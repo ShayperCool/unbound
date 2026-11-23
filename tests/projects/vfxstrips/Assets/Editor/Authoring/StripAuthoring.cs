@@ -348,6 +348,29 @@ public static class StripAuthoring
         SetVector(dots, "color", new Vector3(1f, 0.2f, 0.2f));
         Save(both);
 
+        // A strip's particles drawn as meshes (the package's default mesh, turned each its own
+        // way), beside the strip itself: unlit, and lit by the render pipeline.
+        foreach (var (name, lit) in new[] { ("StripMeshes", false), ("StripMeshesLit", true) })
+        {
+            var meshes = NewGraph(name);
+            var meshed = Strips(meshes, 1, 16);
+            ConstantRate(meshed.Spawn, 20f);
+            Scatter(meshed.Init, 0.2f, new Vector3(0.9f, 0.9f, 0.3f), 0.6f);
+            SetRandom(meshed.Init, "angle", new Vector3(0f, 0f, 0f), new Vector3(90f, 90f, 90f));
+            Output<VFXQuadStripOutput>(meshes, meshed.Update);
+            VFXContext cubes;
+            if (lit)
+            {
+                var litCubes = Output<VFXURPLitMeshOutput>(meshes, meshed.Update, false);
+                litCubes.SetSettingValue("useBaseColorMap", VFXAbstractParticleURPLitOutput.BaseColorMapMode.None);
+                cubes = litCubes;
+            }
+            else cubes = Output<VFXMeshOutput>(meshes, meshed.Update, false);
+            Set(cubes, "size", 0.15f);
+            SetVector(cubes, "color", new Vector3(0.2f, 0.5f, 1f));
+            Save(meshes);
+        }
+
         // A strip that widens along itself: each particle's size times its place in the strip.
         var taper = NewGraph("StripTaper");
         var tapered = Strips(taper, 1, 16);

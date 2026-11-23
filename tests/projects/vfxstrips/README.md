@@ -51,6 +51,8 @@ are `Output ParticleStrip Quad` contexts with an `Orient: Face Camera Position` 
 - `StripIndex`: four strips of eight; the strip a particle goes into is the initialize
   context's `stripIndex`, an exposed property `Strip` of the effect.
 - `StripBoth`: a strip drawn twice: joined, and each of its particles as a quad of its own.
+- `StripMeshes`, `StripMeshesLit`: a strip drawn joined, and each of its particles (each turned
+  its own way) as the package's default mesh: unlit, and lit by the render pipeline.
 - `StripTaper`: each particle's size multiplied by its place in the strip
   (`particleIndexInStrip`), in the output.
 - `StripImage`, `StripImageSegments`, `StripImageSwapped`: strips of eight that draw an image
@@ -86,6 +88,8 @@ capacity and whether it sleeps. `systems/<control>` lists the systems' names.
 - `listed`, `culled`: `StripListed` and `StripCulled`.
 - `lit`, `lit bent`: `StripLit` and `StripLitBent`, each under a point light of its own; a
   directional light without shadows lights the scene (the other stages are unlit).
+- `meshes`, `meshes lit`: `StripMeshes` and `StripMeshesLit`, each under such a point light
+  too (frames 10, 20, 40 and 66).
 - `trails alive`, `trails alive keep`: `StripTrailsAlive` and `StripTrailsAliveKeep`, images
   every four frames to frame 32, then at 40, 50 and 66. The heads' alive count includes the dead
   heads kept for their strips (room for four, full at frame 70 in both).
@@ -131,8 +135,9 @@ alive` (whose strip particles die) is exact throughout.
   sides drawn, receiving the main light's shadows or not; Shader Graph strip outputs (drawn,
   not measured).
 - Strips lit by 2D lights, line strips
-  (`Output ParticleStrip Line`), and any output but quads of a strip system's particles: not
-  drawn (the effect says so).
+  (`Output ParticleStrip Line`), and any output but quads and meshes of a strip system's
+  particles: not drawn (the effect says so). Meshes of a strip system's particles drawn from a
+  list, sorted, or chosen among several: drawn, not measured.
 - Additive strips; a sorted strip under a perspective camera or with another sort criterion
   than the default; two strips of one sorted output that cross.
 - A batch in which an effect wakes in every frame for longer than three frames (as measured,

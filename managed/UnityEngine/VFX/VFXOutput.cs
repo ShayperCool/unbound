@@ -161,8 +161,9 @@ namespace Unbound.Runtime
             if ((system.flags & VFXSystemFlag.SystemHasStrips) != 0)
             {
                 // Strips are quads from each particle to the next, drawn for all the strips'
-                // room; a strip system's particles may be drawn one by one as well.
-                if (task.type != VFXTaskType.ParticleQuadOutput) return $"{task.type} of a strip system's particles is not measured yet";
+                // room; a strip system's particles may be drawn one by one as well, as quads or
+                // as meshes (tests/projects/vfxstrips `both`, `meshes`, `meshes lit`).
+                if (task.type != VFXTaskType.ParticleQuadOutput && task.type != VFXTaskType.ParticleMeshOutput) return $"{task.type} of a strip system's particles is not measured yet";
                 // Through an indirect buffer: strips from a sorted list (what an alpha blended
                 // strip output does by default), from the list the system's update makes, and
                 // from each camera's frustum-culled list; the particles as quads from a list

@@ -30,6 +30,8 @@
 {"k":"systems/culled","v":"System, System (1) | particle: System (1)"}
 {"k":"systems/lit","v":"System, System (1) | particle: System (1)"}
 {"k":"systems/lit bent","v":"System, System (1) | particle: System (1)"}
+{"k":"systems/meshes","v":"System, System (1) | particle: System (1)"}
+{"k":"systems/meshes lit","v":"System, System (1) | particle: System (1)"}
 {"k":"sim/single/f002","v":"alive=-1 culled=0 awake=1 | System (1): alive=0 capacity=16 sleeping=0"}
 {"k":"sim/keep/f002","v":"alive=0 culled=0 awake=0 | System (1): alive=0 capacity=12 sleeping=1"}
 {"k":"sim/trails/f002","v":"alive=2 culled=0 awake=1 | System (1): alive=3 capacity=4 sleeping=0 | System (3): alive=0 capacity=64 sleeping=0"}
@@ -62,6 +64,8 @@
 {"k":"sim/culled/f002","v":"alive=-1 culled=0 awake=1 | System (1): alive=0 capacity=24 sleeping=0"}
 {"k":"sim/lit/f002","v":"alive=-1 culled=0 awake=1 | System (1): alive=0 capacity=16 sleeping=0"}
 {"k":"sim/lit bent/f002","v":"alive=-1 culled=0 awake=1 | System (1): alive=0 capacity=16 sleeping=0"}
+{"k":"sim/meshes/f002","v":"alive=-1 culled=0 awake=1 | System (1): alive=0 capacity=16 sleeping=0"}
+{"k":"sim/meshes lit/f002","v":"alive=-1 culled=0 awake=1 | System (1): alive=0 capacity=16 sleeping=0"}
 {"k":"sim/single/f003","v":"alive=-1 culled=0 awake=1 | System (1): alive=0 capacity=16 sleeping=0"}
 {"k":"sim/keep/f003","v":"alive=1 culled=0 awake=1 | System (1): alive=1 capacity=12 sleeping=0"}
 {"k":"sim/trails/f003","v":"alive=6 culled=0 awake=1 | System (1): alive=3 capacity=4 sleeping=0 | System (3): alive=3 capacity=64 sleeping=0"}
@@ -94,6 +98,8 @@
 {"k":"sim/culled/f003","v":"alive=-1 culled=0 awake=1 | System (1): alive=0 capacity=24 sleeping=0"}
 {"k":"sim/lit/f003","v":"alive=-1 culled=0 awake=1 | System (1): alive=0 capacity=16 sleeping=0"}
 {"k":"sim/lit bent/f003","v":"alive=-1 culled=0 awake=1 | System (1): alive=0 capacity=16 sleeping=0"}
+{"k":"sim/meshes/f003","v":"alive=-1 culled=0 awake=1 | System (1): alive=0 capacity=16 sleeping=0"}
+{"k":"sim/meshes lit/f003","v":"alive=-1 culled=0 awake=1 | System (1): alive=0 capacity=16 sleeping=0"}
 {"k":"sim/single/f004","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=16 sleeping=0"}
 {"k":"sim/keep/f004","v":"alive=1 culled=0 awake=1 | System (1): alive=1 capacity=12 sleeping=0"}
 {"k":"sim/trails/f004","v":"alive=6 culled=0 awake=1 | System (1): alive=3 capacity=4 sleeping=0 | System (3): alive=3 capacity=64 sleeping=0"}
@@ -126,6 +132,8 @@
 {"k":"sim/culled/f004","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=24 sleeping=0"}
 {"k":"sim/lit/f004","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=16 sleeping=0"}
 {"k":"sim/lit bent/f004","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=16 sleeping=0"}
+{"k":"sim/meshes/f004","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=16 sleeping=0"}
+{"k":"sim/meshes lit/f004","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=16 sleeping=0"}
 {"k":"sim/single/f005","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=16 sleeping=0"}
 {"k":"sim/keep/f005","v":"alive=1 culled=0 awake=1 | System (1): alive=1 capacity=12 sleeping=0"}
 {"k":"sim/trails/f005","v":"alive=6 culled=0 awake=1 | System (1): alive=3 capacity=4 sleeping=0 | System (3): alive=3 capacity=64 sleeping=0"}
@@ -158,6 +166,8 @@
 {"k":"sim/culled/f005","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=24 sleeping=0"}
 {"k":"sim/lit/f005","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=16 sleeping=0"}
 {"k":"sim/lit bent/f005","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=16 sleeping=0"}
+{"k":"sim/meshes/f005","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=16 sleeping=0"}
+{"k":"sim/meshes lit/f005","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=16 sleeping=0"}
 {"k":"sim/single/f006","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=16 sleeping=0"}
 {"k":"sim/keep/f006","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=12 sleeping=0"}
 {"k":"sim/trails/f006","v":"alive=6 culled=0 awake=1 | System (1): alive=3 capacity=4 sleeping=0 | System (3): alive=3 capacity=64 sleeping=0"}
@@ -190,6 +200,8 @@
 {"k":"sim/culled/f006","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=24 sleeping=0"}
 {"k":"sim/lit/f006","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=16 sleeping=0"}
 {"k":"sim/lit bent/f006","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=16 sleeping=0"}
+{"k":"sim/meshes/f006","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=16 sleeping=0"}
+{"k":"sim/meshes lit/f006","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=16 sleeping=0"}
 {"k":"sim/single/f007","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=16 sleeping=0"}
 {"k":"sim/keep/f007","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=12 sleeping=0"}
 {"k":"sim/trails/f007","v":"alive=6 culled=0 awake=1 | System (1): alive=3 capacity=4 sleeping=0 | System (3): alive=3 capacity=64 sleeping=0"}
@@ -222,6 +234,8 @@
 {"k":"sim/culled/f007","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=24 sleeping=0"}
 {"k":"sim/lit/f007","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=16 sleeping=0"}
 {"k":"sim/lit bent/f007","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=16 sleeping=0"}
+{"k":"sim/meshes/f007","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=16 sleeping=0"}
+{"k":"sim/meshes lit/f007","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=16 sleeping=0"}
 {"k":"sim/single/f008","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=16 sleeping=0"}
 {"k":"sim/keep/f008","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=12 sleeping=0"}
 {"k":"sim/trails/f008","v":"alive=6 culled=0 awake=1 | System (1): alive=3 capacity=4 sleeping=0 | System (3): alive=3 capacity=64 sleeping=0"}
@@ -254,6 +268,8 @@
 {"k":"sim/culled/f008","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=24 sleeping=0"}
 {"k":"sim/lit/f008","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=16 sleeping=0"}
 {"k":"sim/lit bent/f008","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=16 sleeping=0"}
+{"k":"sim/meshes/f008","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=16 sleeping=0"}
+{"k":"sim/meshes lit/f008","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=16 sleeping=0"}
 {"k":"sim/single/f010","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=16 sleeping=0"}
 {"k":"sim/keep/f010","v":"alive=3 culled=0 awake=1 | System (1): alive=3 capacity=12 sleeping=0"}
 {"k":"sim/trails/f010","v":"alive=6 culled=0 awake=1 | System (1): alive=3 capacity=4 sleeping=0 | System (3): alive=3 capacity=64 sleeping=0"}
@@ -286,6 +302,8 @@
 {"k":"sim/culled/f010","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=24 sleeping=0"}
 {"k":"sim/lit/f010","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=16 sleeping=0"}
 {"k":"sim/lit bent/f010","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=16 sleeping=0"}
+{"k":"sim/meshes/f010","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=16 sleeping=0"}
+{"k":"sim/meshes lit/f010","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=16 sleeping=0"}
 {"k":"sim/single/f020","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=16 sleeping=0"}
 {"k":"sim/keep/f020","v":"alive=6 culled=0 awake=1 | System (1): alive=6 capacity=12 sleeping=0"}
 {"k":"sim/trails/f020","v":"alive=6 culled=0 awake=1 | System (1): alive=3 capacity=4 sleeping=0 | System (3): alive=3 capacity=64 sleeping=0"}
@@ -318,6 +336,8 @@
 {"k":"sim/culled/f020","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=24 sleeping=0"}
 {"k":"sim/lit/f020","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=16 sleeping=0"}
 {"k":"sim/lit bent/f020","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=16 sleeping=0"}
+{"k":"sim/meshes/f020","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=16 sleeping=0"}
+{"k":"sim/meshes lit/f020","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=16 sleeping=0"}
 {"k":"sim/single/f030","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=16 sleeping=0"}
 {"k":"sim/keep/f030","v":"alive=10 culled=0 awake=1 | System (1): alive=10 capacity=12 sleeping=0"}
 {"k":"sim/trails/f030","v":"alive=6 culled=0 awake=1 | System (1): alive=3 capacity=4 sleeping=0 | System (3): alive=3 capacity=64 sleeping=0"}
@@ -350,6 +370,8 @@
 {"k":"sim/culled/f030","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=24 sleeping=0"}
 {"k":"sim/lit/f030","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=16 sleeping=0"}
 {"k":"sim/lit bent/f030","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=16 sleeping=0"}
+{"k":"sim/meshes/f030","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=16 sleeping=0"}
+{"k":"sim/meshes lit/f030","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=16 sleeping=0"}
 {"k":"sim/single/f031","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=16 sleeping=0"}
 {"k":"sim/keep/f031","v":"alive=10 culled=0 awake=1 | System (1): alive=10 capacity=12 sleeping=0"}
 {"k":"sim/trails/f031","v":"alive=6 culled=0 awake=1 | System (1): alive=3 capacity=4 sleeping=0 | System (3): alive=3 capacity=64 sleeping=0"}
@@ -382,6 +404,8 @@
 {"k":"sim/culled/f031","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=24 sleeping=0"}
 {"k":"sim/lit/f031","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=16 sleeping=0"}
 {"k":"sim/lit bent/f031","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=16 sleeping=0"}
+{"k":"sim/meshes/f031","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=16 sleeping=0"}
+{"k":"sim/meshes lit/f031","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=16 sleeping=0"}
 {"k":"sim/single/f032","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=16 sleeping=0"}
 {"k":"sim/keep/f032","v":"alive=10 culled=0 awake=1 | System (1): alive=10 capacity=12 sleeping=0"}
 {"k":"sim/trails/f032","v":"alive=6 culled=0 awake=1 | System (1): alive=3 capacity=4 sleeping=0 | System (3): alive=3 capacity=64 sleeping=0"}
@@ -414,6 +438,8 @@
 {"k":"sim/culled/f032","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=24 sleeping=0"}
 {"k":"sim/lit/f032","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=16 sleeping=0"}
 {"k":"sim/lit bent/f032","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=16 sleeping=0"}
+{"k":"sim/meshes/f032","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=16 sleeping=0"}
+{"k":"sim/meshes lit/f032","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=16 sleeping=0"}
 {"k":"sim/single/f033","v":"alive=11 culled=0 awake=1 | System (1): alive=11 capacity=16 sleeping=0"}
 {"k":"sim/keep/f033","v":"alive=11 culled=0 awake=1 | System (1): alive=11 capacity=12 sleeping=0"}
 {"k":"sim/trails/f033","v":"alive=6 culled=0 awake=1 | System (1): alive=3 capacity=4 sleeping=0 | System (3): alive=3 capacity=64 sleeping=0"}
@@ -446,6 +472,8 @@
 {"k":"sim/culled/f033","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=24 sleeping=0"}
 {"k":"sim/lit/f033","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=16 sleeping=0"}
 {"k":"sim/lit bent/f033","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=16 sleeping=0"}
+{"k":"sim/meshes/f033","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=16 sleeping=0"}
+{"k":"sim/meshes lit/f033","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=16 sleeping=0"}
 {"k":"sim/single/f034","v":"alive=11 culled=0 awake=1 | System (1): alive=11 capacity=16 sleeping=0"}
 {"k":"sim/keep/f034","v":"alive=11 culled=0 awake=1 | System (1): alive=11 capacity=12 sleeping=0"}
 {"k":"sim/trails/f034","v":"alive=6 culled=0 awake=1 | System (1): alive=3 capacity=4 sleeping=0 | System (3): alive=3 capacity=64 sleeping=0"}
@@ -478,6 +506,8 @@
 {"k":"sim/culled/f034","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=24 sleeping=0"}
 {"k":"sim/lit/f034","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=16 sleeping=0"}
 {"k":"sim/lit bent/f034","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=16 sleeping=0"}
+{"k":"sim/meshes/f034","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=16 sleeping=0"}
+{"k":"sim/meshes lit/f034","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=16 sleeping=0"}
 {"k":"sim/single/f035","v":"alive=11 culled=0 awake=1 | System (1): alive=11 capacity=16 sleeping=0"}
 {"k":"sim/keep/f035","v":"alive=11 culled=0 awake=1 | System (1): alive=11 capacity=12 sleeping=0"}
 {"k":"sim/trails/f035","v":"alive=6 culled=0 awake=1 | System (1): alive=3 capacity=4 sleeping=0 | System (3): alive=3 capacity=64 sleeping=0"}
@@ -510,6 +540,8 @@
 {"k":"sim/culled/f035","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=24 sleeping=0"}
 {"k":"sim/lit/f035","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=16 sleeping=0"}
 {"k":"sim/lit bent/f035","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=16 sleeping=0"}
+{"k":"sim/meshes/f035","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=16 sleeping=0"}
+{"k":"sim/meshes lit/f035","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=16 sleeping=0"}
 {"k":"sim/single/f036","v":"alive=11 culled=0 awake=1 | System (1): alive=11 capacity=16 sleeping=0"}
 {"k":"sim/keep/f036","v":"alive=12 culled=0 awake=1 | System (1): alive=12 capacity=12 sleeping=0"}
 {"k":"sim/trails/f036","v":"alive=6 culled=0 awake=1 | System (1): alive=3 capacity=4 sleeping=0 | System (3): alive=3 capacity=64 sleeping=0"}
@@ -542,6 +574,8 @@
 {"k":"sim/culled/f036","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=24 sleeping=0"}
 {"k":"sim/lit/f036","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=16 sleeping=0"}
 {"k":"sim/lit bent/f036","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=16 sleeping=0"}
+{"k":"sim/meshes/f036","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=16 sleeping=0"}
+{"k":"sim/meshes lit/f036","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=16 sleeping=0"}
 {"k":"sim/single/f037","v":"alive=11 culled=0 awake=1 | System (1): alive=11 capacity=16 sleeping=0"}
 {"k":"sim/keep/f037","v":"alive=12 culled=0 awake=1 | System (1): alive=12 capacity=12 sleeping=0"}
 {"k":"sim/trails/f037","v":"alive=6 culled=0 awake=1 | System (1): alive=3 capacity=4 sleeping=0 | System (3): alive=3 capacity=64 sleeping=0"}
@@ -574,6 +608,8 @@
 {"k":"sim/culled/f037","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=24 sleeping=0"}
 {"k":"sim/lit/f037","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=16 sleeping=0"}
 {"k":"sim/lit bent/f037","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=16 sleeping=0"}
+{"k":"sim/meshes/f037","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=16 sleeping=0"}
+{"k":"sim/meshes lit/f037","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=16 sleeping=0"}
 {"k":"sim/single/f040","v":"alive=11 culled=0 awake=1 | System (1): alive=11 capacity=16 sleeping=0"}
 {"k":"sim/keep/f040","v":"alive=12 culled=0 awake=1 | System (1): alive=12 capacity=12 sleeping=0"}
 {"k":"sim/trails/f040","v":"alive=6 culled=0 awake=1 | System (1): alive=3 capacity=4 sleeping=0 | System (3): alive=3 capacity=64 sleeping=0"}
@@ -606,6 +642,8 @@
 {"k":"sim/culled/f040","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=24 sleeping=0"}
 {"k":"sim/lit/f040","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=16 sleeping=0"}
 {"k":"sim/lit bent/f040","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=16 sleeping=0"}
+{"k":"sim/meshes/f040","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=16 sleeping=0"}
+{"k":"sim/meshes lit/f040","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=16 sleeping=0"}
 {"k":"sim/single/f045","v":"alive=11 culled=0 awake=1 | System (1): alive=11 capacity=16 sleeping=0"}
 {"k":"sim/keep/f045","v":"alive=12 culled=0 awake=1 | System (1): alive=12 capacity=12 sleeping=0"}
 {"k":"sim/trails/f045","v":"alive=6 culled=0 awake=1 | System (1): alive=3 capacity=4 sleeping=0 | System (3): alive=3 capacity=64 sleeping=0"}
@@ -638,6 +676,8 @@
 {"k":"sim/culled/f045","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=24 sleeping=0"}
 {"k":"sim/lit/f045","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=16 sleeping=0"}
 {"k":"sim/lit bent/f045","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=16 sleeping=0"}
+{"k":"sim/meshes/f045","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=16 sleeping=0"}
+{"k":"sim/meshes lit/f045","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=16 sleeping=0"}
 {"k":"sim/single/f050","v":"alive=11 culled=0 awake=1 | System (1): alive=11 capacity=16 sleeping=0"}
 {"k":"sim/keep/f050","v":"alive=12 culled=0 awake=1 | System (1): alive=12 capacity=12 sleeping=0"}
 {"k":"sim/trails/f050","v":"alive=6 culled=0 awake=1 | System (1): alive=3 capacity=4 sleeping=0 | System (3): alive=3 capacity=64 sleeping=0"}
@@ -670,6 +710,8 @@
 {"k":"sim/culled/f050","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=24 sleeping=0"}
 {"k":"sim/lit/f050","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=16 sleeping=0"}
 {"k":"sim/lit bent/f050","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=16 sleeping=0"}
+{"k":"sim/meshes/f050","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=16 sleeping=0"}
+{"k":"sim/meshes lit/f050","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=16 sleeping=0"}
 {"k":"sim/single/f054","v":"alive=11 culled=0 awake=1 | System (1): alive=11 capacity=16 sleeping=0"}
 {"k":"sim/keep/f054","v":"alive=12 culled=0 awake=1 | System (1): alive=12 capacity=12 sleeping=0"}
 {"k":"sim/trails/f054","v":"alive=6 culled=0 awake=1 | System (1): alive=3 capacity=4 sleeping=0 | System (3): alive=3 capacity=64 sleeping=0"}
@@ -702,6 +744,8 @@
 {"k":"sim/culled/f054","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=24 sleeping=0"}
 {"k":"sim/lit/f054","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=16 sleeping=0"}
 {"k":"sim/lit bent/f054","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=16 sleeping=0"}
+{"k":"sim/meshes/f054","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=16 sleeping=0"}
+{"k":"sim/meshes lit/f054","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=16 sleeping=0"}
 {"k":"sim/single/f055","v":"alive=11 culled=0 awake=1 | System (1): alive=11 capacity=16 sleeping=0"}
 {"k":"sim/keep/f055","v":"alive=12 culled=0 awake=1 | System (1): alive=12 capacity=12 sleeping=0"}
 {"k":"sim/trails/f055","v":"alive=6 culled=0 awake=1 | System (1): alive=3 capacity=4 sleeping=0 | System (3): alive=3 capacity=64 sleeping=0"}
@@ -734,6 +778,8 @@
 {"k":"sim/culled/f055","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=24 sleeping=0"}
 {"k":"sim/lit/f055","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=16 sleeping=0"}
 {"k":"sim/lit bent/f055","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=16 sleeping=0"}
+{"k":"sim/meshes/f055","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=16 sleeping=0"}
+{"k":"sim/meshes lit/f055","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=16 sleeping=0"}
 {"k":"sim/single/f056","v":"alive=11 culled=0 awake=1 | System (1): alive=11 capacity=16 sleeping=0"}
 {"k":"sim/keep/f056","v":"alive=12 culled=0 awake=1 | System (1): alive=12 capacity=12 sleeping=0"}
 {"k":"sim/trails/f056","v":"alive=6 culled=0 awake=1 | System (1): alive=3 capacity=4 sleeping=0 | System (3): alive=3 capacity=64 sleeping=0"}
@@ -766,6 +812,8 @@
 {"k":"sim/culled/f056","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=24 sleeping=0"}
 {"k":"sim/lit/f056","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=16 sleeping=0"}
 {"k":"sim/lit bent/f056","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=16 sleeping=0"}
+{"k":"sim/meshes/f056","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=16 sleeping=0"}
+{"k":"sim/meshes lit/f056","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=16 sleeping=0"}
 {"k":"sim/single/f057","v":"alive=11 culled=0 awake=1 | System (1): alive=11 capacity=16 sleeping=0"}
 {"k":"sim/keep/f057","v":"alive=12 culled=0 awake=1 | System (1): alive=12 capacity=12 sleeping=0"}
 {"k":"sim/trails/f057","v":"alive=6 culled=0 awake=1 | System (1): alive=3 capacity=4 sleeping=0 | System (3): alive=3 capacity=64 sleeping=0"}
@@ -798,6 +846,8 @@
 {"k":"sim/culled/f057","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=24 sleeping=0"}
 {"k":"sim/lit/f057","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=16 sleeping=0"}
 {"k":"sim/lit bent/f057","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=16 sleeping=0"}
+{"k":"sim/meshes/f057","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=16 sleeping=0"}
+{"k":"sim/meshes lit/f057","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=16 sleeping=0"}
 {"k":"sim/single/f058","v":"alive=11 culled=0 awake=1 | System (1): alive=11 capacity=16 sleeping=0"}
 {"k":"sim/keep/f058","v":"alive=12 culled=0 awake=1 | System (1): alive=12 capacity=12 sleeping=0"}
 {"k":"sim/trails/f058","v":"alive=6 culled=0 awake=1 | System (1): alive=3 capacity=4 sleeping=0 | System (3): alive=3 capacity=64 sleeping=0"}
@@ -830,6 +880,8 @@
 {"k":"sim/culled/f058","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=24 sleeping=0"}
 {"k":"sim/lit/f058","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=16 sleeping=0"}
 {"k":"sim/lit bent/f058","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=16 sleeping=0"}
+{"k":"sim/meshes/f058","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=16 sleeping=0"}
+{"k":"sim/meshes lit/f058","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=16 sleeping=0"}
 {"k":"sim/single/f060","v":"alive=11 culled=0 awake=1 | System (1): alive=11 capacity=16 sleeping=0"}
 {"k":"sim/keep/f060","v":"alive=12 culled=0 awake=1 | System (1): alive=12 capacity=12 sleeping=0"}
 {"k":"sim/trails/f060","v":"alive=6 culled=0 awake=1 | System (1): alive=3 capacity=4 sleeping=0 | System (3): alive=3 capacity=64 sleeping=0"}
@@ -862,6 +914,8 @@
 {"k":"sim/culled/f060","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=24 sleeping=0"}
 {"k":"sim/lit/f060","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=16 sleeping=0"}
 {"k":"sim/lit bent/f060","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=16 sleeping=0"}
+{"k":"sim/meshes/f060","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=16 sleeping=0"}
+{"k":"sim/meshes lit/f060","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=16 sleeping=0"}
 {"k":"sim/single/f062","v":"alive=11 culled=0 awake=1 | System (1): alive=11 capacity=16 sleeping=0"}
 {"k":"sim/keep/f062","v":"alive=12 culled=0 awake=1 | System (1): alive=12 capacity=12 sleeping=0"}
 {"k":"sim/trails/f062","v":"alive=6 culled=0 awake=1 | System (1): alive=3 capacity=4 sleeping=0 | System (3): alive=3 capacity=64 sleeping=0"}
@@ -894,6 +948,8 @@
 {"k":"sim/culled/f062","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=24 sleeping=0"}
 {"k":"sim/lit/f062","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=16 sleeping=0"}
 {"k":"sim/lit bent/f062","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=16 sleeping=0"}
+{"k":"sim/meshes/f062","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=16 sleeping=0"}
+{"k":"sim/meshes lit/f062","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=16 sleeping=0"}
 {"k":"sim/single/f063","v":"alive=11 culled=0 awake=1 | System (1): alive=11 capacity=16 sleeping=0"}
 {"k":"sim/keep/f063","v":"alive=12 culled=0 awake=1 | System (1): alive=12 capacity=12 sleeping=0"}
 {"k":"sim/trails/f063","v":"alive=33 culled=0 awake=1 | System (1): alive=3 capacity=4 sleeping=0 | System (3): alive=30 capacity=64 sleeping=0"}
@@ -926,6 +982,8 @@
 {"k":"sim/culled/f063","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=24 sleeping=0"}
 {"k":"sim/lit/f063","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=16 sleeping=0"}
 {"k":"sim/lit bent/f063","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=16 sleeping=0"}
+{"k":"sim/meshes/f063","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=16 sleeping=0"}
+{"k":"sim/meshes lit/f063","v":"alive=2 culled=0 awake=1 | System (1): alive=2 capacity=16 sleeping=0"}
 {"k":"sim/single/f064","v":"alive=11 culled=0 awake=1 | System (1): alive=11 capacity=16 sleeping=0"}
 {"k":"sim/keep/f064","v":"alive=12 culled=0 awake=1 | System (1): alive=12 capacity=12 sleeping=0"}
 {"k":"sim/trails/f064","v":"alive=33 culled=0 awake=1 | System (1): alive=3 capacity=4 sleeping=0 | System (3): alive=30 capacity=64 sleeping=0"}
@@ -958,6 +1016,8 @@
 {"k":"sim/culled/f064","v":"alive=12 culled=0 awake=1 | System (1): alive=12 capacity=24 sleeping=0"}
 {"k":"sim/lit/f064","v":"alive=12 culled=0 awake=1 | System (1): alive=12 capacity=16 sleeping=0"}
 {"k":"sim/lit bent/f064","v":"alive=12 culled=0 awake=1 | System (1): alive=12 capacity=16 sleeping=0"}
+{"k":"sim/meshes/f064","v":"alive=12 culled=0 awake=1 | System (1): alive=12 capacity=16 sleeping=0"}
+{"k":"sim/meshes lit/f064","v":"alive=12 culled=0 awake=1 | System (1): alive=12 capacity=16 sleeping=0"}
 {"k":"sim/single/f065","v":"alive=11 culled=0 awake=1 | System (1): alive=11 capacity=16 sleeping=0"}
 {"k":"sim/keep/f065","v":"alive=12 culled=0 awake=1 | System (1): alive=12 capacity=12 sleeping=0"}
 {"k":"sim/trails/f065","v":"alive=33 culled=0 awake=1 | System (1): alive=3 capacity=4 sleeping=0 | System (3): alive=30 capacity=64 sleeping=0"}
@@ -990,6 +1050,8 @@
 {"k":"sim/culled/f065","v":"alive=12 culled=0 awake=1 | System (1): alive=12 capacity=24 sleeping=0"}
 {"k":"sim/lit/f065","v":"alive=12 culled=0 awake=1 | System (1): alive=12 capacity=16 sleeping=0"}
 {"k":"sim/lit bent/f065","v":"alive=12 culled=0 awake=1 | System (1): alive=12 capacity=16 sleeping=0"}
+{"k":"sim/meshes/f065","v":"alive=12 culled=0 awake=1 | System (1): alive=12 capacity=16 sleeping=0"}
+{"k":"sim/meshes lit/f065","v":"alive=12 culled=0 awake=1 | System (1): alive=12 capacity=16 sleeping=0"}
 {"k":"sim/single/f066","v":"alive=11 culled=0 awake=1 | System (1): alive=11 capacity=16 sleeping=0"}
 {"k":"sim/keep/f066","v":"alive=12 culled=0 awake=1 | System (1): alive=12 capacity=12 sleeping=0"}
 {"k":"sim/trails/f066","v":"alive=33 culled=0 awake=1 | System (1): alive=3 capacity=4 sleeping=0 | System (3): alive=30 capacity=64 sleeping=0"}
@@ -1022,6 +1084,8 @@
 {"k":"sim/culled/f066","v":"alive=12 culled=0 awake=1 | System (1): alive=12 capacity=24 sleeping=0"}
 {"k":"sim/lit/f066","v":"alive=12 culled=0 awake=1 | System (1): alive=12 capacity=16 sleeping=0"}
 {"k":"sim/lit bent/f066","v":"alive=12 culled=0 awake=1 | System (1): alive=12 capacity=16 sleeping=0"}
+{"k":"sim/meshes/f066","v":"alive=12 culled=0 awake=1 | System (1): alive=12 capacity=16 sleeping=0"}
+{"k":"sim/meshes lit/f066","v":"alive=12 culled=0 awake=1 | System (1): alive=12 capacity=16 sleeping=0"}
 {"k":"sim/single/f070","v":"alive=11 culled=0 awake=1 | System (1): alive=11 capacity=16 sleeping=0"}
 {"k":"sim/keep/f070","v":"alive=12 culled=0 awake=1 | System (1): alive=12 capacity=12 sleeping=0"}
 {"k":"sim/trails/f070","v":"alive=33 culled=0 awake=1 | System (1): alive=3 capacity=4 sleeping=0 | System (3): alive=30 capacity=64 sleeping=0"}
@@ -1054,5 +1118,7 @@
 {"k":"sim/culled/f070","v":"alive=12 culled=0 awake=1 | System (1): alive=12 capacity=24 sleeping=0"}
 {"k":"sim/lit/f070","v":"alive=12 culled=0 awake=1 | System (1): alive=12 capacity=16 sleeping=0"}
 {"k":"sim/lit bent/f070","v":"alive=12 culled=0 awake=1 | System (1): alive=12 capacity=16 sleeping=0"}
+{"k":"sim/meshes/f070","v":"alive=12 culled=0 awake=1 | System (1): alive=12 capacity=16 sleeping=0"}
+{"k":"sim/meshes lit/f070","v":"alive=12 culled=0 awake=1 | System (1): alive=12 capacity=16 sleeping=0"}
 {"k":"capture/graphs imported while playing","v":""}
 {"k": "complete", "v": true}

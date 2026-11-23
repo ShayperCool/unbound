@@ -1213,7 +1213,10 @@ namespace UnityEngine.Tests
             // from a list, are drawn too (tests/projects/vfxstrips `listed`, `culled`).
             Assert.Null(VFXOutput.Refusal(sortedStrips, Joined(Indirect(2, 2)), material));
             Assert.Null(VFXOutput.Refusal(sortedStrips, Indirect(2, 3), material));
-            Assert.Equal("ParticleMeshOutput of a strip system's particles is not measured yet", VFXOutput.Refusal(stripSystem, meshes, material));
+            // A strip system's particles drawn as meshes, as a system without strips draws them
+            // (tests/projects/vfxstrips `meshes`); as other primitives, not measured.
+            Assert.Equal(VFXOutput.Refusal(system, meshes, material), VFXOutput.Refusal(stripSystem, meshes, material));
+            Assert.Equal("ParticleTriangleOutput of a strip system's particles is not measured yet", VFXOutput.Refusal(stripSystem, new VFXEditorTaskDesc { type = VFXTaskType.ParticleTriangleOutput }, material));
             Assert.Equal("it draws with a material variant (a graph compiled for editing), which is not measured yet", VFXOutput.Refusal(system, new VFXEditorTaskDesc { type = VFXTaskType.ParticleQuadOutput, usesMaterialVariant = true }, material));
             var previous = new VFXEditorTaskDesc { type = VFXTaskType.ParticleQuadOutput, temporaryBuffers = new[] { new VFXMappingTemporary() } };
             // An output that keeps its particles' last frames (motion vectors) is drawn
