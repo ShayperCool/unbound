@@ -930,6 +930,9 @@ namespace Unbound.Runtime
         /// Begin leaf (unmeasured there).</summary>
         internal static bool AnimationUpdateSplitMeasured => Family == ReleaseFamily.Unity6000_0;
 
+        /// <summary>Humanoid hips scale writes through a TransformStreamHandle (humanoid bone.scaleHips).</summary>
+        internal static bool HumanStreamHipsScale => Family == ReleaseFamily.Unity6000_0;
+
         /// <summary>Humanoid root motion composed by mixer trees (any input count and nesting, any
         /// input weight sum blended unnormalized, weights changed between evaluations or while
         /// culled), measured by animculling humanMixerMotion/humanMixerShape on

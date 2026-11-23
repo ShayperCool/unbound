@@ -46,7 +46,7 @@ namespace Unbound.Runtime.Playables
         bool m_HumanValid, m_SkeletonValid, m_Changed;
         /// <summary>A job moved or scaled bones of the skeleton through their handles: values that
         /// stay in the skeleton and are left out when the pose is made from it.</summary>
-        bool m_BonesMoved;
+        bool m_BonesMoved, m_HipsScaleWritten;
         AnimStream m_Stream;
 
         const int GoalCount = 4;
@@ -119,6 +119,7 @@ namespace Unbound.Runtime.Playables
             m_SkeletonValid = false;
             m_Changed = false;
             m_BonesMoved = false;
+            m_HipsScaleWritten = false;
             m_BonesKept = false;
             Array.Clear(m_GoalSet);
             Array.Clear(m_HintSet);
@@ -218,6 +219,7 @@ namespace Unbound.Runtime.Playables
             m_SkeletonValid = true;
             m_BonesKept = false;
             m_BonesMoved = false;
+            m_HipsScaleWritten = false;
             HumanOps.RetargetTo(m_Human, Pose, null, Root, m_World, m_Local, m_Global, true);
         }
 
@@ -320,6 +322,12 @@ namespace Unbound.Runtime.Playables
             // the hips an unscaled offset from the root, the bones below as far from the hips
             // as the hips' own scale puts them (bone.rotateThenHuman).
             BoneSkeleton();
+            BoneWorldFromLocal(node, out position, out rotation, out scale);
+            if (m_HipsScaleWritten && !IsHips(node)) position = BoneWorldPoint(node);
+        }
+
+        void BoneWorldFromLocal(int node, out F4 position, out F4 rotation, out F4 scale)
+        {
             var bones = m_Local;
             var s = m_Human.Skeleton;
             if (IsHips(node))
@@ -330,11 +338,22 @@ namespace Unbound.Runtime.Playables
                 scale = hips.s;
                 return;
             }
-            BoneWorld(s.Parent[node], out F4 pp, out F4 pr, out F4 ps);
+            BoneWorldFromLocal(s.Parent[node], out F4 pp, out F4 pr, out F4 ps);
             var x = bones.X[node];
             position = pp + M.QRotate(pr, ps * x.t);
             rotation = M.QNormalize(M.QMul(pr, x.q));
             scale = ps * x.s;
+        }
+
+        // Carry the point through each local frame before applying a nonuniform hips scale.
+        F4 BoneWorldPoint(int node)
+        {
+            F4 point = default;
+            var skeleton = m_Human.Skeleton;
+            int hips = m_Human.BoneIndex[Bone.Hips];
+            for (; node != hips; node = skeleton.Parent[node])
+                point = M.MulPoint(m_Local.X[node], point);
+            return M.MulPoint(M.Mul(m_Local.X[skeleton.Parent[hips]], m_Local.X[hips]), point);
         }
 
         internal void BoneWorld(int node, out Vector3 position, out Quaternion rotation, out Vector3 scale)
@@ -361,6 +380,18 @@ namespace Unbound.Runtime.Playables
         internal void SetHipsPlaced(Vector3 position, Quaternion rotation)
         {
             if (Finite(position) && UnitRotation(rotation, out F4 q)) SetHipsWorld(V(position), q, false);
+        }
+
+        /// <summary>Sets the hips scale in the handle's placed frame (humanoid bone.scaleHips).</summary>
+        internal void SetHipsPlacedScale(Vector3 scale)
+        {
+            if (!Finite(scale)) return;
+            var bones = BoneSkeleton();
+            int hips = m_Human.BoneIndex[Bone.Hips];
+            var parent = bones.X[m_Human.Skeleton.Parent[hips]];
+            bones.X[hips].s = V(scale) * M.RcpSafe(parent.s);
+            m_HipsScaleWritten = true;
+            BoneChanged();
         }
 
         /// <summary>A job changed the skeleton through a bone's handle: the pose is made again from
@@ -608,6 +639,7 @@ namespace Unbound.Runtime.Playables
             m_SkeletonValid = true;
             m_HumanValid = false;
             m_BonesKept = false;
+            m_HipsScaleWritten = false;
         }
 
         internal Vector3 GetGoalPosition(int g) => ToWorldPoint(GoalLocalPosition(g));
@@ -650,8 +682,10 @@ namespace Unbound.Runtime.Playables
         internal Vector3 GetGoalPositionFromPose(int g)
         {
             UpdateSkeletonPose();
+            int node = m_Human.BoneIndex[HumanOps.GoalBoneOf(g)];
+            if (m_HipsScaleWritten) return P(BoneWorldPoint(node));
             Skel.ComputeGlobal(m_Human.Skeleton, m_Local, m_Global);
-            return P(m_Global.X[m_Human.BoneIndex[HumanOps.GoalBoneOf(g)]].t);
+            return P(m_Global.X[node].t);
         }
 
         internal Quaternion GetGoalRotationFromPose(int g)

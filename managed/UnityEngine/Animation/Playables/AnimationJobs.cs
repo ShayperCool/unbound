@@ -441,8 +441,7 @@ namespace Unbound.Runtime.Playables
         internal void HumanGlobal(in AnimatorHandles.StreamTransform d, Unbound.Runtime.Playables.HumanStreamPose pose, out Vector3 p, out Quaternion r, out Vector3 s) =>
             pose.BoneWorld(d.Human, out p, out r, out s);
 
-        /// <summary>A write through a humanoid bone's handle, local (null: unchanged). The hips'
-        /// scale is not a value of the pose and is not taken (unmeasured).</summary>
+        /// <summary>A write through a humanoid bone's handle, local (null: unchanged).</summary>
         internal void HumanSetLocal(in AnimatorHandles.StreamTransform d, Unbound.Runtime.Playables.HumanStreamPose pose, Vector3? p, Quaternion? r, Vector3? s)
         {
             if (!pose.IsHips(d.Human))
@@ -453,13 +452,17 @@ namespace Unbound.Runtime.Playables
                 return;
             }
             HumanLocal(d, pose, out var lp, out var lr, out var ls);
-            if (s.HasValue && (s.Value - ls).sqrMagnitude > 1e-10f * ls.sqrMagnitude)
-                Stubs.Ignored("TransformStreamHandle scale of a humanoid's hips", "is not taken: the hips' scale in the stream comes from the pose's body (unmeasured)");
-            if (!p.HasValue && !r.HasValue) return;
+            bool writeScale = s.HasValue && Compat.HumanStreamHipsScale;
+            if (s.HasValue && !writeScale && (s.Value - ls).sqrMagnitude > 1e-10f * ls.sqrMagnitude)
+                Stubs.Ignored("TransformStreamHandle scale of a humanoid's hips", "keeps the pose's scale for the unmeasured release family");
+            if (!p.HasValue && !r.HasValue && !writeScale) return;
             // The rotation is taken at unit length in the frame it is written in.
             if (r.HasValue && !Unbound.Runtime.Playables.HumanStreamPose.UnitRotation(r.Value, out lr)) return;
             HipsParentGlobal(d.Transform, pose, out var pp, out var pr, out var ps);
-            pose.SetHipsPlaced(pp + pr * Vector3.Scale(ps, p ?? lp), pr * lr);
+            if (p.HasValue || r.HasValue)
+                pose.SetHipsPlaced(pp + pr * Vector3.Scale(ps, p ?? lp), pr * lr);
+            if (writeScale)
+                pose.SetHipsPlacedScale(Vector3.Scale(ps, s.Value));
         }
 
         /// <summary>A write through a humanoid bone's handle, in the world (null: unchanged).</summary>

@@ -172,6 +172,15 @@ imported without keyframe reduction.
   -1.07); Unbound does the same, its straight arm's roll split between the upper arm and the
   forearm is the bounded known class `readback-solve-straight-limbs`.
 
+  The `bone.scaleHips`, `bone.scaleHipsThenHuman` and `bone.hipsTrs` controls
+  add 604 rows from two identical Linux 6000.0.71f1 Editor runs. A non-uniform
+  scale written through the hips handle changes the positions of descendants in
+  the stream and survives reading the human pose. Retargeting observes the
+  scaled body and keeps the scene hips scale at its authored value.
+  The combined SetLocalTRS control also changes the position.
+  [TransformStreamHandle](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Animations.TransformStreamHandle.html),
+  [Humanoid Avatar Manual](https://docs.unity3d.com/6000.0/Documentation/Manual/AvatarCreationandSetup.html).
+
 - states without a motion and without write defaults (`HumanoidPlayables.cs`, controllers from
   `ProbeRunner.Leftovers`): HumanA's clip leaving for such a state (Hold) after an exit time of 0.3
   at once (with an extra `Update(0)` before step 12, `noWDAlone`), over 0.2 s (`noWDFade`), at

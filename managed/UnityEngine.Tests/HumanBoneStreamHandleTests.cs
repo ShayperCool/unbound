@@ -344,6 +344,39 @@ namespace UnityEngine.Tests
             Near(restSpineScale, spine.localScale);
         }
 
+        [Theory]
+        [InlineData(TestRelease.Measured, true)]
+        [InlineData(TestRelease.Unmeasured, false)]
+        public void AScaleWrittenToTheHipsChangesTheirDescendantsInTheStream(string release, bool measured)
+        {
+            using var pinned = TestRelease.Pin(release);
+            var animator = Human(scale: 2f);
+            var hips = animator.transform.Find("Hips");
+            var hand = animator.transform.Find("Hips/Spine/Chest/LeftUpperArm/LeftLowerArm/LeftHand");
+            var hipsHandle = animator.BindStreamTransform(hips);
+            var handHandle = animator.BindStreamTransform(hand);
+            var sceneScale = hips.localScale;
+
+            Evaluate(animator, (stream, deltaTime) =>
+            {
+                Touch(stream);
+                var start = hipsHandle.GetLocalScale(stream);
+                var desired = Vector3.Scale(start, new Vector3(.8f, 1.25f, 1.1f));
+                var before = handHandle.GetPosition(stream);
+
+                hipsHandle.SetLocalScale(stream, desired);
+                Near(measured ? desired : start, hipsHandle.GetLocalScale(stream));
+                if (measured)
+                    Assert.True((handHandle.GetPosition(stream) - before).sqrMagnitude > 1e-5f);
+                else
+                    Near(before, handHandle.GetPosition(stream));
+
+                _ = stream.AsHuman().bodyPosition;
+                Near(measured ? desired : start, hipsHandle.GetLocalScale(stream));
+            });
+            Near(sceneScale, hips.localScale);
+        }
+
         /// <summary>The hips moved through their handle move the body: the whole pose follows.</summary>
         [Fact]
         public void TheHipsMovedThroughTheirHandleMoveTheBody()
