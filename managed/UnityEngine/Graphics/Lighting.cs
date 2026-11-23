@@ -763,6 +763,15 @@ namespace UnityEngine
                 ? BakedReflection(reflection.GetProperty("guid").GetString(), reflection.GetProperty("fileId").GetInt64())
                 : null;
 
+        /// <summary>Whether <paramref name="cube"/> is a project's baked cubemap asset a lighting
+        /// data names (not one of the built-in resources).</summary>
+        internal static bool IsProjectReflection(Cubemap cube)
+        {
+            foreach (var pair in s_Cubemaps)
+                if (pair.Value == cube) return !pair.Key.Item1.StartsWith("0000000000000000", StringComparison.Ordinal);
+            return false;
+        }
+
         /// <summary>A baked reflection a lighting data names (the skybox's, a probe's): a cubemap
         /// of the built-in resources, or a project's baked cubemap asset.</summary>
         internal static Cubemap BakedReflection(string guid, long fileId)

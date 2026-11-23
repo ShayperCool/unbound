@@ -181,6 +181,7 @@ namespace UnityEngine.Tests
             {
                 Assert.False(RealtimeGI.ScriptBakedThisSession(data.Path));
                 Assert.False(data.IsDirty);
+                var environment = RenderSettings.BakedEnvironment(file);
                 bool result = false;
                 var (logs, events) = Run(Phase.Edit, () => result = Lightmapping.Bake());
                 Assert.True(result);
@@ -194,6 +195,9 @@ namespace UnityEngine.Tests
                 Assert.Contains(logs.Messages, m => m.Type == LogType.Warning && m.Message.Contains("Q677"));
                 Assert.Contains(logs.Messages, m => m.Type == LogType.Warning && m.Message.Contains("'Added'"));
                 Assert.DoesNotContain(logs.Messages, m => m.Message.Contains("'Made'"));
+                // Where the bake makes no environment lighting (here: without the native side)
+                // the scene keeps the one it had, also when it loads again.
+                Assert.True(RealtimeGI.BakedEnvironmentKept(data.Path, environment.Probe, environment.Reflection));
                 // Said once: a second bake says nothing again.
                 var again = Run(Phase.Edit, () => Assert.True(Lightmapping.Bake()));
                 Assert.DoesNotContain(again.Logs.Messages, m => m.Message.Contains("LightingData.asset") || m.Message.Contains("Q677"));
@@ -201,6 +205,7 @@ namespace UnityEngine.Tests
             finally
             {
                 RealtimeGI.s_Warned.Clear();
+                RealtimeGI.ForgetEnvironment(data.Path);
                 RealtimeGI.SceneUnloaded(data.Handle.Value);
                 UnityEngine.SceneManagement.SceneManager.UnloadSceneAsync(scene);
             }

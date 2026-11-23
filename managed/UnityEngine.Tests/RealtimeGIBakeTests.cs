@@ -140,6 +140,7 @@ namespace Unbound.Tests
             {
                 RenderSettings.ambientMode = mode;
                 RenderSettings.SetBakedEnvironment(null, probeBefore, reflectionBefore);
+                RealtimeGI.ForgetEnvironment(path);
                 UnityEngine.Object.DestroyImmediate(cube);
             }
         }

@@ -119,6 +119,14 @@ namespace UnityEngine
             if (!string.IsNullOrEmpty(path)) s_BakedEnvironments[path] = (probe, reflection);
         }
 
+        /// <summary>Whether the scene at <paramref name="path"/> has, for the session, the
+        /// environment given (tests).</summary>
+        internal static bool BakedEnvironmentKept(string path, Rendering.SphericalHarmonicsL2? probe, Cubemap reflection) =>
+            s_BakedEnvironments.TryGetValue(path, out var made) && Equals(made.Probe, probe) && made.Reflection == reflection;
+
+        /// <summary>Forgets what a bake made of the scene at <paramref name="path"/> (tests).</summary>
+        internal static void ForgetEnvironment(string path) => s_BakedEnvironments.Remove(path);
+
         /// <summary>A scene loaded again (read with <paramref name="file"/>) that a script's bake
         /// made the environment lighting of this session has it again, as it has the bake's
         /// realtime GI.</summary>
@@ -148,37 +156,42 @@ namespace UnityEngine
         /// </summary>
         static void BakeEnvironment(LoadedFile file)
         {
-            // (Without the native side nothing is drawn or baked, as SceneLoaded.)
-            if (!Native.IsReady) return;
             string path = file.Path;
+            var (probe, reflection) = RenderSettings.BakedEnvironment(file);
+            // Where none is made the scene keeps what it had, also when it loads again (the bake
+            // stands in for its lighting data for the session). Without the native side nothing
+            // is drawn or baked, as SceneLoaded.
+            if (!Native.IsReady)
+            {
+                RememberEnvironment(path, probe, reflection);
+                return;
+            }
             const string kept = "the scene keeps the environment lighting it had";
-            if (!RenderSettings.InEffect(file))
+            string skipped = !RenderSettings.InEffect(file)
+                ? $"{path}: Lightmapping.Bake makes the environment lighting of the scene whose lighting settings are in effect (the active scene's); of the other open scenes it is not measured and not made: {kept}."
+                : QualitySettings.activeColorSpace != ColorSpace.Linear
+                    ? $"{path}: Lightmapping.Bake's environment lighting in a gamma colour space project is not measured and not made: {kept}."
+                    : !DynamicGI.SkyReadable()
+                        ? $"{path}: Lightmapping.Bake needs a graphics device to draw the sky for the environment lighting; without one it is not made: {kept}."
+                        : null;
+            if (skipped != null)
             {
-                Warn("bake-environment-scenes:" + path, $"{path}: Lightmapping.Bake makes the environment lighting of the scene whose lighting settings are in effect (the active scene's); of the other open scenes it is not measured and not made: {kept}.");
-                return;
-            }
-            if (QualitySettings.activeColorSpace != ColorSpace.Linear)
-            {
-                Warn("bake-environment-gamma:" + path, $"{path}: Lightmapping.Bake's environment lighting in a gamma colour space project is not measured and not made: {kept}.");
-                return;
-            }
-            if (!DynamicGI.SkyReadable())
-            {
-                Warn("bake-environment-headless:" + path, $"{path}: Lightmapping.Bake needs a graphics device to draw the sky for the environment lighting; without one it is not made: {kept}.");
+                Warn("bake-environment-kept:" + skipped, skipped);
+                RememberEnvironment(path, probe, reflection);
                 return;
             }
             if (Rendering.GraphicsSettings.currentRenderPipeline != null)
                 Warn("bake-environment-pipeline:" + path, $"{path}: Lightmapping.Bake's environment lighting with a render pipeline asset is not measured; Unbound makes it as the built-in render pipeline's.");
-            var (probe, reflection) = RenderSettings.BakedEnvironment(file);
             var parts = BakedParts(Rendering.SupportedRenderingFeatures.active, RenderSettings.ambientMode, RenderSettings.defaultReflectionMode);
             if (parts.Probe == EnvironmentPart.Kept)
                 Warn("bake-environment-custom-ambient:" + path, $"{path}: Lightmapping.Bake's ambient probe with a Custom ambient source is not measured and not made: the scene keeps the probe it had.");
             if (parts.Reflection == EnvironmentPart.Kept)
                 Warn("bake-environment-custom-reflection:" + path, $"{path}: Lightmapping.Bake's default reflection with a Custom reflection source is not measured and not made: the scene keeps the reflection it had.");
-            // The reflection an earlier bake of this scene made (its file, which this bake
-            // replaces or removes, in the Editor).
-            var earlier = !string.IsNullOrEmpty(path) && s_BakedEnvironments.TryGetValue(path, out var before) && s_MadeReflections.Contains(before.Reflection)
-                ? before.Reflection : null;
+            // The reflection an earlier bake of this scene made: one of this session's, or the
+            // one its own lighting data names (its file, which this bake replaces or removes, in
+            // the Editor: tests/projects/bakeenvironment EnvSkyThenNone, EnvBakedNoSky).
+            var earlier = reflection != null && (s_MadeReflections.Contains(reflection) || RenderSettings.IsProjectReflection(reflection))
+                ? reflection : null;
             if (parts.Probe == EnvironmentPart.Cleared)
                 probe = new Rendering.SphericalHarmonicsL2();
             else if (parts.Probe == EnvironmentPart.Made)
@@ -189,7 +202,7 @@ namespace UnityEngine
             {
                 // Without a skybox none is made: the scene keeps the reflection it had, but for
                 // one an earlier bake made (tests/projects/bakeenvironment EnvNoSky, which keeps
-                // the built-in lighting data's, and EnvSkyThenNone).
+                // the built-in lighting data's; EnvSkyThenNone, EnvBakedNoSky).
                 if (RenderSettings.skybox == null)
                     reflection = reflection == earlier ? null : reflection;
                 else
