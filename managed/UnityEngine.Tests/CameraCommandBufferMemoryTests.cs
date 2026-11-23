@@ -52,6 +52,9 @@ namespace UnityEngine.Tests
                 camera.AddCommandBufferAsync(evt, buffer, ComputeQueueType.Default);
                 camera.RemoveCommandBuffer(evt, buffer);
                 Assert.Same(buffer, Assert.Single(camera.GetCommandBuffers(evt)));
+                var invalid = (CameraEvent)(-1);
+                camera.AddCommandBuffer(invalid, buffer);
+                Assert.Same(buffer, Assert.Single(camera.GetCommandBuffers(invalid)));
                 Assert.Null(MemorySizes.RuntimeSize(camera));
             }
             finally
