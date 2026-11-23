@@ -61,7 +61,8 @@ namespace UnityEditorInternal
         public static string GetUnityBuildHash()
         {
             string revision = UnityEngine.ProjectInfo.UnityRevision;
-            if (string.IsNullOrEmpty(revision)) GetFullUnityVersion();
+            if (string.IsNullOrEmpty(revision) && s_UnmeasuredBuildFacts.Add(nameof(GetUnityBuildHash)))
+                Debug.LogError($"Unbound: the build revision of Unity {UnityEngine.ProjectInfo.UnityVersion} is not known (no Hub modules.json beside an installed Editor of it and none in ProjectSettings/ProjectVersion.txt): InternalEditorUtility.GetUnityBuildHash answers empty.");
             return revision ?? "";
         }
 

@@ -40,7 +40,9 @@ namespace Unbound.Runtime
         /// <summary>The build facts InternalEditorUtility reports (GetUnityBuildBranch,
         /// GetUnityRevision, GetUnityVersionDate, GetUnityDisplayVersionVerbose, GetUnityProductName,
         /// GetUnityCopyright), measured on 6000.0.71f1 and answered by every release of its family
-        /// (tests/projects/editorinternals version.*); null for a family without them.</summary>
+        /// (tests/projects/editorinternals version.*); null for a family without them. They are the
+        /// measured build's own identity (its branch names that release, its date and copyright are
+        /// its own), not values derived for each patch.</summary>
         internal static EditorBuildFacts EditorBuild => Family == ReleaseFamily.Unity6000_0 ? s_EditorBuild6000_0 : null;
 
         static readonly EditorBuildFacts s_EditorBuild6000_0 = new EditorBuildFacts(
