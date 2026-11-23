@@ -51,6 +51,8 @@ namespace UnityEngine.AI
         bool m_HasDestination;
         bool m_PathPending;
         NavMeshPath m_RequestedPath;
+        internal enum AssignmentRequest { None, Queued, Searching }
+        internal AssignmentRequest PendingAssignment { get; private set; }
         // A new agent reports a complete path, also while its first path is pending (measured).
         NavMeshPathStatus m_PathStatus = NavMeshPathStatus.PathComplete;
         Vector3 m_WrittenPosition;
@@ -359,6 +361,7 @@ namespace UnityEngine.AI
             m_HasDestination = true;
             m_PathPending = true;
             m_RequestedPath = null;
+            PendingAssignment = AssignmentRequest.None;
             AgentSystem.RequestPath(this);
             AgentSystem.PlanAtOnce(this, following);
             // A path given in the call to an agent that reported none is reported from the next update.
@@ -374,12 +377,20 @@ namespace UnityEngine.AI
                 ResetPath();
                 return false;
             }
+            bool keepRequest = Compat.NavMeshPathAssignmentMeasured && m_PathPending
+                && m_Crowd.state == DtCrowdAgentState.DT_CROWDAGENT_STATE_WALKING && !isOnOffMeshLink;
             m_RequestedPath = new NavMeshPath();
             path.CopyTo(m_RequestedPath);
             m_Destination = path.m_Corners.Length > 0 ? path.m_Corners[path.m_Corners.Length - 1] : m_NextPosition;
             m_ReportedDestination = m_Destination;
             m_HasDestination = true;
             AgentSystem.ApplyPath(this, m_RequestedPath);
+            if (keepRequest)
+            {
+                m_PathPending = true;
+                PendingAssignment = AgentSystem.PathSearchStarted(this)
+                    ? AssignmentRequest.Searching : AssignmentRequest.Queued;
+            }
             if (Compat.NavMeshCorridorReportingMeasured)
             {
                 // A directly assigned path reports immediately, even after a same-call
@@ -625,7 +636,7 @@ namespace UnityEngine.AI
             m_PathStatus = NavMeshPathStatus.PathComplete;
             m_PathFromCall = false;
             m_HasDestination = false;
-            m_PathPending = false;
+            SetPathPending(false);
             CatchUpStaleness();
         }
 
@@ -838,7 +849,11 @@ namespace UnityEngine.AI
 
         // ------------------------------------------------------------------ system hooks
 
-        internal void SetPathPending(bool pending) => m_PathPending = pending;
+        internal void SetPathPending(bool pending)
+        {
+            m_PathPending = pending;
+            if (!pending) PendingAssignment = AssignmentRequest.None;
+        }
         internal void SetPathStatus(NavMeshPathStatus status) => m_PathStatus = status;
         internal void SetPathEnd(Vector3 end) => m_ReportedDestination = end;
         internal bool HasDestination => m_HasDestination;
@@ -1024,16 +1039,25 @@ namespace Unbound.Runtime
                 var ag = agent.m_Crowd;
                 if (ag == null || (!changed && !ag.deferPathValidation)) continue;
                 ag.deferPathValidation = false;
-                if (!agent.FollowingPath || agent.pathPending || agent.isOnOffMeshLink) continue;
+                if (!agent.FollowingPath || agent.isOnOffMeshLink) continue;
+                var assignment = agent.PendingAssignment;
+                if (agent.pathPending && assignment == NavMeshAgent.AssignmentRequest.None) continue;
                 var path = ag.corridor.GetPath();
                 int count = ag.corridor.GetPathCount();
                 for (int i = 0; i < count; i++)
                 {
                     if (agent.m_Surface.Mesh.GetTileAndPolyByRef(path[i], out _, out var poly).Failed()
                         || poly.GetPolyType() != DtPolyTypes.DT_POLYTYPE_OFFMESH_CONNECTION || poly.flags != 0) continue;
-                    PlanAgain(agent);
-                    agent.CatchUpStaleness();
-                    ag.waitingForConnection = false;
+                    if (assignment == NavMeshAgent.AssignmentRequest.Queued)
+                    {
+                        agent.ResetPath();
+                    }
+                    else
+                    {
+                        PlanAgain(agent);
+                        agent.CatchUpStaleness();
+                        ag.waitingForConnection = false;
+                    }
                     break;
                 }
             }
@@ -1676,6 +1700,8 @@ namespace Unbound.Runtime
         }
 
         static readonly Dictionary<NavMeshAgent, NavMesh.PathSearch> s_Searches = new Dictionary<NavMeshAgent, NavMesh.PathSearch>();
+
+        internal static bool PathSearchStarted(NavMeshAgent agent) => s_Searches.ContainsKey(agent);
         /// <summary>Agents whose search under way a NavMesh rebuild restarted: finished in one go.</summary>
         static readonly HashSet<NavMeshAgent> s_Restarted = new HashSet<NavMeshAgent>();
 
@@ -1698,7 +1724,8 @@ namespace Unbound.Runtime
                     }
                     continue;
                 }
-                if (!s_Searches.TryGetValue(agent, out var search))
+                bool started = s_Searches.TryGetValue(agent, out var search);
+                if (!started)
                 {
                     search = NavMesh.PathSearch.Begin(agent.m_Surface, PathOrigin(agent), agent.RequestedDestination, agent.Filter, agent.agentTypeID);
                     if (search == null)
@@ -1714,7 +1741,11 @@ namespace Unbound.Runtime
                 int allowed = restarted ? int.MaxValue : budget;
                 bool finished = search.Step(ref allowed);
                 if (!restarted) budget = allowed;
-                if (!finished) break;
+                if (!finished)
+                {
+                    if (!started && agent.PendingAssignment == NavMeshAgent.AssignmentRequest.Queued) WaitForAssignedRequest(agent);
+                    break;
+                }
                 s_PathRequests.RemoveAt(0);
                 s_Searches.Remove(agent);
                 if (search.Result == null)
@@ -1723,8 +1754,20 @@ namespace Unbound.Runtime
                     agent.SetPathStatus(NavMeshPathStatus.PathInvalid);
                     continue;
                 }
+                bool assignedDuringSearch = started && agent.PendingAssignment == NavMeshAgent.AssignmentRequest.Searching;
+                // A completed request for the assigned path's final polygon keeps the assigned endpoint.
+                if (assignedDuringSearch && search.Result.status == NavMeshPathStatus.PathComplete
+                    && agent.pathStatus == NavMeshPathStatus.PathComplete && agent.m_Crowd.corridor.GetLastPoly() == search.EndPolygon)
+                {
+                    agent.SetPathPending(false);
+                    continue;
+                }
+                // An older result can replace the reported route. Replanning still uses
+                // the goal selected by SetPath.
+                var staleness = agent.Staleness;
                 // The corridor starts where the search did (see PathOrigin).
                 ApplyPath(agent, search.Result, NavMesh.V(search.Origin));
+                if (assignedDuringSearch) agent.RestoreStaleness(staleness);
                 if (Compat.NavMeshLinkActivationMeasured && search.ActivationVersion != NavWorld.LinkActivationVersion)
                 {
                     // A request completed across an activation change reports its result stale
@@ -1733,6 +1776,18 @@ namespace Unbound.Runtime
                     agent.m_Crowd.deferPathValidation = true;
                 }
             }
+        }
+
+        // A queued request begins on the assigned destination. If it spans more than this
+        // update, the agent waits at its current polygon until a new corridor is ready.
+        static void WaitForAssignedRequest(NavMeshAgent agent)
+        {
+            var ag = agent.m_Crowd;
+            ag.corridor.Reset(ag.corridor.GetFirstPoly(), ag.corridor.GetPos());
+            CrowdOf(agent.m_Surface).ResetMoveTarget(ag);
+            ag.vel = ag.nvel = RcVec3f.Zero;
+            ag.ncorners = ag.reportedCorners = 0;
+            ag.hasSteer = false;
         }
 
         /// <summary>Where the agent's paths start: where it stands; on a link (crossing or waiting),

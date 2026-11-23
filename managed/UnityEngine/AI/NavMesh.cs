@@ -229,6 +229,8 @@ namespace UnityEngine.AI
             internal NavMeshPath Result;
             /// <summary>Where the search starts, on the NavMesh.</summary>
             internal Vector3 Origin => m_Start;
+            /// <summary>The polygon the search originally targeted.</summary>
+            internal long EndPolygon => m_EndRef;
             internal int ActivationVersion;
             internal int PathStaleVersion;
 

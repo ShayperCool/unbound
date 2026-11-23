@@ -498,3 +498,43 @@ python3 tests/projects/navlinks/projection.py editor --profile linkversion --rel
 python3 tests/projects/navlinks/projection.py publish --profile linkversion --release 6000.0.71f1 --label L
 UNBOUND_CLI=.../unbound python3 tests/projects/navlinks/projection.py gate --profile linkversion --release 6000.0.71f1
 ```
+## Assigning a path while a destination request is pending
+
+Unity 6.0 documents that SetPath resumes movement along an accepted path
+and clears the path when an assignment fails. SetDestination may need
+several updates to compute a path and keeps pathPending true while it
+does. [NavMeshAgent.SetPath](https://docs.unity.com/en-us/engine/6000.0/script-reference/unityengine/ai/navmeshagent/setpath),
+[NavMeshAgent.SetDestination](https://docs.unity.com/en-us/engine/6000.0/script-reference/unityengine/ai/navmeshagent/setdestination),
+[NavMeshAgent.pathPending](https://docs.unity.com/en-us/engine/6000.0/script-reference/unityengine/ai/navmeshagent/pathpending).
+
+The Unity 6000.0.71f1 probe gives the agent a path while an earlier
+SetDestination is pending. The assigned route is visible immediately and
+the pending flag remains set. If the search has yet to start, it uses the
+assigned route's final point when its turn comes. If that new search
+exceeds the remaining iteration budget, the agent reports no route and
+waits at its current polygon. A short search to the endpoint of an
+assigned partial path can complete this new route.
+
+A search that already started can finish at its earlier goal. The agent
+keeps the assigned endpoint if both complete routes end on the same
+polygon. A cost change can keep the older result stale. The controls
+distinguish an actual search in progress from a queued agent that has
+already waited an update behind another request. They also cover
+movement, a second assignment, ResetPath and a failed assignment.
+
+When a link is deactivated, the assigned corridor is checked before the
+pending request advances. A queued request is cleared if the assigned
+corridor crosses the invalid link. If a search has started, that invalid
+corridor is replanned immediately. If the assigned corridor stays valid
+and an older result later crosses the invalid link, the agent replans to
+the goal from SetPath at the following update.
+
+The probe measures agents walking on the NavMesh on Unity 6000.0.71f1.
+Assignments during link traversal and after a NavMesh rebuild are
+unmeasured. Replacing a pending request with another SetDestination is a
+separate open case. All 162 records and 1,770 values match at the existing
+tolerances. One velocity component differs by about 1.4e-7.
+
+    python3 tests/projects/navlinks/projection.py editor --release 6000.0.71f1 --profile assignment --label L
+    python3 tests/projects/navlinks/projection.py publish --release 6000.0.71f1 --profile assignment --label L
+    UNBOUND_CLI=.../unbound python3 tests/projects/navlinks/projection.py gate --release 6000.0.71f1 --profile assignment
