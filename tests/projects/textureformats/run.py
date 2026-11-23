@@ -256,9 +256,11 @@ def unbound(work, release, only=None):
     env = dict(os.environ, TEXTURE_FORMATS_PROBE_OUT=str(out/OUTPUT))
     if only is not None:
         env['TEXTURE_FORMATS_PROBE_ONLY'] = only
+    # Match the batch Editor's framebuffer for the full-screen resize controls.
+    size = '640x480' if DEVICE in RESOLVE_DEVICES else '64x64'
     with (out/'unbound.log').open('w') as log:
         result = subprocess.run([str(LAUNCHER), '--kind', 'engine-gpu', 'timeout', '600', cli, 'run', '-p', str(project),
-                                 '--no-watch', '--frames', '30', '--size', '64x64',
+                                 '--no-watch', '--frames', '30', '--size', size,
                                  *([] if MACOS else ['--force-'+('vulkan' if DEVICE in VULKAN_DEVICES else 'glcore')])],
                                 env=env, stdout=log, stderr=subprocess.STDOUT)
     print('unbound exit', result.returncode, out)

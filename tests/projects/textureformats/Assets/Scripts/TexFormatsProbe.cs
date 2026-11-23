@@ -766,6 +766,7 @@ public static class TexFormatsProbe
         {
             CommandResolveDisplayPlacementCases();
             CommandResolveDisplayEdges();
+            CommandResolveDisplayPatterns();
             CommandResolveUncreatedDirect();
         }
         finally
@@ -886,6 +887,63 @@ public static class TexFormatsProbe
         }
     }
 
+    static void CommandResolveDisplayPatterns()
+    {
+        const string prefix = "rt.commandResolve.displayPatterns";
+        var material = Own(new Material(s_Mat.shader));
+        var dimensions = new Rect(0f, 0f, Screen.width, Screen.height);
+        var cases = new[]
+        {
+            ("sameSize", new Rect(4f, 5f, 4f, 4f), new Rect(9f, 8f, 4f, 4f)),
+            ("enlarged", new Rect(4f, 5f, 4f, 4f), new Rect(9f, 8f, 14f, 13f)),
+            ("shrunk", new Rect(4f, 5f, 16f, 12f), new Rect(9f, 8f, 5f, 7f)),
+            ("maximized", new Rect(4f, 5f, 4f, 4f), dimensions),
+            ("restored", dimensions, new Rect(9f, 8f, 14f, 13f)),
+        };
+        Value(prefix + ".screenWidth", Screen.width.ToString(CultureInfo.InvariantCulture));
+        Value(prefix + ".screenHeight", Screen.height.ToString(CultureInfo.InvariantCulture));
+        foreach (var (hdr, aa) in new[] { (false, 4), (true, 0), (true, 4) })
+        foreach (var (name, start, finish) in cases)
+        {
+            string key = prefix + "." + hdr + "." + aa + "." + name;
+            var (_, target) = ResolvePartialDisplay(hdr, aa, start, finish, pattern: material);
+            int left = Math.Min(target.width - 1, (int)finish.x + (int)finish.width / 8);
+            int right = Math.Min(target.width - 1, (int)finish.x + (int)finish.width / 2);
+            int lower = Math.Min(target.height - 1, (int)finish.y + (int)finish.height / 4);
+            int upper = Math.Min(target.height - 1, (int)finish.y + (int)finish.height * 7 / 8);
+            Value(key + ".lower", Readback(AsyncGPUReadback.Request(target, 0, 0, target.width, lower, 1, 0, 1, TextureFormat.RGBA32)));
+            Value(key + ".upper", Readback(AsyncGPUReadback.Request(target, 0, 0, target.width, upper, 1, 0, 1, TextureFormat.RGBA32)));
+            Value(key + ".left", Readback(AsyncGPUReadback.Request(target, 0, left, 1, 0, target.height, 0, 1, TextureFormat.RGBA32)));
+            Value(key + ".right", Readback(AsyncGPUReadback.Request(target, 0, right, 1, 0, target.height, 0, 1, TextureFormat.RGBA32)));
+        }
+    }
+
+    static void DrawResolvePattern(Material material)
+    {
+        GL.PushMatrix();
+        GL.LoadOrtho();
+        try
+        {
+            Quad(0f, 0f, .25f, .25f, Color.red);
+            Quad(.25f, 0f, 1f, .25f, Color.white);
+            Quad(0f, .25f, .25f, 1f, Color.cyan);
+            Quad(.25f, .25f, 1f, 1f, Color.yellow);
+        }
+        finally { GL.PopMatrix(); }
+
+        void Quad(float x0, float y0, float x1, float y1, Color color)
+        {
+            material.SetVector("_Color", color);
+            material.SetPass(0);
+            GL.Begin(GL.QUADS);
+            GL.Vertex3(x0, y0, 0);
+            GL.Vertex3(x0, y1, 0);
+            GL.Vertex3(x1, y1, 0);
+            GL.Vertex3(x1, y0, 0);
+            GL.End();
+        }
+    }
+
     static void CommandResolveUncreatedDirect()
     {
         GL.sRGBWrite = false;
@@ -923,11 +981,15 @@ public static class TexFormatsProbe
     }
 
     static (RenderTexture source, RenderTexture destination) ResolvePartialDisplay(bool hdr, int aa, Rect viewport,
-        Rect? lateViewport = null, bool? write = null, bool destinationSrgb = false)
+        Rect? lateViewport = null, bool? write = null, bool destinationSrgb = false, Material pattern = null)
     {
         QualitySettings.antiAliasing = aa;
         GL.sRGBWrite = false;
-        var desc = new RenderTextureDescriptor(24, 24, RenderTextureFormat.ARGB32, 0) { msaaSamples = 4, sRGB = destinationSrgb };
+        // Keep the readback within the batch Editor's framebuffer, including when Unity
+        // reports a larger logical viewport for the full-screen camera.
+        const int PatternSize = 192;
+        int size = pattern == null ? 24 : PatternSize;
+        var desc = new RenderTextureDescriptor(size, size, RenderTextureFormat.ARGB32, 0) { msaaSamples = 4, sRGB = destinationSrgb };
         var source = Target(desc);
         source.Create();
         desc.msaaSamples = 1;
@@ -954,10 +1016,11 @@ public static class TexFormatsProbe
         void OnPostRender(Camera current)
         {
             if (current != camera) return;
+            if (pattern != null) DrawResolvePattern(pattern);
             if (lateViewport.HasValue) camera.pixelRect = lateViewport.Value;
             if (write.HasValue) GL.sRGBWrite = write.Value;
         }
-        if (lateViewport.HasValue || write.HasValue) Camera.onPostRender += OnPostRender;
+        if (lateViewport.HasValue || write.HasValue || pattern != null) Camera.onPostRender += OnPostRender;
         try { camera.Render(); }
         finally
         {

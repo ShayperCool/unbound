@@ -70,8 +70,9 @@ These are observations of this release and device, not documented guarantees:
   destination's format when writing it. A late `GL.sRGBWrite` change controls
   how its intermediate reaches the display.
   A partial camera presents its intermediate scaled to the presentation viewport
-  while the rest comes from the display. The viewport rounds its endpoints
-  before computing the intermediate's size. A positive viewport that rounds
+  while the rest comes from the display. The patterned controls measure bilinear
+  interpolation across rows and columns when the viewport changes size. The viewport
+  rounds its endpoints before computing the intermediate's size. A positive viewport that rounds
   to zero contributes no pixels. A zero-width or zero-height camera leaves
   the destination alone. Controls cover fractional and moved viewports,
   negative origins, normalized channels, half and full floats, and sRGB
