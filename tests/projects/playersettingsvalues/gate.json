@@ -1,0 +1,8 @@
+{
+  "commands": ["python3 tests/projects/playersettingsvalues/run.py gate"],
+  "summary": "playersettingsvalues: .*",
+  "engine_paths": [
+    "managed/UnityEngine/Editor/PlayerSettingsValues.cs",
+    "managed/UnityEngine/Editor/SettingsAssets.cs"
+  ]
+}
