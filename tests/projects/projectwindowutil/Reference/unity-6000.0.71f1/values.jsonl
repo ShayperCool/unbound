@@ -18,7 +18,7 @@
 {"k":"create.assetNull","v":"throws=NullReferenceException:Object reference not set to an instance of an object|logs=<none>|created=none|loaded=<null>|selection=GameObject:Marker|willCreate="}
 {"k":"create.folder","v":"throws=<none>|logs=<none>|created=folder|loaded=DefaultAsset:New Folder|selection=<null>|willCreate=Assets/New Folder.meta"}
 {"k":"create.folderAgain","v":"throws=<none>|logs=<none>|created=folder|loaded=DefaultAsset:New Folder 1|selection=<null>|willCreate=Assets/New Folder 1.meta"}
-{"k":"create.scene","v":"throws=<none>|logs=<none>|created=scene gameObjects=Directional Light,Main Camera|loaded=SceneAsset:New Scene|selection=<null>|willCreate=Assets/New Scene.unity,Assets/New Scene.unity.meta"}
+{"k":"create.scene","v":"throws=<none>|logs=<none>|created=scene gameObjects=Directional Light,Main Camera|skybox={fileID: 0}|loaded=SceneAsset:New Scene|selection=<null>|willCreate=Assets/New Scene.unity,Assets/New Scene.unity.meta"}
 {"k":"create.withContent","v":"throws=<none>|logs=<none>|created=text=one\\ntwo\\nthree\\nfour|loaded=TextAsset:Text|selection=<null>|willCreate=Assets/Data/Text.txt,Assets/Data/Text.txt.meta"}
 {"k":"create.template","v":"throws=<none>|logs=<none>|created=text=// My Note (MyNote, myNote)\\nclass MyNote\\n{\\n    int value;\\n}\\nend\\n|loaded=TextAsset:My Note|selection=<null>|willCreate=Assets/Data/My Note.txt,Assets/Data/My Note.txt.meta"}
 {"k":"create.templateLower","v":"throws=<none>|logs=<none>|created=text=// note two (notetwo, myNotetwo)\\nclass notetwo\\n{\\n    int value;\\n}\\nend\\n|loaded=TextAsset:note two|selection=<null>|willCreate=Assets/Data/note two.txt,Assets/Data/note two.txt.meta"}
@@ -27,4 +27,5 @@
 {"k":"create.templateMissing","v":"throws=FileNotFoundException:The template file \"Assets/Data/Missing.txt\" could not be found.|logs=<none>|created=none|loaded=<null>|selection=GameObject:Marker|willCreate="}
 {"k":"create.scriptWithContent","v":"throws=<none>|logs=<none>|returned=TextAsset:Direct|created=text=a\\nb|loaded=TextAsset:Direct|willCreate=Assets/Data/Direct.txt,Assets/Data/Direct.txt.meta"}
 {"k":"ancestors","v":"file=[\"Assets\",\"Assets/Data\"]|folder=[\"Assets\"]|scene=[\"\"]|zero=[]|max=[]"}
+{"k":"ancestors.package","v":"[\"Packages/com.unity.modules.audio\",<int.MaxValue>]"}
 {"k":"complete","v":true}

@@ -15,7 +15,8 @@ template, `CreateScriptAssetWithContent`): what was thrown and logged, the file 
 file's text, a scene's GameObject names, sorted), the object loaded from it, the selection and the
 paths `AssetModificationProcessor.OnWillCreateAsset` heard (`Assets/Scripts/CreationRecorder.cs`);
 `create.lineEndings` the project's line endings for new scripts; `ancestors` `GetAncestors` of a file,
-a folder, a scene object, 0 and `int.MaxValue` (as asset paths).
+a folder, a scene object, 0 and `int.MaxValue` (as asset paths), `ancestors.package` of a built-in
+package's `package.json`; `create.scene` also the new scene's skybox material.
 
 ```sh
 python3 tests/projects/projectwindowutil/run.py record --label a

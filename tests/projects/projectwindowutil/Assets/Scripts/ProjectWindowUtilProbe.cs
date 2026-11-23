@@ -139,6 +139,13 @@ static class ProjectWindowUtilProbe
             return "file=" + Paths(file.GetInstanceID()) + "|folder=" + Paths(folder.GetInstanceID()) + "|scene=" + Paths(marker.GetInstanceID())
                 + "|zero=" + Paths(0) + "|max=" + Paths(int.MaxValue);
         });
+        Check("ancestors.package", () =>
+        {
+            var manifest = AssetDatabase.LoadMainAssetAtPath("Packages/com.unity.modules.audio/package.json");
+            if (manifest == null) return "<no package asset>";
+            return "[" + string.Join(",", ProjectWindowUtil.GetAncestors(manifest.GetInstanceID())
+                .Select(a => a == int.MaxValue ? "<int.MaxValue>" : Text(AssetDatabase.GetAssetPath(a))).OrderBy(p => p, StringComparer.Ordinal)) + "]";
+        });
     }
 
     static void Create(string key, Object marker, Action create, string path)
@@ -169,7 +176,7 @@ static class ProjectWindowUtilProbe
             // Sorted: a new scene's objects get random file IDs, which order the file.
             var names = lines.Select((l, i) => (l, i)).Where(x => x.l == "GameObject:").Select(x => lines.Skip(x.i).First(l => l.StartsWith("  m_Name: ", StringComparison.Ordinal)).Substring(10))
                 .OrderBy(n => n, StringComparer.Ordinal);
-            what = "scene gameObjects=" + string.Join(",", names);
+            what = "scene gameObjects=" + string.Join(",", names) + "|skybox=" + lines.First(l => l.StartsWith("  m_SkyboxMaterial: ", StringComparison.Ordinal)).Substring(20);
         }
         else what = "file";
         return "created=" + what + "|loaded=" + Describe(AssetDatabase.LoadMainAssetAtPath(path));
