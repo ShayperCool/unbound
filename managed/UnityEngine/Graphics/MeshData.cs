@@ -162,7 +162,8 @@ namespace UnityEngine
                 // A writable copy carries its variable table alongside the edited streams.
                 // Copies of a fixed layout can retain the destination's existing table.
                 var packed = m_CopiedPackedWeights;
-                if (packed == null && m_CopiedSkinLayout.HasValue && mesh.RuntimeSkinWeights is { IsPacked: true } retained)
+                if (packed == null && m_CopiedSkinLayout is (SkinWeights.OneBone or SkinWeights.TwoBones or SkinWeights.FourBones) &&
+                    mesh.RuntimeSkinWeights is { IsPacked: true } retained)
                     packed = retained;
                 mesh.DropRuntimeBoneWeights();
                 mesh.SetVertexBufferParamsInternal(VertexCount, Layout);
