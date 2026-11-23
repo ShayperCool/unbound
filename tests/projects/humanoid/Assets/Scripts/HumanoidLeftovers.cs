@@ -233,6 +233,44 @@ public partial class HumanoidProbe
     }
 
 
+    static void GenericControllerMotion()
+    {
+#if UNITY_EDITOR
+        foreach (var mode in new[] { "plain", "plainOff", "inactiveHumanState", "inactiveHumanStateOff",
+            "zeroAdditiveLayer" })
+        {
+            string key = "genericController." + mode;
+            bool move = !mode.EndsWith("Off", StringComparison.Ordinal);
+            bool upper = mode.EndsWith("Layer", StringComparison.Ordinal);
+            Guarded(key, () => PlayGraph(key, graph =>
+            {
+                var controller = new UnityEditor.Animations.AnimatorController();
+                controller.AddLayer("Base Layer");
+                if (upper) controller.AddLayer("Additive");
+                var layers = controller.layers;
+                var baseMachine = layers[0].stateMachine;
+                var generic = baseMachine.AddState("Generic");
+                generic.motion = ControllerClip("HumanGenericMove");
+                baseMachine.defaultState = generic;
+                if (mode.StartsWith("inactiveHumanState", StringComparison.Ordinal))
+                    baseMachine.AddState("Humanoid").motion = ControllerClip("HumanA");
+                if (upper)
+                {
+                    layers[1].blendingMode = UnityEditor.Animations.AnimatorLayerBlendingMode.Additive;
+                    var layerMachine = layers[1].stateMachine;
+                    var additive = layerMachine.AddState("Additive");
+                    additive.motion = ControllerClip("HumanA");
+                    layerMachine.defaultState = additive;
+                }
+                controller.layers = layers;
+                var playable = AnimatorControllerPlayable.Create(graph, controller);
+                if (upper) playable.SetLayerWeight(1, 0f);
+                return playable;
+            }, move, velocities: true, localsEvery: 4));
+        }
+#endif
+    }
+
     static void AdditiveEmptyBody()
     {
 #if UNITY_EDITOR
@@ -320,6 +358,7 @@ public partial class HumanoidProbe
     static void ApiCurves()
     {
         AdditiveEmptyBody();
+        GenericControllerMotion();
         foreach (var mode in new[] { "setCurve", "editorCurve", "mirror", "mirrorFootIK", "plainFootIK",
             "plainJob", "plainJobFootIK", "mirrorJob", "mirrorJobFootIK", "mirrorJobPartialFoot",
             "mirrorJobPartialHand", "mirrorJobFootPosition", "mirrorJobFullFoot",
