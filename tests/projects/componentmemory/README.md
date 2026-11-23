@@ -35,3 +35,21 @@ the captures. The Scripting API describes duplicate registrations and their remo
 
 Add `--profile light` to the commands above to record, publish or check this profile. Light memory
 with a scriptable render pipeline and other release families remains unmeasured.
+
+## AudioSource distance curve allocation
+
+The audio profile records attached AudioSources with script-created and scene-authored distances.
+Each measurement stores the key count followed by the reported bytes before and after retrieving
+that curve. The profiler accounts 1288 base bytes for a new source. The rolloff curve has two key
+slots in that cost and the other curves each have one. Each extra slot costs 32 bytes. A source
+retains its per-curve reservation when a curve shrinks or a scalar setter changes it to one key.
+A clone allocates storage for the current keys. AudioClip storage is accounted separately. The
+attached scene fixture starts with different lengths on all four curves and checks a clone after
+shrinking them. Persistent asset components, other release families and copying built-in settings
+through EditorUtility.CopySerialized remain outside this profile.
+
+Unity 6000.0 documents distance normalization and the single key returned after a corresponding
+scalar setter. The 6000.0.71f1 measurements also capture the empty-curve error and null-curve
+exception with a populated curve before the call. [SetCustomCurve](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/AudioSource.SetCustomCurve.html), [GetCustomCurve](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/AudioSource.GetCustomCurve.html)
+
+Add `--profile audio` to the record, publish and gate commands above.

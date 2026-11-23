@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Record native allocation sizes of components with a fixed per-object cost."""
+"""Record and compare native allocation sizes of attached components."""
 import argparse
 import os
 from pathlib import Path
@@ -11,9 +11,11 @@ import value_probe  # noqa: E402
 
 PROBE = Path(__file__).resolve().parent
 BASE = (PROBE.parent/'formatmapping', ['Assets/Scenes', 'Assets/Scenes.meta', 'Packages', 'ProjectSettings'])
+AUDIO_BASE = [BASE, (PROBE/'Fixtures/audio', ['Assets/Scenes/Probe.unity'])]
 PROFILES = {
-    'fixed': ('RecordComponentMemory.Record', 'COMPONENT_MEMORY_OUT', None),
-    'light': ('RecordLightAllocation.Record', 'LIGHT_ALLOCATION_OUT', 'light'),
+    'fixed': ('RecordComponentMemory.Record', 'COMPONENT_MEMORY_OUT', None, BASE),
+    'light': ('RecordLightAllocation.Record', 'LIGHT_ALLOCATION_OUT', 'light', BASE),
+    'audio': ('RecordAudioSourceMemory.Record', 'AUDIO_SOURCE_MEMORY_OUT', 'audio', AUDIO_BASE),
 }
 
 
@@ -47,7 +49,7 @@ def main():
     parser.add_argument('--profile', choices=PROFILES, default='fixed')
     args = parser.parse_intermixed_args()
     os.environ['UNBOUND_PROBE_UNITY_VERSION'] = args.release
-    method, variable, profile = PROFILES[args.profile]
+    method, variable, profile, base = PROFILES[args.profile]
     if args.mode == 'publish':
         roots = [directory(label, profile) for label in args.labels]
         value_probe.verify_sealed_value_repeats(roots)
@@ -61,11 +63,11 @@ def main():
         raise SystemExit(f'{out}: expected a fresh run directory')
     if args.mode == 'record':
         value_probe.record(PROBE, method, variable, str(out),
-                           batch=True, macos_batch=True, base=BASE)
+                           batch=True, macos_batch=True, base=base)
         validate_capture(out, args.release, method)
         value_probe.seal_value_capture(out)
         return 0
-    return value_probe.gate(PROBE, variable, str(out), 0, ['--headless', '8'], base=BASE, profile=profile)
+    return value_probe.gate(PROBE, variable, str(out), 0, ['--headless', '8'], base=base, profile=profile)
 
 
 if __name__ == '__main__':
