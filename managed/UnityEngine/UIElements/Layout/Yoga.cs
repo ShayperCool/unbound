@@ -160,7 +160,8 @@ namespace Unbound.UIElements.Layout
         public bool RecomputesFlexBasis { get; set; }
 
         /// <summary>The configuration of UI Toolkit's layout engine: standard flexbox layout with the
-        /// differences each flag above names.</summary>
+        /// differences each flag above names. Percentage margins, paddings and offsets and the minimum
+        /// over a smaller maximum follow UI Toolkit (and CSS) in every configuration, not by flag.</summary>
         internal static YogaConfig UIToolkit() => new YogaConfig
         {
             RoundEdgesToPixelGrid = true,
