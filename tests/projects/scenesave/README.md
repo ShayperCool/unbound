@@ -84,6 +84,13 @@ file the run added, changed or removed.
   transitions in different orders, a blend tree, a synced layer overriding a motion)
   before and after `SaveAssets`, and a controller made with a clip. Recorded in the Linux Editor
   (batch mode, no graphics: two identical captures).
+- `controller-additions` (Edit Mode, `ControllerAdditionTests`): an animator controller read from its
+  file (`Assets/Existing/Basic.controller`, a copy of the file `controller-assets` records the Editor
+  writing) given a parameter, a second layer, a state with a transition from its default state, a
+  sub-state machine with a state and a blend tree state, which the controller API adds to the asset
+  with `AssetDatabase.AddObjectToAsset`: whether they are sub-assets and dirty, the objects the file
+  holds, and the file before and after `SaveAssets`. Recorded in the macOS Editor (batch mode, no
+  graphics: two identical captures; the file does not depend on the OS).
 - `modification-timing` (Edit Mode, `ModificationTimingTests`): when a prefab instance's property
   modifications (`PrefabUtility.GetPropertyModifications`) take a change made by script: a
   Transform's position and a script field set directly, then after a frame, after

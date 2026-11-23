@@ -13,7 +13,7 @@ PrefabWriteTests), `create-assets` (Edit Mode CreateAssetTests), `engine-assets`
 EngineAssetTests), `prefab-nested` (Edit Mode NestedPrefabTests), `settings-writes` (Edit Mode
 SettingsWriteTests), `mesh-bounds` (Edit Mode MeshBoundsTests), `native-saves` (Edit Mode
 NativeSaveTests), `clip-assets` (Edit Mode ClipAssetTests), `controller-assets` (Edit Mode
-ControllerAssetTests), `modification-timing` (Edit Mode ModificationTimingTests), `scene-api-rest`
+ControllerAssetTests), `controller-additions` (Edit Mode ControllerAdditionTests), `modification-timing` (Edit Mode ModificationTimingTests), `scene-api-rest`
 (Edit Mode SceneApiRestTests).
 """
 import argparse
@@ -46,6 +46,7 @@ CASES = {
     'native-saves': ('EditMode', 'NativeSaveTests.NativeSaves'),
     'clip-assets': ('EditMode', 'ClipAssetTests.ClipAssets'),
     'controller-assets': ('EditMode', 'ControllerAssetTests.ControllerAssets'),
+    'controller-additions': ('EditMode', 'ControllerAdditionTests.ControllerAdditions'),
     'modification-timing': ('EditMode', 'ModificationTimingTests.ModificationTiming'),
     'scene-api-rest': ('EditMode', 'SceneApiRestTests.SceneApiRest'),
 }

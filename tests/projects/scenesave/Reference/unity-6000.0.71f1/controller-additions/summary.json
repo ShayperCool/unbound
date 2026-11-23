@@ -1,0 +1,8 @@
+{
+  "case": "controller-additions",
+  "exit": 0,
+  "changed": [
+    "Assets/Existing/Basic.controller"
+  ],
+  "removed": []
+}

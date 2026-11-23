@@ -1,0 +1,13 @@
+{"key": "existing.loaded", "value": true}
+{"key": "existing.objects", "value": 19}
+{"key": "added.subAsset", "value": false}
+{"key": "added.path", "value": "Assets/Existing/Basic.controller"}
+{"key": "added.dirty", "value": true}
+{"key": "controller.dirty", "value": true}
+{"key": "edited.objects", "value": 27}
+{"key": "existing.edited", "value": "95386a006e841e1f356b04ecb710667369438cf0efc281195f83f8d6b1d29f06"}
+{"key": "existing.saved", "value": "b040e91ad43941376f30f49b32e7e7f77e4de3ffbb80c615447492ca34f3c2b8"}
+{"key": "saved.added.dirty", "value": false}
+{"key": "saved.controller.dirty", "value": false}
+{"key": "saved.objects", "value": 27}
+{"key": "saved.names", "value": "AnimatorController:Basic,AnimatorState:AddedBlend,AnimatorState:AddedState,AnimatorState:Fall,AnimatorState:Grip,AnimatorState:Idle,AnimatorState:Inner,AnimatorState:LayerState,AnimatorState:Paddle,AnimatorState:Run,AnimatorStateMachine:AddedLayer,AnimatorStateMachine:AddedMachine,AnimatorStateMachine:Air,AnimatorStateMachine:Base Layer,AnimatorStateMachine:Climb,AnimatorStateMachine:Swim,AnimatorStateTransition:,AnimatorStateTransition:,AnimatorStateTransition:,AnimatorStateTransition:,AnimatorStateTransition:,AnimatorTransition:,AnimatorTransition:,AnimatorTransition:,AnimatorTransition:,AnimatorTransition:,BlendTree:AddedBlend"}
