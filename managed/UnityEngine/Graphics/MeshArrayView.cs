@@ -12,9 +12,11 @@ namespace UnityEngine
     {
         GCHandle m_Pin;
         AtomicSafetyHandle m_Safety;
+        readonly int m_Capacity;
 
         internal MeshArrayView(T[] data)
         {
+            m_Capacity = data?.Length ?? 0;
             if (data != null) m_Pin = GCHandle.Alloc(data, GCHandleType.Pinned);
             m_Safety = AtomicSafetyHandle.Create();
             AtomicSafetyHandle.SetAllowSecondaryVersionWriting(m_Safety, false);
@@ -24,12 +26,17 @@ namespace UnityEngine
 
         internal unsafe NativeArray<T> Borrow(int length)
         {
-            void* pointer = m_Pin.IsAllocated ? (void*)m_Pin.AddrOfPinnedObject() : null;
-            var view = NativeArrayUnsafeUtility.ConvertExistingDataToNativeArray<T>(pointer, length, Allocator.None);
-            var safety = m_Safety;
-            AtomicSafetyHandle.UseSecondaryVersion(ref safety);
-            NativeArrayUnsafeUtility.SetAtomicSafetyHandle(ref view, safety);
-            return view;
+            lock (this)
+            {
+                if (AtomicSafetyHandle.IsDefaultValue(m_Safety)) throw new ObjectDisposedException(nameof(MeshArrayView<T>));
+                if ((uint)length > (uint)m_Capacity) throw new ArgumentOutOfRangeException(nameof(length));
+                void* pointer = m_Pin.IsAllocated ? (void*)m_Pin.AddrOfPinnedObject() : null;
+                var view = NativeArrayUnsafeUtility.ConvertExistingDataToNativeArray<T>(pointer, length, Allocator.None);
+                var safety = m_Safety;
+                AtomicSafetyHandle.UseSecondaryVersion(ref safety);
+                NativeArrayUnsafeUtility.SetAtomicSafetyHandle(ref view, safety);
+                return view;
+            }
         }
 
         internal void CompleteReaders()
@@ -40,14 +47,17 @@ namespace UnityEngine
 
         internal void Release()
         {
-            if (!AtomicSafetyHandle.IsDefaultValue(m_Safety))
+            lock (this)
             {
-                CompleteReaders();
-                AtomicSafetyHandle.Release(m_Safety);
-                m_Safety = default;
+                if (!AtomicSafetyHandle.IsDefaultValue(m_Safety))
+                {
+                    CompleteReaders();
+                    AtomicSafetyHandle.Release(m_Safety);
+                    m_Safety = default;
+                }
+                if (m_Pin.IsAllocated) m_Pin.Free();
+                GC.SuppressFinalize(this);
             }
-            if (m_Pin.IsAllocated) m_Pin.Free();
-            GC.SuppressFinalize(this);
         }
     }
 }

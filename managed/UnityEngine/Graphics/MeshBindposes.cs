@@ -2,9 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using Unbound.Runtime;
-using Unbound.Runtime.Jobs;
 using Unity.Collections;
-using Unity.Collections.LowLevel.Unsafe;
 
 namespace UnityEngine
 {
@@ -12,53 +10,7 @@ namespace UnityEngine
     {
         Matrix4x4[] m_BindposeStorage;
         int m_BindposeCount;
-        BindposeViews m_BindposeViews;
-
-        // Mesh wrappers may be collected without an explicit Destroy. Only meshes that handed
-        // out views need a finalizer, and pending readers finish on the engine thread.
-        sealed class BindposeViews
-        {
-            GCHandle m_Pin;
-            AtomicSafetyHandle m_Safety;
-
-            internal BindposeViews(Matrix4x4[] storage)
-            {
-                if (storage != null) m_Pin = GCHandle.Alloc(storage, GCHandleType.Pinned);
-                m_Safety = AtomicSafetyHandle.Create();
-                AtomicSafetyHandle.SetAllowSecondaryVersionWriting(m_Safety, false);
-            }
-
-            ~BindposeViews() => MainThreadContext.Instance.Post(static owner => ((BindposeViews)owner).Release(), this);
-
-            internal unsafe NativeArray<Matrix4x4> Borrow(int count)
-            {
-                void* pointer = m_Pin.IsAllocated ? (void*)m_Pin.AddrOfPinnedObject() : null;
-                var view = NativeArrayUnsafeUtility.ConvertExistingDataToNativeArray<Matrix4x4>(pointer, count, Allocator.None);
-                var safety = m_Safety;
-                AtomicSafetyHandle.UseSecondaryVersion(ref safety);
-                NativeArrayUnsafeUtility.SetAtomicSafetyHandle(ref view, safety);
-                return view;
-            }
-
-            internal void CompleteReaders()
-            {
-                if (JobSystem.IsExecutingJob)
-                    throw new InvalidOperationException("Mesh bind pose storage cannot be modified from a job.");
-                AtomicSafetyHandle.EnforceAllBufferJobsHaveCompleted(m_Safety);
-            }
-
-            internal void Release()
-            {
-                if (!AtomicSafetyHandle.IsDefaultValue(m_Safety))
-                {
-                    CompleteReaders();
-                    AtomicSafetyHandle.Release(m_Safety);
-                    m_Safety = default;
-                }
-                if (m_Pin.IsAllocated) m_Pin.Free();
-                GC.SuppressFinalize(this);
-            }
-        }
+        MeshArrayView<Matrix4x4> m_BindposeViews;
 
         internal bool HasBindposes { get; private set; }
         internal int BindposeVersion { get; private set; }
@@ -106,7 +58,7 @@ namespace UnityEngine
             ThrowIfDestroyed();
             EnsureModelLoaded();
             ThrowIfDestroyed();
-            return (m_BindposeViews ??= new BindposeViews(m_BindposeStorage)).Borrow(m_BindposeCount);
+            return (m_BindposeViews ??= new MeshArrayView<Matrix4x4>(m_BindposeStorage)).Borrow(m_BindposeCount);
         }
 
         public void SetBindposes(NativeArray<Matrix4x4> poses)
