@@ -863,3 +863,10 @@ are queued in `debt.json` beside `Editor`'s.
 The search slice adds `Search.SearchAction`, `SearchContext`, `SearchItem`, `SearchProvider` (none with a public parameterless
 constructor) and the static `SearchService` to the inventory, as two Unity 6000.0.71f1 batch Editor captures on macOS write
 their rows; every earlier row is unchanged.
+
+The project-window helpers (`ProjectWindowCallback.DoCreateAssetWithContent`, `DoCreateFolder`, `DoCreateNewAsset`,
+`DoCreateScene`, `DoCreateScriptAsset`, `AssetModificationProcessor`) and the search picker's `Search.ObjectField` (and its
+`UxmlSerializedData`) are hand-written now and enter the inventory, as two Unity 6000.0.71f1 batch Editor captures on macOS
+write their 69 rows; every earlier row is unchanged. Three `Search.ObjectField` rows carry that Mac's 2x panel scale
+(queued in `debt.json`). The new types initialize UI Toolkit events and objects earlier, so seven queued `eventTypeId`
+rows and the two TextCore `instanceID` rows record their shifted Unbound values.

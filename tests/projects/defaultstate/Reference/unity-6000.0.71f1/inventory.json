@@ -1,13 +1,4 @@
 {
-  "constructorStores": {
-    "branchingConstructors": 1113,
-    "differences": [],
-    "equal": 397,
-    "unknown": 1293,
-    "unmatchedConstructors": 1649,
-    "unmatchedFields": 1878
-  },
-  "release": "6000.0.71f1",
   "types": [
     {
       "category": "class",
@@ -1177,6 +1168,12 @@
       "category": "class",
       "module": "UnityEditor.CoreModule",
       "status": "candidate",
+      "type": "UnityEditor.AssetModificationProcessor"
+    },
+    {
+      "category": "class",
+      "module": "UnityEditor.CoreModule",
+      "status": "candidate",
       "type": "UnityEditor.AssetPostprocessor"
     },
     {
@@ -2088,6 +2085,36 @@
     {
       "category": "scriptable",
       "module": "UnityEditor.CoreModule",
+      "status": "candidate",
+      "type": "UnityEditor.ProjectWindowCallback.DoCreateAssetWithContent"
+    },
+    {
+      "category": "scriptable",
+      "module": "UnityEditor.CoreModule",
+      "status": "candidate",
+      "type": "UnityEditor.ProjectWindowCallback.DoCreateFolder"
+    },
+    {
+      "category": "scriptable",
+      "module": "UnityEditor.CoreModule",
+      "status": "candidate",
+      "type": "UnityEditor.ProjectWindowCallback.DoCreateNewAsset"
+    },
+    {
+      "category": "scriptable",
+      "module": "UnityEditor.CoreModule",
+      "status": "candidate",
+      "type": "UnityEditor.ProjectWindowCallback.DoCreateScene"
+    },
+    {
+      "category": "scriptable",
+      "module": "UnityEditor.CoreModule",
+      "status": "candidate",
+      "type": "UnityEditor.ProjectWindowCallback.DoCreateScriptAsset"
+    },
+    {
+      "category": "scriptable",
+      "module": "UnityEditor.CoreModule",
       "status": "abstract",
       "type": "UnityEditor.ProjectWindowCallback.EndNameEditAction"
     },
@@ -2282,6 +2309,18 @@
       "module": "UnityEditor.CoreModule",
       "status": "open-generic",
       "type": "UnityEditor.ScriptableSingleton`1"
+    },
+    {
+      "category": "class",
+      "module": "UnityEditor.QuickSearchModule",
+      "status": "candidate",
+      "type": "UnityEditor.Search.ObjectField"
+    },
+    {
+      "category": "class",
+      "module": "UnityEditor.QuickSearchModule",
+      "status": "candidate",
+      "type": "UnityEditor.Search.ObjectField+UxmlSerializedData"
     },
     {
       "category": "class",
