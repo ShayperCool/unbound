@@ -62,7 +62,8 @@ def main():
         validate_capture(out, args.release)
         value_probe.seal_value_capture(out)
         return 0
-    return value_probe.gate(PROBE, VARIABLE, str(out), 0, ['--headless', '8'], base=BASE, configure=include_particles)
+    return value_probe.gate(PROBE, VARIABLE, str(out), 0, ['--frames', '12', '--size', '64x64'],
+                            base=BASE, configure=include_particles)
 
 
 if __name__ == '__main__':
