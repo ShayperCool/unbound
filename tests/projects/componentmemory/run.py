@@ -22,7 +22,8 @@ PROFILES = {
     'transform': ('RecordTransformMemory.Record', 'TRANSFORM_MEMORY_OUT', 'transform', TRANSFORM_BASE),
     'camera': ('RecordCameraMemory.Record', 'CAMERA_MEMORY_OUT', 'camera', BASE),
 }
-CAMERA_DEVICES = {'metal': 'Metal', 'opengl': 'OpenGLCore'}
+CAMERA_DEVICES = {'metal': 'Metal', 'opengl': 'OpenGLCore', 'vulkan': 'Vulkan'}
+CAMERA_ENGINE_FLAGS = {'metal': (), 'opengl': ('--force-glcore',), 'vulkan': ('--force-vulkan',)}
 
 
 def directory(label, profile):
@@ -60,13 +61,16 @@ def main():
     os.environ['UNBOUND_PROBE_UNITY_VERSION'] = args.release
     method, variable, profile, base = PROFILES[args.profile]
     device = None
+    backend = None
+    engine_args = ['--headless', '8']
     if args.profile == 'camera':
-        local_backend = 'metal' if sys.platform == 'darwin' else 'opengl'
-        backend = args.backend or local_backend
-        if backend != local_backend and args.mode != 'publish':
+        local_backends = ('metal',) if sys.platform == 'darwin' else ('opengl', 'vulkan')
+        backend = args.backend or local_backends[0]
+        if backend not in local_backends and args.mode != 'publish':
             parser.error(f'camera {backend} requires a host with that backend')
         profile = f'camera-{backend}'
         device = CAMERA_DEVICES[backend]
+        engine_args.extend(CAMERA_ENGINE_FLAGS[backend])
     elif args.backend is not None:
         parser.error('--backend applies to the camera profile')
     if args.mode == 'publish':
@@ -82,11 +86,12 @@ def main():
         raise SystemExit(f'{out}: expected a fresh run directory')
     if args.mode == 'record':
         value_probe.record(PROBE, method, variable, str(out), batch=True, macos_batch=True, base=base,
-                           timeout=240 if args.profile == 'camera' else value_probe.RECORD_TIMEOUT)
+                           timeout=240 if args.profile == 'camera' else value_probe.RECORD_TIMEOUT,
+                           device='vulkan' if backend == 'vulkan' else None)
         validate_capture(out, args.release, method, device)
         value_probe.seal_value_capture(out)
         return 0
-    return value_probe.gate(PROBE, variable, str(out), 0, ['--headless', '8'], base=base, profile=profile)
+    return value_probe.gate(PROBE, variable, str(out), 0, engine_args, base=base, profile=profile)
 
 
 if __name__ == '__main__':
