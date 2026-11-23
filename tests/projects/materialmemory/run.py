@@ -67,8 +67,9 @@ def main():
         if out.exists():
             raise SystemExit(f'{out}: expected a fresh run directory')
         if args.mode == 'record':
-            value_probe.record(PROBE, METHOD, VARIABLE, str(out), batch=True, macos_batch=True, base=BASE,
-                               device='vulkan' if backend == 'vulkan' else None)
+            # Vulkan pass controls need the windowed Editor's submission path.
+            value_probe.record(PROBE, METHOD, VARIABLE, str(out), batch=backend != 'vulkan', macos_batch=True,
+                               base=BASE, device='vulkan' if backend == 'vulkan' else None)
             validate_capture(out, args.release, device)
             value_probe.seal_value_capture(out)
             return 0

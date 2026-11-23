@@ -167,10 +167,7 @@ namespace Unbound.Runtime
             }
             s_BlitProperties.Clear();
             material ??= BlitCopy;
-            if (GraphicsDeviceProfile.Current.MaterialBlitAllocationMeasured)
-                material.ObserveProfilerPass(pass, allPasses: pass == -1);
-            else
-                material.PrepareProfilerDraw();
+            material.ObserveProfilerPass(pass, allPasses: pass == -1);
             if (source != null) material.SetBlitSource(s_MainTex, source);
             if (scale != UnityEngine.Vector2.one || offset != UnityEngine.Vector2.zero)
                 s_BlitProperties[UnityEngine.Shader.PropertyToID("_MainTex_ST")] = new UnityEngine.Vector4(scale.x, scale.y, offset.x, offset.y);

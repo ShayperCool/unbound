@@ -5,7 +5,6 @@ using System.Globalization;
 using System.IO;
 using UnityEngine;
 using UnityEngine.Profiling;
-using UnityEngine.Rendering;
 using Object = UnityEngine.Object;
 
 sealed class MaterialMemory : MonoBehaviour
@@ -96,26 +95,22 @@ sealed class MaterialMemory : MonoBehaviour
                 Size(stage + ".instanceAfterValidPass", selected);
                 Object.Destroy(selected);
 
-                // The Vulkan Editor did not complete this batch blit sequence.
-                if (SystemInfo.graphicsDeviceType != GraphicsDeviceType.Vulkan)
-                {
-                    var target = new RenderTexture(4, 4, 0);
-                    var previous = RenderTexture.active;
-                    var blit = Object.Instantiate(material);
-                    Graphics.Blit(null, target, blit);
-                    Size(stage + ".instanceAfterNullBlit", blit);
-                    Object.Destroy(blit);
-                    var withTexture = Object.Instantiate(material);
-                    Graphics.Blit(texture, target, withTexture);
-                    Size(stage + ".instanceAfterTextureBlit", withTexture);
-                    Object.Destroy(withTexture);
-                    var invalidBlit = Object.Instantiate(material);
-                    Graphics.Blit(texture, target, invalidBlit, 9999);
-                    Size(stage + ".instanceAfterInvalidBlit", invalidBlit);
-                    Object.Destroy(invalidBlit);
-                    RenderTexture.active = previous;
-                    Object.Destroy(target);
-                }
+                var target = new RenderTexture(4, 4, 0);
+                var previous = RenderTexture.active;
+                var blit = Object.Instantiate(material);
+                Graphics.Blit(null, target, blit);
+                Size(stage + ".instanceAfterNullBlit", blit);
+                Object.Destroy(blit);
+                var withTexture = Object.Instantiate(material);
+                Graphics.Blit(texture, target, withTexture);
+                Size(stage + ".instanceAfterTextureBlit", withTexture);
+                Object.Destroy(withTexture);
+                var invalidBlit = Object.Instantiate(material);
+                Graphics.Blit(texture, target, invalidBlit, 9999);
+                Size(stage + ".instanceAfterInvalidBlit", invalidBlit);
+                Object.Destroy(invalidBlit);
+                RenderTexture.active = previous;
+                Object.Destroy(target);
             }
             Object.DestroyImmediate(copy);
             Object.DestroyImmediate(material);
