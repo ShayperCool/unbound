@@ -125,8 +125,7 @@ Linux Editor on OpenGL Core). In `trails alive keep` from frame 8 to frame 28, w
 live, the Editor's pixels where a strip's newest end meets its head changed with the scene:
 before the `meshes*` stages joined it, every capture showed the head there (a few pixels each,
 up to 209 levels from Unbound's, which shows the strip); since, four captures show the strip, as
-Unbound does. Which of the two the Editor draws on top there is an order it does not specify,
-and what decides it is not measured.
+Unbound does. What decides which of the two the Editor shows there is not measured.
 
 ## Not covered
 

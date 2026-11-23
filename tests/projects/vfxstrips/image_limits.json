@@ -537,37 +537,37 @@
   "mean": 0,
   "worst": 0,
   "over8": 0,
-  "reason": "The Editor's pixels exactly, where both ran: one machine, an NVIDIA driver, the Linux Editor on OpenGL Core. The strips' edges fall anywhere between pixel centres, so another GPU or device may decide an edge pixel the other way: such a difference is to be measured and recorded with its cause, not assumed away. Where a strip's newest end meets its head, which of the two shows is an order the Editor does not specify: it showed the head before the meshes stages joined the scene, the strip (as Unbound) since."
+  "reason": "The Editor's pixels exactly, where both ran: one machine, an NVIDIA driver, the Linux Editor on OpenGL Core. The strips' edges fall anywhere between pixel centres, so another GPU or device may decide an edge pixel the other way: such a difference is to be measured and recorded with its cause, not assumed away. Where a strip's newest end meets its head, the Editor showed the head before the meshes stages joined the scene and the strip (as Unbound) since; what decides it is not measured."
  },
  "draw-trails alive keep-f012.png": {
   "mean": 0,
   "worst": 0,
   "over8": 0,
-  "reason": "The Editor's pixels exactly, where both ran: one machine, an NVIDIA driver, the Linux Editor on OpenGL Core. The strips' edges fall anywhere between pixel centres, so another GPU or device may decide an edge pixel the other way: such a difference is to be measured and recorded with its cause, not assumed away. Where a strip's newest end meets its head, which of the two shows is an order the Editor does not specify: it showed the head before the meshes stages joined the scene, the strip (as Unbound) since."
+  "reason": "The Editor's pixels exactly, where both ran: one machine, an NVIDIA driver, the Linux Editor on OpenGL Core. The strips' edges fall anywhere between pixel centres, so another GPU or device may decide an edge pixel the other way: such a difference is to be measured and recorded with its cause, not assumed away. Where a strip's newest end meets its head, the Editor showed the head before the meshes stages joined the scene and the strip (as Unbound) since; what decides it is not measured."
  },
  "draw-trails alive keep-f016.png": {
   "mean": 0,
   "worst": 0,
   "over8": 0,
-  "reason": "The Editor's pixels exactly, where both ran: one machine, an NVIDIA driver, the Linux Editor on OpenGL Core. The strips' edges fall anywhere between pixel centres, so another GPU or device may decide an edge pixel the other way: such a difference is to be measured and recorded with its cause, not assumed away. Where a strip's newest end meets its head, which of the two shows is an order the Editor does not specify: it showed the head before the meshes stages joined the scene, the strip (as Unbound) since."
+  "reason": "The Editor's pixels exactly, where both ran: one machine, an NVIDIA driver, the Linux Editor on OpenGL Core. The strips' edges fall anywhere between pixel centres, so another GPU or device may decide an edge pixel the other way: such a difference is to be measured and recorded with its cause, not assumed away. Where a strip's newest end meets its head, the Editor showed the head before the meshes stages joined the scene and the strip (as Unbound) since; what decides it is not measured."
  },
  "draw-trails alive keep-f020.png": {
   "mean": 0,
   "worst": 0,
   "over8": 0,
-  "reason": "The Editor's pixels exactly, where both ran: one machine, an NVIDIA driver, the Linux Editor on OpenGL Core. The strips' edges fall anywhere between pixel centres, so another GPU or device may decide an edge pixel the other way: such a difference is to be measured and recorded with its cause, not assumed away. Where a strip's newest end meets its head, which of the two shows is an order the Editor does not specify: it showed the head before the meshes stages joined the scene, the strip (as Unbound) since."
+  "reason": "The Editor's pixels exactly, where both ran: one machine, an NVIDIA driver, the Linux Editor on OpenGL Core. The strips' edges fall anywhere between pixel centres, so another GPU or device may decide an edge pixel the other way: such a difference is to be measured and recorded with its cause, not assumed away. Where a strip's newest end meets its head, the Editor showed the head before the meshes stages joined the scene and the strip (as Unbound) since; what decides it is not measured."
  },
  "draw-trails alive keep-f024.png": {
   "mean": 0,
   "worst": 0,
   "over8": 0,
-  "reason": "The Editor's pixels exactly, where both ran: one machine, an NVIDIA driver, the Linux Editor on OpenGL Core. The strips' edges fall anywhere between pixel centres, so another GPU or device may decide an edge pixel the other way: such a difference is to be measured and recorded with its cause, not assumed away. Where a strip's newest end meets its head, which of the two shows is an order the Editor does not specify: it showed the head before the meshes stages joined the scene, the strip (as Unbound) since."
+  "reason": "The Editor's pixels exactly, where both ran: one machine, an NVIDIA driver, the Linux Editor on OpenGL Core. The strips' edges fall anywhere between pixel centres, so another GPU or device may decide an edge pixel the other way: such a difference is to be measured and recorded with its cause, not assumed away. Where a strip's newest end meets its head, the Editor showed the head before the meshes stages joined the scene and the strip (as Unbound) since; what decides it is not measured."
  },
  "draw-trails alive keep-f028.png": {
   "mean": 0,
   "worst": 0,
   "over8": 0,
-  "reason": "The Editor's pixels exactly, where both ran: one machine, an NVIDIA driver, the Linux Editor on OpenGL Core. The strips' edges fall anywhere between pixel centres, so another GPU or device may decide an edge pixel the other way: such a difference is to be measured and recorded with its cause, not assumed away. Where a strip's newest end meets its head, which of the two shows is an order the Editor does not specify: it showed the head before the meshes stages joined the scene, the strip (as Unbound) since."
+  "reason": "The Editor's pixels exactly, where both ran: one machine, an NVIDIA driver, the Linux Editor on OpenGL Core. The strips' edges fall anywhere between pixel centres, so another GPU or device may decide an edge pixel the other way: such a difference is to be measured and recorded with its cause, not assumed away. Where a strip's newest end meets its head, the Editor showed the head before the meshes stages joined the scene and the strip (as Unbound) since; what decides it is not measured."
  },
  "draw-trails keep-f010.png": {
   "mean": 0,
