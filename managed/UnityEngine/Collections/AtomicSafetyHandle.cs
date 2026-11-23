@@ -93,7 +93,7 @@ namespace Unity.Collections.LowLevel.Unsafe
             if (!Safety.IsAlive(handle)) return EnforceJobResult.HandleWasAlreadyDeallocated;
             var jobs = Safety.JobsUsing(handle);
             if (jobs.Count == 0) return EnforceJobResult.AllJobsAlreadySynced;
-            foreach (var job in jobs) Unbound.Runtime.Jobs.JobSystem.Sync(job);
+            for (int i = 0; i < jobs.Count; i++) Unbound.Runtime.Jobs.JobSystem.Sync(jobs[i]);
             return EnforceJobResult.DidSyncRunningJobs;
         }
 
@@ -113,8 +113,12 @@ namespace Unity.Collections.LowLevel.Unsafe
 
         internal static bool CheckAllBufferJobsAreDependencyOrHaveCompleted(AtomicSafetyHandle handle, JobHandle job)
         {
-            foreach (var user in Safety.JobsUsing(handle))
+            var users = Safety.JobsUsing(handle);
+            for (int i = 0; i < users.Count; i++)
+            {
+                var user = users[i];
                 if (!Unbound.Runtime.Jobs.JobSystem.IsDependency(job, user) && !user.Synced) return false;
+            }
             return true;
         }
 

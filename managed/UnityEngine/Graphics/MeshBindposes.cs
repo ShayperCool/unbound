@@ -19,11 +19,11 @@ namespace UnityEngine
         sealed class BindposeViews
         {
             GCHandle m_Pin;
-            readonly AtomicSafetyHandle m_Safety;
+            AtomicSafetyHandle m_Safety;
 
             internal BindposeViews(Matrix4x4[] storage)
             {
-                m_Pin = GCHandle.Alloc(storage, GCHandleType.Pinned);
+                if (storage != null) m_Pin = GCHandle.Alloc(storage, GCHandleType.Pinned);
                 m_Safety = AtomicSafetyHandle.Create();
                 AtomicSafetyHandle.SetAllowSecondaryVersionWriting(m_Safety, false);
             }
@@ -32,8 +32,8 @@ namespace UnityEngine
 
             internal unsafe NativeArray<Matrix4x4> Borrow(int count)
             {
-                var view = NativeArrayUnsafeUtility.ConvertExistingDataToNativeArray<Matrix4x4>(
-                    (void*)m_Pin.AddrOfPinnedObject(), count, Allocator.None);
+                void* pointer = m_Pin.IsAllocated ? (void*)m_Pin.AddrOfPinnedObject() : null;
+                var view = NativeArrayUnsafeUtility.ConvertExistingDataToNativeArray<Matrix4x4>(pointer, count, Allocator.None);
                 var safety = m_Safety;
                 AtomicSafetyHandle.UseSecondaryVersion(ref safety);
                 NativeArrayUnsafeUtility.SetAtomicSafetyHandle(ref view, safety);
@@ -49,10 +49,13 @@ namespace UnityEngine
 
             internal void Release()
             {
-                if (!m_Pin.IsAllocated) return;
-                CompleteReaders();
-                if (!AtomicSafetyHandle.IsDefaultValue(m_Safety)) AtomicSafetyHandle.Release(m_Safety);
-                m_Pin.Free();
+                if (!AtomicSafetyHandle.IsDefaultValue(m_Safety))
+                {
+                    CompleteReaders();
+                    AtomicSafetyHandle.Release(m_Safety);
+                    m_Safety = default;
+                }
+                if (m_Pin.IsAllocated) m_Pin.Free();
                 GC.SuppressFinalize(this);
             }
         }
@@ -64,18 +67,34 @@ namespace UnityEngine
 
         public Matrix4x4[] bindposes
         {
-            get { EnsureModelLoaded(); return BindposeData.AsSpan().ToArray(); }
-            set { EnsureModelLoaded(); StoreBindposes(value, value != null); }
+            get
+            {
+                MainThreadCheck.Check("get_bindposes");
+                EnsureModelLoaded();
+                return BindposeData.AsSpan().ToArray();
+            }
+            set
+            {
+                MainThreadCheck.Check("set_bindposes");
+                EnsureModelLoaded();
+                StoreBindposes(value, value != null);
+            }
         }
 
         public int bindposeCount
         {
-            get { EnsureModelLoaded(); return m_BindposeCount; }
+            get
+            {
+                MainThreadCheck.Check("get_bindposeCount");
+                EnsureModelLoaded();
+                return m_BindposeCount;
+            }
         }
 
         public void GetBindposes(List<Matrix4x4> bindposes)
         {
-            bindposes.Clear();
+            if (bindposes == null) throw new ArgumentNullException(nameof(bindposes), "The result bindposes list cannot be null.");
+            MainThreadCheck.Check("get_bindposeCount");
             EnsureModelLoaded();
             CollectionsMarshal.SetCount(bindposes, m_BindposeCount);
             BindposeData.AsSpan().CopyTo(CollectionsMarshal.AsSpan(bindposes));
@@ -83,19 +102,19 @@ namespace UnityEngine
 
         public NativeArray<Matrix4x4> GetBindposes()
         {
+            MainThreadCheck.Check("GetBindposesArray");
             ThrowIfDestroyed();
             EnsureModelLoaded();
             ThrowIfDestroyed();
-            if (m_BindposeStorage == null) return default;
             return (m_BindposeViews ??= new BindposeViews(m_BindposeStorage)).Borrow(m_BindposeCount);
         }
 
         public void SetBindposes(NativeArray<Matrix4x4> poses)
         {
-            ThrowIfDestroyed();
-            if (poses.Length == 0)
+            if (!poses.IsCreated || poses.Length == 0)
                 throw new ArgumentException("Cannot set bindposes as the native poses array is empty.", nameof(poses));
-            if (!poses.IsCreated) throw new ObjectDisposedException(nameof(poses));
+            MainThreadCheck.Check("SetBindposesFromScript_NativeArray");
+            ThrowIfDestroyed();
             EnsureModelLoaded();
             var data = poses.AsReadOnlySpan();
             if (data.Overlaps(m_BindposeStorage.AsSpan()))

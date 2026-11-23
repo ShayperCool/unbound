@@ -313,7 +313,7 @@ namespace UnityEngine
                     for (int k = 0; k < 16; k++) p[k] = bindPoses[i * 16 + k];
                     poses[i] = p;
                 }
-                bindposes = poses;
+                StoreBindposes(poses, true);
             }
             // Blend shapes: per frame the deltas of every vertex.
             if (m.TryGetProperty("blendShapes", out var shapes))

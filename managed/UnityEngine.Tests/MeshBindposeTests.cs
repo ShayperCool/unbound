@@ -69,8 +69,41 @@ namespace UnityEngine.Tests
                 var safety = NativeSliceUnsafeUtility.GetAtomicSafetyHandle(slice);
                 Assert.Throws<InvalidOperationException>(() => Safety.ReserveExternalWrite(safety));
                 view.Dispose();
-                Assert.Throws<ObjectDisposedException>(() => mesh.SetBindposes(view));
+                Assert.Throws<ArgumentException>("poses", () => mesh.SetBindposes(view));
                 Assert.Equal(Matrix4x4.identity, mesh.GetBindposes()[0]);
+            }
+            finally { Object.DestroyImmediate(mesh); }
+        }
+
+        [Fact]
+        public void EmptyBindposeViewRetainsReadOnlySafety()
+        {
+            var mesh = new Mesh();
+            try
+            {
+                var view = mesh.GetBindposes();
+                Assert.False(view.IsCreated);
+                Assert.Empty(view.ToArray());
+                Assert.True(view.AsReadOnlySpan().IsEmpty);
+                Assert.Throws<IndexOutOfRangeException>(() => view[0]);
+                Assert.Throws<ArgumentNullException>("bindposes", () => mesh.GetBindposes(null));
+            }
+            finally { Object.DestroyImmediate(mesh); }
+        }
+
+        [Fact]
+        public void SameSizeBindposeAssignmentWithAnIdleViewDoesNotAllocate()
+        {
+            var mesh = new Mesh { bindposes = new[] { Matrix4x4.identity } };
+            using var poses = new NativeArray<Matrix4x4>(new[] { Matrix4x4.Translate(Vector3.right) }, Allocator.TempJob);
+            try
+            {
+                var view = mesh.GetBindposes();
+                mesh.SetBindposes(poses);
+                var before = GC.GetAllocatedBytesForCurrentThread();
+                for (int i = 0; i < 32; i++) mesh.SetBindposes(poses);
+                Assert.Equal(before, GC.GetAllocatedBytesForCurrentThread());
+                Assert.Equal(poses[0], view[0]);
             }
             finally { Object.DestroyImmediate(mesh); }
         }

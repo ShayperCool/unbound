@@ -489,17 +489,18 @@ namespace Unbound.Runtime
         }
 
         /// <summary>The unsynced jobs that use a container.</summary>
-        internal static List<Jobs.JobRecord> JobsUsing(in AtomicSafetyHandle handle)
+        internal static IReadOnlyList<Jobs.JobRecord> JobsUsing(in AtomicSafetyHandle handle)
         {
-            var jobs = new List<Jobs.JobRecord>();
             lock (s_Lock)
             {
                 var node = RealNode(handle);
-                if (node == null) return jobs;
+                if (node == null || (node.Writer == null && node.Readers.Count == 0))
+                    return Array.Empty<Jobs.JobRecord>();
+                var jobs = new List<Jobs.JobRecord>(node.Readers.Count + (node.Writer == null ? 0 : 1));
                 if (node.Writer != null) jobs.Add(node.Writer);
                 foreach (var (reader, _) in node.Readers) jobs.Add(reader);
+                return jobs;
             }
-            return jobs;
         }
 
         internal static Jobs.JobRecord WriterOf(in AtomicSafetyHandle handle)

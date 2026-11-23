@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Runtime.InteropServices;
 using Unbound.Runtime;
 using UnityEngine.Rendering;
 
@@ -209,7 +210,7 @@ namespace UnityEngine
                         matrix[r, c] = m.Float($"e{r}{c}");
                 poses.Add(matrix);
             }
-            if (poses.Count > 0) bindposes = poses.ToArray();
+            if (poses.Count > 0) StoreBindposes(CollectionsMarshal.AsSpan(poses), true);
 
             ReadBlendShapes(body.Get("m_Shapes"), count);
 
