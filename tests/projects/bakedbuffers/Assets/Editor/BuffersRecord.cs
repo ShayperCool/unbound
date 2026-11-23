@@ -164,8 +164,13 @@ public static class BuffersRecord
         bool whole = false;
         // (Under load the bake now and then answers true without having written all its files:
         // run again as for a false answer. Every scene here writes some, and one with baked
-        // global illumination its lightmaps.)
-        bool lightmaps = Lightmapping.lightingSettings != null && Lightmapping.lightingSettings.bakedGI;
+        // global illumination its lightmaps, but for one whose light all goes to the realtime
+        // lightmaps: realtime GI and no baked or mixed light, SkyRealtime.)
+        var lighting = Lightmapping.lightingSettings;
+        bool bakedLights = false;
+        foreach (var light in UnityEngine.Object.FindObjectsByType<Light>(FindObjectsSortMode.None))
+            bakedLights |= light.lightmapBakeType != LightmapBakeType.Realtime;
+        bool lightmaps = lighting != null && lighting.bakedGI && (!lighting.realtimeGI || bakedLights);
         for (int attempt = 0; attempt < 3 && !whole; attempt++)
             whole = Lightmapping.Bake() && Directory.Exists(written)
                 && (!lightmaps || Directory.GetFiles(written, "Lightmap-*_comp_light.exr").Length > 0);
