@@ -1,0 +1,9 @@
+{
+  "commands": ["python3 tests/projects/boundplayables/run.py gate"],
+  "summary": "boundplayables: .*",
+  "engine_paths": [
+    "managed/UnityEngine/Animation/Animator.cs",
+    "managed/UnityEngine/Animation/AnimatorAvatar.cs",
+    "managed/UnityEngine/Animation/Playables/AnimationOutputs.cs"
+  ]
+}
