@@ -32,6 +32,12 @@ public static class EnvironmentSetup
         setup();
         AssetDatabase.CreateAsset(settings, $"{Folder}/{name}.lighting");
         EditorSceneManager.SaveScene(scene, $"{Folder}/{name}.unity");
+        if (name == "EnvBakedNoSky")
+        {
+            Lightmapping.Bake();
+            RenderSettings.skybox = null;
+            EditorSceneManager.SaveScene(scene);
+        }
     }
 
     /// <summary>Makes the scenes <c>ENVIRONMENT_SCENES</c> names (comma-separated), else all.</summary>
@@ -76,6 +82,9 @@ public static class EnvironmentSetup
                 ("EnvNoSky", () => { RenderSettings.skybox = null; }),
                 // Baked with the skybox and then without it (the recorder takes it away).
                 ("EnvSkyThenNone", () => { }),
+                // Saved with the lighting data of a bake with its skybox (its LightingData.asset
+                // and ReflectionProbe-0.exr beside it), then without the skybox.
+                ("EnvBakedNoSky", () => { }),
                 // A render pipeline that bakes neither part (the recorder says so for the bake),
                 // under a sky that is not the default's (intensity 1.7).
                 ("EnvNoBaking", () => { RenderSettings.ambientIntensity = 1.7f; }),

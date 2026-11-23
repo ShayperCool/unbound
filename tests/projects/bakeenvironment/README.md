@@ -32,6 +32,10 @@ environment alone), the default procedural skybox as the ambient source and the 
 - `EnvSkyThenNone`: baked with the skybox, then without it (the recorder takes it away): the
   reflection the first bake made is gone (the Editor removes its file), and none is left: the
   black `UnityBlackCube`.
+- `EnvBakedNoSky`: saved with the lighting data of an earlier bake with its skybox
+  (`EnvBakedNoSky/LightingData.asset` and its `ReflectionProbe-0.exr`, made by `create`), then
+  without the skybox: the bake removes that reflection's file too and leaves none (the black
+  cube).
 - `EnvNoBaking`: baked with SupportedRenderingFeatures saying the render pipeline bakes neither
   the ambient probe nor the default reflection (the recorder sets them for the bake): both are
   taken away (a zero probe, the black cube), not kept.
@@ -73,5 +77,5 @@ keeps the others'), a render pipeline asset (made as the built-in pipeline's). W
 graphics device Unbound's bake makes no environment lighting (said). Not measured either: a
 skybox other than the procedural one, Environment Reflections Compression other than Auto, the
 bake on a scene's load (`Lightmapping.bakeOnSceneLoad`: still said and not made), a scene loaded
-again after the bake (Unbound gives it the bake's environment, as it gives it the bake's
-realtime GI).
+again after the bake (Unbound gives it the bake's environment, or the one it kept, as it gives
+it the bake's realtime GI).

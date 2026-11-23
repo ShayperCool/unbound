@@ -71,12 +71,13 @@ def create(names=None):
     out = WORK/private_label('create')
     project_copy(PROBE, out/'project', package_cache=False)
     env = {'ENVIRONMENT_SCENES': ','.join(names)} if names else {}
-    if editor(out, 'EnvironmentSetup.Create', env, 'create', graphics=False):
+    # (On the graphics device: a scene saved with a bake's lighting data is baked there.)
+    if editor(out, 'EnvironmentSetup.Create', env, 'create'):
         return 1
     made = out/'project/Assets'
     for path in sorted((made/'Scenes').iterdir()):
         if (names is None or any(path.name.startswith(name) for name in names)) and not (target/path.name).exists():
-            shutil.copy2(path, target/path.name)
+            (shutil.copytree if path.is_dir() else shutil.copy2)(path, target/path.name)
     for meta in ('Scenes.meta', 'Editor.meta'):
         if not (PROBE/'Assets'/meta).exists():
             shutil.copy2(made/meta, PROBE/'Assets'/meta)
