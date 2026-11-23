@@ -287,8 +287,11 @@ namespace UnityEngine.Tests
                 var holder = instance.GetComponent<PrefabTestHolder>();
                 holder.count = 8;
                 PrefabUtility.RecordPrefabInstancePropertyModifications(holder);
+                // Another property changed without recording: not an override after the revert either.
+                holder.label = "unrecorded";
                 PrefabUtility.RevertPropertyOverride(new SerializedObject(holder).FindProperty("count"), InteractionMode.AutomatedAction);
                 Assert.Equal(3, holder.count);
+                Assert.Null(ValueOf(instance, "label"));
                 holder.count = 9;
                 Assert.Null(ValueOf(instance, "count"));
                 PrefabUtility.RecordPrefabInstancePropertyModifications(holder);

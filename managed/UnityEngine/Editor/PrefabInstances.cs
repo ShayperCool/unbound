@@ -386,7 +386,7 @@ namespace Unbound.Runtime
                 // A script whose changes are taken only when recorded answers its values at its last
                 // record (matches the Unity 6000.0.71f1 Editor, tests/projects/animatorapi
                 // modify.overridden.*: a change since is listed once recorded again).
-                var entries = TakesChangesWhenRecorded(o, data) && PrefabRecords.Values(o) is { } recorded ? Entries(o, data, recorded) : null;
+                var entries = TakesChangesWhenRecorded(o) && PrefabRecords.Values(o) is { } recorded ? Entries(o, recorded) : null;
                 if (entries == null)
                 {
                     // A Transform changed since its instance last took its changes answers its pose
@@ -442,20 +442,29 @@ namespace Unbound.Runtime
             internal List<(string Path, YText Value)> Values;
         }
 
-        /// <summary>The values a record keeps for a script of an instance (null for other objects):
-        /// all its properties as they are now, what its modifications take until it is recorded
-        /// again.</summary>
+        /// <summary>The overrides a record keeps for a script of an instance (null for other objects):
+        /// its values now of the properties that differ from the source's or that the instance
+        /// stores, what its modifications take until it is recorded again (a revert or an apply
+        /// takes paths away, <see cref="PrefabRecords.Forget"/>).</summary>
         internal static RecordedValues Record(Object o)
         {
-            if (o is not MonoBehaviour || PrefabLinks.Of(o)?.Instance is not PrefabInstanceData data || !TakesChangesWhenRecorded(o, data)) return null;
+            if (o is not MonoBehaviour || PrefabLinks.Of(o)?.Instance is not PrefabInstanceData data || !TakesChangesWhenRecorded(o)) return null;
+            var link = PrefabLinks.Of(o);
+            var source = PrefabLinks.Source(o);
+            if (source == null) return null;
             var refs = new ValueReferences();
-            return new RecordedValues { Refs = refs, Values = PrefabValues.Flatten(PrefabValues.Fields(o, ToSource(data), refs)) };
+            var before = PrefabValues.ByPath(PrefabValues.Flatten(PrefabValues.Fields(source, null, refs)));
+            var stored = new HashSet<string>(StringComparer.Ordinal);
+            foreach (var m in data.Stored)
+                if (Targets(m, data, link)) stored.Add(m.Path);
+            var values = PrefabValues.Flatten(PrefabValues.Fields(o, ToSource(data), refs))
+                .FindAll(v => stored.Contains(v.Path) || !(before.TryGetValue(v.Path, out var was) && PrefabValues.Same(was, v.Value)));
+            return new RecordedValues { Refs = refs, Values = values };
         }
 
-        /// <summary>A script's recorded values as entries, each differing when its recorded value
-        /// differs from the source's (an apply, revert, merge or Undo records it again,
-        /// <see cref="PrefabRecords.Writing"/>).</summary>
-        static List<(string Path, string Value, Object Reference, bool Differs)> Entries(Object o, PrefabInstanceData data, RecordedValues recorded)
+        /// <summary>A script's recorded overrides as entries, each differing when its recorded value
+        /// differs from the source's now (an apply since leaves it equal).</summary>
+        static List<(string Path, string Value, Object Reference, bool Differs)> Entries(Object o, RecordedValues recorded)
         {
             var list = new List<(string, string, Object, bool)>(recorded.Values.Count);
             var source = PrefabLinks.Source(o);
@@ -470,10 +479,10 @@ namespace Unbound.Runtime
             return list;
         }
 
-        /// <summary>A script whose changes reach its instance's modifications only when recorded, as
-        /// measured: in Play mode (Edit mode keeps its scripts' live values, which scene saves and
-        /// merges also take).</summary>
-        static bool TakesChangesWhenRecorded(Object o, PrefabInstanceData data) =>
+        /// <summary>A script whose changes reach its instance's modifications (GetPropertyModifications)
+        /// only when recorded, as measured: in Play mode. Edit mode keeps its scripts' live values;
+        /// applies, reverts and merges take live values in both (unmeasured for Play mode).</summary>
+        static bool TakesChangesWhenRecorded(Object o) =>
             o is MonoBehaviour && EditorApplication.isPlaying;
     }
 
@@ -485,7 +494,6 @@ namespace Unbound.Runtime
         {
             using var quiet = PrefabRecordTiming.QuietScope.Begin();
             if (target == null) return false;
-            using var written = PrefabRecords.Writing(target);
             var so = new SerializedObject(target);
             var property = so.FindProperty(path);
             if (property == null) return false;
