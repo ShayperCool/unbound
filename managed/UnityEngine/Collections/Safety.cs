@@ -230,7 +230,8 @@ namespace Unbound.Runtime
                 if (node.Temp)
                     throw new ArgumentException("A GPU readback destination cannot use Allocator.Temp because its memory expires at the end of the frame.");
                 if (node.ExternalWriter) throw ExternalWriteError();
-                if (!node.AllowReadOrWrite || node.Writer != null || node.Readers.Count != 0)
+                if (!node.AllowReadOrWrite || (IsSecondary(handle) && !node.AllowSecondaryWriting) ||
+                    node.Writer != null || node.Readers.Count != 0)
                     throw new InvalidOperationException("A GPU readback destination must be writable and have no outstanding jobs.");
                 node.ExternalWriter = true;
                 UpdateBits(node);
