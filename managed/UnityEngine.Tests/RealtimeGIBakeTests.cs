@@ -86,6 +86,9 @@ namespace Unbound.Tests
                 RenderSettings.ambientMode = AmbientMode.Skybox;
                 Assert.Contains(Logged(() => RealtimeGI.NoteBakeParts(file, new LightingSettings { bakedGI = false, realtimeGI = true }, RealtimeGI.BakeOnLoad)),
                     l => l.Contains("environment lighting"));
+                // A script's bake makes it (tests/projects/bakeenvironment): nothing is said.
+                Assert.DoesNotContain(Logged(() => RealtimeGI.NoteBakeParts(file, new LightingSettings { bakedGI = false, realtimeGI = true }, RealtimeGI.ScriptBake)),
+                    l => l.Contains("environment lighting"));
             }
             finally
             {

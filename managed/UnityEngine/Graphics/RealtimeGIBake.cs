@@ -115,12 +115,24 @@ namespace UnityEngine
         /// the session.</summary>
         static void BakeEnvironment(LoadedFile file)
         {
+            // (Without the native side nothing is drawn or baked, as SceneLoaded.)
+            if (!Native.IsReady) return;
             var probe = DynamicGI.SkyboxProbe();
             Cubemap reflection = null;
             if (RenderSettings.defaultReflectionMode == Rendering.DefaultReflectionMode.Skybox)
-                reflection = RenderSettings.skybox != null
-                    ? DefaultReflection(RenderSettings.defaultReflectionResolution)
-                    : RenderSettings.BuiltinDefaultReflection();
+            {
+                if (RenderSettings.skybox == null)
+                    reflection = RenderSettings.BuiltinDefaultReflection();
+                else
+                    try
+                    {
+                        reflection = DefaultReflection(RenderSettings.defaultReflectionResolution);
+                    }
+                    catch (InvalidOperationException e)
+                    {
+                        Warn("bake-reflection-failed:" + file.Path, $"{file.Path}: Lightmapping.Bake could not make the default reflection of the skybox, which the scene goes without: {e.Message}");
+                    }
+            }
             RenderSettings.SetBakedEnvironment(file, probe, reflection);
         }
 
