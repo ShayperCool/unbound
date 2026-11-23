@@ -250,11 +250,23 @@ public class AppFactsProbe : MonoBehaviour
         fixed (byte* p = buffer) n = Debug.ExtractStackTraceNoAlloc(p, size, folder);
         int written = buffer.Length;
         while (written > 0 && buffer[written - 1] == 0xAA) written--;
-        Value(k + ".return", N(n));
-        Value(k + ".written", N(written));
         int text = 0;
         while (text < written && buffer[text] != 0) text++;
-        Value(k + ".text", Q(Norm(Encoding.UTF8.GetString(buffer, 0, text))));
+        string rawTrace = Encoding.UTF8.GetString(buffer, 0, text);
+        string trace = Norm(rawTrace);
+        int pathDelta = 0;
+        if (size == 4096 && folder != project + "/")
+        {
+            // Apply the same path replacement to the measured counts as to the text.
+            // Keep the original numbers, including bytes after the first terminator, in the run.
+            pathDelta = Encoding.UTF8.GetByteCount(trace) - Encoding.UTF8.GetByteCount(rawTrace);
+            File.AppendAllText(Path.Combine(directory, "stack-counts.jsonl"),
+                "{\"key\":" + Q(k) + ",\"return\":" + N(n) + ",\"written\":" + N(written) +
+                ",\"pathDelta\":" + N(pathDelta) + "}\n");
+        }
+        Value(k + ".return", N(n < 0 ? n : (long)n + pathDelta));
+        Value(k + ".written", N((long)written + pathDelta));
+        Value(k + ".text", Q(trace));
     }
 
     // ------------------------------------------------------------------ runtime memory sizes
