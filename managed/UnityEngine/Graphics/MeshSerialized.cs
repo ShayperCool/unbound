@@ -162,10 +162,7 @@ namespace UnityEngine
                 else
                 {
                     InvalidateBoneWeightArrays();
-                    RuntimeSkinWeights = packedWeights;
-                    m_RuntimeSkinLayout = SkinWeights.Unlimited;
-                    m_BoneWeights = packedWeights.LegacyProjection();
-                    Array.Resize(ref m_BoneWeights, count);
+                    RestorePackedSkinWeights(packedWeights, SkinWeights.Unlimited);
                 }
             }
 
@@ -176,6 +173,27 @@ namespace UnityEngine
                 if (channels[i].Dimension > 0)
                     layout.Add(new VertexAttributeDescriptor((VertexAttribute)i, (VertexAttributeFormat)channels[i].Format, channels[i].Dimension, channels[i].Stream));
             m_Layout = layout.Count > 0 ? layout.ToArray() : null;
+            if (m_BoneWeights != null && count > 0)
+            {
+                foreach (var descriptor in layout)
+                {
+                    if (descriptor.attribute is not (VertexAttribute.BlendWeight or VertexAttribute.BlendIndices)) continue;
+                    var channel = channels[(int)descriptor.attribute];
+                    int width = FormatSize(channel.Format) * channel.Dimension;
+                    int stride = strides[channel.Stream];
+                    long start = (long)starts[channel.Stream] + channel.Offset;
+                    if (start < 0 || start + (long)(count - 1) * stride + width > data.Length) continue;
+
+                    var bytes = new byte[checked(width * count)];
+                    for (int v = 0; v < count; v++)
+                        data.AsSpan((int)start + v * stride, width).CopyTo(bytes.AsSpan(v * width, width));
+                    m_PackedChannels ??= new PackedChannel[MaxVertexAttributes];
+                    m_PackedChannels[(int)descriptor.attribute] = new PackedChannel
+                    {
+                        Descriptor = descriptor, Count = count, Bytes = bytes,
+                    };
+                }
+            }
 
             // Indices and submeshes.
             var indexBytes = Hex(body.Str("m_IndexBuffer"));

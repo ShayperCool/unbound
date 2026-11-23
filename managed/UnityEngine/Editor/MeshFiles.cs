@@ -194,9 +194,9 @@ namespace Unbound.Runtime
                     Line(1, "m_BonesAABB", "[]");
                     return;
                 }
-                var weights = mesh.boneWeights;
-                var runtimeWeights = mesh.RuntimeSkinWeights;
                 var vertices = mesh.vertices;
+                var weights = mesh.FixedSkinningWeights;
+                var runtimeWeights = mesh.VariableSkinningWeights;
                 // A bone no vertex weighs keeps the empty box: min infinite, max minus infinite
                 // (engine-assets Boneless).
                 var lo = new Vector3[poses.Length];
@@ -213,7 +213,8 @@ namespace Unbound.Runtime
                     lo[bone] = UnityEngine.Vector3.Min(lo[bone], p);
                     hi[bone] = UnityEngine.Vector3.Max(hi[bone], p);
                 }
-                for (int v = 0; v < weights.Length && v < vertices.Length; v++)
+                int count = Math.Min(weights?.Length ?? 0, vertices.Length);
+                for (int v = 0; v < count; v++)
                 {
                     if (runtimeWeights != null)
                     {
