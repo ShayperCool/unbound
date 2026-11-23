@@ -626,6 +626,19 @@ namespace Unbound.Runtime
             return false;
         }
 
+        /// <summary>A discrete float curve of an engine component's property: it animates nothing,
+        /// whether its keys are the integer's bits or numbers (matches the Unity 6000.0.71f1 Editor,
+        /// tests/projects/enginediscrete: engine components offer discrete bindings for object
+        /// references only). Scripts' discrete fields bind (FieldGroup); the Animator's own curves
+        /// are left as they are (unmeasured).</summary>
+        static bool EngineDiscrete(ClipCurve curve)
+        {
+            if (curve.Flags != 1) return false;
+            var type = curve.Binding.ResolveType();
+            return type != null && typeof(Component).IsAssignableFrom(type)
+                && !typeof(MonoBehaviour).IsAssignableFrom(type) && type != typeof(Animator);
+        }
+
         /// <summary>A clip's curves on channels; without <paramref name="create"/> only on the
         /// properties bound already (-1 for the others).</summary>
         BoundClip Map(AnimationClip clip, bool create)
@@ -651,6 +664,11 @@ namespace Unbound.Runtime
                     bound.Float[i + 1] = ch >= 0 ? ch + 1 : -1;
                     bound.Float[i + 2] = ch >= 0 ? ch + 2 : -1;
                     i += 2;
+                    continue;
+                }
+                if (EngineDiscrete(curve))
+                {
+                    bound.Float[i] = -1;
                     continue;
                 }
                 int channel = bound.Float[i] = BindCurve(curve.Binding, objectValued: false, clip, create, bound);
