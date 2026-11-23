@@ -74,7 +74,7 @@ def main():
             value_probe.seal_value_capture(out)
             return 0
 
-        status = max(status, value_probe.gate(PROBE, VARIABLE, str(out), 0, ['--headless', '24', *flags],
+        status = max(status, value_probe.gate(PROBE, VARIABLE, str(out), 0, ['--frames', '24', '--size', '64x64', *flags],
                                              base=BASE, profile=backend))
     return status
 
