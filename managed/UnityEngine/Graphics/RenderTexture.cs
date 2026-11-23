@@ -21,6 +21,7 @@ namespace UnityEngine
         internal int m_LastUsedFrame;
         /// <summary>The size the texture's images were made at.</summary>
         int m_AllocatedWidth, m_AllocatedHeight;
+        bool m_AllocatedHasColor;
         /// <summary>The factors <see cref="ApplyDynamicScale"/> last applied to a texture marked
         /// useDynamicScaleExplicit.</summary>
         float m_ExplicitWidthScale = 1f, m_ExplicitHeightScale = 1f;
@@ -442,14 +443,14 @@ namespace UnityEngine
         // A supplied target must name a different image. See tests/projects/textureformats.
         internal void WriteCommandResolve(RenderTexture target)
         {
-            if (!IsCreated()) return;
-            bool implicitTarget = ReferenceEquals(target, null);
+            if (!IsCreated() || !m_AllocatedHasColor) return;
+            bool implicitTarget = target == null;
             if (implicitTarget)
             {
                 if (bindTextureMS || antiAliasing <= 1) return;
                 target = this;
             }
-            else if (target == null || !target.IsCreated()) return;
+            else if (!target.IsCreated() || !target.m_AllocatedHasColor) return;
             var binding = GfxStream.Current;
             bool isBound = binding.Colors == null
                 ? binding.Color == m_NativeHandle
@@ -457,7 +458,9 @@ namespace UnityEngine
             if (!isBound)
             {
                 Log.Write(LogType.Assert, ResolveOfInactiveSource, "", null);
-                return;
+                bool backbuffer = binding.Colors == null && (binding.Color == 0
+                    || (ScreenStandIn != null && binding.Color == ScreenStandIn.m_NativeHandle));
+                if (!backbuffer) return;
             }
             if (!implicitTarget && target == this) return;
             if (!implicitTarget && target.dimension is not (TextureDimension.Tex2D or TextureDimension.Cube))
@@ -465,7 +468,13 @@ namespace UnityEngine
                 Debug.LogWarning("Resolving into layered or volume render textures is not supported.");
                 return;
             }
-            QueueResolve(target);
+            if (isBound)
+                QueueResolve(target);
+            else if (implicitTarget)
+                GfxStream.CopyTexture(binding.Color, 0, 0, new RectInt(0, 0, -1, -1),
+                    m_NativeHandle, 0, 0, 0, 0);
+            else
+                GfxStream.ResolveTexture(binding.Color, target.EnsureCreated());
         }
 
         void QueueResolve(RenderTexture target) =>
@@ -690,6 +699,7 @@ namespace UnityEngine
             UploadTexture(&packet);
             m_AllocatedMipCount = Compat.RenderingMeasured ? mipCount : null;
             m_Created = true;
+            m_AllocatedHasColor = graphicsFormat != GraphicsFormat.None;
             (m_AllocatedWidth, m_AllocatedHeight) = (packet.Width, packet.Height);
             return m_NativeHandle;
         }

@@ -4059,6 +4059,7 @@ impl UnityRenderer {
                             .get(&destination)
                             .is_none_or(|t| t.samples == 1)
                         {
+                            self.prepare_screen_copy(texture, destination, &mut passes);
                             let source_view = self.bound_resolve_source(texture, destination);
                             if let Some(copy) = self.plan_copy(
                                 texture,
@@ -4879,13 +4880,7 @@ impl UnityRenderer {
                     } => {
                         open = false;
                         self.process_packed(&mut passes);
-                        if (source == 0 || destination == 0) && !self.screen_touched {
-                            // The frame's screen starts at its first use, a copy too: the slot still
-                            // holds an older frame's image.
-                            let target = self.screen_target(self.color_space);
-                            let pass = self.new_pass(target);
-                            passes.push(Op::Pass(pass));
-                        }
+                        self.prepare_screen_copy(source, destination, &mut passes);
                         if let Some(copy) = self.plan_copy(
                             source,
                             [source_slice, source_mip],
@@ -4905,11 +4900,7 @@ impl UnityRenderer {
                         open = false;
                         self.copy_depth(&mut passes, depth_mark);
                         depth_mark = self.op_position(&passes);
-                        if (source == 0 || destination == 0) && !self.screen_touched {
-                            let target = self.screen_target(self.color_space);
-                            let pass = self.new_pass(target);
-                            passes.push(Op::Pass(pass));
-                        }
+                        self.prepare_screen_copy(source, destination, &mut passes);
                         if let Some(blit) = self.plan_depth_blit(source, destination) {
                             passes.push(Op::DepthBlit(blit));
                             // What sampling the destination's depth element reads follows.
@@ -5978,6 +5969,14 @@ impl UnityRenderer {
                 })
         };
         image().unwrap_or([0, 0])
+    }
+
+    fn prepare_screen_copy(&mut self, source: u64, destination: u64, passes: &mut Vec<Op>) {
+        if (source == 0 || destination == 0) && !self.screen_touched {
+            // The screen slot still holds an earlier image until its first use.
+            let target = self.screen_target(self.color_space);
+            passes.push(Op::Pass(self.new_pass(target)));
+        }
     }
 
     /// A copy between two textures (0: the screen), clipped to both; formats must match.
