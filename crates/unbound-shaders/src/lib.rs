@@ -1190,8 +1190,8 @@ impl ShaderCompiler {
         let name = file
             .file_name()
             .map_or("shader".into(), |n| n.to_string_lossy().to_string());
-        // Macros expanded once: a program that calls frexp or declares an `inout bool` parameter
-        // compiles rewritten at once (glslang can crash on either, taking the process with it:
+        // Macros expanded once: a program that calls frexp or has an `inout bool` parameter the
+        // rewrite splits compiles rewritten at once (glslang can crash on either, taking the process with it:
         // [`exponents`], [`inout_bools`]); others compile as they are first.
         let expanded = self
             .compiler
@@ -1207,7 +1207,7 @@ impl ShaderCompiler {
                     anyhow!("{}: {e}", stage_name(kind))
                 })
         };
-        let crashes = exponents::calls_frexp(&expanded) || inout_bools::has_inout_bool(&expanded);
+        let crashes = exponents::calls_frexp(&expanded) || inout_bools::splits(&expanded);
         let artifact = if crashes {
             compile_fixed()?
         } else {
@@ -1323,6 +1323,7 @@ const FRAMEBUFFER_INPUT_MACROS: &[&str] = &[
 /// integer; `half` is `float` on desktop), buffers held in structs ([`buffer_members`]) or passed to functions
 /// with their counters ([`buffer_parameters`]), matrix
 /// swizzles of several elements ([`matrix_swizzles`]), `frexp` and `ldexp` ([`exponents`]),
+/// numbers given to `inout bool` parameters ([`inout_bools`]),
 /// functions declared to return a `const` value ([`plain_returns`]).
 fn fxc_compatible(source: &str) -> String {
     buffer_members::buffer_members(&writable_globals(&constructor_statements(
@@ -2109,6 +2110,32 @@ float4 array() : SV_Target { return float4(0.2, 0.4, 0.6, 1); }
         let module = naga::front::wgsl::parse_str(&compiled.fragment).unwrap();
         assert_ne!(compiled.fragment_entry, "array");
         assert_eq!(module.entry_points[0].name, compiled.fragment_entry);
+    }
+
+    /// A number passed to an `inout bool` parameter (a Shader Graph effect output's blocks given
+    /// its particles' `alive`, a float) crashes glslang, the process with it: such a program
+    /// compiles rewritten at once ([`inout_bools`]), and its call converts as FXC's.
+    #[test]
+    fn numbers_given_to_inout_bool_parameters_compile() {
+        let source = r#"
+#pragma vertex vert
+#pragma fragment frag
+struct Attributes { float alive; float3 position; };
+void SetAlive(inout bool alive, bool value) { alive = value && alive; }
+float4 vert(float4 position : POSITION) : SV_POSITION
+{
+    Attributes attributes = (Attributes)0;
+    attributes.alive = position.w;
+    SetAlive(attributes.alive, position.x > 0);
+    return float4(position.xyz, attributes.alive);
+}
+float4 frag() : SV_Target { return float4(0.2, 0.4, 0.6, 1); }
+"#;
+        let mut compiler = ShaderCompiler::new(Settings::default()).unwrap();
+        let compiled = compiler
+            .compile(&program(source, false), &[], false)
+            .unwrap();
+        naga::front::wgsl::parse_str(&compiled.vertex).unwrap();
     }
 
     /// HLSL's `ddx`/`ddy` (and `fwidth`, built from them) are coarse derivatives on Vulkan, as the
