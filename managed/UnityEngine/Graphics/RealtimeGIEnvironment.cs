@@ -166,6 +166,16 @@ namespace UnityEngine
             return faces;
         }
 
+        /// <summary>The skybox drawn into six faces of <paramref name="size"/> texels a side,
+        /// whatever the ambient source, at intensity 1: what a bake makes the default reflection
+        /// of (tests/projects/bakeenvironment).</summary>
+        internal static float[] SkyboxFaces(int size)
+        {
+            var faces = new float[6 * size * size * 3];
+            RenderSkyFaces(1f, size, faces);
+            return faces;
+        }
+
         /// <summary>Fills six faces of <paramref name="size"/> texels a side from an ambient
         /// source.</summary>
         static void FillFaces(EnvironmentKey key, int size, float[] faces)

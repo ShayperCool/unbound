@@ -651,6 +651,10 @@ pub fn dispatch(method: &str, request: &str) -> Result<String> {
             let r: crate::realtime_gi::BakeRequest = serde_json::from_str(request)?;
             Ok(crate::realtime_gi::bake_request(r)?.to_string())
         }
+        "baked-gi-default-reflection" => {
+            let r: crate::baked_gi::DefaultReflectionRequest = serde_json::from_str(request)?;
+            Ok(crate::baked_gi::default_reflection(r)?.to_string())
+        }
         "baked-gi-bake" => {
             let r: crate::baked_gi::BakeRequest = serde_json::from_str(request)?;
             Ok(crate::baked_gi::bake_request(r)?.to_string())

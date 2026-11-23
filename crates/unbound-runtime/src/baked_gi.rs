@@ -1136,6 +1136,53 @@ fn bake(request: BakeRequest, buffers: Option<&Path>) -> Result<Json> {
     }))
 }
 
+/// What the bake makes of the sky for the default reflection: the skybox drawn into six faces
+/// of `size` texels a side (linear RGB floats, Unity's face order, rows from the top, base64).
+#[derive(serde::Deserialize)]
+pub struct DefaultReflectionRequest {
+    size: u32,
+    faces: String,
+}
+
+/// The default reflection a bake makes of the sky's faces (matches the Unity 6000.0.71f1
+/// Editor, tests/projects/bakeenvironment): the faces as the bake stores them (half floats of
+/// red, green and blue, alpha 1), glossy-convolved as the texture importer convolves a
+/// reflection cube. `{ size, levels, texels }`: `texels` base64 half floats of RGBA, level by
+/// level and face by face within each level, rows from the top.
+pub fn default_reflection(request: DefaultReflectionRequest) -> Result<Json> {
+    let size = request.size;
+    let floats: Vec<f32> = base64::engine::general_purpose::STANDARD
+        .decode(request.faces)?
+        .chunks_exact(4)
+        .map(|b| f32::from_le_bytes([b[0], b[1], b[2], b[3]]))
+        .collect();
+    let texels = (size * size) as usize;
+    ensure!(
+        size > 0 && floats.len() == 6 * texels * 3,
+        "the default reflection's faces have {} values for 6 faces of {size} texels a side",
+        floats.len()
+    );
+    let stored = |v: f32| half::f16::from_f32(v).to_f32();
+    let faces: [Vec<f32>; 6] = std::array::from_fn(|face| {
+        floats[face * texels * 3..(face + 1) * texels * 3]
+            .chunks_exact(3)
+            .flat_map(|c| [stored(c[0]), stored(c[1]), stored(c[2]), 1.0])
+            .collect()
+    });
+    let levels = unbound_assets::texture::convolve_cube(size, &faces);
+    let bytes: Vec<u8> = levels
+        .iter()
+        .flatten()
+        .flatten()
+        .flat_map(|&v| half::f16::from_f32(v).to_le_bytes())
+        .collect();
+    Ok(json!({
+        "size": size,
+        "levels": levels.len(),
+        "texels": base64::engine::general_purpose::STANDARD.encode(bytes),
+    }))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1186,6 +1233,52 @@ mod tests {
             "scene": "10000000200000003000000040000000", "meshes": meshes, "renderers": renderers,
         }))
         .unwrap()
+    }
+
+    #[test]
+    fn the_default_reflection_stores_the_sky_as_half_floats_and_convolves_every_level() {
+        let size = 4u32;
+        let texels = (size * size) as usize;
+        // A face of 0.1 (not a half float) and the others of 2.
+        let faces: Vec<f32> = (0..6 * texels * 3)
+            .map(|i| if i < texels * 3 { 0.1 } else { 2.0 })
+            .collect();
+        let bytes: Vec<u8> = faces.iter().flat_map(|v| v.to_le_bytes()).collect();
+        let encode = |b: &[u8]| base64::engine::general_purpose::STANDARD.encode(b);
+        let out = default_reflection(DefaultReflectionRequest {
+            size,
+            faces: encode(&bytes),
+        })
+        .unwrap();
+        assert_eq!(
+            (out["size"].as_u64(), out["levels"].as_u64()),
+            (Some(4), Some(3))
+        );
+        let halves: Vec<f32> = base64::engine::general_purpose::STANDARD
+            .decode(out["texels"].as_str().unwrap())
+            .unwrap()
+            .chunks_exact(2)
+            .map(|b| half::f16::from_le_bytes([b[0], b[1]]).to_f32())
+            .collect();
+        // Levels of 4, 2 and 1 texels a side, six faces of four channels.
+        assert_eq!(halves.len(), 6 * 4 * (16 + 4 + 1));
+        // The first level is the faces as stored: red, green and blue as half floats, alpha 1.
+        assert_eq!(
+            &halves[..4],
+            &[
+                half::f16::from_f32(0.1).to_f32(),
+                half::f16::from_f32(0.1).to_f32(),
+                half::f16::from_f32(0.1).to_f32(),
+                1.0
+            ]
+        );
+        assert_eq!(&halves[texels * 4..texels * 4 + 4], &[2.0, 2.0, 2.0, 1.0]);
+        // Faces of another size are refused.
+        let short = default_reflection(DefaultReflectionRequest {
+            size: 8,
+            faces: encode(&bytes),
+        });
+        assert!(short.is_err());
     }
 
     #[test]

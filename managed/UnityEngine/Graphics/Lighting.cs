@@ -628,16 +628,27 @@ namespace UnityEngine
                     Debug.LogWarning($"Unbound: the scene's lighting data could not be read: {e.Message}");
                 }
             }
+            SetBakedEnvironment(owner, ambient, sky);
+        }
+
+        /// <summary>Gives the scene whose RenderSettings were read with <paramref name="file"/>
+        /// the environment lighting a bake made of it (a script's bake in Edit mode): its stored
+        /// ambient probe and default reflection.</summary>
+        internal static void SetBakedEnvironment(IReferenceResolver file, SphericalHarmonicsL2? ambient, Cubemap reflection) =>
+            SetBakedEnvironment(SettingsOf(file), ambient, reflection);
+
+        static void SetBakedEnvironment(SceneSettings owner, SphericalHarmonicsL2? ambient, Cubemap reflection)
+        {
             if (owner == null || owner == s_SettingsOwner)
             {
                 s_BakedProbe = ambient;
-                s_BakedReflection = sky;
+                s_BakedReflection = reflection;
                 s_EnvironmentProbe = null;
             }
             else
             {
                 owner.BakedProbe = ambient;
-                owner.BakedReflection = sky;
+                owner.BakedReflection = reflection;
             }
         }
 
@@ -732,6 +743,26 @@ namespace UnityEngine
 
         /// <summary>A baked reflection a lighting data names (the skybox's, a probe's): a cubemap
         /// of the built-in resources, or a project's baked cubemap asset.</summary>
+        /// <summary>The built-in lighting data's default reflection (Default-Skybox-Cubemap), or
+        /// null where it cannot be read.</summary>
+        internal static Cubemap BuiltinDefaultReflection()
+        {
+            if (!Native.IsReady) return null;
+            try
+            {
+                var json = Native.Call("lighting-data", System.Text.Json.JsonSerializer.Serialize(new { guid = s_BuiltinLightingData.Guid, fileId = s_BuiltinLightingData.FileId }));
+                var root = System.Text.Json.JsonDocument.Parse(json).RootElement;
+                return root.TryGetProperty("defaultReflection", out var reflection) && reflection.ValueKind == System.Text.Json.JsonValueKind.Object
+                    ? BakedReflection(reflection.GetProperty("guid").GetString(), reflection.GetProperty("fileId").GetInt64())
+                    : null;
+            }
+            catch (Exception e)
+            {
+                Debug.LogWarning($"Unbound: the built-in lighting data could not be read: {e.Message}");
+                return null;
+            }
+        }
+
         internal static Cubemap BakedReflection(string guid, long fileId)
         {
             var key = (guid, fileId);

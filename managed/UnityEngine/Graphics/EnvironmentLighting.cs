@@ -84,7 +84,9 @@ namespace UnityEngine
         /// it for both.</summary>
         public static void SetEnvironmentData(float[] input) => RealtimeGI.SetEnvironmentData(input);
 
-        static SphericalHarmonicsL2? SkyboxProbe()
+        /// <summary>The ambient probe of the skybox at ambient intensity 1 (null without a
+        /// skybox): what DynamicGI.UpdateEnvironment derives and a bake stores.</summary>
+        internal static SphericalHarmonicsL2? SkyboxProbe()
         {
             var sky = RenderSettings.skybox;
             if (sky == null) return null;

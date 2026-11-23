@@ -12,7 +12,8 @@ namespace UnityEngine
     /// lighting data (tests/projects/realtimegi bake cases: the Editor bakes when it opens such a
     /// scene; a scene loaded at runtime is not baked). The bake is the realtime part only: the
     /// Editor's bake also makes baked lightmaps, the light probes' baked lighting, reflection
-    /// probes and the environment lighting, which Unbound does not (each said once).
+    /// probes and the environment lighting, which Unbound does not (each said once); a script's
+    /// bake in Edit mode makes the environment lighting (<see cref="BakeEnvironment"/>).
     /// </summary>
     internal static partial class RealtimeGI
     {
@@ -55,8 +56,8 @@ namespace UnityEngine
         /// lighting data asset the Editor writes beside the scene (LightingData.asset and its
         /// .meta, with the scene's folder's .meta), which the scene then names; baked lightmaps
         /// and the light probes' baked lighting where the scene's Lighting Settings have baked
-        /// global illumination on (Q677); the environment lighting from a sky and baked
-        /// reflection probes. Of the baked lightmaps Unbound lays out where each renderer would
+        /// global illumination on (Q677); baked reflection probes. The environment lighting is
+        /// made (<see cref="BakeEnvironment"/>). Of the baked lightmaps Unbound lays out where each renderer would
         /// go (<see cref="BakedAtlas"/>, written to LibraryUnbound/BakedGI; renderers get
         /// nothing). Renderers a script added to the scene after it loaded are not
         /// baked (named). Several open scenes are baked one by one as they would load (not
@@ -88,6 +89,7 @@ namespace UnityEngine
                     scene.BakedOnOpen = true;
                     NoteBakeParts(file, settings, ScriptBake);
                     SceneLoaded(scene.Handle.Value, default, file, settings, first, bake: true, scriptBake: true);
+                    BakeEnvironment(file);
                     BakedAtlas.Lay(file, settings);
                     first = false;
                     UnityEditor.SceneManagement.EditorSceneManager.Dirty(scene);
@@ -102,6 +104,53 @@ namespace UnityEngine
             return true;
         }
 
+        /// <summary>The environment lighting a bake makes of the scene whose RenderSettings are in
+        /// effect, which it then has (matches the Unity 6000.0.71f1 Editor,
+        /// tests/projects/bakeenvironment): the ambient probe of the skybox (none without one:
+        /// the ambient mode then gives the ambient color), and the default reflection, the
+        /// skybox drawn into a cube of the Default Reflection Resolution and convolved for glossy
+        /// reflection as the texture importer convolves a reflection cube; without a skybox the
+        /// built-in Default-Skybox-Cubemap (none with a Custom reflection source, not measured). The Editor stores both in the lighting data it
+        /// writes beside the scene, the reflection as ReflectionProbe-0.exr; Unbound keeps them for
+        /// the session.</summary>
+        static void BakeEnvironment(LoadedFile file)
+        {
+            var probe = DynamicGI.SkyboxProbe();
+            Cubemap reflection = null;
+            if (RenderSettings.defaultReflectionMode == Rendering.DefaultReflectionMode.Skybox)
+                reflection = RenderSettings.skybox != null
+                    ? DefaultReflection(RenderSettings.defaultReflectionResolution)
+                    : RenderSettings.BuiltinDefaultReflection();
+            RenderSettings.SetBakedEnvironment(file, probe, reflection);
+        }
+
+        /// <summary>The skybox's default reflection at <paramref name="size"/> texels a side: its
+        /// faces stored as half floats and glossy-convolved, every level down to one texel, in a
+        /// readable RGBAHalf cube (the Editor's imported one is BC6H and not readable).</summary>
+        static Cubemap DefaultReflection(int size)
+        {
+            var faces = SkyboxFaces(size);
+            var bytes = new byte[faces.Length * sizeof(float)];
+            Buffer.BlockCopy(faces, 0, bytes, 0, bytes.Length);
+            var json = Native.Call("baked-gi-default-reflection", JsonSerializer.Serialize(new { size, faces = Convert.ToBase64String(bytes) }));
+            var root = JsonDocument.Parse(json).RootElement;
+            int levels = root.GetProperty("levels").GetInt32();
+            var texels = Convert.FromBase64String(root.GetProperty("texels").GetString());
+            var cube = new Cubemap(size, TextureFormat.RGBAHalf, levels) { name = "ReflectionProbe-0" };
+            int at = 0;
+            for (int level = 0; level < levels; level++)
+            {
+                int side = Math.Max(size >> level, 1);
+                for (int face = 0; face < 6; face++)
+                {
+                    cube.SetPixelData(texels, level, (CubemapFace)face, at);
+                    at += side * side * 8;
+                }
+            }
+            cube.Apply(false, false);
+            return cube;
+        }
+
         /// <summary>Says once what the Editor's bake of a scene (<paramref name="what"/>: when it
         /// opens it without lighting data, or a script's) would make and Unbound does not: baked
         /// lightmaps and the light probes' baked lighting (baked global illumination on; a scene
@@ -113,7 +162,8 @@ namespace UnityEngine
             string path = file?.Path ?? "a scene";
             if (settings == null || settings.bakedGI)
                 Warn("bake-baked:" + what + path, $"{path}: {what} would make baked lightmaps and the light probes' baked lighting, which Unbound does not make (Q677).");
-            if (RenderSettings.skybox != null || RenderSettings.ambientMode == Rendering.AmbientMode.Skybox)
+            // (A script's bake makes it, BakeEnvironment.)
+            if (what != ScriptBake && (RenderSettings.skybox != null || RenderSettings.ambientMode == Rendering.AmbientMode.Skybox))
                 Warn("bake-environment:" + what + path, $"{path}: {what} would make the environment lighting from the sky (the ambient probe and the default reflection), which Unbound does not make.");
             if (file != null)
                 foreach (var obj in file.Objects.Values)
