@@ -1,0 +1,9 @@
+{
+  "commands": [
+    "python3 tests/projects/missingscripts/run.py gate"
+  ],
+  "summary": "missingscripts: .*",
+  "engine_paths": [
+    "managed/UnityEngine/Runtime/Loading.cs"
+  ]
+}

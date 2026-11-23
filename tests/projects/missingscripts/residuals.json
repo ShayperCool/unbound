@@ -1,0 +1,21 @@
+{
+  "GetComponents lists a component whose script is missing as a null entry; Unbound makes no component for it": [
+    "01.scene.components",
+    "03.prefab.components",
+    "03.prefab.instance.components"
+  ],
+  "Each Instantiate of a prefab with a missing script's component says 'The referenced script on this Behaviour (Game Object '<null>') is missing!' and twice with the clone's name; Unbound keeps no such component to say it for": [
+    "03.prefab.instantiate.logs",
+    "03.prefab.instantiateAgain.logs"
+  ],
+  "A reference to a missing script's object is null from another file and a live Object from its own file; Unbound gives an object of the base class that compares equal to null (which a timeline's marker list needs: tests/projects/gameinterop timeline.CutsceneMissing)": [
+    "01.scene.missingAsset",
+    "01.scene.missingSubAsset",
+    "08.linked.other"
+  ],
+  "LoadAllAssetsAtPath lists a missing script's null entries before the main object; Unbound lists the main object first": [
+    "06.mixed.all",
+    "08.linked.all",
+    "09.twice.all"
+  ]
+}
