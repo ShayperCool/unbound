@@ -127,8 +127,10 @@ alive` (whose strip particles die) is exact throughout.
   overlapping segments show the order), a sorted quad output of a strip system's particles,
   `Compute Culling` on a strip output itself, several cameras.
 - Lit strips blended over what is behind them or drawn from lists, through the deferred
-  renderer, or with maps (drawn, not measured).
-- Strips lit by 2D lights, Shader Graph strip outputs, line strips
+  renderer or Forward+, with maps, the specular workflow, the six-way smoke material, both
+  sides drawn, receiving the main light's shadows or not; Shader Graph strip outputs (drawn,
+  not measured).
+- Strips lit by 2D lights, line strips
   (`Output ParticleStrip Line`), and any output but quads of a strip system's particles: not
   drawn (the effect says so).
 - Additive strips; a sorted strip under a perspective camera or with another sort criterion

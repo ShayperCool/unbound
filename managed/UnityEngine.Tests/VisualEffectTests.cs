@@ -624,6 +624,10 @@ VisualEffect:
             var entry = Assert.Single(ClassCoverage.Report("6000.0.71f1", new[] { found }).Classes);
             Assert.Equal(ClassReading.Unsupported.ToString(), entry.Reading);
             Assert.Equal("Assets/Scene.unity fileID 11: " + VisualEffect.NotDrawn, entry.Detail);
+            // Strips lit by the pipeline's lights are drawn (tests/projects/vfxstrips `lit`);
+            // only strips lit by 2D lights are said not to be.
+            Assert.DoesNotContain("lit strips", VisualEffect.NotDrawn);
+            Assert.Contains("strips lit by 2D lights", VisualEffect.NotDrawn);
             // Without an asset there is nothing to draw: the class is simply read.
             found.Documents["Assets/Scene.unity"] = "--- !u!2083052967 &12\nVisualEffect:\n  m_Enabled: 1\n  m_Asset: {fileID: 0}\n";
             entry = Assert.Single(ClassCoverage.Report("6000.0.71f1", new[] { found }).Classes);

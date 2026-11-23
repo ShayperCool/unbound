@@ -191,8 +191,9 @@ adds to that is not separated.
 ## Not covered
 
 - A lit output's motion vectors (`LitMoving`: drawn, not shot; an unlit output's are measured
-  in `tests/projects/vfxoutputs`). Lit strips, meshes chosen among several by their size on
-  screen: not drawn; each says so once for its asset. One mesh
+  in `tests/projects/vfxoutputs`). Strips lit by 2D lights and meshes chosen among several by
+  their size on screen: not drawn; each says so once for its asset (strips lit by the
+  pipeline's lights are drawn: `tests/projects/vfxstrips` `lit`). One mesh
   culled by its size on screen is drawn, not measured. Outputs of three or four
   meshes, several meshes through a sorted list or by a lit output: drawn as `mesh pair`, not
   measured.
