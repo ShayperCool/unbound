@@ -58,3 +58,20 @@ rejected write. The Error stack setting includes a stack in ScriptOnly and omits
 Full native stacks remain unmeasured. [Unity 6000.0 stack trace logging](https://docs.unity3d.com/6000.0/Documentation/Manual/stack-trace.html)
 
 Add `--profile audio` to the record, publish and gate commands above.
+
+## MeshRenderer material reservations
+
+The renderer profile records live attached MeshRenderers in the Built-In Render Pipeline and
+with a scriptable pipeline. A renderer accounts 656 bytes plus four bytes for each reserved
+material slot. Property block storage for individual slots starts on the first non-null indexed
+write, including an empty block, and adds eight bytes per reserved slot. Both reservations retain
+capacity when a material list shrinks. Shrinking discards indexed values outside the new list,
+and cloning creates fresh material slots and no property blocks. Renderer-wide property blocks
+and the referenced mesh, materials and textures have separate costs.
+
+Scene-authored empty and nonempty lists, list and array writes, rendering, clones, renderer-wide
+and indexed overrides, and out-of-range diagnostic paths have separate controls. The Unity 6000.0
+API declares valid material indices from zero through the current material count minus one and
+allows null to clear an override. [Renderer.SetPropertyBlock](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Renderer.SetPropertyBlock.html)
+
+Add `--profile renderer` to the record, publish and gate commands above.
