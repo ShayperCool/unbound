@@ -12,7 +12,7 @@ import value_probe  # noqa: E402
 PROBE = Path(__file__).resolve().parent
 BASE = (PROBE.parent/'formatmapping', ['Assets/Scenes', 'Assets/Scenes.meta', 'Packages', 'ProjectSettings'])
 AUDIO_BASE = [BASE, (PROBE/'Fixtures/audio', ['Assets/Scenes/Probe.unity'])]
-RENDERER_BASE = [BASE, (PROBE/'Fixtures/renderer', ['Assets/Scenes/Probe.unity'])]
+RENDERER_BASE = [BASE, (PROBE/'Fixtures/renderer', ['Assets/Scenes/Probe.unity', 'Assets/Resources'])]
 PROFILES = {
     'fixed': ('RecordComponentMemory.Record', 'COMPONENT_MEMORY_OUT', None, BASE),
     'light': ('RecordLightAllocation.Record', 'LIGHT_ALLOCATION_OUT', 'light', BASE),

@@ -184,6 +184,10 @@ public sealed class MeasureMeshRendererMemory : MonoBehaviour
         renderer = new GameObject("Empty indexed overrides").AddComponent<MeshRenderer>();
         renderer.sharedMaterials = Materials(3, material);
         renderer.SetPropertyBlock(new MaterialPropertyBlock(), 0);
+        var destination = new MaterialPropertyBlock();
+        destination.SetFloat(Property, 17.25f);
+        renderer.GetPropertyBlock(destination, 0);
+        Put("indexedEmpty.overwritesNonemptyDestination", destination.isEmpty.ToString());
         renderer.sharedMaterials = Materials(5, material);
         Read("indexedEmpty.grow", renderer);
         renderer.SetPropertyBlock(null, 1);
@@ -206,6 +210,15 @@ public sealed class MeasureMeshRendererMemory : MonoBehaviour
         Read("indexedTrim.zeroWhileActive", renderer);
         renderer.sharedMaterials = Materials(10, material);
         Read("indexedTrim.growAfterZero", renderer, 7);
+        Object.DestroyImmediate(renderer.gameObject);
+
+        renderer = new GameObject("Clear index after trimming").AddComponent<MeshRenderer>();
+        renderer.sharedMaterials = Materials(5, material);
+        renderer.SetPropertyBlock(block, 4);
+        renderer.sharedMaterials = Materials(2, material);
+        renderer.SetPropertyBlock(null, 1);
+        renderer.sharedMaterials = Materials(8, material);
+        Read("indexedTrim.growAfterClearUnassigned", renderer, 4);
         Object.DestroyImmediate(renderer.gameObject);
     }
 
@@ -320,6 +333,77 @@ public sealed class MeasureMeshRendererMemory : MonoBehaviour
         }
     }
 
+    static void MeasureDetached(Material material)
+    {
+        var source = new GameObject("Detached renderer source").AddComponent<MeshRenderer>();
+        var peer = new GameObject("Scene renderer source").AddComponent<MeshRenderer>();
+        var block = new MaterialPropertyBlock();
+        block.SetFloat(Property, 3.75f);
+        peer.SetPropertyBlock(block);
+        peer.SetPropertyBlock(block, 0);
+        source.sharedMaterials = Materials(5, material);
+        source.SetPropertyBlock(block);
+        source.SetPropertyBlock(block, 0);
+        source.SetPropertyBlock(block, 4);
+        Read("detached.before", source, 4);
+        source.gameObject.hideFlags = HideFlags.HideAndDontSave;
+        Put("detached.sceneWhileHidden", source.gameObject.scene.IsValid().ToString());
+        Read("detached.hidden", source, 4);
+        var rootClone = Object.Instantiate(source);
+        Read("detached.rootClone", rootClone, 4);
+        var parentedClone = Object.Instantiate(peer, source.transform);
+        Put("detached.childScene", parentedClone.gameObject.scene.IsValid().ToString());
+        Read("detached.parentedClone", parentedClone);
+        source.sharedMaterials = Materials(1, material);
+        Read("detached.shrunk", source);
+        source.sharedMaterials = Materials(8, material);
+        Read("detached.reusedIndex", source, 4);
+        source.gameObject.hideFlags = HideFlags.None;
+        Put("detached.sceneAfterRestore", source.gameObject.scene.IsValid().ToString());
+        Read("detached.restored", source);
+        Object.DestroyImmediate(rootClone.gameObject);
+        Object.DestroyImmediate(source.gameObject);
+        Object.DestroyImmediate(peer.gameObject);
+    }
+
+    static IEnumerator MeasureAsyncClones()
+    {
+        var source = new GameObject("Async renderer source").AddComponent<MeshRenderer>();
+        var block = new MaterialPropertyBlock();
+        block.SetFloat(Property, 3.75f);
+        source.SetPropertyBlock(block);
+        source.SetPropertyBlock(block, 0);
+        Read("async.source", source);
+        var asset = Resources.Load<GameObject>("RendererMemoryParent");
+        Put("async.assetLoaded", (asset != null).ToString());
+        if (asset == null)
+        {
+            Object.DestroyImmediate(source.gameObject);
+            yield break;
+        }
+        var sceneParent = new GameObject("Async scene parent").transform;
+        var assetParent = asset.transform;
+        var parents = new[] { sceneParent, assetParent };
+        var operations = new[] { Object.InstantiateAsync(source, sceneParent), Object.InstantiateAsync(source, assetParent) };
+        var prefixes = new[] { "async.sceneParent", "async.assetParent" };
+        for (int index = 0; index < operations.Length; index++)
+        {
+            var operation = operations[index];
+            for (int frame = 0; frame < 120 && !operation.isDone; frame++) yield return null;
+            string prefix = prefixes[index];
+            var copies = operation.Result;
+            bool completed = operation.isDone && copies is { Length: 1 } && copies[0] != null;
+            Put(prefix + ".completed", completed.ToString());
+            if (!completed) continue;
+            var clone = copies[0];
+            Put(prefix + ".parent", (clone.transform.parent == parents[index]).ToString());
+            Put(prefix + ".validScene", clone.gameObject.scene.IsValid().ToString());
+            Read(prefix, clone);
+        }
+        Object.DestroyImmediate(sceneParent.gameObject);
+        Object.DestroyImmediate(source.gameObject);
+    }
+
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
     static void Begin()
     {
@@ -364,6 +448,8 @@ public sealed class MeasureMeshRendererMemory : MonoBehaviour
             Object.DestroyImmediate(pipeline);
         }
         MeasureAuthored();
+        MeasureDetached(material);
+        yield return MeasureAsyncClones();
         Object.DestroyImmediate(material);
         Rows.Add("{\"k\":\"complete\",\"v\":true}");
         File.WriteAllLines(Path.Combine(output, "values.jsonl"), Rows);
