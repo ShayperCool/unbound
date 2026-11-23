@@ -40,9 +40,6 @@ namespace UnityEditor
         internal static void Store(string key, int value) =>
             SettingsAssets.Edit("ProjectSettings", body => body.Set(key, YText.Scalar(value.ToString(CultureInfo.InvariantCulture))));
 
-        internal static void Store(string key, string value) =>
-            SettingsAssets.Edit("ProjectSettings", body => body.Set(key, YText.Scalar(UnityYamlWriter.Scalar(value ?? ""))));
-
         /// <summary>Whether the Play Mode test runner may run tests in players.</summary>
         internal static bool playModeTestRunnerEnabled
         {
@@ -105,7 +102,7 @@ namespace UnityEditor
                     string stored = StoredText("appleDeveloperTeamID");
                     return stored.Length < 1 ? EditorPrefs.GetString("DefaultiOSAutomaticSignTeamId") : stored;
                 }
-                set => Store("appleDeveloperTeamID", value);
+                set => Save("appleDeveloperTeamID", value);
             }
 
             /// <summary>The project's profile, else the Editor preference DefaultiOSProvisioningProfileUUID.</summary>
@@ -116,7 +113,7 @@ namespace UnityEditor
                     string stored = StoredText("iOSManualSigningProvisioningProfileID");
                     return string.IsNullOrEmpty(stored) ? EditorPrefs.GetString("DefaultiOSProvisioningProfileUUID") : stored;
                 }
-                set => Store("iOSManualSigningProvisioningProfileID", value);
+                set => Save("iOSManualSigningProvisioningProfileID", value);
             }
 
             public static ProvisioningProfileType iOSManualProvisioningProfileType
@@ -133,7 +130,7 @@ namespace UnityEditor
                     string stored = StoredText("tvOSManualSigningProvisioningProfileID");
                     return string.IsNullOrEmpty(stored) ? EditorPrefs.GetString("DefaulttvOSProvisioningProfileUUID") : stored;
                 }
-                set => Store("tvOSManualSigningProvisioningProfileID", value);
+                set => Save("tvOSManualSigningProvisioningProfileID", value);
             }
 
             public static ProvisioningProfileType tvOSManualProvisioningProfileType
