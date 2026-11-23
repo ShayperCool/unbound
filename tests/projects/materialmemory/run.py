@@ -49,7 +49,9 @@ def main():
         parser.error(f'{args.backend} requires a host with that backend')
     if args.mode != 'publish' and args.labels:
         parser.error('use --label for record and gate')
-    backends = (args.backend,) if args.backend else local if args.mode == 'gate' else local[:1]
+    backends = local if args.mode == 'gate' else local[:1]
+    if args.backend:
+        backends = (args.backend,)
     label = private_label() if args.label is None else args.label
     status = 0
     for backend in backends:
