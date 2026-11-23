@@ -553,7 +553,7 @@ namespace Unbound.Runtime
             // The first frame tells where the pointer is, not that it moved. On macOS the second
             // frame's update brings the pointer where it is, moved or not, as one state event
             // without motion; on Linux a pointer that never moves sends nothing (see
-            // ReportsUnmovedPointer). Without a known pointer (headless) nothing is sent.
+            // ReportsUnmovedPointer). Without a current host position for the pointer nothing is sent.
             s_MouseFrames++;
             if (!s_HaveWindowMouse)
             {

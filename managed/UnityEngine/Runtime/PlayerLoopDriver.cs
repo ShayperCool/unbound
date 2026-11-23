@@ -43,8 +43,9 @@ namespace Unbound.Runtime
         /// <summary>Under a scripted fixed frame rate (<c>--fixed-fps</c>), the frame's step in
         /// seconds; 0 when frames follow the wall clock.</summary>
         internal double FixedStep;
-        /// <summary>1 when MouseX/MouseY are where the system pointer is (also outside the
-        /// window); 0 when no pointer is known (headless runs).</summary>
+        /// <summary>1 when MouseX/MouseY are where the system pointer is now; 0 when the host has
+        /// no current position for it, whatever the reason (headless, a Linux window before the
+        /// pointer moves or while it is outside, a locked cursor).</summary>
         internal int PointerKnown;
     }
 

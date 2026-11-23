@@ -134,8 +134,9 @@ pub struct FrameInput {
     /// `real_delta_time` is 0); 0 when frames follow the wall clock. The engine's real-time clock
     /// then follows the fixed frames too.
     pub fixed_step: f64,
-    /// 1 when `mouse_x`/`mouse_y` are where the system pointer is (a window's host knows it,
-    /// moved or not, also outside the window); 0 when no pointer is known (headless runs).
+    /// 1 when `mouse_x`/`mouse_y` are where the system pointer is now; 0 when the host has no
+    /// current position for it, whatever the reason (headless, a Linux window before the pointer
+    /// moves or while it is outside, a locked cursor).
     pub pointer_known: i32,
 }
 
