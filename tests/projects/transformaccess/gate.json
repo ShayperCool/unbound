@@ -1,0 +1,9 @@
+{
+  "commands": [
+    "python3 tests/projects/transformaccess/run.py gate"
+  ],
+  "summary": "transformaccess: .*",
+  "engine_paths": [
+    "managed/UnityEngine/Jobs/TransformJobs.cs"
+  ]
+}

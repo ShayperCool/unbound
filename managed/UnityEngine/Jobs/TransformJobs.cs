@@ -430,27 +430,39 @@ namespace Unbound.Runtime.Jobs
 
         internal int Count => m_Transforms.Count;
 
+        /// <summary>The capacity as set (Unity 6000.0.71f1, tests/projects/transformaccess): one
+        /// below the length is ignored, compared unsigned, so a negative one is kept as it is and
+        /// reads back negative.</summary>
         internal int Capacity
         {
-            get => Math.Max(m_Capacity, m_Transforms.Count);
+            get => m_Capacity;
             set
             {
-                if (value < m_Transforms.Count) throw new ArgumentException("Capacity can not be smaller than the length of the TransformAccessArray");
+                if ((uint)value < (uint)m_Transforms.Count) return;
                 m_Capacity = value;
             }
         }
 
+        internal const string NoJobCount = "Assertion failed on expression: 'desiredJobCount != 0'";
+
+        /// <summary>Room for <paramref name="count"/> transforms: past the capacity (compared
+        /// unsigned) it becomes twice that count, for Add and SetTransforms alike.</summary>
+        void Reserve(int count)
+        {
+            if ((uint)count > (uint)m_Capacity) m_Capacity = count * 2;
+        }
+
         internal void SetTransforms(UnityEngine.Transform[] transforms)
         {
+            Reserve(transforms.Length);
             m_Transforms.Clear();
             m_Transforms.AddRange(transforms);
-            m_Capacity = Math.Max(m_Capacity, transforms.Length);
         }
 
         internal void Add(UnityEngine.Transform transform)
         {
+            Reserve(m_Transforms.Count + 1);
             m_Transforms.Add(transform);
-            if (m_Transforms.Count > m_Capacity) m_Capacity = Math.Max(m_Capacity * 2, m_Transforms.Count);
         }
 
         internal void RemoveAtSwapBack(int index)
@@ -486,6 +498,9 @@ namespace Unbound.Runtime.Jobs
         /// <summary>The job data a transform job reads (freed with the job, and its snapshot with it).</summary>
         internal IntPtr PrepareForJob(bool readOnly)
         {
+            // A negative capacity leaves the job no batch count: the Editor asserts and runs the job
+            // over the transforms all the same (tests/projects/transformaccess negative*).
+            if (m_Capacity < 0) UnityEngine.Debug.LogAssertion(NoJobCount);
             int count = m_Transforms.Count;
             var snapshot = m_Transforms.ToArray();
             // Sorted by hierarchy root, user order within a hierarchy.
