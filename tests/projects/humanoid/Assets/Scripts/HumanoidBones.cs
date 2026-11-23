@@ -38,6 +38,11 @@ public partial class HumanoidProbe
         Put((s_JobKey ?? "job") + ".bones." + tag, "{" + string.Join(",", parts) + "}");
     }
 
+    internal static void ElbowHintRecord(string tag, AnimationStream stream)
+    {
+        Put((s_JobKey ?? "job") + ".elbowHint." + tag, V(stream.AsHuman().GetHintPosition(AvatarIKHint.LeftElbow)));
+    }
+
     /// <summary>What a job reads through the stream handle of an object added under the left
     /// hand (bone.prop): validity, the local position (times 100), rotation, and the world
     /// position and rotation.</summary>
@@ -111,7 +116,7 @@ public partial class HumanoidProbe
 /// one of them.</summary>
 public struct HumanBoneJob : IAnimationJob
 {
-    public enum Mode { Read, RotateLocal, RotateWorld, MoveHips, MoveArm, Scale, RotateThenHuman, HumanThenRead, Prop, Solve, RotateThenSolve, SolveTwice, ScaleHips, ScaleHipsThenHuman, HipsTrs }
+    public enum Mode { Read, RotateLocal, RotateWorld, MoveHips, MoveArm, Scale, RotateThenHuman, HumanThenRead, Prop, Solve, RotateThenSolve, SolveTwice, ScaleHips, ScaleHipsThenHuman, HipsTrs, ScaleHipsWorldWrite, ScaleHipsHints, ScaleHipsThenSolve, ScaleSpineThenSameHips, ScaleHipsFirstHint }
 
     public Mode mode;
     TransformStreamHandle hips, spine, arm, head, hand, prop;
@@ -187,6 +192,31 @@ public struct HumanBoneJob : IAnimationJob
                 hips.GetLocalTRS(stream, out var position, out var rotation, out var scale);
                 hips.SetLocalTRS(stream, position + new Vector3(.001f, 0, 0), rotation,
                     Vector3.Scale(scale, new Vector3(.8f, 1.25f, 1.1f)), false);
+                break;
+            case Mode.ScaleHipsWorldWrite:
+                hips.SetLocalScale(stream, Vector3.Scale(hips.GetLocalScale(stream), new Vector3(.8f, 1.25f, 1.1f)));
+                HumanoidProbe.BoneRecord("scaled", stream, ref this);
+                hand.SetPosition(stream, hand.GetPosition(stream) + new Vector3(10, 20, -5));
+                break;
+            case Mode.ScaleHipsHints:
+                HumanoidProbe.ElbowHintRecord("before", stream);
+                hips.SetLocalScale(stream, Vector3.Scale(hips.GetLocalScale(stream), new Vector3(.8f, 1.25f, 1.1f)));
+                HumanoidProbe.ElbowHintRecord("after", stream);
+                break;
+            case Mode.ScaleHipsFirstHint:
+                hips.SetLocalScale(stream, Vector3.Scale(hips.GetLocalScale(stream), new Vector3(.8f, 1.25f, 1.1f)));
+                HumanoidProbe.ElbowHintRecord("first", stream);
+                break;
+            case Mode.ScaleHipsThenSolve:
+                hips.SetLocalScale(stream, Vector3.Scale(hips.GetLocalScale(stream), new Vector3(.8f, 1.25f, 1.1f)));
+                HumanoidProbe.BoneRecord("scaled", stream, ref this);
+                SolveLeftHand(stream);
+                break;
+            case Mode.ScaleSpineThenSameHips:
+                spine.SetLocalScale(stream, new Vector3(1, 2, 1));
+                HumanoidProbe.BoneRecord("beforeSameHips", stream, ref this);
+                hips.GetLocalTRS(stream, out var samePosition, out var sameRotation, out var sameScale);
+                hips.SetLocalTRS(stream, samePosition, sameRotation, sameScale, false);
                 break;
             case Mode.Solve:
                 SolveLeftHand(stream);
