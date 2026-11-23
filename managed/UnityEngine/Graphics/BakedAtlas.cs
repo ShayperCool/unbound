@@ -358,6 +358,18 @@ namespace UnityEngine
         /// and left out or simplified: area lights, lights whose intensity multiplies their linear
         /// colour (GraphicsSettings.lightsUseLinearIntensity; not measured), cookies (ignored),
         /// soft baked shadows (a Baked Shadow Angle or Radius: baked hard).</summary>
+        /// <summary>Whether a scene's component takes part in a bake of its baked lightmaps (as the
+        /// bake reads them from the scene file): an enabled, active Mesh Renderer contributing to
+        /// global illumination, an enabled, active baked or mixed light, a LOD Group, a Terrain or
+        /// a Light Probe Group.</summary>
+        internal static bool TakenByBake(Component component) => component switch
+        {
+            MeshRenderer r => r.enabled && r.gameObject.activeInHierarchy && (r.gameObject.m_StaticEditorFlags & ContributeGI) != 0,
+            Light l => l.enabled && l.gameObject.activeInHierarchy && l.lightmapBakeType != LightmapBakeType.Realtime,
+            LODGroup or Terrain or LightProbeGroup => true,
+            _ => false,
+        };
+
         /// <summary>Why a bake's lightmaps (and its lighting data) are not written, or null: a
         /// renderer or light of a prefab instance (how the lighting data names it is not
         /// measured: its IDs combine the instance's and the prefab's), part of their light left

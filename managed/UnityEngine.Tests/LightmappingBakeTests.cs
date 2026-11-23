@@ -173,9 +173,13 @@ namespace UnityEngine.Tests
             file.Objects[1] = renderer;
             RealtimeGI.SceneLoaded(data.Handle.Value, default, file, settings, true);
             // A renderer a script adds after the load is not baked: named.
-            var added = new GameObject("Added");
+            var added = new GameObject("Added") { m_StaticEditorFlags = 1 };
             UnityEngine.SceneManagement.SceneManager.MoveGameObjectToScene(added, scene);
             added.AddComponent<MeshRenderer>();
+            // One the bake would not take (not contributing to global illumination): not named.
+            var preview = new GameObject("Preview");
+            UnityEngine.SceneManagement.SceneManager.MoveGameObjectToScene(preview, scene);
+            preview.AddComponent<MeshRenderer>();
             RealtimeGI.s_Warned.Clear();
             try
             {
@@ -194,6 +198,7 @@ namespace UnityEngine.Tests
                 Assert.Contains(logs.Messages, m => m.Type == LogType.Warning && m.Message.Contains("LightingData.asset"));
                 Assert.Contains(logs.Messages, m => m.Type == LogType.Warning && m.Message.Contains("Q677"));
                 Assert.Contains(logs.Messages, m => m.Type == LogType.Warning && m.Message.Contains("'Added'"));
+                Assert.DoesNotContain(logs.Messages, m => m.Message.Contains("'Preview'"));
                 Assert.DoesNotContain(logs.Messages, m => m.Message.Contains("'Made'"));
                 // Where the bake makes no environment lighting (here: without the native side)
                 // the scene keeps the one it had, also when it loads again.

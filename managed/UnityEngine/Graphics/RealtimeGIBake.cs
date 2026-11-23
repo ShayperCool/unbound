@@ -59,8 +59,9 @@ namespace UnityEngine
         /// global illumination on (Q677); baked reflection probes. The environment lighting is
         /// made (<see cref="BakeEnvironment"/>). Of the baked lightmaps Unbound lays out where each renderer would
         /// go (<see cref="BakedAtlas"/>, written to LibraryUnbound/BakedGI; renderers get
-        /// nothing). Renderers a script added to the scene after it loaded are not
-        /// baked (named). Several open scenes are baked one by one as they would load (not
+        /// nothing). Renderers, lights, LOD Groups, Terrains and
+        /// Light Probe Groups a script added to the scene after it loaded are not baked (named),
+        /// and the scene's lightmaps are then not written. Several open scenes are baked one by one as they would load (not
         /// measured).
         /// </summary>
         internal static bool BakeInEditMode()
@@ -82,11 +83,11 @@ namespace UnityEngine
                     var made = new HashSet<Object>(file.Objects.Values);
                     bool added = false;
                     foreach (var root in scene.Roots)
-                        foreach (var renderer in root.GetComponentsInChildren<MeshRenderer>(true))
-                            if (!made.Contains(renderer))
+                        foreach (var component in root.GetComponentsInChildren<Component>(true))
+                            if (component != null && !made.Contains(component) && BakedAtlas.TakenByBake(component))
                             {
                                 added = true;
-                                Warn("script-bake-added:" + scene.Path + renderer.GetInstanceID(), $"{scene.Path}: '{renderer.name}' was added after the scene loaded; Unbound's bake (Lightmapping.Bake) does not take it.");
+                                Warn("script-bake-added:" + scene.Path + component.GetInstanceID(), $"{scene.Path}: '{component.name}' ({component.GetType().Name}) was added after the scene loaded; Unbound's bake (Lightmapping.Bake) does not take it, and writes no lightmaps of the scene.");
                             }
                     if (!string.IsNullOrEmpty(scene.Path)) s_ScriptBakedScenes.Add(scene.Path);
                     scene.BakedOnOpen = true;

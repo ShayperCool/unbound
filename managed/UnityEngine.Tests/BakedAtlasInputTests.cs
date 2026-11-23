@@ -135,6 +135,30 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
+        public void TheBakeTakesContributingRenderersBakedLightsAndLodGroups()
+        {
+            var go = new GameObject("taken");
+            try
+            {
+                var renderer = go.AddComponent<MeshRenderer>();
+                Assert.False(BakedAtlas.TakenByBake(renderer));
+                go.m_StaticEditorFlags = 1;
+                Assert.True(BakedAtlas.TakenByBake(renderer));
+                var light = go.AddComponent<Light>();
+                light.lightmapBakeType = LightmapBakeType.Realtime;
+                Assert.False(BakedAtlas.TakenByBake(light));
+                light.lightmapBakeType = LightmapBakeType.Mixed;
+                Assert.True(BakedAtlas.TakenByBake(light));
+                Assert.True(BakedAtlas.TakenByBake(go.AddComponent<LODGroup>()));
+                Assert.False(BakedAtlas.TakenByBake(go.transform));
+            }
+            finally
+            {
+                Object.DestroyImmediate(go);
+            }
+        }
+
+        [Fact]
         public void LightingSettingsReadFixedLightmapSize()
         {
             var settings = new LightingSettings();
