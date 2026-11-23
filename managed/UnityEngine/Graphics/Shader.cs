@@ -571,12 +571,53 @@ namespace UnityEngine
         Dictionary<int, ShaderPropertyInfo> m_ById;
         int m_ByIdCount;
 
-        internal bool ProfilerPropertyLayoutKnown { get; private set; }
+        internal (long Keys, long Words, bool MixedWords)? ProfilerPropertyLayout { get; private set; }
+        internal int ProfilerLayoutVersion { get; private set; }
 
         internal void PropertiesChanged(bool layoutKnown = false)
         {
             m_ById = null;
-            ProfilerPropertyLayoutKnown = layoutKnown;
+            ProfilerLayoutVersion++;
+            ProfilerPropertyLayout = layoutKnown && Compat.MaterialScalarMemoryMeasured ? MeasureProfilerPropertyLayout() : null;
+        }
+
+        (long Keys, long Words, bool MixedWords)? MeasureProfilerPropertyLayout()
+        {
+            const int VectorWords = 4;
+            const int TextureKeys = 4;
+            const int TextureWords = 21;
+            var names = new HashSet<string>(StringComparer.Ordinal);
+            long keys = 0, words = 0;
+            bool mixedWords = false;
+            foreach (var property in m_Properties)
+            {
+                if (!names.Add(property.Name)) return null;
+                switch (property.Type)
+                {
+                    case ShaderPropertyType.Float:
+                    case ShaderPropertyType.Range:
+                        keys++;
+                        words++;
+                        continue;
+                    case ShaderPropertyType.Int:
+                        keys++;
+                        words++;
+                        break;
+                    case ShaderPropertyType.Color:
+                    case ShaderPropertyType.Vector:
+                        keys++;
+                        words += VectorWords;
+                        break;
+                    case ShaderPropertyType.Texture:
+                        keys += TextureKeys;
+                        words += TextureWords;
+                        break;
+                    default:
+                        return null;
+                }
+                mixedWords = true;
+            }
+            return (keys, words, mixedWords);
         }
 
         /// <summary>The property flagged with <paramref name="flag"/> (MainTexture, MainColor), else

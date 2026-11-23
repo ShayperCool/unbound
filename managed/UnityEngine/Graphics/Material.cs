@@ -181,12 +181,23 @@ namespace UnityEngine
             internal bool m_InheritFlags;
             internal bool m_InheritKeywords;
             internal SavedSheet m_Sheet;
+            internal int? m_ProfilerLayoutVersion;
+            internal HashSet<int> m_ProfilerAddedFloats;
         }
         readonly MaterialState m_State = new MaterialState();
 
         internal Material ReloadWrapper() => (Material)CreateReloadWrapper();
 
-        Shader m_Shader { get => m_State.m_Shader; set => m_State.m_Shader = value; }
+        Shader m_Shader
+        {
+            get => m_State.m_Shader;
+            set
+            {
+                if (m_State.m_ProfilerLayoutVersion.HasValue && !ReferenceEquals(m_State.m_Shader, value))
+                    StopMeasuringPropertyStorage();
+                m_State.m_Shader = value;
+            }
+        }
         internal int m_CustomRenderQueue { get => m_State.m_CustomRenderQueue; set => m_State.m_CustomRenderQueue = value; }
         int m_SerializedQueue { get => m_State.m_SerializedQueue; set => m_State.m_SerializedQueue = value; }
 
@@ -234,6 +245,7 @@ namespace UnityEngine
             if (shader == null) throw new ArgumentNullException(nameof(shader), "Creating a material requires a shader.");
             m_Name = shader.name;
             StartWith(shader);
+            StartMeasuringPropertyStorage();
         }
 
         /// <summary>The shader a new material starts with: its default textures and its keyword
@@ -308,6 +320,10 @@ namespace UnityEngine
             m_InheritKeywords = source.m_InheritKeywords;
             // The copy already has what the source inherited.
             m_InheritedVersion = source.m_InheritedVersion;
+            // A plain runtime copy starts with its own declared property storage. The source's
+            // appended scalar reservation does not carry over (tests/projects/materialmemory).
+            if (source.ProfilerPropertyStorageBytes.HasValue)
+                StartMeasuringPropertyStorage();
         }
 
         [global::System.@ObsoleteAttribute("Creating materials from shader source string is no longer supported. Use Shader assets instead.", false)] [global::System.ComponentModel.@EditorBrowsableAttribute((global::System.ComponentModel.EditorBrowsableState)1)]
@@ -556,6 +572,7 @@ namespace UnityEngine
             set
             { MainThreadCheck.Check("SetShaderKeywords");
                 OwnKeywords();
+                StopMeasuringPropertyStorage();
                 m_Keywords.Clear();
                 m_KeywordExtras.Clear();
                 if (value != null)
@@ -624,6 +641,7 @@ namespace UnityEngine
             set
             {
                 if (m_GIFlags == value) return;
+                StopMeasuringPropertyStorage();
                 m_GIFlags = value;
                 MarkDirty();
             }
@@ -635,6 +653,7 @@ namespace UnityEngine
             set
             {
                 if (m_DoubleSidedGI == value) return;
+                StopMeasuringPropertyStorage();
                 m_DoubleSidedGI = value;
                 MarkDirty();
             }
@@ -670,6 +689,7 @@ namespace UnityEngine
             set
             {
                 m_Parent = value == this ? null : value;
+                if (m_Parent != null) StopMeasuringPropertyStorage();
                 m_Own = m_Parent != null ? Differences(m_Parent) : null;
                 m_InheritQueue = m_InheritFlags = m_InheritKeywords = false;
                 m_InheritedVersion = -1;
@@ -848,7 +868,11 @@ namespace UnityEngine
         {
             MainThreadCheck.Check("EnableKeyword");
             OwnKeywords();
-            if (m_Keywords.Add(keyword)) MarkDirty();
+            if (m_Keywords.Add(keyword))
+            {
+                StopMeasuringPropertyStorage();
+                MarkDirty();
+            }
         }
 
         public void DisableKeyword(string keyword)
@@ -890,7 +914,11 @@ namespace UnityEngine
                 ? m_DisabledPasses != null && m_DisabledPasses.Remove(passName)
                 : (m_DisabledPasses ??= new HashSet<string>(StringComparer.OrdinalIgnoreCase)).Add(passName);
             // GPU-driven rendering keeps whether the motion vectors pass is enabled.
-            if (changed) ObjectDispatch.Changed(this);
+            if (changed)
+            {
+                StopMeasuringPropertyStorage();
+                ObjectDispatch.Changed(this);
+            }
         }
 
         public bool GetShaderPassEnabled(string passName) => passName == null || m_DisabledPasses == null || !m_DisabledPasses.Contains(passName);
@@ -937,7 +965,11 @@ namespace UnityEngine
         public void SetOverrideTag(string tag, string val)
         {
             if (string.IsNullOrEmpty(val)) m_Tags.Remove(tag);
-            else m_Tags[tag] = val;
+            else
+            {
+                m_Tags[tag] = val;
+                StopMeasuringPropertyStorage();
+            }
         }
 
         /// <summary>
@@ -1093,7 +1125,11 @@ namespace UnityEngine
                 Debug.LogWarning("Unbound: constant buffers bound at an offset are not supported yet; the cbuffer reads the buffer from its start.");
             }
             if (buffer == null) m_Buffers.Remove(nameID);
-            else m_Buffers[nameID] = buffer;
+            else
+            {
+                m_Buffers[nameID] = buffer;
+                StopMeasuringPropertyStorage();
+            }
             MarkDirty();
         }
 
@@ -1110,6 +1146,7 @@ namespace UnityEngine
             TouchSheet();
             m_RawBindings.Remove(nameID);
             m_Floats[nameID] = value;
+            RecordProfilerPropertyWrite(nameID, ShaderPropertyType.Float);
             ScriptSet(nameID);
             MarkDirty();
         }
@@ -1138,6 +1175,7 @@ namespace UnityEngine
         {
             TouchSheet();
             m_Ints[nameID] = value;
+            RecordProfilerPropertyWrite(nameID, ShaderPropertyType.Int);
             ScriptSet(nameID);
             MarkDirty();
         }
@@ -1167,12 +1205,14 @@ namespace UnityEngine
                 var slot = Slot(texture);
                 slot.Scale = new Vector2(value.x, value.y);
                 slot.Offset = new Vector2(value.z, value.w);
+                StopMeasuringPropertyStorage();
                 MarkDirty();
                 return;
             }
             m_RawBindings.Remove(nameID);
             m_Vectors[nameID] = value;
             m_VectorsAfterTexture.Add(nameID);
+            RecordProfilerPropertyWrite(nameID, ShaderPropertyType.Vector);
             ScriptSet(nameID);
             MarkDirty();
         }
@@ -1202,6 +1242,7 @@ namespace UnityEngine
         {
             TouchSheet();
             m_Matrices[nameID] = value;
+            StopMeasuringPropertyStorage();
             ScriptSet(nameID);
             MarkDirty();
         }
@@ -1232,6 +1273,8 @@ namespace UnityEngine
             slot.Element = element;
             slot.ElementBinding = elementBinding;
             m_VectorsAfterTexture.Remove(HdrDecode.IdOf(nameID));
+            if (elementBinding) StopMeasuringPropertyStorage();
+            else RecordProfilerPropertyWrite(nameID, ShaderPropertyType.Texture);
             ScriptSet(nameID);
             MarkDirty();
         }
@@ -1277,6 +1320,7 @@ namespace UnityEngine
             TouchSheet();
             m_Own?.Add(nameID);
             Slot(nameID).Offset = value;
+            StopMeasuringPropertyStorage();
             MarkDirty();
         }
 
@@ -1287,6 +1331,7 @@ namespace UnityEngine
             TouchSheet();
             m_Own?.Add(nameID);
             Slot(nameID).Scale = value;
+            StopMeasuringPropertyStorage();
             MarkDirty();
         }
 
@@ -1397,6 +1442,7 @@ namespace UnityEngine
         void SetArray<T>(int nameID, IReadOnlyList<T> values)
         {
             PropertyArrays.Set(m_Arrays, nameID, values);
+            StopMeasuringPropertyStorage();
             MarkDirty();
         }
 
@@ -1453,6 +1499,7 @@ namespace UnityEngine
         /// texture slots and arrays the source also has are kept for it to fill.</summary>
         void ClearForCopyOf(Material source)
         {
+            StopMeasuringPropertyStorage();
             m_Floats.Clear(); m_Ints.Clear(); m_Vectors.Clear(); m_Matrices.Clear(); m_Keywords.Clear(); m_KeywordExtras.Clear();
             m_ScriptSet.Clear(); m_TextureNames.Clear(); m_RawBindings.Clear(); m_VectorsAfterTexture.Clear();
             m_Buffers.Clear();
@@ -1503,6 +1550,7 @@ namespace UnityEngine
             if (m_Parent != null)
                 Unbound.Runtime.Stubs.Ignored("Material.CopyMatchingPropertiesFromMaterial into a material variant",
                     "copies the values without making them overrides: a later change of the parent can replace them");
+            StopMeasuringPropertyStorage();
             bool Declares(int id) => Declared(id) != null;
             foreach (var p in mat.m_Floats) if (Declares(p.Key)) m_Floats[p.Key] = p.Value;
             foreach (var p in mat.m_Ints) if (Declares(p.Key)) m_Ints[p.Key] = p.Value;
@@ -1552,6 +1600,7 @@ namespace UnityEngine
             start.Inherit();
             end.Inherit();
             Inherit();
+            StopMeasuringPropertyStorage();
             bool linear = QualitySettings.activeColorSpace == ColorSpace.Linear;
             foreach (var p in start.m_Floats)
             {
@@ -1636,6 +1685,7 @@ namespace UnityEngine
 
         internal void ReadSerialized(YNode body, IReferenceResolver resolver)
         {
+            StopMeasuringPropertyStorage();
             var shaderRef = body.Ref("m_Shader");
             m_Shader = shaderRef.IsNull ? null : resolver.Resolve(shaderRef, typeof(Shader)) as Shader;
             m_CustomRenderQueue = body.Int("m_CustomRenderQueue", -1);
