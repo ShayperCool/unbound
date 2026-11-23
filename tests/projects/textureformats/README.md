@@ -66,9 +66,12 @@ These are observations of this release and device, not documented guarantees:
   ordinary source's retained image. Screen-camera commands can see the
   camera's LDR or HDR intermediate before final presentation. The destination
   gets the opaque display color, clipped to both images. The framebuffer
-  copy converts to the destination's storage. The controls record normalized
-  channels, half and full floats, sRGB writes in a Linear project, and a
-  rectangle whose position is preserved. An explicit self-target keeps its
+  copy uses the destination's sRGB encoding when sRGB writes are enabled.
+  A partial camera supplies the pixels inside its viewport while the rest
+  come from the display. The built-in screen viewport rounds the clipped
+  endpoints before computing the intermediate's size. The controls include
+  fractional edges, negative origins, normalized channels, half and full
+  floats, and sRGB writes in Gamma and Linear projects. An explicit self-target keeps its
   earlier color. A different active render texture leaves the destination alone.
   Destroyed destinations act as omitted destinations. Released images skip the
   command, and a source recreated before execution supplies its new pixels.

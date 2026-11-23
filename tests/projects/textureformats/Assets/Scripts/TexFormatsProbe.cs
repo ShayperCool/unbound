@@ -758,6 +758,120 @@ public static class TexFormatsProbe
         }
     }
 
+    static void CommandResolveDisplayPlacement()
+    {
+        int previousAA = QualitySettings.antiAliasing;
+        bool previousWrite = GL.sRGBWrite;
+        try { CommandResolveDisplayPlacementCases(); }
+        finally
+        {
+            QualitySettings.antiAliasing = previousAA;
+            GL.sRGBWrite = previousWrite;
+        }
+    }
+
+    static void CommandResolveDisplayPlacementCases()
+    {
+        QualitySettings.antiAliasing = 0;
+        void Read(string key, RenderTexture rt, int x = 0, int y = 0)
+        {
+            Value(key + ".byte", Readback(AsyncGPUReadback.Request(rt, 0, x, 1, y, 1, 0, 1, TextureFormat.RGBA32)));
+            Value(key + ".float", Readback(AsyncGPUReadback.Request(rt, 0, x, 1, y, 1, 0, 1, TextureFormat.RGBAFloat)));
+        }
+        foreach (var format in new[] { GraphicsFormat.R8G8B8A8_UNorm, GraphicsFormat.R8G8B8A8_SRGB })
+        foreach (var write in new[] { false, true })
+        {
+            string key = "rt.commandResolve.destinationEncoding." + format + "." + write;
+            var desc = new RenderTextureDescriptor(8, 8, format, 0) { msaaSamples = 4 };
+            var source = Target(desc);
+            Value(key + ".sourceCreated", B2(source.Create()));
+            desc.msaaSamples = 1;
+            var dst = Target(desc);
+            Value(key + ".destCreated", B2(dst.Create()));
+            RenderTexture.active = source;
+            GL.Clear(false, true, Color.red);
+            RenderTexture.active = dst;
+            GL.Clear(false, true, Color.green);
+            RenderTexture.active = null;
+            GL.sRGBWrite = write;
+            GL.Clear(false, true, new Color(.11f, .31f, .73f, .42f));
+            using var cb = new CommandBuffer();
+            cb.ResolveAntiAliasedSurface(source, dst);
+            cb.ResolveAntiAliasedSurface(source);
+            Graphics.ExecuteCommandBuffer(cb);
+            Read(key + ".explicit", dst);
+            Read(key + ".implicit", source);
+        }
+        foreach (var hdr in new[] { false, true })
+        foreach (var aa in new[] { 0, 4 })
+        foreach (int x in new[] { 4, 0, -2 })
+        {
+            string key = "rt.commandResolve.partialScreen." + hdr + "." + aa + "." + x;
+            var (source, dst) = ResolvePartialDisplay(hdr, aa, new Rect(x, 5, 14, 13));
+            Read(key + ".origin", dst, 0, 0);
+            Read(key + ".within", dst, 6, 7);
+            Read(key + ".beyondIntermediate", dst, 20, 20);
+            Value(key + ".justInside", CommandResolvePixel(dst, TextureFormat.RGBA32, Math.Max(0, x), 5));
+            Value(key + ".justOutside", CommandResolvePixel(dst, TextureFormat.RGBA32, x + 14, 5));
+            Value(key + ".retainedWithin", CommandResolvePixel(source, TextureFormat.RGBA32, 6, 7));
+            Value(key + ".retainedBeyond", CommandResolvePixel(source, TextureFormat.RGBA32, 20, 20));
+        }
+
+        // Compare entire rows across both edges. Half pixels and unequal endpoint rounding
+        // distinguish the displayed extent from truncating the rectangle's width and height.
+        var fractional = new[]
+        {
+            new Rect(-2.5f, 5f, 14f, 13f),
+            new Rect(-3.5f, 5f, 14f, 13f),
+            new Rect(4.25f, 5.25f, 13.25f, 12.25f),
+            new Rect(4.75f, 5.75f, 13.25f, 12.25f),
+            new Rect(4.5f, 5.5f, 13.5f, 12.5f),
+            new Rect(4.2f, 5.2f, 13.9f, 12.9f),
+        };
+        foreach (bool hdr in new[] { false, true })
+        foreach (int aa in new[] { 0, 4 })
+        for (int i = 0; i < fractional.Length; ++i)
+        {
+            string key = "rt.commandResolve.fractionalDisplay." + hdr + "." + aa + "." + i;
+            var (_, dst) = ResolvePartialDisplay(hdr, aa, fractional[i]);
+            Value(key + ".row", Readback(AsyncGPUReadback.Request(dst, 0, 0, 24, 7, 1, 0, 1, TextureFormat.RGBA32)));
+            Value(key + ".column", Readback(AsyncGPUReadback.Request(dst, 0, 6, 1, 0, 24, 0, 1, TextureFormat.RGBA32)));
+        }
+    }
+
+    static (RenderTexture source, RenderTexture destination) ResolvePartialDisplay(bool hdr, int aa, Rect viewport)
+    {
+        QualitySettings.antiAliasing = aa;
+        GL.sRGBWrite = false;
+        var desc = new RenderTextureDescriptor(24, 24, RenderTextureFormat.ARGB32, 0) { msaaSamples = 4, sRGB = false };
+        var source = Target(desc);
+        source.Create();
+        desc.msaaSamples = 1;
+        var dst = Target(desc);
+        dst.Create();
+        RenderTexture.active = source;
+        GL.Clear(false, true, Color.red);
+        RenderTexture.active = dst;
+        GL.Clear(false, true, Color.green);
+        RenderTexture.active = null;
+        GL.Clear(false, true, Color.blue);
+        var camera = Own(new GameObject("Partial resolve camera")).AddComponent<Camera>();
+        camera.enabled = false;
+        camera.allowHDR = hdr;
+        camera.allowMSAA = true;
+        camera.clearFlags = CameraClearFlags.SolidColor;
+        camera.backgroundColor = new Color(.1f, .7f, .3f, .4f);
+        camera.cullingMask = 0;
+        camera.pixelRect = viewport;
+        using var cb = new CommandBuffer();
+        cb.ResolveAntiAliasedSurface(source, dst);
+        cb.ResolveAntiAliasedSurface(source);
+        camera.AddCommandBuffer(CameraEvent.AfterEverything, cb);
+        try { camera.Render(); }
+        finally { camera.RemoveCommandBuffer(CameraEvent.AfterEverything, cb); }
+        return (source, dst);
+    }
+
     static void CommandResolveFramebufferColors()
     {
         int previousAA = QualitySettings.antiAliasing;
@@ -1314,6 +1428,7 @@ public static class TexFormatsProbe
             CommandResolveCamera();
             CommandResolveBackbuffer();
             CommandResolveFramebufferColors();
+            CommandResolveDisplayPlacement();
             CommandResolveDepthSource();
             CommandResolveDestroyedTarget();
         }
