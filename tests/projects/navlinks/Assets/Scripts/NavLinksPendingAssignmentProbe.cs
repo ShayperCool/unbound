@@ -367,7 +367,8 @@ public partial class NavLinksProbe
 
     IEnumerator RecordGroundAreaRepairControls()
     {
-        var cases = new[] { "startExcluded", "endExcluded", "allExcluded", "allExcludedMoving", "unrelated", "queuedMask", "queuedAssignedMask" };
+        var cases = new[] { "startExcluded", "endExcluded", "allExcluded", "allExcludedMoving", "unrelated", "queuedMask", "queuedAssignedMask",
+            "startExcludedMoving", "endExcludedMoving", "startOutsideReach", "endOutsideReach", "queuedAllExcluded" };
         var lane = new Lane { Name = "groundMask", O = new Vector3(500f, 0f, 500f) };
         var sources = new List<NavMeshBuildSource>();
         foreach (var side in new[] { -1, 1 })
@@ -382,10 +383,10 @@ public partial class NavLinksProbe
         foreach (string mode in cases)
         {
             lane.Name = "groundMask." + mode;
-            var from = new Vector3(-7f, 0f, 0f);
-            var to = new Vector3(7f, 0f, 0f);
+            var from = new Vector3(mode == "startOutsideReach" ? -13f : -7f, 0f, 0f);
+            var to = new Vector3(mode == "endOutsideReach" ? 13f : 7f, 0f, 0f);
             var agent = Agent(lane, "a", from, null, a => {
-                a.speed = mode == "allExcludedMoving" ? 3f : 0f;
+                a.speed = mode.EndsWith("Moving", StringComparison.Ordinal) ? 3f : 0f;
                 a.autoRepath = false;
                 a.obstacleAvoidanceType = ObstacleAvoidanceType.NoObstacleAvoidance;
             });
@@ -394,7 +395,7 @@ public partial class NavLinksProbe
             for (int frame = 0; frame < 6 && agent.pathPending; frame++) yield return null;
             if (!agent.hasPath || agent.pathStatus != NavMeshPathStatus.PathComplete)
                 throw new InvalidOperationException("initial path not complete " + mode);
-            if (mode == "allExcludedMoving")
+            if (mode.EndsWith("Moving", StringComparison.Ordinal))
                 for (int frame = 0; frame < 5; frame++) yield return null;
             int oldBudget = NavMesh.pathfindingIterationsPerFrame;
             NavMeshAgent other = null;
@@ -420,7 +421,8 @@ public partial class NavLinksProbe
             for (int frame = 0; frame <= 12; frame++)
             {
                 if (frame == 1)
-                    agent.areaMask = mode.StartsWith("allExcluded", StringComparison.Ordinal) ? 0 : agent.areaMask & ~(1 << (mode == "startExcluded" ? 4 : mode == "unrelated" ? 6 : 5));
+                    agent.areaMask = mode.Contains("allExcluded", StringComparison.OrdinalIgnoreCase) ? 0
+                        : agent.areaMask & ~(1 << (mode.StartsWith("start", StringComparison.Ordinal) ? 4 : mode == "unrelated" ? 6 : 5));
                 Line(lane.Name, "a", frame,
                     "\"pending\":" + B(agent.pathPending) + ",\"path\":" + B(agent.hasPath) + ",\"stale\":" + B(agent.isPathStale)
                     + ",\"status\":" + Text(agent.pathStatus.ToString()) + ",\"destination\":" + V(agent.destination)
