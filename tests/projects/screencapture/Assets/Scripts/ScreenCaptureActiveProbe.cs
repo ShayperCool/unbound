@@ -1,3 +1,4 @@
+using System;
 using System.Collections;
 using UnityEngine;
 using UnityEngine.Rendering;
@@ -190,7 +191,149 @@ public partial class ScreenCaptureProbe
             DestroyImmediate(commands);
             DestroyImmediate(destination);
         }
+
+        yield return null;
+        yield return new WaitForEndOfFrame();
+        foreach (bool useActiveTarget in new[] { false, true })
+        foreach (bool wireframe in new[] { false, true })
+        foreach (bool encode in new[] { false, true })
+        {
+            var source = useActiveTarget
+                ? Target(W, H, RenderTextureFormat.ARGB32, RenderTextureReadWrite.Linear) : null;
+            var destination = Target(W, H, RenderTextureFormat.ARGB32, RenderTextureReadWrite.sRGB);
+            RenderTexture.active = source;
+            if (useActiveTarget) GL.Clear(false, true, CaptureSourceColor);
+            bool savedWrite = GL.sRGBWrite;
+            bool savedWireframe = GL.wireframe;
+            GL.sRGBWrite = encode;
+            GL.wireframe = wireframe;
+            string origin = useActiveTarget ? "active" : "screen";
+            string key = "blit.state." + origin + ".wire." + B(wireframe) + ".srgb." + B(encode);
+            IntoTarget(key, destination);
+            Value(key + ".retainedWrite", B(GL.sRGBWrite == encode));
+            Value(key + ".retainedWire", B(GL.wireframe == wireframe));
+            Value(key + ".retainedTarget", B(RenderTexture.active == source));
+            GL.sRGBWrite = savedWrite;
+            GL.wireframe = savedWireframe;
+            RenderTexture.active = null;
+            if (source != null) DestroyImmediate(source);
+            DestroyImmediate(destination);
+        }
+
+        foreach (bool larger in new[] { false, true })
+        {
+            var source = larger ? null : Target(W / 2, H / 2, RenderTextureFormat.ARGB32, RenderTextureReadWrite.Linear);
+            int width = larger ? W * 2 : W / 2;
+            int height = larger ? H * 2 : H / 2;
+            var destination = Target(width, height, RenderTextureFormat.ARGB32, RenderTextureReadWrite.sRGB);
+            RenderTexture.active = source;
+            if (source != null) GL.Clear(false, true, CaptureSourceColor);
+            bool saved = GL.wireframe;
+            GL.wireframe = true;
+            IntoTarget(larger ? "blit.state.wire.largerDestination" : "blit.state.wire.smallerSourceAndDestination", destination);
+            GL.wireframe = saved;
+            RenderTexture.active = null;
+            if (source != null) DestroyImmediate(source);
+            DestroyImmediate(destination);
+        }
+        RecordCaptureDestinationCreation();
+        RecordCaptureIntoMsaaTargets();
+        var colorSource = Target(W, H, RenderTextureFormat.ARGB32, RenderTextureReadWrite.Linear);
+        var depthDestination = new RenderTexture(W, H, 24, RenderTextureFormat.Depth);
+        RenderTexture.active = colorSource;
+        Value("blit.depthDestination.before", B(depthDestination.IsCreated()));
+        BeginLogs();
+        ScreenCapture.CaptureScreenshotIntoRenderTexture(depthDestination);
+        EndLogs("blit.depthDestination");
+        Value("blit.depthDestination.created", B(depthDestination.IsCreated()));
+        Value("blit.depthDestination.active", B(RenderTexture.active == colorSource));
+        RenderTexture.active = null;
+        DestroyImmediate(colorSource);
+        DestroyImmediate(depthDestination);
     }
+
+    void RecordCaptureDestinationCreation()
+    {
+        foreach (string kind in new[] { "screen", "color", "depth", "integer", "array" })
+        foreach (bool wireframe in new[] { false, true })
+        {
+            var format = kind == "depth" ? RenderTextureFormat.Depth
+                : kind == "integer" ? RenderTextureFormat.RInt : RenderTextureFormat.ARGB32;
+            var desc = new RenderTextureDescriptor(W, H, format, kind == "depth" ? 24 : 0);
+            if (kind == "array")
+            {
+                desc.dimension = TextureDimension.Tex2DArray;
+                desc.volumeDepth = 2;
+            }
+            var source = kind == "screen" ? null : new RenderTexture(desc);
+            var destination = new RenderTexture(W, H, 0, RenderTextureFormat.ARGB32, RenderTextureReadWrite.sRGB);
+            Graphics.SetRenderTarget(source, 0, CubemapFace.Unknown, 0);
+            if (source != null && kind == "color") GL.Clear(false, true, CaptureSourceColor);
+            bool saved = GL.wireframe;
+            GL.wireframe = wireframe;
+            string key = "blit.create." + kind + ".wire." + B(wireframe);
+            Value(key + ".before", B(destination.IsCreated()));
+            BeginLogs();
+            ScreenCapture.CaptureScreenshotIntoRenderTexture(destination);
+            EndLogs(key);
+            Value(key + ".after", B(destination.IsCreated()));
+            GL.wireframe = saved;
+            RenderTexture.active = null;
+            if (source != null) DestroyImmediate(source);
+            DestroyImmediate(destination);
+        }
+    }
+
+    void RecordCaptureIntoMsaaTargets()
+    {
+        foreach (string kind in new[] { "screen", "linear", "msaa", "msaaBound", "integer", "depth" })
+        foreach (bool bind in new[] { false, true })
+        {
+            var format = kind == "integer" ? RenderTextureFormat.RInt
+                : kind == "depth" ? RenderTextureFormat.Depth : RenderTextureFormat.ARGB32;
+            bool sourceMsaa = kind == "msaa" || kind == "msaaBound";
+            var source = kind == "screen" ? null : new RenderTexture(new RenderTextureDescriptor(W, H, format, kind == "depth" ? 24 : 0)
+            {
+                msaaSamples = sourceMsaa ? 4 : 1, bindMS = kind == "msaaBound",
+            });
+            var target = new RenderTexture(new RenderTextureDescriptor(W, H, RenderTextureFormat.ARGB32, 0)
+            {
+                msaaSamples = 4, bindMS = bind, sRGB = true,
+            });
+            target.Create();
+            RenderTexture.active = target;
+            GL.Clear(false, true, Sentinel);
+            RenderTexture.active = source;
+            if (source != null) GL.Clear(kind == "depth", kind != "depth", CaptureSourceColor);
+            string key = "blit.msaa." + kind + ".bind." + B(bind);
+            var previous = ReadRetainedColor(target);
+            IntoTarget(key, target);
+            var retained = ReadRetainedColor(target);
+            Value(key + ".readError", B(retained == null));
+            if (retained != null)
+            {
+                string bytes = FirstColorBytes(retained);
+                // Compare the full retained buffer across the capture call. Its initial
+                // retained bytes on a bound multisampled texture differ between engines.
+                Value(key + ".retainedUnchanged", B(previous != null && previous.AsSpan().SequenceEqual(retained)));
+                if (!bind) Value(key + ".retained", bytes);
+                else Debug.Log(key + " retained: " + FirstColorBytes(previous) + " before, " + bytes + " after");
+            }
+            RenderTexture.active = null;
+            if (source != null) DestroyImmediate(source);
+            DestroyImmediate(target);
+        }
+    }
+
+    static byte[] ReadRetainedColor(RenderTexture target)
+    {
+        var request = AsyncGPUReadback.Request(target, 0, UnityEngine.Experimental.Rendering.GraphicsFormat.R8G8B8A8_UNorm);
+        request.WaitForCompletion();
+        return request.hasError ? null : request.GetData<byte>().ToArray();
+    }
+
+    static string FirstColorBytes(byte[] colors) => colors == null ? "null"
+        : "[" + colors[0] + "," + colors[1] + "," + colors[2] + "," + colors[3] + "]";
 
     void DrawSourcePattern()
     {
