@@ -411,9 +411,9 @@ namespace UnityEngine
         /// the capture's Editor log) and the destination receives the pixels of the Editor
         /// window's own framebuffer. Unbound logs the assertion in that state and resolves the
         /// source: it has no Editor window to copy, as for the other reads of that framebuffer.
-        /// Not measured, and silent here: another render target active, a source without
-        /// multisampling or not created yet, the Vulkan device, and the resolve without a
-        /// destination.
+        /// An uncreated OpenGL Core source leaves the destination alone
+        /// (tests/projects/textureformats directUncreated). Other active render targets and
+        /// sources without multisampling are covered only where measured by the probes.
         /// </summary>
         public void ResolveAntiAliasedSurface(RenderTexture target)
         {
@@ -425,14 +425,16 @@ namespace UnityEngine
         /// false when there is nothing to send.</summary>
         internal bool WriteResolve(RenderTexture target)
         {
-            // The Editor leaves an uncreated destination alone (resources rtmips.resolve).
-            if (!target.IsCreated()) return false;
+            // Resolving to an explicit texture leaves uncreated images alone
+            // (tests/projects/textureformats directUncreated and resources rtmips.resolve).
+            if (!target.IsCreated() || (Compat.RenderingMeasured &&
+                SystemInfo.graphicsDeviceType == GraphicsDeviceType.OpenGLCore && !IsCreated())) return false;
             if (!Compat.RenderingMeasured)
             {
                 Graphics.CopyElement(this, 0, 0, target, 0, 0);
                 return false;
             }
-            if (s_Active == null && antiAliasing > 1 && IsCreated() && SystemInfo.graphicsDeviceType == GraphicsDeviceType.OpenGLCore)
+            if (s_Active == null && antiAliasing > 1 && SystemInfo.graphicsDeviceType == GraphicsDeviceType.OpenGLCore)
                 Debug.LogAssertion(ResolveOfInactiveSource);
             QueueResolve(target);
             return true;
@@ -459,6 +461,13 @@ namespace UnityEngine
                 binding.Color == context.CameraTarget.m_NativeHandle;
             if (!isBound)
             {
+                // A zero-sized camera rect makes no display resolve. A positive fractional
+                // rect can round to zero and still reads the rest of the display.
+                if (context.Screen && context.Camera is Camera camera)
+                {
+                    var pixels = camera.pixelRect;
+                    if (pixels.width <= 0f || pixels.height <= 0f) return;
+                }
                 Log.Write(LogType.Assert, ResolveOfInactiveSource, "", null);
                 bool backbuffer = binding.Colors == null && (binding.Color == 0 || cameraAttachment
                     || (ScreenStandIn != null && binding.Color == ScreenStandIn.m_NativeHandle));
@@ -474,14 +483,17 @@ namespace UnityEngine
                 QueueResolve(target);
             else
             {
-                Vector2Int? screenOrigin = null;
-                if (cameraAttachment && context.Camera.rect != new Rect(0f, 0f, 1f, 1f))
+                RectInt? screenRect = null;
+                if (cameraAttachment && context.CameraTarget != ScreenStandIn)
                 {
                     var viewport = FrameBuilder.ScreenDisplayViewport(context.Camera);
-                    screenOrigin = new Vector2Int((int)viewport.x, (int)viewport.y);
+                    if (context.Camera.rect != new Rect(0f, 0f, 1f, 1f) ||
+                        context.CameraTarget.width != (int)viewport.width ||
+                        context.CameraTarget.height != (int)viewport.height)
+                        screenRect = new RectInt((int)viewport.x, (int)viewport.y, (int)viewport.width, (int)viewport.height);
                 }
                 GfxStream.ResolveFramebuffer(binding.Color, target.m_NativeHandle, implicitTarget,
-                    context.Screen, screenOrigin);
+                    context.Screen, screenRect);
             }
         }
 

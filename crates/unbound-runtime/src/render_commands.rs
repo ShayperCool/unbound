@@ -240,8 +240,8 @@ pub enum Command {
         destination: u64,
         retained: bool,
         screen_camera: bool,
-        /// A partial camera's intermediate covers only this part of the display.
-        screen_origin: Option<[i32; 2]>,
+        /// A partial camera's display rectangle (x, y, width, height).
+        screen_rect: Option<[i32; 4]>,
     },
     /// Filter the lower mip levels of a render target.
     GenerateMips {
@@ -1020,8 +1020,8 @@ pub fn parse(bytes: &[u8]) -> Result<Vec<Command>, String> {
                     destination,
                     retained: flags & 1 != 0,
                     screen_camera: flags & 2 != 0,
-                    screen_origin: if flags & 4 != 0 {
-                        Some([r.i32()?, r.i32()?])
+                    screen_rect: if flags & 4 != 0 {
+                        Some([r.i32()?, r.i32()?, r.i32()?, r.i32()?])
                     } else {
                         None
                     },
@@ -1443,7 +1443,7 @@ impl Writer {
                 destination,
                 retained,
                 screen_camera,
-                screen_origin,
+                screen_rect,
             } => {
                 self.bytes.push(op::RESOLVE_FRAMEBUFFER);
                 self.u64(*source);
@@ -1451,11 +1451,12 @@ impl Writer {
                 self.bytes.push(
                     u8::from(*retained)
                         | (u8::from(*screen_camera) << 1)
-                        | (u8::from(screen_origin.is_some()) << 2),
+                        | (u8::from(screen_rect.is_some()) << 2),
                 );
-                if let Some([x, y]) = screen_origin {
-                    self.u32(*x as u32);
-                    self.u32(*y as u32);
+                if let Some(rect) = screen_rect {
+                    for coordinate in rect {
+                        self.u32(*coordinate as u32);
+                    }
                 }
             }
             Command::GenerateMips { texture } => {
@@ -1619,7 +1620,7 @@ mod tests {
                 destination: 42,
                 retained: true,
                 screen_camera: true,
-                screen_origin: Some([4, -5]),
+                screen_rect: Some([4, -5, 24, 18]),
             },
             Command::GenerateMips { texture: 42 },
             Command::BeginFrame {

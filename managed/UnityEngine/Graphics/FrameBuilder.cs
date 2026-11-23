@@ -1965,13 +1965,25 @@ namespace Unbound.Runtime
                     // The resolve is the device's, not a draw: GL.wireframe leaves it alone.
                     bool wireframe = GL.wireframe;
                     if (wireframe) GfxStream.SetGlFlag(GfxStream.CameraWireframe, false);
+                    bool partial = camera.rect != new Rect(0f, 0f, 1f, 1f);
+                    // A full-screen camera can become partial in OnPostRender. Draw to the
+                    // display so the earlier color outside the new viewport is preserved.
+                    if (partial && displayFlag != 0 && screenStandIn != null && resolveTarget == screenStandIn)
+                    {
+                        RenderTexture.ScreenStandIn = null;
+                        cameraTarget = resolveTarget = null;
+                    }
                     // An explicit target takes the stretched resolve (above); on the screen a
-                    // partial camera only covers its own rect (measured: tests/projects/display).
-                    if (resolveTarget == null && camera.rect != new Rect(0f, 0f, 1f, 1f))
-                        Immediate.BlitInto(msaaTarget, null, displayViewport);
+                    // partial camera only covers its presentation rect (tests/projects/textureformats).
+                    if (resolveTarget == null && partial)
+                    {
+                        var presentation = displayFlag != 0 ? ScreenDisplayViewport(camera) : displayViewport;
+                        if (presentation.width > 0f && presentation.height > 0f)
+                            Immediate.BlitInto(msaaTarget, null, presentation);
+                    }
                     else
                         Graphics.Blit(msaaTarget, resolveTarget);
-                    if (resolveTarget == null && fullScreen)
+                    if (resolveTarget == null && (displayFlag != 0 ? !partial : fullScreen))
                     {
                         // The full-screen resolve leaves the screen without depth: a later camera
                         // that draws on the screen itself sees none (measured, the Editor).
@@ -2013,7 +2025,7 @@ namespace Unbound.Runtime
                     GfxStream.Restore(savedGizmoState);
                 }
                 ResolveIntermediate();
-                if (screenStandIn != null)
+                if (screenStandIn != null && cameraTarget == screenStandIn)
                 {
                     // Presenting the stand-in is a copy, not a draw: GL.wireframe leaves it alone.
                     RenderTexture.ScreenStandIn = previousStandIn;

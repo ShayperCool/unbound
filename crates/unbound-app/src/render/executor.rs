@@ -430,6 +430,25 @@ impl GpuMaterial {
 /// How many [`UnityRenderer::repack_texture`] shapes are kept.
 const REPACK_TEXTURES_KEPT: usize = 4;
 
+#[derive(Clone)]
+struct RepackTexture {
+    texture: wgpu::Texture,
+    target: wgpu::TextureView,
+    alternate: Option<wgpu::TextureView>,
+}
+
+impl RepackTexture {
+    fn sample(&self, srgb: bool) -> &wgpu::TextureView {
+        if self.texture.format().is_srgb() == srgb {
+            &self.target
+        } else {
+            self.alternate
+                .as_ref()
+                .expect("sampled display format has two views")
+        }
+    }
+}
+
 /// The screen: 8-bit color like the Editor's game view (RGBA, or BGRA where the device stores it
 /// so: `DeviceConventions::screen_format`), sRGB-encoded in Linear color space (draws encode,
 /// samples decode, readbacks and copies see the stored bytes: measured, tests/projects/rtdepth
@@ -705,14 +724,21 @@ enum ChannelTransfer {
     Storage(CopyKind),
     Framebuffer {
         srgb: bool,
-        encode_srgb: bool,
+        display: Option<FramebufferDisplay>,
         destination_format: wgpu::TextureFormat,
     },
+}
+
+#[derive(Clone, Copy)]
+struct FramebufferDisplay {
+    format: wgpu::TextureFormat,
+    resize_uniform: Option<u32>,
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, Hash)]
 enum FramebufferTransfer {
     LinearToDisplay,
+    ResizeToDisplay,
     SrgbToTexture,
     UnormToTexture,
 }
@@ -1152,7 +1178,7 @@ pub struct UnityRenderer {
     /// right before it.
     dispatch_fills: Vec<u64>,
     /// [`Self::repack_texture`]'s textures and views, oldest first.
-    repack_textures: Vec<(wgpu::Texture, wgpu::TextureView)>,
+    repack_textures: Vec<RepackTexture>,
     framebuffer_resolve_layout: Option<wgpu::BindGroupLayout>,
     framebuffer_resolve_pipelines:
         HashMap<(wgpu::TextureFormat, FramebufferTransfer), wgpu::RenderPipeline>,
@@ -3092,17 +3118,21 @@ impl UnityRenderer {
         format: wgpu::TextureFormat,
         size: wgpu::Extent3d,
         sampled: bool,
-    ) -> (wgpu::Texture, wgpu::TextureView) {
-        if let Some(entry) = self.repack_textures.iter().find(|(texture, _)| {
-            texture.format() == format
-                && texture.size() == size
-                && texture
-                    .usage()
-                    .contains(wgpu::TextureUsages::TEXTURE_BINDING)
-                    == sampled
+    ) -> RepackTexture {
+        if let Some(entry) = self.repack_textures.iter().find(|entry| {
+            entry.texture.format() == format
+                && entry.texture.size() == size
+                && entry.alternate.is_some() == sampled
         }) {
             return entry.clone();
         }
+        let alternate = sampled.then(|| {
+            if format.is_srgb() {
+                format.remove_srgb_suffix()
+            } else {
+                format.add_srgb_suffix()
+            }
+        });
         let texture = self.device.create_texture(&wgpu::TextureDescriptor {
             label: Some("unbound channel copy"),
             size,
@@ -3117,13 +3147,22 @@ impl UnityRenderer {
                 } else {
                     wgpu::TextureUsages::empty()
                 },
-            view_formats: &[],
+            view_formats: alternate.as_slice(),
         });
         // A few shapes at a time (a resized screen leaves its old size behind).
         if self.repack_textures.len() >= REPACK_TEXTURES_KEPT {
             self.repack_textures.remove(0);
         }
-        let entry = (texture.clone(), texture.create_view(&Default::default()));
+        let entry = RepackTexture {
+            target: texture.create_view(&Default::default()),
+            alternate: alternate.map(|format| {
+                texture.create_view(&wgpu::TextureViewDescriptor {
+                    format: Some(format),
+                    ..Default::default()
+                })
+            }),
+            texture,
+        };
         self.repack_textures.push(entry.clone());
         entry
     }
@@ -3143,6 +3182,9 @@ impl UnityRenderer {
             .or_insert_with(|| {
                 let shader = match transfer {
                     FramebufferTransfer::LinearToDisplay => CHANNEL_COPY_WGSL.into(),
+                    FramebufferTransfer::ResizeToDisplay => CHANNEL_COPY_WGSL.replace(
+                        "textureLoad(source, vec2<i32>(p.xy), 0)", "resample_display(p.xy)",
+                    ) + FRAMEBUFFER_RESIZE_WGSL,
                     FramebufferTransfer::SrgbToTexture => CHANNEL_COPY_WGSL
                         .replace("return texel;", "return vec4<f32>(texel.rgb, 1.0);"),
                     FramebufferTransfer::UnormToTexture => {
@@ -3161,7 +3203,9 @@ impl UnityRenderer {
                         ) + FRAMEBUFFER_UNORM_COPY_WGSL
                     }
                 };
-                Self::texture_copy_pipeline(&self.device, shader, format, layout)
+                let layouts = [Some(&*layout), Some(&self.pipelines.draw_layout)];
+                let count = if transfer == FramebufferTransfer::ResizeToDisplay { 2 } else { 1 };
+                Self::texture_copy_pipeline(&self.device, shader, format, &layouts[..count])
             });
         if let Some((_, group)) = self
             .framebuffer_resolve_groups
@@ -3273,7 +3317,7 @@ impl UnityRenderer {
             CopyKind::DepthMultisampled | CopyKind::Depth16Multisampled
         );
         let layout = Self::texture_copy_layout(device, multisampled);
-        let pipeline = Self::texture_copy_pipeline(device, source, target_format, &layout);
+        let pipeline = Self::texture_copy_pipeline(device, source, target_format, &[Some(&layout)]);
         let result = (pipeline, layout);
         self.depth_copy_pipelines[index] = Some(result.clone());
         result
@@ -3299,7 +3343,7 @@ impl UnityRenderer {
         device: &wgpu::Device,
         source: String,
         target_format: wgpu::TextureFormat,
-        layout: &wgpu::BindGroupLayout,
+        layouts: &[Option<&wgpu::BindGroupLayout>],
     ) -> wgpu::RenderPipeline {
         let module = device.create_shader_module(wgpu::ShaderModuleDescriptor {
             label: Some("unbound texture copy"),
@@ -3307,7 +3351,7 @@ impl UnityRenderer {
         });
         let pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
             label: Some("unbound texture copy"),
-            bind_group_layouts: &[Some(layout)],
+            bind_group_layouts: layouts,
             immediate_size: 0,
         });
         device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
@@ -4185,9 +4229,9 @@ impl UnityRenderer {
                         destination,
                         retained,
                         screen_camera,
-                        screen_origin,
+                        screen_rect,
                     } => {
-                        if screen_origin.is_some() {
+                        if screen_rect.is_some() {
                             // The camera's intermediate supplies only its rectangle. Outside it
                             // the resolve reads the display that the camera is drawn over.
                             self.prepare_screen_copy(0, destination, &mut passes);
@@ -4208,7 +4252,7 @@ impl UnityRenderer {
                             destination,
                             retained,
                             screen_camera,
-                            screen_origin,
+                            screen_rect,
                         ) {
                             passes.push(Op::Copy(copy));
                         }
@@ -6127,11 +6171,20 @@ impl UnityRenderer {
         destination: u64,
         retained: bool,
         screen_camera: bool,
-        screen_origin: Option<[i32; 2]>,
+        screen_rect: Option<[i32; 4]>,
     ) -> Option<Copy> {
-        let srgb = (self.color_space == 1 && (screen_camera || !self.state.no_srgb_write))
-            || (source == 0 && self.state.gamma_framebuffer_srgb);
-        let encoded = srgb && !self.state.no_srgb_write;
+        let linear = self.color_space == 1;
+        let write_srgb = !self.state.no_srgb_write && (linear || self.state.gamma_framebuffer_srgb);
+        // The screen camera resolves the display encoding for the project's color space.
+        // A late GL.sRGBWrite change only affects presentation of the camera intermediate
+        // (tests/projects/textureformats displayEdges).
+        let srgb = if screen_camera {
+            linear
+        } else {
+            write_srgb || self.state.gamma_framebuffer_srgb
+        };
+        let use_srgb_view = if screen_camera { linear } else { write_srgb };
+        let camera_intermediate = screen_camera && source != 0 && source != self.screen_stand_in;
         let (src, raw, encoded_view) = if source == 0 {
             let screen = self.ensure_screen(self.screen_slot);
             (&screen.texture, &screen.color, Some(&screen.srgb))
@@ -6139,8 +6192,18 @@ impl UnityRenderer {
             let texture = self.textures.get(&source)?;
             (&texture.texture, &texture.view, texture.srgb_view.as_ref())
         };
-        let encoded_view = encoded_view.filter(|_| encoded);
-        let encode_srgb = srgb && encoded_view.is_none();
+        let encoded_view = encoded_view.filter(|_| use_srgb_view);
+        let stored_display_color = matches!(
+            src.format().remove_srgb_suffix(),
+            wgpu::TextureFormat::Rgba8Unorm | wgpu::TextureFormat::Bgra8Unorm
+        );
+        let convert_display = if screen_camera {
+            camera_intermediate
+                && (!stored_display_color || write_srgb != srgb || (srgb && encoded_view.is_none()))
+        } else {
+            srgb && encoded_view.is_none()
+        };
+        let display_srgb = if screen_camera { write_srgb } else { srgb };
         let view = encoded_view.unwrap_or(raw).clone();
         let src = src.clone();
         let target = self.textures.get(&destination)?;
@@ -6167,17 +6230,20 @@ impl UnityRenderer {
             });
             return None;
         }
-        let destination_format = if srgb && target.srgb_view.is_some() {
+        let destination_srgb = if screen_camera { linear } else { write_srgb };
+        let destination_format = if destination_srgb && target.srgb_view.is_some() {
             format.add_srgb_suffix()
         } else {
             format
         };
-        let (source_origin, destination_origin, size) = match screen_origin {
-            Some([x, y]) => {
+        let (mut source_origin, destination_origin, size, resized) = match screen_rect {
+            Some([x, y, width, height]) => {
+                let source_width = width.max(0) as u32;
+                let source_height = height.max(0) as u32;
                 let (sx, dx, width) =
-                    shifted_copy_axis(x, src.width(), dst.width().min(self.screen_size.0))?;
+                    shifted_copy_axis(x, source_width, dst.width().min(self.screen_size.0))?;
                 let (sy, dy, height) =
-                    shifted_copy_axis(y, src.height(), dst.height().min(self.screen_size.1))?;
+                    shifted_copy_axis(y, source_height, dst.height().min(self.screen_size.1))?;
                 (
                     wgpu::Origin3d { x: sx, y: sy, z: 0 },
                     wgpu::Origin3d { x: dx, y: dy, z: 0 },
@@ -6186,6 +6252,8 @@ impl UnityRenderer {
                         height,
                         depth_or_array_layers: 1,
                     },
+                    (source_width != src.width() || source_height != src.height())
+                        .then_some([source_width, source_height]),
                 )
             }
             None => (
@@ -6196,8 +6264,32 @@ impl UnityRenderer {
                     height: src.height().min(dst.height()),
                     depth_or_array_layers: 1,
                 },
+                None,
             ),
         };
+        // A resized intermediate is sampled over the late viewport. The scratch image only
+        // needs the visible pixels, including when the new viewport extends past the display.
+        let resize_uniform = resized.map(|[width, height]| {
+            let screen = [
+                source_origin.x as f32,
+                source_origin.y as f32,
+                1.0 / width as f32,
+                1.0 / height as f32,
+            ];
+            source_origin = wgpu::Origin3d::ZERO;
+            self.push_uniform(DrawUniform {
+                screen,
+                ..DrawUniform::zeroed()
+            })
+        });
+        let display = (convert_display || resize_uniform.is_some()).then_some(FramebufferDisplay {
+            format: if display_srgb {
+                wgpu::TextureFormat::Rgba8UnormSrgb
+            } else {
+                wgpu::TextureFormat::Rgba8Unorm
+            },
+            resize_uniform,
+        });
         Some(Copy {
             source: src,
             source_mip: 0,
@@ -6215,7 +6307,7 @@ impl UnityRenderer {
                 },
                 transfer: ChannelTransfer::Framebuffer {
                     srgb,
-                    encode_srgb,
+                    display,
                     destination_format,
                 },
             }),
@@ -6596,20 +6688,34 @@ impl UnityRenderer {
                             }
                             ChannelTransfer::Framebuffer {
                                 srgb,
-                                encode_srgb,
+                                display,
                                 destination_format,
                             } => {
-                                let encoded;
-                                let view = if encode_srgb {
-                                    let format = wgpu::TextureFormat::Rgba8UnormSrgb;
-                                    encoded = self.repack_texture(format, channels.size, true);
+                                let repack;
+                                let view = if let Some(FramebufferDisplay {
+                                    format,
+                                    resize_uniform,
+                                }) = display
+                                {
+                                    repack = self.repack_texture(format, channels.size, true);
+                                    let transfer = if resize_uniform.is_some() {
+                                        FramebufferTransfer::ResizeToDisplay
+                                    } else {
+                                        FramebufferTransfer::LinearToDisplay
+                                    };
                                     let (pipeline, group) = self.framebuffer_copy_resources(
                                         &channels.source,
                                         format,
-                                        FramebufferTransfer::LinearToDisplay,
+                                        transfer,
                                     );
-                                    draw_channel_copy(&mut encoder, &encoded.1, &pipeline, &group);
-                                    &encoded.1
+                                    draw_channel_copy(
+                                        &mut encoder,
+                                        &repack.target,
+                                        &pipeline,
+                                        &group,
+                                        resize_uniform.map(|offset| (&draw_bg, offset)),
+                                    );
+                                    repack.sample(srgb)
                                 } else {
                                     &channels.source
                                 };
@@ -6626,9 +6732,9 @@ impl UnityRenderer {
                                 (pipeline, group, destination_format)
                             }
                         };
-                        let (texture, target) = self.repack_texture(format, channels.size, false);
-                        draw_channel_copy(&mut encoder, &target, &pipeline, &group);
-                        texture
+                        let repacked = self.repack_texture(format, channels.size, false);
+                        draw_channel_copy(&mut encoder, &repacked.target, &pipeline, &group, None);
+                        repacked.texture
                     });
                     let (source, source_mip, source_origin) = match &repacked {
                         Some(texture) => (
@@ -7217,6 +7323,28 @@ fn fs(@builtin(position) p: vec4<f32>) -> @location(0) vec4<f32> {
 }
 "#;
 
+// Resampling uses the same frame uniform buffer as draws. The screen field holds the
+// visible region's offset in the presentation rectangle and its reciprocal extent.
+const FRAMEBUFFER_RESIZE_WGSL: &str = r#"
+struct DisplayUniform {
+    unused: array<vec4<f32>, 13>,
+    viewport: vec4<f32>,
+}
+@group(1) @binding(0) var<uniform> display: DisplayUniform;
+
+fn resample_display(pixel: vec2<f32>) -> vec4<f32> {
+    let extent = vec2<i32>(textureDimensions(source));
+    let p = (pixel + display.viewport.xy) * display.viewport.zw * vec2<f32>(extent) - 0.5;
+    let corner = vec2<i32>(floor(p));
+    let high = clamp(corner + vec2<i32>(1), vec2<i32>(0), extent - 1);
+    let low = clamp(corner, vec2<i32>(0), extent - 1);
+    let weight = fract(p);
+    let lower = mix(textureLoad(source, low, 0), textureLoad(source, vec2<i32>(high.x, low.y), 0), weight.x);
+    let upper = mix(textureLoad(source, vec2<i32>(low.x, high.y), 0), textureLoad(source, high, 0), weight.x);
+    return mix(lower, upper, weight.y);
+}
+"#;
+
 // The OpenGL Core framebuffer copy expands its normalized colors and truncates them when the
 // destination is half precision (Unity 6000.0.71f1, tests/projects/textureformats screenColor).
 const FRAMEBUFFER_UNORM_COPY_WGSL: &str = r#"
@@ -7254,6 +7382,7 @@ fn draw_channel_copy(
     target: &wgpu::TextureView,
     pipeline: &wgpu::RenderPipeline,
     group: &wgpu::BindGroup,
+    resize: Option<(&wgpu::BindGroup, u32)>,
 ) {
     let mut pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
         label: Some("unbound channel copy"),
@@ -7273,6 +7402,9 @@ fn draw_channel_copy(
     });
     pass.set_pipeline(pipeline);
     pass.set_bind_group(0, group, &[]);
+    if let Some((group, offset)) = resize {
+        pass.set_bind_group(1, group, &[offset]);
+    }
     pass.draw(0..3, 0..1);
 }
 

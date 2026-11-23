@@ -1046,16 +1046,18 @@ namespace Unbound.Runtime
         }
 
         internal static void ResolveFramebuffer(ulong source, ulong destination, bool retained,
-            bool screenCamera, Vector2Int? screenOrigin)
+            bool screenCamera, RectInt? screenRect)
         {
             U8(ResolveFramebufferOp);
             U64(source);
             U64(destination);
-            U8((byte)((retained ? 1 : 0) | (screenCamera ? 2 : 0) | (screenOrigin.HasValue ? 4 : 0)));
-            if (screenOrigin is Vector2Int origin)
+            U8((byte)((retained ? 1 : 0) | (screenCamera ? 2 : 0) | (screenRect.HasValue ? 4 : 0)));
+            if (screenRect is RectInt rect)
             {
-                I32(origin.x);
-                I32(origin.y);
+                I32(rect.x);
+                I32(rect.y);
+                I32(rect.width);
+                I32(rect.height);
             }
         }
 
