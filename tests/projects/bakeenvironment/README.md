@@ -75,7 +75,8 @@ keeps that part as the scene had it), gamma colour space projects and several op
 (Unbound makes the environment of the scene whose lighting settings are in effect alone, and
 keeps the others'), a render pipeline asset (made as the built-in pipeline's). Without a
 graphics device Unbound's bake makes no environment lighting (said). Not measured either: a
-skybox other than the procedural one, Environment Reflections Compression other than Auto, the
+skybox other than the procedural one, Environment Reflections Compression other than Auto, a
+scene naming another scene's lighting data (Unbound sets its reflection aside as its own), the
 bake on a scene's load (`Lightmapping.bakeOnSceneLoad`: still said and not made), a scene loaded
 again after the bake (Unbound gives it the bake's environment, or the one it kept, as it gives
 it the bake's realtime GI).

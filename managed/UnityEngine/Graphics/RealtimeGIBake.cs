@@ -187,9 +187,10 @@ namespace UnityEngine
                 Warn("bake-environment-custom-ambient:" + path, $"{path}: Lightmapping.Bake's ambient probe with a Custom ambient source is not measured and not made: the scene keeps the probe it had.");
             if (parts.Reflection == EnvironmentPart.Kept)
                 Warn("bake-environment-custom-reflection:" + path, $"{path}: Lightmapping.Bake's default reflection with a Custom reflection source is not measured and not made: the scene keeps the reflection it had.");
-            // The reflection an earlier bake of this scene made: one of this session's, or the
-            // one its own lighting data names (its file, which this bake replaces or removes, in
-            // the Editor: tests/projects/bakeenvironment EnvSkyThenNone, EnvBakedNoSky).
+            // The reflection an earlier bake of this scene made: one of this session's, or a
+            // project's baked cube its lighting data names (its file, which this bake replaces or
+            // removes, in the Editor: tests/projects/bakeenvironment EnvSkyThenNone,
+            // EnvBakedNoSky; a scene naming another scene's lighting data is not measured).
             var earlier = reflection != null && (s_MadeReflections.Contains(reflection) || RenderSettings.IsProjectReflection(reflection))
                 ? reflection : null;
             if (parts.Probe == EnvironmentPart.Cleared)
