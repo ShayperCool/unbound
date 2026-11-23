@@ -1652,7 +1652,7 @@ namespace Unbound.UIElements.Layout
 
         // Percentage margins and paddings take the owner's width, as for other nodes (plain Yoga took the
         // node's own available width here; UI Toolkit does not: Unity 6000.0.71f1 Editor,
-        // tests/projects/uitkpercent measuredMargin).
+        // tests/projects/uitkpercent measuredMargin, measuredPadding).
         static void WithMeasureFuncSetMeasuredDimensions(YogaNode node, float availableWidth, float availableHeight,
             YogaMeasureMode widthMeasureMode, YogaMeasureMode heightMeasureMode, float ownerWidth, float ownerHeight)
         {
