@@ -7,6 +7,8 @@
 {"k":"growOverflow","v":"a rect=0,0,450,50|basis=500|b rect=550,0,450,50|basis=450"}
 {"k":"growFraction","v":"a rect=0,0,350,50|basis=200|b rect=350,0,350,50|basis=200"}
 {"k":"growMax","v":"a rect=0,0,100,50|basis=0|b rect=100,0,250,50|basis=0|c rect=350,0,250,50|basis=0"}
+{"k":"percentMinInAutoRow.auto","v":"input rect=0,0,1424,90|basis=0|drag rect=0,0,1352,80|basis=0"}
+{"k":"percentMinInAutoRow.fixed","v":"input rect=0,0,1424,90|basis=1000|drag rect=0,0,1352,80|basis=0"}
 {"k":"centeredRow.grown","v":"row rect=-11,0,1006,415|basis=0|a rect=0,0,960,415|basis=982.8|b rect=960,0,24,415|basis=24"}
 {"k":"centeredRow.fixedHeight","v":"row rect=-11,0,1006,415|basis=415|a rect=0,0,982,415|basis=982.8|b rect=982,0,24,415|basis=24"}
 {"k":"centeredRow.stretched","v":"row rect=0,0,984,415|basis=0|a rect=0,0,960,415|basis=0|b rect=960,0,24,415|basis=24"}

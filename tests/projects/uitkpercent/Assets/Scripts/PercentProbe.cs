@@ -357,6 +357,23 @@ namespace PercentProbe
                 var crB = Box(crRow, "b", 24);
                 centeredRows.Add((name, crRow, crA, crB));
             }
+            // percentMinInAutoRow: in a 1423.5 wide row, a growing row sized by its content (auto) or
+            // 1000 wide (fixed) holding an item growing and shrinking from a 0 basis, 95% wide with a
+            // 95% min and max.
+            var percentMinRows = new System.Collections.Generic.List<(string, VisualElement, VisualElement)>();
+            float pmrLeft = 0;
+            foreach (var name in new[] { "auto", "fixed" })
+            {
+                var pmrCase = Case(root, "percentMinInAutoRow." + name, pmrLeft);
+                pmrCase.style.top = 8800;
+                pmrLeft += 1600;
+                var pmiOuter = Box(pmrCase, "outer", 1423.5f, 90); pmiOuter.style.flexDirection = FlexDirection.Row;
+                var pmrInput = Box(pmiOuter, "input"); pmrInput.style.flexDirection = FlexDirection.Row; pmrInput.style.flexGrow = 1;
+                if (name == "fixed") pmrInput.style.width = 1000;
+                var pmrDrag = Box(pmrInput, "drag"); pmrDrag.style.flexGrow = 1; pmrDrag.style.flexShrink = 1; pmrDrag.style.flexBasis = 0; pmrDrag.style.height = 80;
+                pmrDrag.style.width = Length.Percent(95); pmrDrag.style.minWidth = Length.Percent(95); pmrDrag.style.maxWidth = Length.Percent(95);
+                percentMinRows.Add((name, pmrInput, pmrDrag));
+            }
             var svCase = Case(root, "centeredRow.scrollView", 0);
             svCase.style.top = 8100;
             var svOuter = Box(svCase, "outer", 1003.5f, 535.5f);
@@ -373,6 +390,8 @@ namespace PercentProbe
             Put("growOverflow", "a " + State(goA) + "|b " + State(goB));
             Put("growFraction", "a " + State(gfA) + "|b " + State(gfB));
             Put("growMax", "a " + State(gmA) + "|b " + State(gmB) + "|c " + State(gmC));
+            foreach (var (name, input, drag) in percentMinRows)
+                Put("percentMinInAutoRow." + name, "input " + State(input) + "|drag " + State(drag));
             foreach (var (name, row, a, b) in centeredRows)
                 Put("centeredRow." + name, "row " + State(row) + "|a " + State(a) + "|b " + State(b));
             Put("centeredRow.scrollView", "scroll " + State(scrollView) + "|row " + State(scrollView.Q("unity-content-and-vertical-scroll-container"))
