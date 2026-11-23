@@ -1251,6 +1251,9 @@ namespace Unbound.Runtime
                     doc ??= Defaults.Settings(classId);
                     if (classId == RenderSettingsId && RenderSettings.InEffectFor(m_Target.Scene))
                         Overlay(doc.Body, Written(RenderSettings.WriteSerialized), ref m_UnlocatedCount);
+                    // A scene file CreateSceneAsset writes has no skybox, unlike a new scene saved.
+                    if (classId == RenderSettingsId && m_Target.Scene.IsNewSceneAsset)
+                        doc.Body.Set("m_SkyboxMaterial", FlowValue("{fileID: 0}"));
                     if (classId == LightmapSettingsId) LightingSettingsReference(doc.Body);
                     m_Out[doc.FileId] = doc;
                 }

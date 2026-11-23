@@ -136,14 +136,16 @@ namespace UnityEditor.SceneManagement
         }
 
         /// <summary>Writes a new scene file at <paramref name="scenePath"/> (with the new scene's
-        /// camera and light when asked) without opening it, also in Play mode; false when it cannot
-        /// be written there. Whether it raises the scene callbacks is not measured (none is).</summary>
+        /// camera and light when asked, and no skybox) without opening it, also in Play mode; false
+        /// when it cannot be written there. Whether it raises the scene callbacks is not measured
+        /// (none is).</summary>
         internal static bool CreateSceneAsset(string scenePath, bool createDefaultGameObjects)
         {
             var path = SceneFiles.ProjectRelative(scenePath);
             AssetModificationProcessorInternal.OnWillCreateAsset(path);
             var previous = SceneRegistry.Active;
             var scene = NewPreviewScene();
+            scene.Data.IsNewSceneAsset = true;
             try
             {
                 if (createDefaultGameObjects) AddDefaultGameObjects(scene.Data);

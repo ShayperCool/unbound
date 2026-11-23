@@ -14,8 +14,9 @@ namespace UnityEditor
     /// <summary>
     /// Calls the AssetModificationProcessor callbacks of the project's scripts. OnWillCreateAsset is
     /// called with the path of an asset about to be created and with the path of each .meta file
-    /// about to be written for a new asset (as the Unity 6000.0.71f1 Editor does,
-    /// tests/projects/projectwindowutil create.*). The other callbacks are not called yet.
+    /// about to be written for a new asset imported (as the Unity 6000.0.71f1 Editor does,
+    /// tests/projects/projectwindowutil create.*), not yet for the .meta files of a refresh. The
+    /// other callbacks are not called yet.
     /// </summary>
     internal partial class AssetModificationProcessorInternal
     {

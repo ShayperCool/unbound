@@ -105,6 +105,13 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
+        public void ThePackagesFolderIsTheLastAncestorOfAPackageAsset()
+        {
+            // As the Project window answers it: Packages has no folder asset.
+            Assert.Equal(int.MaxValue, ProjectWindowUtil.FolderInstanceID("Packages"));
+        }
+
+        [Fact]
         public void PathHelpersTrimAndKeepTheOutermostFolders()
         {
             Assert.Equal("Assets/A", ProjectWindowUtil.GetContainingFolder("/Assets/A/b/"));

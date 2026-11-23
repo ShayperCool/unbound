@@ -53,6 +53,10 @@ namespace Unbound.Runtime
         /// <summary>A preview scene of the Editor's (a prefab's contents loaded for editing, or one
         /// EditorSceneManager.NewPreviewScene made): not listed by SceneManager.</summary>
         internal bool IsPreview;
+        /// <summary>A scene EditorSceneManager.CreateSceneAsset builds to write a new scene file:
+        /// its render settings name no skybox material (tests/projects/projectwindowutil
+        /// create.scene).</summary>
+        internal bool IsNewSceneAsset;
     }
 
     /// <summary>The loaded scenes and their root GameObjects, in hierarchy order.</summary>

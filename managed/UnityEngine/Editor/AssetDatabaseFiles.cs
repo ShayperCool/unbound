@@ -83,7 +83,8 @@ namespace UnityEditor
             var list = requests.ToList();
             if (list.Count == 0) return Array.Empty<string>();
             // The project's scripts hear of each .meta file about to be written for a new asset
-            // (tests/projects/projectwindowutil create.*).
+            // (tests/projects/projectwindowutil create.*). The .meta files a refresh writes are not
+            // reported yet: the engine writes them without listing the new paths first.
             foreach (var request in list)
                 if (!AssetPaths.Hidden(request.Path) && Exists(request.Path) && !File.Exists(FileOf(request.Path) + ".meta"))
                     AssetModificationProcessorInternal.OnWillCreateAsset(request.Path + ".meta");

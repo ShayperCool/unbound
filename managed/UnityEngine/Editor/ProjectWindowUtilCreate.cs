@@ -140,12 +140,17 @@ namespace UnityEditor
             if (main != instanceID) ancestors.Add(main);
             for (var folder = GetContainingFolder(AssetDatabase.GetAssetPath(main)); !string.IsNullOrEmpty(folder);)
             {
-                int id = AssetDatabase.GetMainAssetOrInProgressProxyInstanceID(folder);
+                int id = FolderInstanceID(folder);
                 ancestors.Add(id);
                 folder = GetContainingFolder(AssetDatabase.GetAssetPath(id));
             }
             return ancestors.ToArray();
         }
+
+        /// <summary>The instance ID the Project window gives a folder: the folder asset's, and
+        /// int.MaxValue for Packages (which has none).</summary>
+        internal static int FolderInstanceID(string folderPath) =>
+            folderPath == "Packages" ? int.MaxValue : AssetDatabase.GetMainAssetOrInProgressProxyInstanceID(folderPath);
     }
 }
 
