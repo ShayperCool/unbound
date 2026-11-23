@@ -20,7 +20,9 @@ PROFILES = {
     'audio': ('RecordAudioSourceMemory.Record', 'AUDIO_SOURCE_MEMORY_OUT', 'audio', AUDIO_BASE),
     'renderer': ('RecordMeshRendererMemory.Record', 'MESH_RENDERER_MEMORY_OUT', 'renderer', RENDERER_BASE),
     'transform': ('RecordTransformMemory.Record', 'TRANSFORM_MEMORY_OUT', 'transform', TRANSFORM_BASE),
+    'camera': ('RecordCameraMemory.Record', 'CAMERA_MEMORY_OUT', 'camera', BASE),
 }
+CAMERA_DEVICES = {'metal': 'Metal', 'opengl': 'OpenGLCore'}
 
 
 def directory(label, profile):
@@ -34,10 +36,12 @@ def directory(label, profile):
     return out
 
 
-def validate_capture(root, release, method):
+def validate_capture(root, release, method, device=None):
     rows = value_probe.read_values(root/'capture'/value_probe.VALUES)
     if rows.get('unity') != release:
         raise SystemExit(f'{root}: expected Editor capture for {release}')
+    if device is not None and rows.get('device') != device:
+        raise SystemExit(f'{root}: expected Editor capture on {device}')
     receipt = value_probe.editor_runner.load_result(root) or {}
     command = receipt.get('command')
     if not isinstance(command, list) or ('-executeMethod', method) not in zip(command, command[1:]):
@@ -51,14 +55,25 @@ def main():
     parser.add_argument('--release', required=True)
     parser.add_argument('--label')
     parser.add_argument('--profile', choices=PROFILES, default='fixed')
+    parser.add_argument('--backend', choices=CAMERA_DEVICES, help='Camera capture device')
     args = parser.parse_intermixed_args()
     os.environ['UNBOUND_PROBE_UNITY_VERSION'] = args.release
     method, variable, profile, base = PROFILES[args.profile]
+    device = None
+    if args.profile == 'camera':
+        local_backend = 'metal' if sys.platform == 'darwin' else 'opengl'
+        backend = args.backend or local_backend
+        if backend != local_backend and args.mode != 'publish':
+            parser.error(f'camera {backend} requires a host with that backend')
+        profile = f'camera-{backend}'
+        device = CAMERA_DEVICES[backend]
+    elif args.backend is not None:
+        parser.error('--backend applies to the camera profile')
     if args.mode == 'publish':
         roots = [directory(label, profile) for label in args.labels]
         value_probe.verify_sealed_value_repeats(roots)
         for root in roots:
-            validate_capture(root, args.release, method)
+            validate_capture(root, args.release, method, device)
         return value_probe.publish(PROBE, [str(root) for root in roots], profile=profile)
     if args.labels:
         parser.error('use --label for record and gate')
@@ -66,9 +81,9 @@ def main():
     if out.exists():
         raise SystemExit(f'{out}: expected a fresh run directory')
     if args.mode == 'record':
-        value_probe.record(PROBE, method, variable, str(out),
-                           batch=True, macos_batch=True, base=base)
-        validate_capture(out, args.release, method)
+        value_probe.record(PROBE, method, variable, str(out), batch=True, macos_batch=True, base=base,
+                           timeout=240 if args.profile == 'camera' else value_probe.RECORD_TIMEOUT)
+        validate_capture(out, args.release, method, device)
         value_probe.seal_value_capture(out)
         return 0
     return value_probe.gate(PROBE, variable, str(out), 0, ['--headless', '8'], base=base, profile=profile)
