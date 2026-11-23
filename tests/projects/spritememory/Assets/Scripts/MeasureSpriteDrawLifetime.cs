@@ -179,6 +179,7 @@ public sealed class MeasureSpriteDrawLifetime : MonoBehaviour
         Put("renderer.willRenderCallback", callbacks.WillRender.ToString());
         Object.DestroyImmediate(controlled.gameObject);
         Object.DestroyImmediate(controlledSprite);
+        SpriteMemoryGeometry.Capture(Make, camera, 12, Read);
 
         var maskSourceSprite = Make();
         var unusedMaskSprite = Make();

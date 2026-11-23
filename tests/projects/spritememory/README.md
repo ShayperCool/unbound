@@ -1,10 +1,16 @@
 # Runtime sprite geometry allocation
 
-The Unity 6000.0.71f1 Editor attributes 1460 bytes to a script-created Sprite with ordinary
-geometry. Making a copy or sampling the geometry through a particle Shape module raises the
-source's size to 2040 bytes. Each copy starts at 1460 bytes and acquires its own reservations.
-First camera use of the Sprite's geometry raises its size to 2132 bytes. Geometry changes
-retain an acquired reservation.
+The Unity 6000.0.71f1 Editor attributes 1460 bytes to a script-created Sprite with a quad.
+The size consists of a 1368-byte base, source vertices at 20 bytes each with four extra bytes
+for each vertex in the final incomplete group of four, and two bytes per reserved index.
+Geometry replacement keeps the largest source index reservation. A copy starts with the
+source's current vertices and indices and acquires its own reservations.
+
+Making a copy, replacing geometry or sampling it through a particle Shape module adds a
+580-byte reservation once. First camera use also adds 20 bytes for each vertex and two bytes
+for each index in the camera's geometry. This allocation reflects the geometry last prepared for
+a camera. Replacing the source geometry updates its own cost immediately. Its camera allocation
+changes on the next use.
 
 The camera controls cover a Simple SpriteRenderer and a visible Sprite-mode SpriteMask,
 including a mask without a receiver and a renderer with an empty material list. A renderer
@@ -17,8 +23,8 @@ The manual and API describe the render modes and the distinction between culling
 
 Sliced and Tiled renderers use their own generated geometry and leave the Sprite's size at its
 previous value. This profile measures Sprites created from a texture through `Sprite.Create`
-without generated fallback physics or secondary textures. Imported Sprites, other release
-families and storage needed only by shadow rendering remain unmeasured.
+without generated fallback physics or secondary textures. Imported Sprites, low-level geometry
+data writes, other release families and storage needed only by shadow rendering remain unmeasured.
 [Sprite.Create](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Sprite.Create.html)
 
 ```sh
