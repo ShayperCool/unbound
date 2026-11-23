@@ -232,7 +232,7 @@ namespace UnityEngine
         public void SetVertexBufferParams(int vertexCount, NativeArray<VertexAttributeDescriptor> attributes) =>
             SetVertexBufferParamsInternal(vertexCount, attributes.ToArray());
 
-        internal void SetVertexBufferParamsInternal(int vertexCount, VertexAttributeDescriptor[] attributes)
+        internal void SetVertexBufferParamsInternal(int vertexCount, VertexAttributeDescriptor[] attributes, bool keepBoneWeightBuffers = false)
         {
             if (vertexCount < 0) throw new ArgumentException("Vertex count can not be negative", nameof(vertexCount));
             EnsureModelLoaded();
@@ -255,7 +255,7 @@ namespace UnityEngine
                 m_UVs[c] = Resize(m_UVs[c], Has(attr));
                 m_UVDimensions[c] = Has(attr) ? Array.Find(layout, d => d.attribute == attr).dimension : 0;
             }
-            bool hasSkin = AdoptRawSkinWeightLayout(layout, vertexCount);
+            bool hasSkin = AdoptRawSkinWeightLayout(layout, vertexCount, keepBoneWeightBuffers);
             m_BoneWeights = Resize(m_BoneWeights, hasSkin);
             m_Layout = layout;
             m_HasPositionChannel = Has(VertexAttribute.Position);
