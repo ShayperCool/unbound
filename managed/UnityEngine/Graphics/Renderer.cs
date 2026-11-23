@@ -9,7 +9,25 @@ namespace UnityEngine
     [global::UnityEngine.@RequireComponent(typeof(global::UnityEngine.Transform))] public partial class Renderer : Component
     {
         internal bool m_Enabled = true;
-        internal Material[] m_Materials = new Material[1]; // one empty slot when added by script (measured)
+        Material[] m_MaterialSlots = new Material[1]; // one empty slot when added by script (measured)
+        int m_ProfilerMaterialSlots, m_ProfilerIndexedBlockSlots;
+
+        bool MeasuresMaterialReservations => this is MeshRenderer && Compat.MeshRendererMaterialMemoryMeasured;
+        internal int ProfilerMaterialSlots => m_ProfilerMaterialSlots;
+        internal int ProfilerIndexedBlockSlots => m_ProfilerIndexedBlockSlots;
+
+        internal Material[] m_Materials
+        {
+            get => m_MaterialSlots;
+            set
+            {
+                m_MaterialSlots = value;
+                if (!MeasuresMaterialReservations) return;
+                m_ProfilerMaterialSlots = Math.Max(m_ProfilerMaterialSlots, value.Length);
+                if (m_ProfilerIndexedBlockSlots != 0)
+                    m_ProfilerIndexedBlockSlots = Math.Max(m_ProfilerIndexedBlockSlots, value.Length);
+            }
+        }
         /// <summary>Instances `material`/`materials` made for this renderer.</summary>
         internal readonly HashSet<Material> m_OwnedMaterials = new HashSet<Material>();
         internal int m_SortingLayerID;
@@ -26,6 +44,13 @@ namespace UnityEngine
         internal bool m_Registered;
 
         public Renderer() { }
+
+        internal override void OnAttached()
+        {
+            base.OnAttached();
+            if (MeasuresMaterialReservations && !ComponentFactory.IsDeserializing)
+                m_ProfilerMaterialSlots = m_MaterialSlots.Length;
+        }
 
         public bool enabled
         {
@@ -466,6 +491,8 @@ namespace UnityEngine
 
         public void SetPropertyBlock(MaterialPropertyBlock properties, int materialIndex)
         {
+            if (MeasuresMaterialReservations && properties != null && (uint)materialIndex < (uint)m_Materials.Length)
+                m_ProfilerIndexedBlockSlots = Math.Max(m_ProfilerIndexedBlockSlots, m_Materials.Length);
             if (properties == null || properties.isEmpty)
                 m_MaterialBlocks?.Remove(materialIndex);
             else if (m_MaterialBlocks != null && m_MaterialBlocks.TryGetValue(materialIndex, out var own))

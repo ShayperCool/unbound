@@ -115,8 +115,13 @@ namespace UnityEngine
             get => m_Materials.Length > 1 ? m_Materials[1] : null;
             set
             {
-                if (m_Materials.Length < 2) Array.Resize(ref m_Materials, 2);
-                m_Materials[1] = value;
+                var materials = m_Materials;
+                if (materials.Length < 2)
+                {
+                    Array.Resize(ref materials, 2);
+                    m_Materials = materials;
+                }
+                materials[1] = value;
             }
         }
 
