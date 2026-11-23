@@ -392,6 +392,11 @@ Partial foot and hand rotations follow the same mapping. The controls include a 
 foot rotation, a foot position with an omitted rotation, and Foot IK through a clip, a controller
 playable, a mirrored state and an attached controller. The original `mirrorFootIK` control now
 matches within the comparator's existing tolerance and is checked with the other controls.
+Five movement controls record both foot velocities in jobs over clips with moving body curves,
+and MatchTarget on the right foot of an attached controller. They compare plain and mirrored
+clips and a mirrored partial foot rotation. The MatchTarget check uses a rotation-only weight
+mask. A separate full capture records the unsupported root movement and its scene differences
+for mirrored clip playables. These job controls check the sampled foot velocities.
 Families without measured defaults still report the fallback.
 [Animation tab](https://docs.unity3d.com/6000.0/Documentation/Manual/class-AnimationClip.html),
 [AnimationHumanStream.GetGoalLocalPosition](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Animations.AnimationHumanStream.GetGoalLocalPosition.html).
