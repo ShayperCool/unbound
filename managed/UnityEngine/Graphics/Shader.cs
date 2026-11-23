@@ -557,15 +557,19 @@ namespace UnityEngine
         }
 
         /// <summary>The declared property of a name id, else null.</summary>
-        internal ShaderPropertyInfo PropertyById(int nameID)
+        internal ShaderPropertyInfo PropertyById(int nameID) =>
+            PropertyLookup().TryGetValue(nameID, out var info) ? info : null;
+
+        Dictionary<int, ShaderPropertyInfo> PropertyLookup()
         {
             if (m_ById == null || m_ByIdCount != m_Properties.Count)
             {
-                m_ById = new Dictionary<int, ShaderPropertyInfo>();
-                foreach (var p in m_Properties) m_ById.TryAdd(PropertyToID(p.Name), p);
+                var properties = new Dictionary<int, ShaderPropertyInfo>(m_Properties.Count);
+                foreach (var property in m_Properties) properties.TryAdd(PropertyToID(property.Name), property);
                 m_ByIdCount = m_Properties.Count;
+                m_ById = properties;
             }
-            return m_ById.TryGetValue(nameID, out var info) ? info : null;
+            return m_ById;
         }
 
         Dictionary<int, ShaderPropertyInfo> m_ById;
@@ -586,12 +590,12 @@ namespace UnityEngine
             const int VectorWords = 4;
             const int TextureKeys = 4;
             const int TextureWords = 21;
-            var names = new HashSet<string>(StringComparer.Ordinal);
+            // Build the shader's existing lookup here so declared writes reuse it.
+            if (PropertyLookup().Count != m_Properties.Count) return null;
             long keys = 0, words = 0;
             bool mixedWords = false;
             foreach (var property in m_Properties)
             {
-                if (!names.Add(property.Name)) return null;
                 switch (property.Type)
                 {
                     case ShaderPropertyType.Float:

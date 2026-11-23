@@ -13,8 +13,8 @@ namespace UnityEngine
 
         void StartMeasuringPropertyStorage()
         {
-            if (Compat.MaterialScalarMemoryMeasured && m_Shader.ProfilerPropertyLayout is not null
-                && m_Keywords.Count == 0)
+            if (Compat.MaterialScalarMemoryMeasured && !IsPersistentAsset
+                && m_Shader.ProfilerPropertyLayout is not null && m_Keywords.Count == 0)
                 m_State.m_ProfilerLayoutVersion = m_Shader.ProfilerLayoutVersion;
         }
 
