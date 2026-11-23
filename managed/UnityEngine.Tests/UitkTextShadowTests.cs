@@ -10,7 +10,7 @@ namespace UnityEngine.Tests
     /// takes them (tests/projects/uitktextshadow measures the drawn result against the Editor).</summary>
     public class UitkTextShadowTests
     {
-        static (Panel panel, Label label, FontAsset font) Setup()
+        static (Panel panel, Label label, FontAsset font, PanelSettings settings) Setup()
         {
             var font = ScriptableObject.CreateInstance<FontAsset>();
             font.atlasPadding = 9;
@@ -21,13 +21,20 @@ namespace UnityEngine.Tests
             label.style.unityFontDefinition = FontDefinition.FromSDFFont(font);
             label.style.fontSize = 30;
             panel.visualTree.Add(label);
-            return (panel, label, font);
+            return (panel, label, font, settings);
+        }
+
+        static void TearDown(Panel panel, FontAsset font, PanelSettings settings)
+        {
+            panel.Dispose();
+            Object.DestroyImmediate(font);
+            Object.DestroyImmediate(settings);
         }
 
         [Fact]
         public void ShadowAndOutlineAreFractionsOfTheAtlasPaddingAtTheFontsPointSize()
         {
-            var (panel, label, font) = Setup();
+            var (panel, label, font, settings) = Setup();
             try
             {
                 // One pixel at 30 points is 90 / 30 = 3 units of the font's point size, a third of its padding of 9.
@@ -66,15 +73,14 @@ namespace UnityEngine.Tests
             }
             finally
             {
-                panel.Dispose();
-                Object.DestroyImmediate(font);
+                TearDown(panel, font, settings);
             }
         }
 
         [Fact]
         public void AColourAtlasTakesAWhiteFaceAndAnOutlineColourAsItIs()
         {
-            var (panel, label, font) = Setup();
+            var (panel, label, font, settings) = Setup();
             var atlas = new Texture2D(4, 4, TextureFormat.RGBA32, false);
             font.material = new Material(Shader.Create("Hidden/TextShadowTestAtlas", 2000)) { mainTexture = atlas };
             try
@@ -89,17 +95,16 @@ namespace UnityEngine.Tests
             }
             finally
             {
-                panel.Dispose();
                 Object.DestroyImmediate(font.material);
                 Object.DestroyImmediate(atlas);
-                Object.DestroyImmediate(font);
+                TearDown(panel, font, settings);
             }
         }
 
         [Fact]
         public void TextWithoutOutlineWidthShadowOffsetOrBlurHasTheDefaultSettings()
         {
-            var (panel, label, font) = Setup();
+            var (panel, label, font, settings) = Setup();
             try
             {
                 panel.ApplyStyles();
@@ -118,8 +123,7 @@ namespace UnityEngine.Tests
             }
             finally
             {
-                panel.Dispose();
-                Object.DestroyImmediate(font);
+                TearDown(panel, font, settings);
             }
         }
     }
