@@ -469,8 +469,9 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
-        public void ASystemWithTrailsCountsAsVisibleWheneverItsLayerIsDrawn()
+        public void UnmeasuredReleaseKeepsApproximateParticleVisibilityFallback()
         {
+            using var pinned = TestRelease.Pin(TestRelease.Unmeasured);
             const string notCovered = "Particle culling without covering bounds";
             var camera = MakeCamera(orthographic: false);
             var ps = Make(ParticleSystemCullingMode.Pause);
@@ -480,7 +481,7 @@ namespace UnityEngine.Tests
             var renderer = RendererOf(ps);
             Frames(3);
             Assert.False(renderer.CullingBoundsCoverDraw);
-            // Unbound cannot bound trails: it draws the system, so it stays visible, reported.
+            // An empty renderer has unknown bounds in the unmeasured profile.
             int reported = Hits(notCovered);
             Assert.True(CullSees(camera, renderer));
             float time = ps.time;

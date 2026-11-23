@@ -18,6 +18,7 @@ sealed class ParticleVisibilityProbe : MonoBehaviour
         internal Animator Animator;
         internal AnimationState Legacy;
         internal ParticleSystemRenderer Renderer;
+        internal ParticleSystem PausedSystem;
         internal Transform Marker;
         internal bool World;
     }
@@ -47,7 +48,7 @@ sealed class ParticleVisibilityProbe : MonoBehaviour
         camera.cullingMask = 1 << Layer;
     }
 
-    Rig Create(string name, bool world, bool live, float minSize, bool trails, bool stretch, bool legacy = false, float size = 1f, float emittedSize = .5f, bool moving = false)
+    Rig Create(string name, bool world, bool live, float minSize, bool trails, bool stretch, bool legacy = false, float size = 1f, float emittedSize = .5f, bool moving = false, bool pause = false)
     {
         var root = new GameObject(name);
         root.SetActive(false);
@@ -59,7 +60,7 @@ sealed class ParticleVisibilityProbe : MonoBehaviour
         main.playOnAwake = false;
         main.startSize = size;
         main.simulationSpace = world ? ParticleSystemSimulationSpace.World : ParticleSystemSimulationSpace.Local;
-        main.cullingMode = ParticleSystemCullingMode.AlwaysSimulate;
+        main.cullingMode = pause ? ParticleSystemCullingMode.Pause : ParticleSystemCullingMode.AlwaysSimulate;
         var em = ps.emission;
         em.enabled = false;
         var shape = ps.shape;
@@ -109,6 +110,7 @@ sealed class ParticleVisibilityProbe : MonoBehaviour
             Name = name,
             Root = root,
             Renderer = renderer,
+            PausedSystem = pause ? ps : null,
             Animator = animator,
             Legacy = animation == null ? null : animation["Loop"],
             Marker = marker,
@@ -133,6 +135,8 @@ sealed class ParticleVisibilityProbe : MonoBehaviour
             rigs.Add(Create("movingTrail", false, true, 0, true, false, size: .5f, moving: true));
             rigs.Add(Create("movingStretch", false, true, 0, false, true, size: .5f, moving: true));
             rigs.Add(Create("worldFar", true, true, .2f, false, false));
+            rigs.Add(Create("pauseTrails", false, true, 0, true, false, pause: true));
+            rigs.Add(Create("pauseEmpty", false, false, 0, true, false, pause: true));
         }
         if (tick == 6)
             foreach (var rig in rigs)
@@ -171,8 +175,12 @@ sealed class ParticleVisibilityProbe : MonoBehaviour
         if (tick == 0 || tick > 56) return;
         foreach (var rig in rigs)
         {
+            // Pause controls use the relocation and layer-mask portions of the sequence.
+            if (rig.PausedSystem != null && tick > 25) continue;
             float normalizedTime = rig.Legacy != null ? rig.Legacy.normalizedTime : rig.Animator.GetCurrentAnimatorStateInfo(0).normalizedTime;
             var observation = $"{rig.Renderer.isVisible}/{Mathf.RoundToInt(normalizedTime * 10000)}/{Mathf.RoundToInt(rig.Marker.localPosition.x * 10000)}";
+            if (rig.PausedSystem != null)
+                observation += "/" + Mathf.RoundToInt(rig.PausedSystem.time * 10000);
             rows.Add(JsonUtility.ToJson(new Row { k = rig.Name + "." + tick, v = observation }));
         }
     }

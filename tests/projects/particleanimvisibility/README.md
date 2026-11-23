@@ -1,7 +1,7 @@
 # Animation culling with particle renderers
 
 Unity 6000.0.71f1, Built-In Render Pipeline. Two independent windowed Linux Editor runs
-on NVIDIA matched across all 673 rows. The runner closes Scene views and uses a 320×180
+on NVIDIA matched across all 723 rows. The runner closes Scene views and uses a 320×180
 Game view. The gate compares every visibility, animation clock and pose sample exactly.
 
 An Animator with CullCompletely freezes while its only ParticleSystemRenderer is invisible.
@@ -10,6 +10,10 @@ again. The control rig uses a plain billboard. Other rigs use minimum screen siz
 or camera-velocity stretch. The camera and emitter move independently, the camera drops the
 layer, the renderer is disabled, and the camera is turned off. A world-space particle starts
 away from its emitter, and the trail and stretch controls include moving particles.
+Two Pause-mode controls record the simulation clock as the camera drops an off-screen
+system and brings it back. The clock stops for both empty and live systems with trails.
+A longer diagnostic found a one-step clock difference after re-enabling the renderer and
+a different near-frustum result for an empty Pause-mode system. Those cases remain open.
 
 Near the edge of the view, a small empty system becomes invisible earlier than a large
 empty system. A large emitted particle stays visible farther out even with a small
@@ -27,6 +31,7 @@ The bounds estimates and exact timing above are observations of this setup.
 [AnimatorCullingMode](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/AnimatorCullingMode.html),
 [AnimationCullingType](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/AnimationCullingType.html),
 [Renderer.isVisible](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Renderer-isVisible.html),
+[Particle simulation Pause](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/ParticleSystemCullingMode.Pause.html),
 [Particle renderer Manual](https://docs.unity3d.com/6000.0/Documentation/Manual/PartSysRendererModule.html).
 
 ```sh
