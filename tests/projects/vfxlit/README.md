@@ -85,7 +85,8 @@ places and turned at random angles, in a system of sixteen, unless said otherwis
   update makes); lines as native lines, `LineSoft` as quads a pixel wide (the output's default).
   `PointDying`, `LineDying`: the same with lifetimes from 0.05 to 0.3 seconds, so that the dead
   of the system's room are drawn too. `LineOffset`: native lines to the output's default target
-  offset (one unit up) rather than the target position.
+  offset ((0, 1, 0) in the particle's frame, a tenth of a unit at the default size) rather than
+  the target position.
 - `MovingLit`, `MovingMeshes`: twenty opaque particles moving sideways fast (6 units a second),
   writing motion vectors: quads lit by the render pipeline (no base colour map), and the
   package's default mesh turned each its own way (unlit).
