@@ -57,4 +57,53 @@
 {"k":"bake.auto.Unlimited.log","v":""}
 {"k":"bake.overrideTwo","v":[{"x":0.39655354619026186,"y":2.379321336746216,"z":0.0},{"x":18.800182342529298,"y":8.800030708312989,"z":0.0},{"x":4.0,"y":11.0,"z":0.0}]}
 {"k":"bake.overrideTwo.log","v":""}
+{"k":"buffer.fresh.buffer","v":"ArgumentException: Bone Weight buffer for 2 bones per vertex on  is null"}
+{"k":"buffer.fresh.buffer.log","v":""}
+{"k":"buffer.initial","v":"3:16:Vertex, Structured:3F400000/3E800000/00000002/00000000/3F200000/3EC00000/00000003/00000001/3F800000/00000000/00000004/00000000"}
+{"k":"buffer.initial.log","v":""}
+{"k":"buffer.wrapper.shared","v":"True:False"}
+{"k":"buffer.wrapper.shared.log","v":""}
+{"k":"buffer.wrapper.afterDisposeOther","v":"True:3:16:Vertex, Structured:3F400000/3E800000/00000002/00000000/3F200000/3EC00000/00000003/00000001/3F800000/00000000/00000004/00000000"}
+{"k":"buffer.wrapper.afterDisposeOther.log","v":""}
+{"k":"buffer.storage.existingImmediatelyAfterSetter","v":"3:16:Vertex, Structured:00000000/00000000/00000000/00000000/00000000/00000000/00000000/00000000/00000000/00000000/00000000/00000000"}
+{"k":"buffer.storage.sameLayoutRewrite","v":"True|True|3:16:Vertex, Structured:3F400000/3E800000/00000008/00000007/3F000000/3F000000/00000006/00000005/3F800000/00000000/00000004/00000000"}
+{"k":"buffer.storage.sameLayoutRewrite.log","v":""}
+{"k":"buffer.storage.newLayout","v":"True|True|3:16:Vertex, Structured:3F800000/00000000/00000004/00000000/3F800000/00000000/00000005/00000000/3F800000/00000000/00000006/00000000"}
+{"k":"buffer.storage.newLayout.log","v":""}
+{"k":"buffer.storage.afterUnreadable","v":"False|3:4:Vertex, Structured:00000004/00000005/00000006"}
+{"k":"buffer.storage.afterUnreadable.log","v":""}
+{"k":"buffer.storage.ownerDestroyed","v":"True|True"}
+{"k":"buffer.storage.ownerDestroyed.log","v":""}
+{"k":"buffer.storage.resize","v":"True|True|3:16:Vertex, Structured:3F400000/3E800000/00000002/00000000/3F200000/3EC00000/00000003/00000001/3F800000/00000000/00000004/00000000"}
+{"k":"buffer.storage.resize.log","v":""}
+{"k":"buffer.packed.None","v":"null"}
+{"k":"buffer.packed.None.log","v":"Error:Only possible to access bone weights buffer for values: OneBone, TwoBones, FourBones and Unlimited."}
+{"k":"buffer.packed.OneBone","v":"3:4:Vertex, Structured:00000004/00000008/00000002"}
+{"k":"buffer.packed.OneBone.log","v":""}
+{"k":"buffer.packed.TwoBones","v":"3:16:Vertex, Structured:3F104B00/3EDF69FF/00000004/00000001/3F800000/00000000/00000008/00000000/3F4CCCCD/3E4CCCCD/00000002/00000004"}
+{"k":"buffer.packed.TwoBones.log","v":""}
+{"k":"buffer.packed.FourBones","v":"3:32:Vertex, Structured:3EB67087/3E8D3D28/3E6B6776/3E0D3D28/00000004/00000001/00000008/00000003/3F800000/00000000/00000000/00000000/00000008/00000000/00000000/00000000/3F4CCCCD/3E4CCCCD/00000000/00000000/00000002/00000004/00000000/00000000"}
+{"k":"buffer.packed.FourBones.log","v":""}
+{"k":"buffer.packed.Unlimited","v":"13:4:Vertex, Structured:00000004/0000000A/0000000B/0000000D/4F5C0004/3D700001/33330008/1EB80003/199A0002/07AE0009/FFFF0008/CCCC0002/33330004"}
+{"k":"buffer.packed.Unlimited.log","v":""}
+{"k":"buffer.packed.3","v":"3:32:Vertex, Structured:3EB67087/3E8D3D28/3E6B6776/3E0D3D28/00000004/00000001/00000008/00000003/3F800000/00000000/00000000/00000000/00000008/00000000/00000000/00000000/3F4CCCCD/3E4CCCCD/00000000/00000000/00000002/00000004/00000000/00000000"}
+{"k":"buffer.packed.3.log","v":""}
+{"k":"buffer.worker","v":"UnityException: GetBoneWeightBufferImpl can only be called from the main thread.\nConstructors and field initializers will be executed from the loading thread when loading a scene.\nDon't use this function in the constructor or field initializers, instead move initialization code to the Awake or Start function."}
+{"k":"buffer.worker.log","v":""}
+{"k":"transition.callback","v":"Unlimited:True:True:created:5:created:1@0.5000076/2@0.2500038/3@0.1250019/4@0.06250095/6@0.0624856949|UNorm16:4:1/UInt16:4:1|Unlimited:True:True:created:5:created:1@0.5000076/2@0.2500038/3@0.1250019/4@0.06250095/6@0.0624856949|UNorm16:4:1/UInt16:4:1"}
+{"k":"transition.callback.log","v":"Error:Unsupported conversion of vertex data (format 0 to 4, dimensions 2 to 4)"}
+{"k":"unlimited.unsorted","v":"FourBones:True:True:created:4:created:1@0.5333333/2@0.266666651/3@0.133333325/4@0.06666666"}
+{"k":"unlimited.unsorted.log","v":"Error:Vertex 0 bone weights are not in descending order! testing !(0.500000000 <= 0.250000000)"}
+{"k":"unlimited.infinity","v":"Unlimited:True:True:created:1:created:4@1"}
+{"k":"unlimited.infinity.log","v":""}
+{"k":"fixed.nan","v":"TwoBones:True:True:created:1:created:2@NaN"}
+{"k":"fixed.nan.log","v":""}
+{"k":"thread.legacyGet","v":"UnityException: GetBoneWeightsImpl can only be called from the main thread.\nConstructors and field initializers will be executed from the loading thread when loading a scene.\nDon't use this function in the constructor or field initializers, instead move initialization code to the Awake or Start function."}
+{"k":"thread.legacyGet.log","v":""}
+{"k":"thread.legacySet","v":"UnityException: SetBoneWeightsImpl can only be called from the main thread.\nConstructors and field initializers will be executed from the loading thread when loading a scene.\nDon't use this function in the constructor or field initializers, instead move initialization code to the Awake or Start function."}
+{"k":"thread.legacySet.log","v":""}
+{"k":"thread.vertices","v":"UnityException: get_canAccess can only be called from the main thread.\nConstructors and field initializers will be executed from the loading thread when loading a scene.\nDon't use this function in the constructor or field initializers, instead move initialization code to the Awake or Start function."}
+{"k":"thread.vertices.log","v":""}
+{"k":"thread.clear","v":"UnityException: ClearImpl can only be called from the main thread.\nConstructors and field initializers will be executed from the loading thread when loading a scene.\nDon't use this function in the constructor or field initializers, instead move initialization code to the Awake or Start function."}
+{"k":"thread.clear.log","v":""}
 {"k":"complete","v":true}

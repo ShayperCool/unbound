@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
@@ -8,7 +9,7 @@ using UnityEngine;
 using UnityEngine.Rendering;
 using Object = UnityEngine.Object;
 
-static class MeshSkinningProbe
+sealed class MeshSkinningProbe : MonoBehaviour
 {
     [Serializable] sealed class Row { public string k, v; }
     [Serializable] sealed class PositionRow { public string k; public Vector3[] v; }
@@ -47,6 +48,14 @@ static class MeshSkinningProbe
         return Describe(VertexAttribute.BlendWeight) + "/" + Describe(VertexAttribute.BlendIndices);
     }
 
+    static string Words(GraphicsBuffer buffer)
+    {
+        var words = new uint[buffer.count * buffer.stride / sizeof(uint)];
+        buffer.GetData(words);
+        return buffer.count + ":" + buffer.stride + ":" + buffer.target + ":" +
+            string.Join("/", Array.ConvertAll(words, word => word.ToString("X8", Invariant)));
+    }
+
     static string OnWorkerThread(Action action)
     {
         string result = "ok";
@@ -61,10 +70,16 @@ static class MeshSkinningProbe
     }
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
-    static void Capture()
+    static void Begin()
+    {
+        if (!string.IsNullOrEmpty(Environment.GetEnvironmentVariable("MESH_SKINNING_OUT")))
+            new GameObject("Mesh skinning probe").AddComponent<MeshSkinningProbe>().StartCoroutine(Capture());
+    }
+
+    static IEnumerator Capture()
     {
         string output = Environment.GetEnvironmentVariable("MESH_SKINNING_OUT");
-        if (string.IsNullOrEmpty(output)) return;
+        if (string.IsNullOrEmpty(output)) yield break;
         var rows = new List<string>();
         void Put(string key, object value) => rows.Add(JsonUtility.ToJson(new Row { k = key, v = Convert.ToString(value, Invariant) }));
         void Probe(string stage, Func<string> action)
@@ -232,6 +247,120 @@ static class MeshSkinningProbe
             Object.DestroyImmediate(deforming);
             Object.DestroyImmediate(outputMesh);
         }
+        // The buffer checks require the renderer to have completed its first frame.
+        yield return null;
+        var bufferMesh = Make(3);
+        var narrow = new byte[] { 2, 2, 1 };
+        var initial = new[] { Weight(2, 0.75f), Weight(0, 0.25f), Weight(3, 0.625f), Weight(1, 0.375f), Weight(4, 1) };
+        var replacement = new[] { Weight(8, 0.75f), Weight(7, 0.25f), Weight(6, 0.5f), Weight(5, 0.5f), Weight(4, 1) };
+        Probe("buffer.fresh.buffer", () =>
+        {
+            using var buffer = bufferMesh.GetBoneWeightBuffer(SkinWeights.TwoBones);
+            return buffer == null ? "null" : Words(buffer);
+        });
+        Apply(bufferMesh, narrow, initial);
+        using var first = bufferMesh.GetBoneWeightBuffer(SkinWeights.TwoBones);
+        Probe("buffer.initial", () => Words(first));
+        Probe("buffer.wrapper.shared", () =>
+        {
+            using var second = bufferMesh.GetBoneWeightBuffer(SkinWeights.TwoBones);
+            return (first.GetNativeBufferPtr() == second.GetNativeBufferPtr()) + ":" + ReferenceEquals(first, second);
+        });
+        Probe("buffer.wrapper.afterDisposeOther", () => first.IsValid() + ":" + Words(first));
+        Probe("buffer.storage.sameLayoutRewrite", () =>
+        {
+            Apply(bufferMesh, narrow, replacement);
+            Put("buffer.storage.existingImmediatelyAfterSetter", Words(first));
+            using var current = bufferMesh.GetBoneWeightBuffer(SkinWeights.TwoBones);
+            return (first.GetNativeBufferPtr() == current.GetNativeBufferPtr()) + "|" + first.IsValid() + "|" + Words(current);
+        });
+        Probe("buffer.storage.newLayout", () =>
+        {
+            Apply(bufferMesh, new byte[] { 1, 1, 1 }, new[] { Weight(4, 1), Weight(5, 1), Weight(6, 1) });
+            using var current = bufferMesh.GetBoneWeightBuffer(SkinWeights.TwoBones);
+            return (first.GetNativeBufferPtr() == current.GetNativeBufferPtr()) + "|" + first.IsValid() + "|" + Words(current);
+        });
+        Probe("buffer.storage.afterUnreadable", () =>
+        {
+            bufferMesh.triangles = new[] { 0, 1, 2 };
+            bufferMesh.UploadMeshData(true);
+            using var current = bufferMesh.GetBoneWeightBuffer(SkinWeights.OneBone);
+            return bufferMesh.isReadable + "|" + Words(current);
+        });
+        Probe("buffer.storage.ownerDestroyed", () =>
+        {
+            using var current = bufferMesh.GetBoneWeightBuffer(SkinWeights.TwoBones);
+            Object.DestroyImmediate(bufferMesh);
+            return first.IsValid() + "|" + current.IsValid();
+        });
+
+        var growing = Make(3);
+        Apply(growing, narrow, initial);
+        using var small = growing.GetBoneWeightBuffer(SkinWeights.TwoBones);
+        Probe("buffer.storage.resize", () =>
+        {
+            growing.vertices = new Vector3[4];
+            using var grown = growing.GetBoneWeightBuffer(SkinWeights.TwoBones);
+            return small.IsValid() + "|" + (small.GetNativeBufferPtr() == grown.GetNativeBufferPtr()) + "|" + Words(grown);
+        });
+        Object.DestroyImmediate(growing);
+
+        var packed = Make(3);
+        Apply(packed, new byte[] { 6, 1, 2 }, new[] {
+            Weight(4, 0.31f), Weight(1, 0.24f), Weight(8, 0.2f), Weight(3, 0.12f), Weight(2, 0.1f), Weight(9, 0.03f),
+            Weight(8, 1), Weight(2, 0.8f), Weight(4, 0.2f)
+        });
+        foreach (SkinWeights layout in new[] { SkinWeights.None, SkinWeights.OneBone, SkinWeights.TwoBones,
+            SkinWeights.FourBones, SkinWeights.Unlimited, (SkinWeights)3 })
+            Probe("buffer.packed." + layout, () =>
+            {
+                using var view = packed.GetBoneWeightBuffer(layout);
+                return view == null ? "null" : Words(view);
+            });
+        Probe("buffer.worker", () => OnWorkerThread(() => packed.GetBoneWeightBuffer(SkinWeights.OneBone)));
+        Object.DestroyImmediate(packed);
+
+        var diagnostics = Make(1);
+        Apply(diagnostics, new byte[] { 2 }, new[] { Weight(5, 0.75f), Weight(7, 0.25f) });
+        Probe("transition.callback", () =>
+        {
+            string observed = "none";
+            void Observe(string message, string _, LogType type)
+            {
+                if (type == LogType.Error && message.Contains("Unsupported conversion"))
+                    observed = Shape(diagnostics) + "|" + AttributeShape(diagnostics);
+            }
+            Application.logMessageReceived += Observe;
+            try
+            {
+                Apply(diagnostics, new byte[] { 5 }, new[] { Weight(1, 0.5f), Weight(2, 0.25f),
+                    Weight(3, 0.125f), Weight(4, 0.0625f), Weight(6, 0.0625f) });
+            }
+            finally { Application.logMessageReceived -= Observe; }
+            return observed + "|" + Shape(diagnostics) + "|" + AttributeShape(diagnostics);
+        });
+        Probe("unlimited.unsorted", () =>
+        {
+            Apply(diagnostics, new byte[] { 5 }, new[] { Weight(1, 0.25f), Weight(2, 0.5f),
+                Weight(3, 0.125f), Weight(4, 0.0625f), Weight(6, 0.0625f) });
+            return Shape(diagnostics);
+        });
+        Probe("unlimited.infinity", () =>
+        {
+            Apply(diagnostics, new byte[] { 5 }, new[] { Weight(4, float.PositiveInfinity), Weight(1, 0.25f),
+                Weight(2, 0.25f), Weight(3, 0.125f), Weight(5, 0.125f) });
+            return Shape(diagnostics);
+        });
+        Probe("fixed.nan", () =>
+        {
+            Apply(diagnostics, new byte[] { 2 }, new[] { Weight(2, 1), Weight(3, float.NaN) });
+            return Shape(diagnostics);
+        });
+        Probe("thread.legacyGet", () => OnWorkerThread(() => _ = diagnostics.boneWeights));
+        Probe("thread.legacySet", () => OnWorkerThread(() => diagnostics.boneWeights = new[] { new BoneWeight { weight0 = 1 } }));
+        Probe("thread.vertices", () => OnWorkerThread(() => diagnostics.vertices = new Vector3[2]));
+        Probe("thread.clear", () => OnWorkerThread(() => diagnostics.Clear()));
+        Object.DestroyImmediate(diagnostics);
         rows.Add("{\"k\":\"complete\",\"v\":true}");
         File.WriteAllLines(Path.Combine(output, "values.jsonl"), rows);
 #if UNITY_EDITOR

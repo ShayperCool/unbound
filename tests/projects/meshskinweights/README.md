@@ -1,0 +1,29 @@
+# Mesh skin weights
+
+The Unity 6000.0 Scripting API accepts up to 255 influences per vertex supplied in descending weight
+order. The probe checks count and index order through the borrowed arrays, input validation, and
+the rounded weights that the selected layout stores. The six-bone bake moves each bone differently
+so a four-influence result differs from the unlimited result. [SetBoneWeights](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Mesh.SetBoneWeights.html) ·
+[GetAllBoneWeights](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Mesh.GetAllBoneWeights.html) ·
+[GetBonesPerVertex](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Mesh.GetBonesPerVertex.html)
+
+Unity 6000.0.71f1 resizes the per-vertex counts as the geometry grows or shrinks and retains
+the flat weight data from the last assignment. The legacy array follows the active vertices.
+The probe also checks a layout change and the state visible inside the conversion diagnostic.
+
+The GPU checks run after a frame has elapsed so a synchronous readback has a graphics context.
+They compare raw words for every layout, including the unlimited layout's offset table and packed
+influences. Separate wrappers share the buffer and can be disposed independently. The sequence
+also checks immediately reading an existing buffer after a weight write, then requesting it again
+to get the refreshed contents. [GetBoneWeightBuffer](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Mesh.GetBoneWeightBuffer.html)
+
+The probe exercises scripted mesh weights. Imported meshes use the influences their importer
+supplies. Synchronous readbacks issued before the renderer becomes available use the engine's
+existing GPU availability diagnostic.
+
+```sh
+python3 tests/projects/meshskinweights/run.py record --release 6000.0.71f1 --label repeat-a
+python3 tests/projects/meshskinweights/run.py record --release 6000.0.71f1 --label repeat-b
+python3 tests/projects/meshskinweights/run.py publish --release 6000.0.71f1 repeat-a repeat-b
+python3 tests/projects/meshskinweights/run.py gate --release 6000.0.71f1
+```
