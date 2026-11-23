@@ -2088,6 +2088,7 @@
 {"key":"UnityEditor.View/Property/UnityEngine.Object/hideFlags","status":"value","value":"enum:52"}
 {"key":"UnityEditor.View/Property/UnityEngine.Object/name","status":"value","value":"string:"}
 {"key":"UnityEditorInternal.InternalEditorUtility/@factory","status":"value","value":"class"}
+{"key":"UnityEditorInternal.PackageManifest/@factory","status":"excluded","value":"no-public-parameterless-constructor"}
 {"key":"UnityEditorInternal.ReorderableList/@factory","status":"excluded","value":"no-public-parameterless-constructor"}
 {"key":"UnityEngine.AI.NavMesh/@factory","status":"excluded","value":"static"}
 {"key":"UnityEngine.AI.NavMeshAgent/@factory","status":"value","value":"component"}

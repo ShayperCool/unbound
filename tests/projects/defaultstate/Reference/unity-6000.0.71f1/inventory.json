@@ -3193,6 +3193,12 @@
       "category": "class",
       "module": "UnityEditor.CoreModule",
       "status": "no-public-parameterless-constructor",
+      "type": "UnityEditorInternal.PackageManifest"
+    },
+    {
+      "category": "class",
+      "module": "UnityEditor.CoreModule",
+      "status": "no-public-parameterless-constructor",
       "type": "UnityEditorInternal.ReorderableList"
     },
     {

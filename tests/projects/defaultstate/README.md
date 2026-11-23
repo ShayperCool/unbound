@@ -875,3 +875,7 @@ by the shift measured on macOS (-22; not measured on Linux).
 The PlayerSettings values slice makes `PlayerSettings.SplashScreen`, `PlayerSettings.WebGL` and `PlayerSettings.tvOS`
 hand-written, and they enter the inventory; two Unity 6000.0.71f1 batch Editor captures on macOS write their three
 `@factory` rows. Every earlier row is unchanged, and no queued row shifts on macOS.
+
+`UnityEditorInternal.PackageManifest` (a package's `package.json`) is hand-written now and enters the
+inventory; two Unity 6000.0.71f1 batch Editor captures on macOS write its one `@factory` row. Every
+earlier row is unchanged, and no queued row shifts on macOS.
