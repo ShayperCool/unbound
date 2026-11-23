@@ -39,14 +39,17 @@ fn exact(w: u64, h: u64) -> Option<Layout> {
 }
 
 /// What AutoCubemap makes of an image of no exact layout, by its aspect (width / height,
-/// inclusive bounds as fractions): the bands in which every image measured in the Unity
-/// 6000.0.71f1 Editor got the same mapping (tests/projects/cubemapimport Aspect*, Wide*,
-/// Square*, Tall*). Between the bands the choice is not monotonic in the aspect (1.25 a
-/// panorama, 0.85 the corner square, 0.7 and 0.8 a sphere map), so it is not taken there.
+/// inclusive bounds as fractions): each layout takes images near its own aspect, within the
+/// bands every measured image of the Unity 6000.0.71f1 Editor falls in (tests/projects/
+/// cubemapimport Aspect*, Wide*, Square*, Tall*); between a layout's last measured image and the
+/// next layout's first, the choice is not measured, so it is not taken there.
 const AUTO_BANDS: &[((u64, u64), (u64, u64), Layout)] = &[
     ((1, 2), (2, 3), Layout::Corner),
+    ((100, 143), (4, 5), Layout::VerticalCross),
+    ((50, 59), (50, 59), Layout::Corner),
     ((9, 10), (28, 25), Layout::SphereMap),
     ((23, 20), (6, 5), Layout::Corner),
+    ((5, 4), (4, 3), Layout::HorizontalCross),
     ((29, 20), (38, 25), Layout::Corner),
     ((31, 20), (14, 5), Layout::LatLong),
     ((29, 10), (5, 1), Layout::Corner),
@@ -76,19 +79,31 @@ pub(super) fn layout(width: u32, height: u32, mode: i32) -> Result<Layout> {
         .ok_or_else(|| {
             anyhow::anyhow!(
                 "AutoCubemap's mapping of a {width}x{height} image is not measured (aspects \
-                 measured: 1:2-2:3 corner square, 0.9-1.12 sphere map, 1.55-2.8 panorama, 2.9-5 \
-                 corner square, and the exact strips and crosses); set the texture's Mapping"
+                 measured: 0.5-0.67, 0.85, 1.15-1.2, 1.45-1.52 and 2.9-5 the corner square, 0.7-0.8 a \
+                 vertical cross, 0.9-1.12 a sphere map, 1.25-1.33 a horizontal cross, 1.55-2.8 a \
+                 panorama, and the exact strips); set the texture's Mapping"
             )
         })
 }
 
-/// The face size a layout cuts or projects from the image, before it is made a power of two.
+/// A cross's cells: whole texels across and down (its columns and rows of the image).
+fn cells(width: u32, height: u32, layout: Layout) -> (u32, u32) {
+    match layout {
+        Layout::HorizontalCross => (width / 4, height / 3),
+        _ => (width / 3, height / 4),
+    }
+}
+
+/// The face size a layout cuts or projects from the image, before it is made a power of two
+/// (a cross's larger cell side: its faces are squares).
 pub(super) fn face_size(width: u32, height: u32, layout: Layout) -> u32 {
     match layout {
         Layout::HorizontalStrip => height,
         Layout::VerticalStrip => width,
-        Layout::HorizontalCross => width / 4,
-        Layout::VerticalCross => width / 3,
+        Layout::HorizontalCross | Layout::VerticalCross => {
+            let (w, h) = cells(width, height, layout);
+            w.max(h)
+        }
         Layout::LatLong | Layout::SphereMap => width / 2,
         Layout::Corner => width.min(height),
     }
@@ -124,22 +139,54 @@ pub(super) fn faces(image: &Image, layout: Layout, size: u32) -> Vec<Image> {
     match layout {
         Layout::HorizontalStrip => (0..6).map(|i| cut(i, 0, false)).collect(),
         Layout::VerticalStrip => (0..6).map(|i| cut(0, i, false)).collect(),
-        Layout::HorizontalCross => vec![
-            cut(2, 1, false),
-            cut(0, 1, false),
-            cut(1, 0, false),
-            cut(1, 2, false),
-            cut(1, 1, false),
-            cut(3, 1, false),
-        ],
-        Layout::VerticalCross => vec![
-            cut(2, 1, false),
-            cut(0, 1, false),
-            cut(1, 0, false),
-            cut(1, 2, false),
-            cut(1, 1, false),
-            cut(1, 3, true),
-        ],
+        Layout::HorizontalCross | Layout::VerticalCross => {
+            // Cells of whole texels counted from the image's bottom-left (Unity's texture
+            // order); each face is the square of the larger cell side from its cell's corner,
+            // reaching right and up, edge texels repeated past the image (tests/projects/
+            // cubemapimport Aspect125Auto, Aspect080Auto, Aspect070Auto).
+            let (cw, ch) = cells(image.width, image.height, layout);
+            let rows = if layout == Layout::HorizontalCross {
+                3
+            } else {
+                4
+            };
+            let square = |col: u32, row: u32, rotate: bool| -> Image {
+                let x0 = col * cw;
+                let bottom = (rows - 1 - row) * ch;
+                let top = image.height as i64 - bottom as i64 - cell as i64;
+                let mut data = Vec::with_capacity((cell * cell) as usize * bpp);
+                for y in 0..cell {
+                    let sy = if rotate { cell - 1 - y } else { y };
+                    let row = (top + sy as i64).clamp(0, image.height as i64 - 1) as u32;
+                    let line = &image.data[(row * image.width) as usize * bpp..]
+                        [..image.width as usize * bpp];
+                    for x in 0..cell {
+                        let sx = if rotate { cell - 1 - x } else { x };
+                        let column = (x0 + sx).min(image.width - 1) as usize;
+                        data.extend_from_slice(&line[column * bpp..column * bpp + bpp]);
+                    }
+                }
+                Image {
+                    width: cell,
+                    height: cell,
+                    format: image.format,
+                    data,
+                }
+            };
+            let minus_z = if layout == Layout::HorizontalCross {
+                square(3, 1, false)
+            } else {
+                square(1, 3, true)
+            };
+            vec![
+                square(2, 1, false),
+                square(0, 1, false),
+                square(1, 0, false),
+                square(1, 2, false),
+                square(1, 1, false),
+                minus_z,
+            ]
+        }
         Layout::Corner => {
             // The image's last rows, the first in Unity's bottom-up texture order, read upward.
             let mut data = Vec::with_capacity((cell * cell) as usize * bpp);
@@ -293,7 +340,10 @@ mod tests {
         assert_eq!(layout(192, 128, 6).unwrap(), Layout::Corner);
         assert_eq!(layout(240, 80, 6).unwrap(), Layout::Corner);
         assert_eq!(layout(64, 128, 6).unwrap(), Layout::Corner);
-        assert!(layout(125, 100, 6).is_err());
+        assert_eq!(layout(125, 100, 6).unwrap(), Layout::HorizontalCross);
+        assert_eq!(layout(100, 143, 6).unwrap(), Layout::VerticalCross);
+        assert!(layout(124, 100, 6).is_err());
+        assert!(layout(100, 117, 6).is_err());
         assert!(layout(500, 300, 6).is_ok());
         assert!(layout(600, 100, 6).is_ok());
         assert!(layout(700, 100, 6).is_err());
@@ -303,6 +353,34 @@ mod tests {
         assert_eq!(layout(256, 128, 1).unwrap(), Layout::SphereMap);
         assert_eq!(layout(192, 108, 5).unwrap(), Layout::Corner);
         assert_eq!(layout(768, 128, 5).unwrap(), Layout::HorizontalStrip);
+    }
+
+    /// A cross whose cells are not square: whole cells from the bottom-left, each face the
+    /// larger side's square reaching right and up, repeated past the image's edge
+    /// (tests/projects/cubemapimport Aspect080Auto: 100x125, cells 33x31, faces 33).
+    #[test]
+    fn an_uneven_cross_cuts_squares_of_its_larger_cell_side() {
+        let (w, h) = (100u32, 125u32);
+        let image = Image {
+            width: w,
+            height: h,
+            format: TextureFormat::Rgba8,
+            data: (0..h)
+                .flat_map(|y| (0..w).flat_map(move |x| [x as u8, y as u8, 255, 255]))
+                .collect(),
+        };
+        let faces = faces(&image, Layout::VerticalCross, 64);
+        assert_eq!(faces[4].width, 33);
+        let at = |face: &Image, x: u32, y: u32| {
+            let i = ((y * face.width + x) * 4) as usize;
+            (face.data[i], face.data[i + 1])
+        };
+        // +Y (column 1, top row): rows from 125 - 33 - 3 * 31 = -1, the first repeated.
+        assert_eq!(at(&faces[2], 0, 0), (33, 0));
+        assert_eq!(at(&faces[2], 0, 1), (33, 0));
+        assert_eq!(at(&faces[2], 0, 2), (33, 1));
+        // +Z (column 1, second row) from row 30.
+        assert_eq!(at(&faces[4], 0, 0), (33, 30));
     }
 
     /// The corner square is the image's bottom rows read upward, on every face.
