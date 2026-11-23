@@ -84,6 +84,10 @@ a ground, a cube and a sphere, and lights with hard shadows:
   without shadows (no channel, still mixed; in the light grid it comes before the lights with
   shadows) and a baked light; and five mixed suns (the fifth is baked). A light's channel and
   its mode as baked are compared with the bake input's.
+- `MasksBright`: a bright mixed point light without shadows among five dimmer ones with
+  them, all in one region of the light grid: the light without shadows comes first in the
+  region's order whatever its colour. `MasksEdges`: mixed point lights whose spheres just meet
+  (3.98 m apart, ranges 2: different channels) and just miss.
 - `Far` (0.5, 128): a ground of 120 m 500 m from the origin, six point lights and a spot light
   near one end under a ceiling: the light grid's box starts from the scene's origin (its
   lights' reach alone would make one region), so the lights fall into two regions along x.

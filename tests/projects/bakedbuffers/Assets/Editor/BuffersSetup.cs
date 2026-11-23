@@ -737,6 +737,31 @@ public static class BuffersSetup
         Save(scene, "MasksSuns");
     }
 
+    /// <summary>A bright light without shadows among dimmer ones with them, all reaching one
+    /// region (Baked Indirect: all stay mixed).</summary>
+    static void MasksBright()
+    {
+        var scene = Lit("MasksBright", MixedLightingMode.IndirectOnly);
+        Lightmapping.lightingSettings.indirectSampleCount = 16;
+        var bright = NewLight("Bright", LightType.Point, new Vector3(0.52f, 2.51f, 0.53f), Vector3.zero, Color.white, 4f, LightmapBakeType.Mixed);
+        bright.range = 8f;
+        bright.shadows = LightShadows.None;
+        for (int k = 0; k < 5; k++)
+            NewLight("Dim" + k, LightType.Point, new Vector3(-2.01f + k * 1.03f, 1.02f + 0.2f * k, -1.53f + 0.7f * k), Vector3.zero, Color.white, 0.5f, LightmapBakeType.Mixed).range = 8f;
+        Save(scene, "MasksBright");
+    }
+
+    /// <summary>Mixed point lights whose spheres just meet (3.98 m apart, ranges 2) and just
+    /// miss (4.04 m).</summary>
+    static void MasksEdges()
+    {
+        var scene = Lit("MasksEdges", MixedLightingMode.Shadowmask);
+        NewLight("EdgeA", LightType.Point, new Vector3(-3.01f, 1.5f, -3.02f), Vector3.zero, Color.white, 1f, LightmapBakeType.Mixed).range = 2f;
+        NewLight("EdgeB", LightType.Point, new Vector3(0.97f, 1.5f, -3.02f), Vector3.zero, Color.white, 1f, LightmapBakeType.Mixed).range = 2f;
+        NewLight("EdgeC", LightType.Point, new Vector3(5.01f, 1.5f, -3.02f), Vector3.zero, Color.white, 1f, LightmapBakeType.Mixed).range = 2f;
+        Save(scene, "MasksEdges");
+    }
+
     /// <summary>Makes the scenes <c>BAKED_BUFFERS_SCENES</c> names (comma-separated), else all.</summary>
     public static void Create()
     {
@@ -749,7 +774,7 @@ public static class BuffersSetup
                 ("ModeSubtractive", () => Modes("ModeSubtractive", MixedLightingMode.Subtractive)),
                 ("ModeShadowmask", () => Modes("ModeShadowmask", MixedLightingMode.Shadowmask)),
                 ("Bounce", Bounces), ("Glow", Glow), ("Roof", Roof), ("Textured", Textured), ("Levels", Levels), ("Sky", Skies), ("Spare", Spare),
-                ("SkyRealtime", RealtimeSkies), ("SpareEmpty", SpareEmpty), ("Spread", Spread), ("Far", Far), ("Masks", Masks), ("Directional", Directional),
+                ("SkyRealtime", RealtimeSkies), ("SpareEmpty", SpareEmpty), ("Spread", Spread), ("Far", Far), ("Masks", Masks), ("MasksBright", MasksBright), ("MasksEdges", MasksEdges), ("Directional", Directional),
             };
             var only = Environment.GetEnvironmentVariable("BAKED_BUFFERS_SCENES");
             var wanted = string.IsNullOrEmpty(only) ? null : new HashSet<string>(only.Split(','));
