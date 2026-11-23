@@ -3,15 +3,18 @@
     "python3 tests/projects/componentmemory/test_capture_selection.py",
     "python3 tests/projects/componentmemory/run.py gate --release 6000.0.71f1",
     "python3 tests/projects/componentmemory/run.py gate --release 6000.0.71f1 --profile light",
-    "python3 tests/projects/componentmemory/run.py gate --release 6000.0.71f1 --profile audio"
+    "python3 tests/projects/componentmemory/run.py gate --release 6000.0.71f1 --profile audio",
+    "python3 tests/projects/componentmemory/run.py gate --release 6000.0.71f1 --profile renderer"
   ],
-  "summary": "componentmemory(?: light| audio)?: .*",
+  "summary": "componentmemory(?: light| audio| renderer)?: .*",
   "engine_paths": [
     "managed/UnityEngine/Profiling/MemorySizes.cs",
     "managed/UnityEngine/Profiling/Profiling.cs",
     "managed/UnityEngine/Runtime/Compat.cs",
     "managed/UnityEngine/Graphics/Light.CommandBuffers.cs",
     "managed/UnityEngine/Audio/AudioSource.cs",
-    "managed/UnityEngine/Core/Debug.cs"
+    "managed/UnityEngine/Core/Debug.cs",
+    "managed/UnityEngine/Graphics/Renderer.cs",
+    "managed/UnityEngine/Particles/ParticleSystemRenderer.cs"
   ]
 }
