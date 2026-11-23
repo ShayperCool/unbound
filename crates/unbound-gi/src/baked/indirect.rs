@@ -10,7 +10,7 @@
 //! The rays' directions come from [`sampling`](super::sampling), read as the Unity 6000.0.71f1
 //! Editor's Progressive CPU lightmapper reads them, which makes a texel's result the Editor's
 //! but for the last bits of its sums (tests/projects/bakedbuffers).
-use super::direct::{Receiver, normal_matrix, point, world_normal};
+use super::direct::{self, Receiver, normal_matrix, point, world_normal};
 use super::directional::{NONE, Toward};
 use super::gbuffer::GBuffer;
 use super::grid::{Grid, Pick};
@@ -359,11 +359,9 @@ pub fn indirect(
             let start = |index: u32| -> Option<([f32; 3], [f32; 3], [f32; 3])> {
                 let pick = sampling::fraction(samples.sobol(index, 2) + place);
                 let k = ((s * s) as f32 * pick).floor() as usize % (s * s);
-                let sample = g.width * s * (ty * s + k / s) + tx * s + k % s;
+                let (sample, receiver) = direct::sample(g, tx, ty, k, receivers.len());
+                let receiver = receiver?;
                 let local = g.positions[sample];
-                let receiver = (local[3] >= 0.0)
-                    .then(|| local[3] as usize)
-                    .filter(|&i| i < receivers.len())?;
                 let matrix = &receivers[receiver].local_to_world;
                 let position = point(matrix, [local[0], local[1], local[2]]);
                 let (smooth, plane) = (g.normals[sample], g.plane_normals[sample]);
@@ -427,12 +425,7 @@ pub fn indirect(
             // How much the texel's samples face where the light comes from.
             let (mut facing, mut faced) = ([0f32; 3], 0u32);
             for k in 0..s * s {
-                let sample = g.width * s * (ty * s + k / s) + tx * s + k % s;
-                let local = g.positions[sample];
-                let Some(receiver) = (local[3] >= 0.0)
-                    .then(|| local[3] as usize)
-                    .filter(|&i| i < receivers.len())
-                else {
+                let (sample, Some(receiver)) = direct::sample(g, tx, ty, k, receivers.len()) else {
                     continue;
                 };
                 let n = g.normals[sample];

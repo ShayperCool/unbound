@@ -66,6 +66,26 @@ pub fn world_normal(rows: &[[f32; 3]; 3], n: [f32; 3]) -> [f32; 3] {
     }
 }
 
+/// Sample `k` of texel (`tx`, `ty`) of the lightmap: its place in the samples, and the
+/// renderer its surface belongs to (by its place among `receivers`), if it has one.
+pub(super) fn sample(
+    g: &GBuffer,
+    tx: usize,
+    ty: usize,
+    k: usize,
+    receivers: usize,
+) -> (usize, Option<usize>) {
+    let s = g.supersampling;
+    let index = g.width * s * (ty * s + k / s) + tx * s + k % s;
+    let local = g.positions[index][3];
+    (
+        index,
+        (local >= 0.0)
+            .then(|| local as usize)
+            .filter(|&i| i < receivers),
+    )
+}
+
 /// The direct light of a lightmap's texels.
 pub struct Direct {
     /// Red, green, blue, and 1 for a used texel (zeros for an unused one).
@@ -91,7 +111,7 @@ pub fn direct(
         .iter()
         .map(|r| normal_matrix(&r.local_to_world))
         .collect();
-    let (s, sw) = (g.supersampling, g.width * g.supersampling);
+    let s = g.supersampling;
     let texels = (0..g.width * g.height)
         .into_par_iter()
         .map(|texel| {
@@ -104,14 +124,11 @@ pub fn direct(
             let mut toward = Toward::default();
             let mut facing = [0f32; 3];
             for k in 0..s * s {
-                let sample = sw * (ty * s + k / s) + tx * s + k % s;
-                let local = g.positions[sample];
-                let Some(receiver) = (local[3] >= 0.0)
-                    .then(|| local[3] as usize)
-                    .filter(|&i| i < receivers.len())
-                else {
+                let (sample, receiver) = sample(g, tx, ty, k, receivers.len());
+                let Some(receiver) = receiver else {
                     continue;
                 };
+                let local = g.positions[sample];
                 samples += 1;
                 let matrix = &receivers[receiver].local_to_world;
                 let position = point(matrix, [local[0], local[1], local[2]]);
