@@ -20,7 +20,9 @@ using UnityEngine;
 /// face by face (+x, -x, +y, -y, +z, -z), as 32-bit floats of RGBA. The Editor's is an imported
 /// asset that cannot be read: it is imported again readable and uncompressed first (its import
 /// settings as the bake wrote them are kept as <c>import.txt</c>); a built-in one is not read.
-/// What is logged during the bake goes to <c>messages.txt</c>.</para>
+/// What is logged during the bake goes to <c>messages.txt</c>, and the files the bake wrote
+/// beside the scene, as it wrote them, to <c>written/</c> (the folder's .meta as
+/// <c>folder.meta</c>).</para>
 /// <para>In the Editor it runs with <c>-executeMethod EnvironmentRecord.Record</c>; with
 /// <c>ENVIRONMENT_AUTO</c> set (Unbound's <c>unbound test</c>) it starts itself once Edit mode
 /// has run a few updates.</para>
@@ -82,6 +84,15 @@ public static class EnvironmentRecord
                     UnityEngine.Rendering.SupportedRenderingFeatures.active = features;
                 }
                 File.WriteAllLines(Path.Combine(folder, "messages.txt"), said);
+                // The files the bake wrote beside the scene (its folder's .meta too), as it wrote
+                // them: copied before the reflection is imported again below.
+                var written = Path.Combine(folder, "written");
+                Directory.CreateDirectory(written);
+                var bakeFolder = Path.Combine(Path.GetDirectoryName(path), name);
+                if (File.Exists(bakeFolder + ".meta")) File.Copy(bakeFolder + ".meta", Path.Combine(written, "folder.meta"), true);
+                if (Directory.Exists(bakeFolder))
+                    foreach (var file in Directory.GetFiles(bakeFolder))
+                        File.Copy(file, Path.Combine(written, Path.GetFileName(file)), true);
 
                 var lines = new List<string> { "bake: " + baked };
                 var sh = RenderSettings.ambientProbe;
