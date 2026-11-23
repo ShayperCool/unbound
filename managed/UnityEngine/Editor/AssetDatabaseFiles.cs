@@ -82,6 +82,11 @@ namespace UnityEditor
         {
             var list = requests.ToList();
             if (list.Count == 0) return Array.Empty<string>();
+            // The project's scripts hear of each .meta file about to be written for a new asset
+            // (tests/projects/projectwindowutil create.*).
+            foreach (var request in list)
+                if (!AssetPaths.Hidden(request.Path) && Exists(request.Path) && !File.Exists(FileOf(request.Path) + ".meta"))
+                    AssetModificationProcessorInternal.OnWillCreateAsset(request.Path + ".meta");
             var json = JsonSerializer.Serialize(new { paths = list }, s_Json);
             var assets = JsonSerializer.Deserialize<ImportResult>(Native.Call("asset-import", json), s_Json)?.Assets ?? Array.Empty<Imported>();
             var guids = new string[list.Count];
@@ -162,6 +167,15 @@ namespace UnityEditor
 
         internal static void Refused(string operation, string path) =>
             Debug.LogError($"{operation}: '{path}' is not in the project's own assets (Assets/, or a package embedded or kept locally); nothing is written there.");
+
+        /// <summary>The instance ID of the main asset at <paramref name="assetPath"/> (a folder's
+        /// too); 0 for no asset.</summary>
+        internal static int GetMainAssetOrInProgressProxyInstanceID(string assetPath)
+        {
+            if (string.IsNullOrEmpty(assetPath)) return 0;
+            var main = LoadMainAssetAtPath(assetPath);
+            return main == null ? 0 : main.GetInstanceID();
+        }
 
         /// <summary>The file or folder a project path names (absolute).</summary>
         internal static string FileOf(string path)

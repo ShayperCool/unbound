@@ -684,5 +684,12 @@
     "Type": "UnityEngine.AddComponentMenu",
     "Message": "UnityEngine/Editor/ObjectNames.cs TryGetMenuTitle: Attribute.GetCustomAttribute(type, typeof(AddComponentMenu), false): inherit is False, reference AttributeUsage is True",
     "Reason": "An object's Inspector title uses the menu path declared on its own class. tests/projects/editorpreview names.derivedMenu: a class derived from one with a menu path is titled by its own name."
+  },
+  {
+    "Release": "6000.0.71f1",
+    "Category": "attributes",
+    "Type": "UnityEditor.ProjectWindowUtil",
+    "Message": "M:static CreateFolder`0():System.Void attributes is [], Unity's is [UnityEditor.ShortcutManagement.ShortcutAttribute:M:.ctor`0(System.String,System.Type,UnityEngine.KeyCode,UnityEditor.ShortcutManagement.ShortcutModifiers):System.Void(System.String:\"Project Browser/Create/Folder\",System.Type:UnityEditor.ProjectBrowser,UnityEngine.KeyCode:Int32:110,UnityEditor.ShortcutManagement.ShortcutModifiers:Int32:6){}]",
+    "Reason": "Q632: Unity's Shortcut attribute on CreateFolder names the Project Browser window type, which Unbound declares only as a generated stub (hand-written code cannot reference it); the shortcut needs a Project Browser window, which Unbound does not open."
   }
 ]

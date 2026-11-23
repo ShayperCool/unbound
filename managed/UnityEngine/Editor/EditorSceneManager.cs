@@ -109,24 +109,52 @@ namespace UnityEditor.SceneManagement
             if (setup == NewSceneSetup.DefaultGameObjects)
             {
                 var previous = SceneRegistry.Active;
-                SceneRegistry.Active = scene.Data;
-                // As the Editor's new scene (tests/projects/scenesave Fresh.unity): a camera drawn
-                // first and a warm directional light with soft shadows.
-                var camera = new GameObject("Main Camera", typeof(Camera), typeof(AudioListener)) { tag = "MainCamera" };
-                camera.transform.position = new Vector3(0f, 1f, -10f);
-                camera.GetComponent<Camera>().depth = -1f;
-                var light = new GameObject("Directional Light", typeof(Light));
-                var angles = new Vector3(50f, -30f, 0f);
-                light.transform.SetPositionAndRotation(new Vector3(0f, 3f, 0f), Quaternion.Euler(angles));
-                light.transform.SetLocalEulerHint(angles);
-                var l = light.GetComponent<Light>();
-                l.type = LightType.Directional;
-                l.color = new Color(1f, 0.95686275f, 0.8392157f, 1f);
-                l.shadows = LightShadows.Soft;
+                AddDefaultGameObjects(scene.Data);
                 if (mode == NewSceneMode.Additive && previous != null) SceneRegistry.Active = previous;
             }
             newSceneCreated?.Invoke(scene, setup, mode);
             return scene;
+        }
+
+        /// <summary>The new scene's objects, as the Editor's (tests/projects/scenesave Fresh.unity): a
+        /// camera drawn first and a warm directional light with soft shadows. The scene is left
+        /// active.</summary>
+        static void AddDefaultGameObjects(SceneData scene)
+        {
+            SceneRegistry.Active = scene;
+            var camera = new GameObject("Main Camera", typeof(Camera), typeof(AudioListener)) { tag = "MainCamera" };
+            camera.transform.position = new Vector3(0f, 1f, -10f);
+            camera.GetComponent<Camera>().depth = -1f;
+            var light = new GameObject("Directional Light", typeof(Light));
+            var angles = new Vector3(50f, -30f, 0f);
+            light.transform.SetPositionAndRotation(new Vector3(0f, 3f, 0f), Quaternion.Euler(angles));
+            light.transform.SetLocalEulerHint(angles);
+            var l = light.GetComponent<Light>();
+            l.type = LightType.Directional;
+            l.color = new Color(1f, 0.95686275f, 0.8392157f, 1f);
+            l.shadows = LightShadows.Soft;
+        }
+
+        /// <summary>Writes a new scene file at <paramref name="scenePath"/> (with the new scene's
+        /// camera and light when asked) without opening it, also in Play mode; false when it cannot
+        /// be written there. Whether it raises the scene callbacks is not measured (none is).</summary>
+        internal static bool CreateSceneAsset(string scenePath, bool createDefaultGameObjects)
+        {
+            var path = SceneFiles.ProjectRelative(scenePath);
+            AssetModificationProcessorInternal.OnWillCreateAsset(path);
+            var previous = SceneRegistry.Active;
+            var scene = NewPreviewScene();
+            try
+            {
+                if (createDefaultGameObjects) AddDefaultGameObjects(scene.Data);
+                SceneRegistry.Active = previous;
+                return SceneFiles.Save(scene.Data, path);
+            }
+            finally
+            {
+                SceneRegistry.Active = previous;
+                ClosePreviewScene(scene);
+            }
         }
 
         public static Scene OpenScene(string scenePath) => OpenScene(scenePath, OpenSceneMode.Single);

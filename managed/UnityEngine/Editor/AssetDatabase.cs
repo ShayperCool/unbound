@@ -563,6 +563,13 @@ namespace UnityEditor
         public static GUID Generate() => new GUID(Guid.NewGuid().ToString("N"));
     }
 
+    public enum LineEndingsMode
+    {
+        OSNative = 0,
+        Unix = 1,
+        Windows = 2,
+    }
+
     public sealed partial class EditorSettings : Object
     {
         /// <summary>The root namespace of new scripts: the file's, saved there as the Editor saves
@@ -597,6 +604,16 @@ namespace UnityEditor
             get => int.TryParse(SettingsAssets.Value("EditorSettings", "m_GameObjectNamingDigits"), NumberStyles.Integer, CultureInfo.InvariantCulture, out var value)
                 ? value : 1;
             set => SettingsAssets.Edit("EditorSettings", body => body.Set("m_GameObjectNamingDigits", YText.Scalar(value.ToString(CultureInfo.InvariantCulture))));
+        }
+
+        /// <summary>The line endings of new scripts and text assets (EditorSettings.asset
+        /// m_LineEndingsForNewScripts, saved there as the Editor saves settings). A project without
+        /// the key gets OSNative: not measured (new projects write 1, Unix).</summary>
+        public static LineEndingsMode lineEndingsForNewScripts
+        {
+            get => int.TryParse(SettingsAssets.Value("EditorSettings", "m_LineEndingsForNewScripts"), NumberStyles.Integer, CultureInfo.InvariantCulture, out var value)
+                ? (LineEndingsMode)value : LineEndingsMode.OSNative;
+            set => SettingsAssets.Edit("EditorSettings", body => body.Set("m_LineEndingsForNewScripts", YText.Scalar(((int)value).ToString(CultureInfo.InvariantCulture))));
         }
 
         static volatile bool s_Loaded;

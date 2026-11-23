@@ -10,8 +10,8 @@ namespace UnityEditor
     /// The Project window's helpers. Unbound opens no Project window, so naming an asset being
     /// created does not wait for the user: the end action runs at once, on a unique path under
     /// Assets, then is cleaned up and the created object selected (matches the Unity 6000.0.71f1
-    /// Editor in Play mode, tests/projects/projectwindowutil). The asset-creating helpers that
-    /// pass their own end actions (CreateAsset, CreateFolder, CreateScene, ...) stay stubs.
+    /// Editor in Play mode, tests/projects/projectwindowutil). The asset-creating helpers are in
+    /// ProjectWindowUtilCreate.cs.
     /// </summary>
     public partial class ProjectWindowUtil
     {
