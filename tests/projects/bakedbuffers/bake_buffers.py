@@ -61,7 +61,11 @@ NORMAL_TOLERANCE = 1e-5
 EMPTY = -1.0e6
 UNBOUND_NOTE = 'Unbound'
 BUFFERS = ('occupancy{}.r2d', 'chartIndex{}.int', 'normal{}.r2d', 'irradianceDirect{}.r2d', 'irradianceIndirect{}.r2d',
-           'irradianceEnvironment{}.r2d', 'validity{}.r2d')
+           'irradianceEnvironment{}.r2d', 'validity{}.r2d', 'directionalityDirect{}.r2d', 'directionalityIndirect{}.r2d')
+# Where a texel's light comes from (directional lightmaps): its mean direction and how much its
+# samples face it, each mapped to 0..1. The direct light's follows its light within its last
+# bits (the worst seen is 4.2e-7), the indirect light's its paths, as the indirect light does.
+DIRECTIONALITY_TOLERANCE = 1e-4
 # The direct light of a texel is compared within this, times its value where that is above 1.
 # The Editor's and Unbound's 32-bit arithmetic differ in their last bits, which a narrow spot
 # cone's falloff multiplies (a 20 degree cone: by about 65 before its table's slope); the worst
@@ -233,20 +237,22 @@ def tree(root):
 
 
 def repeats(name, first, other):
-    """Whether two captures' file is the same result: byte for byte, but for a buffer of light,
-    which the Editor sums in an order that varies from bake to bake (the same used texels, and
-    values within REPEAT_TOLERANCE, or INDIRECT_REPEAT_TOLERANCE for the indirect light, times
-    the value where that is above 1)."""
+    """Whether two captures' file is the same result: byte for byte, but for a buffer of light
+    or of where it comes from, which the Editor sums in an order that varies from bake to bake
+    (the same used texels, and values within REPEAT_TOLERANCE, or INDIRECT_REPEAT_TOLERANCE for
+    the indirect light, times the value where that is above 1)."""
     if first == other:
         return True
-    if not first or not other or not Path(name).name.startswith('irradiance'):
+    if not first or not other or not Path(name).name.startswith(('irradiance', 'directionality')):
         return False
     a, b = editor_bake.parse_r2d(first), editor_bake.parse_r2d(other)
     if a[:3] != b[:3]:
         return False
-    summed = Path(name).name.startswith(('irradianceIndirect', 'irradianceEnvironment'))
+    summed = Path(name).name.startswith(('irradianceIndirect', 'irradianceEnvironment', 'directionalityIndirect'))
     tolerance = INDIRECT_REPEAT_TOLERANCE if summed else REPEAT_TOLERANCE
-    return all(x == y if k % 4 == 3 else abs(x - y) <= tolerance * max(1.0, abs(x)) for k, (x, y) in enumerate(zip(a[3], b[3])))
+    # (Where the light comes from has no flag of use: all four values are numbers.)
+    flagged = Path(name).name.startswith('irradiance')
+    return all(x == y if flagged and k % 4 == 3 else abs(x - y) <= tolerance * max(1.0, abs(x)) for k, (x, y) in enumerate(zip(a[3], b[3])))
 
 
 def publish(labels):
@@ -291,7 +297,8 @@ def expected(root):
             if (width, height, channels) != (lightmap['width'], lightmap['height'], 4):
                 raise ValueError(f'{folder}: irradianceDirect{index} of {width}x{height}')
             lightmap['direct'] = direct
-            for part, name in (('indirect', 'irradianceIndirect'), ('environment', 'irradianceEnvironment'), ('validity', 'validity')):
+            for part, name in (('indirect', 'irradianceIndirect'), ('environment', 'irradianceEnvironment'), ('validity', 'validity'),
+                               ('towardDirect', 'directionalityDirect'), ('towardIndirect', 'directionalityIndirect')):
                 width, height, channels, values = editor_bake.read_r2d(folder/f'{name}{index}.r2d')
                 if (width, height, channels) != (lightmap['width'], lightmap['height'], 4):
                     raise ValueError(f'{folder}: {name}{index} of {width}x{height}')
@@ -358,7 +365,8 @@ def actual(out):
                 lightmap['charts'] = list(numbers(dump/f'chartIndex{index}.i32', 'i'))
                 lightmap['normals'] = numbers(dump/f'normal{index}.f32', 'f')
                 lightmap['direct'] = numbers(dump/f'irradianceDirect{index}.f32', 'f')
-                for part, name in (('indirect', 'irradianceIndirect'), ('environment', 'irradianceEnvironment'), ('validity', 'validity')):
+                for part, name in (('indirect', 'irradianceIndirect'), ('environment', 'irradianceEnvironment'), ('validity', 'validity'),
+                                   ('towardDirect', 'directionalityDirect'), ('towardIndirect', 'directionalityIndirect')):
                     lightmap[part] = numbers(dump/f'{name}{index}.f32', 'f') if (dump/f'{name}{index}.f32').is_file() else None
                 entry['lightmaps'].append(lightmap)
         result[scene] = entry
@@ -442,6 +450,20 @@ def direct_difference(got, want, tolerance=DIRECT_TOLERANCE):
             off += not error <= tolerance
     if used or off:
         return f'{used} texels differ in being used, {off} values in their light (worst {worst:.3g}, tolerance {tolerance:g})'
+    return None
+
+
+def toward_difference(got, want, tolerance):
+    """Where the light of each texel comes from: its four values within the tolerance."""
+    if got is None:
+        return 'not baked'
+    if len(got) != len(want):
+        return f'{len(got) // 4} texels, expected {len(want) // 4}'
+    errors = [abs(a - b) for a, b in zip(got, want)]
+    off = sum(not e <= tolerance for e in errors)
+    if off:
+        texels = len({k // 4 for k, e in enumerate(errors) if not e <= tolerance})
+        return f'{texels} texels, {off} values differ (worst {max(errors):.3g}, tolerance {tolerance:g})'
     return None
 
 
@@ -537,7 +559,8 @@ def compare(label):
             key = f'{scene}.lightmap{index}.'
             mine = a['lightmaps'][index] if index < len(a['lightmaps']) else None
             if mine is None or (mine['width'], mine['height'], mine['supersampling']) != (lightmap['width'], lightmap['height'], lightmap['supersampling']):
-                for part in ('instances', 'occupancy', 'charts', 'normals', 'direct', 'indirect', 'environment', 'validity'):
+                for part in ('instances', 'occupancy', 'charts', 'normals', 'direct', 'indirect', 'environment', 'validity',
+                             'towardDirect', 'towardIndirect'):
                     record(key + part, 'no such lightmap of that size')
                 continue
             names = lambda entry, m: [entry['instances'][i] for i in m['instances']]  # noqa: E731
@@ -549,6 +572,8 @@ def compare(label):
             record(key + 'indirect', direct_difference(mine['indirect'], lightmap['indirect'], INDIRECT_TOLERANCE))
             record(key + 'environment', direct_difference(mine['environment'], lightmap['environment'], INDIRECT_TOLERANCE))
             record(key + 'validity', validity_difference(mine['validity'], lightmap['validity']))
+            record(key + 'towardDirect', toward_difference(mine['towardDirect'], lightmap['towardDirect'], DIRECTIONALITY_TOLERANCE))
+            record(key + 'towardIndirect', toward_difference(mine['towardIndirect'], lightmap['towardIndirect'], INDIRECT_TOLERANCE))
         record(scene + '.materials', material_difference(a['materials'], e['materials']))
         record(scene + '.sky', sky_difference(a['sky'], e['sky']))
     keys = {key for key, _ in records}

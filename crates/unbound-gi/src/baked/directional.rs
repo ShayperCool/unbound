@@ -49,3 +49,54 @@ impl Toward {
         ]
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn near(a: [f32; 4], b: [f32; 4]) -> bool {
+        a.iter().zip(&b).all(|(x, y)| (x - y).abs() < 1e-6)
+    }
+
+    #[test]
+    fn a_texel_without_light_holds_the_middle_values() {
+        assert_eq!(Toward::default().encode([0.0, 2.0, 0.0], 2), NONE);
+        let mut black = Toward::default();
+        black.add([0.0, 1.0, 0.0], [0.0; 3]);
+        assert_eq!(black.encode([0.0, 2.0, 0.0], 2), NONE);
+        // No sample with a surface.
+        let mut lit = Toward::default();
+        lit.add([0.0, 1.0, 0.0], [1.0; 3]);
+        assert_eq!(lit.encode([0.0; 3], 0), NONE);
+    }
+
+    #[test]
+    fn light_from_one_side_gives_its_direction_and_how_much_the_samples_face_it() {
+        let mut toward = Toward::default();
+        let slanted = [0.6, 0.8, 0.0];
+        toward.add(slanted, [1.0, 0.5, 0.25]);
+        // Two samples facing up and one facing the light: their mean cosine with it.
+        let normals = [0.6 + 0.0 + 0.0, 0.8 + 1.0 + 1.0, 0.0];
+        let facing = (1.0 + 0.8 + 0.8) / 3.0;
+        assert!(near(
+            toward.encode(normals, 3),
+            [0.8, 0.9, 0.5, facing * 0.5 + 0.5]
+        ));
+    }
+
+    #[test]
+    fn directions_are_weighed_by_the_lights_luminance() {
+        let mut toward = Toward::default();
+        // Green weighs most: its light pulls the mean towards +x.
+        toward.add([1.0, 0.0, 0.0], [0.0, 1.0, 0.0]);
+        toward.add([-1.0, 0.0, 0.0], [1.0, 0.0, 0.0]);
+        let mean = (0.707 - 0.22) / (0.707 + 0.22);
+        let value = toward.encode([0.0, 1.0, 0.0], 1);
+        assert!(near(value, [mean * 0.5 + 0.5, 0.5, 0.5, 0.5]), "{value:?}");
+        // Equal light from opposite sides cancels: the mean direction has no length.
+        let mut even = Toward::default();
+        even.add([0.0, 0.0, 1.0], [1.0; 3]);
+        even.add([0.0, 0.0, -1.0], [1.0; 3]);
+        assert!(near(even.encode([0.0, 0.0, 1.0], 1), [0.5; 4]));
+    }
+}

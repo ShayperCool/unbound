@@ -1405,6 +1405,11 @@ mod bounced {
 
         /// The floor's one texel: its indirect light, its validity and the sky's light on it.
         fn run_under_the_sky(&self) -> ([f32; 4], f32, [f32; 4]) {
+            let lit = self.bake();
+            (lit.irradiance[0], lit.validity[0], lit.environment[0])
+        }
+
+        fn bake(&self) -> indirect::Indirect {
             let mesh = floor();
             let instances = [Instance {
                 mesh: &mesh,
@@ -1434,9 +1439,31 @@ mod bounced {
                 sky: self.sky.as_ref(),
             };
             let samples = Samples::new(&vec![0; BLUE_NOISE_BYTES]).unwrap();
-            let lit = indirect::indirect(&g, &receivers, &world, &samples, self.settings);
-            (lit.irradiance[0], lit.validity[0], lit.environment[0])
+            indirect::indirect(&g, &receivers, &world, &samples, self.settings)
         }
+    }
+
+    #[test]
+    fn a_texel_keeps_the_direction_its_light_came_from_and_how_much_it_faces_it() {
+        // An even sky over the floor (facing +z). The test's sampling numbers are all alike,
+        // so every sample looks the same way: the mean direction is that one, of unit length,
+        // above the floor, and the floor faces it by its z.
+        let mut open = Bake::new(ceiling(0), [1.0; 3], [0.0; 3]);
+        open.surfaces.clear();
+        open.sky = Some(even_sky([1.0, 2.0, 3.0], false));
+        open.settings.environment_samples = 64;
+        let toward = open.bake().directionality[0];
+        let mean = [
+            toward[0] * 2.0 - 1.0,
+            toward[1] * 2.0 - 1.0,
+            toward[2] * 2.0 - 1.0,
+        ];
+        let length = (mean[0] * mean[0] + mean[1] * mean[1] + mean[2] * mean[2]).sqrt();
+        assert!((length - 1.0).abs() < 1e-5 && mean[2] > 0.0, "{toward:?}");
+        assert!((toward[3] - toward[2]).abs() < 1e-6, "{toward:?}");
+        // No light along any path or from the sky: the middle values.
+        let dark = Bake::new(ceiling(0), [1.0; 3], [0.0; 3]);
+        assert_eq!(dark.bake().directionality[0], [0.5; 4]);
     }
 
     /// A sky of one colour, with or without directions picked by its brightness.

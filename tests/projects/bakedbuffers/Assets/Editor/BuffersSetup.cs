@@ -667,6 +667,28 @@ public static class BuffersSetup
         Save(scene, "Far");
     }
 
+    /// <summary>Directional lightmaps (Directional Mode Directional): a sun, a point light and a
+    /// spot light over the lit scene, with one bounce; the coloured scene under a sun with two
+    /// bounces; and an ambient colour alone.</summary>
+    static void Directional()
+    {
+        void Directed() => Lightmapping.lightingSettings.directionalityMode = LightmapsMode.CombinedDirectional;
+        var lamps = Lit("DirectionalLamps");
+        Directed();
+        Lightmapping.lightingSettings.indirectSampleCount = 16;
+        NewLight("Sun", LightType.Directional, Vector3.zero, new Vector3(50f, -30f, 0f), new Color(1f, 0.9f, 0.8f), 1.5f);
+        NewLight("Bulb", LightType.Point, new Vector3(1.03f, 2.01f, -1.02f), Vector3.zero, new Color(1f, 0.6f, 0.3f), 2f).range = 6f;
+        var spot = NewLight("Spot", LightType.Spot, new Vector3(-1.97f, 3.02f, 0.03f), new Vector3(60f, 90f, 0f), new Color(0.4f, 0.6f, 1f), 3f);
+        spot.range = 10f;
+        spot.spotAngle = 60f;
+        Save(lamps, "DirectionalLamps");
+        var bounce = Coloured("DirectionalBounce", 64, 2);
+        Directed();
+        WhiteSun();
+        Save(bounce, "DirectionalBounce");
+        SkyScene("DirectionalSky", 64, 1, false, () => { FlatSky(); Directed(); });
+    }
+
     /// <summary>Makes the scenes <c>BAKED_BUFFERS_SCENES</c> names (comma-separated), else all.</summary>
     public static void Create()
     {
@@ -679,7 +701,7 @@ public static class BuffersSetup
                 ("ModeSubtractive", () => Modes("ModeSubtractive", MixedLightingMode.Subtractive)),
                 ("ModeShadowmask", () => Modes("ModeShadowmask", MixedLightingMode.Shadowmask)),
                 ("Bounce", Bounces), ("Glow", Glow), ("Roof", Roof), ("Textured", Textured), ("Levels", Levels), ("Sky", Skies), ("Spare", Spare),
-                ("SkyRealtime", RealtimeSkies), ("SpareEmpty", SpareEmpty), ("Spread", Spread), ("Far", Far),
+                ("SkyRealtime", RealtimeSkies), ("SpareEmpty", SpareEmpty), ("Spread", Spread), ("Far", Far), ("Directional", Directional),
             };
             var only = Environment.GetEnvironmentVariable("BAKED_BUFFERS_SCENES");
             var wanted = string.IsNullOrEmpty(only) ? null : new HashSet<string>(only.Split(','));

@@ -69,6 +69,10 @@ a ground, a cube and a sphere, and lights with hard shadows:
   has five by two by five regions, each listing the lights whose range reaches it (a spot
   light's where it reaches in front of the light, its cone not tested); 16 indirect samples,
   three bounces without the chance of stopping (four, three and two lights tested).
+- `DirectionalLamps`, `DirectionalBounce`, `DirectionalSky`: directional lightmaps (Directional
+  Mode Directional): a sun, a point light and a spot light over the lit scene with one bounce,
+  the coloured scene under a sun with two bounces, and an ambient colour alone. A path's light
+  comes from the direction the path left the texel in, the sky's straight from its own.
 - `Far` (0.5, 128): a ground of 120 m 500 m from the origin, six point lights and a spot light
   near one end under a ceiling: the light grid's box starts from the scene's origin (its
   lights' reach alone would make one region), so the lights fall into two regions along x.
@@ -147,8 +151,11 @@ bakes them in the Editor's process and writes each lightmap's buffers unprocesse
   `irradianceDirect<N>.r2d` (per texel the direct light's red, green and blue, and 1 for a used
   texel), `irradianceIndirect<N>.r2d` (the same of the indirect light) and `validity<N>.r2d`
   (per texel the part of its rays that met a back face first) and
-  `irradianceEnvironment<N>.r2d` (per texel the light its samples take straight from the sky)
-  as the Editor wrote them;
+  `irradianceEnvironment<N>.r2d` (per texel the light its samples take straight from the sky),
+  `directionalityDirect<N>.r2d` and `directionalityIndirect<N>.r2d` (where the direct light,
+  and the indirect and sky's light, come from: the mean of their directions weighed by the
+  light's luminance, and the mean of the texel's samples' cosines with it, each mapped from
+  -1..1 to 0..1; 0.5 without light or without directional lightmaps) as the Editor wrote them;
 - `sky.json`, the bake input's sky: the side of its six faces, their colour when all texels
   are the same, else the faces in `sky.f32.z` (zlib of 32-bit float RGB, faces towards +x, -x,
   +y, -y, +z, -z, rows as a cube map stores them); the number of directions picked by its
@@ -216,8 +223,7 @@ horizon: the procedural sky computes its colours per vertex, so the mesh shows),
 gamma-encoded values times the ambient intensity; a black sky where the realtime lightmaps
 take the environment's light (`LightingSettings.realtimeEnvironmentLighting`).
 
-Not baked by Unbound yet: ambient occlusion, directionality and the
-shadowmask; without a graphics device, the indirect light (said). Not baked (said, each once per
+Not baked by Unbound yet: ambient occlusion and the shadowmask; without a graphics device, the indirect light (said). Not baked (said, each once per
 scene): area lights, light cookies, soft baked
 shadows (a Baked Shadow Angle or Radius: baked hard), lights whose intensity multiplies their
 linear colour (GraphicsSettings.lightsUseLinearIntensity), the levels of LOD Groups (their
