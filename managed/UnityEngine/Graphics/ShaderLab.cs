@@ -240,13 +240,19 @@ namespace Unbound.Runtime
             return source.Substring(open + 1, Math.Max(0, end - open - 1));
         }
 
-        internal static List<ShaderPropertyInfo> Properties(string source)
+        internal static List<ShaderPropertyInfo> Properties(string source) => Properties(source, out _);
+
+        internal static List<ShaderPropertyInfo> Properties(string source, out bool layoutKnown)
         {
             var list = new List<ShaderPropertyInfo>();
             var block = PropertiesBlock(source);
+            layoutKnown = true;
             if (block == null) return list;
+            int parsedThrough = 0;
             foreach (Match m in s_Property.Matches(block))
             {
+                layoutKnown &= block.AsSpan(parsedThrough, m.Index - parsedThrough).IsWhiteSpace();
+                parsedThrough = m.Index + m.Length;
                 var type = m.Groups[3].Value;
                 var value = m.Groups[5].Value.Trim();
                 var info = new ShaderPropertyInfo { Name = m.Groups[1].Value, Description = m.Groups[2].Value };
@@ -274,6 +280,7 @@ namespace Unbound.Runtime
                             info.DefaultTexture = value.Split('"').Length > 1 ? value.Split('"')[1] : "";
                             break;
                         }
+                        layoutKnown &= type is "Float" or "Range" or "Int" or "Integer";
                         // `Int` is the legacy type, a float (measured, 6000.0); `Integer` is an int.
                         info.Type = type == "Range" ? ShaderPropertyType.Range : type == "Integer" ? ShaderPropertyType.Int : ShaderPropertyType.Float;
                         if (float.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out var number)) info.DefaultValue = new Vector4(number, 0, 0, 0);
@@ -293,6 +300,7 @@ namespace Unbound.Runtime
                 Shader.PropertyToID(info.Name);
                 list.Add(info);
             }
+            layoutKnown &= block.AsSpan(parsedThrough).IsWhiteSpace();
             return list;
         }
     }

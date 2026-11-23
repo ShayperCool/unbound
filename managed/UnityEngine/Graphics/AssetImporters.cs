@@ -150,9 +150,9 @@ namespace Unbound.Runtime
             // source when several declare one name (tests/projects/shadernames).
             if (declared != null) shader.m_SourceKey = Shader.ContentKey(declared, bytes);
             shader.m_Properties.Clear();
-            shader.m_Properties.AddRange(ShaderLab.Properties(source));
+            shader.m_Properties.AddRange(ShaderLab.Properties(source, out bool layoutKnown));
             ShaderLab.Editors(source, shader);
-            shader.PropertiesChanged();
+            shader.PropertiesChanged(layoutKnown && declared != null);
             shader.IsPersistentAsset = true;
             Shader.Register(shader);
             var file = new LoadedFile { MainObject = shader };

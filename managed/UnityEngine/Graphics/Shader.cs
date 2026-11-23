@@ -571,7 +571,13 @@ namespace UnityEngine
         Dictionary<int, ShaderPropertyInfo> m_ById;
         int m_ByIdCount;
 
-        internal void PropertiesChanged() => m_ById = null;
+        internal bool ProfilerPropertyLayoutKnown { get; private set; }
+
+        internal void PropertiesChanged(bool layoutKnown = false)
+        {
+            m_ById = null;
+            ProfilerPropertyLayoutKnown = layoutKnown;
+        }
 
         /// <summary>The property flagged with <paramref name="flag"/> (MainTexture, MainColor), else
         /// <paramref name="fallback"/>.</summary>
@@ -831,12 +837,12 @@ namespace Unbound.Runtime
         internal static void ApplySource(UnityEngine.Shader shader, string source)
         {
             if (string.IsNullOrEmpty(source)) return;
-            var properties = ShaderLab.Properties(source);
+            var properties = ShaderLab.Properties(source, out bool layoutKnown);
             if (properties.Count == 0 && !string.IsNullOrWhiteSpace(ShaderLab.PropertiesBlock(source))) return;
             ShaderLab.Editors(source, shader);
             shader.m_Properties.Clear();
             shader.m_Properties.AddRange(properties);
-            shader.PropertiesChanged();
+            shader.PropertiesChanged(layoutKnown);
         }
 
         static string Source(string name)
