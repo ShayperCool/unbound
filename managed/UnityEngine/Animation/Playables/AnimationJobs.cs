@@ -1002,7 +1002,11 @@ namespace Unbound.Runtime.Playables
             var context = StreamContext.Open(into, handles, e);
             var entry = StreamMotion.None;
             bool measuredVelocities = e.UsesMeasuredJobVelocities;
-            if (measuredVelocities) m_RootPhaseMotion = StreamMotion.None;
+            if (measuredVelocities)
+            {
+                m_RootPhaseMotion = StreamMotion.None;
+                m_AnimationPhaseEdits = StreamVelocityEdits.None;
+            }
             JobKind inputJob = null;
             bool ran = false;
             try
@@ -1041,8 +1045,14 @@ namespace Unbound.Runtime.Playables
                     unsafe
                     {
                         var pointer = (IntPtr)(&stream);
-                        Dispatch(Job, pointer, (IntPtr)(int)UnityEngine.Animations.JobMethodIndex.ProcessRootMotionMethodIndex);
-                        if (measuredVelocities) BeginAnimationPhase(context, into, inputJob);
+                        try
+                        {
+                            Dispatch(Job, pointer, (IntPtr)(int)UnityEngine.Animations.JobMethodIndex.ProcessRootMotionMethodIndex);
+                        }
+                        finally
+                        {
+                            if (measuredVelocities) BeginAnimationPhase(context, into, inputJob);
+                        }
                         Dispatch(Job, pointer, (IntPtr)(int)UnityEngine.Animations.JobMethodIndex.ProcessAnimationMethodIndex);
                     }
                 }
@@ -1079,6 +1089,8 @@ namespace Unbound.Runtime.Playables
                     Delta = m_RootPhaseMotion.Velocity * into.DeltaTime,
                     Turn = m_RootPhaseMotion.JobTurn(into.DeltaTime),
                 };
+            else if (!into.Motion.Known && context.Evaluation.MotionMode == RootMotionMode.Compute)
+                into.Motion = RootMotionStep.Zero;
 
             // The input's animation callback ran when it was evaluated. Apply its field
             // edits here so the motion callbacks see the root phase, then the animation

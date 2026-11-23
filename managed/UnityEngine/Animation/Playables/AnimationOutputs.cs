@@ -389,6 +389,7 @@ namespace Unbound.Runtime.Playables
             e.Bindings = null;
             e.DeltaTime = 0f;
             e.Seek = e.AutomaticFrame = e.RootMotion = e.ReferencePose = e.PlayableIK = e.Replay = false;
+            e.UsesMeasuredJobVelocities = false;
             e.OutputWeight = 1f;
             e.MotionMode = default;
             e.Combining = 0;
