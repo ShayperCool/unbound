@@ -53,6 +53,9 @@ namespace UnityEngine.AI
         NavMeshPath m_RequestedPath;
         internal enum AssignmentRequest { None, Queued, Searching }
         internal AssignmentRequest PendingAssignment { get; private set; }
+        // The reported corridor came from an older search. The assigned goal is
+        // still available if link validation cannot keep the reported endpoint.
+        internal bool m_FollowingOlderResult;
         // A new agent reports a complete path, also while its first path is pending (measured).
         NavMeshPathStatus m_PathStatus = NavMeshPathStatus.PathComplete;
         Vector3 m_WrittenPosition;
@@ -343,8 +346,9 @@ namespace UnityEngine.AI
         /// search box (<see cref="NavMesh.AgentReach"/>), to the nearest point;
         /// a target that maps nowhere is refused (false) and changes nothing. The path is then given
         /// in the call when it needs no search (see <see cref="AgentSystem.PlanAtOnce"/>), else
-        /// at the next agent update, while the agent goes on following and reporting its current
-        /// path (measured: tests/projects/navlinks offedge, pendingold, targets).</summary>
+        /// by an agent update. The current route stays visible until the replacement search
+        /// starts. A walking agent waits without a route if that search exceeds the remaining
+        /// iteration budget (measured: tests/projects/navlinks pendingold and initialSearch).</summary>
         public bool SetDestination(Vector3 target)
         {
             AgentSystem.Sync(this);
@@ -362,6 +366,7 @@ namespace UnityEngine.AI
             m_PathPending = true;
             m_RequestedPath = null;
             PendingAssignment = AssignmentRequest.None;
+            m_FollowingOlderResult = false;
             AgentSystem.RequestPath(this);
             AgentSystem.PlanAtOnce(this, following);
             // A path given in the call to an agent that reported none is reported from the next update.
@@ -384,9 +389,13 @@ namespace UnityEngine.AI
             m_Destination = path.m_Corners.Length > 0 ? path.m_Corners[path.m_Corners.Length - 1] : m_NextPosition;
             m_ReportedDestination = m_Destination;
             m_HasDestination = true;
+            var staleness = Staleness;
             AgentSystem.ApplyPath(this, m_RequestedPath);
             if (keepRequest)
             {
+                // Replacing the corridor does not clear staleness while a destination
+                // request is still pending.
+                RestoreStaleness(staleness);
                 m_PathPending = true;
                 PendingAssignment = AgentSystem.PathSearchStarted(this)
                     ? AssignmentRequest.Searching : AssignmentRequest.Queued;
@@ -425,10 +434,10 @@ namespace UnityEngine.AI
             }
         }
 
-        /// <summary>A path is being followed: also the current one while a new one is pending
-        /// (measured: tests/projects/navlinks pendingold, offedge). A path given by SetDestination
-        /// to a standing agent counts from the next update (targets, incall). SetPath reports the
-        /// assigned route immediately when it has corners (staleAssigned).</summary>
+        /// <summary>A path is being followed. A walking agent can report it before a replacement
+        /// search starts (tests/projects/navlinks pendingold, initialSearch) or after SetPath assigns
+        /// a corridor during the search (assignedPending). A path given by SetDestination to a
+        /// standing agent counts from the next update (targets, incall).</summary>
         public bool hasPath => Compat.NavMeshCorridorReportingMeasured ? ReportsPath : FollowingPath && !m_PathFromCall;
 
         /// <summary>The path as reported between updates: corners remain from where the last step
@@ -472,6 +481,7 @@ namespace UnityEngine.AI
         // followed while another request is pending (navlinks staleArea, Unity 6000.0.71f1).
         void AreaSettingsChanged()
         {
+            if (Compat.NavMeshPathAssignmentMeasured) AgentSystem.MarkSearchFilterChanged(this);
             if (!Compat.NavMeshAreaStalenessMeasured || ReportsPath) m_OwnPathStale = true;
         }
 
@@ -852,7 +862,11 @@ namespace UnityEngine.AI
         internal void SetPathPending(bool pending)
         {
             m_PathPending = pending;
-            if (!pending) PendingAssignment = AssignmentRequest.None;
+            if (!pending)
+            {
+                PendingAssignment = AssignmentRequest.None;
+                m_FollowingOlderResult = false;
+            }
         }
         internal void SetPathStatus(NavMeshPathStatus status) => m_PathStatus = status;
         internal void SetPathEnd(Vector3 end) => m_ReportedDestination = end;
@@ -1054,8 +1068,15 @@ namespace Unbound.Runtime
                     }
                     else
                     {
-                        PlanAgain(agent);
-                        agent.CatchUpStaleness();
+                        if (agent.m_FollowingOlderResult && PlanAgain(agent, completeGoal: agent.pathEndPosition))
+                        {
+                            agent.m_FollowingOlderResult = true;
+                        }
+                        else
+                        {
+                            PlanAgain(agent);
+                            agent.CatchUpStaleness();
+                        }
                         ag.waitingForConnection = false;
                     }
                     break;
@@ -1520,12 +1541,15 @@ namespace Unbound.Runtime
         /// navlinks inactive: partial and stale in the frame a link opens, complete the next).
         /// Rejoin preserves the old endpoint whenever a partial route is stale. Partial paths
         /// during NavMesh data changes and carving remain unmeasured.
-        static void PlanAgain(NavMeshAgent agent, Vector3? partialEnd = null)
+        // When validating an older result, keep its endpoint only if a complete
+        // route still reaches it. Failure leaves the corridor available for replanning.
+        static bool PlanAgain(NavMeshAgent agent, Vector3? partialEnd = null, Vector3? completeGoal = null)
         {
-            var target = partialEnd ?? agent.RequestedDestination;
+            var target = completeGoal ?? partialEnd ?? agent.RequestedDestination;
             var search = NavMesh.PathSearch.Begin(agent.m_Surface, agent.m_NextPosition, target, agent.Filter, agent.agentTypeID);
             int budget = int.MaxValue;
-            if (search != null && search.Step(ref budget) && search.Result != null)
+            if (search != null && search.Step(ref budget) && search.Result != null
+                && (!completeGoal.HasValue || search.Result.status == NavMeshPathStatus.PathComplete))
             {
                 // The path goes on: as stale as it was (measured, see isPathStale).
                 var staleness = agent.Staleness;
@@ -1536,9 +1560,10 @@ namespace Unbound.Runtime
                     agent.SetPathStatus(NavMeshPathStatus.PathPartial);
                 }
                 agent.RestoreStaleness(staleness);
-                return;
+                return true;
             }
-            agent.SetPathStatus(NavMeshPathStatus.PathInvalid);
+            if (!completeGoal.HasValue) agent.SetPathStatus(NavMeshPathStatus.PathInvalid);
+            return false;
         }
 
         /// <summary>An agent on a link stays on it when the NavMesh changes, its link deactivated
@@ -1702,6 +1727,12 @@ namespace Unbound.Runtime
         static readonly Dictionary<NavMeshAgent, NavMesh.PathSearch> s_Searches = new Dictionary<NavMeshAgent, NavMesh.PathSearch>();
 
         internal static bool PathSearchStarted(NavMeshAgent agent) => s_Searches.ContainsKey(agent);
+
+        internal static void MarkSearchFilterChanged(NavMeshAgent agent)
+        {
+            if (s_Searches.TryGetValue(agent, out var search)) search.AgentFilterChanged = true;
+        }
+
         /// <summary>Agents whose search under way a NavMesh rebuild restarted: finished in one go.</summary>
         static readonly HashSet<NavMeshAgent> s_Restarted = new HashSet<NavMeshAgent>();
 
@@ -1743,7 +1774,9 @@ namespace Unbound.Runtime
                 if (!restarted) budget = allowed;
                 if (!finished)
                 {
-                    if (!started && agent.PendingAssignment == NavMeshAgent.AssignmentRequest.Queued) WaitForAssignedRequest(agent);
+                    if (!started && Compat.NavMeshPathAssignmentMeasured && agent.FollowingPath
+                        && agent.m_Crowd.state == DtCrowdAgentState.DT_CROWDAGENT_STATE_WALKING && !agent.isOnOffMeshLink)
+                        WaitForPath(agent);
                     break;
                 }
                 s_PathRequests.RemoveAt(0);
@@ -1755,37 +1788,42 @@ namespace Unbound.Runtime
                     continue;
                 }
                 bool assignedDuringSearch = started && agent.PendingAssignment == NavMeshAgent.AssignmentRequest.Searching;
+                var staleness = agent.Staleness;
+                bool ownStale = search.AgentFilterChanged || (assignedDuringSearch && staleness.Own);
                 // A completed request for the assigned path's final polygon keeps the assigned endpoint.
                 if (assignedDuringSearch && search.Result.status == NavMeshPathStatus.PathComplete
                     && agent.pathStatus == NavMeshPathStatus.PathComplete && agent.m_Crowd.corridor.GetLastPoly() == search.EndPolygon)
                 {
                     agent.SetPathPending(false);
+                    agent.RestoreStaleness((ownStale, staleness.Version));
                     continue;
                 }
-                // An older result can replace the reported route. Replanning still uses
-                // the goal selected by SetPath.
-                var staleness = agent.Staleness;
                 // The corridor starts where the search did (see PathOrigin).
                 ApplyPath(agent, search.Result, NavMesh.V(search.Origin));
-                if (assignedDuringSearch) agent.RestoreStaleness(staleness);
+                agent.m_FollowingOlderResult = assignedDuringSearch;
                 if (Compat.NavMeshLinkActivationMeasured && search.ActivationVersion != NavWorld.LinkActivationVersion)
                 {
                     // A request completed across an activation change reports its result stale
                     // until the next AI update validates it (tests/projects/navlinks activation.pending).
-                    agent.RestoreStaleness((false, search.PathStaleVersion));
+                    agent.RestoreStaleness((ownStale, search.PathStaleVersion));
                     agent.m_Crowd.deferPathValidation = true;
+                }
+                else if (assignedDuringSearch || ownStale)
+                {
+                    agent.RestoreStaleness((ownStale, assignedDuringSearch ? staleness.Version : NavWorld.PathStaleVersion));
                 }
             }
         }
 
-        // A queued request begins on the assigned destination. If it spans more than this
-        // update, the agent waits at its current polygon until a new corridor is ready.
-        static void WaitForAssignedRequest(NavMeshAgent agent)
+        // A request that has begun and needs more than this update clears the previous
+        // corridor. The agent waits at its current polygon until the search finishes.
+        static void WaitForPath(NavMeshAgent agent)
         {
             var ag = agent.m_Crowd;
             ag.corridor.Reset(ag.corridor.GetFirstPoly(), ag.corridor.GetPos());
             CrowdOf(agent.m_Surface).ResetMoveTarget(ag);
-            ag.vel = ag.nvel = RcVec3f.Zero;
+            agent.SetPathStatus(NavMeshPathStatus.PathComplete);
+            ag.vel = ag.nvel = ag.pvel = RcVec3f.Zero;
             ag.ncorners = ag.reportedCorners = 0;
             ag.hasSteer = false;
         }

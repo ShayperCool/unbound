@@ -233,6 +233,7 @@ namespace UnityEngine.AI
             internal long EndPolygon => m_EndRef;
             internal int ActivationVersion;
             internal int PathStaleVersion;
+            internal bool AgentFilterChanged;
 
             internal static PathSearch Begin(NavWorld.Surface surface, Vector3 source, Vector3 target, AreaFilter filter, int agentTypeID)
             {

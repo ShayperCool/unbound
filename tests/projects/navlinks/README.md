@@ -510,30 +510,39 @@ does. [NavMeshAgent.SetPath](https://docs.unity.com/en-us/engine/6000.0/script-r
 The Unity 6000.0.71f1 probe gives the agent a path while an earlier
 SetDestination is pending. The assigned route is visible immediately and
 the pending flag remains set. If the search has yet to start, it uses the
-assigned route's final point when its turn comes. If that new search
-exceeds the remaining iteration budget, the agent reports no route and
-waits at its current polygon. A short search to the endpoint of an
-assigned partial path can complete this new route.
+assigned route's final point when its turn comes. A short search to the
+endpoint of an assigned partial path can complete this new route.
+
+When a replacement search starts and exceeds its update's iteration
+budget, the agent clears the previous corridor and stops at its current
+polygon. It reports PathComplete while waiting without a route. The
+controls use two iteration budgets and include agents previously following
+complete and partial paths, plus agents with no previous path.
 
 A search that already started can finish at its earlier goal. The agent
 keeps the assigned endpoint if both complete routes end on the same
-polygon. A cost change can keep the older result stale. The controls
-distinguish an actual search in progress from a queued agent that has
-already waited an update behind another request. They also cover
-movement, a second assignment, ResetPath and a failed assignment.
+polygon. A cost change leaves a result from an already-started search
+stale, even when no route was visible during the change. A queued search
+starts with the current costs. Assigning a route while a request is
+pending preserves the staleness reported before the call. The controls
+distinguish a search in progress from one that has waited behind another
+request. They also cover movement, a second assignment, ResetPath and a
+failed assignment.
 
-When a link is deactivated, the assigned corridor is checked before the
-pending request advances. A queued request is cleared if the assigned
-corridor crosses the invalid link. If a search has started, that invalid
-corridor is replanned immediately. If the assigned corridor stays valid
-and an older result later crosses the invalid link, the agent replans to
-the goal from SetPath at the following update.
+Deactivating a link through the assigned corridor cancels a queued request
+or replans the invalid corridor if the request had already started.
+If the assigned corridor stays valid and an older result later crosses
+a deactivated link, the agent tries to keep that result's endpoint. A
+complete route through another link preserves the earlier destination
+and its staleness. Otherwise the agent replans to the assigned goal.
+The controls change links before and after assignment and after the
+older result is published, including a second repair.
 
 The probe measures agents walking on the NavMesh on Unity 6000.0.71f1.
 Assignments during link traversal and after a NavMesh rebuild are
 unmeasured. Replacing a pending request with another SetDestination is a
-separate open case. All 162 records and 1,770 values match at the existing
-tolerances. One velocity component differs by about 1.4e-7.
+separate open case. All 318 records and 4,362 values pass the existing
+tolerances, with a maximum component difference of 0.000012.
 
     python3 tests/projects/navlinks/projection.py editor --release 6000.0.71f1 --profile assignment --label L
     python3 tests/projects/navlinks/projection.py publish --release 6000.0.71f1 --profile assignment --label L
