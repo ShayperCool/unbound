@@ -351,6 +351,26 @@ namespace UnityEngine.Tests
             Assert.Equal((0f, 984f, 960f), (row.LayoutX, row.LayoutWidth, a.LayoutWidth));
         }
 
+        /// <summary>Measured in the Editor (tests/projects/uitkpercent percentMinInAutoRow): the bases a
+        /// row sized by its content collects are bounded by percentage min and max sizes of its own
+        /// width only when that width is exact, so an item 95% wide at least gives the row no basis.</summary>
+        [Fact]
+        public void CollectedBasesTakePercentagesOfTheNodesExactSizeOnly()
+        {
+            var config = YogaConfig.UIToolkit();
+            var outer = new YogaNode(config) { Width = YogaValue.Point(1423.5f), Height = YogaValue.Point(90), FlexDirection = YogaFlexDirection.Row };
+            var input = new YogaNode(config) { FlexDirection = YogaFlexDirection.Row, FlexGrow = 1 };
+            var drag = new YogaNode(config)
+            {
+                FlexGrow = 1, FlexShrink = 1, FlexBasis = YogaValue.Point(0), Height = YogaValue.Point(80),
+                Width = YogaValue.Percent(95), MinWidth = YogaValue.Percent(95), MaxWidth = YogaValue.Percent(95),
+            };
+            input.Insert(0, drag);
+            outer.Insert(0, input);
+            outer.CalculateLayout();
+            Assert.Equal((0f, 1424f, 1352f), (input.ComputedFlexBasis, input.LayoutWidth, drag.LayoutWidth));
+        }
+
         // A 25x20 box (column, or row) holding a middle node over a 50x50 leaf; neither shrinks.
         static YogaNode BoxedMiddle(YogaConfig config, YogaOverflow boxOverflow, YogaOverflow middleOverflow, YogaFlexDirection boxDirection = YogaFlexDirection.Column)
         {

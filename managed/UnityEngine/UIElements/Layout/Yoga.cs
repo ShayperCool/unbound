@@ -2666,7 +2666,11 @@ namespace Unbound.UIElements.Layout
             var collectedFlexItemsValues = new CollectFlexItemsRowValues();
             for (; endOfLineIndex < childCount; lineCount++, startOfLineIndex = endOfLineIndex)
             {
-                CalculateCollectFlexItemsRowValues(collectedFlexItemsValues, node, ownerDirection, mainAxisOwnerSize,
+                // UI Toolkit bounds the bases the line collects by min and max sizes in percentages of
+                // the node's own inner size, when that is exact (Unity 6000.0.71f1 Editor,
+                // tests/projects/uitkpercent percentMinInAutoRow); Yoga takes the node's owner's size.
+                CalculateCollectFlexItemsRowValues(collectedFlexItemsValues, node, ownerDirection,
+                    percentagesOfExactSizes ? (isMainAxisRow ? percentWidth : percentHeight) : mainAxisOwnerSize,
                     availableInnerWidth, availableInnerMainDim, startOfLineIndex, lineCount);
                 endOfLineIndex = collectedFlexItemsValues.EndOfLineIndex;
 
