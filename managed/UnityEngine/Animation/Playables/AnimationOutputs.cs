@@ -56,6 +56,8 @@ namespace Unbound.Runtime.Playables
         /// pose comes from clips alone (the measured case).</summary>
         internal bool ClipSampled, JobRan;
         internal bool DefaultHumanJobPose;
+        /// <summary>A measured generic controller pose replaces any previous humanoid body sample.</summary>
+        internal bool GenericControllerPose;
         /// <summary>The IK values (goal weights, hints, look-at) an animation job left in the
         /// stream's human pose, for the jobs above it.</summary>
         internal readonly Unbound.Runtime.Playables.StreamHumanIK HumanIK = new Unbound.Runtime.Playables.StreamHumanIK();
@@ -89,7 +91,7 @@ namespace Unbound.Runtime.Playables
             FootIK = false;
             GoalsInMotion = false;
             HasMassCenter = false;
-            ClipSampled = JobRan = DefaultHumanJobPose = false;
+            ClipSampled = JobRan = DefaultHumanJobPose = GenericControllerPose = false;
             HumanIK.Clear();
             Owner = null;
             FloatCount = b.FloatCount;
@@ -903,6 +905,7 @@ namespace Unbound.Runtime.Playables
             var evaluatedPlayer = animator.m_Player;
             var withController = evaluatedPlayer != null && animator.isActiveAndEnabled;
             e.MotionMode = e.MotionModeOf(animator, outputs);
+            result.GenericControllerPose = e.GenericMotionController != null;
             motion = RootMotionStep.Zero;
             motionDeltaTime = (float)outputs[0].Dt;
             if (withController)
@@ -1023,6 +1026,7 @@ namespace Unbound.Runtime.Playables
             bool rootWritten = false)
         {
             if (result.BodyMotion.HasMotion) animator.Human?.SetPoseMotion(result.BodyMotion);
+            else if (result.GenericControllerPose) animator.Human?.ClearMotion();
             if (result.FootIK && animator.Human is { } footHuman) footHuman.FootIK = true;
             if (result.HasMassCenter && animator.Human is { } massHuman)
             {
