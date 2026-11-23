@@ -1,7 +1,7 @@
 # Animation culling with particle renderers
 
 Unity 6000.0.71f1, Built-In Render Pipeline. Two independent windowed Linux Editor runs
-on NVIDIA matched across all 723 rows. The runner closes Scene views and uses a 320×180
+on NVIDIA matched across all 798 rows. The runner closes Scene views and uses a 320×180
 Game view. The gate compares every visibility, animation clock and pose sample exactly.
 
 An Animator with CullCompletely freezes while its only ParticleSystemRenderer is invisible.
@@ -14,6 +14,11 @@ Two Pause-mode controls record the simulation clock as the camera drops an off-s
 system and brings it back. The clock stops for both empty and live systems with trails.
 A longer diagnostic found a one-step clock difference after re-enabling the renderer and
 a different near-frustum result for an empty Pause-mode system. Those cases remain open.
+PauseAndCatchup holds and takes a larger step on return. Its absolute time remains one
+step ahead in Unbound per return in the wider diagnostic, with the same values before
+and after the bounds change. The Automatic controls check the procedural flag and clock
+for a system that emits over time and a nonprocedural trail system. In the separate manual
+Emit control, Unity simulated off-screen and both Unbound builds paused.
 
 Near the edge of the view, a small empty system becomes invisible earlier than a large
 empty system. A large emitted particle stays visible farther out even with a small
@@ -23,7 +28,8 @@ Separate Editor controls with constant sizes 0.1, 0.5 and 4 recorded world-space
 particle positions or the emitter when empty. The measured moving trail includes its
 earlier points and the moving stretched billboard extends behind its particle. Public
 particle bounds and sizes outside these cases remain open. SRP, mesh particles with
-approximate bounds, ribbons and mixed world-space trails while paused are unmeasured.
+approximate bounds, ribbons, freeform stretch, custom simulation space, wider or
+size-independent trails and mixed world-space trails while paused are unmeasured.
 
 Unity documents the effect of each culling mode, the visibility contribution of shadow
 rendering and Scene view cameras, and minimum particle size as a screen fraction.

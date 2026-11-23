@@ -1557,10 +1557,10 @@ namespace UnityEngine
         /// parent's cull it (measured: an AlwaysSimulate parent keeps an unseen child updating);
         /// a system without an enabled ParticleSystemRenderer keeps simulating, reported once. Visibility comes from the
         /// renderer's culling bounds (<see cref="ParticleSystemRenderer.CullingBounds"/>), which
-        /// Unbound computes conservatively from the particles and the emitter; where it cannot
-        /// bound what is drawn (trails, a minimum particle size, camera velocity stretching) the
-        /// renderer counts as visible whenever a camera draws its layer, so the system keeps
-        /// simulating, reported once.</para>
+        /// Unbound computes from the particles and the emitter. Simulation culling based on
+        /// approximate bounds is reported (trails, minimum screen size, camera-velocity
+        /// stretching). The Built-In controls in particleanimvisibility cover the simulation
+        /// response to the renderer leaving and re-entering the view.</para>
         /// </summary>
         // The renderer's culling bounds, as the Editor keeps them (6000.0.71f1,
         // tests/projects/particlerender firstvis/*, destroyphases delayFraction, resources

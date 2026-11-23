@@ -18,7 +18,9 @@ sealed class ParticleVisibilityProbe : MonoBehaviour
         internal Animator Animator;
         internal AnimationState Legacy;
         internal ParticleSystemRenderer Renderer;
-        internal ParticleSystem PausedSystem;
+        internal ParticleSystem ObservedSystem;
+        internal ParticleSystemCullingMode SimulationMode;
+        internal float PreviousSimulationTime;
         internal Transform Marker;
         internal bool World;
     }
@@ -48,7 +50,8 @@ sealed class ParticleVisibilityProbe : MonoBehaviour
         camera.cullingMask = 1 << Layer;
     }
 
-    Rig Create(string name, bool world, bool live, float minSize, bool trails, bool stretch, bool legacy = false, float size = 1f, float emittedSize = .5f, bool moving = false, bool pause = false)
+    Rig Create(string name, bool world, bool live, float minSize, bool trails, bool stretch, bool legacy = false, float size = 1f, float emittedSize = .5f, bool moving = false,
+        ParticleSystemCullingMode cullingMode = ParticleSystemCullingMode.AlwaysSimulate, bool emitOverTime = false)
     {
         var root = new GameObject(name);
         root.SetActive(false);
@@ -60,9 +63,14 @@ sealed class ParticleVisibilityProbe : MonoBehaviour
         main.playOnAwake = false;
         main.startSize = size;
         main.simulationSpace = world ? ParticleSystemSimulationSpace.World : ParticleSystemSimulationSpace.Local;
-        main.cullingMode = pause ? ParticleSystemCullingMode.Pause : ParticleSystemCullingMode.AlwaysSimulate;
+        main.cullingMode = cullingMode;
         var em = ps.emission;
-        em.enabled = false;
+        em.enabled = emitOverTime;
+        if (emitOverTime)
+        {
+            main.startSpeed = 0f;
+            em.rateOverTime = 20f;
+        }
         var shape = ps.shape;
         shape.enabled = false;
         var trail = ps.trails;
@@ -110,7 +118,8 @@ sealed class ParticleVisibilityProbe : MonoBehaviour
             Name = name,
             Root = root,
             Renderer = renderer,
-            PausedSystem = pause ? ps : null,
+            ObservedSystem = cullingMode == ParticleSystemCullingMode.AlwaysSimulate ? null : ps,
+            SimulationMode = cullingMode,
             Animator = animator,
             Legacy = animation == null ? null : animation["Loop"],
             Marker = marker,
@@ -135,8 +144,11 @@ sealed class ParticleVisibilityProbe : MonoBehaviour
             rigs.Add(Create("movingTrail", false, true, 0, true, false, size: .5f, moving: true));
             rigs.Add(Create("movingStretch", false, true, 0, false, true, size: .5f, moving: true));
             rigs.Add(Create("worldFar", true, true, .2f, false, false));
-            rigs.Add(Create("pauseTrails", false, true, 0, true, false, pause: true));
-            rigs.Add(Create("pauseEmpty", false, false, 0, true, false, pause: true));
+            rigs.Add(Create("pauseTrails", false, true, 0, true, false, cullingMode: ParticleSystemCullingMode.Pause));
+            rigs.Add(Create("pauseEmpty", false, false, 0, true, false, cullingMode: ParticleSystemCullingMode.Pause));
+            rigs.Add(Create("catchUpTrails", false, true, 0, true, false, cullingMode: ParticleSystemCullingMode.PauseAndCatchup));
+            rigs.Add(Create("automaticMinimum", false, false, .2f, false, false, cullingMode: ParticleSystemCullingMode.Automatic, emitOverTime: true));
+            rigs.Add(Create("automaticTrails", false, true, 0, true, false, cullingMode: ParticleSystemCullingMode.Automatic));
         }
         if (tick == 6)
             foreach (var rig in rigs)
@@ -175,12 +187,24 @@ sealed class ParticleVisibilityProbe : MonoBehaviour
         if (tick == 0 || tick > 56) return;
         foreach (var rig in rigs)
         {
-            // Pause controls use the relocation and layer-mask portions of the sequence.
-            if (rig.PausedSystem != null && tick > 25) continue;
+            // Simulation controls use the relocation and layer-mask portions of the sequence.
+            if (rig.ObservedSystem != null && tick > 25) continue;
             float normalizedTime = rig.Legacy != null ? rig.Legacy.normalizedTime : rig.Animator.GetCurrentAnimatorStateInfo(0).normalizedTime;
             var observation = $"{rig.Renderer.isVisible}/{Mathf.RoundToInt(normalizedTime * 10000)}/{Mathf.RoundToInt(rig.Marker.localPosition.x * 10000)}";
-            if (rig.PausedSystem != null)
-                observation += "/" + Mathf.RoundToInt(rig.PausedSystem.time * 10000);
+            if (rig.ObservedSystem != null)
+            {
+                float time = rig.ObservedSystem.time;
+                if (rig.SimulationMode == ParticleSystemCullingMode.PauseAndCatchup)
+                {
+                    int advance = Mathf.RoundToInt((time - rig.PreviousSimulationTime) * 10000);
+                    observation += advance == 0 ? "/held" : advance <= 200 ? "/step" : "/catchup";
+                    rig.PreviousSimulationTime = time;
+                }
+                else
+                    observation += "/" + Mathf.RoundToInt(time * 10000);
+                if (rig.SimulationMode == ParticleSystemCullingMode.Automatic)
+                    observation += "/" + rig.ObservedSystem.proceduralSimulationSupported;
+            }
             rows.Add(JsonUtility.ToJson(new Row { k = rig.Name + "." + tick, v = observation }));
         }
     }
