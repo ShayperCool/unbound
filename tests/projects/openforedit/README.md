@@ -18,8 +18,9 @@ calls and refuse paths by a marker in the path (one with a null message). Each q
 and outside the versioned folders, for lists and for objects (also the Assets folder, which has no
 .meta file), records its answer and the callbacks it reached, with their arguments.
 `tests/projects/openforeditorder` has instead two processors with the same callbacks (list
-`IsOpenForEdit` and `MakeEditable`), each refusing its own path: it records the answers, the number of
-calls and whether the calls follow the order TypeCache lists the processors in, not that order.
+`IsOpenForEdit` and `MakeEditable`), each refusing its own path: it records the answers and whether
+the calls follow the order TypeCache lists the processors in up to the first that refuses, not that
+order (nor the number of calls, which depends on it).
 
 Measured on the Unity 6000.0.71f1 Editor (two identical macOS batch captures per probe; the values
 depend on neither the OS nor the graphics device):
@@ -35,8 +36,8 @@ depend on neither the OS nor the graphics device):
   refused (listed first by the list queries, which skip the blank and unversioned entries).
 - Both queries share one flow: the list callbacks with all the paths (for one path, that path and a
   new list) until one refuses; when all accept, each processor's single-path callback with every
-  path, each refused path added to the list and the message (null as given) returned, stopping after
-  a processor that refused one.
+  path, each refused path added to the list and the message (null as given) returned. (With two
+  processors having single-path callbacks Unbound stops after one that refused a path: unmeasured.)
 - `CanOpenForEdit` first runs that flow for `IsOpenForEdit` (its message dropped); the paths not open
   then go through it for `CanOpenForEdit`, with the immutable paths already in the list.
 - `MakeEditable` passes every path (unversioned ones too; one empty path as none, blank list entries

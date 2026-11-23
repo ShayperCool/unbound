@@ -244,10 +244,10 @@ public static class OpenForEditProbe
     }
 
     /// <summary>With two processors having the same callbacks (tests/projects/openforeditorder),
-    /// each refusing its own path: the answers (which do not depend on the order between them),
-    /// the number of calls, and whether the calls follow the order TypeCache lists the processors
-    /// in up to the first that refuses (Unity documents no order between processors, so the order
-    /// itself is not recorded).</summary>
+    /// each refusing its own path: the answers (which do not depend on the order between them)
+    /// and whether the calls follow the order TypeCache lists the processors in up to the first
+    /// that refuses (Unity documents no order between processors, so neither the order nor the
+    /// number of calls, which depends on it, is recorded).</summary>
     static void Order()
     {
         var order = new List<string>();
@@ -265,7 +265,6 @@ public static class OpenForEditProbe
                 if (Array.Exists(paths, p => p != null && p.Contains(name == "second" ? "Second" : "Third"))) break;
             }
             var called = Calls.ConvertAll(c => c.Substring(0, c.IndexOf('.')));
-            Put(key + ".calls", called.Count);
             Put(key + ".typeCacheOrder", string.Join(",", called) == string.Join(",", expected));
         }
         foreach (var (key, path) in new[] { ("asset", "Assets/Probe.txt"), ("second", "Assets/Second.txt"), ("third", "Assets/Third.txt") })

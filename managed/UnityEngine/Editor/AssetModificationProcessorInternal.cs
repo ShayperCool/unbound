@@ -63,7 +63,8 @@ namespace UnityEditor
         /// in an immutable package, nor outside the project's versioned folders): the list
         /// callbacks with all of them until one refuses; when all accept, each processor's
         /// single-path callback with every path, each refused path added to the list and its
-        /// message kept (null as given), stopping after a processor that refused one.</summary>
+        /// message kept (null as given). Stopping after a processor whose single-path callback
+        /// refused a path is unmeasured (the probes have one such processor).</summary>
         static bool Query(string name, string[] paths, List<string> outNotEditablePaths, StatusQueryOptions options, out string message)
         {
             message = "";
