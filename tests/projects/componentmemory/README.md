@@ -75,7 +75,7 @@ API declares valid material indices from zero through the current material count
 allows null to clear an override. [Renderer.SetPropertyBlock](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Renderer.SetPropertyBlock.html)
 
 Out-of-range writes report an Error through the application callback, honoring None and ScriptOnly
-for stack presence. Persistent components, other release families, invalid indexed reads and
-empty-block rendering precedence remain outside the measured scope.
+for stack presence. Persistent components, copies made by an importer or from an asset, other release families,
+invalid indexed reads and empty-block rendering precedence retain their earlier behavior.
 
 Add `--profile renderer` to the record, publish and gate commands above.

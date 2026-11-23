@@ -805,8 +805,9 @@ namespace UnityEngine
             m_CastShadows = source.m_CastShadows;
             m_ReceiveShadows = source.m_ReceiveShadows;
             m_RenderingLayerMask = source.m_RenderingLayerMask;
-            // MeshRenderer clones start with materials but no property overrides (componentmemory).
-            bool copyBlocks = !MeasuresMaterialReservations;
+            // The runtime clone measurement covers live scene objects. Importers copy components
+            // before placement decides whether their GameObjects are assets, so retain their blocks.
+            bool copyBlocks = !MeasuresMaterialReservations || !source.MeasuresMaterialReservations || ScriptedImports.Importing;
             m_PropertyBlock = copyBlocks ? source.m_PropertyBlock?.Copy() : null;
             m_OwnBlock = m_PropertyBlock;
             m_MaterialBlocks = null;
