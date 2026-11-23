@@ -38,6 +38,11 @@ public partial class HumanoidProbe
         Put((s_JobKey ?? "job") + ".bones." + tag, "{" + string.Join(",", parts) + "}");
     }
 
+    internal static void CallbackRoot(string phase, Transform root)
+    {
+        Put((s_JobKey ?? "callback") + ".moved." + phase, "[" + V(root.position) + "," + Q(root.rotation) + "]");
+    }
+
     internal static void ElbowHintRecord(string tag, AnimationStream stream)
     {
         Put((s_JobKey ?? "job") + ".elbowHint." + tag, V(stream.AsHuman().GetHintPosition(AvatarIKHint.LeftElbow)));
@@ -132,9 +137,23 @@ public partial class HumanoidProbe
                         g.Connect(clip, 0, playable, 0);
                     playable.SetInputWeight(0, 1f);
                     return playable;
-                }, true, setup: animator =>
+                }, mode != HumanBoneJob.Mode.ScriptedRootBuiltinWithApplyOff, setup: animator =>
                 {
                     bound = animator;
+                    switch (mode)
+                    {
+                        case HumanBoneJob.Mode.ScriptedRootOffset:
+                        case HumanBoneJob.Mode.ScriptedRootOffsetAndTurnBone:
+                            animator.gameObject.AddComponent<HumanoidScriptedJobRoot>().action = 1;
+                            break;
+                        case HumanBoneJob.Mode.ScriptedRootBuiltin:
+                        case HumanBoneJob.Mode.ScriptedRootBuiltinWithApplyOff:
+                            animator.gameObject.AddComponent<HumanoidScriptedJobRoot>().action = 2;
+                            break;
+                        case HumanBoneJob.Mode.ScriptedRootUnmoved:
+                            animator.gameObject.AddComponent<HumanoidScriptedJobRoot>();
+                            break;
+                    }
                     if (mode == HumanBoneJob.Mode.KinematicRoot || mode == HumanBoneJob.Mode.KinematicRootArmEdit)
                     {
                         var body = animator.gameObject.AddComponent<Rigidbody>();
@@ -158,7 +177,8 @@ public struct HumanBoneJob : IAnimationJob
         HipsTrs, ScaleHipsWorldWrite, ScaleHipsHints, ScaleHipsThenSolve, ScaleSpineThenSameHips,
         ScaleHipsFirstHint, ScaleHipsUniformThenSolve, ScaleHipsUniformFirstHint, ScaleHipsReadTurnThenHint,
         MaskedHipsTrs, MaskedArmTrs, MaskedHeadGlobal, MasksLayerWithoutHead,
-        KinematicRoot, KinematicRootArmEdit
+        KinematicRoot, KinematicRootArmEdit, ScriptedRootOffset, ScriptedRootBuiltin, ScriptedRootUnmoved,
+        ScriptedRootOffsetAndTurnBone, ScriptedRootBuiltinWithApplyOff
     }
 
     public Mode mode;
@@ -216,6 +236,7 @@ public struct HumanBoneJob : IAnimationJob
                 HumanoidProbe.BoneRecord("between", stream, ref this);
                 head.SetRotation(stream, Quaternion.Euler(0f, 45f, 0f));
                 break;
+            case Mode.ScriptedRootOffsetAndTurnBone:
             case Mode.RotateWorld:
                 head.SetRotation(stream, Quaternion.Euler(0f, 45f, 0f));
                 break;
@@ -319,5 +340,21 @@ public struct HumanBoneJob : IAnimationJob
         HumanoidProbe.BoneRecord("after", stream, ref this);
         if (mode == Mode.Prop) HumanoidProbe.PropRecord(stream, prop);
         HumanoidProbe.JobRecord("human", stream);
+    }
+}
+
+public sealed class HumanoidScriptedJobRoot : MonoBehaviour
+{
+    public int action;
+
+    void OnAnimatorMove()
+    {
+        HumanoidProbe.CallbackRoot("before", transform);
+        if (action == 1)
+            transform.SetPositionAndRotation(transform.position + new Vector3(.04f, 0f, .2f),
+                transform.rotation * Quaternion.Euler(0f, 2f, 0f));
+        else if (action == 2)
+            GetComponent<Animator>().ApplyBuiltinRootMotion();
+        HumanoidProbe.CallbackRoot("after", transform);
     }
 }
