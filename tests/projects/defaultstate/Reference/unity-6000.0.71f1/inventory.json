@@ -2047,7 +2047,25 @@
       "category": "class",
       "module": "UnityEditor.CoreModule",
       "status": "candidate",
+      "type": "UnityEditor.PlayerSettings+SplashScreen"
+    },
+    {
+      "category": "class",
+      "module": "UnityEditor.CoreModule",
+      "status": "candidate",
+      "type": "UnityEditor.PlayerSettings+WebGL"
+    },
+    {
+      "category": "class",
+      "module": "UnityEditor.CoreModule",
+      "status": "candidate",
       "type": "UnityEditor.PlayerSettings+iOS"
+    },
+    {
+      "category": "class",
+      "module": "UnityEditor.CoreModule",
+      "status": "candidate",
+      "type": "UnityEditor.PlayerSettings+tvOS"
     },
     {
       "category": "class",

@@ -871,3 +871,7 @@ write their 69 rows; every earlier row is unchanged. Three `Search.ObjectField` 
 (queued in `debt.json`). The new types initialize UI Toolkit events and objects earlier, so seven queued `eventTypeId`
 rows record their shifted Unbound values; the two TextCore `instanceID` rows record the Linux values moved
 by the shift measured on macOS (-22; not measured on Linux).
+
+The PlayerSettings values slice makes `PlayerSettings.SplashScreen`, `PlayerSettings.WebGL` and `PlayerSettings.tvOS`
+hand-written, and they enter the inventory; two Unity 6000.0.71f1 batch Editor captures on macOS write their three
+`@factory` rows. Every earlier row is unchanged, and no queued row shifts on macOS.

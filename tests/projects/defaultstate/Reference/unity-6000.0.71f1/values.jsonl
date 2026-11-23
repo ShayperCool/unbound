@@ -1095,7 +1095,10 @@
 {"key":"UnityEditor.PlayModeWindow/@factory","status":"excluded","value":"no-public-parameterless-constructor"}
 {"key":"UnityEditor.PlayerSettings/@factory","status":"excluded","value":"no-public-parameterless-constructor"}
 {"key":"UnityEditor.PlayerSettings+Android/@factory","status":"value","value":"class"}
+{"key":"UnityEditor.PlayerSettings+SplashScreen/@factory","status":"value","value":"class"}
+{"key":"UnityEditor.PlayerSettings+WebGL/@factory","status":"value","value":"class"}
 {"key":"UnityEditor.PlayerSettings+iOS/@factory","status":"value","value":"class"}
+{"key":"UnityEditor.PlayerSettings+tvOS/@factory","status":"value","value":"class"}
 {"key":"UnityEditor.PluginImporter/@factory","status":"value","value":"class"}
 {"key":"UnityEditor.PluginImporter/Property/UnityEditor.AssetImporter/assetBundleName","status":"getter-threw","value":"System.NullReferenceException"}
 {"key":"UnityEditor.PluginImporter/Property/UnityEditor.AssetImporter/assetBundleVariant","status":"getter-threw","value":"System.NullReferenceException"}
