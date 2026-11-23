@@ -121,6 +121,7 @@ sealed class MaterialMemory : MonoBehaviour
         Probe("unlit", Shader.Find("Unlit/Color"));
         Probe("standard", Shader.Find("Standard"));
         Object.Destroy(texture);
+        yield return MaterialPassControls.Run(Put);
         rows.Add("{\"k\":\"complete\",\"v\":true}");
         File.WriteAllLines(Path.Combine(output, "values.jsonl"), rows);
         // Keep the Editor alive across a frame boundary so queued blits can complete.

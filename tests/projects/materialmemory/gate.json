@@ -19,11 +19,17 @@
     "managed/UnityEngine/Graphics/ShaderLab.cs",
     "managed/UnityEngine/Graphics/ShaderPasses.cs",
     "managed/UnityEngine/Graphics/Srp/Keywords.cs",
+    "managed/UnityEngine/Graphics/Srp/SrpContext.cs",
+    "managed/UnityEngine/Graphics/Srp/SrpCore.cs",
     "managed/UnityEngine/Profiling/MemorySizes.cs",
     "managed/UnityEngine/Profiling/Profiling.cs",
     "managed/UnityEngine/Runtime/Compat.cs",
     "managed/UnityEngine/Runtime/GraphicsDeviceProfile.cs",
     "managed/UnityEngine/Terrain/TerrainTreeBillboards.cs",
-    "managed/UnityEngine/UI/CanvasRenderer.Clipping.cs"
+    "managed/UnityEngine/UI/CanvasRenderer.Clipping.cs",
+    "tests/projects/formatmapping/Assets/Scenes.meta",
+    "tests/projects/formatmapping/Assets/Scenes/",
+    "tests/projects/formatmapping/Packages/",
+    "tests/projects/formatmapping/ProjectSettings/"
   ]
 }
