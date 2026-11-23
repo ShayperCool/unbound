@@ -47,8 +47,9 @@ namespace Unbound.Runtime.Playables
         /// <summary>A job moved or scaled bones of the skeleton through their handles: values that
         /// stay in the skeleton and are left out when the pose is made from it.</summary>
         bool m_BonesMoved;
-        // IK starts from the human pose when a handle has changed the hips' non-uniform scale.
-        bool m_HipsScaleOverridden;
+        // A later bone edit can make the pose stale after it already took a hips scale edit.
+        enum HipsScaleEdit : byte { None, Pending, ReadBack }
+        HipsScaleEdit m_HipsScaleEdit;
         AnimStream m_Stream;
 
         const int GoalCount = 4;
@@ -121,7 +122,7 @@ namespace Unbound.Runtime.Playables
             m_SkeletonValid = false;
             m_Changed = false;
             m_BonesMoved = false;
-            m_HipsScaleOverridden = false;
+            m_HipsScaleEdit = HipsScaleEdit.None;
             m_BonesKept = false;
             Array.Clear(m_GoalSet);
             Array.Clear(m_HintSet);
@@ -221,7 +222,7 @@ namespace Unbound.Runtime.Playables
             m_SkeletonValid = true;
             m_BonesKept = false;
             m_BonesMoved = false;
-            m_HipsScaleOverridden = false;
+            m_HipsScaleEdit = HipsScaleEdit.None;
             HumanOps.RetargetTo(m_Human, Pose, null, Root, m_World, m_Local, m_Global, true);
         }
 
@@ -233,6 +234,7 @@ namespace Unbound.Runtime.Playables
         {
             if (m_HumanValid) return;
             m_HumanValid = true;
+            if (m_HipsScaleEdit == HipsScaleEdit.Pending) m_HipsScaleEdit = HipsScaleEdit.ReadBack;
             m_Changed = true;
             for (int g = 0; g < GoalCount; g++) m_Saved[g] = Pose.Goals[g].X;
             var s = m_Human.Skeleton;
@@ -428,7 +430,7 @@ namespace Unbound.Runtime.Playables
             var local = V(scale) * M.RcpSafe(parent.s);
             var before = bones.X[hips].s;
             if (!Mathf.Approximately(local.x, before.x) || !Mathf.Approximately(local.y, before.y) || !Mathf.Approximately(local.z, before.z))
-                m_HipsScaleOverridden = !UniformScale(V(scale));
+                m_HipsScaleEdit = HipsScaleEdit.Pending;
             bones.X[hips].s = local;
             BoneChanged();
         }
@@ -678,7 +680,7 @@ namespace Unbound.Runtime.Playables
             m_SkeletonValid = true;
             m_HumanValid = false;
             m_BonesKept = false;
-            m_HipsScaleOverridden = false;
+            m_HipsScaleEdit = HipsScaleEdit.None;
         }
 
         internal Vector3 GetGoalPosition(int g) => ToWorldPoint(GoalLocalPosition(g));
@@ -745,13 +747,16 @@ namespace Unbound.Runtime.Playables
             {
                 UpdateSkeletonPose();
                 var placed = m_Local;
-                if (m_HipsScaleOverridden && !m_HumanValid)
+                if (m_HipsScaleEdit == HipsScaleEdit.Pending)
                 {
                     // Before the human pose takes the bone edits, default hints use its previous
                     // placement (humanoid bone.scaleHipsFirstHint).
                     HumanOps.RetargetTo(m_Human, Pose, null, Root, m_World, m_W4, m_Global, true);
                     placed = m_W4;
                 }
+                else if (m_HipsScaleEdit == HipsScaleEdit.ReadBack && !m_HumanValid)
+                    Stubs.Ignored("Humanoid default hints after additional bone edits",
+                        "reads the retained skeleton after a hips scale readback; the exact default hint is unresolved");
                 Skel.ComputeGlobal(m_Human.Skeleton, placed, m_Global);
                 for (int i = 0; i < GoalCount; i++)
                 {
@@ -774,15 +779,11 @@ namespace Unbound.Runtime.Playables
         /// job left them. The pose is made again from the solved skeleton when next read.</summary>
         internal void SolveIK()
         {
-            if (m_HipsScaleOverridden)
-            {
-                // Before the human pose takes the scale edit, the solve uses its previous
-                // placement (humanoid bone.scaleHipsThenSolve).
-                if (!m_HumanValid) m_SkeletonValid = false;
-                else
-                    Stubs.Ignored("Humanoid IK after non-uniform hips scale readback",
-                        "solves from the rebased skeleton; parity of the resulting pose is unresolved");
-            }
+            // Before the human pose takes the scale edit, solve from its earlier placement.
+            if (m_HipsScaleEdit == HipsScaleEdit.Pending) m_SkeletonValid = false;
+            else if (m_HipsScaleEdit == HipsScaleEdit.ReadBack)
+                Stubs.Ignored("Humanoid IK after hips scale readback",
+                    "solves from the rebased skeleton; parity of the resulting pose is unresolved");
             UpdateSkeletonPose();
             var s = m_Human.Skeleton;
             Skel.ComputeGlobal(s, m_Local, m_Global);
@@ -799,6 +800,7 @@ namespace Unbound.Runtime.Playables
                 m_World.Goals[g].X = M.Mul(Root, x);
             }
             HumanIK.SolveFullBody(m_Human, m_World, m_Local, m_Global, m_W4);
+            m_HipsScaleEdit = HipsScaleEdit.None;
             m_Changed = true;
             m_HumanValid = false;
             m_BonesKept = false;
