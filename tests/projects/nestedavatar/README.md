@@ -16,12 +16,22 @@ after `Animator.Update(0)` and `Update(0.25)`:
 - `decoy`: a branch before the model holding a Hips only; `holderPartial`: the holder itself holds
   Hips/Leg; `holderNames`: the holder holds a Hips (without its Leg) and a Prop, as many top-level
   names as the model with fewer of its paths; `tie`: two copies of the model;
-- `human`: the humanoid `HumanA` below its holder, playing muscle curves (its avatar root and two
-  bones);
-- `direct`: the model with its own Animator (a control).
+- `human`: the humanoid `HumanA` below its holder with a controller of muscle curves, and
+  `humanDirect` the model with its own Animator (a control): updated this way neither moves from
+  its bind pose (the avatar root and two bones are recorded);
+- `direct`: the model with its own Animator (a control);
+- `cached`: after a first update a second copy of the model is added before the first: the next
+  update still animates the first (the avatar root is kept), and after `Rebind` the second (found
+  again, the first back at its defaults);
+- played by playable graphs evaluated by hand (`Evaluate(0)`, `Evaluate(0.25)`): `humanGraph`, the
+  humanoid's muscle clip below its holder, takes the pose of `humanGraphDirect`, the clip on the
+  model's own Animator; `masked`, the generic clip below its holder through a layer whose mask keeps
+  `Hips` and leaves out `Hips/Leg` and `Prop`, moves the Hips only (mask paths start at the avatar
+  root).
 
 The avatar root is the first transform, in depth-first order from the Animator's own, below which
-the most of the avatar's skeleton paths exist; the clips bind below it.
+the most of the avatar's skeleton paths exist; the clips bind below it, layer masks name paths below
+it, and it is kept until `Rebind`.
 
 The models and controllers are the modelroot and humanoid probes' (`run.py` takes them; no copy in
 Git), the scene the uitkpanelutils probe's.

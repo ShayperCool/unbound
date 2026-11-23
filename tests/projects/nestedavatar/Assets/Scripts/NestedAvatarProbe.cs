@@ -5,6 +5,8 @@ using System.IO;
 using System.Text;
 using UnityEditor;
 using UnityEngine;
+using UnityEngine.Animations;
+using UnityEngine.Playables;
 
 namespace NestedAvatarProbe
 {
@@ -51,7 +53,7 @@ namespace NestedAvatarProbe
             if (own != null) DestroyImmediate(own);
             var animator = holder.AddComponent<Animator>();
             if (avatar) animator.avatar = source;
-            animator.runtimeAnimatorController = Resources.Load<RuntimeAnimatorController>(controller);
+            if (controller != null) animator.runtimeAnimatorController = Resources.Load<RuntimeAnimatorController>(controller);
             return (animator, model.transform);
         }
 
@@ -125,8 +127,13 @@ namespace NestedAvatarProbe
             var second = Instantiate(Resources.Load<GameObject>("WalkerNoNode"), cases[cases.Count - 1].Item2.transform, false);
             second.name = "Second";
             DestroyImmediate(second.GetComponent<Animator>());
-            // A humanoid model below its holder, playing muscle curves.
+            // A humanoid model below its holder, its controller playing muscle curves; the model's
+            // own Animator as a control.
             Add("human", "HumanA", "HumanLoopMuscles");
+            var humanDirect = Instantiate(Resources.Load<GameObject>("HumanA"), new Vector3(80, 0, 0), Quaternion.identity);
+            var humanDirectAnimator = humanDirect.GetComponent<Animator>();
+            humanDirectAnimator.runtimeAnimatorController = Resources.Load<RuntimeAnimatorController>("HumanLoopMuscles");
+            cases.Add(("humanDirect", humanDirectAnimator, humanDirect.transform));
             // Control: the model's own Animator, as imported.
             var direct = Instantiate(Resources.Load<GameObject>("WalkerNoNode"), new Vector3(60, 0, 0), Quaternion.identity);
             var directAnimator = direct.GetComponent<Animator>();
@@ -140,6 +147,62 @@ namespace NestedAvatarProbe
                 Put(key + ".start", Pose(animator, model));
                 animator.Update(0.25f);
                 Put(key + ".quarter", Pose(animator, model));
+            }
+
+            // After a first update, a second copy of the model is added before the first: updated
+            // again, then after Rebind.
+            var (cached, cachedModel) = Nested("WalkerNoNode", "C_WalkerNoNode_Loop", "cached", 1, null, true, 130);
+            cached.enabled = false;
+            cached.Update(0f);
+            var added = Instantiate(Resources.Load<GameObject>("WalkerNoNode"), cached.transform, false);
+            added.name = "Added";
+            DestroyImmediate(added.GetComponent<Animator>());
+            added.transform.SetAsFirstSibling();
+            cached.Update(0.25f);
+            Put("cached.added", Pose(cached, cachedModel) + "|added " + Pose(cached, added.transform));
+            cached.Rebind();
+            cached.Update(0.25f);
+            Put("cached.rebound", Pose(cached, cachedModel) + "|added " + Pose(cached, added.transform));
+
+            // Played by playable graphs evaluated by hand: the humanoid's muscle clip below its holder
+            // and on the model's own Animator, and the generic clip below its holder through a layer
+            // whose mask keeps Hips and leaves out Hips/Leg and Prop.
+            var graphs = new List<(string, Animator, Transform, AnimationClip, AvatarMask)>();
+            var muscles = Resources.Load<AnimationClip>("LoopMuscles");
+            var (humanGraph, humanGraphModel) = Nested("HumanA", null, "humanGraph", 1, null, true, 100);
+            graphs.Add(("humanGraph", humanGraph, humanGraphModel, muscles, null));
+            var humanGraphDirect = Instantiate(Resources.Load<GameObject>("HumanA"), new Vector3(110, 0, 0), Quaternion.identity);
+            graphs.Add(("humanGraphDirect", humanGraphDirect.GetComponent<Animator>(), humanGraphDirect.transform, muscles, null));
+            var mask = new AvatarMask { transformCount = 3 };
+            mask.SetTransformPath(0, "Hips");
+            mask.SetTransformActive(0, true);
+            mask.SetTransformPath(1, "Hips/Leg");
+            mask.SetTransformActive(1, false);
+            mask.SetTransformPath(2, "Prop");
+            mask.SetTransformActive(2, false);
+            var loop = Resources.Load<RuntimeAnimatorController>("C_WalkerNoNode_Loop").animationClips[0];
+            var (masked, maskedModel) = Nested("WalkerNoNode", null, "masked", 1, null, true, 120);
+            graphs.Add(("masked", masked, maskedModel, loop, mask));
+            foreach (var (key, animator, model, clip, layerMask) in graphs)
+            {
+                var graph = PlayableGraph.Create(key);
+                graph.SetTimeUpdateMode(DirectorUpdateMode.Manual);
+                var output = AnimationPlayableOutput.Create(graph, key, animator);
+                var source = AnimationClipPlayable.Create(graph, clip);
+                if (layerMask != null)
+                {
+                    var layers = AnimationLayerMixerPlayable.Create(graph, 1);
+                    graph.Connect(source, 0, layers, 0);
+                    layers.SetInputWeight(0, 1f);
+                    layers.SetLayerMaskFromAvatarMask(0, layerMask);
+                    output.SetSourcePlayable(layers);
+                }
+                else output.SetSourcePlayable(source);
+                graph.Evaluate(0f);
+                Put(key + ".start", Pose(animator, model));
+                graph.Evaluate(0.25f);
+                Put(key + ".quarter", Pose(animator, model));
+                graph.Destroy();
             }
 
             Put("complete", true);
