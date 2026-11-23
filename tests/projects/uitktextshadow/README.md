@@ -37,4 +37,6 @@ python3 tests/projects/uitktextshadow/verify.py --release 6000.0.71f1 --candidat
 
 ## Reference
 
-`Reference/unity-6000.0.71f1/metal`: two byte-identical macOS Editor captures (Metal).
+`Reference/unity-6000.0.71f1`: two byte-identical Linux Editor captures (OpenGL on an NVIDIA GPU);
+`Reference/unity-6000.0.71f1/metal`: two byte-identical macOS Editor captures (Metal). They differ
+only at the cells' outer corner pixels (48 pixels, the recorded residual); `shadow.jsonl` is equal.
