@@ -63,15 +63,17 @@ Add `--profile audio` to the record, publish and gate commands above.
 
 The renderer profile records live attached MeshRenderers in the Built-In Render Pipeline and
 after a camera request renders through the active scriptable pipeline. A renderer accounts 656
-bytes plus four bytes for each reserved material slot. Property block storage for individual slots starts on the first non-null indexed
-write, including an empty block, and adds eight bytes per reserved slot. Both reservations retain
+bytes plus four bytes for each reserved material slot. Property block storage for individual slots
+starts on the first non-null indexed write, including an empty block, and adds eight bytes per
+reserved slot. Both reservations retain
 capacity when a material list shrinks. Indexed storage grows with the material list while
 active. Clearing its last assigned block or setting zero materials ends that growth until the
 next indexed assignment. Trimming removed indices keeps the storage active if slots remain.
-A clone of a runtime renderer starts with its current materials and empty property blocks. The
-controls include synchronous copies of a hidden detached object and asynchronous copies parented
-under both a scene object and a prefab asset. Detached runtime renderers continue to account for
-material assignments and discard trimmed overrides while their scene is invalid.
+A clone of a runtime renderer outside an importer callback starts with its current materials and
+empty property blocks. The controls include synchronous copies of a hidden detached object and
+asynchronous copies parented under both a scene object and a prefab asset. Detached runtime
+renderers continue to account for material assignments and discard trimmed overrides while their
+scene is invalid.
 Renderer-wide blocks and the referenced mesh, materials and textures have separate costs.
 
 Scene-authored empty and nonempty lists, list and array writes, rendering, clones, renderer-wide

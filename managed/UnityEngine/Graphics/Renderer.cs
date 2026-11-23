@@ -818,8 +818,8 @@ namespace UnityEngine
             m_CastShadows = source.m_CastShadows;
             m_ReceiveShadows = source.m_ReceiveShadows;
             m_RenderingLayerMask = source.m_RenderingLayerMask;
-            // The runtime clone measurement covers live scene objects. Importers copy components
-            // before placement decides whether their GameObjects are assets, so retain their blocks.
+            // Runtime clones start with empty blocks. Importer callbacks fall outside that
+            // measurement, so their component snapshots retain the earlier behavior.
             bool copyBlocks = !MeasuresMaterialReservations || !source.MeasuresMaterialReservations || ScriptedImports.Importing;
             m_PropertyBlock = copyBlocks ? source.m_PropertyBlock?.Copy() : null;
             m_OwnBlock = m_PropertyBlock;
