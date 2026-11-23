@@ -23,6 +23,11 @@ namespace Unbound.Runtime
         // (tests/projects/gameinterop annotation.builtin).
         internal static bool AnnotationTableMeasured => Family == ReleaseFamily.Unity6000_0;
 
+        // The files a script's bake of the environment alone writes beside its scene
+        // (LightingData.asset, ReflectionProbe-0.exr and their .meta files), measured on
+        // 6000.0.71f1 (tests/projects/bakeenvironment written/).
+        internal static bool BakeFilesMeasured => Family == ReleaseFamily.Unity6000_0;
+
         // The documents the Editor writes for new objects and new scenes (a scene save's starting
         // point), measured on 6000.0.71f1 (tests/projects/scenesave defaults.unity).
         internal static bool NewObjectDocumentsMeasured => Family == ReleaseFamily.Unity6000_0;

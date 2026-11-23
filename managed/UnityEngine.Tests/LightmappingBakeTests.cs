@@ -212,6 +212,64 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
+        public void TheLightingDataIsWrittenForACompleteEnvironmentBakeOfAProjectScene()
+        {
+            var environment = new LightingSettings { bakedGI = false, realtimeGI = false };
+            // (The project's own assets: Assets/ here.)
+            System.Func<string, bool> own = path => path.StartsWith("Assets/", System.StringComparison.Ordinal);
+            string Unwritten(LightingSettings settings, string folder, bool made) => RealtimeGI.Unwritten(settings, folder, made, own);
+            try
+            {
+                using (TestRelease.Pin(TestRelease.Measured))
+                {
+                    // Control: an environment bake that made all of it, of a scene in Assets/.
+                    Assert.Null(Unwritten(environment, "Assets/Scenes/Lit", made: true));
+                    // Baked or realtime GI on (or the defaults, which have it): not written.
+                    Assert.Contains("environment alone", Unwritten(null, "Assets/Scenes/Lit", true));
+                    environment.bakedGI = true;
+                    Assert.Contains("environment alone", Unwritten(environment, "Assets/Scenes/Lit", true));
+                    environment.bakedGI = false;
+                    environment.realtimeGI = true;
+                    Assert.Contains("environment alone", Unwritten(environment, "Assets/Scenes/Lit", true));
+                    environment.realtimeGI = false;
+                    // An environment kept in part (several scenes, gamma, Custom sources, no device),
+                    // an untitled scene, a scene of a package the project does not hold: not written.
+                    Assert.Contains("did not make", Unwritten(environment, "Assets/Scenes/Lit", false));
+                    Assert.Contains("untitled", Unwritten(environment, null, true));
+                    Assert.Contains("own assets", Unwritten(environment, "Packages/com.unity.render-pipelines.core/Samples/Lit", true));
+                }
+                // Another release family: not measured, not written.
+                using (TestRelease.Pin(TestRelease.Unmeasured))
+                    Assert.Contains("not measured", Unwritten(environment, "Assets/Scenes/Lit", true));
+            }
+            finally
+            {
+                Object.DestroyImmediate(environment);
+            }
+        }
+
+        [Fact]
+        public void ABakeThatWritesNothingNamesNoWrittenLightingData()
+        {
+            // A scene whose earlier bake wrote its lighting data, baked again with baked GI on:
+            // nothing is written and the scene no longer counts as written.
+            var data = new Unbound.Runtime.SceneData { Path = "Assets/Scenes/Lit.unity", LightingDataWritten = true };
+            var settings = new LightingSettings { bakedGI = true };
+            RealtimeGI.s_Warned.Clear();
+            try
+            {
+                var (logs, _) = Run(Phase.Edit, () => RealtimeGI.WriteLightingData(data, null, settings, new RealtimeGI.EnvironmentBake(true, null)));
+                Assert.False(data.LightingDataWritten);
+                Assert.Contains(logs.Messages, m => m.Type == LogType.Warning && m.Message.Contains("LightingData.asset"));
+            }
+            finally
+            {
+                RealtimeGI.s_Warned.Clear();
+                Object.DestroyImmediate(settings);
+            }
+        }
+
+        [Fact]
         public void ARealtimeContributorLitByProbesIsBakedAsLightmappedAndNamed()
         {
             // Receive Global Illumination is read from the scene; what the Editor's realtime GI

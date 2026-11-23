@@ -52,9 +52,9 @@ namespace UnityEngine
         /// bakeCompleted (isRunning false again), answers true, and the scene then has the bake's
         /// realtime GI, in Edit mode at once and in Play mode, and is dirty (not saved). The
         /// realtime GI is Unbound's own precompute of the scene's renderers (<see cref="Bake"/>),
-        /// cached under LibraryUnbound/RealtimeGI. Not made, each said once per scene: the
-        /// lighting data asset the Editor writes beside the scene (LightingData.asset and its
-        /// .meta, with the scene's folder's .meta), which the scene then names; baked lightmaps
+        /// cached under LibraryUnbound/RealtimeGI. The lighting data the Editor writes beside the
+        /// scene, which the scene then names, is written for a bake of the environment alone
+        /// (<see cref="WriteLightingData"/>). Not made, each said once per scene: baked lightmaps
         /// and the light probes' baked lighting where the scene's Lighting Settings have baked
         /// global illumination on (Q677); baked reflection probes. The environment lighting is
         /// made (<see cref="BakeEnvironment"/>). Of the baked lightmaps Unbound lays out where each renderer would
@@ -88,8 +88,8 @@ namespace UnityEngine
                     scene.BakedOnOpen = true;
                     NoteBakeParts(file, settings, ScriptBake);
                     SceneLoaded(scene.Handle.Value, default, file, settings, first, bake: true, scriptBake: true);
-                    var faces = BakeEnvironment(file);
-                    WriteLightingData(scene, file, settings, faces);
+                    var environment = BakeEnvironment(file);
+                    WriteLightingData(scene, file, settings, environment);
                     BakedAtlas.Lay(file, settings);
                     first = false;
                     UnityEditor.SceneManagement.EditorSceneManager.Dirty(scene);
@@ -154,11 +154,13 @@ namespace UnityEngine
         /// part alone). Said once and made: a project with a render pipeline asset. Without a
         /// graphics device nothing is drawn: said once, the environment kept.</para>
         /// </summary>
-        /// <returns>The skybox's faces the default reflection was made of (its size, and red,
-        /// green and blue floats, face by face), or null where none was made.</returns>
-        static (int Size, float[] Faces)? BakeEnvironment(LoadedFile file)
+        /// <returns>Whether the environment lighting was made as measured, each part of it (not
+        /// where any part was kept as the scene had it), and the skybox's faces the default
+        /// reflection was made of, or null where none was made.</returns>
+        static EnvironmentBake BakeEnvironment(LoadedFile file)
         {
             (int Size, float[] Faces)? drawn = null;
+            bool made = true;
             string path = file.Path;
             var (probe, reflection) = RenderSettings.BakedEnvironment(file);
             // Where none is made the scene keeps what it had, also when it loads again (the bake
@@ -167,7 +169,7 @@ namespace UnityEngine
             if (!Native.IsReady)
             {
                 RememberEnvironment(path, probe, reflection);
-                return null;
+                return default;
             }
             const string kept = "the scene keeps the environment lighting it had";
             string skipped = !RenderSettings.InEffect(file)
@@ -181,11 +183,12 @@ namespace UnityEngine
             {
                 Warn("bake-environment-kept:" + skipped, skipped);
                 RememberEnvironment(path, probe, reflection);
-                return null;
+                return default;
             }
             if (Rendering.GraphicsSettings.currentRenderPipeline != null)
                 Warn("bake-environment-pipeline:" + path, $"{path}: Lightmapping.Bake's environment lighting with a render pipeline asset is not measured; Unbound makes it as the built-in render pipeline's.");
             var parts = BakedParts(Rendering.SupportedRenderingFeatures.active, RenderSettings.ambientMode, RenderSettings.defaultReflectionMode);
+            made = parts.Probe != EnvironmentPart.Kept && parts.Reflection != EnvironmentPart.Kept;
             if (parts.Probe == EnvironmentPart.Kept)
                 Warn("bake-environment-custom-ambient:" + path, $"{path}: Lightmapping.Bake's ambient probe with a Custom ambient source is not measured and not made: the scene keeps the probe it had.");
             if (parts.Reflection == EnvironmentPart.Kept)
@@ -221,6 +224,7 @@ namespace UnityEngine
                     catch (InvalidOperationException e)
                     {
                         Warn("bake-reflection-failed:" + path, $"{path}: Lightmapping.Bake could not make the default reflection of the skybox: {e.Message}; the scene keeps the reflection it had.");
+                        made = false;
                     }
             }
             RenderSettings.SetBakedEnvironment(file, probe, reflection);
@@ -231,8 +235,27 @@ namespace UnityEngine
             if (earlier != null && earlier != reflection && s_MadeReflections.Remove(earlier))
                 Object.DestroyImmediate(earlier);
             RememberEnvironment(path, probe, reflection);
-            return drawn;
+            return new EnvironmentBake(made, drawn);
         }
+
+        /// <summary>Why a bake's lighting data is not written beside its scene's
+        /// <paramref name="folder"/> (null: untitled), or null where it is: nothing is written, or
+        /// deleted, where any of it would not be the Editor's. <paramref name="editable"/>: whether
+        /// a path is of the project's own assets (AssetDatabase's answer by default).</summary>
+        internal static string Unwritten(LightingSettings settings, string folder, bool environmentMade, Func<string, bool> editable = null) =>
+            settings == null || settings.bakedGI || settings.realtimeGI
+                ? "Unbound writes it for a bake of the environment alone (baked and realtime global illumination off)"
+            : folder == null ? "an untitled scene's is not measured"
+            : !Compat.BakeFilesMeasured ? $"of Unity {Application.unityVersion} it is not measured (its release family)"
+            : !environmentMade ? "this bake did not make all of the environment lighting (said)"
+            : !(editable ?? UnityEditor.AssetDatabase.Editable)(folder) ? "the scene is not in the project's own assets"
+            : null;
+
+        /// <summary>What <see cref="BakeEnvironment"/> made: whether the whole environment
+        /// lighting was made as measured (default: not made), and the skybox's faces its default
+        /// reflection was made of (its size, and red, green and blue floats, face by face), or
+        /// null.</summary>
+        internal readonly record struct EnvironmentBake(bool Made, (int Size, float[] Faces)? Drawn);
 
         /// <summary>The image a bake writes its default reflection to, in the scene's folder.</summary>
         const string ReflectionImage = "ReflectionProbe-0.exr";
@@ -249,21 +272,25 @@ namespace UnityEngine
         /// half floats; imported as a cube convolved for glossy reflection, clamped, trilinear),
         /// which the scene then reflects, or none (one an earlier bake wrote is deleted), and the
         /// lighting data (LightingData.asset), which the scene then names. Written for a bake of
-        /// the environment alone (baked and realtime global illumination off); the lighting data
-        /// of other bakes is not written yet (said once). The files are the Editor's but for the
-        /// GUIDs of the new assets.
+        /// the environment alone (baked and realtime global illumination off) that made all of
+        /// it, of a scene of the project's own assets, in the measured release family; otherwise
+        /// nothing is written or deleted (said once): the lighting data of other bakes is not
+        /// written yet. The files are the Editor's but for the GUIDs of the new assets.
         /// </summary>
-        static void WriteLightingData(Unbound.Runtime.SceneData scene, LoadedFile file, LightingSettings settings, (int Size, float[] Faces)? faces)
+        internal static void WriteLightingData(Unbound.Runtime.SceneData scene, LoadedFile file, LightingSettings settings, EnvironmentBake environment)
         {
-            if (string.IsNullOrEmpty(scene.Path)) return;
             scene.LightingDataWritten = false;
-            // (Without the native side, as in managed tests, nothing is written either.)
-            if (settings == null || settings.bakedGI || settings.realtimeGI || !Native.IsReady)
+            string folder = string.IsNullOrEmpty(scene.Path) ? null
+                : scene.Path.Substring(0, scene.Path.Length - System.IO.Path.GetExtension(scene.Path).Length);
+            // (Without the native side, as in managed tests, nothing is made or written.)
+            string unwritten = Unwritten(settings, folder, Native.IsReady && environment.Made);
+            if (unwritten != null)
             {
-                Warn("script-bake-asset:" + scene.Path, $"{scene.Path}: Lightmapping.Bake writes its lighting data (LightingData.asset beside it) in the Editor, which the scene then names; Unbound writes it for a bake of the environment alone (baked and realtime global illumination off), and keeps this bake for the session (LibraryUnbound/RealtimeGI) without writing it.");
+                string name = folder == null ? "an untitled scene" : scene.Path;
+                Warn("script-bake-asset:" + name, $"{name}: Lightmapping.Bake writes its lighting data (LightingData.asset beside it) in the Editor, which the scene then names; {unwritten}: Unbound keeps this bake for the session (LibraryUnbound/RealtimeGI) without writing it.");
                 return;
             }
-            var folder = scene.Path.Substring(0, scene.Path.Length - System.IO.Path.GetExtension(scene.Path).Length);
+            var faces = environment.Drawn;
             if (!UnityEditor.AssetDatabase.IsValidFolder(folder))
             {
                 int slash = folder.LastIndexOf('/');
