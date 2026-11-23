@@ -1,0 +1,24 @@
+{
+  "commands": [
+    "python3 tests/projects/spriteatlassecondary/run.py gate"
+  ],
+  "summary": "spriteatlassecondary: .*",
+  "engine_paths": [
+    "crates/unbound-assets/src/dilate.rs",
+    "crates/unbound-assets/src/sprite_atlas.rs",
+    "crates/unbound-assets/src/sprite_atlas/definition.rs",
+    "crates/unbound-assets/src/texture.rs",
+    "crates/unbound-runtime/src/sprite_atlases.rs",
+    "managed/UnityEngine/Graphics/Renderer.cs",
+    "managed/UnityEngine/Graphics/Sprite.cs",
+    "managed/UnityEngine/U2D/SpriteAtlasPacking.cs",
+    "tests/projects/urp2d/Assets/DefaultVolumeProfile.asset",
+    "tests/projects/urp2d/Assets/DefaultVolumeProfile.asset.meta",
+    "tests/projects/urp2d/Assets/Settings/",
+    "tests/projects/urp2d/Assets/Settings.meta",
+    "tests/projects/urp2d/Assets/UniversalRenderPipelineGlobalSettings.asset",
+    "tests/projects/urp2d/Assets/UniversalRenderPipelineGlobalSettings.asset.meta",
+    "tests/projects/urp2d/Packages/",
+    "tests/projects/urp2d/ProjectSettings/"
+  ]
+}
