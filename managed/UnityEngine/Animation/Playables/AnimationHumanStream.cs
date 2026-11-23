@@ -46,7 +46,9 @@ namespace Unbound.Runtime.Playables
         bool m_HumanValid, m_SkeletonValid, m_Changed;
         /// <summary>A job moved or scaled bones of the skeleton through their handles: values that
         /// stay in the skeleton and are left out when the pose is made from it.</summary>
-        bool m_BonesMoved, m_HipsScaleWritten;
+        bool m_BonesMoved;
+        // IK starts from the human pose when a handle has changed the hips' non-uniform scale.
+        bool m_HipsScaleOverridden;
         AnimStream m_Stream;
 
         const int GoalCount = 4;
@@ -119,7 +121,7 @@ namespace Unbound.Runtime.Playables
             m_SkeletonValid = false;
             m_Changed = false;
             m_BonesMoved = false;
-            m_HipsScaleWritten = false;
+            m_HipsScaleOverridden = false;
             m_BonesKept = false;
             Array.Clear(m_GoalSet);
             Array.Clear(m_HintSet);
@@ -219,7 +221,7 @@ namespace Unbound.Runtime.Playables
             m_SkeletonValid = true;
             m_BonesKept = false;
             m_BonesMoved = false;
-            m_HipsScaleWritten = false;
+            m_HipsScaleOverridden = false;
             HumanOps.RetargetTo(m_Human, Pose, null, Root, m_World, m_Local, m_Global, true);
         }
 
@@ -323,7 +325,7 @@ namespace Unbound.Runtime.Playables
             // as the hips' own scale puts them (bone.rotateThenHuman).
             BoneSkeleton();
             BoneWorldFromLocal(node, out position, out rotation, out scale);
-            if (m_HipsScaleWritten && !IsHips(node)) position = BoneWorldPoint(node);
+            if (UsesPointChain(node)) position = BoneWorldPoint(node);
         }
 
         void BoneWorldFromLocal(int node, out F4 position, out F4 rotation, out F4 scale)
@@ -345,7 +347,22 @@ namespace Unbound.Runtime.Playables
             scale = ps * x.s;
         }
 
-        // Carry the point through each local frame before applying a nonuniform hips scale.
+        // A non-uniform scale can change a position when a rotation follows it.
+        static bool UniformScale(F4 scale) =>
+            Mathf.Approximately(scale.x, scale.y) && Mathf.Approximately(scale.x, scale.z);
+
+        bool UsesPointChain(int node)
+        {
+            if (!Compat.HumanStreamHipsScale || IsHips(node)) return false;
+            var skeleton = m_Human.Skeleton;
+            int hips = m_Human.BoneIndex[Bone.Hips];
+            bool nonUniform = false;
+            int parent = skeleton.Parent[node];
+            for (; parent > 0 && parent != hips; parent = skeleton.Parent[parent])
+                nonUniform |= !UniformScale(m_Local.X[parent].s);
+            return parent == hips && (nonUniform || !UniformScale(m_Local.X[hips].s * m_Local.X[skeleton.Parent[hips]].s));
+        }
+
         F4 BoneWorldPoint(int node)
         {
             F4 point = default;
@@ -354,6 +371,25 @@ namespace Unbound.Runtime.Playables
             for (; node != hips; node = skeleton.Parent[node])
                 point = M.MulPoint(m_Local.X[node], point);
             return M.MulPoint(M.Mul(m_Local.X[skeleton.Parent[hips]], m_Local.X[hips]), point);
+        }
+
+        F4 WorldPointInBoneFrame(int node, F4 position)
+        {
+            var skeleton = m_Human.Skeleton;
+            if (IsHips(node))
+                return M.InvMulPoint(M.Mul(m_Local.X[skeleton.Parent[node]], m_Local.X[node]), position);
+            return M.InvMulPoint(m_Local.X[node], WorldPointInBoneFrame(skeleton.Parent[node], position));
+        }
+
+        internal bool TryGetScaledLocalPosition(int node, Vector3 world, out Vector3 position)
+        {
+            if (!UsesPointChain(node))
+            {
+                position = default;
+                return false;
+            }
+            position = P(WorldPointInBoneFrame(m_Human.Skeleton.Parent[node], V(world)));
+            return true;
         }
 
         internal void BoneWorld(int node, out Vector3 position, out Quaternion rotation, out Vector3 scale)
@@ -389,8 +425,11 @@ namespace Unbound.Runtime.Playables
             var bones = BoneSkeleton();
             int hips = m_Human.BoneIndex[Bone.Hips];
             var parent = bones.X[m_Human.Skeleton.Parent[hips]];
-            bones.X[hips].s = V(scale) * M.RcpSafe(parent.s);
-            m_HipsScaleWritten = true;
+            var local = V(scale) * M.RcpSafe(parent.s);
+            var before = bones.X[hips].s;
+            if (!Mathf.Approximately(local.x, before.x) || !Mathf.Approximately(local.y, before.y) || !Mathf.Approximately(local.z, before.z))
+                m_HipsScaleOverridden = !UniformScale(V(scale));
+            bones.X[hips].s = local;
             BoneChanged();
         }
 
@@ -639,7 +678,7 @@ namespace Unbound.Runtime.Playables
             m_SkeletonValid = true;
             m_HumanValid = false;
             m_BonesKept = false;
-            m_HipsScaleWritten = false;
+            m_HipsScaleOverridden = false;
         }
 
         internal Vector3 GetGoalPosition(int g) => ToWorldPoint(GoalLocalPosition(g));
@@ -683,7 +722,7 @@ namespace Unbound.Runtime.Playables
         {
             UpdateSkeletonPose();
             int node = m_Human.BoneIndex[HumanOps.GoalBoneOf(g)];
-            if (m_HipsScaleWritten) return P(BoneWorldPoint(node));
+            if (UsesPointChain(node)) return P(BoneWorldPoint(node));
             Skel.ComputeGlobal(m_Human.Skeleton, m_Local, m_Global);
             return P(m_Global.X[node].t);
         }
@@ -705,7 +744,15 @@ namespace Unbound.Runtime.Playables
             if (!m_HintSet[g])
             {
                 UpdateSkeletonPose();
-                Skel.ComputeGlobal(m_Human.Skeleton, m_Local, m_Global);
+                var placed = m_Local;
+                if (m_HipsScaleOverridden && !m_HumanValid)
+                {
+                    // Before the human pose takes the bone edits, default hints use its previous
+                    // placement (humanoid bone.scaleHipsFirstHint).
+                    HumanOps.RetargetTo(m_Human, Pose, null, Root, m_World, m_W4, m_Global, true);
+                    placed = m_W4;
+                }
+                Skel.ComputeGlobal(m_Human.Skeleton, placed, m_Global);
                 for (int i = 0; i < GoalCount; i++)
                 {
                     if (m_HintSet[i]) continue;
@@ -727,6 +774,8 @@ namespace Unbound.Runtime.Playables
         /// job left them. The pose is made again from the solved skeleton when next read.</summary>
         internal void SolveIK()
         {
+            // The solve builds a skeleton from the current human pose (humanoid bone.scaleHipsThenSolve).
+            if (m_HipsScaleOverridden) m_SkeletonValid = false;
             UpdateSkeletonPose();
             var s = m_Human.Skeleton;
             Skel.ComputeGlobal(s, m_Local, m_Global);

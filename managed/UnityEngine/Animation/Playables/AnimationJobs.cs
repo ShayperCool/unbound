@@ -477,8 +477,12 @@ namespace Unbound.Runtime.Playables
             pose.BoneParentWorld(d.Human, out var pp, out var pr, out var ps);
             if (p.HasValue)
             {
-                var local = Quaternion.Inverse(pr) * (p.Value - pp);
-                pose.SetBoneLocalPosition(d.Human, new Vector3(Div(local.x, ps.x), Div(local.y, ps.y), Div(local.z, ps.z)));
+                if (!pose.TryGetScaledLocalPosition(d.Human, p.Value, out var position))
+                {
+                    var local = Quaternion.Inverse(pr) * (p.Value - pp);
+                    position = new Vector3(Div(local.x, ps.x), Div(local.y, ps.y), Div(local.z, ps.z));
+                }
+                pose.SetBoneLocalPosition(d.Human, position);
             }
             if (r.HasValue && Unbound.Runtime.Playables.HumanStreamPose.UnitRotation(r.Value, out Quaternion unit))
                 pose.SetBoneLocalRotation(d.Human, Quaternion.Inverse(pr) * unit);

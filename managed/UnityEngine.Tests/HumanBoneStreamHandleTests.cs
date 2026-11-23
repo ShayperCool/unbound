@@ -355,6 +355,9 @@ namespace UnityEngine.Tests
             var hand = animator.transform.Find("Hips/Spine/Chest/LeftUpperArm/LeftLowerArm/LeftHand");
             var hipsHandle = animator.BindStreamTransform(hips);
             var handHandle = animator.BindStreamTransform(hand);
+            var chain = new List<TransformStreamHandle>();
+            for (var joint = hand; joint != hips; joint = joint.parent)
+                chain.Add(animator.BindStreamTransform(joint));
             var sceneScale = hips.localScale;
 
             Evaluate(animator, (stream, deltaTime) =>
@@ -367,7 +370,20 @@ namespace UnityEngine.Tests
                 hipsHandle.SetLocalScale(stream, desired);
                 Near(measured ? desired : start, hipsHandle.GetLocalScale(stream));
                 if (measured)
-                    Assert.True((handHandle.GetPosition(stream) - before).sqrMagnitude > 1e-5f);
+                {
+                    var inHips = Vector3.zero;
+                    foreach (var joint in chain)
+                    {
+                        joint.GetLocalTRS(stream, out var position, out var rotation, out var scale);
+                        inHips = position + rotation * Vector3.Scale(scale, inHips);
+                    }
+                    var placed = hipsHandle.GetLocalToWorldMatrix(stream).MultiplyPoint3x4(inHips);
+                    Assert.True((placed - before).sqrMagnitude > 1e-5f);
+                    Near(placed, handHandle.GetPosition(stream));
+                    var moved = placed + new Vector3(.3f, -.1f, .2f);
+                    handHandle.SetPosition(stream, moved);
+                    Near(moved, handHandle.GetPosition(stream));
+                }
                 else
                     Near(before, handHandle.GetPosition(stream));
 
