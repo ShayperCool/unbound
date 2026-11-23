@@ -22,13 +22,14 @@ corners), then the colours A, B and C get, drawn by a SpriteRenderer, under a di
 and a point light that uses normal maps, and A under a light of the masked blend style 3 (0-255;
 values compare within 1, by which the Editor on different GPUs rounds them apart).
 
-The Editor's order between sprites of different sets of secondary textures is not a function of
-the sets (in scratch captures, swapping the sets between sprites reordered them inconsistently);
-Unbound orders such sets by a hash of their properties and textures, so A and B trade places in
-the page: `residuals.json` lists their texture rects. Not measured: textures of both colour
-spaces under one property in one page, per-property secondary settings, mipmapped secondary pages (filtered as plain texels), alpha dilation (which
-leaves the border fill's alpha, a normal map's x, empty), and the order `GetSprites` lists the
-sprites of different sets in.
+A sprite without secondary textures packs first; the others pack by area (A before B). The
+Editor's order between sprites of different sets of one area is not a function of the sets (in
+scratch captures, swapping the sets between sprites reordered them inconsistently); Unbound breaks
+such ties by a hash of their properties and textures. Not measured (Unbound warns): textures of
+both colour spaces under one property in one page, per-property secondary settings, mipmapped
+secondary pages (filtered as plain texels), alpha dilation (which leaves the border fill's alpha,
+a normal map's x, empty); not measured: the order `GetSprites` lists the sprites of different
+sets in (Unbound keeps its texture order).
 
 ```sh
 python3 tests/projects/spriteatlassecondary/run.py record --label A     # twice, A and B

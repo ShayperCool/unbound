@@ -358,11 +358,11 @@ fn secondary_guids(meta: &Path) -> Vec<Guid> {
         .collect()
 }
 
-/// The packer's key for a sprite's set of secondary textures (0 without any): sprites of one set
-/// pack together. The Editor packs a sprite without secondary textures before those with them
-/// (tests/projects/spriteatlassecondary); its order of two different sets is not a function of
-/// the sets (swapping sets between sprites reorders them), so this orders them by an FNV-1a
-/// hash of their property names and texture GUIDs.
+/// The packer's key for a sprite's set of secondary textures (0 without any). The Editor packs a
+/// sprite without secondary textures before those with them, then by area
+/// (tests/projects/spriteatlassecondary); its order of two different sets of one area is not a
+/// function of the sets (swapping sets between sprites reorders them), so such ties break by an
+/// FNV-1a hash of their property names and texture GUIDs.
 fn secondary_hash(textures: &[unbound_assets::sprite::SecondaryTextureDef]) -> u64 {
     if textures.is_empty() {
         return 0;
@@ -476,7 +476,8 @@ impl Importer for AtlasImporter<'_> {
     // 5: an atlas tells whether its pack is complete.
     // 6: a variant without a master is not packed (its pack is incomplete).
     // 7: secondary textures are packed into secondary pages.
-    const VERSION: u32 = 7;
+    // 8: sprites with secondary textures pack by area before their set.
+    const VERSION: u32 = 8;
 
     fn dependencies(&self, source: &Path) -> Result<Vec<PathBuf>> {
         let bytes = std::fs::read(source)?;
@@ -635,7 +636,6 @@ impl Importer for AtlasImporter<'_> {
             let mut own = Vec::new();
             for sec in &texture.sprites[s].secondary_textures {
                 let guid = Guid::parse(&sec.guid);
-                let known = guid.is_some_and(|g| imported.contains_key(&g));
                 let found = match guid {
                     Some(guid) => imported
                         .entry(guid)
@@ -670,7 +670,7 @@ impl Importer for AtlasImporter<'_> {
                 };
                 let Some(found) = found else {
                     // Reported once per texture (when first looked up); an unreadable GUID per sprite.
-                    if guid.is_none() && !known {
+                    if guid.is_none() {
                         packed.warnings.push(format!(
                             "atlas {}: secondary texture {} of {} names no asset; it is not packed",
                             def.name, sec.name, texture.name
@@ -798,10 +798,28 @@ impl Importer for AtlasImporter<'_> {
                     continue;
                 }
                 for (property, texture) in own {
-                    if !properties.iter().any(|(p, _)| p == property) {
-                        properties.push((property, texture.srgb));
+                    match properties.iter().find(|(p, _)| p == property) {
+                        None => properties.push((property, texture.srgb)),
+                        Some(&(_, srgb)) if srgb != texture.srgb => packed.warnings.push(format!(
+                            "atlas {}: the {property} textures of page {page} are not all in one \
+                             colour space; the page takes the first's (unmeasured)",
+                            def.name
+                        )),
+                        Some(_) => {}
                     }
                 }
+            }
+            if !properties.is_empty() && (def.alpha_dilation || page_settings.mipmaps) {
+                packed.warnings.push(format!(
+                    "atlas {}: its secondary pages are made with {} as its page is (unmeasured: \
+                     the fill leaves a normal map's x empty, the mipmaps filter plain texels)",
+                    def.name,
+                    match (def.alpha_dilation, page_settings.mipmaps) {
+                        (true, true) => "alpha dilation and mipmaps",
+                        (true, false) => "alpha dilation",
+                        _ => "mipmaps",
+                    }
+                ));
             }
             let mut pages = Vec::new();
             for (property, srgb) in properties {

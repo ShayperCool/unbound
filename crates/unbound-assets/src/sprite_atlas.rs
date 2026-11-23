@@ -208,29 +208,32 @@ impl Layout {
     }
 }
 
-/// The packing order: secondary textures, then area (largest first), then texture.
+/// The packing order: sprites without secondary textures first, then area (largest first), then
+/// the set of secondary textures (matches the Unity 6000.0.71f1 Editor,
+/// tests/projects/spriteatlassecondary; the Editor's order of two sets of one area is not a
+/// function of the sets), then texture.
 fn compare(a: &PackSprite, b: &PackSprite) -> Ordering {
-    a.secondary_hash
-        .cmp(&b.secondary_hash)
+    (a.secondary_hash != 0)
+        .cmp(&(b.secondary_hash != 0))
         .then_with(|| {
             let area = |s: &PackSprite| s.rect[2] * s.rect[3];
             area(b).partial_cmp(&area(a)).unwrap_or(Ordering::Equal)
         })
+        .then_with(|| a.secondary_hash.cmp(&b.secondary_hash))
         .then_with(|| compare_texture_only(a, b))
 }
 
 /// Sprites by texture: one texture's by the FNV-1a hash of their names (signed), others by
-/// their textures' GUIDs.
+/// their textures' GUIDs. (Secondary textures do not take part: the order `GetSprites` lists
+/// sprites of different sets in is unmeasured.)
 fn compare_texture_only(a: &PackSprite, b: &PackSprite) -> Ordering {
-    a.secondary_hash.cmp(&b.secondary_hash).then_with(|| {
-        if a.texture == b.texture {
-            (fnv1a(a.name) as i32).cmp(&(fnv1a(b.name) as i32))
-        } else {
-            guid_words(a.texture_guid)
-                .cmp(&guid_words(b.texture_guid))
-                .then(a.texture.cmp(&b.texture))
-        }
-    })
+    if a.texture == b.texture {
+        (fnv1a(a.name) as i32).cmp(&(fnv1a(b.name) as i32))
+    } else {
+        guid_words(a.texture_guid)
+            .cmp(&guid_words(b.texture_guid))
+            .then(a.texture.cmp(&b.texture))
+    }
 }
 
 /// The sprites by texture, as `SpriteAtlas.GetSprites` lists an atlas's packed sprites.

@@ -1,6 +1,0 @@
-{
-  "The Editor's order between sprites of different sets of secondary textures (here A's and B's) is not a function of the sets (swapping the sets between sprites reorders them inconsistently); Unbound orders such sets by a hash of their properties and textures, so the two sprites trade places in the page. Pages, texels and the lit colours match.": [
-    "A.textureRect",
-    "B.textureRect"
-  ]
-}
