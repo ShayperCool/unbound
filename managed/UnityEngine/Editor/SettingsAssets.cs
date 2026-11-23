@@ -168,6 +168,10 @@ namespace Unbound.Runtime
             return Load(file) ? file : null;
         }
 
+        /// <summary>Reads settings without creating the editor object that exposes them.</summary>
+        internal static YText ReadBody(string name) =>
+            Files.TryGetValue(name, out var file) && LoadText(file) ? file.Body : null;
+
         internal static SettingsFile ByGuid(string guid)
         {
             if (string.IsNullOrEmpty(guid)) return null;
@@ -200,13 +204,20 @@ namespace Unbound.Runtime
             return null;
         }
 
-        static bool Load(SettingsFile file)
+        static bool LoadText(SettingsFile file)
         {
-            if (file.Object != null) return true;
+            if (file.Documents != null) return true;
             if (string.IsNullOrEmpty(ProjectInfo.ProjectPath) || !File.Exists(file.FilePath)) return false;
             var text = File.ReadAllText(file.FilePath);
             if (!text.StartsWith("%YAML", StringComparison.Ordinal)) return false;
             file.Documents = UnityYamlText.Parse(text);
+            return true;
+        }
+
+        static bool Load(SettingsFile file)
+        {
+            if (file.Object != null) return true;
+            if (!LoadText(file)) return false;
             var type = FindType(file.ClassName) ?? typeof(Object);
             Object obj;
             using (ObjectRegistry.AsAssets())

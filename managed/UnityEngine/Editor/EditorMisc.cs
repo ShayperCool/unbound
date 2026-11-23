@@ -248,7 +248,8 @@ namespace UnityEditor
             {
                 if (s_StandaloneBuildSubtarget == value) return;
                 s_StandaloneBuildSubtarget = value;
-                PlayerSettings.StandaloneBuildSubtargetChanged();
+                if (EditorUserBuildSettingsInfo.ActiveGroup == BuildTargetGroup.Standalone)
+                    PlayerSettings.RefreshApplicationIdentifier();
             }
         }
     }

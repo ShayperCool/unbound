@@ -394,6 +394,7 @@ public static unsafe class Game
             c.EditorScenes.Select(s => new UnityEditor.EditorBuildSettingsScene(s.Path, s.Enabled) { guid = new UnityEditor.GUID(s.Guid) }),
             c.ConfigObjects.ToDictionary(p => p.Key, p => (p.Value.Guid, p.Value.FileId)));
         UnityEditor.EditorUserBuildSettingsInfo.SetTargetGroup(c.TargetGroup);
+        UnityEditor.PlayerSettings.RefreshApplicationIdentifier();
         GameDomain.ImageFilter = (image, symbols) =>
         {
             AccessChecks.Symbols = symbols;

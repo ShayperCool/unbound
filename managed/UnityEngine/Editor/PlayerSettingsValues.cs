@@ -41,7 +41,7 @@ namespace UnityEditor
         internal static string StoredText(string key) => SettingsAssets.Value("ProjectSettings", key);
 
         static string StoredTargetText(string key, string target) =>
-            SettingsAssets.AtPath("ProjectSettings/ProjectSettings.asset")?.Body?.Get(key)?.Get(target)?.Text;
+            SettingsAssets.ReadBody("ProjectSettings")?.Get(key)?.Get(target)?.Text;
 
         static void SetTargetText(YText body, string key, string target, string value)
         {
@@ -66,10 +66,9 @@ namespace UnityEditor
             }
         }
 
-        internal static void StandaloneBuildSubtargetChanged()
+        internal static void RefreshApplicationIdentifier()
         {
-            // Switching between Player and Server changes the active identifier right away.
-            if (Compat.ProjectBuildIdentityMeasured && EditorUserBuildSettingsInfo.ActiveGroup == BuildTargetGroup.Standalone)
+            if (Compat.ProjectBuildIdentityMeasured)
                 ProjectInfo.Identifier = GetApplicationIdentifier(ApplicationIdentifierTarget);
         }
 
@@ -113,9 +112,11 @@ namespace UnityEditor
 
         public static string GetApplicationIdentifier(NamedBuildTarget buildTarget)
         {
-            if (!Compat.ProjectBuildIdentityMeasured || string.IsNullOrEmpty(ProjectInfo.ProjectPath))
+            if (!Compat.ProjectBuildIdentityMeasured)
                 return ProjectInfo.Identifier;
-            return StoredTargetText("applicationIdentifier", buildTarget.TargetName)
+            var body = SettingsAssets.ReadBody("ProjectSettings");
+            if (body == null) return ProjectInfo.Identifier;
+            return body.Get("applicationIdentifier")?.Get(buildTarget.TargetName)?.Text
                 ?? NormalizeIdentifier($"com.{ProjectInfo.CompanyName}.{ProjectInfo.ProductName}", buildTarget);
         }
 
@@ -133,6 +134,11 @@ namespace UnityEditor
             }
             if (string.IsNullOrEmpty(buildTarget.TargetName))
                 throw new ArgumentException($"The provided target platform group name ({buildTarget.TargetName}) is not valid.");
+            if (SettingsAssets.ReadBody("ProjectSettings") == null)
+            {
+                Stubs.Ignored("UnityEditor.PlayerSettings.SetApplicationIdentifier", "the project has no readable ProjectSettings.asset");
+                return;
+            }
 
             string stored = NormalizeIdentifier(identifier, buildTarget);
             SettingsAssets.Edit("ProjectSettings", body =>
