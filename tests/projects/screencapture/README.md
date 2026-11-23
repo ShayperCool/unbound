@@ -211,6 +211,7 @@ These observations are for Graphics.ExecuteCommandBuffer with the Unity
 6000.0.71f1 Linux OpenGL Core device, in Linear and Gamma. Other graphics
 devices and Unity release families are unmeasured.
 
-The active profile compares 391 values and 106 images in Linear and 122
-values and 40 images in Gamma. All 146 images match the Editor captures
-byte for byte.
+Two fresh Editor runs in each color space reproduced the existing active
+reference before the command-buffer cases were appended. The active
+profile compares 391 values and 106 images in Linear and 122 values and
+40 images in Gamma. All 146 images match the Editor captures byte for byte.
