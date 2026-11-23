@@ -345,6 +345,9 @@ namespace Unbound.Runtime.Playables
         internal float OutputWeight = 1f;
         internal bool UsesMeasuredJobVelocities;
         internal bool UsesMeasuredKinematicJobRoot;
+        internal bool UsesMeasuredScriptedJobRoot;
+        bool m_CanMoveDuringJob, m_JobInterrupted;
+        AnimatorRootMotion? m_JobHumanStep;
         /// <summary>How this evaluation's streams carry root motion (set by <see cref="Run"/>).</summary>
         internal RootMotionMode MotionMode;
         readonly List<(AnimationKind Kind, PlayableNode Node, bool Combined)> m_Evaluated = new List<(AnimationKind, PlayableNode, bool)>();
@@ -392,6 +395,9 @@ namespace Unbound.Runtime.Playables
             e.Seek = e.AutomaticFrame = e.RootMotion = e.ReferencePose = e.PlayableIK = e.Replay = false;
             e.UsesMeasuredJobVelocities = false;
             e.UsesMeasuredKinematicJobRoot = false;
+            e.UsesMeasuredScriptedJobRoot = false;
+            e.m_CanMoveDuringJob = e.m_JobInterrupted = false;
+            e.m_JobHumanStep = null;
             e.OutputWeight = 1f;
             e.MotionMode = default;
             e.Combining = 0;
@@ -789,7 +795,9 @@ namespace Unbound.Runtime.Playables
             animator.m_OutputEvaluations++;
             try
             {
+                e.m_CanMoveDuringJob = !suppressMovement && !deferPhases && Compat.HumanStreamScriptedRoot;
                 pending = Run(e, animator, bindings, outputs, suppressMovement);
+                if (pending == null) return;
                 if (AnimationPhases.Split)
                 {
                     // Clip events and the controller's state callbacks precede movement and the
@@ -823,6 +831,11 @@ namespace Unbound.Runtime.Playables
             List<(PlayableOutputData Output, double Dt, bool Seek)> outputs, bool suppressMovement)
         {
             var result = Sample(e, animator, bindings, outputs, out var motion, out float motionDeltaTime);
+            if (e.m_JobInterrupted)
+            {
+                AnimStream.Return(result);
+                return null;
+            }
             var evaluatedPlayer = animator.m_Player;
             var withController = evaluatedPlayer != null && animator.isActiveAndEnabled;
             var pending = PendingOutput.Rent();
@@ -832,6 +845,7 @@ namespace Unbound.Runtime.Playables
             pending.Motion = motion;
             pending.DeltaTime = motionDeltaTime;
             pending.SuppressMovement = suppressMovement;
+            pending.MovementDelivered = e.m_JobHumanStep.HasValue;
             pending.ControllerMovement = withController && animator.m_Player.DeferOutput;
             pending.PlayableIK = e.PlayableIK;
             pending.Manual = AnyManual(outputs);
@@ -841,7 +855,10 @@ namespace Unbound.Runtime.Playables
             {
                 // The same sample and feet-pivot memory as controller-driven humanoid motion.
                 // Advance it once even when motion is not requested, as the controller does.
-                animator.Human.ApplyMotion(result.BodyMotion.HasMotion ? result.BodyMotion : HumanRootMotion.NoMotion, motionDeltaTime, out var step);
+                AnimatorRootMotion step;
+                if (e.m_JobHumanStep is { } ready) step = ready;
+                else animator.Human.ApplyMotion(result.BodyMotion.HasMotion ? result.BodyMotion : HumanRootMotion.NoMotion,
+                    motionDeltaTime, out step);
                 // Visibility return projects the retained (blended) clip step, before this
                 // evaluation's feet-pivot correction, in the root's current frame
                 // (6000.0.71f1, animculling humanMixerMotion and humanMixerShape).
@@ -901,9 +918,12 @@ namespace Unbound.Runtime.Playables
                     && !animator.isHuman && o.Graph.UpdateMode == DirectorUpdateMode.Manual && o.Weight == 1f
                     && source == AnimationStreamSource.DefaultValues && JobKind.HasEmptyMotionSource(o.Source)
                     && outputs.Count == 1 && AnimationOutputs.ActiveCount(animator) == 1;
-                e.UsesMeasuredKinematicJobRoot = Compat.HumanStreamKinematicBodyRoot && e.MotionMode == RootMotionMode.Human
-                    && o.Graph.UpdateMode == DirectorUpdateMode.Manual && o.Weight == 1f
-                    && source == AnimationStreamSource.DefaultValues && JobKind.HasSingleHumanClipInput(o.Source);
+                bool directManualHumanJob = e.MotionMode == RootMotionMode.Human && o.Graph.UpdateMode == DirectorUpdateMode.Manual
+                    && o.Weight == 1f && source == AnimationStreamSource.DefaultValues && JobKind.HasSingleHumanClipInput(o.Source);
+                e.UsesMeasuredKinematicJobRoot = Compat.HumanStreamKinematicBodyRoot && directManualHumanJob;
+                e.UsesMeasuredScriptedJobRoot = e.m_CanMoveDuringJob && directManualHumanJob
+                    && ((ClipKind)o.Source.Inputs[0].Node.Kind).Clip.m_Events.Count == 0 && MoveCallbacks.Any(animator)
+                    && animator.GetComponent<Rigidbody>() == null && animator.GetComponent<CharacterController>() == null;
                 AnimStream s;
                 // The tree's own weights decide which clips fire events; the output's weight blends
                 // the pose only (6000.0.71f1, animculling weight/0: a clip under an output at
@@ -923,6 +943,11 @@ namespace Unbound.Runtime.Playables
                     e.PreviousInputs = null;
                 }
                 else s = e.Evaluate(o.Source, o.SourcePort, 1f);
+                if (e.m_JobInterrupted)
+                {
+                    AnimStream.Return(s);
+                    break;
+                }
                 e.OutputWeight = 1f;
                 if (!(o.Weight > 0f)) e.PlayableIK = ik;
                 if (e.MotionMode == RootMotionMode.Compute)
@@ -1070,6 +1095,24 @@ namespace Unbound.Runtime.Playables
             && node.Kind is ClipKind clip && clip.Clip != null && clip.Clip.HasHumanCurves
             && clip.Clip.length > 0f && !clip.Clip.HumanClipMotion.Settings.Mirror && !clip.OverrideLoopTime;
 
+        // The clip has sampled its movement and this job finished ProcessRootMotion. The
+        // animation callback reads after the script moved the root. A recursive evaluation,
+        // graph destruction or a changed avatar invalidates the outstanding sample.
+        internal bool MoveScriptedJobRoot(PlayableNode node, AnimStream stream)
+        {
+            var animator = Animator;
+            var human = animator.Human;
+            int evaluation = animator.m_OutputEvaluations;
+            human.ApplyMotion(stream.BodyMotion.HasMotion ? stream.BodyMotion : HumanRootMotion.NoMotion,
+                stream.DeltaTime, out var step);
+            m_JobHumanStep = step;
+            ApplyHumanRootMotion(animator, step);
+            m_JobInterrupted = animator == null || !animator.isActiveAndEnabled
+                || animator.m_OutputEvaluations != evaluation || !ReferenceEquals(human, animator.Human)
+                || node.Destroyed || node.Graph.Destroyed;
+            return !m_JobInterrupted;
+        }
+
         /// <summary>Apply the already sampled humanoid motion. Visibility replay keeps the last
         /// local step without stepping the feet-pivot memory again.</summary>
         internal static void ApplyHumanRootMotion(Animator animator, in AnimatorRootMotion motion, bool dispatch = true)
@@ -1209,7 +1252,7 @@ namespace Unbound.Runtime.Playables
         internal AnimatorRootMotion HumanStep;
         internal AnimatorRootMotion? HumanMotion;
         internal float DeltaTime;
-        internal bool SuppressMovement, ControllerMovement, PlayableIK, Manual;
+        internal bool SuppressMovement, MovementDelivered, ControllerMovement, PlayableIK, Manual;
         internal int Weights;
         /// <summary>The Animator's output evaluation count when sampled: a later evaluation (an
         /// explicit one between the two leaves) makes this write stale.</summary>
@@ -1226,7 +1269,10 @@ namespace Unbound.Runtime.Playables
         internal void Move()
         {
             if (Result == null || Evaluation != Animator.m_OutputEvaluations) return;
-            if (Mode == RootMotionMode.Human) AnimationEvaluation.ApplyHumanRootMotion(Animator, HumanStep, dispatch: !SuppressMovement);
+            if (Mode == RootMotionMode.Human)
+            {
+                if (!MovementDelivered) AnimationEvaluation.ApplyHumanRootMotion(Animator, HumanStep, dispatch: !SuppressMovement);
+            }
             else if (Mode == RootMotionMode.Compute) AnimationEvaluation.ApplyRootMotion(Animator, Result, Motion, DeltaTime, dispatch: !SuppressMovement);
             else if (!SuppressMovement && ControllerMovement) Animator.m_Player?.ProcessRootMotion();
             // A movement callback may have evaluated the outputs again or disabled the Animator.
@@ -1264,7 +1310,7 @@ namespace Unbound.Runtime.Playables
         {
             if (Result != null) AnimStream.Return(Result);
             Result = null;
-            RootWritten = false;
+            RootWritten = MovementDelivered = false;
             Animator = null;
             HumanMotion = null;
             Events.Clear();

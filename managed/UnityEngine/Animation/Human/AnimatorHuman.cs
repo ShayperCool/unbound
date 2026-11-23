@@ -290,10 +290,11 @@ namespace Unbound.Runtime.Humanoid
         /// script (OnAnimatorMove), a Rigidbody or a CharacterController applies uses the root
         /// before it. Manual ProcessAnimation on a kinematic body matches that placement
         /// (humanoid bone.kinematicRoot). Other scripted or physics cases still report it.</summary>
-        internal Trs StreamRoot(bool humanMotion, in HumanRootMotionSample sample, float deltaTime, bool useKinematicAnimationRoot)
+        internal Trs StreamRoot(bool humanMotion, in HumanRootMotionSample sample, float deltaTime,
+            bool useKinematicAnimationRoot, bool useMovedAnimationRoot)
         {
             var root = AvatarX();
-            if (!humanMotion) return root;
+            if (!humanMotion || useMovedAnimationRoot) return root;
             var animator = m_Animator;
             bool hasMove = MoveCallbacks.Any(animator);
             if (!animator.m_ApplyRootMotion && !hasMove) return root;

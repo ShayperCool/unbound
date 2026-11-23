@@ -330,8 +330,9 @@ namespace Unbound.Runtime.Playables
         internal StreamVelocityEdits VelocityEdits;
         /// <summary>The evaluation the stream belongs to.</summary>
         internal AnimationEvaluation Evaluation;
-        internal bool UseKinematicAnimationRoot;
+        internal bool UseKinematicAnimationRoot, UseMovedAnimationRoot;
         Unbound.Runtime.Playables.HumanStreamPose m_Human;
+        internal bool HasHumanPose => m_Human != null;
 
         static readonly List<StreamContext> s_Active = new List<StreamContext> { null };
 
@@ -362,7 +363,8 @@ namespace Unbound.Runtime.Playables
                 Stubs.Ignored("AnimationHumanStream under a layer without Root",
                     "reads and writes the animated pose; the pose that places the body (layers whose mask keeps Root) is not part of it (not measured)");
             bool humanMotion = Evaluation != null && Evaluation.MotionMode == RootMotionMode.Human;
-            var root = human.StreamRoot(humanMotion, Stream.BodyMotion, Stream.DeltaTime, UseKinematicAnimationRoot);
+            var root = human.StreamRoot(humanMotion, Stream.BodyMotion, Stream.DeltaTime,
+                UseKinematicAnimationRoot, UseMovedAnimationRoot);
             m_Human = human.RentStreamPose();
             m_Human.Load(Stream, root);
             return m_Human;
@@ -1002,6 +1004,12 @@ namespace Unbound.Runtime.Playables
             return false;
         }
 
+        void InvokeJob(IntPtr stream, UnityEngine.Animations.JobMethodIndex method)
+        {
+            using var jobScope = Unbound.Runtime.Jobs.JobSystem.AnimationJob();
+            Dispatch(Job, stream, (IntPtr)(int)method);
+        }
+
         internal override void Evaluate(AnimationEvaluation e, PlayableNode node, int viaPort, float weight, AnimStream into)
         {
             into.JobRan = true;
@@ -1049,20 +1057,24 @@ namespace Unbound.Runtime.Playables
                 if (Job != null)
                 {
                     var stream = context.ToStream();
-                    using var jobScope = Unbound.Runtime.Jobs.JobSystem.AnimationJob();
                     unsafe
                     {
                         var pointer = (IntPtr)(&stream);
                         try
                         {
-                            Dispatch(Job, pointer, (IntPtr)(int)UnityEngine.Animations.JobMethodIndex.ProcessRootMotionMethodIndex);
+                            InvokeJob(pointer, UnityEngine.Animations.JobMethodIndex.ProcessRootMotionMethodIndex);
                         }
                         finally
                         {
                             if (measuredVelocities) BeginAnimationPhase(context, into, inputJob);
                         }
                         context.UseKinematicAnimationRoot = e.UsesMeasuredKinematicJobRoot;
-                        Dispatch(Job, pointer, (IntPtr)(int)UnityEngine.Animations.JobMethodIndex.ProcessAnimationMethodIndex);
+                        if (e.UsesMeasuredScriptedJobRoot && !context.HasHumanPose)
+                        {
+                            if (!e.MoveScriptedJobRoot(node, into)) return;
+                            context.UseMovedAnimationRoot = true;
+                        }
+                        InvokeJob(pointer, UnityEngine.Animations.JobMethodIndex.ProcessAnimationMethodIndex);
                     }
                 }
             }
