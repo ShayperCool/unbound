@@ -8,4 +8,12 @@
 {"key":"graph.hitchCountedNextFrame","value":"True"}
 {"key":"graph.wholeBuffers","value":"False"}
 {"key":"graph.movesEveryFrame","value":"True"}
+{"key":"stall.dspCounted","value":"True"}
+{"key":"stall.filterRanEveryBuffer","value":"True"}
+{"key":"stall.filterHadSignal","value":"True"}
+{"key":"stall.filterBufferLength","value":"True"}
+{"key":"stall.toneMoved","value":"True"}
+{"key":"stall.shortClipEnded","value":"True"}
+{"key":"stall.scheduledStarted","value":"True"}
+{"key":"stall.scheduledFromItsTime","value":"True"}
 {"key":"complete","value":"1"}

@@ -23,6 +23,15 @@ started):
   between the audio clock's buffers it moves with the frames (an exploratory capture: by about
   each frame's real time).
 
+A second phase starts three sources at frame 160 (a 10 s 440 Hz tone at 0.5 with an
+`OnAudioFilterRead` script that counts its calls, `StallFilter`), at frame 199 plays a 0.5 s clip and
+schedules a 10 s one 1 s ahead, and sleeps 3 s in frame 200's `Update`. Frame 201 reads (`stall.*`):
+the clock counted the stall; the filter ran once per dsp buffer of it, with the tone (0.354 per
+channel at centre pan) and buffers of the configured length; the tone moved by the stall; the short
+clip ended; the scheduled source started and has played from its scheduled time. The Editor mixes
+all of it on its audio thread during the stall. An exploratory capture also read the listener's
+`GetOutputData` as all zeros in batch mode with the tone playing; it is not part of the probe.
+
 Exploratory macOS Editor captures outside the reference also showed the clock moving within a frame
 (a 30 ms busy wait in `Update` moved it by one or two buffers) and, with Disable Unity Audio set,
 `dspTime` 0 in every frame, `outputSampleRate` and the buffer size 0 and the configuration's

@@ -21,6 +21,10 @@ public class DspClockProbe : MonoBehaviour
     /// <summary>The frame from which real time and the dsp clock are compared.</summary>
     const int FirstCompared = 10;
     const int LastFrame = 150;
+    /// <summary>Phase two: sources start at <see cref="SourcesFrame"/>, the frame before
+    /// <see cref="StallFrame"/> starts a short clip and schedules one, and <see cref="StallFrame"/>'s
+    /// Update sleeps <see cref="StallMilliseconds"/>; the frame after it reads what the stall did.</summary>
+    const int SourcesFrame = 160, StallFrame = 200, StallMilliseconds = 3000, EndFrame = 210;
 
     StreamWriter output;
     int frames, length;
@@ -28,6 +32,10 @@ public class DspClockProbe : MonoBehaviour
     readonly List<double> dsp = new List<double>(), realtime = new List<double>(), graphTime = new List<double>();
     PlayableGraph graph;
     Playable root;
+    AudioSource tone, shortClip, scheduled;
+    StallFilter filter;
+    double stallStartDsp, toneTimeBefore, scheduledAt;
+    long callsBefore;
 
     void Put(string key, object value) => output.WriteLine(JsonUtility.ToJson(new Row { key = key, value = Convert.ToString(value, CultureInfo.InvariantCulture) }));
 
@@ -52,17 +60,92 @@ public class DspClockProbe : MonoBehaviour
         dsp.Add(AudioSettings.dspTime);
         realtime.Add(Time.realtimeSinceStartupAsDouble);
         if (frames == HitchFrame) System.Threading.Thread.Sleep(HitchMilliseconds);
+        if (frames == SourcesFrame) StartSources();
+        if (frames == StallFrame - 1)
+        {
+            shortClip.Play();
+            scheduledAt = AudioSettings.dspTime + 1.0;
+            scheduled.PlayScheduled(scheduledAt);
+        }
+        if (frames == StallFrame)
+        {
+            stallStartDsp = AudioSettings.dspTime;
+            toneTimeBefore = tone.time;
+            callsBefore = System.Threading.Interlocked.Read(ref filter.calls);
+            filter.peak = 0f;
+            System.Threading.Thread.Sleep(StallMilliseconds);
+        }
+        if (frames == StallFrame + 1) ReadStall();
+    }
+
+    static AudioClip Tone(string name, float seconds, int sampleRate)
+    {
+        int samples = Mathf.RoundToInt(seconds * sampleRate);
+        var data = new float[samples];
+        for (int i = 0; i < samples; i++) data[i] = 0.5f * Mathf.Sin(2f * Mathf.PI * 440f * i / sampleRate);
+        var clip = AudioClip.Create(name, samples, 1, sampleRate, false);
+        clip.SetData(data, 0);
+        return clip;
+    }
+
+    AudioSource Source(string name, AudioClip clip)
+    {
+        var source = new GameObject(name).AddComponent<AudioSource>();
+        source.clip = clip;
+        source.spatialBlend = 0f;
+        return source;
+    }
+
+    void StartSources()
+    {
+        gameObject.AddComponent<AudioListener>();
+        int sampleRate = AudioSettings.outputSampleRate;
+        tone = Source("Tone", Tone("tone", 10f, sampleRate));
+        filter = tone.gameObject.AddComponent<StallFilter>();
+        tone.Play();
+        shortClip = Source("Short", Tone("short", 0.5f, sampleRate));
+        scheduled = Source("Scheduled", Tone("scheduled", 10f, sampleRate));
+    }
+
+    /// <summary>What a 3 s stall of the main thread did, read in the frame after it: the dsp clock
+    /// counted it, the playing source's filter ran for every dsp buffer of it with the source's
+    /// signal (a 0.5 tone at centre pan: 0.354 per channel), the source moved by it, a clip shorter
+    /// than it ended, and a source scheduled within it started at its time.</summary>
+    void ReadStall()
+    {
+        double step = length / rate;
+        double counted = AudioSettings.dspTime - stallStartDsp;
+        double stall = StallMilliseconds / 1000.0;
+        Put("stall.dspCounted", counted >= 0.9 * stall && counted <= stall + 0.5);
+        long calls = System.Threading.Interlocked.Read(ref filter.calls) - callsBefore;
+        Put("stall.filterRanEveryBuffer", Math.Abs(calls - counted / step) <= 3);
+        Put("stall.filterHadSignal", filter.peak > 0.3f);
+        Put("stall.filterBufferLength", filter.lastLength == length * filter.lastChannels);
+        Put("stall.toneMoved", Math.Abs(tone.time - toneTimeBefore - counted) <= 3 * step + 0.02);
+        Put("stall.shortClipEnded", !shortClip.isPlaying);
+        bool started = scheduled.isPlaying && scheduled.time > 0f;
+        Put("stall.scheduledStarted", started);
+        Put("stall.scheduledFromItsTime", started && Math.Abs(scheduled.time - (AudioSettings.dspTime - scheduledAt)) <= 3 * step + 0.02);
     }
 
     void LateUpdate()
     {
         graphTime.Add(root.GetTime());
-        if (frames < LastFrame) return;
+        if (frames == LastFrame) Measure();
+        if (frames < EndFrame) return;
         try { Finish(); }
         catch (Exception e) { Debug.LogException(e); output.Dispose(); EditorApplication.Exit(1); }
     }
 
     void Finish()
+    {
+        graph.Destroy();
+        Put("complete", 1);
+        output.Dispose();
+        EditorApplication.Exit(0);
+    }
+
+    void Measure()
     {
         double step = length / rate;
         bool whole = true, monotonic = true;
@@ -98,9 +181,5 @@ public class DspClockProbe : MonoBehaviour
         bool everyFrame = true;
         for (int i = 1; i < graphTime.Count; i++) everyFrame &= graphTime[i] > graphTime[i - 1];
         Put("graph.movesEveryFrame", everyFrame);
-        graph.Destroy();
-        Put("complete", 1);
-        output.Dispose();
-        EditorApplication.Exit(0);
     }
 }
