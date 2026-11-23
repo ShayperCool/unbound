@@ -17,6 +17,8 @@ public sealed class GameConfig
     public string ProjectRoot { get; set; } = "";
     public string ProjectData { get; set; } = "";
     public string UnityVersion { get; set; } = "";
+    /// <summary>The release's build revision ("" when the host does not know it).</summary>
+    public string UnityRevision { get; set; } = "";
     /// <summary>The graphics device the host chose (GraphicsDeviceType's name).</summary>
     public string GraphicsDevice { get; set; } = "";
     /// <summary>Its rendering threading mode (RenderingThreadingMode's name).</summary>
@@ -369,6 +371,7 @@ public static unsafe class Game
         if (string.IsNullOrEmpty(c.UnityVersion))
             throw new InvalidOperationException("the host named no Unity release for the project");
         ProjectInfo.UnityVersion = c.UnityVersion;
+        ProjectInfo.UnityRevision = c.UnityRevision;
         Unbound.Runtime.GraphicsDeviceProfile.Select(c.GraphicsDevice, c.RenderingThreadingMode);
         ProjectInfo.Features.Clear();
         foreach (var feature in c.Features) ProjectInfo.Features.Add(feature);

@@ -19,6 +19,24 @@ namespace UnityEditorInternal
         [Unbound.EditorFaithful("Unbound has no editor views to repaint (as the batch-mode Editor)")]
         public static void RepaintAllViews() { }
 
+        static bool s_WarnedRevision;
+
+        /// <summary>The release with its build revision, as the Editor of the release states it
+        /// ("6000.0.71f1 (907bc2d768b5)"). Without a known revision (no Hub modules.json beside the
+        /// Editor, and none in the project's version file) the release alone, said once.</summary>
+        public static string GetFullUnityVersion()
+        {
+            string version = UnityEngine.ProjectInfo.UnityVersion;
+            string revision = UnityEngine.ProjectInfo.UnityRevision;
+            if (!string.IsNullOrEmpty(revision)) return version + " (" + revision + ")";
+            if (!s_WarnedRevision)
+            {
+                s_WarnedRevision = true;
+                Debug.LogError($"Unbound: the build revision of Unity {version} is not known (no Hub modules.json beside the Editor and none in ProjectSettings/ProjectVersion.txt): InternalEditorUtility.GetFullUnityVersion answers the release without it.");
+            }
+            return version;
+        }
+
         // The Inspector's expanded state: one for all objects of a type (a script's class is its
         // type), expanded until collapsed; a material has its own, collapsed until expanded. It
         // lasts for the session (the Editor also keeps it in the project's Library: not done).

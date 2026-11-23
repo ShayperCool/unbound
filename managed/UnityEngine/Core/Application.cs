@@ -292,6 +292,9 @@ namespace UnityEngine
         /// always sets: Unbound opens no project without one. Until then, in the tools that run
         /// without a game, the release the 6000.0 family's answers were measured on.</summary>
         internal static string UnityVersion = Unbound.Runtime.Compat.Measured6000_0;
+        /// <summary>The release's build revision (as `907bc2d768b5`), "" when the host does not know
+        /// it (its installation, or the project's version file of the same release).</summary>
+        internal static string UnityRevision = "";
         /// <summary>The compatibility profile's behaviour switches this release has (unbound-compat's
         /// Feature names); empty when the host did not say, as in unit tests.</summary>
         internal static readonly HashSet<string> Features = new HashSet<string>(StringComparer.Ordinal);

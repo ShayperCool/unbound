@@ -374,6 +374,8 @@ pub fn prepare(
         config["playerPrefsPath"] = json!(prefs);
     }
     // Outside the literal above, which is at json!'s recursion limit.
+    // The release's build revision (InternalEditorUtility.GetFullUnityVersion), "" unknown.
+    config["unityRevision"] = json!(project.revision().unwrap_or_default());
     // SystemInfo.renderingThreadingMode where -force-gfx-mt set it (else the device's own).
     if let Some(mode) = crate::graphics_device::forced_threading() {
         config["renderingThreadingMode"] = json!(mode.name());
