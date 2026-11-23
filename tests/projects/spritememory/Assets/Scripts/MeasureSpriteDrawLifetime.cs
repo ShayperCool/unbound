@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using UnityEngine;
@@ -6,15 +7,23 @@ using UnityEngine.Profiling;
 using UnityEngine.Rendering;
 using Object = UnityEngine.Object;
 
-static class MeasureSpriteDrawLifetime
+public sealed class MeasureSpriteDrawLifetime : MonoBehaviour
 {
     [Serializable] sealed class Row { public string k, v; }
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
-    static void Capture()
+    static void Begin()
     {
         string output = Environment.GetEnvironmentVariable("SPRITE_MEMORY_OUT");
-        if (string.IsNullOrEmpty(output)) return;
+        if (!string.IsNullOrEmpty(output))
+            new GameObject("Sprite allocation probe").AddComponent<MeasureSpriteDrawLifetime>().StartCoroutine(Capture(output));
+    }
+
+    static IEnumerator Capture(string output)
+    {
+        // The graphics device is available after the first frame.
+        yield return null;
+
         var rows = new List<string>();
         void Put(string key, string value) => rows.Add(JsonUtility.ToJson(new Row { k = key, v = value }));
         void Read(string stage, Sprite sprite) => Put(stage, Profiler.GetRuntimeMemorySizeLong(sprite).ToString());
