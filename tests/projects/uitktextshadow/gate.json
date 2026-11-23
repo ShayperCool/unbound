@@ -1,0 +1,9 @@
+{
+  "commands": [
+    "python3 tests/projects/uitktextshadow/run.py gate --release $UNBOUND_PROBE_UNITY_VERSION"
+  ],
+  "summary": "[0-9]+/[0-9]+ text shadow checks match",
+  "engine_paths": [
+    "tests/projects/uitk/"
+  ]
+}
