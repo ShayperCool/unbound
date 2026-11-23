@@ -3046,7 +3046,6 @@ impl Mixer {
         }
     }
 
-    /// Advances the clock by `frames` without an output device.
     /// The virtual device's work for `frames` frames of real time (no output device). A device
     /// mixes on its own thread while the game's frame runs, so a long frame (a stall) costs the
     /// game nothing; here the frame's real time is mixed as the next frame starts. Beyond the
@@ -3074,9 +3073,13 @@ impl Mixer {
     /// ring, in whole dsp buffers.
     fn catch_up_window(&self) -> usize {
         let buffer = (self.config.buffer_size as usize).max(1);
-        RING_FRAMES.max(self.config.sample_rate as usize / 2).div_ceil(buffer) * buffer
+        RING_FRAMES
+            .max(self.config.sample_rate as usize / 2)
+            .div_ceil(buffer)
+            * buffer
     }
 
+    /// Advances the clock by `frames` without an output device.
     pub fn advance(&mut self, frames: usize) {
         let mut done = 0;
         while done < frames {
@@ -3158,7 +3161,7 @@ impl Mixer {
         let need_mix = !self.catching_up
             && (!self.discard_output
                 || self.listener_filter
-            || !self.listener_chain.filters.is_empty()
+                || !self.listener_chain.filters.is_empty()
                 || self.listener_output_wanted
                 || !self.group_nodes.is_empty());
         self.mix[..n * 2].fill(0.0);
@@ -4628,6 +4631,9 @@ fn render_voice(
     {
         voice.zone_send.until = 0;
     }
+    if out.is_none() && voice.stream.is_none() && zone_send.is_none() {
+        return move_unheard_voice(voice, clip, n, t0, step, looping, measured_matrix, entries);
+    }
     let inv_n = 1.0 / n as f32;
     // The ramped gains of a voice without the measured matrix ramp, frame by frame.
     let mut ramp = [0.0; MATRIX_ENTRIES];
@@ -4653,11 +4659,7 @@ fn render_voice(
             voice.zone_send.end_at = voice.end_at;
             voice.zone_send.looping = looping;
         }
-        // A decoded voice nothing hears (virtual, or its samples unwanted) only moves: every
-        // consumer of its frame is in the output branch below.
-        let input = if out.is_none() && voice.stream.is_none() {
-            [0.0; MAX_INPUT_CHANNELS]
-        } else if let Some(stream) = &mut voice.stream {
+        let input = if let Some(stream) = &mut voice.stream {
             let i = voice.position.floor();
             let frac = (voice.position - i) as f32;
             let i = i as u64;
@@ -4767,6 +4769,49 @@ fn render_voice(
                 }
                 voice.position = voice.position.rem_euclid(frames);
             }
+        }
+    }
+    voice.zone_send.next_at = t0 + n as u64;
+    voice.zone_send.next_position = voice.position;
+    None
+}
+
+/// A decoded voice nothing hears (virtual, its samples unwanted, or caught up): `render_voice`'s
+/// frames without the sample work. Its fade, start, end and position move frame by frame as there,
+/// so it stands exactly where mixing would have left it.
+#[allow(clippy::too_many_arguments)]
+fn move_unheard_voice(
+    voice: &mut Voice,
+    clip: &Clip,
+    n: usize,
+    t0: u64,
+    step: f64,
+    looping: bool,
+    measured_matrix: bool,
+    entries: usize,
+) -> Option<u64> {
+    let frames = clip.frames as f64;
+    for f in 0..n {
+        let dsp = t0 + f as u64;
+        if dsp < voice.start_at {
+            if voice.fade_frames < VOICE_GAIN_RAMP_FRAMES {
+                voice.advance_fade(measured_matrix, entries);
+            }
+            continue;
+        }
+        if dsp >= voice.end_at {
+            return Some(dsp);
+        }
+        if voice.fade_frames < VOICE_GAIN_RAMP_FRAMES {
+            voice.advance_fade(measured_matrix, entries);
+        }
+        voice.rendered = true;
+        voice.position += step;
+        if voice.position >= frames || voice.position < 0.0 {
+            if !looping {
+                return Some(dsp + 1);
+            }
+            voice.position = voice.position.rem_euclid(frames);
         }
     }
     voice.zone_send.next_at = t0 + n as u64;
@@ -5596,7 +5641,11 @@ mod tests {
         assert!(filtered >= 40);
         for handle in [7, 8, 9] {
             let (a, b) = (whole.source_state(handle), caught.source_state(handle));
-            assert_eq!((a.main, a.position), (b.main, b.position), "source {handle}");
+            assert_eq!(
+                (a.main, a.position),
+                (b.main, b.position),
+                "source {handle}"
+            );
         }
         assert_eq!(caught.source_state(8).main, voice_state::NONE);
         assert_eq!(caught.source_state(9).main, voice_state::PLAYING);
@@ -5606,6 +5655,41 @@ mod tests {
         caught.output_data(0, 0, &mut b, -1);
         assert_eq!(a, b);
         assert!(b.iter().any(|v| *v != 0.0));
+    }
+
+    #[test]
+    fn an_observed_group_is_mixed_for_every_buffer_of_a_stall() {
+        use std::cell::Cell;
+        thread_local! {
+            static OBSERVED: Cell<i64> = const { Cell::new(0) };
+        }
+        extern "C" fn script(kind: i32, _: u64, _: *mut f32, _: i32, _: i32, _: i64) {
+            if kind == callback::GROUP_OUTPUT {
+                OBSERVED.with(|c| c.set(c.get() + 1));
+            }
+        }
+        let run = |catch_up: bool| {
+            OBSERVED.with(|c| c.set(0));
+            let mut m = mixer();
+            m.discard_output = true;
+            m.set_callback(Some(script));
+            let mut group = filter_group(3, 0, "Attenuation");
+            group.mixer = 3;
+            group.observe = true;
+            m.configure_group(group).unwrap();
+            m.add_clip(1, ramp_clip(60_000, 1000));
+            source_with(&mut m, 7, 1, |p| p.group = 3);
+            play(&mut m, 7, command::PLAY, 0.0);
+            if catch_up {
+                m.advance_virtual(40 * 1024);
+            } else {
+                m.advance(40 * 1024);
+            }
+            (m.mixed_frames, OBSERVED.with(Cell::get))
+        };
+        let (mixed, observed) = run(true);
+        assert_eq!(mixed, 40 * 1024);
+        assert_eq!((mixed, observed), run(false));
     }
 
     #[test]

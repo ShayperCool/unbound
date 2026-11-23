@@ -1120,9 +1120,11 @@ therefore catches up (`Mixer::advance_virtual`): sources move, end and start as 
 whose samples scripts read (`OnAudioFilterRead`, `GetOutputData`) are rendered and run their filters
 for every buffer, but nothing is mixed and the graph (mixer groups, reverb zones, listener components)
 holds still; the last half second is then mixed whole, so output data read after it holds mixed audio.
-A listener `OnAudioFilterRead` or an observed group keeps every buffer mixed. Unmeasured: what a
-graph's effects carry from before a catch-up into the half second after it (the Editor's ran
-through the stall).
+A listener `OnAudioFilterRead` or an observed group keeps every buffer mixed. This applies to any
+frame longer than half a second, a scene-load hitch on an idle machine too. Unmeasured: what a
+graph's effects (an echo's delay line, a reverb's decay) carry from before a catch-up into the half
+second after it, which output data or spectrum read then shows (the Editor's ran through the
+stall).
 
 Limits: the clock does not move within a frame (that needs an audio thread running in real time,
 which runs at a fixed frame rate would no longer reproduce); a project with audio disabled runs the
