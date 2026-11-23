@@ -17,6 +17,10 @@ const LIGHT_PROBES_PATH_ID: i64 = 25_800_002;
 const SCENE_ASSET_PATH_ID: i64 = 102_900_000;
 /// The path ID of a cubemap imported from an image (a reflection probe's EXR).
 const CUBEMAP_PATH_ID: i64 = 8_900_000;
+/// A renderer's lightmap index for none.
+const NO_LIGHTMAP: &str = "65535";
+/// The path ID of an imported image's texture.
+const TEXTURE_PATH_ID: i64 = 2_800_000;
 /// A project asset in a file's list of external files.
 const ASSET_FILE: i32 = 3;
 /// The platform an Editor's project files are written for.
@@ -138,6 +142,40 @@ pub struct Environment {
     pub reflection_guid: Option<[u8; 16]>,
 }
 
+/// What a bake with baked global illumination adds to its lighting data.
+#[derive(Clone, Debug, Default)]
+pub struct Baked {
+    /// Each lightmap's image (Lightmap-N_comp_light.exr), its .meta's GUID, in order.
+    pub lightmaps: Vec<[u8; 16]>,
+    /// The renderers with a lightmap, in the bake's order.
+    pub renderers: Vec<LightmappedRenderer>,
+    /// The bake's lights, in its order.
+    pub lights: Vec<BakedLight>,
+}
+
+/// A renderer's place in the lightmaps (Renderer.lightmapIndex and lightmapScaleOffset).
+#[derive(Clone, Copy, Debug)]
+pub struct LightmappedRenderer {
+    /// Its file ID in the scene.
+    pub file_id: i64,
+    pub lightmap_index: i32,
+    pub scale_offset: [f32; 4],
+}
+
+/// What the bake did with a light (Light.bakingOutput).
+#[derive(Clone, Copy, Debug)]
+pub struct BakedLight {
+    /// Its file ID in the scene.
+    pub file_id: i64,
+    /// LightmapBakeType: 2 baked, 1 mixed.
+    pub bake_type: i32,
+    /// MixedLightingMode: 0 Baked Indirect, 1 Subtractive, 2 Shadowmask.
+    pub mixed_mode: i32,
+    /// The shadowmask channel, -1 for none.
+    pub occlusion_mask_channel: i32,
+    pub probe_occlusion_light_index: i32,
+}
+
 /// A GUID as a .meta writes it (32 hex digits, each byte's low nibble first) in a file's bytes.
 pub fn guid_bytes(text: &str) -> Result<[u8; 16]> {
     if text.len() != 32 {
@@ -151,8 +189,14 @@ pub fn guid_bytes(text: &str) -> Result<[u8; 16]> {
     Ok(out)
 }
 
-/// The lighting data file's bytes.
+/// The lighting data file's bytes of a bake of the environment alone.
 pub fn environment(environment: &Environment) -> Result<Vec<u8>> {
+    baked(environment, &Baked::default())
+}
+
+/// The lighting data file's bytes: the environment's, and the baked lightmaps, their renderers
+/// and the bake's lights.
+pub fn baked(environment: &Environment, baked: &Baked) -> Result<Vec<u8>> {
     let types = types(&environment.unity_version)?;
     let index = |class: i32| {
         types
@@ -187,6 +231,86 @@ pub fn environment(environment: &Environment) -> Result<Vec<u8>> {
         kind: ASSET_FILE,
         path: String::new(),
     }];
+    // The lightmaps' images name files of their own, after the scene and before the reflection's.
+    let mut lightmaps = Vec::new();
+    for guid in &baked.lightmaps {
+        externals.push(ExternalFile {
+            guid: *guid,
+            kind: ASSET_FILE,
+            path: String::new(),
+        });
+        let mut entry = element_default(&types[data_type], "m_Lightmaps")?;
+        entry.set_field("m_Lightmap", pptr(externals.len() as i32, TEXTURE_PATH_ID))?;
+        lightmaps.push(entry);
+    }
+    set(&mut data, "m_Lightmaps", Value::Seq(lightmaps))?;
+    let mut renderers = Vec::new();
+    let mut renderer_ids = Vec::new();
+    for r in &baked.renderers {
+        let mut entry = element_default(&types[data_type], "m_LightmappedRendererData")?;
+        // As the Editor writes a renderer without realtime GI or terrain: no dynamic lightmap,
+        // identity scale and offsets (tests/projects/bakedbuffers lightingData.json).
+        entry.set_field("lightmapIndexDynamic", Value::Scalar(NO_LIGHTMAP.into()))?;
+        for field in [
+            "terrainDynamicUVST",
+            "terrainChunkDynamicUVST",
+            "lightmapSTDynamic",
+        ] {
+            let st = entry
+                .get_mut_field(field)
+                .with_context(|| format!("no {field}"))?;
+            for (name, v) in ["x", "y", "z", "w"]
+                .iter()
+                .zip(["1.0", "1.0", "0.0", "0.0"])
+            {
+                st.set_field(name, Value::Scalar(v.into()))?;
+            }
+        }
+        entry.set_field("lightmapIndex", Value::Scalar(r.lightmap_index.to_string()))?;
+        let st = entry.get_mut_field("lightmapST").context("no lightmapST")?;
+        for (name, v) in ["x", "y", "z", "w"].iter().zip(r.scale_offset) {
+            st.set_field(name, Value::Scalar(format!("{v:?}")))?;
+        }
+        renderers.push(entry);
+        renderer_ids.push(object_id(
+            &types[data_type],
+            "m_LightmappedRendererDataIDs",
+            r.file_id,
+        )?);
+    }
+    set(
+        &mut data,
+        "m_LightmappedRendererData",
+        Value::Seq(renderers),
+    )?;
+    set(
+        &mut data,
+        "m_LightmappedRendererDataIDs",
+        Value::Seq(renderer_ids),
+    )?;
+    let mut lights = Vec::new();
+    let mut outputs = Vec::new();
+    for l in &baked.lights {
+        lights.push(object_id(&types[data_type], "m_Lights", l.file_id)?);
+        let mut output = element_default(&types[data_type], "m_LightBakingOutputs")?;
+        output.set_field(
+            "probeOcclusionLightIndex",
+            Value::Scalar(l.probe_occlusion_light_index.to_string()),
+        )?;
+        output.set_field(
+            "occlusionMaskChannel",
+            Value::Scalar(l.occlusion_mask_channel.to_string()),
+        )?;
+        let mode = output
+            .get_mut_field("lightmapBakeMode")
+            .context("no lightmapBakeMode")?;
+        mode.set_field("lightmapBakeType", Value::Scalar(l.bake_type.to_string()))?;
+        mode.set_field("mixedLightingMode", Value::Scalar(l.mixed_mode.to_string()))?;
+        output.set_field("isBaked", Value::Scalar("true".into()))?;
+        outputs.push(output);
+    }
+    set(&mut data, "m_Lights", Value::Seq(lights))?;
+    set(&mut data, "m_LightBakingOutputs", Value::Seq(outputs))?;
     if let Some(guid) = environment.reflection_guid {
         externals.push(ExternalFile {
             guid,
@@ -272,6 +396,29 @@ fn default_value(t: &RawType, i: usize) -> Value {
     ))
 }
 
+/// A new element of the top-level array field `field` of type `t`.
+fn element_default(t: &RawType, field: &str) -> Result<Value> {
+    let node = t
+        .children_of(0)
+        .into_iter()
+        .find(|&k| t.field_name(k) == field)
+        .with_context(|| format!("no field `{field}`"))?;
+    let array = *t.children_of(node).first().context("not an array")?;
+    let element = *t
+        .children_of(array)
+        .get(1)
+        .context("an array without elements")?;
+    Ok(default_value(t, element))
+}
+
+/// A scene object's identifier (SceneObjectIdentifier) as an element of the array `field`.
+fn object_id(t: &RawType, field: &str, file_id: i64) -> Result<Value> {
+    let mut id = element_default(t, field)?;
+    id.set_field("targetObject", Value::Scalar(file_id.to_string()))?;
+    id.set_field("targetPrefab", Value::Scalar("0".into()))?;
+    Ok(id)
+}
+
 fn set(value: &mut Value, field: &str, to: Value) -> Result<()> {
     value.set_field(field, to)
 }
@@ -348,6 +495,114 @@ mod tests {
                 expected.len()
             );
         }
+    }
+
+    #[test]
+    fn the_baked_lightmaps_renderers_and_lights_are_written() {
+        let environment = Environment {
+            unity_version: "6000.0.71f1".into(),
+            scene_guid: [1; 16],
+            lightmaps_mode: 0,
+            ambient_probe: [0.0; 27],
+            reflection_guid: Some([4; 16]),
+        };
+        let made = baked(
+            &environment,
+            &Baked {
+                lightmaps: vec![[2; 16], [3; 16]],
+                renderers: vec![
+                    LightmappedRenderer {
+                        file_id: 1161936178,
+                        lightmap_index: 0,
+                        scale_offset: [0.33057046, 0.33057046, 0.6549093, 0.15490928],
+                    },
+                    LightmappedRenderer {
+                        file_id: 267123693,
+                        lightmap_index: 1,
+                        scale_offset: [0.625, 0.625, 0.0, 0.0],
+                    },
+                ],
+                lights: vec![BakedLight {
+                    file_id: 1569681067,
+                    bake_type: 2,
+                    mixed_mode: 0,
+                    occlusion_mask_channel: -1,
+                    probe_occlusion_light_index: 0,
+                }],
+            },
+        )
+        .unwrap();
+        // The files named: the scene, the lightmaps in order, then the reflection.
+        let externals = serialized_writer::raw_externals(&made).unwrap();
+        assert_eq!(
+            externals.iter().map(|e| e.guid[0]).collect::<Vec<_>>(),
+            [1, 2, 3, 4]
+        );
+        let file = SerializedFile::parse(&made).unwrap();
+        let data = file.read(LIGHTING_DATA_PATH_ID).unwrap();
+        let lightmaps = data.get("m_Lightmaps").unwrap().as_seq().unwrap();
+        let lightmap = |k: usize, field: &str| {
+            lightmaps[k]
+                .get("m_Lightmap")
+                .unwrap()
+                .get(field)
+                .unwrap()
+                .as_str()
+                .unwrap()
+                .to_string()
+        };
+        assert_eq!(
+            (
+                lightmap(0, "m_FileID"),
+                lightmap(1, "m_FileID"),
+                lightmap(1, "m_PathID")
+            ),
+            ("2".into(), "3".into(), "2800000".into())
+        );
+        let renderers = data
+            .get("m_LightmappedRendererData")
+            .unwrap()
+            .as_seq()
+            .unwrap();
+        let ids = data
+            .get("m_LightmappedRendererDataIDs")
+            .unwrap()
+            .as_seq()
+            .unwrap();
+        assert_eq!(
+            ids[1].get("targetObject").unwrap().as_str(),
+            Some("267123693")
+        );
+        assert_eq!(
+            renderers[1].get("lightmapIndex").unwrap().as_str(),
+            Some("1")
+        );
+        assert_eq!(
+            renderers[0]
+                .get("lightmapST")
+                .unwrap()
+                .get("w")
+                .unwrap()
+                .as_str(),
+            Some("0.15490928")
+        );
+        assert_eq!(
+            renderers[0].get("lightmapIndexDynamic").unwrap().as_str(),
+            Some("65535")
+        );
+        let outputs = data.get("m_LightBakingOutputs").unwrap().as_seq().unwrap();
+        assert_eq!(
+            outputs[0].get("occlusionMaskChannel").unwrap().as_str(),
+            Some("-1")
+        );
+        assert_eq!(outputs[0].get("isBaked").unwrap().as_str(), Some("true"));
+        assert_eq!(
+            data.get("m_Lights").unwrap().as_seq().unwrap()[0]
+                .get("targetObject")
+                .unwrap()
+                .as_str(),
+            Some("1569681067")
+        );
     }
 
     #[test]
