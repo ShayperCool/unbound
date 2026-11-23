@@ -1,0 +1,65 @@
+{"k":"unity","v":"6000.0.71f1"}
+{"k":"device","v":"Vulkan"}
+{"k":"camera.initial","v":"4088/0"}
+{"k":"camera.cullingAndProjection","v":"4088/0"}
+{"k":"camera.stereoPhysical","v":"4088/0"}
+{"k":"camera.replacementShader","v":"4088/0"}
+{"k":"camera.target","v":"4088/0"}
+{"k":"camera.renderedTarget","v":"4088/0"}
+{"k":"camera.removedTarget","v":"4088/0"}
+{"k":"commands.oneEvent.1","v":"4100/1"}
+{"k":"commands.oneEvent.2","v":"4112/2"}
+{"k":"commands.oneEvent.3","v":"4136/3"}
+{"k":"commands.oneEvent.4","v":"4136/4"}
+{"k":"commands.oneEvent.5","v":"4184/5"}
+{"k":"commands.oneEvent.6","v":"4184/6"}
+{"k":"commands.oneEvent.7","v":"4184/7"}
+{"k":"commands.oneEvent.8","v":"4184/8"}
+{"k":"commands.oneEvent.9","v":"4280/9"}
+{"k":"commands.moreEvents","v":"4304/11"}
+{"k":"commands.clone","v":"4088/0"}
+{"k":"commands.copyFrom","v":"4088/0"}
+{"k":"commands.removeBuffer","v":"4304/2"}
+{"k":"commands.reuseReservedEvent","v":"4304/3"}
+{"k":"commands.removeEvent","v":"4292/2"}
+{"k":"commands.removeAll","v":"4088/0"}
+{"k":"mixed.ordered","v":"4184/5"}
+{"k":"mixed.removedAllMatches","v":"4184/2"}
+{"k":"mixed.remainingBuffers","v":"Second buffer/Third buffer"}
+{"k":"commands.warmCopyTarget","v":"4100/1"}
+{"k":"commands.warmCopyFrom","v":"4100/1"}
+{"k":"commands.warmCopyDestinationBuffer","v":"First reused buffer"}
+{"k":"commands.addAsync","v":"4196/3"}
+{"k":"commands.removeAsync","v":"4196/2"}
+{"k":"pipeline.beforeSwitch","v":"4100/1"}
+{"k":"pipeline.configuredAdd","v":"|"}
+{"k":"pipeline.afterConfiguredAdd","v":"4112/2"}
+{"k":"pipeline.addAfterSupports","v":"Warning: Your project uses a scriptable render pipeline. You can use Camera.AddCommandBuffer only with the built-in renderer.|"}
+{"k":"pipeline.afterSupports","v":"4112/2"}
+{"k":"pipeline.actualFrame","v":"True"}
+{"k":"pipeline.existing","v":"4112/2"}
+{"k":"pipeline.new","v":"4088/0"}
+{"k":"pipeline.add","v":"Warning: Your project uses a scriptable render pipeline. You can use Camera.AddCommandBuffer only with the built-in renderer.|"}
+{"k":"pipeline.afterRegister","v":"4088/0"}
+{"k":"pipeline.remove","v":"Warning: Your project uses a scriptable render pipeline. You can use Camera.RemoveCommandBuffer only with the built-in renderer.|"}
+{"k":"pipeline.afterRemove","v":"4112/2"}
+{"k":"pipeline.addAsync","v":"Warning: Your project uses a scriptable render pipeline. You can use Camera.AddCommandBufferAsync only with the built-in renderer.|"}
+{"k":"pipeline.getRetained","v":"First reused buffer/Second buffer"}
+{"k":"pipeline.get","v":"Warning: Your project uses a scriptable render pipeline. You can use Camera.GetCommandBuffers only with the built-in renderer.|"}
+{"k":"pipeline.removeEvent","v":"Warning: Your project uses a scriptable render pipeline. You can use Camera.RemoveCommandBuffers only with the built-in renderer.|"}
+{"k":"pipeline.removeAll","v":"Warning: Your project uses a scriptable render pipeline. You can use Camera.RemoveAllCommandBuffers only with the built-in renderer.|"}
+{"k":"pipeline.addNull","v":"|NullReferenceException: buffer is null"}
+{"k":"pipeline.addAsyncNull","v":"|NullReferenceException: buffer is null"}
+{"k":"pipeline.removeNull","v":"|NullReferenceException: buffer is null"}
+{"k":"pipeline.afterAllCalls","v":"4112/2"}
+{"k":"pipeline.addBeforeBuiltInFrame","v":"Warning: Your project uses a scriptable render pipeline. You can use Camera.AddCommandBuffer only with the built-in renderer.|"}
+{"k":"pipeline.beforeBuiltInFrame","v":"4112/2"}
+{"k":"pipeline.removeAfterManualRender","v":"Warning: Your project uses a scriptable render pipeline. You can use Camera.RemoveCommandBuffer only with the built-in renderer.|"}
+{"k":"pipeline.afterManualRender","v":"4112/2"}
+{"k":"pipeline.builtInFrameActive","v":"True"}
+{"k":"pipeline.removeAfterBuiltInFrame","v":"|"}
+{"k":"pipeline.restoredOldCamera","v":"4112/1"}
+{"k":"commands.builtInRemoveNull","v":"|NullReferenceException: buffer is null"}
+{"k":"commands.afterRemoveNull","v":"4112/1"}
+{"k":"pipeline.restoredNewCamera","v":"4088/0"}
+{"k":"complete","v":true}
