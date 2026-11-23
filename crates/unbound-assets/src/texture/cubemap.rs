@@ -1,13 +1,15 @@
 //! Cubemaps from images (`textureShape: Cube`): the six faces cut from a 6:1 or 1:6 strip or a
-//! 4:3 or 3:4 cross, or projected from a 2:1 latitude-longitude panorama, as `generateCubemap`
-//! says (AutoCubemap picks by aspect). The glossy convolution of their mips is in `specular`.
+//! 4:3 or 3:4 cross, projected from a latitude-longitude panorama or a sphere map, or the image's
+//! corner square on every face, as `generateCubemap` says (AutoCubemap picks by aspect). The
+//! glossy convolution of their mips is in `specular`.
 //!
 //! Faces are in Unity's order (+X, -X, +Y, -Y, +Z, -Z) and orientation: a face of a strip or
 //! cross is the square as the image shows it, top-down (the importer then flips rows as for any
 //! texture); in the vertical cross -Z is upside down. Directions of a face texel follow the
-//! D3D/Vulkan cube convention (assumed for the image layouts, not measured).
+//! D3D/Vulkan cube convention. The panorama, sphere map and corner square match the Unity
+//! 6000.0.71f1 Editor (tests/projects/cubemapimport).
 use super::{Image, TextureFormat, read_f32};
-use anyhow::{Result, bail};
+use anyhow::Result;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(super) enum Layout {
@@ -16,50 +18,89 @@ pub(super) enum Layout {
     HorizontalCross,
     VerticalCross,
     LatLong,
+    SphereMap,
+    /// Every face is the image's bottom-left square (the image cannot be laid out as a cube).
+    Corner,
 }
 
-/// The layout `generateCubemap` gives an image: AutoCubemap (6) and FullCubemap (5) by aspect,
-/// Cylindrical (2) a panorama; Spheremap (1) is not supported.
-pub(super) fn layout(width: u32, height: u32, mode: i32) -> Result<Layout> {
-    let (w, h) = (width as u64, height as u64);
-    let by_aspect = if w == 6 * h {
-        Layout::HorizontalStrip
+/// The strip or cross an image's exact aspect makes.
+fn exact(w: u64, h: u64) -> Option<Layout> {
+    if w == 6 * h {
+        Some(Layout::HorizontalStrip)
     } else if h == 6 * w {
-        Layout::VerticalStrip
+        Some(Layout::VerticalStrip)
     } else if 3 * w == 4 * h {
-        Layout::HorizontalCross
+        Some(Layout::HorizontalCross)
     } else if 4 * w == 3 * h {
-        Layout::VerticalCross
-    } else if w == 2 * h {
-        Layout::LatLong
+        Some(Layout::VerticalCross)
     } else {
-        bail!(
-            "a {width}x{height} image is no cubemap layout Unbound knows (6:1, 1:6, 4:3, 3:4, 2:1)"
-        )
-    };
-    match mode {
-        1 => bail!("spheremap cubemaps are not supported yet"),
-        2 => Ok(Layout::LatLong),
-        _ => Ok(by_aspect),
+        None
     }
 }
 
-/// The face size of a layout.
+/// What AutoCubemap makes of an image of no exact layout, by its aspect (width / height,
+/// inclusive bounds as fractions): the bands in which every image measured in the Unity
+/// 6000.0.71f1 Editor got the same mapping (tests/projects/cubemapimport Aspect*, Wide*,
+/// Square*, Tall*). Between the bands the choice is not monotonic in the aspect (1.25 a
+/// panorama, 0.85 the corner square, 0.7 and 0.8 a sphere map), so it is not taken there.
+const AUTO_BANDS: &[((u64, u64), (u64, u64), Layout)] = &[
+    ((1, 2), (2, 3), Layout::Corner),
+    ((9, 10), (28, 25), Layout::SphereMap),
+    ((23, 20), (6, 5), Layout::Corner),
+    ((29, 20), (38, 25), Layout::Corner),
+    ((31, 20), (14, 5), Layout::LatLong),
+    ((29, 10), (5, 1), Layout::Corner),
+];
+
+/// The layout `generateCubemap` gives an image: Spheremap (1) and Cylindrical (2) whatever its
+/// aspect; FullCubemap (5) a strip or cross by exact aspect, else the corner square;
+/// AutoCubemap (6, and any other value) a strip or cross by exact aspect, else by
+/// [`AUTO_BANDS`].
+pub(super) fn layout(width: u32, height: u32, mode: i32) -> Result<Layout> {
+    let (w, h) = (width as u64, height as u64);
+    match mode {
+        1 => return Ok(Layout::SphereMap),
+        2 => return Ok(Layout::LatLong),
+        _ => {}
+    }
+    if let Some(layout) = exact(w, h) {
+        return Ok(layout);
+    }
+    if mode == 5 {
+        return Ok(Layout::Corner);
+    }
+    AUTO_BANDS
+        .iter()
+        .find(|((ln, ld), (hn, hd), _)| ln * h <= w * ld && w * hd <= hn * h)
+        .map(|&(_, _, layout)| layout)
+        .ok_or_else(|| {
+            anyhow::anyhow!(
+                "AutoCubemap's mapping of a {width}x{height} image is not measured (aspects \
+                 measured: 1:2-2:3 corner square, 0.9-1.12 sphere map, 1.55-2.8 panorama, 2.9-5 \
+                 corner square, and the exact strips and crosses); set the texture's Mapping"
+            )
+        })
+}
+
+/// The face size a layout cuts or projects from the image, before it is made a power of two.
 pub(super) fn face_size(width: u32, height: u32, layout: Layout) -> u32 {
     match layout {
         Layout::HorizontalStrip => height,
         Layout::VerticalStrip => width,
         Layout::HorizontalCross => width / 4,
         Layout::VerticalCross => width / 3,
-        Layout::LatLong => width / 4,
+        Layout::LatLong | Layout::SphereMap => width / 2,
+        Layout::Corner => width.min(height),
     }
 }
 
-/// The six faces of an image (top-down rows), each `size` square before any resizing.
-pub(super) fn faces(image: &Image, layout: Layout) -> Vec<Image> {
-    let size = face_size(image.width, image.height, layout);
+/// The six faces of an image (top-down rows): cut at the layout's face size, projected at
+/// `size` (the faces' final size).
+pub(super) fn faces(image: &Image, layout: Layout, size: u32) -> Vec<Image> {
+    let cell = face_size(image.width, image.height, layout);
+    let bpp = image.format.bytes_per_pixel();
     let cut = |col: u32, row: u32, rotate: bool| -> Image {
-        let bpp = image.format.bytes_per_pixel();
+        let size = cell;
         let mut data = Vec::with_capacity((size * size) as usize * bpp);
         for y in 0..size {
             let sy = if rotate { size - 1 - y } else { y };
@@ -99,8 +140,26 @@ pub(super) fn faces(image: &Image, layout: Layout) -> Vec<Image> {
             cut(1, 1, false),
             cut(1, 3, true),
         ],
+        Layout::Corner => {
+            // The image's last rows, the first in Unity's bottom-up texture order, read upward.
+            let mut data = Vec::with_capacity((cell * cell) as usize * bpp);
+            for y in 0..cell {
+                let start = (((image.height - 1 - y) * image.width) as usize) * bpp;
+                data.extend_from_slice(&image.data[start..start + cell as usize * bpp]);
+            }
+            let face = Image {
+                width: cell,
+                height: cell,
+                format: image.format,
+                data,
+            };
+            vec![face; 6]
+        }
         Layout::LatLong => (0..6)
-            .map(|face| from_panorama(image, face, size))
+            .map(|face| project(image, face, size, panorama))
+            .collect(),
+        Layout::SphereMap => (0..6)
+            .map(|face| project(image, face, size, sphere_map))
             .collect(),
     }
 }
@@ -148,26 +207,53 @@ fn store(format: TextureFormat, value: [f32; 4], out: &mut Vec<u8>) {
     }
 }
 
-/// A face of a panorama: u = 0.75 − longitude/2π (longitude = atan2(z, x)), v = latitude/π from
-/// the top, as the built-in Skybox/Panoramic shader maps it (assumed for the importer), bilinear.
-fn from_panorama(image: &Image, face: usize, size: u32) -> Image {
+/// Where in the image (u right, v down, 0..1) a direction is taken from, and whether the image
+/// wraps around horizontally.
+type Mapping = fn([f32; 3]) -> (f32, f32, bool);
+
+/// A latitude-longitude panorama: u = 0.75 − longitude/2π (longitude = atan2(z, x)), v =
+/// latitude/π from the top, wrapping around.
+fn panorama(d: [f32; 3]) -> (f32, f32, bool) {
+    let longitude = d[2].atan2(d[0]);
+    let latitude = d[1].clamp(-1.0, 1.0).acos();
+    let u = (0.75 - longitude / std::f32::consts::TAU).rem_euclid(1.0);
+    (u, latitude / std::f32::consts::PI, true)
+}
+
+/// A sphere map (a mirrored ball seen along -Z): +Z at the image's centre, -Z at its rim, u =
+/// 0.5 + x/m and v = 0.5 − y/m with m = 2·√(x² + y² + (z + 1)²).
+fn sphere_map(d: [f32; 3]) -> (f32, f32, bool) {
+    let m = 2.0 * (d[0] * d[0] + d[1] * d[1] + (d[2] + 1.0) * (d[2] + 1.0)).sqrt();
+    if m <= f32::EPSILON {
+        return (0.5, 0.5, false);
+    }
+    (0.5 + d[0] / m, 0.5 - d[1] / m, false)
+}
+
+/// A face of `size` texels projected out of the image through a mapping, bilinear. As the
+/// Unity 6000.0.71f1 Editor projects (tests/projects/cubemapimport: every panorama and sphere map
+/// texel of 30 images exact): a face texel looks through its top-left corner (x / size), and the
+/// image is sampled from the bottom up with texel centres at whole coordinates (u·w, and v·h − 1
+/// counted from the top).
+fn project(image: &Image, face: usize, size: u32, mapping: Mapping) -> Image {
     let (w, h) = (image.width as f32, image.height as f32);
     let mut data = Vec::with_capacity((size * size) as usize * image.format.bytes_per_pixel());
     for y in 0..size {
         for x in 0..size {
-            let d = direction(
-                face,
-                (x as f32 + 0.5) / size as f32,
-                (y as f32 + 0.5) / size as f32,
-            );
-            let longitude = d[2].atan2(d[0]);
-            let latitude = d[1].clamp(-1.0, 1.0).acos();
-            let u = (0.75 - longitude / std::f32::consts::TAU).rem_euclid(1.0);
-            let v = latitude / std::f32::consts::PI;
-            let (fx, fy) = (u * w - 0.5, (v * h - 0.5).clamp(0.0, h - 1.0));
+            let d = direction(face, x as f32 / size as f32, y as f32 / size as f32);
+            let (u, v, wraps) = mapping(d);
+            let fx = u * w;
+            let fx = if wraps { fx } else { fx.clamp(0.0, w - 1.0) };
+            let fy = (v * h - 1.0).clamp(0.0, h - 1.0);
             let (x0, y0) = (fx.floor(), fy.floor());
             let (ax, ay) = (fx - x0, fy - y0);
-            let xi = |k: f32| ((x0 + k).rem_euclid(w)) as usize;
+            let xi = |k: f32| {
+                if wraps {
+                    (x0 + k).rem_euclid(w) as usize
+                } else {
+                    (x0 + k).min(w - 1.0) as usize
+                }
+            };
             let yi = |k: f32| ((y0 + k).min(h - 1.0)) as usize;
             let p00 = pixel(image, xi(0.0), yi(0.0));
             let p10 = pixel(image, xi(1.0), yi(0.0));
@@ -199,7 +285,66 @@ mod tests {
         assert_eq!(layout(512, 384, 6).unwrap(), Layout::HorizontalCross);
         assert_eq!(layout(384, 512, 6).unwrap(), Layout::VerticalCross);
         assert_eq!(layout(512, 256, 6).unwrap(), Layout::LatLong);
-        assert!(layout(500, 300, 6).is_err());
+        // tests/projects/cubemapimport: 16:9 and 2:1 panoramas, 1:1 sphere maps, 3:2 and 3:1
+        // corner squares; a 5:3 image (between measured bands) is refused.
+        assert_eq!(layout(3840, 2160, 6).unwrap(), Layout::LatLong);
+        assert_eq!(layout(200, 100, 6).unwrap(), Layout::LatLong);
+        assert_eq!(layout(128, 128, 6).unwrap(), Layout::SphereMap);
+        assert_eq!(layout(192, 128, 6).unwrap(), Layout::Corner);
+        assert_eq!(layout(240, 80, 6).unwrap(), Layout::Corner);
+        assert_eq!(layout(64, 128, 6).unwrap(), Layout::Corner);
+        assert!(layout(125, 100, 6).is_err());
+        assert!(layout(500, 300, 6).is_ok());
+        assert!(layout(600, 100, 6).is_ok());
+        assert!(layout(700, 100, 6).is_err());
+        // Cylindrical and Spheremap whatever the aspect; FullCubemap the corner square.
+        assert_eq!(layout(128, 128, 2).unwrap(), Layout::LatLong);
+        assert_eq!(layout(192, 32, 2).unwrap(), Layout::LatLong);
+        assert_eq!(layout(256, 128, 1).unwrap(), Layout::SphereMap);
+        assert_eq!(layout(192, 108, 5).unwrap(), Layout::Corner);
+        assert_eq!(layout(768, 128, 5).unwrap(), Layout::HorizontalStrip);
+    }
+
+    /// The corner square is the image's bottom rows read upward, on every face.
+    #[test]
+    fn the_corner_square_is_the_bottom_left_square_read_upward() {
+        let (w, h) = (3u32, 2u32);
+        let data = (0..w * h).flat_map(|i| [i as u8, 0, 0, 255]).collect();
+        let image = Image {
+            width: w,
+            height: h,
+            format: TextureFormat::Rgba8,
+            data,
+        };
+        let faces = faces(&image, Layout::Corner, 2);
+        assert_eq!(faces.len(), 6);
+        // Rows: the source's last row (3, 4), then its first (0, 1).
+        let red: Vec<u8> = faces[3].data.chunks(4).map(|p| p[0]).collect();
+        assert_eq!(red, [3, 4, 0, 1]);
+    }
+
+    /// +Z looks at a sphere map's centre, and the projected faces read back as the Editor's
+    /// (tests/projects/cubemapimport: Square11Spheremap face4 8,8 is 46,45; Wide21Cylindrical
+    /// face0 16,16 is 166,41), from an image holding each texel's position.
+    #[test]
+    fn projections_read_back_as_the_editors() {
+        assert_eq!(sphere_map(direction(4, 0.5, 0.5)), (0.5, 0.5, false));
+        let positions = |w: u32, h: u32| Image {
+            width: w,
+            height: h,
+            format: TextureFormat::Rgba8,
+            data: (0..h)
+                .flat_map(|y| (0..w).flat_map(move |x| [x as u8, y as u8, 255, 255]))
+                .collect(),
+        };
+        let at = |face: &Image, x: u32, y: u32| {
+            let i = ((y * face.width + x) * 4) as usize;
+            (face.data[i], face.data[i + 1])
+        };
+        let sphere = faces(&positions(128, 128), Layout::SphereMap, 64);
+        assert_eq!(at(&sphere[4], 8, 8), (46, 45));
+        let panorama = faces(&positions(256, 128), Layout::LatLong, 128);
+        assert_eq!(at(&panorama[0], 16, 16), (166, 41));
     }
 
     /// The vertical cross's -Z is upside down: its top-left texel is the source's bottom-right.
@@ -213,7 +358,7 @@ mod tests {
             format: TextureFormat::Rgba8,
             data,
         };
-        let faces = faces(&image, Layout::VerticalCross);
+        let faces = faces(&image, Layout::VerticalCross, 2);
         // -Z is cells x 2..4, y 6..8; its bottom-right source texel (3, 7) comes first.
         assert_eq!(faces[5].data[0], (7 * w + 3) as u8);
         // +Z (x 2..4, y 2..4) as is.

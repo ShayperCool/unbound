@@ -1508,7 +1508,9 @@ impl Importer for TextureImporter {
     // 46: BC6H imports' pixels are what their blocks decode to (floats).
     // 47: the maps of SpeedTree 9 trees import with the settings the trees give them.
     // 49: a SpeedTree 9 tree's normal map is also marked linear (its import settings' hash).
-    const VERSION: u32 = 49;
+    // 50: cubemaps from images: faces the next power of two up, panoramas half the image's
+    //     width, sphere maps and the corner square; AutoCubemap by measured aspect bands.
+    const VERSION: u32 = 50;
 
     fn import(&self, source: &Path, bytes: &[u8], meta: &Value) -> Result<ImportedTexture> {
         let tree_meta = self.tree_textures.apply(source, meta);
@@ -2336,7 +2338,9 @@ fn cube_size(
     layout: cubemap::Layout,
 ) -> (u32, u32, u32) {
     let face = cubemap::face_size(image.width, image.height, layout);
-    let (size, _) = npot_size(face, face, settings.npot_scale);
+    // A cube's faces are the next power of two up from the layout's face, whatever nPOTScale
+    // says (Unity 6000.0.71f1, tests/projects/cubemapimport: 40 -> 64, 80 -> 128, 108 -> 128).
+    let size = face.max(1).next_power_of_two();
     let (size, _) = fit_max_size(size, size, settings.max_size);
     let levels = if settings.mipmaps {
         32 - size.leading_zeros()
@@ -2364,13 +2368,13 @@ fn import_cubemap(
     original: (u32, u32),
 ) -> Result<ImportedTexture> {
     let layout = cubemap::layout(image.width, image.height, settings.cubemap_layout)?;
-    let (face, size, levels) = cube_size(&image, &settings, layout);
+    let (_, size, levels) = cube_size(&image, &settings, layout);
     let convolve = convolves(&settings) && levels > 1;
     // A gamma project's convolved HDR cube is gamma-encoded after the convolution (the others
     // were before their faces were cut, import_texture).
     let gamma = settings.gamma_hdr && image.format == TextureFormat::Rgba32F;
-    let mut faces = cubemap::faces(&image, layout);
-    if size != face {
+    let mut faces = cubemap::faces(&image, layout, size);
+    if faces[0].width != size {
         faces = faces
             .into_iter()
             .map(|f| f.resize(size, size, settings.resize_algorithm))

@@ -413,7 +413,7 @@ fn an_infinite_texel_never_turns_into_nan() {
         format: TextureFormat::Rgba32F,
         data,
     };
-    let chains = specular::convolve(&cubemap::faces(&image, cubemap::Layout::HorizontalStrip));
+    let chains = specular::convolve(&cubemap::faces(&image, cubemap::Layout::HorizontalStrip, 0));
     let values = || {
         chains.iter().flatten().flat_map(|m| {
             m.data
@@ -535,13 +535,14 @@ fn cubemap_faces_are_compressed_top_down() {
     );
     assert!(near(&tex.mips[0].data[..4], bottom));
 
-    // Faces that are not a multiple of 4 texels are unmeasured: uncompressed, with the warning.
-    let odd = png(36, 6, |_, y| if y < 3 { top } else { bottom });
+    // Faces that are not a multiple of 4 texels are unmeasured: uncompressed, with the warning
+    // (faces are powers of two, tests/projects/cubemapimport: 2 texels here).
+    let odd = png(12, 2, |_, y| if y < 1 { top } else { bottom });
     let unscaled = unbound_yaml::parse_value("TextureImporter:\n  textureShape: 2\n  generateCubemap: 6\n  nPOTScale: 0\n  mipmaps:\n    enableMipMap: 0\n    sRGBTexture: 0\n  textureCompression: 1\n").unwrap();
     let tex = importer
         .import(Path::new("Odd.png"), &odd, &unscaled)
         .unwrap();
-    assert_eq!(tex.width, 6);
+    assert_eq!(tex.width, 2);
     assert!(tex.blocks.is_none());
     assert!(
         tex.approximation
