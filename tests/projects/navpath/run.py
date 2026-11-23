@@ -158,8 +158,12 @@ def obstacle_separation_problem(path):
                            for axis in 'xyz')
             statuses.add(f'{key}.pathStatus')
             pending.add(f'{key}.pathPending')
-    for case in ('shaft', 'lower-cap', 'upper-cap', 'above'):
+    for case in ('shaft', 'lower-cap', 'upper-cap', 'above', 'tall', 'zero-speed',
+                 'slow-speed', 'zero-foot', 'short', 'on-axis', 'on-axis-path',
+                 'lower-cap-path', 'above-path', 'cap-graze'):
         numeric.update(f'{case}.f{frame}.at.{axis}' for frame in (1, 3) for axis in 'xyz')
+    for case in ('on-axis-path', 'lower-cap-path', 'above-path', 'cap-graze'):
+        numeric.update(f'{case}.f{frame}.desired.{axis}' for frame in (1, 3) for axis in 'xyz')
     expected = numeric | statuses | pending | {'release', 'mesh0.triangles', 'mesh0.vertices'}
     if set(records) != expected:
         return (f'missing separation keys {sorted(expected - records.keys())}, '
@@ -268,7 +272,7 @@ def main():
     parser.add_argument('--scenario', default='')
     parser.add_argument('--details', type=int, default=6)
     args = parser.parse_args()
-    if args.profile == 'layers' and args.scenario:
+    if args.profile != 'main' and args.scenario:
         parser.error('--scenario is supported only by the main profile')
     print(f'Unity {unity_version()}', file=sys.stderr)
     return {'editor': editor, 'publish': publish, 'unbound': unbound}[args.command](args)

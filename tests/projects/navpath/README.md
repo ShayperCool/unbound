@@ -101,13 +101,16 @@ prediction. A capsule with the same radius contributes to collision prediction a
 The steering change first occurs at frame 91 in `replan.none`, when the participant enters
 the separation range. All 578 values now match the original reference.
 
-For an upright capsule at least as tall as its diameter, contact uses its widest horizontal
-section across the agent's height. With both radii at 0.5 m, the shaft pushes the agent to
-1.0 m from the capsule axis. A cap 0.25 m beyond the agent's height pushes it to 0.933 m, and
-a capsule fully above the agent leaves its position unchanged.
+An upright capsule enters the neighbor list using its center and horizontal bounds. The chosen
+neighbor contributes its widest horizontal section across the agent's height, both for velocity
+sampling and contact. A capsule shorter than its diameter has a spherical section. With both radii
+at 0.5 m, the shaft pushes the agent to 1.0 m from the capsule axis. A cap 0.25 m beyond the agent's
+height pushes it to 0.933 m, and a capsule fully above the agent leaves its position unchanged.
+On the capsule axis the contact moves the agent along positive X, including when its destination
+lies along negative Z.
 
-The dedicated profile records 555 values, including the release, all six steering controls,
-and stationary contacts against the shaft, lower cap, upper cap and a vertically clear capsule.
+The dedicated profile records 639 values. It includes six steering controls and varies the
+capsule height, the agent's speed, cap height, and the presence of a path during contact.
 The main and stacked-link profiles continue to use their original references.
 
     UNBOUND_PROBE_UNITY_VERSION=6000.0.71f1 python3 tests/projects/navpath/run.py editor --profile obstacle-separation --label L

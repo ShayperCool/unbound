@@ -1417,6 +1417,7 @@ public class PathProbe : MonoBehaviour
     }
 
     enum SeparationNeighbour { Empty, Capsule, Agent }
+    enum CapsuleRoute { None, AlongZ, GrazeCap }
 
     /// <summary>Steering near a capsule or a stationary agent, including initial overlap.</summary>
     IEnumerator ObstacleSeparation()
@@ -1479,31 +1480,51 @@ public class PathProbe : MonoBehaviour
             yield return null;
         }
 
-        foreach (var (name, height) in new (string, float)[]
+        foreach (var (name, centerHeight, capsuleHeight, speed, onAxis, route) in
+            new (string, float, float, float, bool, CapsuleRoute)[]
         {
-            ("shaft", 0f),
-            ("lower-cap", -0.75f),
-            ("upper-cap", 2.75f),
-            ("above", 3.05f),
+            ("shaft", 0f, 2f, 3.5f, false, CapsuleRoute.None),
+            ("lower-cap", -0.75f, 2f, 3.5f, false, CapsuleRoute.None),
+            ("upper-cap", 2.75f, 2f, 3.5f, false, CapsuleRoute.None),
+            ("above", 3.05f, 2f, 3.5f, false, CapsuleRoute.None),
+            ("tall", 0f, 20f, 3.5f, false, CapsuleRoute.None),
+            ("zero-speed", 0f, 2f, 0f, false, CapsuleRoute.None),
+            ("slow-speed", 0f, 2f, 0.01f, false, CapsuleRoute.None),
+            ("zero-foot", 1f, 2f, 0f, false, CapsuleRoute.None),
+            ("short", 0f, 0.4f, 3.5f, false, CapsuleRoute.None),
+            ("on-axis", 0f, 2f, 3.5f, true, CapsuleRoute.None),
+            ("on-axis-path", 0f, 2f, 3.5f, true, CapsuleRoute.AlongZ),
+            ("lower-cap-path", -0.75f, 2f, 3.5f, false, CapsuleRoute.AlongZ),
+            ("above-path", 3.05f, 2f, 3.5f, false, CapsuleRoute.AlongZ),
+            ("cap-graze", -0.75f, 2f, 3.5f, false, CapsuleRoute.GrazeCap),
         })
         {
             float floor = 1f / 15f;
             var post = new GameObject("post");
-            post.transform.position = new Vector3(0.07f, floor + height, -0.12f);
+            var center = new Vector3(0.07f, floor + centerHeight, -0.12f);
+            post.transform.position = center;
             var obstacle = post.AddComponent<NavMeshObstacle>();
             obstacle.shape = NavMeshObstacleShape.Capsule;
             obstacle.radius = 0.5f;
-            obstacle.height = 2f;
+            obstacle.height = capsuleHeight;
             yield return null;
 
             var mover = new GameObject("mover");
-            mover.transform.position = new Vector3(-0.68f, floor, 0.08f);
+            var start = new Vector3(-0.68f, floor, 0.08f);
+            if (onAxis) start = new Vector3(center.x, floor, center.z);
+            if (route == CapsuleRoute.GrazeCap) start = new Vector3(-1.51f, floor, 0.85f);
+            mover.transform.position = start;
             var agent = mover.AddComponent<NavMeshAgent>();
             agent.height = 2f;
+            agent.speed = speed;
+            if (route == CapsuleRoute.AlongZ) agent.SetDestination(new Vector3(start.x, floor, -7f));
+            if (route == CapsuleRoute.GrazeCap) agent.SetDestination(new Vector3(6f, floor, start.z));
             yield return null;
             ProbeLog.Value(name + ".f1.at", agent.nextPosition);
+            if (route != CapsuleRoute.None) ProbeLog.Value(name + ".f1.desired", agent.desiredVelocity);
             yield return Frames(2);
             ProbeLog.Value(name + ".f3.at", agent.nextPosition);
+            if (route != CapsuleRoute.None) ProbeLog.Value(name + ".f3.desired", agent.desiredVelocity);
             Destroy(mover);
             Destroy(post);
             yield return null;
