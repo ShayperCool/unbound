@@ -625,24 +625,22 @@ namespace Unbound.Runtime
             internal readonly Vector3 Center;
             internal readonly float Radius;
             internal readonly float Bottom;
-            internal readonly float Top;
+            internal readonly float Height;
             internal readonly Vector3 Velocity;
             internal readonly NavMeshObstacle Owner;
             internal readonly bool UprightCapsule;
 
             internal Circle(Vector3 center, float radius, float bottom, float top, Vector3 velocity,
-                NavMeshObstacle owner, bool uprightCapsule = false)
+                NavMeshObstacle owner, float? uprightHeight = null)
             {
                 Center = center;
                 Radius = radius;
                 Bottom = bottom;
-                Top = top;
+                Height = uprightHeight ?? Mathf.Max(0f, top - bottom);
                 Velocity = velocity;
                 Owner = owner;
-                UprightCapsule = uprightCapsule;
+                UprightCapsule = uprightHeight.HasValue;
             }
-
-            internal float Height => Mathf.Max(0f, Top - Bottom);
         }
 
         /// <summary>The obstacle circles in each crowd, reused from update to update.</summary>
@@ -686,7 +684,8 @@ namespace Unbound.Runtime
                 s_InCrowd.Add(crowd, members);
             }
             if (!crowd.Config().predictNeighbourBounds) CollectCircles();
-            // The circle stands on the obstacle's bottom, as tall as it (C6).
+            // Measured capsules keep their center for admission and projection. The older
+            // proxies stand on the obstacle's bottom (C6).
             var agents = crowd.GetActiveAgents();
             bool prediction = crowd.Config().predictNeighbourBounds;
             crowd.GetGridCellSize(out float cellX, out float cellZ);
@@ -695,7 +694,7 @@ namespace Unbound.Runtime
             s_NearPositions.Clear();
             foreach (var c in s_Circles)
             {
-                var position = new RcVec3f(c.Center.x, c.Bottom, c.Center.z);
+                var position = new RcVec3f(c.Center.x, c.UprightCapsule ? c.Center.y : c.Bottom, c.Center.z);
                 if (!NearAWalkingAgent(agents, position, c, cell, prediction, 1f / cellX, 1f / cellZ)) continue;
                 s_Near.Add(c);
                 s_NearPositions.Add(position);
@@ -872,7 +871,7 @@ namespace Unbound.Runtime
                     if (uprightCapsule) half = Mathf.Max(half, radius);
                 }
                 into.Add(new Circle(center, radius, center.y - half, center.y + half, velocity,
-                    obstacle, uprightCapsule));
+                    obstacle, uprightCapsule ? 2f * half : null));
                 return;
             }
             var rotation = t.rotation;

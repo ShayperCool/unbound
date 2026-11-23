@@ -1125,7 +1125,6 @@ namespace DotRecast.Detour.Crowd
                 {
                     // Obstacle admission ranks the center with the horizontal bounds'
                     // half-diagonal. The capsule section is tested during avoidance and contact.
-                    diff.Y += ag.option.height * 0.5f;
                     radius = MathF.Sqrt(radius * radius + radius * radius);
                 }
                 float radii = skip.option.radius + radius;
@@ -1394,9 +1393,11 @@ namespace DotRecast.Detour.Crowd
             out float radius, out bool clippedCap)
         {
             radius = capsule.option.radius;
-            float bottom = ag.npos.Y - capsule.npos.Y;
-            float gap = MathF.Max(radius - (bottom + ag.option.height),
-                bottom - (capsule.option.height - radius));
+            // Translate the center before forming the axis endpoints. The rounding at each
+            // endpoint determines whether the agent sees the shaft, a cap, or no section.
+            float center = capsule.npos.Y - ag.npos.Y;
+            float halfAxis = capsule.option.height * 0.5f - radius;
+            float gap = MathF.Max((center - halfAxis) - ag.option.height, -(center + halfAxis));
             clippedCap = gap > 0f;
             if (gap > radius) return false;
             if (clippedCap) radius = MathF.Sqrt(radius * radius - gap * gap);
