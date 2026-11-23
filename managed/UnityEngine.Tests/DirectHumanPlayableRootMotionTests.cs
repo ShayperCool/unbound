@@ -5,6 +5,7 @@ using Unbound.Runtime;
 using Unbound.Runtime.Humanoid;
 using Unbound.Runtime.Playables;
 using Unbound.Tests;
+using UnityEditor.Animations;
 using UnityEngine.Animations;
 using UnityEngine.Playables;
 using Xunit;
@@ -90,6 +91,54 @@ namespace UnityEngine.Tests
                 graph.Destroy();
                 Object.DestroyImmediate(root);
                 Object.DestroyImmediate(avatar);
+                Object.DestroyImmediate(clip);
+            }
+        }
+
+        [Theory]
+        [InlineData(TestRelease.Measured, true)]
+        [InlineData(TestRelease.Unmeasured, false)]
+        public void AnAdditiveLayerPosesTheBodyAboveAMeasuredEmptyBase(string release, bool movesBody)
+        {
+            using var pin = TestRelease.Pin(release);
+            const string diagnostic = "Animator additive humanoid body over no humanoid clip";
+            int Hits() => Stubs.HitReport().FirstOrDefault(hit => hit.Key == diagnostic).Value;
+
+            var root = AnimationHumanStreamTests.Humanoid(out var animator);
+            var avatar = animator.avatar;
+            var hips = animator.GetBoneTransform(HumanBodyBones.Hips);
+            var clip = Clip(turn: false);
+            clip.SetCurve("", typeof(Animator), "Left Arm Down-Up", AnimationCurve.Constant(0f, 1f, .15f));
+            var controller = new AnimatorController();
+            controller.AddLayer("Base");
+            controller.AddLayer("Additive");
+            var layers = controller.layers;
+            layers[0].stateMachine.defaultState = layers[0].stateMachine.AddState("Empty");
+            var motionState = layers[1].stateMachine.AddState("Motion");
+            motionState.motion = clip;
+            layers[1].stateMachine.defaultState = motionState;
+            layers[1].defaultWeight = .65f;
+            layers[1].blendingMode = AnimatorLayerBlendingMode.Additive;
+            controller.layers = layers;
+            animator.runtimeAnimatorController = controller;
+            animator.applyRootMotion = true;
+            animator.SetLayerWeight(1, .65f);
+            try
+            {
+                int before = Hits();
+                animator.Update(0f);
+                var bodyInitial = hips.position;
+                var rootInitial = root.transform.position;
+                animator.Update(.25f);
+                Assert.Equal(movesBody, (hips.position - bodyInitial).magnitude > .05f);
+                Near.Equal(rootInitial, root.transform.position, 1e-5f);
+                Assert.Equal(!movesBody, Hits() > before);
+            }
+            finally
+            {
+                Object.DestroyImmediate(root);
+                Object.DestroyImmediate(avatar);
+                Object.DestroyImmediate(controller);
                 Object.DestroyImmediate(clip);
             }
         }

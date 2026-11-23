@@ -410,6 +410,15 @@ Other mirrored playable shapes and release families retain the report.
 [Animation tab](https://docs.unity3d.com/6000.0/Documentation/Manual/class-AnimationClip.html),
 [AnimationHumanStream.GetGoalLocalPosition](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Animations.AnimationHumanStream.GetGoalLocalPosition.html).
 
+Eight `additiveEmptyBody.*` controls append 760 rows from matching macOS 6000.0.71f1
+Editor captures. An additive clip over an empty base state with write defaults adds its weighted
+body difference from the identity. The Animator's root motion remains zero. The controller
+playable and the controller attached to an Animator give the same placement, with root motion
+on or off. The controls vary the additive layer weight, mask Root off, and compare a humanoid
+base clip. Separate diagnostic captures keep the open generic-base differences and the
+nonfinite body Unity produced when an explicit additive reference had no body curves.
+[Animation layers](https://docs.unity3d.com/6000.0/Documentation/Manual/AnimationLayers.html).
+
 After changing the rigs, regenerate them (`blender -b --factory-startup --python
 tests/projects/humanoid/make_models.py`), let the Editor configure them in a copy of the project
 (`Unity -batchmode -nographics -projectPath <copy> -executeMethod ProbeRunner.Create`) and copy its

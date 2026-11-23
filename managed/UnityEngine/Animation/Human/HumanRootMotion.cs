@@ -642,21 +642,27 @@ namespace Unbound.Runtime.Humanoid
         /// layer without Root adds neither body nor motion, and an override layer without a foot IK
         /// part keeps the feet below for the feet pivot (measured, tests/projects/humanoid).</summary>
         public static void CombineLayer(ref HumanRootMotionSample below, ref bool any, ReadOnlySpan<HumanRootMotionSample> samples,
-            ReadOnlySpan<Trs> differences, ReadOnlySpan<float> weights, bool additive, float layerWeight, bool[] parts)
+            ReadOnlySpan<Trs> differences, ReadOnlySpan<float> weights, bool additive, float layerWeight, bool[] parts,
+            bool additiveOverEmptyBase = false)
         {
             if (additive ? differences.Length == 0 : samples.Length == 0) return;
             if (layerWeight <= 0f) return;
-            // Also over no humanoid clip: an empty base state or generic root motion below
-            // (override layers measured, tests/projects/humanoid noRootOverEmpty, noRootOverGeneric;
-            // additive ones follow unmeasured).
+            // The Root mask also controls the body when the layers below have no humanoid clip.
             if (parts != null && !parts[0]) return;
             if (additive)
             {
                 if (!any)
                 {
-                    Unbound.Runtime.Stubs.Ignored("Animator additive humanoid body over no humanoid clip",
-                        "an additive layer's humanoid body differences over no humanoid clip below are left out (not measured)");
-                    return;
+                    if (!additiveOverEmptyBase)
+                    {
+                        Unbound.Runtime.Stubs.Ignored("Animator additive humanoid body over no humanoid clip",
+                            "leaves out the additive body's placement in this unmeasured layer setup");
+                        return;
+                    }
+                    // Start at the identity body with an identity root step and resting feet.
+                    below = NoMotion;
+                    below.HasMotion = true;
+                    any = true;
                 }
                 AddBody(ref below, AdditiveBody(differences, weights, layerWeight));
                 return;

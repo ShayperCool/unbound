@@ -750,11 +750,16 @@ namespace Unbound.Runtime
                 float layerWeight = i == 0 ? 1f : Layers[i].Evaluated;
                 if (!additive) layerWeight *= FillLayer(i);
                 var mask = Layers[i].Def.Mask;
+                bool additiveOverEmptyBase = Compat.HumanAdditiveBodyOverEmptyBase && additive && !any
+                    && i == 1 && Layers.Length == 2 && !Layers[0].Def.Additive && Layers[0].Next == null
+                    && EmptyWithDefaults(Layers[0], Layers[0].Current)
+                    && Layers[i].Def.SyncedLayerIndex < 0 && Layers[i].Next == null
+                    && Layers[i].Current is { } current && MotionOf(Layers[i].Def, current.Def) is AnimationClip;
                 Unbound.Runtime.Humanoid.HumanRootMotion.CombineLayer(ref blended, ref any,
                     System.Runtime.InteropServices.CollectionsMarshal.AsSpan(m_HumanSamples),
                     System.Runtime.InteropServices.CollectionsMarshal.AsSpan(m_HumanBodyDifferences),
                     System.Runtime.InteropServices.CollectionsMarshal.AsSpan(m_HumanWeights), additive, layerWeight,
-                    mask != null && mask.MasksHumanoidParts ? mask.m_HumanoidParts : null);
+                    mask != null && mask.MasksHumanoidParts ? mask.m_HumanoidParts : null, additiveOverEmptyBase);
             }
             return any;
         }
