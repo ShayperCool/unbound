@@ -261,7 +261,20 @@ namespace PercentProbe
                 mgRow.Add(ve);
             }
 
+            // measuredPadding: in a 1000 wide, 400 high row aligning its children to the start, a label
+            // 300 wide with wrapping text, an automatic height and 5% top, bottom and left paddings
+            // (its text is measured at the width the paddings leave).
+            var measuredPadding = Case(root, "measuredPadding", 0);
+            measuredPadding.style.top = 3900;
+            var mpRow = Box(measuredPadding, "row", 1000, 400); mpRow.style.flexDirection = FlexDirection.Row;
+            mpRow.style.alignItems = Align.FlexStart;
+            var mpLabel = new Label("Percentage paddings of a label decide the width its text wraps in") { name = "label" };
+            mpLabel.style.width = 300; mpLabel.style.flexShrink = 0; mpLabel.style.whiteSpace = WhiteSpace.Normal;
+            mpLabel.style.paddingTop = Length.Percent(5); mpLabel.style.paddingBottom = Length.Percent(5); mpLabel.style.paddingLeft = Length.Percent(5);
+            mpRow.Add(mpLabel);
+
             yield return Frames();
+            Put("measuredPadding", State(mpLabel) + "|content " + F(mpLabel.contentRect.x) + "," + F(mpLabel.contentRect.y) + "," + F(mpLabel.contentRect.width) + "," + F(mpLabel.contentRect.height));
             Put("measuredMargin", "label " + State(mgLabel) + "|plain " + State(mgPlain));
             Put("shrinkRowMore", "a " + State(srmA) + "|b " + State(srmB));
             Put("shrinkRowLastMargin", "a " + State(srlA) + "|b " + State(srlB));
