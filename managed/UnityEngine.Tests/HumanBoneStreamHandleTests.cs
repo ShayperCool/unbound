@@ -183,6 +183,25 @@ namespace UnityEngine.Tests
             Assert.Equal(!retargets, Hits() > before);
         }
 
+        [Theory]
+        [InlineData(TestRelease.Measured, false, false)]
+        [InlineData(TestRelease.Measured, true, true)]
+        [InlineData(TestRelease.Unmeasured, false, true)]
+        public void ANoInputJobReportsAnUnmeasuredDefaultPoseWithoutAccessingTheStream(
+            string release, bool rootMotion, bool reports)
+        {
+            using var pin = TestRelease.Pin(release);
+            const string warning = "Default humanoid pose of a no-input animation job";
+            int Hits() => Stubs.HitReport().FirstOrDefault(hit => hit.Key == warning).Value;
+            var animator = Human();
+            animator.applyRootMotion = rootMotion;
+            m_Graph = AnimationHumanStreamTests.Graph(animator, (_, _) => { });
+
+            int before = Hits();
+            m_Graph.Evaluate(0f);
+            Assert.Equal(reports, Hits() > before);
+        }
+
         public sealed class KinematicMoveCallback : MonoBehaviour
         {
             void OnAnimatorMove() { }

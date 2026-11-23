@@ -936,13 +936,14 @@ namespace Unbound.Runtime.Playables
                 e.UsesMeasuredLayerJobRoot = Compat.HumanStreamLayerRootPlacement && e.MotionMode == RootMotionMode.Human
                     && o.Graph.UpdateMode == DirectorUpdateMode.Manual && o.Weight == 1f
                     && source == AnimationStreamSource.DefaultValues && JobKind.HasRootMaskedLayerInput(o.Source);
-                e.UsesDefaultHumanJobPose = Compat.HumanStreamDefaultJobPose && e.m_ExplicitEvaluation
-                    && animator.Human != null && animator.m_Player == null && !animator.applyRootMotion
+                var noInputJob = o.Source.Kind is JobKind job && o.Source.Inputs.Count == 0 ? job : null;
+                bool noInputHumanJob = noInputJob != null && animator.Human != null && animator.m_Player == null
+                    && source == AnimationStreamSource.DefaultValues;
+                e.UsesDefaultHumanJobPose = noInputHumanJob && noInputJob.ProcessInputs
+                    && Compat.HumanStreamDefaultJobPose && e.m_ExplicitEvaluation && !animator.applyRootMotion
                     && animator.updateMode == AnimatorUpdateMode.Normal && !MoveCallbacks.Any(animator)
                     && outputs.Count == 1 && AnimationOutputs.ActiveCount(animator) == 1
-                    && o.Graph.UpdateMode == DirectorUpdateMode.Manual && o.Weight == 1f
-                    && source == AnimationStreamSource.DefaultValues
-                    && o.Source.Kind is JobKind { ProcessInputs: true } && o.Source.Inputs.Count == 0;
+                    && o.Graph.UpdateMode == DirectorUpdateMode.Manual && o.Weight == 1f;
                 AnimStream s;
                 // The tree's own weights decide which clips fire events; the output's weight blends
                 // the pose only (6000.0.71f1, animculling weight/0: a clip under an output at
@@ -989,7 +990,12 @@ namespace Unbound.Runtime.Playables
                 if (o.Weight > 0f && s.FootIK) result.FootIK = true;
                 result.ClipSampled |= s.ClipSampled;
                 result.JobRan |= s.JobRan;
-                if (e.UsesDefaultHumanJobPose && s.JobRan) result.DefaultHumanJobPose = true;
+                if (noInputHumanJob && s.JobRan && o.Weight > 0f)
+                {
+                    if (e.UsesDefaultHumanJobPose) result.DefaultHumanJobPose = true;
+                    else Stubs.Ignored("Default humanoid pose of a no-input animation job",
+                        "is unmeasured in this setup. The output keeps the existing pose and applies its writes");
+                }
                 if (s.HasMassCenter && o.Weight >= 1f)
                 {
                     result.MassCenter ??= new float[Unbound.Runtime.Humanoid.HumanClipImport.CurveCount];
