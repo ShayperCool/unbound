@@ -74,8 +74,6 @@ static class MeasureCameraMemory
         camera.Render();
         Read("camera.renderedTarget", camera);
         camera.targetTexture = null;
-        target.Release();
-        Object.DestroyImmediate(target);
         Read("camera.removedTarget", camera);
 
         var first = new CommandBuffer { name = "First reused buffer" };
@@ -176,7 +174,9 @@ static class MeasureCameraMemory
             QualitySettings.renderPipeline = previousQuality;
             GraphicsSettings.defaultRenderPipeline = previousDefault;
         }
+        camera.targetTexture = target;
         camera.Render();
+        camera.targetTexture = null;
         Read("pipeline.restoredOldCamera", camera);
         CheckCall("commands.builtInRemoveNull", () => camera.RemoveCommandBuffer(CameraEvent.AfterEverything, null));
         Read("commands.afterRemoveNull", camera);
@@ -190,6 +190,8 @@ static class MeasureCameraMemory
         first.Release();
         second.Release();
         third.Release();
+        target.Release();
+        Object.DestroyImmediate(target);
         Object.DestroyImmediate(camera.gameObject);
 
         rows.Add("{\"k\":\"complete\",\"v\":true}");
