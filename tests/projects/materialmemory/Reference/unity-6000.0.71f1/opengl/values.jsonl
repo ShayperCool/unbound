@@ -242,4 +242,9 @@
 {"k":"standard.populatedInstance","v":"1656"}
 {"k":"standard.instanceEdited","v":"6588"}
 {"k":"standard.sourceAfterInstanceEdit","v":"6732"}
+{"k":"standard.instanceMetadata","v":"1656"}
+{"k":"standard.instanceHasProperty","v":"True"}
+{"k":"standard.instanceAfterHasProperty","v":"5072"}
+{"k":"standard.instanceDeclaredValue","v":"0.75"}
+{"k":"standard.instanceAfterRead","v":"5072"}
 {"k":"complete","v":true}
