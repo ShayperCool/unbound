@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
+using System.Threading;
 using Unity.Collections;
 using UnityEngine;
 using Object = UnityEngine.Object;
@@ -20,6 +21,19 @@ static class MeshBindposesProbe
         string[] rows = new string[view.Length];
         for (int i = 0; i < view.Length; i++) rows[i] = Pair(view[i]);
         return (view.IsCreated ? "created:" : "default:") + string.Join("/", rows);
+    }
+
+    static string OnWorkerThread(Action action)
+    {
+        string result = "ok";
+        var worker = new Thread(() =>
+        {
+            try { action(); }
+            catch (Exception error) { result = error.GetType().Name + ": " + error.Message; }
+        });
+        worker.Start();
+        worker.Join();
+        return result;
     }
 
     static string BakeWithOrderedPoses()
@@ -161,6 +175,30 @@ static class MeshBindposesProbe
             return calls.ToString(CultureInfo.InvariantCulture) + "|" + Describe(alias);
         });
         Object.DestroyImmediate(alias);
+        var controls = new Mesh();
+        Probe("fresh.copy", () =>
+        {
+            var view = controls.GetBindposes();
+            return view.ToArray().Length + ":" + view.AsReadOnlySpan().Length;
+        });
+        Probe("fresh.index", () => Pair(controls.GetBindposes()[0]));
+        controls.bindposes = new[] { Pose(5, 7) };
+        Probe("set.disposed", () =>
+        {
+            var view = controls.GetBindposes();
+            view.Dispose();
+            controls.SetBindposes(view);
+            return Describe(controls);
+        });
+        Probe("get.nullList", () => { controls.GetBindposes((List<Matrix4x4>)null); return Describe(controls); });
+        Probe("thread.borrow", () => OnWorkerThread(() => controls.GetBindposes()));
+        using (var poses = new NativeArray<Matrix4x4>(new[] { Pose(11, 13) }, Allocator.Persistent))
+            Probe("thread.assign", () => OnWorkerThread(() => controls.SetBindposes(poses)));
+        Probe("thread.arrayGet", () => OnWorkerThread(() => _ = controls.bindposes));
+        Probe("thread.arraySet", () => OnWorkerThread(() => controls.bindposes = new[] { Pose(17, 19) }));
+        Probe("thread.count", () => OnWorkerThread(() => _ = controls.bindposeCount));
+        Probe("thread.list", () => OnWorkerThread(() => controls.GetBindposes(new List<Matrix4x4>())));
+        Object.DestroyImmediate(controls);
         rows.Add("{\"k\":\"complete\",\"v\":true}");
         File.WriteAllLines(Path.Combine(output, "values.jsonl"), rows);
 #if UNITY_EDITOR

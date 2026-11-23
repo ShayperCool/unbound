@@ -52,4 +52,24 @@
 {"k":"alias.offset.log","v":"Assert:vector: assign data may not be data from the vector itself."}
 {"k":"alias.reentrant","v":"1|created:29,31/37,41"}
 {"k":"alias.reentrant.log","v":"Assert:vector: assign data may not be data from the vector itself."}
+{"k":"fresh.copy","v":"0:0"}
+{"k":"fresh.copy.log","v":""}
+{"k":"fresh.index","v":"IndexOutOfRangeException: Index 0 is out of range of '0' Length."}
+{"k":"fresh.index.log","v":""}
+{"k":"set.disposed","v":"ArgumentException: Cannot set bindposes as the native poses array is empty.\nParameter name: poses"}
+{"k":"set.disposed.log","v":""}
+{"k":"get.nullList","v":"ArgumentNullException: The result bindposes list cannot be null.\nParameter name: bindposes"}
+{"k":"get.nullList.log","v":""}
+{"k":"thread.borrow","v":"UnityException: GetBindposesArray can only be called from the main thread.\nConstructors and field initializers will be executed from the loading thread when loading a scene.\nDon't use this function in the constructor or field initializers, instead move initialization code to the Awake or Start function."}
+{"k":"thread.borrow.log","v":""}
+{"k":"thread.assign","v":"UnityException: SetBindposesFromScript_NativeArray can only be called from the main thread.\nConstructors and field initializers will be executed from the loading thread when loading a scene.\nDon't use this function in the constructor or field initializers, instead move initialization code to the Awake or Start function."}
+{"k":"thread.assign.log","v":""}
+{"k":"thread.arrayGet","v":"UnityException: get_bindposes can only be called from the main thread.\nConstructors and field initializers will be executed from the loading thread when loading a scene.\nDon't use this function in the constructor or field initializers, instead move initialization code to the Awake or Start function."}
+{"k":"thread.arrayGet.log","v":""}
+{"k":"thread.arraySet","v":"UnityException: set_bindposes can only be called from the main thread.\nConstructors and field initializers will be executed from the loading thread when loading a scene.\nDon't use this function in the constructor or field initializers, instead move initialization code to the Awake or Start function."}
+{"k":"thread.arraySet.log","v":""}
+{"k":"thread.count","v":"UnityException: get_bindposeCount can only be called from the main thread.\nConstructors and field initializers will be executed from the loading thread when loading a scene.\nDon't use this function in the constructor or field initializers, instead move initialization code to the Awake or Start function."}
+{"k":"thread.count.log","v":""}
+{"k":"thread.list","v":"UnityException: get_bindposeCount can only be called from the main thread.\nConstructors and field initializers will be executed from the loading thread when loading a scene.\nDon't use this function in the constructor or field initializers, instead move initialization code to the Awake or Start function."}
+{"k":"thread.list.log","v":""}
 {"k":"complete","v":true}
