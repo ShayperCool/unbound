@@ -322,7 +322,7 @@ namespace UnityEngine
             m_InheritedVersion = source.m_InheritedVersion;
             // A plain runtime copy starts with its own declared property storage. The source's
             // appended scalar reservation does not carry over (tests/projects/materialmemory).
-            if (source.ProfilerPropertyStorageBytes.HasValue)
+            if (source.TryGetProfilerPropertyLayout(out _))
                 StartMeasuringPropertyStorage();
         }
 
@@ -794,7 +794,10 @@ namespace UnityEngine
         /// effect on the variant).</summary>
         public void SetPropertyLock(int nameID, bool value)
         {
-            if (value) (m_Locked ??= new HashSet<int>()).Add(nameID);
+            if (value)
+            {
+                if ((m_Locked ??= new HashSet<int>()).Add(nameID)) StopMeasuringPropertyStorage();
+            }
             else m_Locked?.Remove(nameID);
         }
 

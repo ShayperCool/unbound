@@ -217,8 +217,11 @@ namespace Unbound.Runtime
 
         /// <summary>The body of the source's `Properties` block, comments blanked (null: the
         /// source has no `Properties` block, so it declares no properties).</summary>
-        internal static string PropertiesBlock(string source)
+        internal static string PropertiesBlock(string source) => PropertiesBlock(source, out _);
+
+        static string PropertiesBlock(string source, out bool closed)
         {
+            closed = false;
             source = s_SourceTrivia.Replace(source, m => m.Value[0] == '"'
                 ? m.Value : Regex.Replace(m.Value, @"[^\r\n]", " "));
             int open = -1;
@@ -237,6 +240,7 @@ namespace Unbound.Runtime
                 else if (source[end] == '{') depth++;
                 else if (source[end] == '}' && --depth == 0) break;
             }
+            closed = depth == 0;
             return source.Substring(open + 1, Math.Max(0, end - open - 1));
         }
 
@@ -245,8 +249,7 @@ namespace Unbound.Runtime
         internal static List<ShaderPropertyInfo> Properties(string source, out bool layoutKnown)
         {
             var list = new List<ShaderPropertyInfo>();
-            var block = PropertiesBlock(source);
-            layoutKnown = true;
+            var block = PropertiesBlock(source, out layoutKnown);
             if (block == null) return list;
             int parsedThrough = 0;
             foreach (Match m in s_Property.Matches(block))

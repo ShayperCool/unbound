@@ -38,14 +38,24 @@ namespace UnityEngine
                 StopMeasuringPropertyStorage();
         }
 
+        bool TryGetProfilerPropertyLayout(out (long Keys, long Words, bool MixedWords) layout)
+        {
+            if (!IsPersistentAsset && m_Parent == null && m_State.m_ProfilerLayoutVersion is { } version && m_Shader != null
+                && m_Shader.ProfilerLayoutVersion == version && m_Shader.ProfilerPropertyLayout is { } current
+                && m_RawBindings.Count == 0)
+            {
+                layout = current;
+                return true;
+            }
+            layout = default;
+            return false;
+        }
+
         internal long? ProfilerPropertyStorageBytes
         {
             get
             {
-                if (IsPersistentAsset || m_Parent != null || !m_State.m_ProfilerLayoutVersion.HasValue || m_Shader == null
-                    || m_Shader.ProfilerLayoutVersion != m_State.m_ProfilerLayoutVersion
-                    || m_Shader.ProfilerPropertyLayout is not { } layout)
-                    return null;
+                if (!TryGetProfilerPropertyLayout(out var layout)) return null;
                 long extra = m_State.m_ProfilerAddedFloats?.Count ?? 0;
                 long keys = layout.Keys + extra;
                 long words = layout.Words + extra;
