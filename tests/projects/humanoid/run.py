@@ -11,6 +11,7 @@ Editors run through the shared heavy-job launcher, on the GPU (a private Xvfb an
 """
 import argparse
 import filecmp
+import json
 import os
 from pathlib import Path
 import shutil
@@ -67,11 +68,38 @@ def editor(work):
     return int(any(codes))
 
 
-def publish(work):
+def publish(work, append_prefixes):
     a, b = work/'native1'/'values.jsonl', work/'native2'/'values.jsonl'
     if not filecmp.cmp(a, b, shallow=False):
         sys.exit('the two Editor captures differ; not publishing')
     target = reference_file(PROBE, 'jsonl')
+    if append_prefixes:
+        old = target.read_bytes()
+        existing = {json.loads(line)['k'] for line in old.splitlines()}
+        additions = {}
+        selected = set()
+        captured = set()
+        for line in a.read_bytes().splitlines(keepends=True):
+            key = json.loads(line)['k']
+            if key in captured:
+                sys.exit(f'{key}: duplicate capture key')
+            captured.add(key)
+            matches = [prefix for prefix in append_prefixes if key.startswith(prefix)]
+            if not matches:
+                continue
+            if key in existing:
+                sys.exit(f'{key}: append requires a new reference key')
+            additions[key] = line
+            selected.update(matches)
+        if existing - captured:
+            sys.exit(f'{a}: capture is missing {len(existing - captured)} existing reference keys')
+        if selected != set(append_prefixes):
+            sys.exit('no records for '+', '.join(sorted(set(append_prefixes) - selected)))
+        if not old.endswith(b'\n'):
+            sys.exit(f'{target}: existing reference needs a final newline')
+        target.write_bytes(old + b''.join(additions.values()))
+        print(f'appended {len(additions)} records to {target}')
+        return 0
     target.parent.mkdir(parents=True, exist_ok=True)
     shutil.copyfile(a, target)
     print('published', target)
@@ -99,12 +127,17 @@ def main():
     parser.add_argument('mode', choices=('editor', 'publish', 'unbound'))
     parser.add_argument('--label', required=True)
     parser.add_argument('--release', required=True)
+    parser.add_argument('--append-prefix', action='append', default=[], help='publish only new keys starting with this prefix')
     args = parser.parse_args()
+    if args.append_prefix and (args.mode != 'publish' or not all(args.append_prefix)):
+        parser.error('--append-prefix requires publish and nonempty prefixes')
     if not args.label or Path(args.label).name != args.label or args.label in ('.', '..'):
         parser.error('label must be a single directory name')
     os.environ['UNBOUND_PROBE_UNITY_VERSION'] = args.release
     work = run_root(PROBE, args.label)
-    return {'editor': editor, 'publish': publish, 'unbound': unbound}[args.mode](work)
+    if args.mode == 'publish':
+        return publish(work, args.append_prefix)
+    return {'editor': editor, 'unbound': unbound}[args.mode](work)
 
 
 if __name__ == '__main__':

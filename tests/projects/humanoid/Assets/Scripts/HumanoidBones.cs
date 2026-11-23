@@ -111,7 +111,7 @@ public partial class HumanoidProbe
 /// one of them.</summary>
 public struct HumanBoneJob : IAnimationJob
 {
-    public enum Mode { Read, RotateLocal, RotateWorld, MoveHips, MoveArm, Scale, RotateThenHuman, HumanThenRead, Prop, Solve, RotateThenSolve, SolveTwice }
+    public enum Mode { Read, RotateLocal, RotateWorld, MoveHips, MoveArm, Scale, RotateThenHuman, HumanThenRead, Prop, Solve, RotateThenSolve, SolveTwice, ScaleHips, ScaleHipsThenHuman, HipsTrs }
 
     public Mode mode;
     TransformStreamHandle hips, spine, arm, head, hand, prop;
@@ -173,6 +173,20 @@ public struct HumanBoneJob : IAnimationJob
                 break;
             case Mode.Scale:
                 spine.SetLocalScale(stream, new Vector3(1.2f, 1.2f, 1.2f));
+                break;
+            case Mode.ScaleHips:
+            case Mode.ScaleHipsThenHuman:
+                hips.SetLocalScale(stream, Vector3.Scale(hips.GetLocalScale(stream), new Vector3(.8f, 1.25f, 1.1f)));
+                if (mode == Mode.ScaleHipsThenHuman)
+                {
+                    HumanoidProbe.BoneRecord("afterWrite", stream, ref this);
+                    HumanoidProbe.JobRecord("humanBetween", stream);
+                }
+                break;
+            case Mode.HipsTrs:
+                hips.GetLocalTRS(stream, out var position, out var rotation, out var scale);
+                hips.SetLocalTRS(stream, position + new Vector3(.001f, 0, 0), rotation,
+                    Vector3.Scale(scale, new Vector3(.8f, 1.25f, 1.1f)), false);
                 break;
             case Mode.Solve:
                 SolveLeftHand(stream);
