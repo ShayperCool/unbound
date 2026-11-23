@@ -124,11 +124,12 @@ namespace UnityEngine.Tests
             Assert.Equal(140f, percent.LayoutHeight);
         }
 
-        /// <summary>Measured in the Editor (tests/projects/uitkpercent measuredMargin): a node laid out by
-        /// a measure function (a text element) takes its percentage margins and paddings from the
-        /// owner's width like any other node: in a 1000 wide row it is as large as a plain node.</summary>
+        /// <summary>Measured in the Editor (tests/projects/uitkpercent measuredMargin, measuredPadding): a
+        /// node laid out by a measure function (a text element) takes its percentage margins and
+        /// paddings from the owner's width like any other node: in a 1000 wide row it is as large as a
+        /// plain node, and its content is measured at the width its paddings leave.</summary>
         [Fact]
-        public void AMeasuredNodesPercentMarginsTakeTheOwnersWidth()
+        public void AMeasuredNodesPercentMarginsAndPaddingsTakeTheOwnersWidth()
         {
             var config = YogaConfig.UIToolkit();
             var row = new YogaNode(config) { Width = YogaValue.Point(1000), Height = YogaValue.Point(200), FlexDirection = YogaFlexDirection.Row, AlignItems = YogaAlign.Center };
@@ -152,6 +153,20 @@ namespace UnityEngine.Tests
             row.CalculateLayout();
             Assert.Equal((5f, 8f, 250f, 150f), (label.LayoutX, label.LayoutY, label.LayoutWidth, label.LayoutHeight));
             Assert.Equal((265f, 8f, 250f, 150f), (plain.LayoutX, plain.LayoutY, plain.LayoutWidth, plain.LayoutHeight));
+
+            // Measured: 300 wide with an automatic height and 5% top, bottom and left paddings; the
+            // content (taller when narrower) is measured 250 wide and the paddings add 100.
+            var wrapRow = new YogaNode(config) { Width = YogaValue.Point(1000), Height = YogaValue.Point(400), FlexDirection = YogaFlexDirection.Row, AlignItems = YogaAlign.FlexStart };
+            var text = new YogaNode(config) { Width = YogaValue.Point(300), FlexShrink = 0 };
+            text.SetPadding(YogaEdge.Top, YogaValue.Percent(5));
+            text.SetPadding(YogaEdge.Bottom, YogaValue.Percent(5));
+            text.SetPadding(YogaEdge.Left, YogaValue.Percent(5));
+            float measuredWidth = float.NaN;
+            text.MeasureFunction = (n, w, wm, h, hm) => { measuredWidth = w; return new YogaSize { Width = w, Height = 3000f / w }; };
+            wrapRow.Insert(0, text);
+            wrapRow.CalculateLayout();
+            Assert.Equal(250f, measuredWidth);
+            Assert.Equal(112f, text.LayoutHeight);
         }
 
         /// <summary>Measured in the Editor (tests/projects/uitkpercent minOverMax): a minimum size wins
