@@ -9,6 +9,7 @@ namespace UnityEngine.Tests
     /// <summary>A recompilation as the Unity 6000.0.71f1 Editor reports it (tests/projects/compileevents):
     /// started with the build's context, each compiled assembly's started and finished events with its
     /// messages, not-required assemblies, finished with the same context.</summary>
+    [Collection("Frames")]
     public sealed class CompilationEventsTests
     {
         [Fact]

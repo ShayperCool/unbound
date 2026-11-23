@@ -5,6 +5,7 @@ namespace UnityEngine.Tests
 {
     /// <summary>deltaTime before Play mode's first frame and in it (tests/projects/capturestart
     /// records the Editor's: 0.0199999921 whatever the fixed timestep and the time scale).</summary>
+    [Collection("Frames")]
     public class PlayStartDeltaTests
     {
         const float StartDelta = 0.0199999921f;

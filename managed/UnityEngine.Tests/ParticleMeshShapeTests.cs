@@ -7,6 +7,7 @@ namespace UnityEngine.Tests
     /// <summary>The shape module's mesh shapes (Unity 6000.0 ShapeModule.meshShapeType,
     /// meshSpawnMode, useMeshColors, useMeshMaterialIndex, normalOffset, SkinnedMeshRenderer).
     /// These check where particles start, not Unity's random sequence.</summary>
+    [Collection("Frames")]
     public class ParticleMeshShapeTests
     {
         // Submesh 0: a right triangle of area 2 at z = 0; submesh 1: one of area 0.5 at z = 5.

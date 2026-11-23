@@ -16,6 +16,7 @@ namespace UnityEngine.Tests
     /// stay "" and false with one warning. The frame counter, the log handler and the IME state
     /// are restored in <see cref="Dispose"/>.
     /// </summary>
+    [Collection("Frames")]
     public sealed class ImeInputTests : IDisposable
     {
         readonly int m_Frame = Time.s_FrameCount;

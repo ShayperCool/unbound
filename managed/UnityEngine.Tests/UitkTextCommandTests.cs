@@ -10,6 +10,7 @@ namespace UnityEngine.Tests
     /// preview follows the release's text editing with a stand-in input method, as the Editor
     /// probe cannot compose). Controls outside the probe: a paste with Windows line ends into a
     /// single-line and a multiline field, and a read-only field leaving an IME mode set before.</summary>
+    [Collection("Frames")]
     public sealed class UitkTextCommandTests : IDisposable
     {
         readonly Panel m_Panel;

@@ -11,6 +11,7 @@ namespace UnityEngine.Tests
     /// <summary>The Visual Effect runtime on compiled graphs made by hand (no graph package, no
     /// GPU): spawner states, the expression evaluator, the frame's steps, and effects whose
     /// particle systems only count (no kernels, particles that never die).</summary>
+    [Collection("Frames")]
     public partial class VisualEffectSimulationTests
     {
         const float Frame = 1f / 30f;

@@ -7,6 +7,7 @@ using Xunit;
 
 namespace UnityEngine.Tests
 {
+    [Collection("Frames")]
     public class AudioCaptureTimeTests
     {
         static string ClockReference(string profile, [System.Runtime.CompilerServices.CallerFilePath] string source = "") =>

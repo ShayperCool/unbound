@@ -2,6 +2,7 @@ using Xunit;
 
 namespace UnityEngine.Tests
 {
+    [Collection("Frames")]
     public class SkinnedMeshTests
     {
         [Fact]

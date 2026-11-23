@@ -13,6 +13,7 @@ namespace UnityEngine.Tests
     /// they force no motion, and skinned mesh renderers, moving as their root bone does (their
     /// deformation adds none: tests/projects/urp motion_blur_skinned*);
     /// never camera-motion renderers or queued draws.</summary>
+    [Collection("Frames")]
     public sealed class ObjectMotionVectorTests : IDisposable
     {
         readonly List<GameObject> m_Objects = new List<GameObject>();

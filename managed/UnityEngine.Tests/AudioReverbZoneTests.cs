@@ -12,6 +12,7 @@ namespace UnityEngine.Tests
     /// Reverb, the zone descriptor of the frame packet and each AudioSource's send gain. The probe
     /// checks the sound; these tests pin the values the mixer receives.
     /// </summary>
+    [Collection("Frames")]
     public sealed unsafe class AudioReverbZoneTests : IDisposable
     {
         readonly List<GameObject> m_Objects = new List<GameObject>();

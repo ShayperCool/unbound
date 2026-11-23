@@ -2,7 +2,7 @@ using Xunit;
 
 namespace UnityEngine.Tests
 {
-    [Collection("Time")]
+    [Collection("Frames")]
     public class TimeTests
     {
         [Fact]
