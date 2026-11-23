@@ -199,13 +199,16 @@ namespace UnityEngine
             if (globalRenderPipeline.Length != 0 || ActiveSubShader(null, null) is not { } active) return null;
             int count = active.Passes.Count;
             if (count == 0 || !allPasses && pass >= count) return false;
-            var info = Unbound.Runtime.ShaderPassInfo.Of(this);
-            if (info?.Known != true || !info.Found || info.Passes.Count != count) return null;
-            if (!allPasses) return info.CanDraw(pass) ? true : null;
-            for (int index = 0; index < count; index++)
-                if (info.CanDraw(index)) return true;
+            if (!allPasses) return OrdinaryProfilerPass(active.Passes[pass]) ? true : null;
+            foreach (var tags in active.Passes)
+                if (OrdinaryProfilerPass(tags)) return true;
             return null;
         }
+
+        // Shader declarations mark GrabPass separately, including in a headless run. A tag of
+        // that kind cannot establish that a regular pass initialized the property storage.
+        static bool OrdinaryProfilerPass(Dictionary<string, string> tags) =>
+            !string.Equals(Unbound.Runtime.ShaderDeclarations.Tag(tags, "LightMode"), "GrabPass", StringComparison.OrdinalIgnoreCase);
 
         /// <summary>
         /// The names of the passes <see cref="passCount"/> counts, in order: those of the
