@@ -271,6 +271,51 @@ public partial class HumanoidProbe
 #endif
     }
 
+    static void GenericAdditiveMotion()
+    {
+#if UNITY_EDITOR
+        foreach (var mode in new[] { "asset", "assetOff", "assetNoRoot", "authored", "authoredHalf" })
+        {
+            string key = "genericAdditive." + mode;
+            Guarded(key, () => PlayGraph(key, graph =>
+            {
+                var controller = new UnityEditor.Animations.AnimatorController();
+                controller.AddLayer("Base Layer");
+                controller.AddLayer("Additive");
+                var layers = controller.layers;
+                var generic = layers[0].stateMachine.AddState("Generic");
+                generic.motion = ControllerClip("HumanGenericMove");
+                layers[0].stateMachine.defaultState = generic;
+                layers[1].blendingMode = UnityEditor.Animations.AnimatorLayerBlendingMode.Additive;
+                layers[1].defaultWeight = mode == "authoredHalf" ? .35f : .65f;
+                if (mode == "assetNoRoot")
+                {
+                    var mask = new AvatarMask();
+                    for (int part = 0; part < (int)AvatarMaskBodyPart.LastBodyPart; part++)
+                        mask.SetHumanoidBodyPartActive((AvatarMaskBodyPart)part, part != (int)AvatarMaskBodyPart.Root);
+                    layers[1].avatarMask = mask;
+                }
+                var additive = layers[1].stateMachine.AddState("Additive");
+                layers[1].stateMachine.defaultState = additive;
+                if (mode.StartsWith("authored", StringComparison.Ordinal))
+                {
+                    var clip = new AnimationClip();
+                    clip.SetCurve("", typeof(Animator), "Left Arm Down-Up", AnimationCurve.Linear(0f, .15f, 1f, .45f));
+                    clip.SetCurve("", typeof(Animator), "RootT.x", AnimationCurve.Linear(0f, -.15f, 1f, .45f));
+                    clip.SetCurve("", typeof(Animator), "RootT.y", AnimationCurve.Linear(0f, .75f, 1f, 1.1f));
+                    clip.SetCurve("", typeof(Animator), "RootQ.w", AnimationCurve.Constant(0f, 1f, 1f));
+                    additive.motion = clip;
+                }
+                else additive.motion = ControllerClip("HumanA");
+                controller.layers = layers;
+                var playable = AnimatorControllerPlayable.Create(graph, controller);
+                playable.SetLayerWeight(1, layers[1].defaultWeight);
+                return playable;
+            }, mode != "assetOff", velocities: true, localsEvery: 4));
+        }
+#endif
+    }
+
     static void AdditiveEmptyBody()
     {
 #if UNITY_EDITOR
@@ -359,6 +404,7 @@ public partial class HumanoidProbe
     {
         AdditiveEmptyBody();
         GenericControllerMotion();
+        GenericAdditiveMotion();
         foreach (var mode in new[] { "setCurve", "editorCurve", "mirror", "mirrorFootIK", "plainFootIK",
             "plainJob", "plainJobFootIK", "mirrorJob", "mirrorJobFootIK", "mirrorJobPartialFoot",
             "mirrorJobPartialHand", "mirrorJobFootPosition", "mirrorJobFullFoot",
