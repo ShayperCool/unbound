@@ -1,0 +1,9 @@
+{
+  "commands": ["python3 tests/projects/nestedavatar/run.py gate"],
+  "summary": "nestedavatar: .*",
+  "engine_paths": [
+    "managed/UnityEngine/Animation/AnimatorAvatar.cs",
+    "managed/UnityEngine/Animation/Binding.cs",
+    "managed/UnityEngine/Animation/Human/AnimatorHuman.cs"
+  ]
+}

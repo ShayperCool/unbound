@@ -1,0 +1,23 @@
+{"k":"nested.start","v":"avatarRoot WalkerNoNode|initialized True|hips 0,1,0 0,0,0,1|leg 0,-0.5,0 0,0,0,1|prop -1,0,0|holder 0,0,0"}
+{"k":"nested.quarter","v":"avatarRoot WalkerNoNode|initialized True|hips -0.15,1.05,-0.5 0.022,-0.044,0.001,0.999|leg 0,-0.5,0 0.131,0,0,0.991|prop -1,0.25,0|holder 0,0,0"}
+{"k":"renamed.start","v":"avatarRoot Renamed|initialized True|hips 0,1,0 0,0,0,1|leg 0,-0.5,0 0,0,0,1|prop -1,0,0|holder 10,0,0"}
+{"k":"renamed.quarter","v":"avatarRoot Renamed|initialized True|hips -0.15,1.05,-0.5 0.022,-0.044,0.001,0.999|leg 0,-0.5,0 0.131,0,0,0.991|prop -1,0.25,0|holder 10,0,0"}
+{"k":"noAvatar.start","v":"avatarRoot noAvatar|initialized True|hips 0,1,0 0,0,0,1|leg 0,-0.5,0 0,0,0,1|prop -1,0,0|holder 20,0,0"}
+{"k":"noAvatar.quarter","v":"avatarRoot noAvatar|initialized True|hips 0,1,0 0,0,0,1|leg 0,-0.5,0 0,0,0,1|prop -1,0,0|holder 20,0,0"}
+{"k":"deep.start","v":"avatarRoot WalkerNoNode|initialized True|hips 0,1,0 0,0,0,1|leg 0,-0.5,0 0,0,0,1|prop -1,0,0|holder 30,0,0"}
+{"k":"deep.quarter","v":"avatarRoot WalkerNoNode|initialized True|hips -0.15,1.05,-0.5 0.022,-0.044,0.001,0.999|leg 0,-0.5,0 0.131,0,0,0.991|prop -1,0.25,0|holder 30,0,0"}
+{"k":"rootNode.start","v":"avatarRoot Walker|initialized True|hips 0,1,0 0,0,0,1|leg 0,-0.5,0 0,0,0,1|prop -1,0,0|holder 40,0,0"}
+{"k":"rootNode.quarter","v":"avatarRoot Walker|initialized True|hips -0.15,1.05,-0.5 0.022,-0.044,0.001,0.999|leg 0,-0.5,0 0.131,0,0,0.991|prop -1,0.25,0|holder 40,0,0"}
+{"k":"decoy.start","v":"avatarRoot WalkerNoNode|initialized True|hips 0,1,0 0,0,0,1|leg 0,-0.5,0 0,0,0,1|prop -1,0,0|holder 50,0,0"}
+{"k":"decoy.quarter","v":"avatarRoot WalkerNoNode|initialized True|hips -0.15,1.05,-0.5 0.022,-0.044,0.001,0.999|leg 0,-0.5,0 0.131,0,0,0.991|prop -1,0.25,0|holder 50,0,0"}
+{"k":"holderPartial.start","v":"avatarRoot WalkerNoNode|initialized True|hips 0,1,0 0,0,0,1|leg 0,-0.5,0 0,0,0,1|prop -1,0,0|holder 60,0,0"}
+{"k":"holderPartial.quarter","v":"avatarRoot WalkerNoNode|initialized True|hips -0.15,1.05,-0.5 0.022,-0.044,0.001,0.999|leg 0,-0.5,0 0.131,0,0,0.991|prop -1,0.25,0|holder 60,0,0"}
+{"k":"holderNames.start","v":"avatarRoot WalkerNoNode|initialized True|hips 0,1,0 0,0,0,1|leg 0,-0.5,0 0,0,0,1|prop -1,0,0|holder 70,0,0"}
+{"k":"holderNames.quarter","v":"avatarRoot WalkerNoNode|initialized True|hips -0.15,1.05,-0.5 0.022,-0.044,0.001,0.999|leg 0,-0.5,0 0.131,0,0,0.991|prop -1,0.25,0|holder 70,0,0"}
+{"k":"tie.start","v":"avatarRoot WalkerNoNode|initialized True|hips 0,1,0 0,0,0,1|leg 0,-0.5,0 0,0,0,1|prop -1,0,0|holder 80,0,0"}
+{"k":"tie.quarter","v":"avatarRoot WalkerNoNode|initialized True|hips -0.15,1.05,-0.5 0.022,-0.044,0.001,0.999|leg 0,-0.5,0 0.131,0,0,0.991|prop -1,0.25,0|holder 80,0,0"}
+{"k":"human.start","v":"avatarRoot HumanA|upperLeg LeftUpperLeg 0.908,0.013,-0.033,0.418|spine Spine 0.006,-0.046,-0.029,0.999"}
+{"k":"human.quarter","v":"avatarRoot HumanA|upperLeg LeftUpperLeg 0.908,0.013,-0.033,0.418|spine Spine 0.006,-0.046,-0.029,0.999"}
+{"k":"direct.start","v":"avatarRoot WalkerNoNode(Clone)|initialized True|hips 0,1,0 0,0,0,1|leg 0,-0.5,0 0,0,0,1|prop -1,0,0|holder 60,0,0"}
+{"k":"direct.quarter","v":"avatarRoot WalkerNoNode(Clone)|initialized True|hips -0.15,1.05,-0.5 0.022,-0.044,0.001,0.999|leg 0,-0.5,0 0.131,0,0,0.991|prop -1,0.25,0|holder 60,0,0"}
+{"k":"complete","v":true}
