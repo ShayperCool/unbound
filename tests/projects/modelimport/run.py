@@ -56,6 +56,8 @@ def copy_project(dest, space, material_slots=False, mtl=False, smoothing=False):
         'm_EditorVersion: '+os.environ['UNBOUND_PROBE_UNITY_VERSION']+'\n')
     if space in HOOKS:
         shutil.copyfile(PROBE/'Hook'/HOOKS[space], dest/'Assets/Editor'/HOOKS[space])
+    if space == 'BuiltinBlend':
+        shutil.copyfile(PROBE/'Hook/BlendEditor.shader', dest/'Assets/BlendEditor.shader')
     if space in URP_PROFILES:
         (dest/'Assets/Settings').mkdir(parents=True, exist_ok=True)
         for name in URP_FILES:
@@ -127,8 +129,10 @@ def validate_builtin_blend(work, capture):
     keys = {row['k'] for row in rows}
     seed_blends = [row for row in rows if row['k'].endswith('.seed._DstBlend')]
     loaded_blends = [row for row in rows if row['k'].endswith('.loaded._DstBlend')]
-    if (len(rows) != len(keys) or len(rows) != 141 or not all(key.startswith('blend.') for key in keys)
-            or len(seed_blends) != 10 or len(loaded_blends) != 10 or 'blend.playEdit._DstBlend' not in keys):
+    shaders = {row['k']: row['v'] for row in rows if row['k'].endswith('.loaded.shader')}
+    if (len(rows) != len(keys) or len(rows) != 223 or not all(key.startswith('blend.') for key in keys)
+            or len(seed_blends) != 10 or len(loaded_blends) != 10 or 'blend.playEdit._DstBlend' not in keys
+            or shaders.get('blend.M_TransparentTex.loaded.shader') != 'Probe/ModelBlend'):
         sys.exit('BuiltinBlend: incomplete or invalid Editor capture')
 
 

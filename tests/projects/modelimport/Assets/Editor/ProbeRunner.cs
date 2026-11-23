@@ -179,6 +179,14 @@ public class BuiltinBlendSeed : AssetPostprocessor
         };
         if (float.IsNaN(mode)) return;
         if (material.name == "M_Bump") material.shader = Shader.Find("Standard (Specular setup)");
+        if (material.name == "M_TransparentTex")
+        {
+            const string shaderPath = "Assets/BlendEditor.shader";
+            context.DependsOnArtifact(shaderPath);
+            var shader = AssetDatabase.LoadAssetAtPath<Shader>(shaderPath);
+            if (shader == null) throw new InvalidOperationException("Blend control shader is missing.");
+            material.shader = shader;
+        }
         material.SetFloat("_Mode", mode);
         material.SetFloat("_SrcBlend", 5);
         material.SetFloat("_DstBlend", 5);

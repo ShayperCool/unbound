@@ -132,20 +132,57 @@ public class ModelImportProbe : MonoBehaviour
 #if UNITY_EDITOR
             Add(key + ".asset", UnityEditor.AssetDatabase.GetAssetPath(material));
 #endif
-            // Keep the same observation order as Material. An Editor property query can
-            // validate the material, which also changes its queue, tags and keywords.
-            Add(key + ".rawQueue", material.rawRenderQueue);
-            Add(key + ".RenderType", material.GetTag("RenderType", false));
-            Add(key + ".keywords", material.shaderKeywords.OrderBy(keyword => keyword, StringComparer.Ordinal));
-            Add(key + ".gi", material.globalIlluminationFlags.ToString());
+            BlendMetadata(key, material);
+            switch (material.name)
+            {
+                case "M_ArnoldMax": material.HasProperty("_DstBlend"); break;
+                case "M_ArnoldMaya": material.GetTexture("_MainTex"); break;
+                case "M_Bump": material.SetFloat("_DstBlend", 7); break;
+                case "M_Interactive": material.HasFloat("_DstBlend"); break;
+                case "M_InteractiveCutout": material.GetColor("_Color"); break;
+                case "M_LambertBare": material.GetTag("RenderType", false); break;
+                case "M_Physical": material.SetPass(0); break;
+                case "M_SimplifiedPhysical":
+                    var copy = new Material(material);
+                    Add("blend.copy._DstBlend", copy.GetFloat("_DstBlend"));
+                    Add("blend.copy.gi", copy.globalIlluminationFlags.ToString());
+                    DestroyImmediate(copy);
+                    break;
+                case "M_TransparentColor": DrawBeforeRead(material); break;
+                case "M_TransparentTex": material.SetFloat("_Mode", 0); break;
+            }
+            BlendMetadata(key + ".afterAction", material);
             foreach (var property in BlendProperties)
                 Add(key + "." + property, material.GetFloat(property));
+            BlendMetadata(key + ".afterFloats", material);
             if (material.name == "M_InteractiveCutout")
             {
                 material.SetFloat("_DstBlend", 5);
                 Add("blend.playEdit._DstBlend", material.GetFloat("_DstBlend"));
             }
         }
+    }
+
+    void BlendMetadata(string key, Material material)
+    {
+        Add(key + ".rawQueue", material.rawRenderQueue);
+        Add(key + ".RenderType", material.GetTag("RenderType", false));
+        Add(key + ".keywords", material.shaderKeywords.OrderBy(keyword => keyword, StringComparer.Ordinal));
+        Add(key + ".gi", material.globalIlluminationFlags.ToString());
+    }
+
+    static void DrawBeforeRead(Material material)
+    {
+        var holder = GameObject.CreatePrimitive(PrimitiveType.Quad);
+        holder.GetComponent<Renderer>().sharedMaterial = material;
+        var camera = new GameObject("Blend probe camera").AddComponent<Camera>();
+        camera.transform.position = Vector3.back * 2f;
+        var target = new RenderTexture(8, 8, 0);
+        camera.targetTexture = target;
+        camera.Render();
+        DestroyImmediate(camera.gameObject);
+        DestroyImmediate(holder);
+        DestroyImmediate(target);
     }
 
     void Model(string name, Transform root)
