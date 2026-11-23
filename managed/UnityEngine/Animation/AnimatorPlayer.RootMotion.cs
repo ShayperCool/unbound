@@ -691,7 +691,7 @@ namespace Unbound.Runtime
         bool HumanRootMotion(Animator animator, Unbound.Runtime.Humanoid.AnimatorHuman human)
         {
             human.ClearMotion();
-            if (!BlendHumanMotion(human, out var blended))
+            if (!BlendHumanMotion(human, out var blended, allowAdditiveOverEmptyBase: true))
             {
                 human.IdleMotion(m_RootDeltaTime);
                 return false;
@@ -710,7 +710,8 @@ namespace Unbound.Runtime
         /// layer poses, blended over its layers (<see cref="HumanRootMotion"/>), without moving
         /// anything: what an AnimatorControllerPlayable's stream carries to its output. False
         /// when no humanoid clip plays.</summary>
-        internal bool BlendHumanMotion(Unbound.Runtime.Humanoid.AnimatorHuman human, out Unbound.Runtime.Humanoid.HumanRootMotionSample blended)
+        internal bool BlendHumanMotion(Unbound.Runtime.Humanoid.AnimatorHuman human,
+            out Unbound.Runtime.Humanoid.HumanRootMotionSample blended, bool allowAdditiveOverEmptyBase)
         {
             blended = default;
             bool any = false;
@@ -750,8 +751,9 @@ namespace Unbound.Runtime
                 float layerWeight = i == 0 ? 1f : Layers[i].Evaluated;
                 if (!additive) layerWeight *= FillLayer(i);
                 var mask = Layers[i].Def.Mask;
-                bool additiveOverEmptyBase = Compat.HumanAdditiveBodyOverEmptyBase && additive && !any
-                    && i == 1 && Layers.Length == 2 && !Layers[0].Def.Additive && Layers[0].Next == null
+                bool additiveOverEmptyBase = allowAdditiveOverEmptyBase && Compat.HumanAdditiveBodyOverEmptyBase && additive && !any
+                    && i == 1 && Layers.Length == 2 && !Layers[0].Def.Additive
+                    && Layers[0].Def.SyncedLayerIndex < 0 && Layers[0].Next == null
                     && EmptyWithDefaults(Layers[0], Layers[0].Current)
                     && Layers[i].Def.SyncedLayerIndex < 0 && Layers[i].Next == null
                     && Layers[i].Current is { } current && MotionOf(Layers[i].Def, current.Def) is AnimationClip;

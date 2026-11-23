@@ -662,6 +662,7 @@ namespace Unbound.Runtime.Humanoid
                     // Start at the identity body with an identity root step and resting feet.
                     below = NoMotion;
                     below.HasMotion = true;
+                    below.GravityWeight = 0f;
                     any = true;
                 }
                 AddBody(ref below, AdditiveBody(differences, weights, layerWeight));

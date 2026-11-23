@@ -237,11 +237,12 @@ public partial class HumanoidProbe
     {
 #if UNITY_EDITOR
         foreach (var mode in new[] { "baseClip", "empty", "emptyHalf", "emptyNoRoot", "emptyZero", "attachedEmpty",
-            "emptyWithoutMotion", "attachedEmptyWithoutMotion" })
+            "emptyWithoutMotion", "attachedEmptyWithoutMotion", "attachedFadeEmpty", "playableFadeEmpty" })
         {
             var key = "additiveEmptyBody." + mode;
             float weight = mode == "emptyZero" ? 0f : mode == "emptyHalf" ? .35f : .65f;
             bool move = !mode.EndsWith("WithoutMotion", StringComparison.Ordinal);
+            bool fade = mode.EndsWith("FadeEmpty", StringComparison.Ordinal);
             Guarded(key, () =>
             {
                 var controller = new UnityEditor.Animations.AnimatorController();
@@ -251,7 +252,8 @@ public partial class HumanoidProbe
                 layers[1].blendingMode = UnityEditor.Animations.AnimatorLayerBlendingMode.Additive;
                 layers[1].defaultWeight = weight;
                 var baseState = layers[0].stateMachine.AddState("Base");
-                if (mode == "baseClip") baseState.motion = ControllerClip("HumanA");
+                if (mode == "baseClip" || fade) baseState.motion = ControllerClip("HumanA");
+                if (fade) layers[0].stateMachine.AddState("Empty");
                 layers[0].stateMachine.defaultState = baseState;
                 var additiveState = layers[1].stateMachine.AddState("Additive");
                 layers[1].stateMachine.defaultState = additiveState;
@@ -280,6 +282,7 @@ public partial class HumanoidProbe
                     using var handler = new HumanPoseHandler(animator.avatar, instance.transform);
                     for (int step = 0; step <= 28; step++)
                     {
+                        if (fade && step == 9) animator.CrossFadeInFixedTime("Empty", .05f, 0, 0f);
                         animator.Update(step == 0 ? 0f : step <= 24 ? 1f / 30f : 0.1f);
                         var stepKey = key + ".step" + step;
                         Step(stepKey, animator, handler, step % 4 == 0);
@@ -290,12 +293,16 @@ public partial class HumanoidProbe
                     return;
                 }
 
+                AnimatorControllerPlayable playable = default;
                 PlayGraph(key, g =>
                 {
-                    var playable = AnimatorControllerPlayable.Create(g, controller);
+                    playable = AnimatorControllerPlayable.Create(g, controller);
                     playable.SetLayerWeight(1, weight);
                     return playable;
-                }, move, velocities: false, localsEvery: 4);
+                }, move, velocities: false, before: step =>
+                {
+                    if (fade && step == 9) playable.CrossFadeInFixedTime("Empty", .05f, 0, 0f);
+                }, localsEvery: 4);
             });
         }
 #endif

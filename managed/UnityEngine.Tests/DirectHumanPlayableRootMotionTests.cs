@@ -96,13 +96,18 @@ namespace UnityEngine.Tests
         }
 
         [Theory]
-        [InlineData(TestRelease.Measured, true)]
-        [InlineData(TestRelease.Unmeasured, false)]
-        public void AnAdditiveLayerPosesTheBodyAboveAMeasuredEmptyBase(string release, bool movesBody)
+        [InlineData(TestRelease.Measured, "attached", true)]
+        [InlineData(TestRelease.Measured, "direct", true)]
+        [InlineData(TestRelease.Unmeasured, "attached", false)]
+        [InlineData(TestRelease.Measured, "mixer", false)]
+        [InlineData(TestRelease.Measured, "job", false)]
+        public void AnAdditiveLayerPosesTheBodyAboveAMeasuredEmptyBase(
+            string release, string output, bool movesBody)
         {
             using var pin = TestRelease.Pin(release);
             const string diagnostic = "Animator additive humanoid body over no humanoid clip";
-            int Hits() => Stubs.HitReport().FirstOrDefault(hit => hit.Key == diagnostic).Value;
+            const string streamDiagnostic = "AnimationHumanStream without humanoid body motion";
+            int Hits(string key) => Stubs.HitReport().FirstOrDefault(hit => hit.Key == key).Value;
 
             var root = AnimationHumanStreamTests.Humanoid(out var animator);
             var avatar = animator.avatar;
@@ -120,22 +125,61 @@ namespace UnityEngine.Tests
             layers[1].defaultWeight = .65f;
             layers[1].blendingMode = AnimatorLayerBlendingMode.Additive;
             controller.layers = layers;
-            animator.runtimeAnimatorController = controller;
             animator.applyRootMotion = true;
-            animator.SetLayerWeight(1, .65f);
+            PlayableGraph graph = default;
+            Action<float> evaluate = animator.Update;
             try
             {
-                int before = Hits();
-                animator.Update(0f);
+                if (output == "attached")
+                {
+                    animator.runtimeAnimatorController = controller;
+                    animator.SetLayerWeight(1, .65f);
+                }
+                else if (output == "job")
+                {
+                    graph = AnimationHumanStreamTests.Graph(animator, (stream, frame) =>
+                    {
+                        _ = stream.AsHuman().bodyLocalPosition;
+                    });
+                    var job = graph.GetOutput(0).GetSourcePlayable();
+                    job.SetInputCount(1);
+                    var playable = AnimatorControllerPlayable.Create(graph, controller);
+                    playable.SetLayerWeight(1, .65f);
+                    Assert.True(graph.Connect(playable, 0, job, 0));
+                    job.SetInputWeight(0, 1f);
+                    evaluate = graph.Evaluate;
+                }
+                else
+                {
+                    graph = PlayableGraph.Create();
+                    graph.SetTimeUpdateMode(DirectorUpdateMode.Manual);
+                    var playable = AnimatorControllerPlayable.Create(graph, controller);
+                    playable.SetLayerWeight(1, .65f);
+                    Playable source = playable;
+                    if (output == "mixer")
+                    {
+                        var mixer = AnimationMixerPlayable.Create(graph, 1);
+                        Assert.True(graph.Connect(playable, 0, mixer, 0));
+                        mixer.SetInputWeight(0, 1f);
+                        source = mixer;
+                    }
+                    AnimationPlayableOutput.Create(graph, "out", animator).SetSourcePlayable(source);
+                    evaluate = graph.Evaluate;
+                }
+
+                int before = Hits(diagnostic), beforeStream = Hits(streamDiagnostic);
+                evaluate(0f);
                 var bodyInitial = hips.position;
                 var rootInitial = root.transform.position;
-                animator.Update(.25f);
+                evaluate(.25f);
                 Assert.Equal(movesBody, (hips.position - bodyInitial).magnitude > .05f);
                 Near.Equal(rootInitial, root.transform.position, 1e-5f);
-                Assert.Equal(!movesBody, Hits() > before);
+                Assert.Equal(!movesBody, Hits(diagnostic) > before);
+                Assert.Equal(output == "job", Hits(streamDiagnostic) > beforeStream);
             }
             finally
             {
+                if (graph.IsValid()) graph.Destroy();
                 Object.DestroyImmediate(root);
                 Object.DestroyImmediate(avatar);
                 Object.DestroyImmediate(controller);

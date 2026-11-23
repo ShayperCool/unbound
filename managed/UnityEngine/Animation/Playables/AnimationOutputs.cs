@@ -348,6 +348,7 @@ namespace Unbound.Runtime.Playables
         internal bool UsesMeasuredKinematicJobRoot;
         internal bool UsesMeasuredLayerJobRoot;
         internal PlayableOutputData ScriptedJobOutput;
+        internal ControllerKind AdditiveBodyController;
         bool m_ExplicitEvaluation, m_CanMoveDuringJob, m_JobInterrupted;
         internal bool UsesDefaultHumanJobPose;
         AnimatorRootMotion? m_JobHumanStep;
@@ -402,6 +403,7 @@ namespace Unbound.Runtime.Playables
             e.UsesDefaultHumanJobPose = false;
             e.m_ExplicitEvaluation = false;
             e.ScriptedJobOutput = null;
+            e.AdditiveBodyController = null;
             e.m_CanMoveDuringJob = e.m_JobInterrupted = false;
             e.m_JobHumanStep = null;
             e.OutputWeight = 1f;
@@ -921,6 +923,8 @@ namespace Unbound.Runtime.Playables
                 e.AutomaticFrame = (o.Engine as AnimationOutputState)?.Automatic == true
                     && o.Graph.UpdateMode == DirectorUpdateMode.GameTime;
                 var source = (o.Engine as AnimationOutputState)?.StreamSource ?? AnimationStreamSource.DefaultValues;
+                e.AdditiveBodyController = e.MotionMode == RootMotionMode.Human && e.m_ExplicitEvaluation
+                    && o.Graph.UpdateMode == DirectorUpdateMode.Manual ? o.Source.Kind as ControllerKind : null;
                 e.UsesMeasuredJobVelocities = Compat.AnimationStreamVelocityWrites && !withController
                     && !animator.isHuman && o.Graph.UpdateMode == DirectorUpdateMode.Manual && o.Weight == 1f
                     && source == AnimationStreamSource.DefaultValues && JobKind.HasEmptyMotionSource(o.Source)

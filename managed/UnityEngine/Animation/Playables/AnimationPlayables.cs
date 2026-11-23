@@ -855,7 +855,7 @@ namespace Unbound.Runtime.Playables
             if (e.Replay) into.BodyMotion = m_LastBody;
             else
             {
-                player.BlendHumanMotion(human, out into.BodyMotion);
+                player.BlendHumanMotion(human, out into.BodyMotion, ReferenceEquals(e.AdditiveBodyController, this));
                 m_LastBody = into.BodyMotion;
             }
             if (into.BodyMotion.HasMotion) into.GoalsInMotion = true;
