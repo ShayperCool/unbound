@@ -2320,6 +2320,40 @@ namespace UnityEngine
         /// the end: float noise of the summed step intervals, far below one birth.</summary>
         const float BirthEndTie = 1e-4f;
 
+        static int TakeBirthCount(ref float accumulator, bool endsAtDuration)
+        {
+            int count;
+            if (endsAtDuration)
+            {
+                float whole = Mathf.Round(accumulator);
+                if (Mathf.Abs(accumulator - whole) <= BirthEndTie) accumulator = whole;
+                count = Math.Max(0, (int)Math.Ceiling(accumulator) - 1);
+            }
+            else count = (int)accumulator;
+            accumulator -= count;
+            return count;
+        }
+
+        void DispatchBirthEmission(ParticleSystem child, ref Particle parent, ParticleSystemSubEmitterProperties properties,
+            int count, in BirthEmission first, System.Collections.Generic.List<BirthEmission> requests, bool held)
+        {
+            if (held)
+            {
+                var birth = parent;
+                birth.m_Position = first.position;
+                ParticleSystemManager.HoldBirthEmission(child, this, ref birth, properties, count, first, requests);
+            }
+            else if (m_SimulatingBirths)
+            {
+                var birth = parent;
+                birth.m_Position = first.position;
+                child.EmitFromParent(this, ref birth, properties, count, first.age,
+                    birthCatchup: m_BirthCallRemaining, birthSpacing: first.spacing,
+                    birthVelocity: first.velocity, birthRequests: requests);
+            }
+            else child.EmitFromParent(this, ref parent, properties, count, 0f);
+        }
+
         void BirthSubEmitters(ref Particle parent, float ageBefore, float ageAfter, float dt, Vector3 positionBefore)
         {
             bool held = !m_SimulatingBirths && ParticleSystemManager.Updating && Compat.ParticleBirthStepsMeasured;
@@ -2353,7 +2387,6 @@ namespace UnityEngine
                 // bursts still drive Birth emission (6000.0.71f1, particlerender
                 // birthstart/disabled*, Play and Simulate; Death children, subemitters probe).
                 var emissionRandom = ModuleRandom(parent.m_RandomSeed, PlaybackSeed);
-                float rate = child.m_Emission.rateOverTime.Evaluate(age01, emissionRandom.NextValue());
                 // The measured percent-clock endpoints retain rate boundary bits.
                 // The first interval cannot precede the newborn's integration span.
                 // Infinite lifetimes and a ring's age rewind have no such interval;
@@ -2371,25 +2404,55 @@ namespace UnityEngine
                 }
                 float emissionDt = useInterval ? to - from : dt;
                 if (useInterval && firstBirth) emissionDt = Mathf.Min(emissionDt, dt);
-                ref float accumulator = ref (slot == 0 ? ref parent.m_EmitAccumulator0 : ref parent.m_EmitAccumulator1);
-                accumulator += rate * emissionDt;
+                float tail = useInterval ? Mathf.Max(0f, ageAfter - delay - to) : 0f;
                 // A non-looping child's duration ends its rate exclusively, as a loop's end: a
                 // birth due exactly there is not emitted, in Play, Simulate and prewarm alike
                 // (6000.0.71f1, particlerender birthstart/childdur*: a 1 s child at 10/s under a
                 // parent living 1.5 s emits nine). The step's summed intervals can land a hair
                 // above that whole count, which still counts as due at the end.
-                if (useInterval && !child.m_Main.loop && ageAfter - delay >= child.m_Main.duration)
+                bool endsAtDuration = useInterval && !child.m_Main.loop && ageAfter - delay >= child.m_Main.duration;
+                ref float accumulator = ref (slot == 0 ? ref parent.m_EmitAccumulator0 : ref parent.m_EmitAccumulator1);
+                // Rate over distance precedes rate over time and shares the parent particle's
+                // per-slot accumulator (6000.0.71f1, tests/projects/subemitters birth/distance/*).
+                // A statically zero distance rate skips evaluation so rate-over-time-only random
+                // draws stay unchanged.
+                var distCurve = child.m_Emission.rateOverDistance;
+                if (distCurve.scalar > 0f || (distCurve.mode == ParticleSystemCurveMode.TwoConstants && distCurve.minScalar > 0f))
                 {
-                    float whole = Mathf.Round(accumulator);
-                    if (Mathf.Abs(accumulator - whole) <= BirthEndTie) accumulator = whole;
-                    n = Math.Max(0, (int)Math.Ceiling(accumulator) - 1);
+                    float distRate = Mathf.Max(0f, distCurve.Evaluate(age01, emissionRandom.NextValue()));
+                    var simVelocity = parent.m_Velocity + parent.m_AnimatedVelocity;
+                    float worldSpeed = m_Main.simulationSpace == ParticleSystemSimulationSpace.World
+                        ? simVelocity.magnitude
+                        : SimulationToWorld().MultiplyVector(simVelocity).magnitude;
+                    float toEmit = distRate * emissionDt * worldSpeed;
+                    if (toEmit > 0f)
+                    {
+                        accumulator += toEmit;
+                        int distCount = TakeBirthCount(ref accumulator, endsAtDuration);
+                        if (distCount > 0)
+                        {
+                            float distRemainder = accumulator;
+                            float distSpacing = toEmit < 1e-4f ? 1f : 1f / toEmit;
+                            float distAge = Mathf.Clamp(distRemainder * distSpacing, 1e-6f, 1f) * emissionDt + tail;
+                            var distEmission = new BirthEmission
+                            {
+                                count = distCount,
+                                age = distAge,
+                                spacing = -distSpacing * emissionDt,
+                                velocity = travel,
+                                position = Vector3.LerpUnclamped(positionBefore, parent.m_Position, dt > 0f ? 1f - distAge / dt : 0f),
+                            };
+                            DispatchBirthEmission(child, ref parent, e.properties, distCount, distEmission, null, held);
+                        }
+                    }
                 }
-                else n = (int)accumulator;
-                accumulator -= n;
+                float rate = child.m_Emission.rateOverTime.Evaluate(age01, emissionRandom.NextValue());
+                accumulator += rate * emissionDt;
+                n = TakeBirthCount(ref accumulator, endsAtDuration);
                 if (n > 0 && rate > 0f)
                 {
                     float remainder = accumulator;
-                    birthAge = remainder / rate + (useInterval ? Mathf.Max(0f, ageAfter - delay - to) : 0f);
+                    birthAge = remainder / rate + tail;
                     spacing = -1f / rate;
                     firstEmission = new BirthEmission { count = n, age = birthAge, spacing = spacing, velocity = travel,
                         position = Vector3.LerpUnclamped(positionBefore, parent.m_Position, dt > 0f ? 1f - birthAge / dt : 0f) };
@@ -2419,24 +2482,7 @@ namespace UnityEngine
                     }
                 }
                 if (n > 0)
-                {
-                    var requests = batch.Count > 0 ? batch : null;
-                    if (held)
-                    {
-                        var birth = parent;
-                        birth.m_Position = firstEmission.position;
-                        ParticleSystemManager.HoldBirthEmission(child, this, ref birth, e.properties, n, firstEmission, requests);
-                    }
-                    else if (m_SimulatingBirths)
-                    {
-                        var birth = parent;
-                        birth.m_Position = firstEmission.position;
-                        child.EmitFromParent(this, ref birth, e.properties, n, firstEmission.age,
-                            birthCatchup: m_BirthCallRemaining, birthSpacing: firstEmission.spacing,
-                            birthVelocity: firstEmission.velocity, birthRequests: requests);
-                    }
-                    else child.EmitFromParent(this, ref parent, e.properties, n, 0f);
-                }
+                    DispatchBirthEmission(child, ref parent, e.properties, n, firstEmission, batch.Count > 0 ? batch : null, held);
                 slot++;
             }
             if (intervals) parent.m_Flags |= Particle.FlagBirthBurstsDone;
