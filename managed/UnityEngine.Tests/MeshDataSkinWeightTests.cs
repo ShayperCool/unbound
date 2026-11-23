@@ -1,4 +1,3 @@
-using System;
 using Unity.Collections;
 using UnityEngine.Rendering;
 using Xunit;
@@ -36,7 +35,7 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
-        public void ResizedPackedSnapshotCannotPartiallyReplaceDestinationMeshes()
+        public void ResizedPackedSnapshotCanStillReplaceDestinationMeshes()
         {
             var source = new Mesh { vertices = new[] { Vector3.right } };
             var first = new Mesh();
@@ -53,13 +52,19 @@ namespace UnityEngine.Tests
                     new BoneWeight1 { boneIndex = 4, weight = .0625f },
                 }, Allocator.Temp);
                 source.SetBoneWeights(counts, weights);
-                using var data = Mesh.AllocateWritableMeshData(new[] { source, source });
-                data[1].SetVertexBufferParams(2, new VertexAttributeDescriptor(VertexAttribute.Position));
-
-                Assert.Throws<NotSupportedException>(() => Mesh.ApplyAndDisposeWritableMeshData(data, new[] { first, second }));
-                Assert.Equal(0, first.vertexCount);
-                Assert.Equal(0, second.vertexCount);
-                Assert.Equal(2, data[1].vertexCount);
+                var data = Mesh.AllocateWritableMeshData(new[] { source, source });
+                try
+                {
+                    data[1].SetVertexBufferParams(2, new VertexAttributeDescriptor(VertexAttribute.Position));
+                    Mesh.ApplyAndDisposeWritableMeshData(data, new[] { first, second });
+                }
+                catch
+                {
+                    data.Dispose();
+                    throw;
+                }
+                Assert.Equal(1, first.vertexCount);
+                Assert.Equal(2, second.vertexCount);
             }
             finally
             {
