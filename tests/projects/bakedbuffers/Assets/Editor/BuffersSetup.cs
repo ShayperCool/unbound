@@ -840,6 +840,29 @@ public static class BuffersSetup
         Save(scene, "ProbesGrid");
     }
 
+    /// <summary>Whether the lightmaps' light grid takes the probes in: five baked point lights
+    /// over the renderers (more than a path's surface tests, so it picks among them), and one
+    /// beyond them whose range reaches a probe but no renderer (in the grid's one region with
+    /// the probes, out of it without them: it changes which lights the lightmaps' paths
+    /// pick).</summary>
+    static void ProbesReach()
+    {
+        var scene = Lit("ProbesReach");
+        var settings = Lightmapping.lightingSettings;
+        settings.indirectSampleCount = 64;
+        settings.maxBounces = 2;
+        settings.minBounces = 2;
+        NewLight("NearA", LightType.Point, new Vector3(1.03f, 2.01f, -1.02f), Vector3.zero, new Color(1f, 0.6f, 0.3f), 2f).range = 6f;
+        NewLight("NearB", LightType.Point, new Vector3(-1.52f, 1.53f, 1.04f), Vector3.zero, new Color(0.4f, 1f, 0.5f), 1.5f).range = 5f;
+        NewLight("NearC", LightType.Point, new Vector3(2.51f, 1.02f, 2.03f), Vector3.zero, new Color(0.5f, 0.5f, 1f), 1f).range = 4f;
+        NewLight("NearD", LightType.Point, new Vector3(-2.03f, 2.52f, -2.01f), Vector3.zero, new Color(1f, 1f, 0.6f), 2.5f).range = 7f;
+        NewLight("NearE", LightType.Point, new Vector3(0.04f, 3.01f, 0.03f), Vector3.zero, new Color(1f, 0.4f, 0.8f), 1.2f).range = 5f;
+        NewLight("Away", LightType.Point, new Vector3(10.03f, 1.01f, 0.02f), Vector3.zero, new Color(0.3f, 0.6f, 1f), 3f).range = 3f;
+        var group = new GameObject("Group").AddComponent<LightProbeGroup>();
+        group.probePositions = new[] { new Vector3(12f, 0.5f, 0.1f), new Vector3(0.2f, 2f, 0.3f) };
+        Save(scene, "ProbesReach");
+    }
+
     /// <summary>Makes the scenes <c>BAKED_BUFFERS_SCENES</c> names (comma-separated), else all.</summary>
     public static void Create()
     {
@@ -852,7 +875,7 @@ public static class BuffersSetup
                 ("ModeSubtractive", () => Modes("ModeSubtractive", MixedLightingMode.Subtractive)),
                 ("ModeShadowmask", () => Modes("ModeShadowmask", MixedLightingMode.Shadowmask)),
                 ("Bounce", Bounces), ("Glow", Glow), ("Roof", Roof), ("Textured", Textured), ("Levels", Levels), ("Sky", Skies), ("Spare", Spare),
-                ("SkyRealtime", RealtimeSkies), ("SpareEmpty", SpareEmpty), ("Spread", Spread), ("Far", Far), ("Masks", Masks), ("MasksBright", MasksBright), ("MasksEdges", MasksEdges), ("Probes", Probes), ("ProbesGrid", ProbesGrid), ("Directional", Directional),
+                ("SkyRealtime", RealtimeSkies), ("SpareEmpty", SpareEmpty), ("Spread", Spread), ("Far", Far), ("Masks", Masks), ("MasksBright", MasksBright), ("MasksEdges", MasksEdges), ("Probes", Probes), ("ProbesGrid", ProbesGrid), ("ProbesReach", ProbesReach), ("Directional", Directional),
             };
             var only = Environment.GetEnvironmentVariable("BAKED_BUFFERS_SCENES");
             var wanted = string.IsNullOrEmpty(only) ? null : new HashSet<string>(only.Split(','));

@@ -1,0 +1,227 @@
+{
+ "mixedMode": 0,
+ "lights": [
+  {
+   "color": [
+    0.3185468316078186,
+    2.440061569213867,
+    0.5225216150283813
+   ],
+   "indirectColor": [
+    0.3185468316078186,
+    2.440061569213867,
+    0.5225216150283813
+   ],
+   "orientation": [
+    0.0,
+    0.0,
+    0.0,
+    1.0
+   ],
+   "position": [
+    -1.5199999809265137,
+    1.5299999713897705,
+    1.0399999618530273
+   ],
+   "range": 5.0,
+   "cookie": 4294967295,
+   "cookieScale": 1.0,
+   "coneAngle": 0.0,
+   "innerConeAngle": 0.0,
+   "shape0": 0.0,
+   "shape1": 0.0,
+   "type": 1,
+   "mode": 2,
+   "falloff": 3,
+   "angularFalloff": 0,
+   "castsShadows": true,
+   "shadowMaskChannel": 4294967295,
+   "name": "NearB"
+  },
+  {
+   "color": [
+    7.507028102874756,
+    7.507028102874756,
+    2.4400618076324463
+   ],
+   "indirectColor": [
+    7.507028102874756,
+    7.507028102874756,
+    2.4400618076324463
+   ],
+   "orientation": [
+    0.0,
+    0.0,
+    0.0,
+    1.0
+   ],
+   "position": [
+    -2.0299999713897705,
+    2.5199999809265137,
+    -2.009999990463257
+   ],
+   "range": 7.0,
+   "cookie": 4294967295,
+   "cookieScale": 1.0,
+   "coneAngle": 0.0,
+   "innerConeAngle": 0.0,
+   "shape0": 0.0,
+   "shape1": 0.0,
+   "type": 1,
+   "mode": 2,
+   "falloff": 3,
+   "angularFalloff": 0,
+   "castsShadows": true,
+   "shadowMaskChannel": 4294967295,
+   "name": "NearD"
+  },
+  {
+   "color": [
+    0.21404114365577698,
+    0.21404114365577698,
+    1.0
+   ],
+   "indirectColor": [
+    0.21404114365577698,
+    0.21404114365577698,
+    1.0
+   ],
+   "orientation": [
+    0.0,
+    0.0,
+    0.0,
+    1.0
+   ],
+   "position": [
+    2.509999990463257,
+    1.0199999809265137,
+    2.0299999713897705
+   ],
+   "range": 4.0,
+   "cookie": 4294967295,
+   "cookieScale": 1.0,
+   "coneAngle": 0.0,
+   "innerConeAngle": 0.0,
+   "shape0": 0.0,
+   "shape1": 0.0,
+   "type": 1,
+   "mode": 2,
+   "falloff": 3,
+   "angularFalloff": 0,
+   "castsShadows": true,
+   "shadowMaskChannel": 4294967295,
+   "name": "NearC"
+  },
+  {
+   "color": [
+    1.4934778213500977,
+    0.19599421322345734,
+    0.9114076495170593
+   ],
+   "indirectColor": [
+    1.4934778213500977,
+    0.19599421322345734,
+    0.9114076495170593
+   ],
+   "orientation": [
+    0.0,
+    0.0,
+    0.0,
+    1.0
+   ],
+   "position": [
+    0.03999999910593033,
+    3.009999990463257,
+    0.029999999329447746
+   ],
+   "range": 5.0,
+   "cookie": 4294967295,
+   "cookieScale": 1.0,
+   "coneAngle": 0.0,
+   "innerConeAngle": 0.0,
+   "shape0": 0.0,
+   "shape1": 0.0,
+   "type": 1,
+   "mode": 2,
+   "falloff": 3,
+   "angularFalloff": 0,
+   "castsShadows": true,
+   "shadowMaskChannel": 4294967295,
+   "name": "NearE"
+  },
+  {
+   "color": [
+    4.594793796539307,
+    1.4934778213500977,
+    0.318546861410141
+   ],
+   "indirectColor": [
+    4.594793796539307,
+    1.4934778213500977,
+    0.318546861410141
+   ],
+   "orientation": [
+    0.0,
+    0.0,
+    0.0,
+    1.0
+   ],
+   "position": [
+    1.0299999713897705,
+    2.009999990463257,
+    -1.0199999809265137
+   ],
+   "range": 6.0,
+   "cookie": 4294967295,
+   "cookieScale": 1.0,
+   "coneAngle": 0.0,
+   "innerConeAngle": 0.0,
+   "shape0": 0.0,
+   "shape1": 0.0,
+   "type": 1,
+   "mode": 2,
+   "falloff": 3,
+   "angularFalloff": 0,
+   "castsShadows": true,
+   "shadowMaskChannel": 4294967295,
+   "name": "NearA"
+  },
+  {
+   "color": [
+    0.7874124646186829,
+    3.6441779136657715,
+    11.211579322814941
+   ],
+   "indirectColor": [
+    0.7874124646186829,
+    3.6441779136657715,
+    11.211579322814941
+   ],
+   "orientation": [
+    0.0,
+    0.0,
+    0.0,
+    1.0
+   ],
+   "position": [
+    10.029999732971191,
+    1.0099999904632568,
+    0.019999999552965164
+   ],
+   "range": 3.0,
+   "cookie": 4294967295,
+   "cookieScale": 1.0,
+   "coneAngle": 0.0,
+   "innerConeAngle": 0.0,
+   "shape0": 0.0,
+   "shape1": 0.0,
+   "type": 1,
+   "mode": 2,
+   "falloff": 3,
+   "angularFalloff": 0,
+   "castsShadows": true,
+   "shadowMaskChannel": 4294967295,
+   "name": "Away"
+  }
+ ]
+}

@@ -157,13 +157,18 @@ ground, cube and sphere with 16 Direct Samples and no sky but an ambient colour:
   objects' order in the scene file, one moved, one turned and scaled, with points between
   hundredths of a metre on both sides of zero; and a probe 8 m above the renderers under a
   baked point light that reaches it but not them.
+- `ProbesReach`: five baked point lights over the renderers and a sixth 10 m away whose range
+  reaches a probe beside it and no renderer: it is in the light grid's region only if the box
+  takes the probes in, and the lightmaps' paths, which pick among more lights than they test,
+  pick otherwise with it (the Editor's own bake input replayed: exact with it, 528 texels off
+  by more than 1e-2 without).
 
 What these show: the groups are baked in their objects' order in the scene file (their file
 IDs'), each by itself (a probe's sample numbers are turned by its place in its group); a probe
 is baked at its world point cut to whole hundredths of a metre towards zero; the light grid's
-box takes the probes in with the renderers; a probe takes four times the samples a texel
-takes, of its paths and of the sky, and its paths may end by chance from their first surface
-on whatever the Min Bounces.
+box takes the probes in with the renderers, for the lightmaps' paths too; a probe takes four
+times the samples a texel takes, of its paths and of the sky, and its paths may end by chance
+from their first surface on whatever the Min Bounces.
 
 The scenes above them have the default sky (`Bare`, `Charts`, `Samples`, `Shapes`: the default
 skybox, with the default Lighting Settings' picked directions) or none (a black sky: one picked
