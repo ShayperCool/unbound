@@ -92,6 +92,38 @@ namespace UnityEngine.Tests
             Assert.Equal(160f, plainChild.LayoutHeight);
         }
 
+        /// <summary>Measured in the Editor (tests/projects/uitkpercent): the percentage margins and
+        /// paddings of an element in a 100 wide, 400 high column take the width (10% is 10), also for
+        /// the space its children are laid out in: a 50% basis of a child is half of what is left.</summary>
+        [Theory]
+        [InlineData(false)]
+        [InlineData(true)]
+        public void PercentMarginsAndPaddingsOfAColumnTakeTheWidth(bool padding)
+        {
+            var config = YogaConfig.UIToolkit();
+            var outer = new YogaNode(config) { Width = YogaValue.Point(100), Height = YogaValue.Point(400) };
+            var grow = new YogaNode(config) { Width = YogaValue.Point(100), FlexGrow = 1, FlexShrink = 0 };
+            if (padding)
+            {
+                grow.SetPadding(YogaEdge.Top, YogaValue.Percent(10));
+                grow.SetPadding(YogaEdge.Bottom, YogaValue.Percent(10));
+            }
+            else
+            {
+                grow.SetMargin(YogaEdge.Top, YogaValue.Percent(10));
+                grow.SetMargin(YogaEdge.Bottom, YogaValue.Percent(10));
+            }
+            var percent = new YogaNode(config) { Width = YogaValue.Point(20), FlexBasis = YogaValue.Percent(50), FlexShrink = 0 };
+            grow.Insert(0, percent);
+            outer.Insert(0, new YogaNode(config) { Height = YogaValue.Point(100), FlexShrink = 0 });
+            outer.Insert(1, grow);
+            outer.CalculateLayout();
+            Assert.Equal(padding ? 100f : 110f, grow.LayoutY);
+            Assert.Equal(padding ? 300f : 280f, grow.LayoutHeight);
+            Assert.Equal(padding ? 10f : 0f, percent.LayoutY);
+            Assert.Equal(140f, percent.LayoutHeight);
+        }
+
         // A 25x20 box (column, or row) holding a middle node over a 50x50 leaf; neither shrinks.
         static YogaNode BoxedMiddle(YogaConfig config, YogaOverflow boxOverflow, YogaOverflow middleOverflow, YogaFlexDirection boxDirection = YogaFlexDirection.Column)
         {

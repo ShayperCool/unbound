@@ -1761,13 +1761,17 @@ namespace Unbound.UIElements.Layout
                 ZeroOutLayoutRecursively(child);
         }
 
-        static float CalculateAvailableInnerDim(YogaNode node, YogaFlexDirection axis, float availableDim, float ownerDim)
+        // Percentage margins and paddings resolve against the owner's width on both axes, as everywhere
+        // else (plain Yoga resolved a column's against the owner's height here; UI Toolkit does not:
+        // Unity 6000.0.71f1 Editor, tests/projects/uitkpercent); min and max sizes against the axis' own
+        // owner size.
+        static float CalculateAvailableInnerDim(YogaNode node, YogaFlexDirection axis, float availableDim, float ownerDim, float ownerWidth)
         {
             var direction = IsRow(axis) ? YogaFlexDirection.Row : YogaFlexDirection.Column;
             int dimension = IsRow(axis) ? DimWidth : DimHeight;
 
-            float margin = Unwrap(node.GetMarginForAxis(direction, ownerDim));
-            float paddingAndBorder = PaddingAndBorderForAxis(node, direction, ownerDim);
+            float margin = Unwrap(node.GetMarginForAxis(direction, ownerWidth));
+            float paddingAndBorder = PaddingAndBorderForAxis(node, direction, ownerWidth);
 
             float availableInnerDim = availableDim - margin - paddingAndBorder;
             // The max dimension overrides the available size, and the min dimension overrides both.
@@ -2386,8 +2390,8 @@ namespace Unbound.UIElements.Layout
 
             // STEP 2: DETERMINE AVAILABLE SIZE IN MAIN AND CROSS DIRECTIONS
 
-            float availableInnerWidth = CalculateAvailableInnerDim(node, YogaFlexDirection.Row, availableWidth, ownerWidth);
-            float availableInnerHeight = CalculateAvailableInnerDim(node, YogaFlexDirection.Column, availableHeight, ownerHeight);
+            float availableInnerWidth = CalculateAvailableInnerDim(node, YogaFlexDirection.Row, availableWidth, ownerWidth, ownerWidth);
+            float availableInnerHeight = CalculateAvailableInnerDim(node, YogaFlexDirection.Column, availableHeight, ownerHeight, ownerWidth);
 
             float availableInnerMainDim = isMainAxisRow ? availableInnerWidth : availableInnerHeight;
             float availableInnerCrossDim = isMainAxisRow ? availableInnerHeight : availableInnerWidth;
