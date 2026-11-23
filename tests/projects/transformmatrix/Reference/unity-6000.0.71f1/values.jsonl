@@ -1,0 +1,39 @@
+{"k":"root.matrix","v":"3ef9caa2 3ece58b6 3f463910 00000000 bf56d987 3eebc748 3e9405f6 00000000 be75d142 bf4a77e1 3f101a9e 00000000 3fe1ce07 c04851ec 3f14b7d4 3f800000"}
+{"k":"root.localPosition","v":"3fe1ce07 c04851ec 3f14b7d4"}
+{"k":"root.localRotation","v":"3eae77cb bea3dd6a 3ec8aed8 3f4ad78f"}
+{"k":"unit.matrix","v":"bf0441e1 bf03b0c8 3f2f37fc 00000000 3eba1092 3f17921a 3f3823ac 00000000 bf467770 3f1ececb bdf396de 00000000 3fa138d8 c008dd1c 3f1249cd 3f800000"}
+{"k":"unit.localPosition","v":"3f29ba5e 3f4ccccd bfa126e9"}
+{"k":"unit.localRotation","v":"3e857411 3dace7b9 3f3faf7c bf1a825b"}
+{"k":"unit.worldPoseMatrixDiffers","v":"true"}
+{"k":"shear.matrix","v":"bf42a087 bdb3a6f5 3f2c729e 00000000 3e0495f0 bfc40dc3 bf37f59c 00000000 c018e225 3e60df88 bf0467dd 00000000 400bf4a0 c06d03e7 bebc1d44 3f800000"}
+{"k":"shear.localPosition","v":"3f29ba5e 3f4ccccd bfa126e9"}
+{"k":"shear.localRotation","v":"3e857411 3dace7b9 3f3faf7c bf1a825b"}
+{"k":"shear.worldPoseMatrixDiffers","v":"true"}
+{"k":"degenerate.matrix","v":"bf859c2b beae3c5e 3f72ee24 00000000 3e9fe3b3 bf33abcf 3e3a76b1 00000000 c0008357 4018889b 3d82f0d7 00000000 4102461a c0d966ee bfefe74e 3f800000"}
+{"k":"degenerate.localPosition","v":"3f29ba5e 3f4ccccd bfa126e9"}
+{"k":"degenerate.localRotation","v":"3e857411 3dace7b9 3f3faf7c bf1a825b"}
+{"k":"signed.matrix","v":"3f800000 00000000 00000000 00000000 80000000 bf800000 80000000 00000000 80000000 80000000 80000000 00000000 80000000 c1000000 00000000 3f800000"}
+{"k":"signed.localPosition","v":"80000000 c1000000 00000000"}
+{"k":"signed.localRotation","v":"00000000 00000000 80000000 3f800000"}
+{"k":"euler.matrix","v":"be5e396f bf3ddae0 be803d39 00000000 3f73f8cd bd1b882c bf369b08 00000000 3f3c535c bf0ea693 3f819a9e 00000000 c0400000 3f828f5c 3e841893 3f800000"}
+{"k":"euler.localPosition","v":"c0400000 3f828f5c 3e841893"}
+{"k":"euler.localRotation","v":"bda3fcb7 3eb454d1 bf36bc7a 3f199a00"}
+{"k":"changedAncestor.matrix","v":"bed0e71a 3deeda1d 3ea207ac 00000000 bf8fd04f 3f941284 bf5fd536 00000000 3f9c47b9 bf576156 bf16e7d4 00000000 405c0770 3f05ae27 3f45bb8c 3f800000"}
+{"k":"changedAncestor.localPosition","v":"c0400000 3f828f5c 3e841893"}
+{"k":"changedAncestor.localRotation","v":"bda3fcb7 3eb454d1 bf36bc7a 3f199a00"}
+{"k":"combined.matrix","v":"bdc65e99 be207c84 be0cfb9d 00000000 bf297c49 3f189eea be59fd2d 00000000 bf285549 becdafef 3f6b7f50 00000000 40800000 3f800000 c0000000 3f800000"}
+{"k":"combined.localPosition","v":"40800000 3f800000 c0000000"}
+{"k":"combined.localRotation","v":"3cf8e3d7 beae3744 3ed55c13 3f57a7b5"}
+{"k":"separate.matrix","v":"bdc65e99 be207c84 be0cfb9d 00000000 bf297c49 3f189eea be59fd2d 00000000 bf285549 becdafef 3f6b7f50 00000000 40800000 3f800000 c0000000 3f800000"}
+{"k":"separate.localPosition","v":"40800000 3f800000 c0000000"}
+{"k":"separate.localRotation","v":"3cf8e3d7 beae3744 3ed55c13 3f57a7b5"}
+{"k":"tinyRotation.matrix","v":"be6b851f 80000000 80000000 00000000 00000000 3f6a7efa 00000000 00000000 00000000 00000000 3f99999a 00000000 40800000 3f800000 c0000000 3f800000"}
+{"k":"tinyRotation.localPosition","v":"40800000 3f800000 c0000000"}
+{"k":"tinyRotation.localRotation","v":"00000000 00000000 00000000 3f800000"}
+{"k":"zeroRotation.matrix","v":"be6b851f 80000000 80000000 00000000 00000000 3f6a7efa 00000000 00000000 00000000 00000000 3f99999a 00000000 40800000 3f800000 c0000000 3f800000"}
+{"k":"zeroRotation.localPosition","v":"40800000 3f800000 c0000000"}
+{"k":"zeroRotation.localRotation","v":"00000000 00000000 00000000 3f800000"}
+{"k":"geometry.localPoint","v":"40000000 c0400000 40800000"}
+{"k":"geometry.worldPoint","v":"42080000 c0400000 40000000"}
+{"k":"geometry.transformPoint","v":"42080000 c0400000 40000000"}
+{"k":"complete","v":true}

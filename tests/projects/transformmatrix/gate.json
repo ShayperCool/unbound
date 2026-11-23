@@ -1,0 +1,16 @@
+{
+  "commands": [
+    "python3 tests/projects/transformmatrix/run.py gate"
+  ],
+  "summary": "transformmatrix: .*",
+  "engine_paths": [
+    "managed/UnityEngine/Core/Transform.cs",
+    "managed/UnityEngine/Math/Matrix4x4.cs"
+  ],
+  "probe_paths": [
+    "tests/projects/animatorapi/Assets/Scenes/**",
+    "tests/projects/animatorapi/Assets/Scenes.meta",
+    "tests/projects/animatorapi/Packages/**",
+    "tests/projects/animatorapi/ProjectSettings/**"
+  ]
+}
