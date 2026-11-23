@@ -132,7 +132,16 @@ public partial class HumanoidProbe
                         g.Connect(clip, 0, playable, 0);
                     playable.SetInputWeight(0, 1f);
                     return playable;
-                }, true, setup: animator => bound = animator, velocities: false, localsEvery: 4);
+                }, true, setup: animator =>
+                {
+                    bound = animator;
+                    if (mode == HumanBoneJob.Mode.KinematicRoot || mode == HumanBoneJob.Mode.KinematicRootArmEdit)
+                    {
+                        var body = animator.gameObject.AddComponent<Rigidbody>();
+                        body.isKinematic = true;
+                        body.useGravity = false;
+                    }
+                }, velocities: false, localsEvery: 4);
             });
         }
     }
@@ -148,7 +157,8 @@ public struct HumanBoneJob : IAnimationJob
         HumanThenRead, Prop, Solve, RotateThenSolve, SolveTwice, ScaleHips, ScaleHipsThenHuman,
         HipsTrs, ScaleHipsWorldWrite, ScaleHipsHints, ScaleHipsThenSolve, ScaleSpineThenSameHips,
         ScaleHipsFirstHint, ScaleHipsUniformThenSolve, ScaleHipsUniformFirstHint, ScaleHipsReadTurnThenHint,
-        MaskedHipsTrs, MaskedArmTrs, MaskedHeadGlobal, MasksLayerWithoutHead
+        MaskedHipsTrs, MaskedArmTrs, MaskedHeadGlobal, MasksLayerWithoutHead,
+        KinematicRoot, KinematicRootArmEdit
     }
 
     public Mode mode;
@@ -195,6 +205,7 @@ public struct HumanBoneJob : IAnimationJob
         HumanoidProbe.BoneRecord("before", stream, ref this);
         switch (mode)
         {
+            case Mode.KinematicRootArmEdit:
             case Mode.RotateLocal:
                 arm.SetLocalRotation(stream, arm.GetLocalRotation(stream) * Quaternion.Euler(0f, 0f, 40f));
                 break;
