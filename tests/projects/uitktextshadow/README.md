@@ -27,9 +27,7 @@ drawn, following UI Toolkit's rule), and an element whose shadow offset and blur
 it was drawn with them (UI Toolkit keeps the settings once allocated; Unbound decides each draw).
 
 `verify.py` compares each cell inside its edge exactly and the whole images within the recorded
-residual (the cells' outer corner pixels, from the rectangle's anti-aliased edge). The `bold` label
-is laid out 7.2 points narrower than in the Editor (its text measures 186.4 wide, 193.6 in the
-Editor) while its glyphs are drawn at the same places: listed in `verify.py` KNOWN.
+residual (the cells' outer corner pixels, from the rectangle's anti-aliased edge).
 
 Other releases are unmeasured.
 

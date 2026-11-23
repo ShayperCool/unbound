@@ -28,10 +28,8 @@ CASES = ['plain', 'outline-no-width', 'shadow', 'shadow-blur', 'shadow-negative'
          'outline-translucent', 'shadow-color-only']
 COLUMNS, CELL_W, CELL_H, MARGIN, INSET = 3, 200, 96, 4, 2
 IMAGES = {'shadow-1.png': 1.0, 'shadow-1.25.png': 1.25}
-# Lines of shadow.jsonl known to differ, with the reason. The bold label is laid out narrower: its
-# text measures 186.4 wide in Unbound, 193.6 in the Editor; its glyphs are drawn at the same places
-# (its cell matches).
-KNOWN = {'bold': 'bold text of the default font measures narrower than the Editor\'s (layout width 186.4 vs 193.6)'}
+# Lines of shadow.jsonl known to differ, with the reason.
+KNOWN = {}
 IMAGE_LIMITS = {'shadow-1.png': (0.02, 24, 56), 'shadow-1.25.png': (0.05, 24, 56)}
 
 
