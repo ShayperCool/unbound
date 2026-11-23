@@ -1059,6 +1059,18 @@ namespace Unbound.Runtime
         internal static bool IsMainLoaded(string guid) =>
             s_Files.TryGetValue(guid, out var f) && f != null && f.MainObject != null;
 
+        /// <summary>The assets imported (or imported again) since Unbound started: an import of
+        /// one of them is Play mode's, its messages Play mode's too; any other asset the Editor
+        /// imported before Play mode (see Log.EarlierImport).</summary>
+        static readonly HashSet<string> s_ImportedInSession = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        internal static void ImportedInSession(string guid)
+        {
+            if (!string.IsNullOrEmpty(guid)) s_ImportedInSession.Add(guid);
+        }
+
+        static IDisposable ImportMessages(string guid) => Unbound.Runtime.Log.EarlierImport(!s_ImportedInSession.Contains(guid));
+
         internal static LoadedFile LoadFile(string guid)
         {
             if (s_Files.TryGetValue(guid, out var loaded)) return loaded;
@@ -1103,6 +1115,7 @@ namespace Unbound.Runtime
                 {
                     case "prefab":
                     case "model":
+                    using (info.Kind == "model" ? ImportMessages(guid) : null)
                     {
                         bool model = info.Kind == "model";
                         if (model) UnityEditor.AssetPostprocessing.EnsurePreprocessed(info.Path, "model", guid);
@@ -1158,7 +1171,8 @@ namespace Unbound.Runtime
                         {
                             try
                             {
-                                file = importer(info);
+                                using (ImportMessages(guid))
+                                    file = importer(info);
                             }
                             catch (Exception e)
                             {
@@ -1583,9 +1597,11 @@ namespace Unbound.Runtime
             o.IsPersistentAsset = false;
         }
 
-        /// <summary>Forgets one file so that the next load reads it again (hot reload of content).</summary>
+        /// <summary>Forgets one file so that the next load reads it again (hot reload of content);
+        /// that load is an import of this session.</summary>
         internal static void Invalidate(string guid)
         {
+            ImportedInSession(guid);
             if (s_Files.Remove(guid))
             {
                 var keys = new List<(string, long)>();

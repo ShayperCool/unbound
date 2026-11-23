@@ -347,15 +347,45 @@ namespace Unbound.Runtime
 
         internal static void Write(UnityEngine.LogType type, string message, string stackTrace, UnityEngine.Object context, Exception exception = null)
         {
+            string text = exception != null ? $"{message}\n{stackTrace}" : message;
+            if (type == UnityEngine.LogType.Error || type == UnityEngine.LogType.Assert)
+                text = $"{message}\n{stackTrace}";
+            // An import the Editor made before Play mode (see EarlierImport): its messages are in
+            // its log only.
+            if (s_EarlierImport > 0)
+            {
+                Native.Log((int)type, text);
+                return;
+            }
             // The Editor has no such messages: the game's log handlers (in-game consoles, crash
             // reporting) do not see them, only Unbound's console does.
             if (exception != null || message == null || !message.StartsWith(DiagnosticPrefix, StringComparison.Ordinal))
                 UnityEngine.Application.Internal_InvokeLogCallbacks(message, stackTrace, type);
-            string text = exception != null ? $"{message}\n{stackTrace}" : message;
-            if (type == UnityEngine.LogType.Error || type == UnityEngine.LogType.Assert)
-                text = $"{message}\n{stackTrace}";
             Native.Log((int)type, text);
             ConsoleLog.Append(text);
+        }
+
+        [ThreadStatic] static int s_EarlierImport;
+
+        /// <summary>While an asset is imported that the Editor imports before Play mode (one of the
+        /// project's when it opens, not imported again since): the import's messages (an
+        /// importer's warnings, its postprocessors' logs) go to Unbound's log only, as the Editor
+        /// writes them to its log then, before any Play mode handler or console entry exists
+        /// (matches the Unity 6000.0.71f1 Editor, tests/projects/importlogs load.*).</summary>
+        internal static IDisposable EarlierImport(bool earlier) => earlier ? new EarlierImportScope() : null;
+
+        sealed class EarlierImportScope : IDisposable
+        {
+            bool m_Disposed;
+
+            internal EarlierImportScope() => s_EarlierImport++;
+
+            public void Dispose()
+            {
+                if (m_Disposed) return;
+                m_Disposed = true;
+                s_EarlierImport--;
+            }
         }
     }
 }

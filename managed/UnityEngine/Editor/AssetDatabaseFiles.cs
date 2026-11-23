@@ -97,6 +97,7 @@ namespace UnityEditor
             {
                 var asset = i < assets.Length ? assets[i] : null;
                 guids[i] = asset?.Guid ?? "";
+                AssetDatabaseRuntime.ImportedInSession(guids[i]);
                 if (!string.IsNullOrEmpty(asset?.Error))
                 {
                     Debug.LogWarning("Unbound: " + asset.Error);
