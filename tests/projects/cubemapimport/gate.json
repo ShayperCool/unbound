@@ -1,0 +1,11 @@
+{
+  "commands": [
+    "python3 tests/projects/cubemapimport/run.py gate"
+  ],
+  "summary": "cubemapimport: .*",
+  "engine_paths": [
+    "crates/unbound-assets/src/texture.rs",
+    "crates/unbound-assets/src/texture/cubemap.rs",
+    "managed/UnityEngine/Graphics/Cubemap.cs"
+  ]
+}
