@@ -490,6 +490,26 @@ namespace UnityEngine.Tests
             Assert.True(Hits(notCovered) > reported);
         }
 
+        [Fact]
+        public void AMeasuredOffscreenTrailSystemPausesAndReportsApproximateBounds()
+        {
+            using var pinned = TestRelease.Pin(TestRelease.Measured);
+            var camera = MakeCamera(orthographic: false);
+            var ps = Make(ParticleSystemCullingMode.Pause);
+            var trails = ps.trails;
+            trails.enabled = true;
+            ps.transform.position = kFar + new Vector3(0f, 80f, 10f);
+            var renderer = RendererOf(ps);
+            Frames(3);
+            Assert.False(CullSees(camera, renderer));
+
+            int reported = Hits("Particle culling without covering bounds");
+            float time = ps.time;
+            Frames(5);
+            Assert.Equal(time, ps.time);
+            Assert.True(Hits("Particle culling without covering bounds") > reported);
+        }
+
         // Implementation invariant (an unmeasured inference, not a Native observation): a new
         // playback drops the time missed by an earlier one, even when both were culled from total
         // time 0 and the restart (Stop(StopEmittingAndClear) + Play in one frame, fixed seed)

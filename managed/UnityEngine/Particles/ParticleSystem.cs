@@ -1671,13 +1671,10 @@ namespace UnityEngine
             // it simulates every frame under every culling mode (Unity 6000.0.71f1,
             // tests/projects/particlerender norender/*).
             if (renderer == null || !renderer.enabled) return CullingState.Simulated;
-            if (renderer.isVisible)
-            {
-                if (!renderer.CullingBoundsCoverDraw && CullingSimulates)
-                    Unbound.Runtime.Stubs.Ignored("Particle culling without covering bounds",
-                        "uses approximate renderer visibility for simulation culling (trails, a minimum particle size or camera-velocity stretching)");
-                return CullingState.Simulated;
-            }
+            if (CullingSimulates && renderer.DrawNeedsApproximateBounds)
+                Unbound.Runtime.Stubs.Ignored("Particle culling without covering bounds",
+                    "uses approximate renderer visibility for simulation culling (trails, a minimum particle size or camera-velocity stretching)");
+            if (renderer.isVisible) return CullingState.Simulated;
             return frame == m_CullingGraceFrame + 1 ? CullingState.SimulatedOffscreen : CullingState.Culled;
         }
 

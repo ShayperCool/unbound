@@ -73,9 +73,10 @@ namespace UnityEngine.Tests
         }
 
         [Theory]
-        [InlineData(TestRelease.Measured, false)]
-        [InlineData(TestRelease.Unmeasured, true)]
-        public void AnInvisibleParticleRendererWithMinimumSizeUsesTheReleaseVisibilityRule(string release, bool expected)
+        [InlineData(TestRelease.Measured, false, false)]
+        [InlineData(TestRelease.Unmeasured, false, true)]
+        [InlineData(TestRelease.Measured, true, true)]
+        public void AnInvisibleParticleRendererUsesTheSupportedVisibilityRule(string release, bool ribbon, bool expected)
         {
             using var pinned = TestRelease.Pin(release);
             var root = new GameObject("Particles");
@@ -83,6 +84,12 @@ namespace UnityEngine.Tests
             var particles = root.AddComponent<ParticleSystem>();
             var renderer = particles.GetComponent<ParticleSystemRenderer>();
             renderer.minParticleSize = .2f;
+            if (ribbon)
+            {
+                var trails = particles.trails;
+                trails.enabled = true;
+                trails.mode = ParticleSystemTrailMode.Ribbon;
+            }
 
             Assert.False(renderer.isVisible);
             Assert.Equal(expected, Animator.AnyRendererVisible(root));

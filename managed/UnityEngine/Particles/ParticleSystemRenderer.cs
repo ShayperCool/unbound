@@ -453,8 +453,25 @@ namespace UnityEngine
 
         internal override Bounds CullingBounds => m_CullingBounds;
 
-        internal bool UsesMeasuredAnimationVisibility => Compat.RenderingMeasured && m_RenderMode != ParticleSystemRenderMode.Mesh
-            && GraphicsSettings.currentRenderPipeline == null && RenderPipelineManager.currentPipeline == null;
+        internal bool UsesMeasuredAnimationVisibility
+        {
+            get
+            {
+                if (!Compat.RenderingMeasured || GraphicsSettings.currentRenderPipeline != null || RenderPipelineManager.currentPipeline != null)
+                    return false;
+                if (m_RenderMode != ParticleSystemRenderMode.Billboard
+                    && (m_RenderMode != ParticleSystemRenderMode.Stretch || m_FreeformStretching))
+                    return false;
+
+                var ps = System;
+                if (ps == null || ps.m_Main.simulationSpace == ParticleSystemSimulationSpace.Custom) return false;
+                var trails = ps.m_Trails;
+                if (!trails.enabled && !ps.HasAliveTrails) return true;
+                return trails.mode == ParticleSystemTrailMode.PerParticle && trails.sizeAffectsWidth
+                    && trails.widthOverTrail.mode == ParticleSystemCurveMode.Constant && trails.widthOverTrail.scalar <= 1f
+                    && !(ps.m_BoundsFrozen && trails.worldSpace);
+            }
+        }
 
         internal override bool NothingToDraw => System is ParticleSystem ps && ps.m_DrawPending;
 
@@ -468,6 +485,13 @@ namespace UnityEngine
                 return m_CullingBoundsCoverDraw;
             }
         }
+
+        // The simulation diagnostic checks eligibility without preparing a renderer that no camera has seen.
+        internal bool DrawNeedsApproximateBounds => !BoundsCoverDraw(System);
+
+        bool BoundsCoverDraw(ParticleSystem ps) =>
+            ps != null && !ps.m_Trails.enabled && !ps.HasAliveTrails && !(m_MinParticleSize > 0f)
+            && !(m_RenderMode == ParticleSystemRenderMode.Stretch && m_CameraVelocityScale != 0f);
 
         /// <summary>Computes the renderer's visibility bounds once per frame and simulation state.
         /// The conservative draw bounds include render mode reach, size and pivot. Trails, minimum
@@ -500,8 +524,7 @@ namespace UnityEngine
             m_CullingBoundsFrame = frame;
             m_CullingBoundsTime = ps != null ? ps.m_TotalTime : -1f;
             m_CullingBoundsCount = ps != null ? ps.m_Count : -1;
-            m_CullingBoundsCoverDraw = ps != null && !ps.m_Trails.enabled && !ps.HasAliveTrails && !(m_MinParticleSize > 0f)
-                && !(m_RenderMode == ParticleSystemRenderMode.Stretch && m_CameraVelocityScale != 0f);
+            m_CullingBoundsCoverDraw = BoundsCoverDraw(ps);
             m_ComputedApproximateBounds = !m_CullingBoundsCoverDraw && ps != null && UsesMeasuredApproximateBounds;
             if (!m_CullingBoundsCoverDraw)
             {
