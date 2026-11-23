@@ -342,9 +342,13 @@ namespace UnityEngine
             int last = (offset + bytes.Length + stride - 1) / stride;
             Span<float> f = stackalloc float[4];
             Span<int> n = stackalloc int[4];
-            ReleaseBoneWeightViews();
+            // A borrowed bone array can be this write's source. Finish its readers while
+            // retaining the pin through the last read of the input span.
+            m_BoneCountsView?.CompleteReaders();
+            m_BoneWeightsView?.CompleteReaders();
             BoneWeight[] skinTarget = null;
             bool skinPrepared = false;
+            bool implicitWeight = !ChannelPresent(VertexAttribute.BlendWeight);
             for (int v = first; v < last; v++)
             {
                 int at = 0;
@@ -377,9 +381,10 @@ namespace UnityEngine
                         var s = attribute.Slice(c * size, size);
                         (f[c], n[c]) = Read(s, d.format);
                     }
-                    Store(d, v, f, n, attribute, skinTarget);
+                    Store(d, v, f, n, attribute, skinTarget, implicitWeight);
                 }
             }
+            ReleaseBoneWeightViews();
             Changed(indices: false);
         }
 
@@ -404,7 +409,7 @@ namespace UnityEngine
         }
 
         void Store(VertexAttributeDescriptor d, int v, ReadOnlySpan<float> f, ReadOnlySpan<int> n,
-            ReadOnlySpan<byte> raw, BoneWeight[] skinTarget)
+            ReadOnlySpan<byte> raw, BoneWeight[] skinTarget, bool implicitWeight)
         {
             switch (d.attribute)
             {
@@ -431,6 +436,11 @@ namespace UnityEngine
                 {
                     if (skinTarget == null) break;
                     var b = skinTarget[v];
+                    if (d.dimension == 1 && implicitWeight)
+                    {
+                        b.weight0 = 1f;
+                        b.weight1 = b.weight2 = b.weight3 = 0f;
+                    }
                     b.boneIndex0 = n[0];
                     b.boneIndex1 = n[1];
                     b.boneIndex2 = n[2];

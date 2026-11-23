@@ -562,7 +562,7 @@ namespace UnityEngine
                         }
                     }
                     if (weight <= 0f || index < 0 || index >= boneCount) continue;
-                    if (mesh.RuntimeSkinWeights != null && maxBones == 1) weight = 1f;
+                    if (maxBones == 1) weight = 1f;
                     var m = m_Matrices[index];
                     p += m.MultiplyPoint3x4(v) * weight;
                     n += normalMatrices[index].MultiplyVector(sn) * weight;

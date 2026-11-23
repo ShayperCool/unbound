@@ -27,6 +27,8 @@ namespace UnityEngine
             internal IndexFormat IndexFormat = IndexFormat.UInt16;
             internal readonly List<SubMeshDescriptor> SubMeshes = new List<SubMeshDescriptor>();
             internal readonly bool ReadOnly;
+            SkinWeights? m_CopiedSkinLayout;
+            MeshSkinWeightData m_CopiedPackedWeights;
 
             internal MeshDataStore(bool readOnly) => ReadOnly = readOnly;
 
@@ -109,6 +111,12 @@ namespace UnityEngine
             {
                 var store = new MeshDataStore(readOnly);
                 store.Update(mesh);
+                if (!readOnly)
+                {
+                    store.m_CopiedSkinLayout = mesh.CurrentSkinWeightLayout;
+                    if (mesh.RuntimeSkinWeights is { IsPacked: true } packed)
+                        store.m_CopiedPackedWeights = packed;
+                }
                 return store;
             }
 
@@ -151,9 +159,17 @@ namespace UnityEngine
             /// <summary>Writes the data into a mesh.</summary>
             internal void ApplyTo(Mesh mesh, MeshUpdateFlags flags)
             {
+                // A writable copy carries its variable table alongside the edited streams.
+                // Copies of a fixed layout can retain the destination's existing table.
+                var packed = m_CopiedPackedWeights;
+                if (packed == null && m_CopiedSkinLayout.HasValue && mesh.RuntimeSkinWeights is { IsPacked: true } retained)
+                    packed = retained;
+                mesh.DropRuntimeBoneWeights();
                 mesh.SetVertexBufferParamsInternal(VertexCount, Layout);
                 for (int s = 0; s < 4; s++)
                     if (StreamBytes[s] > 0) mesh.WriteVertices(new ReadOnlySpan<byte>(Streams[s], StreamBytes[s]), 0, s);
+                if (m_CopiedSkinLayout.HasValue)
+                    mesh.RestorePackedSkinWeights(packed, m_CopiedSkinLayout.Value);
                 mesh.SetIndexBufferParams(IndexCount, IndexFormat);
                 if (IndexCount > 0)
                     mesh.WriteIndices(new ReadOnlySpan<byte>(Indices, IndexCount * (IndexFormat == IndexFormat.UInt32 ? 4 : 2)), 0, flags | MeshUpdateFlags.DontValidateIndices);
