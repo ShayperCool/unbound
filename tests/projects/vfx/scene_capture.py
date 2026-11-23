@@ -77,7 +77,9 @@ def settings(args):
             'targetNear': dict(zip('xyz', args.target_near or (0, 0, 0))), 'views': views,
             'fieldOfView': args.fov, 'width': width, 'height': height, 'deltaTime': args.step, 'frames': frames,
             'seed': args.seed, 'keep': getattr(args, 'keep', '') or '', 'soleCameras': bool(getattr(args, 'sole_cameras', False)),
-            'listRenderers': bool(getattr(args, 'list_renderers', False)), 'eachEffect': each, 'selfTestThrowAtFrame': getattr(args, 'throw_at', 0)}
+            'listRenderers': bool(getattr(args, 'list_renderers', False)), 'eachEffect': each, 'effectRows': getattr(args, 'effect_rows', '') or '',
+            'boundsOf': getattr(args, 'bounds_of', '') or '',
+            'selfTestThrowAtFrame': getattr(args, 'throw_at', 0)}
 
 
 def prepare(args, fixtures=None):
@@ -275,6 +277,10 @@ def main():
         run.add_argument('--each-effect', action='store_true',
                          help='one view per effect of the scene, from --position as an offset from it, looking at it')
         run.add_argument('--vulkan', action='store_true', help='the Vulkan device (the Editor on the GPU display :0)')
+        run.add_argument('--effect-rows', default='', metavar='PREFIX',
+                         help='a row per effect whose name starts with PREFIX, with its place, however many the scene has')
+        run.add_argument('--bounds-of', default='', metavar='PREFIXES',
+                         help="at each shot, the bounds of the renderers whose objects' names start with one of these comma-separated prefixes")
         run.add_argument('--keep', choices=('effects', 'others'),
                          help="only that kind of renderer under --target's parent is drawn")
         run.add_argument('--timeout', type=int, default=1800)

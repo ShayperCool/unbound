@@ -49,6 +49,12 @@ public sealed class UnboundSceneCapture : MonoBehaviour
         /// <summary>One view per effect of the scene instead of the views given: each from the
         /// first view's position as an offset from the effect, looking at it (<see cref="EachEffect"/>).</summary>
         public bool eachEffect;
+        /// <summary>Empty: a row per effect while the scene has at most <see cref="MostEffectRows"/>;
+        /// else a row per effect whose name starts with it, however many (<see cref="Effects"/>).</summary>
+        public string effectRows = "";
+        /// <summary>Empty: none; else, at each shot, a row per renderer whose object's name starts
+        /// with one of these comma-separated prefixes (<see cref="Bounds"/>).</summary>
+        public string boundsOf = "";
         /// <summary>For scene_capture.py's self-test only: the frame whose shot fails (0: none).</summary>
         public int selfTestThrowAtFrame;
         public int[] frames = { 30 };
@@ -239,13 +245,16 @@ public sealed class UnboundSceneCapture : MonoBehaviour
         return p.x != q.x ? p.x.CompareTo(q.x) : p.y != q.y ? p.y.CompareTo(q.y) : p.z.CompareTo(q.z);
     }
 
-    /// <summary>One row per effect at a shot: its alive particles, and each of its systems'
-    /// alive count, capacity and sleeping state (as the effect last read them back), in the
-    /// order of the effects' names and places.</summary>
+    /// <summary>One row per effect at a shot (of the effects named as `effectRows` starts, if
+    /// given): its alive particles, and each of its systems' alive count, capacity and sleeping
+    /// state (as the effect last read them back), in the order of the effects' names and places,
+    /// with its place when the rows are of named effects.</summary>
     void Effects()
     {
         var effects = new System.Collections.Generic.List<UnityEngine.VFX.VisualEffect>(FindObjectsByType<UnityEngine.VFX.VisualEffect>(FindObjectsSortMode.None));
-        if (effects.Count > MostEffectRows)
+        bool named = !string.IsNullOrEmpty(m_Settings.effectRows);
+        if (named) effects.RemoveAll(e => !e.name.StartsWith(m_Settings.effectRows, StringComparison.Ordinal));
+        else if (effects.Count > MostEffectRows)
         {
             m_Out.Append("{\"k\":\"effect/").Append(m_Frame.ToString("000")).Append("\",\"v\":\"").Append(effects.Count).Append(" effects: rows omitted\"}\n");
             return;
@@ -256,6 +265,7 @@ public sealed class UnboundSceneCapture : MonoBehaviour
         {
             var effect = effects[i];
             m_Out.Append("{\"k\":\"effect/").Append(m_Frame.ToString("000")).Append('/').Append(i).Append("\",\"v\":\"").Append(effect.name)
+                .Append(named ? " at " + Place(effect.transform.position) : "")
                 .Append(" alive=").Append(effect.aliveParticleCount).Append(effect.culled ? " culled" : "");
             names.Clear();
             effect.GetParticleSystemNames(names);
@@ -320,12 +330,39 @@ public sealed class UnboundSceneCapture : MonoBehaviour
         Exit(1);
     }
 
+    /// <summary>One row per renderer of an active object named as `boundsOf` says, at a shot:
+    /// its type and path, its bounds' centre and extents (what transparent draws are sorted by),
+    /// and the squared distance of the centre from each view's camera, sorted by path.</summary>
+    void Bounds()
+    {
+        if (string.IsNullOrEmpty(m_Settings.boundsOf)) return;
+        var prefixes = m_Settings.boundsOf.Split(',');
+        var rows = new System.Collections.Generic.List<string>();
+        var path = new StringBuilder();
+        foreach (var renderer in FindObjectsByType<Renderer>(FindObjectsSortMode.None))
+        {
+            if (Array.FindIndex(prefixes, p => renderer.name.StartsWith(p, StringComparison.Ordinal)) < 0) continue;
+            path.Clear();
+            for (var t = renderer.transform; t != null; t = t.parent) path.Insert(0, "/" + t.name);
+            var bounds = renderer.bounds;
+            var row = new StringBuilder().Append(path).Append(' ').Append(renderer.GetType().Name)
+                .Append(" center=").Append(Place(bounds.center)).Append(" extents=").Append(Place(bounds.extents));
+            foreach (var eye in m_Cameras) row.Append(" d2=").Append((bounds.center - eye.transform.position).sqrMagnitude.ToString("R"));
+            rows.Add(row.ToString());
+        }
+        rows.Sort(string.CompareOrdinal);
+        string frame = m_Frame.ToString("000");
+        for (int i = 0; i < rows.Count; i++)
+            m_Out.Append("{\"k\":\"bounds/").Append(frame).Append('/').Append(i).Append("\",\"v\":\"").Append(rows[i]).Append("\"}\n");
+    }
+
     /// <summary>The views' colours at the end of this frame, when it is one the settings name.</summary>
     void Shoot()
     {
         if (m_Frame == m_Settings.selfTestThrowAtFrame) throw new InvalidOperationException("UnboundSceneCapture: the self-test's failure at frame " + m_Frame);
         if (Array.IndexOf(m_Settings.frames, m_Frame) < 0) return;
         Effects();
+        Bounds();
         // The clocks the frame's shaders read (as the pipeline last set them).
         string frame = m_Frame.ToString("000");
         m_Out.Append("{\"k\":\"time/").Append(frame).Append("\",\"v\":\"").Append(Time.time.ToString("R")).Append(' ')

@@ -598,6 +598,13 @@ ends at once without values.jsonl; scripts that do not compile when the Editor s
 load the runner, and that run waits out its `--timeout`. `compare` names any setting in which the two captures differ and any frame only
 one has.
 
+At each shot values.jsonl also holds a row per effect (its alive particles and each system's
+alive count, capacity and sleep) while the scene has at most 64 effects, or, with
+`--effect-rows PREFIX`, a row per effect whose name starts with the prefix, with its place,
+however many there are; and, with `--bounds-of PREFIXES` (comma-separated), a row per renderer
+whose object's name starts with one of them: its bounds, which transparent draws are sorted by,
+and the squared distance of their centre from each view's camera.
+
 What the comparison cannot tell apart from an effect's difference: anything else in the frame
 that differs (lighting, other renderers, post-processing), work that is timed by the frame rate
 rather than the fixed step, and how the project enters play mode in the Editor (with its Enter
