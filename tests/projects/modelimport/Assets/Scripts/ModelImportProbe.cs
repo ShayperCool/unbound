@@ -85,15 +85,52 @@ public class ModelImportProbe : MonoBehaviour
             else Model(model.name, instance.transform);
             DestroyImmediate(instance);
         }
-        if (builtinBlend)
+        if (builtinBlend) StartCoroutine(FinishBuiltinBlend());
+        else Finish(builtinBlend);
+    }
+
+    System.Collections.IEnumerator FinishBuiltinBlend()
+    {
+        var material = LoadBlendAsset("InteractiveValidation");
+        Add("blend.standalone.shader", material.shader.name);
+        BlendMetadata("blend.standalone.before", material);
+        RecordValidatedBlend("blend.standalone", material);
+
+        var pending = new[]
         {
-            var material = Resources.Load<Material>("InteractiveValidation");
-            if (!material) throw new InvalidOperationException("Interactive validation asset is missing.");
-            Add("blend.standalone.shader", material.shader.name);
-            BlendMetadata("blend.standalone.before", material);
-            Add("blend.standalone.blend", material.GetFloat("_DstBlend"));
-            BlendMetadata("blend.standalone.after", material);
+            (Key: "blend.standardUntouched", Material: LoadBlendAsset("StandardUntouched")),
+            (Key: "blend.interactiveUntouched", Material: LoadBlendAsset("InteractiveUntouched")),
+        };
+        foreach (var (key, untouched) in pending)
+        {
+            Add(key + ".shader", untouched.shader.name);
+            BlendMetadata(key + ".before", untouched);
         }
+        int frame = Time.frameCount;
+        for (int i = 0; i < 3; i++) yield return null;
+        Add("blend.untouchedFrames", Time.frameCount - frame);
+        foreach (var (key, untouched) in pending)
+        {
+            BlendMetadata(key + ".metadataAfterThreeFrames", untouched);
+            RecordValidatedBlend(key, untouched);
+        }
+        Finish(builtinBlend: true);
+    }
+
+    static Material LoadBlendAsset(string resource)
+    {
+        var material = Resources.Load<Material>(resource);
+        return material ? material : throw new InvalidOperationException("Missing blend validation asset: " + resource);
+    }
+
+    void RecordValidatedBlend(string key, Material material)
+    {
+        Add(key + ".blend", material.GetFloat("_DstBlend"));
+        BlendMetadata(key + ".after", material);
+    }
+
+    void Finish(bool builtinBlend)
+    {
         var path = Environment.GetEnvironmentVariable("MODEL_IMPORT_PROBE_OUT");
         Stages(path, builtinBlend);
         if (!string.IsNullOrEmpty(path))

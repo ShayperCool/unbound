@@ -29,10 +29,10 @@ The `BuiltinBlend` profile seeds conflicting blend factors and depth writes in a
 `OnPreprocessMaterialDescription` callback. It records queue, tag, keywords and GI flags
 before and after property access, writes, rendering, or `SetPass` in Play mode. The controls
 cover all four modes, fractional and out-of-range modes, copies, a project shader that
-uses Standard's shader editor, and a textured Autodesk Interactive import. A standalone
-Autodesk Interactive material asset records its saved state and its validated state
-after the first property read. Use `MODEL_IMPORT_PROFILES=BuiltinBlend` to record or replay
-the 233 observations.
+uses Standard's shader editor, and a textured Autodesk Interactive import. Standalone
+Standard and Autodesk Interactive material assets retain their saved metadata through three
+updates when only metadata is read. The next property read validates them. Use
+`MODEL_IMPORT_PROFILES=BuiltinBlend` to record or replay the 262 observations.
 
 The same file appears under several importer settings (only the `.meta` differs):
 `materialImportMode` None, "Standard (Legacy)" and "Import via MaterialDescription"; the legacy
