@@ -700,6 +700,12 @@ namespace UnityEngine
                 cube.m_MipCount = root.GetProperty("mipCount").GetInt32();
                 cube.m_UsageMode = root.GetProperty("usageMode").GetInt32();
                 cube.m_UsageSrgb = !root.GetProperty("linear").GetBoolean();
+                // Its format and color space as the file has them, RGBM data too (the built-in
+                // Default-Skybox-Cubemap, RGBM in RGBA32 of the sRGB color space, is
+                // R8G8B8A8_SRGB in a project of Linear color space: tests/projects/bakeenvironment
+                // EnvNoSky). The renderer samples it as the file says.
+                cube.m_Format = (TextureFormat)root.GetProperty("format").GetInt32();
+                cube.m_Linear = !cube.m_UsageSrgb;
                 return cube;
             }
             catch (Exception e)

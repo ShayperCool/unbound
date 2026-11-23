@@ -143,6 +143,10 @@ namespace UnityEngine.Tests
                     Assert.Equal("UnityBlackCube", black.name);
                     Assert.Equal(1, black.width);
                     Assert.Equal(TextureDimension.Cube, black.dimension);
+                    // Stored as sRGB (tests/projects/bakeenvironment EnvNoBaking: R8G8B8A8_SRGB in
+                    // a project of Linear color space).
+                    Assert.False(black.m_Linear);
+                    Assert.Equal(TextureFormat.RGBA32, black.format);
                     for (int face = 0; face < 6; face++)
                         Assert.Equal(new Color(0f, 0f, 0f, 0f), black.GetPixel((CubemapFace)face, 0, 0) * new Color(1f, 1f, 1f, 0f));
                     Assert.Equal(new Vector4(1f, 1f, 0f, 0f), ReflectionProbe.defaultTextureHDRDecodeValues);
