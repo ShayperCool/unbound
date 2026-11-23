@@ -431,18 +431,6 @@ namespace UnityEngine
         public uint startIndex { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.BlendShapeBufferRange.startIndex"); return default; } [global::Unbound.Stub] internal set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.BlendShapeBufferRange.startIndex"); } }
         public uint endIndex { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.BlendShapeBufferRange.endIndex"); return default; } [global::Unbound.Stub] internal set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.BlendShapeBufferRange.endIndex"); } }
     }
-    [global::System.Serializable]
-    [global::Unbound.Stub]
-    public unsafe partial struct BoneWeight1 : global::System.IEquatable<global::UnityEngine.BoneWeight1>
-    {
-        [global::Unbound.Stub] public override bool Equals(object other) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.BoneWeight1.Equals"); return default; }
-        [global::Unbound.Stub] public bool Equals(global::UnityEngine.BoneWeight1 other) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.BoneWeight1.Equals"); return default; }
-        [global::Unbound.Stub] public override int GetHashCode() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.BoneWeight1.GetHashCode"); return default; }
-        [global::Unbound.Stub] public static bool operator ==(global::UnityEngine.BoneWeight1 lhs, global::UnityEngine.BoneWeight1 rhs) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.BoneWeight1.op_Equality"); return default; }
-        [global::Unbound.Stub] public static bool operator !=(global::UnityEngine.BoneWeight1 lhs, global::UnityEngine.BoneWeight1 rhs) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.BoneWeight1.op_Inequality"); return default; }
-        public float weight { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.BoneWeight1.weight"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.BoneWeight1.weight"); } }
-        public int boneIndex { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.BoneWeight1.boneIndex"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.BoneWeight1.boneIndex"); } }
-    }
     [global::Unbound.Stub]
     internal unsafe partial class BootConfigData
     {
@@ -1168,9 +1156,6 @@ namespace UnityEngine
         [global::Unbound.Stub] internal uint GetTotalIndexCount() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Mesh.GetTotalIndexCount"); return default; }
         [global::Unbound.Stub] public global::System.IntPtr GetNativeVertexBufferPtr(int index) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Mesh.GetNativeVertexBufferPtr"); return default; }
         [global::Unbound.Stub] public global::System.IntPtr GetNativeIndexBufferPtr() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Mesh.GetNativeIndexBufferPtr"); return default; }
-        [global::Unbound.Stub] public void SetBoneWeights(global::Unity.Collections.NativeArray<byte> bonesPerVertex, global::Unity.Collections.NativeArray<global::UnityEngine.BoneWeight1> weights) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Mesh.SetBoneWeights"); }
-        [global::Unbound.Stub] public global::Unity.Collections.NativeArray<global::UnityEngine.BoneWeight1> GetAllBoneWeights() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Mesh.GetAllBoneWeights"); return default; }
-        [global::Unbound.Stub] public global::Unity.Collections.NativeArray<byte> GetBonesPerVertex() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Mesh.GetBonesPerVertex"); return default; }
         [global::Unbound.Stub] internal static global::UnityEngine.Rendering.VertexAttribute GetUVChannel(int uvIndex) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Mesh.GetUVChannel"); return default; }
         [global::Unbound.Stub] internal static int DefaultDimensionForChannel(global::UnityEngine.Rendering.VertexAttribute channel) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Mesh.DefaultDimensionForChannel"); return default; }
         [global::Unbound.Stub] public global::UnityEngine.GraphicsBuffer GetBoneWeightBuffer(global::UnityEngine.SkinWeights layout) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Mesh.GetBoneWeightBuffer"); return default; }
@@ -1184,7 +1169,6 @@ namespace UnityEngine
         [global::Unbound.Stub] public void RecalculateUVDistributionMetric(int uvSetIndex, float uvAreaThreshold = 1E-09f) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Mesh.RecalculateUVDistributionMetric"); }
         [global::System.Obsolete("Property Mesh.uv1 has been deprecated. Use Mesh.uv2 instead (UnityUpgradable) -> uv2")] public global::UnityEngine.Vector2[] uv1 { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Mesh.uv1"); return (global::UnityEngine.Vector2[])null; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Mesh.uv1"); } }
         internal bool canAccess { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Mesh.canAccess"); return default; } }
-        public global::UnityEngine.SkinWeights skinWeightBufferLayout { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Mesh.skinWeightBufferLayout"); return default; } }
     }
     [global::Unbound.Stub]
     internal unsafe partial class MeshSubsetCombineUtility

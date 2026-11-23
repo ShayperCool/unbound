@@ -199,6 +199,7 @@ namespace UnityEngine
             m_HasPositionChannel = saved.m_HasPositionChannel;
             m_IndexBuffer = null;
             m_BoneWeights = null;
+            DropRuntimeBoneWeights();
             ResetBindposes();
             m_BoneNameHashes = (uint[])saved.m_BoneNameHashes?.Clone();
             m_RootBoneNameHash = saved.m_RootBoneNameHash;
@@ -301,7 +302,7 @@ namespace UnityEngine
                         weight0 = values[0], weight1 = values[1], weight2 = values[2], weight3 = values[3],
                     };
                 }
-                boneWeights = result;
+                SetLegacyBoneWeights(result);
             }
             var bindPoses = Decoded<float>(m, "bindPoses");
             if (bindPoses.Length > 0 && bindPoses.Length % 16 == 0)

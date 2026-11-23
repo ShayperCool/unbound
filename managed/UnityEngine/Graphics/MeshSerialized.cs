@@ -150,7 +150,7 @@ namespace UnityEngine
                         boneIndex0 = B(0), boneIndex1 = B(1), boneIndex2 = B(2), boneIndex3 = B(3),
                     };
                 }
-                boneWeights = bw;
+                SetLegacyBoneWeights(bw);
             }
 
             // The vertex layout the file holds: each channel's format, dimension and stream, as

@@ -81,6 +81,8 @@ namespace UnityEngine
                 case VertexAttribute.Tangent: return m_Tangents != null;
                 case VertexAttribute.Color: return m_Colors != null;
                 case VertexAttribute.BlendWeight:
+                    if (m_RuntimeSkinLayout == SkinWeights.OneBone) return false;
+                    goto case VertexAttribute.BlendIndices;
                 case VertexAttribute.BlendIndices: return m_BoneWeights != null && (m_Layout == null || LayoutHas(attr));
                 default:
                     int channel = (int)attr - (int)VertexAttribute.TexCoord0;
@@ -127,8 +129,7 @@ namespace UnityEngine
                     VertexAttribute.Position or VertexAttribute.Normal => new VertexAttributeDescriptor(attr, VertexAttributeFormat.Float32, 3),
                     VertexAttribute.Tangent => new VertexAttributeDescriptor(attr, VertexAttributeFormat.Float32, 4),
                     VertexAttribute.Color => new VertexAttributeDescriptor(attr, m_PackedChannels?[(int)attr]?.Descriptor.format ?? VertexAttributeFormat.UNorm8, 4),
-                    VertexAttribute.BlendWeight => new VertexAttributeDescriptor(attr, VertexAttributeFormat.Float32, 4, 1),
-                    VertexAttribute.BlendIndices => new VertexAttributeDescriptor(attr, VertexAttributeFormat.UInt32, 4, 1),
+                    VertexAttribute.BlendWeight or VertexAttribute.BlendIndices => SkinWeightDescriptor(attr, CurrentSkinWeightLayout),
                     _ => new VertexAttributeDescriptor(attr, VertexAttributeFormat.Float32, Math.Max(1, m_UVDimensions[(int)attr - (int)VertexAttribute.TexCoord0])),
                 };
             }
@@ -254,7 +255,10 @@ namespace UnityEngine
                 m_UVs[c] = Resize(m_UVs[c], Has(attr));
                 m_UVDimensions[c] = Has(attr) ? Array.Find(layout, d => d.attribute == attr).dimension : 0;
             }
-            m_BoneWeights = Resize(m_BoneWeights, Has(VertexAttribute.BlendWeight) || Has(VertexAttribute.BlendIndices));
+            bool hasSkin = Has(VertexAttribute.BlendWeight) || Has(VertexAttribute.BlendIndices);
+            m_BoneWeights = Resize(m_BoneWeights, hasSkin);
+            if (hasSkin) ResizeRuntimeBoneWeights(vertexCount);
+            else DropRuntimeBoneWeights();
             m_Layout = layout;
             m_HasPositionChannel = Has(VertexAttribute.Position);
             ResizePackedChannels(vertexCount, layout);

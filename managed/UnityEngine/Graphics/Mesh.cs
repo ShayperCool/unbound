@@ -152,6 +152,7 @@ namespace UnityEngine
             m_HasPositionChannel = source.m_HasPositionChannel;
             m_IndexBuffer = (int[])source.m_IndexBuffer?.Clone();
             m_BoneWeights = (BoneWeight[])source.m_BoneWeights?.Clone();
+            CopyRuntimeBoneWeights(source);
             CopyBindposesFrom(source);
             m_BoneNameHashes = (uint[])source.m_BoneNameHashes?.Clone();
             m_RootBoneNameHash = source.m_RootBoneNameHash;
@@ -376,6 +377,7 @@ namespace UnityEngine
             ResizeVertexChannel(ref m_Tangents, count);
             ResizeVertexChannel(ref m_Colors, count);
             ResizeVertexChannel(ref m_BoneWeights, count);
+            if (resized) ResizeRuntimeBoneWeights(count);
             for (int channel = 0; channel < m_UVs.Length; channel++)
                 ResizeVertexChannel(ref m_UVs[channel], count);
             if (!scriptSet || resized) UpdateBounds();
@@ -932,19 +934,21 @@ namespace UnityEngine
             set
             {
                 EnsureModelLoaded();
-                m_BoneWeights = Checked(value, "boneWeights");
-                // A layout without skin channels (one read from a file) gets them, as a new mesh's
-                // layout lists them.
-                if (m_BoneWeights != null && m_Layout != null && !LayoutHas(VertexAttribute.BlendWeight))
-                {
-                    Array.Resize(ref m_Layout, m_Layout.Length + 2);
-                    m_Layout[m_Layout.Length - 2] = new VertexAttributeDescriptor(VertexAttribute.BlendWeight, VertexAttributeFormat.Float32, 4, 1);
-                    m_Layout[m_Layout.Length - 1] = new VertexAttributeDescriptor(VertexAttribute.BlendIndices, VertexAttributeFormat.UInt32, 4, 1);
-                }
-                InvalidatePackedChannel(VertexAttribute.BlendWeight);
-                InvalidatePackedChannel(VertexAttribute.BlendIndices);
-                Changed(indices: false);
+                SetLegacyBoneWeights(value);
             }
+        }
+
+        void SetLegacyBoneWeights(BoneWeight[] value)
+        {
+            var data = Checked(value, "boneWeights");
+            bool hadVariableLayout = m_RuntimeSkinLayout != null;
+            DropRuntimeBoneWeights();
+            m_BoneWeights = data;
+            if (hadVariableLayout || (m_BoneWeights != null && !LayoutHas(VertexAttribute.BlendWeight)))
+                UpdateSkinWeightLayout(m_BoneWeights != null ? SkinWeights.FourBones : SkinWeights.None);
+            InvalidatePackedChannel(VertexAttribute.BlendWeight);
+            InvalidatePackedChannel(VertexAttribute.BlendIndices);
+            Changed(indices: false);
         }
 
         public void GetBoneWeights(List<BoneWeight> boneWeights)
@@ -984,6 +988,7 @@ namespace UnityEngine
                 if (!keepVertexLayout) m_UVDimensions[i] = 0;
             }
             m_BoneWeights = keepWeights ? Array.Empty<BoneWeight>() : null;
+            DropRuntimeBoneWeights(keepWeights);
             m_BlendShapes.Clear();
             foreach (var s in m_SubMeshes)
             {
@@ -1450,6 +1455,7 @@ namespace UnityEngine
         internal override void OnEngineDestroy()
         {
             EndBindposeViews();
+            InvalidateBoneWeightArrays();
             ReleaseGraphicsBufferOwner();
             Native.ReleaseMesh(m_Handle);
             m_Handle = 0;

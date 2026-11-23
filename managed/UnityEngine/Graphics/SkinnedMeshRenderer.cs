@@ -358,6 +358,7 @@ namespace UnityEngine
             {
                 SkinWeights.OneBone => 1,
                 SkinWeights.TwoBones => 2,
+                SkinWeights.Unlimited when m_Mesh?.RuntimeSkinWeights != null => byte.MaxValue,
                 _ => 4,
             },
         };
@@ -421,6 +422,7 @@ namespace UnityEngine
                 m_Skinned = (Mesh)mesh.CloneObject();
                 m_Skinned.ClearBlendShapes();
                 m_Skinned.m_BoneWeights = null;
+                m_Skinned.DropRuntimeBoneWeights();
                 m_Skinned.ResetBindposes();
                 m_Skinned.SetSkinOutputLayout();
                 m_Skinned.vertexBufferTarget = m_VertexBufferTarget;
@@ -489,6 +491,7 @@ namespace UnityEngine
         {
             var mesh = m_Mesh;
             var weights = mesh.m_BoneWeights;
+            var runtimeWeights = mesh.RuntimeSkinWeights;
             var bindposes = mesh.BindposeData.AsSpan();
             var skeleton = m_Bones.Length == 0 ? SkeletonSkin() : null;
             int boneCount = Math.Min(skeleton != null ? m_SkinNodes.Length : m_Bones.Length, bindposes.Length);
@@ -536,16 +539,27 @@ namespace UnityEngine
                 var st = tangents != null ? (Vector3)tangents[i] : default;
                 Vector3 p = default, n = default, t = default;
                 float total = 0f;
-                for (int k = 0; k < maxBones; k++)
+                var influences = runtimeWeights == null ? default : runtimeWeights.ForVertex(i);
+                int limit = Math.Min(maxBones, runtimeWeights == null ? 4 : influences.Length);
+                for (int k = 0; k < limit; k++)
                 {
                     float weight;
                     int index;
-                    switch (k)
+                    if (runtimeWeights != null)
                     {
-                        case 0: weight = w.weight0; index = w.boneIndex0; break;
-                        case 1: weight = w.weight1; index = w.boneIndex1; break;
-                        case 2: weight = w.weight2; index = w.boneIndex2; break;
-                        default: weight = w.weight3; index = w.boneIndex3; break;
+                        var influence = influences[k];
+                        weight = influence.weight;
+                        index = influence.boneIndex;
+                    }
+                    else
+                    {
+                        switch (k)
+                        {
+                            case 0: weight = w.weight0; index = w.boneIndex0; break;
+                            case 1: weight = w.weight1; index = w.boneIndex1; break;
+                            case 2: weight = w.weight2; index = w.boneIndex2; break;
+                            default: weight = w.weight3; index = w.boneIndex3; break;
+                        }
                     }
                     if (weight <= 0f || index < 0 || index >= boneCount) continue;
                     var m = m_Matrices[index];
