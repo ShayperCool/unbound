@@ -26,6 +26,16 @@ public partial class NavLinksProbe
         yield return null;
         foreach (bool afterUpdate in new[] { false, true })
             yield return RecordPendingAssignment(local, afterUpdate, "partial", false);
+
+        DestroyImmediate(local.Link.gameObject);
+        local.Link = AddLink(local, new Vector3(-2f, 0f, 0f), new Vector3(2f, 0f, 0f));
+        foreach (bool afterUpdate in new[] { false, true })
+        foreach (string mode in new[] { "toggleNear", "toggleFar" })
+        {
+            local.Link.activated = true;
+            yield return null;
+            yield return RecordPendingAssignment(local, afterUpdate, mode, false);
+        }
         Finish(0);
     }
 
@@ -84,6 +94,7 @@ public partial class NavLinksProbe
                 throw new InvalidOperationException("second assignment was not applied");
         }
         if (mode == "markCost") agent.SetAreaCost(4, 4f);
+        if (mode.StartsWith("toggle", StringComparison.Ordinal)) local.Link.activated = false;
         if (mode == "reset") agent.ResetPath();
         for (int frame = 0; frame <= 8; frame++)
         {
