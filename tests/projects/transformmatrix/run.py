@@ -11,5 +11,4 @@ BASE = (PROBE.parent / 'animatorapi', ('Packages', 'ProjectSettings', 'Assets/Sc
 
 if __name__ == '__main__':
     sys.exit(value_probe.main(PROBE, 'TransformMatrixProbeRunner.Record', 'TRANSFORM_MATRIX_OUT',
-                              tolerance=0, engine_args=['--headless', '30', '--size', '64x64'], base=BASE,
-                              macos_batch=True))
+                              tolerance=0, engine_args=['--headless', '30', '--size', '64x64'], base=BASE))
