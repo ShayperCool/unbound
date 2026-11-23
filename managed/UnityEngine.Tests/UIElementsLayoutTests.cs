@@ -124,6 +124,35 @@ namespace UnityEngine.Tests
             Assert.Equal(140f, percent.LayoutHeight);
         }
 
+        /// <summary>Measured in the Editor (tests/projects/uitkpercent minOverMax): a minimum size wins
+        /// over a smaller maximum (150x300 with max 50x100 and min 80x200 is 80x200), also for an
+        /// absolutely placed element sized in percentages; a size between them stays.</summary>
+        [Fact]
+        public void AMinimumWinsOverASmallerMaximum()
+        {
+            var config = YogaConfig.UIToolkit();
+            var outer = new YogaNode(config) { Width = YogaValue.Point(200), Height = YogaValue.Point(400) };
+            var box = new YogaNode(config)
+            {
+                Width = YogaValue.Point(150), Height = YogaValue.Point(300), FlexShrink = 0,
+                MaxWidth = YogaValue.Point(50), MaxHeight = YogaValue.Point(100), MinWidth = YogaValue.Point(80), MinHeight = YogaValue.Point(200),
+            };
+            var absolute = new YogaNode(config)
+            {
+                PositionType = YogaPositionType.Absolute, Width = YogaValue.Point(50),
+                Height = YogaValue.Percent(38), MaxHeight = YogaValue.Percent(20), MinHeight = YogaValue.Point(120),
+            };
+            var between = new YogaNode(config) { Width = YogaValue.Point(60), Height = YogaValue.Point(150), FlexShrink = 0, MaxHeight = YogaValue.Point(170), MinHeight = YogaValue.Point(120) };
+            outer.Insert(0, box);
+            outer.Insert(1, absolute);
+            outer.Insert(2, between);
+            outer.CalculateLayout();
+            Assert.Equal(80f, box.LayoutWidth);
+            Assert.Equal(200f, box.LayoutHeight);
+            Assert.Equal(120f, absolute.LayoutHeight);
+            Assert.Equal(150f, between.LayoutHeight);
+        }
+
         /// <summary>Measured in the Editor (tests/projects/uitkpercent relativeIn*): percentage offsets of
         /// a relatively placed element take the owner's width for left and right and its height for
         /// top and bottom, whatever the element's own flex direction.</summary>

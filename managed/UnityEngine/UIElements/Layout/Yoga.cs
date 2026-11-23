@@ -1307,11 +1307,13 @@ namespace Unbound.UIElements.Layout
                 max = ResolveValue(node.style.MaxDimensions[DimWidth], axisSize);
             }
 
+            // The minimum wins over a smaller maximum, as in CSS and UI Toolkit (plain Yoga let the
+            // maximum win: Unity 6000.0.71f1 Editor, tests/projects/uitkpercent minOverMax).
             if (!max.IsUndefined && max.Value >= 0 && value > max.Value)
-                return max;
+                value = max.Value;
 
             if (!min.IsUndefined && min.Value >= 0 && value < min.Value)
-                return min;
+                value = min.Value;
 
             return new YogaFloatOptional(value);
         }
