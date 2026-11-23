@@ -1,0 +1,14 @@
+{
+  "commands": [
+    "python3 tests/projects/streamvelocity/run.py gate --release \"$UNBOUND_PROBE_UNITY_VERSION\""
+  ],
+  "summary": "streamvelocity: .*",
+  "engine_paths": [
+    "managed/UnityEngine/Animation/Animator.RootMotion.cs",
+    "managed/UnityEngine/Animation/Playables/",
+    "managed/UnityEngine/Runtime/Compat.cs",
+    "tests/projects/animculling/Assets/Scenes/",
+    "tests/projects/animculling/Packages/",
+    "tests/projects/animculling/ProjectSettings/"
+  ]
+}
