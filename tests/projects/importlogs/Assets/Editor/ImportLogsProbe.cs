@@ -74,6 +74,17 @@ public static class ImportLogsProbe
             var copy = AssetDatabase.LoadAssetAtPath<StyleSheet>("Assets/Styles/BadNew.uss");
             Put("import.uss.loaded", copy != null);
             Put("import.uss.afterLoad", Taken());
+            // A forced import in Play mode of one of the project's assets not loaded yet.
+            AssetDatabase.ImportAsset("Assets/Styles/Forced.uss", ImportAssetOptions.ForceUpdate);
+            Put("forced.uss", Taken());
+            Put("forced.uss.loaded", AssetDatabase.LoadAssetAtPath<StyleSheet>("Assets/Styles/Forced.uss") != null);
+            Put("forced.uss.afterLoad", Taken());
+            // A file a refresh in Play mode finds.
+            File.Copy("Assets/Styles/Bad.uss", "Assets/Styles/Refreshed.uss", true);
+            AssetDatabase.Refresh();
+            Put("refresh.uss", Taken());
+            Put("refresh.uss.loaded", AssetDatabase.LoadAssetAtPath<StyleSheet>("Assets/Styles/Refreshed.uss") != null);
+            Put("refresh.uss.afterLoad", Taken());
             File.Copy("Assets/Textures/Logged.png", "Assets/Textures/LoggedNew.png", true);
             AssetDatabase.ImportAsset("Assets/Textures/LoggedNew.png");
             Put("import.texture", Taken());

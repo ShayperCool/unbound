@@ -471,6 +471,8 @@ namespace UnityEditor
                     }
                     if (!AssetDatabaseRuntime.IsLoaded(guid))
                     {
+                        // Imported now: its import's messages are logged now.
+                        AssetDatabaseRuntime.ImportedInSession(guid);
                         AssetDatabaseRuntime.LoadFile(guid);
                         return;
                     }

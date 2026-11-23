@@ -355,6 +355,7 @@ namespace Unbound.Runtime
             if (s_EarlierImport > 0)
             {
                 Native.Log((int)type, text);
+                ConsoleLog.Append(text);
                 return;
             }
             // The Editor has no such messages: the game's log handlers (in-game consoles, crash
@@ -371,21 +372,21 @@ namespace Unbound.Runtime
         /// project's when it opens, not imported again since): the import's messages (an
         /// importer's warnings, its postprocessors' logs) go to Unbound's log only, as the Editor
         /// writes them to its log then, before any Play mode handler or console entry exists
-        /// (matches the Unity 6000.0.71f1 Editor, tests/projects/importlogs load.*).</summary>
-        internal static IDisposable EarlierImport(bool earlier) => earlier ? new EarlierImportScope() : null;
-
-        sealed class EarlierImportScope : IDisposable
+        /// (matches the Unity 6000.0.71f1 Editor, tests/projects/importlogs load.*). A custom
+        /// Debug.unityLogger.logHandler still receives them (unmeasured).</summary>
+        internal static IDisposable EarlierImport(bool earlier)
         {
-            bool m_Disposed;
+            if (!earlier) return null;
+            s_EarlierImport++;
+            return s_EndEarlierImport;
+        }
 
-            internal EarlierImportScope() => s_EarlierImport++;
+        static readonly IDisposable s_EndEarlierImport = new EndEarlierImport();
 
-            public void Dispose()
-            {
-                if (m_Disposed) return;
-                m_Disposed = true;
-                s_EarlierImport--;
-            }
+        /// <summary>Ends one EarlierImport scope (each `using` disposes it once).</summary>
+        sealed class EndEarlierImport : IDisposable
+        {
+            public void Dispose() => s_EarlierImport--;
         }
     }
 }

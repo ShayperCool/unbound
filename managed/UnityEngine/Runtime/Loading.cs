@@ -1132,11 +1132,15 @@ namespace Unbound.Runtime
                         using (postprocessed && model ? ModelMaterialImport.Defer(info.Path) : null)
                             file = ObjectGraphBuilder.Build(documents, info.Path, guid, ObjectGraphBuilder.Kind.PrefabAsset, null, Publish);
                         if (model) ModelMaterialImport.UsePipelineDefault(file);
-                        if (postprocessed) UnityEditor.HierarchyPostprocessing.Run(file, model);
-                        else
+                        // A prefab's postprocessors are its import's too (a model's whole load is).
+                        using (model ? null : ImportMessages(guid))
                         {
-                            if (!model) UnityEditor.AssetPostprocessing.EnsurePreprocessed(info.Path, "prefab", guid);
-                            UnityEditor.AssetPostprocessing.EndSession(info.Path);
+                            if (postprocessed) UnityEditor.HierarchyPostprocessing.Run(file, model);
+                            else
+                            {
+                                if (!model) UnityEditor.AssetPostprocessing.EnsurePreprocessed(info.Path, "prefab", guid);
+                                UnityEditor.AssetPostprocessing.EndSession(info.Path);
+                            }
                         }
                         break;
                     }

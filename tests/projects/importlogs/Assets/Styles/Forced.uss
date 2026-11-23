@@ -1,0 +1,3 @@
+.probe {
+    -unity-font-definition: none;
+}
