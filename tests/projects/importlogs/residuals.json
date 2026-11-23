@@ -1,0 +1,8 @@
+{
+  "Unbound imports an asset when it is first loaded: an asset AssetDatabase.ImportAsset imports in Play mode logs its import's messages at that first load, not in the ImportAsset call as the Editor's import does. The messages, and that Play mode's handlers receive them, match.": [
+    "import.uss",
+    "import.uss.afterLoad",
+    "import.texture",
+    "import.texture.afterLoad"
+  ]
+}
