@@ -116,4 +116,49 @@ public class BuildIdentityTests
         PlayerSettings.iOS.buildNumber = "41";
         ProbeLog.Row("quit.beforeSave.file", ProbeLog.Hash(SettingsPath));
     }
+
+    [Test]
+    public void DefaultsAndPunctuation()
+    {
+        ProbeLog.Row("initial.file", ProbeLog.Hash(SettingsPath));
+        var targets = new[]
+        {
+            NamedBuildTarget.Standalone, NamedBuildTarget.Server, NamedBuildTarget.WebGL,
+            NamedBuildTarget.Android, NamedBuildTarget.iOS, NamedBuildTarget.tvOS,
+            NamedBuildTarget.VisionOS, NamedBuildTarget.WindowsStoreApps, NamedBuildTarget.EmbeddedLinux,
+            NamedBuildTarget.QNX, NamedBuildTarget.PS4, NamedBuildTarget.PS5,
+            NamedBuildTarget.XboxOne, NamedBuildTarget.NintendoSwitch, NamedBuildTarget.NintendoSwitch2,
+        };
+        foreach (var target in targets)
+            Identifier("initial." + target.TargetName, target);
+        ProbeLog.Row("initial.active", PlayerSettings.applicationIdentifier);
+        ProbeLog.Row("initial.runtime", Application.identifier);
+
+        var previousSubtarget = EditorUserBuildSettings.standaloneBuildSubtarget;
+        try
+        {
+            EditorUserBuildSettings.standaloneBuildSubtarget = StandaloneBuildSubtarget.Server;
+            ProbeLog.Row("emptyServer.active", PlayerSettings.applicationIdentifier);
+            ProbeLog.Row("emptyServer.runtime", Application.identifier);
+        }
+        finally
+        {
+            EditorUserBuildSettings.standaloneBuildSubtarget = previousSubtarget;
+        }
+        ProbeLog.Row("restored.runtime", Application.identifier);
+        PlayerSettings.companyName = "Probe Laß _ Inc";
+        ProbeLog.Row("renamed.active", PlayerSettings.applicationIdentifier);
+        ProbeLog.Row("renamed.runtime", Application.identifier);
+        Identifier("renamed.android", NamedBuildTarget.Android);
+        Identifier("renamed.ios", NamedBuildTarget.iOS);
+        Identifier("renamed.webgl", NamedBuildTarget.WebGL);
+
+        foreach (var target in targets)
+            SetIdentifier("assigned." + target.TargetName, target, "Com.Probe _ Space-é.工具");
+        ProbeLog.Row("assigned.active", PlayerSettings.applicationIdentifier);
+        ProbeLog.Row("assigned.runtime", Application.identifier);
+        ProbeLog.Row("beforeSave.file", ProbeLog.Hash(SettingsPath));
+        AssetDatabase.SaveAssets();
+        ProbeLog.Snapshot("saved.file", SettingsPath);
+    }
 }

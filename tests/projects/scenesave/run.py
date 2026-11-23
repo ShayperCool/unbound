@@ -11,7 +11,7 @@ Cases: `edit` (Edit Mode SaveEditTests), `play-nosave` and `play-save` (Play Mod
 NoSave and Save, each alone), `prefab-api` (Edit Mode PrefabApiTests), `prefab-writes` (Edit Mode
 PrefabWriteTests), `create-assets` (Edit Mode CreateAssetTests), `engine-assets` (Edit Mode
 EngineAssetTests), `prefab-nested` (Edit Mode NestedPrefabTests), `settings-writes` (Edit Mode
-SettingsWriteTests), `build-identity` (Edit Mode BuildIdentityTests), `mesh-bounds` (Edit Mode
+SettingsWriteTests), `build-identity` and `build-identity-defaults` (Edit Mode BuildIdentityTests), `mesh-bounds` (Edit Mode
 MeshBoundsTests), `native-saves` (Edit Mode NativeSaveTests), `clip-assets` (Edit Mode ClipAssetTests), `controller-assets` (Edit Mode
 ControllerAssetTests), `controller-additions` (Edit Mode ControllerAdditionTests), `modification-timing` (Edit Mode ModificationTimingTests), `scene-api-rest`
 (Edit Mode SceneApiRestTests).
@@ -43,6 +43,7 @@ CASES = {
     'prefab-nested': ('EditMode', 'NestedPrefabTests.NestedPrefabs'),
     'settings-writes': ('EditMode', 'SettingsWriteTests.SettingsWrites'),
     'build-identity': ('EditMode', 'BuildIdentityTests.Persist'),
+    'build-identity-defaults': ('EditMode', 'BuildIdentityTests.DefaultsAndPunctuation'),
     'mesh-bounds': ('EditMode', 'MeshBoundsTests.MeshBounds'),
     'native-saves': ('EditMode', 'NativeSaveTests.NativeSaves'),
     'clip-assets': ('EditMode', 'ClipAssetTests.ClipAssets'),
@@ -76,6 +77,17 @@ def copy_project(destination):
             shutil.copytree(source, destination/name, symlinks=True)
 
 
+def seed_identifier_defaults(project):
+    settings = project/'ProjectSettings/ProjectSettings.asset'
+    text = settings.read_bytes()
+    for old, new in ((b'  productName: testrunner\n', b'  productName: My project\n'),
+                     (b'  applicationIdentifier: {}\n', b'  applicationIdentifier:\n    Server: \n')):
+        if text.count(old) != 1:
+            raise ValueError(f'{settings}: expected one {old!r}')
+        text = text.replace(old, new)
+    settings.write_bytes(text)
+
+
 def run_case(kind, case, out, cli=None):
     platform, test_filter = CASES[case]
     scratch = run_root(PROBE, 'work')
@@ -83,6 +95,8 @@ def run_case(kind, case, out, cli=None):
     work = Path(tempfile.mkdtemp(prefix=f'{case}-', dir=scratch))
     project = work/'scenesave'
     copy_project(project)
+    if case == 'build-identity-defaults':
+        seed_identifier_defaults(project)
     rows = work/'rows.jsonl'
     env = dict(os.environ, SCENESAVE_LOG=str(rows))
     results = work/'results.xml'
