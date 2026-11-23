@@ -39,16 +39,14 @@ def normalized(name, data, written):
     return data
 
 
-def keep_written(written, target, leave_out=()):
-    """Copies a capture's `written` folder to `target`, normalized, but for the names in
-    `leave_out` (files the reference keeps elsewhere)."""
+def keep_written(written, target):
+    """Copies a capture's `written` folder to `target`, normalized."""
     written, target = Path(written), Path(target)
     if not written.is_dir():
         return
     target.mkdir(parents=True, exist_ok=True)
     for path in sorted(written.iterdir()):
-        if path.name not in leave_out:
-            (target/path.name).write_bytes(normalized(path.name, path.read_bytes(), written))
+        (target/path.name).write_bytes(normalized(path.name, path.read_bytes(), written))
 
 
 def written_files(folder):
