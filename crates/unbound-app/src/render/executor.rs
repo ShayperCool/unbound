@@ -1182,7 +1182,7 @@ pub struct UnityRenderer {
     framebuffer_resolve_layout: Option<wgpu::BindGroupLayout>,
     framebuffer_resolve_pipelines:
         HashMap<(wgpu::TextureFormat, FramebufferTransfer), wgpu::RenderPipeline>,
-    framebuffer_resolve_groups: Vec<(wgpu::TextureView, wgpu::BindGroup)>,
+    framebuffer_resolve_groups: Vec<(wgpu::TextureView, bool, wgpu::BindGroup)>,
     /// The pipelines (and their layouts) that copy a depth buffer into a float color texture:
     /// single-sample and multisampled.
     depth_copy_pipelines: [Option<(wgpu::RenderPipeline, wgpu::BindGroupLayout)>;
@@ -3173,9 +3173,14 @@ impl UnityRenderer {
         format: wgpu::TextureFormat,
         transfer: FramebufferTransfer,
     ) -> (wgpu::RenderPipeline, wgpu::BindGroup) {
-        let layout = self
-            .framebuffer_resolve_layout
-            .get_or_insert_with(|| Self::texture_copy_layout(&self.device, false));
+        let resize = transfer == FramebufferTransfer::ResizeToDisplay;
+        let layout = if resize {
+            self.pipelines.texture_layout.clone()
+        } else {
+            self.framebuffer_resolve_layout
+                .get_or_insert_with(|| Self::texture_copy_layout(&self.device, false))
+                .clone()
+        };
         let pipeline = self
             .framebuffer_resolve_pipelines
             .entry((format, transfer))
@@ -3203,24 +3208,43 @@ impl UnityRenderer {
                         ) + FRAMEBUFFER_UNORM_COPY_WGSL
                     }
                 };
-                let layouts = [Some(&*layout), Some(&self.pipelines.draw_layout)];
-                let count = if transfer == FramebufferTransfer::ResizeToDisplay { 2 } else { 1 };
+                let layouts = [Some(&layout), Some(&self.pipelines.draw_layout)];
+                let count = if resize { 2 } else { 1 };
                 Self::texture_copy_pipeline(&self.device, shader, format, &layouts[..count])
-            });
-        if let Some((_, group)) = self
+            })
+            .clone();
+        if let Some((_, _, group)) = self
             .framebuffer_resolve_groups
             .iter()
-            .find(|(view, _)| view == source)
+            .find(|(view, filtered, _)| view == source && *filtered == resize)
         {
-            return (pipeline.clone(), group.clone());
+            return (pipeline, group.clone());
         }
-        let group = Self::channel_copy_group(&self.device, layout, source);
+        let group = if resize {
+            let sampler = self.sampler(SamplerKey::LINEAR_CLAMP);
+            self.device.create_bind_group(&wgpu::BindGroupDescriptor {
+                label: Some("unbound display resize"),
+                layout: &layout,
+                entries: &[
+                    wgpu::BindGroupEntry {
+                        binding: 0,
+                        resource: wgpu::BindingResource::TextureView(source),
+                    },
+                    wgpu::BindGroupEntry {
+                        binding: 1,
+                        resource: wgpu::BindingResource::Sampler(&sampler),
+                    },
+                ],
+            })
+        } else {
+            Self::channel_copy_group(&self.device, &layout, source)
+        };
         if self.framebuffer_resolve_groups.len() >= REPACK_TEXTURES_KEPT {
             self.framebuffer_resolve_groups.remove(0);
         }
         self.framebuffer_resolve_groups
-            .push((source.clone(), group.clone()));
-        (pipeline.clone(), group)
+            .push((source.clone(), resize, group.clone()));
+        (pipeline, group)
     }
 
     fn channel_copy_group(
@@ -7327,21 +7351,18 @@ fn fs(@builtin(position) p: vec4<f32>) -> @location(0) vec4<f32> {
 // visible region's offset in the presentation rectangle and its reciprocal extent.
 const FRAMEBUFFER_RESIZE_WGSL: &str = r#"
 struct DisplayUniform {
-    unused: array<vec4<f32>, 13>,
+    model: mat4x4<f32>,
+    view: mat4x4<f32>,
+    projection: mat4x4<f32>,
+    color: vec4<f32>,
     viewport: vec4<f32>,
 }
+@group(0) @binding(1) var source_sampler: sampler;
 @group(1) @binding(0) var<uniform> display: DisplayUniform;
 
 fn resample_display(pixel: vec2<f32>) -> vec4<f32> {
-    let extent = vec2<i32>(textureDimensions(source));
-    let p = (pixel + display.viewport.xy) * display.viewport.zw * vec2<f32>(extent) - 0.5;
-    let corner = vec2<i32>(floor(p));
-    let high = clamp(corner + vec2<i32>(1), vec2<i32>(0), extent - 1);
-    let low = clamp(corner, vec2<i32>(0), extent - 1);
-    let weight = fract(p);
-    let lower = mix(textureLoad(source, low, 0), textureLoad(source, vec2<i32>(high.x, low.y), 0), weight.x);
-    let upper = mix(textureLoad(source, vec2<i32>(low.x, high.y), 0), textureLoad(source, high, 0), weight.x);
-    return mix(lower, upper, weight.y);
+    let uv = (pixel + display.viewport.xy) * display.viewport.zw;
+    return textureSampleLevel(source, source_sampler, uv, 0.0);
 }
 "#;
 

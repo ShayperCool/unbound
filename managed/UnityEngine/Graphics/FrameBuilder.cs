@@ -1983,7 +1983,7 @@ namespace Unbound.Runtime
                     }
                     else
                         Graphics.Blit(msaaTarget, resolveTarget);
-                    if (resolveTarget == null && (displayFlag != 0 ? !partial : fullScreen))
+                    if (resolveTarget == null && fullScreen && (displayFlag == 0 || !partial))
                     {
                         // The full-screen resolve leaves the screen without depth: a later camera
                         // that draws on the screen itself sees none (measured, the Editor).
