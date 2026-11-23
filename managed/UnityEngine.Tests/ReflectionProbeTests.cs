@@ -120,6 +120,35 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
+        public void AProjectsBakedCubeIsReadAgainOnceItsFileIsNotItsSource()
+        {
+            // A bake's ReflectionProbe-0.exr imported again keeps its GUID: the cube read before
+            // is no longer what the file loads to, so the lighting data's reference reads it again
+            // (here: a file the project does not have, so none) rather than keep the old texels.
+            const string Guid = "6b6b6b6b6b6b6b6b6b6b6b6b6b6b6b6b";
+            var stale = new Cubemap(1, TextureFormat.RGBA32, false);
+            var previous = Debug.unityLogger.logHandler;
+            Debug.unityLogger.logHandler = new Silent();
+            try
+            {
+                RenderSettings.s_Cubemaps[(Guid, 8900000)] = stale;
+                Assert.NotSame(stale, RenderSettings.BakedReflection(Guid, 8900000));
+            }
+            finally
+            {
+                Debug.unityLogger.logHandler = previous;
+                RenderSettings.s_Cubemaps.Remove((Guid, 8900000));
+                Object.DestroyImmediate(stale);
+            }
+        }
+
+        sealed class Silent : ILogHandler
+        {
+            public void LogFormat(LogType type, Object context, string format, params object[] args) { }
+            public void LogException(System.Exception exception, Object context) { }
+        }
+
+        [Fact]
         public void AScenesDefaultReflectionIsABlackCubeWithoutOne()
         {
             // The Unity 6000.0.71f1 Editor, tests/projects/realtimegi end-reflection (a scene

@@ -554,7 +554,7 @@ namespace UnityEngine
         static float SkyboxProbeScale => Mathf.GammaToLinearSpace(s_AmbientIntensity);
 
         internal static Cubemap s_BakedReflection;
-        static readonly System.Collections.Generic.Dictionary<(string, long), Cubemap> s_Cubemaps = new System.Collections.Generic.Dictionary<(string, long), Cubemap>();
+        internal static readonly System.Collections.Generic.Dictionary<(string, long), Cubemap> s_Cubemaps = new System.Collections.Generic.Dictionary<(string, long), Cubemap>();
         static DefaultReflectionMode s_DefaultReflectionMode;
         static Texture s_CustomReflection;
         static int s_DefaultReflectionResolution = 128;
@@ -777,10 +777,14 @@ namespace UnityEngine
         internal static Cubemap BakedReflection(string guid, long fileId)
         {
             var key = (guid, fileId);
-            if (s_Cubemaps.TryGetValue(key, out var cube) && cube) return cube;
+            bool builtin = guid.StartsWith("0000000000000000", StringComparison.Ordinal);
+            // A project's cube only while it is the one its file loads to: imported again (a
+            // bake's new image), it is read again.
+            if (s_Cubemaps.TryGetValue(key, out var cube) && cube && (builtin || AssetDatabaseRuntime.TryGetLocation(cube, out _, out _)))
+                return cube;
             try
             {
-                cube = guid.StartsWith("0000000000000000", StringComparison.Ordinal)
+                cube = builtin
                     ? Cubemap.FromSerialized(guid, fileId)
                     : AssetDatabaseRuntime.Load(guid, fileId, typeof(Cubemap)) as Cubemap;
             }
