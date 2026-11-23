@@ -418,9 +418,19 @@ Animator give the same placement, with root motion on or off. The controls vary 
 layer weight, mask Root off, and compare a humanoid base clip. Two controls fade from a moving
 base clip to the empty state. The feet stop moving the root when the fade finishes. Controller
 playables below mixers or jobs use the reported fallback. Separate diagnostic captures keep
-the open generic-base and immediate Play differences, and the nonfinite body Unity produced
-when an explicit additive reference had no body curves.
+the differences for an active additive layer over a generic base and for an immediate Play cut.
+They also record the nonfinite body Unity produced when an explicit additive reference lacked body curves.
 [Animation layers](https://docs.unity3d.com/6000.0/Documentation/Manual/AnimationLayers.html).
+
+Five `genericController.*` controls append 475 rows from matching macOS 6000.0.71f1
+Editor captures. A generic base clip drives the root of a humanoid through an explicit
+manual controller playable with a single full-weight DefaultValues output. The controls
+compare a controller with only the generic clip, one with an inactive humanoid state, and
+one with a zero-weight additive humanoid layer. They cover root motion enabled and disabled,
+with the root and body pose, velocities, and delta motion recorded at each step. A separate
+full capture keeps the open positive-weight additive case (728 differing values).
+[Root motion](https://docs.unity3d.com/6000.0/Documentation/Manual/RootMotion.html),
+[AnimatorControllerPlayable](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Animations.AnimatorControllerPlayable.html).
 
 After changing the rigs, regenerate them (`blender -b --factory-startup --python
 tests/projects/humanoid/make_models.py`), let the Editor configure them in a copy of the project

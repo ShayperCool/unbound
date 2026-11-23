@@ -974,6 +974,9 @@ namespace Unbound.Runtime
         /// <summary>Root motion for a mirrored clip in a direct manual humanoid output.</summary>
         internal static bool HumanPlayableMirroredMotion => Family == ReleaseFamily.Unity6000_0;
 
+        /// <summary>A direct controller playable with one sampled generic base clip can move a humanoid.</summary>
+        internal static bool HumanPlayableGenericControllerMotion => Family == ReleaseFamily.Unity6000_0;
+
         /// <summary>Humanoid body placement from an additive controller layer over an empty base state.</summary>
         internal static bool HumanAdditiveBodyOverEmptyBase => Family == ReleaseFamily.Unity6000_0;
 

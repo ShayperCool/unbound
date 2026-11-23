@@ -96,6 +96,68 @@ namespace UnityEngine.Tests
         }
 
         [Theory]
+        [InlineData(TestRelease.Measured, "generic", true, true)]
+        [InlineData(TestRelease.Measured, "inactiveHuman", true, true)]
+        [InlineData(TestRelease.Measured, "zeroAdditive", true, true)]
+        [InlineData(TestRelease.Measured, "generic", false, true)]
+        [InlineData(TestRelease.Unmeasured, "generic", true, false)]
+        public void ADirectControllerPlayableUsesTheContributingGenericBase(
+            string release, string shape, bool rootMotion, bool measured)
+        {
+            using var pin = TestRelease.Pin(release);
+            const string diagnostic = "Animator root motion of composed playable graph outputs on humanoid avatars";
+            int Hits() => Stubs.HitReport().FirstOrDefault(hit => hit.Key == diagnostic).Value;
+
+            var root = Rig(out var animator, out var avatar);
+            root.transform.position = new Vector3(3f, 0f, 0f);
+            animator.applyRootMotion = rootMotion;
+            var clip = new AnimationClip();
+            clip.SetCurve("", typeof(Transform), "localPosition.x", AnimationCurve.Linear(0f, 0f, 1f, 2f));
+            var humanClip = Clip(turn: false);
+            var controller = new AnimatorController();
+            controller.AddLayer("Base");
+            var machine = controller.layers[0].stateMachine;
+            machine.defaultState = machine.AddState("Generic");
+            machine.defaultState.motion = clip;
+            if (shape == "inactiveHuman") machine.AddState("Humanoid").motion = humanClip;
+            if (shape == "zeroAdditive")
+            {
+                controller.AddLayer("Additive");
+                var layers = controller.layers;
+                layers[1].blendingMode = AnimatorLayerBlendingMode.Additive;
+                var additive = layers[1].stateMachine;
+                additive.defaultState = additive.AddState("Humanoid");
+                additive.defaultState.motion = humanClip;
+                controller.layers = layers;
+            }
+
+            var graph = PlayableGraph.Create();
+            graph.SetTimeUpdateMode(DirectorUpdateMode.Manual);
+            var playable = AnimatorControllerPlayable.Create(graph, controller);
+            AnimationPlayableOutput.Create(graph, "out", animator).SetSourcePlayable(playable);
+            try
+            {
+                int before = Hits();
+                graph.Evaluate(0f);
+                graph.Evaluate(.25f);
+                bool moves = measured && rootMotion;
+                Near.Equal(new Vector3(moves ? 3.5f : .5f, 0f, 0f), root.transform.position, 1e-5f);
+                Near.Equal(new Vector3(moves ? .5f : 0f, 0f, 0f), animator.deltaPosition, 1e-5f);
+                if (measured) Near.Equal(root.transform.position, animator.rootPosition, 1e-5f);
+                Assert.Equal(!measured, Hits() > before);
+            }
+            finally
+            {
+                graph.Destroy();
+                Object.DestroyImmediate(root);
+                Object.DestroyImmediate(avatar);
+                Object.DestroyImmediate(controller);
+                Object.DestroyImmediate(humanClip);
+                Object.DestroyImmediate(clip);
+            }
+        }
+
+        [Theory]
         [InlineData(TestRelease.Measured, "attached", true)]
         [InlineData(TestRelease.Measured, "direct", true)]
         [InlineData(TestRelease.Unmeasured, "attached", false)]

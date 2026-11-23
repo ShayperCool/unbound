@@ -296,7 +296,7 @@ namespace Unbound.Runtime
         /// the root motion convention of <see cref="Animator.CaptureRootMotionPose"/>. False when
         /// humanoid clips play: their stream root motion is not computed.</summary>
         internal bool StreamRootMotion(float deltaTime, out Vector3 start, out Quaternion startRotation,
-            out Vector3 velocity, out Vector3 angularVelocity)
+            out Vector3 velocity, out Vector3 angularVelocity, bool ignoreInactiveLayers = false)
         {
             velocity = Vector3.zero;
             angularVelocity = Vector3.zero;
@@ -307,8 +307,9 @@ namespace Unbound.Runtime
             start = parent == null ? t.localPosition
                 : parent.position + parent.rotation * Vector3.Scale(parent.lossyScale, t.localPosition);
             startRotation = parent == null ? t.localRotation : parent.rotation * t.localRotation;
-            foreach (var (_, _, _, clip, _, _) in m_Contributions)
-                if (clip.HasHumanCurves && !clip.BodyMovesRoot(animator)) return false;
+            foreach (var (layer, layerIndex, _, clip, weight, _) in m_Contributions)
+                if ((!ignoreInactiveLayers || weight > 0f && (layerIndex == 0 || layer.Evaluated > 0f))
+                    && clip.HasHumanCurves && !clip.BodyMovesRoot(animator)) return false;
             int pos = Bindings.ChannelOf(t, "position"), rot = Bindings.ChannelOf(t, "rotation");
             if (!animator.m_ApplyRootMotion && !MoveCallbacks.Any(animator))
             {
@@ -329,6 +330,23 @@ namespace Unbound.Runtime
             foreach (var (_, _, _, clip, _, _) in m_Contributions)
                 if (clip.MotionCurves() != null || clip.BodyMovesRoot(m_Animator)) return true;
             return false;
+        }
+
+        /// <summary>A base-layer clip without a humanoid pose, playing without a transition or an
+        /// upper layer contributing to its pose. Unused clips do not determine its motion type.</summary>
+        internal bool HasSingleGenericBase
+        {
+            get
+            {
+                if (Layers.Length == 0) return false;
+                var layer = Layers[0];
+                if (layer.Def.Additive || layer.Def.SyncedLayerIndex >= 0 || layer.Def.Mask != null || layer.Next != null
+                    || layer.Completed != null || layer.Current == null
+                    || MotionOf(layer.Def, layer.Current.Def) is not AnimationClip { HasHumanCurves: false, legacy: false }) return false;
+                for (int i = 1; i < Layers.Length; i++)
+                    if (Layers[i].Evaluated != 0f) return false;
+                return true;
+            }
         }
 
         internal void ProcessRootMotion()

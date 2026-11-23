@@ -808,7 +808,12 @@ namespace Unbound.Runtime.Playables
             if (e.ReferencePose) return;
             player.EvaluateInto(into.Values, into.Animated, into.Objects, into.ObjectAnimated);
             if (player.FootIK()) into.FootIK = true;
-            if (e.Animator.Human is { } human) Humanoid(e, player, human, weight, into);
+            if (e.Animator.Human is { } human)
+            {
+                // A supported generic controller uses the same default humanoid pose as a generic clip output.
+                into.ClipSampled |= e.MotionMode is RootMotionMode.Compute or RootMotionMode.GenericControllerWithoutRootMotion;
+                Humanoid(e, player, human, weight, into);
+            }
             // Its parameter curves drive its own float parameters from its own layers, before the
             // graph mixes this pose with anything (see PlayableParameters.Sample).
             PlayableParameters.Sample(player, e.Animator);
@@ -892,9 +897,10 @@ namespace Unbound.Runtime.Playables
             var player = Player;
             if (player == null || player.Bindings != e.Bindings) return RootMotionStep.Unknown;
             var motion = RootMotionStep.Zero;
-            if (e.MotionMode != RootMotionMode.Zero)
+            if (e.MotionMode is not (RootMotionMode.Zero or RootMotionMode.GenericControllerWithoutRootMotion))
             {
-                if (!player.StreamRootMotion(into.DeltaTime, out _, out _, out var velocity, out var angular)) return RootMotionStep.Unknown;
+                if (!player.StreamRootMotion(into.DeltaTime, out _, out _, out var velocity, out var angular,
+                    ignoreInactiveLayers: e.MotionMode == RootMotionMode.Compute && e.Animator.isHuman)) return RootMotionStep.Unknown;
                 motion = RootMotionStep.FromVelocities(e.Animator, into.DeltaTime, velocity, angular);
             }
             motion.RootUnanimated = RootAnimation.Channels(e, out int pos, out int rot)

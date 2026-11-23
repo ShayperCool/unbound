@@ -162,6 +162,8 @@ namespace Unbound.Runtime.Playables
         /// <summary>The Animator requests no root motion (applyRootMotion off, no OnAnimatorMove):
         /// streams carry zero motion, as the Animator's own root motion is then zero.</summary>
         Zero,
+        /// <summary>A measured generic controller on a humanoid poses the root without applying motion.</summary>
+        GenericControllerWithoutRootMotion,
         /// <summary>Clips, mixers, layer mixers, controller playables and jobs compute and pass on
         /// their root motion.</summary>
         Compute,
@@ -1053,6 +1055,8 @@ namespace Unbound.Runtime.Playables
         /// humanoid by generic root motion (<see cref="GenericClipTree"/>). An
         /// AnimatorControllerPlayable with humanoid clips as such an output's source moves the
         /// Animator by its clips' humanoid root motion, as the Animator's own controller does.
+        /// A measured manual controller output whose only contributing layer plays a generic
+        /// base clip uses generic motion even if the asset contains unused humanoid clips.
         /// A direct explicit manual output of a mirrored clip, optionally with a single job,
         /// uses the same root-motion sampler in the measured context. Other graph shapes warn.</summary>
         static RootMotionMode MotionModeOf(Animator animator, List<(PlayableOutputData Output, double Dt, bool Seek)> outputs,
@@ -1072,9 +1076,14 @@ namespace Unbound.Runtime.Playables
                     var source = BelowJobs(o.Source);
                     if (HumanMotionClip(source) || requested && CanMoveMirroredClip(animator, o, source, explicitEvaluation))
                         return RootMotionMode.Human;
-                    // A controller with humanoid clips moves the Animator as its own controller
-                    // would (6000.0.71f1, tests/projects/humanoid controllerGraph.*).
-                    if (o.Source.Kind is ControllerKind { HasHumanClips: true } && !o.Source.HasConnectedOutput()) return RootMotionMode.Human;
+                    // A controller's current generic base can move the Animator even when the asset
+                    // also contains humanoid clips (6000.0.71f1, humanoid genericController.*).
+                    if (o.Source.Kind is ControllerKind controller && !o.Source.HasConnectedOutput())
+                    {
+                        if (CanMoveGenericController(animator, o, controller, explicitEvaluation))
+                            return requested ? RootMotionMode.Compute : RootMotionMode.GenericControllerWithoutRootMotion;
+                        if (controller.HasHumanClips) return RootMotionMode.Human;
+                    }
                     // Generic root curves alone move a humanoid as a generic Animator's, by its
                     // human scale (6000.0.71f1, tests/projects/humanoid genericOnHuman.graph).
                     if (source == o.Source && GenericClipTree(o.Source)) return requested ? RootMotionMode.Compute : RootMotionMode.Zero;
@@ -1088,7 +1097,7 @@ namespace Unbound.Runtime.Playables
                     : "Animator root motion of composed playable graph outputs on humanoid avatars",
                     "is not applied: one full-weight output of a nonmirrored humanoid clip, or on measured 6000.0.71f1 of a mixer or layer mixer tree of such clips "
                     + "with input weights that are not infinite, or of clips without humanoid curves, mixers and layer mixers, "
-                    + "or of an AnimatorControllerPlayable with humanoid clips, "
+                    + "or of an AnimatorControllerPlayable with humanoid clips or a measured manual generic base, "
                     + "is supported, without a playing controller, shared nodes or loop overrides; "
                     + "a mirrored clip or a single job above it moves a humanoid with measured manual output settings; "
                     + "controller playables below mixers or jobs, animation jobs other than ones passing such a source on whole, "
@@ -1132,6 +1141,12 @@ namespace Unbound.Runtime.Playables
             && (output.Source == source || output.Source.Inputs.Count == 1 && output.Source.Inputs[0].Node == source)
             && animator.updateMode == AnimatorUpdateMode.Normal && !MoveCallbacks.Any(animator)
             && animator.GetComponent<Rigidbody>() == null && animator.GetComponent<CharacterController>() == null;
+
+        static bool CanMoveGenericController(Animator animator, PlayableOutputData output, ControllerKind controller,
+            bool explicitEvaluation) =>
+            Compat.HumanPlayableGenericControllerMotion && explicitEvaluation && output.Graph.UpdateMode == DirectorUpdateMode.Manual
+            && controller.Player?.HasSingleGenericBase == true && animator.updateMode == AnimatorUpdateMode.Normal
+            && !MoveCallbacks.Any(animator) && animator.GetComponent<Rigidbody>() == null && animator.GetComponent<CharacterController>() == null;
 
         internal static bool HumanMotionClip(PlayableNode node, bool allowMirrored = false) => node != null && !node.Destroyed
             && node.Kind is ClipKind clip && clip.Clip != null && clip.Clip.HasHumanCurves
@@ -1191,12 +1206,7 @@ namespace Unbound.Runtime.Playables
         /// </summary>
         internal static void ApplyRootMotion(Animator animator, AnimStream result, RootMotionStep motion, float deltaTime, bool dispatch = true)
         {
-            animator.CaptureRootMotionPose();
-            animator.m_RootMotionApplied = false;
-            animator.m_DeltaPosition = Vector3.zero;
-            animator.m_DeltaRotation = Quaternion.identity;
-            animator.m_RootVelocity = Vector3.zero;
-            animator.m_RootAngularVelocity = Vector3.zero;
+            CaptureRootWithoutMotion(animator);
             if (!motion.Known)
             {
                 Stubs.Ignored("Animator root motion of this playable graph output",
@@ -1225,6 +1235,16 @@ namespace Unbound.Runtime.Playables
                 out animator.m_RootVelocity, out animator.m_RootAngularVelocity);
             if (!dispatch) return;
             DispatchRootMotion(animator);
+        }
+
+        internal static void CaptureRootWithoutMotion(Animator animator)
+        {
+            animator.CaptureRootMotionPose();
+            animator.m_RootMotionApplied = false;
+            animator.m_DeltaPosition = Vector3.zero;
+            animator.m_DeltaRotation = Quaternion.identity;
+            animator.m_RootVelocity = Vector3.zero;
+            animator.m_RootAngularVelocity = Vector3.zero;
         }
 
         static void DispatchRootMotion(Animator animator)
@@ -1324,6 +1344,7 @@ namespace Unbound.Runtime.Playables
             // A movement callback may have evaluated the outputs again or disabled the Animator.
             if (Result == null || Evaluation != Animator.m_OutputEvaluations || !Animator.isActiveAndEnabled) return;
             PoseWriter.WriteStream(Result, onlyRoot: Animator.transform);
+            if (Mode == RootMotionMode.GenericControllerWithoutRootMotion) AnimationEvaluation.CaptureRootWithoutMotion(Animator);
             RootWritten = true;
         }
 
