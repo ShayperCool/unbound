@@ -373,6 +373,13 @@ namespace Unbound.Runtime.Playables
         internal bool HumanBone(int index, ref AnimatorHandles.StreamTransform handle, out Unbound.Runtime.Playables.HumanStreamPose pose)
         {
             pose = null;
+            if (!IsHumanBone(index, ref handle)) return false;
+            pose = HumanPose();
+            return true;
+        }
+
+        internal bool IsHumanBone(int index, ref AnimatorHandles.StreamTransform handle)
+        {
             var animator = Handles.Animator;
             if (handle.Node >= 0 || animator == null) return false;
             using var engine = MainThreadCheck.Engine();
@@ -392,7 +399,6 @@ namespace Unbound.Runtime.Playables
                     "reads and writes the transform values of its path, not the human pose's bone (not measured)");
                 return false;
             }
-            pose = HumanPose();
             return true;
         }
 
@@ -1373,11 +1379,17 @@ namespace UnityEngine.Animations
             return Matrix4x4.TRS(c.LocalPosition(d.Transform, d.Position), c.LocalRotation(d.Transform, d.Rotation), c.LocalScale(d.Transform, d.Scale));
         }
 
-        public bool GetPositionReadMask(AnimationStream stream) => Data(stream, out var c, out var d) && d.Position >= 0;
+        public bool GetPositionReadMask(AnimationStream stream) => Data(stream, out var c, out var d)
+            && (d.Position >= 0 || (HasHumanReadMasks(c, ref d)));
 
-        public bool GetRotationReadMask(AnimationStream stream) => Data(stream, out var c, out var d) && d.Rotation >= 0;
+        public bool GetRotationReadMask(AnimationStream stream) => Data(stream, out var c, out var d)
+            && (d.Rotation >= 0 || (HasHumanReadMasks(c, ref d)));
 
-        public bool GetScaleReadMask(AnimationStream stream) => Data(stream, out var c, out var d) && d.Scale >= 0;
+        public bool GetScaleReadMask(AnimationStream stream) => Data(stream, out var c, out var d) && d.Scale >= 0
+            && !(HasHumanReadMasks(c, ref d));
+
+        bool HasHumanReadMasks(StreamContext c, ref AnimatorHandles.StreamTransform d) =>
+            Compat.HumanStreamReadMasks && d.Transform != null && c.IsHumanBone(handleIndex, ref d);
 
         public void GetLocalTRS(AnimationStream stream, out Vector3 position, out Quaternion rotation, out Vector3 scale)
         {
@@ -1400,8 +1412,13 @@ namespace UnityEngine.Animations
             if (!Data(stream, out var c, out var d)) return;
             if (c.HumanBone(handleIndex, ref d, out var human))
             {
-                if (useMask) StreamContext.BoneMaskUnmeasured();
-                c.HumanSetLocal(d, human, position, rotation, scale);
+                if (useMask && Compat.HumanStreamReadMasks)
+                    c.HumanSetLocal(d, human, null, null, scale);
+                else
+                {
+                    if (useMask) StreamContext.BoneMaskUnmeasured();
+                    c.HumanSetLocal(d, human, position, rotation, scale);
+                }
                 return;
             }
             if (!useMask || (d.Position >= 0)) c.Write(d.Position, position);
@@ -1433,10 +1450,11 @@ namespace UnityEngine.Animations
         public void SetGlobalTR(AnimationStream stream, Vector3 position, Quaternion rotation, bool useMask)
         {
             if (!Data(stream, out var c, out var d)) return;
-            if (c.HumanBone(handleIndex, ref d, out var human))
+            if (c.IsHumanBone(handleIndex, ref d))
             {
+                if (useMask && Compat.HumanStreamReadMasks) return;
                 if (useMask) StreamContext.BoneMaskUnmeasured();
-                c.HumanSetGlobal(d, human, position, rotation);
+                c.HumanSetGlobal(d, c.HumanPose(), position, rotation);
                 return;
             }
             c.ParentGlobal(d, out var pp, out var pr, out var parentScale);

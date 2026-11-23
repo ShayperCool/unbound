@@ -949,6 +949,10 @@ namespace Unbound.Runtime
         /// <summary>Humanoid hips scale writes through a TransformStreamHandle (humanoid bone.scaleHips).</summary>
         internal static bool HumanStreamHipsScale => Family == ReleaseFamily.Unity6000_0;
 
+        // Exposed humanoid job bone handles protect position and rotation and allow scale
+        // in masked TRS writes (6000.0.71f1, humanoid bone.masked*).
+        internal static bool HumanStreamReadMasks => Family == ReleaseFamily.Unity6000_0;
+
         /// <summary>Humanoid root motion composed by mixer trees (any input count and nesting, any
         /// input weight sum blended unnormalized, weights changed between evaluations or while
         /// culled), measured by animculling humanMixerMotion/humanMixerShape on

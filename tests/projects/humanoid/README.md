@@ -195,6 +195,14 @@ imported without keyframe reduction.
   [TransformStreamHandle](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Animations.TransformStreamHandle.html),
   [Humanoid Avatar Manual](https://docs.unity3d.com/6000.0/Documentation/Manual/AvatarCreationandSetup.html).
 
+  The masked transform controls add 757 rows from two identical macOS
+  6000.0.71f1 Editor runs. Exposed humanoid bone handles return true for the
+  position and rotation read masks and false for scale. A masked SetLocalTRS
+  changes only the scale, and a masked SetGlobalTR leaves both fields as read.
+  The head's masks are the same when the AvatarMask excludes it from the
+  playable layer. These controls cover the exposed humanoid handles.
+  [TransformStreamHandle](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Animations.TransformStreamHandle.html)
+
 - states without a motion and without write defaults (`HumanoidPlayables.cs`, controllers from
   `ProbeRunner.Leftovers`): HumanA's clip leaving for such a state (Hold) after an exit time of 0.3
   at once (with an extra `Update(0)` before step 12, `noWDAlone`), over 0.2 s (`noWDFade`), at

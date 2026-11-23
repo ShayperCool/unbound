@@ -118,6 +118,37 @@ namespace UnityEngine.Tests
             Near(Quaternion.Euler(10f, 20f, 30f), arm.rotation, 10f);
         }
 
+        [Fact]
+        public void AHumanoidReadMaskProtectsPositionAndRotation()
+        {
+            var animator = Human();
+            var arm = animator.transform.Find("Hips/Spine/Chest/LeftUpperArm");
+            var handle = animator.BindStreamTransform(arm);
+            (bool Position, bool Rotation, bool Scale) masks = default;
+            Vector3 p = default, s = default, afterLocalP = default, afterLocalS = default;
+            Vector3 wp = default, afterWorldP = default;
+            Quaternion r = default, afterLocalR = default, wr = default, afterWorldR = default;
+
+            Evaluate(animator, (stream, _) =>
+            {
+                masks = (handle.GetPositionReadMask(stream), handle.GetRotationReadMask(stream),
+                    handle.GetScaleReadMask(stream));
+                handle.GetLocalTRS(stream, out p, out r, out s);
+                handle.SetLocalTRS(stream, p + Vector3.one, r * Quaternion.Euler(0f, 0f, 25f), s * 1.25f, true);
+                handle.GetLocalTRS(stream, out afterLocalP, out afterLocalR, out afterLocalS);
+                handle.GetGlobalTR(stream, out wp, out wr);
+                handle.SetGlobalTR(stream, wp + Vector3.one, wr * Quaternion.Euler(0f, 25f, 0f), true);
+                handle.GetGlobalTR(stream, out afterWorldP, out afterWorldR);
+            });
+
+            Assert.Equal((true, true, false), masks);
+            Near(p, afterLocalP);
+            Near(r, afterLocalR);
+            Near(s * 1.25f, afterLocalS);
+            Near(wp, afterWorldP);
+            Near(wr, afterWorldR);
+        }
+
         /// <summary>A handle is a bone of the avatar the Animator has when the job runs: one bound
         /// before the avatar was assigned, and one bound for an avatar that was then replaced by
         /// another of the same hierarchy with a bone fewer, read the pose's bone like a handle
