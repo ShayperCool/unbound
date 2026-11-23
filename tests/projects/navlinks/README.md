@@ -472,3 +472,29 @@ python3 tests/projects/navlinks/projection.py editor --profile wallmove --releas
 python3 tests/projects/navlinks/projection.py publish --profile wallmove --release 6000.0.71f1 --label L
 UNBOUND_CLI=.../unbound python3 tests/projects/navlinks/projection.py gate --profile wallmove --release 6000.0.71f1
 ```
+
+## Link changes across tiles and partial paths
+
+The link version profile adds, toggles and removes a connection between two
+sections of an 8 m tile NavMesh. It observes complete routes near both link
+endpoints, on a distant tile in the same data, and on an independent NavMeshData.
+Every tested route becomes stale in the call that adds or removes a valid
+connection, including a handle whose endpoints attach to no polygon. Changing
+activation also marks the routes stale. A redundant toggle and an invalid
+removal preserve freshness.
+
+A walking agent with autoRepath enabled retries its stale partial route as it
+nears the endpoint. The near and far controls retry six and 124 updates after
+link addition, respectively. An unattached link leaves the retry partial. An
+agent that has already arrived keeps its old partial status and endpoint.
+Stopped agents, disabled autoRepath and completed full routes provide controls.
+The frame counts describe these distances and speeds in Unity 6000.0.71f1.
+
+[NavMeshAgent.isPathStale](https://docs.unity.com/en-us/engine/6000.0/script-reference/unityengine/ai/navmeshagent/ispathstale).
+[NavMeshAgent.autoRepath](https://docs.unity.com/en-us/engine/6000.0/script-reference/unityengine/ai/navmeshagent/autorepath).
+
+```
+python3 tests/projects/navlinks/projection.py editor --profile linkversion --release 6000.0.71f1 --label L
+python3 tests/projects/navlinks/projection.py publish --profile linkversion --release 6000.0.71f1 --label L
+UNBOUND_CLI=.../unbound python3 tests/projects/navlinks/projection.py gate --profile linkversion --release 6000.0.71f1
+```

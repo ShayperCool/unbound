@@ -1284,9 +1284,10 @@ namespace Unbound.Runtime
                 && agent.m_Crowd.targetState == DtMoveRequestState.DT_CROWDAGENT_TARGET_VALID
                 && FlatRemaining(agent.m_Crowd) < 0.01f;
             var moving = agent.m_Crowd;
-            // A stale partial path (any cause: a link change, the agent's own areaMask or area
-            // costs) is kept to its end; other paths are planned again to the destination.
-            Vector3? partialEnd = following && agent.pathStatus == NavMeshPathStatus.PathPartial && agent.isPathStale
+            // Rejoin keeps a stale partial path's endpoint. The last step can also have finished
+            // at that endpoint before a link is added (navlinks link-version arrived control).
+            bool retainPartial = following || (finishing && Compat.NavMeshDestinationRetentionMeasured);
+            Vector3? partialEnd = retainPartial && agent.pathStatus == NavMeshPathStatus.PathPartial && agent.isPathStale
                 ? NavMesh.V(moving.corridor.GetTarget()) : null;
             bool completing = agent.m_LinkCompleting, landing = agent.m_LandAfterReset;
             var linkEnd = moving.animation.endPos;
@@ -1358,7 +1359,7 @@ namespace Unbound.Runtime
             }
             else if (finishing)
             {
-                PlanAgain(agent);
+                PlanAgain(agent, partialEnd);
                 agent.SetArrived(true);
             }
         }
