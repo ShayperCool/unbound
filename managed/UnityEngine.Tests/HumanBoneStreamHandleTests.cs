@@ -181,10 +181,7 @@ namespace UnityEngine.Tests
             if (setup == "scripted") animator.gameObject.AddComponent<KinematicMoveCallback>();
             animator.applyRootMotion = true;
 
-            var clip = new AnimationClip { legacy = true };
-            m_Created.Add(clip);
-            clip.SetCurve("", typeof(Animator), "Left Arm Down-Up", AnimationCurve.Linear(0f, -0.2f, 1f, 0.2f));
-            clip.legacy = false;
+            var clip = MakeHumanoidMotionClip();
             bool sampled = false;
             void ReadPose(AnimationStream stream, int frame)
             {
@@ -207,6 +204,54 @@ namespace UnityEngine.Tests
             AnimationHumanStreamTests.Run(m_Graph, 1);
             Assert.True(sampled);
             Assert.Equal(report, Hits() > before);
+        }
+
+        AnimationClip MakeHumanoidMotionClip()
+        {
+            var clip = new AnimationClip { legacy = true };
+            m_Created.Add(clip);
+            clip.SetCurve("", typeof(Animator), "Left Arm Down-Up", AnimationCurve.Linear(0f, -0.2f, 1f, 0.2f));
+            clip.legacy = false;
+            return clip;
+        }
+
+        public sealed class ScriptedMoveCallback : MonoBehaviour
+        {
+            public Action Move;
+            void OnAnimatorMove() => Move();
+        }
+
+        [Fact]
+        public void AJobStreamIsInvalidWhileTheScriptMovesTheRoot()
+        {
+            using var pin = TestRelease.Pin(TestRelease.Measured);
+            var animator = Human();
+            animator.applyRootMotion = true;
+            var script = animator.gameObject.AddComponent<ScriptedMoveCallback>();
+            AnimationStream escaped = default;
+            var phases = new List<string>();
+            bool validInMove = true;
+            bool validInAnimation = false;
+            script.Move = () =>
+            {
+                phases.Add("move");
+                validInMove = escaped.isValid;
+            };
+            m_Graph = AnimationHumanStreamTests.Graph(animator, (stream, _) =>
+            {
+                phases.Add("animation");
+                validInAnimation = stream.isValid;
+            }, MakeHumanoidMotionClip(), (stream, _) =>
+            {
+                phases.Add("root");
+                escaped = stream;
+            });
+
+            AnimationHumanStreamTests.Run(m_Graph, 1);
+            Assert.Equal(new[] { "root", "move", "animation" }, phases);
+            Assert.False(validInMove);
+            Assert.True(validInAnimation);
+            Assert.False(escaped.isValid);
         }
 
         /// <summary>A handle is a bone of the avatar the Animator has when the job runs: one bound

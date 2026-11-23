@@ -325,6 +325,7 @@ namespace Unbound.Runtime.Playables
         internal AnimatorHandles Handles;
         internal readonly List<(StreamContext Context, float Weight)> Inputs = new List<(StreamContext, float)>();
         internal int Id;
+        internal bool Suspended;
         /// <summary>The stream's root motion (AnimationStream.velocity, rootMotionPosition, ...).</summary>
         internal StreamMotion Motion = StreamMotion.None;
         internal StreamVelocityEdits VelocityEdits;
@@ -351,7 +352,8 @@ namespace Unbound.Runtime.Playables
             while (s_Active.Count > 1 && s_Active[s_Active.Count - 1] == null) s_Active.RemoveAt(s_Active.Count - 1);
         }
 
-        internal static StreamContext Get(int id) => id > 0 && id < s_Active.Count ? s_Active[id] : null;
+        internal static StreamContext Get(int id) =>
+            id > 0 && id < s_Active.Count && s_Active[id] is { Suspended: false } context ? context : null;
 
         /// <summary>The stream's human pose (AnimationStream.AsHuman), opened on first use.</summary>
         internal Unbound.Runtime.Playables.HumanStreamPose HumanPose()
@@ -1071,7 +1073,14 @@ namespace Unbound.Runtime.Playables
                         context.UseKinematicAnimationRoot = e.UsesMeasuredKinematicJobRoot;
                         if (e.UsesMeasuredScriptedJobRoot && !context.HasHumanPose)
                         {
-                            if (!e.MoveScriptedJobRoot(node, into)) return;
+                            // Keep the slot reserved across nested evaluations, but do not
+                            // expose the job's stream to OnAnimatorMove.
+                            context.Suspended = true;
+                            try
+                            {
+                                if (!e.MoveScriptedJobRoot(node, into)) return;
+                            }
+                            finally { context.Suspended = false; }
                             context.UseMovedAnimationRoot = true;
                         }
                         InvokeJob(pointer, UnityEngine.Animations.JobMethodIndex.ProcessAnimationMethodIndex);
