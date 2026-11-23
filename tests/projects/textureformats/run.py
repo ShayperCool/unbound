@@ -36,7 +36,7 @@ import subprocess
 import sys
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
-from probe_paths import reference_file, reference_root, run_root
+from probe_paths import reference_file, reference_root, run_root, unity_version
 from editor_runner import EditorJob, jsonl_complete, publish as publish_repeats, run, run_parallel, summary
 import macos_editor
 
@@ -48,6 +48,24 @@ REPEATS = ('native1', 'native2')
 OUTPUT = 'values.jsonl'
 # The cases Unbound matches (TEXTURE_FORMATS_PROBE_ONLY prefixes): every one.
 SUPPORTED = 'rt,tex,feedback'
+BYTE_CASE = 'rt.unorm16Byte'
+BYTE_DEVICES = {'opengl-r16-byte': 'OpenGLCore', 'vulkan-r16-byte': 'Vulkan'}
+VULKAN_DEVICES = ('vulkan', 'vulkan-r16-byte')
+# Unorm16Byte reads 30 words per channel and records tightly packed payloads.
+BYTE_TEXELS = 30
+BYTE_INPUT_CHANNELS = {'r': 1, 'rg': 2, 'rgba': 4}
+BYTE_CREATED = {f'{BYTE_CASE}.{source}.created' for source in BYTE_INPUT_CHANNELS}
+BYTE_PAYLOAD_BYTES = {
+    f'{BYTE_CASE}.{source}.{image}.{record}': BYTE_TEXELS * bytes_per_texel
+    for source, channels in BYTE_INPUT_CHANNELS.items()
+    for image in ('texture', 'render')
+    for record, bytes_per_texel in (
+        ('raw', 2 * channels), ('rgba8', 4), ('argb8', 4), ('bgra8', 4),
+        ('rgb8', 3), ('r8', 1), ('rg8', 2), ('half', 8)
+    )
+}
+BYTE_RECORDS = ({'complete', BYTE_CASE + '.device', BYTE_CASE + '.release'}
+                | BYTE_CREATED | set(BYTE_PAYLOAD_BYTES))
 DEVICE = 'opengl'
 # This device's reference covers the added format/clear/feedback mechanisms. Older packed
 # UNorm async-to-float cases do not repeat on this device and have no canonical reference.
@@ -59,16 +77,22 @@ MACOS = sys.platform == 'darwin' and platform.machine() == 'arm64'
 
 def device_cases():
     """The cases the device's reference was recorded with (None: every case)."""
+    if DEVICE in BYTE_DEVICES:
+        return BYTE_CASE
     return {'vulkan': VULKAN_CASES, 'metal': METAL_CASES}.get(DEVICE)
 
 
 def reference():
     if DEVICE == 'opengl':
         return reference_file(PROBE, 'jsonl')
+    if DEVICE in BYTE_DEVICES:
+        return reference_root(PROBE)/f'{DEVICE}.jsonl'
     return reference_root(PROBE)/('vulkan-q58.jsonl' if DEVICE == 'vulkan' else 'metal.jsonl')
 
 
 def residuals():
+    if DEVICE in BYTE_DEVICES:
+        return None
     return PROBE/('residuals.json' if DEVICE == 'opengl' else f'residuals-{DEVICE}.json')
 
 
@@ -94,16 +118,43 @@ def fresh_output(directory):
     return directory
 
 
-def capture_problem(directory):
+def capture_problem(directory, publishing=False):
     reason = jsonl_complete(OUTPUT)(directory)
     if reason:
         return reason
-    keys = [json.loads(line)['k'] for line in (Path(directory)/OUTPUT).read_text().splitlines() if line.strip()]
-    if 'fatal' in keys:
-        return 'the probe recorded a fatal error'
-    if len(set(keys)) != len(keys):
+    rows = [json.loads(line) for line in (Path(directory)/OUTPUT).read_text().splitlines() if line.strip()]
+    values = {row['k']: row['v'] for row in rows}
+    if 'fatal' in values:
+        return str(values['fatal'])
+    if len(values) != len(rows):
         return 'duplicate keys'
+    if DEVICE in BYTE_DEVICES:
+        return byte_capture_problem(values)
+    if publishing and any(key.startswith(BYTE_CASE + '.') for key in values):
+        return 'R16 byte records belong in a dedicated Linux profile'
     return None
+
+
+def byte_capture_problem(values):
+    missing = sorted(BYTE_RECORDS - values.keys())
+    extra = sorted(values.keys() - BYTE_RECORDS)
+    if missing or extra:
+        return f'R16 byte profile records differ (missing {missing}, extra {extra})'
+    if values[BYTE_CASE + '.device'] != BYTE_DEVICES[DEVICE]:
+        return f'the capture did not record the {BYTE_DEVICES[DEVICE]} device'
+    if values[BYTE_CASE + '.release'] != unity_version():
+        return 'the capture did not record the requested Unity release'
+    invalid = [f'{key} did not create a render texture'
+               for key in sorted(BYTE_CREATED) if values[key] is not True]
+    for key, size in BYTE_PAYLOAD_BYTES.items():
+        payload = values[key]
+        try:
+            valid = isinstance(payload, str) and len(payload) == 2 * size and len(bytes.fromhex(payload)) == size
+        except ValueError:
+            valid = False
+        if not valid:
+            invalid.append(f'{key} did not read {size} bytes as hexadecimal')
+    return 'invalid R16 byte results: ' + ', '.join(invalid) if invalid else None
 
 
 def editor(work, release):
@@ -119,25 +170,34 @@ def editor(work, release):
             print(repeat, 'exit', codes[-1], capture_problem(out) or 'complete')
         return int(any(codes))
     jobs = []
+    cases = device_cases()
+    editor_args = ['-executeMethod', 'TexFormatsRunner.Record']
+    if DEVICE == 'opengl-r16-byte':
+        editor_args.append('-force-glcore')
     for repeat in REPEATS:
         project, out = work/'projects'/repeat, work/repeat
         copy_project(project, release)
         fresh_output(out)
-        jobs.append(EditorJob(project, out/'editor.log', out, args=['-executeMethod', 'TexFormatsRunner.Record'],
-                              batch=True, graphics=True, vulkan=DEVICE == 'vulkan',
+        jobs.append(EditorJob(project, out/'editor.log', out, args=editor_args,
+                              batch=True, graphics=True, vulkan=DEVICE in VULKAN_DEVICES,
                               env={'TEXTURE_FORMATS_PROBE_OUT': str(out/OUTPUT),
-                                   **({'TEXTURE_FORMATS_PROBE_ONLY': VULKAN_CASES} if DEVICE == 'vulkan' else {})},
+                                   **({'TEXTURE_FORMATS_PROBE_ONLY': cases} if cases else {})},
                               timeout=900, shutdown_grace=120, progress_files=[out/OUTPUT], progress_timeout=600,
                               label='textureformats-'+repeat))
-    results = [run(job) for job in jobs] if DEVICE == 'vulkan' else run_parallel(jobs)
+    results = [run(job) for job in jobs] if DEVICE in VULKAN_DEVICES else run_parallel(jobs)
     for result in results:
         print(summary(result))
-    for repeat in REPEATS:
-        print(repeat, capture_problem(work/repeat) or 'complete')
-    return int(any(r['exit_code'] != 0 or r.get('forced_exit') for r in results))
+    problems = [capture_problem(work/repeat) for repeat in REPEATS]
+    for repeat, problem in zip(REPEATS, problems):
+        print(repeat, problem or 'complete')
+    return int(any(r['exit_code'] != 0 or r.get('forced_exit') for r in results)
+               or (DEVICE in BYTE_DEVICES and any(problems)))
 
 
 def publish(work, append=False):
+    def reference_capture_problem(directory):
+        return capture_problem(directory, publishing=True)
+
     def write(target, first):
         target.parent.mkdir(parents=True, exist_ok=True)
         if append:
@@ -161,7 +221,7 @@ def publish(work, append=False):
         if append:
             raise SystemExit('the Metal reference is published whole')
         for repeat in REPEATS:
-            problem = capture_problem(work/repeat)
+            problem = reference_capture_problem(work/repeat)
             if problem:
                 raise SystemExit(f'{repeat}: {problem}; not publishing')
         code = macos_editor.publish([work/r for r in REPEATS], target, OUTPUT)
@@ -173,12 +233,12 @@ def publish(work, append=False):
         candidate = work/'append-candidate.jsonl'
         code = publish_repeats([work/r for r in REPEATS], candidate, lambda d: [OUTPUT],
                               lambda path, first: shutil.copyfile(first/OUTPUT, path),
-                              complete=[capture_problem], gpu=True)
+                              complete=[reference_capture_problem], gpu=True)
         if code: return code
         write(target, work/REPEATS[0])
         return 0
     return publish_repeats([work/r for r in REPEATS], target, lambda d: [OUTPUT], write,
-                           complete=[capture_problem], gpu=True)
+                           complete=[reference_capture_problem], gpu=True)
 
 
 def unbound(work, release, only=None):
@@ -191,7 +251,7 @@ def unbound(work, release, only=None):
     with (out/'unbound.log').open('w') as log:
         result = subprocess.run([str(LAUNCHER), '--kind', 'engine-gpu', 'timeout', '600', cli, 'run', '-p', str(project),
                                  '--no-watch', '--frames', '30', '--size', '64x64',
-                                 *([] if MACOS else ['--force-'+('vulkan' if DEVICE == 'vulkan' else 'glcore')])],
+                                 *([] if MACOS else ['--force-'+('vulkan' if DEVICE in VULKAN_DEVICES else 'glcore')])],
                                 env=env, stdout=log, stderr=subprocess.STDOUT)
     print('unbound exit', result.returncode, out)
     if result.returncode == 0:
@@ -208,9 +268,13 @@ def verify(work, release, cases):
     if code:
         return code
     command = [sys.executable, str(PROBE/'compare.py'), str(reference()),
-               str(work/'unbound'/OUTPUT), '--report', str(work/'report.json'),
-               '--residuals', str(residuals())]
-    return subprocess.run(command + (['--only', only] if only else [])).returncode
+               str(work/'unbound'/OUTPUT), '--report', str(work/'report.json')]
+    residual_file = residuals()
+    if residual_file is not None:
+        command.extend(['--residuals', str(residual_file)])
+    if only and DEVICE not in BYTE_DEVICES:
+        command.extend(['--only', only])
+    return subprocess.run(command).returncode
 
 
 def main():
@@ -219,13 +283,18 @@ def main():
     parser.add_argument('--cases', choices=('supported', 'all'), default='supported', help='verify: which cases')
     parser.add_argument('--label', required=True)
     parser.add_argument('--release', required=True)
-    parser.add_argument('--device', choices=('opengl', 'vulkan', 'metal'), default='opengl')
+    parser.add_argument('--device', choices=('opengl', 'vulkan', 'metal', *BYTE_DEVICES), default='opengl')
     parser.add_argument('--append', action='store_true', help='publish: append new keys, preserving every existing record')
     args = parser.parse_args()
     if not args.label or Path(args.label).name != args.label or args.label in ('.', '..'):
         parser.error('label must be a single directory name')
     global DEVICE
     DEVICE = args.device
+    if DEVICE in BYTE_DEVICES and sys.platform != 'linux':
+        if args.mode == 'verify':
+            print('textureformats: the R16 byte profiles require Linux')
+            return 0
+        parser.error('the R16 byte profiles record Linux OpenGL Core or Vulkan')
     if MACOS and DEVICE != 'metal' and args.mode not in ('unbound', 'verify'):
         parser.error(f'the {DEVICE} Editor runs on Linux; on macOS record --device metal')
     if MACOS and DEVICE == 'vulkan':

@@ -651,6 +651,49 @@ public static class TexFormatsProbe
         s_Sample.SetTexture("_ArrayTex", null);
     }
 
+    static void Unorm16Byte()
+    {
+        ushort[] codes = { 0, 1, 2, 3, 4, 127, 255, 256, 257, 258, 509, 1027,
+            1028, 1029, 2047, 4095, 8193, 15841, 21407, 32767, 32768, 32769,
+            40001, 48005, 53217, 60329, 61235, 65533, 65534, 65535 };
+        foreach (var (name, format, channels) in new[]
+        {
+            ("r", TextureFormat.R16, 1),
+            ("rg", TextureFormat.RG32, 2),
+            ("rgba", TextureFormat.RGBA64, 4),
+        })
+        {
+            string key = "rt.unorm16Byte." + name;
+            var input = Own(new Texture2D(codes.Length, 1, format, false, true));
+            var pixels = new ushort[codes.Length * channels];
+            for (int i = 0; i < codes.Length; ++i)
+                for (int c = 0; c < channels; ++c)
+                    pixels[i * channels + c] = codes[(i + c * 7) % codes.Length];
+            input.SetPixelData(pixels, 0);
+            input.Apply(false, true);
+            var desc = new RenderTextureDescriptor(codes.Length, 1, input.graphicsFormat, 0);
+            var render = Target(desc);
+            Value(key + ".created", B2(render.Create()));
+            Graphics.CopyTexture(input, render);
+            Value(key + ".texture.raw", Readback(AsyncGPUReadback.Request(input)));
+            Value(key + ".render.raw", Readback(AsyncGPUReadback.Request(render)));
+            foreach (var (label, targetFormat) in new[]
+            {
+                ("rgba8", TextureFormat.RGBA32),
+                ("argb8", TextureFormat.ARGB32),
+                ("bgra8", TextureFormat.BGRA32),
+                ("rgb8", TextureFormat.RGB24),
+                ("r8", TextureFormat.R8),
+                ("rg8", TextureFormat.RG16),
+                ("half", TextureFormat.RGBAHalf),
+            })
+            {
+                Value(key + ".texture." + label, Readback(AsyncGPUReadback.Request(input, 0, targetFormat)));
+                Value(key + ".render." + label, Readback(AsyncGPUReadback.Request(render, 0, targetFormat)));
+            }
+        }
+    }
+
     static void MsaaMips()
     {
         var d = new RenderTextureDescriptor(4, 4, RenderTextureFormat.ARGB32, 0)
@@ -903,6 +946,15 @@ public static class TexFormatsProbe
     {
         Rows.Clear();
         s_Only = Environment.GetEnvironmentVariable("TEXTURE_FORMATS_PROBE_ONLY");
+        const string byteReadback = "rt.unorm16Byte";
+        bool byteReadbackRequested = s_Only != null && Array.IndexOf(s_Only.Split(','), byteReadback) >= 0;
+        var device = SystemInfo.graphicsDeviceType;
+        if (byteReadbackRequested && device is not (GraphicsDeviceType.OpenGLCore or GraphicsDeviceType.Vulkan))
+        {
+            Value("fatal", Json($"The R16 byte readback controls require OpenGL Core or Vulkan. Active API is {device}."));
+            WriteCapture();
+            return;
+        }
         s_Mat = Own(new Material(Shader.Find("Probe/TexFormats")));
         s_Sample = Own(new Material(s_Mat.shader));
         s_Load = Own(new Material(s_Mat.shader));
@@ -920,6 +972,12 @@ public static class TexFormatsProbe
             foreach (var format in ReadbackFormats)
                 if (!string.IsNullOrEmpty(s_Only) && Runs("readback." + format)) ReadbackTarget("readback." + format, format);
             if (Runs("rt.msaaMips")) MsaaMips();
+            if (byteReadbackRequested)
+            {
+                Value(byteReadback + ".device", Json(device.ToString()));
+                Value(byteReadback + ".release", Json(Application.unityVersion));
+                Unorm16Byte();
+            }
             if (Runs("rt.msaaCopies") || Runs("rt.msaaLayers")) MsaaCopiesAndLayers();
             if (Runs("rt.arrayLoad")) ArrayLoad();
             foreach (var format in new[] { RenderTextureFormat.ARGB32, RenderTextureFormat.ARGBFloat })
@@ -943,6 +1001,11 @@ public static class TexFormatsProbe
         }
         foreach (var o in Owned) if (o != null) Object.DestroyImmediate(o);
         Owned.Clear();
+        WriteCapture();
+    }
+
+    static void WriteCapture()
+    {
         Value("complete", "true");
         File.WriteAllLines(Environment.GetEnvironmentVariable("TEXTURE_FORMATS_PROBE_OUT"), Rows);
     }

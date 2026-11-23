@@ -33,6 +33,14 @@ These are observations of this release and device, not documented guarantees:
 - `AsyncGPUReadback` of R16/RG32 into RGBAFloat reads the missing channels as 1 ((r, 1, 1, 1),
   (r, g, 1, 1)); of A2B10G10R10 and every integer format it fails ("doesn't support ReadPixels
   usage"), as the format table says (no ReadPixels usage).
+- Async readback of R16 into byte color layouts fills red, green and blue from
+  the stored red channel and writes opaque alpha. The controls cover Texture2D
+  and RenderTexture inputs, RGB and RG layouts, and destination channel order.
+  Raw data, RG32 and RGBA64 inputs, and half-float output are comparison controls.
+  Use `--device opengl-r16-byte` or `--device vulkan-r16-byte` to run the Linux
+  references. Publishing checks both repeats for the requested graphics API,
+  Unity release and complete payloads.
+  [Unity 6.0 AsyncGPUReadback.Request](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Rendering.AsyncGPUReadback.Request.html).
 - A Texture2D in A2B10G10R10 or an integer format is refused ("Texture creation failed ... not
   supported for Sample usage"); the object is destroyed (`== null`). Texture2D RG32/RGBA64 keep
   16-bit texels: `GetPixel` reads (r, g, 1, 1) for RG32, `SetPixel` rounds half up.
