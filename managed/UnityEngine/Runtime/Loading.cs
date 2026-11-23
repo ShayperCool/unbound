@@ -1,5 +1,4 @@
 using System;
-using System.Runtime.CompilerServices;
 using System.Collections.Generic;
 using System.Text.Json;
 using UnityEngine;
@@ -442,7 +441,10 @@ namespace Unbound.Runtime
                     // (MissingScripts.Loaded); in an AssetBundle, or a script that exists but
                     // Unbound does not resolve, it is named when the file is read.
                     bool editorOnly = MissingScripts.ReportEditorOnly(script, doc);
-                    bool editorRule = !editorOnly && kind != Kind.Bundle && MissingScripts.NamesNoAsset(script.Guid);
+                    // A reference that names no script at all ({fileID: 0}) takes the Editor's
+                    // other message (tests/projects/missingscripts 10.empty).
+                    bool empty = string.IsNullOrEmpty(script.Guid) && script.FileId == 0;
+                    bool editorRule = !editorOnly && kind != Kind.Bundle && (empty || MissingScripts.NamesNoAsset(script.Guid));
                     if (!editorOnly && !editorRule) MissingScripts.Report(script, doc);
                     // As in Unity, the asset still exists: an object of the base class that
                     // serialized references keep (its data cannot be read). It compares equal to
@@ -454,7 +456,7 @@ namespace Unbound.Runtime
                     {
                         ReadName(placeholder, doc.Body);
                         placeholder.m_Destroyed = true;
-                        if (editorRule) MissingScripts.Mark(placeholder);
+                        if (editorRule) MissingScripts.Mark(placeholder, empty ? MissingScripts.EmptyMessage : MissingScripts.UnknownMessage);
                     }
                     return placeholder;
                 }
@@ -594,10 +596,19 @@ namespace Unbound.Runtime
     internal static class MissingScripts
     {
         internal const string UnknownMessage = "The referenced script (Unknown) on this Behaviour is missing!";
+        /// <summary>What a load says for an asset object whose script reference is empty.</summary>
+        internal const string EmptyMessage = "The referenced script on this Behaviour (Game Object '<null>') is missing!";
         static readonly HashSet<string> s_Reported = new HashSet<string>();
-        /// <summary>Asset objects of a missing script, and whether a load said so yet.</summary>
-        static readonly System.Runtime.CompilerServices.ConditionalWeakTable<Object, StrongBox<bool>> s_Objects =
-            new System.Runtime.CompilerServices.ConditionalWeakTable<Object, StrongBox<bool>>();
+
+        sealed class Pending
+        {
+            internal bool Said;
+            internal string Message;
+        }
+
+        /// <summary>Asset objects of a missing script, what a load says for each, and whether one did yet.</summary>
+        static readonly System.Runtime.CompilerServices.ConditionalWeakTable<Object, Pending> s_Objects =
+            new System.Runtime.CompilerServices.ConditionalWeakTable<Object, Pending>();
 
         internal static void WarnUnknown() => Debug.LogWarning(UnknownMessage);
 
@@ -612,25 +623,26 @@ namespace Unbound.Runtime
             catch (InvalidOperationException) { return true; }
         }
 
-        internal static void Mark(Object placeholder) => s_Objects.AddOrUpdate(placeholder, new StrongBox<bool>(false));
+        internal static void Mark(Object placeholder, string message = UnknownMessage) =>
+            s_Objects.AddOrUpdate(placeholder, new Pending { Message = message });
 
         internal static bool IsMissing(Object o) => (object)o != null && s_Objects.TryGetValue(o, out _);
 
         /// <summary>Reached through a reference of its own file: said as loaded, silently.</summary>
         internal static void Reached(Object o)
         {
-            if ((object)o != null && s_Objects.TryGetValue(o, out var said)) said.Value = true;
+            if ((object)o != null && s_Objects.TryGetValue(o, out var pending)) pending.Said = true;
         }
 
         /// <summary>An object a load hands out by itself: an asset object of a missing script is
         /// said once and given as null.</summary>
         internal static Object Loaded(Object o)
         {
-            if ((object)o == null || !s_Objects.TryGetValue(o, out var said)) return o;
-            if (!said.Value)
+            if ((object)o == null || !s_Objects.TryGetValue(o, out var pending)) return o;
+            if (!pending.Said)
             {
-                said.Value = true;
-                WarnUnknown();
+                pending.Said = true;
+                Debug.LogWarning(pending.Message);
             }
             return null;
         }

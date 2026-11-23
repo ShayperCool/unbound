@@ -79,6 +79,12 @@ namespace Unbound.Tests
                 Assert.Null(MissingScripts.Loaded(reached));
                 Assert.Same(plain, MissingScripts.Loaded(plain));
                 Assert.Single(m_Logs);
+                // An empty script reference says the Editor's other message (10.empty).
+                var empty = ScriptableObject.CreateInstanceWithoutCallbacks(typeof(ScriptableObject));
+                MissingScripts.Mark(empty, MissingScripts.EmptyMessage);
+                Assert.Null(MissingScripts.Loaded(empty));
+                Assert.Equal("Warning: The referenced script on this Behaviour (Game Object '<null>') is missing!", m_Logs[1]);
+                Object.DestroyImmediate(empty);
             }
             finally
             {
