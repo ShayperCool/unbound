@@ -53,6 +53,17 @@ namespace UnityEngine
         internal AnimationCurve m_SpreadCurve = new AnimationCurve(new Keyframe(0f, 0f));
         internal AnimationCurve m_ReverbZoneMixCurve = new AnimationCurve(new Keyframe(0f, 1f));
 
+        // Scene loads and curve assignments retain the largest reservation for each curve.
+        // A new source or clone starts with its own inline keys (componentmemory, 6000.0).
+        const int RolloffInlineKeys = 2, OtherCurveInlineKeys = 1;
+        int m_RolloffReservedKeys, m_SpatialBlendReservedKeys, m_SpreadReservedKeys, m_ReverbZoneMixReservedKeys;
+
+        internal long ProfilerExternalCurveSlots =>
+            (long)Math.Max(0, m_RolloffReservedKeys - RolloffInlineKeys)
+            + Math.Max(0, m_SpatialBlendReservedKeys - OtherCurveInlineKeys)
+            + Math.Max(0, m_SpreadReservedKeys - OtherCurveInlineKeys)
+            + Math.Max(0, m_ReverbZoneMixReservedKeys - OtherCurveInlineKeys);
+
         internal bool m_Paused;
         internal bool m_Dirty = true;
         internal bool m_CurvesDirty = true;
@@ -412,6 +423,13 @@ namespace UnityEngine
             curve.keys = keys;
         }
 
+        static void AssignCurve(ref AnimationCurve curve, ref int reservedKeys, AnimationCurve value)
+        {
+            curve = value;
+            if (Compat.AudioSourceCurveStorageMeasured)
+                reservedKeys = Math.Max(reservedKeys, value.length);
+        }
+
         void SetConstant(ref AnimationCurve curve, float value)
         {
             curve = new AnimationCurve(new Keyframe(0f, value));
@@ -427,17 +445,17 @@ namespace UnityEngine
             switch (type)
             {
                 case AudioSourceCurveType.CustomRolloff:
-                    m_RolloffCurve = copy;
+                    AssignCurve(ref m_RolloffCurve, ref m_RolloffReservedKeys, copy);
                     if (!Compat.AudioSpatialStereoMeasured) m_RolloffMode = AudioRolloffMode.Custom;
                     break;
                 case AudioSourceCurveType.SpatialBlend:
-                    m_SpatialBlendCurve = copy;
+                    AssignCurve(ref m_SpatialBlendCurve, ref m_SpatialBlendReservedKeys, copy);
                     break;
                 case AudioSourceCurveType.ReverbZoneMix:
-                    m_ReverbZoneMixCurve = copy;
+                    AssignCurve(ref m_ReverbZoneMixCurve, ref m_ReverbZoneMixReservedKeys, copy);
                     break;
                 case AudioSourceCurveType.Spread:
-                    m_SpreadCurve = copy;
+                    AssignCurve(ref m_SpreadCurve, ref m_SpreadReservedKeys, copy);
                     break;
             }
             m_Dirty = true;
@@ -980,10 +998,10 @@ namespace UnityEngine
             m_Spatialize = s.m_Spatialize;
             m_SpatializePostEffects = s.m_SpatializePostEffects;
             m_VelocityUpdateMode = s.m_VelocityUpdateMode;
-            m_RolloffCurve = new AnimationCurve(s.m_RolloffCurve.keys);
-            m_SpatialBlendCurve = new AnimationCurve(s.m_SpatialBlendCurve.keys);
-            m_SpreadCurve = new AnimationCurve(s.m_SpreadCurve.keys);
-            m_ReverbZoneMixCurve = new AnimationCurve(s.m_ReverbZoneMixCurve.keys);
+            AssignCurve(ref m_RolloffCurve, ref m_RolloffReservedKeys, new AnimationCurve(s.m_RolloffCurve.keys));
+            AssignCurve(ref m_SpatialBlendCurve, ref m_SpatialBlendReservedKeys, new AnimationCurve(s.m_SpatialBlendCurve.keys));
+            AssignCurve(ref m_SpreadCurve, ref m_SpreadReservedKeys, new AnimationCurve(s.m_SpreadCurve.keys));
+            AssignCurve(ref m_ReverbZoneMixCurve, ref m_ReverbZoneMixReservedKeys, new AnimationCurve(s.m_ReverbZoneMixCurve.keys));
             m_Dirty = true;
             m_CurvesDirty = true;
         }
@@ -1016,10 +1034,10 @@ namespace UnityEngine
             m_BypassReverbZones = body.Bool("BypassReverbZones");
             AnimationCurve Curve(string key, AnimationCurve fallback) =>
                 body.Get(key) is YNode node && node.Kind == YKind.Map && (node.Get("m_Curve")?.Count ?? 0) > 0 ? BuiltinReaders.AnimationCurve(node) : fallback;
-            m_RolloffCurve = Curve("rolloffCustomCurve", m_RolloffCurve);
-            m_SpatialBlendCurve = Curve("panLevelCustomCurve", m_SpatialBlendCurve);
-            m_SpreadCurve = Curve("spreadCustomCurve", m_SpreadCurve);
-            m_ReverbZoneMixCurve = Curve("reverbZoneMixCustomCurve", m_ReverbZoneMixCurve);
+            AssignCurve(ref m_RolloffCurve, ref m_RolloffReservedKeys, Curve("rolloffCustomCurve", m_RolloffCurve));
+            AssignCurve(ref m_SpatialBlendCurve, ref m_SpatialBlendReservedKeys, Curve("panLevelCustomCurve", m_SpatialBlendCurve));
+            AssignCurve(ref m_SpreadCurve, ref m_SpreadReservedKeys, Curve("spreadCustomCurve", m_SpreadCurve));
+            AssignCurve(ref m_ReverbZoneMixCurve, ref m_ReverbZoneMixReservedKeys, Curve("reverbZoneMixCustomCurve", m_ReverbZoneMixCurve));
             m_Dirty = true;
             m_CurvesDirty = true;
         }

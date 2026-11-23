@@ -35,6 +35,7 @@ namespace Unbound.Runtime
         // The attached component itself, measured by tests/projects/componentmemory on Unity 6000.0.71f1.
         const long BoxColliderBytes = 288, MeshFilterBytes = 120, MonoBehaviourBytes = 456;
         const long LightBytes = 1176, LightCommandBufferSlotBytes = 12;
+        const long AudioSourceBytes = 1288, AudioSourceCurveKeyBytes = 32;
         // Unity 6000.0.71f1, tests/projects/textassetmemory: byte storage changes past 31 bytes.
         const long TextAssetHeader = 160, TextAssetInlineBytes = 31;
         static readonly object s_AstcFallbackLock = new();
@@ -95,6 +96,8 @@ namespace Unbound.Runtime
                         MonoBehaviour when Compat.FixedComponentMemoryMeasured => MonoBehaviourBytes,
                         Light light when Compat.LightCommandBufferMemoryMeasured && GraphicsSettings.currentRenderPipeline == null
                             => LightBytes + light.ProfilerCommandBufferSlots * LightCommandBufferSlotBytes,
+                        AudioSource source when Compat.AudioSourceCurveStorageMeasured
+                            => AudioSourceBytes + source.ProfilerExternalCurveSlots * AudioSourceCurveKeyBytes,
                         _ => null,
                     };
                 default: return null;
