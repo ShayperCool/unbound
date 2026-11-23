@@ -10,8 +10,8 @@ using UnityEngine.Rendering.Universal;
 /// Universal Render Pipeline: the camera's opaque texture (Scene Color) a little displaced, and
 /// the camera's depth texture (Scene Depth), each alone and together: with the camera's opaque
 /// and depth textures asked for, the depth copied after the transparent objects (the renderer's
-/// default), after the opaque ones, and through Forward+ with depth priming forced (no copy: the
-/// prepass makes the depth texture), the first and the last again with screen space ambient
+/// default), after the opaque ones, and through Forward+ with depth priming forced (a depth
+/// prepass, the depth still copied after the transparent objects), the first and the last again with screen space ambient
 /// occlusion (its prepass of depth and normals); and with neither texture asked for; then with a
 /// terrain in place of the ground, drawn as patches and instanced, the depth copied after the
 /// opaque objects and as the third scenario with screen space ambient occlusion; and drawn at a

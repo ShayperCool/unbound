@@ -1,49 +1,49 @@
 {
  "after_transparents.png": {
-  "mean": 0.1,
-  "worst": 2,
+  "mean": 0.01,
+  "worst": 1,
   "over8": 0,
   "reason": "The Editor's image to the last bit but for rounding, measured on one machine: an NVIDIA driver, the Linux Editor on OpenGL Core, Unbound's OpenGL Core device. Another GPU, driver or device is unmeasured."
  },
  "after_opaques.png": {
-  "mean": 0.1,
-  "worst": 2,
+  "mean": 0.01,
+  "worst": 1,
   "over8": 0,
   "reason": "The Editor's image to the last bit but for rounding, measured on one machine: an NVIDIA driver, the Linux Editor on OpenGL Core, Unbound's OpenGL Core device. Another GPU, driver or device is unmeasured."
  },
  "forward_plus_primed.png": {
-  "mean": 0.1,
-  "worst": 2,
+  "mean": 0.01,
+  "worst": 1,
   "over8": 0,
   "reason": "The Editor's image to the last bit but for rounding, measured on one machine: an NVIDIA driver, the Linux Editor on OpenGL Core, Unbound's OpenGL Core device. Another GPU, driver or device is unmeasured."
  },
  "after_transparents_ssao.png": {
-  "mean": 0.1,
-  "worst": 2,
+  "mean": 0.01,
+  "worst": 1,
   "over8": 0,
   "reason": "The Editor's image to the last bit but for rounding, measured on one machine: an NVIDIA driver, the Linux Editor on OpenGL Core, Unbound's OpenGL Core device. Another GPU, driver or device is unmeasured."
  },
  "forward_plus_primed_ssao.png": {
-  "mean": 0.1,
-  "worst": 2,
+  "mean": 0.01,
+  "worst": 1,
   "over8": 0,
   "reason": "The Editor's image to the last bit but for rounding, measured on one machine: an NVIDIA driver, the Linux Editor on OpenGL Core, Unbound's OpenGL Core device. Another GPU, driver or device is unmeasured."
  },
  "none.png": {
-  "mean": 0.1,
-  "worst": 2,
+  "mean": 0.01,
+  "worst": 1,
   "over8": 0,
   "reason": "The Editor's image to the last bit but for rounding, measured on one machine: an NVIDIA driver, the Linux Editor on OpenGL Core, Unbound's OpenGL Core device. Another GPU, driver or device is unmeasured."
  },
  "terrain_after_opaques.png": {
-  "mean": 0.1,
-  "worst": 2,
+  "mean": 0.01,
+  "worst": 1,
   "over8": 0,
   "reason": "The Editor's image to the last bit but for rounding, measured on one machine: an NVIDIA driver, the Linux Editor on OpenGL Core, Unbound's OpenGL Core device. Another GPU, driver or device is unmeasured."
  },
  "terrain_forward_plus_primed_ssao.png": {
-  "mean": 0.1,
-  "worst": 2,
+  "mean": 0.01,
+  "worst": 1,
   "over8": 0,
   "reason": "The Editor's image to the last bit but for rounding, measured on one machine: an NVIDIA driver, the Linux Editor on OpenGL Core, Unbound's OpenGL Core device. Another GPU, driver or device is unmeasured."
  },
@@ -51,23 +51,23 @@
   "mean": 0.1,
   "worst": 2,
   "over8": 0,
-  "reason": "The terrain drawn instanced (per-pixel normals from the terrain's normal map) shades up to 2/255 apart from the Editor, 3/255 after the render scale's upscale, on the terrain only (the same terrain drawn as patches matches to 1/255); recorded, not chased. Measured on one machine: an NVIDIA driver, the Linux Editor on OpenGL Core, Unbound's OpenGL Core device."
+  "reason": "The terrain drawn instanced (per-pixel normals from the terrain's normal map) shades up to 2/255 apart from the Editor, 3/255 after the render scale's upscale, on the terrain only (the same terrain drawn as patches matches to 1/255); recorded, not chased (the terrain normal map's texels are within one 8-bit step of the Editor's, tests/projects/terrainnormalmap). Measured on one machine: an NVIDIA driver, the Linux Editor on OpenGL Core, Unbound's OpenGL Core device."
  },
  "terrain_instanced_forward_plus_primed_ssao.png": {
   "mean": 0.1,
   "worst": 2,
   "over8": 0,
-  "reason": "The terrain drawn instanced (per-pixel normals from the terrain's normal map) shades up to 2/255 apart from the Editor, 3/255 after the render scale's upscale, on the terrain only (the same terrain drawn as patches matches to 1/255); recorded, not chased. Measured on one machine: an NVIDIA driver, the Linux Editor on OpenGL Core, Unbound's OpenGL Core device."
+  "reason": "The terrain drawn instanced (per-pixel normals from the terrain's normal map) shades up to 2/255 apart from the Editor, 3/255 after the render scale's upscale, on the terrain only (the same terrain drawn as patches matches to 1/255); recorded, not chased (the terrain normal map's texels are within one 8-bit step of the Editor's, tests/projects/terrainnormalmap). Measured on one machine: an NVIDIA driver, the Linux Editor on OpenGL Core, Unbound's OpenGL Core device."
  },
  "scaled_after_opaques.png": {
-  "mean": 0.1,
-  "worst": 2,
+  "mean": 0.01,
+  "worst": 1,
   "over8": 0,
   "reason": "The Editor's image to the last bit but for rounding, measured on one machine: an NVIDIA driver, the Linux Editor on OpenGL Core, Unbound's OpenGL Core device. Another GPU, driver or device is unmeasured."
  },
  "scaled_forward_plus_primed_ssao.png": {
-  "mean": 0.1,
-  "worst": 2,
+  "mean": 0.01,
+  "worst": 1,
   "over8": 0,
   "reason": "The Editor's image to the last bit but for rounding, measured on one machine: an NVIDIA driver, the Linux Editor on OpenGL Core, Unbound's OpenGL Core device. Another GPU, driver or device is unmeasured."
  },
@@ -75,6 +75,6 @@
   "mean": 0.1,
   "worst": 3,
   "over8": 0,
-  "reason": "The terrain drawn instanced (per-pixel normals from the terrain's normal map) shades up to 2/255 apart from the Editor, 3/255 after the render scale's upscale, on the terrain only (the same terrain drawn as patches matches to 1/255); recorded, not chased. Measured on one machine: an NVIDIA driver, the Linux Editor on OpenGL Core, Unbound's OpenGL Core device."
+  "reason": "The terrain drawn instanced (per-pixel normals from the terrain's normal map) shades up to 2/255 apart from the Editor, 3/255 after the render scale's upscale, on the terrain only (the same terrain drawn as patches matches to 1/255); recorded, not chased (the terrain normal map's texels are within one 8-bit step of the Editor's, tests/projects/terrainnormalmap). Measured on one machine: an NVIDIA driver, the Linux Editor on OpenGL Core, Unbound's OpenGL Core device."
  }
 }
