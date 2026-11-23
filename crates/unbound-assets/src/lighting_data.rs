@@ -6,6 +6,7 @@
 //! scene it belongs to, the Directional Mode, the ambient probe and the default reflection.
 use crate::serialized_writer::{self, ExternalFile, File, FileObject, RawNode, RawType};
 use anyhow::{Context, Result, bail};
+use unbound_compat::{MeasuredFamily, UnityVersion};
 use unbound_yaml::{Map, Value};
 
 /// The LightingDataAsset's path ID in its file (its .meta's `mainObjectFileID`).
@@ -51,17 +52,22 @@ fn empty_realtime_archive(unity_version: &str) -> Vec<u8> {
     header
 }
 
-/// The measured type trees of a release family's lighting data, or None.
-fn measured(family: &str) -> Option<&'static str> {
+/// The measured type trees of a release family's lighting data.
+fn measured(family: MeasuredFamily) -> &'static str {
     match family {
-        "6000.0" => Some(include_str!("../data/serialized-types-6000.0.json")),
-        _ => None,
+        MeasuredFamily::Unity6000_0 => include_str!("../data/serialized-types-6000.0.json"),
     }
 }
 
-fn types(family: &str) -> Result<Vec<RawType>> {
-    let text = measured(family)
-        .with_context(|| format!("the lighting data of Unity {family} is not measured"))?;
+/// The type trees of `unity_version`'s family (a loud failure outside every measured family).
+fn types(unity_version: &str) -> Result<Vec<RawType>> {
+    let version: UnityVersion = unity_version
+        .parse()
+        .with_context(|| format!("the Unity release {unity_version:?}"))?;
+    let family = version.measured_family().with_context(|| {
+        format!("the lighting data of Unity {unity_version} is not measured (its release family)")
+    })?;
+    let text = measured(family);
     let table: serde_json::Value = serde_json::from_str(text)?;
     let hex16 = |v: &serde_json::Value| -> Result<[u8; 16]> {
         let text = v.as_str().context("a hash")?;
@@ -147,13 +153,7 @@ pub fn guid_bytes(text: &str) -> Result<[u8; 16]> {
 
 /// The lighting data file's bytes.
 pub fn environment(environment: &Environment) -> Result<Vec<u8>> {
-    let family = environment
-        .unity_version
-        .splitn(3, '.')
-        .take(2)
-        .collect::<Vec<_>>()
-        .join(".");
-    let types = types(&family)?;
+    let types = types(&environment.unity_version)?;
     let index = |class: i32| {
         types
             .iter()
@@ -370,5 +370,16 @@ mod tests {
         })
         .unwrap_err();
         assert!(error.to_string().contains("not measured"), "{error}");
+        // Every release of the measured family has it.
+        assert!(
+            environment(&Environment {
+                unity_version: "6000.0.12f1".into(),
+                scene_guid: [0; 16],
+                lightmaps_mode: 1,
+                ambient_probe: [0.0; 27],
+                reflection_guid: None,
+            })
+            .is_ok()
+        );
     }
 }
