@@ -21,8 +21,8 @@ curve on `m_SortingOrder` sets the rounded value; float curves on the properties
 offer change nothing.
 
 Unmeasured, and left binding as before: the legacy Animation component and
-`AnimationClip.SampleAnimation` (which treat discrete curves otherwise), and the Animator's own
-curves.
+`AnimationClip.SampleAnimation` (which treat discrete curves otherwise), the Animator's own curves,
+and a player (bundle) clip's discrete curves (its bindings' `isIntCurve` flag is not read).
 
 Known residuals (`residuals.json`): Unbound animates any serialized field of an engine component,
 also those the Editor does not offer, and its `GetAnimatableBindings` lists no object-reference

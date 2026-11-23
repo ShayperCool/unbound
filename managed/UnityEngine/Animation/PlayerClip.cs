@@ -103,8 +103,7 @@ namespace Unbound.Runtime
                     clip.m_ObjectCurves.Add(new ClipObjectCurve { Binding = binding, Times = times.ToArray(), Values = values.ToArray() });
                     continue;
                 }
-                // A discrete (integer) curve keeps its file's flag, as a clip asset's does.
-                clip.m_Curves.Add(new ClipCurve { Binding = binding, Sampled = curve, Flags = b.Int("isIntCurve") != 0 ? 1 : 0 });
+                clip.m_Curves.Add(new ClipCurve { Binding = binding, Sampled = curve });
             }
         }
 

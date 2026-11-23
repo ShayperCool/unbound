@@ -41,9 +41,11 @@ namespace UnityEngine.Tests
             var holder = go.AddComponent<DiscreteHolder>();
             var animator = go.AddComponent<Animator>();
             var clip = new AnimationClip();
-            var keys = new AnimationCurve(new Keyframe(0f, System.BitConverter.Int32BitsToSingle(1)), new Keyframe(1f, System.BitConverter.Int32BitsToSingle(2)));
-            AnimationUtility.SetEditorCurve(clip, EditorCurveBinding.DiscreteCurve("", typeof(SpriteRenderer), "m_SortingOrder"), keys);
-            AnimationUtility.SetEditorCurve(clip, EditorCurveBinding.DiscreteCurve("", typeof(DiscreteHolder), "counter"), keys);
+            // The engine curve's keys are numbers (its 0 shows it stayed unbound), the script's bits.
+            AnimationUtility.SetEditorCurve(clip, EditorCurveBinding.DiscreteCurve("", typeof(SpriteRenderer), "m_SortingOrder"),
+                new AnimationCurve(new Keyframe(0f, 1f), new Keyframe(1f, 2f)));
+            AnimationUtility.SetEditorCurve(clip, EditorCurveBinding.DiscreteCurve("", typeof(DiscreteHolder), "counter"),
+                new AnimationCurve(new Keyframe(0f, System.BitConverter.Int32BitsToSingle(1)), new Keyframe(1f, System.BitConverter.Int32BitsToSingle(2))));
             var graph = PlayableGraph.Create("mixed");
             graph.SetTimeUpdateMode(DirectorUpdateMode.Manual);
             AnimationPlayableOutput.Create(graph, "out", animator).SetSourcePlayable(AnimationClipPlayable.Create(graph, clip));
