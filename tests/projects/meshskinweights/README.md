@@ -30,6 +30,16 @@ The asset checks save and reload one-, two-, five-, and eleven-influence meshes,
 variable table bytes and the reloaded arrays after an unsaved change. [SetVertexBufferParams](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Mesh.SetVertexBufferParams.html) ·
 [SetVertexBufferData](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Mesh.SetVertexBufferData.html)
 
+A raw upload can copy from either of the mesh's borrowed arrays, and the upload then invalidates
+both views. Writable snapshots of existing meshes preserve their variable table and physical
+stream. The copy checks use distinct source and destination weights and compare against newly
+allocated writable data. Asset controls also compare both representations after a raw edit and
+check fixed bone bounds and one-bone baking after reload. [AllocateWritableMeshData](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Mesh.AllocateWritableMeshData.html)
+
+The `copies` profile records its own Editor pair. The earlier `legacy.grow` and
+`views.resize.current` rows record zero in a newly grown slot, where later Editor repeats
+also returned other values.
+
 The probe exercises scripted mesh weights. Imported meshes use the influences their importer
 supplies. Synchronous readbacks issued before the renderer becomes available use the engine's
 existing GPU availability diagnostic.
@@ -38,5 +48,8 @@ existing GPU availability diagnostic.
 python3 tests/projects/meshskinweights/run.py record --release 6000.0.71f1 --label repeat-a
 python3 tests/projects/meshskinweights/run.py record --release 6000.0.71f1 --label repeat-b
 python3 tests/projects/meshskinweights/run.py publish --release 6000.0.71f1 repeat-a repeat-b
+python3 tests/projects/meshskinweights/run.py record --release 6000.0.71f1 --profile copies --label repeat-a
+python3 tests/projects/meshskinweights/run.py record --release 6000.0.71f1 --profile copies --label repeat-b
+python3 tests/projects/meshskinweights/run.py publish --release 6000.0.71f1 --profile copies repeat-a repeat-b
 python3 tests/projects/meshskinweights/run.py gate --release 6000.0.71f1
 ```

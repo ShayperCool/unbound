@@ -107,6 +107,16 @@ sealed partial class MeshSkinningProbe : MonoBehaviour
         }
 
         Put("unity", Application.unityVersion);
+        if (Environment.GetEnvironmentVariable("MESH_SKINNING_PROFILE") == "copies")
+        {
+            yield return null;
+            CheckBorrowedUploads(Probe);
+            CheckMeshCopies(Probe);
+            CheckStoredSkinStreams(Probe, ProbePositions);
+            CheckEmptyCachesAndBounds(Probe);
+            Finish(output, rows);
+            yield break;
+        }
         var mesh = Make(3);
         Probe("empty.views", () => mesh.GetBonesPerVertex().ToArray().Length + ":" + mesh.GetAllBoneWeights().ToArray().Length);
         Probe("invalid.default", () => { mesh.SetBoneWeights(default, default); return Shape(mesh); });
@@ -436,6 +446,11 @@ sealed partial class MeshSkinningProbe : MonoBehaviour
         CheckRawChannels(Probe, ProbePositions);
         CheckAssetReload(Probe);
         CheckLegacyProjection(Probe);
+        Finish(output, rows);
+    }
+
+    static void Finish(string output, List<string> rows)
+    {
         rows.Add("{\"k\":\"complete\",\"v\":true}");
         File.WriteAllLines(Path.Combine(output, "values.jsonl"), rows);
 #if UNITY_EDITOR

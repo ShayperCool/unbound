@@ -1,6 +1,6 @@
 {
   "commands": ["python3 tests/projects/meshskinweights/run.py gate --release 6000.0.71f1"],
-  "summary": "meshskinweights: .*",
+  "summary": "meshskinweights(?: copies)?: .*",
   "engine_paths": [
     "managed/UnityEngine/Graphics/BoneWeight1.cs",
     "managed/UnityEngine/Graphics/Mesh.cs",
