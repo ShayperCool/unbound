@@ -286,8 +286,14 @@ namespace UnityEngine
                     return;
                 }
                 ResetBindings();
+                if (m_HasControllerGraph)
+                {
+                    m_HasControllerGraph = false;
+                    m_ControllerGraphReleasedFrame = Time.s_FrameCount;
+                }
                 m_Controller = value;
                 m_Player = null;
+                if (m_GameObject != null && m_GameObject.activeInHierarchy) MakeControllerGraph();
                 if (isActiveAndEnabled) EnsurePlayer();
             }
         }
@@ -415,6 +421,7 @@ namespace UnityEngine
         // initialized and is reported once (tests/projects/gameinterop animator.OverrideEmpty).
         internal override void OnEngineHierarchyActivated()
         {
+            MakeControllerGraph();
             m_Initialized = m_Controller == null || m_Controller.Graph != null;
             if (!m_Initialized && m_LogWarnings)
                 Debug.LogWarning($"The Animator Controller ({m_Controller.m_Name}) you have used is not valid. Animations will not play", this);

@@ -288,11 +288,29 @@ namespace UnityEngine
             return null;
         }
 
-        /// <summary>Whether animation outputs of playable graphs target this Animator.</summary>
+        /// <summary>Whether the controller's own playable graph exists: made when a valid controller
+        /// is set on an active hierarchy or the hierarchy becomes active with one (enabled or not),
+        /// kept through disabling and deactivation.</summary>
+        bool m_HasControllerGraph;
+
+        /// <summary>The frame the controller's graph was released in (the controller taken away or
+        /// replaced): it counts until that frame ends.</summary>
+        int m_ControllerGraphReleasedFrame = -1;
+
+        void MakeControllerGraph()
+        {
+            if (m_Controller != null && m_Controller.Graph != null) m_HasControllerGraph = true;
+        }
+
+        /// <summary>Whether playable outputs target this Animator: its controller's own graph (see
+        /// <see cref="m_HasControllerGraph"/>) and the animation outputs of playable graphs, a destroyed
+        /// graph's until the end of the frame (matches the Unity 6000.0.71f1 Editor,
+        /// tests/projects/boundplayables).</summary>
         public bool hasBoundPlayables
         {
             get
             { MainThreadCheck.Check("get_hasBoundPlayables");
+                if (m_HasControllerGraph || m_ControllerGraphReleasedFrame == Time.s_FrameCount) return true;
                 var outputs = AnimationOutputs.Of(this);
                 if (outputs == null) return false;
                 foreach (var o in outputs)
