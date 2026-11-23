@@ -5,6 +5,7 @@ using Unity.Collections.LowLevel.Unsafe;
 using Unbound.Runtime;
 using UnityEngine;
 using UnityEngine.Experimental.Rendering;
+using UnityEngine.Rendering;
 
 namespace Unbound.Runtime
 {
@@ -388,6 +389,10 @@ namespace Unbound.Runtime
             };
             bool alphaAsRed = alpha && Compat.DeviceTextureReadback && GraphicsDeviceProfile.Current.Alpha8Readback == Alpha8ReadbackMode.Red;
             bool floats = !EightBit(src.graphicsFormat) && !alphaAsRed;
+            // The measured Linux devices expand a single R16 channel to RGB in byte layouts.
+            bool replicateRed = format.IsByte && src.graphicsFormat == GraphicsFormat.R16_UNorm
+                && Compat.DeviceTextureReadback && OperatingSystem.IsLinux()
+                && GraphicsDeviceProfile.Current.Type is GraphicsDeviceType.OpenGLCore or GraphicsDeviceType.Vulkan;
             int channels = alphaAsRed ? 1
                 : MissingChannelsReadAsOne(src.graphicsFormat) ? (int)GraphicsFormatUtility.GetComponentCount(src.graphicsFormat) : 4;
             alpha &= !alphaAsRed;
@@ -401,7 +406,7 @@ namespace Unbound.Runtime
                     Compat.DeviceTextureReadback && GraphicsDeviceProfile.Current.FramebufferReadback
                         && src.graphicsFormat == GraphicsFormat.R16G16B16_SNorm,
                     // Our Alpha8 upload keeps its value in RGBA's alpha component.
-                    redSourceChannel: alphaAsRed ? 3 : 0);
+                    redSourceChannel: alphaAsRed ? 3 : 0, replicateRed: replicateRed);
             }
             result.Width = width;
             result.Height = height;
@@ -417,6 +422,7 @@ namespace Unbound.Runtime
     {
         /// <summary>Source channel (0 r, 1 g, 2 b, 3 a) of each output channel.</summary>
         readonly int[] m_Channels;
+        readonly int[] m_RedChannels;
         /// <summary>1 byte, 2 half (or a normalized 16-bit value), 4 float per channel.</summary>
         readonly int m_Size;
         /// <summary>Normalized 16-bit channels (with <see cref="m_Size"/> 2).</summary>
@@ -427,7 +433,12 @@ namespace Unbound.Runtime
 
         internal bool IsAlpha8 => ReferenceEquals(this, A8);
 
-        ReadbackFormat(int size, params int[] channels) { m_Size = size; m_Channels = channels; }
+        ReadbackFormat(int size, params int[] channels)
+        {
+            m_Size = size;
+            m_Channels = channels;
+            m_RedChannels = IsByte ? Array.ConvertAll(channels, c => c is 1 or 2 ? 0 : c) : channels;
+        }
         ReadbackFormat(PackedLayout packed) : this(packed is PackedLayout.R4G4B4A4 or PackedLayout.A4R4G4B4 or PackedLayout.R5G6B5 ? 2 : 4, 0, 1, 2, 3) { m_Packed = packed; }
 
         /// <summary>A packed word per texel, little-endian, from the texel's RGBA (fields named
@@ -448,6 +459,7 @@ namespace Unbound.Runtime
         /// <summary>Whether this is a packed target's own word layout (read from the stored values,
         /// not from what reading the target into another format returns).</summary>
         internal bool IsPacked => m_Packed != PackedLayout.None;
+        internal bool IsByte => m_Size == sizeof(byte);
 
         /// <summary>The packed words a request in a packed target's own format reads.</summary>
         internal static ReadbackFormat Packed(GraphicsFormat format) => format switch
@@ -575,15 +587,17 @@ namespace Unbound.Runtime
         /// <summary><paramref name="texels"/> as the renderer reads them: 4 bytes per texel of an
         /// 8-bit RGBA texture (1 of a one-channel one), 4 floats when <paramref name="floats"/>, of
         /// which those from <paramref name="sourceChannels"/> on read as 1.</summary>
-        internal byte[] Encode(byte[] texels, int count, bool floats, bool alpha = false, int sourceChannels = 4, bool clampNegative = false, int redSourceChannel = 0)
+        internal byte[] Encode(byte[] texels, int count, bool floats, bool alpha = false,
+            int sourceChannels = 4, bool clampNegative = false, int redSourceChannel = 0, bool replicateRed = false)
         {
             int inChannels = floats ? 4 : Math.Max(1, texels.Length / Math.Max(1, count));
             if (m_Packed != PackedLayout.None) return EncodePacked(texels, count, floats, inChannels, sourceChannels);
-            var output = new byte[count * m_Channels.Length * m_Size];
+            var channels = replicateRed ? m_RedChannels : m_Channels;
+            var output = new byte[count * channels.Length * m_Size];
             int o = 0;
             for (int i = 0; i < count; i++)
             {
-                foreach (int c in m_Channels)
+                foreach (int c in channels)
                 {
                     int storedChannel = inChannels == 4 && c == 0 ? redSourceChannel : c;
                     float f;
