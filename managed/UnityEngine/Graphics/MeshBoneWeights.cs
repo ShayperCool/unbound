@@ -281,7 +281,7 @@ namespace UnityEngine
             bool unlimited = CurrentSkinWeightLayout == SkinWeights.Unlimited;
             if (width == 0 && !unlimited)
             {
-                DropRuntimeBoneWeights(keepBuffers: keepBoneWeightBuffers);
+                DropRuntimeBoneWeights(keepBuffers: keepBoneWeightBuffers, keepQueries: Compat.RenderingMeasured);
                 return false;
             }
 
@@ -334,12 +334,15 @@ namespace UnityEngine
             m_BoneWeightsView = null;
         }
 
-        void InvalidateBoneWeightArrays()
+        void InvalidateBoneWeightArrays(bool keepQueries = false)
         {
             ReleaseBoneWeightViews();
             m_CachedFixedWeights = null;
-            m_QueriedWeights = null;
-            m_QueriedBoneCounts = null;
+            if (!keepQueries)
+            {
+                m_QueriedWeights = null;
+                m_QueriedBoneCounts = null;
+            }
             m_LegacyProjectionRead = false;
         }
 
@@ -352,9 +355,9 @@ namespace UnityEngine
             ReleaseBoneWeightViews();
         }
 
-        internal void DropRuntimeBoneWeights(bool keepLayout = false, bool keepBuffers = false)
+        internal void DropRuntimeBoneWeights(bool keepLayout = false, bool keepBuffers = false, bool keepQueries = false)
         {
-            InvalidateBoneWeightArrays();
+            InvalidateBoneWeightArrays(keepQueries);
             if (!keepBuffers) InvalidateBoneWeightBuffers();
             RuntimeSkinWeights = null;
             m_RawFixedBoneWeights = null;

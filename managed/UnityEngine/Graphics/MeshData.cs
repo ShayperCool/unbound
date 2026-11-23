@@ -30,6 +30,7 @@ namespace UnityEngine
             internal readonly bool ReadOnly;
             SkinWeights? m_CopiedSkinLayout;
             MeshSkinWeightData m_CopiedPackedWeights;
+            int m_CopiedVertexCount;
 
             internal MeshDataStore(bool readOnly) => ReadOnly = readOnly;
 
@@ -114,6 +115,7 @@ namespace UnityEngine
                 store.Update(mesh);
                 if (!readOnly)
                 {
+                    store.m_CopiedVertexCount = store.VertexCount;
                     store.m_CopiedSkinLayout = mesh.CurrentSkinWeightLayout;
                     if (mesh.RuntimeSkinWeights is { IsPacked: true } packed)
                         store.m_CopiedPackedWeights = packed;
@@ -157,24 +159,29 @@ namespace UnityEngine
                 for (int submesh = 0; submesh < mesh.subMeshCount; submesh++) SubMeshes.Add(mesh.GetSubMesh(submesh));
             }
 
+            internal void ValidateForApply()
+            {
+                if (ReadOnly)
+                    throw new InvalidOperationException("MeshDataArray acquired with Mesh.AcquireReadOnlyMeshData cannot be applied to meshes");
+                if (m_CopiedPackedWeights != null && VertexCount != m_CopiedVertexCount
+                    && m_CopiedPackedWeights.Counts.Length != VertexCount)
+                    throw new NotSupportedException("Cannot apply resized MeshData with variable bone weights from the original vertex count.");
+            }
+
             /// <summary>Writes the data into a mesh.</summary>
             internal void ApplyTo(Mesh mesh, MeshUpdateFlags flags)
             {
                 // In Unity 6000.0 the destination keeps its typed query data across a mesh-data
                 // replacement. The active layout still determines whether getters expose it.
                 bool copiedUnlimited = m_CopiedSkinLayout == SkinWeights.Unlimited;
-                var queriedWeights = Compat.RenderingMeasured ? mesh.m_QueriedWeights : null;
-                var queriedCounts = Compat.RenderingMeasured ? mesh.m_QueriedBoneCounts : null;
                 // Applying mesh data leaves buffers that were already requested available.
-                mesh.DropRuntimeBoneWeights(keepBuffers: true);
+                mesh.DropRuntimeBoneWeights(keepBuffers: true, keepQueries: Compat.RenderingMeasured);
                 mesh.m_BoneWeights = null;
                 mesh.SetVertexBufferParamsInternal(VertexCount, Layout, keepBoneWeightBuffers: true);
                 for (int s = 0; s < 4; s++)
                     if (StreamBytes[s] > 0) mesh.WriteVertices(new ReadOnlySpan<byte>(Streams[s], StreamBytes[s]), 0, s);
                 if (copiedUnlimited)
                     mesh.RestorePackedSkinWeights(m_CopiedPackedWeights, SkinWeights.Unlimited);
-                mesh.m_QueriedWeights = queriedWeights;
-                mesh.m_QueriedBoneCounts = queriedCounts;
                 mesh.SetIndexBufferParams(IndexCount, IndexFormat);
                 if (IndexCount > 0)
                     mesh.WriteIndices(new ReadOnlySpan<byte>(Indices, IndexCount * (IndexFormat == IndexFormat.UInt32 ? 4 : 2)), 0, flags | MeshUpdateFlags.DontValidateIndices);
@@ -523,7 +530,11 @@ namespace UnityEngine
                 {
                     if (meshes[i] == null) throw new ArgumentNullException(nameof(meshes), $"Mesh at index {i} is null");
                     var store = (MeshDataStore)GCHandle.FromIntPtr(m_Ptrs[i]).Target;
-                    if (store.ReadOnly) throw new InvalidOperationException("MeshDataArray acquired with Mesh.AcquireReadOnlyMeshData cannot be applied to meshes");
+                    store.ValidateForApply();
+                }
+                for (int i = 0; i < m_Length; i++)
+                {
+                    var store = (MeshDataStore)GCHandle.FromIntPtr(m_Ptrs[i]).Target;
                     store.ApplyTo(meshes[i], flags);
                 }
                 Dispose();
