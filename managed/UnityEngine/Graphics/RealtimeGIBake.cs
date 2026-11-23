@@ -278,8 +278,9 @@ namespace UnityEngine
         /// opens it without lighting data, or a script's) would make and Unbound does not: baked
         /// lightmaps and the light probes' baked lighting (baked global illumination on; a scene
         /// without Lighting Settings has the defaults', which have it on; Q677), the environment
-        /// lighting from a sky (the ambient probe and the default reflection), baked reflection
-        /// probes. Unbound makes the realtime GI alone (<see cref="Bake"/>).</summary>
+        /// lighting from a sky (the ambient probe and the default reflection; a script's bake
+        /// makes it), baked reflection probes, Adaptive Probe Volumes. Unbound makes the realtime
+        /// GI alone (<see cref="Bake"/>).</summary>
         internal static void NoteBakeParts(LoadedFile file, LightingSettings settings, string what)
         {
             string path = file?.Path ?? "a scene";
@@ -288,14 +289,29 @@ namespace UnityEngine
             // (A script's bake makes it, BakeEnvironment.)
             if (what != ScriptBake && (RenderSettings.skybox != null || RenderSettings.ambientMode == Rendering.AmbientMode.Skybox))
                 Warn("bake-environment:" + what + path, $"{path}: {what} would make the environment lighting from the sky (the ambient probe and the default reflection), which Unbound does not make.");
-            if (file != null)
-                foreach (var obj in file.Objects.Values)
-                    if (obj is ReflectionProbe probe && probe != null && probe.mode == Rendering.ReflectionProbeMode.Baked)
-                    {
-                        Warn("bake-reflection:" + what + path, $"{path}: {what} would bake its reflection probes, which Unbound does not make.");
-                        break;
-                    }
+            if (file == null) return;
+            bool reflection = false, volumes = false;
+            foreach (var obj in file.Objects.Values)
+            {
+                if (!reflection && obj is ReflectionProbe probe && probe != null && probe.mode == Rendering.ReflectionProbeMode.Baked)
+                {
+                    reflection = true;
+                    Warn("bake-reflection:" + what + path, $"{path}: {what} would bake its reflection probes, which Unbound does not make.");
+                }
+                // Adaptive Probe Volumes (a render pipeline's ProbeVolume components): the
+                // Editor's bake writes their Baking Set's cell data.
+                if (!volumes && (settings == null || settings.bakedGI) && obj is MonoBehaviour behaviour && behaviour != null
+                    && behaviour.GetType().FullName == AdaptiveProbeVolumeType)
+                {
+                    volumes = true;
+                    Warn("bake-apv:" + what + path, $"{path}: {what} would bake its Adaptive Probe Volumes (their Baking Set's cell data), which Unbound does not make.");
+                }
+            }
         }
+
+        /// <summary>The component of an Adaptive Probe Volume (the Scriptable Render Pipeline
+        /// Core package's).</summary>
+        internal const string AdaptiveProbeVolumeType = "UnityEngine.Rendering.ProbeVolume";
 
         /// <summary>The renderers of the scene's LOD Groups below their most detailed level: realtime
         /// GI lights only the most detailed one (Unity 6000.0 Manual, "Lightmapping LODs": "the

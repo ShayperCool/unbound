@@ -144,5 +144,38 @@ namespace Unbound.Tests
                 UnityEngine.Object.DestroyImmediate(cube);
             }
         }
+
+        [Fact]
+        public void ABakeOfAdaptiveProbeVolumesIsSaidOnceWhereBakedLightingIsOn()
+        {
+            var made = new GameObject("Volumes");
+            try
+            {
+                var file = new LoadedFile { Path = "Assets/Volumes.unity" };
+                file.Objects[1] = made.AddComponent<UnityEngine.Rendering.ProbeVolume>();
+                RealtimeGI.s_Warned.Clear();
+                // Without baked lighting nothing of them is baked.
+                Assert.DoesNotContain(Logged(() => RealtimeGI.NoteBakeParts(file, new LightingSettings { bakedGI = false }, RealtimeGI.ScriptBake)),
+                    l => l.Contains("Adaptive Probe Volumes"));
+                // With it: said, once for two bakes.
+                var settings = new LightingSettings { bakedGI = true };
+                Assert.Single(Logged(() =>
+                {
+                    RealtimeGI.NoteBakeParts(file, settings, RealtimeGI.ScriptBake);
+                    RealtimeGI.NoteBakeParts(file, settings, RealtimeGI.ScriptBake);
+                }), l => l.Contains("Adaptive Probe Volumes"));
+            }
+            finally
+            {
+                RealtimeGI.s_Warned.Clear();
+                UnityEngine.Object.DestroyImmediate(made);
+            }
+        }
     }
+}
+
+namespace UnityEngine.Rendering
+{
+    /// <summary>Stands for the render pipeline Core package's Adaptive Probe Volume component.</summary>
+    public class ProbeVolume : MonoBehaviour { }
 }
