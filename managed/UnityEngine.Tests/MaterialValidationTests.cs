@@ -25,14 +25,16 @@ namespace UnityEngine.Tests
                 Messages.Add((logType, args.Length == 0 ? format : string.Format(format, args)));
         }
 
-        static Logs Validate(Material material)
+        static Logs Validate(Material material) => CaptureLogs(() => MaterialValidation.Validate(material));
+
+        static Logs CaptureLogs(Action action)
         {
             var logs = new Logs();
             var handler = Debug.unityLogger.logHandler;
             try
             {
                 Debug.unityLogger.logHandler = logs;
-                MaterialValidation.Validate(material);
+                action();
             }
             finally
             {
@@ -179,9 +181,16 @@ namespace UnityEngine.Tests
                 Assert.Equal("PROBE_OTHER", Keywords(m));
                 Assert.Equal(2600, m.renderQueue);
             }
-            // An editor of the Editor's that Unbound only stubs: left as it is, said once.
+            // First use of an imported material reaches its unsupported editor and reports once.
+            using var release = TestRelease.Pin(TestRelease.Measured);
             var stubbed = Made("StandardParticlesShaderGUI");
-            var first = Validate(stubbed);
+            var metadata = CaptureLogs(() =>
+            {
+                MaterialValidation.DeferImportedEditor(stubbed);
+                Assert.Equal(2600, stubbed.rawRenderQueue);
+            });
+            Assert.Empty(metadata.Messages);
+            var first = CaptureLogs(() => Assert.Equal(1f, stubbed.GetFloat("_Mode")));
             Assert.Contains(first.Messages, l => l.Type == LogType.Warning
                 && l.Message.Contains("UnityEditor.StandardParticlesShaderGUI.ValidateMaterial is not implemented"));
             Assert.Equal("PROBE_OTHER", Keywords(stubbed));

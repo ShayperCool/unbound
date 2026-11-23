@@ -451,7 +451,7 @@ namespace UnityEngine
         /// splat block, a tree's).</summary>
         internal Material DrawnMaterial(int index, Material source)
         {
-            if (source != null) source.ValidateImportedOnAccess();
+            if (source != null) source.ValidateDeferredEditor();
             var block = BlockFor(index);
             if (block == null || block.isEmpty || source == null) return source;
             if (m_BlockMaterials == null || m_BlockMaterials.Length <= index)

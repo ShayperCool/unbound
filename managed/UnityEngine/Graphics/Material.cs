@@ -93,10 +93,10 @@ namespace UnityEngine
 
         /// <summary>A property value read or written through the Material API: the sheet lists every
         /// property of the shader again (nothing to do while it does).</summary>
-        void TouchSheet(bool profileAccess = true, bool validateImported = true)
+        void TouchSheet(bool profileAccess = true, bool validateDeferred = true)
         {
             if (profileAccess) RealizeProfilerPropertyStorage();
-            ValidateOnAccess(validateImported);
+            ValidateOnAccess(validateDeferred);
             var sheet = m_State.m_Sheet;
             if (sheet == null || sheet.FilledFor == m_Shader) return;
             if (sheet.Shared) m_Sheet = sheet = sheet.Clone();
@@ -141,7 +141,7 @@ namespace UnityEngine
         sealed class MaterialState
         {
             internal Shader m_Shader;
-            internal MaterialValidation.ImportedEditor m_PendingImportedEditor;
+            internal bool m_PendingEditorValidation;
             internal int m_CustomRenderQueue = -1;
             /// <summary>A variant's own m_CustomRenderQueue, as its data holds it while it takes its
             /// parent's queue (what its SerializedObject reads).</summary>
@@ -202,10 +202,10 @@ namespace UnityEngine
                 m_State.m_Shader = value;
             }
         }
-        internal MaterialValidation.ImportedEditor PendingImportedEditor
+        internal bool PendingEditorValidation
         {
-            get => m_State.m_PendingImportedEditor;
-            set => m_State.m_PendingImportedEditor = value;
+            get => m_State.m_PendingEditorValidation;
+            set => m_State.m_PendingEditorValidation = value;
         }
         internal int m_CustomRenderQueue { get => m_State.m_CustomRenderQueue; set => m_State.m_CustomRenderQueue = value; }
         int m_SerializedQueue { get => m_State.m_SerializedQueue; set => m_State.m_SerializedQueue = value; }
@@ -450,8 +450,8 @@ namespace UnityEngine
                 }
                 bool changed = value != m_Shader;
                 m_Shader = value;
-                if (changed && PendingImportedEditor != MaterialValidation.ImportedEditor.None)
-                    PendingImportedEditor = MaterialValidation.ImportedEditorFor(value);
+                if (changed && PendingEditorValidation)
+                    PendingEditorValidation = MaterialValidation.UsesBuiltinEditor(value);
                 TouchSheet();
                 AddTextureNames();
                 MarkDirty();
@@ -472,27 +472,26 @@ namespace UnityEngine
         /// (writes and a shader change take the same path here, the Has* queries do not).</summary>
         internal bool m_ValidateOnPropertyAccess;
 
-        void ValidateOnAccess(bool validateImported = true)
+        void ValidateOnAccess(bool validateDeferred = true)
         {
             if (m_ValidateOnPropertyAccess)
             {
                 m_ValidateOnPropertyAccess = false;
                 MaterialValidation.Validate(this, editorsOfTheEditor: false);
             }
-            if (validateImported) ValidateImportedOnAccess();
+            if (validateDeferred) ValidateDeferredEditor();
         }
 
-        internal void ValidateImportedOnAccess()
+        internal void ValidateDeferredEditor()
         {
-            var editor = PendingImportedEditor;
-            if (editor == MaterialValidation.ImportedEditor.None) return;
-            PendingImportedEditor = MaterialValidation.ImportedEditor.None;
-            MaterialValidation.ValidateImported(this, editor);
+            if (!PendingEditorValidation) return;
+            PendingEditorValidation = false;
+            MaterialValidation.Validate(this);
         }
 
         internal int QueueForDraw()
         {
-            ValidateImportedOnAccess();
+            ValidateDeferredEditor();
             return renderQueue;
         }
 
@@ -1067,7 +1066,7 @@ namespace UnityEngine
         /// <summary>Activates a pass for GL drawing and Graphics.DrawMeshNow.</summary>
         public bool SetPass(int pass)
         {
-            ValidateImportedOnAccess();
+            ValidateDeferredEditor();
             ObserveProfilerPass(pass, useActivePipeline: true);
             Unbound.Runtime.Immediate.PassMaterial = this;
             Unbound.Runtime.Immediate.PassIndex = pass;
@@ -1097,28 +1096,28 @@ namespace UnityEngine
 
         bool IsFloat(int nameID)
         {
-            ValidateImportedOnAccess();
+            ValidateDeferredEditor();
             return Declared(nameID) is ShaderPropertyType.Float or ShaderPropertyType.Range || SetFromScript(nameID, m_Floats);
         }
         bool IsInteger(int nameID)
         {
-            ValidateImportedOnAccess();
+            ValidateDeferredEditor();
             return Declared(nameID) == ShaderPropertyType.Int || SetFromScript(nameID, m_Ints);
         }
         bool IsVector(int nameID)
         {
-            ValidateImportedOnAccess();
+            ValidateDeferredEditor();
             return Declared(nameID) is ShaderPropertyType.Color or ShaderPropertyType.Vector
                 || SetFromScript(nameID, m_Vectors) || ScaleOffsetOf(nameID, out _);
         }
         bool IsTexture(int nameID)
         {
-            ValidateImportedOnAccess();
+            ValidateDeferredEditor();
             return Declared(nameID) == ShaderPropertyType.Texture || SetFromScript(nameID, m_Textures);
         }
         bool IsMatrix(int nameID)
         {
-            ValidateImportedOnAccess();
+            ValidateDeferredEditor();
             RealizeProfilerPropertyStorage();
             return SetFromScript(nameID, m_Matrices);
         }
@@ -1205,16 +1204,16 @@ namespace UnityEngine
         public void SetFloat(int nameID, float value)
         {
             MainThreadCheck.Check("SetFloatImpl");
-            TouchSheet(validateImported: false);
+            TouchSheet(validateDeferred: false);
             m_RawBindings.Remove(nameID);
             m_Floats[nameID] = value;
             RecordProfilerPropertyWrite(nameID, ShaderPropertyType.Float);
             ScriptSet(nameID);
-            if (PendingImportedEditor != MaterialValidation.ImportedEditor.None)
+            if (PendingEditorValidation)
             {
                 // The editor sees the mode written by the caller. A write to a blend
                 // factor also keeps the explicit value after the first validation.
-                ValidateImportedOnAccess();
+                ValidateDeferredEditor();
                 m_Floats[nameID] = value;
             }
             MarkDirty();
@@ -1268,14 +1267,14 @@ namespace UnityEngine
 
         public void SetVector(int nameID, Vector4 value)
         {
-            TouchSheet(validateImported: false);
+            TouchSheet(validateDeferred: false);
             if (ScaleOffsetOf(nameID, out var texture))
             {
                 var slot = Slot(texture);
                 slot.Scale = new Vector2(value.x, value.y);
                 slot.Offset = new Vector2(value.z, value.w);
                 StopMeasuringPropertyStorage();
-                ValidateImportedOnAccess();
+                ValidateDeferredEditor();
                 MarkDirty();
                 return;
             }
@@ -1284,7 +1283,7 @@ namespace UnityEngine
             m_VectorsAfterTexture.Add(nameID);
             RecordProfilerPropertyWrite(nameID, ShaderPropertyType.Vector);
             ScriptSet(nameID);
-            ValidateImportedOnAccess();
+            ValidateDeferredEditor();
             MarkDirty();
         }
 
@@ -1338,7 +1337,7 @@ namespace UnityEngine
         /// GetTexture returns the texture whatever the element.</summary>
         void SetTextureElement(int nameID, Texture value, RenderTextureSubElement element, bool elementBinding, bool profileAccess = true)
         {
-            TouchSheet(profileAccess, validateImported: false);
+            TouchSheet(profileAccess, validateDeferred: false);
             var slot = Slot(nameID);
             slot.Texture = value;
             slot.Element = element;
@@ -1350,7 +1349,7 @@ namespace UnityEngine
                 else RecordProfilerPropertyWrite(nameID, ShaderPropertyType.Texture);
             }
             ScriptSet(nameID);
-            ValidateImportedOnAccess();
+            ValidateDeferredEditor();
             MarkDirty();
         }
 
@@ -1982,7 +1981,7 @@ namespace UnityEngine
 
         internal unsafe ulong Sync(bool profileDraw = true)
         {
-            ValidateImportedOnAccess();
+            ValidateDeferredEditor();
             if (profileDraw) MarkProfilerDrawEmitted();
             if (m_Handle == 0) m_Handle = RenderHandles.Next();
             // A maximum LOD changed: the shader goes again when the SubShader it names changed.

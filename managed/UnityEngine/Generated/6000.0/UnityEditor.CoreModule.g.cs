@@ -4044,16 +4044,13 @@ namespace UnityEditor
         public static bool resetAllAudioClipPlayCountsOnPlay { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.AudioUtil.resetAllAudioClipPlayCountsOnPlay"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.AudioUtil.resetAllAudioClipPlayCountsOnPlay"); } }
         public static bool canUseSpatializerEffect { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.AudioUtil.canUseSpatializerEffect"); return default; } }
     }
-    [global::Unbound.Stub]
-    internal unsafe partial class AutodeskInteractiveShaderGUI : global::UnityEditor.ShaderGUI
+    unsafe partial class AutodeskInteractiveShaderGUI
     {
         [global::Unbound.Stub] public void FindProperties(global::UnityEditor.MaterialProperty[] props) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.AutodeskInteractiveShaderGUI.FindProperties"); }
         [global::Unbound.Stub] public override void OnGUI(global::UnityEditor.MaterialEditor materialEditor, global::UnityEditor.MaterialProperty[] props) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.AutodeskInteractiveShaderGUI.OnGUI"); }
         [global::Unbound.Stub] public void ShaderPropertiesGUI(global::UnityEngine.Material material) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.AutodeskInteractiveShaderGUI.ShaderPropertiesGUI"); }
         [global::Unbound.Stub] public override void AssignNewShaderToMaterial(global::UnityEngine.Material material, global::UnityEngine.Shader oldShader, global::UnityEngine.Shader newShader) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.AutodeskInteractiveShaderGUI.AssignNewShaderToMaterial"); }
         [global::Unbound.Stub] public static void SetupMaterialWithBlendMode(global::UnityEngine.Material material, global::UnityEditor.AutodeskInteractiveShaderGUI.BlendMode blendMode) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.AutodeskInteractiveShaderGUI.SetupMaterialWithBlendMode"); }
-        [global::Unbound.Stub] public override void ValidateMaterial(global::UnityEngine.Material material) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.AutodeskInteractiveShaderGUI.ValidateMaterial"); }
-        [global::Unbound.Stub] public AutodeskInteractiveShaderGUI() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.AutodeskInteractiveShaderGUI.ctor"); }
         public enum BlendMode
         {
             Opaque = 0,

@@ -41,9 +41,9 @@ namespace Unbound.Runtime
         // (tests/projects/importerserialized). Elsewhere it reflects over the managed importer.
         internal static bool ImporterTypeTreesMeasured => Family == ReleaseFamily.Unity6000_0;
 
-        /// <summary>First-use validation of imported materials with built-in shader editors
-        /// (tests/projects/modelimport, BuiltinBlend).</summary>
-        internal static bool ImportedMaterialValidationMeasured => Family == ReleaseFamily.Unity6000_0;
+        /// <summary>First-use validation of model materials with built-in shader editors and
+        /// Autodesk Interactive material assets (tests/projects/modelimport, BuiltinBlend).</summary>
+        internal static bool DeferredBuiltinMaterialValidationMeasured => Family == ReleaseFamily.Unity6000_0;
 
         // The memory AnimationUtility.GetAnimationClipStats reports for a compiled clip: its fixed
         // part and the bytes of a curve, a constant, a streamed key time and a streamed key,

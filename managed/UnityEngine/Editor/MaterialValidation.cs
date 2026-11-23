@@ -17,58 +17,49 @@ namespace Unbound.Runtime
     /// 6000.0.71f1 Editor): the materials of the project's material and prefab files are
     /// validated, those made by scripts and the built-in resources' are not, and by the next frame
     /// a material has what its editor's validation sets (keywords, render queue, tags, values and
-    /// GI flags). Unbound validates each material once, when its file has loaded; the Editor
-    /// validates it again before the next frame, and a material loaded in Play mode still reads
+    /// GI flags). Unbound ordinarily validates a material when its file has loaded. The Editor
+    /// validates it again before the next frame. A material loaded in Play mode still reads
     /// its saved keywords, render queue, tags and GI flags until then. A material made by
-    /// a model description import first validates with Standard or Autodesk Interactive's shader
-    /// editor when a property's value is accessed or it is used to draw. Render pipelines' and
-    /// projects' editors validate as the model imports (<see cref="ModelMaterialImport"/>).
+    /// a model description import defers its built-in shader editor until the first property
+    /// access or draw. Unsupported shader editors report a warning at that point. An Autodesk
+    /// Interactive material asset also exposes its saved state until first use (modelimport
+    /// BuiltinBlend). Render pipelines' and projects' editors validate as the model imports
+    /// (<see cref="ModelMaterialImport"/>).
     /// </summary>
     internal static class MaterialValidation
     {
         static readonly Dictionary<string, Type> s_Editors = new Dictionary<string, Type>(StringComparer.Ordinal);
 
-        internal enum ImportedEditor { None, Standard, AutodeskInteractive }
-
         internal static void DeferImportedEditor(Material material)
         {
-            if (Compat.ImportedMaterialValidationMeasured && material != null)
-                material.PendingImportedEditor = ImportedEditorFor(material.shader);
+            if (Compat.DeferredBuiltinMaterialValidationMeasured && material != null)
+                material.PendingEditorValidation = UsesBuiltinEditor(material.shader);
         }
 
-        internal static ImportedEditor ImportedEditorFor(Shader shader)
-        {
-            if (shader == null) return ImportedEditor.None;
-            var type = EditorType(CurrentEditor(shader));
-            if (type == typeof(StandardShaderGUI)) return ImportedEditor.Standard;
-            if (type?.FullName == "UnityEditor.AutodeskInteractiveShaderGUI" && type.Assembly == typeof(ShaderGUI).Assembly)
-                return ImportedEditor.AutodeskInteractive;
-            return ImportedEditor.None;
-        }
+        internal static bool UsesBuiltinEditor(Shader shader) =>
+            SelectedEditor(shader)?.Assembly == typeof(ShaderGUI).Assembly;
 
-        internal static void ValidateImported(Material material, ImportedEditor editor)
-        {
-            if (editor == ImportedEditor.Standard) Validate(material);
-            else if (editor == ImportedEditor.AutodeskInteractive) StandardShaderGUI.ValidateAutodeskInteractive(material);
-        }
-
-        /// <summary>Validates every material of a loaded project file.</summary>
+        /// <summary>Validates materials in a loaded project file or schedules their first-use validation.</summary>
         internal static void ValidateLoaded(LoadedFile file)
         {
             if (file == null) return;
             HashSet<Material> seen = null;
             foreach (var obj in file.Objects.Values)
-                if (obj is Material material && (seen ??= new HashSet<Material>()).Add(material))
+            {
+                if (obj is not Material material || !(seen ??= new HashSet<Material>()).Add(material)) continue;
+                if (Compat.DeferredBuiltinMaterialValidationMeasured
+                    && SelectedEditor(material.shader) == typeof(AutodeskInteractiveShaderGUI))
+                    material.PendingEditorValidation = true;
+                else
                     Validate(material);
+            }
         }
 
         /// <param name="editorsOfTheEditor">Whether the Editor's own shader editors (Unbound's
         /// UnityEditor) validate too, or only those of render pipelines and projects.</param>
         internal static void Validate(Material material, bool editorsOfTheEditor = true)
         {
-            var shader = material.shader;
-            if (shader == null) return;
-            var type = EditorType(CurrentEditor(shader));
+            var type = SelectedEditor(material.shader);
             if (type == null || (!editorsOfTheEditor && type.Assembly == typeof(ShaderGUI).Assembly)) return;
             var method = type.GetMethod(nameof(ShaderGUI.ValidateMaterial), BindingFlags.Instance | BindingFlags.Public,
                 null, new[] { typeof(Material) }, null);
@@ -90,6 +81,8 @@ namespace Unbound.Runtime
                 Debug.LogException(e is TargetInvocationException t ? t.InnerException ?? e : e);
             }
         }
+
+        static Type SelectedEditor(Shader shader) => shader == null ? null : EditorType(CurrentEditor(shader));
 
         /// <summary>The shader's editor for the active render pipeline, else its own.</summary>
         static string CurrentEditor(Shader shader)

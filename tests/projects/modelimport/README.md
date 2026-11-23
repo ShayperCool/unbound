@@ -28,9 +28,11 @@ only `GetColor` made the change. Writes in the callback are not measured.
 The `BuiltinBlend` profile seeds conflicting blend factors and depth writes in a late
 `OnPreprocessMaterialDescription` callback. It records queue, tag, keywords and GI flags
 before and after property access, writes, rendering, or `SetPass` in Play mode. The controls
-cover all four modes, fractional and out-of-range modes, copies, and a project shader that
-uses Standard's shader editor. Use `MODEL_IMPORT_PROFILES=BuiltinBlend` to record or replay
-the 223 observations.
+cover all four modes, fractional and out-of-range modes, copies, a project shader that
+uses Standard's shader editor, and a textured Autodesk Interactive import. A standalone
+Autodesk Interactive material asset records its saved state and its validated state
+after the first property read. Use `MODEL_IMPORT_PROFILES=BuiltinBlend` to record or replay
+the 233 observations.
 
 The same file appears under several importer settings (only the `.meta` differs):
 `materialImportMode` None, "Standard (Legacy)" and "Import via MaterialDescription"; the legacy
@@ -87,6 +89,9 @@ Interactive use the integer part of the blend mode. An out-of-range mode keeps t
 blend and queue values while still updating emission flags. In `BuiltinBlend`, reading a tag
 keeps the saved metadata until the first property read. A write to a float property keeps
 the value supplied by the caller, including a new mode used during validation.
+Other built-in shader editors use the same deferred dispatch. An editor with a stub
+validator reports a warning on first use. Nonfinite modes, shader replacement before first
+use, and the ordering of other first writes remain unmeasured.
 
 Material animation curves remain unsupported. URP: every value matches (7807/7807). The Editor validates a material
 each time a preprocessor sets its shader and once more after the last one: the description-made
