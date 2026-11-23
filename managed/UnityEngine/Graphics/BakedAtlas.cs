@@ -325,6 +325,29 @@ namespace UnityEngine
             }
         }
 
+        /// <summary>The scene's light probes the bake lights: each enabled Light Probe Group of an
+        /// active GameObject, with its file ID and its points in world space, as three numbers
+        /// each.</summary>
+        internal static List<object> Probes(LoadedFile file)
+        {
+            var groups = new List<object>();
+            foreach (var pair in file.Objects)
+            {
+                if (!(pair.Value is LightProbeGroup group) || group == null || !group.enabled || !group.gameObject.activeInHierarchy) continue;
+                var local = group.probePositions;
+                var points = new float[local.Length * 3];
+                for (int i = 0; i < local.Length; i++)
+                {
+                    var p = group.transform.TransformPoint(local[i]);
+                    points[3 * i] = p.x;
+                    points[3 * i + 1] = p.y;
+                    points[3 * i + 2] = p.z;
+                }
+                groups.Add(new { fileId = pair.Key, points });
+            }
+            return groups;
+        }
+
         /// <summary>The scene's lights that take part in a bake: enabled mixed and baked lights of
         /// active GameObjects, made from its file, each with its colour as the bake takes it
         /// (times its intensity, and times its Indirect Multiplier, linear). Said once per scene
@@ -502,6 +525,7 @@ namespace UnityEngine
             try
             {
                 var lights = Lights(file, path);
+                var probes = Probes(file);
                 string Request(bool layoutOnly, object indirect) => JsonSerializer.Serialize(new
                 {
                     maxSize = settings.lightmapMaxSize,
@@ -514,6 +538,7 @@ namespace UnityEngine
                     lights,
                     mixedMode = (int)settings.mixedBakeMode,
                     directional = settings.directionalityMode == LightmapsMode.CombinedDirectional,
+                    probes,
                     layoutOnly,
                     indirect,
                 });

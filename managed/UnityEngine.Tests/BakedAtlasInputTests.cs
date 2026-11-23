@@ -245,6 +245,46 @@ namespace UnityEngine.Tests
             }
         }
 
+        [Fact]
+        public void TheBakeTakesTheProbesOfEnabledGroupsOfActiveObjectsInWorldSpace()
+        {
+            var made = new List<GameObject>();
+            LightProbeGroup Make(string name, params Vector3[] points)
+            {
+                var go = new GameObject(name);
+                made.Add(go);
+                var group = go.AddComponent<LightProbeGroup>();
+                group.probePositions = points;
+                return group;
+            }
+            try
+            {
+                var file = new LoadedFile { Path = "Assets/Probes.unity", Guid = "50000000000000000000000000000000" };
+                var moved = Make("Moved", new Vector3(1f, 0f, 0f), new Vector3(0f, 0f, 2f));
+                moved.transform.position = new Vector3(0.5f, 1f, -1f);
+                moved.transform.rotation = Quaternion.Euler(0f, 90f, 0f);
+                moved.transform.localScale = new Vector3(2f, 2f, 2f);
+                Make("Disabled", Vector3.one).enabled = false;
+                Make("Inactive", Vector3.one).gameObject.SetActive(false);
+                file.Objects[7] = moved;
+                file.Objects[8] = made[1].GetComponent<LightProbeGroup>();
+                file.Objects[9] = made[2].GetComponent<LightProbeGroup>();
+
+                var groups = System.Text.Json.JsonDocument.Parse(System.Text.Json.JsonSerializer.Serialize(BakedAtlas.Probes(file))).RootElement;
+                Assert.Equal(1, groups.GetArrayLength());
+                Assert.Equal(7, groups[0].GetProperty("fileId").GetInt64());
+                var points = groups[0].GetProperty("points");
+                // Scaled by 2 and turned a quarter about y: +x goes to -z, +z to +x.
+                var expected = new[] { 0.5f, 1f, -3f, 4.5f, 1f, -1f };
+                Assert.Equal(expected.Length, points.GetArrayLength());
+                for (int i = 0; i < expected.Length; i++) Assert.Equal(expected[i], points[i].GetSingle(), 5);
+            }
+            finally
+            {
+                foreach (var go in made) Object.DestroyImmediate(go);
+            }
+        }
+
         /// <summary>A scene file of one lightmapped quad, in a LOD Group or not.</summary>
         static LoadedFile QuadScene(string path, bool inLodGroup, List<Object> made)
         {

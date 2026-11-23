@@ -14,7 +14,8 @@ use unbound_gi::baked::directional;
 use unbound_gi::baked::grid::{Bounds, Grid};
 use unbound_gi::baked::indirect::{self, Material, Surface, Texture, World};
 use unbound_gi::baked::light::{Kind, Light, Mode};
-use unbound_gi::baked::sampling::Samples;
+use unbound_gi::baked::probes;
+use unbound_gi::baked::sampling::{self, Samples};
 use unbound_gi::baked::shadowmask;
 use unbound_gi::baked::sky::{IMPORTANCE_DIRECTIONS, Importance, Sky};
 use unbound_gi::baked::trace::Scene;
@@ -50,6 +51,45 @@ pub struct BakeRequest {
     /// What the indirect light is baked with; without it only the direct light is.
     #[serde(default)]
     indirect: Option<IndirectData>,
+    /// The scene's light probe groups.
+    #[serde(default)]
+    probes: Vec<ProbeGroupData>,
+}
+
+/// A light probe group: its file ID in the scene and its probes' points in world space, three
+/// numbers each.
+#[derive(serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct ProbeGroupData {
+    file_id: i64,
+    points: Vec<f32>,
+}
+
+/// The light probes' points as the bake has them, group by group: the groups with probes in
+/// their objects' order in the scene file (their file IDs'), each group's points in its order,
+/// where the bake puts them (tests/projects/bakedbuffers `Probes*`).
+fn probe_points(groups: &[ProbeGroupData]) -> Vec<Vec<[f32; 3]>> {
+    let mut groups: Vec<&ProbeGroupData> = groups.iter().filter(|g| g.points.len() >= 3).collect();
+    groups.sort_by_key(|g| g.file_id);
+    groups
+        .iter()
+        .map(|g| {
+            g.points
+                .chunks_exact(3)
+                .map(|c| probes::snap([c[0], c[1], c[2]]))
+                .collect()
+        })
+        .collect()
+}
+
+/// How far a light probe's paths start off the surfaces they meet (what the bake asks of its
+/// probes; tests/projects/bakedbuffers `Probes*`).
+const PROBE_PUSHOFF: f32 = 0.0001;
+
+/// A light probe's samples for a texel's count asked for: four times the count a texel takes
+/// before its supersampling (tests/projects/bakedbuffers `Probes*`, the bake inputs' counts).
+fn probe_samples(asked: u32) -> u32 {
+    4 * sampling::sample_count(asked, 1)
 }
 
 /// The settings and materials of the bake's indirect light.
@@ -433,6 +473,13 @@ impl<'a> Buffers<'a> {
     const SKY: &'static str = "sky.f32";
     /// The directions picked by the sky's brightness: three floats each, then their light.
     const SKY_DIRECTIONS: &'static str = "skyDirections.f32";
+    /// The light probes' direct and indirect light (per probe nine coefficients of three
+    /// floats) and per probe the part of its paths that met a back face first.
+    const PROBES: [&'static str; 3] = [
+        "probesDirect.f32",
+        "probesIndirect.f32",
+        "probesValidity.f32",
+    ];
     const PER_LIGHTMAP: [(&'static str, &'static str); 10] = [
         ("occupancy", ".u8"),
         ("chartIndex", ".i32"),
@@ -459,6 +506,7 @@ impl<'a> Buffers<'a> {
             let ours = name == Self::DESCRIPTION
                 || name == Self::SKY
                 || name == Self::SKY_DIRECTIONS
+                || Self::PROBES.contains(&name.as_ref())
                 || Self::PER_LIGHTMAP.iter().any(|(prefix, suffix)| {
                     name.strip_prefix(prefix)
                         .and_then(|rest| rest.strip_suffix(suffix))
@@ -592,11 +640,12 @@ impl<'a> Buffers<'a> {
     /// Ends the bake's buffers with their description: the lightmaps, the Lighting Mode of
     /// mixed lights, the bake's lights in its order and, where the indirect light is baked, its
     /// settings and each renderer's material images as the bake read them.
-    fn finish(self, mixed_mode: u8, lights: Json, indirect: Json) -> Result<()> {
+    fn finish(self, mixed_mode: u8, lights: Json, indirect: Json, probes: Json) -> Result<()> {
         self.write(
             Self::DESCRIPTION.into(),
             serde_json::to_vec_pretty(&json!({
                 "lightmaps": self.lightmaps, "mixedMode": mixed_mode, "lights": lights, "indirect": indirect,
+                "probes": probes,
             }))?,
         )
     }
@@ -770,12 +819,19 @@ fn bake(request: BakeRequest, buffers: Option<&Path>) -> Result<Json> {
         // left without one is baked instead.
         let channels = shadowmask::assign(&mut baked_lights, mixed == MixedMode::Shadowmask);
         let baked: Vec<&Renderer> = taken.iter().map(|&i| &request.renderers[i]).collect();
-        // Which lights a surface of the scene takes at a bounce: the light grid over the box
-        // around the bake's renderers.
-        let around = Bounds::around(baked.iter().flat_map(|r| {
-            let (mesh, m) = (&meshes[r.mesh], r.local_to_world);
-            mesh.positions.iter().map(move |&p| direct::point(&m, p))
-        }))
+        let groups = probe_points(&request.probes);
+        let points = groups.concat();
+        // Which lights a surface of the scene or a probe takes at a bounce: the light grid over
+        // the box around the bake's renderers and probes.
+        let around = Bounds::around(
+            baked
+                .iter()
+                .flat_map(|r| {
+                    let (mesh, m) = (&meshes[r.mesh], r.local_to_world);
+                    mesh.positions.iter().map(move |&p| direct::point(&m, p))
+                })
+                .chain(points.iter().copied()),
+        )
         .unwrap_or(Bounds {
             min: [0.0; 3],
             max: [0.0; 3],
@@ -971,6 +1027,56 @@ fn bake(request: BakeRequest, buffers: Option<&Path>) -> Result<Json> {
                 )?;
             }
         }
+        // The light probes: their direct light and, where the indirect light is
+        // baked, the light from other surfaces and the sky.
+        let mut described_probes = Json::Null;
+        if !points.is_empty() {
+            let flat = |coefficients: &[probes::Coefficients]| -> Vec<u8> {
+                coefficients
+                    .iter()
+                    .flatten()
+                    .flatten()
+                    .flat_map(|v| v.to_le_bytes())
+                    .collect()
+            };
+            let lit = probes::direct(&points, &baked_lights, &grid, &scene);
+            written.write(Buffers::PROBES[0].into(), flat(&lit))?;
+            let mut counts = Json::Null;
+            if let Some(b) = &bounce {
+                let settings = indirect::Settings {
+                    samples: probe_samples(b.settings.0),
+                    max_bounces: b.settings.1,
+                    min_bounces: b.settings.2,
+                    pushoff: PROBE_PUSHOFF,
+                    environment_samples: probe_samples(b.sky.as_ref().map_or(0, |s| s.1)),
+                };
+                let world = World {
+                    scene: &b.scene,
+                    casters: &scene,
+                    surfaces: &b.surfaces,
+                    materials: &b.materials,
+                    lights: &baked_lights,
+                    grid: &grid,
+                    sky: b.sky.as_ref().map(|s| &s.0),
+                };
+                // Each group's probes are baked by themselves: a probe's numbers are turned by
+                // its place in its group.
+                let (mut radiance, mut validity) = (Vec::new(), Vec::new());
+                for group in &groups {
+                    let probed = indirect::probes(group, &world, &b.samples, settings);
+                    radiance.extend(probed.radiance);
+                    validity.extend(probed.validity);
+                }
+                written.write(Buffers::PROBES[1].into(), flat(&radiance))?;
+                written.write(
+                    Buffers::PROBES[2].into(),
+                    validity.iter().flat_map(|v| v.to_le_bytes()).collect(),
+                )?;
+                counts = json!({ "indirect": settings.samples, "environment": settings.environment_samples });
+            }
+            described_probes =
+                json!({ "count": points.len(), "points": points, "samples": counts });
+        }
         written.finish(
             request.mixed_mode,
             json!(
@@ -1002,6 +1108,7 @@ fn bake(request: BakeRequest, buffers: Option<&Path>) -> Result<Json> {
                     .collect::<Vec<_>>()
             ),
             described,
+            described_probes,
         )?;
     }
 
@@ -1077,6 +1184,39 @@ mod tests {
             "scene": "10000000200000003000000040000000", "meshes": meshes, "renderers": renderers,
         }))
         .unwrap()
+    }
+
+    #[test]
+    fn probe_groups_are_baked_in_their_scene_file_order_at_their_cut_points() {
+        // tests/projects/bakedbuffers ProbesGrid: the groups by file ID, whatever the order they
+        // come in (their order in the hierarchy) or their file IDs' hashes give.
+        let group = |file_id, points: &[f32]| ProbeGroupData {
+            file_id,
+            points: points.to_vec(),
+        };
+        let groups = [
+            group(862829824, &[0.5, 9.0, 0.2]),
+            group(283887366, &[-0.235, 0.4507, 1.0179, 0.0239, 0.294, 0.0079]),
+            group(498991141, &[-1.84, 0.929, -0.2449]),
+            // A group without probes is no group of the bake.
+            group(100, &[]),
+        ];
+        let points = probe_points(&groups);
+        assert_eq!(points.iter().map(Vec::len).collect::<Vec<_>>(), [2, 1, 1]);
+        let hundredths: Vec<[f32; 3]> = points
+            .iter()
+            .flatten()
+            .map(|p| p.map(|v| (v * 100.0).round()))
+            .collect();
+        assert_eq!(
+            hundredths,
+            [
+                [-23.0, 45.0, 101.0],
+                [2.0, 29.0, 0.0],
+                [-184.0, 92.0, -24.0],
+                [50.0, 900.0, 20.0]
+            ]
+        );
     }
 
     #[test]
