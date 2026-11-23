@@ -141,7 +141,10 @@ namespace UnityEditor
                 // A material whose description waited for the pass is made even when it failed.
                 foreach (var o in file.Objects.Values)
                     if (o is Material m && ModelMaterialImport.TakeDeferred(m) is MaterialDescription description)
+                    {
                         ModelMaterialImport.Describe(session, description, m);
+                        ModelMaterialImport.ApplyLoadedBlendState(m);
+                    }
                 AssetPostprocessing.EndSession(file.Path);
             }
         }
@@ -309,7 +312,12 @@ namespace UnityEditor
             // A model material no slot uses is made as reading it without postprocessors makes it.
             foreach (var (m, (source, description)) in pass.Own)
             {
-                if (!pass.Used.Contains(m) && description != null) ModelMaterialImport.Describe(session, description, m);
+                if (description != null)
+                {
+                    bool used = pass.Used.Contains(m);
+                    if (!used) ModelMaterialImport.Describe(session, description, m);
+                    if (!used || pass.Made.Contains(m)) ModelMaterialImport.ApplyLoadedBlendState(m);
+                }
                 Object.DestroyImmediate(source, true);
             }
             if (json.TryGetProperty("sorted", out var sorted) && sorted.GetBoolean())

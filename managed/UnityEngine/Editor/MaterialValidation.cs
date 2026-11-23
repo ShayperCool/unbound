@@ -19,10 +19,10 @@ namespace Unbound.Runtime
     /// a material has what its editor's validation sets (keywords, render queue, tags, values and
     /// GI flags). Unbound validates each material once, when its file has loaded; the Editor
     /// validates it again before the next frame, and a material loaded in Play mode still reads
-    /// its saved keywords, render queue, tags and GI flags until then. The materials a model's
-    /// import makes are not validated on load (tests/projects/modelimport: emissive Standard ones
-    /// keep GI flags the Standard editor would change); render pipelines' and projects' editors
-    /// validate them as the model imports (<see cref="ModelMaterialImport"/>: URP's model
+    /// its saved keywords, render queue, tags and GI flags until then. Model description imports
+    /// keep their built-in shaders' saved keywords, render queue, tags and GI flags in Play mode,
+    /// with blend factors and depth writes applied separately. Render pipelines' and projects'
+    /// editors validate them as the model imports (<see cref="ModelMaterialImport"/>: URP's model
     /// materials get their blend states, queue control and GI flags, as its import postprocessing
     /// gives them).
     /// </summary>

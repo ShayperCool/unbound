@@ -21,6 +21,10 @@ namespace Unbound.Runtime
     {
         static readonly int s_Color = Shader.PropertyToID("_Color");
         static readonly int s_MainTex = Shader.PropertyToID("_MainTex");
+        static readonly int s_BlendMode = Shader.PropertyToID("_Mode");
+        static readonly int s_SourceBlend = Shader.PropertyToID("_SrcBlend");
+        static readonly int s_DestinationBlend = Shader.PropertyToID("_DstBlend");
+        static readonly int s_ZWrite = Shader.PropertyToID("_ZWrite");
         static List<(int Order, Type Type, MethodInfo Method)> s_Preprocessors;
 
         /// <summary>The model whose materials' description preprocessors wait for its
@@ -56,10 +60,13 @@ namespace Unbound.Runtime
                 else if (s_Deferring != null && s_Deferring == assetPath)
                     s_Deferred[material] = description;
                 else
+                {
                     // In the model's import (its postprocessors' objects), else one of its own
                     // (a copy a scene's expansion reads).
                     Describe(AssetPostprocessing.ExistingSession(assetPath) ?? new ImportSession(assetPath, new AssetImportContext(assetPath), null),
                         description, material);
+                    ApplyLoadedBlendState(material);
+                }
             }
         }
 
@@ -154,6 +161,28 @@ namespace Unbound.Runtime
                 }
                 MaterialValidation.Validate(material, editorsOfTheEditor: false);
             }
+        }
+
+        /// <summary>After the import callbacks, built-in Standard and Autodesk Interactive
+        /// materials load with blend factors and depth writes from their saved mode. The import's
+        /// queue, tags, keywords and GI flags persist (tests/projects/modelimport, BuiltinBlend).</summary>
+        internal static void ApplyLoadedBlendState(Material material)
+        {
+            if (!Compat.ImportedMaterialBlendStateMeasured || material == null) return;
+            var shader = material.shader;
+            if (shader == null) return;
+            string name = shader.name;
+            if (name is not ("Standard" or "Standard (Specular setup)" or "Autodesk Interactive")
+                || !ReferenceEquals(shader, BuiltinShaders.ByName(name))) return;
+            float mode = material.GetFloat(s_BlendMode);
+            // Truncate toward zero. Modes outside the enum, including nonfinite values, keep
+            // the preprocessor's state.
+            if (!(mode > -1f && mode < (int)StandardShaderGUI.BlendMode.Transparent + 1)) return;
+            if (StandardShaderGUI.BlendState((StandardShaderGUI.BlendMode)(int)mode) is not { } state) return;
+            material.m_Floats[s_SourceBlend] = (int)state.Source;
+            material.m_Floats[s_DestinationBlend] = (int)state.Destination;
+            material.m_Floats[s_ZWrite] = state.WriteDepth ? 1f : 0f;
+            material.MarkChanged();
         }
 
         /// <summary>

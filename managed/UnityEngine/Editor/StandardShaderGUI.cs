@@ -1,4 +1,5 @@
 using UnityEngine;
+using BlendFactor = UnityEngine.Rendering.BlendMode;
 
 namespace UnityEditor
 {
@@ -60,21 +61,27 @@ namespace UnityEditor
             switch (blendMode)
             {
                 case BlendMode.Opaque:
-                    States(material, "", 1, 0, 1, null);
+                    SetBlendTagAndKeywords(material, "", null);
                     max = 2449;
                     break;
                 case BlendMode.Cutout:
-                    States(material, "TransparentCutout", 1, 0, 1, "_ALPHATEST_ON");
+                    SetBlendTagAndKeywords(material, "TransparentCutout", "_ALPHATEST_ON");
                     (min, max, queue) = (2450, 2500, 2450);
                     break;
                 case BlendMode.Fade:
-                    States(material, "Transparent", 5, 10, 0, "_ALPHABLEND_ON");
+                    SetBlendTagAndKeywords(material, "Transparent", "_ALPHABLEND_ON");
                     (min, max, queue) = (2501, 3999, 3000);
                     break;
                 case BlendMode.Transparent:
-                    States(material, "Transparent", 1, 10, 0, "_ALPHAPREMULTIPLY_ON");
+                    SetBlendTagAndKeywords(material, "Transparent", "_ALPHAPREMULTIPLY_ON");
                     (min, max, queue) = (2501, 3999, 3000);
                     break;
+            }
+            if (BlendState(blendMode) is { } state)
+            {
+                material.SetFloat("_SrcBlend", (int)state.Source);
+                material.SetFloat("_DstBlend", (int)state.Destination);
+                material.SetFloat("_ZWrite", state.WriteDepth ? 1f : 0f);
             }
             if (overrideRenderQueue || material.renderQueue < min || material.renderQueue > max)
             {
@@ -88,14 +95,20 @@ namespace UnityEditor
 
         static readonly string[] s_AlphaKeywords = { "_ALPHATEST_ON", "_ALPHABLEND_ON", "_ALPHAPREMULTIPLY_ON" };
 
-        static void States(Material material, string renderType, float source, float destination, float zWrite, string alphaKeyword)
+        static void SetBlendTagAndKeywords(Material material, string renderType, string alphaKeyword)
         {
             material.SetOverrideTag("RenderType", renderType);
-            material.SetFloat("_SrcBlend", source);
-            material.SetFloat("_DstBlend", destination);
-            material.SetFloat("_ZWrite", zWrite);
             foreach (var keyword in s_AlphaKeywords) SetKeyword(material, keyword, keyword == alphaKeyword);
         }
+
+        internal static (BlendFactor Source, BlendFactor Destination, bool WriteDepth)? BlendState(BlendMode mode)
+            => mode switch
+        {
+            BlendMode.Opaque or BlendMode.Cutout => (BlendFactor.One, BlendFactor.Zero, true),
+            BlendMode.Fade => (BlendFactor.SrcAlpha, BlendFactor.OneMinusSrcAlpha, false),
+            BlendMode.Transparent => (BlendFactor.One, BlendFactor.OneMinusSrcAlpha, false),
+            _ => null,
+        };
 
         static void SetMaterialKeywords(Material material, WorkflowMode workflow)
         {

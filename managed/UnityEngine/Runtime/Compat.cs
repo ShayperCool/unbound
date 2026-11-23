@@ -41,6 +41,10 @@ namespace Unbound.Runtime
         // (tests/projects/importerserialized). Elsewhere it reflects over the managed importer.
         internal static bool ImporterTypeTreesMeasured => Family == ReleaseFamily.Unity6000_0;
 
+        /// <summary>Blend and depth-write settings of built-in FBX materials loaded in Play mode
+        /// (tests/projects/modelimport, BuiltinBlend). Other families retain the preprocessor's values.</summary>
+        internal static bool ImportedMaterialBlendStateMeasured => Family == ReleaseFamily.Unity6000_0;
+
         // The memory AnimationUtility.GetAnimationClipStats reports for a compiled clip: its fixed
         // part and the bytes of a curve, a constant, a streamed key time and a streamed key,
         // measured on 6000.0.71f1 (tests/projects/animatorapi stats.*). Elsewhere the same sum is

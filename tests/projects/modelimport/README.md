@@ -25,6 +25,12 @@ Unity 6000.0.71f1 Editor captures, an empty callback and ones reading only the s
 flags or `shaderKeywords` changed nothing; ones calling only `HasProperty`, only `GetFloat` or
 only `GetColor` made the change. Writes in the callback are not measured.
 
+The `BuiltinBlend` profile seeds conflicting blend factors and depth writes in a late
+`OnPreprocessMaterialDescription` callback. It reads the saved queue, tag, keywords and GI
+flags before reading the float properties in Play mode. All four modes, Standard Specular,
+fractional and out-of-range modes, and a Play mode edit are covered. Use
+`MODEL_IMPORT_PROFILES=BuiltinBlend` to record or replay these 141 observations.
+
 The same file appears under several importer settings (only the `.meta` differs):
 `materialImportMode` None, "Standard (Legacy)" and "Import via MaterialDescription"; the legacy
 external location with `materialName` by texture, material, model + material and texture or
@@ -73,10 +79,14 @@ threshold, UV offset with V negated and UV scale when present), with no blend mo
 queue or GI flag, validated by the shader's editor as the material is made (before those values;
 `_QueueControl` 0).
 
-What still differs: an Autodesk Interactive material with a mask threshold has `_DstBlend` 0 in the
-Editor although its preprocessor sets 10 (queue 3000 stays; when the Editor loads it outside Play
-mode the queue reads 2450, as the shader's GUI would set it); Unbound keeps 10. Material animation
-curves are not imported. URP: every value matches (7807/7807). The Editor validates a material
+The Autodesk Interactive cutout's preprocessor sets `_DstBlend` to 10. The Play mode material
+reads 0 and its saved queue is 3000. In the `BuiltinBlend` profile, Standard, Standard Specular
+and Autodesk Interactive take blend factors and depth writes from the integer part of their
+mode. An out-of-range mode keeps the imported values. The probe also observes an edit to
+`_DstBlend` in Play mode taking effect. The timing of full ShaderGUI validation when the Editor
+first reads a material property remains a separate compatibility gap.
+
+Material animation curves remain unsupported. URP: every value matches (7807/7807). The Editor validates a material
 each time a preprocessor sets its shader and once more after the last one: the description-made
 Shader Graph materials keep Lit's GI flags (Lit's validation, as URP's FBX preprocessor sets Lit,
 keeps `RealtimeEmissive` without `EmissiveIsBlack`) and the Autodesk Interactive cutout the
