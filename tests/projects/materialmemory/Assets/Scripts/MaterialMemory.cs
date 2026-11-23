@@ -63,6 +63,20 @@ static class MaterialMemory
             Size(stage + ".instanceEdited", instance);
             Size(stage + ".sourceAfterInstanceEdit", material);
             Object.DestroyImmediate(instance);
+            if (stage == "standard")
+            {
+                var queried = Object.Instantiate(material);
+                _ = queried.shader;
+                queried.renderQueue = 2200;
+                Size(stage + ".instanceMetadata", queried);
+                Put(stage + ".instanceHasProperty", queried.HasProperty("_Glossiness"));
+                Size(stage + ".instanceAfterHasProperty", queried);
+                Object.DestroyImmediate(queried);
+                var read = Object.Instantiate(material);
+                Put(stage + ".instanceDeclaredValue", read.GetFloat("_Glossiness"));
+                Size(stage + ".instanceAfterRead", read);
+                Object.DestroyImmediate(read);
+            }
             Object.DestroyImmediate(copy);
             Object.DestroyImmediate(material);
         }
