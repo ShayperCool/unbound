@@ -811,7 +811,7 @@ namespace Unbound.Runtime.Playables
             if (e.Animator.Human is { } human)
             {
                 // A supported generic controller uses the same default humanoid pose as a generic clip output.
-                into.ClipSampled |= e.MotionMode is RootMotionMode.Compute or RootMotionMode.GenericControllerWithoutRootMotion;
+                into.ClipSampled |= ReferenceEquals(e.GenericMotionController, this);
                 Humanoid(e, player, human, weight, into);
             }
             // Its parameter curves drive its own float parameters from its own layers, before the
@@ -860,7 +860,8 @@ namespace Unbound.Runtime.Playables
             if (e.Replay) into.BodyMotion = m_LastBody;
             else
             {
-                player.BlendHumanMotion(human, out into.BodyMotion, ReferenceEquals(e.AdditiveBodyController, this));
+                player.BlendHumanMotion(human, out into.BodyMotion, ReferenceEquals(e.AdditiveBodyController, this),
+                    ReferenceEquals(e.GenericMotionController, this));
                 m_LastBody = into.BodyMotion;
             }
             if (into.BodyMotion.HasMotion) into.GoalsInMotion = true;
@@ -900,7 +901,7 @@ namespace Unbound.Runtime.Playables
             if (e.MotionMode is not (RootMotionMode.Zero or RootMotionMode.GenericControllerWithoutRootMotion))
             {
                 if (!player.StreamRootMotion(into.DeltaTime, out _, out _, out var velocity, out var angular,
-                    ignoreInactiveLayers: e.MotionMode == RootMotionMode.Compute && e.Animator.isHuman)) return RootMotionStep.Unknown;
+                    genericBaseOnly: ReferenceEquals(e.GenericMotionController, this))) return RootMotionStep.Unknown;
                 motion = RootMotionStep.FromVelocities(e.Animator, into.DeltaTime, velocity, angular);
             }
             motion.RootUnanimated = RootAnimation.Channels(e, out int pos, out int rot)

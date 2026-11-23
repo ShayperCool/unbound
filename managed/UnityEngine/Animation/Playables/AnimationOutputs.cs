@@ -351,6 +351,8 @@ namespace Unbound.Runtime.Playables
         internal bool UsesMeasuredLayerJobRoot;
         internal PlayableOutputData ScriptedJobOutput;
         internal ControllerKind AdditiveBodyController;
+        /// <summary>The sole explicit controller output whose generic base supplies this evaluation's movement.</summary>
+        internal ControllerKind GenericMotionController;
         bool m_ExplicitEvaluation, m_CanMoveDuringJob, m_JobInterrupted;
         internal bool UsesDefaultHumanJobPose;
         AnimatorRootMotion? m_JobHumanStep;
@@ -406,6 +408,7 @@ namespace Unbound.Runtime.Playables
             e.m_ExplicitEvaluation = false;
             e.ScriptedJobOutput = null;
             e.AdditiveBodyController = null;
+            e.GenericMotionController = null;
             e.m_CanMoveDuringJob = e.m_JobInterrupted = false;
             e.m_JobHumanStep = null;
             e.OutputWeight = 1f;
@@ -899,7 +902,7 @@ namespace Unbound.Runtime.Playables
             var result = AnimStream.Rent(bindings);
             var evaluatedPlayer = animator.m_Player;
             var withController = evaluatedPlayer != null && animator.isActiveAndEnabled;
-            e.MotionMode = MotionModeOf(animator, outputs, e.m_ExplicitEvaluation);
+            e.MotionMode = e.MotionModeOf(animator, outputs);
             motion = RootMotionStep.Zero;
             motionDeltaTime = (float)outputs[0].Dt;
             if (withController)
@@ -1059,9 +1062,9 @@ namespace Unbound.Runtime.Playables
         /// base clip uses generic motion even if the asset contains unused humanoid clips.
         /// A direct explicit manual output of a mirrored clip, optionally with a single job,
         /// uses the same root-motion sampler in the measured context. Other graph shapes warn.</summary>
-        static RootMotionMode MotionModeOf(Animator animator, List<(PlayableOutputData Output, double Dt, bool Seek)> outputs,
-            bool explicitEvaluation)
+        RootMotionMode MotionModeOf(Animator animator, List<(PlayableOutputData Output, double Dt, bool Seek)> outputs)
         {
+            GenericMotionController = null;
             bool requested = animator.m_ApplyRootMotion || MoveCallbacks.Any(animator);
             if (!animator.isHuman) return requested ? RootMotionMode.Compute : RootMotionMode.Zero;
             if (animator.m_Player == null && outputs.Count == 1 && AnimationOutputs.ActiveCount(animator) == 1)
@@ -1074,14 +1077,17 @@ namespace Unbound.Runtime.Playables
                     // Animation jobs pass their input's humanoid motion on (6000.0.71f1,
                     // tests/projects/humanoid stream.*).
                     var source = BelowJobs(o.Source);
-                    if (HumanMotionClip(source) || requested && CanMoveMirroredClip(animator, o, source, explicitEvaluation))
+                    if (HumanMotionClip(source) || requested && CanMoveMirroredClip(animator, o, source, m_ExplicitEvaluation))
                         return RootMotionMode.Human;
                     // A controller's current generic base can move the Animator even when the asset
                     // also contains humanoid clips (6000.0.71f1, humanoid genericController.*).
                     if (o.Source.Kind is ControllerKind controller && !o.Source.HasConnectedOutput())
                     {
-                        if (CanMoveGenericController(animator, o, controller, explicitEvaluation))
+                        if (CanMoveGenericController(animator, o, controller, m_ExplicitEvaluation))
+                        {
+                            GenericMotionController = controller;
                             return requested ? RootMotionMode.Compute : RootMotionMode.GenericControllerWithoutRootMotion;
+                        }
                         if (controller.HasHumanClips) return RootMotionMode.Human;
                     }
                     // Generic root curves alone move a humanoid as a generic Animator's, by its
@@ -1145,7 +1151,7 @@ namespace Unbound.Runtime.Playables
         static bool CanMoveGenericController(Animator animator, PlayableOutputData output, ControllerKind controller,
             bool explicitEvaluation) =>
             Compat.HumanPlayableGenericControllerMotion && explicitEvaluation && output.Graph.UpdateMode == DirectorUpdateMode.Manual
-            && controller.Player?.HasSingleGenericBase == true && animator.updateMode == AnimatorUpdateMode.Normal
+            && controller.Player?.HasGenericBaseMotion == true && animator.updateMode == AnimatorUpdateMode.Normal
             && !MoveCallbacks.Any(animator) && animator.GetComponent<Rigidbody>() == null && animator.GetComponent<CharacterController>() == null;
 
         internal static bool HumanMotionClip(PlayableNode node, bool allowMirrored = false) => node != null && !node.Destroyed

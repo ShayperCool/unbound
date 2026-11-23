@@ -99,6 +99,7 @@ namespace UnityEngine.Tests
         [InlineData(TestRelease.Measured, "generic", true, true)]
         [InlineData(TestRelease.Measured, "inactiveHuman", true, true)]
         [InlineData(TestRelease.Measured, "zeroAdditive", true, true)]
+        [InlineData(TestRelease.Measured, "activeAdditive", true, true)]
         [InlineData(TestRelease.Measured, "generic", false, true)]
         [InlineData(TestRelease.Unmeasured, "generic", true, false)]
         public void ADirectControllerPlayableUsesTheContributingGenericBase(
@@ -120,11 +121,12 @@ namespace UnityEngine.Tests
             machine.defaultState = machine.AddState("Generic");
             machine.defaultState.motion = clip;
             if (shape == "inactiveHuman") machine.AddState("Humanoid").motion = humanClip;
-            if (shape == "zeroAdditive")
+            if (shape.EndsWith("Additive", StringComparison.Ordinal))
             {
                 controller.AddLayer("Additive");
                 var layers = controller.layers;
                 layers[1].blendingMode = AnimatorLayerBlendingMode.Additive;
+                layers[1].defaultWeight = shape == "activeAdditive" ? .65f : 0f;
                 var additive = layers[1].stateMachine;
                 additive.defaultState = additive.AddState("Humanoid");
                 additive.defaultState.motion = humanClip;

@@ -643,7 +643,7 @@ namespace Unbound.Runtime.Humanoid
         /// part keeps the feet below for the feet pivot (measured, tests/projects/humanoid).</summary>
         public static void CombineLayer(ref HumanRootMotionSample below, ref bool any, ReadOnlySpan<HumanRootMotionSample> samples,
             ReadOnlySpan<Trs> differences, ReadOnlySpan<float> weights, bool additive, float layerWeight, bool[] parts,
-            bool additiveOverEmptyBase = false)
+            bool additiveOverNoHumanBase = false)
         {
             if (additive ? differences.Length == 0 : samples.Length == 0) return;
             if (layerWeight <= 0f) return;
@@ -653,7 +653,7 @@ namespace Unbound.Runtime.Humanoid
             {
                 if (!any)
                 {
-                    if (!additiveOverEmptyBase)
+                    if (!additiveOverNoHumanBase)
                     {
                         Unbound.Runtime.Stubs.Ignored("Animator additive humanoid body over no humanoid clip",
                             "leaves out the additive body's placement in this unmeasured layer setup");

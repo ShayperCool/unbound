@@ -192,7 +192,7 @@ namespace Unbound.Runtime
         /// own frame: each layer's states sum their positions and blend their rotations by weight
         /// (a holding state takes the layer's last step, see <see cref="HoldWeight"/>), then the
         /// layers add their positions by layer weight and compose their rotations.</summary>
-        (Vector3 Delta, Quaternion Turn) ContributionMotion(int pos, int rot)
+        (Vector3 Delta, Quaternion Turn) ContributionMotion(int pos, int rot, bool baseLayerOnly = false)
         {
             var delta = Vector3.zero;
             var turn = Quaternion.identity;
@@ -207,6 +207,7 @@ namespace Unbound.Runtime
             Array.Clear(m_RootDeltas);
             foreach (var (layer, layerIndex, run, clip, weight, _) in m_Contributions)
             {
+                if (baseLayerOnly && layerIndex != 0) continue;
                 // A layer of weight 0 moves nothing; its step only matters to a state that may hold it.
                 if (weight <= 0f || (!m_MayHold && layerIndex > 0 && layer.Evaluated <= 0f)) continue;
                 var bound = Bindings.Bind(clip);
@@ -215,7 +216,8 @@ namespace Unbound.Runtime
                     ClipSampling.StateClipNormalized(run.Normalized, clip.length) + offset, pos, rot);
                 AddRootStep(layerIndex, d, q, weight);
             }
-            for (int i = 0; i < Layers.Length; i++)
+            int layerCount = baseLayerOnly ? 1 : Layers.Length;
+            for (int i = 0; i < layerCount; i++)
             {
                 var layer = Layers[i];
                 float hold = HoldWeight(i, out bool frozen);
@@ -296,7 +298,7 @@ namespace Unbound.Runtime
         /// the root motion convention of <see cref="Animator.CaptureRootMotionPose"/>. False when
         /// humanoid clips play: their stream root motion is not computed.</summary>
         internal bool StreamRootMotion(float deltaTime, out Vector3 start, out Quaternion startRotation,
-            out Vector3 velocity, out Vector3 angularVelocity, bool ignoreInactiveLayers = false)
+            out Vector3 velocity, out Vector3 angularVelocity, bool genericBaseOnly = false)
         {
             velocity = Vector3.zero;
             angularVelocity = Vector3.zero;
@@ -307,16 +309,18 @@ namespace Unbound.Runtime
             start = parent == null ? t.localPosition
                 : parent.position + parent.rotation * Vector3.Scale(parent.lossyScale, t.localPosition);
             startRotation = parent == null ? t.localRotation : parent.rotation * t.localRotation;
-            foreach (var (layer, layerIndex, _, clip, weight, _) in m_Contributions)
-                if ((!ignoreInactiveLayers || weight > 0f && (layerIndex == 0 || layer.Evaluated > 0f))
-                    && clip.HasHumanCurves && !clip.BodyMovesRoot(animator)) return false;
+            if (!genericBaseOnly)
+            {
+                foreach (var (_, _, _, clip, _, _) in m_Contributions)
+                    if (clip.HasHumanCurves && !clip.BodyMovesRoot(animator)) return false;
+            }
             int pos = Bindings.ChannelOf(t, "position"), rot = Bindings.ChannelOf(t, "rotation");
             if (!animator.m_ApplyRootMotion && !MoveCallbacks.Any(animator))
             {
                 KeepRootSteps(pos, rot);
                 return true;
             }
-            var (delta, turn) = ContributionMotion(pos, rot);
+            var (delta, turn) = ContributionMotion(pos, rot, genericBaseOnly);
             RootVelocities(startRotation * Vector3.Scale(RootMotionScale(t), delta), turn, startRotation, deltaTime,
                 out velocity, out angularVelocity);
             return true;
@@ -332,9 +336,9 @@ namespace Unbound.Runtime
             return false;
         }
 
-        /// <summary>A base-layer clip without a humanoid pose, playing without a transition or an
-        /// upper layer contributing to its pose. Unused clips do not determine its motion type.</summary>
-        internal bool HasSingleGenericBase
+        /// <summary>Only the generic base clip contributes root motion. An additive humanoid clip
+        /// above it can still change the pose. Unused clips do not determine the motion type.</summary>
+        internal bool HasGenericBaseMotion
         {
             get
             {
@@ -344,7 +348,14 @@ namespace Unbound.Runtime
                     || layer.Completed != null || layer.Current == null
                     || MotionOf(layer.Def, layer.Current.Def) is not AnimationClip { HasHumanCurves: false, legacy: false }) return false;
                 for (int i = 1; i < Layers.Length; i++)
-                    if (Layers[i].Evaluated != 0f) return false;
+                {
+                    var upper = Layers[i];
+                    if (upper.Evaluated == 0f) continue;
+                    if (i != 1 || Layers.Length != 2 || upper.Evaluated > 1f || !upper.Def.Additive || upper.Def.SyncedLayerIndex >= 0
+                        || upper.Next != null || upper.Completed != null || upper.Current == null
+                        || MotionOf(upper.Def, upper.Current.Def) is not AnimationClip { HasHumanCurves: true, legacy: false })
+                        return false;
+                }
                 return true;
             }
         }
@@ -729,7 +740,7 @@ namespace Unbound.Runtime
         /// anything: what an AnimatorControllerPlayable's stream carries to its output. False
         /// when no humanoid clip plays.</summary>
         internal bool BlendHumanMotion(Unbound.Runtime.Humanoid.AnimatorHuman human,
-            out Unbound.Runtime.Humanoid.HumanRootMotionSample blended, bool allowAdditiveOverEmptyBase)
+            out Unbound.Runtime.Humanoid.HumanRootMotionSample blended, bool allowAdditiveOverEmptyBase, bool allowAdditiveOverGenericBase = false)
         {
             blended = default;
             bool any = false;
@@ -748,7 +759,9 @@ namespace Unbound.Runtime
                     {
                         // Additive layers leave the root motion alone; only their body differences apply.
                         if (!Unbound.Runtime.Humanoid.HumanRootMotion.HasRoot(clip.HumanPresent)) continue;
-                        m_HumanBodyDifferences.Add(human.AdditiveBodyDifference(clip, clip.HumanClipMotion, HumanInput(run, clip)));
+                        // With a generic base and root motion off the additive body's motion wraps with its clip time.
+                        m_HumanBodyDifferences.Add(human.AdditiveBodyDifference(clip, clip.HumanClipMotion, HumanInput(run, clip),
+                            extendCycles: !allowAdditiveOverGenericBase || m_Animator.m_ApplyRootMotion));
                         m_HumanWeights.Add(weight);
                         continue;
                     }
@@ -769,17 +782,18 @@ namespace Unbound.Runtime
                 float layerWeight = i == 0 ? 1f : Layers[i].Evaluated;
                 if (!additive) layerWeight *= FillLayer(i);
                 var mask = Layers[i].Def.Mask;
-                bool additiveOverEmptyBase = allowAdditiveOverEmptyBase && Compat.HumanAdditiveBodyOverEmptyBase && additive && !any
+                bool additiveOverNoHumanBase = additive && !any
                     && i == 1 && Layers.Length == 2 && !Layers[0].Def.Additive
                     && Layers[0].Def.SyncedLayerIndex < 0 && Layers[0].Next == null
-                    && EmptyWithDefaults(Layers[0], Layers[0].Current)
+                    && (allowAdditiveOverGenericBase || allowAdditiveOverEmptyBase && Compat.HumanAdditiveBodyOverEmptyBase
+                        && EmptyWithDefaults(Layers[0], Layers[0].Current))
                     && Layers[i].Def.SyncedLayerIndex < 0 && Layers[i].Next == null
                     && Layers[i].Current is { } current && MotionOf(Layers[i].Def, current.Def) is AnimationClip;
                 Unbound.Runtime.Humanoid.HumanRootMotion.CombineLayer(ref blended, ref any,
                     System.Runtime.InteropServices.CollectionsMarshal.AsSpan(m_HumanSamples),
                     System.Runtime.InteropServices.CollectionsMarshal.AsSpan(m_HumanBodyDifferences),
                     System.Runtime.InteropServices.CollectionsMarshal.AsSpan(m_HumanWeights), additive, layerWeight,
-                    mask != null && mask.MasksHumanoidParts ? mask.m_HumanoidParts : null, additiveOverEmptyBase);
+                    mask != null && mask.MasksHumanoidParts ? mask.m_HumanoidParts : null, additiveOverNoHumanBase);
             }
             return any;
         }

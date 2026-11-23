@@ -206,9 +206,11 @@ namespace Unbound.Runtime.Humanoid
         /// <summary>An additive layer clip's body difference at a state's time: its body (RootX)
         /// relative to the body of its additive reference pose (the reference clip at the reference
         /// time, else the clip's first frame), reference⁻¹ · body.</summary>
-        internal Trs AdditiveBodyDifference(AnimationClip clip, HumanClipMotion motion, in HumanClipMotionInput input)
+        internal Trs AdditiveBodyDifference(AnimationClip clip, HumanClipMotion motion, in HumanClipMotionInput input,
+            bool extendCycles = true)
         {
             float time = HumanRootMotion.ClipTime(motion, input.Time, input.Speed, input.CycleOffset, out float cycle);
+            if (!extendCycles) cycle = 0f;
             clip.SampleHuman(time, m_Current);
             var body = HumanRootMotion.ReadRoot(m_Current, clip.HumanPresent);
             if (motion.HasRootCurves && motion.LoopTime && (motion.Settings.LoopBlend || cycle != 0f))
