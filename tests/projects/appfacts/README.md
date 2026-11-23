@@ -134,11 +134,15 @@ recording stubs before their writes to reproduce the former process-start race.
 
 ## Sheriff status (main e541da0ea, 2026-11-16)
 
-30 of 555 values differ, all recorded in `docs/COMPATIBILITY_GAPS.md` (appfacts row and the
+30 of 555 values differed, all recorded in `docs/COMPATIBILITY_GAPS.md` (appfacts row and the
 rows it names): stack-trace text and byte counts (10), component/GameObject memory (11),
 materials (2), sprites (1), one-sample clips (2) and texture size/creation values (4). Most
-values are facts of the Linux capture's machine; on macOS many more differ by design. The four full-buffer absolute-path byte counts were later measured again in two Linux Editor
-projects with different path lengths, including a non-ASCII directory name. The raw counts
+values are facts of the Linux capture's machine.
+
+## Current Linux status
+
+The four full-buffer absolute-path byte counts were measured in two Linux Editor projects
+with different path lengths, including a non-ASCII directory name. The raw counts
 were 613 and 682. Both became 310 after replacing the path in the reported byte counts,
 and every other reference row stayed byte-identical. The capture keeps the raw returned
 count, sentinel-derived written count and signed UTF-8 adjustment in `stack-counts.jsonl`.
