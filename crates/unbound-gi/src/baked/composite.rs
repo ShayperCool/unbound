@@ -55,17 +55,17 @@ pub fn composite(buffers: &Buffers, backface_tolerance: f32, padding: u32) -> Ve
         texel[3] = 1.0;
     }
     // The texels whose light does not stand (more of their rays met back faces than the
-    // tolerance allows): given their neighbours' light.
+    // tolerance allows): given their neighbours' light. (A group of them that no texel holding
+    // its own light reaches keeps its own light, and holds none for the rings around it: not
+    // measured.)
     let invalid = 1.0 - backface_tolerance;
     let mut holds: Vec<bool> = (0..texels)
         .map(|k| buffers.used[k] && buffers.validity.is_none_or(|v| !(v[k] > invalid)))
         .collect();
-    let replaced: Vec<usize> = (0..texels)
-        .filter(|&k| buffers.used[k] && !holds[k])
-        .collect();
+    let replaced: Vec<bool> = (0..texels).map(|k| buffers.used[k] && !holds[k]).collect();
     spread(&mut out, &mut holds, width, height, replaced, usize::MAX);
     // The texels around the charts, `padding` rings of them.
-    let around: Vec<usize> = (0..texels).filter(|&k| !buffers.used[k]).collect();
+    let around: Vec<bool> = buffers.used.iter().map(|&u| !u).collect();
     spread(
         &mut out,
         &mut holds,
@@ -77,29 +77,46 @@ pub fn composite(buffers: &Buffers, backface_tolerance: f32, padding: u32) -> Ve
     out
 }
 
+/// The texels beside texel `k` (the eight around it, within the lightmap).
+fn beside(k: usize, width: usize, height: usize) -> impl Iterator<Item = usize> {
+    let (x, y) = ((k % width) as isize, (k / width) as isize);
+    AROUND.into_iter().filter_map(move |(dx, dy)| {
+        let (nx, ny) = (x + dx, y + dy);
+        (nx >= 0 && ny >= 0 && nx < width as isize && ny < height as isize)
+            .then(|| ny as usize * width + nx as usize)
+    })
+}
+
 /// Gives the `waiting` texels light, ring by ring (at most `rings` of them): in each, every
 /// waiting texel beside a texel that holds light takes the mean of those neighbours' light as
-/// it was before the ring, and then holds light itself.
+/// it was before the ring, and then holds light itself. Each ring looks only at the texels
+/// beside the last one's (the first: beside a texel that holds light).
 fn spread(
     out: &mut [[f32; 4]],
     holds: &mut [bool],
     width: usize,
     height: usize,
-    mut waiting: Vec<usize>,
+    waiting: Vec<bool>,
     rings: usize,
 ) {
+    // Whether a texel is in a ring already (the one being made or the next).
+    let mut queued = vec![false; waiting.len()];
+    let mut ring: Vec<usize> = (0..waiting.len())
+        .filter(|&k| waiting[k] && beside(k, width, height).any(|n| holds[n]))
+        .collect();
+    for &k in &ring {
+        queued[k] = true;
+    }
+    let mut taken: Vec<(usize, [f32; 3])> = Vec::new();
     for _ in 0..rings {
-        let mut taken = Vec::new();
-        waiting.retain(|&k| {
-            let (x, y) = ((k % width) as isize, (k / width) as isize);
+        if ring.is_empty() {
+            break;
+        }
+        taken.clear();
+        for &k in &ring {
             let mut sum = [0.0f32; 3];
             let mut count = 0u32;
-            for (dx, dy) in AROUND {
-                let (nx, ny) = (x + dx, y + dy);
-                if nx < 0 || ny < 0 || nx >= width as isize || ny >= height as isize {
-                    continue;
-                }
-                let n = ny as usize * width + nx as usize;
+            for n in beside(k, width, height) {
                 if holds[n] {
                     for c in 0..3 {
                         sum[c] += out[n][c];
@@ -107,18 +124,20 @@ fn spread(
                     count += 1;
                 }
             }
-            if count == 0 {
-                return true;
-            }
             taken.push((k, sum.map(|s| s / count as f32)));
-            false
-        });
-        if taken.is_empty() {
-            break;
         }
-        for (k, light) in taken {
+        for &(k, light) in &taken {
             out[k] = [light[0], light[1], light[2], 1.0];
             holds[k] = true;
+        }
+        ring.clear();
+        for &(k, _) in &taken {
+            for n in beside(k, width, height) {
+                if waiting[n] && !queued[n] {
+                    queued[n] = true;
+                    ring.push(n);
+                }
+            }
         }
     }
 }
@@ -177,6 +196,30 @@ mod tests {
         // first, the fourth's as the first ring gave it.
         let red: Vec<f32> = out.iter().map(|t| t[0]).collect();
         assert_eq!(red, vec![2.0, 4.0, 6.0, 6.0, 6.0]);
+    }
+
+    #[test]
+    fn back_face_texels_no_texel_reaches_keep_their_light_and_hold_none_for_the_padding() {
+        // A chart of two texels whose rays all met back faces, with an unused texel beside it.
+        let used = [true, true, false];
+        let direct = lit(&[1.0, 2.0, 0.0]);
+        let out = composite(
+            &Buffers {
+                width: 3,
+                height: 1,
+                used: &used,
+                direct: &direct,
+                indirect: None,
+                environment: None,
+                validity: Some(&[1.0, 1.0, 0.0]),
+            },
+            0.9,
+            2,
+        );
+        assert_eq!(
+            out,
+            vec![[1.0, 1.0, 1.0, 1.0], [2.0, 2.0, 2.0, 1.0], [0.0; 4]]
+        );
     }
 
     #[test]
