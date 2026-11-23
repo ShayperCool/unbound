@@ -28,6 +28,32 @@ namespace UnityEngine.Tests
             return order;
         }
 
+        public sealed class DiscreteHolder : MonoBehaviour
+        {
+            [DiscreteEvaluation] public int counter;
+        }
+
+        [Fact]
+        public void AScriptsDiscreteFieldStillStepsBesideAnEngineDiscreteCurve()
+        {
+            var go = new GameObject("mixed");
+            var renderer = go.AddComponent<SpriteRenderer>();
+            var holder = go.AddComponent<DiscreteHolder>();
+            var animator = go.AddComponent<Animator>();
+            var clip = new AnimationClip();
+            var keys = new AnimationCurve(new Keyframe(0f, System.BitConverter.Int32BitsToSingle(1)), new Keyframe(1f, System.BitConverter.Int32BitsToSingle(2)));
+            AnimationUtility.SetEditorCurve(clip, EditorCurveBinding.DiscreteCurve("", typeof(SpriteRenderer), "m_SortingOrder"), keys);
+            AnimationUtility.SetEditorCurve(clip, EditorCurveBinding.DiscreteCurve("", typeof(DiscreteHolder), "counter"), keys);
+            var graph = PlayableGraph.Create("mixed");
+            graph.SetTimeUpdateMode(DirectorUpdateMode.Manual);
+            AnimationPlayableOutput.Create(graph, "out", animator).SetSourcePlayable(AnimationClipPlayable.Create(graph, clip));
+            graph.Evaluate(0f);
+            graph.Evaluate(1f);
+            Assert.Equal((0, 2), (renderer.sortingOrder, holder.counter));
+            graph.Destroy();
+            Object.DestroyImmediate(go);
+        }
+
         [Fact]
         public void AnEngineComponentsDiscreteCurveAnimatesNothing()
         {

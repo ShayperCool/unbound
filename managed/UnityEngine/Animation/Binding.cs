@@ -626,14 +626,16 @@ namespace Unbound.Runtime
             return false;
         }
 
-        /// <summary>A discrete float curve of an engine component's property: it animates nothing,
-        /// whether its keys are the integer's bits or numbers (matches the Unity 6000.0.71f1 Editor,
-        /// tests/projects/enginediscrete: engine components offer discrete bindings for object
-        /// references only). Scripts' discrete fields bind (FieldGroup); the Animator's own curves
-        /// are left as they are (unmeasured).</summary>
-        static bool EngineDiscrete(ClipCurve curve)
+        /// <summary>A discrete float curve of an engine component's property as an Animator's
+        /// outputs play it: it animates nothing, whether its keys are the integer's bits or numbers
+        /// (matches the Unity 6000.0.71f1 Editor, tests/projects/enginediscrete: engine components
+        /// offer discrete bindings for object references only). Scripts' discrete fields bind
+        /// (FieldGroup); the Animator's own curves, the legacy Animation component and
+        /// AnimationClip.SampleAnimation (curves only, which treat discrete curves otherwise) keep
+        /// binding it (unmeasured).</summary>
+        bool EngineDiscrete(ClipCurve curve)
         {
-            if (curve.Flags != 1) return false;
+            if (CurvesOnly || curve.Flags != 1) return false;
             var type = curve.Binding.ResolveType();
             return type != null && typeof(Component).IsAssignableFrom(type)
                 && !typeof(MonoBehaviour).IsAssignableFrom(type) && type != typeof(Animator);

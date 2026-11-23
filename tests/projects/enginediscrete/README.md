@@ -20,6 +20,10 @@ A discrete curve of an engine component's property animates nothing, whatever it
 curve on `m_SortingOrder` sets the rounded value; float curves on the properties the Editor does not
 offer change nothing.
 
+Unmeasured, and left binding as before: the legacy Animation component and
+`AnimationClip.SampleAnimation` (which treat discrete curves otherwise), and the Animator's own
+curves.
+
 Known residuals (`residuals.json`): Unbound animates any serialized field of an engine component,
 also those the Editor does not offer, and its `GetAnimatableBindings` lists no object-reference
 bindings and not `m_SortingOrder`.
