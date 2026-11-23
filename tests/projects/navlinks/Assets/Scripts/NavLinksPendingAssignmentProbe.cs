@@ -41,6 +41,7 @@ public partial class NavLinksProbe
         yield return RecordResubmissionControls(local);
         yield return RecordSearchFilterControls(local);
         yield return RecordPartialRepairControls(local);
+        yield return RecordAreaMaskRepairControls(local);
         Finish(0);
     }
 
@@ -299,6 +300,65 @@ public partial class NavLinksProbe
             yield return null;
         }
         NavMesh.pathfindingIterationsPerFrame = prior;
+        DestroyImmediate(first.gameObject);
+        DestroyImmediate(alternate.gameObject);
+    }
+
+    IEnumerator RecordAreaMaskRepairControls(Lane lane)
+    {
+        var first = AddLink(lane, new Vector3(-2f, 0f, 0f), new Vector3(2f, 0f, 0f), area: 4, cost: 1);
+        var alternate = AddLink(lane, new Vector3(-2f, 0f, 2f), new Vector3(2f, 0f, 2f), area: 5, cost: 7);
+        int previousBudget = NavMesh.pathfindingIterationsPerFrame;
+        var cases = new (string Name, bool Alternate, bool Assigned, bool Established, bool AutoRepath, int Area)[]
+        {
+            ("disconnected",          false, false, false, true,  4),
+            ("disconnectedAssigned",  false, true,  false, true,  4),
+            ("established",           true,  false, true,  true,  4),
+            ("establishedNoAuto",     true,  false, true,  false, 4),
+            ("disconnectedNoAuto",    false, false, true,  false, 4),
+            ("unrelated",             true,  false, false, true,  6),
+        };
+        foreach (var test in cases)
+        {
+            alternate.activated = test.Alternate;
+            yield return null;
+            var agent = Agent(lane, "a", new Vector3(-8f, 0f, -0.3f), null, a =>
+            {
+                a.speed = 0f;
+                a.autoRepath = test.AutoRepath;
+                a.obstacleAvoidanceType = ObstacleAvoidanceType.NoObstacleAvoidance;
+            });
+            yield return null;
+            NavMesh.pathfindingIterationsPerFrame = 1;
+            SetTestDestination(agent, lane.O + new Vector3(8f, 0f, -0.3f));
+            yield return null;
+            if (!agent.pathPending) throw new InvalidOperationException("search did not pend");
+            if (!test.Established) agent.areaMask &= ~(1 << test.Area);
+            if (test.Assigned)
+            {
+                var path = new NavMeshPath();
+                if (!agent.CalculatePath(lane.O + new Vector3(-5f, 0f, 0.7f), path) || !agent.SetPath(path))
+                    throw new InvalidOperationException("assignment failed");
+            }
+            for (int frame = 0; frame <= 12; frame++)
+            {
+                if (test.Established && frame == 6)
+                {
+                    if (agent.pathPending || !agent.nextOffMeshLinkData.valid)
+                        throw new InvalidOperationException("expected an established corridor");
+                    agent.areaMask &= ~(1 << test.Area);
+                }
+                var link = agent.nextOffMeshLinkData;
+                Line("maskRepair." + test.Name, "a", frame,
+                    "\"pending\":" + B(agent.pathPending) + ",\"path\":" + B(agent.hasPath) + ",\"stale\":" + B(agent.isPathStale)
+                    + ",\"status\":" + Text(agent.pathStatus.ToString()) + ",\"destination\":" + V(agent.destination)
+                    + ",\"end\":" + V(agent.pathEndPosition) + ",\"valid\":" + B(link.valid) + ",\"link\":" + V(link.startPos));
+                yield return null;
+            }
+            DestroyImmediate(agent.gameObject);
+            yield return null;
+        }
+        NavMesh.pathfindingIterationsPerFrame = previousBudget;
         DestroyImmediate(first.gameObject);
         DestroyImmediate(alternate.gameObject);
     }
