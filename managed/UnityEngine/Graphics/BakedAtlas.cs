@@ -362,11 +362,11 @@ namespace UnityEngine
         /// renderer or light of a prefab instance (how the lighting data names it is not
         /// measured: its IDs combine the instance's and the prefab's), part of their light left
         /// out or approximated (said), no indirect light made, a light whose baking output is
-        /// not measured (a mixed light without shadows outside the Shadowmask Lighting Mode).</summary>
+        /// not measured (a mixed light without shadows in the Subtractive Lighting Mode).</summary>
         internal static string ImagesRefused(bool prefabs, bool approximated, bool indirectMade, bool lightsMeasured) =>
             prefabs ? "a baked renderer or light of a prefab instance: how the lighting data names it is not measured"
             : approximated || !indirectMade ? "it did not make all of the lightmaps' light (said)"
-            : !lightsMeasured ? "a mixed light without shadows outside the Shadowmask Lighting Mode: what the lighting data keeps of it is not measured"
+            : !lightsMeasured ? "a mixed light without shadows in the Subtractive Lighting Mode: what the lighting data keeps of it is not measured"
             : null;
 
         /// <summary>Whether the bake under way leaves out or approximates part of its light (a

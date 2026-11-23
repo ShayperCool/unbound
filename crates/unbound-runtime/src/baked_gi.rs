@@ -913,8 +913,9 @@ fn bake(request: BakeRequest, buffers: Option<&Path>) -> Result<Json> {
                 let mixed = light.mode == Mode::Mixed;
                 let unshadowed = mixed && !light.casts_shadows;
                 let mode = if unshadowed { 0 } else { request.mixed_mode };
-                // (Seen in the Shadowmask Lighting Mode only.)
-                let measured = !unshadowed || request.mixed_mode == 2;
+                // (Seen in the Shadowmask and Baked Indirect Lighting Modes: bakedbuffers Masks,
+                // MasksIndirect, MasksBright; not in Subtractive.)
+                let measured = !unshadowed || request.mixed_mode != 1;
                 (data.file_id, json!({
                     "fileId": data.file_id, "bakeType": if mixed { 1 } else { 2 }, "mixedMode": mode,
                     "channel": channel.map_or(-1, |c| c as i32), "probeIndex": index,
@@ -1775,8 +1776,8 @@ mod tests {
     }
 
     #[test]
-    fn a_mixed_light_without_shadows_is_measured_in_the_shadowmask_mode_only() {
-        for (mode, measured) in [(0u8, false), (2, true)] {
+    fn a_mixed_light_without_shadows_is_not_measured_in_the_subtractive_mode() {
+        for (mode, measured) in [(0u8, true), (1, false), (2, true)] {
             let mut r = request(
                 vec![quad_mesh(&UNIT, &BACK)],
                 vec![renderer("quad", 1, 0, 1.0, 0.0)],
