@@ -22,7 +22,7 @@ namespace Unbound.Runtime
         const string MeshParameter = "mesh", SubMeshMaskParameter = "subMeshMask";
 
         /// <summary>The submeshes a mask can name: its bits.</summary>
-        const int MaskBits = 32;
+        internal const int MaskBits = 32;
 
         /// <summary>The words describing a submesh to the arguments' kernel: its index count,
         /// first index and base vertex.</summary>

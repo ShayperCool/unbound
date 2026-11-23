@@ -1052,6 +1052,88 @@ namespace UnityEngine.Tests
             Assert.Equal("the mesh output system 'Mesh' of 2 tasks", VisualEffect.Unsupported(Data(2, true)));
         }
 
+        /// <summary>An effect of one mesh output system: its mesh, transform and mask values, and
+        /// two exposed shader properties (a colour and a vector), all given the same value.</summary>
+        static VisualEffectAsset SingleMesh(Mesh mesh, Matrix4x4 transform, uint mask, Vector4 value, Object processor)
+        {
+            var expressions = new[] { Value(VFXValueType.Mesh), Value(VFXValueType.Matrix4x4), Value(VFXValueType.Uint32), Value(VFXValueType.Float4), Value(VFXValueType.Float4) };
+            var values = new VFXExpressionValueContainerDesc[]
+            {
+                new VFXExpressionObjectValueContainerDesc<Mesh> { expressionIndex = 0, instanceID = mesh.GetInstanceID() },
+                Constant(1, transform), Constant(2, mask), Constant(3, value), Constant(4, value),
+            };
+            var system = new VFXEditorSystemDesc
+            {
+                name = "Mesh", type = VFXSystemType.Mesh,
+                tasks = new[] { new VFXEditorTaskDesc { type = VFXTaskType.Output, values = new[] { new VFXMapping("_Tint", 3), new VFXMapping("_Offset", 4) } } },
+                values = new[] { new VFXMapping("mesh", 0), new VFXMapping("transform", 1), new VFXMapping("subMeshMask", 2) },
+            };
+            var asset = VisualEffectAsset.Create();
+            asset.m_Data = Data(expressions, values, new[] { system }, new[]
+            {
+                new VFXEventDesc { name = "OnPlay", startSystems = Array.Empty<uint>(), stopSystems = Array.Empty<uint>(), initSystems = Array.Empty<uint>() },
+            });
+            asset.m_Data.Processors = new[] { new[] { processor } };
+            return asset;
+        }
+
+        [Fact]
+        public void AMeshOutputSystemDrawsItsMeshAtItsTransformWithItsProperties()
+        {
+            var shader = UnityEditor.ShaderUtil.CreateShaderAsset("Shader \"Tests/VfxSingleMesh\" { Properties { _Tint (\"Tint\", Color) = (1,1,1,1) _Offset (\"Offset\", Vector) = (0,0,0,0) } SubShader { Pass { } } }");
+            var material = new Material(shader);
+            var mesh = new Mesh { vertices = new[] { Vector3.zero, Vector3.right, Vector3.up }, subMeshCount = 3 };
+            for (int i = 0; i < 3; i++) mesh.SetTriangles(new[] { 0, 1, 2 }, i);
+            var transform = Matrix4x4.TRS(new Vector3(1f, 2f, 3f), Quaternion.Euler(10f, 20f, 30f), new Vector3(2f, 1f, 0.5f));
+            var value = new Vector4(0.5f, 0.25f, 1f, 1f);
+            using var warnings = new Warnings();
+            // A mask of the first and third submeshes, and a bit past the mesh's.
+            var effect = Running(SingleMesh(mesh, transform, 0b1000_0101u, value, material));
+            var eye = new GameObject("eye").AddComponent<Camera>();
+            VisualEffect lost = null;
+            try
+            {
+                Assert.Empty(warnings.Messages);
+                effect.transform.SetPositionAndRotation(new Vector3(5f, 0f, 0f), Quaternion.Euler(0f, 45f, 0f));
+                effect.transform.localScale = new Vector3(1f, 2f, 1f);
+                effect.UpdateEffect(Thirtieth);
+                Assert.True(effect.TryGetComponent<VFXRenderer>(out var renderer));
+                var camera = new FrameBuilder.CameraContext { Camera = eye, Position = new Vector3(0f, 0f, -10f), Forward = Vector3.forward };
+                var draws = new List<FrameBuilder.DrawItem>();
+                renderer.CollectDraws(camera, draws);
+                // One draw per submesh the mask names, in order, at the transform in the effect's space.
+                Assert.Equal(new[] { 0, 2 }, System.Linq.Enumerable.Select(draws, d => d.Submesh));
+                Assert.All(draws, d => Assert.Same(material, d.Material));
+                Assert.All(draws, d => Assert.Equal(effect.transform.localToWorldMatrix * transform, d.Model));
+                // The colour property is set as a colour, the vector as it is.
+                var expected = QualitySettings.activeColorSpace == ColorSpace.Linear ? ((Color)value).linear : (Color)value;
+                Assert.Equal((Vector4)expected, (Vector4)(Color)draws[0].Properties[Shader.PropertyToID("_Tint")]);
+                Assert.Equal(value, (Vector4)draws[0].Properties[Shader.PropertyToID("_Offset")]);
+                // Values that did not change are not set again: the same boxed values.
+                var tint = draws[0].Properties[Shader.PropertyToID("_Tint")];
+                draws.Clear();
+                renderer.CollectDraws(camera, draws);
+                Assert.Same(tint, draws[0].Properties[Shader.PropertyToID("_Tint")]);
+                Assert.Empty(warnings.Messages);
+                // A system whose shader was not imported draws nothing and says so once.
+                lost = Running(SingleMesh(mesh, transform, ~0u, value, shader));
+                lost.UpdateEffect(Thirtieth);
+                Assert.True(lost.TryGetComponent<VFXRenderer>(out var lostRenderer));
+                draws.Clear();
+                lostRenderer.CollectDraws(camera, draws);
+                Assert.Empty(draws);
+                Assert.Contains(warnings.Messages, m => m.Contains("an output of 'Mesh' is not drawn: its shader was not imported", StringComparison.Ordinal));
+            }
+            finally
+            {
+                Object.DestroyImmediate(effect.gameObject);
+                if (lost != null) Object.DestroyImmediate(lost.gameObject);
+                Object.DestroyImmediate(eye.gameObject);
+                Object.DestroyImmediate(material);
+                Object.DestroyImmediate(mesh);
+            }
+        }
+
         [Fact]
         public void AnOutputThatIsNotDrawnSaysSoOnceForItsAssetAndItsSystemStillRuns()
         {
