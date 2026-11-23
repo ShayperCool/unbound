@@ -68,6 +68,7 @@ BYTE_PAYLOAD_BYTES = {
 BYTE_RECORDS = ({'complete', BYTE_CASE + '.device', BYTE_CASE + '.release'}
                 | BYTE_CREATED | set(BYTE_PAYLOAD_BYTES))
 RESOLVE_CASES = 'rt.commandResolve'
+RESOLVE_DEVICES = ('opengl-resolve', 'opengl-resolve-linear')
 DEVICE = 'opengl'
 # This device's reference covers the added format/clear/feedback mechanisms. Older packed
 # UNorm async-to-float cases do not repeat on this device and have no canonical reference.
@@ -81,19 +82,21 @@ def device_cases():
     """The cases the device's reference was recorded with (None: every case)."""
     if DEVICE in BYTE_DEVICES:
         return BYTE_CASE
-    return {'opengl-resolve': RESOLVE_CASES, 'vulkan': VULKAN_CASES, 'metal': METAL_CASES}.get(DEVICE)
+    if DEVICE in RESOLVE_DEVICES:
+        return RESOLVE_CASES
+    return {'vulkan': VULKAN_CASES, 'metal': METAL_CASES}.get(DEVICE)
 
 
 def reference():
     if DEVICE == 'opengl':
         return reference_file(PROBE, 'jsonl')
-    if DEVICE in BYTE_DEVICES or DEVICE == 'opengl-resolve':
+    if DEVICE in BYTE_DEVICES or DEVICE in RESOLVE_DEVICES:
         return reference_root(PROBE)/f'{DEVICE}.jsonl'
     return reference_root(PROBE)/('vulkan-q58.jsonl' if DEVICE == 'vulkan' else 'metal.jsonl')
 
 
 def residuals():
-    if DEVICE in BYTE_DEVICES or DEVICE == 'opengl-resolve':
+    if DEVICE in BYTE_DEVICES or DEVICE in RESOLVE_DEVICES:
         return None
     return PROBE/('residuals.json' if DEVICE == 'opengl' else f'residuals-{DEVICE}.json')
 
@@ -103,6 +106,9 @@ def copy_project(dest, release):
         sys.exit(f'refusing to overwrite project: {dest}')
     for part in ('Packages', 'ProjectSettings'):
         shutil.copytree(HELLO/part, dest/part)
+    if DEVICE == 'opengl-resolve-linear':
+        settings = dest/'ProjectSettings'/'ProjectSettings.asset'
+        settings.write_text(settings.read_text().replace('m_ActiveColorSpace: 0', 'm_ActiveColorSpace: 1'))
     (dest/'ProjectSettings/ProjectVersion.txt').write_text('m_EditorVersion: '+release+'\n')
     shutil.copytree(PROBE/'Assets', dest/'Assets')
     # The hello scene's camera, without its scripted GameObject.
@@ -274,7 +280,7 @@ def verify(work, release, cases):
     residual_file = residuals()
     if residual_file is not None:
         command.extend(['--residuals', str(residual_file)])
-    if only and DEVICE not in BYTE_DEVICES and DEVICE != 'opengl-resolve':
+    if only and DEVICE not in BYTE_DEVICES and DEVICE not in RESOLVE_DEVICES:
         command.extend(['--only', only])
     return subprocess.run(command).returncode
 
@@ -285,7 +291,7 @@ def main():
     parser.add_argument('--cases', choices=('supported', 'all'), default='supported', help='verify: which cases')
     parser.add_argument('--label', required=True)
     parser.add_argument('--release', required=True)
-    parser.add_argument('--device', choices=('opengl', 'opengl-resolve', 'vulkan', 'metal', *BYTE_DEVICES), default='opengl')
+    parser.add_argument('--device', choices=('opengl', *RESOLVE_DEVICES, 'vulkan', 'metal', *BYTE_DEVICES), default='opengl')
     parser.add_argument('--append', action='store_true', help='publish: append new keys, preserving every existing record')
     args = parser.parse_args()
     if not args.label or Path(args.label).name != args.label or args.label in ('.', '..'):
@@ -297,7 +303,7 @@ def main():
             print('textureformats: the R16 byte profiles require Linux')
             return 0
         parser.error('the R16 byte profiles record Linux OpenGL Core or Vulkan')
-    if DEVICE == 'opengl-resolve' and sys.platform != 'linux':
+    if DEVICE in RESOLVE_DEVICES and sys.platform != 'linux':
         if args.mode == 'verify':
             print('textureformats: OpenGL Core resolve profile requires Linux')
             return 0

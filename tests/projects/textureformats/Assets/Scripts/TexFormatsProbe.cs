@@ -758,6 +758,129 @@ public static class TexFormatsProbe
         }
     }
 
+    static void CommandResolveFramebufferColors()
+    {
+        int previousAA = QualitySettings.antiAliasing;
+        try
+        {
+            QualitySettings.antiAliasing = 0;
+            foreach (var format in new[] { RenderTextureFormat.ARGB32, RenderTextureFormat.ARGBHalf, RenderTextureFormat.ARGBFloat, RenderTextureFormat.R8 })
+            foreach (bool srgbWrite in new[] { false, true })
+            {
+                string key = "rt.commandResolve.screenColor." + format + "." + srgbWrite;
+                var desc = new RenderTextureDescriptor(8, 8, format, 0) { msaaSamples = 4, sRGB = false };
+                var source = Target(desc);
+                source.Create();
+                desc.msaaSamples = 1;
+                var destination = Target(desc);
+                destination.Create();
+                RenderTexture.active = destination;
+                GL.Clear(false, true, Color.green);
+                RenderTexture.active = source;
+                GL.Clear(false, true, Color.red);
+                RenderTexture.active = null;
+                GL.sRGBWrite = srgbWrite;
+                GL.Clear(false, true, new Color32(31, 127, 220, 161));
+
+                using var cb = new CommandBuffer();
+                cb.ResolveAntiAliasedSurface(source, destination);
+                cb.ResolveAntiAliasedSurface(source);
+                Graphics.ExecuteCommandBuffer(cb);
+                Value(key + ".external", CommandResolvePixel(destination, TextureFormat.RGBA32));
+                Value(key + ".implicit", CommandResolvePixel(source, TextureFormat.RGBA32));
+                if (format != RenderTextureFormat.R8)
+                    Value(key + ".float", CommandResolvePixel(destination, TextureFormat.RGBAFloat));
+                GL.sRGBWrite = false;
+            }
+
+            foreach (int antialias in new[] { 0, 4 })
+            foreach (bool hdr in new[] { false, true })
+            foreach (bool callerSrgb in new[] { false, true })
+            foreach (var cameraFormat in new[] { RenderTextureFormat.ARGB32, RenderTextureFormat.ARGBHalf, RenderTextureFormat.ARGBFloat })
+            {
+                string key = "rt.commandResolve.screenCamera." + antialias + "." + hdr + "." + callerSrgb + "." + cameraFormat;
+                QualitySettings.antiAliasing = antialias;
+                var desc = new RenderTextureDescriptor(8, 8, cameraFormat, 0)
+                    { msaaSamples = 4, sRGB = false };
+                var source = Target(desc);
+                source.Create();
+                desc.msaaSamples = 1;
+                var destination = Target(desc);
+                var other = Target(desc);
+                destination.Create();
+                other.Create();
+                RenderTexture.active = destination;
+                GL.Clear(false, true, Color.green);
+                RenderTexture.active = source;
+                GL.Clear(false, true, Color.red);
+                RenderTexture.active = null;
+                GL.Clear(false, true, Color.white);
+
+                var camera = Own(new GameObject("Screen resolve camera")).AddComponent<Camera>();
+                camera.enabled = false;
+                camera.allowHDR = hdr;
+                camera.allowMSAA = true;
+                camera.clearFlags = CameraClearFlags.SolidColor;
+                camera.backgroundColor = new Color(1.625f, .305f, .7f, .375f);
+                camera.cullingMask = 0;
+                using var cb = new CommandBuffer();
+                cb.ResolveAntiAliasedSurface(source, destination);
+                cb.ResolveAntiAliasedSurface(source);
+                camera.AddCommandBuffer(CameraEvent.AfterEverything, cb);
+                GL.sRGBWrite = callerSrgb;
+                try { camera.Render(); }
+                finally { camera.RemoveCommandBuffer(CameraEvent.AfterEverything, cb); }
+                Value(key + ".external", CommandResolvePixel(destination, TextureFormat.RGBAFloat));
+                Value(key + ".implicit", CommandResolvePixel(source, TextureFormat.RGBAFloat));
+                Value(key + ".callerSrgbWrite", B2(GL.sRGBWrite));
+
+                RenderTexture.active = destination;
+                GL.Clear(false, true, Color.green);
+                RenderTexture.active = null;
+                cb.Clear();
+                cb.SetRenderTarget(other);
+                cb.ClearRenderTarget(false, true, Color.yellow);
+                cb.ResolveAntiAliasedSurface(source, destination);
+                camera.AddCommandBuffer(CameraEvent.AfterEverything, cb);
+                try { camera.Render(); }
+                finally { camera.RemoveCommandBuffer(CameraEvent.AfterEverything, cb); }
+                Value(key + ".otherBound", CommandResolvePixel(destination, TextureFormat.RGBAHalf));
+                GL.sRGBWrite = false;
+            }
+
+            QualitySettings.antiAliasing = 0;
+            var wide = new RenderTextureDescriptor(Screen.width + 4, Screen.height + 4,
+                RenderTextureFormat.ARGB32, 0) { msaaSamples = 4, sRGB = false };
+            var wideSource = Target(wide);
+            wideSource.Create();
+            wide.msaaSamples = 1;
+            var wideTarget = Target(wide);
+            wideTarget.Create();
+            RenderTexture.active = wideTarget;
+            GL.Clear(false, true, Color.green);
+            RenderTexture.active = null;
+            GL.Clear(false, true, Color.blue);
+            // A single off-origin rectangle distinguishes an unscaled copy from a fill.
+            GL.Viewport(new Rect(2, 2, 3, 3));
+            GL.Clear(false, true, Color.magenta);
+            GL.Viewport(new Rect(0, 0, Screen.width, Screen.height));
+            using var clipped = new CommandBuffer();
+            clipped.ResolveAntiAliasedSurface(wideSource, wideTarget);
+            Graphics.ExecuteCommandBuffer(clipped);
+            const string crop = "rt.commandResolve.screenCrop";
+            Value(crop + ".near", CommandResolvePixel(wideTarget, TextureFormat.RGBA32, 0, 0));
+            Value(crop + ".rectangle", CommandResolvePixel(wideTarget, TextureFormat.RGBA32, 3, 3));
+            Value(crop + ".rightOfRectangle", CommandResolvePixel(wideTarget, TextureFormat.RGBA32, 5, 3));
+            Value(crop + ".aboveRectangle", CommandResolvePixel(wideTarget, TextureFormat.RGBA32, 3, 5));
+            Value(crop + ".outsideX", CommandResolvePixel(wideTarget, TextureFormat.RGBA32, wide.width - 1, wide.height - 5));
+            Value(crop + ".outsideY", CommandResolvePixel(wideTarget, TextureFormat.RGBA32, wide.width - 5, wide.height - 1));
+        }
+        finally { QualitySettings.antiAliasing = previousAA; }
+    }
+
+    static string CommandResolvePixel(RenderTexture target, TextureFormat format, int x = 0, int y = 0) =>
+        Readback(AsyncGPUReadback.Request(target, 0, x, 1, y, 1, 0, 1, format));
+
     static void CommandResolveBackbuffer()
     {
         foreach (string mode in new[]
@@ -1190,6 +1313,7 @@ public static class TexFormatsProbe
             CommandResolveInactiveSelf();
             CommandResolveCamera();
             CommandResolveBackbuffer();
+            CommandResolveFramebufferColors();
             CommandResolveDepthSource();
             CommandResolveDestroyedTarget();
         }
