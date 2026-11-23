@@ -234,26 +234,48 @@ def probes_digest(folder):
     return {'count': count, 'points': points, 'samples': {'indirect': samples['indirect'], 'environment': samples['environment']}}
 
 
+def probe_requests(data):
+    """The probe requests of a probe requests file (`probeRequests.bin`): per request its number,
+    the place of its first probe among the points and its number of probes. Each request names
+    its output folder (`.../probeRequest<N>`, a string after its length) after these fields: the
+    first probe's place 28 bytes before the string and the count 20 bytes before it."""
+    requests = []
+    for match in re.finditer(rb'probeRequest(\d+)', data):
+        end = match.end()
+        for start in range(match.start(), max(match.start() - 4096, 28), -1):
+            if struct.unpack_from('<Q', data, start - 8)[0] == end - start:
+                requests.append((int(match.group(1)), struct.unpack_from('<Q', data, start - 28)[0],
+                                 struct.unpack_from('<Q', data, start - 20)[0]))
+                break
+        else:
+            raise ValueError(f'a probe request naming {match.group(0)!r} without its length')
+    return requests
+
+
 def joined_probes(folder, name, count):
     """A light probe file of all a scene's probes, in the order of their points: the Editor bakes
     them in requests of consecutive probes (one per Light Probe Group), each with its own file
-    (`radianceDirect<request>.shl2` in `probeRequest<request>`), which this joins in the order of
-    the requests."""
+    (`radianceDirect<request>.shl2` in `probeRequest<request>`), which this joins by the
+    requests' places among the points, each checked to follow the one before and to hold the
+    probes its file has."""
     per_probe = []
     shl2 = name.endswith('.shl2')
     stem, suffix = name.split('0.', 1)
-    request = 0
-    while (folder/f'probeRequest{request}').is_dir():
+    requests = sorted(probe_requests((folder/'probeRequests.bin').read_bytes()), key=lambda r: r[1])
+    for request, first, size in requests:
+        if first != len(per_probe):
+            raise ValueError(f'{folder}: probe request {request} starts at probe {first}, after {len(per_probe)}')
         data = (folder/f'probeRequest{request}'/f'{stem}{request}.{suffix}').read_bytes()
         n = struct.unpack_from('<Q', data, 0)[0]
+        if n != size:
+            raise ValueError(f'{folder}: probe request {request} has {n} probes in {name}, expected {size}')
         if shl2:
             values = struct.unpack_from(f'<{9 * n * 4}f', data, 8)
             per_probe += [[values[4 * (c * n + p) + k] for c in range(9) for k in range(4)] for p in range(n)]
         else:
             per_probe += [[v] for v in struct.unpack_from(f'<{n}f', data, 8)]
-        request += 1
     if len(per_probe) != count:
-        raise ValueError(f'{folder}: {len(per_probe)} probes baked in {request} requests, expected {count}')
+        raise ValueError(f'{folder}: {len(per_probe)} probes baked in {len(requests)} requests, expected {count}')
     if shl2:
         values = [per_probe[p][4 * c + k] for c in range(9) for p in range(count) for k in range(4)]
     else:
@@ -385,8 +407,7 @@ def expected(root):
         entry['lights'] = json.loads((folder/'lights.json').read_text())
         entry['materials'] = json.loads((folder/'materials.json').read_text())
         entry['sky'] = json.loads((folder/'sky.json').read_text())
-        # (A reference made before light probes were measured has none of their files.)
-        entry['probes'] = json.loads((folder/'probes.json').read_text()) if (folder/'probes.json').is_file() else None
+        entry['probes'] = json.loads((folder/'probes.json').read_text())
         if entry['probes'] is not None:
             entry['probes']['direct'] = probe_coefficients((folder/PROBE_FILES[0]).read_bytes())
             entry['probes']['indirect'] = probe_coefficients((folder/PROBE_FILES[1]).read_bytes())

@@ -863,6 +863,39 @@ public static class BuffersSetup
         Save(scene, "ProbesReach");
     }
 
+    /// <summary>Light probes under a sky of three colours (the gradient), with directions picked
+    /// by its brightness and without, in the Shadowmask Lighting Mode with a probe in a mixed
+    /// spot light's cone; beside the probes' group, a disabled group and a group of an inactive
+    /// object.</summary>
+    static void ProbesSky()
+    {
+        foreach (var (name, picked) in new[] { ("ProbesSky", true), ("ProbesSkyEven", false) })
+        {
+            var scene = Lit(name, MixedLightingMode.Shadowmask);
+            var settings = Lightmapping.lightingSettings;
+            settings.indirectSampleCount = 32;
+            settings.environmentSampleCount = 64;
+            settings.environmentImportanceSampling = picked;
+            settings.maxBounces = 2;
+            settings.minBounces = 2;
+            GradientSky();
+            NewLight("Bulb", LightType.Point, new Vector3(1.03f, 2.01f, -1.02f), Vector3.zero, new Color(1f, 0.6f, 0.3f), 2f).range = 6f;
+            var spot = NewLight("MixedSpot", LightType.Spot, new Vector3(-1.97f, 3.02f, 0.03f), new Vector3(60f, 90f, 0f), new Color(0.4f, 0.6f, 1f), 3f, LightmapBakeType.Mixed);
+            spot.range = 10f;
+            spot.spotAngle = 60f;
+            LightProbeGroup Group(string groupName, Vector3[] points)
+            {
+                var group = new GameObject(groupName).AddComponent<LightProbeGroup>();
+                group.probePositions = points;
+                return group;
+            }
+            Group("Group", new[] { new Vector3(0.1f, 0.5f, -1.2f), new Vector3(1.5f, 1.2f, 0.3f), new Vector3(-1.1f, 2.0f, 1.1f), new Vector3(0.3f, 0.2f, 2.2f) });
+            Group("Off", new[] { new Vector3(1.2f, 1.4f, -2.1f) }).enabled = false;
+            Group("Hidden", new[] { new Vector3(-2.5f, 1.0f, 2.5f) }).gameObject.SetActive(false);
+            Save(scene, name);
+        }
+    }
+
     /// <summary>Makes the scenes <c>BAKED_BUFFERS_SCENES</c> names (comma-separated), else all.</summary>
     public static void Create()
     {
@@ -875,7 +908,7 @@ public static class BuffersSetup
                 ("ModeSubtractive", () => Modes("ModeSubtractive", MixedLightingMode.Subtractive)),
                 ("ModeShadowmask", () => Modes("ModeShadowmask", MixedLightingMode.Shadowmask)),
                 ("Bounce", Bounces), ("Glow", Glow), ("Roof", Roof), ("Textured", Textured), ("Levels", Levels), ("Sky", Skies), ("Spare", Spare),
-                ("SkyRealtime", RealtimeSkies), ("SpareEmpty", SpareEmpty), ("Spread", Spread), ("Far", Far), ("Masks", Masks), ("MasksBright", MasksBright), ("MasksEdges", MasksEdges), ("Probes", Probes), ("ProbesGrid", ProbesGrid), ("ProbesReach", ProbesReach), ("Directional", Directional),
+                ("SkyRealtime", RealtimeSkies), ("SpareEmpty", SpareEmpty), ("Spread", Spread), ("Far", Far), ("Masks", Masks), ("MasksBright", MasksBright), ("MasksEdges", MasksEdges), ("Probes", Probes), ("ProbesGrid", ProbesGrid), ("ProbesReach", ProbesReach), ("ProbesSky", ProbesSky), ("Directional", Directional),
             };
             var only = Environment.GetEnvironmentVariable("BAKED_BUFFERS_SCENES");
             var wanted = string.IsNullOrEmpty(only) ? null : new HashSet<string>(only.Split(','));

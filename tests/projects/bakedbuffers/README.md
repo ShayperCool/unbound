@@ -148,8 +148,8 @@ ground, cube and sphere with 16 Direct Samples and no sky but an ambient colour:
 
 - `Probes`: a baked sun, a baked point light and a mixed spot light; six probes of one group (one inside the sphere: its rays meet back faces), 64
   Indirect and Environment Samples, two bounces (Min Bounces 2).
-- `ProbesMore`: the Subtractive Lighting Mode, 24 Indirect Samples (a probe takes 128),
-  picked sky directions, three bounces and two groups, one moved. A probe in the mixed spot
+- `ProbesMore`: the Subtractive Lighting Mode, 24 Indirect Samples (a probe takes 128), three
+  bounces and two groups, one moved. A probe in the mixed spot
   light's cone takes none of its direct light: in this mode as in the others a mixed light's
   direct light is realtime for the objects probes light (the Lighting Mode page: "Real-time
   for dynamic GameObjects, baked for static GameObjects").
@@ -157,6 +157,11 @@ ground, cube and sphere with 16 Direct Samples and no sky but an ambient colour:
   objects' order in the scene file, one moved, one turned and scaled, with points between
   hundredths of a metre on both sides of zero; and a probe 8 m above the renderers under a
   baked point light that reaches it but not them.
+- `ProbesSky`, `ProbesSkyEven`: the gradient sky (three colours: the probes' sky light is
+  not the same every way), with directions picked by its brightness and without, in the
+  Shadowmask Lighting Mode with a probe in the mixed spot light's cone (none of its direct
+  light either); beside the probes' group a disabled group and a group of an inactive object,
+  whose probes the bake leaves out.
 - `ProbesReach`: five baked point lights over the renderers and a sixth 10 m away whose range
   reaches a probe beside it and no renderer: it is in the light grid's region only if the box
   takes the probes in, and the lightmaps' paths, which pick among more lights than they test,
@@ -296,12 +301,13 @@ Not measured, of where the light comes from: mixed lights in the Shadowmask and 
 modes, ambient occlusion and emission in a directional bake, a project with a render pipeline
 asset.
 
-Not measured, of light probes: disabled groups and groups of inactive objects (Unbound leaves
-them out), groups of prefab instances or of several scenes (their order),
+Not measured, of light probes: groups of prefab instances or of several scenes (their order),
 negative file IDs, probes beyond the light grid's 20 regions a side, a mixed light baked for
 want of a shadowmask channel (taken as a baked light), the probes' occlusion of mixed lights
 (`lightProbeOcclusion`, `mixedLightOcclusion`: not compared), a group's Remove Ringing (on
-in every group here) and what the bake makes of the buffers for the scene's Light Probes.
+in every group here), Max Bounces 0 (Unbound's probes then take no sky light, as the lightmaps
+in `SkyNoBounce`), a drawn skybox, and what the bake makes of the buffers for the scene's
+Light Probes.
 
 Not measured, of the sky's light: a skybox other than the procedural one (a cube map, six
 images, a panorama: drawn the same way), an ambient source that is not the scene's sky
