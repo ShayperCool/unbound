@@ -23,6 +23,7 @@ sealed class ParticleVisibilityProbe : MonoBehaviour
         internal float PreviousSimulationTime;
         internal Transform Marker;
         internal bool World;
+        internal float Height;
     }
 
     const string Variable = "PARTICLE_ANIMATION_VISIBILITY_OUT";
@@ -51,11 +52,13 @@ sealed class ParticleVisibilityProbe : MonoBehaviour
     }
 
     Rig Create(string name, bool world, bool live, float minSize, bool trails, bool stretch, bool legacy = false, float size = 1f, float emittedSize = .5f, bool moving = false,
-        ParticleSystemCullingMode cullingMode = ParticleSystemCullingMode.AlwaysSimulate, bool emitOverTime = false)
+        ParticleSystemCullingMode cullingMode = ParticleSystemCullingMode.AlwaysSimulate, bool emitOverTime = false,
+        bool trailOnly = false, ParticleSystem.MinMaxCurve? trailWidth = null, float height = 0f)
     {
         var root = new GameObject(name);
         root.SetActive(false);
         root.layer = Layer;
+        root.transform.position = new Vector3(0, height, 0);
         var marker = new GameObject("Marker").transform;
         marker.SetParent(root.transform, false);
         var ps = root.AddComponent<ParticleSystem>();
@@ -76,7 +79,9 @@ sealed class ParticleVisibilityProbe : MonoBehaviour
         var trail = ps.trails;
         trail.enabled = trails;
         trail.minVertexDistance = .01f;
+        if (trailWidth.HasValue) trail.widthOverTrail = trailWidth.Value;
         var renderer = root.GetComponent<ParticleSystemRenderer>();
+        if (trailOnly) renderer.renderMode = ParticleSystemRenderMode.None;
         renderer.minParticleSize = minSize;
         if (stretch)
         {
@@ -123,7 +128,8 @@ sealed class ParticleVisibilityProbe : MonoBehaviour
             Animator = animator,
             Legacy = animation == null ? null : animation["Loop"],
             Marker = marker,
-            World = world
+            World = world,
+            Height = height
         };
     }
 
@@ -144,6 +150,16 @@ sealed class ParticleVisibilityProbe : MonoBehaviour
             rigs.Add(Create("movingTrail", false, true, 0, true, false, size: .5f, moving: true));
             rigs.Add(Create("movingStretch", false, true, 0, false, true, size: .5f, moving: true));
             rigs.Add(Create("worldFar", true, true, .2f, false, false));
+            var taper = AnimationCurve.Linear(0, 1, 1, 0);
+            var narrow = new ParticleSystem.MinMaxCurve(1f, taper);
+            var wide = new ParticleSystem.MinMaxCurve(8f, taper);
+            rigs.Add(Create("trailOnlyMoving", false, true, 0, true, false, size: .5f, moving: true, trailOnly: true));
+            rigs.Add(Create("trailOnlyEmpty", false, false, 0, true, false, size: .5f, trailOnly: true));
+            rigs.Add(Create("trailOnlyNarrow", false, true, 0, true, false, size: .5f, moving: true, trailOnly: true, trailWidth: narrow));
+            rigs.Add(Create("trailOnlyWide", false, true, 0, true, false, size: .5f, moving: true, trailOnly: true, trailWidth: wide));
+            rigs.Add(Create("trailOnlyNarrowAbove", false, true, 0, true, false, size: .5f, moving: true, trailOnly: true, trailWidth: narrow, height: 3.65f));
+            rigs.Add(Create("trailOnlyWideAbove", false, true, 0, true, false, size: .5f, moving: true, trailOnly: true, trailWidth: wide, height: 3.65f));
+            rigs.Add(Create("billboardWideTrail", false, true, 0, true, false, size: .5f, moving: true, trailWidth: wide, height: 3.65f));
             rigs.Add(Create("pauseTrails", false, true, 0, true, false, cullingMode: ParticleSystemCullingMode.Pause));
             rigs.Add(Create("pauseEmpty", false, false, 0, true, false, cullingMode: ParticleSystemCullingMode.Pause));
             rigs.Add(Create("catchUpTrails", false, true, 0, true, false, cullingMode: ParticleSystemCullingMode.PauseAndCatchup));
@@ -152,7 +168,7 @@ sealed class ParticleVisibilityProbe : MonoBehaviour
         }
         if (tick == 6)
             foreach (var rig in rigs)
-                if (!rig.World) rig.Root.transform.position = new Vector3(1000, 0, 0);
+                if (!rig.World) rig.Root.transform.position = new Vector3(1000, rig.Height, 0);
         if (tick == 11) camera.transform.position = new Vector3(1000, 0, -10);
         if (tick == 16) camera.cullingMask = 0;
         if (tick == 21) camera.cullingMask = 1 << Layer;
