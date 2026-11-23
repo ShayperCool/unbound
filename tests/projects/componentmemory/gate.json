@@ -11,6 +11,7 @@
     "managed/UnityEngine/Profiling/Profiling.cs",
     "managed/UnityEngine/Runtime/Compat.cs",
     "managed/UnityEngine/Graphics/Light.CommandBuffers.cs",
-    "managed/UnityEngine/Audio/AudioSource.cs"
+    "managed/UnityEngine/Audio/AudioSource.cs",
+    "managed/UnityEngine/Core/Debug.cs"
   ]
 }
