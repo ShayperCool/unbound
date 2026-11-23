@@ -1190,11 +1190,20 @@ pub fn reflection_image(request: DefaultReflectionRequest) -> Result<Json> {
             }
         }
     }
-    let image = unbound_assets::exr_writer::write_piz(&unbound_assets::exr_writer::Image {
-        width: 6 * size,
-        height: size,
-        channels: &[("B", &planes[0]), ("G", &planes[1]), ("R", &planes[2])],
-    });
+    use unbound_assets::exr_writer::Samples;
+    let image = unbound_assets::exr_writer::write(
+        &unbound_assets::exr_writer::Image {
+            width: 6 * size,
+            height: size,
+            channels: &[
+                ("B", Samples::Half(&planes[0])),
+                ("G", Samples::Half(&planes[1])),
+                ("R", Samples::Half(&planes[2])),
+            ],
+            screen_window_width: 1.0,
+        },
+        unbound_assets::exr_writer::Compression::Piz,
+    );
     Ok(json!({ "image": base64::engine::general_purpose::STANDARD.encode(image) }))
 }
 

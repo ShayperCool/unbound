@@ -1,26 +1,77 @@
 //! OpenEXR images as the Unity Editor writes the files it bakes (matches the Unity 6000.0.71f1
-//! Editor, tests/projects/bakeenvironment `written/ReflectionProbe-0.exr`): one part of scan
-//! lines, half-float channels, PIZ compression (OpenEXR's wavelet and Huffman coding, the code
-//! lengths built with GNU libstdc++'s heap, as the Linux Editor's files have them), the
-//! attributes the Editor writes in its order.
+//! Editor): one part of scan lines, the attributes the Editor writes in its order. A reflection's
+//! image has half-float channels, a lightmap 32-bit float ones. A reflection's image is PIZ-compressed (OpenEXR's wavelet and Huffman coding, the code
+//! lengths built with GNU libstdc++'s heap, as the Linux Editor's files have them:
+//! tests/projects/bakeenvironment `written/ReflectionProbe-0.exr`), a lightmap ZIP-compressed
+//! (OpenEXR's byte split and predictor, then zlib's deflate at its default level 6:
+//! tests/projects/bakedbuffers `lightmap0.exr`).
 
-/// Scan lines in a PIZ chunk.
-const PIZ_LINES: usize = 32;
-/// OpenEXR's compression numbers.
-const PIZ: u8 = 4;
-/// A channel of half floats.
-const HALF: i32 = 1;
+/// How the Editor compresses an image it bakes.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Compression {
+    /// A reflection's image.
+    Piz,
+    /// A lightmap.
+    Zip,
+}
 
-/// An image to write: its size and its channels (in name order, as OpenEXR stores them), each a
-/// half float per pixel (their bits), rows from the top.
+impl Compression {
+    /// OpenEXR's number for it.
+    fn number(self) -> u8 {
+        match self {
+            Compression::Zip => 3,
+            Compression::Piz => 4,
+        }
+    }
+
+    /// Scan lines in a chunk.
+    fn lines(self) -> usize {
+        match self {
+            Compression::Zip => 16,
+            Compression::Piz => 32,
+        }
+    }
+}
+
+/// zlib's compression level the Editor's ZIP chunks have (its default).
+const ZIP_LEVEL: i32 = 6;
+/// A channel's samples, rows from the top: half floats (their bits) or 32-bit floats.
+#[derive(Clone, Copy, Debug)]
+pub enum Samples<'a> {
+    Half(&'a [u16]),
+    Float(&'a [f32]),
+}
+
+impl Samples<'_> {
+    /// OpenEXR's pixel type.
+    fn kind(self) -> i32 {
+        match self {
+            Samples::Half(_) => 1,
+            Samples::Float(_) => 2,
+        }
+    }
+
+    /// The bytes of samples `from..to`, as the file stores them.
+    fn extend_bytes(self, out: &mut Vec<u8>, from: usize, to: usize) {
+        match self {
+            Samples::Half(v) => out.extend(v[from..to].iter().flat_map(|h| h.to_le_bytes())),
+            Samples::Float(v) => out.extend(v[from..to].iter().flat_map(|f| f.to_le_bytes())),
+        }
+    }
+}
+
+/// An image to write: its size, its channels (in name order, as OpenEXR stores them), a sample
+/// per pixel each, and its screenWindowWidth attribute (a reflection's 1, a lightmap's its
+/// width).
 pub struct Image<'a> {
     pub width: usize,
     pub height: usize,
-    pub channels: &'a [(&'a str, &'a [u16])],
+    pub channels: &'a [(&'a str, Samples<'a>)],
+    pub screen_window_width: f32,
 }
 
 /// The file's bytes.
-pub fn write_piz(image: &Image) -> Vec<u8> {
+pub fn write(image: &Image, compression: Compression) -> Vec<u8> {
     let mut out = Vec::new();
     out.extend([0x76, 0x2f, 0x31, 0x01]);
     out.extend(2u32.to_le_bytes()); // version 2, one part of scan lines
@@ -33,10 +84,10 @@ pub fn write_piz(image: &Image) -> Vec<u8> {
         out.extend(value);
     };
     let mut channels = Vec::new();
-    for (name, _) in image.channels {
+    for (name, samples) in image.channels {
         channels.extend(name.as_bytes());
         channels.push(0);
-        channels.extend(HALF.to_le_bytes());
+        channels.extend(samples.kind().to_le_bytes());
         channels.extend([0u8; 4]); // linear 0, reserved
         channels.extend(1i32.to_le_bytes());
         channels.extend(1i32.to_le_bytes());
@@ -47,41 +98,103 @@ pub fn write_piz(image: &Image) -> Vec<u8> {
         .flat_map(|v| v.to_le_bytes())
         .collect();
     attribute(&mut out, "channels", "chlist", &channels);
-    attribute(&mut out, "compression", "compression", &[PIZ]);
+    attribute(
+        &mut out,
+        "compression",
+        "compression",
+        &[compression.number()],
+    );
     attribute(&mut out, "dataWindow", "box2i", &window);
     attribute(&mut out, "displayWindow", "box2i", &window);
     attribute(&mut out, "lineOrder", "lineOrder", &[0]);
     attribute(&mut out, "pixelAspectRatio", "float", &1f32.to_le_bytes());
     attribute(&mut out, "screenWindowCenter", "v2f", &[0u8; 8]);
-    attribute(&mut out, "screenWindowWidth", "float", &1f32.to_le_bytes());
+    attribute(
+        &mut out,
+        "screenWindowWidth",
+        "float",
+        &image.screen_window_width.to_le_bytes(),
+    );
     out.push(0);
-    let chunks = image.height.div_ceil(PIZ_LINES);
+    let lines = compression.lines();
+    let chunks = image.height.div_ceil(lines);
     let table = out.len();
     out.resize(table + 8 * chunks, 0);
     for chunk in 0..chunks {
-        let first = chunk * PIZ_LINES;
-        let rows = PIZ_LINES.min(image.height - first);
+        let first = chunk * lines;
+        let rows = lines.min(image.height - first);
         let at = out.len() as u64;
         out[table + 8 * chunk..table + 8 * chunk + 8].copy_from_slice(&at.to_le_bytes());
         // The lines as the file stores them uncompressed: line by line, channel by channel.
-        let mut raw = Vec::with_capacity(rows * image.width * image.channels.len());
+        let mut raw = Vec::new();
         for y in first..first + rows {
             for (_, samples) in image.channels {
-                raw.extend_from_slice(&samples[y * image.width..(y + 1) * image.width]);
+                samples.extend_bytes(&mut raw, y * image.width, (y + 1) * image.width);
             }
         }
-        let compressed = piz_compress(&raw, image.width, rows, image.channels.len());
+        let compressed = match compression {
+            Compression::Piz => {
+                assert!(
+                    image
+                        .channels
+                        .iter()
+                        .all(|(_, s)| matches!(s, Samples::Half(_))),
+                    "PIZ images of half floats only"
+                );
+                let words: Vec<u16> = raw
+                    .chunks_exact(2)
+                    .map(|b| u16::from_le_bytes([b[0], b[1]]))
+                    .collect();
+                piz_compress(&words, image.width, rows, image.channels.len())
+            }
+            Compression::Zip => zip_compress(&raw),
+        };
         out.extend((first as i32).to_le_bytes());
-        if compressed.len() < raw.len() * 2 {
+        if compressed.len() < raw.len() {
             out.extend((compressed.len() as i32).to_le_bytes());
             out.extend(compressed);
         } else {
             // A chunk that does not get smaller is stored as it is.
-            out.extend(((raw.len() * 2) as i32).to_le_bytes());
-            out.extend(raw.iter().flat_map(|v| v.to_le_bytes()));
+            out.extend((raw.len() as i32).to_le_bytes());
+            out.extend(raw);
         }
     }
     out
+}
+
+/// One chunk's lines ZIP-compressed: their bytes split into those at even and at odd offsets,
+/// each byte then as its difference from the one before (plus 128, OpenEXR's predictor), all
+/// deflated by zlib.
+fn zip_compress(bytes: &[u8]) -> Vec<u8> {
+    let half = bytes.len().div_ceil(2);
+    let mut split = vec![0u8; bytes.len()];
+    for (k, &b) in bytes.iter().enumerate() {
+        split[if k % 2 == 0 { k / 2 } else { half + k / 2 }] = b;
+    }
+    for k in (1..split.len()).rev() {
+        split[k] = split[k].wrapping_sub(split[k - 1]).wrapping_add(128);
+    }
+    deflate(&split)
+}
+
+/// `data` compressed by zlib (the C library: its output is what the Editor's files hold, which
+/// other deflate implementations do not reproduce).
+fn deflate(data: &[u8]) -> Vec<u8> {
+    // SAFETY: compressBound and compress2 get valid buffers of the lengths given.
+    unsafe {
+        let mut length = libz_sys::compressBound(data.len() as libz_sys::uLong);
+        let mut out = vec![0u8; length as usize];
+        let status = libz_sys::compress2(
+            out.as_mut_ptr(),
+            &mut length,
+            data.as_ptr(),
+            data.len() as libz_sys::uLong,
+            ZIP_LEVEL,
+        );
+        assert_eq!(status, libz_sys::Z_OK, "zlib's compress2 failed");
+        out.truncate(length as usize);
+        out
+    }
 }
 
 /// One chunk's lines (line by line, channel by channel, `width` samples each) PIZ-compressed.
@@ -475,12 +588,14 @@ fn adjust_heap(h: &mut [usize], mut hole: usize, len: usize, value: usize, freq:
 mod tests {
     use super::*;
 
-    #[test]
-    fn the_editors_reflection_image_is_written_again_byte_for_byte() {
-        let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join(
-            "../../tests/projects/bakeenvironment/Reference/unity-6000.0.71f1/EnvSky/written/ReflectionProbe-0.exr",
-        );
-        let bytes = std::fs::read(path).unwrap();
+    /// A channel read back: half floats (bits) or 32-bit floats.
+    enum Plane {
+        Half(Vec<u16>),
+        Float(Vec<f32>),
+    }
+
+    /// An Editor's file read back: its size and its channels.
+    fn planes(bytes: &[u8]) -> ((usize, usize), Vec<(String, Plane)>) {
         use exr::prelude::*;
         let read = read()
             .no_deep_data()
@@ -488,39 +603,88 @@ mod tests {
             .all_channels()
             .first_valid_layer()
             .all_attributes()
-            .from_buffered(std::io::Cursor::new(&bytes))
+            .from_buffered(std::io::Cursor::new(bytes))
             .unwrap();
         let size = read.layer_data.size;
-        let planes: Vec<(String, Vec<u16>)> = read
+        let planes = read
             .layer_data
             .channel_data
             .list
             .iter()
             .map(|c| {
                 let samples = match &c.sample_data {
-                    FlatSamples::F16(v) => v.iter().map(|h| h.to_bits()).collect(),
-                    _ => panic!("not half floats"),
+                    FlatSamples::F16(v) => Plane::Half(v.iter().map(|h| h.to_bits()).collect()),
+                    FlatSamples::F32(v) => Plane::Float(v.clone()),
+                    FlatSamples::U32(_) => panic!("not floats"),
                 };
                 (c.name.to_string(), samples)
             })
             .collect();
-        let channels: Vec<(&str, &[u16])> = planes
+        ((size.0, size.1), planes)
+    }
+
+    fn samples(planes: &[(String, Plane)]) -> Vec<(&str, Samples<'_>)> {
+        planes
             .iter()
-            .map(|(name, samples)| (name.as_str(), samples.as_slice()))
-            .collect();
-        struct Size {
-            width: usize,
-            height: usize,
+            .map(|(name, plane)| {
+                let samples = match plane {
+                    Plane::Half(v) => Samples::Half(v),
+                    Plane::Float(v) => Samples::Float(v),
+                };
+                (name.as_str(), samples)
+            })
+            .collect()
+    }
+
+    #[test]
+    fn the_editors_lightmaps_are_written_again_byte_for_byte() {
+        let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("../../tests/projects/bakedbuffers/Reference/unity-6000.0.71f1");
+        let mut checked = 0;
+        for scene in std::fs::read_dir(&root).unwrap() {
+            let path = scene.unwrap().path().join("lightmap0.exr");
+            let Ok(bytes) = std::fs::read(&path) else {
+                continue;
+            };
+            let ((width, height), planes) = planes(&bytes);
+            let channels = samples(&planes);
+            let made = write(
+                &Image {
+                    width,
+                    height,
+                    channels: &channels,
+                    screen_window_width: width as f32,
+                },
+                Compression::Zip,
+            );
+            let first = made.iter().zip(&bytes).position(|(a, b)| a != b);
+            assert!(
+                made == bytes,
+                "{}: {} bytes, expected {}; first difference at {first:?}",
+                path.display(),
+                made.len(),
+                bytes.len()
+            );
+            checked += 1;
         }
-        let image = Size {
-            width: size.0,
-            height: size.1,
-        };
-        let made = write_piz(&super::Image {
-            width: image.width,
-            height: image.height,
+        assert!(checked >= 20, "{checked} lightmaps");
+    }
+
+    #[test]
+    fn the_editors_reflection_image_is_written_again_byte_for_byte() {
+        let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join(
+            "../../tests/projects/bakeenvironment/Reference/unity-6000.0.71f1/EnvSky/written/ReflectionProbe-0.exr",
+        );
+        let bytes = std::fs::read(path).unwrap();
+        let ((width, height), planes) = planes(&bytes);
+        let channels = samples(&planes);
+        let image = Image {
+            width,
+            height,
             channels: &channels,
-        });
+            screen_window_width: 1.0,
+        };
+        let made = write(&image, Compression::Piz);
         let first = made.iter().zip(&bytes).position(|(a, b)| a != b);
         assert!(
             made == bytes,

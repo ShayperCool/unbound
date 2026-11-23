@@ -6544,6 +6544,7 @@ dependencies = [
  "image",
  "intel_tex_2",
  "libc",
+ "libz-sys",
  "lz4-sys",
  "lz4_flex",
  "lzma-rs",
