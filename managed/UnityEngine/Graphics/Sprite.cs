@@ -43,6 +43,7 @@ namespace UnityEngine
         internal int ProfilerVertexCount => m_Vertices.Length;
         internal int ProfilerIndexSlots => m_ProfilerIndexSlots;
         internal (int Vertices, int Indices) ProfilerCameraGeometry => m_ProfilerCameraGeometry;
+        internal void MarkGeometryStorageUnmeasured() => m_ProfilerGeometryStorage = GeometryStorage.Unmeasured;
         /// <summary>The secondary textures (an imported sprite's are loaded when first asked for).</summary>
         SecondarySpriteTexture[] m_SecondaryTextures;
         (string Name, string Guid)[] m_SecondaryGuids;

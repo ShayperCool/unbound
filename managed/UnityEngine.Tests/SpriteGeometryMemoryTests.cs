@@ -1,4 +1,6 @@
 using Unbound.Runtime;
+using UnityEngine.Profiling;
+using UnityEngine.U2D;
 using Xunit;
 
 namespace UnityEngine.Tests
@@ -28,6 +30,26 @@ namespace UnityEngine.Tests
                 Object.DestroyImmediate(secondary);
                 Object.DestroyImmediate(fallback);
                 Object.DestroyImmediate(ordinary);
+                Object.DestroyImmediate(texture);
+            }
+        }
+
+        [Fact]
+        public void ADirectBoneWriteMakesThePublicProfilerReportTheUnmeasuredSize()
+        {
+            using var release = TestRelease.Pin(TestRelease.Measured);
+            var texture = new Texture2D(4, 4);
+            var sprite = Sprite.Create(texture, new Rect(0, 0, 4, 4), Vector2.zero);
+            try
+            {
+                Assert.Equal(1460L, Profiler.GetRuntimeMemorySizeLong(sprite));
+                sprite.SetBones(new[] { new SpriteBone { name = "root", parentId = -1, rotation = Quaternion.identity } });
+                Assert.Single(sprite.GetBones());
+                Assert.Equal(0L, Profiler.GetRuntimeMemorySizeLong(sprite));
+            }
+            finally
+            {
+                Object.DestroyImmediate(sprite);
                 Object.DestroyImmediate(texture);
             }
         }

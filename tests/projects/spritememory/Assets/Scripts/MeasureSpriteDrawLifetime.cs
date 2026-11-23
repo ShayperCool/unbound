@@ -232,16 +232,38 @@ public sealed class MeasureSpriteDrawLifetime : MonoBehaviour
                     if (RenderPipeline.SupportsRenderRequest(camera, request))
                         RenderPipeline.SubmitRenderRequest(camera, request);
             }
-            var skipped = new SpriteMemoryPipeline.Request();
+            void ReadCull(string stage, SpriteMemoryPipeline.Request request)
+            {
+                Put(stage + ".beforeCull", request.BeforeCull.ToString());
+                Put(stage + ".afterCull", request.AfterCull.ToString());
+                Put(stage + ".afterSetup", request.AfterSetup.ToString());
+                Put(stage + ".afterClear", request.AfterClear.ToString());
+            }
+            var skipped = new SpriteMemoryPipeline.Request { Measured = pipelineSprite };
             RunRequest(skipped);
+            ReadCull("srp.simple", skipped);
             Put("srp.cullOnlyCompleted", skipped.Completed.ToString());
             Put("srp.cullOnlyColor", HasColor().ToString());
             Read("srp.cullOnly", pipelineSprite);
-            var drawn = new SpriteMemoryPipeline.Request { Draw = true };
+            var drawn = new SpriteMemoryPipeline.Request { Draw = true, Measured = pipelineSprite };
             RunRequest(drawn);
             Put("srp.drawCompleted", drawn.Completed.ToString());
             Put("srp.drawColor", HasColor().ToString());
             Read("srp.afterDraw", pipelineSprite);
+
+            pipelineReceiver.enabled = false;
+            var pipelineMaskSprite = Make();
+            var pipelineMask = new GameObject("SRP sprite mask").AddComponent<SpriteMask>();
+            pipelineMask.gameObject.layer = 12;
+            pipelineMask.sprite = pipelineMaskSprite;
+            var maskCull = new SpriteMemoryPipeline.Request { Measured = pipelineMaskSprite };
+            RunRequest(maskCull);
+            ReadCull("srp.mask", maskCull);
+            Put("srp.mask.completed", maskCull.Completed.ToString());
+            Put("srp.mask.color", HasColor().ToString());
+            Read("srp.mask.afterSubmit", pipelineMaskSprite);
+            Object.DestroyImmediate(pipelineMask.gameObject);
+            Object.DestroyImmediate(pipelineMaskSprite);
         }
         finally
         {

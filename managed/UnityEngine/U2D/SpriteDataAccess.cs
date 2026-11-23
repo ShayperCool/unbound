@@ -234,6 +234,7 @@ namespace UnityEngine.U2D
         {
             CheckSprite(sprite);
             sprite.m_Bones = src != null ? (SpriteBone[])src.Clone() : Array.Empty<SpriteBone>();
+            sprite.MarkGeometryStorageUnmeasured();
         }
 
         public static bool HasVertexAttribute(this Sprite sprite, VertexAttribute channel)
@@ -457,7 +458,7 @@ namespace UnityEngine
         /// <summary>Takes what was set through the data access API as the sprite's geometry.</summary>
         internal unsafe void MeshDataChanged()
         {
-            m_ProfilerGeometryStorage = GeometryStorage.Unmeasured;
+            MarkGeometryStorageUnmeasured();
             var data = m_MeshData;
             var positions = (Vector3*)data.Channel(Rendering.VertexAttribute.Position);
             var uvs = (Vector2*)data.Channel(Rendering.VertexAttribute.TexCoord0);
