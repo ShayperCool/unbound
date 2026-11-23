@@ -27,6 +27,8 @@ opaque unlit quads.
   `BoundsDyingPadded`: the same with a padding.
 - `BoundsAway`: four particles that fly out of view to the right; `ManualAway`: the same with
   bounds the graph gives (`Manual`): a box whose numbers are not round.
+- `ManualWorld`: four particles that stay, the same box the graph gives, the system in world
+  space.
 
 The graph compiler sets the culling flags of an asset with automatic bounds to none (such an
 effect goes on simulating and recomputing its bounds when culled); `ManualAway` keeps the
@@ -65,6 +67,9 @@ written as centre and extents, floats with every digit.
   asked, a question the Editor does not survive.) Its `renderer=` box is not its `bounds=` box
   in the last place of the centre: an effect's box is the union of its systems' corners, taken
   back as a centre and extents; so is every other control's.
+- `manual world`: the graph's box on a system in world space, the effect turned 30 degrees and
+  far from the world's origin: the box is in the effect's space as it is for a system in local
+  space (the graph compiler takes it there), and the renderer's world box is around it.
 - `reinit`: `Reinit()` at frame 20: the box is zero until the new particles' box arrives.
 - `moved`: the effect moved half a unit at frame 20: the box stays (it is in the effect's
   space) and the renderer's follows.

@@ -328,9 +328,12 @@ namespace Unbound.Runtime
         internal VFXAliveReadback AliveSchedule => m_Alive;
 
         /// <summary>The system's bounds in the effect's space: the box the graph gives it, grown
-        /// by its padding (a system in world space has its box brought into the effect's space).
+        /// by its padding. The graph compiler takes the box into the effect's space whatever the
+        /// system's (the package's `VFXBasicInitialize.GetOutputSpaceFromSlot` answers `Local`
+        /// for it): a system in world space has its box in the effect's space too, as the
+        /// Unity 6000.0.71f1 Editor draws and culls it (tests/projects/vfxbounds `manual world`).
         /// False when the graph gives the system no box.</summary>
-        internal bool LocalBounds(VisualEffectState state, out Bounds bounds)
+        internal bool LocalBounds(out Bounds bounds)
         {
             bounds = default;
             // Bounds computed from the particles are in the effect's space already.
@@ -344,7 +347,6 @@ namespace Unbound.Runtime
             Vector3 center = values.GetVector(m_BoundsCenter, 3), size = values.GetVector(m_BoundsSize, 3);
             if (m_BoundsPadding >= 0) size += 2f * (Vector3)values.GetVector(m_BoundsPadding, 3);
             bounds = new Bounds(center, size);
-            if ((Desc.flags & VFXSystemFlag.SystemInWorldSpace) != 0) bounds = UnityEngine.Renderer.TransformBounds(bounds, state.WorldToLocal);
             return true;
         }
 

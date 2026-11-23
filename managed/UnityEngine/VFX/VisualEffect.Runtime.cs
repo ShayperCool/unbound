@@ -545,7 +545,7 @@ namespace UnityEngine.VFX
             Vector3 least = default, greatest = default;
             foreach (var system in m_ParticleSystems)
             {
-                if (!system.LocalBounds(m_State, out var bounds)) continue;
+                if (!system.LocalBounds(out var bounds)) continue;
                 Vector3 min = bounds.center - bounds.extents, max = bounds.center + bounds.extents;
                 least = any ? Vector3.Min(least, min) : min;
                 greatest = any ? Vector3.Max(greatest, max) : max;
@@ -703,7 +703,7 @@ namespace UnityEngine.VFX
         {
             if (SystemNamed(nameID) is VFXParticleSystem system)
             {
-                system.LocalBounds(m_State, out var bounds);
+                system.LocalBounds(out var bounds);
                 return new VFXParticleSystemInfo((uint)Math.Max(0, system.AliveCount), system.Capacity, system.Sleeping, bounds);
             }
             if (AssetHasParticleSystem(nameID)) throw new ArgumentException(string.Format(NoSuchSystem, Shader.IdToName(nameID)));

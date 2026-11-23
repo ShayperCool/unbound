@@ -116,6 +116,9 @@ public sealed class BoundsProbe : MonoBehaviour
             Draw("turned", "BoundsTurned", 10, 30).Effect.transform.rotation = Quaternion.Euler(0f, 0f, 30f);
             m_StoppedPadded = Draw("stopped padded", "BoundsDyingPadded", 10, 40);
             Draw("many", "BoundsMany", 10, 30);
+            // The graph's bounds on a system in world space, the effect turned: last, so the
+            // others keep their places.
+            Draw("manual world", "ManualWorld", 6, 30).Effect.transform.rotation = Quaternion.Euler(0f, 0f, 30f);
             // What the turned effect is given of its transform.
             Rec("matrix/world turned/to world", Matrix(turned.Effect.transform.localToWorldMatrix));
             Rec("matrix/world turned/to local", Matrix(turned.Effect.transform.worldToLocalMatrix));
@@ -156,7 +159,7 @@ public sealed class BoundsProbe : MonoBehaviour
         camera.clearFlags = CameraClearFlags.SolidColor;
         camera.backgroundColor = new Color(0.1f, 0.1f, 0.1f, 1f);
         camera.targetTexture = new RenderTexture(64, 64, 24);
-        var stage = new Stage { Key = key, Effect = effect, Camera = camera, Frames = frames, Computes = graph != "ManualAway" };
+        var stage = new Stage { Key = key, Effect = effect, Camera = camera, Frames = frames, Computes = !graph.StartsWith("Manual") };
         m_Stages.Add(stage);
         return stage;
     }

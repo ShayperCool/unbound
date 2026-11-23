@@ -120,10 +120,22 @@ public static class BoundsAuthoring
             Set(away.Init, "size", 0.3f);
             // The graph's own bounds: a box whose numbers are not round.
             if (mode == BoundsSettingMode.Manual)
-                Input(away.Init, "bounds").value = new AABox { center = new Vector3(0.1234567f, -0.0288367569f, 0.3f), size = new Vector3(1.1149996f, 1.173260928f, 0.61604631f) };
+                Input(away.Init, "bounds").value = ManualBox;
             Save(away.Graph);
         }
+
+        // The graph's own bounds on a system in world space: four particles that stay.
+        var manualWorld = Bounded("ManualWorld", BoundsSettingMode.Manual);
+        manualWorld.Init.space = VFXSpace.World;
+        Burst(manualWorld.Spawn, 4f);
+        SetRandom(manualWorld.Init, "position", new Vector3(-0.4f, -0.4f, 0f), new Vector3(0.4f, 0.4f, 0f));
+        Set(manualWorld.Init, "size", 0.3f);
+        Input(manualWorld.Init, "bounds").value = ManualBox;
+        Save(manualWorld.Graph);
     }
+
+    /// <summary>The bounds the manual graphs give: a box whose numbers are not round.</summary>
+    static readonly AABox ManualBox = new AABox { center = new Vector3(0.1234567f, -0.0288367569f, 0.3f), size = new Vector3(1.1149996f, 1.173260928f, 0.61604631f) };
 
     // ---------------------------------------------------------------------------- helpers
 
