@@ -327,6 +327,7 @@ namespace Unbound.Runtime.Playables
         internal int Id;
         /// <summary>The stream's root motion (AnimationStream.velocity, rootMotionPosition, ...).</summary>
         internal StreamMotion Motion = StreamMotion.None;
+        internal StreamVelocityEdits VelocityEdits;
         /// <summary>The evaluation the stream belongs to.</summary>
         internal AnimationEvaluation Evaluation;
         Unbound.Runtime.Playables.HumanStreamPose m_Human;
@@ -837,6 +838,14 @@ namespace Unbound.Runtime.Playables
         }
     }
 
+    [Flags]
+    internal enum StreamVelocityEdits
+    {
+        None = 0,
+        Linear = 1,
+        Angular = 2,
+    }
+
     /// <summary>
     /// An animation stream's root motion for the evaluated frame. Velocities are per second; Unbound
     /// takes them in world space, as Animator.velocity/angularVelocity are (Unbound's choice,
@@ -868,6 +877,23 @@ namespace Unbound.Runtime.Playables
             float speed = AngularVelocity.magnitude;
             if (speed == 0f || deltaTime == 0f) return StartRotation;
             return QuaternionMath.AngleAxis(speed * deltaTime * Mathf.Rad2Deg, AngularVelocity / speed) * StartRotation;
+        }
+
+        // Job velocity edits use angles about X, then Y, then Z. Cycle the components
+        // through Quaternion's Z-X-Y conversion to use that order.
+        internal Quaternion JobTurn(float deltaTime)
+        {
+            var a = AngularVelocity * deltaTime;
+            var q = Quaternion.FromEulerRad(new Vector3(a.y, a.z, a.x));
+            return new Quaternion(q.z, q.x, q.y, q.w);
+        }
+
+        internal Vector3 JobAngularVelocity(float deltaTime)
+        {
+            if (deltaTime == 0f) return Vector3.zero;
+            var q = JobTurn(deltaTime);
+            var a = Quaternion.ToEulerRad(new Quaternion(q.y, q.z, q.x, q.w));
+            return new Vector3(a.z, a.x, a.y) / deltaTime;
         }
 
         /// <summary>The motion of the stream an input playable produced (just evaluated): a
@@ -950,6 +976,23 @@ namespace Unbound.Runtime.Playables
         }
         /// <summary>The motion its stream ended with in its last evaluation (a job above reads it).</summary>
         internal StreamMotion Motion = StreamMotion.None;
+        StreamMotion m_RootPhaseMotion;
+        StreamVelocityEdits m_AnimationPhaseEdits;
+
+        // The measured topology is a chain of full-weight jobs above an empty mixer.
+        internal static bool HasEmptyMotionSource(PlayableNode node)
+        {
+            if (node?.Kind is not JobKind) return false;
+            for (int depth = 0; depth < 64 && node != null && !node.Destroyed; depth++)
+            {
+                if (node.Kind is MixerKind) return node.Inputs.Count == 0;
+                if (node.Kind is not JobKind { ProcessInputs: true } || node.Inputs.Count != 1) return false;
+                var input = node.Inputs[0];
+                if (input.Weight != 1f || input.SourcePort != 0) return false;
+                node = input.Node;
+            }
+            return false;
+        }
 
         internal override void Evaluate(AnimationEvaluation e, PlayableNode node, int viaPort, float weight, AnimStream into)
         {
@@ -958,6 +1001,9 @@ namespace Unbound.Runtime.Playables
             var handles = AnimatorHandles.Of(e.Animator);
             var context = StreamContext.Open(into, handles, e);
             var entry = StreamMotion.None;
+            bool measuredVelocities = e.UsesMeasuredJobVelocities;
+            if (measuredVelocities) m_RootPhaseMotion = StreamMotion.None;
+            JobKind inputJob = null;
             bool ran = false;
             try
             {
@@ -968,7 +1014,13 @@ namespace Unbound.Runtime.Playables
                     if (i == 0 && ProcessInputs)
                     {
                         e.EvaluateInto(input.Node, input.SourcePort, weight * input.Weight, into);
-                        context.Motion = StreamMotion.Of(e, input.Node, into);
+                        if (measuredVelocities)
+                        {
+                            inputJob = input.Node.Kind as JobKind;
+                            context.Motion = inputJob?.m_RootPhaseMotion
+                                ?? new StreamMotion { Computed = true, StartRotation = Quaternion.identity };
+                        }
+                        else context.Motion = StreamMotion.Of(e, input.Node, into);
                         context.Inputs.Add((context, input.Weight));
                         continue;
                     }
@@ -981,6 +1033,7 @@ namespace Unbound.Runtime.Playables
                 }
                 entry = context.Motion;
                 ran = true;
+                if (Job == null && measuredVelocities) BeginAnimationPhase(context, into, inputJob);
                 if (Job != null)
                 {
                     var stream = context.ToStream();
@@ -989,6 +1042,7 @@ namespace Unbound.Runtime.Playables
                     {
                         var pointer = (IntPtr)(&stream);
                         Dispatch(Job, pointer, (IntPtr)(int)UnityEngine.Animations.JobMethodIndex.ProcessRootMotionMethodIndex);
+                        if (measuredVelocities) BeginAnimationPhase(context, into, inputJob);
                         Dispatch(Job, pointer, (IntPtr)(int)UnityEngine.Animations.JobMethodIndex.ProcessAnimationMethodIndex);
                     }
                 }
@@ -1000,17 +1054,38 @@ namespace Unbound.Runtime.Playables
             finally
             {
                 Motion = context.Motion;
-                // The motion the job's stream ends with is its stream's root motion for the output
-                // when the job changed it (set velocities, CopyAnimationStreamMotion) or the stream
-                // does not carry its input's motion itself (an input whose motion is not known).
-                bool changed = ran && !context.Motion.SameAs(entry);
-                if (e.MotionMode == RootMotionMode.Compute && (changed || (ran && context.Motion.Computed && !into.Motion.Known)))
+                if (measuredVelocities) m_AnimationPhaseEdits = context.VelocityEdits;
+                else if (e.MotionMode == RootMotionMode.Compute && ran
+                    && (!context.Motion.SameAs(entry) || (context.Motion.Computed && !into.Motion.Known)))
+                {
+                    // In unmeasured graphs the final motion still replaces an unknown input
+                    // or carries velocity changes made in either callback.
                     into.Motion = RootMotionStep.FromVelocities(e.Animator, into.DeltaTime, context.Motion.Velocity, context.Motion.AngularVelocity);
+                }
                 foreach (var (input, _) in context.Inputs)
                     if (input != context) StreamContext.Close(input);
                 context.Inputs.Clear();
                 StreamContext.Close(context);
             }
+        }
+
+        void BeginAnimationPhase(StreamContext context, AnimStream into, JobKind input)
+        {
+            m_RootPhaseMotion = context.Motion;
+            if (context.VelocityEdits != StreamVelocityEdits.None)
+                into.Motion = new RootMotionStep
+                {
+                    Known = true,
+                    Delta = m_RootPhaseMotion.Velocity * into.DeltaTime,
+                    Turn = m_RootPhaseMotion.JobTurn(into.DeltaTime),
+                };
+
+            // The input's animation callback ran when it was evaluated. Apply its field
+            // edits here so the motion callbacks see the root phase, then the animation
+            // callbacks see the edits made by their inputs in that phase.
+            context.VelocityEdits = input?.m_AnimationPhaseEdits ?? StreamVelocityEdits.None;
+            if ((context.VelocityEdits & StreamVelocityEdits.Linear) != 0) context.Motion.Velocity = input.Motion.Velocity;
+            if ((context.VelocityEdits & StreamVelocityEdits.Angular) != 0) context.Motion.AngularVelocity = input.Motion.AngularVelocity;
         }
     }
 
@@ -1172,28 +1247,37 @@ namespace UnityEngine.Animations
             return c;
         }
 
-        /// <summary>A job's motion change stays in the stream (jobs above and CopyAnimationStreamMotion
-        /// see it) and moves a generic Animator through its playable output (AnimationEvaluation.Run).
-        /// Setting stays loud: how Unity turns a set velocity into the Animator's motion is not
-        /// measured, and humanoid Animators and Animators whose own controller plays do not apply it.</summary>
-        StreamContext SetMotionContext(string member)
+        void SetJobVelocity(string member, StreamVelocityEdits channel, Vector3 value)
         {
             CheckIsValid();
-            Unbound.Runtime.Stubs.Ignored("AnimationStream." + member + " (set)",
-                "moves a generic Animator through its playable output by velocity times the stream's delta time (Unbound's choice, unmeasured); humanoid Animators and Animators whose own controller plays do not apply it");
-            return Context;
+            var c = Context;
+            if (c.Evaluation?.UsesMeasuredJobVelocities == true)
+            {
+                if (c.Evaluation.MotionMode == RootMotionMode.Zero || c.Stream.DeltaTime == 0f) return;
+                c.VelocityEdits |= channel;
+            }
+            else
+                Unbound.Runtime.Stubs.Ignored("AnimationStream." + member + " (set)",
+                    "this graph is outside the measured animation job velocity path; keeps Unbound's earlier stream and root-motion rules");
+            if (channel == StreamVelocityEdits.Linear) c.Motion.Velocity = value;
+            else c.Motion.AngularVelocity = value;
         }
 
         public Vector3 velocity
         {
             get => MotionContext("velocity").Motion.Velocity;
-            set => SetMotionContext("velocity").Motion.Velocity = value;
+            set => SetJobVelocity("velocity", StreamVelocityEdits.Linear, value);
         }
 
         public Vector3 angularVelocity
         {
-            get => MotionContext("angularVelocity").Motion.AngularVelocity;
-            set => SetMotionContext("angularVelocity").Motion.AngularVelocity = value;
+            get
+            {
+                var c = MotionContext("angularVelocity");
+                return c.Evaluation?.UsesMeasuredJobVelocities == true
+                    ? c.Motion.JobAngularVelocity(c.Stream.DeltaTime) : c.Motion.AngularVelocity;
+            }
+            set => SetJobVelocity("angularVelocity", StreamVelocityEdits.Angular, value);
         }
 
         public Vector3 rootMotionPosition
@@ -1201,7 +1285,7 @@ namespace UnityEngine.Animations
             get
             {
                 var c = MotionContext("rootMotionPosition");
-                return c.Motion.Position(c.Stream.DeltaTime);
+                return c.Evaluation?.UsesMeasuredJobVelocities == true ? c.Motion.StartPosition : c.Motion.Position(c.Stream.DeltaTime);
             }
         }
 
@@ -1210,7 +1294,7 @@ namespace UnityEngine.Animations
             get
             {
                 var c = MotionContext("rootMotionRotation");
-                return c.Motion.Rotation(c.Stream.DeltaTime);
+                return c.Evaluation?.UsesMeasuredJobVelocities == true ? c.Motion.StartRotation : c.Motion.Rotation(c.Stream.DeltaTime);
             }
         }
 

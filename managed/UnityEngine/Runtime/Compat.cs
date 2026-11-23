@@ -953,6 +953,9 @@ namespace Unbound.Runtime
         // in masked TRS writes (6000.0.71f1, humanoid bone.masked*).
         internal static bool HumanStreamReadMasks => Family == ReleaseFamily.Unity6000_0;
 
+        /// <summary>Root-space velocity writes in a generic animation job, measured on 6000.0.71f1 (streamvelocity).</summary>
+        internal static bool AnimationStreamVelocityWrites => Family == ReleaseFamily.Unity6000_0;
+
         /// <summary>Humanoid root motion composed by mixer trees (any input count and nesting, any
         /// input weight sum blended unnormalized, weights changed between evaluations or while
         /// culled), measured by animculling humanMixerMotion/humanMixerShape on

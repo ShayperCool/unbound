@@ -343,6 +343,7 @@ namespace Unbound.Runtime.Playables
         /// <summary>The weight of the output being sampled: the clips' events report their own
         /// weight times it, as before, while it takes no part in whether they fire.</summary>
         internal float OutputWeight = 1f;
+        internal bool UsesMeasuredJobVelocities;
         /// <summary>How this evaluation's streams carry root motion (set by <see cref="Run"/>).</summary>
         internal RootMotionMode MotionMode;
         readonly List<(AnimationKind Kind, PlayableNode Node, bool Combined)> m_Evaluated = new List<(AnimationKind, PlayableNode, bool)>();
@@ -893,6 +894,10 @@ namespace Unbound.Runtime.Playables
                 e.AutomaticFrame = (o.Engine as AnimationOutputState)?.Automatic == true
                     && o.Graph.UpdateMode == DirectorUpdateMode.GameTime;
                 var source = (o.Engine as AnimationOutputState)?.StreamSource ?? AnimationStreamSource.DefaultValues;
+                e.UsesMeasuredJobVelocities = Compat.AnimationStreamVelocityWrites && !withController
+                    && !animator.isHuman && o.Graph.UpdateMode == DirectorUpdateMode.Manual && o.Weight == 1f
+                    && source == AnimationStreamSource.DefaultValues && JobKind.HasEmptyMotionSource(o.Source)
+                    && outputs.Count == 1 && AnimationOutputs.ActiveCount(animator) == 1;
                 AnimStream s;
                 // The tree's own weights decide which clips fire events; the output's weight blends
                 // the pose only (6000.0.71f1, animculling weight/0: a clip under an output at
