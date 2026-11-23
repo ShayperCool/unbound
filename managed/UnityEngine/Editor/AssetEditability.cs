@@ -34,26 +34,127 @@ namespace UnityEditor
         public static bool IsOpenForEdit(Object assetObject, out string message, StatusQueryOptions statusOptions)
             => IsOpenForEdit(EditObjectPath(assetObject), out message, statusOptions);
 
+        /// <summary>Open: not blank paths, paths outside the packages the project does not hold
+        /// that the processors' IsOpenForEdit callbacks accept (tests/projects/openforedit,
+        /// openforedithooks).</summary>
         public static bool IsOpenForEdit(string assetOrMetaFilePath, out string message, StatusQueryOptions statusOptions)
         {
             message = "";
             if (string.IsNullOrEmpty(assetOrMetaFilePath)) return true;
             MainThreadCheck.Check("TryGetAssetFolderInfo");
             if (IsImmutablePackagePath(assetOrMetaFilePath)) return false;
-            EnsureEditSettings();
-            if (s_ExternalVersionControl)
-                throw new NotSupportedException("AssetDatabase.IsOpenForEdit with an active version control provider is not supported.");
-            return true;
+            if (!AssetModificationProcessorInternal.IsOpenForEdit(assetOrMetaFilePath, out message, statusOptions)) return false;
+            return WithoutVersionControl(nameof(IsOpenForEdit));
         }
 
         public static void IsOpenForEdit(string[] assetOrMetaFilePaths, List<string> outNotEditablePaths,
             StatusQueryOptions statusQueryOptions = StatusQueryOptions.UseCachedIfPossible)
         {
+            var paths = QueriedPaths(assetOrMetaFilePaths, outNotEditablePaths);
+            if (paths.Length != 0 && AssetModificationProcessorInternal.IsOpenForEdit(paths, outNotEditablePaths, statusQueryOptions))
+                WithoutVersionControl(nameof(IsOpenForEdit));
+        }
+
+        public static bool CanOpenForEdit(Object assetObject) => CanOpenForEdit(assetObject, out _, StatusQueryOptions.UseCachedIfPossible);
+        public static bool CanOpenForEdit(string assetOrMetaFilePath) => CanOpenForEdit(assetOrMetaFilePath, out _, StatusQueryOptions.UseCachedIfPossible);
+        public static bool CanOpenForEdit(Object assetObject, StatusQueryOptions statusOptions) => CanOpenForEdit(assetObject, out _, statusOptions);
+        public static bool CanOpenForEdit(string assetOrMetaFilePath, StatusQueryOptions statusOptions) => CanOpenForEdit(assetOrMetaFilePath, out _, statusOptions);
+        public static bool CanOpenForEdit(Object assetObject, out string message) => CanOpenForEdit(assetObject, out message, StatusQueryOptions.UseCachedIfPossible);
+        public static bool CanOpenForEdit(string assetOrMetaFilePath, out string message) => CanOpenForEdit(assetOrMetaFilePath, out message, StatusQueryOptions.UseCachedIfPossible);
+        public static bool CanOpenForEdit(Object assetObject, out string message, StatusQueryOptions statusOptions)
+            => CanOpenForEdit(EditObjectPath(assetObject), out message, statusOptions);
+
+        /// <summary>Open, or else accepted by the processors' CanOpenForEdit callbacks; the
+        /// message stays empty (tests/projects/openforedithooks).</summary>
+        public static bool CanOpenForEdit(string assetOrMetaFilePath, out string message, StatusQueryOptions statusOptions)
+        {
+            message = "";
+            if (string.IsNullOrEmpty(assetOrMetaFilePath)) return true;
+            MainThreadCheck.Check("TryGetAssetFolderInfo");
+            if (IsImmutablePackagePath(assetOrMetaFilePath)) return false;
+            if (!AssetModificationProcessorInternal.CanOpenForEdit(assetOrMetaFilePath, out message, statusOptions)) return false;
+            return WithoutVersionControl(nameof(CanOpenForEdit));
+        }
+
+        /// <summary>Lists the paths that cannot be opened: the immutable ones, then those the
+        /// IsOpenForEdit callbacks refuse and the CanOpenForEdit callbacks do not accept.</summary>
+        public static void CanOpenForEdit(string[] assetOrMetaFilePaths, List<string> outNotEditablePaths,
+            StatusQueryOptions statusQueryOptions = StatusQueryOptions.UseCachedIfPossible)
+        {
+            var paths = QueriedPaths(assetOrMetaFilePaths, outNotEditablePaths);
+            if (paths.Length == 0) return;
+            var notOpen = new List<string>();
+            AssetModificationProcessorInternal.IsOpenForEdit(paths, notOpen, statusQueryOptions);
+            if (notOpen.Count != 0 && !AssetModificationProcessorInternal.CanOpenForEdit(notOpen.ToArray(), outNotEditablePaths, statusQueryOptions))
+                return;
+            WithoutVersionControl(nameof(CanOpenForEdit));
+        }
+
+        public static bool IsMetaFileOpenForEdit(Object assetObject) => IsMetaFileOpenForEdit(assetObject, out _, StatusQueryOptions.UseCachedIfPossible);
+        public static bool IsMetaFileOpenForEdit(Object assetObject, StatusQueryOptions statusOptions) => IsMetaFileOpenForEdit(assetObject, out _, statusOptions);
+        public static bool IsMetaFileOpenForEdit(Object assetObject, out string message) => IsMetaFileOpenForEdit(assetObject, out message, StatusQueryOptions.UseCachedIfPossible);
+
+        /// <summary>Whether the .meta file of the object's asset (or scene) is open; an object
+        /// without one is.</summary>
+        public static bool IsMetaFileOpenForEdit(Object assetObject, out string message, StatusQueryOptions statusOptions)
+        {
+            string path = EditObjectPath(assetObject);
+            if (path.Length == 0)
+            {
+                message = "";
+                return true;
+            }
+            return IsOpenForEdit(path + ".meta", out message, statusOptions);
+        }
+
+        /// <summary>One path; an empty one is passed to the callbacks as none.</summary>
+        public static bool MakeEditable(string path)
+        {
+            if (path == null) throw new ArgumentNullException(nameof(path));
+            return MakeEditable(path.Length == 0 ? Array.Empty<string>() : new[] { path }, null, null);
+        }
+
+        /// <summary>The processors' MakeEditable callbacks get the paths as given (also an
+        /// immutable package's: they are not filtered), the prompt ("" for none) and the list (a
+        /// new one for none) until one refuses: false, with the list as they left it. Otherwise,
+        /// without version control, every file is editable: the list is cleared and the answer is
+        /// true (tests/projects/openforedit, openforedithooks). A read-only file stays read-only.</summary>
+        public static bool MakeEditable(string[] paths, string prompt = null, List<string> outNotEditablePaths = null)
+        {
+            if (paths == null) throw new ArgumentNullException(nameof(paths));
+            outNotEditablePaths ??= new List<string>();
+            if (!AssetModificationProcessorInternal.MakeEditable(paths, prompt ?? "", outNotEditablePaths)) return false;
+            WithoutVersionControl(nameof(MakeEditable));
+            outNotEditablePaths.Clear();
+            return true;
+        }
+
+        /// <summary>A list query's paths for the callbacks: blank ones skipped, those of an
+        /// immutable package listed as not editable (the list cleared first).</summary>
+        static string[] QueriedPaths(string[] assetOrMetaFilePaths, List<string> outNotEditablePaths)
+        {
             if (assetOrMetaFilePaths == null) throw new ArgumentNullException(nameof(assetOrMetaFilePaths));
             if (outNotEditablePaths == null) throw new ArgumentNullException(nameof(outNotEditablePaths));
             outNotEditablePaths.Clear();
+            var paths = new List<string>(assetOrMetaFilePaths.Length);
             foreach (string path in assetOrMetaFilePaths)
-                if (!IsOpenForEdit(path, out _, statusQueryOptions)) outNotEditablePaths.Add(path);
+            {
+                if (string.IsNullOrEmpty(path)) continue;
+                MainThreadCheck.Check("TryGetAssetFolderInfo");
+                if (IsImmutablePackagePath(path)) outNotEditablePaths.Add(path);
+                else paths.Add(path);
+            }
+            return paths.ToArray();
+        }
+
+        /// <summary>Without a version control provider every file the callbacks accept is open;
+        /// with one, the query is unsupported.</summary>
+        static bool WithoutVersionControl(string member)
+        {
+            EnsureEditSettings();
+            if (s_ExternalVersionControl)
+                throw new NotSupportedException($"AssetDatabase.{member} with an active version control provider is not supported.");
+            return true;
         }
 
         /// <summary>Whether the path is in a package the project does not hold (registry, built-in, Git).</summary>
