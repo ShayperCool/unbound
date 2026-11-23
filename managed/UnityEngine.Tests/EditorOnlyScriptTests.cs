@@ -42,10 +42,40 @@ namespace Unbound.Tests
         {
             Assert.Equal("TreeEditor.TreeData", EngineScripts.EditorOnlyClass(DefaultResources, 12106));
             Assert.Null(GameDomain.ResolveScript(DefaultResources, 12106));
-            MissingScripts.Report(new ObjectRef(12106, DefaultResources, 0),
-                new YDocument { ClassId = 114, FileId = 11400000, TypeName = "MonoBehaviour" });
+            Assert.True(MissingScripts.ReportEditorOnly(new ObjectRef(12106, DefaultResources, 0),
+                new YDocument { ClassId = 114, FileId = 11400000, TypeName = "MonoBehaviour" }));
             var warning = Assert.Single(m_Logs);
             Assert.StartsWith("Warning: Unbound does not load the Editor's TreeEditor.TreeData (MonoBehaviour 11400000", warning);
+        }
+
+        /// <summary>An asset object of a missing script says so the first time a load hands it
+        /// out by itself, and is given as null; one reached through its own file's reference first
+        /// says nothing later (tests/projects/missingscripts 04.asset, 08.linked).</summary>
+        [Fact]
+        public void AMissingScriptsObjectIsSaidOnceWhenLoadedByItself()
+        {
+            var direct = ScriptableObject.CreateInstanceWithoutCallbacks(typeof(ScriptableObject));
+            var reached = ScriptableObject.CreateInstanceWithoutCallbacks(typeof(ScriptableObject));
+            var plain = ScriptableObject.CreateInstanceWithoutCallbacks(typeof(ScriptableObject));
+            try
+            {
+                MissingScripts.Mark(direct);
+                MissingScripts.Mark(reached);
+                Assert.True(MissingScripts.IsMissing(direct) && !MissingScripts.IsMissing(plain) && !MissingScripts.IsMissing(null));
+                Assert.Null(MissingScripts.Loaded(direct));
+                Assert.Null(MissingScripts.Loaded(direct));
+                Assert.Equal(new[] { "Warning: " + MissingScripts.UnknownMessage }, m_Logs);
+                MissingScripts.Reached(reached);
+                Assert.Null(MissingScripts.Loaded(reached));
+                Assert.Same(plain, MissingScripts.Loaded(plain));
+                Assert.Single(m_Logs);
+            }
+            finally
+            {
+                Object.DestroyImmediate(direct);
+                Object.DestroyImmediate(reached);
+                Object.DestroyImmediate(plain);
+            }
         }
 
         [Fact]

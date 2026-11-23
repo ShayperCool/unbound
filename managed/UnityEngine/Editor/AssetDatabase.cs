@@ -139,10 +139,11 @@ namespace UnityEditor
             if (string.IsNullOrEmpty(guid)) return null;
             var main = AssetDatabaseRuntime.LoadMain(guid, type ?? typeof(Object));
             if (main != null) return main;
+            if (MissingScripts.IsMissing(main)) return MissingScripts.Loaded(main);
             if (type == null) return null;
             WarnIfScriptsUnknown(assetPath, guid);
             foreach (var o in AssetDatabaseRuntime.LoadAll(guid))
-                if (type.IsInstanceOfType(o)) return o;
+                if (type.IsInstanceOfType(o)) return MissingScripts.Loaded(o);
             return null;
         }
 
@@ -160,7 +161,13 @@ namespace UnityEditor
             // a scene's, a plug-in's DefaultAsset or SceneAsset) is not among them; a managed
             // plug-in's scripts are (matches the Unity 6000.0.71f1 Editor,
             // tests/projects/defaultasset asset.* and dllScripts.main).
-            var all = AssetDatabaseRuntime.LoadAll(guid, hierarchy: true).Where(o => !IsPlaceholder(o)).ToArray();
+            // Objects of a missing script are given as null (and said once: MissingScripts).
+            var listed = AssetDatabaseRuntime.LoadAll(guid, hierarchy: true).Where(o => !IsPlaceholder(o));
+            // A main object of a missing script (which compares equal to null) is listed too,
+            // first (tests/projects/missingscripts 04.asset.all).
+            if (MissingScripts.IsMissing(AssetDatabaseRuntime.LoadFile(guid)?.MainObject))
+                listed = listed.Prepend(AssetDatabaseRuntime.LoadFile(guid).MainObject);
+            var all = listed.Select(MissingScripts.Loaded).ToArray();
             WarnIfScriptsUnknown(assetPath, guid);
             return all;
         }
@@ -182,7 +189,8 @@ namespace UnityEditor
             if (string.IsNullOrEmpty(guid)) return Array.Empty<Object>();
             var main = AssetDatabaseRuntime.LoadMain(guid, null);
             WarnIfScriptsUnknown(assetPath, guid);
-            return AssetDatabaseRuntime.LoadAll(guid).Where(o => o != main && !AssetDatabaseRuntime.IsTakePreview(o)).ToArray();
+            return AssetDatabaseRuntime.LoadAll(guid).Where(o => (MissingScripts.IsMissing(o) || o != main) && !AssetDatabaseRuntime.IsTakePreview(o))
+                .Select(MissingScripts.Loaded).ToArray();
         }
 
         public static Type GetMainAssetTypeAtPath(string assetPath) => LoadMainAssetAtPath(assetPath)?.GetType();

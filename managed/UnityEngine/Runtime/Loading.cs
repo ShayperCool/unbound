@@ -1,4 +1,5 @@
 using System;
+using System.Runtime.CompilerServices;
 using System.Collections.Generic;
 using System.Text.Json;
 using UnityEngine;
@@ -34,7 +35,14 @@ namespace Unbound.Runtime
         {
             if (reference.IsNull) return null;
             if (reference.IsLocal || string.Equals(reference.Guid, Guid, StringComparison.OrdinalIgnoreCase))
-                return Objects.TryGetValue(reference.FileId, out var local) ? local : null;
+            {
+                if (!Objects.TryGetValue(reference.FileId, out var local)) return null;
+                // Reached through its own file's reference, a missing script's object counts as
+                // loaded: a later load by itself does not say so (tests/projects/missingscripts
+                // 08.linked).
+                MissingScripts.Reached(local);
+                return local;
+            }
             return AssetDatabaseRuntime.Load(reference.Guid, reference.FileId, expected);
         }
     }
@@ -176,7 +184,7 @@ namespace Unbound.Runtime
                     if (!owner.IsNull)
                     {
                         if (!gameObjects.TryGetValue(owner.FileId, out var entry)) continue;
-                        var type = ComponentTypeOf(doc, guid);
+                        var type = ComponentTypeOf(doc, guid, kind);
                         if (type == null) continue;
                         if (kind == Kind.Scene && EditorSession.IsPlaying && DisabledModules.Contains(type))
                         {
@@ -393,7 +401,7 @@ namespace Unbound.Runtime
         static void LogDeleted(Type type) =>
             Debug.Log($"{type.Name} component deleted: Component belongs to a disabled built-in package.");
 
-        static Type ComponentTypeOf(YDocument doc, string fileGuid)
+        static Type ComponentTypeOf(YDocument doc, string fileGuid, Kind kind)
         {
             if (doc.ClassId == EngineTypes.MonoBehaviourId)
             {
@@ -401,7 +409,15 @@ namespace Unbound.Runtime
                 var type = ScriptOf(script, fileGuid);
                 if (type == null)
                 {
-                    MissingScripts.Report(script, doc);
+                    // A component whose script is missing: a prefab's load says so for each one;
+                    // a scene Play mode loads says nothing (Unity 6000.0.71f1, tests/projects/
+                    // missingscripts 03.prefab.load, 01.scene.loaded). Other loads (a scene opened
+                    // in Edit mode, a bundle) are unmeasured: Unbound names the script once.
+                    if (!MissingScripts.ReportEditorOnly(script, doc))
+                    {
+                        if (kind == Kind.PrefabAsset) MissingScripts.WarnUnknown();
+                        else if (!(kind == Kind.Scene && EditorSession.IsPlaying)) MissingScripts.Report(script, doc);
+                    }
                     return null;
                 }
                 return typeof(Component).IsAssignableFrom(type) ? type : null;
@@ -418,7 +434,9 @@ namespace Unbound.Runtime
                 var type = ScriptOf(script, fileGuid);
                 if (type == null)
                 {
-                    MissingScripts.Report(script, doc);
+                    // Said when the object is loaded by itself, not when its file is read
+                    // (MissingScripts.Loaded).
+                    MissingScripts.ReportEditorOnly(script, doc);
                     // As in Unity, the asset still exists: an object of the base class that
                     // serialized references keep (its data cannot be read). It compares equal to
                     // null, as a timeline's markers of a missing class are no markers and raise no
@@ -429,6 +447,7 @@ namespace Unbound.Runtime
                     {
                         ReadName(placeholder, doc.Body);
                         placeholder.m_Destroyed = true;
+                        MissingScripts.Mark(placeholder);
                     }
                     return placeholder;
                 }
@@ -557,23 +576,69 @@ namespace Unbound.Runtime
         void ReadSerialized(YNode body, IReferenceResolver resolver);
     }
 
+    /// <summary>
+    /// Objects whose script cannot be found. The Unity 6000.0.71f1 Editor (tests/projects/
+    /// missingscripts) says "The referenced script (Unknown) on this Behaviour is missing!" for
+    /// each such component of a prefab it loads, and for an asset object of such a script the first
+    /// time it is loaded by itself (AssetDatabase.LoadAssetAtPath, LoadAllAssetsAtPath,
+    /// Resources.Load): that load gives null in its place. Reached only through a reference, or in
+    /// a scene Play mode loads, it says nothing.
+    /// </summary>
     internal static class MissingScripts
     {
+        internal const string UnknownMessage = "The referenced script (Unknown) on this Behaviour is missing!";
         static readonly HashSet<string> s_Reported = new HashSet<string>();
+        /// <summary>Asset objects of a missing script, and whether a load said so yet.</summary>
+        static readonly System.Runtime.CompilerServices.ConditionalWeakTable<Object, StrongBox<bool>> s_Objects =
+            new System.Runtime.CompilerServices.ConditionalWeakTable<Object, StrongBox<bool>>();
 
+        internal static void WarnUnknown() => Debug.LogWarning(UnknownMessage);
+
+        internal static void Mark(Object placeholder) => s_Objects.AddOrUpdate(placeholder, new StrongBox<bool>(false));
+
+        internal static bool IsMissing(Object o) => (object)o != null && s_Objects.TryGetValue(o, out _);
+
+        /// <summary>Reached through a reference of its own file: said as loaded, silently.</summary>
+        internal static void Reached(Object o)
+        {
+            if ((object)o != null && s_Objects.TryGetValue(o, out var said)) said.Value = true;
+        }
+
+        /// <summary>An object a load hands out by itself: an asset object of a missing script is
+        /// said once and given as null.</summary>
+        internal static Object Loaded(Object o)
+        {
+            if ((object)o == null || !s_Objects.TryGetValue(o, out var said)) return o;
+            if (!said.Value)
+            {
+                said.Value = true;
+                WarnUnknown();
+            }
+            return null;
+        }
+
+        /// <summary>The Editor's own classes Unbound does not load: named once. False for any
+        /// other script.</summary>
+        internal static bool ReportEditorOnly(ObjectRef script, YDocument doc)
+        {
+            var editorClass = EngineScripts.EditorOnlyClass(script.Guid, script.FileId);
+            if (editorClass == null) return false;
+            lock (s_Reported)
+            {
+                if (!s_Reported.Add($"{script.Guid}:{script.FileId}")) return true;
+            }
+            Debug.LogWarning($"Unbound does not load the Editor's {editorClass} ({doc.TypeName} {doc.FileId}{AssetDatabaseRuntime.DescribeGuid(script.Guid)}): " +
+                             "its data is not read.");
+            return true;
+        }
+
+        /// <summary>Loads whose message is unmeasured: the script named once.</summary>
         internal static void Report(ObjectRef script, YDocument doc)
         {
             var key = $"{script.Guid}:{script.FileId}";
             lock (s_Reported)
             {
                 if (!s_Reported.Add(key)) return;
-            }
-            var editorClass = EngineScripts.EditorOnlyClass(script.Guid, script.FileId);
-            if (editorClass != null)
-            {
-                Debug.LogWarning($"Unbound does not load the Editor's {editorClass} ({doc.TypeName} {doc.FileId}{AssetDatabaseRuntime.DescribeGuid(script.Guid)}): " +
-                                 "its data is not read.");
-                return;
             }
             Debug.LogWarning($"The referenced script (guid {script.Guid}, fileID {script.FileId}) on this Behaviour is missing! " +
                              $"({doc.TypeName} {doc.FileId}{AssetDatabaseRuntime.DescribeGuid(script.Guid)})");
