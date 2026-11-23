@@ -66,7 +66,7 @@ pub fn markers(
 /// One pass from `src` into `dst`: a texel whose weight (fourth value) is above 0 is kept, as is
 /// one outside `within` where given; every other takes the sum of its neighbours' values times
 /// their weights, times [`mean_factor`] of the weights' sum, and that sum within [0, 1] as its
-/// weight (a texel no neighbour holds light for comes to hold nothing). Whether any texel came
+/// weight (a texel no neighbour holds light for comes to hold nothing: not measured). Whether any texel came
 /// to hold light.
 fn pass(
     src: &[[f32; 4]],

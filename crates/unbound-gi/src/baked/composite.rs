@@ -47,7 +47,7 @@ pub fn composite(buffers: &Buffers, backface_tolerance: f32, padding: u32) -> Ve
     // The texels whose light does not stand (more of their rays met back faces than the
     // tolerance allows, or no number) given their neighbours' light, then `padding` rings
     // around the charts ([`dilate`]; a group of them no texel holding its own light reaches
-    // holds none).
+    // holds none: not measured).
     let marks = dilate::markers(buffers.used, buffers.validity, backface_tolerance, &out);
     for (texel, mark) in out.iter_mut().zip(marks) {
         texel[3] = mark;
