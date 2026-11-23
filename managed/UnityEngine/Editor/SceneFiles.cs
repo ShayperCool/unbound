@@ -1393,13 +1393,19 @@ namespace Unbound.Runtime
         static readonly System.Runtime.CompilerServices.ConditionalWeakTable<Object, object> s_Recorded =
             new System.Runtime.CompilerServices.ConditionalWeakTable<Object, object>();
 
+        /// <summary>Records an object's changes: a script of a prefab instance keeps its values as
+        /// they are now (<see cref="PrefabInstances.Record"/>).</summary>
         internal static void Record(Object o)
         {
             if (o is null) return;
-            s_Recorded.AddOrUpdate(o, null);
+            s_Recorded.AddOrUpdate(o, PrefabInstances.Record(o));
         }
 
         internal static bool IsRecorded(Object o) => o is not null && s_Recorded.TryGetValue(o, out _);
+
+        /// <summary>The values kept by a script's last record, or null.</summary>
+        internal static PrefabInstances.RecordedValues Values(Object o) =>
+            o is not null && s_Recorded.TryGetValue(o, out var values) ? values as PrefabInstances.RecordedValues : null;
     }
 
     /// <summary>The document of an object Unbound writes whole or in part outside a scene's

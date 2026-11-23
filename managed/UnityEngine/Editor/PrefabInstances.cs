@@ -381,38 +381,108 @@ namespace Unbound.Runtime
             foreach (var o in ObjectsOf(data))
             {
                 if (!Considered(o)) continue;
-                // A Transform changed since its instance last took its changes answers its pose at the
-                // last update, else (changed for the first time) the stored values.
-                using var taken = Taken(o, data) ? default : TakenPose.Of((Transform)o);
-                if (!Taken(o, data) && !taken.Applied) continue;
                 var link = PrefabLinks.Of(o);
-                var source = PrefabLinks.Source(o);
-                if (source == null) continue;
-                var before = PrefabValues.ByPath(PrefabValues.Flatten(PrefabValues.Fields(source, null, refs)));
-                foreach (var (path, value) in PrefabValues.Flatten(PrefabValues.Fields(o, toSource, refs)))
+                if (PrefabLinks.Source(o) == null) continue;
+                // A script whose changes are taken only when recorded answers its values at its last
+                // record (matches the Unity 6000.0.71f1 Editor, tests/projects/animatorapi
+                // modify.overridden.*: a change since is listed once recorded again).
+                var entries = TakesChangesWhenRecorded(o, data) && PrefabRecords.Values(o) is { } recorded ? Entries(o, recorded) : null;
+                if (entries == null)
                 {
-                    bool isReference = value.Kind == YKind.Map;
-                    var entry = (Target: new ObjectRef(link.SourceFileId, link.SourceGuid, 3), Path: path,
-                        Value: isReference ? "" : value.Text, Reference: isReference ? refs.ObjectOf(value) : null, Resolved: true);
+                    // A Transform changed since its instance last took its changes answers its pose
+                    // at the last update, else (changed for the first time) the stored values.
+                    using var taken = Taken(o, data) ? default : TakenPose.Of((Transform)o);
+                    if (!Taken(o, data) && !taken.Applied) continue;
+                    entries = Entries(o, toSource, refs);
+                }
+                var target = new ObjectRef(link.SourceFileId, link.SourceGuid, 3);
+                foreach (var entry in entries)
+                {
                     int existing = -1;
                     for (int i = 0; i < list.Count && existing < 0; i++)
-                        if (list[i].Path == path && !list[i].Target.IsNull && list[i].Target.FileId == link.SourceFileId
+                        if (list[i].Path == entry.Path && !list[i].Target.IsNull && list[i].Target.FileId == link.SourceFileId
                             && string.Equals(list[i].Target.Guid ?? data.SourceGuid, link.SourceGuid, StringComparison.OrdinalIgnoreCase))
                             existing = i;
                     if (existing >= 0)
                     {
-                        list[existing] = (list[existing].Target, path, entry.Value, entry.Reference, true);
+                        list[existing] = (list[existing].Target, entry.Path, entry.Value, entry.Reference, true);
                         continue;
                     }
-                    if (before.TryGetValue(path, out var was) && PrefabValues.Same(was, value)) continue;
+                    if (!entry.Differs) continue;
                     int insertAt = list.Count;
                     for (int i = 0; i < list.Count; i++)
                         if (list[i].Target.FileId > link.SourceFileId) { insertAt = i; break; }
-                    list.Insert(insertAt, entry);
+                    list.Insert(insertAt, (target, entry.Path, entry.Value, entry.Reference, true));
                 }
             }
             return list;
         }
+
+        /// <summary>An object's properties as an instance's modifications take them: each path with
+        /// its value text (or object reference), and whether it differs from the source's.</summary>
+        internal static List<(string Path, string Value, Object Reference, bool Differs)> Entries(Object o, Func<Object, Object> toSource, ValueReferences refs)
+        {
+            var list = new List<(string, string, Object, bool)>();
+            var source = PrefabLinks.Source(o);
+            if (source == null) return list;
+            var before = PrefabValues.ByPath(PrefabValues.Flatten(PrefabValues.Fields(source, null, refs)));
+            foreach (var (path, value) in PrefabValues.Flatten(PrefabValues.Fields(o, toSource, refs)))
+            {
+                bool isReference = value.Kind == YKind.Map;
+                bool differs = !(before.TryGetValue(path, out var was) && PrefabValues.Same(was, value));
+                list.Add((path, isReference ? "" : value.Text, isReference ? refs.ObjectOf(value) : null, differs));
+            }
+            return list;
+        }
+
+        /// <summary>A script's values as a record took them, with the references they name.</summary>
+        internal sealed class RecordedValues
+        {
+            internal ValueReferences Refs;
+            internal List<(string Path, YText Value)> Values;
+        }
+
+        /// <summary>The overrides a record keeps for a script of an instance (null for other objects):
+        /// its values that differ from the source now, what its modifications list until it is
+        /// recorded again.</summary>
+        internal static RecordedValues Record(Object o)
+        {
+            if (o is not MonoBehaviour || PrefabLinks.Of(o)?.Instance is not PrefabInstanceData data || !TakesChangesWhenRecorded(o, data)) return null;
+            var source = PrefabLinks.Source(o);
+            if (source == null) return null;
+            var refs = new ValueReferences();
+            var before = PrefabValues.ByPath(PrefabValues.Flatten(PrefabValues.Fields(source, null, refs)));
+            var values = PrefabValues.Flatten(PrefabValues.Fields(o, ToSource(data), refs))
+                .FindAll(v => !(before.TryGetValue(v.Path, out var was) && PrefabValues.Same(was, v.Value)));
+            return new RecordedValues { Refs = refs, Values = values };
+        }
+
+        /// <summary>A record's overrides as entries, each listed while both its recorded value and
+        /// the object's value now differ from the source's (an apply or a revert since leaves none:
+        /// they write the instance without recording it), with its recorded value.</summary>
+        static List<(string Path, string Value, Object Reference, bool Differs)> Entries(Object o, RecordedValues recorded)
+        {
+            var list = new List<(string, string, Object, bool)>(recorded.Values.Count);
+            var source = PrefabLinks.Source(o);
+            if (source == null || PrefabLinks.Of(o)?.Instance is not PrefabInstanceData data) return list;
+            var before = PrefabValues.ByPath(PrefabValues.Flatten(PrefabValues.Fields(source, null, recorded.Refs)));
+            var now = PrefabValues.ByPath(PrefabValues.Flatten(PrefabValues.Fields(o, ToSource(data), recorded.Refs)));
+            foreach (var (path, value) in recorded.Values)
+            {
+                bool isReference = value.Kind == YKind.Map;
+                bool was = before.TryGetValue(path, out var sourceValue);
+                bool differs = !(was && PrefabValues.Same(sourceValue, value))
+                    && !(was && now.TryGetValue(path, out var current) && PrefabValues.Same(sourceValue, current));
+                list.Add((path, isReference ? "" : value.Text, isReference ? recorded.Refs.ObjectOf(value) : null, differs));
+            }
+            return list;
+        }
+
+        /// <summary>A script whose changes reach its instance's modifications only when recorded: in
+        /// Play mode, and for an instance not made by InstantiatePrefab in this Edit-mode session
+        /// (those take a script's changes at the next Editor update, see <see cref="Considered"/>).</summary>
+        static bool TakesChangesWhenRecorded(Object o, PrefabInstanceData data) =>
+            o is MonoBehaviour && (EditorApplication.isPlaying || data.InstantiatedStamp < 0);
     }
 
     /// <summary>A property set by its path through a SerializedObject, from a modification's text

@@ -1,6 +1,0 @@
-{
-  "Prefab instance overrides: an object of an instance whose overrides were recorded once lists a property changed since at once; the Editor lists it when it is recorded again (PrefabUtility.GetPropertyModifications, outside animation mode too)": [
-    "modify.overridden.drop.after",
-    "modify.overridden.keep.after"
-  ]
-}

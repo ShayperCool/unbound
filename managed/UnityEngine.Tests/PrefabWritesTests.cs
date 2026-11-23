@@ -213,6 +213,36 @@ namespace UnityEngine.Tests
             Assert.Contains("count", Array.ConvertAll(PrefabUtility.GetPropertyModifications(instance), m => m.propertyPath));
         }
 
+        /// <summary>In Play mode a recorded script's overrides are those of its last record: a
+        /// property changed since is listed once recorded again (tests/projects/animatorapi
+        /// modify.overridden.*).</summary>
+        [Fact]
+        public void ARecordedScriptListsALaterChangeOnceRecordedAgain()
+        {
+            bool playing = EditorSession.IsPlaying;
+            EditorSession.IsPlaying = true;
+            try
+            {
+                var instance = Instance();
+                var holder = instance.GetComponent<PrefabTestHolder>();
+                string[] Paths() => Array.ConvertAll(PrefabUtility.GetPropertyModifications(instance), m => m.propertyPath);
+                holder.count = 8;
+                PrefabUtility.RecordPrefabInstancePropertyModifications(holder);
+                Assert.Contains("count", Paths());
+                holder.label = "later";
+                Assert.DoesNotContain("label", Paths());
+                PrefabUtility.RecordPrefabInstancePropertyModifications(holder);
+                Assert.Contains("label", Paths());
+                // Set back to the prefab's value (unrecorded): no longer an override.
+                holder.count = 3;
+                Assert.DoesNotContain("count", Paths());
+            }
+            finally
+            {
+                EditorSession.IsPlaying = playing;
+            }
+        }
+
         [Fact]
         public void AnAppliedPropertyIsWrittenAndEveryInstanceTakesItButForItsOwnOverride()
         {
