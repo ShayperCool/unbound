@@ -18,7 +18,7 @@ mod buffer_parameters;
 mod exponents;
 pub mod fetch;
 mod fit;
-mod inout_bools;
+mod inout_parameters;
 mod matrix_casts;
 mod matrix_swizzles;
 mod opaque_members;
@@ -37,7 +37,7 @@ use std::{
 
 /// Bumped whenever the output for a given source changes (cache entries of other versions are
 /// never used).
-pub const FORMAT_VERSION: u32 = 73;
+pub const FORMAT_VERSION: u32 = 74;
 
 /// The identity of this build's compiler (`unbound_source_identity::SHADER_COMPILER`): the hash
 /// of the sources that decide its output. Cache entries are keyed by it beside
@@ -1192,8 +1192,8 @@ impl ShaderCompiler {
             .map_or("shader".into(), |n| n.to_string_lossy().to_string());
         // Macros expanded once: a program that calls frexp or has an `inout bool` parameter
         // the rewrite splits compiles rewritten at once (glslang can crash on either, taking
-        // the process with it: [`exponents`], [`inout_bools`]); others compile as they are
-        // first.
+        // the process with it: [`exponents`], [`inout_parameters`]); others compile as they
+        // are first.
         let expanded = self
             .compiler
             .preprocess(source, &name, entry, Some(&o))
@@ -1208,7 +1208,7 @@ impl ShaderCompiler {
                     anyhow!("{}: {e}", stage_name(kind))
                 })
         };
-        let crashes = exponents::calls_frexp(&expanded) || inout_bools::splits(&expanded);
+        let crashes = exponents::calls_frexp(&expanded) || inout_parameters::splits(&expanded);
         let artifact = if crashes {
             compile_fixed()?
         } else {
@@ -1324,7 +1324,7 @@ const FRAMEBUFFER_INPUT_MACROS: &[&str] = &[
 /// integer; `half` is `float` on desktop), buffers held in structs ([`buffer_members`]) or passed to functions
 /// with their counters ([`buffer_parameters`]), matrix
 /// swizzles of several elements ([`matrix_swizzles`]), `frexp` and `ldexp` ([`exponents`]),
-/// numbers given to `inout bool` parameters ([`inout_bools`]),
+/// arguments converted to scalar and vector `inout` parameters ([`inout_parameters`]),
 /// functions declared to return a `const` value ([`plain_returns`]).
 fn fxc_compatible(source: &str) -> String {
     buffer_members::buffer_members(&writable_globals(&constructor_statements(
@@ -1332,7 +1332,7 @@ fn fxc_compatible(source: &str) -> String {
             &drop_duplicate_overloads(&half_literals(&matrix_swizzles::matrix_swizzles(
                 &exponents::exponent_calls(&buffer_parameters::buffer_parameters(&plain_returns(
                     &opaque_members::opaque_members(&scopes::flatten_scopes(
-                        &inout_bools::inout_bools(source),
+                        &inout_parameters::inout_parameters(source),
                     )),
                 ))),
             ))),
@@ -2115,7 +2115,7 @@ float4 array() : SV_Target { return float4(0.2, 0.4, 0.6, 1); }
 
     /// A number passed to an `inout bool` parameter (a Shader Graph effect output's blocks given
     /// its particles' `alive`, a float) crashes glslang, the process with it: such a program
-    /// compiles rewritten at once ([`inout_bools`]), and its call converts as FXC's.
+    /// compiles rewritten at once ([`inout_parameters`]), and its call converts as FXC's.
     #[test]
     fn numbers_given_to_inout_bool_parameters_compile() {
         let source = r#"
@@ -2129,6 +2129,31 @@ float4 vert(float4 position : POSITION) : SV_POSITION
     attributes.alive = position.w;
     SetAlive(attributes.alive, position.x > 0);
     return float4(position.xyz, attributes.alive);
+}
+float4 frag() : SV_Target { return float4(0.2, 0.4, 0.6, 1); }
+"#;
+        let mut compiler = ShaderCompiler::new(Settings::default()).unwrap();
+        let compiled = compiler
+            .compile(&program(source, false), &[], false)
+            .unwrap();
+        naga::front::wgsl::parse_str(&compiled.vertex).unwrap();
+    }
+
+    /// An argument of another base type given to an `inout` parameter (a float to an
+    /// `inout int`, an `int3` to an `inout float3`): glslang rejects the program as written, and
+    /// the program compiles rewritten ([`inout_parameters`]), converting as FXC's call does.
+    #[test]
+    fn arguments_converted_to_inout_parameters_compile() {
+        let source = r#"
+#pragma vertex vert
+#pragma fragment frag
+void Step(inout int count, inout float3 offset) { count += 1; offset += count; }
+float4 vert(float4 position : POSITION) : SV_POSITION
+{
+    float count = position.w;
+    int3 offset = (int3)position.xyz;
+    Step(count, offset);
+    return float4(offset, count);
 }
 float4 frag() : SV_Target { return float4(0.2, 0.4, 0.6, 1); }
 "#;
