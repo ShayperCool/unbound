@@ -318,4 +318,16 @@
 {"k":"blit.depthDestination.log","v":["Error: Invalid surface for grabbing pixels. Verify that the RenderTarget is a valid color surface. Only a single color target may be grabbed."]}
 {"k":"blit.depthDestination.created","v":true}
 {"k":"blit.depthDestination.active","v":true}
+{"k":"blit.fresh.samples.1.bind.false.before","v":false}
+{"k":"blit.fresh.samples.1.bind.false.log","v":[]}
+{"k":"blit.fresh.samples.1.bind.false.created","v":true}
+{"k":"blit.fresh.samples.1.bind.true.before","v":false}
+{"k":"blit.fresh.samples.1.bind.true.log","v":["Error: Invalid surface for grabbing pixels. Verify that the RenderTarget is a valid color surface. Only a single color target may be grabbed."]}
+{"k":"blit.fresh.samples.1.bind.true.created","v":false}
+{"k":"blit.fresh.samples.4.bind.false.before","v":false}
+{"k":"blit.fresh.samples.4.bind.false.log","v":[]}
+{"k":"blit.fresh.samples.4.bind.false.created","v":true}
+{"k":"blit.fresh.samples.4.bind.true.before","v":false}
+{"k":"blit.fresh.samples.4.bind.true.log","v":["Error: Invalid surface for grabbing pixels. Verify that the RenderTarget is a valid color surface. Only a single color target may be grabbed."]}
+{"k":"blit.fresh.samples.4.bind.true.created","v":true}
 {"k":"complete","v":true}

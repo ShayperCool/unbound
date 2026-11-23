@@ -34,7 +34,12 @@ public partial class ScreenCaptureProbe
             DestroyImmediate(destination);
         }
 
-        if (QualitySettings.activeColorSpace != ColorSpace.Linear) yield break;
+        if (QualitySettings.activeColorSpace != ColorSpace.Linear)
+        {
+            RecordFreshCaptureDestinations();
+            RecordGammaIntegerSources();
+            yield break;
+        }
         foreach (var c in new[] {
             (name: "larger", width: W * 2, height: H * 2, format: RenderTextureFormat.ARGB32, rw: RenderTextureReadWrite.sRGB),
             (name: "smaller", width: W / 2, height: H / 2, format: RenderTextureFormat.ARGB32, rw: RenderTextureReadWrite.sRGB),
@@ -250,6 +255,69 @@ public partial class ScreenCaptureProbe
         RenderTexture.active = null;
         DestroyImmediate(colorSource);
         DestroyImmediate(depthDestination);
+        RecordFreshCaptureDestinations();
+    }
+
+    void RecordFreshCaptureDestinations()
+    {
+        foreach (int samples in new[] { 1, 4 })
+        foreach (bool bind in new[] { false, true })
+        {
+            var destination = new RenderTexture(new RenderTextureDescriptor(W, H, RenderTextureFormat.ARGB32, 0)
+            {
+                msaaSamples = samples,
+                bindMS = bind,
+                sRGB = true,
+            });
+            RenderTexture.active = null;
+            string key = "blit.fresh.samples." + samples + ".bind." + B(bind);
+            Value(key + ".before", B(destination.IsCreated()));
+            BeginLogs();
+            ScreenCapture.CaptureScreenshotIntoRenderTexture(destination);
+            EndLogs(key);
+            Value(key + ".created", B(destination.IsCreated()));
+            DestroyImmediate(destination);
+        }
+    }
+
+    void RecordGammaIntegerSources()
+    {
+        foreach (var format in new[] { RenderTextureFormat.RInt, RenderTextureFormat.RGInt, RenderTextureFormat.ARGBInt })
+        foreach (bool wireframe in new[] { false, true })
+        {
+            var source = new RenderTexture(W, H, 0, format, RenderTextureReadWrite.Linear);
+            var destination = new RenderTexture(W, H, 0, RenderTextureFormat.ARGB32, RenderTextureReadWrite.sRGB);
+            if (!source.Create()) throw new InvalidOperationException("integer test source was not created");
+            RenderTexture.active = source;
+            bool saved = GL.wireframe;
+            GL.wireframe = wireframe;
+            string key = "blit.gamma." + format + ".wire." + B(wireframe);
+            BeginLogs();
+            ScreenCapture.CaptureScreenshotIntoRenderTexture(destination);
+            EndLogs(key);
+            // The Editor repeats returned different pixels with a valid integer source.
+            Value(key + ".created", B(destination.IsCreated()));
+            Value(key + ".active", B(RenderTexture.active == source));
+            Value(key + ".wireframe", B(GL.wireframe == wireframe));
+            GL.wireframe = saved;
+            RenderTexture.active = null;
+            DestroyImmediate(source);
+            DestroyImmediate(destination);
+        }
+
+        var integer = new RenderTexture(W, H, 0, RenderTextureFormat.RInt, RenderTextureReadWrite.Linear);
+        var multisampled = new RenderTexture(new RenderTextureDescriptor(W, H, RenderTextureFormat.ARGB32, 0)
+        {
+            msaaSamples = 4,
+        });
+        RenderTexture.active = multisampled;
+        GL.Clear(false, true, Sentinel);
+        if (!integer.Create()) throw new InvalidOperationException("integer test source was not created");
+        RenderTexture.active = integer;
+        IntoTarget("blit.gamma.RInt.msaa", multisampled);
+        RenderTexture.active = null;
+        DestroyImmediate(integer);
+        DestroyImmediate(multisampled);
     }
 
     void RecordCaptureDestinationCreation()
