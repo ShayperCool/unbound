@@ -220,6 +220,11 @@
 {"k":"unlit.populatedInstance","v":"1416"}
 {"k":"unlit.instanceEdited","v":"1932"}
 {"k":"unlit.sourceAfterInstanceEdit","v":"2276"}
+{"k":"unlit.instanceAfterInvalidPass","v":"1416"}
+{"k":"unlit.instanceAfterValidPass","v":"1888"}
+{"k":"unlit.instanceAfterNullBlit","v":"1888"}
+{"k":"unlit.instanceAfterTextureBlit","v":"1888"}
+{"k":"unlit.instanceAfterInvalidBlit","v":"1416"}
 {"k":"standard.propertyKinds","v":"Color/Texture/Range/Range/Range/Float/Range/Texture/Float/Float/Float/Texture/Range/Texture/Range/Texture/Color/Texture/Texture/Texture/Float/Texture/Float/Float/Float/Float/Float"}
 {"k":"standard.created","v":"4832"}
 {"k":"standard.coldCopy","v":"4832"}
@@ -247,4 +252,9 @@
 {"k":"standard.instanceAfterHasProperty","v":"4832"}
 {"k":"standard.instanceDeclaredValue","v":"0.75"}
 {"k":"standard.instanceAfterRead","v":"4832"}
+{"k":"standard.instanceAfterInvalidPass","v":"1416"}
+{"k":"standard.instanceAfterValidPass","v":"4832"}
+{"k":"standard.instanceAfterNullBlit","v":"4832"}
+{"k":"standard.instanceAfterTextureBlit","v":"4832"}
+{"k":"standard.instanceAfterInvalidBlit","v":"1416"}
 {"k":"complete","v":true}
