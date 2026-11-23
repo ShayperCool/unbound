@@ -61,8 +61,13 @@ These are observations of this release and device, not documented guarantees:
   source. Single-sample and bound-MSAA self-resolves leave their images alone.
   A supplied self-target checks the current attachment and leaves it alone.
   A created but inactive source that requires a resolve reports a native
-  assertion. Released images skip the command, and a source recreated before
-  execution contributes the pixels in its new allocation.
+  assertion. With the backbuffer active, an explicit single-sample destination
+  receives its color, and an omitted destination publishes that color to the
+  ordinary source's retained image. An explicit self-target keeps its earlier
+  color. A different active render texture leaves the destination alone.
+  Destroyed destinations act as omitted destinations. Released images skip the
+  command, and a source recreated before execution supplies its new pixels.
+  A depth-only source leaves the destination color unchanged.
   [CommandBuffer.ResolveAntiAliasedSurface](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Rendering.CommandBuffer.ResolveAntiAliasedSurface.html).
 - An allocated 2D MSAA target has one mip even with `useMipMap = true`. Its reported mip count
   survives release and changing the requested sample count. After release, changing its width, height, descriptor or
@@ -90,6 +95,10 @@ UNBOUND_CLI=... python3 tests/projects/textureformats/run.py verify --release 60
 and compares every value exactly with `compare.py`, which prints every missing, extra and failing
 key. `residuals.json` lists the differences recorded as open: each still has to differ.
 `TEXTURE_FORMATS_PROBE_ONLY=<prefix,...>` limits a run to cases (`rt.ARGB64`, `tex.RG32`, ...).
+
+On Linux, add `--device opengl-resolve` to record, publish or verify the
+command-buffer resolve controls with the OpenGL Core reference
+`Reference/unity-6000.0.71f1/opengl-resolve.jsonl`.
 
 ## Retained resolves and deferred differences
 

@@ -697,6 +697,114 @@ public static class TexFormatsProbe
     static string CompletedReadback(AsyncGPUReadbackRequest request) =>
         request.hasError || !request.done ? Json("error") : Hex(request.GetData<byte>().ToArray());
 
+    static void CommandResolveDepthSource()
+    {
+        foreach (int samples in new[] { 1, 4 })
+        {
+            string key = "rt.commandResolve.depthOnly." + samples;
+            var desc = new RenderTextureDescriptor(8, 8, RenderTextureFormat.Depth, 24)
+                { msaaSamples = samples };
+            var source = Target(desc);
+            Value(key + ".sourceCreated", B2(source.Create()));
+            Value(key + ".sourceFormat", Json(source.graphicsFormat.ToString()));
+            var destination = Target(new RenderTextureDescriptor(8, 8, RenderTextureFormat.ARGB32, 24)
+                { sRGB = false });
+            destination.Create();
+            RenderTexture.active = destination;
+            GL.Clear(false, true, Color.green);
+            string Read() =>
+                Readback(AsyncGPUReadback.Request(destination, 0, 0, 1, 0, 1, 0, 1, TextureFormat.RGBA32));
+            Value(key + ".before", Read());
+
+            using var cb = new CommandBuffer();
+            cb.SetRenderTarget(source);
+            cb.ResolveAntiAliasedSurface(source, destination);
+            var logs = new List<string>();
+            void OnLog(string message, string _, LogType type) => logs.Add(type + " " + message);
+            Application.logMessageReceived += OnLog;
+            try { Graphics.ExecuteCommandBuffer(cb); }
+            finally { Application.logMessageReceived -= OnLog; }
+            Value(key + ".logs", Json(string.Join(" | ", logs)));
+            Value(key + ".after", Read());
+        }
+    }
+
+    static void CommandResolveDestroyedTarget()
+    {
+        foreach (bool destroyBeforeRecord in new[] { false, true })
+        {
+            string key = "rt.commandResolve.destroyedTarget." + (destroyBeforeRecord ? "record" : "execute");
+            var desc = new RenderTextureDescriptor(8, 8, RenderTextureFormat.ARGB32, 0)
+                { msaaSamples = 4, sRGB = false };
+            var source = Target(desc);
+            source.Create();
+            desc.msaaSamples = 1;
+            var target = Target(desc);
+            target.Create();
+            RenderTexture.active = source;
+            using var cb = new CommandBuffer();
+            cb.ClearRenderTarget(false, true, Color.blue);
+            string before = null, after = null;
+            cb.RequestAsyncReadback(source, 0, TextureFormat.RGBA32, r => before = CompletedReadback(r));
+            if (destroyBeforeRecord) Object.DestroyImmediate(target);
+            cb.ResolveAntiAliasedSurface(source, target);
+            if (!destroyBeforeRecord) Object.DestroyImmediate(target);
+            cb.RequestAsyncReadback(source, 0, TextureFormat.RGBA32, r => after = CompletedReadback(r));
+            Graphics.ExecuteCommandBuffer(cb);
+            AsyncGPUReadback.WaitAllRequests();
+            Value(key + ".changed", B2(before != after));
+            Value(key + ".retained", after);
+            Value(key + ".keptActive", B2(RenderTexture.active == source));
+        }
+    }
+
+    static void CommandResolveBackbuffer()
+    {
+        foreach (string mode in new[]
+        {
+            "external", "externalSingle", "externalMultisampled", "explicitSelf", "implicitSelf", "boundImplicitSelf",
+        })
+        {
+            string key = "rt.commandResolve.backbuffer." + mode;
+            var desc = new RenderTextureDescriptor(8, 8, RenderTextureFormat.ARGB32, 0)
+                { msaaSamples = mode == "externalSingle" ? 1 : 4,
+                  bindMS = mode == "boundImplicitSelf", sRGB = false };
+            var source = Target(desc);
+            source.Create();
+            desc.msaaSamples = mode == "externalMultisampled" ? 4 : 1;
+            desc.bindMS = false;
+            var target = Target(desc);
+            target.Create();
+            RenderTexture.active = source;
+            GL.Clear(false, true, Color.red);
+            RenderTexture.active = target;
+            GL.Clear(false, true, Color.green);
+            RenderTexture.active = null;
+            GL.Clear(false, true, Color.blue);
+
+            string Read(RenderTexture rt) =>
+                Readback(AsyncGPUReadback.Request(rt, 0, 0, 1, 0, 1, 0, 1, TextureFormat.RGBA32));
+            string sourceBefore = Read(source);
+            Value(key + ".before", Read(target));
+            using var cb = new CommandBuffer();
+            if (mode == "explicitSelf") cb.ResolveAntiAliasedSurface(source, source);
+            else if (mode.EndsWith("ImplicitSelf", StringComparison.Ordinal) || mode == "implicitSelf")
+                cb.ResolveAntiAliasedSurface(source);
+            else cb.ResolveAntiAliasedSurface(source, target);
+            var logs = new List<string>();
+            void OnLog(string message, string _, LogType type) => logs.Add(type + " " + message);
+            Application.logMessageReceived += OnLog;
+            try { Graphics.ExecuteCommandBuffer(cb); }
+            finally { Application.logMessageReceived -= OnLog; }
+            Value(key + ".logs", Json(string.Join(" | ", logs)));
+            Value(key + ".target", Read(target));
+            string sourceAfter = Read(source);
+            Value(key + ".sourceUnchanged", B2(sourceAfter == sourceBefore));
+            if (mode != "boundImplicitSelf") Value(key + ".sourceAfter", sourceAfter);
+            Value(key + ".binding", B2(RenderTexture.active == null));
+        }
+    }
+
     static void CommandResolveCamera()
     {
         var desc = new RenderTextureDescriptor(8, 8, RenderTextureFormat.ARGB32, 24)
@@ -1081,6 +1189,9 @@ public static class TexFormatsProbe
             CommandResolveSubresources();
             CommandResolveInactiveSelf();
             CommandResolveCamera();
+            CommandResolveBackbuffer();
+            CommandResolveDepthSource();
+            CommandResolveDestroyedTarget();
         }
         finally
         {
@@ -1373,7 +1484,7 @@ public static class TexFormatsProbe
                 Value(byteReadback + ".release", Json(Application.unityVersion));
                 Unorm16Byte();
             }
-            if (SystemInfo.graphicsDeviceType == GraphicsDeviceType.OpenGLCore && Runs("rt.commandResolve"))
+            if (SystemInfo.graphicsDeviceType == GraphicsDeviceType.OpenGLCore && s_Only == "rt.commandResolve")
                 CommandResolves();
             if (Runs("rt.msaaCopies") || Runs("rt.msaaLayers")) MsaaCopiesAndLayers();
             if (Runs("rt.arrayLoad")) ArrayLoad();

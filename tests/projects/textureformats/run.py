@@ -18,6 +18,7 @@ Reference/unity-R/metal.jsonl, the readback cases). On macOS the engine draws wi
 opengl check compares it with the Linux OpenGL Core reference (what the device does not decide
 compares with the Linux references, AGENTS.md Platforms), and a vulkan check, a device macOS
 does not have, checks the Metal reference instead (said so on its first line).
+The opengl-resolve profile uses Reference/unity-R/opengl-resolve.jsonl on Linux.
 
 Every capture runs on a fresh project under $XDG_CACHE_HOME/unbound/validation/runs/
 textureformats/<label>: the probe's Assets with the hello project's Packages, ProjectSettings
@@ -66,6 +67,7 @@ BYTE_PAYLOAD_BYTES = {
 }
 BYTE_RECORDS = ({'complete', BYTE_CASE + '.device', BYTE_CASE + '.release'}
                 | BYTE_CREATED | set(BYTE_PAYLOAD_BYTES))
+RESOLVE_CASES = 'rt.commandResolve'
 DEVICE = 'opengl'
 # This device's reference covers the added format/clear/feedback mechanisms. Older packed
 # UNorm async-to-float cases do not repeat on this device and have no canonical reference.
@@ -79,19 +81,19 @@ def device_cases():
     """The cases the device's reference was recorded with (None: every case)."""
     if DEVICE in BYTE_DEVICES:
         return BYTE_CASE
-    return {'vulkan': VULKAN_CASES, 'metal': METAL_CASES}.get(DEVICE)
+    return {'opengl-resolve': RESOLVE_CASES, 'vulkan': VULKAN_CASES, 'metal': METAL_CASES}.get(DEVICE)
 
 
 def reference():
     if DEVICE == 'opengl':
         return reference_file(PROBE, 'jsonl')
-    if DEVICE in BYTE_DEVICES:
+    if DEVICE in BYTE_DEVICES or DEVICE == 'opengl-resolve':
         return reference_root(PROBE)/f'{DEVICE}.jsonl'
     return reference_root(PROBE)/('vulkan-q58.jsonl' if DEVICE == 'vulkan' else 'metal.jsonl')
 
 
 def residuals():
-    if DEVICE in BYTE_DEVICES:
+    if DEVICE in BYTE_DEVICES or DEVICE == 'opengl-resolve':
         return None
     return PROBE/('residuals.json' if DEVICE == 'opengl' else f'residuals-{DEVICE}.json')
 
@@ -272,7 +274,7 @@ def verify(work, release, cases):
     residual_file = residuals()
     if residual_file is not None:
         command.extend(['--residuals', str(residual_file)])
-    if only and DEVICE not in BYTE_DEVICES:
+    if only and DEVICE not in BYTE_DEVICES and DEVICE != 'opengl-resolve':
         command.extend(['--only', only])
     return subprocess.run(command).returncode
 
@@ -283,7 +285,7 @@ def main():
     parser.add_argument('--cases', choices=('supported', 'all'), default='supported', help='verify: which cases')
     parser.add_argument('--label', required=True)
     parser.add_argument('--release', required=True)
-    parser.add_argument('--device', choices=('opengl', 'vulkan', 'metal', *BYTE_DEVICES), default='opengl')
+    parser.add_argument('--device', choices=('opengl', 'opengl-resolve', 'vulkan', 'metal', *BYTE_DEVICES), default='opengl')
     parser.add_argument('--append', action='store_true', help='publish: append new keys, preserving every existing record')
     args = parser.parse_args()
     if not args.label or Path(args.label).name != args.label or args.label in ('.', '..'):
@@ -295,6 +297,11 @@ def main():
             print('textureformats: the R16 byte profiles require Linux')
             return 0
         parser.error('the R16 byte profiles record Linux OpenGL Core or Vulkan')
+    if DEVICE == 'opengl-resolve' and sys.platform != 'linux':
+        if args.mode == 'verify':
+            print('textureformats: OpenGL Core resolve profile requires Linux')
+            return 0
+        parser.error('the OpenGL Core resolve profile runs on Linux')
     if MACOS and DEVICE != 'metal' and args.mode not in ('unbound', 'verify'):
         parser.error(f'the {DEVICE} Editor runs on Linux; on macOS record --device metal')
     if MACOS and DEVICE == 'vulkan':
@@ -302,7 +309,7 @@ def main():
         DEVICE = 'metal'
     if DEVICE == 'metal' and not MACOS:
         parser.error('--device metal runs on macOS arm64 only')
-    if DEVICE != 'opengl' and args.cases == 'all':
+    if (DEVICE in ('vulkan', 'metal') or DEVICE in BYTE_DEVICES) and args.cases == 'all':
         parser.error(f'the {DEVICE} reference covers its own cases; --cases all is not recorded')
     os.environ['UNBOUND_PROBE_UNITY_VERSION'] = args.release
     work = run_root(PROBE, args.label)

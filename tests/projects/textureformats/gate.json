@@ -1,6 +1,7 @@
 {
   "commands": [
     "python3 tests/projects/textureformats/run.py verify --release \"$UNBOUND_PROBE_UNITY_VERSION\" --label \"gate-opengl-$(date +%s%N)\"",
+    "python3 tests/projects/textureformats/run.py verify --release \"$UNBOUND_PROBE_UNITY_VERSION\" --device opengl-resolve --label \"gate-opengl-resolve-$(date +%s%N)\"",
     "python3 tests/projects/textureformats/run.py verify --release \"$UNBOUND_PROBE_UNITY_VERSION\" --device vulkan --label \"gate-vulkan-$(date +%s%N)\"",
     "python3 tests/projects/textureformats/run.py verify --release \"$UNBOUND_PROBE_UNITY_VERSION\" --device opengl-r16-byte --label \"gate-opengl-r16-byte-$(date +%s%N)\"",
     "python3 tests/projects/textureformats/run.py verify --release \"$UNBOUND_PROBE_UNITY_VERSION\" --device vulkan-r16-byte --label \"gate-vulkan-r16-byte-$(date +%s%N)\""
