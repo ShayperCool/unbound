@@ -591,7 +591,8 @@ mod tests {
             open.iter().map(|e| e.occlusion[0]).collect::<Vec<_>>(),
             [1.0, 0.0, 0.0]
         );
-        // A floor between the light and the first probe shadows it.
+        // A floor between the light and the first probe shadows it (Unbound's rule: a shadowed
+        // probe is not measured).
         let floor = Scene::new([
             [[-5.0, -1.0, -5.0], [5.0, -1.0, 5.0], [5.0, -1.0, -5.0]],
             [[-5.0, -1.0, -5.0], [-5.0, -1.0, 5.0], [5.0, -1.0, 5.0]],

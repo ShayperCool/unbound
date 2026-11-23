@@ -104,16 +104,57 @@ def _cell_probes(cell):
     return [int(cell[f'indices[{k}]']) for k in range(4)]
 
 
+def _cell_key(probes):
+    return ','.join(str(v) for v in sorted(probes))
+
+
+# Where an inner cell's weights are compared: at its corners weighed so (by their probes' order).
+_WEIGHED = ((0.25, 0.25, 0.25, 0.25), (0.4, 0.3, 0.2, 0.1))
+
+
+def _cell_meaning(cell, cells, positions):
+    """What a light probe cell means whatever the order of its corners: the cell across each of
+    its faces (an inner cell's, by the face's probes) or edges (an outer cell's, its inner cell's
+    as `inner`), keyed by their probes; an inner cell's weights of points among its corners,
+    by probe; an outer cell's matrix (the cubic of its triangle along the hull rays, the same
+    for each order of its corners)."""
+    probes = _cell_probes(cell)
+    neighbors = [int(cell[f'neighbors[{k}]']) for k in range(4)]
+    key = lambda c: _cell_key(_cell_probes(cells[c])) if 0 <= c < len(cells) else str(c)  # noqa: E731
+    across = {}
+    if probes[3] >= 0:
+        for k in range(4):
+            across[_cell_key(probes[:k] + probes[k + 1:])] = key(neighbors[k])
+        m = cell['matrix']
+        p3 = positions[probes[3]]
+        weights = []
+        for weighed in _WEIGHED:
+            # (Weights of the corners in their probes' order, so of the same point each way.)
+            order = sorted(range(4), key=lambda k: probes[k])
+            x = [sum(weighed[r] * positions[probes[order[r]]][a] for r in range(4)) for a in range(3)]
+            d = [x[a] - p3[a] for a in range(3)]
+            w = [sum(float(m[f'e{r}{a}']) * d[a] for a in range(3)) for r in range(3)]
+            w.append(1.0 - sum(w))
+            weights.append({str(probes[k]): w[k] for k in range(4)})
+        return {'isValid': cell['isValid'], 'across': across, 'weights': weights}
+    for k in range(3):
+        across[_cell_key([probes[k], probes[(k + 1) % 3]])] = key(neighbors[(k + 2) % 3])
+    across['inner'] = key(neighbors[3])
+    return {'isValid': cell['isValid'], 'across': across, 'matrix': cell['matrix']}
+
+
 def _by_cell(objects):
-    """The light probes' cells keyed by their probes, with whether each is valid: the order of
-    the cells and of each cell's corners (and so its matrix and its neighbors' numbers) is
-    compared apart (`cell_order_difference`)."""
+    """The light probes' cells keyed by their probes, each with what it means whatever the order
+    of its corners (`_cell_meaning`): the order of the cells and of each cell's corners (and so
+    its matrix's rows and its neighbors' numbers) is compared apart (`cell_order_difference`)."""
     out = json.loads(json.dumps(objects))
     for obj in out:
         cells = _cells(obj)
         if cells is not None:
-            obj['fields']['m_Data']['m_Tetrahedralization']['m_Tetrahedra'] = {
-                ','.join(str(v) for v in sorted(_cell_probes(c))): {'isValid': c['isValid']} for c in cells}
+            data = obj['fields']['m_Data']
+            positions = [[float(p[a]) for a in 'xyz'] for p in data['m_Positions']]
+            data['m_Tetrahedralization']['m_Tetrahedra'] = {
+                _cell_key(_cell_probes(c)): _cell_meaning(c, cells, positions) for c in cells}
     return out
 
 
