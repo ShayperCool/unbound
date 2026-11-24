@@ -283,7 +283,7 @@ namespace UnityEngine
         /// with: white as Default-Material draws it (matches the Unity 6000.0.71f1 Editor in the
         /// built-in render pipeline, tests/projects/bakedbuffers SpareEmpty; a project with a
         /// render pipeline asset is not measured). The submesh stops no ray all the same.</summary>
-        static Material EmptySlotMaterial() =>
+        internal static Material EmptySlotMaterial() =>
             BuiltinShaders.Resolve(BuiltinShaders.ExtraGuid, BuiltinShaders.DefaultMaterialFileId) as Material;
 
         /// <summary>
@@ -382,7 +382,7 @@ namespace UnityEngine
         /// <summary>The mesh a renderer's material images are drawn with: its own, or for a mesh
         /// without lightmap UVs a copy that has its UVs as them (the bake lays such a mesh out by
         /// its UVs).</summary>
-        static Mesh BakedUVs(Mesh mesh, Dictionary<Mesh, Mesh> copies)
+        internal static Mesh BakedUVs(Mesh mesh, Dictionary<Mesh, Mesh> copies)
         {
             if (mesh == null) return null;
             using (Mesh.EngineReads())
@@ -530,10 +530,10 @@ namespace UnityEngine
 
         /// <summary>An array's values as they are in memory (little-endian), in base64: every float
         /// arrives natively as it is.</summary>
-        static string Encoded<T>(T[] values) where T : unmanaged =>
+        internal static string Encoded<T>(T[] values) where T : unmanaged =>
             Convert.ToBase64String(System.Runtime.InteropServices.MemoryMarshal.AsBytes(new ReadOnlySpan<T>(values ?? Array.Empty<T>())));
 
-        static string HierarchyPath(Transform t)
+        internal static string HierarchyPath(Transform t)
         {
             var parts = new List<string>();
             for (; t != null; t = t.parent) parts.Add(t.name);

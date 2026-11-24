@@ -52013,118 +52013,19 @@ namespace UnityEngine
 }
 namespace UnityEngine.LightTransport
 {
-    [global::Unbound.Stub]
-    public unsafe partial class BakeProgressState : global::System.IDisposable
+    unsafe partial class BakeProgressState
     {
-        [global::Unbound.Stub] internal global::System.IntPtr m_Ptr;
-        [global::Unbound.Stub] internal bool m_OwnsPtr;
-        [global::Unbound.Stub] public BakeProgressState() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightTransport.BakeProgressState.ctor"); }
-        [global::Unbound.Stub] public void Dispose() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightTransport.BakeProgressState.Dispose"); }
-        [global::Unbound.Stub] public void Cancel() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightTransport.BakeProgressState.Cancel"); }
-        [global::Unbound.Stub] public float Progress() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightTransport.BakeProgressState.Progress"); return default; }
-        [global::Unbound.Stub] public void SetTotalWorkSteps(ulong total) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightTransport.BakeProgressState.SetTotalWorkSteps"); }
-        [global::Unbound.Stub] public void IncrementCompletedWorkSteps(ulong steps) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightTransport.BakeProgressState.IncrementCompletedWorkSteps"); }
-        [global::Unbound.Stub] public bool WasCancelled() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightTransport.BakeProgressState.WasCancelled"); return default; }
         [global::Unbound.Stub]
         internal unsafe static partial class BindingsMarshaller
         {
             [global::Unbound.Stub] public static global::System.IntPtr ConvertToNative(global::UnityEngine.LightTransport.BakeProgressState obj) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightTransport.BakeProgressState.BindingsMarshaller.ConvertToNative"); return default; }
         }
     }
-    [global::Unbound.Stub]
-    public unsafe partial struct BufferID : global::System.IEquatable<global::UnityEngine.LightTransport.BufferID>
+    unsafe static partial class InputExtraction
     {
-        [global::Unbound.Stub] public ulong Value;
-        [global::Unbound.Stub] public BufferID(ulong value) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightTransport.BufferID.ctor"); }
-        [global::Unbound.Stub] public global::UnityEngine.LightTransport.BufferSlice<T> Slice<T>(ulong offset = 0UL) where T : struct { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightTransport.BufferID.Slice"); return default; }
-        [global::Unbound.Stub] public override int GetHashCode() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightTransport.BufferID.GetHashCode"); return default; }
-        [global::Unbound.Stub] public bool Equals(global::UnityEngine.LightTransport.BufferID other) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightTransport.BufferID.Equals"); return default; }
-        [global::Unbound.Stub] public override bool Equals(object obj) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightTransport.BufferID.Equals"); return default; }
-        [global::Unbound.Stub] public static bool operator ==(global::UnityEngine.LightTransport.BufferID a, global::UnityEngine.LightTransport.BufferID b) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightTransport.BufferID.op_Equality"); return default; }
-        [global::Unbound.Stub] public static bool operator !=(global::UnityEngine.LightTransport.BufferID a, global::UnityEngine.LightTransport.BufferID b) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightTransport.BufferID.op_Inequality"); return default; }
-    }
-    [global::Unbound.Stub]
-    public unsafe partial struct BufferSlice<T> : global::System.IEquatable<global::UnityEngine.LightTransport.BufferSlice<T>> where T : struct
-    {
-        [global::Unbound.Stub] public global::UnityEngine.LightTransport.BufferID Id;
-        [global::Unbound.Stub] public ulong Offset;
-        [global::Unbound.Stub] public BufferSlice(global::UnityEngine.LightTransport.BufferID id, ulong offset) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightTransport.BufferSlice<T>.ctor"); }
-        [global::Unbound.Stub] public global::UnityEngine.LightTransport.BufferSlice<U> SafeReinterpret<U>() where U : struct { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightTransport.BufferSlice<T>.SafeReinterpret"); return default; }
-        [global::Unbound.Stub] public global::UnityEngine.LightTransport.BufferSlice<U> UnsafeReinterpret<U>() where U : struct { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightTransport.BufferSlice<T>.UnsafeReinterpret"); return default; }
-        [global::Unbound.Stub] public override int GetHashCode() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightTransport.BufferSlice<T>.GetHashCode"); return default; }
-        [global::Unbound.Stub] public bool Equals(global::UnityEngine.LightTransport.BufferSlice<T> other) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightTransport.BufferSlice<T>.Equals"); return default; }
-        [global::Unbound.Stub] public override bool Equals(object obj) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightTransport.BufferSlice<T>.Equals"); return default; }
-        [global::Unbound.Stub] public static bool operator ==(global::UnityEngine.LightTransport.BufferSlice<T> a, global::UnityEngine.LightTransport.BufferSlice<T> b) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightTransport.BufferSlice<T>.op_Equality"); return default; }
-        [global::Unbound.Stub] public static bool operator !=(global::UnityEngine.LightTransport.BufferSlice<T> a, global::UnityEngine.LightTransport.BufferSlice<T> b) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightTransport.BufferSlice<T>.op_Inequality"); return default; }
-    }
-    [global::Unbound.Stub]
-    public unsafe partial struct EventID : global::System.IEquatable<global::UnityEngine.LightTransport.EventID>
-    {
-        [global::Unbound.Stub] public ulong Value;
-        [global::Unbound.Stub] public EventID(ulong value) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightTransport.EventID.ctor"); }
-        [global::Unbound.Stub] public override int GetHashCode() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightTransport.EventID.GetHashCode"); return default; }
-        [global::Unbound.Stub] public bool Equals(global::UnityEngine.LightTransport.EventID other) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightTransport.EventID.Equals"); return default; }
-        [global::Unbound.Stub] public override bool Equals(object obj) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightTransport.EventID.Equals"); return default; }
-        [global::Unbound.Stub] public static bool operator ==(global::UnityEngine.LightTransport.EventID a, global::UnityEngine.LightTransport.EventID b) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightTransport.EventID.op_Equality"); return default; }
-        [global::Unbound.Stub] public static bool operator !=(global::UnityEngine.LightTransport.EventID a, global::UnityEngine.LightTransport.EventID b) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightTransport.EventID.op_Inequality"); return default; }
-    }
-    public unsafe partial interface IDeviceContext : global::System.IDisposable
-    {
-        bool Initialize();
-        global::UnityEngine.LightTransport.BufferID CreateBuffer(ulong count, ulong stride);
-        void DestroyBuffer(global::UnityEngine.LightTransport.BufferID id);
-        void WriteBuffer<T>(global::UnityEngine.LightTransport.BufferSlice<T> dst, global::Unity.Collections.NativeArray<T> src) where T : struct;
-        void ReadBuffer<T>(global::UnityEngine.LightTransport.BufferSlice<T> src, global::Unity.Collections.NativeArray<T> dst) where T : struct;
-        void WriteBuffer<T>(global::UnityEngine.LightTransport.BufferSlice<T> dst, global::Unity.Collections.NativeArray<T> src, global::UnityEngine.LightTransport.EventID id) where T : struct;
-        void ReadBuffer<T>(global::UnityEngine.LightTransport.BufferSlice<T> src, global::Unity.Collections.NativeArray<T> dst, global::UnityEngine.LightTransport.EventID id) where T : struct;
-        global::UnityEngine.LightTransport.EventID CreateEvent();
-        void DestroyEvent(global::UnityEngine.LightTransport.EventID id);
-        bool IsCompleted(global::UnityEngine.LightTransport.EventID id);
-        bool Wait(global::UnityEngine.LightTransport.EventID id);
-        bool Flush();
-    }
-    public unsafe partial interface IProbeIntegrator : global::System.IDisposable
-    {
-        void Prepare(global::UnityEngine.LightTransport.IDeviceContext context, global::UnityEngine.LightTransport.IWorld world, global::UnityEngine.LightTransport.BufferSlice<global::UnityEngine.Vector3> positions, float pushoff, int bounceCount);
-        void SetProgressReporter(global::UnityEngine.LightTransport.BakeProgressState progress);
-        global::UnityEngine.LightTransport.IProbeIntegrator.Result IntegrateDirectRadiance(global::UnityEngine.LightTransport.IDeviceContext context, int positionOffset, int positionCount, int sampleCount, bool ignoreEnvironment, global::UnityEngine.LightTransport.BufferSlice<global::UnityEngine.Rendering.SphericalHarmonicsL2> radianceEstimateOut);
-        global::UnityEngine.LightTransport.IProbeIntegrator.Result IntegrateIndirectRadiance(global::UnityEngine.LightTransport.IDeviceContext context, int positionOffset, int positionCount, int sampleCount, bool ignoreEnvironment, global::UnityEngine.LightTransport.BufferSlice<global::UnityEngine.Rendering.SphericalHarmonicsL2> radianceEstimateOut);
-        global::UnityEngine.LightTransport.IProbeIntegrator.Result IntegrateValidity(global::UnityEngine.LightTransport.IDeviceContext context, int positionOffset, int positionCount, int sampleCount, global::UnityEngine.LightTransport.BufferSlice<float> validityEstimateOut);
-        global::UnityEngine.LightTransport.IProbeIntegrator.Result IntegrateOcclusion(global::UnityEngine.LightTransport.IDeviceContext context, int positionOffset, int positionCount, int sampleCount, int maxLightsPerProbe, global::UnityEngine.LightTransport.BufferSlice<int> perProbeLightIndices, global::UnityEngine.LightTransport.BufferSlice<float> probeOcclusionEstimateOut);
-        public enum ResultType : uint
-        {
-            Success = 0U,
-            Cancelled = 1U,
-            JobFailed = 2U,
-            OutOfMemory = 3U,
-            InvalidInput = 4U,
-            LowLevelAPIFailure = 5U,
-            IOFailed = 6U,
-            Undefined = 7U,
-        }
-        [global::Unbound.Stub]
-        public unsafe partial struct Result
-        {
-            [global::Unbound.Stub] public global::UnityEngine.LightTransport.IProbeIntegrator.ResultType type;
-            [global::Unbound.Stub] public string message;
-            [global::Unbound.Stub] public Result(global::UnityEngine.LightTransport.IProbeIntegrator.ResultType _type, string _message) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightTransport.IProbeIntegrator.Result.ctor"); }
-            [global::Unbound.Stub] public override string ToString() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightTransport.IProbeIntegrator.Result.ToString"); return default; }
-        }
-    }
-    public unsafe partial interface IWorld : global::System.IDisposable
-    {
-    }
-    [global::Unbound.Stub]
-    public unsafe static partial class InputExtraction
-    {
-        [global::Unbound.Stub] public static bool ExtractFromScene(out global::UnityEngine.LightTransport.InputExtraction.BakeInput bakeInput) { bakeInput = default; global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightTransport.InputExtraction.ExtractFromScene"); return default; }
-        [global::Unbound.Stub] public static bool PopulateWorld(global::UnityEngine.LightTransport.InputExtraction.BakeInput bakeInput, global::UnityEngine.LightTransport.BakeProgressState progress, global::UnityEngine.LightTransport.IDeviceContext context, global::UnityEngine.LightTransport.IWorld world) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightTransport.InputExtraction.PopulateWorld"); return default; }
         [global::Unbound.Stub] internal static bool SerializeBakeInput(string path, global::UnityEngine.LightTransport.InputExtraction.BakeInput bakeInput) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightTransport.InputExtraction.SerializeBakeInput"); return default; }
         [global::Unbound.Stub] internal static bool DeserializeBakeInput(string path, out global::UnityEngine.LightTransport.InputExtraction.BakeInput bakeInput) { bakeInput = default; global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightTransport.InputExtraction.DeserializeBakeInput"); return default; }
-        [global::Unbound.Stub] public static int[] ComputeOcclusionLightIndicesFromBakeInput(global::UnityEngine.LightTransport.InputExtraction.BakeInput bakeInput, global::UnityEngine.Vector3[] probePositions, uint maxLightsPerProbe = 4U) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightTransport.InputExtraction.ComputeOcclusionLightIndicesFromBakeInput"); return global::System.Array.Empty<int>(); }
-        [global::Unbound.Stub] public static int[] GetShadowmaskChannelsFromLightIndices(global::UnityEngine.LightTransport.InputExtraction.BakeInput bakeInput, int[] lightIndices) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightTransport.InputExtraction.GetShadowmaskChannelsFromLightIndices"); return global::System.Array.Empty<int>(); }
-        [global::Unbound.Stub]
-        public unsafe partial class BakeInput
+        unsafe partial class BakeInput
         {
             [global::Unbound.Stub] internal BakeInput(global::UnityEditor.LightBaking.LightBaker.BakeInput editorBakeInput) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightTransport.InputExtraction.BakeInput.ctor"); }
             internal global::UnityEditor.LightBaking.LightBaker.BakeInput bakeInput { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightTransport.InputExtraction.BakeInput.bakeInput"); return default; } }
@@ -52146,26 +52047,8 @@ namespace UnityEngine.LightTransport
             [global::Unbound.Stub] public static global::System.IntPtr ConvertToNative(global::UnityEngine.LightTransport.IntegrationContext obj) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightTransport.IntegrationContext.BindingsMarshaller.ConvertToNative"); return default; }
         }
     }
-    [global::Unbound.Stub]
-    public unsafe partial class RadeonRaysContext : global::UnityEngine.LightTransport.IDeviceContext, global::System.IDisposable
+    unsafe partial class RadeonRaysContext
     {
-        [global::Unbound.Stub] internal global::System.IntPtr m_Ptr;
-        [global::Unbound.Stub] internal bool m_OwnsPtr;
-        [global::Unbound.Stub] public RadeonRaysContext() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightTransport.RadeonRaysContext.ctor"); }
-        [global::Unbound.Stub] public RadeonRaysContext(global::System.IntPtr ptr) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightTransport.RadeonRaysContext.ctor"); }
-        [global::Unbound.Stub] public void Dispose() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightTransport.RadeonRaysContext.Dispose"); }
-        [global::Unbound.Stub] public bool Initialize() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightTransport.RadeonRaysContext.Initialize"); return default; }
-        [global::Unbound.Stub] public global::UnityEngine.LightTransport.BufferID CreateBuffer(ulong count, ulong stride) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightTransport.RadeonRaysContext.CreateBuffer"); return default; }
-        [global::Unbound.Stub] public void DestroyBuffer(global::UnityEngine.LightTransport.BufferID id) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightTransport.RadeonRaysContext.DestroyBuffer"); }
-        [global::Unbound.Stub] public void ReadBuffer<T>(global::UnityEngine.LightTransport.BufferSlice<T> src, global::Unity.Collections.NativeArray<T> dst) where T : struct { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightTransport.RadeonRaysContext.ReadBuffer"); }
-        [global::Unbound.Stub] public void ReadBuffer<T>(global::UnityEngine.LightTransport.BufferSlice<T> src, global::Unity.Collections.NativeArray<T> dst, global::UnityEngine.LightTransport.EventID id) where T : struct { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightTransport.RadeonRaysContext.ReadBuffer"); }
-        [global::Unbound.Stub] public void WriteBuffer<T>(global::UnityEngine.LightTransport.BufferSlice<T> dst, global::Unity.Collections.NativeArray<T> src) where T : struct { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightTransport.RadeonRaysContext.WriteBuffer"); }
-        [global::Unbound.Stub] public void WriteBuffer<T>(global::UnityEngine.LightTransport.BufferSlice<T> dst, global::Unity.Collections.NativeArray<T> src, global::UnityEngine.LightTransport.EventID id) where T : struct { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightTransport.RadeonRaysContext.WriteBuffer"); }
-        [global::Unbound.Stub] public global::UnityEngine.LightTransport.EventID CreateEvent() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightTransport.RadeonRaysContext.CreateEvent"); return default; }
-        [global::Unbound.Stub] public void DestroyEvent(global::UnityEngine.LightTransport.EventID id) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightTransport.RadeonRaysContext.DestroyEvent"); }
-        [global::Unbound.Stub] public bool IsCompleted(global::UnityEngine.LightTransport.EventID id) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightTransport.RadeonRaysContext.IsCompleted"); return default; }
-        [global::Unbound.Stub] public bool Wait(global::UnityEngine.LightTransport.EventID id) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightTransport.RadeonRaysContext.Wait"); return default; }
-        [global::Unbound.Stub] public bool Flush() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightTransport.RadeonRaysContext.Flush"); return default; }
         [global::Unbound.Stub] internal static bool InitializePostProcessingInternal(global::UnityEngine.LightTransport.RadeonRaysContext context) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightTransport.RadeonRaysContext.InitializePostProcessingInternal"); return default; }
         [global::Unbound.Stub] internal static bool ConvolveRadianceToIrradianceInternal(global::UnityEngine.LightTransport.RadeonRaysContext context, global::UnityEngine.LightTransport.BufferID radianceIn, global::UnityEngine.LightTransport.BufferID irradianceOut, int probeCount) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightTransport.RadeonRaysContext.ConvolveRadianceToIrradianceInternal"); return default; }
         [global::Unbound.Stub] internal static bool ConvertToUnityFormatInternal(global::UnityEngine.LightTransport.RadeonRaysContext context, global::UnityEngine.LightTransport.BufferID irradianceIn, global::UnityEngine.LightTransport.BufferID irradianceOut, int probeCount) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightTransport.RadeonRaysContext.ConvertToUnityFormatInternal"); return default; }
@@ -52178,44 +52061,14 @@ namespace UnityEngine.LightTransport
             [global::Unbound.Stub] public static global::System.IntPtr ConvertToNative(global::UnityEngine.LightTransport.RadeonRaysContext obj) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightTransport.RadeonRaysContext.BindingsMarshaller.ConvertToNative"); return default; }
         }
     }
-    [global::Unbound.Stub]
-    public unsafe partial class RadeonRaysProbeIntegrator : global::UnityEngine.LightTransport.IProbeIntegrator, global::System.IDisposable
+    unsafe partial class RadeonRaysWorld
     {
-        [global::Unbound.Stub] public void Prepare(global::UnityEngine.LightTransport.IDeviceContext context, global::UnityEngine.LightTransport.IWorld world, global::UnityEngine.LightTransport.BufferSlice<global::UnityEngine.Vector3> positions, float pushoff, int bounceCount) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightTransport.RadeonRaysProbeIntegrator.Prepare"); }
-        [global::Unbound.Stub] public void SetProgressReporter(global::UnityEngine.LightTransport.BakeProgressState progress) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightTransport.RadeonRaysProbeIntegrator.SetProgressReporter"); }
-        [global::Unbound.Stub] public global::UnityEngine.LightTransport.IProbeIntegrator.Result IntegrateDirectRadiance(global::UnityEngine.LightTransport.IDeviceContext context, int positionOffset, int positionCount, int sampleCount, bool ignoreEnvironment, global::UnityEngine.LightTransport.BufferSlice<global::UnityEngine.Rendering.SphericalHarmonicsL2> radianceEstimateOut) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightTransport.RadeonRaysProbeIntegrator.IntegrateDirectRadiance"); return default; }
-        [global::Unbound.Stub] public global::UnityEngine.LightTransport.IProbeIntegrator.Result IntegrateIndirectRadiance(global::UnityEngine.LightTransport.IDeviceContext context, int positionOffset, int positionCount, int sampleCount, bool ignoreEnvironment, global::UnityEngine.LightTransport.BufferSlice<global::UnityEngine.Rendering.SphericalHarmonicsL2> radianceEstimateOut) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightTransport.RadeonRaysProbeIntegrator.IntegrateIndirectRadiance"); return default; }
-        [global::Unbound.Stub] public global::UnityEngine.LightTransport.IProbeIntegrator.Result IntegrateValidity(global::UnityEngine.LightTransport.IDeviceContext context, int positionOffset, int positionCount, int sampleCount, global::UnityEngine.LightTransport.BufferSlice<float> validityEstimateOut) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightTransport.RadeonRaysProbeIntegrator.IntegrateValidity"); return default; }
-        [global::Unbound.Stub] public global::UnityEngine.LightTransport.IProbeIntegrator.Result IntegrateOcclusion(global::UnityEngine.LightTransport.IDeviceContext context, int positionOffset, int positionCount, int sampleCount, int maxLightsPerProbe, global::UnityEngine.LightTransport.BufferSlice<int> perProbeLightIndices, global::UnityEngine.LightTransport.BufferSlice<float> probeOcclusionEstimateOut) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightTransport.RadeonRaysProbeIntegrator.IntegrateOcclusion"); return default; }
-        [global::Unbound.Stub] public void Dispose() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightTransport.RadeonRaysProbeIntegrator.Dispose"); }
-        [global::Unbound.Stub] public RadeonRaysProbeIntegrator() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightTransport.RadeonRaysProbeIntegrator.ctor"); }
-    }
-    [global::Unbound.Stub]
-    public unsafe partial class RadeonRaysWorld : global::UnityEngine.LightTransport.IWorld, global::System.IDisposable
-    {
-        [global::Unbound.Stub] public void Dispose() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightTransport.RadeonRaysWorld.Dispose"); }
         [global::Unbound.Stub] public global::UnityEngine.LightTransport.IntegrationContext GetIntegrationContext() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightTransport.RadeonRaysWorld.GetIntegrationContext"); return default; }
         [global::Unbound.Stub] public void SetIntegrationContext(global::UnityEngine.LightTransport.IntegrationContext context) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightTransport.RadeonRaysWorld.SetIntegrationContext"); }
-        [global::Unbound.Stub] public RadeonRaysWorld() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightTransport.RadeonRaysWorld.ctor"); }
     }
-    [global::Unbound.Stub]
-    public unsafe partial class ReferenceContext : global::UnityEngine.LightTransport.IDeviceContext, global::System.IDisposable
+    unsafe partial class ReferenceContext
     {
-        [global::Unbound.Stub] public bool Initialize() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightTransport.ReferenceContext.Initialize"); return default; }
-        [global::Unbound.Stub] public void Dispose() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightTransport.ReferenceContext.Dispose"); }
-        [global::Unbound.Stub] public global::UnityEngine.LightTransport.BufferID CreateBuffer(ulong count, ulong stride) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightTransport.ReferenceContext.CreateBuffer"); return default; }
-        [global::Unbound.Stub] public void DestroyBuffer(global::UnityEngine.LightTransport.BufferID id) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightTransport.ReferenceContext.DestroyBuffer"); }
-        [global::Unbound.Stub] public void WriteBuffer<T>(global::UnityEngine.LightTransport.BufferSlice<T> dst, global::Unity.Collections.NativeArray<T> src) where T : struct { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightTransport.ReferenceContext.WriteBuffer"); }
-        [global::Unbound.Stub] public void ReadBuffer<T>(global::UnityEngine.LightTransport.BufferSlice<T> src, global::Unity.Collections.NativeArray<T> dst) where T : struct { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightTransport.ReferenceContext.ReadBuffer"); }
-        [global::Unbound.Stub] public void WriteBuffer<T>(global::UnityEngine.LightTransport.BufferSlice<T> dst, global::Unity.Collections.NativeArray<T> src, global::UnityEngine.LightTransport.EventID id) where T : struct { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightTransport.ReferenceContext.WriteBuffer"); }
-        [global::Unbound.Stub] public void ReadBuffer<T>(global::UnityEngine.LightTransport.BufferSlice<T> src, global::Unity.Collections.NativeArray<T> dst, global::UnityEngine.LightTransport.EventID id) where T : struct { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightTransport.ReferenceContext.ReadBuffer"); }
-        [global::Unbound.Stub] public global::UnityEngine.LightTransport.EventID CreateEvent() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightTransport.ReferenceContext.CreateEvent"); return default; }
-        [global::Unbound.Stub] public void DestroyEvent(global::UnityEngine.LightTransport.EventID id) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightTransport.ReferenceContext.DestroyEvent"); }
-        [global::Unbound.Stub] public bool IsCompleted(global::UnityEngine.LightTransport.EventID id) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightTransport.ReferenceContext.IsCompleted"); return default; }
-        [global::Unbound.Stub] public bool Wait(global::UnityEngine.LightTransport.EventID id) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightTransport.ReferenceContext.Wait"); return default; }
         [global::Unbound.Stub] public global::Unity.Collections.NativeArray<byte> GetNativeArray(global::UnityEngine.LightTransport.BufferID id) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightTransport.ReferenceContext.GetNativeArray"); return default; }
-        [global::Unbound.Stub] public bool Flush() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightTransport.ReferenceContext.Flush"); return default; }
-        [global::Unbound.Stub] public ReferenceContext() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightTransport.ReferenceContext.ctor"); }
     }
     [global::Unbound.Stub]
     internal unsafe partial class WintermuteContext : global::UnityEngine.LightTransport.IDeviceContext, global::System.IDisposable
@@ -52289,42 +52142,6 @@ namespace UnityEngine.LightTransport.PostProcessing
         [global::Unbound.Stub] public global::Unity.Collections.NativeSlice<global::UnityEngine.Rendering.SphericalHarmonicsL2> Input;
         [global::Unbound.Stub] public global::Unity.Collections.NativeSlice<global::UnityEngine.Rendering.SphericalHarmonicsL2> Output;
         [global::Unbound.Stub] public void Execute(int probeIdx) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightTransport.PostProcessing.DeringSHJob.Execute"); }
-    }
-    public unsafe partial interface IProbePostProcessor : global::System.IDisposable
-    {
-        bool Initialize(global::UnityEngine.LightTransport.IDeviceContext context);
-        bool ConvolveRadianceToIrradiance(global::UnityEngine.LightTransport.IDeviceContext context, global::UnityEngine.LightTransport.BufferSlice<global::UnityEngine.Rendering.SphericalHarmonicsL2> radianceIn, global::UnityEngine.LightTransport.BufferSlice<global::UnityEngine.Rendering.SphericalHarmonicsL2> irradianceOut, int probeCount);
-        bool ConvertToUnityFormat(global::UnityEngine.LightTransport.IDeviceContext context, global::UnityEngine.LightTransport.BufferSlice<global::UnityEngine.Rendering.SphericalHarmonicsL2> irradianceIn, global::UnityEngine.LightTransport.BufferSlice<global::UnityEngine.Rendering.SphericalHarmonicsL2> irradianceOut, int probeCount);
-        bool AddSphericalHarmonicsL2(global::UnityEngine.LightTransport.IDeviceContext context, global::UnityEngine.LightTransport.BufferSlice<global::UnityEngine.Rendering.SphericalHarmonicsL2> A, global::UnityEngine.LightTransport.BufferSlice<global::UnityEngine.Rendering.SphericalHarmonicsL2> B, global::UnityEngine.LightTransport.BufferSlice<global::UnityEngine.Rendering.SphericalHarmonicsL2> sum, int probeCount);
-        bool ScaleSphericalHarmonicsL2(global::UnityEngine.LightTransport.IDeviceContext context, global::UnityEngine.LightTransport.BufferSlice<global::UnityEngine.Rendering.SphericalHarmonicsL2> shIn, global::UnityEngine.LightTransport.BufferSlice<global::UnityEngine.Rendering.SphericalHarmonicsL2> shOut, int probeCount, float scale);
-        bool WindowSphericalHarmonicsL2(global::UnityEngine.LightTransport.IDeviceContext context, global::UnityEngine.LightTransport.BufferSlice<global::UnityEngine.Rendering.SphericalHarmonicsL2> shIn, global::UnityEngine.LightTransport.BufferSlice<global::UnityEngine.Rendering.SphericalHarmonicsL2> shOut, int probeCount);
-        bool DeringSphericalHarmonicsL2(global::UnityEngine.LightTransport.IDeviceContext context, global::UnityEngine.LightTransport.BufferSlice<global::UnityEngine.Rendering.SphericalHarmonicsL2> shIn, global::UnityEngine.LightTransport.BufferSlice<global::UnityEngine.Rendering.SphericalHarmonicsL2> shOut, int probeCount);
-    }
-    [global::Unbound.Stub]
-    public unsafe partial class RadeonRaysProbePostProcessor : global::UnityEngine.LightTransport.PostProcessing.IProbePostProcessor, global::System.IDisposable
-    {
-        [global::Unbound.Stub] public bool Initialize(global::UnityEngine.LightTransport.IDeviceContext context) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightTransport.PostProcessing.RadeonRaysProbePostProcessor.Initialize"); return default; }
-        [global::Unbound.Stub] public bool ConvolveRadianceToIrradiance(global::UnityEngine.LightTransport.IDeviceContext context, global::UnityEngine.LightTransport.BufferSlice<global::UnityEngine.Rendering.SphericalHarmonicsL2> radianceIn, global::UnityEngine.LightTransport.BufferSlice<global::UnityEngine.Rendering.SphericalHarmonicsL2> irradianceOut, int probeCount) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightTransport.PostProcessing.RadeonRaysProbePostProcessor.ConvolveRadianceToIrradiance"); return default; }
-        [global::Unbound.Stub] public bool ConvertToUnityFormat(global::UnityEngine.LightTransport.IDeviceContext context, global::UnityEngine.LightTransport.BufferSlice<global::UnityEngine.Rendering.SphericalHarmonicsL2> irradianceIn, global::UnityEngine.LightTransport.BufferSlice<global::UnityEngine.Rendering.SphericalHarmonicsL2> irradianceOut, int probeCount) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightTransport.PostProcessing.RadeonRaysProbePostProcessor.ConvertToUnityFormat"); return default; }
-        [global::Unbound.Stub] public bool AddSphericalHarmonicsL2(global::UnityEngine.LightTransport.IDeviceContext context, global::UnityEngine.LightTransport.BufferSlice<global::UnityEngine.Rendering.SphericalHarmonicsL2> a, global::UnityEngine.LightTransport.BufferSlice<global::UnityEngine.Rendering.SphericalHarmonicsL2> b, global::UnityEngine.LightTransport.BufferSlice<global::UnityEngine.Rendering.SphericalHarmonicsL2> sum, int probeCount) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightTransport.PostProcessing.RadeonRaysProbePostProcessor.AddSphericalHarmonicsL2"); return default; }
-        [global::Unbound.Stub] public bool ScaleSphericalHarmonicsL2(global::UnityEngine.LightTransport.IDeviceContext context, global::UnityEngine.LightTransport.BufferSlice<global::UnityEngine.Rendering.SphericalHarmonicsL2> shIn, global::UnityEngine.LightTransport.BufferSlice<global::UnityEngine.Rendering.SphericalHarmonicsL2> shOut, int probeCount, float scale) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightTransport.PostProcessing.RadeonRaysProbePostProcessor.ScaleSphericalHarmonicsL2"); return default; }
-        [global::Unbound.Stub] public bool WindowSphericalHarmonicsL2(global::UnityEngine.LightTransport.IDeviceContext context, global::UnityEngine.LightTransport.BufferSlice<global::UnityEngine.Rendering.SphericalHarmonicsL2> shIn, global::UnityEngine.LightTransport.BufferSlice<global::UnityEngine.Rendering.SphericalHarmonicsL2> shOut, int probeCount) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightTransport.PostProcessing.RadeonRaysProbePostProcessor.WindowSphericalHarmonicsL2"); return default; }
-        [global::Unbound.Stub] public bool DeringSphericalHarmonicsL2(global::UnityEngine.LightTransport.IDeviceContext context, global::UnityEngine.LightTransport.BufferSlice<global::UnityEngine.Rendering.SphericalHarmonicsL2> shIn, global::UnityEngine.LightTransport.BufferSlice<global::UnityEngine.Rendering.SphericalHarmonicsL2> shOut, int probeCount) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightTransport.PostProcessing.RadeonRaysProbePostProcessor.DeringSphericalHarmonicsL2"); return default; }
-        [global::Unbound.Stub] public void Dispose() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightTransport.PostProcessing.RadeonRaysProbePostProcessor.Dispose"); }
-        [global::Unbound.Stub] public RadeonRaysProbePostProcessor() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightTransport.PostProcessing.RadeonRaysProbePostProcessor.ctor"); }
-    }
-    [global::Unbound.Stub]
-    public unsafe partial class ReferenceProbePostProcessor : global::UnityEngine.LightTransport.PostProcessing.IProbePostProcessor, global::System.IDisposable
-    {
-        [global::Unbound.Stub] public bool Initialize(global::UnityEngine.LightTransport.IDeviceContext context) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightTransport.PostProcessing.ReferenceProbePostProcessor.Initialize"); return default; }
-        [global::Unbound.Stub] public bool ConvolveRadianceToIrradiance(global::UnityEngine.LightTransport.IDeviceContext context, global::UnityEngine.LightTransport.BufferSlice<global::UnityEngine.Rendering.SphericalHarmonicsL2> radianceIn, global::UnityEngine.LightTransport.BufferSlice<global::UnityEngine.Rendering.SphericalHarmonicsL2> irradianceOut, int probeCount) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightTransport.PostProcessing.ReferenceProbePostProcessor.ConvolveRadianceToIrradiance"); return default; }
-        [global::Unbound.Stub] public bool ConvertToUnityFormat(global::UnityEngine.LightTransport.IDeviceContext context, global::UnityEngine.LightTransport.BufferSlice<global::UnityEngine.Rendering.SphericalHarmonicsL2> irradianceIn, global::UnityEngine.LightTransport.BufferSlice<global::UnityEngine.Rendering.SphericalHarmonicsL2> irradianceOut, int probeCount) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightTransport.PostProcessing.ReferenceProbePostProcessor.ConvertToUnityFormat"); return default; }
-        [global::Unbound.Stub] public bool AddSphericalHarmonicsL2(global::UnityEngine.LightTransport.IDeviceContext context, global::UnityEngine.LightTransport.BufferSlice<global::UnityEngine.Rendering.SphericalHarmonicsL2> a, global::UnityEngine.LightTransport.BufferSlice<global::UnityEngine.Rendering.SphericalHarmonicsL2> b, global::UnityEngine.LightTransport.BufferSlice<global::UnityEngine.Rendering.SphericalHarmonicsL2> sum, int probeCount) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightTransport.PostProcessing.ReferenceProbePostProcessor.AddSphericalHarmonicsL2"); return default; }
-        [global::Unbound.Stub] public bool ScaleSphericalHarmonicsL2(global::UnityEngine.LightTransport.IDeviceContext context, global::UnityEngine.LightTransport.BufferSlice<global::UnityEngine.Rendering.SphericalHarmonicsL2> shIn, global::UnityEngine.LightTransport.BufferSlice<global::UnityEngine.Rendering.SphericalHarmonicsL2> shOut, int probeCount, float scale) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightTransport.PostProcessing.ReferenceProbePostProcessor.ScaleSphericalHarmonicsL2"); return default; }
-        [global::Unbound.Stub] public bool WindowSphericalHarmonicsL2(global::UnityEngine.LightTransport.IDeviceContext context, global::UnityEngine.LightTransport.BufferSlice<global::UnityEngine.Rendering.SphericalHarmonicsL2> shIn, global::UnityEngine.LightTransport.BufferSlice<global::UnityEngine.Rendering.SphericalHarmonicsL2> shOut, int probeCount) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightTransport.PostProcessing.ReferenceProbePostProcessor.WindowSphericalHarmonicsL2"); return default; }
-        [global::Unbound.Stub] public bool DeringSphericalHarmonicsL2(global::UnityEngine.LightTransport.IDeviceContext context, global::UnityEngine.LightTransport.BufferSlice<global::UnityEngine.Rendering.SphericalHarmonicsL2> shIn, global::UnityEngine.LightTransport.BufferSlice<global::UnityEngine.Rendering.SphericalHarmonicsL2> shOut, int probeCount) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightTransport.PostProcessing.ReferenceProbePostProcessor.DeringSphericalHarmonicsL2"); return default; }
-        [global::Unbound.Stub] public void Dispose() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightTransport.PostProcessing.ReferenceProbePostProcessor.Dispose"); }
-        [global::Unbound.Stub] public ReferenceProbePostProcessor() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightTransport.PostProcessing.ReferenceProbePostProcessor.ctor"); }
     }
     [global::System.Runtime.InteropServices.StructLayout(global::System.Runtime.InteropServices.LayoutKind.Sequential, Size = 1)]
     [global::Unbound.Stub]
