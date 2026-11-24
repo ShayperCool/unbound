@@ -286,6 +286,144 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
+        public void SamePolygonResubmissionWhileSearchIsActiveKeepsOriginalDestination()
+        {
+            NavigationTestRelease.At("6000.0.71f1", () =>
+            {
+                int budget = NavMesh.pathfindingIterationsPerFrame;
+                try
+                {
+                    var agent = Agent(new Vector3(-7f, 0f, 0f));
+                    agent.speed = 0f;
+                    Assert.True(agent.SetDestination(new Vector3(-4f, 0f, 0f)));
+                    AgentSystem.Step();
+
+                    NavMesh.pathfindingIterationsPerFrame = 1;
+                    Assert.True(agent.SetDestination(new Vector3(6.5f, 0f, 0.5f)));
+                    var first = agent.destination;
+                    AgentSystem.Step();
+                    Assert.True(agent.pathPending);
+                    Assert.True(AgentSystem.PathSearchStarted(agent));
+                    Assert.True(agent.SetDestination(new Vector3(6.52f, 0f, 0.5f)));
+                    Assert.Equal(first, agent.destination);
+                    Assert.Equal(first, agent.RequestedDestination);
+                }
+                finally { NavMesh.pathfindingIterationsPerFrame = budget; }
+            });
+        }
+
+        [Fact]
+        public void QueuedDestinationOnExcludedGroundRemapsOrDropsAndSyncsDestination()
+        {
+            NavigationTestRelease.At("6000.0.71f1", () =>
+            {
+                const int excludedArea = 4;
+                var zone = AddData(
+                    new Bounds(new Vector3(5f, 0f, 40f), new Vector3(40f, 4f, 12f)),
+                    new NavMeshBuildSource
+                    {
+                        shape = NavMeshBuildSourceShape.Box,
+                        size = new Vector3(10f, 1f, 6f),
+                        transform = Matrix4x4.Translate(new Vector3(-5f, -0.5f, 40f)),
+                        area = 0,
+                    },
+                    new NavMeshBuildSource
+                    {
+                        shape = NavMeshBuildSourceShape.Box,
+                        size = new Vector3(20f, 1f, 6f),
+                        transform = Matrix4x4.Translate(new Vector3(10f, -0.5f, 40f)),
+                        area = excludedArea,
+                    });
+                m_Data.Add(zone);
+                int budget = NavMesh.pathfindingIterationsPerFrame;
+                try
+                {
+                    var remapped = Agent(new Vector3(-8f, 0f, 39f));
+                    var unmapped = Agent(new Vector3(-8f, 0f, 41f));
+                    remapped.speed = 0f;
+                    unmapped.speed = 0f;
+                    Assert.True(remapped.SetDestination(new Vector3(-2f, 0f, 39f)));
+                    Assert.True(unmapped.SetDestination(new Vector3(-2f, 0f, 41f)));
+                    AgentSystem.Step();
+
+                    NavMesh.pathfindingIterationsPerFrame = 1;
+                    var blocker = Agent(new Vector3(-7f, 0f, 0f));
+                    blocker.speed = 0f;
+                    Assert.True(blocker.SetDestination(new Vector3(7f, 0f, 0f)));
+                    Assert.True(remapped.SetDestination(new Vector3(0.8f, 0f, 39f)));
+                    Assert.True(unmapped.SetDestination(new Vector3(15f, 0f, 41f)));
+                    AgentSystem.Step();
+                    Assert.True(remapped.pathPending);
+                    Assert.True(unmapped.pathPending);
+
+                    int allowed = NavMesh.AllAreas & ~(1 << excludedArea);
+                    remapped.areaMask = allowed;
+                    unmapped.areaMask = allowed;
+                    NavMesh.pathfindingIterationsPerFrame = budget;
+                    AgentSystem.Step();
+
+                    Assert.False(remapped.pathPending);
+                    Assert.True(remapped.hasPath);
+                    Assert.Equal(NavMeshPathStatus.PathComplete, remapped.pathStatus);
+                    Assert.InRange(remapped.pathEndPosition.x, -0.2f, 0.2f);
+                    Assert.Equal(remapped.pathEndPosition, remapped.destination);
+
+                    Assert.False(unmapped.pathPending);
+                    Assert.True(unmapped.hasPath);
+                    Assert.Equal(unmapped.pathEndPosition, unmapped.destination);
+                    Assert.InRange(unmapped.destination.x, -2.1f, -1.9f);
+                }
+                finally { NavMesh.pathfindingIterationsPerFrame = budget; }
+            });
+        }
+
+        [Fact]
+        public void GroundEndpointReconnectToDisconnectedIslandClearsPathStale()
+        {
+            NavigationTestRelease.At("6000.0.71f1", () =>
+            {
+                const int excludedArea = 4;
+                const int islandArea = 6;
+                var zone = AddData(
+                    new Bounds(new Vector3(0f, 0f, 72f), new Vector3(30f, 4f, 30f)),
+                    new NavMeshBuildSource
+                    {
+                        shape = NavMeshBuildSourceShape.Box,
+                        size = new Vector3(10f, 1f, 6f),
+                        transform = Matrix4x4.Translate(new Vector3(-5f, -0.5f, 70f)),
+                        area = 0,
+                    },
+                    new NavMeshBuildSource
+                    {
+                        shape = NavMeshBuildSourceShape.Box,
+                        size = new Vector3(10f, 1f, 6f),
+                        transform = Matrix4x4.Translate(new Vector3(5f, -0.5f, 70f)),
+                        area = excludedArea,
+                    },
+                    new NavMeshBuildSource
+                    {
+                        shape = NavMeshBuildSourceShape.Box,
+                        size = new Vector3(10f, 1f, 5f),
+                        transform = Matrix4x4.Translate(new Vector3(5f, -0.5f, 76.5f)),
+                        area = islandArea,
+                    });
+                m_Data.Add(zone);
+                var agent = Agent(new Vector3(-8f, 0f, 70f));
+                agent.speed = 0f;
+                Assert.True(agent.SetDestination(new Vector3(5f, 0f, 70f)));
+                AgentSystem.Step();
+                Assert.Equal(NavMeshPathStatus.PathComplete, agent.pathStatus);
+                Assert.False(agent.isPathStale);
+
+                agent.areaMask = NavMesh.AllAreas & ~(1 << excludedArea);
+                Assert.True(agent.isPathStale);
+                AgentSystem.Step();
+                Assert.Equal(NavMeshPathStatus.PathPartial, agent.pathStatus);
+                Assert.False(agent.isPathStale);
+            });
+        }
+
+        [Fact]
         public void OtherReleasesRetainTheirUnmeasuredIdleMoveStaleness()
         {
             NavigationTestRelease.At("6000.3.0f1", () =>

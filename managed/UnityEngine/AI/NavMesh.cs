@@ -236,11 +236,14 @@ namespace UnityEngine.AI
             internal int PathStaleVersion;
             internal bool AgentFilterChanged;
 
-            internal static PathSearch Begin(NavWorld.Surface surface, Vector3 source, Vector3 target, AreaFilter filter, int agentTypeID)
+            internal static PathSearch Begin(NavWorld.Surface surface, Vector3 source, Vector3 target, AreaFilter filter, int agentTypeID) =>
+                Begin(surface, source, target, AgentExtents(agentTypeID), filter, agentTypeID);
+
+            internal static PathSearch Begin(NavWorld.Surface surface, Vector3 source, Vector3 target, RcVec3f targetExtents, AreaFilter filter, int agentTypeID)
             {
                 var extents = AgentExtents(agentTypeID);
                 if (!Nearest(surface, source, extents, filter, out var startRef, out var start)) return null;
-                if (!Nearest(surface, target, extents, filter, out var endRef, out var end)) return null;
+                if (!Nearest(surface, target, targetExtents, filter, out var endRef, out var end)) return null;
                 return Begin(surface, startRef, start, endRef, end, filter);
             }
 

@@ -367,11 +367,12 @@ namespace UnityEngine.AI
             }
             if (!NavMesh.Nearest(m_Surface, target, NavMesh.AgentReach(m_Radius), Filter, out var polygon, out var mapped))
                 return false;
-            m_Destination = mapped;
             if (Compat.NavMeshPathAssignmentMeasured && m_PathPending && WalkingOnNavMesh
                 && AgentSystem.TryRetargetPendingPath(this, polygon, out bool requeued))
             {
                 m_RequestedPath = null;
+                if (requeued || !AgentSystem.PathSearchStarted(this))
+                    m_Destination = mapped;
                 if (requeued)
                 {
                     m_ReportedDestination = mapped;
@@ -379,6 +380,7 @@ namespace UnityEngine.AI
                 }
                 return true;
             }
+            m_Destination = mapped;
             m_ReportedDestination = mapped;
             bool reported = hasPath, following = FollowingPath;
             m_HasDestination = true;
@@ -667,6 +669,7 @@ namespace UnityEngine.AI
             SetPathStatus(NavMeshPathStatus.PathComplete);
             m_PathFromCall = false;
             m_HasDestination = false;
+            m_ValidateAreaMask = false;
             SetPathPending(false);
             CatchUpStaleness();
         }
@@ -1111,7 +1114,7 @@ namespace Unbound.Runtime
                     else
                     {
                         bool olderResult = agent.m_FollowingOlderResult;
-                        bool keepEndpoint = olderResult || (excluded && agent.pathStatus == NavMeshPathStatus.PathPartial);
+                        bool keepEndpoint = olderResult;
                         if (keepEndpoint && PlanAgain(agent, keepEndpoint: true))
                         {
                             agent.m_FollowingOlderResult = olderResult;
@@ -1174,14 +1177,9 @@ namespace Unbound.Runtime
                 return true;
             }
 
-            // A queued search reads the current filter when it starts. Remap its request
-            // without changing the public destination that it is still replacing.
             bool pending = agent.pathPending;
-            if (pending && !PathSearchStarted(agent)
-                && NavMesh.Nearest(surface, agent.RequestedDestination, reach, filter, out _, out var requested))
-                agent.SetRequestedDestination(requested);
-
             var status = agent.pathStatus;
+            bool clearStale = false;
             int first = corridor.IndexOf(startRef);
             int last = corridor.LastIndexOf(endRef);
             if (first >= 0 && last >= first && CorridorAllowed(surface, corridor.Slice(first, last - first + 1), filter))
@@ -1197,14 +1195,18 @@ namespace Unbound.Runtime
                 }
                 corridor = search.Result.m_Polygons;
                 end = search.Result.m_Corners[^1];
-                if (search.Result.status != NavMeshPathStatus.PathComplete) status = search.Result.status;
+                if (search.Result.status != NavMeshPathStatus.PathComplete)
+                {
+                    status = search.Result.status;
+                    clearStale = true;
+                }
             }
 
             var staleness = agent.Staleness;
             bool olderResult = agent.m_FollowingOlderResult;
             ag.corridor.Reset(startRef, NavMesh.V(start));
             Follow(agent, corridor, corridor.Length, NavMesh.V(end), status, keepRequest: pending);
-            agent.RestoreStaleness(staleness);
+            if (!clearStale) agent.RestoreStaleness(staleness);
             agent.m_FollowingOlderResult = olderResult;
             return true;
         }
@@ -1227,6 +1229,9 @@ namespace Unbound.Runtime
             WaitForPath(agent);
             agent.m_Velocity = Vector3.zero;
             agent.SetPathPending(false);
+            s_PathRequests.Remove(agent);
+            s_Searches.Remove(agent);
+            s_Restarted.Remove(agent);
             agent.RetainInvalidPathEnd(end);
             agent.CatchUpStaleness();
         }
@@ -1265,6 +1270,7 @@ namespace Unbound.Runtime
         {
             s_Agents.Remove(agent);
             s_PathRequests.Remove(agent);
+            s_Searches.Remove(agent);
             s_Restarted.Remove(agent);
             Detach(agent);
             FreeSlot(agent);
@@ -1926,15 +1932,22 @@ namespace Unbound.Runtime
                 bool started = s_Searches.TryGetValue(agent, out var search);
                 if (!started)
                 {
-                    search = NavMesh.PathSearch.Begin(agent.m_Surface, PathOrigin(agent), agent.RequestedDestination, agent.Filter, agent.agentTypeID);
+                    var targetExtents = Compat.NavMeshPathAssignmentMeasured ? NavMesh.AgentReach(agent.radius) : NavMesh.AgentExtents(agent.agentTypeID);
+                    search = NavMesh.PathSearch.Begin(agent.m_Surface, PathOrigin(agent), agent.RequestedDestination, targetExtents, agent.Filter, agent.agentTypeID);
                     if (search == null)
                     {
                         s_PathRequests.RemoveAt(0);
                         agent.SetPathPending(false);
                         if (Compat.NavMeshPathAssignmentMeasured && agent.FollowingPath)
-                            agent.SetPathEnd(agent.pathEndPosition);
+                        {
+                            var end = agent.pathEndPosition;
+                            agent.SetPathEnd(end);
+                            agent.SetRequestedDestination(end);
+                        }
                         else
+                        {
                             agent.SetPathStatus(NavMeshPathStatus.PathInvalid);
+                        }
                         continue;
                     }
                     s_Searches[agent] = search;
