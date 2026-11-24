@@ -11,6 +11,7 @@
     "managed/UnityEngine/Graphics/BakedAtlas.cs",
     "managed/UnityEngine/Graphics/RealtimeGIBake.cs",
     "managed/UnityEngine/Editor/Lightmapping.cs",
-    "managed/UnityEngine/Graphics/RandomWriteTargets.cs"
+    "managed/UnityEngine/Graphics/RandomWriteTargets.cs",
+    "tests/projects/bakedbuffers/"
   ]
 }
