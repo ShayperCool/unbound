@@ -313,6 +313,7 @@ fn exit_after(result: anyhow::Result<()>) -> anyhow::Result<()> {
 }
 
 fn main() -> anyhow::Result<()> {
+    commands::remember_start_directory();
     tracing_subscriber::fmt()
         .with_env_filter(
             tracing_subscriber::EnvFilter::try_from_env("UNBOUND_LOG")

@@ -49,13 +49,31 @@ fn write_package_lock(project: &Project) {
     }
 }
 
+/// The directory Unbound was started in: the game's host makes the process's working directory
+/// the project view while the game runs.
+static START_DIRECTORY: std::sync::OnceLock<PathBuf> = std::sync::OnceLock::new();
+
+/// Records the directory Unbound was started in; call before any game runs.
+pub(crate) fn remember_start_directory() {
+    if let Ok(dir) = std::env::current_dir() {
+        let _ = START_DIRECTORY.set(dir);
+    }
+}
+
+fn start_directory() -> Result<PathBuf> {
+    match START_DIRECTORY.get() {
+        Some(dir) => Ok(dir.clone()),
+        None => Ok(std::env::current_dir()?),
+    }
+}
+
 /// A path given on the command line: a relative one is relative to the directory Unbound was
 /// started in, not to the directory the game runs in.
 fn from_current_dir(path: &Path) -> Result<PathBuf> {
     Ok(if path.is_absolute() {
         path.to_path_buf()
     } else {
-        std::env::current_dir()?.join(path)
+        start_directory()?.join(path)
     })
 }
 
@@ -1326,7 +1344,7 @@ fn parse_snapshots(snapshots: &[String]) -> Result<Vec<(u32, std::path::PathBuf)
             let (frame, path) = entry
                 .split_once(':')
                 .with_context(|| format!("--snapshot {entry}: expected FRAME:PATH"))?;
-            Ok((frame.trim().parse()?, path.into()))
+            Ok((frame.trim().parse()?, from_current_dir(Path::new(path))?))
         })
         .collect()
 }
@@ -1532,6 +1550,8 @@ fn relaunch_with(env: &[(&str, String)]) -> Result<()> {
     tracing::info!("restarting the game with the edited code");
     let mut command = std::process::Command::new(exe);
     command.args(args);
+    // Relative paths among the arguments name what they named for the first session.
+    command.current_dir(start_directory()?);
     // The new session continues the edited scripts' reload: the old one raised beforeAssemblyReload.
     command.env(SCRIPT_RELOAD_VARIABLE, "1");
     if unbound_runtime::restart_in_debug() {
@@ -1690,7 +1710,11 @@ fn run_session(args: &ProjectArgs, run: RunArgs) -> Result<()> {
             title,
             width: width.max(1) as u32,
             height: height.max(1) as u32,
-            screenshot: run.screenshot,
+            screenshot: run
+                .screenshot
+                .as_deref()
+                .map(from_current_dir)
+                .transpose()?,
             frames,
             snapshots: parse_snapshots(&run.snapshots)?,
             shader_roots,
@@ -1719,6 +1743,9 @@ mod command_line_path_tests {
         );
         let absolute = start.join("elsewhere.xml");
         assert_eq!(from_current_dir(&absolute).unwrap(), absolute);
+        // Once recorded, the start directory stays the base when the working directory moves.
+        remember_start_directory();
+        assert_eq!(start_directory().unwrap(), start);
     }
 }
 
