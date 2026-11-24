@@ -348,8 +348,12 @@ namespace UnityEditor
             get => ProjectInfo.BundleVersion;
             set
             {
-                ProjectInfo.BundleVersion = value;
-                if (Compat.ProjectBuildIdentityMeasured) Save("bundleVersion", value);
+                if (Compat.ProjectBuildIdentityMeasured)
+                {
+                    ProjectInfo.BundleVersion = value ?? "";
+                    Save("bundleVersion", value);
+                }
+                else ProjectInfo.BundleVersion = value;
             }
         }
         public static bool runInBackground { get => Application.runInBackground; set => Application.runInBackground = value; }
@@ -452,7 +456,7 @@ namespace UnityEditor
 
         public partial class Android
         {
-            static int s_BundleVersionCode = 1;
+            internal static int s_BundleVersionCode = 1;
 
             public static int bundleVersionCode
             {

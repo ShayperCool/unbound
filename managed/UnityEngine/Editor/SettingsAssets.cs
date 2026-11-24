@@ -185,6 +185,8 @@ namespace Unbound.Runtime
         {
             s_Files = null;
             s_ByObject.Clear();
+            PlayerSettings.Android.s_BundleVersionCode = 1;
+            PlayerSettings.iOS.s_BuildNumber = "1";
         }
 
         internal static SettingsFile Of(Object o) => o is null ? null : s_ByObject.TryGetValue(o, out var f) ? f : null;

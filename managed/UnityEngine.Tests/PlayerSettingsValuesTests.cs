@@ -144,6 +144,44 @@ namespace UnityEngine.Tests
 
                     // Unknown target throws ArgumentException.
                     Assert.Throws<ArgumentException>(() => PlayerSettings.SetApplicationIdentifier(NamedBuildTarget.Unknown, "net.probe.x"));
+
+                    // bundleVersion normalizes null to empty string consistently between memory and YAML.
+                    PlayerSettings.bundleVersion = null;
+                    Assert.Equal("", PlayerSettings.bundleVersion);
+                    Assert.Equal("", Application.version);
+
+                    // SaveAssets persists normalized identifiers, override flag, and version changes to disk.
+                    PlayerSettings.bundleVersion = "2.4.1";
+                    PlayerSettings.Android.bundleVersionCode = 42;
+                    PlayerSettings.iOS.buildNumber = "9.1";
+                    AssetDatabase.SaveAssets();
+                    var saved = File.ReadAllText(settings);
+                    Assert.Contains("overrideDefaultApplicationIdentifier: 1", saved);
+                    Assert.Contains("Android: Com.Probe_Space.", saved);
+                    Assert.Contains("Standalone: Com.Probe---Space---.------", saved);
+                    Assert.Contains("bundleVersion: 2.4.1", saved);
+                    Assert.Contains("AndroidBundleVersionCode: 42", saved);
+                    Assert.Contains("iPhone: 9.1", saved);
+
+                    // SerializedObject.ApplyModifiedProperties on ProjectSettings.asset syncs BundleVersion and Application.identifier.
+                    var so = new SerializedObject(AssetDatabase.LoadAllAssetsAtPath("ProjectSettings/ProjectSettings.asset")[0]);
+                    so.FindProperty("bundleVersion").stringValue = "3.0.0";
+                    var ids = so.FindProperty("applicationIdentifier");
+                    bool foundStandalone = false;
+                    for (int i = 0; i < ids.arraySize; i++)
+                    {
+                        var pair = ids.GetArrayElementAtIndex(i);
+                        if (pair.FindPropertyRelative("first").stringValue == "Standalone")
+                        {
+                            pair.FindPropertyRelative("second").stringValue = "net.serialized.app";
+                            foundStandalone = true;
+                        }
+                    }
+                    Assert.True(foundStandalone);
+                    Assert.True(so.ApplyModifiedProperties());
+                    Assert.Equal("3.0.0", PlayerSettings.bundleVersion);
+                    Assert.Equal("3.0.0", Application.version);
+                    Assert.Equal("net.serialized.app", Application.identifier);
                 }
             }
             finally
@@ -165,14 +203,29 @@ namespace UnityEngine.Tests
         public void BuildIdentityReportsMissingSettingsAndRespectsUnmeasuredRelease()
         {
             var emptyDir = Path.Combine(Path.GetTempPath(), "unbound-no-settings-" + Guid.NewGuid().ToString("N"));
+            var populatedDir = Path.Combine(Path.GetTempPath(), "unbound-unmeasured-settings-" + Guid.NewGuid().ToString("N"));
             Directory.CreateDirectory(emptyDir);
+            Directory.CreateDirectory(Path.Combine(populatedDir, "ProjectSettings"));
+            var populatedSettings = Path.Combine(populatedDir, "ProjectSettings", "ProjectSettings.asset");
+            var originalYaml = File.ReadAllText(Path.Combine(Repo(), "tests", "projects", "scenesave", "ProjectSettings", "ProjectSettings.asset"))
+                .Replace("  productName: testrunner\n", "  productName: My project\n")
+                .Replace("  applicationIdentifier: {}\n", "  applicationIdentifier:\n    Android: com.saved.android\n    Standalone: com.saved.standalone\n");
+            File.WriteAllText(populatedSettings, originalYaml);
+
             var beforeProject = ProjectInfo.ProjectPath;
+            var beforeCompany = ProjectInfo.CompanyName;
+            var beforeProduct = ProjectInfo.ProductName;
             var beforeIdentifier = ProjectInfo.Identifier;
-            ProjectInfo.ProjectPath = emptyDir;
-            ProjectInfo.Identifier = "com.keep.me";
-            SettingsAssets.Reset();
+            var beforeVersion = ProjectInfo.BundleVersion;
+            var beforeGroup = EditorUserBuildSettingsInfo.ActiveGroup;
+            var beforeSubtarget = EditorUserBuildSettings.standaloneBuildSubtarget;
+            bool playing = EditorSession.IsPlaying;
             try
             {
+                // Missing ProjectSettings.asset under measured release reports via Stubs.Ignored.
+                ProjectInfo.ProjectPath = emptyDir;
+                ProjectInfo.Identifier = "com.keep.me";
+                SettingsAssets.Reset();
                 int hitsBefore = StubHits("UnityEditor.PlayerSettings.SetApplicationIdentifier");
                 using (TestRelease.Pin(TestRelease.Measured))
                 {
@@ -181,20 +234,58 @@ namespace UnityEngine.Tests
                     Assert.Equal(hitsBefore + 1, StubHits("UnityEditor.PlayerSettings.SetApplicationIdentifier"));
                 }
 
+                // Populated ProjectSettings.asset under an unmeasured release keeps prior fallbacks,
+                // does not modify the YAML on disk, and hits Stubs.NotImplemented.
+                ProjectInfo.ProjectPath = populatedDir;
+                ProjectInfo.CompanyName = "DefaultCompany";
+                ProjectInfo.ProductName = "My project";
+                ProjectInfo.Identifier = "com.unmeasured.fallback";
+                ProjectInfo.BundleVersion = "0.9";
+                EditorUserBuildSettingsInfo.ActiveGroup = BuildTargetGroup.Standalone;
+                EditorUserBuildSettings.standaloneBuildSubtarget = StandaloneBuildSubtarget.Player;
+                EditorSession.IsPlaying = false;
+                SettingsAssets.Reset();
+
+                int setHits = StubHits("UnityEditor.PlayerSettings.SetApplicationIdentifier");
                 using (TestRelease.Pin(TestRelease.Unmeasured))
                 {
-                    Assert.Equal("com.keep.me", PlayerSettings.GetApplicationIdentifier(NamedBuildTarget.Android));
+                    Assert.Equal("com.unmeasured.fallback", PlayerSettings.GetApplicationIdentifier(NamedBuildTarget.Android));
+                    Assert.Equal("com.unmeasured.fallback", PlayerSettings.GetApplicationIdentifier(NamedBuildTarget.Standalone));
+                    Assert.Equal(1, PlayerSettings.Android.bundleVersionCode);
+                    Assert.Equal("1", PlayerSettings.iOS.buildNumber);
+
                     PlayerSettings.SetApplicationIdentifier(NamedBuildTarget.Android, "com.other.id");
-                    Assert.Equal("com.keep.me", Application.identifier);
-                    Assert.Equal(hitsBefore + 2, StubHits("UnityEditor.PlayerSettings.SetApplicationIdentifier"));
+                    Assert.Equal("com.unmeasured.fallback", Application.identifier);
+                    Assert.Equal(setHits + 1, StubHits("UnityEditor.PlayerSettings.SetApplicationIdentifier"));
+
+                    PlayerSettings.bundleVersion = "9.9";
+                    PlayerSettings.Android.bundleVersionCode = 77;
+                    PlayerSettings.iOS.buildNumber = "7.7";
+                    AssetDatabase.SaveAssets();
+                    Assert.Equal(originalYaml, File.ReadAllText(populatedSettings));
+                }
+
+                // SettingsAssets.Reset clears static fallback fields so writes do not leak across projects.
+                SettingsAssets.Reset();
+                using (TestRelease.Pin(TestRelease.Unmeasured))
+                {
+                    Assert.Equal(1, PlayerSettings.Android.bundleVersionCode);
+                    Assert.Equal("1", PlayerSettings.iOS.buildNumber);
                 }
             }
             finally
             {
                 ProjectInfo.ProjectPath = beforeProject;
+                ProjectInfo.CompanyName = beforeCompany;
+                ProjectInfo.ProductName = beforeProduct;
                 ProjectInfo.Identifier = beforeIdentifier;
+                ProjectInfo.BundleVersion = beforeVersion;
+                EditorUserBuildSettingsInfo.ActiveGroup = beforeGroup;
+                EditorUserBuildSettings.standaloneBuildSubtarget = beforeSubtarget;
+                EditorSession.IsPlaying = playing;
                 SettingsAssets.Reset();
                 Directory.Delete(emptyDir, true);
+                Directory.Delete(populatedDir, true);
             }
         }
 
