@@ -431,10 +431,23 @@ public class SubEmittersProbe : MonoBehaviour
             p => { var v = p.velocityOverLifetime; v.enabled = true; v.speedModifier = 0f; });
         BirthDistance("birth/distance/speedmod_2", 10f, 0f, new[] { 2f }, true,
             p => { var v = p.velocityOverLifetime; v.enabled = true; v.speedModifier = 2f; });
-        BirthDistance("birth/distance/tiny_below", 0.0032f, 0f, new[] { 1f }, true, null,
-            c => { var em = c.emission; em.rateOverTime = 0f; });
-        BirthDistance("birth/distance/tiny_above", 0.008f, 0f, new[] { 1f }, true, null,
-            c => { var em = c.emission; em.rateOverTime = 0f; });
+        // Prime the shared accumulator to 0.99975 in substep 0 (non-looping 5 s child, to/dur = 0.005)
+        // so later substeps cross 1.0 via rateOverDistance alone with toEmit below (8e-5) vs above (2e-4) 1e-4.
+        var primeCurve = new AnimationCurve(
+            new Keyframe(0f, 39.99f / 40f, 0f, 0f),
+            new Keyframe(0.006f, 39.99f / 40f, 0f, 0f),
+            new Keyframe(0.007f, 0f, 0f, 0f),
+            new Keyframe(1f, 0f, 0f, 0f));
+        BirthDistance("birth/distance/tiny_below", 0.0032f, 0f, new[] { 1f }, true, null, c =>
+        {
+            var m = c.main; m.loop = false; m.duration = 5f;
+            var em = c.emission; em.rateOverTime = new ParticleSystem.MinMaxCurve(40f, primeCurve);
+        });
+        BirthDistance("birth/distance/tiny_above", 0.008f, 0f, new[] { 1f }, true, null, c =>
+        {
+            var m = c.main; m.loop = false; m.duration = 5f;
+            var em = c.emission; em.rateOverTime = new ParticleSystem.MinMaxCurve(40f, primeCurve);
+        });
         // Stationary parent with probabilistic bursts proves a non-zero distance scalar still draws from emissionRandom.
         BirthDistance("birth/distance/rng_zero", 0f, 0f, new[] { 0f }, true, null, c =>
         {
@@ -454,8 +467,15 @@ public class SubEmittersProbe : MonoBehaviour
         });
         BirthDistance("birth/distance/twoconst", 0f, 0f, new[] { 2f }, true, null,
             c => { var em = c.emission; em.rateOverDistance = new ParticleSystem.MinMaxCurve(5f, 15f); });
-        BirthDistance("birth/distance/curve_loop", 0f, 0f, new[] { 2f }, true, null,
-            c => { var em = c.emission; em.rateOverDistance = new ParticleSystem.MinMaxCurve(10f, AnimationCurve.Linear(0f, 0f, 1f, 1f)); });
+        BirthDistance("birth/distance/twoconst_maxzero", 0f, 0f, new[] { 2f }, true, null,
+            c => { var em = c.emission; em.rateOverDistance = new ParticleSystem.MinMaxCurve(10f, 0f); });
+        BirthDistance("birth/distance/both_random", 25f, 45f, new[] { 2f }, true, null,
+            c => { var m = c.main; m.startSize = new ParticleSystem.MinMaxCurve(0.2f, 1f); });
+        BirthDistance("birth/distance/curve_loop", 0f, 0f, new[] { 2f }, true, null, c =>
+        {
+            var m = c.main; m.duration = 0.5f;
+            var em = c.emission; em.rateOverDistance = new ParticleSystem.MinMaxCurve(20f, AnimationCurve.Linear(0f, 0f, 1f, 1f));
+        });
         BirthDistance("birth/distance/curve_nonloop", 0f, 0f, new[] { 2f }, true, null, c =>
         {
             var m = c.main; m.loop = false; m.duration = 0.5f;

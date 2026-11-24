@@ -42,9 +42,11 @@ order does not matter):
   at speeds 1–4, `disabled` with child Emission module disabled, `multi` and `bothmulti` for
   multi-child substeps, `scaled` with local-space scaling, `nonloop` and `nonloop_both` with
   non-looping child durations, `speedmod_0`/`speedmod_2` with `VelocityOverLifetime.speedModifier`,
-  `tiny_below`/`tiny_above` straddling the `1e-4` `toEmit` spacing cutoff, `rng_zero`/`rng_nonzero`
-  probing `emissionRandom` draw order on a stationary parent, `twoconst` TwoConstants mode,
-  `curve_loop`/`curve_nonloop` Curve mode, and `played` in Play-mode 0.05 s frames).
+  `tiny_below`/`tiny_above` straddling the `1e-4` `toEmit` spacing cutoff (non-looping 5 s child
+  primed via `rateOverTime` so `rateOverDistance` alone crosses 1.0), `rng_zero`/`rng_nonzero`
+  probing `emissionRandom` draw order on a stationary parent, `twoconst`/`twoconst_maxzero`
+  TwoConstants mode, `both_random` combining rate over time and distance with randomized start size,
+  `curve_loop`/`curve_nonloop` Curve mode (0.5 s duration), and `played` in Play-mode 0.05 s frames).
 
 Record (two independent GPU Editor captures; publish only when they are byte-identical):
 
@@ -55,7 +57,7 @@ Record (two independent GPU Editor captures; publish only when they are byte-ide
 Check the engine (the landing gate, `gate.json`): `python3 tests/projects/subemitters/run.py check`.
 Run output stays under `$XDG_CACHE_HOME/unbound/validation/runs/subemitters/`.
 
-The canonical oracle is `Reference/unity-6000.0.71f1.jsonl` (1909 records, Unity 6000.0.71f1 on
+The canonical oracle is `Reference/unity-6000.0.71f1.jsonl` (1965 records, Unity 6000.0.71f1 on
 Linux, GPU Editor). Two independent captures were byte-identical.
 
 Documented (6000.0 Manual, Sub Emitters module: "The Collision, Death, Trigger, and Manual

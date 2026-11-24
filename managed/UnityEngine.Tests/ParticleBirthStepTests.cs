@@ -419,17 +419,18 @@ namespace UnityEngine.Tests
         [Fact]
         public void BirthRateOverDistanceCurveModeTinyThresholdAndUnmeasuredRelease()
         {
-            // Looping child evaluates rateOverDistance curve at t = 0 (Linear(0,0,1,1) -> 0); non-looping at to / duration.
+            // Looping child evaluates rateOverDistance curve at t = 0 (Linear(0,0,1,1) -> 0 even over
+            // short duration 0.5 s where (to % duration)/duration would emit 10); non-looping at to / duration.
             WithSystems((parent, child) =>
             {
                 var pm = parent.main; pm.startLifetime = 5f; pm.startSpeed = 0f;
                 var cm = child.main; cm.simulationSpace = ParticleSystemSimulationSpace.World; cm.startLifetime = 2.013f; cm.startSpeed = 1f;
-                cm.loop = true;
+                cm.loop = true; cm.duration = 0.5f;
                 var ce = child.emission; ce.SetBursts(Array.Empty<ParticleSystem.Burst>());
-                ce.rateOverDistance = new ParticleSystem.MinMaxCurve(10f, AnimationCurve.Linear(0f, 0f, 1f, 1f));
+                ce.rateOverDistance = new ParticleSystem.MinMaxCurve(20f, AnimationCurve.Linear(0f, 0f, 1f, 1f));
                 ce.rateOverTime = 0f;
                 parent.Emit(new ParticleSystem.EmitParams { position = Vector3.zero, velocity = new Vector3(0f, 2f, 0f), startLifetime = 5f }, 1);
-                for (int s = 0; s < 10; s++) parent.Simulate(0.05f, true, false, false);
+                for (int s = 0; s < 14; s++) parent.Simulate(0.05f, true, false, false);
                 Assert.Equal(0, child.particleCount);
             });
 
@@ -444,6 +445,48 @@ namespace UnityEngine.Tests
                 parent.Emit(new ParticleSystem.EmitParams { position = Vector3.zero, velocity = new Vector3(0f, 2f, 0f), startLifetime = 5f }, 1);
                 for (int s = 0; s < 10; s++) parent.Simulate(0.05f, true, false, false);
                 Assert.True(child.particleCount > 0);
+            });
+
+            // Tiny toEmit (< 1e-4f vs > 1e-4f) after priming the shared accumulator to 0.99975 in substep 0.
+            var primeCurve = new AnimationCurve(
+                new Keyframe(0f, 39.99f / 40f, 0f, 0f),
+                new Keyframe(0.006f, 39.99f / 40f, 0f, 0f),
+                new Keyframe(0.007f, 0f, 0f, 0f),
+                new Keyframe(1f, 0f, 0f, 0f));
+            float TinyAge(float rate, int steps)
+            {
+                float rem = 0f;
+                WithSystems((parent, child) =>
+                {
+                    var pm = parent.main; pm.startLifetime = 5f; pm.startSpeed = 0f;
+                    var cm = child.main; cm.simulationSpace = ParticleSystemSimulationSpace.World;
+                    cm.loop = false; cm.duration = 5f; cm.startLifetime = 2.013f; cm.startSpeed = 1f;
+                    var ce = child.emission; ce.SetBursts(Array.Empty<ParticleSystem.Burst>());
+                    ce.rateOverTime = new ParticleSystem.MinMaxCurve(40f, primeCurve);
+                    ce.rateOverDistance = rate;
+                    parent.Emit(new ParticleSystem.EmitParams { position = Vector3.zero, velocity = new Vector3(0f, 1f, 0f), startLifetime = 5f }, 1);
+                    for (int s = 0; s < steps; s++) parent.Simulate(0.05f, true, false, false);
+                    Assert.Equal(1, child.particleCount);
+                    var buf = new ParticleSystem.Particle[4];
+                    child.GetParticles(buf);
+                    rem = buf[0].remainingLifetime;
+                });
+                return 2.013f - rem;
+            }
+            float ageBelow = TinyAge(0.0032f, 2); // substep 3: toEmit = 8e-5 < 1e-4 -> distSpacing = 1f (age ~ 0.020002)
+            float ageAbove = TinyAge(0.008f, 1);  // substep 1: toEmit = 2e-4 > 1e-4 -> distSpacing = 1/toEmit (age ~ 0.038746)
+            Assert.True(ageAbove - ageBelow > 0.015f, $"expected ageAbove ({ageAbove}) >> ageBelow ({ageBelow})");
+
+            // TwoConstants with constantMax == 0 skips distance emission (subemitters birth/distance/twoconst_maxzero).
+            WithSystems((parent, child) =>
+            {
+                var pm = parent.main; pm.startLifetime = 5f; pm.startSpeed = 0f;
+                var cm = child.main; cm.simulationSpace = ParticleSystemSimulationSpace.World; cm.startLifetime = 2.013f; cm.startSpeed = 1f;
+                var ce = child.emission; ce.rateOverTime = 0f; ce.SetBursts(Array.Empty<ParticleSystem.Burst>());
+                ce.rateOverDistance = new ParticleSystem.MinMaxCurve(10f, 0f);
+                parent.Emit(new ParticleSystem.EmitParams { position = Vector3.zero, velocity = new Vector3(0f, 2f, 0f), startLifetime = 5f }, 1);
+                for (int s = 0; s < 6; s++) parent.Simulate(0.05f, true, false, false);
+                Assert.Equal(0, child.particleCount);
             });
 
             // Unmeasured release still runs rateOverDistance cleanly (no release-pinned crash or drop).
