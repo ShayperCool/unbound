@@ -697,7 +697,8 @@ namespace Unbound.Runtime
         }
 
         /// <summary>Where <paramref name="part"/> lies in <paramref name="list"/> as a contiguous run
-        /// of the same actions (-1: nowhere).</summary>
+        /// of the same actions (-1: nowhere). Engine systems register each delegate once per node,
+        /// so the first match is the run's list.</summary>
         static int Offset(List<Action> list, List<Action> part)
         {
             for (int at = 0; at + part.Count <= list.Count; at++)
