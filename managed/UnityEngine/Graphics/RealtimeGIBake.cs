@@ -115,7 +115,7 @@ namespace UnityEngine
                     // (A renderer the bake does not take, said above, changes their light: none.)
                     bool lightmaps = settings != null && settings.bakedGI && Native.IsReady && !added
                         && Unwritten(settings, FolderOf(scene), environment.Made, Rendering.GraphicsSettings.currentRenderPipeline != null,
-                            lightmapsMade: true, probes: null) == null;
+                            lightmapsMade: true, probes: null, probeGroups: HasProbeGroups(file)) == null;
                     var baked = BakedAtlas.Lay(file, settings, images: lightmaps);
                     WriteLightingData(scene, file, settings, environment, lightmaps ? baked : null);
                     first = false;
@@ -287,11 +287,12 @@ namespace UnityEngine
 
         /// <summary>Why a bake's lighting data is not written beside its scene's
         /// <paramref name="folder"/> (null: untitled), or null where it is: nothing is written, or
-        /// deleted, where any of it would not be the Editor's (a render pipeline asset's bake is
-        /// not measured). <paramref name="editable"/>: whether a path is of the project's own
-        /// assets (AssetDatabase's answer by default).</summary>
+        /// deleted, where any of it would not be the Editor's (with a render pipeline asset, only
+        /// non-directional Baked Indirect baked GI without LightProbeGroups is measured,
+        /// tests/projects/apvbake). <paramref name="editable"/>: whether a path is of the project's
+        /// own assets (AssetDatabase's answer by default).</summary>
         internal static string Unwritten(LightingSettings settings, string folder, bool environmentMade, bool renderPipeline,
-            bool lightmapsMade, string probes, Func<string, bool> editable = null, bool shadowmaskMade = true) =>
+            bool lightmapsMade, string probes, Func<string, bool> editable = null, bool shadowmaskMade = true, bool probeGroups = false) =>
             settings == null ? "a scene without Lighting Settings (the defaults') is not written yet"
             : settings.realtimeGI ? "Unbound writes it for a bake without realtime global illumination"
             : settings.bakedGI && probes != null ? probes
@@ -308,6 +309,7 @@ namespace UnityEngine
             : !Compat.BakeFilesMeasured ? $"of Unity {Application.unityVersion} it is not measured (its release family)"
             : renderPipeline && (!settings.bakedGI || settings.directionalityMode != LightmapsMode.NonDirectional || settings.mixedBakeMode != MixedLightingMode.IndirectOnly)
                 ? "with a render pipeline asset only non-directional Baked Indirect baked GI is measured"
+            : renderPipeline && probeGroups ? "with a render pipeline asset LightProbeGroups are not measured"
             : !environmentMade ? "this bake did not make all of the environment lighting (said)"
             : !(editable ?? UnityEditor.AssetDatabase.Editable)(folder) ? "the scene is not in the project's own assets"
             : settings.bakedGI && !lightmapsMade ? "this bake did not make all of its lightmaps' light (said)"
@@ -322,6 +324,7 @@ namespace UnityEngine
         /// group with probes).</summary>
         internal static bool HasProbeGroups(LoadedFile file)
         {
+            if (file == null) return false;
             foreach (var obj in file.Objects.Values)
                 if (obj is LightProbeGroup group && group != null && group.isActiveAndEnabled && group.probePositions.Length > 0) return true;
             return false;
@@ -482,10 +485,9 @@ namespace UnityEngine
         /// default reflection's image (ReflectionProbe-0.exr, the skybox's faces side by side as
         /// half floats; imported as a cube convolved for glossy reflection, clamped, trilinear),
         /// which the scene then reflects, or none (one an earlier bake wrote is deleted), and the
-        /// lighting data (LightingData.asset), which the scene then names. Written for a bake of
-        /// the environment alone (baked and realtime global illumination off) that made all of
-        /// it, of a scene of the project's own assets, in the measured release family, without a
-        /// render pipeline asset (<see cref="Unwritten"/>); otherwise
+        /// lighting data (LightingData.asset), which the scene then names. Written for a measured
+        /// bake (built-in pipeline environment/baked GI, or render pipeline non-directional Baked
+        /// Indirect baked GI without LightProbeGroups: <see cref="Unwritten"/>); otherwise
         /// nothing is written or deleted (said once): the lighting data of other bakes is not
         /// written yet. The files are the Editor's but for the GUIDs of the new assets.
         /// </summary>
@@ -498,7 +500,8 @@ namespace UnityEngine
             var lightProbes = LightProbesOf(file, baked, out string probes);
             string unwritten = Unwritten(settings, folder, Native.IsReady && environment.Made, Rendering.GraphicsSettings.currentRenderPipeline != null,
                 baked?.Images is { Length: > 0 }, probes,
-                shadowmaskMade: settings == null || settings.mixedBakeMode != MixedLightingMode.Shadowmask || baked == null || baked.Shadowmasks.Length == baked.Images.Length);
+                shadowmaskMade: settings == null || settings.mixedBakeMode != MixedLightingMode.Shadowmask || baked == null || baked.Shadowmasks.Length == baked.Images.Length,
+                probeGroups: HasProbeGroups(file));
             if (unwritten != null)
             {
                 string name = folder == null ? "an untitled scene" : scene.Path;

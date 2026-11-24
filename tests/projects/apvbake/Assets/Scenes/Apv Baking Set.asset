@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   m_SceneBakeData:
     m_Keys:
-    - 7a2d3a3e40e1295febc000702dadd66c
+    - d39787a3977acc95886274dc8444ee0b
     m_Values:
     - hasProbeVolume: 0
       bakeScene: 1
@@ -41,7 +41,7 @@ MonoBehaviour:
         serializedVersion: 2
         m_Bits: 0
   m_SceneGUIDs:
-  - 7a2d3a3e40e1295febc000702dadd66c
+  - d39787a3977acc95886274dc8444ee0b
   obsoleteScenesToNotBake: []
   m_LightingScenarios: []
   cellDescs:

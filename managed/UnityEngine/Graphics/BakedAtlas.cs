@@ -480,21 +480,103 @@ namespace UnityEngine
 
         /// <summary>The scene's lights that take part in a bake: enabled mixed and baked lights of
         /// active GameObjects, made from its file, each with its colour as the bake takes it
-        /// (times its intensity, and times its Indirect Multiplier, linear). Said once per scene
-        /// and left out or simplified: area lights, lights whose intensity multiplies their linear
-        /// colour (GraphicsSettings.lightsUseLinearIntensity; not measured), cookies (ignored),
-        /// soft baked shadows (a Baked Shadow Angle or Radius: baked hard).</summary>
+        /// (times its intensity, and times its Indirect Multiplier, linear; when a render pipeline
+        /// has registered a <see cref="UnityEngine.Experimental.GlobalIllumination.Lightmapping.RequestLightsDelegate"/>,
+        /// converted through that delegate). Said once per scene and left out or simplified: area
+        /// lights, non-directional lights under linear intensity or non-Legacy falloff, color
+        /// temperature under linear intensity, mixed lights under a render pipeline asset, cookies
+        /// (ignored), and soft baked shadows (a Baked Shadow Angle or Radius: baked hard).</summary>
         internal static List<object> Lights(LoadedFile file, string path)
         {
             var lights = new List<object>();
+            var active = new List<(long FileId, Light Light)>();
             foreach (var pair in file.Objects)
             {
                 if (!(pair.Value is Light light) || light == null || !light.enabled || !light.gameObject.activeInHierarchy) continue;
                 if (light.lightmapBakeType == LightmapBakeType.Realtime) continue;
+                active.Add((pair.Key, light));
+            }
+            if (active.Count == 0) return lights;
+            bool renderPipeline = UnityEngine.Rendering.GraphicsSettings.currentRenderPipeline != null;
+            if (UnityEngine.Experimental.GlobalIllumination.Lightmapping.HasCustomDelegate)
+            {
+                var requests = new Light[active.Count];
+                for (int i = 0; i < active.Count; i++) requests[i] = active[i].Light;
+                var converted = new Unity.Collections.NativeArray<UnityEngine.Experimental.GlobalIllumination.LightDataGI>(active.Count, Unity.Collections.Allocator.Temp);
+                try
+                {
+                    try
+                    {
+                        UnityEngine.Experimental.GlobalIllumination.Lightmapping.GetDelegate()(requests, converted);
+                    }
+                    catch (Exception e)
+                    {
+                        Approximated("light-delegate-failed:" + path, $"{path}: the render pipeline's Lightmapping.RequestLightsDelegate failed ({e.Message}); Unbound's bake (Lightmapping.Bake) skips its lights.");
+                        return lights;
+                    }
+                    for (int i = 0; i < active.Count; i++)
+                    {
+                        var (fileId, light) = active[i];
+                        var data = converted[i];
+                        if (data.mode == UnityEngine.Experimental.GlobalIllumination.LightMode.Unknown
+                            || data.mode == UnityEngine.Experimental.GlobalIllumination.LightMode.Realtime)
+                            continue;
+                        int kind = data.type == UnityEngine.Experimental.GlobalIllumination.LightType.Directional ? 0
+                            : data.type == UnityEngine.Experimental.GlobalIllumination.LightType.Point ? 1
+                            : data.type == UnityEngine.Experimental.GlobalIllumination.LightType.Spot ? 2 : -1;
+                        if (kind < 0)
+                        {
+                            Approximated("light-type:" + path + fileId, $"{path}: '{light.name}' is a {data.type} light, which Unbound's bake (Lightmapping.Bake) does not bake yet.");
+                            continue;
+                        }
+                        if (kind != 0 && data.falloff != UnityEngine.Experimental.GlobalIllumination.FalloffType.Legacy)
+                        {
+                            Approximated("light-falloff:" + path, $"{path}: non-directional lights with {data.falloff} falloff from Lightmapping.RequestLightsDelegate are not baked by Unbound's bake (Lightmapping.Bake) yet.");
+                            continue;
+                        }
+                        if (renderPipeline && data.mode == UnityEngine.Experimental.GlobalIllumination.LightMode.Mixed)
+                        {
+                            Approximated("light-rp-mixed:" + path + fileId, $"{path}: '{light.name}' is a Mixed light with a render pipeline asset, which Unbound's bake (Lightmapping.Bake) has not measured yet.");
+                            continue;
+                        }
+                        if (UnityEngine.Rendering.GraphicsSettings.lightsUseLinearIntensity && light.useColorTemperature)
+                        {
+                            Approximated("light-temp:" + path + fileId, $"{path}: '{light.name}' uses color temperature with GraphicsSettings.lightsUseLinearIntensity, which Unbound's bake (Lightmapping.Bake) has not measured yet.");
+                            continue;
+                        }
+                        if (light.cookie != null || data.cookieID != 0)
+                            Approximated("light-cookie:" + path + fileId, $"{path}: '{light.name}' has a cookie, which Unbound's bake (Lightmapping.Bake) does not apply yet.");
+                        if (data.shape0 > 0f && data.shadow != 0)
+                            Approximated("light-soft:" + path + fileId, $"{path}: '{light.name}' has soft baked shadows (its Baked Shadow {(kind == 0 ? "Angle" : "Radius")}), which Unbound's bake (Lightmapping.Bake) bakes hard yet.");
+                        float di = data.color.intensity, ii = data.indirectColor.intensity;
+                        lights.Add(new
+                        {
+                            name = HierarchyPath(light.transform),
+                            fileId,
+                            kind,
+                            mode = data.mode == UnityEngine.Experimental.GlobalIllumination.LightMode.Mixed ? 1 : 2,
+                            color = new[] { data.color.red * di, data.color.green * di, data.color.blue * di },
+                            indirectColor = new[] { data.indirectColor.red * ii, data.indirectColor.green * ii, data.indirectColor.blue * ii },
+                            position = new[] { data.position.x, data.position.y, data.position.z },
+                            rotation = new[] { data.orientation.x, data.orientation.y, data.orientation.z, data.orientation.w },
+                            range = data.range,
+                            spotAngle = data.coneAngle * Mathf.Rad2Deg,
+                            castsShadows = data.shadow != 0,
+                        });
+                    }
+                    return lights;
+                }
+                finally
+                {
+                    converted.Dispose();
+                }
+            }
+            foreach (var (fileId, light) in active)
+            {
                 int kind = light.type == LightType.Directional ? 0 : light.type == LightType.Point ? 1 : light.type == LightType.Spot ? 2 : -1;
                 if (kind < 0)
                 {
-                    Approximated("light-type:" + path + pair.Key, $"{path}: '{light.name}' is a {light.type} light, which Unbound's bake (Lightmapping.Bake) does not bake yet.");
+                    Approximated("light-type:" + path + fileId, $"{path}: '{light.name}' is a {light.type} light, which Unbound's bake (Lightmapping.Bake) does not bake yet.");
                     continue;
                 }
                 if (UnityEngine.Rendering.GraphicsSettings.lightsUseLinearIntensity && kind != 0)
@@ -502,10 +584,20 @@ namespace UnityEngine
                     Approximated("light-linear:" + path, $"{path}: non-directional lights whose intensity multiplies their linear colour (GraphicsSettings.lightsUseLinearIntensity) are not baked by Unbound's bake (Lightmapping.Bake) yet.");
                     continue;
                 }
+                if (UnityEngine.Rendering.GraphicsSettings.lightsUseLinearIntensity && light.useColorTemperature)
+                {
+                    Approximated("light-temp:" + path + fileId, $"{path}: '{light.name}' uses color temperature with GraphicsSettings.lightsUseLinearIntensity, which Unbound's bake (Lightmapping.Bake) has not measured yet.");
+                    continue;
+                }
+                if (renderPipeline && light.lightmapBakeType == LightmapBakeType.Mixed)
+                {
+                    Approximated("light-rp-mixed:" + path + fileId, $"{path}: '{light.name}' is a Mixed light with a render pipeline asset, which Unbound's bake (Lightmapping.Bake) has not measured yet.");
+                    continue;
+                }
                 if (light.cookie != null)
-                    Approximated("light-cookie:" + path + pair.Key, $"{path}: '{light.name}' has a cookie, which Unbound's bake (Lightmapping.Bake) does not apply yet.");
+                    Approximated("light-cookie:" + path + fileId, $"{path}: '{light.name}' has a cookie, which Unbound's bake (Lightmapping.Bake) does not apply yet.");
                 if ((kind == 0 ? light.shadowAngle : light.shadowRadius) > 0f && light.shadows != LightShadows.None)
-                    Approximated("light-soft:" + path + pair.Key, $"{path}: '{light.name}' has soft baked shadows (its Baked Shadow {(kind == 0 ? "Angle" : "Radius")}), which Unbound's bake (Lightmapping.Bake) bakes hard yet.");
+                    Approximated("light-soft:" + path + fileId, $"{path}: '{light.name}' has soft baked shadows (its Baked Shadow {(kind == 0 ? "Angle" : "Radius")}), which Unbound's bake (Lightmapping.Bake) bakes hard yet.");
                 var t = light.transform;
                 Color direct = light.ScaledColor(light.intensity, linear: true), indirect = light.ScaledColor(light.intensity * light.bounceIntensity, linear: true);
                 Vector3 position = t.position;
@@ -513,7 +605,7 @@ namespace UnityEngine
                 lights.Add(new
                 {
                     name = HierarchyPath(t),
-                    fileId = pair.Key,
+                    fileId,
                     kind,
                     mode = light.lightmapBakeType == LightmapBakeType.Mixed ? 1 : 2,
                     color = new[] { direct.r, direct.g, direct.b },
@@ -618,7 +710,14 @@ namespace UnityEngine
                     // A submesh without a material is not drawn: the bake's rays pass it.
                     var slots = renderer.sharedMaterials;
                     var hasMaterial = new bool[slots.Length];
-                    for (int k = 0; k < slots.Length; k++) hasMaterial[k] = slots[k] != null;
+                    bool emptySlot = slots.Length < mesh.subMeshCount;
+                    for (int k = 0; k < slots.Length; k++)
+                    {
+                        hasMaterial[k] = slots[k] != null;
+                        if (k < mesh.subMeshCount && !hasMaterial[k]) emptySlot = true;
+                    }
+                    if (emptySlot && UnityEngine.Rendering.GraphicsSettings.currentRenderPipeline != null)
+                        Approximated("empty-slot-rp:" + path + fileId, $"{path}: '{renderer.name}' has an empty material slot with a render pipeline asset, which Unbound's bake (Lightmapping.Bake) has not measured yet.");
                     bool inLod = lods.TryGetValue(renderer, out var lod) && lod.Mask != 0;
                     if (lodNotices.InactiveRefs.Contains(renderer))
                         Approximated("lod-inactive-group:" + path, $"{path}: '{renderer.name}' is referenced by an inactive LODGroup GameObject, which Unbound's bake (Lightmapping.Bake) has not measured yet.");

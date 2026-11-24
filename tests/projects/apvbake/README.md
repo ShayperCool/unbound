@@ -17,10 +17,15 @@ with the Progressive CPU lightmapper.
   activate an adjacent voxel/cell that SubShader 1 does not.)
 - Cubes are embedded 5 cm into `Ground` (`y_min = 0.80` vs `Ground` `y = 0.85`) to avoid coincident
   opposite-plane `t` ties.
+- `Sun` is a baked directional light with `intensity = 1.5` and `bounceIntensity = 1.25` under URP's
+  `GraphicsSettings.lightsUseLinearIntensity = true`, distinguishing linear-intensity scaling from
+  gamma-intensity scaling in both `lightmap0.exr` and APV probes.
 - `Tall` (`x ∈ [1, 2]`, `y ∈ [0.80, 3.60]`, `z ∈ [-2.1, -0.7]`) places 12 probes directly on the
   interior of its vertical faces (`x ∈ {1, 2}`, `y ∈ {1, 2, 3}`, `z ∈ {-1, -2}`), verifying
   Unity 6000.0's inclusive `t >= 0.0` probe ray intersection (`validity = 0.5` and coplanar direct
-  sun shadowing / indirect bounces). `Red` and `Flat` enclose strictly interior probes (`validity = 1.0`).
+  sun shadowing / indirect bounces). `Red` and `Flat` enclose interior probes whose validities fall
+  in `0.63..0.95` (because the cubes are embedded into `Ground` at `y = 0.85`, whose upward front
+  face intercepts downward rays inside the cubes).
 
 ## Reference
 

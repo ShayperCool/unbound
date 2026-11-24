@@ -46,6 +46,8 @@ public static class ApvSetup
             foreach (var light in UnityEngine.Object.FindObjectsByType<Light>(FindObjectsSortMode.None))
             {
                 light.lightmapBakeType = LightmapBakeType.Baked;
+                light.intensity = 1.5f;
+                light.bounceIntensity = 1.25f;
                 light.name = "Sun";
             }
             // Geometry sits inside cell y = 0 with faces in the voxel-center safe bands of

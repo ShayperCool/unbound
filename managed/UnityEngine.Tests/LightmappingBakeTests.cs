@@ -223,8 +223,8 @@ namespace UnityEngine.Tests
             // (The project's own assets: Assets/ here.)
             System.Func<string, bool> own = path => path.StartsWith("Assets/", System.StringComparison.Ordinal);
             string Unwritten(LightingSettings settings, string folder, bool made, bool pipeline = false, bool lightmaps = false, string probes = null,
-                bool shadowmask = true) =>
-                RealtimeGI.Unwritten(settings, folder, made, pipeline, lightmaps, probes, own, shadowmask);
+                bool shadowmask = true, bool probeGroups = false) =>
+                RealtimeGI.Unwritten(settings, folder, made, pipeline, lightmaps, probes, own, shadowmask, probeGroups);
             try
             {
                 using (TestRelease.Pin(TestRelease.Measured))
@@ -292,6 +292,7 @@ namespace UnityEngine.Tests
                     environment.directionalityMode = LightmapsMode.NonDirectional;
                     environment.mixedBakeMode = MixedLightingMode.IndirectOnly;
                     Assert.Null(Unwritten(environment, "Assets/Scenes/Lit", true, pipeline: true, lightmaps: true));
+                    Assert.Contains("LightProbeGroups", Unwritten(environment, "Assets/Scenes/Lit", true, pipeline: true, lightmaps: true, probeGroups: true));
                     environment.directionalityMode = LightmapsMode.CombinedDirectional;
                     Assert.Contains("render pipeline", Unwritten(environment, "Assets/Scenes/Lit", true, pipeline: true, lightmaps: true));
                     environment.directionalityMode = LightmapsMode.NonDirectional;

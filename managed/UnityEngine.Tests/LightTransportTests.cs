@@ -294,6 +294,73 @@ namespace UnityEngine.Tests
             };
             var dedup = InputExtraction.ComputeOcclusionLightIndicesFromBakeInput(overlapInput, new[] { new Vector3(1f, 0f, 0f) }, 4U);
             Assert.Equal(new[] { 1, 3, -1, -1 }, dedup);
+
+            // NaN range, spot angle, forward, or probe position must be rejected rather than passing comparisons.
+            var nanLights = new InputExtraction.BakeInput
+            {
+                Lights = new[]
+                {
+                    new InputExtraction.ExtractedLightMeta { Kind = 1, Mode = 1, Position = Vector3.zero, Range = float.NaN, ShadowmaskChannel = 0 },
+                    new InputExtraction.ExtractedLightMeta { Kind = 2, Mode = 1, Position = Vector3.zero, Forward = Vector3.forward, Range = 10f, SpotAngle = float.NaN, ShadowmaskChannel = 1 },
+                    new InputExtraction.ExtractedLightMeta { Kind = 2, Mode = 1, Position = Vector3.zero, Forward = new Vector3(float.NaN, 0f, 0f), Range = 10f, SpotAngle = 60f, ShadowmaskChannel = 2 },
+                    new InputExtraction.ExtractedLightMeta { Kind = 1, Mode = 1, Position = Vector3.zero, Range = 10f, ShadowmaskChannel = 3 },
+                }
+            };
+            var nanLightResult = InputExtraction.ComputeOcclusionLightIndicesFromBakeInput(nanLights, new[] { new Vector3(0f, 0f, 2f) }, 4U);
+            Assert.Equal(new[] { 3, -1, -1, -1 }, nanLightResult);
+            var nanProbeResult = InputExtraction.ComputeOcclusionLightIndicesFromBakeInput(nanLights, new[] { new Vector3(float.NaN, 0f, 0f) }, 4U);
+            Assert.Equal(new[] { -1, -1, -1, -1 }, nanProbeResult);
+        }
+
+        sealed class LogCapture : ILogHandler
+        {
+            internal readonly System.Collections.Generic.List<string> Logs = new System.Collections.Generic.List<string>();
+            public void LogFormat(LogType logType, Object context, string format, params object[] args) => Logs.Add(string.Format(format, args));
+            public void LogException(Exception exception, Object context) => Logs.Add(exception.Message);
+        }
+
+        [Fact]
+        public void CollectSceneLightsWarnsLinearIntensityOnlyForNonDirectionalOrColorTemperature()
+        {
+            var prevHandler = Debug.unityLogger.logHandler;
+            var capture = new LogCapture();
+            bool prevLinear = GraphicsSettings.lightsUseLinearIntensity;
+            var dirGo = new GameObject("LTDir");
+            var pointGo = new GameObject("LTPoint");
+            try
+            {
+                Debug.unityLogger.logHandler = capture;
+                GraphicsSettings.lightsUseLinearIntensity = true;
+                InputExtraction.s_Warned.Clear();
+
+                var dir = dirGo.AddComponent<Light>();
+                dir.type = LightType.Directional;
+                dir.lightmapBakeType = LightmapBakeType.Baked;
+                dir.useColorTemperature = false;
+                var point = pointGo.AddComponent<Light>();
+                point.type = LightType.Point;
+                point.lightmapBakeType = LightmapBakeType.Baked;
+
+                InputExtraction.CollectSceneLights(new[] { dir });
+                Assert.DoesNotContain(capture.Logs, l => l.Contains("lightsUseLinearIntensity"));
+
+                capture.Logs.Clear();
+                dir.useColorTemperature = true;
+                InputExtraction.CollectSceneLights(new[] { dir });
+                Assert.Contains(capture.Logs, l => l.Contains("color temperature"));
+
+                capture.Logs.Clear();
+                InputExtraction.CollectSceneLights(new[] { point });
+                Assert.Contains(capture.Logs, l => l.Contains("non-directional light"));
+            }
+            finally
+            {
+                Debug.unityLogger.logHandler = prevHandler;
+                GraphicsSettings.lightsUseLinearIntensity = prevLinear;
+                InputExtraction.s_Warned.Clear();
+                Object.DestroyImmediate(dirGo);
+                Object.DestroyImmediate(pointGo);
+            }
         }
 
         [Fact]

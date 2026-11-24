@@ -2115,4 +2115,54 @@ mod bounced {
             validity[0]
         );
     }
+
+    #[test]
+    fn non_finite_light_range_or_cone_returns_no_arriving_light() {
+        use crate::baked::light::{Kind, Tables};
+
+        let tables = Tables::new();
+        let base_spot = Light {
+            kind: Kind::Spot,
+            mode: Mode::Mixed,
+            color: [1.0; 3],
+            indirect_color: [1.0; 3],
+            position: [0.0, 2.0, 0.0],
+            forward: [0.0, -1.0, 0.0],
+            right: [1.0, 0.0, 0.0],
+            range: 10.0,
+            cone_angle: 60f32.to_radians(),
+            casts_shadows: false,
+        };
+        assert!(
+            base_spot
+                .arriving_around(&tables, base_spot.color, [0.0, 0.0, 0.0])
+                .is_some()
+        );
+        let mut nan_range = base_spot;
+        nan_range.range = f32::NAN;
+        assert!(
+            nan_range
+                .arriving_around(&tables, nan_range.color, [0.0, 0.0, 0.0])
+                .is_none()
+        );
+        let mut nan_cone = base_spot;
+        nan_cone.cone_angle = f32::NAN;
+        assert!(
+            nan_cone
+                .arriving_around(&tables, nan_cone.color, [0.0, 0.0, 0.0])
+                .is_none()
+        );
+        let mut nan_forward = base_spot;
+        nan_forward.forward = [f32::NAN, -1.0, 0.0];
+        assert!(
+            nan_forward
+                .arriving_around(&tables, nan_forward.color, [0.0, 0.0, 0.0])
+                .is_none()
+        );
+        assert!(
+            base_spot
+                .arriving_around(&tables, base_spot.color, [f32::NAN, 0.0, 0.0])
+                .is_none()
+        );
+    }
 }

@@ -115,7 +115,7 @@
       "m_LightmapsMode": "0",
       "m_Lights": [
         {
-          "targetObject": "227623527",
+          "targetObject": "1085305868",
           "targetPrefab": "0"
         }
       ],
@@ -129,60 +129,11 @@
       },
       "m_Scene": {
         "fileID": "102900000",
-        "guid": "7a2d3a3e40e1295febc000702dadd66c",
+        "guid": "d39787a3977acc95886274dc8444ee0b",
         "type": "2"
       },
       "rendererData": {
-        "1157892265/0": {
-          "explicitProbeSetHash": {
-            "bytes[0]": "0",
-            "bytes[10]": "0",
-            "bytes[11]": "0",
-            "bytes[12]": "0",
-            "bytes[13]": "0",
-            "bytes[14]": "0",
-            "bytes[15]": "0",
-            "bytes[1]": "0",
-            "bytes[2]": "0",
-            "bytes[3]": "0",
-            "bytes[4]": "0",
-            "bytes[5]": "0",
-            "bytes[6]": "0",
-            "bytes[7]": "0",
-            "bytes[8]": "0",
-            "bytes[9]": "0"
-          },
-          "lightmapIndex": "0",
-          "lightmapIndexDynamic": "65535",
-          "lightmapST": {
-            "w": "-0.0009576546",
-            "x": "0.23612174",
-            "y": "0.23612174",
-            "z": "0.65529233"
-          },
-          "lightmapSTDynamic": {
-            "w": "0.0",
-            "x": "1.0",
-            "y": "1.0",
-            "z": "0.0"
-          },
-          "terrainChunkDynamicUVST": {
-            "w": "0.0",
-            "x": "1.0",
-            "y": "1.0",
-            "z": "0.0"
-          },
-          "terrainDynamicUVST": {
-            "w": "0.0",
-            "x": "1.0",
-            "y": "1.0",
-            "z": "0.0"
-          },
-          "uvMesh": {
-            "fileID": "0"
-          }
-        },
-        "1167168168/0": {
+        "1731021035/0": {
           "explicitProbeSetHash": {
             "bytes[0]": "0",
             "bytes[10]": "0",
@@ -231,56 +182,7 @@
             "fileID": "0"
           }
         },
-        "1748321921/0": {
-          "explicitProbeSetHash": {
-            "bytes[0]": "0",
-            "bytes[10]": "0",
-            "bytes[11]": "0",
-            "bytes[12]": "0",
-            "bytes[13]": "0",
-            "bytes[14]": "0",
-            "bytes[15]": "0",
-            "bytes[1]": "0",
-            "bytes[2]": "0",
-            "bytes[3]": "0",
-            "bytes[4]": "0",
-            "bytes[5]": "0",
-            "bytes[6]": "0",
-            "bytes[7]": "0",
-            "bytes[8]": "0",
-            "bytes[9]": "0"
-          },
-          "lightmapIndex": "0",
-          "lightmapIndexDynamic": "65535",
-          "lightmapST": {
-            "w": "0.0",
-            "x": "0.625",
-            "y": "0.625",
-            "z": "0.0"
-          },
-          "lightmapSTDynamic": {
-            "w": "0.0",
-            "x": "1.0",
-            "y": "1.0",
-            "z": "0.0"
-          },
-          "terrainChunkDynamicUVST": {
-            "w": "0.0",
-            "x": "1.0",
-            "y": "1.0",
-            "z": "0.0"
-          },
-          "terrainDynamicUVST": {
-            "w": "0.0",
-            "x": "1.0",
-            "y": "1.0",
-            "z": "0.0"
-          },
-          "uvMesh": {
-            "fileID": "0"
-          }
-        },
-        "2116082648/0": {
+        "1920196423/0": {
           "explicitProbeSetHash": {
             "bytes[0]": "0",
             "bytes[10]": "0",
@@ -306,6 +208,104 @@
             "x": "0.20463885",
             "y": "0.20463885",
             "z": "0.65542"
+          },
+          "lightmapSTDynamic": {
+            "w": "0.0",
+            "x": "1.0",
+            "y": "1.0",
+            "z": "0.0"
+          },
+          "terrainChunkDynamicUVST": {
+            "w": "0.0",
+            "x": "1.0",
+            "y": "1.0",
+            "z": "0.0"
+          },
+          "terrainDynamicUVST": {
+            "w": "0.0",
+            "x": "1.0",
+            "y": "1.0",
+            "z": "0.0"
+          },
+          "uvMesh": {
+            "fileID": "0"
+          }
+        },
+        "267996438/0": {
+          "explicitProbeSetHash": {
+            "bytes[0]": "0",
+            "bytes[10]": "0",
+            "bytes[11]": "0",
+            "bytes[12]": "0",
+            "bytes[13]": "0",
+            "bytes[14]": "0",
+            "bytes[15]": "0",
+            "bytes[1]": "0",
+            "bytes[2]": "0",
+            "bytes[3]": "0",
+            "bytes[4]": "0",
+            "bytes[5]": "0",
+            "bytes[6]": "0",
+            "bytes[7]": "0",
+            "bytes[8]": "0",
+            "bytes[9]": "0"
+          },
+          "lightmapIndex": "0",
+          "lightmapIndexDynamic": "65535",
+          "lightmapST": {
+            "w": "-0.0009576546",
+            "x": "0.23612174",
+            "y": "0.23612174",
+            "z": "0.65529233"
+          },
+          "lightmapSTDynamic": {
+            "w": "0.0",
+            "x": "1.0",
+            "y": "1.0",
+            "z": "0.0"
+          },
+          "terrainChunkDynamicUVST": {
+            "w": "0.0",
+            "x": "1.0",
+            "y": "1.0",
+            "z": "0.0"
+          },
+          "terrainDynamicUVST": {
+            "w": "0.0",
+            "x": "1.0",
+            "y": "1.0",
+            "z": "0.0"
+          },
+          "uvMesh": {
+            "fileID": "0"
+          }
+        },
+        "98828360/0": {
+          "explicitProbeSetHash": {
+            "bytes[0]": "0",
+            "bytes[10]": "0",
+            "bytes[11]": "0",
+            "bytes[12]": "0",
+            "bytes[13]": "0",
+            "bytes[14]": "0",
+            "bytes[15]": "0",
+            "bytes[1]": "0",
+            "bytes[2]": "0",
+            "bytes[3]": "0",
+            "bytes[4]": "0",
+            "bytes[5]": "0",
+            "bytes[6]": "0",
+            "bytes[7]": "0",
+            "bytes[8]": "0",
+            "bytes[9]": "0"
+          },
+          "lightmapIndex": "0",
+          "lightmapIndexDynamic": "65535",
+          "lightmapST": {
+            "w": "0.0",
+            "x": "0.625",
+            "y": "0.625",
+            "z": "0.0"
           },
           "lightmapSTDynamic": {
             "w": "0.0",

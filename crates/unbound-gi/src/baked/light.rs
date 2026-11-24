@@ -197,7 +197,7 @@ impl Light {
             self.position[2] - position[2],
         ];
         let distance = dot(to_light, to_light).sqrt();
-        if distance >= self.range {
+        if !(distance < self.range) {
             return None;
         }
         if distance < AT_THE_LIGHT {
@@ -217,7 +217,7 @@ impl Light {
         if self.kind == Kind::Spot {
             let cone = (self.cone_angle * 0.5).cos();
             let along = dot(direction, self.forward.map(|v| -v));
-            if along < cone {
+            if !(along >= cone) {
                 return None;
             }
             scale *= tables.cone((along - cone) / (1.0 - cone));

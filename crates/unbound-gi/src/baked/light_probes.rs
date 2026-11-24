@@ -608,5 +608,10 @@ mod tests {
             occlusion(&probes[..1], &lights, &channels, &floor)[0].occlusion[0],
             0.0
         );
+        // A probe coplanar with the shadow-casting floor (t == 0) is also shadowed.
+        assert_eq!(
+            occlusion(&[[0.0, -1.0, 0.0]], &lights, &channels, &floor)[0].occlusion[0],
+            0.0
+        );
     }
 }

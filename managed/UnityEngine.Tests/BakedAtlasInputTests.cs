@@ -316,8 +316,84 @@ namespace UnityEngine.Tests
                     // Linear intensity multiplies linear color directly: 1^2.2 * 2 = 2, 0.5^2.2 * 2 = 0.42809.
                     Assert.Equal(2f, Channel(linearLights[0], "color", 0), 4);
                     Assert.Equal(0.42809f, Channel(linearLights[0], "color", 1), 4);
+
+                    // Color temperature with linear intensity is unmeasured and skipped with a warning.
+                    capture.Logs.Clear();
+                    var tempFile = new LoadedFile { Path = "Assets/LitLinearTemp.unity", Guid = "32000000000000000000000000000000" };
+                    sun.useColorTemperature = true;
+                    tempFile.Objects[1] = sun;
+                    Assert.Empty(BakedAtlas.Lights(tempFile, tempFile.Path));
+                    Assert.Contains(capture.Logs, l => l.Contains("color temperature"));
+                    sun.useColorTemperature = false;
                 }
                 finally { UnityEngine.Rendering.GraphicsSettings.lightsUseLinearIntensity = before; }
+
+                // When a custom Lightmapping.RequestLightsDelegate is registered, BakedAtlas invokes it:
+                // InitNoBake skips lights, non-Legacy point/spot falloff warns and skips, directional lights use delegate output.
+                capture.Logs.Clear();
+                var delegateFile = new LoadedFile { Path = "Assets/LitDelegate.unity", Guid = "33000000000000000000000000000000" };
+                delegateFile.Objects[1] = sun;
+                delegateFile.Objects[2] = soft;
+                try
+                {
+                    UnityEngine.Experimental.GlobalIllumination.Lightmapping.SetDelegate((Light[] reqs, Unity.Collections.NativeArray<UnityEngine.Experimental.GlobalIllumination.LightDataGI> outs) =>
+                    {
+                        for (int i = 0; i < reqs.Length; i++)
+                        {
+                            var d = new UnityEngine.Experimental.GlobalIllumination.LightDataGI();
+                            if (reqs[i].type == LightType.Directional)
+                            {
+                                var dl = new UnityEngine.Experimental.GlobalIllumination.DirectionalLight
+                                {
+                                    instanceID = reqs[i].GetInstanceID(),
+                                    mode = UnityEngine.Experimental.GlobalIllumination.LightMode.Baked,
+                                    color = new UnityEngine.Experimental.GlobalIllumination.LinearColor { red = 1f, green = 1f, blue = 1f, intensity = 3f },
+                                    indirectColor = new UnityEngine.Experimental.GlobalIllumination.LinearColor { red = 1f, green = 1f, blue = 1f, intensity = 1.5f },
+                                    orientation = reqs[i].transform.rotation,
+                                    shadow = true,
+                                };
+                                d.Init(ref dl);
+                            }
+                            else
+                            {
+                                var pl = new UnityEngine.Experimental.GlobalIllumination.PointLight
+                                {
+                                    instanceID = reqs[i].GetInstanceID(),
+                                    mode = UnityEngine.Experimental.GlobalIllumination.LightMode.Baked,
+                                    color = UnityEngine.Experimental.GlobalIllumination.LinearColor.Convert(Color.white, 1f),
+                                    indirectColor = UnityEngine.Experimental.GlobalIllumination.LinearColor.Convert(Color.white, 1f),
+                                    range = 5f,
+                                    falloff = UnityEngine.Experimental.GlobalIllumination.FalloffType.InverseSquared,
+                                };
+                                d.Init(ref pl);
+                            }
+                            outs[i] = d;
+                        }
+                    });
+                    var delLights = System.Text.Json.JsonDocument.Parse(System.Text.Json.JsonSerializer.Serialize(BakedAtlas.Lights(delegateFile, delegateFile.Path))).RootElement;
+                    Assert.Equal(1, delLights.GetArrayLength());
+                    Assert.Equal(3f, Channel(delLights[0], "color", 0), 4);
+                    Assert.Equal(1.5f, Channel(delLights[0], "indirectColor", 0), 4);
+                    Assert.Contains(capture.Logs, l => l.Contains("InverseSquared falloff"));
+
+                    // InitNoBake skips without warning.
+                    capture.Logs.Clear();
+                    UnityEngine.Experimental.GlobalIllumination.Lightmapping.SetDelegate((Light[] reqs, Unity.Collections.NativeArray<UnityEngine.Experimental.GlobalIllumination.LightDataGI> outs) =>
+                    {
+                        for (int i = 0; i < reqs.Length; i++)
+                        {
+                            var d = new UnityEngine.Experimental.GlobalIllumination.LightDataGI();
+                            d.InitNoBake(reqs[i].GetInstanceID());
+                            outs[i] = d;
+                        }
+                    });
+                    Assert.Empty(BakedAtlas.Lights(delegateFile, delegateFile.Path));
+                    Assert.Empty(capture.Logs);
+                }
+                finally
+                {
+                    UnityEngine.Experimental.GlobalIllumination.Lightmapping.ResetDelegate();
+                }
             }
             finally
             {
