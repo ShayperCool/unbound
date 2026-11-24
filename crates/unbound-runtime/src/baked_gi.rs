@@ -22,7 +22,7 @@ use unbound_gi::baked::sampling::{self, Samples};
 use unbound_gi::baked::seams::{self, EdgePair};
 use unbound_gi::baked::shadowmask;
 use unbound_gi::baked::sky::{IMPORTANCE_DIRECTIONS, Importance, Sky};
-use unbound_gi::baked::trace::Scene;
+use unbound_gi::baked::trace::{Lod, Scene, Viewer};
 use unbound_gi::baked::{atlas, gbuffer, levels};
 
 /// The folder the texel buffers of each bake go to, when set: `<folder>/<scene GUID>/`.
@@ -356,8 +356,14 @@ struct Renderer {
     #[serde(default)]
     has_material: Option<Vec<bool>>,
     scale_in_lightmap: f32,
-    /// The most detailed LOD level it is in, if it is in a LOD Group.
+    /// The most detailed LOD level it is in, if it is in an active, enabled LOD Group.
     lod_level: Option<u32>,
+    /// The active, enabled LOD Group it belongs to (an identifier shared by the renderers of
+    /// that group) and the 8-bit mask of LOD levels (bits 0..8) that list it.
+    #[serde(default)]
+    lod_group: Option<u32>,
+    #[serde(default)]
+    lod_mask: u8,
     /// It contributes to global illumination but is lit by light probes.
     #[serde(default)]
     probe_lit: bool,
@@ -381,6 +387,31 @@ impl Renderer {
             Some(has) => has.get(submesh).copied().unwrap_or(false),
             None => true,
         }
+    }
+
+    fn lod(&self) -> Lod {
+        match self.lod_group {
+            Some(group) if group < u32::MAX => {
+                let mask = if self.lod_mask != 0 {
+                    self.lod_mask
+                } else {
+                    self.lod_level
+                        .filter(|&level| level < 8)
+                        .map_or(0, |level| 1u8 << level)
+                };
+                if mask != 0 {
+                    Lod { group, mask }
+                } else {
+                    Lod::NONE
+                }
+            }
+            _ => Lod::NONE,
+        }
+    }
+
+    fn effective_lod_level(&self) -> Option<u32> {
+        self.lod_level
+            .or_else(|| (self.lod_mask != 0).then(|| self.lod_mask.trailing_zeros()))
     }
 }
 
@@ -919,7 +950,14 @@ fn bake(request: BakeRequest, buffers: Option<&Path>) -> Result<Json> {
                 probe_lit: r.probe_lit,
                 scene,
                 parameters: parameters(r),
-                rect: atlas::rectangle(r.scale_in_lightmap, settings.resolution, r.lod_level, area, uv_bounds, settings.max_size),
+                rect: atlas::rectangle(
+                    r.scale_in_lightmap,
+                    settings.resolution,
+                    r.effective_lod_level(),
+                    area,
+                    uv_bounds,
+                    settings.max_size,
+                ),
                 uv_bounds,
                 morton: atlas::morton([m[12], m[13], m[14]]),
             })
@@ -1034,8 +1072,51 @@ fn bake(request: BakeRequest, buffers: Option<&Path>) -> Result<Json> {
             max: [0.0; 3],
         });
         let grid = Grid::new(&baked_lights, around);
-        let scene = Scene::new(baked.iter().filter(|r| r.casts_shadows).flat_map(|r| {
+        // Per-(LOD Group, level) world bounding box diagonal: how far a lower-LOD ray looks for
+        // its own group and level before falling back to the base (non-LOD / LOD 0) geometry.
+        let mut lod_bounds: std::collections::HashMap<(u32, u8), Bounds> = Default::default();
+        for r in &baked {
+            let lod = r.lod();
+            if lod.mask == 0 {
+                continue;
+            }
             let (mesh, m) = (&meshes[r.mesh], r.local_to_world);
+            let Some(box_r) = Bounds::around(mesh.positions.iter().map(|&p| direct::point(&m, p)))
+            else {
+                continue;
+            };
+            for level in 0u8..8 {
+                if (lod.mask & (1 << level)) == 0 {
+                    continue;
+                }
+                lod_bounds
+                    .entry((lod.group, level))
+                    .and_modify(|b| {
+                        for k in 0..3 {
+                            b.min[k] = b.min[k].min(box_r.min[k]);
+                            b.max[k] = b.max[k].max(box_r.max[k]);
+                        }
+                    })
+                    .or_insert(box_r);
+            }
+        }
+        let viewer_of = |r: &Renderer| -> Viewer {
+            let lod = r.lod();
+            if lod.is_lod0() {
+                return Viewer::Lod0;
+            }
+            let level = lod.mask.trailing_zeros() as u8;
+            let reach = lod_bounds.get(&(lod.group, level)).map_or(0.0, |b| {
+                let dx = b.max[0] - b.min[0];
+                let dy = b.max[1] - b.min[1];
+                let dz = b.max[2] - b.min[2];
+                (dx * dx + dy * dy + dz * dz).sqrt()
+            });
+            Viewer::from_lod(lod, reach)
+        };
+        let scene = Scene::with_lods(baked.iter().filter(|r| r.casts_shadows).flat_map(|r| {
+            let (mesh, m) = (&meshes[r.mesh], r.local_to_world);
+            let lod = r.lod();
             let world = move |v: u32| direct::point(&m, mesh.positions[v as usize]);
             let count = mesh.positions.len() as u32;
             mesh.submeshes
@@ -1044,10 +1125,10 @@ fn bake(request: BakeRequest, buffers: Option<&Path>) -> Result<Json> {
                 .filter(|(submesh, _)| r.stops_rays(*submesh))
                 .flat_map(|(_, triangles)| triangles)
                 .filter(move |t| t.iter().all(|&v| v < count))
-                .map(move |t| t.map(world))
+                .map(move |t| (t.map(world), lod))
         }));
         // What the indirect light's paths run through: every triangle of the bake's renderers,
-        // with its renderer's material images.
+        // with its renderer's material images and LOD Group membership.
         let bounce = request
             .indirect
             .as_ref()
@@ -1066,11 +1147,13 @@ fn bake(request: BakeRequest, buffers: Option<&Path>) -> Result<Json> {
                     )
                 })?;
                 let mut surfaces = Vec::new();
+                let mut surface_lods = Vec::new();
                 let mut materials = Vec::new();
                 for (&i, r) in taken.iter().zip(&baked) {
                     let mesh = ready[r.mesh].as_ref().expect("made above");
                     let images = &data.materials[i];
                     let m = &r.local_to_world;
+                    let lod = r.lod();
                     let rows = direct::normal_matrix(m);
                     let determinant = m[0] * (m[5] * m[10] - m[6] * m[9])
                         - m[4] * (m[1] * m[10] - m[2] * m[9])
@@ -1090,13 +1173,19 @@ fn bake(request: BakeRequest, buffers: Option<&Path>) -> Result<Json> {
                                 t.map(|v| direct::world_normal(&rows, mesh.normals[v as usize])),
                             uvs: t.map(|v| mesh.uvs[v as usize]),
                         }));
+                        surface_lods.extend(std::iter::repeat_n(lod, triangles.len()));
                     }
                     materials.push(Material {
                         albedo: images.albedo.albedo(&r.name)?,
                         emissive: images.emissive.emissive(&r.name)?,
                     });
                 }
-                let scene = Scene::new(surfaces.iter().map(|s| s.corners));
+                let scene = Scene::with_lods(
+                    surfaces
+                        .iter()
+                        .zip(&surface_lods)
+                        .map(|(s, &lod)| (s.corners, lod)),
+                );
                 Ok(Bounce {
                     samples,
                     surfaces,
@@ -1132,6 +1221,7 @@ fn bake(request: BakeRequest, buffers: Option<&Path>) -> Result<Json> {
                 .map(|&k| Receiver {
                     local_to_world: baked[k].local_to_world,
                     receives_shadows: baked[k].receives_shadows,
+                    viewer: viewer_of(baked[k]),
                 })
                 .collect();
             // The renderers of a lightmap share their Lightmap Parameters.
@@ -2632,6 +2722,87 @@ mod tests {
             .chunks_exact(4)
             .map(|b| f32::from_le_bytes([b[0], b[1], b[2], b[3]]))
             .collect()
+    }
+
+    #[test]
+    fn lod_groups_keep_lower_levels_out_of_other_renderers_rays_and_hide_own_lod0() {
+        let folder = std::env::temp_dir().join(format!("unbound-baked-lod-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&folder);
+        std::fs::create_dir_all(&folder).unwrap();
+        let blue_noise = folder.join("bluenoisedata");
+        std::fs::write(
+            &blue_noise,
+            vec![0u8; unbound_gi::baked::sampling::BLUE_NOISE_BYTES],
+        )
+        .unwrap();
+        let floor = json!({
+            "positions": floats(&[0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 1.0, 0.0, 0.0, 1.0, 0.0]),
+            "normals": floats(&[0.0, 0.0, 1.0].repeat(4)),
+            "uv": floats(&[]),
+            "uv2": floats(&UNIT),
+            "submeshes": [encoded(&[0u32, 1, 2, 0, 2, 3], u32::to_le_bytes)],
+        });
+        let ceiling = json!({
+            "positions": floats(&[-50.0, -50.0, 2.0, -50.0, 50.0, 2.0, 50.0, 50.0, 2.0, 50.0, -50.0, 2.0]),
+            "normals": floats(&[0.0, 0.0, -1.0].repeat(4)),
+            "uv": floats(&[]),
+            "uv2": floats(&UNIT),
+            "submeshes": [encoded(&[0u32, 1, 2, 0, 2, 3], u32::to_le_bytes)],
+        });
+        let black =
+            json!({ "width": 1, "height": 1, "data": encoded(&[0u8, 0, 0, 255], u8::to_le_bytes) });
+        let dark = json!({ "width": 1, "height": 1, "data": floats(&[0.0, 0.0, 0.0, 1.0]) });
+        let even = [1.0f32, 2.0, 3.0].repeat(6);
+        let dump = folder.join("10000000200000003000000040000000");
+
+        let sky_of_floor = |floor_lod: Option<(u32, u8)>,
+                            ceiling_lod: Option<(u32, u8)>|
+         -> usize {
+            let mut f = renderer("floor", 11, 0, 1.0, 0.0);
+            let mut c = renderer("ceiling", 22, 1, 0.0, 0.0);
+            c["probeLit"] = json!(true);
+            if let Some((g, m)) = floor_lod {
+                f["lodGroup"] = json!(g);
+                f["lodMask"] = json!(m);
+                f["lodLevel"] = json!(m.trailing_zeros());
+            }
+            if let Some((g, m)) = ceiling_lod {
+                c["lodGroup"] = json!(g);
+                c["lodMask"] = json!(m);
+                c["lodLevel"] = json!(m.trailing_zeros());
+            }
+            let image = json!({ "albedo": black, "emissive": dark, "doubleSided": [false] });
+            let value = json!({
+                "maxSize": 64, "padding": 2, "resolution": 4.0, "fixedSize": false,
+                "scene": "10000000200000003000000040000000",
+                "meshes": [floor, ceiling],
+                "renderers": [f, c],
+                "indirect": {
+                    "samples": 16, "maxBounces": 1, "minBounces": 1,
+                    "blueNoise": blue_noise.to_string_lossy(), "materials": [image, image],
+                    "environment": { "samples": 16, "importanceSampling": false, "side": 1, "faces": floats(&even) },
+                },
+            });
+            let out = bake(serde_json::from_value(value).unwrap(), Some(&folder)).unwrap();
+            let lightmap = out["placements"][0]["lightmap"].as_u64().unwrap();
+            let light = read_floats(&dump.join(format!("irradianceEnvironment{lightmap}.f32")));
+            light
+                .chunks_exact(4)
+                .filter(|t| t[3] == 1.0 && (t[0] - 1.0).abs() < 1e-5)
+                .count()
+        };
+
+        // Non-LOD floor sees right through a LOD 1 ceiling.
+        assert!(sky_of_floor(None, Some((0, 0b10))) >= 4);
+        // LOD 1 floor skips its own group's LOD 0 ceiling.
+        assert!(sky_of_floor(Some((0, 0b10)), Some((0, 0b01))) >= 4);
+        // LOD 1 floor IS blocked by a same-group LOD 1 ceiling (reach covers both).
+        assert_eq!(sky_of_floor(Some((0, 0b10)), Some((0, 0b10))), 0);
+        // LOD 1 floor IS blocked by a different group's LOD 0 ceiling.
+        assert_eq!(sky_of_floor(Some((0, 0b10)), Some((1, 0b01))), 0);
+        // LOD 1 floor sees through a different group's LOD 1 ceiling.
+        assert!(sky_of_floor(Some((0, 0b10)), Some((1, 0b10))) >= 4);
+        let _ = std::fs::remove_dir_all(&folder);
     }
 
     #[test]

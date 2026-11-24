@@ -8,7 +8,7 @@
 use super::directional::{NONE, Toward};
 use super::gbuffer::GBuffer;
 use super::light::{Light, Mode, Tables};
-use super::trace::{Ray, Scene};
+use super::trace::{Ray, Scene, Viewer};
 use rayon::prelude::*;
 
 /// A renderer of a lightmap, by its place in it ([`gbuffer::Instance::index`](super::gbuffer::Instance)).
@@ -18,6 +18,8 @@ pub struct Receiver {
     pub local_to_world: [f32; 16],
     /// Receive Shadows.
     pub receives_shadows: bool,
+    /// Which LOD levels its rays see.
+    pub viewer: Viewer,
 }
 
 /// How mixed lights are baked (Lighting Mode).
@@ -159,18 +161,20 @@ pub fn direct(
                 }
                 // What a light sends the sample, and whether the sample sees it.
                 let receives = receivers[receiver].receives_shadows;
+                let viewer = receivers[receiver].viewer;
                 let lit = |light: &Light| {
                     light
                         .arriving(&tables, light.color, origin, smooth)
                         .map(|arriving| {
                             let shadowed = light.casts_shadows
                                 && receives
-                                && scene.occluded(
+                                && scene.occluded_for(
                                     &Ray {
                                         origin,
                                         direction: arriving.direction,
                                     },
                                     arriving.distance,
+                                    viewer,
                                 );
                             (arriving, !shadowed)
                         })

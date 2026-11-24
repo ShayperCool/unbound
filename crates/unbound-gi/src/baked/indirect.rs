@@ -18,7 +18,7 @@ use super::light::{Light, Tables};
 use super::probes::{self, Coefficients};
 use super::sampling::{self, Samples};
 use super::sky::Sky;
-use super::trace::{Ray, Scene};
+use super::trace::{Ray, Scene, Viewer};
 use rayon::prelude::*;
 
 /// The dimensions of the sample sequence a surface's hit takes; a texel's own samples take the
@@ -190,11 +190,23 @@ impl Path<'_> {
     /// Follows a path from a texel's sample: adds the light it brings to `sum` and answers
     /// whether its first surface was met from behind.
     /// `path` takes the same light as `sum`, for this path alone.
-    fn follow(&self, index: u32, mut ray: Ray, sum: &mut [f32; 3], path: &mut [f32; 3]) -> bool {
+    fn follow(
+        &self,
+        index: u32,
+        mut ray: Ray,
+        mut viewer: Viewer,
+        sum: &mut [f32; 3],
+        path: &mut [f32; 3],
+    ) -> bool {
         let world = self.world;
         let mut throughput = [1f32; 3];
+        let first_origin = ray.origin;
         for depth in 0..self.settings.max_bounces {
-            let Some(hit) = world.scene.closest(&ray, f32::INFINITY) else {
+            let Some((hit, next_viewer, hit_origin)) =
+                world
+                    .scene
+                    .closest_from(&ray, first_origin, f32::INFINITY, viewer)
+            else {
                 return false;
             };
             let surface = &world.surfaces[hit.triangle as usize];
@@ -232,7 +244,7 @@ impl Path<'_> {
                 smooth = smooth.map(|x| -x);
             }
             let position: [f32; 3] =
-                std::array::from_fn(|k| ray.origin[k] + ray.direction[k] * hit.distance);
+                std::array::from_fn(|k| hit_origin[k] + ray.direction[k] * hit.distance);
             let origin: [f32; 3] =
                 std::array::from_fn(|k| position[k] + geometric[k] * self.settings.pushoff);
             let albedo = material.albedo.at(uv);
@@ -248,12 +260,13 @@ impl Path<'_> {
                     return;
                 };
                 let shadowed = light.casts_shadows
-                    && world.casters.occluded(
+                    && world.casters.occluded_for(
                         &Ray {
                             origin,
                             direction: arriving.direction,
                         },
                         arriving.distance,
+                        next_viewer,
                     );
                 if !shadowed {
                     for k in 0..3 {
@@ -276,14 +289,22 @@ impl Path<'_> {
                 sum[k] += emissive[k] * throughput[k];
                 path[k] += emissive[k] * throughput[k];
             }
-            // The sky's light on the surface, unless the path ends here anyway. Any renderer
-            // in the way stops it, also one that casts no shadows.
+            // The sky's light on the surface, unless the path ends here anyway. From a non-LOD
+            // or LOD 0 path any renderer in the way stops it (also one that casts no shadows);
+            // from a lower-LOD path only shadow-casting renderers stop it.
+            let sky_occluders = if next_viewer.is_lod0() {
+                world.scene
+            } else {
+                world.casters
+            };
             if depth + 1 < self.settings.max_bounces
                 && let Some(sky) = world.sky
                 && let Some((direction, light)) = sky.arriving(smooth, geometric, numbers)
-                && !world
-                    .scene
-                    .occluded(&Ray { origin, direction }, f32::INFINITY)
+                && !sky_occluders.occluded_for(
+                    &Ray { origin, direction },
+                    f32::INFINITY,
+                    next_viewer,
+                )
             {
                 for k in 0..3 {
                     sum[k] += light[k] * reflected[k];
@@ -302,6 +323,7 @@ impl Path<'_> {
                 return false;
             }
             throughput = reflected;
+            viewer = next_viewer;
             ray = Ray {
                 origin,
                 direction: sampling::around(geometric, [numbers[0], numbers[1]]),
@@ -360,8 +382,9 @@ pub fn indirect(
             };
             let place = samples.rotation(tx, ty, g.width, 0)[0];
             // Where a ray of the texel starts: one of its samples, picked by the ray's number;
-            // its point pushed off its triangle, its shading normal and its triangle's.
-            let start = |index: u32| -> Option<([f32; 3], [f32; 3], [f32; 3])> {
+            // its point pushed off its triangle, its shading normal, its triangle's and its
+            // renderer's LOD viewer.
+            let start = |index: u32| -> Option<([f32; 3], [f32; 3], [f32; 3], Viewer)> {
                 let pick = sampling::fraction(samples.sobol(index, 2) + place);
                 let k = ((s * s) as f32 * pick).floor() as usize % (s * s);
                 let (sample, receiver) = direct::sample(g, tx, ty, k, receivers.len());
@@ -374,13 +397,13 @@ pub fn indirect(
                 let plane = world_normal(&normals[receiver], [plane[0], plane[1], plane[2]]);
                 let origin: [f32; 3] =
                     std::array::from_fn(|c| position[c] + plane[c] * settings.pushoff);
-                Some((origin, smooth, plane))
+                Some((origin, smooth, plane, receivers[receiver].viewer))
             };
             let mut sum = [0f32; 3];
             let (mut rays, mut behind) = (0u32, 0u32);
             let mut toward = Toward::default();
             for index in 0..count {
-                let Some((origin, smooth, plane)) = start(index) else {
+                let Some((origin, smooth, plane, viewer)) = start(index) else {
                     break;
                 };
                 let numbers = path.numbers(index, 0);
@@ -391,7 +414,13 @@ pub fn indirect(
                     continue;
                 }
                 let mut light = [0f32; 3];
-                if path.follow(index, Ray { origin, direction }, &mut sum, &mut light) {
+                if path.follow(
+                    index,
+                    Ray { origin, direction },
+                    viewer,
+                    &mut sum,
+                    &mut light,
+                ) {
                     behind += 1;
                 }
                 toward.add(unit(direction), light);
@@ -401,15 +430,22 @@ pub fn indirect(
             let mut sky_rays = 0u32;
             if let Some(sky) = world.sky {
                 for index in 0..sky_count {
-                    let Some((origin, smooth, plane)) = start(index) else {
+                    let Some((origin, smooth, plane, viewer)) = start(index) else {
                         break;
                     };
                     sky_rays += 1;
                     let numbers = path.numbers_of(index, 0, sky_distribution);
+                    let sky_occluders = if viewer.is_lod0() {
+                        world.scene
+                    } else {
+                        world.casters
+                    };
                     if let Some((direction, light)) = sky.arriving(smooth, plane, numbers)
-                        && !world
-                            .scene
-                            .occluded(&Ray { origin, direction }, f32::INFINITY)
+                        && !sky_occluders.occluded_for(
+                            &Ray { origin, direction },
+                            f32::INFINITY,
+                            viewer,
+                        )
                     {
                         for c in 0..3 {
                             sky_sum[c] += light[c];
@@ -539,6 +575,7 @@ fn group_probes(
                         origin: point,
                         direction,
                     },
+                    Viewer::Lod0,
                     &mut sum,
                     &mut light,
                 ) {

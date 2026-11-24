@@ -19,12 +19,104 @@ struct Node {
     count: u32,
 }
 
+/// A triangle's LOD Group membership: which active LOD Group its renderer belongs to and the
+/// 8-bit mask of LOD levels (bits 0..8) that list it. A renderer outside any active LOD Group
+/// has [`Lod::NONE`].
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct Lod {
+    pub group: u32,
+    pub mask: u8,
+}
+
+impl Lod {
+    pub const NONE: Lod = Lod {
+        group: u32::MAX,
+        mask: 0,
+    };
+
+    /// Whether the triangle belongs to LOD 0 or to no LOD Group: visible to light probes,
+    /// non-LOD surfaces and LOD 0 surfaces.
+    pub const fn is_lod0(self) -> bool {
+        self.mask == 0 || (self.mask & 1) != 0
+    }
+
+    /// The bit of the most detailed LOD level the renderer belongs to (`0` when not in a LOD Group).
+    pub const fn lowest_bit(self) -> u8 {
+        self.mask & self.mask.wrapping_neg()
+    }
+
+    /// Whether the triangle belongs to `group` with `level_bit` (a single bit >= 2) as its most
+    /// detailed LOD level.
+    const fn is_lower_level(self, group: u32, level_bit: u8) -> bool {
+        self.group == group && self.lowest_bit() == level_bit
+    }
+
+    /// Whether a base-pass ray (LOD 0 / non-LOD set) cast for `(group, level_bit)` sees this
+    /// triangle: every non-LOD and LOD 0 triangle except LOD 0-only triangles of `group` itself.
+    const fn visible_in_base(self, group: u32, level_bit: u8) -> bool {
+        self.is_lod0() && (self.group != group || (self.mask & level_bit) != 0)
+    }
+}
+
+impl Default for Lod {
+    fn default() -> Self {
+        Lod::NONE
+    }
+}
+
+/// Which LOD levels a ray sees (matches the Unity 6000.0.71f1 Editor's Progressive CPU
+/// lightmapper, tests/projects/bakedbuffers `Shapes`, `Lod`):
+/// - [`Viewer::Lod0`]: non-LOD, LOD 0, light probes, and paths after bouncing onto another
+///   group or a non-LOD surface; sees only non-LOD and LOD 0 triangles.
+/// - [`Viewer::Lod`]: a lower LOD level (`level_bit` is `1 << level`, `level >= 1`); rays first
+///   test triangles of the same group whose most detailed level is `level_bit` within `reach`
+///   (the diagonal of that group-and-level's world bounding box), and on a miss test the base
+///   non-LOD/LOD 0 set while skipping LOD 0-only triangles of its own group.
+/// - [`Viewer::LodShared`]: a lower-LOD path that missed its own lower level and hit a renderer
+///   shared between LOD 0 and `level_bit` of its own group; shadow and environment rays still
+///   test its own lower level (without a reach bound), while bounce rays stay in the base set.
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
+pub enum Viewer {
+    #[default]
+    Lod0,
+    Lod {
+        group: u32,
+        level_bit: u8,
+        reach: f32,
+    },
+    LodShared {
+        group: u32,
+        level_bit: u8,
+    },
+}
+
+impl Viewer {
+    pub const fn from_lod(lod: Lod, reach: f32) -> Viewer {
+        if lod.is_lod0() {
+            Viewer::Lod0
+        } else {
+            Viewer::Lod {
+                group: lod.group,
+                level_bit: lod.lowest_bit(),
+                reach,
+            }
+        }
+    }
+
+    pub const fn is_lod0(self) -> bool {
+        matches!(self, Viewer::Lod0)
+    }
+}
+
 /// The triangles of a scene, for rays.
 pub struct Scene {
     /// Each triangle's first corner and its two edges from it.
     triangles: Vec<[[f32; 3]; 3]>,
     /// Each triangle's number among the triangles the scene was made of.
     numbers: Vec<u32>,
+    /// Each triangle's LOD Group membership, in leaf order; empty when every triangle is
+    /// [`Lod::NONE`].
+    lods: Vec<Lod>,
     nodes: Vec<Node>,
 }
 
@@ -54,12 +146,25 @@ impl Scene {
     /// A scene of triangles given by their corners in world space. Triangles with a corner that
     /// is not a number are left out.
     pub fn new(corners: impl IntoIterator<Item = [[f32; 3]; 3]>) -> Scene {
-        let (given, corners): (Vec<u32>, Vec<[[f32; 3]; 3]>) = corners
-            .into_iter()
-            .enumerate()
-            .filter(|(_, t)| t.iter().flatten().all(|v| v.is_finite()))
-            .map(|(number, t)| (number as u32, t))
-            .unzip();
+        Scene::with_lods(corners.into_iter().map(|t| (t, Lod::NONE)))
+    }
+
+    /// A scene of triangles given by their corners in world space and each triangle's LOD Group
+    /// membership. Triangles with a corner that is not a number are left out.
+    pub fn with_lods(items: impl IntoIterator<Item = ([[f32; 3]; 3], Lod)>) -> Scene {
+        let mut given = Vec::new();
+        let mut corners = Vec::new();
+        let mut given_lods = Vec::new();
+        let mut any_lod = false;
+        for (number, (t, lod)) in items.into_iter().enumerate() {
+            if !t.iter().flatten().all(|v| v.is_finite()) {
+                continue;
+            }
+            given.push(number as u32);
+            corners.push(t);
+            given_lods.push(lod);
+            any_lod |= lod.mask != 0;
+        }
         let bounds: Vec<([f32; 3], [f32; 3])> = corners
             .iter()
             .map(|t| {
@@ -80,9 +185,15 @@ impl Scene {
                 [t[0], sub(t[1], t[0]), sub(t[2], t[0])]
             })
             .collect();
+        let lods = if any_lod {
+            order.iter().map(|&i| given_lods[i as usize]).collect()
+        } else {
+            Vec::new()
+        };
         Scene {
             triangles,
             numbers: order.iter().map(|&i| given[i as usize]).collect(),
+            lods,
             nodes,
         }
     }
@@ -92,8 +203,14 @@ impl Scene {
     }
 
     /// Whether a triangle crosses the ray after its origin and before `limit` along it. Either
-    /// side of a triangle stops the ray.
+    /// side of a triangle stops the ray (seen as [`Viewer::Lod0`]).
     pub fn occluded(&self, ray: &Ray, limit: f32) -> bool {
+        self.occluded_for(ray, limit, Viewer::Lod0)
+    }
+
+    /// Whether a triangle visible to `viewer` crosses the ray after its origin and before `limit`
+    /// along it. Either side of a triangle stops the ray.
+    pub fn occluded_for(&self, ray: &Ray, limit: f32, viewer: Viewer) -> bool {
         if self.nodes.is_empty() {
             return false;
         }
@@ -108,12 +225,51 @@ impl Scene {
                 continue;
             }
             if node.count > 0 {
-                let leaf = &self.triangles[node.first as usize..(node.first + node.count) as usize];
-                if leaf
-                    .iter()
-                    .any(|t| hit(t, ray).is_some_and(|h| h.distance < limit))
-                {
-                    return true;
+                let range = node.first as usize..(node.first + node.count) as usize;
+                if self.lods.is_empty() {
+                    if self.triangles[range]
+                        .iter()
+                        .any(|t| hit(t, ray).is_some_and(|h| h.distance < limit))
+                    {
+                        return true;
+                    }
+                } else {
+                    for k in range {
+                        let lod = self.lods[k];
+                        let max_t = match viewer {
+                            Viewer::Lod0 => {
+                                if !lod.is_lod0() {
+                                    continue;
+                                }
+                                limit
+                            }
+                            Viewer::Lod {
+                                group,
+                                level_bit,
+                                reach,
+                            } => {
+                                if lod.is_lower_level(group, level_bit) {
+                                    limit.min(reach)
+                                } else if lod.visible_in_base(group, level_bit) {
+                                    limit
+                                } else {
+                                    continue;
+                                }
+                            }
+                            Viewer::LodShared { group, level_bit } => {
+                                if lod.is_lower_level(group, level_bit)
+                                    || lod.visible_in_base(group, level_bit)
+                                {
+                                    limit
+                                } else {
+                                    continue;
+                                }
+                            }
+                        };
+                        if hit(&self.triangles[k], ray).is_some_and(|h| h.distance < max_t) {
+                            return true;
+                        }
+                    }
                 }
             } else {
                 // The hierarchy halves its triangles at every level: it is never deeper than
@@ -126,16 +282,88 @@ impl Scene {
         false
     }
 
-    /// The nearest triangle the ray crosses after its origin and before `limit` along it.
+    /// The nearest triangle the ray crosses after its origin and before `limit` along it (seen
+    /// as [`Viewer::Lod0`]).
     pub fn closest(&self, ray: &Ray, limit: f32) -> Option<Hit> {
+        self.closest_for(ray, limit, Viewer::Lod0)
+            .map(|(hit, _)| hit)
+    }
+
+    /// The nearest triangle visible to `viewer` that the ray crosses after its origin and before
+    /// `limit`, together with the viewer a path carries on from that hit.
+    pub fn closest_for(&self, ray: &Ray, limit: f32, viewer: Viewer) -> Option<(Hit, Viewer)> {
+        self.closest_from(ray, ray.origin, limit, viewer)
+            .map(|(hit, next, _)| (hit, next))
+    }
+
+    /// Like [`closest_for`](Self::closest_for), but when a lower-LOD ray misses its own group and
+    /// level and falls back to the base (non-LOD / LOD 0) geometry, the base pass starts from
+    /// `base_origin` (and returns the origin `hit.distance` is measured from).
+    pub fn closest_from(
+        &self,
+        ray: &Ray,
+        base_origin: [f32; 3],
+        limit: f32,
+        viewer: Viewer,
+    ) -> Option<(Hit, Viewer, [f32; 3])> {
         if self.nodes.is_empty() {
             return None;
         }
+        match viewer {
+            Viewer::Lod0 => self
+                .closest_matching(ray, limit, |lod| lod.is_lod0())
+                .map(|(hit, _)| (hit, Viewer::Lod0, ray.origin)),
+            Viewer::Lod {
+                group,
+                level_bit,
+                reach,
+            } => {
+                if !self.lods.is_empty()
+                    && let Some((hit, _)) = self.closest_matching(ray, limit.min(reach), |lod| {
+                        lod.is_lower_level(group, level_bit)
+                    })
+                {
+                    return Some((hit, viewer, ray.origin));
+                }
+                let base_ray = Ray {
+                    origin: base_origin,
+                    direction: ray.direction,
+                };
+                self.closest_matching(&base_ray, limit, |lod| {
+                    lod.visible_in_base(group, level_bit)
+                })
+                .map(|(hit, lod)| {
+                    let next = if lod.group == group {
+                        Viewer::LodShared { group, level_bit }
+                    } else {
+                        Viewer::Lod0
+                    };
+                    (hit, next, base_origin)
+                })
+            }
+            Viewer::LodShared { group, level_bit } => self
+                .closest_matching(ray, limit, |lod| lod.visible_in_base(group, level_bit))
+                .map(|(hit, lod)| {
+                    let next = if lod.group == group {
+                        viewer
+                    } else {
+                        Viewer::Lod0
+                    };
+                    (hit, next, ray.origin)
+                }),
+        }
+    }
+
+    fn closest_matching(
+        &self,
+        ray: &Ray,
+        mut limit: f32,
+        accept: impl Fn(Lod) -> bool,
+    ) -> Option<(Hit, Lod)> {
         let inverse: [f32; 3] = std::array::from_fn(|k| 1.0 / ray.direction[k]);
         let mut stack = [0u32; 64];
         let mut depth = 1;
-        let mut nearest: Option<Hit> = None;
-        let mut limit = limit;
+        let mut nearest: Option<(Hit, Lod)> = None;
         while depth > 0 {
             depth -= 1;
             let index = stack[depth] as usize;
@@ -145,14 +373,25 @@ impl Scene {
             }
             if node.count > 0 {
                 for k in node.first as usize..(node.first + node.count) as usize {
+                    let lod = if self.lods.is_empty() {
+                        Lod::NONE
+                    } else {
+                        self.lods[k]
+                    };
+                    if !accept(lod) {
+                        continue;
+                    }
                     if let Some(found) = hit(&self.triangles[k], ray)
                         && found.distance < limit
                     {
                         limit = found.distance;
-                        nearest = Some(Hit {
-                            triangle: self.numbers[k],
-                            ..found
-                        });
+                        nearest = Some((
+                            Hit {
+                                triangle: self.numbers[k],
+                                ..found
+                            },
+                            lod,
+                        ));
                     }
                 }
             } else {

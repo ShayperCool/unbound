@@ -1009,6 +1009,7 @@ mod lighting {
         let receivers = [Receiver {
             local_to_world: IDENTITY,
             receives_shadows: true,
+            viewer: crate::baked::trace::Viewer::Lod0,
         }];
         let masks = |mixed: MixedMode, channel: Option<u8>| {
             direct::direct(&g, &receivers, &[sun], &[channel], mixed, &roof, 0.0001).shadowmask
@@ -1079,6 +1080,7 @@ mod lighting {
             let receivers = [Receiver {
                 local_to_world: IDENTITY,
                 receives_shadows: receives,
+                viewer: crate::baked::trace::Viewer::Lod0,
             }];
             direct::direct(&g, &receivers, &[sun], &[], mixed, scene, 0.0001).irradiance
         };
@@ -1142,6 +1144,7 @@ mod lighting {
         let receivers = [Receiver {
             local_to_world: IDENTITY,
             receives_shadows: true,
+            viewer: crate::baked::trace::Viewer::Lod0,
         }];
         let above = direct::direct(
             &g,
@@ -1174,6 +1177,7 @@ mod lighting {
         let receivers = [Receiver {
             local_to_world: IDENTITY,
             receives_shadows: true,
+            viewer: crate::baked::trace::Viewer::Lod0,
         }];
         let values = direct::direct(
             &partial,
@@ -1206,6 +1210,7 @@ mod lighting {
         let receivers = [Receiver {
             local_to_world: turned,
             receives_shadows: true,
+            viewer: crate::baked::trace::Viewer::Lod0,
         }];
         let mut along_x = light(Kind::Directional);
         along_x.forward = [-1.0, 0.0, 0.0];
@@ -1518,6 +1523,7 @@ mod bounced {
             let receivers = [Receiver {
                 local_to_world: IDENTITY,
                 receives_shadows: true,
+                viewer: crate::baked::trace::Viewer::Lod0,
             }];
             let scene = Scene::new(self.surfaces.iter().map(|s| s.corners));
             let casters = Scene::new(self.casters.iter().copied());
@@ -1790,5 +1796,211 @@ mod bounced {
             "{right:?}"
         );
         assert!((left[0] - right[1]).abs() < 1e-5 && (left[1] - right[0]).abs() < 1e-5);
+    }
+
+    #[test]
+    fn lod_levels_filter_occlusion_and_bounces_per_group() {
+        use crate::baked::trace::{Lod, Viewer};
+
+        let tri = |z: f32| [[-1.0, -1.0, z], [3.0, -1.0, z], [-1.0, 3.0, z]];
+        let up = Ray {
+            origin: [0.0; 3],
+            direction: [0.0, 0.0, 1.0],
+        };
+        let a_lod0 = Lod {
+            group: 0,
+            mask: 0b01,
+        };
+        let a_lod1 = Lod {
+            group: 0,
+            mask: 0b10,
+        };
+        let a_shared = Lod {
+            group: 0,
+            mask: 0b11,
+        };
+        let a_lod2 = Lod {
+            group: 0,
+            mask: 0b100,
+        };
+        let b_lod0 = Lod {
+            group: 1,
+            mask: 0b01,
+        };
+        let b_lod1 = Lod {
+            group: 1,
+            mask: 0b10,
+        };
+        let non_lod = Lod::NONE;
+
+        let viewer_a1 = Viewer::from_lod(a_lod1, 5.0);
+        let viewer_a2 = Viewer::from_lod(a_lod2, 5.0);
+
+        // LOD 0 / non-LOD rays see only non-LOD and LOD 0 (and shared LOD 0+1), never lower LODs.
+        let lower_only = Scene::with_lods([(tri(1.0), a_lod1), (tri(2.0), b_lod1)]);
+        assert!(!lower_only.occluded_for(&up, 10.0, Viewer::Lod0));
+        assert_eq!(lower_only.closest_for(&up, 10.0, Viewer::Lod0), None);
+        // Same-group LOD 1 sees its own LOD 1 within reach, not past reach, and never group B's LOD 1.
+        assert!(lower_only.occluded_for(&up, 10.0, viewer_a1));
+        assert!(!lower_only.occluded_for(&up, 10.0, Viewer::from_lod(a_lod1, 0.5)));
+        assert!(!lower_only.occluded_for(&up, 10.0, viewer_a2));
+        assert!(!lower_only.occluded_for(&up, 10.0, Viewer::from_lod(b_lod1, 1.5)));
+        assert!(lower_only.occluded_for(&up, 10.0, Viewer::from_lod(b_lod1, 3.0)));
+
+        // Lower LOD skips its own group's LOD 0-only, sees other groups' LOD 0 and non-LOD,
+        // and switches to Viewer::Lod0 once a bounce hits a non-LOD or other-group LOD 0 surface.
+        let own_lod0_then_other =
+            Scene::with_lods([(tri(1.0), a_lod0), (tri(2.0), b_lod0), (tri(3.0), non_lod)]);
+        let (hit, next) = own_lod0_then_other
+            .closest_for(&up, 10.0, viewer_a1)
+            .unwrap();
+        assert_eq!((hit.triangle, hit.distance, next), (1, 2.0, Viewer::Lod0));
+        // Own-group LOD 0 alone does not occlude A's LOD 1.
+        let own_lod0_only = Scene::with_lods([(tri(1.0), a_lod0)]);
+        assert!(!own_lod0_only.occluded_for(&up, 10.0, viewer_a1));
+        assert!(own_lod0_only.occluded_for(&up, 10.0, Viewer::Lod0));
+
+        // Same-group LOD 1 self-hit within reach takes precedence over a closer non-LOD triangle
+        // and keeps viewer_a1 on the bounce.
+        let self_behind_wall = Scene::with_lods([(tri(1.0), non_lod), (tri(2.0), a_lod1)]);
+        let (hit, next) = self_behind_wall.closest_for(&up, 10.0, viewer_a1).unwrap();
+        assert_eq!((hit.triangle, hit.distance, next), (1, 2.0, viewer_a1));
+        // Past reach, Step A misses and Step B hits the closer non-LOD triangle, switching to Lod0.
+        let (hit, next) = self_behind_wall
+            .closest_for(&up, 10.0, Viewer::from_lod(a_lod1, 1.5))
+            .unwrap();
+        assert_eq!((hit.triangle, hit.distance, next), (0, 1.0, Viewer::Lod0));
+
+        // Shared LOD 0+1 renderer of group A is seen by both Lod0 and A's LOD 1 (not A's LOD 2),
+        // and hitting it transitions A's LOD 1 to LodShared (skips Step A on next bounce, still
+        // sees A's LOD 1 for shadow/environment occlusion).
+        let with_shared = Scene::with_lods([(tri(1.0), a_shared), (tri(2.0), a_lod1)]);
+        assert!(with_shared.occluded_for(&up, 10.0, Viewer::Lod0));
+        assert!(!with_shared.occluded_for(&up, 10.0, viewer_a2));
+        let (hit, next) = with_shared
+            .closest_for(&up, 10.0, Viewer::from_lod(a_lod1, 1.5))
+            .unwrap();
+        assert_eq!(
+            (hit.triangle, next),
+            (
+                0,
+                Viewer::LodShared {
+                    group: 0,
+                    level_bit: 0b10
+                }
+            )
+        );
+        // From LodShared, occlusion still sees A's LOD 1 at z = 2, while closest skips Step A.
+        let past_shared = Ray {
+            origin: [0.0, 0.0, 1.5],
+            direction: [0.0, 0.0, 1.0],
+        };
+        assert!(with_shared.occluded_for(&past_shared, 10.0, next));
+        assert_eq!(with_shared.closest_for(&past_shared, 10.0, next), None);
+
+        // When a lower-LOD bounce misses its own group and level, closest_from traces the base
+        // pass from base_origin and returns base_origin as the hit's origin.
+        let base_only = Scene::with_lods([(tri(2.0), non_lod)]);
+        let bounced = Ray {
+            origin: [0.0, 0.0, 5.0],
+            direction: [0.0, 0.0, 1.0],
+        };
+        let (hit, next, used_origin) = base_only
+            .closest_from(&bounced, [0.0, 0.0, 0.0], 10.0, viewer_a1)
+            .unwrap();
+        assert_eq!(
+            (hit.triangle, hit.distance, next, used_origin),
+            (0, 2.0, Viewer::Lod0, [0.0; 3])
+        );
+        // When it hits its own group and level within reach, ray.origin is kept.
+        let own_only = Scene::with_lods([(tri(6.0), a_lod1)]);
+        let (hit, next, used_origin) = own_only
+            .closest_from(&bounced, [0.0, 0.0, 0.0], 10.0, viewer_a1)
+            .unwrap();
+        assert_eq!(
+            (hit.triangle, hit.distance, next, used_origin),
+            (0, 1.0, viewer_a1, [0.0, 0.0, 5.0])
+        );
+    }
+
+    #[test]
+    fn lower_lod_direct_shadow_and_sky_non_caster_rules() {
+        use crate::baked::trace::{Lod, Viewer};
+
+        let mesh = floor();
+        let instances = [Instance {
+            mesh: &mesh,
+            scale_offset: [1.0, 1.0, 0.0, 0.0],
+            index: 0,
+        }];
+        let g = gbuffer::gbuffer(1, 1, 2, &instances);
+        let a_lod0 = Lod {
+            group: 0,
+            mask: 0b01,
+        };
+        let a_lod1 = Lod {
+            group: 0,
+            mask: 0b10,
+        };
+        let viewer_a1 = Viewer::from_lod(a_lod1, 10.0);
+
+        // Direct shadow: a ceiling belonging to A's LOD 0 shadows a Lod0 receiver, not A's LOD 1;
+        // a ceiling belonging to A's LOD 1 shadows A's LOD 1, not a Lod0 receiver.
+        let roof = ceiling(0).corners;
+        let lod0_roof = Scene::with_lods([(roof, a_lod0)]);
+        let lod1_roof = Scene::with_lods([(roof, a_lod1)]);
+        let mut sun = sun_from_below();
+        sun.forward = [0.0, 0.0, -1.0];
+        let direct_r = |viewer: Viewer, casters: &Scene| {
+            let receivers = [Receiver {
+                local_to_world: IDENTITY,
+                receives_shadows: true,
+                viewer,
+            }];
+            crate::baked::direct::direct(
+                &g,
+                &receivers,
+                &[sun],
+                &[],
+                crate::baked::direct::MixedMode::IndirectOnly,
+                casters,
+                0.0001,
+            )
+            .irradiance[0][0]
+        };
+        assert_eq!(direct_r(Viewer::Lod0, &lod0_roof), 0.0);
+        assert!(direct_r(viewer_a1, &lod0_roof) > 8.0);
+        assert!(direct_r(Viewer::Lod0, &lod1_roof) > 8.0);
+        assert_eq!(direct_r(viewer_a1, &lod1_roof), 0.0);
+
+        // Sky occlusion: a non-shadow-casting non-LOD roof blocks sky rays for Lod0 receivers,
+        // but lower-LOD receivers test shadow casters only and still see the sky through it.
+        let mut bake = Bake::new(ceiling(0), [0.0; 3], [0.0; 3]);
+        bake.sky = Some(even_sky([1.0, 1.0, 1.0], false));
+        bake.settings.environment_samples = 16;
+        let scene = Scene::with_lods([(bake.surfaces[0].corners, Lod::NONE)]);
+        let casters = Scene::with_lods([]);
+        let around = Bounds::around(bake.surfaces[0].corners).unwrap();
+        let grid = Grid::new(&bake.lights, around);
+        let world = World {
+            scene: &scene,
+            casters: &casters,
+            surfaces: &bake.surfaces,
+            materials: &bake.materials,
+            lights: &bake.lights,
+            grid: &grid,
+            sky: bake.sky.as_ref(),
+        };
+        let samples = Samples::new(&vec![0; BLUE_NOISE_BYTES]).unwrap();
+        let sky_of = |viewer: Viewer| {
+            let receivers = [Receiver {
+                local_to_world: IDENTITY,
+                receives_shadows: true,
+                viewer,
+            }];
+            indirect::indirect(&g, &receivers, &world, &samples, bake.settings).environment[0][0]
+        };
+        assert_eq!(sky_of(Viewer::Lod0), 0.0);
+        assert!((sky_of(viewer_a1) - 1.0).abs() < 1e-5);
     }
 }

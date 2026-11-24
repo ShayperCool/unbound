@@ -32,7 +32,7 @@ use unbound_gi::baked::probes;
 use unbound_gi::baked::sampling::Samples;
 use unbound_gi::baked::shadowmask;
 use unbound_gi::baked::sky::{Importance, Sky};
-use unbound_gi::baked::trace::Scene;
+use unbound_gi::baked::trace::{Scene, Viewer};
 
 struct Input<'a>(&'a [u8]);
 
@@ -90,6 +90,7 @@ fn main() {
             receivers.push(Receiver {
                 local_to_world: r.floats(),
                 receives_shadows: r.u32() != 0,
+                viewer: Viewer::Lod0,
             });
             instance
         })
