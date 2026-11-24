@@ -54,7 +54,8 @@ impl Lod {
     /// Whether a base-pass ray (LOD 0 / non-LOD set) cast for `(group, level_bit)` sees this
     /// triangle: every non-LOD and LOD 0 triangle except LOD 0-only triangles of `group` itself.
     const fn visible_in_base(self, group: u32, level_bit: u8) -> bool {
-        self.is_lod0() && (self.group != group || (self.mask & level_bit) != 0)
+        self.mask == 0
+            || ((self.mask & 1) != 0 && (self.group != group || (self.mask & level_bit) != 0))
     }
 }
 
@@ -69,20 +70,19 @@ impl Default for Lod {
 /// - [`Viewer::Lod0`]: non-LOD, LOD 0, light probes, and paths after bouncing onto another
 ///   group or a non-LOD surface; sees only non-LOD and LOD 0 triangles.
 /// - [`Viewer::Lod`]: a lower LOD level (`level_bit` is `1 << level`, `level >= 1`); rays first
-///   test triangles of the same group whose most detailed level is `level_bit` within `reach`
-///   (the diagonal of that group-and-level's world bounding box), and on a miss test the base
-///   non-LOD/LOD 0 set while skipping LOD 0-only triangles of its own group.
+///   test triangles of the same group whose most detailed level is `level_bit` (taking precedence
+///   over closer base geometry), and on a miss test the base non-LOD/LOD 0 set while skipping
+///   LOD 0-only triangles of its own group.
 /// - [`Viewer::LodShared`]: a lower-LOD path that missed its own lower level and hit a renderer
 ///   shared between LOD 0 and `level_bit` of its own group; shadow and environment rays still
-///   test its own lower level (without a reach bound), while bounce rays stay in the base set.
-#[derive(Clone, Copy, Debug, Default, PartialEq)]
+///   test its own lower level, while bounce rays stay in the base set.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub enum Viewer {
     #[default]
     Lod0,
     Lod {
         group: u32,
         level_bit: u8,
-        reach: f32,
     },
     LodShared {
         group: u32,
@@ -91,14 +91,13 @@ pub enum Viewer {
 }
 
 impl Viewer {
-    pub const fn from_lod(lod: Lod, reach: f32) -> Viewer {
+    pub const fn from_lod(lod: Lod) -> Viewer {
         if lod.is_lod0() {
             Viewer::Lod0
         } else {
             Viewer::Lod {
                 group: lod.group,
                 level_bit: lod.lowest_bit(),
-                reach,
             }
         }
     }
@@ -243,20 +242,8 @@ impl Scene {
                                 }
                                 limit
                             }
-                            Viewer::Lod {
-                                group,
-                                level_bit,
-                                reach,
-                            } => {
-                                if lod.is_lower_level(group, level_bit) {
-                                    limit.min(reach)
-                                } else if lod.visible_in_base(group, level_bit) {
-                                    limit
-                                } else {
-                                    continue;
-                                }
-                            }
-                            Viewer::LodShared { group, level_bit } => {
+                            Viewer::Lod { group, level_bit }
+                            | Viewer::LodShared { group, level_bit } => {
                                 if lod.is_lower_level(group, level_bit)
                                     || lod.visible_in_base(group, level_bit)
                                 {
@@ -313,15 +300,10 @@ impl Scene {
             Viewer::Lod0 => self
                 .closest_matching(ray, limit, |lod| lod.is_lod0())
                 .map(|(hit, _)| (hit, Viewer::Lod0, ray.origin)),
-            Viewer::Lod {
-                group,
-                level_bit,
-                reach,
-            } => {
+            Viewer::Lod { group, level_bit } => {
                 if !self.lods.is_empty()
-                    && let Some((hit, _)) = self.closest_matching(ray, limit.min(reach), |lod| {
-                        lod.is_lower_level(group, level_bit)
-                    })
+                    && let Some((hit, _)) = self
+                        .closest_matching(ray, limit, |lod| lod.is_lower_level(group, level_bit))
                 {
                     return Some((hit, viewer, ray.origin));
                 }
@@ -333,7 +315,7 @@ impl Scene {
                     lod.visible_in_base(group, level_bit)
                 })
                 .map(|(hit, lod)| {
-                    let next = if lod.group == group {
+                    let next = if lod.mask != 0 && lod.group == group {
                         Viewer::LodShared { group, level_bit }
                     } else {
                         Viewer::Lod0
@@ -344,7 +326,7 @@ impl Scene {
             Viewer::LodShared { group, level_bit } => self
                 .closest_matching(ray, limit, |lod| lod.visible_in_base(group, level_bit))
                 .map(|(hit, lod)| {
-                    let next = if lod.group == group {
+                    let next = if lod.mask != 0 && lod.group == group {
                         viewer
                     } else {
                         Viewer::Lod0

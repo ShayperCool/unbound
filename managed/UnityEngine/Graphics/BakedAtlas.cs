@@ -100,13 +100,27 @@ namespace UnityEngine
 
         /// <summary>Each renderer of the scene's active, enabled LOD Groups: its group index and
         /// the 8-bit mask of LOD levels (bits 0..8) that list it. A disabled or inactive LOD Group
-        /// leaves its renderers outside any group, like the Editor.</summary>
-        internal static Dictionary<Renderer, (uint Group, byte Mask)> LodMemberships(LoadedFile file)
+        /// leaves its renderers outside any group, like the Editor; unmeasured combinations (more
+        /// than 8 levels, a renderer in multiple active LOD Groups, a renderer shared across
+        /// multiple lower LOD levels without LOD 0, or an inactive LOD Group referencing an active
+        /// baked renderer) report via <see cref="Approximated"/>.</summary>
+        internal static Dictionary<Renderer, (uint Group, byte Mask)> LodMemberships(LoadedFile file, HashSet<Renderer> inactiveRefs = null)
         {
             var groups = new List<(LODGroup Group, long FileId)>();
             foreach (var pair in file.Objects)
-                if (pair.Value is LODGroup group && group != null && group.enabled && group.gameObject.activeInHierarchy)
-                    groups.Add((group, pair.Key));
+            {
+                if (pair.Value is not LODGroup group || group == null || !group.enabled) continue;
+                if (!group.gameObject.activeInHierarchy)
+                {
+                    if (inactiveRefs != null)
+                        foreach (var lod in group.GetLODs())
+                            if (lod.renderers != null)
+                                foreach (var r in lod.renderers)
+                                    if (r != null) inactiveRefs.Add(r);
+                    continue;
+                }
+                groups.Add((group, pair.Key));
+            }
             groups.Sort((a, b) => a.FileId.CompareTo(b.FileId));
             var memberships = new Dictionary<Renderer, (uint Group, byte Mask)>();
             uint groupId = 0;
@@ -124,17 +138,33 @@ namespace UnityEngine
                     foreach (var r in renderers)
                     {
                         if (r == null) continue;
-                        var owner = r.m_LODGroup;
-                        if (owner != null && owner != group && owner.enabled && owner.gameObject.activeInHierarchy) continue;
                         byte bit = (byte)(1 << level);
-                        if (memberships.TryGetValue(r, out var known) && known.Group == groupId)
-                            memberships[r] = (groupId, (byte)(known.Mask | bit));
+                        if (memberships.TryGetValue(r, out var known))
+                        {
+                            if (known.Group == groupId)
+                            {
+                                memberships[r] = (groupId, (byte)(known.Mask | bit));
+                                any = true;
+                            }
+                            else
+                            {
+                                Approximated("lod-multi-group:" + file.Path, $"{file.Path}: '{r.name}' is listed by more than one active LODGroup, which Unbound's bake (Lightmapping.Bake) has not measured yet.");
+                            }
+                        }
                         else
+                        {
                             memberships[r] = (groupId, bit);
-                        any = true;
+                            any = true;
+                        }
                     }
                 }
                 if (any) groupId++;
+            }
+            foreach (var pair in memberships)
+            {
+                byte mask = pair.Value.Mask;
+                if ((mask & 1) == 0 && (mask & (mask - 1)) != 0)
+                    Approximated("lod-shared-lower:" + file.Path, $"{file.Path}: '{pair.Key.name}' is shared across multiple lower LOD levels without LOD 0 (mask 0x{mask:x}), which Unbound's bake (Lightmapping.Bake) has not measured yet.");
             }
             return memberships;
         }
@@ -496,7 +526,8 @@ namespace UnityEngine
                     Warn("terrain:" + path, $"{path}: '{terrain.name}' is a lightmapped Terrain, which Unbound's layout of the baked lightmaps (Lightmapping.Bake) does not support; it lays out none for the scene.");
                     return null;
                 }
-            var lods = LodMemberships(file);
+            var inactiveLodRefs = new HashSet<Renderer>();
+            var lods = LodMemberships(file, inactiveLodRefs);
             var renderers = new List<object>();
             var placed = new List<(MeshRenderer renderer, long fileId)>();
             var meshes = new List<object>();
@@ -554,6 +585,10 @@ namespace UnityEngine
                     var hasMaterial = new bool[slots.Length];
                     for (int k = 0; k < slots.Length; k++) hasMaterial[k] = slots[k] != null;
                     bool inLod = lods.TryGetValue(renderer, out var lod) && lod.Mask != 0;
+                    if (!inLod && inactiveLodRefs.Contains(renderer))
+                        Approximated("lod-inactive-group:" + path, $"{path}: '{renderer.name}' is referenced by an inactive LODGroup GameObject, which Unbound's bake (Lightmapping.Bake) has not measured yet.");
+                    if (inLod && (lod.Mask & 1) == 0 && settings.maxBounces > 2)
+                        Approximated("lod-bounces:" + path, $"{path}: lower-LOD renderers with maxBounces={settings.maxBounces} (> 2) are not measured yet in Unbound's bake (Lightmapping.Bake).");
                     int? lodLevel = inLod ? System.Numerics.BitOperations.TrailingZeroCount(lod.Mask) : (int?)null;
                     renderers.Add(new
                     {

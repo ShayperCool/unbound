@@ -1072,48 +1072,7 @@ fn bake(request: BakeRequest, buffers: Option<&Path>) -> Result<Json> {
             max: [0.0; 3],
         });
         let grid = Grid::new(&baked_lights, around);
-        // Per-(LOD Group, level) world bounding box diagonal: how far a lower-LOD ray looks for
-        // its own group and level before falling back to the base (non-LOD / LOD 0) geometry.
-        let mut lod_bounds: std::collections::HashMap<(u32, u8), Bounds> = Default::default();
-        for r in &baked {
-            let lod = r.lod();
-            if lod.mask == 0 {
-                continue;
-            }
-            let (mesh, m) = (&meshes[r.mesh], r.local_to_world);
-            let Some(box_r) = Bounds::around(mesh.positions.iter().map(|&p| direct::point(&m, p)))
-            else {
-                continue;
-            };
-            for level in 0u8..8 {
-                if (lod.mask & (1 << level)) == 0 {
-                    continue;
-                }
-                lod_bounds
-                    .entry((lod.group, level))
-                    .and_modify(|b| {
-                        for k in 0..3 {
-                            b.min[k] = b.min[k].min(box_r.min[k]);
-                            b.max[k] = b.max[k].max(box_r.max[k]);
-                        }
-                    })
-                    .or_insert(box_r);
-            }
-        }
-        let viewer_of = |r: &Renderer| -> Viewer {
-            let lod = r.lod();
-            if lod.is_lod0() {
-                return Viewer::Lod0;
-            }
-            let level = lod.mask.trailing_zeros() as u8;
-            let reach = lod_bounds.get(&(lod.group, level)).map_or(0.0, |b| {
-                let dx = b.max[0] - b.min[0];
-                let dy = b.max[1] - b.min[1];
-                let dz = b.max[2] - b.min[2];
-                (dx * dx + dy * dy + dz * dz).sqrt()
-            });
-            Viewer::from_lod(lod, reach)
-        };
+        let viewer_of = |r: &Renderer| Viewer::from_lod(r.lod());
         let scene = Scene::with_lods(baked.iter().filter(|r| r.casts_shadows).flat_map(|r| {
             let (mesh, m) = (&meshes[r.mesh], r.local_to_world);
             let lod = r.lod();
@@ -1395,39 +1354,38 @@ fn bake(request: BakeRequest, buffers: Option<&Path>) -> Result<Json> {
             described_probes =
                 json!({ "count": points.len(), "points": points, "samples": counts });
         }
-        images = written.finish(
-            request.mixed_mode,
-            json!(
-                lights
-                    .iter()
-                    .zip(&baked_lights)
-                    .zip(&channels)
-                    .map(|((data, light), channel)| json!({
-                        "name": data.name,
-                        "type": data.kind,
-                        // As baked: a mixed light without a shadowmask channel is baked in the
-                        // Shadowmask Lighting Mode.
-                        "mode": match light.mode { Mode::Mixed => 1, Mode::Baked => 2 },
-                        "shadowMaskChannel": channel.map_or(-1, |c| c as i32),
-                        "color": light.color,
-                        "indirectColor": light.indirect_color,
-                        "position": light.position,
-                        "orientation": data.rotation,
-                        // As a bake input's lights are described (the probe's lights.json): no range
-                        // and a cone of 1 for a directional light, no cone for a point light.
-                        "range": if light.kind == Kind::Directional { 0.0 } else { light.range },
-                        "coneAngle": match light.kind {
-                            Kind::Directional => 1.0,
-                            Kind::Point => 0.0,
-                            Kind::Spot => light.cone_angle,
-                        },
-                        "castsShadows": light.casts_shadows,
-                    }))
-                    .collect::<Vec<_>>()
-            ),
-            described,
-            described_probes,
-        )?;
+        images =
+            written.finish(
+                request.mixed_mode,
+                json!(lights
+                .iter()
+                .zip(&baked_lights)
+                .zip(&channels)
+                .map(|((data, light), channel)| json!({
+                    "name": data.name,
+                    "type": data.kind,
+                    // As baked: a mixed light without a shadowmask channel is baked in the
+                    // Shadowmask Lighting Mode.
+                    "mode": match light.mode { Mode::Mixed => 1, Mode::Baked => 2 },
+                    "shadowMaskChannel": channel.map_or(-1, |c| c as i32),
+                    "color": light.color,
+                    "indirectColor": light.indirect_color,
+                    "position": light.position,
+                    "orientation": data.rotation,
+                    // As a bake input's lights are described (the probe's lights.json): no range
+                    // and a cone of 1 for a directional light, no cone for a point light.
+                    "range": if light.kind == Kind::Directional { 0.0 } else { light.range },
+                    "coneAngle": match light.kind {
+                        Kind::Directional => 1.0,
+                        Kind::Point => 0.0,
+                        Kind::Spot => light.cone_angle,
+                    },
+                    "castsShadows": light.casts_shadows,
+                }))
+                .collect::<Vec<_>>()),
+                described,
+                described_probes,
+            )?;
     }
 
     let mut placements = vec![Json::Null; request.renderers.len()];

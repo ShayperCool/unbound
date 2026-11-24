@@ -1833,19 +1833,19 @@ mod bounced {
         };
         let non_lod = Lod::NONE;
 
-        let viewer_a1 = Viewer::from_lod(a_lod1, 5.0);
-        let viewer_a2 = Viewer::from_lod(a_lod2, 5.0);
+        let viewer_a1 = Viewer::from_lod(a_lod1);
+        let viewer_a2 = Viewer::from_lod(a_lod2);
 
         // LOD 0 / non-LOD rays see only non-LOD and LOD 0 (and shared LOD 0+1), never lower LODs.
         let lower_only = Scene::with_lods([(tri(1.0), a_lod1), (tri(2.0), b_lod1)]);
         assert!(!lower_only.occluded_for(&up, 10.0, Viewer::Lod0));
         assert_eq!(lower_only.closest_for(&up, 10.0, Viewer::Lod0), None);
-        // Same-group LOD 1 sees its own LOD 1 within reach, not past reach, and never group B's LOD 1.
+        // Same-group LOD 1 sees its own LOD 1 within limit, not past limit, and never group B's LOD 1.
         assert!(lower_only.occluded_for(&up, 10.0, viewer_a1));
-        assert!(!lower_only.occluded_for(&up, 10.0, Viewer::from_lod(a_lod1, 0.5)));
+        assert!(!lower_only.occluded_for(&up, 0.5, viewer_a1));
         assert!(!lower_only.occluded_for(&up, 10.0, viewer_a2));
-        assert!(!lower_only.occluded_for(&up, 10.0, Viewer::from_lod(b_lod1, 1.5)));
-        assert!(lower_only.occluded_for(&up, 10.0, Viewer::from_lod(b_lod1, 3.0)));
+        assert!(!lower_only.occluded_for(&up, 1.5, Viewer::from_lod(b_lod1)));
+        assert!(lower_only.occluded_for(&up, 3.0, Viewer::from_lod(b_lod1)));
 
         // Lower LOD skips its own group's LOD 0-only, sees other groups' LOD 0 and non-LOD,
         // and switches to Viewer::Lod0 once a bounce hits a non-LOD or other-group LOD 0 surface.
@@ -1860,15 +1860,14 @@ mod bounced {
         assert!(!own_lod0_only.occluded_for(&up, 10.0, viewer_a1));
         assert!(own_lod0_only.occluded_for(&up, 10.0, Viewer::Lod0));
 
-        // Same-group LOD 1 self-hit within reach takes precedence over a closer non-LOD triangle
-        // and keeps viewer_a1 on the bounce.
+        // Same-group LOD 1 hit takes precedence over a closer non-LOD triangle (measured in
+        // bakedbuffers/Lod) and keeps viewer_a1 on the bounce.
         let self_behind_wall = Scene::with_lods([(tri(1.0), non_lod), (tri(2.0), a_lod1)]);
         let (hit, next) = self_behind_wall.closest_for(&up, 10.0, viewer_a1).unwrap();
         assert_eq!((hit.triangle, hit.distance, next), (1, 2.0, viewer_a1));
-        // Past reach, Step A misses and Step B hits the closer non-LOD triangle, switching to Lod0.
-        let (hit, next) = self_behind_wall
-            .closest_for(&up, 10.0, Viewer::from_lod(a_lod1, 1.5))
-            .unwrap();
+        // When limit excludes the LOD 1 triangle, Step A misses and Step B hits the closer non-LOD
+        // triangle, switching to Lod0.
+        let (hit, next) = self_behind_wall.closest_for(&up, 1.5, viewer_a1).unwrap();
         assert_eq!((hit.triangle, hit.distance, next), (0, 1.0, Viewer::Lod0));
 
         // Shared LOD 0+1 renderer of group A is seen by both Lod0 and A's LOD 1 (not A's LOD 2),
@@ -1877,9 +1876,7 @@ mod bounced {
         let with_shared = Scene::with_lods([(tri(1.0), a_shared), (tri(2.0), a_lod1)]);
         assert!(with_shared.occluded_for(&up, 10.0, Viewer::Lod0));
         assert!(!with_shared.occluded_for(&up, 10.0, viewer_a2));
-        let (hit, next) = with_shared
-            .closest_for(&up, 10.0, Viewer::from_lod(a_lod1, 1.5))
-            .unwrap();
+        let (hit, next) = with_shared.closest_for(&up, 1.5, viewer_a1).unwrap();
         assert_eq!(
             (hit.triangle, next),
             (
@@ -1897,6 +1894,20 @@ mod bounced {
         };
         assert!(with_shared.occluded_for(&past_shared, 10.0, next));
         assert_eq!(with_shared.closest_for(&past_shared, 10.0, next), None);
+
+        // Non-LOD triangles remain visible even if a direct caller passes group == u32::MAX.
+        let max_group_viewer = Viewer::from_lod(Lod {
+            group: u32::MAX,
+            mask: 0b10,
+        });
+        let non_lod_only = Scene::with_lods([(tri(1.0), non_lod)]);
+        assert!(non_lod_only.occluded_for(&up, 10.0, max_group_viewer));
+        assert_eq!(
+            non_lod_only
+                .closest_for(&up, 10.0, max_group_viewer)
+                .map(|(h, v)| (h.triangle, v)),
+            Some((0, Viewer::Lod0))
+        );
 
         // When a lower-LOD bounce misses its own group and level, closest_from traces the base
         // pass from base_origin and returns base_origin as the hit's origin.
@@ -1942,7 +1953,7 @@ mod bounced {
             group: 0,
             mask: 0b10,
         };
-        let viewer_a1 = Viewer::from_lod(a_lod1, 10.0);
+        let viewer_a1 = Viewer::from_lod(a_lod1);
 
         // Direct shadow: a ceiling belonging to A's LOD 0 shadows a Lod0 receiver, not A's LOD 1;
         // a ceiling belonging to A's LOD 1 shadows A's LOD 1, not a Lod0 receiver.

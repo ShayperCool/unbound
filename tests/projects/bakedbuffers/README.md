@@ -374,8 +374,9 @@ images, a panorama: drawn the same way), an ambient source that is not the scene
 100000 draws find (the last draw is taken), gamma colour space projects.
 
 Not measured, of the indirect light: materials that let light through (they stop it), LOD
-Groups with more than eight levels, inactive LOD Group GameObjects, renderers shared across
-two active LOD Groups or across lower LOD levels without LOD 0, a material flagged both emissive and black, shaders without a meta pass (said; the
+Groups with more than eight levels (said), inactive LOD Group GameObjects referencing active baked
+renderers (said), renderers shared across two active LOD Groups or across lower LOD levels without
+LOD 0 (said), lower-LOD renderers with Max Bounces above 2 (said), a material flagged both emissive and black, shaders without a meta pass (said; the
 renderer adds no albedo or emission), meshes without lightmap UVs, textured renderers that have
 no lightmap, the light grid's pick among several point and spot lights (see the residuals).
 

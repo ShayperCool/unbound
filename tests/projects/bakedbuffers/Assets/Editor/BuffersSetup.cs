@@ -970,6 +970,19 @@ public static class BuffersSetup
         });
         offComp.enabled = false;
 
+        // Non-LOD wall placed directly between two same-level lower-LOD renderers (C_Lod1_Recv and
+        // C_Lod1_Emit): proves lower-LOD rays hit same-level geometry before testing the base set.
+        var groupC = new GameObject("LodC");
+        var cLod0 = With(Prim(PrimitiveType.Cube, "C_Lod0", new Vector3(3.0f, 2.4f, -2.5f), Vector3.zero, Vector3.one * 0.6f, groupC.transform), matBlue);
+        var cLod1Recv = With(Prim(PrimitiveType.Cube, "C_Lod1_Recv", new Vector3(3.0f, 0.5f, -2.5f), Vector3.zero, Vector3.one * 0.8f, groupC.transform), matWhite);
+        var cLod1Emit = With(Prim(PrimitiveType.Cube, "C_Lod1_Emit", new Vector3(3.0f, 0.5f, -0.5f), Vector3.zero, new Vector3(1.2f, 1.2f, 0.4f), groupC.transform), matGreen);
+        groupC.AddComponent<LODGroup>().SetLODs(new[]
+        {
+            new LOD(0.5f, new Renderer[] { cLod0.GetComponent<Renderer>() }),
+            new LOD(0.2f, new Renderer[] { cLod1Recv.GetComponent<Renderer>(), cLod1Emit.GetComponent<Renderer>() }),
+        });
+        With(Prim(PrimitiveType.Cube, "C_BaseWall", new Vector3(3.0f, 0.5f, -1.5f), Vector3.zero, new Vector3(3.0f, 1.6f, 0.2f)), matRed);
+
         var probes = new GameObject("Probes").AddComponent<LightProbeGroup>();
         probes.probePositions = new[]
         {

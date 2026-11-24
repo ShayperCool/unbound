@@ -448,13 +448,15 @@ namespace UnityEngine.Tests
                 file.Objects[40] = groupInactive;
                 file.Objects[50] = groupDestroyed;
 
-                var memberships = BakedAtlas.LodMemberships(file);
+                var inactiveRefs = new HashSet<Renderer>();
+                var memberships = BakedAtlas.LodMemberships(file, inactiveRefs);
                 Assert.Equal((0u, (byte)0b01), memberships[rB0]);
                 Assert.Equal((1u, (byte)0b01), memberships[rA0]);
                 Assert.Equal((1u, (byte)0b10), memberships[rA1]);
                 Assert.Equal((1u, (byte)0b11), memberships[rAShared]);
                 Assert.False(memberships.ContainsKey(rDisabled));
                 Assert.False(memberships.ContainsKey(rInactive));
+                Assert.Contains(rInactive, inactiveRefs);
 
                 // A LOD Group no longer emits the unimplemented-levels approximation warning.
                 var logger = Debug.unityLogger;
@@ -477,6 +479,65 @@ namespace UnityEngine.Tests
                     manyFile.Objects[1] = many;
                     BakedAtlas.LodMemberships(manyFile);
                     Assert.Contains(capture.Logs, l => l.Contains("more than 8"));
+
+                    // Renderer shared across lower LOD levels without LOD 0 (mask 0b110) must report loudly.
+                    var lowerRoot = new GameObject("LowerShared");
+                    made.Add(lowerRoot);
+                    var rLowerShared = MakeRenderer("LowerSharedMesh", lowerRoot.transform);
+                    var lowerGroup = lowerRoot.AddComponent<LODGroup>();
+                    lowerGroup.SetLODs(new[]
+                    {
+                        new LOD(0.6f, System.Array.Empty<Renderer>()),
+                        new LOD(0.3f, new Renderer[] { rLowerShared }),
+                        new LOD(0.1f, new Renderer[] { rLowerShared }),
+                    });
+                    var lowerFile = new LoadedFile { Path = "Assets/LowerShared.unity", Guid = "40000000000000000000000000000003" };
+                    lowerFile.Objects[1] = lowerGroup;
+                    BakedAtlas.LodMemberships(lowerFile);
+                    Assert.Contains(capture.Logs, l => l.Contains("multiple lower LOD levels"));
+
+                    // Renderer listed by two active LODGroups (even when a third disabled group ran SetLODs last)
+                    // deterministically keeps the first group by file ID and reports loudly.
+                    var multiA = new GameObject("MultiA");
+                    var multiB = new GameObject("MultiB");
+                    var multiOff = new GameObject("MultiOff");
+                    made.Add(multiA); made.Add(multiB); made.Add(multiOff);
+                    var rMulti = MakeRenderer("SharedAcrossGroups");
+                    var gMultiA = multiA.AddComponent<LODGroup>();
+                    var gMultiB = multiB.AddComponent<LODGroup>();
+                    var gMultiOff = multiOff.AddComponent<LODGroup>();
+                    gMultiA.SetLODs(new[] { new LOD(0.6f, new Renderer[] { rMulti }) });
+                    gMultiB.SetLODs(new[] { new LOD(0.6f, System.Array.Empty<Renderer>()), new LOD(0.3f, new Renderer[] { rMulti }) });
+                    gMultiOff.SetLODs(new[] { new LOD(0.6f, new Renderer[] { rMulti }) });
+                    gMultiOff.enabled = false;
+                    var multiFile = new LoadedFile { Path = "Assets/MultiGroup.unity", Guid = "40000000000000000000000000000004" };
+                    multiFile.Objects[10] = gMultiA;
+                    multiFile.Objects[20] = gMultiB;
+                    multiFile.Objects[30] = gMultiOff;
+                    var multiMemberships = BakedAtlas.LodMemberships(multiFile);
+                    Assert.Equal((0u, (byte)0b01), multiMemberships[rMulti]);
+                    Assert.Contains(capture.Logs, l => l.Contains("more than one active LODGroup"));
+
+                    // Lower-LOD renderer with maxBounces > 2 must report loudly in Lay.
+                    var bounceFile = QuadScene("Assets/LodBounces.unity", false, made);
+                    var bounceRenderer = (MeshRenderer)bounceFile.Objects[1];
+                    var bounceGroup = bounceRenderer.gameObject.AddComponent<LODGroup>();
+                    bounceGroup.SetLODs(new[] { new LOD(0.6f, System.Array.Empty<Renderer>()), new LOD(0.3f, new Renderer[] { bounceRenderer }) });
+                    bounceFile.Objects[2] = bounceGroup;
+                    BakedAtlas.Lay(bounceFile, new LightingSettings { maxBounces = 4 });
+                    Assert.Contains(capture.Logs, l => l.Contains("maxBounces=4"));
+
+                    // Inactive LODGroup GameObject referencing an active baked renderer must report loudly in Lay.
+                    var inactiveFile = QuadScene("Assets/LodInactiveRef.unity", false, made);
+                    var activeRenderer = (MeshRenderer)inactiveFile.Objects[1];
+                    var inactiveHolder = new GameObject("InactiveHolder");
+                    made.Add(inactiveHolder);
+                    var inactiveGroup = inactiveHolder.AddComponent<LODGroup>();
+                    inactiveGroup.SetLODs(new[] { new LOD(0.6f, System.Array.Empty<Renderer>()), new LOD(0.3f, new Renderer[] { activeRenderer }) });
+                    inactiveHolder.SetActive(false);
+                    inactiveFile.Objects[2] = inactiveGroup;
+                    BakedAtlas.Lay(inactiveFile, new LightingSettings());
+                    Assert.Contains(capture.Logs, l => l.Contains("inactive LODGroup"));
                 }
                 finally
                 {

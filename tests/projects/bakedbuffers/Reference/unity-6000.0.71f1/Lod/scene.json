@@ -2,17 +2,21 @@
  "bake": "bake Result type: 'Success'",
  "messages": [],
  "instances": [
+  "LodC/C_Lod1_Emit",
+  "LodA/A_Lod1_Near",
+  "LodA/A_Shared",
+  "LodOff/Off_Lod0",
+  "LodA/A_Lod2",
   "NoCastRoof",
   "Ground",
-  "LodA/A_Shared",
-  "LodB/B_Lod0",
-  "LodA/A_Lod2",
-  "LodOff/Off_Lod0",
-  "LodA/A_Lod1_Near",
-  "LodOff/Off_Lod1",
   "LodA/A_Lod0",
+  "LodOff/Off_Lod1",
+  "C_BaseWall",
+  "LodB/B_Lod1",
+  "LodC/C_Lod1_Recv",
   "LodA/A_Lod1_Mate",
-  "LodB/B_Lod1"
+  "LodC/C_Lod0",
+  "LodB/B_Lod0"
  ],
  "lightmaps": [
   {
@@ -30,7 +34,11 @@
     7,
     8,
     9,
-    10
+    10,
+    11,
+    12,
+    13,
+    14
    ]
   }
  ]
