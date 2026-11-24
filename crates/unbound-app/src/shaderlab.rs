@@ -531,6 +531,30 @@ impl PassInfo {
         })
     }
 
+    /// Whether the pass declares a geometry or tessellation stage (`#pragma geometry`,
+    /// `#pragma hull`, `#pragma domain`), which this renderer does not support; a SubShader
+    /// containing such a pass is skipped in favour of a fallback SubShader when one exists.
+    pub fn uses_unsupported_stage(&self) -> bool {
+        let Some(program) = &self.program else {
+            return false;
+        };
+        program.code.lines().any(|line| {
+            let Some(rest) = line.trim_start().strip_prefix('#') else {
+                return false;
+            };
+            let Some(rest) = rest.trim_start().strip_prefix("pragma") else {
+                return false;
+            };
+            if !rest.starts_with(char::is_whitespace) {
+                return false;
+            }
+            matches!(
+                rest.split_whitespace().next(),
+                Some("geometry" | "hull" | "domain")
+            )
+        })
+    }
+
     pub fn light_mode(&self) -> LightMode {
         match self.states.tags.get("LightMode") {
             None => {
@@ -1390,7 +1414,8 @@ impl Parser<'_> {
             .iter()
             .cloned()
             .partition(|pass| pass.runs_on(self.renderer));
-        sub.unsupported = !sub.declared.is_empty() && sub.passes.is_empty();
+        sub.unsupported = (!sub.declared.is_empty() && sub.passes.is_empty())
+            || sub.passes.iter().any(PassInfo::uses_unsupported_stage);
         sub
     }
 
@@ -2093,6 +2118,25 @@ mod tests {
             Pass { Name \"D3DOnly\" HLSLPROGRAM\n  #  pragma only_renderers d3d11 // tessellation\nENDHLSL } \
             Pass { Name \"Comment\" HLSLPROGRAM\n// #pragma exclude_renderers glcore\nENDHLSL } } \
             SubShader { Pass { Name \"Fallback\" } } }";
+        let names = |lab: &ShaderLab| {
+            lab.passes
+                .iter()
+                .map(|p| p.name.clone())
+                .collect::<Vec<_>>()
+        };
+
+        // A SubShader with a geometry-shader pass is skipped for a fallback SubShader.
+        let geom = "Shader \"G\" { SubShader { \
+            Pass { Name \"Terrain\" HLSLPROGRAM\n#pragma vertex v\n#pragma fragment f\nENDHLSL } \
+            Pass { Name \"Mesh\" HLSLPROGRAM\n#pragma vertex v\n#pragma geometry g\n#pragma fragment f\nENDHLSL } } \
+            SubShader { \
+            Pass { Name \"Terrain\" HLSLPROGRAM\n#pragma vertex v\n#pragma fragment f\nENDHLSL } \
+            Pass { Name \"MeshFallback\" HLSLPROGRAM\n#pragma vertex v\n#pragma fragment f\nENDHLSL } } }";
+        let lab = ShaderLab::parse(geom).unwrap();
+        assert!(lab.subshaders[0].unsupported);
+        assert!(!lab.subshaders[1].unsupported);
+        assert_eq!(names(&lab), vec!["Terrain", "MeshFallback"]);
+
         let names = |lab: &ShaderLab| {
             lab.passes
                 .iter()
