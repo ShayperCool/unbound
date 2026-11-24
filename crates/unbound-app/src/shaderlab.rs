@@ -1189,21 +1189,22 @@ pub struct Substitution {
 }
 
 impl Substitution {
-    /// The warning the renderer gives once per shader.
+    /// The warning the renderer gives once per shader, under the active `pipeline` (None: the
+    /// same under every pipeline, the shader's SubShaders being untagged).
     pub fn message(
         &self,
         shader: &str,
-        pipeline: &str,
+        pipeline: Option<&str>,
         device: unbound_compat::GraphicsDevice,
     ) -> String {
         let pick = |i: Option<usize>| match i {
             Some(i) => format!("SubShader {i}"),
             None => "its Fallback".to_string(),
         };
-        let under = if pipeline.is_empty() {
-            "the built-in render pipeline".to_string()
-        } else {
-            format!("render pipeline `{pipeline}`")
+        let under = match pipeline {
+            None => "every render pipeline".to_string(),
+            Some("") => "the built-in render pipeline".to_string(),
+            Some(pipeline) => format!("render pipeline `{pipeline}`"),
         };
         let stage = self.stage.pragma();
         let editor = if self.unmeasured {
@@ -2123,7 +2124,7 @@ impl ShaderIndex {
         lab.select_with(&self.pipeline, &selection);
         let device = unbound_runtime::graphics_device::get();
         if let Some(substitution) = lab.substitution(&self.pipeline, &selection, device) {
-            warn_substitution_once(&substitution.message(&lab.name, &self.pipeline, device));
+            warn_substitution_once(&substitution.message(&lab.name, Some(&self.pipeline), device));
         }
         Some(lab)
     }
@@ -2161,9 +2162,10 @@ impl ShaderIndex {
                     }
                 }
             }
+            let tagged = pipelines.len() > 1;
             for pipeline in &pipelines {
                 if let Some(s) = lab.substitution(pipeline, &Selection::default(), device) {
-                    found.insert(s.message(&lab.name, pipeline, device));
+                    found.insert(s.message(&lab.name, tagged.then_some(pipeline), device));
                 }
             }
         }
@@ -3140,11 +3142,11 @@ Pass { Name "TAIL" }
         let tagged = Selection::parse("X|tag=RenderType=Nope").1;
         assert_eq!(geometry.substitution(urp, &tagged, Vulkan), None);
 
-        let message =
-            geometry
-                .substitution(urp, &none, Vulkan)
-                .unwrap()
-                .message(&geometry.name, urp, Vulkan);
+        let message = geometry.substitution(urp, &none, Vulkan).unwrap().message(
+            &geometry.name,
+            Some(urp),
+            Vulkan,
+        );
         assert_eq!(
             message,
             "shader `Tests/Stage` under render pipeline `UniversalPipeline`: SubShader 0 has a \
@@ -3246,6 +3248,13 @@ Pass { Name "TAIL" }
         )
         .unwrap();
         std::fs::write(
+            dir.join("Untagged.shader"),
+            "Shader \"Tests/Untagged\" { \
+             SubShader { Pass { HLSLPROGRAM\n#pragma vertex v\n#pragma geometry g\n#pragma fragment f\nENDHLSL } } \
+             SubShader { Pass { HLSLPROGRAM\n#pragma vertex v\n#pragma fragment f\nENDHLSL } } }",
+        )
+        .unwrap();
+        std::fs::write(
             dir.join("Plain.shader"),
             "Shader \"Tests/Plain\" { SubShader { Pass { HLSLPROGRAM\n#pragma vertex v\nENDHLSL } } }",
         )
@@ -3258,9 +3267,13 @@ Pass { Name "TAIL" }
         assert_eq!(
             listed,
             [
-                "shader `Tests/Listed` under render pipeline `UniversalPipeline`: SubShader 0 has a \
-              domain stage (`#pragma domain`), which Unbound's renderer does not run; Unbound \
-              draws SubShader 1 where the Unity Editor on Vulkan draws SubShader 0"
+                "shader `Tests/Listed` under render pipeline `UniversalPipeline`: SubShader 0 has \
+                 a domain stage (`#pragma domain`), which Unbound's renderer does not run; \
+                 Unbound draws SubShader 1 where the Unity Editor on Vulkan draws SubShader 0",
+                // An untagged shader substitutes alike under every pipeline.
+                "shader `Tests/Untagged` under every render pipeline: SubShader 0 has a geometry \
+                 stage (`#pragma geometry`), which Unbound's renderer does not run; Unbound draws \
+                 SubShader 1 where the Unity Editor on Vulkan draws SubShader 0",
             ]
         );
     }
