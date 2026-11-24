@@ -404,3 +404,241 @@ pub fn dering(request: DeringRequest) -> Result<Json> {
     });
     Ok(json!({ "data": encode_f32s(&flat) }))
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use unbound_gi::baked::sampling::BLUE_NOISE_BYTES;
+
+    fn b64_f32(vals: &[f32]) -> String {
+        encode_f32s(vals)
+    }
+
+    fn b64_u32(vals: &[u32]) -> String {
+        let mut bytes = Vec::with_capacity(vals.len() * 4);
+        for &v in vals {
+            bytes.extend_from_slice(&v.to_le_bytes());
+        }
+        base64::engine::general_purpose::STANDARD.encode(&bytes)
+    }
+
+    fn b64_i32(vals: &[i32]) -> String {
+        let mut bytes = Vec::with_capacity(vals.len() * 4);
+        for &v in vals {
+            bytes.extend_from_slice(&v.to_le_bytes());
+        }
+        base64::engine::general_purpose::STANDARD.encode(&bytes)
+    }
+
+    fn decode_f32(b64: &str) -> Vec<f32> {
+        values::<f32, 1>(b64, "test floats", f32::from_le_bytes)
+            .unwrap()
+            .into_iter()
+            .map(|v| v[0])
+            .collect()
+    }
+
+    #[test]
+    fn populate_integrate_dering_and_release_round_trip() {
+        let tmp = std::env::temp_dir().join(format!("unbound-lt-test-{}.bin", std::process::id()));
+        std::fs::write(&tmp, vec![0u8; BLUE_NOISE_BYTES]).unwrap();
+
+        // A horizontal 20x20 quad at y = 0 facing +y (normal = (0, 1, 0)).
+        let positions = b64_f32(&[
+            -10.0, 0.0, -10.0, 10.0, 0.0, -10.0, 10.0, 0.0, 10.0, -10.0, 0.0, 10.0,
+        ]);
+        let normals = b64_f32(&[0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0]);
+        let uvs = b64_f32(&[0.0, 0.0, 1.0, 0.0, 1.0, 1.0, 0.0, 1.0]);
+        let tris = b64_u32(&[0, 2, 1, 0, 3, 2]);
+        let albedo_px = base64::engine::general_purpose::STANDARD.encode([200u8, 200, 200, 255]);
+        let emissive_px = b64_f32(&[0.0, 0.0, 0.0, 1.0]);
+        let sky_faces = b64_f32(&[0.5f32; 6 * 3]);
+
+        // Directional light shining straight down (-y): rotation +90 deg around X -> (sin(45), 0, 0, cos(45)).
+        let s = std::f32::consts::FRAC_1_SQRT_2;
+        let pop_req: PopulateRequest = serde_json::from_value(json!({
+            "meshes": [{
+                "positions": positions,
+                "normals": normals,
+                "uv": uvs,
+                "uv2": uvs,
+                "submeshes": [tris],
+            }],
+            "renderers": [{
+                "name": "Floor",
+                "mesh": 0,
+                "localToWorld": [
+                    1.0, 0.0, 0.0, 0.0,
+                    0.0, 1.0, 0.0, 0.0,
+                    0.0, 0.0, 1.0, 0.0,
+                    0.0, 0.0, 0.0, 1.0
+                ],
+                "hasMaterial": [true],
+                "castsShadows": true,
+                "material": {
+                    "albedo": { "width": 1, "height": 1, "data": albedo_px },
+                    "emissive": { "width": 1, "height": 1, "data": emissive_px },
+                    "doubleSided": [false]
+                }
+            }],
+            "lights": [
+                {
+                    "name": "BakedSun",
+                    "fileId": 1,
+                    "kind": 0,
+                    "mode": 2,
+                    "color": [2.0, 1.0, 0.5],
+                    "indirectColor": [2.0, 1.0, 0.5],
+                    "position": [0.0, 10.0, 0.0],
+                    "rotation": [s, 0.0, 0.0, s],
+                    "range": 0.0,
+                    "spotAngle": 0.0,
+                    "castsShadows": true
+                },
+                {
+                    "name": "MixedSun",
+                    "fileId": 2,
+                    "kind": 0,
+                    "mode": 1,
+                    "color": [1.0, 1.0, 1.0],
+                    "indirectColor": [1.0, 1.0, 1.0],
+                    "position": [0.0, 10.0, 0.0],
+                    "rotation": [s, 0.0, 0.0, s],
+                    "range": 0.0,
+                    "spotAngle": 0.0,
+                    "castsShadows": true
+                }
+            ],
+            "blueNoise": tmp.to_string_lossy(),
+            "environment": {
+                "samples": 32,
+                "importanceSampling": false,
+                "side": 1,
+                "faces": sky_faces
+            }
+        }))
+        .unwrap();
+        let pop_res = populate(pop_req).unwrap();
+        let _ = std::fs::remove_file(&tmp);
+        let world_id = pop_res["worldId"].as_u64().unwrap();
+
+        // Two probes: (0, 1, 0) above the floor, (0, -1, 0) below the floor (shadowed & seeing backfaces).
+        let probe_pos = b64_f32(&[0.0, 1.0, 0.0, 0.0, -1.0, 0.0]);
+
+        let direct_res = integrate(IntegrateRequest {
+            world_id,
+            kind: "direct".into(),
+            positions: probe_pos.clone(),
+            sample_count: 16,
+            max_bounces: 2,
+            pushoff: 0.0001,
+            ignore_environment: false,
+            max_lights_per_probe: 0,
+            per_probe_light_indices: None,
+        })
+        .unwrap();
+        let direct_vals = decode_f32(direct_res["data"].as_str().unwrap());
+        assert_eq!(direct_vals.len(), 54);
+        assert!(
+            direct_vals[0] > 1.0,
+            "above-floor probe receives sun direct L0"
+        );
+        assert_eq!(direct_vals[27], 0.0, "below-floor probe is shadowed");
+
+        let indirect_sky = integrate(IntegrateRequest {
+            world_id,
+            kind: "indirect".into(),
+            positions: probe_pos.clone(),
+            sample_count: 64,
+            max_bounces: 2,
+            pushoff: 0.0001,
+            ignore_environment: false,
+            max_lights_per_probe: 0,
+            per_probe_light_indices: None,
+        })
+        .unwrap();
+        let indirect_nosky = integrate(IntegrateRequest {
+            world_id,
+            kind: "indirect".into(),
+            positions: probe_pos.clone(),
+            sample_count: 64,
+            max_bounces: 2,
+            pushoff: 0.0001,
+            ignore_environment: true,
+            max_lights_per_probe: 0,
+            per_probe_light_indices: None,
+        })
+        .unwrap();
+        let ind_sky = decode_f32(indirect_sky["data"].as_str().unwrap());
+        let ind_nosky = decode_f32(indirect_nosky["data"].as_str().unwrap());
+        assert!(
+            ind_sky[0] > ind_nosky[0],
+            "environment light increases indirect L0"
+        );
+        assert!(
+            ind_nosky[0] > 0.0,
+            "above-floor probe receives bounced light from floor"
+        );
+
+        let val_res = integrate(IntegrateRequest {
+            world_id,
+            kind: "validity".into(),
+            positions: probe_pos.clone(),
+            sample_count: 64,
+            max_bounces: 2,
+            pushoff: 0.0001,
+            ignore_environment: false,
+            max_lights_per_probe: 0,
+            per_probe_light_indices: None,
+        })
+        .unwrap();
+        let validity = decode_f32(val_res["data"].as_str().unwrap());
+        assert_eq!(validity.len(), 2);
+        assert_eq!(validity[0], 0.0, "above-floor probe sees no backfaces");
+        assert!(
+            validity[1] > 0.3,
+            "below-floor probe hits floor backface: {}",
+            validity[1]
+        );
+
+        let occ_res = integrate(IntegrateRequest {
+            world_id,
+            kind: "occlusion".into(),
+            positions: probe_pos.clone(),
+            sample_count: 16,
+            max_bounces: 2,
+            pushoff: 0.0001,
+            ignore_environment: false,
+            max_lights_per_probe: 4,
+            per_probe_light_indices: Some(b64_i32(&[1, -1, -1, -1, 1, -1, -1, -1])),
+        })
+        .unwrap();
+        let occ = decode_f32(occ_res["data"].as_str().unwrap());
+        assert_eq!(occ, vec![1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]);
+
+        // Deringing attenuates ringing L1 while keeping L0 unchanged.
+        let mut sh = [0.0f32; 27];
+        sh[0] = 0.28209478;
+        sh[3] = 1.5;
+        let dering_res = dering(DeringRequest { sh: b64_f32(&sh) }).unwrap();
+        let deringed = decode_f32(dering_res["data"].as_str().unwrap());
+        assert_eq!(deringed[0], sh[0]);
+        assert!(deringed[3].abs() < sh[3].abs());
+
+        release(world_id);
+        assert!(
+            integrate(IntegrateRequest {
+                world_id,
+                kind: "direct".into(),
+                positions: probe_pos,
+                sample_count: 1,
+                max_bounces: 1,
+                pushoff: 0.0001,
+                ignore_environment: true,
+                max_lights_per_probe: 0,
+                per_probe_light_indices: None,
+            })
+            .is_err()
+        );
+    }
+}
