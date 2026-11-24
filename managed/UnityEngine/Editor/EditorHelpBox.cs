@@ -51,23 +51,27 @@ namespace UnityEditor
 
         internal static GUIContent blankContent { get; } = new GUIContent(" ");
 
-        internal static Texture2D infoIcon => LoadHelpIcon(0, "console.infoicon");
-        internal static Texture2D warningIcon => LoadHelpIcon(1, "console.warnicon");
-        internal static Texture2D errorIcon => LoadHelpIcon(2, "console.erroricon");
+        internal static Texture2D infoIcon => EditorGUI.Unmeasured("UnityEditor.EditorGUIUtility.infoIcon") ? null : LoadHelpIcon(0, "console.infoicon");
+        internal static Texture2D warningIcon => EditorGUI.Unmeasured("UnityEditor.EditorGUIUtility.warningIcon") ? null : LoadHelpIcon(1, "console.warnicon");
+        internal static Texture2D errorIcon => EditorGUI.Unmeasured("UnityEditor.EditorGUIUtility.errorIcon") ? null : LoadHelpIcon(2, "console.erroricon");
 
-        internal static Texture2D GetHelpIcon(MessageType type) => type switch
+        internal static Texture2D GetHelpIcon(MessageType type)
         {
-            MessageType.Info => infoIcon,
-            MessageType.Warning => warningIcon,
-            MessageType.Error => errorIcon,
-            _ => null,
-        };
+            if (EditorGUI.Unmeasured("UnityEditor.EditorGUIUtility.GetHelpIcon")) return null;
+            return type switch
+            {
+                MessageType.Info => infoIcon,
+                MessageType.Warning => warningIcon,
+                MessageType.Error => errorIcon,
+                _ => null,
+            };
+        }
 
         internal static GUIContent TempHelpContent(string message, Texture image)
         {
             s_TempHelpContent.text = message;
             s_TempHelpContent.image = image;
-            s_TempHelpContent.tooltip = string.Empty;
+            s_TempHelpContent.tooltip = null;
             return s_TempHelpContent;
         }
 

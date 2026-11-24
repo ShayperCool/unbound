@@ -51,6 +51,7 @@ namespace UnityEngine.Tests
         [Fact]
         public void GetHelpIconNoneAndUnknownReturnNullAndBlankContentIsSingleSpace()
         {
+            using var release = TestRelease.Pin(TestRelease.Measured);
             Assert.Null(EditorGUIUtility.GetHelpIcon(MessageType.None));
             Assert.Null(EditorGUIUtility.GetHelpIcon((MessageType)99));
             Assert.Equal(" ", EditorGUIUtility.blankContent.text);
@@ -59,7 +60,7 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
-        public void AnotherReleaseFamilysHelpBoxSaysSoAndTakesNoControlId()
+        public void AnotherReleaseFamilysHelpBoxSaysSoAndTakesNoControlIdOrLayoutSpace()
         {
             using var release = TestRelease.Pin(TestRelease.Unmeasured);
             var logs = new Logs();
@@ -68,19 +69,33 @@ namespace UnityEngine.Tests
             try
             {
                 int ids = -1;
+                int layoutEntries = -1;
+                bool stringOverloadLogged = false;
                 Pass(new Event { type = EventType.Layout }, () =>
                 {
                     int before = GUIUtility.GetControlID(FocusType.Passive);
                     EditorGUI.HelpBox(new Rect(0, 0, 100, 20), "hello", MessageType.Info);
                     EditorGUI.HelpBox(new Rect(0, 0, 100, 20), new GUIContent("hello"));
                     EditorGUILayout.HelpBox("hello", MessageType.Warning);
+                    stringOverloadLogged = logs.Messages.Exists(m => m.Contains("EditorGUILayout.HelpBox"));
                     EditorGUILayout.HelpBox("hello", MessageType.Error, false);
                     EditorGUILayout.HelpBox(new GUIContent("hello"), false);
+                    layoutEntries = GUILayoutUtility.topLevel.entries.Count;
                     ids = GUIUtility.GetControlID(FocusType.Passive) - before;
                 });
                 Assert.Equal(1, ids);
+                Assert.Equal(0, layoutEntries);
+                Assert.True(stringOverloadLogged);
                 Assert.Contains(logs.Messages, m => m.Contains("EditorGUI.HelpBox"));
-                Assert.Contains(logs.Messages, m => m.Contains("EditorGUILayout.HelpBox"));
+
+                Assert.Null(EditorGUIUtility.GetHelpIcon(MessageType.Info));
+                Assert.Null(EditorGUIUtility.infoIcon);
+                Assert.Null(EditorGUIUtility.warningIcon);
+                Assert.Null(EditorGUIUtility.errorIcon);
+                Assert.Contains(logs.Messages, m => m.Contains("EditorGUIUtility.GetHelpIcon"));
+                Assert.Contains(logs.Messages, m => m.Contains("EditorGUIUtility.infoIcon"));
+                Assert.Contains(logs.Messages, m => m.Contains("EditorGUIUtility.warningIcon"));
+                Assert.Contains(logs.Messages, m => m.Contains("EditorGUIUtility.errorIcon"));
             }
             finally { Debug.unityLogger.logHandler = previous; }
         }

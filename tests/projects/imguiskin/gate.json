@@ -6,6 +6,7 @@
   "engine_paths": [
     "managed/UnityEngine/IMGUI/",
     "managed/UnityEngine/Editor/EditorGUIState.cs",
+    "managed/UnityEngine/Editor/EditorHelpBox.cs",
     "managed/UnityEngine/Editor/EditorTextSettings.cs",
     "managed/UnityEngine/Text/TextCoreText/"
   ]

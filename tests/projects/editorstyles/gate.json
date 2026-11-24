@@ -6,6 +6,7 @@
   "engine_paths": [
     "managed/UnityEngine/Editor/EditorGUIState.cs",
     "managed/UnityEngine/Editor/EditorGUIUtility.cs",
+    "managed/UnityEngine/Editor/EditorHelpBox.cs",
     "managed/UnityEngine/Editor/InspectorTogglePaint.cs",
     "managed/UnityEngine/Runtime/Compat.cs",
     "managed/UnityEngine/IMGUI/",
