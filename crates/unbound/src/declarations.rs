@@ -24,7 +24,7 @@ use std::collections::HashSet;
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
-use unbound_app::shaderlab::{PassInfo, ShaderIndex, ShaderLab};
+use unbound_app::shaderlab::{PassInfo, PassProgram, ShaderIndex, ShaderLab};
 use unbound_assets::builtin_shaders::{DeclarationMap, Declarations as Builtin};
 use unbound_compat::ShaderKeywordRules;
 use unbound_shaders::keywords::{Declared, Space};
@@ -247,8 +247,8 @@ fn builtin_subshaders(builtin: &Builtin) -> Result<Vec<Value>, Unknown> {
         .collect())
 }
 
-/// Whether a program has pragmas not read here (an `#include_with_pragmas`, whose file may
-/// limit the devices the program runs on): whether the device runs it is then not known.
+/// Whether a program takes pragmas from a file (`#include_with_pragmas`), which may limit the
+/// devices the program runs on ([`State::included_limits`] reads them).
 fn unread_pragmas(code: &str) -> bool {
     code.lines().any(|line| {
         line.trim_start()
@@ -702,7 +702,8 @@ impl State {
     }
 
     /// Whether it is not known whether the device runs a pass it keeps: a `GLSLPROGRAM` (which
-    /// devices run one is not measured), a program with pragmas not read ([`unread_pragmas`]),
+    /// devices run one is not measured), a program whose `#include_with_pragmas` files limit the
+    /// devices or cannot be read ([`State::included_limits`]),
     /// or a `UsePass` of a project shader's pass that is one. A `UsePass` of a built-in shader's
     /// pass is taken as its SubShader is (run).
     fn pass_runs_unknown(&mut self, inputs: &Inputs, pass: &PassInfo, depth: u32) -> bool {
@@ -710,7 +711,7 @@ impl State {
             return true;
         }
         if let Some(program) = &pass.program {
-            return unread_pragmas(&program.code);
+            return unread_pragmas(&program.code) && self.included_limits(inputs, pass, program);
         }
         let Some(target) = &pass.use_pass else {
             return false;
@@ -726,6 +727,48 @@ impl State {
             Some(found) if depth < 4 => self.pass_runs_unknown(inputs, &found, depth + 1),
             Some(_) => true,
             None => false,
+        }
+    }
+
+    /// Whether the pragmas a program's `#include_with_pragmas` files give it (the preprocessed
+    /// program's, active branches only) may limit the devices it runs on (`only_renderers`,
+    /// `exclude_renderers`), which the renderer does not apply; also where they cannot be read.
+    /// URP's shaders take keyword and target pragmas that way, which limit no device.
+    fn included_limits(&mut self, inputs: &Inputs, pass: &PassInfo, program: &PassProgram) -> bool {
+        let p = unbound_shaders::Program {
+            file: program.file.clone(),
+            source: program.code.clone(),
+            cg: program.cg,
+            light_mode: pass.states.tags.get("LightMode").cloned(),
+        };
+        let Ok(compiler) = self.compiler(inputs) else {
+            return true;
+        };
+        let limits =
+            |kind: Option<&str>| matches!(kind, Some("only_renderers" | "exclude_renderers"));
+        // The program's own limits (in any branch) are applied by the renderer; more in the
+        // preprocessed program came from the included files.
+        let own = program
+            .code
+            .lines()
+            .filter(|line| {
+                line.trim_start()
+                    .strip_prefix('#')
+                    .map(str::trim_start)
+                    .and_then(|rest| rest.strip_prefix("pragma"))
+                    .filter(|rest| rest.starts_with(char::is_whitespace))
+                    .is_some_and(|rest| limits(rest.split_whitespace().next()))
+            })
+            .count();
+        match compiler.pragma_lines(&p) {
+            Ok(pragmas) => {
+                pragmas
+                    .iter()
+                    .filter(|pragma| limits(pragma.words.first().map(String::as_str)))
+                    .count()
+                    > own
+            }
+            Err(_) => true,
         }
     }
 

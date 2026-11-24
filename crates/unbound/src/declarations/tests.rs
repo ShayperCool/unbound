@@ -693,13 +693,12 @@ fn probe_shaders_match_the_canonical_reference() {
             .map(|s| s["passes"].as_array().unwrap().len().to_string())
             .collect();
         assert_eq!(json!(counts), *key("passCountInSubshader"), "{shader}");
-        // LODs from the probe sources (the Fallback Unlit/Color's as serialized); only for
-        // KwForms's first SubShader is it not known whether the device runs it (its
-        // `#include_with_pragmas` is not read).
+        // LODs from the probe sources (the Fallback Unlit/Color's as serialized); the device runs
+        // every SubShader (KwForms's `#include_with_pragmas` file limits no device).
         let (lods, runs): (&[u64], &[Value]) = match shader {
             "Probe/KwForms" => (
                 &[300, 0, 100][..],
-                &[Value::Null, json!(true), json!(true)][..],
+                &[json!(true), json!(true), json!(true)][..],
             ),
             "Probe/KwFixed" => (
                 &[400, 200, 100][..],
@@ -1277,9 +1276,53 @@ fn procedural_instancing_is_read_from_the_instancing_options() {
     );
 }
 
+/// An `#include_with_pragmas` file's pragmas are read: keywords and targets leave the SubShader
+/// run; a renderer limit there, which the renderer does not apply, leaves it not known.
 #[test]
-fn subshader_with_unsupported_geometry_stage_is_marked_restricted() {
-    let scratch = Scratch::new("decl-geom-restricted");
+fn included_pragmas_that_limit_renderers_leave_the_answer_unknown() {
+    let scratch = Scratch::new("decl-included-limits");
+    scratch.write("CGIncludes/UnityCG.cginc", "// stand-in\n");
+    scratch.write(
+        "Assets/Keywords.hlsl",
+        "#pragma multi_compile _ KW_INCLUDED\n#pragma target 4.5 KW_INCLUDED\n",
+    );
+    scratch.write(
+        "Assets/Limits.hlsl",
+        "#pragma exclude_renderers d3d11\n#pragma multi_compile _ KW_LIMITED\n",
+    );
+    let program = |include: &str| {
+        format!(
+            "SubShader {{ Pass {{ HLSLPROGRAM\n#pragma vertex vert\n#pragma exclude_renderers gles\n#include_with_pragmas \"{include}\"\nENDHLSL }} }}"
+        )
+    };
+    scratch.write(
+        "Assets/Included.shader",
+        &format!(
+            "Shader \"Tests/Included\" {{\n{}\n{}\n}}",
+            program("Keywords.hlsl"),
+            program("Limits.hlsl")
+        ),
+    );
+    let data = scratch.0.join("unity");
+    std::fs::create_dir_all(&data).unwrap();
+    let provider = Provider::new(inputs(
+        &scratch,
+        scratch.0.join("CGIncludes"),
+        data,
+        MEASURED,
+        Arc::new(AtomicUsize::new(0)),
+        Arc::new(AtomicBool::new(false)),
+    ));
+    let answer = ask(&provider, "Tests/Included");
+    assert_eq!(answer["subshaders_known"], true, "{answer}");
+    let subs = answer["subshaders"].as_array().unwrap();
+    assert_eq!(subs[0]["runs"], true, "{answer}");
+    assert_eq!(subs[1]["runs"], Value::Null, "{answer}");
+}
+
+#[test]
+fn a_subshader_with_a_geometry_stage_runs_as_the_editors_device_runs_it() {
+    let scratch = Scratch::new("decl-geom-runs");
     scratch.write(
         "Assets/GeomFallback.shader",
         r#"Shader "Tests/GeomFallback" {
