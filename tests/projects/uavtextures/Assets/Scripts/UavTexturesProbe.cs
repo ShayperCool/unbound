@@ -371,6 +371,20 @@ public class UavTexturesProbe : MonoBehaviour
         Value("lifecycle.replace.tex_to_buf.buf", bOut[0].ToString());
         Value("lifecycle.replace.tex_to_buf.tex", F4(Read2DF(rtA)));
 
+        // Invalid (non-random-write) RenderTexture after a valid buffer on slot 1
+        var nonRandomRt = new RenderTexture(4, 4, 0, RenderTextureFormat.ARGB32);
+        nonRandomRt.Create();
+        made.Add(nonRandomRt);
+        buf.SetData(new uint[] { 41u, 0, 0, 0 });
+        mat.SetInt("_UVal", 88);
+        DrawFragPass(9, cmd =>
+        {
+            cmd.SetRandomWriteTarget(1, buf);
+            cmd.SetRandomWriteTarget(1, nonRandomRt);
+        });
+        buf.GetData(bOut, 0, 0, 1);
+        Value("lifecycle.invalid_rt_over_buf", bOut[0].ToString());
+
         // Combined RWTexture2D (u1) + unnumbered RWStructuredBuffer (auto u2)
         buf.SetData(new uint[] { 0u, 0, 0, 0 });
         Clear2DF(rtA);
@@ -451,5 +465,24 @@ public class UavTexturesProbe : MonoBehaviour
         var got = new float[7];
         readF.GetData(got, 0, 0, 7);
         Value("packed.structs", F4(got));
+
+        // Write path (emit_pack): whole struct, nested struct, vector field, and scalar field stores
+        using var outTrailing = new ComputeBuffer(2, Marshal.SizeOf<TrailingPad>());
+        using var outMixed = new ComputeBuffer(2, Marshal.SizeOf<MixedVec4>());
+        using var outNested = new ComputeBuffer(2, Marshal.SizeOf<Outer>());
+        int kw = cs.FindKernel("PackedStructsWrite");
+        cs.SetBuffer(kw, "_OutTrailing", outTrailing);
+        cs.SetBuffer(kw, "_OutMixed", outMixed);
+        cs.SetBuffer(kw, "_OutNested", outNested);
+        cs.Dispatch(kw, 1, 1, 1);
+        var wT = new TrailingPad[2];
+        var wM = new MixedVec4[2];
+        var wN = new Outer[2];
+        outTrailing.GetData(wT);
+        outMixed.GetData(wM);
+        outNested.GetData(wN);
+        Value("packed.write.trailing", F4(new[] { wT[0].a.x, wT[0].a.w, wT[0].b, wT[1].a.x, wT[1].a.w, wT[1].b }));
+        Value("packed.write.mixed", F4(new[] { wM[0].p.z, wM[0].a.y, wM[0].s, wM[0].b.w, wM[1].p.x, wM[1].a.z, wM[1].s, wM[1].b.y }));
+        Value("packed.write.nested", F4(new[] { wN[0].inner.v.x, wN[0].inner.v.w, wN[0].inner.k, wN[0].tail, wN[1].inner.v.x, wN[1].inner.v.w, wN[1].inner.k, wN[1].tail }));
     }
 }

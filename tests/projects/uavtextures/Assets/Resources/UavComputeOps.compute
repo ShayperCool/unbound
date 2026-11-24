@@ -11,6 +11,7 @@
 #pragma kernel Read3DFloat4
 #pragma kernel Read2DUint4
 #pragma kernel PackedStructs
+#pragma kernel PackedStructsWrite
 
 RWTexture2D<float4> _Clear2F;
 RWTexture3D<float4> _Clear3F;
@@ -127,4 +128,41 @@ void PackedStructs(uint3 id : SV_DispatchThreadID)
     _ReadF[4] = o0.inner.v.z + o0.inner.k + o0.tail;
     _ReadF[5] = o1.inner.v.x + o1.inner.v.w + o1.inner.k + o1.tail;
     _ReadF[6] = a1.x.x + a1.x.w;
+}
+
+RWStructuredBuffer<TrailingPad> _OutTrailing;
+RWStructuredBuffer<MixedVec4> _OutMixed;
+RWStructuredBuffer<Outer> _OutNested;
+
+[numthreads(1, 1, 1)]
+void PackedStructsWrite(uint3 id : SV_DispatchThreadID)
+{
+    TrailingPad t0;
+    t0.a = float4(2, 4, 6, 8);
+    t0.b = 10;
+    _OutTrailing[0] = t0;
+    _OutTrailing[1].a = float4(12, 14, 16, 18);
+    _OutTrailing[1].b = 20;
+
+    MixedVec4 m0;
+    m0.p = float3(1, 2, 3);
+    m0.a = float4(4, 5, 6, 7);
+    m0.s = 8;
+    m0.b = float4(9, 10, 11, 12);
+    _OutMixed[0] = m0;
+    _OutMixed[1].p = float3(13, 14, 15);
+    _OutMixed[1].a = float4(16, 17, 18, 19);
+    _OutMixed[1].s = 20;
+    _OutMixed[1].b = float4(21, 22, 23, 24);
+
+    Outer o0;
+    o0.inner.v = float4(3, 6, 9, 12);
+    o0.inner.k = 15;
+    o0.tail = 18;
+    _OutNested[0] = o0;
+    Inner in1;
+    in1.v = float4(21, 24, 27, 30);
+    in1.k = 33;
+    _OutNested[1].inner = in1;
+    _OutNested[1].tail = 36;
 }

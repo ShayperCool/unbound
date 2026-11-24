@@ -5756,8 +5756,23 @@ impl UnityRenderer {
                             )
                         });
                     }
+                    let no_uav_tex = !errored
+                        && id.is_some_and(|id| {
+                            self.compiled.program(id).storage_textures.is_empty()
+                        });
                     if let Some(m) = self.materials.get_mut(&draw.material) {
                         m.variants.insert(key, (id, errored));
+                        if no_uav_tex && uav_key != [None; 8] {
+                            let base = (
+                                pass_index,
+                                self.keyword_set,
+                                linear,
+                                mode,
+                                multisampled,
+                                [None; 8],
+                            );
+                            m.variants.insert(base, (id, errored));
+                        }
                     }
                     (id, errored)
                 }

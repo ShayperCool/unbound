@@ -12,13 +12,15 @@ Measures Unity 6000.0.71f1 behavior for:
      channels are filled with channel `.x` (`v.xxxx`, `v.xyxx`, `v.xyzx`).
 2. **Fragment random-write texture binding lifecycle**:
    - `Graphics.SetRandomWriteTarget` / `ClearRandomWriteTargets`, `CommandBuffer.SetRandomWriteTarget`,
-     texture-to-texture, buffer-to-texture, and texture-to-buffer slot replacement, combined
-     explicit `RWTexture2D : register(u1)` + auto-assigned `RWStructuredBuffer` (`u2`), and
-     fragment read-modify-write (`_Out[xy] = _Out[xy] + delta`).
+     texture-to-texture, buffer-to-texture, and texture-to-buffer slot replacement, invalid
+     non-random-write `RenderTexture` preserving an already-bound buffer on that slot
+     (`lifecycle.invalid_rt_over_buf`), combined explicit `RWTexture2D : register(u1)` +
+     auto-assigned `RWStructuredBuffer` (`u2`), and fragment read-modify-write (`_Out[xy] = _Out[xy] + delta`).
 3. **Vertex `switch` with `default:` falling through into `case 0:`** (`switch.axis0..2`).
-4. **Tightly packed `StructuredBuffer<T>` layouts** (`TrailingPad { float4; float; }`,
-   `MixedVec4 { float3; float4; float; float4; }`, nested `Outer { Inner { float4; float; }; float; }`,
-   and a co-resident std430-aligned `Aligned { float4; }`).
+4. **Tightly packed `StructuredBuffer<T>` and `RWStructuredBuffer<T>` layouts** (both read and
+   write paths: `TrailingPad { float4; float; }`, `MixedVec4 { float3; float4; float; float4; }`,
+   nested `Outer { Inner { float4; float; }; float; }`, and a co-resident std430-aligned
+   `Aligned { float4; }`).
 
 ## Reference
 

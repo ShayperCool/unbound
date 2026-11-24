@@ -990,10 +990,26 @@ impl ShaderCompiler {
             );
         }
 
-        let effective_uav_formats: &[(u32, String)] = if fragment_source.contains("RWTexture") {
-            &uav_formats
+        let effective_uav_formats: Vec<(u32, String)> = if fragment_source.contains("RWTexture") {
+            uav_formats.clone()
         } else {
-            &[]
+            Vec::new()
+        };
+        let effective_key = if effective_uav_formats.len() != uav_formats.len() {
+            let ek = (
+                key.0.clone(),
+                selected.clone(),
+                linear,
+                effective_uav_formats.clone(),
+            );
+            if let Some(c) = self.memory.get(&ek) {
+                let c = c.clone();
+                self.memory.insert(key, c.clone());
+                return Ok(c);
+            }
+            Some(ek)
+        } else {
+            None
         };
 
         let hash = {
@@ -1015,7 +1031,7 @@ impl ShaderCompiler {
             h.update(instanced_properties.join(" ").as_bytes());
             h.update(format!("{mesh_instance_stride:?}/{mesh_instance_uniform_scaling}/{mesh_instance_max_count:?}").as_bytes());
             h.update(&(effective_uav_formats.len() as u64).to_le_bytes());
-            for (reg, fmt) in effective_uav_formats {
+            for (reg, fmt) in &effective_uav_formats {
                 h.update(&reg.to_le_bytes());
                 h.update(&(fmt.len() as u64).to_le_bytes());
                 h.update(fmt.as_bytes());
@@ -1028,6 +1044,9 @@ impl ShaderCompiler {
             && let Ok(compiled) = serde_json::from_str::<Compiled>(&text)
         {
             let compiled = Arc::new(compiled);
+            if let Some(ek) = effective_key {
+                self.memory.insert(ek, compiled.clone());
+            }
             self.memory.insert(key, compiled.clone());
             return Ok(compiled);
         }
@@ -1048,7 +1067,7 @@ impl ShaderCompiler {
             &vertex_spv,
             &fragment_spv,
             &uav_registers(&fragment_source),
-            effective_uav_formats,
+            &effective_uav_formats,
             fit::ClipSpace::of(self.settings.device.conventions()),
             self.settings.device.named_samplers(),
             self.settings.opengl_shading_language,
@@ -1069,6 +1088,9 @@ impl ShaderCompiler {
             }
         }
         let compiled = Arc::new(compiled);
+        if let Some(ek) = effective_key {
+            self.memory.insert(ek, compiled.clone());
+        }
         self.memory.insert(key, compiled.clone());
         Ok(compiled)
     }
@@ -5646,6 +5668,69 @@ void CSMain(uint3 id : SV_DispatchThreadID) {
             .compile_kernel(&program, "CSMain", &[], &[])
             .unwrap();
         assert!(!kernel.wgsl.is_empty());
+    }
+
+    #[test]
+    fn std430_aligned_float3_struct_stays_unpacked_for_dynamic_component_indexing() {
+        let mut compiler = ShaderCompiler::new(Settings::default()).unwrap();
+        // Particle has float3 pos (off 0), float life (off 12), float4 color (off 16), size 32:
+        // already std430-aligned, so pack_storage_vectors must leave it unpacked and keep
+        // dynamic component indexing working.
+        let src = r#"
+#pragma kernel CSMain
+struct Particle { float3 pos; float life; float4 color; };
+RWStructuredBuffer<Particle> _P;
+[numthreads(1, 1, 1)]
+void CSMain(uint3 id : SV_DispatchThreadID) {
+    _P[id.x].color[id.y] = 1.0;
+    _P[id.x].pos[id.z] = 2.0;
+}
+"#;
+        let program = crate::compute::ComputeProgram {
+            file: PathBuf::from("Std430Particle.compute"),
+            source: src.into(),
+        };
+        let kernel = compiler
+            .compile_kernel(&program, "CSMain", &[], &[])
+            .unwrap();
+        assert!(!kernel.wgsl.is_empty());
+    }
+
+    #[test]
+    fn pack_storage_vectors_write_path_emits_packed_stores() {
+        let mut compiler = ShaderCompiler::new(Settings::default()).unwrap();
+        let src = r#"
+#pragma kernel CSMain
+struct Inner { float4 v; float k; };
+struct Outer { Inner inner; float tail; };
+RWStructuredBuffer<Outer> _Out;
+[numthreads(1, 1, 1)]
+void CSMain(uint3 id : SV_DispatchThreadID) {
+    Outer o;
+    o.inner.v = float4(1, 2, 3, 4);
+    o.inner.k = 5;
+    o.tail = 6;
+    _Out[id.x] = o;
+}
+"#;
+        let program = crate::compute::ComputeProgram {
+            file: PathBuf::from("PackedWrite.compute"),
+            source: src.into(),
+        };
+        let kernel = compiler
+            .compile_kernel(&program, "CSMain", &[], &[])
+            .unwrap();
+        // Packed Outer struct has size 24 (16-byte packed vec4 + 4 + 4), storing scalar components.
+        assert!(
+            kernel.wgsl.contains("1f")
+                && kernel.wgsl.contains("2f")
+                && kernel.wgsl.contains("3f")
+                && kernel.wgsl.contains("4f")
+                && kernel.wgsl.contains("5f")
+                && kernel.wgsl.contains("6f"),
+            "expected all 6 scalar fields in packed store WGSL:\n{}",
+            kernel.wgsl
+        );
     }
 
     #[test]

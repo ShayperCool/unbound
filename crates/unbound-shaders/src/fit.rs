@@ -936,7 +936,6 @@ fn image_coordinate_vectors(words: &[u32]) -> Result<Vec<u32>> {
     Ok(out)
 }
 
-/// HLSL `StructuredBuffer<T3>` and `StructuredBuffer<Struct>` elements use tight 4-byte scalar
 /// Strips redundant `OpSwitch` target pairs whose branch target equals the switch's `default`
 /// label (e.g. HLSL `default: case 0:`). Naga 30.0.1's SPIR-V frontend assigns each explicit case
 /// a fresh body and skips mapping its label when `default_id` already claimed it, leaving the
@@ -944,7 +943,8 @@ fn image_coordinate_vectors(words: &[u32]) -> Result<Vec<u32>> {
 /// Removing `(literal, default_label)` pairs is semantically identical in SPIR-V and avoids the
 /// miscompilation.
 fn strip_redundant_switch_default_cases(words: &[u32]) -> Result<Vec<u32>> {
-    let mut has_int64 = false;
+    let mut int64_types = std::collections::HashSet::new();
+    let mut val_int64 = std::collections::HashSet::new();
     let mut any_redundant = false;
     let mut at = 5;
     while at < words.len() {
@@ -953,20 +953,27 @@ fn strip_redundant_switch_default_cases(words: &[u32]) -> Result<Vec<u32>> {
             bail!("malformed SPIR-V");
         }
         let inst = &words[at..at + count];
-        match inst[0] & 0xffff {
-            21 if count >= 3 && inst[2] == 64 => has_int64 = true,
-            // SPIR-V OpSwitch is opcode 251.
-            251 if count >= 5 && (count - 3).is_multiple_of(2) => {
-                let default_label = inst[2];
-                if inst[3..].chunks_exact(2).any(|p| p[1] == default_label) {
-                    any_redundant = true;
-                }
+        let op = inst[0] & 0xffff;
+        if op == 21 && count >= 3 && inst[2] == 64 {
+            int64_types.insert(inst[1]);
+        } else if !matches!(op, 5 | 6 | 19..=40 | 71 | 72 | 332 | 5632 | 5633)
+            && count >= 3
+            && int64_types.contains(&inst[1])
+        {
+            val_int64.insert(inst[2]);
+        } else if op == 251
+            && count >= 5
+            && !val_int64.contains(&inst[1])
+            && (count - 3).is_multiple_of(2)
+        {
+            let default_label = inst[2];
+            if inst[3..].chunks_exact(2).any(|p| p[1] == default_label) {
+                any_redundant = true;
             }
-            _ => {}
         }
         at += count;
     }
-    if !any_redundant || has_int64 {
+    if !any_redundant {
         return Ok(words.to_vec());
     }
     let mut out = Vec::with_capacity(words.len());
@@ -975,7 +982,11 @@ fn strip_redundant_switch_default_cases(words: &[u32]) -> Result<Vec<u32>> {
     while at < words.len() {
         let count = (words[at] >> 16) as usize;
         let inst = &words[at..at + count];
-        if (inst[0] & 0xffff) == 251 && count >= 5 && (count - 3).is_multiple_of(2) {
+        if (inst[0] & 0xffff) == 251
+            && count >= 5
+            && !val_int64.contains(&inst[1])
+            && (count - 3).is_multiple_of(2)
+        {
             let default_label = inst[2];
             let mut kept: Vec<u32> = Vec::with_capacity(count - 3);
             for pair in inst[3..].chunks_exact(2) {
@@ -1102,7 +1113,7 @@ fn pack_storage_vectors(words: &[u32]) -> Result<Vec<u32>> {
         }
         if let Some(&(_, count)) = vectors.get(&ty) {
             let align = if count == 2 { 8 } else { 16 };
-            return Some((count * 4, align, count == 3));
+            return Some((count * 4, align, false));
         }
         if !block_structs.contains(&ty)
             && let Some(fields) = structs.get(&ty)

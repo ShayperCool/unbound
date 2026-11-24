@@ -1265,3 +1265,54 @@ fn procedural_instancing_is_read_from_the_instancing_options() {
         None
     );
 }
+
+#[test]
+fn subshader_with_unsupported_geometry_stage_is_marked_restricted() {
+    let scratch = Scratch::new("decl-geom-restricted");
+    scratch.write(
+        "Assets/GeomFallback.shader",
+        r#"Shader "Tests/GeomFallback" {
+            SubShader {
+                Tags { "RenderType"="Geom" }
+                Pass {
+                    HLSLPROGRAM
+                    #pragma vertex vert
+                    #pragma geometry geom
+                    #pragma fragment frag
+                    ENDHLSL
+                }
+            }
+            SubShader {
+                Tags { "RenderType"="Fallback" }
+                Pass {
+                    HLSLPROGRAM
+                    #pragma vertex vert
+                    #pragma fragment frag
+                    ENDHLSL
+                }
+            }
+        }"#,
+    );
+    let data = scratch.0.join("unity");
+    std::fs::create_dir_all(&data).unwrap();
+    let provider = Provider::new(inputs(
+        &scratch,
+        scratch.0.join("CGIncludes"),
+        data,
+        MEASURED,
+        Arc::new(AtomicUsize::new(0)),
+        Arc::new(AtomicBool::new(false)),
+    ));
+    let answer = ask(&provider, "Tests/GeomFallback");
+    assert_eq!(answer["subshaders_known"], true, "{answer}");
+    let subs = answer["subshaders"].as_array().unwrap();
+    assert_eq!(subs.len(), 2);
+    assert_eq!(
+        subs[0]["restricted"], true,
+        "geometry SubShader must be restricted: {answer}"
+    );
+    assert_eq!(
+        subs[1]["restricted"], false,
+        "fallback vert/frag SubShader must not be restricted: {answer}"
+    );
+}

@@ -40,6 +40,7 @@
 {"k":"lifecycle.replace.buf_to_tex.tex","v":[0.25,0.5,0.75,1]}
 {"k":"lifecycle.replace.tex_to_buf.buf","v":77}
 {"k":"lifecycle.replace.tex_to_buf.tex","v":[0.125,0.25,0.375,0.5]}
+{"k":"lifecycle.invalid_rt_over_buf","v":88}
 {"k":"lifecycle.mixed.tex","v":[0.5,0.75,0.25,1]}
 {"k":"lifecycle.mixed.buf","v":123}
 {"k":"lifecycle.rmw","v":[0.375,0.75,0.5,0.75]}
@@ -47,4 +48,7 @@
 {"k":"switch.axis1","v":[0.5,0.625,0.75,1]}
 {"k":"switch.axis2","v":[0.875,0.25,0.5,1]}
 {"k":"packed.structs","v":[9,100,28,73,14,40,13]}
+{"k":"packed.write.trailing","v":[2,8,10,12,18,20]}
+{"k":"packed.write.mixed","v":[3,5,8,12,13,18,20,22]}
+{"k":"packed.write.nested","v":[3,12,15,18,21,30,33,36]}
 {"k":"complete","v":true}

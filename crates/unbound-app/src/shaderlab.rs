@@ -701,7 +701,7 @@ impl ShaderLab {
                 .collect();
             return;
         }
-        let found = self.subshaders.iter().find(|sub| {
+        let matches = |sub: &&SubShader| {
             let runs = runs_under(sub.tags.get("RenderPipeline").map(String::as_str), pipeline);
             let vertex_lit = !selection.vertex_lit
                 || sub
@@ -715,7 +715,15 @@ impl ShaderLab {
                     .tag
                     .as_ref()
                     .is_none_or(|(key, value)| sub.tags.get(key).is_some_and(|v| v == value))
-        });
+        };
+        // Prefer a matching SubShader whose passes use only supported stages (vertex/fragment),
+        // falling back to a matching SubShader with geometry/tessellation passes when no fallback
+        // SubShader exists so working sibling passes still draw and unsupported passes fail loudly.
+        let found = self
+            .subshaders
+            .iter()
+            .find(|sub| matches(sub) && !sub.uses_unsupported_stage)
+            .or_else(|| self.subshaders.iter().find(matches));
         match found {
             Some(sub) => {
                 self.has_subshader = true;
@@ -1023,6 +1031,9 @@ pub struct SubShader {
     /// Every pass it has is one the device does not run, so it is not chosen (Unbound's
     /// reading: unmeasured, where only a dropped pass among others is).
     pub unsupported: bool,
+    /// At least one kept pass declares a geometry or tessellation stage (`#pragma geometry`,
+    /// `hull`, or `domain`): skipped only when another matching SubShader runs without them.
+    pub uses_unsupported_stage: bool,
 }
 
 impl Parser<'_> {
@@ -1296,6 +1307,7 @@ impl Parser<'_> {
             dropped: Vec::new(),
             declared: Vec::new(),
             unsupported: false,
+            uses_unsupported_stage: false,
         };
         if self.next() != Some(Token::Open) {
             return sub;
@@ -1414,8 +1426,8 @@ impl Parser<'_> {
             .iter()
             .cloned()
             .partition(|pass| pass.runs_on(self.renderer));
-        sub.unsupported = (!sub.declared.is_empty() && sub.passes.is_empty())
-            || sub.passes.iter().any(PassInfo::uses_unsupported_stage);
+        sub.unsupported = !sub.declared.is_empty() && sub.passes.is_empty();
+        sub.uses_unsupported_stage = sub.passes.iter().any(PassInfo::uses_unsupported_stage);
         sub
     }
 
@@ -2133,8 +2145,9 @@ mod tests {
             Pass { Name \"Terrain\" HLSLPROGRAM\n#pragma vertex v\n#pragma fragment f\nENDHLSL } \
             Pass { Name \"MeshFallback\" HLSLPROGRAM\n#pragma vertex v\n#pragma fragment f\nENDHLSL } } }";
         let lab = ShaderLab::parse(geom).unwrap();
-        assert!(lab.subshaders[0].unsupported);
-        assert!(!lab.subshaders[1].unsupported);
+        assert!(!lab.subshaders[0].unsupported);
+        assert!(lab.subshaders[0].uses_unsupported_stage);
+        assert!(!lab.subshaders[1].uses_unsupported_stage);
         assert_eq!(names(&lab), vec!["Terrain", "MeshFallback"]);
 
         let names = |lab: &ShaderLab| {
@@ -2739,5 +2752,72 @@ Pass { Name "TAIL" }
             s.passes[0].states.fixed_function(),
             s.passes[1].states.fixed_function()
         );
+    }
+
+    #[test]
+    fn subshader_with_geometry_stage_prefers_fallback_subshader_but_keeps_single_subshader() {
+        // Multi-SubShader: prefers the vertex/fragment fallback SubShader.
+        let multi = ShaderLab::parse(
+            r#"Shader "Tests/GeomMulti" {
+                SubShader {
+                    Tags { "RenderType"="Geom" }
+                    Pass {
+                        Name "GeomPass"
+                        HLSLPROGRAM
+                        #pragma vertex v
+                        #pragma geometry g
+                        #pragma fragment f
+                        ENDHLSL
+                    }
+                }
+                SubShader {
+                    Tags { "RenderType"="Fallback" }
+                    Pass {
+                        Name "FallbackPass"
+                        HLSLPROGRAM
+                        #pragma vertex v
+                        #pragma fragment f
+                        ENDHLSL
+                    }
+                }
+            }"#,
+        )
+        .unwrap();
+        assert!(multi.has_subshader);
+        assert_eq!(multi.passes.len(), 1);
+        assert_eq!(multi.passes[0].name, "FallbackPass");
+        assert!(multi.subshaders[0].uses_unsupported_stage);
+        assert!(!multi.subshaders[1].uses_unsupported_stage);
+
+        // Single-SubShader with a working sibling pass + a geometry pass (and Fallback "Diffuse"):
+        // must keep the SubShader selected so Pass 0 still renders and Pass 1 fails loudly at
+        // compile time instead of silently following Fallback "Diffuse".
+        let single = ShaderLab::parse(
+            r#"Shader "Tests/GeomSingle" {
+                SubShader {
+                    Pass {
+                        Name "WorkingPass"
+                        HLSLPROGRAM
+                        #pragma vertex v
+                        #pragma fragment f
+                        ENDHLSL
+                    }
+                    Pass {
+                        Name "GeomPass"
+                        HLSLPROGRAM
+                        #pragma vertex v
+                        #pragma geometry g
+                        #pragma fragment f
+                        ENDHLSL
+                    }
+                }
+                Fallback "Diffuse"
+            }"#,
+        )
+        .unwrap();
+        assert!(single.has_subshader);
+        assert_eq!(single.passes.len(), 2);
+        assert_eq!(single.passes[0].name, "WorkingPass");
+        assert_eq!(single.passes[1].name, "GeomPass");
     }
 }
