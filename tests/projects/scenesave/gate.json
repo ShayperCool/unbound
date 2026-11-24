@@ -31,6 +31,8 @@
     "managed/UnityEngine/Editor/PrefabWrites.cs",
     "managed/UnityEngine/Editor/ObjectChangeEvents.cs",
     "managed/UnityEngine/Core/SceneManagement.cs",
+    "managed/UnityEngine/Runtime/Compat.cs",
+    "managed/Unbound.Host/Game.cs",
     "tests/projects/scenesave/"
   ]
 }

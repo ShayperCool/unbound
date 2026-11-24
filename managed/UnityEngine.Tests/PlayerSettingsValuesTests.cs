@@ -222,7 +222,8 @@ namespace UnityEngine.Tests
             bool playing = EditorSession.IsPlaying;
             try
             {
-                // Missing ProjectSettings.asset under measured release reports via Stubs.Ignored.
+                // Missing ProjectSettings.asset under measured release reports via Stubs.Ignored on
+                // SetApplicationIdentifier and keeps iOS.buildNumber writes in memory.
                 ProjectInfo.ProjectPath = emptyDir;
                 ProjectInfo.Identifier = "com.keep.me";
                 SettingsAssets.Reset();
@@ -232,6 +233,11 @@ namespace UnityEngine.Tests
                     PlayerSettings.SetApplicationIdentifier(NamedBuildTarget.Standalone, "com.new.id");
                     Assert.Equal("com.keep.me", Application.identifier);
                     Assert.Equal(hitsBefore + 1, StubHits("UnityEditor.PlayerSettings.SetApplicationIdentifier"));
+                    Assert.Equal("0", PlayerSettings.iOS.buildNumber);
+                    PlayerSettings.iOS.buildNumber = "27.3";
+                    Assert.Equal("27.3", PlayerSettings.iOS.buildNumber);
+                    PlayerSettings.iOS.buildNumber = null;
+                    Assert.Equal("", PlayerSettings.iOS.buildNumber);
                 }
 
                 // Populated ProjectSettings.asset under an unmeasured release keeps prior fallbacks,
@@ -260,7 +266,10 @@ namespace UnityEngine.Tests
 
                     PlayerSettings.bundleVersion = "9.9";
                     PlayerSettings.Android.bundleVersionCode = 77;
+                    PlayerSettings.iOS.buildNumber = null;
+                    Assert.Null(PlayerSettings.iOS.buildNumber);
                     PlayerSettings.iOS.buildNumber = "7.7";
+                    Assert.Equal("7.7", PlayerSettings.iOS.buildNumber);
                     AssetDatabase.SaveAssets();
                     Assert.Equal(originalYaml, File.ReadAllText(populatedSettings));
                 }

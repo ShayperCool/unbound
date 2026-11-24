@@ -203,17 +203,29 @@ namespace UnityEditor
         public partial class iOS
         {
             internal static string s_BuildNumber = "1";
+            internal static bool s_BuildNumberSet;
 
             public static string buildNumber
             {
-                get => Compat.ProjectBuildIdentityMeasured
-                    ? StoredTargetText("buildNumber", NamedBuildTarget.iOS.TargetName) ?? "0"
-                    : s_BuildNumber;
+                get
+                {
+                    if (!Compat.ProjectBuildIdentityMeasured) return s_BuildNumber;
+                    var body = SettingsAssets.ReadBody("ProjectSettings");
+                    if (body == null) return s_BuildNumberSet ? s_BuildNumber : "0";
+                    return body.Get("buildNumber")?.Get(NamedBuildTarget.iOS.TargetName)?.Text ?? "0";
+                }
                 set
                 {
-                    s_BuildNumber = value ?? "";
+                    s_BuildNumberSet = true;
                     if (Compat.ProjectBuildIdentityMeasured)
+                    {
+                        s_BuildNumber = value ?? "";
                         SettingsAssets.Edit("ProjectSettings", body => SetTargetText(body, "buildNumber", NamedBuildTarget.iOS.TargetName, value));
+                    }
+                    else
+                    {
+                        s_BuildNumber = value;
+                    }
                 }
             }
 
