@@ -289,4 +289,31 @@ mod tests {
         assert_eq!(settings.filter, crate::texture::FilterMode::Point);
         assert!(read_v1(asset).is_err());
     }
+
+    #[test]
+    fn reads_secondary_texture_settings_flag() {
+        assert!(!read_v1(V1).unwrap().secondary_settings);
+        let v1_empty = V1.replace(
+            "    bindAsDefault: 1\n",
+            "    bindAsDefault: 1\n    secondaryTextureSettings: {}\n",
+        );
+        assert!(!read_v1(&v1_empty).unwrap().secondary_settings);
+        let v1_set = V1.replace(
+            "    bindAsDefault: 1\n",
+            "    bindAsDefault: 1\n    secondaryTextureSettings:\n      _NormalMap:\n        sRGB: 0\n",
+        );
+        assert!(read_v1(&v1_set).unwrap().secondary_settings);
+
+        let asset = "%YAML 1.1\n%TAG !u! tag:unity3d.com,2011:\n--- !u!612988286 &1\nSpriteAtlasAsset:\n  m_Name: \n  m_ImporterData:\n    packables: []\n  m_IsVariant: 0\n";
+        let meta_empty = unbound_yaml::parse_value(
+            "fileFormatVersion: 2\nguid: 0123456789abcdef0123456789abcdef\nSpriteAtlasImporter:\n  secondaryTextureSettings: {}\n",
+        )
+        .unwrap();
+        assert!(!read_v2(asset, &meta_empty, "A").unwrap().secondary_settings);
+        let meta_set = unbound_yaml::parse_value(
+            "fileFormatVersion: 2\nguid: 0123456789abcdef0123456789abcdef\nSpriteAtlasImporter:\n  secondaryTextureSettings:\n    _NormalMap:\n      sRGB: 0\n",
+        )
+        .unwrap();
+        assert!(read_v2(asset, &meta_set, "A").unwrap().secondary_settings);
+    }
 }

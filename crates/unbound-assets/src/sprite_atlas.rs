@@ -3,8 +3,8 @@
 //! pixels.
 //!
 //! The layout:
-//! - Sprites are ordered by their secondary-texture set, then by texture rect area (largest
-//!   first), then by texture (by GUID; on one texture by the FNV-1a hash of the name).
+//! - Sprites are ordered by their secondary-texture hash (0 for none), then by texture rect area
+//!   (largest first), then by texture (by GUID; on one texture by the FNV-1a hash of the name).
 //! - Each sprite's mask is its render mesh rasterized over the texture rect's pixel bounds (the
 //!   whole covered box unless the atlas packs tightly), grown by the padding towards +x and +y.
 //! - A sprite tries the pages from the last to the first, then opens a new page, where it goes to
@@ -208,18 +208,16 @@ impl Layout {
     }
 }
 
-/// The packing order: sprites without secondary textures first, then area (largest first), then
-/// the set of secondary textures (matches the Unity 6000.0.71f1 Editor,
-/// tests/projects/spriteatlassecondary; the Editor's order of two sets of one area is not a
-/// function of the sets), then texture.
+/// The packing order: by [`PackSprite::secondary_hash`] ascending (0 for sprites without secondary
+/// textures first), then by area (largest first), then by texture (matches the Unity 6000.0.71f1
+/// Editor, tests/projects/spriteatlassecondary).
 fn compare(a: &PackSprite, b: &PackSprite) -> Ordering {
-    (a.secondary_hash != 0)
-        .cmp(&(b.secondary_hash != 0))
+    a.secondary_hash
+        .cmp(&b.secondary_hash)
         .then_with(|| {
             let area = |s: &PackSprite| s.rect[2] * s.rect[3];
             area(b).partial_cmp(&area(a)).unwrap_or(Ordering::Equal)
         })
-        .then_with(|| a.secondary_hash.cmp(&b.secondary_hash))
         .then_with(|| compare_texture_only(a, b))
 }
 
@@ -247,6 +245,258 @@ pub fn texture_order(sprites: &[PackSprite]) -> Vec<usize> {
 fn fnv1a(text: &str) -> u32 {
     text.bytes()
         .fold(0x811c_9dc5, |h, b| (h ^ b as u32).wrapping_mul(0x0100_0193))
+}
+
+/// The packer's key for a sprite's secondary textures (0 when it has none): the sorted,
+/// deduplicated property names folded with CityHash64-with-seed in the high 32 bits and the
+/// xxHash32 of the sprite texture's GUID words in the low 32 bits (matches the Unity 6000.0.71f1
+/// Editor, tests/projects/spriteatlassecondary).
+pub fn secondary_hash<'a>(names: impl IntoIterator<Item = &'a str>, texture_guid: u128) -> u64 {
+    const XXH_SEED: u32 = 0x8f37_154b;
+    let mut keyed: Vec<(u32, &str)> = names
+        .into_iter()
+        .map(|name| (xxh32(name.as_bytes(), XXH_SEED), name))
+        .collect();
+    if keyed.is_empty() {
+        return 0;
+    }
+    keyed.sort_unstable_by_key(|&(h, _)| h);
+    keyed.dedup_by_key(|&mut (h, _)| h);
+    let mut hi = 0u64;
+    for (_, name) in keyed {
+        hi = cityhash64_with_seed(name.as_bytes(), hi);
+    }
+    if hi == 0 {
+        return 0;
+    }
+    let words = guid_words(texture_guid);
+    let mut guid_bytes = [0u8; 16];
+    for (i, word) in words.iter().enumerate() {
+        guid_bytes[i * 4..i * 4 + 4].copy_from_slice(&word.to_le_bytes());
+    }
+    let lo = xxh32(&guid_bytes, XXH_SEED) as u64;
+    ((hi & 0xffff_ffff) << 32) | lo
+}
+
+/// xxHash32.
+fn xxh32(data: &[u8], seed: u32) -> u32 {
+    const P1: u32 = 0x9e37_79b1;
+    const P2: u32 = 0x85eb_ca77;
+    const P3: u32 = 0xc2b2_ae3d;
+    const P4: u32 = 0x27d4_eb2f;
+    const P5: u32 = 0x1656_67b1;
+    let read32 = |i: usize| u32::from_le_bytes(data[i..i + 4].try_into().unwrap());
+    let round = |acc: u32, lane: u32| {
+        acc.wrapping_add(lane.wrapping_mul(P2))
+            .rotate_left(13)
+            .wrapping_mul(P1)
+    };
+    let n = data.len();
+    let mut i = 0;
+    let mut h = if n >= 16 {
+        let mut v1 = seed.wrapping_add(P1).wrapping_add(P2);
+        let mut v2 = seed.wrapping_add(P2);
+        let mut v3 = seed;
+        let mut v4 = seed.wrapping_sub(P1);
+        while i <= n - 16 {
+            v1 = round(v1, read32(i));
+            v2 = round(v2, read32(i + 4));
+            v3 = round(v3, read32(i + 8));
+            v4 = round(v4, read32(i + 12));
+            i += 16;
+        }
+        v1.rotate_left(1)
+            .wrapping_add(v2.rotate_left(7))
+            .wrapping_add(v3.rotate_left(12))
+            .wrapping_add(v4.rotate_left(18))
+    } else {
+        seed.wrapping_add(P5)
+    };
+    h = h.wrapping_add(n as u32);
+    while i <= n - 4 {
+        h = h
+            .wrapping_add(read32(i).wrapping_mul(P3))
+            .rotate_left(17)
+            .wrapping_mul(P4);
+        i += 4;
+    }
+    while i < n {
+        h = h
+            .wrapping_add((data[i] as u32).wrapping_mul(P5))
+            .rotate_left(11)
+            .wrapping_mul(P1);
+        i += 1;
+    }
+    h ^= h >> 15;
+    h = h.wrapping_mul(P2);
+    h ^= h >> 13;
+    h = h.wrapping_mul(P3);
+    h ^ (h >> 16)
+}
+
+/// CityHash64 with a single seed (CityHash64WithSeed).
+fn cityhash64_with_seed(data: &[u8], seed: u64) -> u64 {
+    const K2: u64 = 0x9ae1_6a3b_2f90_404f;
+    city_hash_len_16(cityhash64(data).wrapping_sub(K2), seed)
+}
+
+fn city_hash_len_16(u: u64, v: u64) -> u64 {
+    city_hash_len_16_mul(u, v, 0x9ddf_ea08_eb38_2d69)
+}
+
+fn city_hash_len_16_mul(u: u64, v: u64, mul: u64) -> u64 {
+    let mut a = (u ^ v).wrapping_mul(mul);
+    a ^= a >> 47;
+    let mut b = (v ^ a).wrapping_mul(mul);
+    b ^= b >> 47;
+    b.wrapping_mul(mul)
+}
+
+fn cityhash64(data: &[u8]) -> u64 {
+    const K0: u64 = 0xc3a5_c85c_97cb_3127;
+    const K1: u64 = 0xb492_b66f_be98_f273;
+    const K2: u64 = 0x9ae1_6a3b_2f90_404f;
+    let shift_mix = |v: u64| v ^ (v >> 47);
+    let read64 = |i: usize| u64::from_le_bytes(data[i..i + 8].try_into().unwrap());
+    let read32 = |i: usize| u32::from_le_bytes(data[i..i + 4].try_into().unwrap()) as u64;
+    let weak_hash_len_32 = |i: usize, mut a: u64, mut b: u64| -> (u64, u64) {
+        let w = read64(i);
+        let x = read64(i + 8);
+        let y = read64(i + 16);
+        let z = read64(i + 24);
+        a = a.wrapping_add(w);
+        b = b.wrapping_add(a).wrapping_add(z).rotate_right(21);
+        let c = a;
+        a = a.wrapping_add(x).wrapping_add(y);
+        b = b.wrapping_add(a.rotate_right(44));
+        (a.wrapping_add(z), b.wrapping_add(c))
+    };
+    let n = data.len();
+    if n <= 16 {
+        if n >= 8 {
+            let mul = K2.wrapping_add((n as u64) * 2);
+            let a = read64(0).wrapping_add(K2);
+            let b = read64(n - 8);
+            let c = b.rotate_right(37).wrapping_mul(mul).wrapping_add(a);
+            let d = a.rotate_right(25).wrapping_add(b).wrapping_mul(mul);
+            return city_hash_len_16_mul(c, d, mul);
+        }
+        if n >= 4 {
+            let mul = K2.wrapping_add((n as u64) * 2);
+            let a = read32(0);
+            return city_hash_len_16_mul((n as u64).wrapping_add(a << 3), read32(n - 4), mul);
+        }
+        if n > 0 {
+            let a = data[0] as u32;
+            let b = data[n >> 1] as u32;
+            let c = data[n - 1] as u32;
+            let y = a.wrapping_add(b << 8) as u64;
+            let z = (n as u32).wrapping_add(c << 2) as u64;
+            return shift_mix(y.wrapping_mul(K2) ^ z.wrapping_mul(K0)).wrapping_mul(K2);
+        }
+        return K2;
+    }
+    if n <= 32 {
+        let mul = K2.wrapping_add((n as u64) * 2);
+        let a = read64(0).wrapping_mul(K1);
+        let b = read64(8);
+        let c = read64(n - 8).wrapping_mul(mul);
+        let d = read64(n - 16).wrapping_mul(K2);
+        return city_hash_len_16_mul(
+            a.wrapping_add(b)
+                .rotate_right(43)
+                .wrapping_add(c.rotate_right(30))
+                .wrapping_add(d),
+            a.wrapping_add(b.wrapping_add(K2).rotate_right(18))
+                .wrapping_add(c),
+            mul,
+        );
+    }
+    if n <= 64 {
+        let mul = K2.wrapping_add((n as u64) * 2);
+        let mut a = read64(0).wrapping_mul(K2);
+        let b = read64(8);
+        let c = read64(n - 24);
+        let d = read64(n - 32);
+        let e = read64(16).wrapping_mul(K2);
+        let f = read64(24).wrapping_mul(9);
+        let g = read64(n - 8);
+        let h = read64(n - 16).wrapping_mul(mul);
+        let u = a
+            .wrapping_add(g)
+            .rotate_right(43)
+            .wrapping_add(b.rotate_right(30).wrapping_add(c).wrapping_mul(9));
+        let v = (a.wrapping_add(g) ^ d).wrapping_add(f).wrapping_add(1);
+        let w = u
+            .wrapping_add(v)
+            .wrapping_mul(mul)
+            .swap_bytes()
+            .wrapping_add(h);
+        let x = e.wrapping_add(f).rotate_right(42).wrapping_add(c);
+        let y = v
+            .wrapping_add(w)
+            .wrapping_mul(mul)
+            .swap_bytes()
+            .wrapping_add(g)
+            .wrapping_mul(mul);
+        let z = e.wrapping_add(f).wrapping_add(c);
+        a = x
+            .wrapping_add(z)
+            .wrapping_mul(mul)
+            .wrapping_add(y)
+            .swap_bytes()
+            .wrapping_add(b);
+        let b2 = shift_mix(
+            z.wrapping_add(a)
+                .wrapping_mul(mul)
+                .wrapping_add(d)
+                .wrapping_add(h),
+        )
+        .wrapping_mul(mul);
+        return b2.wrapping_add(x);
+    }
+    let mut x = read64(n - 40);
+    let mut y = read64(n - 16).wrapping_add(read64(n - 56));
+    let mut z = city_hash_len_16(read64(n - 48).wrapping_add(n as u64), read64(n - 24));
+    let mut v = weak_hash_len_32(n - 64, n as u64, z);
+    let mut w = weak_hash_len_32(n - 32, y.wrapping_add(K1), x);
+    x = x.wrapping_mul(K1).wrapping_add(read64(0));
+    let mut len = (n - 1) & !63;
+    let mut pos = 0;
+    loop {
+        x = x
+            .wrapping_add(y)
+            .wrapping_add(v.0)
+            .wrapping_add(read64(pos + 8))
+            .rotate_right(37)
+            .wrapping_mul(K1);
+        y = y
+            .wrapping_add(v.1)
+            .wrapping_add(read64(pos + 48))
+            .rotate_right(42)
+            .wrapping_mul(K1);
+        x ^= w.1;
+        y = y.wrapping_add(v.0).wrapping_add(read64(pos + 40));
+        z = z.wrapping_add(w.0).rotate_right(33).wrapping_mul(K1);
+        v = weak_hash_len_32(pos, v.1.wrapping_mul(K1), x.wrapping_add(w.0));
+        w = weak_hash_len_32(
+            pos + 32,
+            z.wrapping_add(w.1),
+            y.wrapping_add(read64(pos + 16)),
+        );
+        std::mem::swap(&mut z, &mut x);
+        pos += 64;
+        len -= 64;
+        if len == 0 {
+            break;
+        }
+    }
+    city_hash_len_16(
+        city_hash_len_16(v.0, w.0)
+            .wrapping_add(shift_mix(y).wrapping_mul(K1))
+            .wrapping_add(z),
+        city_hash_len_16(v.1, w.1).wrapping_add(x),
+    )
 }
 
 /// A GUID's four 32-bit words, which order textures: each word's nibbles are its group's eight
@@ -1308,5 +1558,67 @@ mod tests {
             let pixels = layout.page_pixels(0, &settings(32, 2, true, tight), |_| &texels);
             assert_eq!(pixels.len(), 32 * 32 * 4);
         }
+    }
+
+    #[test]
+    fn secondary_hash_and_packing_order() {
+        let a_guid = 0xc66d_2bec_041d_41ac_b50e_331a_e0be_99beu128;
+        let b_guid = 0x098b_d20c_5d6e_4e51_83a4_79e7_f1c8_ed03u128;
+        let d_guid = 0x004c_e611_c288_474f_8da7_ca87_8b03_b9dbu128;
+        let f_guid = 0x370e_18e2_7df8_4a38_9722_c2d7_dc0c_59b6u128;
+        assert_eq!(secondary_hash([], a_guid), 0);
+        // Order and duplicate invariance for property names.
+        let h_a = secondary_hash(["_NormalMap", "_MaskTex"], a_guid);
+        assert_eq!(h_a, 0x8b2b_77f9_4659_974c);
+        assert_eq!(
+            secondary_hash(["_MaskTex", "_NormalMap", "_NormalMap"], a_guid),
+            h_a
+        );
+        let h_b = secondary_hash(["_NormalMap"], b_guid);
+        assert_eq!(h_b, 0xdd6a_6110_7189_967d);
+        let h_d = secondary_hash(["_NormalMap", "_MaskTex"], d_guid);
+        assert_eq!(h_d, 0x8b2b_77f9_5aed_2333);
+        let h_f = secondary_hash(["_NormalMap", "_MaskTex"], f_guid);
+        assert_eq!(h_f, 0x8b2b_77f9_a7a5_9d59);
+        assert_eq!(h_a >> 32, h_d >> 32);
+        assert_eq!(h_a >> 32, h_f >> 32);
+        // Long property names (>32 and >64 bytes) produce distinct non-zero hashes.
+        let long40 = "_SecondaryPropertyNameLongerThanThirtyTwo";
+        let long72 = "_SecondaryPropertyNameMuchLongerThanSixtyFourBytesForCityHashLoopCoverage";
+        assert_ne!(secondary_hash([long40], a_guid), 0);
+        assert_ne!(secondary_hash([long72], a_guid), 0);
+        assert_ne!(
+            secondary_hash([long40], a_guid),
+            secondary_hash([long72], a_guid)
+        );
+
+        // compare() orders by secondary_hash ascending BEFORE area (even when the higher hash has
+        // larger area), while texture_order() ignores secondary_hash.
+        let vertices: &[[f32; 2]] = &[[-0.5, 0.5], [0.5, 0.5], [-0.5, -0.5], [0.5, -0.5]];
+        let make =
+            |name: &'static str, guid: u128, texture: usize, hash: u64, side: f32| PackSprite {
+                name,
+                texture_guid: guid,
+                texture,
+                secondary_hash: hash,
+                texture_size: [side as u32, side as u32],
+                rect: [0.0, 0.0, side, side],
+                uv_transform: [1.0, side / 2.0, 1.0, side / 2.0],
+                vertices,
+                indices: &[0, 1, 2, 2, 1, 3],
+            };
+        let sprites = [
+            make("LargeHighHash", b_guid, 0, h_b, 16.0),
+            make("SmallLowHash", a_guid, 1, h_a, 8.0),
+            make("SmallNone", d_guid, 2, 0, 4.0),
+            make("LargeMidHash", f_guid, 3, h_f, 20.0),
+        ];
+        let packed = layout(&sprites, &settings(64, 2, false, false)).unwrap();
+        // Secondary hash order: 0 (SmallNone) < h_a (SmallLowHash) < h_f (LargeMidHash) < h_b (LargeHighHash).
+        assert_eq!(packed.order, [2, 1, 3, 0]);
+        // texture_order() orders purely by texture GUID words, ignoring secondary_hash.
+        let mut by_guid: Vec<usize> = (0..sprites.len()).collect();
+        by_guid.sort_by_key(|&i| guid_words(sprites[i].texture_guid));
+        assert_eq!(texture_order(&sprites), by_guid);
     }
 }

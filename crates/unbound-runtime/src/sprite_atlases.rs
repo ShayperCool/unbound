@@ -358,27 +358,9 @@ fn secondary_guids(meta: &Path) -> Vec<Guid> {
         .collect()
 }
 
-/// The packer's key for a sprite's set of secondary textures (0 without any). The Editor packs a
-/// sprite without secondary textures before those with them, then by area
-/// (tests/projects/spriteatlassecondary); its order of two different sets of one area is not a
-/// function of the sets (swapping sets between sprites reorders them), so such ties break by an
-/// FNV-1a hash of their property names and texture GUIDs.
-fn secondary_hash(textures: &[unbound_assets::sprite::SecondaryTextureDef]) -> u64 {
-    if textures.is_empty() {
-        return 0;
-    }
-    let mut parts: Vec<(&str, &str)> = textures
-        .iter()
-        .map(|t| (t.name.as_str(), t.guid.as_str()))
-        .collect();
-    parts.sort_unstable();
-    let mut hash: u64 = 0xcbf2_9ce4_8422_2325;
-    for (name, guid) in parts {
-        for byte in name.bytes().chain([0]).chain(guid.bytes()).chain([0]) {
-            hash = (hash ^ u64::from(byte)).wrapping_mul(0x0000_0100_0000_01b3);
-        }
-    }
-    hash.max(1)
+/// The packer's key for a sprite's set of secondary textures (0 without any).
+fn secondary_hash(textures: &[unbound_assets::sprite::SecondaryTextureDef], guid: Guid) -> u64 {
+    sprite_atlas::secondary_hash(textures.iter().map(|t| t.name.as_str()), guid.0)
 }
 
 /// The format part of a page's name: the Editor's for the measured formats, else the Unity
@@ -427,6 +409,9 @@ impl AtlasImporter<'_> {
         packed.complete = master.complete;
         packed.scale = scale;
         packed.sprites = master.sprites.clone();
+        for sprite in &mut packed.sprites {
+            sprite.secondary.clear();
+        }
         packed.uv_sizes = master.uv_sizes.clone();
         let mut settings = self.textures.settings(&def.texture_meta);
         settings.format_alpha = Some(true);
@@ -477,7 +462,9 @@ impl Importer for AtlasImporter<'_> {
     // 6: a variant without a master is not packed (its pack is incomplete).
     // 7: secondary textures are packed into secondary pages.
     // 8: sprites with secondary textures pack by area before their set.
-    const VERSION: u32 = 8;
+    // 9: secondary-texture packing order hashes property names and texture GUID; variants clear
+    //    secondary page bindings; single-channel secondary textures are not packed.
+    const VERSION: u32 = 9;
 
     fn dependencies(&self, source: &Path) -> Result<Vec<PathBuf>> {
         let bytes = std::fs::read(source)?;
@@ -681,10 +668,11 @@ impl Importer for AtlasImporter<'_> {
                 if found.width != texture.width
                     || found.height != texture.height
                     || found.format != unbound_assets::texture::TextureFormat::Rgba8
+                    || found.gpu_channel().is_some()
                 {
                     packed.warnings.push(format!(
-                        "atlas {}: secondary texture {} ({}) of {} is not the size or a byte \
-                         format of its texture; it is not packed",
+                        "atlas {}: secondary texture {} ({}) of {} is not the size or an RGBA \
+                         byte format of its texture; it is not packed",
                         def.name, sec.name, found.name, texture.name
                     ));
                     continue;
@@ -740,7 +728,10 @@ impl Importer for AtlasImporter<'_> {
                     name,
                     texture_guid: textures[t].0.0,
                     texture: t,
-                    secondary_hash: secondary_hash(&textures[t].1.sprites[s].secondary_textures),
+                    secondary_hash: secondary_hash(
+                        &textures[t].1.sprites[s].secondary_textures,
+                        textures[t].0,
+                    ),
                     texture_size: [texture.width, texture.height],
                     rect,
                     uv_transform: [
@@ -886,19 +877,24 @@ mod tests {
             name: name.into(),
             guid: guid.into(),
         };
+        let tex_a = Guid::parse("c66d2bec041d41acb50e331ae0be99be").unwrap();
+        let tex_d = Guid::parse("004ce611c288474f8da7ca878b03b9db").unwrap();
         let normal = def("_NormalMap", "11111111111111111111111111111111");
         let mask = def("_MaskTex", "22222222222222222222222222222222");
-        let other = def("_NormalMap", "33333333333333333333333333333333");
         // No secondary textures sorts before any set.
-        assert_eq!(secondary_hash(&[]), 0);
-        let both = secondary_hash(&[normal.clone(), mask.clone()]);
+        assert_eq!(secondary_hash(&[], tex_a), 0);
+        let both = secondary_hash(&[normal.clone(), mask.clone()], tex_a);
         assert!(both > 0);
         // A set is the same whatever order the sprite lists it in.
-        assert_eq!(secondary_hash(&[mask.clone(), normal.clone()]), both);
-        // Another texture or one property fewer is another set.
-        assert_ne!(secondary_hash(&[other.clone(), mask]), both);
-        assert_ne!(secondary_hash(&[normal.clone()]), secondary_hash(&[other]));
-        assert_ne!(secondary_hash(&[normal]), both);
+        assert_eq!(secondary_hash(&[mask.clone(), normal.clone()], tex_a), both);
+        // Another texture with the same property set shares the high 32 bits and differs in low 32 bits.
+        let both_d = secondary_hash(&[normal.clone(), mask], tex_d);
+        assert_eq!(both_d >> 32, both >> 32);
+        assert_ne!(both_d, both);
+        // One property fewer is another set (different high 32 bits).
+        let single = secondary_hash(&[normal], tex_a);
+        assert_ne!(single >> 32, both >> 32);
+        assert_ne!(single, both);
     }
 
     #[test]
@@ -1105,5 +1101,202 @@ mod tests {
         };
         set.merge(&cancelled);
         assert_eq!(set.atlases[0].1.name, "A");
+    }
+
+    #[test]
+    fn secondary_textures_dependencies_pages_warnings_and_variant_clearing() {
+        let root =
+            std::env::temp_dir().join(format!("unbound-atlas-secondary-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&root);
+        let assets = root.join("Assets");
+        std::fs::create_dir_all(&assets).unwrap();
+
+        let write_tga = |path: &Path, w: u16, h: u16, rgba: [u8; 4]| {
+            let mut bytes = Vec::with_capacity(18 + w as usize * h as usize * 4);
+            bytes.extend_from_slice(&[
+                0,
+                0,
+                2,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                (w & 0xff) as u8,
+                (w >> 8) as u8,
+                (h & 0xff) as u8,
+                (h >> 8) as u8,
+                32,
+                8,
+            ]);
+            for _ in 0..w as usize * h as usize {
+                bytes.extend_from_slice(&[rgba[2], rgba[1], rgba[0], rgba[3]]);
+            }
+            std::fs::write(path, bytes).unwrap();
+        };
+        let sprite_meta = |guid: &str, name: &str, w: u32, h: u32, secs: &[(&str, &str)]| {
+            let mut sec_yaml = String::new();
+            if secs.is_empty() {
+                sec_yaml.push_str("    secondaryTextures: []\n");
+            } else {
+                sec_yaml.push_str("    secondaryTextures:\n");
+                for (prop, sguid) in secs {
+                    sec_yaml.push_str(&format!(
+                        "    - name: {prop}\n      texture: {{fileID: 2800000, guid: {sguid}, type: 3}}\n"
+                    ));
+                }
+            }
+            format!(
+                "fileFormatVersion: 2\nguid: {guid}\nTextureImporter:\n  textureType: 8\n  spriteMode: 1\n  isReadable: 1\n  textureCompression: 0\n  spritePixelsToUnits: 100\n  spriteSheet:\n    sprites:\n    - name: {name}\n      rect:\n        x: 0\n        y: 0\n        width: {w}\n        height: {h}\n      alignment: 0\n      pivot: {{x: 0.5, y: 0.5}}\n      internalID: 21300000\n{sec_yaml}"
+            )
+        };
+        let tex_meta = |guid: &str, texture_type: i32, explicit_format: Option<i32>| {
+            let platform = match explicit_format {
+                Some(fmt) => format!(
+                    "  platformSettings:\n  - buildTarget: Standalone\n    textureFormat: {fmt}\n    overridden: 1\n"
+                ),
+                None => String::new(),
+            };
+            format!(
+                "fileFormatVersion: 2\nguid: {guid}\nTextureImporter:\n  textureType: {texture_type}\n  isReadable: 1\n  textureCompression: 0\n{platform}"
+            )
+        };
+
+        let g_main = "11111111111111111111111111111111";
+        let g_norm = "22222222222222222222222222222222";
+        let g_wrong_size = "33333333333333333333333333333333";
+        let g_alpha8 = "44444444444444444444444444444444";
+        let g_missing = "55555555555555555555555555555555";
+        let g_atlas = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
+        let g_var = "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
+
+        write_tga(&assets.join("Main.tga"), 8, 8, [255, 255, 255, 255]);
+        std::fs::write(
+            assets.join("Main.tga.meta"),
+            sprite_meta(
+                g_main,
+                "Main",
+                8,
+                8,
+                &[
+                    ("_NormalMap", g_norm),
+                    ("_WrongSize", g_wrong_size),
+                    ("_SingleChan", g_alpha8),
+                    ("_Missing", g_missing),
+                    ("_BadGuid", "not-a-guid"),
+                ],
+            ),
+        )
+        .unwrap();
+        write_tga(&assets.join("Norm.tga"), 8, 8, [128, 128, 255, 255]);
+        std::fs::write(assets.join("Norm.tga.meta"), tex_meta(g_norm, 0, None)).unwrap();
+        write_tga(&assets.join("WrongSize.tga"), 4, 4, [10, 20, 30, 255]);
+        std::fs::write(
+            assets.join("WrongSize.tga.meta"),
+            tex_meta(g_wrong_size, 0, None),
+        )
+        .unwrap();
+        write_tga(&assets.join("Alpha8.tga"), 8, 8, [255, 255, 255, 200]);
+        // TextureImporterFormat::Alpha8 = 1 (one-channel GPU format).
+        std::fs::write(
+            assets.join("Alpha8.tga.meta"),
+            tex_meta(g_alpha8, 0, Some(1)),
+        )
+        .unwrap();
+
+        let atlas = assets.join("M.spriteatlas");
+        std::fs::write(
+            &atlas,
+            format!(
+                "%YAML 1.1\n%TAG !u! tag:unity3d.com,2011:\n--- !u!687078895 &1\nSpriteAtlas:\n  m_Name: M\n  m_EditorData:\n    textureSettings:\n      readable: 1\n      textureCompression: 0\n    packingSettings:\n      padding: 2\n      enableRotation: 0\n      enableTightPacking: 0\n    packables:\n    - {{fileID: 2800000, guid: {g_main}, type: 3}}\n    secondaryTextureSettings:\n      _NormalMap:\n        sRGB: 0\n    bindAsDefault: 1\n  m_MasterAtlas: {{fileID: 0}}\n  m_Tag: M\n  m_IsVariant: 0\n"
+            ),
+        )
+        .unwrap();
+        std::fs::write(
+            assets.join("M.spriteatlas.meta"),
+            format!("fileFormatVersion: 2\nguid: {g_atlas}\n"),
+        )
+        .unwrap();
+
+        let variant = assets.join("V.spriteatlas");
+        std::fs::write(
+            &variant,
+            format!(
+                "%YAML 1.1\n%TAG !u! tag:unity3d.com,2011:\n--- !u!687078895 &1\nSpriteAtlas:\n  m_Name: V\n  m_EditorData:\n    textureSettings:\n      readable: 1\n      textureCompression: 0\n    variantMultiplier: 0.5\n    bindAsDefault: 1\n  m_MasterAtlas: {{fileID: 687078895, guid: {g_atlas}, type: 2}}\n  m_Tag: M\n  m_IsVariant: 1\n"
+            ),
+        )
+        .unwrap();
+        std::fs::write(
+            assets.join("V.spriteatlas.meta"),
+            format!("fileFormatVersion: 2\nguid: {g_var}\n"),
+        )
+        .unwrap();
+
+        let db = AssetDb::scan(&[unbound_project::assetdb::Root {
+            dir: &assets,
+            virtual_path: "Assets".into(),
+        }]);
+        let textures = TextureImporter::default();
+        let cache = AssetCache::new(root.join("cache"));
+        let importer = AtlasImporter {
+            db: &db,
+            textures: &textures,
+            cache: &cache,
+        };
+
+        // secondary_guids + dependencies() include secondary textures and their .meta files.
+        let sguids = secondary_guids(&assets.join("Main.tga.meta"));
+        assert!(sguids.contains(&Guid::parse(g_norm).unwrap()));
+        let deps = importer.dependencies(&atlas).unwrap();
+        assert!(deps.iter().any(|p| p.ends_with("Norm.tga")));
+        assert!(deps.iter().any(|p| p.ends_with("Norm.tga.meta")));
+
+        // Import master: _NormalMap packs; wrong size, single-channel, missing, bad GUID, and
+        // secondary_settings each emit warnings.
+        let bytes = std::fs::read(&atlas).unwrap();
+        let meta = unbound_yaml::parse_value(&std::fs::read_to_string(meta_path(&atlas)).unwrap())
+            .unwrap();
+        let packed = importer.import(&atlas, &bytes, &meta).unwrap();
+        assert_eq!(packed.sprites.len(), 1);
+        assert_eq!(packed.sprites[0].secondary, ["_NormalMap"]);
+        assert_eq!(packed.secondary_pages.len(), 1);
+        assert_eq!(packed.secondary_pages[0].len(), 1);
+        assert_eq!(packed.secondary_pages[0][0].0, "_NormalMap");
+        let has_warn = |needle: &str| packed.warnings.iter().any(|w| w.contains(needle));
+        assert!(has_warn("per-property secondary texture settings"));
+        assert!(has_warn("_Missing"));
+        assert!(has_warn("_BadGuid"));
+        assert!(has_warn("_WrongSize"));
+        assert!(has_warn("_SingleChan"));
+
+        // page() resolves `?property` for packed secondary pages and errors for unknown ones.
+        let set = AtlasSet {
+            atlases: vec![(Guid::parse(g_atlas).unwrap(), packed)],
+            cancelled: None,
+        };
+        assert!(page(&set, &format!("{g_atlas}:0?_NormalMap")).is_ok());
+        assert!(page(&set, &format!("{g_atlas}:0?_NoSuchProp")).is_err());
+
+        // Variant clears sprites' secondary bindings and warns that secondary pages are not scaled.
+        let vbytes = std::fs::read(&variant).unwrap();
+        let vmeta =
+            unbound_yaml::parse_value(&std::fs::read_to_string(meta_path(&variant)).unwrap())
+                .unwrap();
+        let vpacked = importer.import(&variant, &vbytes, &vmeta).unwrap();
+        assert!(vpacked.secondary_pages.is_empty());
+        assert_eq!(vpacked.sprites.len(), 1);
+        assert!(vpacked.sprites[0].secondary.is_empty());
+        assert!(
+            vpacked
+                .warnings
+                .iter()
+                .any(|w| w.contains("secondary pages are not scaled"))
+        );
+
+        let _ = std::fs::remove_dir_all(&root);
     }
 }
