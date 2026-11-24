@@ -387,25 +387,104 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
-        public void ABakeSaysThatItDoesNotTellLodLevelsApart()
+        public void LodMembershipsAssignGroupIdsAndLevelMasksForActiveEnabledGroupsOnly()
         {
-            var logger = Debug.unityLogger;
-            var previous = logger.logHandler;
-            var capture = new Capture(previous);
             var made = new List<Object>();
             try
             {
-                logger.logHandler = capture;
-                BakedAtlas.Lay(QuadScene("Assets/WithLod.unity", true, made), new LightingSettings());
-                Assert.Single(capture.Logs, l => l.StartsWith("Warning: ") && l.Contains("'Leveled' is of a LOD Group"));
-                // Without a LOD Group nothing of the kind is said.
-                capture.Logs.Clear();
-                BakedAtlas.Lay(QuadScene("Assets/WithoutLod.unity", false, made), new LightingSettings());
-                Assert.DoesNotContain(capture.Logs, l => l.Contains("LOD Group"));
+                MeshRenderer MakeRenderer(string name, Transform parent = null)
+                {
+                    var go = new GameObject(name);
+                    if (parent != null) go.transform.SetParent(parent, false);
+                    made.Add(go);
+                    return go.AddComponent<MeshRenderer>();
+                }
+                var file = new LoadedFile { Path = "Assets/LodMemberships.unity", Guid = "40000000000000000000000000000001" };
+                var rootA = new GameObject("GroupA");
+                made.Add(rootA);
+                var rA0 = MakeRenderer("A0", rootA.transform);
+                var rA1 = MakeRenderer("A1", rootA.transform);
+                var rAShared = MakeRenderer("AShared", rootA.transform);
+                var groupA = rootA.AddComponent<LODGroup>();
+                groupA.SetLODs(new[]
+                {
+                    new LOD(0.6f, new Renderer[] { rA0, rAShared }),
+                    new LOD(0.3f, new Renderer[] { rA1, rAShared }),
+                });
+
+                var rootB = new GameObject("GroupB");
+                made.Add(rootB);
+                var rB0 = MakeRenderer("B0", rootB.transform);
+                var groupB = rootB.AddComponent<LODGroup>();
+                groupB.SetLODs(new[] { new LOD(0.5f, new Renderer[] { rB0 }) });
+
+                // Disabled LODGroup and inactive GameObject LODGroup must not attach renderers,
+                // and a later disabled group listing a renderer from an active group must not steal it.
+                var rootDisabled = new GameObject("GroupDisabled");
+                made.Add(rootDisabled);
+                var rDisabled = MakeRenderer("DisabledLod1");
+                var groupDisabled = rootDisabled.AddComponent<LODGroup>();
+                groupDisabled.SetLODs(new[] { new LOD(0.6f, new Renderer[] { rA0 }), new LOD(0.3f, new Renderer[] { rDisabled }) });
+                groupDisabled.enabled = false;
+
+                var rootInactive = new GameObject("GroupInactive");
+                made.Add(rootInactive);
+                var rInactive = MakeRenderer("InactiveLod1");
+                var groupInactive = rootInactive.AddComponent<LODGroup>();
+                groupInactive.SetLODs(new[] { new LOD(0.6f, System.Array.Empty<Renderer>()), new LOD(0.3f, new Renderer[] { rInactive }) });
+                rootInactive.SetActive(false);
+
+                // A destroyed LODGroup whose SetLODs previously claimed rA0 must not block groupA.
+                var rootDestroyed = new GameObject("GroupDestroyed");
+                made.Add(rootDestroyed);
+                var groupDestroyed = rootDestroyed.AddComponent<LODGroup>();
+                groupDestroyed.SetLODs(new[] { new LOD(0.6f, new Renderer[] { rA0 }) });
+                Object.DestroyImmediate(groupDestroyed);
+
+                // File IDs intentionally out of creation order: GroupB (10) precedes GroupA (20).
+                file.Objects[20] = groupA;
+                file.Objects[10] = groupB;
+                file.Objects[30] = groupDisabled;
+                file.Objects[40] = groupInactive;
+                file.Objects[50] = groupDestroyed;
+
+                var memberships = BakedAtlas.LodMemberships(file);
+                Assert.Equal((0u, (byte)0b01), memberships[rB0]);
+                Assert.Equal((1u, (byte)0b01), memberships[rA0]);
+                Assert.Equal((1u, (byte)0b10), memberships[rA1]);
+                Assert.Equal((1u, (byte)0b11), memberships[rAShared]);
+                Assert.False(memberships.ContainsKey(rDisabled));
+                Assert.False(memberships.ContainsKey(rInactive));
+
+                // A LOD Group no longer emits the unimplemented-levels approximation warning.
+                var logger = Debug.unityLogger;
+                var previous = logger.logHandler;
+                var capture = new Capture(previous);
+                try
+                {
+                    logger.logHandler = capture;
+                    BakedAtlas.Lay(QuadScene("Assets/WithLod.unity", true, made), new LightingSettings());
+                    Assert.DoesNotContain(capture.Logs, l => l.Contains("LOD Group"));
+
+                    // More than 8 LOD levels must report loudly rather than silently dropping levels.
+                    var manyRoot = new GameObject("ManyLods");
+                    made.Add(manyRoot);
+                    var many = manyRoot.AddComponent<LODGroup>();
+                    var nine = new LOD[9];
+                    for (int i = 0; i < 9; i++) nine[i] = new LOD(0.9f - i * 0.08f, System.Array.Empty<Renderer>());
+                    many.SetLODs(nine);
+                    var manyFile = new LoadedFile { Path = "Assets/ManyLods.unity", Guid = "40000000000000000000000000000002" };
+                    manyFile.Objects[1] = many;
+                    BakedAtlas.LodMemberships(manyFile);
+                    Assert.Contains(capture.Logs, l => l.Contains("more than 8"));
+                }
+                finally
+                {
+                    logger.logHandler = previous;
+                }
             }
             finally
             {
-                logger.logHandler = previous;
                 foreach (var o in made) Object.DestroyImmediate(o);
             }
         }

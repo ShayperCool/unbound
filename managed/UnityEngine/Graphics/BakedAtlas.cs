@@ -98,19 +98,45 @@ namespace UnityEngine
             return read;
         }
 
-        /// <summary>Each renderer of the scene's LOD Groups: the most detailed level it is in.</summary>
-        static Dictionary<Renderer, int> LodLevels(LoadedFile file)
+        /// <summary>Each renderer of the scene's active, enabled LOD Groups: its group index and
+        /// the 8-bit mask of LOD levels (bits 0..8) that list it. A disabled or inactive LOD Group
+        /// leaves its renderers outside any group, like the Editor.</summary>
+        internal static Dictionary<Renderer, (uint Group, byte Mask)> LodMemberships(LoadedFile file)
         {
-            var levels = new Dictionary<Renderer, int>();
-            foreach (var obj in file.Objects.Values)
+            var groups = new List<(LODGroup Group, long FileId)>();
+            foreach (var pair in file.Objects)
+                if (pair.Value is LODGroup group && group != null && group.enabled && group.gameObject.activeInHierarchy)
+                    groups.Add((group, pair.Key));
+            groups.Sort((a, b) => a.FileId.CompareTo(b.FileId));
+            var memberships = new Dictionary<Renderer, (uint Group, byte Mask)>();
+            uint groupId = 0;
+            foreach (var (group, _) in groups)
             {
-                if (!(obj is LODGroup group) || group == null) continue;
                 var lods = group.GetLODs();
-                for (int level = 0; level < lods.Length; level++)
-                    foreach (var r in lods[level].renderers)
-                        if (r != null && (!levels.TryGetValue(r, out var known) || level < known)) levels[r] = level;
+                if (lods.Length > 8)
+                    Approximated("lod-levels:" + file.Path, $"{file.Path}: '{group.name}' has {lods.Length} LOD levels (more than 8), which Unbound's bake (Lightmapping.Bake) does not support beyond 8 levels.");
+                int count = Math.Min(lods.Length, 8);
+                bool any = false;
+                for (int level = 0; level < count; level++)
+                {
+                    var renderers = lods[level].renderers;
+                    if (renderers == null) continue;
+                    foreach (var r in renderers)
+                    {
+                        if (r == null) continue;
+                        var owner = r.m_LODGroup;
+                        if (owner != null && owner != group && owner.enabled && owner.gameObject.activeInHierarchy) continue;
+                        byte bit = (byte)(1 << level);
+                        if (memberships.TryGetValue(r, out var known) && known.Group == groupId)
+                            memberships[r] = (groupId, (byte)(known.Mask | bit));
+                        else
+                            memberships[r] = (groupId, bit);
+                        any = true;
+                    }
+                }
+                if (any) groupId++;
             }
-            return levels;
+            return memberships;
         }
 
         /// <summary>The scene's MeshRenderers made from its file, by their file IDs (the bake puts
@@ -470,7 +496,7 @@ namespace UnityEngine
                     Warn("terrain:" + path, $"{path}: '{terrain.name}' is a lightmapped Terrain, which Unbound's layout of the baked lightmaps (Lightmapping.Bake) does not support; it lays out none for the scene.");
                     return null;
                 }
-            var levels = LodLevels(file);
+            var lods = LodMemberships(file);
             var renderers = new List<object>();
             var placed = new List<(MeshRenderer renderer, long fileId)>();
             var meshes = new List<object>();
@@ -527,6 +553,8 @@ namespace UnityEngine
                     var slots = renderer.sharedMaterials;
                     var hasMaterial = new bool[slots.Length];
                     for (int k = 0; k < slots.Length; k++) hasMaterial[k] = slots[k] != null;
+                    bool inLod = lods.TryGetValue(renderer, out var lod) && lod.Mask != 0;
+                    int? lodLevel = inLod ? System.Numerics.BitOperations.TrailingZeroCount(lod.Mask) : (int?)null;
                     renderers.Add(new
                     {
                         name = renderer.name,
@@ -535,7 +563,9 @@ namespace UnityEngine
                         hasMaterial,
                         localToWorld = matrix,
                         scaleInLightmap = renderer.scaleInLightmap,
-                        lodLevel = levels.TryGetValue(renderer, out var level) ? (int?)level : null,
+                        lodLevel,
+                        lodGroup = inLod ? (uint?)lod.Group : null,
+                        lodMask = inLod ? (int)lod.Mask : 0,
                         probeLit = renderer.receiveGI != ReceiveGI.Lightmaps,
                         castsShadows = renderer.shadowCastingMode != UnityEngine.Rendering.ShadowCastingMode.Off,
                         receivesShadows = renderer.receiveShadows,
@@ -553,12 +583,6 @@ namespace UnityEngine
                 }
             }
             if (renderers.Count == 0) return null;
-            foreach (var (renderer, _) in placed)
-                if (levels.ContainsKey(renderer))
-                {
-                    Approximated("lod:" + path, $"{path}: '{renderer.name}' is of a LOD Group; Unbound's bake (Lightmapping.Bake) does not tell the levels of LOD Groups apart yet (their renderers take and stop light like any other).");
-                    break;
-                }
             bool fixedSize = settings.LightmapSizeFixed
                 || UnityEditor.PackageManager.PackageInfo.FindForPackageName("com.unity.entities.graphics") != null
                 || UnityEditor.PackageManager.PackageInfo.FindForPackageName("com.unity.rendering.hybrid") != null;
