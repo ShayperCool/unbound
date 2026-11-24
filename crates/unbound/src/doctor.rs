@@ -348,7 +348,13 @@ pub fn doctor(args: &ProjectArgs, all: bool, as_json: bool) -> Result<()> {
             "projectSettingsFields": settings_coverage.project_settings_fields,
             "unreadInRelease": coverage.unread_in_release,
             "renderingLimitations": RENDERING_LIMITATIONS,
-            "shaderSubstitutions": {"device": shader_device.name(), "shaders": shader_substitutions},
+            "shaderSubstitutions": {
+                "device": shader_device.name(),
+                "shaders": shader_substitutions
+                    .iter()
+                    .map(|(message, unmeasured)| json!({"message": message, "unmeasured": unmeasured}))
+                    .collect::<Vec<_>>(),
+            },
             "audioLimitations": AUDIO_LIMITATIONS,
             "playModeSpriteAtlases": play_mode_atlases.as_ref().map(|a| json!({"mode": a.mode, "atlases": a.paths})),
             "unsupportedMessages": messages.messages,
@@ -431,11 +437,17 @@ pub fn doctor(args: &ProjectArgs, all: bool, as_json: bool) -> Result<()> {
     for limitation in RENDERING_LIMITATIONS {
         println!("  {limitation}");
     }
+    let unmeasured = shader_substitutions.iter().filter(|(_, u)| *u).count();
     println!(
-        "\n{} SubShader substitutions (a shader under a render pipeline) against the Unity Editor on {shader_device}, some not measured:",
-        shader_substitutions.len()
+        "\n{} SubShader substitutions (a shader under a render pipeline) against the Unity Editor on {shader_device}{}:",
+        shader_substitutions.len(),
+        if unmeasured > 0 {
+            format!(", {unmeasured} of them not measured")
+        } else {
+            String::new()
+        }
     );
-    for substitution in &shader_substitutions {
+    for (substitution, _) in &shader_substitutions {
         println!("  {substitution}");
     }
     if let Some(atlases) = &play_mode_atlases {
@@ -468,7 +480,7 @@ pub fn doctor(args: &ProjectArgs, all: bool, as_json: bool) -> Result<()> {
 /// device a run of the project starts (the OS's Editor's choice from the project's API list).
 fn shader_substitutions(
     project: &Project,
-) -> Result<(unbound_compat::GraphicsDevice, Vec<String>)> {
+) -> Result<(unbound_compat::GraphicsDevice, Vec<(String, bool)>)> {
     let device = unbound_compat::select_device(
         &project.settings.device_request(None),
         unbound_compat::HostOs::current(),

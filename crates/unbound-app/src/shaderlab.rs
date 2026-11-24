@@ -796,7 +796,9 @@ impl ShaderLab {
     /// SubShader its device runs (Unity adds `#pragma require geometry` for a geometry stage and
     /// `tessellation` for hull/domain ones and runs a program only where the device supports what
     /// it requires; with none, the Fallback), while the renderer passes over SubShaders with
-    /// stages it does not run. None where both pick the same.
+    /// stages it does not run. Where it is not measured whether the device runs a SubShader's
+    /// stage, both of the Editor's possible picks are given (it draws that SubShader, or passes
+    /// over it), even where one is the renderer's. None where both pick the same, measured.
     pub fn substitution(
         &self,
         pipeline: &str,
@@ -817,36 +819,46 @@ impl ShaderLab {
             return None;
         }
         let drawn = self.renderer_pick(pipeline, selection);
-        for (i, sub) in self.subshaders.iter().enumerate() {
-            if !self.matches(sub, pipeline, selection) {
-                continue;
-            }
-            let runs = sub.editor_runs(runs_stage);
-            if runs == Some(false) {
-                continue;
-            }
-            // The Editor's pick (if it runs the SubShader's stages; not measured when `runs` is
-            // None, and then the renderer's pick is the same SubShader or a later one).
-            if Some(i) == drawn {
-                return None;
-            }
+        // The Editor's pick where it draws each SubShader whose stages it is not measured to run
+        // (`runs`), and where it passes over each.
+        let pick = |runs: &dyn Fn(Option<bool>) -> bool| {
+            self.subshaders
+                .iter()
+                .enumerate()
+                .find(|(_, sub)| {
+                    self.matches(sub, pipeline, selection) && runs(sub.editor_runs(runs_stage))
+                })
+                .map(|(i, _)| i)
+        };
+        let drawing = pick(&|runs| runs != Some(false));
+        let passing = pick(&|runs| runs == Some(true));
+        if drawing != passing {
+            // `drawing` is a SubShader whose stages are not all measured.
+            let i = drawing?;
             return Some(Substitution {
                 drawn,
-                editor: Some(i),
+                editor: drawing,
+                passed_over: Some(passing),
                 subshader: i,
-                stage: sub.deciding_stage(runs_stage)?,
-                unmeasured: runs.is_none(),
+                stage: self.subshaders[i].deciding_stage(runs_stage)?,
             });
         }
-        // The Editor's device runs no matching SubShader: it takes the Fallback, where the
-        // renderer draws one with a stage the device does not run.
-        let i = drawn?;
+        if drawing == drawn {
+            return None;
+        }
+        // The SubShader with the stage: the Editor's when the renderer passes over it, else the
+        // renderer's, which the Editor passes over.
+        let i = match (drawing, drawn) {
+            (Some(e), Some(d)) => e.min(d),
+            (Some(e), None) => e,
+            (None, d) => d?,
+        };
         Some(Substitution {
             drawn,
-            editor: None,
+            editor: drawing,
+            passed_over: None,
             subshader: i,
             stage: self.subshaders[i].deciding_stage(runs_stage)?,
-            unmeasured: false,
         })
     }
 
@@ -1187,23 +1199,29 @@ impl SubShader {
 }
 
 /// A SubShader pick of the renderer that differs from the Editor's device's, or whose agreement
-/// is not measured ([`ShaderLab::substitution`]).
+/// is not measured ([`ShaderLab::substitution`]). A pick of None is the shader's Fallback (no
+/// SubShader of its own).
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Substitution {
-    /// The SubShader the renderer draws (None: none).
+    /// The SubShader the renderer draws.
     pub drawn: Option<usize>,
-    /// The SubShader the Editor's device draws (None: none of the shader's own, so its
-    /// Fallback), when known.
+    /// The SubShader the Editor's device draws; where that is not measured, its pick if it draws
+    /// [`Substitution::subshader`].
     pub editor: Option<usize>,
-    /// The SubShader whose stage decides the difference and that stage.
+    /// Where it is not measured whether the Editor's device draws [`Substitution::subshader`] or
+    /// passes over it: its pick if it passes over it.
+    pub passed_over: Option<Option<usize>>,
+    /// The SubShader whose stage decides the difference, and that stage.
     pub subshader: usize,
     pub stage: ProgramStage,
-    /// Whether the Editor's device runs that stage is not measured: `editor` is the pick if it
-    /// does.
-    pub unmeasured: bool,
 }
 
 impl Substitution {
+    /// Whether the Editor's pick is not measured.
+    pub fn unmeasured(&self) -> bool {
+        self.passed_over.is_some()
+    }
+
     /// The warning the renderer gives once per shader, under the active `pipeline` (None: the
     /// same under every pipeline, the shader's SubShaders being untagged).
     pub fn message(
@@ -1222,14 +1240,14 @@ impl Substitution {
             Some(pipeline) => format!("render pipeline `{pipeline}`"),
         };
         let stage = self.stage.pragma();
-        let editor = if self.unmeasured {
-            format!(
-                "whether the Unity Editor on {device} runs its {stage} stage is not measured (if \
-                 it does, it draws SubShader {})",
-                self.subshader
-            )
-        } else {
-            format!("the Unity Editor on {device} draws {}", pick(self.editor))
+        let editor = match self.passed_over {
+            Some(passed_over) => format!(
+                "it is not measured whether the Unity Editor on {device} draws SubShader {} or \
+                 passes over it and draws {}",
+                self.subshader,
+                pick(passed_over)
+            ),
+            None => format!("the Unity Editor on {device} draws {}", pick(self.editor)),
         };
         format!(
             "shader `{shader}` under {under}: SubShader {} has a {stage} stage (`#pragma {stage}`), \
@@ -2148,8 +2166,9 @@ impl ShaderIndex {
 
     /// Every SubShader substitution of the indexed shaders ([`ShaderLab::substitution`]) on
     /// `device`, under the built-in pipeline and each pipeline a SubShader is tagged for: one
-    /// warning text each, sorted (what `unbound doctor` lists).
-    pub fn substitutions(&self, device: unbound_compat::GraphicsDevice) -> Vec<String> {
+    /// warning text each, sorted, and whether the Editor's pick is not measured (what `unbound
+    /// doctor` lists).
+    pub fn substitutions(&self, device: unbound_compat::GraphicsDevice) -> Vec<(String, bool)> {
         let mut paths: Vec<&PathBuf> = self.files.values().collect();
         paths.sort();
         paths.dedup();
@@ -2178,7 +2197,10 @@ impl ShaderIndex {
             let tagged = pipelines.len() > 1;
             for pipeline in &pipelines {
                 if let Some(s) = lab.substitution(pipeline, &Selection::default(), device) {
-                    found.insert(s.message(&lab.name, tagged.then_some(pipeline), device));
+                    found.insert((
+                        s.message(&lab.name, tagged.then_some(pipeline.as_str()), device),
+                        s.unmeasured(),
+                    ));
                 }
             }
         }
@@ -3132,14 +3154,16 @@ Pass { Name "TAIL" }
                     Substitution {
                         drawn: Some(1),
                         editor: Some(0),
+                        passed_over: None,
                         subshader: 0,
                         stage,
-                        unmeasured: false
                     }
                 );
+                assert!(!s.unmeasured());
             }
         }
-        // Whether Metal runs a geometry or hull/domain SubShader is not measured.
+        // Whether Metal draws a geometry or hull/domain SubShader or passes over it is not
+        // measured: both picks are named.
         for (lab, stage) in [
             (&geometry, ProgramStage::Geometry),
             (&hull, ProgramStage::Hull),
@@ -3150,16 +3174,27 @@ Pass { Name "TAIL" }
                 Substitution {
                     drawn: Some(1),
                     editor: Some(0),
+                    passed_over: Some(Some(1)),
                     subshader: 0,
                     stage,
-                    unmeasured: true
                 }
             );
+            assert!(s.unmeasured());
         }
         // Under the built-in pipeline only SubShader 2 matches: the renderer draws it (its stage
-        // fails when compiled) as the Editor does where it runs the stage.
+        // fails when compiled) as the Linux Editor does; on Metal the Editor may pass over it and
+        // take the Fallback, not measured.
         assert_eq!(geometry.substitution("", &none, Vulkan), None);
-        assert_eq!(geometry.substitution("", &none, Metal), None);
+        assert_eq!(
+            geometry.substitution("", &none, Metal),
+            Some(Substitution {
+                drawn: Some(2),
+                editor: Some(2),
+                passed_over: Some(None),
+                subshader: 2,
+                stage: ProgramStage::Geometry,
+            })
+        );
         // A device without the stage: the Editor passes over SubShader 0 and draws 1 as the
         // renderer does; where SubShader 2 is the only match it takes the Fallback.
         let without = |stage: ProgramStage| Some(stage != ProgramStage::Geometry);
@@ -3169,15 +3204,27 @@ Pass { Name "TAIL" }
             Some(Substitution {
                 drawn: Some(2),
                 editor: None,
+                passed_over: None,
                 subshader: 2,
                 stage: ProgramStage::Geometry,
-                unmeasured: false
             })
         );
         assert_eq!(
             hull.substitution_with(urp, &none, &without)
                 .map(|s| s.editor),
             Some(Some(0))
+        );
+        let metal = geometry.substitution("", &none, Metal).unwrap().message(
+            &geometry.name,
+            Some(""),
+            Metal,
+        );
+        assert_eq!(
+            metal,
+            "shader `Tests/Stage` under the built-in render pipeline: SubShader 2 has a geometry \
+             stage (`#pragma geometry`), which Unbound's renderer does not run; Unbound draws \
+             SubShader 2 where it is not measured whether the Unity Editor on Metal draws \
+             SubShader 2 or passes over it and draws its Fallback"
         );
         // A replacement tag no SubShader has: neither draws any.
         let tagged = Selection::parse("X|tag=RenderType=Nope").1;
@@ -3260,8 +3307,8 @@ Pass { Name "TAIL" }
         let editor = match device.editor_runs_geometry_stages() {
             Some(true) => format!("the Unity Editor on {device} draws SubShader 0"),
             _ => format!(
-                "whether the Unity Editor on {device} runs its geometry stage is not measured (if \
-                 it does, it draws SubShader 0)"
+                "it is not measured whether the Unity Editor on {device} draws SubShader 0 or \
+                 passes over it and draws SubShader 1"
             ),
         };
         assert!(
@@ -3304,7 +3351,14 @@ Pass { Name "TAIL" }
         )
         .unwrap();
         let index = ShaderIndex::scan(std::slice::from_ref(&dir));
-        let listed = index.substitutions(unbound_compat::GraphicsDevice::Vulkan);
+        let listed: Vec<String> = index
+            .substitutions(unbound_compat::GraphicsDevice::Vulkan)
+            .into_iter()
+            .map(|(message, unmeasured)| {
+                assert!(!unmeasured);
+                message
+            })
+            .collect();
         std::fs::remove_dir_all(&dir).ok();
         // Under URP SubShader 0 runs on the Editor's device; under the built-in pipeline only
         // SubShader 1 (untagged) matches, a SubShader the Editor runs too.
