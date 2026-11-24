@@ -178,6 +178,19 @@ box takes the probes in with the renderers, for the lightmaps' paths too; a prob
 times the samples a texel takes, of its paths and of the sky, and its paths may end by chance
 from their first surface on whatever the Min Bounces.
 
+- `Lod` (4, 128): two active LOD Groups (`LodA` with LOD 0, two LOD 1 renderers, a renderer
+  shared between LOD 0 and LOD 1, and LOD 2; `LodB` with LOD 0 and LOD 1), a disabled LOD
+  Group (`LodOff`, whose renderers bake like non-LOD renderers), a non-shadow-casting roof
+  over `LodA` (`NoCastRoof`), and a Light Probe Group with probes inside `A_Lod1_Near`, under
+  a directional sun and an ambient colour with two bounces (32 indirect and environment
+  samples). Non-LOD renderers, LOD 0 renderers and light probes see only non-LOD and LOD 0
+  geometry (their sky rays are stopped by non-shadow-casting renderers too); lower-LOD rays
+  test their own group and level within the diagonal of that level's world bounding box before
+  falling back to non-LOD and LOD 0 geometry (skipping their own group's LOD 0-only
+  renderers; on a bounce from a same-level hit that misses its own level, the fallback to
+  non-LOD and LOD 0 starts from the path's first origin), and their sky rays test
+  shadow-casting renderers only.
+
 The scenes above them have the default sky (`Bare`, `Charts`, `Samples`, `Shapes`: the default
 skybox, with the default Lighting Settings' picked directions) or none (a black sky: one picked
 direction that brings nothing).
@@ -315,8 +328,6 @@ where the buffer does (and where its light is spread to), under the same name:
   Editor's own bake input replayed gives the same differences. Not traced.
 - One texel of `Roof`'s indirect light and one of `Glow`'s validity: a single ray that meets a
   triangle exactly on its edge falls on the other side of it than in the Editor.
-- `Shapes`' sky light: one sky ray of some texels is stopped by a renderer of a less detailed
-  LOD level, which the Editor's rays pass (the levels of LOD Groups are not told apart yet).
 - One texel of `Probes`' indirect light (the ground's): it differs by about what one of its 64
   paths brings; the Editor's own bake input replayed gives the same difference. Not traced.
 - The validity of `ProbesGrid`'s probe inside the cube: 5 of its 64 rays meet the cube's bottom
@@ -342,8 +353,7 @@ take the environment's light (`LightingSettings.realtimeEnvironmentLighting`).
 Not baked by Unbound yet: ambient occlusion; without a graphics device, the indirect light (said). Not baked (said, each once per
 scene): area lights, light cookies, soft baked
 shadows (a Baked Shadow Angle or Radius: baked hard), lights whose intensity multiplies their
-linear colour (GraphicsSettings.lightsUseLinearIntensity), the levels of LOD Groups (their
-renderers take and stop light like any other; the Editor's rays tell the levels apart). Not done
+linear colour (GraphicsSettings.lightsUseLinearIntensity). Not done
 and not said: materials that let light through stop it.
 
 Not measured, of where the light comes from: mixed lights in the Shadowmask and Subtractive
@@ -364,7 +374,8 @@ images, a panorama: drawn the same way), an ambient source that is not the scene
 100000 draws find (the last draw is taken), gamma colour space projects.
 
 Not measured, of the indirect light: materials that let light through (they stop it), LOD
-Groups, a material flagged both emissive and black, shaders without a meta pass (said; the
+Groups with more than eight levels, inactive LOD Group GameObjects, renderers shared across
+two active LOD Groups or across lower LOD levels without LOD 0, a material flagged both emissive and black, shaders without a meta pass (said; the
 renderer adds no albedo or emission), meshes without lightmap UVs, textured renderers that have
 no lightmap, the light grid's pick among several point and spot lights (see the residuals).
 

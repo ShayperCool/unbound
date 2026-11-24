@@ -1,0 +1,37 @@
+{
+ "bake": "bake Result type: 'Success'",
+ "messages": [],
+ "instances": [
+  "NoCastRoof",
+  "Ground",
+  "LodA/A_Shared",
+  "LodB/B_Lod0",
+  "LodA/A_Lod2",
+  "LodOff/Off_Lod0",
+  "LodA/A_Lod1_Near",
+  "LodOff/Off_Lod1",
+  "LodA/A_Lod0",
+  "LodA/A_Lod1_Mate",
+  "LodB/B_Lod1"
+ ],
+ "lightmaps": [
+  {
+   "width": 64,
+   "height": 64,
+   "supersampling": 2,
+   "instances": [
+    0,
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9,
+    10
+   ]
+  }
+ ]
+}

@@ -909,6 +909,78 @@ public static class BuffersSetup
         }
     }
 
+    /// <summary>LOD Groups: two active groups (LOD 0, two LOD 1 renderers, a renderer shared
+    /// between LOD 0 and LOD 1, and LOD 2), a disabled LOD Group, a non-shadow-casting roof over
+    /// the first group and light probes beside them: direct shadows, two indirect bounces, sky
+    /// occlusion, light probes and written lighting data.</summary>
+    static void Lod()
+    {
+        var scene = NewScene("Lod", 4f, 128);
+        var settings = Lightmapping.lightingSettings;
+        settings.directSampleCount = 16;
+        settings.indirectSampleCount = 32;
+        settings.environmentSampleCount = 32;
+        settings.maxBounces = 2;
+        settings.minBounces = 2;
+        FlatSky();
+        NewLight("Sun", LightType.Directional, Vector3.zero, new Vector3(45f, -35f, 0f), new Color(1f, 0.95f, 0.85f), 2f).bounceIntensity = 1.5f;
+        With(Prim(PrimitiveType.Plane, "Ground", Vector3.zero, Vector3.zero, Vector3.one), Mat("BounceGrey", new Color(0.5f, 0.5f, 0.5f)));
+        var matRed = Mat("LodRedEmit", new Color(0.9f, 0.15f, 0.15f), m => Emit(m, new Color(1.5f, 0.1f, 0.1f), MaterialGlobalIlluminationFlags.BakedEmissive));
+        var matGreen = Mat("LodGreenEmit", new Color(0.15f, 0.9f, 0.15f), m => Emit(m, new Color(0.1f, 1.5f, 0.1f), MaterialGlobalIlluminationFlags.BakedEmissive));
+        var matBlue = Mat("LodBlue", new Color(0.2f, 0.35f, 0.9f));
+        var matYellow = Mat("LodYellow", new Color(0.9f, 0.85f, 0.2f));
+        var matMagenta = Mat("LodMagentaEmit", new Color(0.9f, 0.2f, 0.9f), m => Emit(m, new Color(1.2f, 0.1f, 1.2f), MaterialGlobalIlluminationFlags.BakedEmissive));
+        var matCyan = Mat("LodCyanEmit", new Color(0.2f, 0.9f, 0.9f), m => Emit(m, new Color(0.1f, 1.2f, 1.2f), MaterialGlobalIlluminationFlags.BakedEmissive));
+        var matOrange = Mat("LodOrangeEmit", new Color(0.95f, 0.5f, 0.1f), m => Emit(m, new Color(1.4f, 0.6f, 0.1f), MaterialGlobalIlluminationFlags.BakedEmissive));
+        var matWhite = Mat("BounceWhite", Color.white);
+
+        var groupA = new GameObject("LodA");
+        var aLod0 = With(Prim(PrimitiveType.Cube, "A_Lod0", new Vector3(-2.4f, 1.9f, -0.8f), Vector3.zero, Vector3.one * 0.9f, groupA.transform), matRed);
+        var aLod1Near = With(Prim(PrimitiveType.Cube, "A_Lod1_Near", new Vector3(-2.0f, 0.5f, 0.0f), Vector3.zero, new Vector3(2.2f, 1.0f, 1.0f), groupA.transform), matWhite);
+        var aLod1Mate = With(Prim(PrimitiveType.Cube, "A_Lod1_Mate", new Vector3(-1.2f, 1.9f, -0.8f), Vector3.zero, Vector3.one * 0.9f, groupA.transform), matGreen);
+        var aShared = With(Prim(PrimitiveType.Cube, "A_Shared", new Vector3(-2.0f, 0.5f, 1.7f), Vector3.zero, Vector3.one, groupA.transform), matBlue);
+        var aLod2 = With(Prim(PrimitiveType.Cube, "A_Lod2", new Vector3(-2.4f, 0.5f, -1.9f), Vector3.zero, Vector3.one * 0.9f, groupA.transform), matYellow);
+        groupA.AddComponent<LODGroup>().SetLODs(new[]
+        {
+            new LOD(0.6f, new Renderer[] { aLod0.GetComponent<Renderer>(), aShared.GetComponent<Renderer>() }),
+            new LOD(0.3f, new Renderer[] { aLod1Near.GetComponent<Renderer>(), aLod1Mate.GetComponent<Renderer>(), aShared.GetComponent<Renderer>() }),
+            new LOD(0.1f, new Renderer[] { aLod2.GetComponent<Renderer>() }),
+        });
+
+        var groupB = new GameObject("LodB");
+        var bLod0 = With(Prim(PrimitiveType.Cube, "B_Lod0", new Vector3(0.2f, 1.2f, 0.2f), Vector3.zero, Vector3.one * 0.8f, groupB.transform), matMagenta);
+        var bLod1 = With(Prim(PrimitiveType.Cube, "B_Lod1", new Vector3(0.4f, 1.9f, -0.8f), Vector3.zero, Vector3.one * 0.8f, groupB.transform), matCyan);
+        groupB.AddComponent<LODGroup>().SetLODs(new[]
+        {
+            new LOD(0.5f, new Renderer[] { bLod0.GetComponent<Renderer>() }),
+            new LOD(0.2f, new Renderer[] { bLod1.GetComponent<Renderer>() }),
+        });
+
+        var noCastRoof = With(Prim(PrimitiveType.Cube, "NoCastRoof", new Vector3(-2.0f, 3.2f, -0.4f), Vector3.zero, new Vector3(3.2f, 0.2f, 2.8f)), matWhite);
+        noCastRoof.GetComponent<MeshRenderer>().shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+
+        var groupOff = new GameObject("LodOff");
+        var offLod0 = With(Prim(PrimitiveType.Cube, "Off_Lod0", new Vector3(2.5f, 0.5f, 2.0f), Vector3.zero, Vector3.one * 0.8f, groupOff.transform), matWhite);
+        var offLod1 = With(Prim(PrimitiveType.Cube, "Off_Lod1", new Vector3(2.5f, 1.7f, 1.2f), Vector3.zero, Vector3.one * 0.8f, groupOff.transform), matOrange);
+        var offComp = groupOff.AddComponent<LODGroup>();
+        offComp.SetLODs(new[]
+        {
+            new LOD(0.6f, new Renderer[] { offLod0.GetComponent<Renderer>() }),
+            new LOD(0.3f, new Renderer[] { offLod1.GetComponent<Renderer>() }),
+        });
+        offComp.enabled = false;
+
+        var probes = new GameObject("Probes").AddComponent<LightProbeGroup>();
+        probes.probePositions = new[]
+        {
+            new Vector3(-1.2f, 0.9f, -0.1f),
+            new Vector3(-2.4f, 0.9f, -0.1f),
+            new Vector3(0.2f, 0.6f, 1.0f),
+            new Vector3(2.5f, 1.1f, 1.8f),
+        };
+        Save(scene, "Lod");
+    }
+
     /// <summary>Makes the scenes <c>BAKED_BUFFERS_SCENES</c> names (comma-separated), else all.</summary>
     public static void Create()
     {
@@ -921,7 +993,7 @@ public static class BuffersSetup
                 ("ModeSubtractive", () => Modes("ModeSubtractive", MixedLightingMode.Subtractive)),
                 ("ModeShadowmask", () => Modes("ModeShadowmask", MixedLightingMode.Shadowmask)),
                 ("Bounce", Bounces), ("Glow", Glow), ("Roof", Roof), ("Textured", Textured), ("Levels", Levels), ("Sky", Skies), ("Spare", Spare),
-                ("SkyRealtime", RealtimeSkies), ("SpareEmpty", SpareEmpty), ("Spread", Spread), ("Far", Far), ("Masks", Masks), ("MasksBright", MasksBright), ("MasksEdges", MasksEdges), ("Probes", Probes), ("ProbesGrid", ProbesGrid), ("ProbesReach", ProbesReach), ("ProbesSky", ProbesSky), ("Directional", Directional),
+                ("SkyRealtime", RealtimeSkies), ("SpareEmpty", SpareEmpty), ("Spread", Spread), ("Far", Far), ("Masks", Masks), ("MasksBright", MasksBright), ("MasksEdges", MasksEdges), ("Probes", Probes), ("ProbesGrid", ProbesGrid), ("ProbesReach", ProbesReach), ("ProbesSky", ProbesSky), ("Directional", Directional), ("Lod", Lod),
             };
             var only = Environment.GetEnvironmentVariable("BAKED_BUFFERS_SCENES");
             var wanted = string.IsNullOrEmpty(only) ? null : new HashSet<string>(only.Split(','));
