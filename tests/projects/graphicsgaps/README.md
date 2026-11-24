@@ -61,4 +61,7 @@ null entry.
     python3 tests/projects/graphicsgaps/run.py publish [--device vulkan] <L1> <L2>
     UNBOUND=<build>/unbound python3 tests/projects/graphicsgaps/run.py gate          # both devices
 
-Values compare exactly. Known residuals are in `residuals.json` with their cause.
+Values compare exactly. Known residuals are in `residuals.json` with their cause. The
+`select.restricted.*` keys were added from two identical captures per device; the `objectId.*.ids`
+values of those captures (and of a control capture of the probe without them) read back drawn ids
+where the committed ones read zero, which stays as recorded (a queue row follows it up).
