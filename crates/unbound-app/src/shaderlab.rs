@@ -1232,7 +1232,7 @@ impl Substitution {
     ) -> String {
         let pick = |i: Option<usize>| match i {
             Some(i) => format!("SubShader {i}"),
-            None => "its Fallback".to_string(),
+            None => "its Fallback (the error shader without one)".to_string(),
         };
         let under = match pipeline {
             None => "every render pipeline".to_string(),
@@ -3224,7 +3224,7 @@ Pass { Name "TAIL" }
             "shader `Tests/Stage` under the built-in render pipeline: SubShader 2 has a geometry \
              stage (`#pragma geometry`), which Unbound's renderer does not run; Unbound draws \
              SubShader 2 where it is not measured whether the Unity Editor on Metal draws \
-             SubShader 2 or passes over it and draws its Fallback"
+             SubShader 2 or passes over it and draws its Fallback (the error shader without one)"
         );
         // A replacement tag no SubShader has: neither draws any.
         let tagged = Selection::parse("X|tag=RenderType=Nope").1;
