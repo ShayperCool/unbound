@@ -10,7 +10,11 @@ before (`ProbeVolumeBakingSet.SyncBakingSets`).
 Measured in the Unity 6000.0.71f1 Editor (two identical captures on the NVIDIA driver; another
 capture crashed at startup twice while other Editors ran, and was discarded): a referenced asset is loaded,
 an unreferenced one only after it is loaded, neither after it is unloaded, and the scene's reference
-reads null after its asset is unloaded.
+reads null after its asset is unloaded. After `Resources.UnloadAsset`, the asset's instance ID stays
+valid (`Resources.InstanceIDIsValid == true`), and `Resources.InstanceIDToObject`,
+`EditorUtility.InstanceIDToObject`, and `AssetDatabase.LoadAssetAtPath` reload the asset with the same
+instance ID; a destroyed runtime `ScriptableObject` has `InstanceIDIsValid == false` and returns `null`
+from both `InstanceIDToObject` methods.
 
     python3 tests/projects/assetloaded/run.py record --label A   # Editor capture (GPU)
     python3 tests/projects/assetloaded/run.py publish A B        # two identical captures

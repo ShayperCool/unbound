@@ -482,7 +482,7 @@ namespace UnityEditor
         public static bool DisplayCancelableProgressBar(string title, string info, float progress) => false;
         [Unbound.EditorFaithful("no window shows a progress bar (as the batch-mode Editor)")]
         public static void ClearProgressBar() { }
-        public static Object InstanceIDToObject(int instanceID) => AssetDatabaseRuntime.Reloaded(ObjectRegistry.FindById(instanceID));
+        public static Object InstanceIDToObject(int instanceID) => AssetDatabaseRuntime.FindOrReloadById(instanceID);
         public static void UnloadUnusedAssetsImmediate() => Resources.UnloadUnusedAssetsInternal();
         public static void UnloadUnusedAssetsImmediate(bool includeMonoReferencesAsRoots) => Resources.UnloadUnusedAssetsInternal();
         public static void CopySerialized(Object source, Object dest)

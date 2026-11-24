@@ -74,6 +74,17 @@ namespace Unbound.Runtime
             lock (s_Objects) s_Objects[obj.m_InstanceID] = new WeakReference<Object>(obj);
         }
 
+        internal static void ReassignId(Object obj, int id)
+        {
+            if (obj.m_InstanceID == id) return;
+            lock (s_Objects)
+            {
+                s_Objects.Remove(obj.m_InstanceID);
+                obj.m_InstanceID = id;
+                s_Objects[id] = new WeakReference<Object>(obj);
+            }
+        }
+
         internal static void Unregister(Object obj)
         {
             Gizmos.Untrack(obj);

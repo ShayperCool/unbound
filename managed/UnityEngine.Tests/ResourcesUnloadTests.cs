@@ -99,5 +99,57 @@ namespace Unbound.Tests
                 Object.DestroyImmediate(crt, true);
             }
         }
+
+        [Fact]
+        public void PersistentAssetIdSurvivesUnloadAndReassignsOnReloadUntilForgotten()
+        {
+            const string guid = "fedcba9876543210fedcba9876543210";
+            var first = ScriptableObject.CreateInstance<ScriptableObject>();
+            first.IsPersistentAsset = true;
+            var file = new LoadedFile { Guid = guid, Path = "Assets/UnloadReload.asset", MainObject = first };
+            file.Objects[11400000] = first;
+            AssetDatabaseRuntime.AddLoaded(file);
+            int id = first.GetInstanceID();
+
+            var runtime = ScriptableObject.CreateInstance<ScriptableObject>();
+            int runtimeId = runtime.GetInstanceID();
+            Object.DestroyImmediate(runtime);
+            Assert.False(Resources.InstanceIDIsValid(runtimeId));
+            Assert.Null(Resources.InstanceIDToObject(runtimeId));
+            Assert.Null(UnityEditor.EditorUtility.InstanceIDToObject(runtimeId));
+
+            try
+            {
+                Assert.True(Resources.InstanceIDIsValid(id));
+                Assert.Same(first, Resources.InstanceIDToObject(id));
+
+                Resources.UnloadAsset(first);
+                Assert.True(first == null);
+
+                // Reloading a new object into the same (guid, fileId) slot reuses the stable ID.
+                var reloaded = ScriptableObject.CreateInstance<ScriptableObject>();
+                reloaded.IsPersistentAsset = true;
+                var reloadedFile = new LoadedFile { Guid = guid, Path = "Assets/UnloadReload.asset", MainObject = reloaded };
+                reloadedFile.Objects[11400000] = reloaded;
+                AssetDatabaseRuntime.AddLoaded(reloadedFile);
+
+                Assert.Equal(id, reloaded.GetInstanceID());
+                Assert.Same(reloaded, Resources.InstanceIDToObject(id));
+                Assert.Same(reloaded, UnityEditor.EditorUtility.InstanceIDToObject(id));
+                Assert.True(Resources.InstanceIDIsValid(id));
+
+                // Forgetting persistent IDs (as DeleteAsset does) invalidates the ID once unloaded.
+                AssetDatabaseRuntime.Invalidate(guid);
+                AssetDatabaseRuntime.ForgetPersistentIds(guid);
+                Object.DestroyImmediate(reloaded, true);
+                Assert.False(Resources.InstanceIDIsValid(id));
+                Assert.Null(Resources.InstanceIDToObject(id));
+            }
+            finally
+            {
+                AssetDatabaseRuntime.Invalidate(guid);
+                AssetDatabaseRuntime.ForgetPersistentIds(guid);
+            }
+        }
     }
 }

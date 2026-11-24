@@ -7,4 +7,15 @@
 {"k":"referenced.afterUnload","v":"False"}
 {"k":"referenced.sceneReference","v":"null"}
 {"k":"referenced.afterAccess","v":"False"}
+{"k":"unreferenced.idValidAfterUnload","v":"True"}
+{"k":"unreferenced.byResources","v":"2|sameId=True"}
+{"k":"unreferenced.idValidAfterResources","v":"True"}
+{"k":"unreferenced.loadedAfterResources","v":"True"}
+{"k":"unreferenced.idValidAfterUnload2","v":"True"}
+{"k":"unreferenced.byEditor","v":"2|sameId=True"}
+{"k":"unreferenced.loadedAfterEditor","v":"True"}
+{"k":"unreferenced.byAssetDbSameId","v":"2|sameId=True"}
+{"k":"runtime.idValidAfterDestroy","v":"False"}
+{"k":"runtime.byResourcesAfterDestroy","v":"False"}
+{"k":"runtime.byEditorAfterDestroy","v":"False"}
 {"k":"complete","v":true}

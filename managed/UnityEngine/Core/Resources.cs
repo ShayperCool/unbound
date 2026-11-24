@@ -208,9 +208,10 @@ namespace UnityEngine
             return kept ?? all;
         }
 
-        public static Object InstanceIDToObject(int instanceID) => AssetDatabaseRuntime.Reloaded(ObjectRegistry.FindById(instanceID));
+        public static Object InstanceIDToObject(int instanceID) => AssetDatabaseRuntime.FindOrReloadById(instanceID);
 
-        public static bool InstanceIDIsValid(int instanceId) => ObjectRegistry.FindById(instanceId) != null;
+        public static bool InstanceIDIsValid(int instanceId) =>
+            ObjectRegistry.FindById(instanceId) != null || AssetDatabaseRuntime.HasPersistentId(instanceId);
 
         [Obsolete("Use AssetDatabase.LoadAssetAtPath instead (UnityUpgradable) -> * [UnityEditor] UnityEditor.AssetDatabase.LoadAssetAtPath(*)", true)]
         [Unbound.EditorFaithful("Unity returns null too (obsolete as an error)")]

@@ -575,6 +575,7 @@ namespace UnityEditor
                 s_DeletedGuidByPath[p] = guid;
                 s_DeletedPathByGuid[guid] = p;
                 AssetDatabaseRuntime.Invalidate(guid);
+                AssetDatabaseRuntime.ForgetPersistentIds(guid);
             }
             var file = FileOf(path);
             if (trash) Trash.Move(file);

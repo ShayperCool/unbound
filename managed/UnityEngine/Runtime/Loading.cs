@@ -839,6 +839,12 @@ namespace Unbound.Runtime
     {
         static readonly Dictionary<string, LoadedFile> s_Files = new Dictionary<string, LoadedFile>(StringComparer.OrdinalIgnoreCase);
         static readonly Dictionary<(string, long), Object> s_Objects = new Dictionary<(string, long), Object>();
+        /// <summary>Stable instance IDs remembered per persistent `(guid, fileId)` so an asset
+        /// unloaded via `Resources.UnloadAsset` keeps its ID and can be reloaded by
+        /// `Resources.InstanceIDToObject` / `EditorUtility.InstanceIDToObject` (measured in
+        /// Unity 6000.0.71f1, tests/projects/assetloaded).</summary>
+        static readonly Dictionary<(string, long), int> s_AssetIds = new Dictionary<(string, long), int>();
+        static readonly Dictionary<int, (string Guid, long FileId)> s_IdLocations = new Dictionary<int, (string, long)>();
         static readonly HashSet<string> s_Loading = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         /// <summary>Assets whose import is calling its postprocessors (<see cref="ImportCallbacks"/>).</summary>
         static readonly HashSet<string> s_InImportCallbacks = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -1108,7 +1114,7 @@ namespace Unbound.Runtime
                     if (info.Kind == "yaml" && info.MainFileId != 0 && f.Objects.TryGetValue(info.MainFileId, out var main)) f.MainObject = main;
                     f.Guid = guid;
                     f.Path = info.Path;
-                    foreach (var pair in f.Objects) s_Objects[(guid, pair.Key)] = pair.Value;
+                    foreach (var pair in f.Objects) RegisterObject(guid, pair.Key, pair.Value);
                     s_Files[guid] = f;
                 }
                 switch (info.Kind)
@@ -1195,7 +1201,7 @@ namespace Unbound.Runtime
                     file.Path = info.Path;
                     foreach (var pair in file.Objects)
                     {
-                        s_Objects[(guid, pair.Key)] = pair.Value;
+                        RegisterObject(guid, pair.Key, pair.Value);
                         // A DefaultAsset is named by its importer (a managed plug-in's has no name).
                         if (string.IsNullOrEmpty(pair.Value.m_Name) && pair.Value == file.MainObject && !(pair.Value is UnityEditor.DefaultAsset))
                             pair.Value.m_Name = System.IO.Path.GetFileNameWithoutExtension(info.Path);
@@ -1549,17 +1555,61 @@ namespace Unbound.Runtime
             return copy;
         }
 
+        static void RegisterObject(string guid, long fileId, Object obj)
+        {
+            var key = (guid, fileId);
+            s_Objects[key] = obj;
+            if (s_AssetIds.TryGetValue(key, out int stableId))
+            {
+                if (obj.m_InstanceID != stableId && ObjectRegistry.FindById(stableId) == null)
+                    ObjectRegistry.ReassignId(obj, stableId);
+            }
+            else if (obj.m_InstanceID != 0)
+            {
+                s_AssetIds[key] = obj.m_InstanceID;
+                s_IdLocations[obj.m_InstanceID] = key;
+            }
+        }
+
+        internal static bool HasPersistentId(int instanceId) =>
+            s_IdLocations.TryGetValue(instanceId, out var loc)
+            && (s_Files.ContainsKey(loc.Guid) || UnityEditor.AssetDatabase.Lists(loc.Guid));
+
+        internal static Object FindOrReloadById(int instanceId)
+        {
+            var live = ObjectRegistry.FindById(instanceId);
+            if (live != null) return Reloaded(live);
+            if (s_IdLocations.TryGetValue(instanceId, out var loc)
+                && (s_Files.ContainsKey(loc.Guid) || UnityEditor.AssetDatabase.Lists(loc.Guid)))
+                return Load(loc.Guid, loc.FileId, null);
+            return null;
+        }
+
+        internal static void ForgetPersistentIds(string guid)
+        {
+            var keys = new List<(string, long)>();
+            foreach (var key in s_AssetIds.Keys)
+                if (string.Equals(key.Item1, guid, StringComparison.OrdinalIgnoreCase)) keys.Add(key);
+            foreach (var key in keys)
+            {
+                if (s_AssetIds.Remove(key, out int id))
+                    s_IdLocations.Remove(id);
+            }
+        }
+
         /// <summary>Forgets every loaded asset (a domain reload or a content change).</summary>
         internal static void Clear()
         {
             s_Files.Clear();
             s_Objects.Clear();
+            s_AssetIds.Clear();
+            s_IdLocations.Clear();
         }
 
         /// <summary>Makes an already built file and its objects loaded, as reading it would (tests).</summary>
         internal static void AddLoaded(LoadedFile file)
         {
-            foreach (var pair in file.Objects) s_Objects[(file.Guid, pair.Key)] = pair.Value;
+            foreach (var pair in file.Objects) RegisterObject(file.Guid, pair.Key, pair.Value);
             s_Files[file.Guid] = file;
         }
 
@@ -1568,8 +1618,13 @@ namespace Unbound.Runtime
         internal static void RefreshObjects(LoadedFile file, List<long> removed)
         {
             foreach (long id in removed)
-                if (!file.Objects.ContainsKey(id)) s_Objects.Remove((file.Guid, id));
-            foreach (var pair in file.Objects) s_Objects[(file.Guid, pair.Key)] = pair.Value;
+                if (!file.Objects.ContainsKey(id))
+                {
+                    var key = (file.Guid, id);
+                    s_Objects.Remove(key);
+                    if (s_AssetIds.Remove(key, out int instanceId)) s_IdLocations.Remove(instanceId);
+                }
+            foreach (var pair in file.Objects) RegisterObject(file.Guid, pair.Key, pair.Value);
         }
 
         /// <summary>An asset an editor API wrote from live objects (AssetDatabase.CreateAsset): its
@@ -1587,7 +1642,7 @@ namespace Unbound.Runtime
         internal static void AddObject(LoadedFile file, Object o, long fileId)
         {
             file.Objects[fileId] = o;
-            s_Objects[(file.Guid, fileId)] = o;
+            RegisterObject(file.Guid, fileId, o);
             o.IsPersistentAsset = true;
         }
 
@@ -1596,7 +1651,9 @@ namespace Unbound.Runtime
         internal static void RemoveObject(LoadedFile file, Object o, long fileId)
         {
             file.Objects.Remove(fileId);
-            s_Objects.Remove((file.Guid, fileId));
+            var key = (file.Guid, fileId);
+            s_Objects.Remove(key);
+            if (s_AssetIds.Remove(key, out int id)) s_IdLocations.Remove(id);
             if (ReferenceEquals(file.MainObject, o)) file.MainObject = null;
             o.IsPersistentAsset = false;
         }

@@ -328,13 +328,14 @@ namespace UnityEngine
 
         internal static bool IsPersistent(Object obj) => obj != null && obj.IsPersistentAsset;
 
-        /// <summary>A live object has the id (a destroyed one does not).</summary>
-        internal static bool DoesObjectWithInstanceIDExist(int instanceID) => ObjectRegistry.FindById(instanceID) != null;
+        /// <summary>A live object (or an unloaded persistent asset whose ID is remembered) has the id.</summary>
+        internal static bool DoesObjectWithInstanceIDExist(int instanceID) =>
+            ObjectRegistry.FindById(instanceID) != null || AssetDatabaseRuntime.HasPersistentId(instanceID);
 
         internal static Object FindObjectFromInstanceID(int instanceID) => ObjectRegistry.FindById(instanceID);
 
-        /// <summary>Every asset is loaded with its scene or file, so the id's object is already there.</summary>
-        internal static Object ForceLoadFromInstanceID(int instanceID) => ObjectRegistry.FindById(instanceID);
+        /// <summary>Returns the live object for the id, or reloads an unloaded persistent asset.</summary>
+        internal static Object ForceLoadFromInstanceID(int instanceID) => AssetDatabaseRuntime.FindOrReloadById(instanceID);
 
         // ------------------------------------------------------------------ Find
 

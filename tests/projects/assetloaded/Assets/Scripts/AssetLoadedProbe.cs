@@ -42,6 +42,7 @@ public class AssetLoadedProbe : MonoBehaviour
                 Row("unreferenced.loaded", Loaded(Unreferenced));
                 Row("missing.loaded", Loaded("Assets/Data/Missing.asset"));
                 var unreferenced = AssetDatabase.LoadAssetAtPath<LoadedData>(Unreferenced);
+                int unreferencedId = unreferenced.GetInstanceID();
                 Row("unreferenced.afterLoad", Loaded(Unreferenced));
                 Resources.UnloadAsset(unreferenced);
                 Row("unreferenced.afterUnload", Loaded(Unreferenced));
@@ -50,6 +51,30 @@ public class AssetLoadedProbe : MonoBehaviour
                 Row("referenced.afterUnload", Loaded(Referenced));
                 Row("referenced.sceneReference", holder.data == null ? "null" : holder.data.value.ToString());
                 Row("referenced.afterAccess", Loaded(Referenced));
+
+                // Weak-reference reload by instance ID (as ProbeVolumeBakingSetWeakReference uses).
+                Row("unreferenced.idValidAfterUnload", Resources.InstanceIDIsValid(unreferencedId).ToString());
+                var byResources = Resources.InstanceIDToObject(unreferencedId) as LoadedData;
+                Row("unreferenced.byResources", byResources == null ? "null" : $"{byResources.value}|sameId={byResources.GetInstanceID() == unreferencedId}");
+                Row("unreferenced.idValidAfterResources", Resources.InstanceIDIsValid(unreferencedId).ToString());
+                Row("unreferenced.loadedAfterResources", Loaded(Unreferenced));
+
+                Resources.UnloadAsset(byResources);
+                Row("unreferenced.idValidAfterUnload2", Resources.InstanceIDIsValid(unreferencedId).ToString());
+                var byEditor = EditorUtility.InstanceIDToObject(unreferencedId) as LoadedData;
+                Row("unreferenced.byEditor", byEditor == null ? "null" : $"{byEditor.value}|sameId={byEditor.GetInstanceID() == unreferencedId}");
+                Row("unreferenced.loadedAfterEditor", Loaded(Unreferenced));
+
+                Resources.UnloadAsset(byEditor);
+                var byAssetDb = AssetDatabase.LoadAssetAtPath<LoadedData>(Unreferenced);
+                Row("unreferenced.byAssetDbSameId", byAssetDb == null ? "null" : $"{byAssetDb.value}|sameId={byAssetDb.GetInstanceID() == unreferencedId}");
+
+                var runtime = ScriptableObject.CreateInstance<LoadedData>();
+                int runtimeId = runtime.GetInstanceID();
+                DestroyImmediate(runtime);
+                Row("runtime.idValidAfterDestroy", Resources.InstanceIDIsValid(runtimeId).ToString());
+                Row("runtime.byResourcesAfterDestroy", (Resources.InstanceIDToObject(runtimeId) != null).ToString());
+                Row("runtime.byEditorAfterDestroy", (EditorUtility.InstanceIDToObject(runtimeId) != null).ToString());
                 output.Write("{\"k\":\"complete\",\"v\":true}\n");
             }
             EditorApplication.Exit(0);
