@@ -1732,7 +1732,12 @@ mod command_line_path_tests {
     /// runs in the project view, which every run builds anew.
     #[test]
     fn a_relative_path_is_relative_to_the_start_directory() {
-        let start = std::env::current_dir().unwrap();
+        // The recorded start directory, not the working directory, is the base (the game's host
+        // moves the working directory while the game runs).
+        let recorded = std::env::temp_dir().join("unbound-start-directory");
+        let _ = START_DIRECTORY.set(recorded);
+        let start = START_DIRECTORY.get().unwrap().clone();
+        assert_ne!(start, std::env::current_dir().unwrap());
         assert_eq!(
             from_current_dir(Path::new("prefs.xml")).unwrap(),
             start.join("prefs.xml")
@@ -1741,11 +1746,8 @@ mod command_line_path_tests {
             from_current_dir(Path::new("saves/data")).unwrap(),
             start.join("saves/data")
         );
-        let absolute = start.join("elsewhere.xml");
+        let absolute = std::env::temp_dir().join("elsewhere.xml");
         assert_eq!(from_current_dir(&absolute).unwrap(), absolute);
-        // Once recorded, the start directory stays the base when the working directory moves.
-        remember_start_directory();
-        assert_eq!(start_directory().unwrap(), start);
     }
 }
 
