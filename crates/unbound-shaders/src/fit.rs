@@ -1065,7 +1065,7 @@ fn pack_storage_vectors(words: &[u32]) -> Result<Vec<u32>> {
             43 if i.len() == 4 => {
                 constants.insert(i[2], i[3]);
             }
-            59 | 65 | 66 => {
+            55 | 59 | 65 | 66 => {
                 values.insert(i[2], i[1]);
             }
             71 if i.len() >= 3 && (i[2] == 2 || i[2] == 3) => {
@@ -1098,8 +1098,8 @@ fn pack_storage_vectors(words: &[u32]) -> Result<Vec<u32>> {
     /// Returns `(tight_byte_size, wgsl_align, needs_packing)` if `ty` can be packed tightly to
     /// 4-byte scalar alignment (32-bit scalars, 2..=4 vectors of them, and non-block structs of
     /// them). `needs_packing` is true whenever WGSL std430 layout differs from HLSL tight layout
-    /// (contains a `vec3`, any member offset mismatches tight packing or WGSL alignment, or a
-    /// struct's tight size is not a multiple of its WGSL alignment).
+    /// (any member offset mismatches tight packing or WGSL alignment, or a struct's tight size is
+    /// not a multiple of its WGSL alignment).
     fn analyze_member(
         ty: u32,
         scalar32: &std::collections::HashSet<u32>,

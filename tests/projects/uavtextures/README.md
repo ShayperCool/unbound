@@ -26,8 +26,8 @@ Measures Unity 6000.0.71f1 behavior for:
 
 `Reference/unity-6000.0.71f1.jsonl` was published from two byte-identical Unity 6000.0.71f1
 Linux Vulkan captures (`run.py native --label L --vulkan`, `run.py publish L-1 L-2`).
-OpenGL Core Unity 6000.0.71f1 agrees on 48/50 keys (all 34 `<4`-channel expansion cases,
-all slot replacement, mixed UAV, switch, and packed-struct cases); Unity's OpenGL Core backend
-retains a stale GL image unit after `Graphics.ClearRandomWriteTargets` when drawing with an
-unbound UAV (`lifecycle.gfx.cleared`) and reads zeros before an explicit image barrier in
-`lifecycle.rmw`. Unbound's wgpu renderer matches Vulkan on both OpenGL Core and Vulkan backends.
+OpenGL Core Unity 6000.0.71f1 agrees on every `<4`-channel expansion case, slot replacement,
+mixed UAV, switch, and packed-struct case; Unity's OpenGL Core backend retains a stale GL image
+unit after `Graphics.ClearRandomWriteTargets` when drawing with an unbound UAV
+(`lifecycle.gfx.cleared`) and reads zeros before an explicit image barrier in `lifecycle.rmw`.
+Unbound's wgpu renderer matches Vulkan on both OpenGL Core and Vulkan backends.
