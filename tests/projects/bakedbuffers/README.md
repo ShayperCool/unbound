@@ -178,17 +178,18 @@ box takes the probes in with the renderers, for the lightmaps' paths too; a prob
 times the samples a texel takes, of its paths and of the sky, and its paths may end by chance
 from their first surface on whatever the Min Bounces.
 
-- `Lod` (4, 128): two active LOD Groups (`LodA` with LOD 0, two LOD 1 renderers, a renderer
-  shared between LOD 0 and LOD 1, and LOD 2; `LodB` with LOD 0 and LOD 1), a disabled LOD
-  Group (`LodOff`, whose renderers bake like non-LOD renderers), a non-shadow-casting roof
-  over `LodA` (`NoCastRoof`), and a Light Probe Group with probes inside `A_Lod1_Near`, under
-  a directional sun and an ambient colour with two bounces (32 indirect and environment
-  samples). Non-LOD renderers, LOD 0 renderers and light probes see only non-LOD and LOD 0
-  geometry (their sky rays are stopped by non-shadow-casting renderers too); lower-LOD rays
-  test their own group and level within the diagonal of that level's world bounding box before
-  falling back to non-LOD and LOD 0 geometry (skipping their own group's LOD 0-only
-  renderers; on a bounce from a same-level hit that misses its own level, the fallback to
-  non-LOD and LOD 0 starts from the path's first origin), and their sky rays test
+- `Lod` (4, 128): three active LOD Groups (`LodA` with LOD 0, two LOD 1 renderers, a renderer
+  shared between LOD 0 and LOD 1, and LOD 2; `LodB` with LOD 0 and LOD 1; `LodC` with a non-LOD
+  wall `C_BaseWall` placed directly between two same-level LOD 1 renderers `C_Lod1_Recv` and
+  `C_Lod1_Emit`), a disabled LOD Group (`LodOff`, whose renderers bake like non-LOD renderers),
+  a non-shadow-casting roof over `LodA` (`NoCastRoof`), and a Light Probe Group with probes
+  inside `A_Lod1_Near`, under a directional sun and an ambient colour with two bounces (32
+  indirect and environment samples). Non-LOD renderers, LOD 0 renderers and light probes see
+  only non-LOD and LOD 0 geometry (their sky rays are stopped by non-shadow-casting renderers
+  too); lower-LOD rays test their own group and level first (even past an intervening non-LOD
+  wall) before falling back to non-LOD and LOD 0 geometry (skipping their own group's LOD
+  0-only renderers; on a bounce from a same-level hit that misses its own level, the fallback
+  to non-LOD and LOD 0 starts from the path's first origin), and their sky rays test
   shadow-casting renderers only.
 
 The scenes above them have the default sky (`Bare`, `Charts`, `Samples`, `Shapes`: the default

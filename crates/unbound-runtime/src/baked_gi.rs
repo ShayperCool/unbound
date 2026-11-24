@@ -2754,7 +2754,7 @@ mod tests {
         assert!(sky_of_floor(None, Some((0, 0b10))) >= 4);
         // LOD 1 floor skips its own group's LOD 0 ceiling.
         assert!(sky_of_floor(Some((0, 0b10)), Some((0, 0b01))) >= 4);
-        // LOD 1 floor IS blocked by a same-group LOD 1 ceiling (reach covers both).
+        // LOD 1 floor IS blocked by a same-group LOD 1 ceiling.
         assert_eq!(sky_of_floor(Some((0, 0b10)), Some((0, 0b10))), 0);
         // LOD 1 floor IS blocked by a different group's LOD 0 ceiling.
         assert_eq!(sky_of_floor(Some((0, 0b10)), Some((1, 0b01))), 0);

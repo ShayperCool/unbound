@@ -102,9 +102,26 @@ namespace UnityEngine
         /// the 8-bit mask of LOD levels (bits 0..8) that list it. A disabled or inactive LOD Group
         /// leaves its renderers outside any group, like the Editor; unmeasured combinations (more
         /// than 8 levels, a renderer in multiple active LOD Groups, a renderer shared across
-        /// multiple lower LOD levels without LOD 0, or an inactive LOD Group referencing an active
-        /// baked renderer) report via <see cref="Approximated"/>.</summary>
-        internal static Dictionary<Renderer, (uint Group, byte Mask)> LodMemberships(LoadedFile file, HashSet<Renderer> inactiveRefs = null)
+        /// <summary>Per-renderer unmeasured LOD Group conditions collected by
+        /// <see cref="LodMemberships"/> and emitted only for renderers that actually enter the
+        /// baked lightmap layout (enabled, active, Contribute GI MeshRenderers).</summary>
+        internal sealed class LodNotices
+        {
+            public readonly HashSet<Renderer> InactiveRefs = new HashSet<Renderer>();
+            public readonly Dictionary<Renderer, (string GroupName, int LevelCount)> OverEightLevels = new Dictionary<Renderer, (string, int)>();
+            public readonly HashSet<Renderer> MultiGroup = new HashSet<Renderer>();
+            public readonly HashSet<Renderer> SharedLower = new HashSet<Renderer>();
+        }
+
+        /// <summary>The active LOD Group membership of each renderer in a scene file, ordered
+        /// deterministically by the <see cref="LODGroup"/>'s scene file ID: the group index and
+        /// the 8-bit level mask (bit <c>k</c> set when the renderer is listed at LOD level
+        /// <c>k</c>). Disabled LOD Groups and inactive GameObjects are excluded; unmeasured
+        /// conditions (more than 8 levels, a renderer listed by more than one active LOD Group,
+        /// multiple lower LOD levels without LOD 0, or an inactive LOD Group referencing a
+        /// renderer) are recorded into <paramref name="notices"/> so <see cref="Lay"/> emits
+        /// <see cref="Approximated"/> only for baked renderers.</summary>
+        internal static Dictionary<Renderer, (uint Group, byte Mask)> LodMemberships(LoadedFile file, LodNotices notices = null)
         {
             var groups = new List<(LODGroup Group, long FileId)>();
             foreach (var pair in file.Objects)
@@ -112,11 +129,11 @@ namespace UnityEngine
                 if (pair.Value is not LODGroup group || group == null || !group.enabled) continue;
                 if (!group.gameObject.activeInHierarchy)
                 {
-                    if (inactiveRefs != null)
+                    if (notices != null)
                         foreach (var lod in group.GetLODs())
                             if (lod.renderers != null)
                                 foreach (var r in lod.renderers)
-                                    if (r != null) inactiveRefs.Add(r);
+                                    if (r != null) notices.InactiveRefs.Add(r);
                     continue;
                 }
                 groups.Add((group, pair.Key));
@@ -127,8 +144,17 @@ namespace UnityEngine
             foreach (var (group, _) in groups)
             {
                 var lods = group.GetLODs();
-                if (lods.Length > 8)
-                    Approximated("lod-levels:" + file.Path, $"{file.Path}: '{group.name}' has {lods.Length} LOD levels (more than 8), which Unbound's bake (Lightmapping.Bake) does not support beyond 8 levels.");
+                if (lods.Length > 8 && notices != null)
+                {
+                    for (int level = 0; level < lods.Length; level++)
+                    {
+                        var renderers = lods[level].renderers;
+                        if (renderers == null) continue;
+                        foreach (var r in renderers)
+                            if (r != null && !notices.OverEightLevels.ContainsKey(r))
+                                notices.OverEightLevels[r] = (group.name, lods.Length);
+                    }
+                }
                 int count = Math.Min(lods.Length, 8);
                 bool any = false;
                 for (int level = 0; level < count; level++)
@@ -148,7 +174,7 @@ namespace UnityEngine
                             }
                             else
                             {
-                                Approximated("lod-multi-group:" + file.Path, $"{file.Path}: '{r.name}' is listed by more than one active LODGroup, which Unbound's bake (Lightmapping.Bake) has not measured yet.");
+                                notices?.MultiGroup.Add(r);
                             }
                         }
                         else
@@ -160,11 +186,14 @@ namespace UnityEngine
                 }
                 if (any) groupId++;
             }
-            foreach (var pair in memberships)
+            if (notices != null)
             {
-                byte mask = pair.Value.Mask;
-                if ((mask & 1) == 0 && (mask & (mask - 1)) != 0)
-                    Approximated("lod-shared-lower:" + file.Path, $"{file.Path}: '{pair.Key.name}' is shared across multiple lower LOD levels without LOD 0 (mask 0x{mask:x}), which Unbound's bake (Lightmapping.Bake) has not measured yet.");
+                foreach (var pair in memberships)
+                {
+                    byte mask = pair.Value.Mask;
+                    if ((mask & 1) == 0 && (mask & (mask - 1)) != 0)
+                        notices.SharedLower.Add(pair.Key);
+                }
             }
             return memberships;
         }
@@ -444,6 +473,11 @@ namespace UnityEngine
             Warn(key, message);
         }
 
+        internal static bool LastApproximated => s_Approximated;
+
+        internal static (uint? Group, int Mask) LodBakeFields(bool inLod, (uint Group, byte Mask) lod) =>
+            inLod && Compat.BakedGiLodMeasured ? ((uint?)lod.Group, (int)lod.Mask) : (null, 0);
+
         /// <summary>The scene's lights that take part in a bake: enabled mixed and baked lights of
         /// active GameObjects, made from its file, each with its colour as the bake takes it
         /// (times its intensity, and times its Indirect Multiplier, linear). Said once per scene
@@ -526,8 +560,9 @@ namespace UnityEngine
                     Warn("terrain:" + path, $"{path}: '{terrain.name}' is a lightmapped Terrain, which Unbound's layout of the baked lightmaps (Lightmapping.Bake) does not support; it lays out none for the scene.");
                     return null;
                 }
-            var inactiveLodRefs = new HashSet<Renderer>();
-            var lods = LodMemberships(file, inactiveLodRefs);
+            var lodNotices = new LodNotices();
+            var lods = LodMemberships(file, lodNotices);
+            bool lodMeasured = Compat.BakedGiLodMeasured;
             var renderers = new List<object>();
             var placed = new List<(MeshRenderer renderer, long fileId)>();
             var meshes = new List<object>();
@@ -585,11 +620,20 @@ namespace UnityEngine
                     var hasMaterial = new bool[slots.Length];
                     for (int k = 0; k < slots.Length; k++) hasMaterial[k] = slots[k] != null;
                     bool inLod = lods.TryGetValue(renderer, out var lod) && lod.Mask != 0;
-                    if (!inLod && inactiveLodRefs.Contains(renderer))
+                    if (lodNotices.InactiveRefs.Contains(renderer))
                         Approximated("lod-inactive-group:" + path, $"{path}: '{renderer.name}' is referenced by an inactive LODGroup GameObject, which Unbound's bake (Lightmapping.Bake) has not measured yet.");
-                    if (inLod && (lod.Mask & 1) == 0 && settings.maxBounces > 2)
+                    if (lodNotices.OverEightLevels.TryGetValue(renderer, out var overEight))
+                        Approximated("lod-levels:" + path, $"{path}: '{overEight.GroupName}' has {overEight.LevelCount} LOD levels (more than 8), which Unbound's bake (Lightmapping.Bake) does not support beyond 8 levels.");
+                    if (lodNotices.MultiGroup.Contains(renderer))
+                        Approximated("lod-multi-group:" + path, $"{path}: '{renderer.name}' is listed by more than one active LODGroup, which Unbound's bake (Lightmapping.Bake) has not measured yet.");
+                    if (lodNotices.SharedLower.Contains(renderer))
+                        Approximated("lod-shared-lower:" + path, $"{path}: '{renderer.name}' is shared across multiple lower LOD levels without LOD 0 (mask 0x{lod.Mask:x}), which Unbound's bake (Lightmapping.Bake) has not measured yet.");
+                    if (inLod && !lodMeasured)
+                        Approximated("lod:" + path, $"{path}: '{renderer.name}' is in a LOD Group; LOD Group baked lightmapping is measured only for Unity 6000.0.");
+                    if (inLod && lodMeasured && (lod.Mask & 1) == 0 && settings.maxBounces > 2)
                         Approximated("lod-bounces:" + path, $"{path}: lower-LOD renderers with maxBounces={settings.maxBounces} (> 2) are not measured yet in Unbound's bake (Lightmapping.Bake).");
                     int? lodLevel = inLod ? System.Numerics.BitOperations.TrailingZeroCount(lod.Mask) : (int?)null;
+                    var (lodGroup, lodMask) = LodBakeFields(inLod, lod);
                     renderers.Add(new
                     {
                         name = renderer.name,
@@ -599,8 +643,8 @@ namespace UnityEngine
                         localToWorld = matrix,
                         scaleInLightmap = renderer.scaleInLightmap,
                         lodLevel,
-                        lodGroup = inLod ? (uint?)lod.Group : null,
-                        lodMask = inLod ? (int)lod.Mask : 0,
+                        lodGroup,
+                        lodMask,
                         probeLit = renderer.receiveGI != ReceiveGI.Lightmaps,
                         castsShadows = renderer.shadowCastingMode != UnityEngine.Rendering.ShadowCastingMode.Off,
                         receivesShadows = renderer.receiveShadows,

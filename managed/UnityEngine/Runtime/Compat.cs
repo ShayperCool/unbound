@@ -28,6 +28,11 @@ namespace Unbound.Runtime
         // 6000.0.71f1 (tests/projects/bakeenvironment written/).
         internal static bool BakeFilesMeasured => Family == ReleaseFamily.Unity6000_0;
 
+        // Baked lightmapping LOD Group ray/shadow/bounce/sky visibility rules, measured on
+        // 6000.0.71f1 (tests/projects/bakedbuffers Shapes and Lod). Other families keep the
+        // pre-LOD unmeasured warning and omit LOD Group ray filtering.
+        internal static bool BakedGiLodMeasured => Family == ReleaseFamily.Unity6000_0;
+
         // The documents the Editor writes for new objects and new scenes (a scene save's starting
         // point), measured on 6000.0.71f1 (tests/projects/scenesave defaults.unity).
         internal static bool NewObjectDocumentsMeasured => Family == ReleaseFamily.Unity6000_0;

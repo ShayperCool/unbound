@@ -1923,7 +1923,7 @@ mod bounced {
             (hit.triangle, hit.distance, next, used_origin),
             (0, 2.0, Viewer::Lod0, [0.0; 3])
         );
-        // When it hits its own group and level within reach, ray.origin is kept.
+        // When it hits its own group and level, ray.origin is kept.
         let own_only = Scene::with_lods([(tri(6.0), a_lod1)]);
         let (hit, next, used_origin) = own_only
             .closest_from(&bounced, [0.0, 0.0, 0.0], 10.0, viewer_a1)
