@@ -1176,6 +1176,7 @@ namespace Unbound.Runtime
                 agent.CatchUpStaleness();
                 return true;
             }
+            var mappedEnd = end;
 
             bool pending = agent.pathPending;
             var status = agent.pathStatus;
@@ -1206,6 +1207,7 @@ namespace Unbound.Runtime
             bool olderResult = agent.m_FollowingOlderResult;
             ag.corridor.Reset(startRef, NavMesh.V(start));
             Follow(agent, corridor, corridor.Length, NavMesh.V(end), status, keepRequest: pending);
+            if (!pending && moveEnd) agent.SetRequestedDestination(mappedEnd);
             if (!clearStale) agent.RestoreStaleness(staleness);
             agent.m_FollowingOlderResult = olderResult;
             return true;
@@ -1988,6 +1990,8 @@ namespace Unbound.Runtime
                 }
                 // The corridor starts where the search did (see PathOrigin).
                 ApplyPath(agent, search.Result, NavMesh.V(search.Origin));
+                if (Compat.NavMeshPathAssignmentMeasured && !assignedDuringSearch)
+                    agent.SetRequestedDestination(search.Target);
                 agent.m_FollowingOlderResult = assignedDuringSearch;
                 if (Compat.NavMeshLinkActivationMeasured && search.ActivationVersion != NavWorld.LinkActivationVersion)
                 {

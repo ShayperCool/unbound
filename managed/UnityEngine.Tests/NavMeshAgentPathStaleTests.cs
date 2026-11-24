@@ -367,11 +367,35 @@ namespace UnityEngine.Tests
                     Assert.Equal(NavMeshPathStatus.PathComplete, remapped.pathStatus);
                     Assert.InRange(remapped.pathEndPosition.x, -0.2f, 0.2f);
                     Assert.Equal(remapped.pathEndPosition, remapped.destination);
+                    Assert.Equal(remapped.pathEndPosition, remapped.RequestedDestination);
 
                     Assert.False(unmapped.pathPending);
                     Assert.True(unmapped.hasPath);
                     Assert.Equal(unmapped.pathEndPosition, unmapped.destination);
+                    Assert.Equal(unmapped.pathEndPosition, unmapped.RequestedDestination);
                     Assert.InRange(unmapped.destination.x, -2.1f, -1.9f);
+
+                    // An unrelated NavMesh rebuild after remapping/dropping keeps both paths valid.
+                    var extraLink = NavMesh.AddLink(new NavMeshLinkData
+                    {
+                        startPosition = new Vector3(-8f, 0f, 38f),
+                        endPosition = new Vector3(-7f, 0f, 38f),
+                        bidirectional = true,
+                        costModifier = -1f,
+                        area = 0,
+                        agentTypeID = 0,
+                    });
+                    try
+                    {
+                        AgentSystem.Step();
+                        Assert.True(remapped.hasPath);
+                        Assert.Equal(NavMeshPathStatus.PathComplete, remapped.pathStatus);
+                        Assert.InRange(remapped.destination.x, -0.2f, 0.2f);
+                        Assert.True(unmapped.hasPath);
+                        Assert.Equal(NavMeshPathStatus.PathComplete, unmapped.pathStatus);
+                        Assert.InRange(unmapped.destination.x, -2.1f, -1.9f);
+                    }
+                    finally { NavMesh.RemoveLink(extraLink); }
                 }
                 finally { NavMesh.pathfindingIterationsPerFrame = budget; }
             });
@@ -420,6 +444,98 @@ namespace UnityEngine.Tests
                 AgentSystem.Step();
                 Assert.Equal(NavMeshPathStatus.PathPartial, agent.pathStatus);
                 Assert.False(agent.isPathStale);
+
+                // An unrelated NavMeshData addition rebuilds the world without losing the repaired partial route.
+                var extra = AddData(
+                    new Bounds(new Vector3(0f, 0f, 120f), new Vector3(10f, 4f, 10f)),
+                    Platform(new Vector3(0f, 0f, 120f)));
+                try
+                {
+                    AgentSystem.Step();
+                    Assert.True(agent.hasPath);
+                    Assert.Equal(NavMeshPathStatus.PathPartial, agent.pathStatus);
+                }
+                finally { NavMesh.RemoveNavMeshData(extra); }
+
+                // Complete endExcluded repair also updates RequestedDestination so a link rebuild keeps the path.
+                var repaired = Agent(new Vector3(-8f, 0f, 69f));
+                repaired.speed = 0f;
+                Assert.True(repaired.SetDestination(new Vector3(1f, 0f, 69f)));
+                AgentSystem.Step();
+                repaired.areaMask = NavMesh.AllAreas & ~(1 << excludedArea);
+                AgentSystem.Step();
+                Assert.Equal(NavMeshPathStatus.PathComplete, repaired.pathStatus);
+                Assert.Equal(repaired.pathEndPosition, repaired.RequestedDestination);
+                var link = NavMesh.AddLink(new NavMeshLinkData
+                {
+                    startPosition = new Vector3(-8f, 0f, 68f),
+                    endPosition = new Vector3(-7f, 0f, 68f),
+                    bidirectional = true,
+                    costModifier = -1f,
+                    area = 0,
+                    agentTypeID = 0,
+                });
+                try
+                {
+                    AgentSystem.Step();
+                    Assert.True(repaired.hasPath);
+                    Assert.Equal(NavMeshPathStatus.PathComplete, repaired.pathStatus);
+                }
+                finally { NavMesh.RemoveLink(link); }
+            });
+        }
+
+        [Fact]
+        public void DisablingInvalidatingAndResettingClearPendingSearchAndMaskValidationState()
+        {
+            NavigationTestRelease.At("6000.0.71f1", () =>
+            {
+                int budget = NavMesh.pathfindingIterationsPerFrame;
+                try
+                {
+                    // (a) Disabling and re-enabling an agent mid-search clears s_Searches.
+                    var disabled = Agent(new Vector3(-7f, 0f, 0f));
+                    disabled.speed = 0f;
+                    NavMesh.pathfindingIterationsPerFrame = 1;
+                    Assert.True(disabled.SetDestination(new Vector3(7f, 0f, 0f)));
+                    AgentSystem.Step();
+                    Assert.True(AgentSystem.PathSearchStarted(disabled));
+                    disabled.enabled = false;
+                    disabled.enabled = true;
+                    Assert.False(AgentSystem.PathSearchStarted(disabled));
+
+                    // (b) InvalidateCorridor during an active search (with an assigned corridor) clears s_Searches.
+                    var invalidated = Agent(new Vector3(-7f, 0f, 0.5f));
+                    invalidated.speed = 0f;
+                    var assigned = new NavMeshPath();
+                    Assert.True(NavMesh.CalculatePath(new Vector3(-7f, 0f, 0.5f), new Vector3(-4f, 0f, 0.5f), NavMesh.AllAreas, assigned));
+                    Assert.True(invalidated.SetDestination(new Vector3(7f, 0f, 0.5f)));
+                    AgentSystem.Step();
+                    Assert.True(AgentSystem.PathSearchStarted(invalidated));
+                    Assert.True(invalidated.SetPath(assigned));
+                    invalidated.areaMask = NavMesh.AllAreas & ~(1 << 0);
+                    AgentSystem.Step();
+                    Assert.False(invalidated.hasPath);
+                    Assert.False(AgentSystem.PathSearchStarted(invalidated));
+
+                    // (c) ResetPath (ForgetPath) clears m_ValidateAreaMask before a new path is assigned.
+                    NavMesh.pathfindingIterationsPerFrame = budget;
+                    var reset = Agent(new Vector3(-7f, 0f, -0.5f));
+                    reset.speed = 0f;
+                    Assert.True(reset.SetDestination(new Vector3(-4f, 0f, -0.5f)));
+                    AgentSystem.Step();
+                    reset.areaMask = NavMesh.AllAreas & ~(1 << 0);
+                    Assert.True(reset.m_ValidateAreaMask);
+                    reset.ResetPath();
+                    Assert.False(reset.m_ValidateAreaMask);
+                    var fresh = new NavMeshPath();
+                    Assert.True(NavMesh.CalculatePath(new Vector3(-7f, 0f, -0.5f), new Vector3(-4f, 0f, -0.5f), NavMesh.AllAreas, fresh));
+                    Assert.True(reset.SetPath(fresh));
+                    AgentSystem.Step();
+                    Assert.True(reset.hasPath);
+                    Assert.Equal(NavMeshPathStatus.PathComplete, reset.pathStatus);
+                }
+                finally { NavMesh.pathfindingIterationsPerFrame = budget; }
             });
         }
 
