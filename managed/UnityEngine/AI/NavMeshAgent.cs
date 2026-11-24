@@ -60,6 +60,7 @@ namespace UnityEngine.AI
         // A new agent reports a complete path, also while its first path is pending (measured).
         NavMeshPathStatus m_PathStatus = NavMeshPathStatus.PathComplete;
         bool m_KeepInvalidPathEnd;
+        Vector3 m_InvalidPathEnd;
         Vector3 m_WrittenPosition;
         bool m_OnNavMesh;
         int m_WorldVersion = -1;
@@ -367,7 +368,6 @@ namespace UnityEngine.AI
             if (!NavMesh.Nearest(m_Surface, target, NavMesh.AgentReach(m_Radius), Filter, out var polygon, out var mapped))
                 return false;
             m_Destination = mapped;
-            m_KeepInvalidPathEnd = false;
             if (Compat.NavMeshPathAssignmentMeasured && m_PathPending && WalkingOnNavMesh
                 && AgentSystem.TryRetargetPendingPath(this, polygon, out bool requeued))
             {
@@ -554,7 +554,7 @@ namespace UnityEngine.AI
         /// <summary>The current corridor's endpoint, including one given in the call, retained
         /// while a new one is pending and after hasPath changes (measured).</summary>
         public Vector3 pathEndPosition => m_Crowd != null && (Compat.NavMeshCorridorReportingMeasured || FollowingPath)
-            ? (m_KeepInvalidPathEnd ? m_ReportedDestination : NavMesh.V(m_Crowd.corridor.GetTarget())) : m_NextPosition;
+            ? (m_KeepInvalidPathEnd ? m_InvalidPathEnd : NavMesh.V(m_Crowd.corridor.GetTarget())) : m_NextPosition;
 
         static readonly DtStraightPath[] s_RemainingCorners = new DtStraightPath[DtCrowdConst.DT_CROWDAGENT_MAX_CORNERS];
 
@@ -899,6 +899,7 @@ namespace UnityEngine.AI
         {
             SetPathStatus(NavMeshPathStatus.PathInvalid);
             m_ReportedDestination = end;
+            m_InvalidPathEnd = end;
             m_KeepInvalidPathEnd = true;
         }
 
@@ -1160,9 +1161,14 @@ namespace Unbound.Runtime
             var end = agent.pathEndPosition;
             if (moveEnd && !NavMesh.Nearest(surface, end, reach, filter, out endRef, out end))
             {
-                // The agent can stand here but has no reachable endpoint to follow.
+                // The agent can stand here but has no reachable endpoint to follow; any queued
+                // replacement request is dropped with the corridor.
                 ag.corridor.Reset(startRef, NavMesh.V(start));
                 WaitForPath(agent);
+                agent.SetPathPending(false);
+                s_PathRequests.Remove(agent);
+                s_Searches.Remove(agent);
+                s_Restarted.Remove(agent);
                 agent.SetPathEnd(start);
                 agent.CatchUpStaleness();
                 return true;
@@ -1925,7 +1931,10 @@ namespace Unbound.Runtime
                     {
                         s_PathRequests.RemoveAt(0);
                         agent.SetPathPending(false);
-                        agent.SetPathStatus(NavMeshPathStatus.PathInvalid);
+                        if (Compat.NavMeshPathAssignmentMeasured && agent.FollowingPath)
+                            agent.SetPathEnd(agent.pathEndPosition);
+                        else
+                            agent.SetPathStatus(NavMeshPathStatus.PathInvalid);
                         continue;
                     }
                     s_Searches[agent] = search;

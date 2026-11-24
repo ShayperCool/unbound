@@ -557,12 +557,19 @@ keeps the route's status and staleness. Moving the start also moves the
 agent, without adding the
 projection distance to walking velocity. Without permitted ground for
 the start, the agent stops and reports PathInvalid, with its last
-endpoint as the destination. If only the destination is beyond reach,
+endpoint as the destination (and retains that last endpoint as
+pathEndPosition while a subsequent SetDestination is still pending).
+If only the destination is beyond reach,
 the measured agent reports PathComplete with hasPath false and its
-standing point as the destination. Trimming the reported
+standing point as the destination, dropping any queued replacement
+request. Trimming the reported
 corridor while a request waits preserves its queue position and reported
-destination until that request finishes. The ground controls measure
-walking and stationary agents, both endpoints, placement reach, and a
+destination until that request finishes; if that queued request later
+cannot map onto the filtered mesh when its turn arrives, the agent keeps
+the repaired corridor and its status and resets destination to the
+repaired endpoint. The ground controls measure
+walking and stationary agents, both endpoints, placement reach,
+disconnected reconnects, invalid-corridor recovery, and a
 second agent already using the update budget.
 
 A second SetDestination updates a queued request in place. Its previous
@@ -575,7 +582,7 @@ assignment, and verify when a second agent advances in the queue.
 
 The probe measures walking agents on Unity 6000.0.71f1. Assignments and
 resubmissions during link traversal and after a NavMesh rebuild are
-unmeasured. All 850 records and 12,206 values pass the existing
+unmeasured. All 941 records and 14,078 values pass the existing
 tolerances, with a maximum component difference of 0.000031.
 
     python3 tests/projects/navlinks/projection.py editor --release 6000.0.71f1 --profile assignment --label L

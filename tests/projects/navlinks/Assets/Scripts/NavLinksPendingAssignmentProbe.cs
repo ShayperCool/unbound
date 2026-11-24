@@ -45,6 +45,7 @@ public partial class NavLinksProbe
         yield return RecordAreaMaskRepairControls(local);
         yield return RecordGroundAreaRepairControls(reconnect: false);
         yield return RecordGroundAreaRepairControls(reconnect: true);
+        yield return RecordGroundAreaRepairControls(reconnect: true, disconnected: true);
         Finish(0);
     }
 
@@ -366,11 +367,13 @@ public partial class NavLinksProbe
         DestroyImmediate(alternate.gameObject);
     }
 
-    IEnumerator RecordGroundAreaRepairControls(bool reconnect)
+    IEnumerator RecordGroundAreaRepairControls(bool reconnect, bool disconnected = false)
     {
-        var cases = reconnect ? new[] { "startExcluded", "endExcluded", "unrelated" }
+        var cases = disconnected ? new[] { "endDisconnected", "startDisconnected" }
+            : reconnect ? new[] { "startExcluded", "endExcluded", "unrelated" }
             : new[] { "startExcluded", "endExcluded", "allExcluded", "allExcludedMoving", "unrelated", "queuedMask", "queuedAssignedMask",
-                "startExcludedMoving", "endExcludedMoving", "startOutsideReach", "endOutsideReach", "queuedAllExcluded" };
+                "startExcludedMoving", "endExcludedMoving", "startOutsideReach", "endOutsideReach", "queuedAllExcluded",
+                "queuedEndOutsideReach", "queuedAssignedEndOutsideReach", "queuedUnmapped", "queuedRemapped", "startRecover" };
         var lane = new Lane { Name = "groundMask", O = new Vector3(500f, 0f, 500f) };
         var sources = new List<NavMeshBuildSource>();
         foreach (var side in new[] { -1, 1 })
@@ -380,7 +383,7 @@ public partial class NavLinksProbe
             size = new Vector3(12f, 1f, 8f), transform = Matrix4x4.Translate(lane.O + new Vector3(36f, -0.5f, 0f)) });
         if (reconnect)
             sources.Add(new NavMeshBuildSource { shape = NavMeshBuildSourceShape.Box, area = 6,
-                size = new Vector3(32f, 1f, 8f), transform = Matrix4x4.Translate(lane.O + new Vector3(0f, -0.5f, 8f)) });
+                size = new Vector3(32f, 1f, 8f), transform = Matrix4x4.Translate(lane.O + new Vector3(0f, -0.5f, disconnected ? 10.5f : 8f)) });
         var data = NavMeshBuilder.BuildNavMeshData(NavMesh.GetSettingsByID(0), sources,
             new Bounds(lane.O + new Vector3(15f, 0f, 0f), new Vector3(66f, 8f, reconnect ? 32f : 12f)), Vector3.zero, Quaternion.identity);
         var instance = NavMesh.AddNavMeshData(data);
@@ -389,7 +392,7 @@ public partial class NavLinksProbe
         {
             lane.Name = (reconnect ? "groundReconnect." : "groundMask.") + mode;
             var from = new Vector3(mode == "startOutsideReach" ? -13f : -7f, 0f, 0f);
-            var to = new Vector3(mode == "endOutsideReach" ? 13f : 7f, 0f, 0f);
+            var to = new Vector3(mode.Contains("EndOutsideReach", StringComparison.OrdinalIgnoreCase) ? 13f : 7f, 0f, 0f);
             var agent = Agent(lane, "a", from, null, a => {
                 a.speed = mode.EndsWith("Moving", StringComparison.Ordinal) ? 3f : 0f;
                 a.autoRepath = false;
@@ -413,10 +416,11 @@ public partial class NavLinksProbe
                 yield return null;
                 NavMesh.pathfindingIterationsPerFrame = 1;
                 other.SetDestination(lane.O + to + Vector3.forward);
-                if (!agent.SetDestination(lane.O + new Vector3(36f, 0f, 0f)))
+                if (mode == "queuedUnmapped" || mode == "queuedRemapped") agent.SetAreaCost(5, 1.1f);
+                if (!agent.SetDestination(lane.O + new Vector3(mode == "queuedUnmapped" ? 13f : mode == "queuedRemapped" ? 7f : 36f, 0f, 0f)))
                     throw new InvalidOperationException("queued target rejected");
-                if (!agent.pathPending) throw new InvalidOperationException("no queued replacement");
-                if (mode == "queuedAssignedMask")
+                if (!agent.pathPending) throw new InvalidOperationException("no queued replacement " + mode);
+                if (mode == "queuedAssignedMask" || mode == "queuedAssignedEndOutsideReach")
                 {
                     var path = new NavMeshPath();
                     if (!agent.CalculatePath(lane.O + to, path) || !agent.SetPath(path))
@@ -425,8 +429,13 @@ public partial class NavLinksProbe
             }
             for (int frame = 0; frame <= 12; frame++)
             {
+                if (frame == 5 && mode == "startRecover")
+                {
+                    agent.areaMask = NavMesh.AllAreas;
+                    if (!agent.SetDestination(lane.O + new Vector3(36f, 0f, 0f))) throw new InvalidOperationException("recovery rejected");
+                }
                 if (frame == 1)
-                    agent.areaMask = mode.Contains("allExcluded", StringComparison.OrdinalIgnoreCase) ? 0
+                    agent.areaMask = (mode == "startRecover" || mode.Contains("allExcluded", StringComparison.OrdinalIgnoreCase)) ? 0
                         : agent.areaMask & ~(1 << (mode.StartsWith("start", StringComparison.Ordinal) ? 4 : mode == "unrelated" ? 6 : 5));
                 Line(lane.Name, "a", frame,
                     "\"pending\":" + B(agent.pathPending) + ",\"path\":" + B(agent.hasPath) + ",\"stale\":" + B(agent.isPathStale)
