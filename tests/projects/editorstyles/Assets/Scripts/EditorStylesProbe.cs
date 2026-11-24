@@ -100,6 +100,7 @@ public sealed partial class EditorStylesProbe : MonoBehaviour
 
         RecordToggle();
         RecordPopup();
+        RecordHelpBox();
         RecordLabel();
     }
 
@@ -162,6 +163,25 @@ public sealed partial class EditorStylesProbe : MonoBehaviour
             DescribeStyle("popup/", style, textureInfo: true);
         }
         catch (Exception error) { Put("popup/Repaint/exception", Quote(error.GetType().Name)); }
+    }
+
+    void RecordHelpBox()
+    {
+        try
+        {
+            var style = EditorStyles.helpBox;
+            Put("helpBox/Repaint/style", Quote(style.name));
+            Put("helpBox/shared", Flag(ReferenceEquals(EditorStyles.helpBox, style)));
+            DescribeStyle("helpBox/", style, textureInfo: true);
+            var getHelpIcon = typeof(EditorGUIUtility).GetMethod("GetHelpIcon",
+                System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.NonPublic);
+            foreach (MessageType kind in new[] { MessageType.None, MessageType.Info, MessageType.Warning, MessageType.Error })
+            {
+                var icon = getHelpIcon != null ? getHelpIcon.Invoke(null, new object[] { kind }) as Texture2D : null;
+                Put("helpBox/icon/" + kind, icon == null ? "null" : $"[{Quote(icon.name)},{icon.width},{icon.height}]");
+            }
+        }
+        catch (Exception error) { Put("helpBox/Repaint/exception", Quote(error.GetType().Name)); }
     }
 
     GUIStyle DescribeStyle(string prefix, GUIStyle style, bool textureInfo)

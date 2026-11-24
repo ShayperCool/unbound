@@ -26,6 +26,14 @@ themes; the popup keys were added from two agreeing captures to the reference, w
 values those captures repeat.
 [Unity 6000.0 `EditorStyles.popup`](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/EditorStyles-popup.html)
 
+The help box control (`helpBox/*`) records `EditorStyles.helpBox` (named "HelpBox") and
+`EditorGUIUtility.GetHelpIcon` for every `MessageType` (`None`, `Info`, `Warning`, `Error`) in
+both themes: its layout, font, wrapping and eight state fields, the light-theme `helpbox@2x`
+and both themes' `OL box on@2x` scaled backgrounds, and the light/dark 32×32 console icon names
+and sizes; the help box keys were added from two byte-identical captures per theme to the
+reference, whose other values those captures repeat.
+[Unity 6000.0 `EditorStyles.helpBox`](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/EditorStyles-helpBox.html)
+
 The 320×180 Gamma Game view capture compares the checkbox pixels under normal, hovered,
 pressed, focused and disabled combinations. It checks hot-control hover suppression, a
 named style and renamed copy, an explicit background override, a short control, clipping,

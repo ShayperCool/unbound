@@ -1034,4 +1034,40 @@
 {"k":"texture/window on/info","v":["Texture2D",17,27,"Bilinear","Clamp","Clamp",1,0,1]}
 {"k":"texture/window on/format","v":"RGBA32"}
 {"k":"texture/window on/pixels","v":"e6e6e600e6e6e600e6e6e600e6e6e600e6e6e623e6e6e67fe6e6e6bbe6e6e6e6e6e6e6e6e6e6e6e6e6e6e6bbe6e6e67fe6e6e623e6e6e600e6e6e600e6e6e600e6e6e600e6e6e600e6e6e600e6e6e600e6e6e667e6e6e6dee6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6dee6e6e667e6e6e600e6e6e600e6e6e600e6e6e600e6e6e605e6e6e6a5e6e6e6e6e6e6e6e1cdcdcd9c8e8e8e874b4b4b8a4b4b4b8a4b4b4b8a8b8b8b86cdcdcd9ce6e6e6e1e6e6e6e6e6e6e6a5e6e6e605e6e6e600e6e6e600e6e6e685e6e6e6e6e5e5e5cf7c7c7c864b4b4b8a4b4b4b8a4c4c4c8a4c4c4c8a4b4b4b8a4c4c4c8a4b4b4b8a7c7c7c86e5e5e5cfe6e6e6e6e6e6e682e6e6e600e6e6e629e6e6e6e3e6e6e6e17d7d7d864b4b4b8a4b4b4b8a4c4c4c8a4c4c4c8a4b4b4b8a4b4b4b8a4b4b4b8a4b4b4b8a4c4c4c8a7c7c7c86e6e6e6e1e6e6e6e3e6e6e629e6e6e685e6e6e6e6cdcdcd9c4b4b4b8a4c4c4c8a4b4b4b8a4b4b4b8a4c4c4c8a4c4c4c8a4b4b4b8a4b4b4b8a4b4b4b8a4b4b4b8a4c4c4c8acdcdcd9ce6e6e6e6e6e6e682e6e6e6c6e6e6e6e6898989864b4b4b8a4c4c4c8a4c4c4c8a4b4b4b8a4c4c4c8a4b4b4b8a4b4b4b8a4b4b4b8a4b4b4b8a4b4b4b8a4c4c4c8a89898986e6e6e6e6e6e6e6c0e6e6e6e1e6e6e6e6515151884b4b4b8a4b4b4b8a4c4c4c8a4c4c4c8a4c4c4c8a4c4c4c8a4c4c4c8a4c4c4c8a4c4c4c8a4b4b4b8a4c4c4c8a58585888e6e6e6e6e6e6e6dbe6e6e6e6e6e6e6e64b4b4b8a4b4b4b8a4b4b4b8a4c4c4c8a4b4b4b8a4b4b4b8a4c4c4c8a4b4b4b8a4b4b4b8a4b4b4b8a4b4b4b8a4b4b4b8a4c4c4c8ae6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e64b4b4b8a4c4c4c8a4c4c4c8a4b4b4b8a4b4b4b8a4c4c4c8a4b4b4b8a4c4c4c8a4b4b4b8a4b4b4b8a4c4c4c8a4b4b4b8a4c4c4c8ae6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e64b4b4bcf4b4b4bcf4b4b4bcf4b4b4bcf4b4b4bcf4b4b4bcf4b4b4bcf4b4b4bcf4b4b4bcf4b4b4bcf4b4b4bcf4b4b4bcf4b4b4bcfe6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e64b4b4bcf4b4b4bcf4b4b4bcf4b4b4bcf4b4b4bcf4b4b4bcf4b4b4bcf4b4b4bcf4b4b4bcf4b4b4bcf4b4b4bcf4b4b4bcf4b4b4bcfe6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e64b4b4bcf4b4b4bcf4b4b4bcf4b4b4bcf4b4b4bcf4b4b4bcf4b4b4bcf4b4b4bcf4b4b4bcf4b4b4bcf4b4b4bcf4b4b4bcf4b4b4bcfe6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e64b4b4bcf4b4b4bcf4b4b4bcf4b4b4bcf4b4b4bcf4b4b4bcf4b4b4bcf4b4b4bcf4b4b4bcf4b4b4bcf4b4b4bcf4b4b4bcf4b4b4bcfe6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e64b4b4bcf4b4b4bcf4b4b4bcf4b4b4bcf4b4b4bcf4b4b4bcf4b4b4bcf4b4b4bcf4b4b4bcf4b4b4bcf4b4b4bcf4b4b4bcf4b4b4bcfe6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e64b4b4bcf4b4b4bcf4b4b4bcf4b4b4bcf4b4b4bcf4b4b4bcf4b4b4bcf4b4b4bcf4b4b4bcf4b4b4bcf4b4b4bcf4b4b4bcf4b4b4bcfe6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e64b4b4bcf4b4b4bcf4b4b4bcf4b4b4bcf4b4b4bcf4b4b4bcf4b4b4bcf4b4b4bcf4b4b4bcf4b4b4bcf4b4b4bcf4b4b4bcf4b4b4bcfe6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e64b4b4bcf4b4b4bcf4b4b4bcf4b4b4bcf4b4b4bcf4b4b4bcf4b4b4bcf4b4b4bcf4b4b4bcf4b4b4bcf4b4b4bcf4b4b4bcf4b4b4bcfe6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e64b4b4bcf4b4b4bcf4b4b4bcf4b4b4bcf4b4b4bcf4b4b4bcf4b4b4bcf4b4b4bcf4b4b4bcf4b4b4bcf4b4b4bcf4b4b4bcf4b4b4bcfe6e6e6e6e6e6e6e6e6e6e6e1e6e6e6e64f4f4fd04b4b4bcf4b4b4bcf4b4b4bcf4b4b4bcf4b4b4bcf4b4b4bcf4b4b4bcf4b4b4bcf4b4b4bcf4b4b4bcf4b4b4bcf4f4f4fd0e6e6e6e6e6e6e6d8e6e6e6c3e6e6e6e6747474d54b4b4bcf4b4b4bcf4b4b4bcf4b4b4bcf4b4b4bcf4b4b4bcf4b4b4bcf4b4b4bcf4b4b4bcf4b4b4bcf4b4b4bcf747474d5e6e6e6e6e6e6e6c0e6e6e682e6e6e6e6abababdc4b4b4bcf4b4b4bcf4b4b4bcf4b4b4bcf4b4b4bcf4b4b4bcf4b4b4bcf4b4b4bcf4b4b4bcf4b4b4bcf4b4b4bcfabababdce6e6e6e6e6e6e67fe6e6e629e5e5e5e4e4e4e4e56a6a6ad34b4b4bcf4b4b4bcf4b4b4bcf4b4b4bcf4b4b4bcf4b4b4bcf4b4b4bcf4b4b4bcf4b4b4bcf6a6a6ad3e4e4e4e5e5e5e5e4e6e6e626e6e6e600e4e4e484e6e6e6e6d9d9d9e36c6c6cd44b4b4bcf4b4b4bcf4b4b4bcf4b4b4bcf4b4b4bcf4b4b4bcf4b4b4bcf6c6c6cd4d9d9d9e3e6e6e6e6e4e4e481e6e6e600e6e6e600e6e6e605e1e1e1abe6e6e6e6e4e4e4e5abababdc767676d54f4f4fd04b4b4bcf4f4f4fd0767676d5abababdce4e4e4e5e6e6e6e6e1e1e1abe6e6e605e6e6e600e6e6e600e6e6e600e6e6e600e3e3e36ae4e4e4e1e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e4e4e4e1e3e3e36ae6e6e600e6e6e600e6e6e600e6e6e600e6e6e600e6e6e600e6e6e600e6e6e623e6e6e67fe6e6e6b8e6e6e6e3e6e6e6e6e6e6e6e3e6e6e6b8e6e6e67fe6e6e623e6e6e600e6e6e600e6e6e600e6e6e600"}
+{"k":"helpBox/Layout/layout/none","v":[null,2,null]}
+{"k":"helpBox/Layout/layout/info","v":[null,2,null]}
+{"k":"helpBox/Layout/layout/warningWide","v":[null,2,null]}
+{"k":"helpBox/Layout/layout/errorNarrow","v":[null,2,null]}
+{"k":"helpBox/Layout/layout/wrapWide","v":[null,2,null]}
+{"k":"helpBox/Layout/layout/wrapNarrow","v":[null,2,null]}
+{"k":"helpBox/Layout/layout/contentWide","v":[null,2,null]}
+{"k":"helpBox/Layout/layout/contentNarrow","v":[null,2,null]}
+{"k":"helpBox/Layout/layout/emptyNone","v":[null,2,null]}
+{"k":"helpBox/Layout/layout/emptyWarning","v":[null,2,null]}
+{"k":"helpBox/Layout/layout/indentedWide","v":[null,2,null]}
+{"k":"helpBox/Layout/layout/indentedNarrow","v":[null,2,null]}
+{"k":"helpBox/Layout/rect/none","v":[null,1,null]}
+{"k":"helpBox/Layout/rect/info","v":[null,1,null]}
+{"k":"helpBox/Layout/rect/warning","v":[null,1,null]}
+{"k":"helpBox/Layout/rect/error","v":[null,1,null]}
+{"k":"helpBox/Layout/rect/content","v":[null,1,null]}
+{"k":"helpBox/Layout/rect/indented","v":[null,1,null]}
+{"k":"helpBox/Repaint/layout/none","v":[null,2,[0,0,300,18]]}
+{"k":"helpBox/Repaint/layout/info","v":[null,2,[0,20,300,38]]}
+{"k":"helpBox/Repaint/layout/warningWide","v":[null,2,[0,60,300,38]]}
+{"k":"helpBox/Repaint/layout/errorNarrow","v":[null,2,[0,100,300,38]]}
+{"k":"helpBox/Repaint/layout/wrapWide","v":[null,2,[0,140,300,49]]}
+{"k":"helpBox/Repaint/layout/wrapNarrow","v":[null,2,[0,191,300,71]]}
+{"k":"helpBox/Repaint/layout/contentWide","v":[null,2,[0,264,300,18]]}
+{"k":"helpBox/Repaint/layout/contentNarrow","v":[null,2,[0,284,300,18]]}
+{"k":"helpBox/Repaint/layout/emptyNone","v":[null,2,[0,304,300,18]]}
+{"k":"helpBox/Repaint/layout/emptyWarning","v":[null,2,[0,324,300,38]]}
+{"k":"helpBox/Repaint/layout/indentedWide","v":[null,2,[0,364,300,38]]}
+{"k":"helpBox/Repaint/layout/indentedNarrow","v":[null,2,[0,404,300,38]]}
+{"k":"helpBox/Repaint/rect/none","v":[null,1,null]}
+{"k":"helpBox/Repaint/rect/info","v":[null,1,null]}
+{"k":"helpBox/Repaint/rect/warning","v":[null,1,null]}
+{"k":"helpBox/Repaint/rect/error","v":[null,1,null]}
+{"k":"helpBox/Repaint/rect/content","v":[null,1,null]}
+{"k":"helpBox/Repaint/rect/indented","v":[null,1,null]}
 {"k":"complete","v":true}

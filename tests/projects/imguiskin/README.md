@@ -163,3 +163,11 @@ menu forgotten). The menu itself (EditorUtility.DisplayCustomMenu) and what the 
 not recorded; Unbound shows no editor menus (said).
 [Unity 6000.0 `EditorGUI.Popup`](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/EditorGUI.Popup.html)
 [Unity 6000.0 `EditorGUILayout.Popup`](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/EditorGUILayout.Popup.html)
+
+The help box controls (`helpBox/*`) call each `EditorGUI.HelpBox` and `EditorGUILayout.HelpBox`
+overload in Layout and Repaint across every `MessageType` (`None`, `Info`, `Warning`, `Error`),
+wide and narrow (`wide = false`) modes, long wrapping messages whose height differs between wide
+and narrow layouts, empty strings and `EditorGUI.indentLevel`: recording exceptions, control ID
+counts (0 for `EditorGUI.HelpBox`, 1 for `EditorGUILayout.HelpBox`) and the layout rects.
+[Unity 6000.0 `EditorGUI.HelpBox`](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/EditorGUI.HelpBox.html)
+[Unity 6000.0 `EditorGUILayout.HelpBox`](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/EditorGUILayout.HelpBox.html)

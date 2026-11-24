@@ -443,14 +443,6 @@ namespace UnityEditor
             return GUILayoutUtility.GetRect(hasLabel ? preferred : field, preferred, height, height, style, options);
         }
 
-        public static void HelpBox(string message, MessageType type)
-        {
-            EditorGUI.RequireGUI();
-            GUILayout.Label(message);
-        }
-
-        public static void HelpBox(string message, MessageType type, bool wide) => HelpBox(message, type);
-
         static readonly GUILayoutOption[] s_ExpandWidthTrue = { GUILayout.ExpandWidth(true) };
         static readonly GUILayoutOption[] s_ExpandWidthFalse = { GUILayout.ExpandWidth(false) };
 
@@ -995,6 +987,8 @@ namespace UnityEditor
         static GUIStyle s_DarkToggle;
         static GUIStyle s_LightPopup;
         static GUIStyle s_DarkPopup;
+        static GUIStyle s_LightHelpBox;
+        static GUIStyle s_DarkHelpBox;
 
         internal static bool HasInspectorStyles => Compat.InspectorGuiStylesMeasured && Event.current != null;
 
@@ -1094,7 +1088,16 @@ namespace UnityEditor
         public static GUIStyle radioButton => Style();
         public static GUIStyle foldout => Style();
         public static GUIStyle foldoutHeader => Style();
-        public static GUIStyle helpBox => Style();
+        public static GUIStyle helpBox
+        {
+            get
+            {
+                if (!HasInspectorStyles) return Style();
+                return EditorGUIUtility.isProSkin
+                    ? s_DarkHelpBox ??= CreateHelpBox(dark: true)
+                    : s_LightHelpBox ??= CreateHelpBox(dark: false);
+            }
+        }
         public static GUIStyle toolbar => Style();
         public static GUIStyle toolbarButton => Style();
         public static GUIStyle toolbarDropDown => Style();
@@ -1203,6 +1206,37 @@ namespace UnityEditor
             style.focused.scaledBackgrounds = new[] { SkinImage(skin, "mini popup focus@2x") };
             style.normal.textColor = style.hover.textColor = style.onNormal.textColor = style.onHover.textColor = text;
             style.active.textColor = style.focused.textColor = style.onActive.textColor = style.onFocused.textColor = pressed;
+            return style;
+        }
+
+        /// <summary>The help box style, "HelpBox", as captured by tests/projects/editorstyles
+        /// (both themes): word-wrapped 10 pt text, the skin's scaled images where Unity ships
+        /// them (light normal and both themes' onNormal), and padding/margin/border.</summary>
+        static GUIStyle CreateHelpBox(bool dark)
+        {
+            Color text = dark ? new Color32(189, 189, 189, 255) : new Color32(22, 22, 22, 255);
+            Color onNormalText = dark ? new Color32(210, 210, 210, 255) : Color.black;
+            string skin = dark ? "darkskin" : "lightskin";
+            var style = new GUIStyle
+            {
+                name = "HelpBox",
+                fontSize = 10,
+                alignment = TextAnchor.MiddleLeft,
+                clipping = TextClipping.Clip,
+                imagePosition = ImagePosition.ImageLeft,
+                border = new RectOffset(4, 4, 4, 4),
+                margin = new RectOffset(3, 3, 2, 2),
+                padding = new RectOffset(4, 4, 3, 3),
+                stretchWidth = true,
+                wordWrap = true,
+                richText = false,
+            };
+            if (!dark)
+                style.normal.scaledBackgrounds = new[] { SkinImage(skin, "helpbox@2x") };
+            style.onNormal.scaledBackgrounds = new[] { SkinImage(skin, "OL box on@2x") };
+            style.normal.textColor = style.hover.textColor = style.active.textColor = style.focused.textColor =
+                style.onHover.textColor = style.onActive.textColor = style.onFocused.textColor = text;
+            style.onNormal.textColor = onNormalText;
             return style;
         }
 
