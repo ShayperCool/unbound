@@ -1,0 +1,8 @@
+{
+  "case": "build-identity-defaults",
+  "exit": 0,
+  "changed": [
+    "ProjectSettings/ProjectSettings.asset"
+  ],
+  "removed": []
+}

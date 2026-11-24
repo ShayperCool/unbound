@@ -107,41 +107,44 @@ namespace UnityEngine.Tests
             SettingsAssets.Reset();
             try
             {
-                PlayerSettings.RefreshApplicationIdentifier();
-                Assert.Equal("com.DefaultCompany.My-project", Application.identifier);
-                Assert.Equal("com.DefaultCompany.Myproject", PlayerSettings.GetApplicationIdentifier(NamedBuildTarget.Android));
-                Assert.Equal("", PlayerSettings.GetApplicationIdentifier(NamedBuildTarget.Server));
+                using (TestRelease.Pin(TestRelease.Measured))
+                {
+                    PlayerSettings.RefreshApplicationIdentifier();
+                    Assert.Equal("com.DefaultCompany.My-project", Application.identifier);
+                    Assert.Equal("com.DefaultCompany.Myproject", PlayerSettings.GetApplicationIdentifier(NamedBuildTarget.Android));
+                    Assert.Equal("", PlayerSettings.GetApplicationIdentifier(NamedBuildTarget.Server));
 
-                // Switching Standalone subtarget to Server and back refreshes Application.identifier.
-                EditorUserBuildSettings.standaloneBuildSubtarget = StandaloneBuildSubtarget.Server;
-                Assert.Equal("", Application.identifier);
-                EditorUserBuildSettings.standaloneBuildSubtarget = StandaloneBuildSubtarget.Player;
-                Assert.Equal("com.DefaultCompany.My-project", Application.identifier);
+                    // Switching Standalone subtarget to Server and back refreshes Application.identifier.
+                    EditorUserBuildSettings.standaloneBuildSubtarget = StandaloneBuildSubtarget.Server;
+                    Assert.Equal("", Application.identifier);
+                    EditorUserBuildSettings.standaloneBuildSubtarget = StandaloneBuildSubtarget.Player;
+                    Assert.Equal("com.DefaultCompany.My-project", Application.identifier);
 
-                // Renaming companyName or productName updates derived default identifiers and Application.identifier.
-                PlayerSettings.companyName = "Probe Laß _ Inc";
-                Assert.Equal("com.Probe-La-----Inc.My-project", PlayerSettings.applicationIdentifier);
-                Assert.Equal("com.Probe-La-----Inc.My-project", Application.identifier);
-                Assert.Equal("com.ProbeLa_Inc.Myproject", PlayerSettings.GetApplicationIdentifier(NamedBuildTarget.Android));
+                    // Renaming companyName or productName updates derived default identifiers and Application.identifier.
+                    PlayerSettings.companyName = "Probe Laß _ Inc";
+                    Assert.Equal("com.Probe-La-----Inc.My-project", PlayerSettings.applicationIdentifier);
+                    Assert.Equal("com.Probe-La-----Inc.My-project", Application.identifier);
+                    Assert.Equal("com.ProbeLa_Inc.Myproject", PlayerSettings.GetApplicationIdentifier(NamedBuildTarget.Android));
 
-                PlayerSettings.productName = "New App";
-                Assert.Equal("com.Probe-La-----Inc.New-App", PlayerSettings.applicationIdentifier);
-                Assert.Equal("com.Probe-La-----Inc.New-App", Application.identifier);
+                    PlayerSettings.productName = "New App";
+                    Assert.Equal("com.Probe-La-----Inc.New-App", PlayerSettings.applicationIdentifier);
+                    Assert.Equal("com.Probe-La-----Inc.New-App", Application.identifier);
 
-                // Explicit target normalization: Android strips non-[A-Za-z0-9._], others map each UTF-8 byte to '-'.
-                PlayerSettings.SetApplicationIdentifier(NamedBuildTarget.Android, "Com.Probe _ Space-é.工具");
-                Assert.Equal("Com.Probe_Space.", PlayerSettings.GetApplicationIdentifier(NamedBuildTarget.Android));
-                PlayerSettings.SetApplicationIdentifier(NamedBuildTarget.Standalone, "Com.Probe _ Space-é.工具");
-                Assert.Equal("Com.Probe---Space---.------", PlayerSettings.applicationIdentifier);
-                Assert.Equal("Com.Probe---Space---.------", Application.identifier);
+                    // Explicit target normalization: Android strips non-[A-Za-z0-9._], others map each UTF-8 byte to '-'.
+                    PlayerSettings.SetApplicationIdentifier(NamedBuildTarget.Android, "Com.Probe _ Space-é.工具");
+                    Assert.Equal("Com.Probe_Space.", PlayerSettings.GetApplicationIdentifier(NamedBuildTarget.Android));
+                    PlayerSettings.SetApplicationIdentifier(NamedBuildTarget.Standalone, "Com.Probe _ Space-é.工具");
+                    Assert.Equal("Com.Probe---Space---.------", PlayerSettings.applicationIdentifier);
+                    Assert.Equal("Com.Probe---Space---.------", Application.identifier);
 
-                // Once explicitly set for Standalone, renaming companyName keeps the explicit identifier.
-                PlayerSettings.companyName = "Later Co";
-                Assert.Equal("Com.Probe---Space---.------", PlayerSettings.applicationIdentifier);
-                Assert.Equal("Com.Probe---Space---.------", Application.identifier);
+                    // Once explicitly set for Standalone, renaming companyName keeps the explicit identifier.
+                    PlayerSettings.companyName = "Later Co";
+                    Assert.Equal("Com.Probe---Space---.------", PlayerSettings.applicationIdentifier);
+                    Assert.Equal("Com.Probe---Space---.------", Application.identifier);
 
-                // Unknown target throws ArgumentException.
-                Assert.Throws<ArgumentException>(() => PlayerSettings.SetApplicationIdentifier(NamedBuildTarget.Unknown, "net.probe.x"));
+                    // Unknown target throws ArgumentException.
+                    Assert.Throws<ArgumentException>(() => PlayerSettings.SetApplicationIdentifier(NamedBuildTarget.Unknown, "net.probe.x"));
+                }
             }
             finally
             {
@@ -165,30 +168,29 @@ namespace UnityEngine.Tests
             Directory.CreateDirectory(emptyDir);
             var beforeProject = ProjectInfo.ProjectPath;
             var beforeIdentifier = ProjectInfo.Identifier;
-            var logger = Debug.unityLogger;
-            var previousHandler = logger.logHandler;
-            var logs = new List<string>();
-            logger.logHandler = new LogCapture(logs);
             ProjectInfo.ProjectPath = emptyDir;
             ProjectInfo.Identifier = "com.keep.me";
             SettingsAssets.Reset();
             try
             {
-                PlayerSettings.SetApplicationIdentifier(NamedBuildTarget.Standalone, "com.new.id");
-                Assert.Equal("com.keep.me", Application.identifier);
-                Assert.Contains(logs, l => l.Contains("ProjectSettings.asset"));
+                int hitsBefore = StubHits("UnityEditor.PlayerSettings.SetApplicationIdentifier");
+                using (TestRelease.Pin(TestRelease.Measured))
+                {
+                    PlayerSettings.SetApplicationIdentifier(NamedBuildTarget.Standalone, "com.new.id");
+                    Assert.Equal("com.keep.me", Application.identifier);
+                    Assert.Equal(hitsBefore + 1, StubHits("UnityEditor.PlayerSettings.SetApplicationIdentifier"));
+                }
 
-                logs.Clear();
-                using (TestRelease.Unmeasured())
+                using (TestRelease.Pin(TestRelease.Unmeasured))
                 {
                     Assert.Equal("com.keep.me", PlayerSettings.GetApplicationIdentifier(NamedBuildTarget.Android));
                     PlayerSettings.SetApplicationIdentifier(NamedBuildTarget.Android, "com.other.id");
-                    Assert.Contains(logs, l => l.Contains("SetApplicationIdentifier"));
+                    Assert.Equal("com.keep.me", Application.identifier);
+                    Assert.Equal(hitsBefore + 2, StubHits("UnityEditor.PlayerSettings.SetApplicationIdentifier"));
                 }
             }
             finally
             {
-                logger.logHandler = previousHandler;
                 ProjectInfo.ProjectPath = beforeProject;
                 ProjectInfo.Identifier = beforeIdentifier;
                 SettingsAssets.Reset();
@@ -196,12 +198,11 @@ namespace UnityEngine.Tests
             }
         }
 
-        sealed class LogCapture : ILogHandler
+        static int StubHits(string member)
         {
-            readonly List<string> m_Logs;
-            public LogCapture(List<string> logs) => m_Logs = logs;
-            public void LogFormat(LogType logType, Object context, string format, params object[] args) => m_Logs.Add(string.Format(format, args));
-            public void LogException(Exception exception, Object context) => m_Logs.Add(exception.Message);
+            foreach (var hit in Stubs.HitReport())
+                if (hit.Key == member) return hit.Value;
+            return 0;
         }
     }
 }

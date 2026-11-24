@@ -1,0 +1,45 @@
+{"key": "initial.file", "value": "d7fcd18a80a5015bf58aa64e2361de65497d38bb184f1c404aa268bf40f351f0"}
+{"key": "initial.Standalone", "value": "com.DefaultCompany.My-project"}
+{"key": "initial.Server", "value": ""}
+{"key": "initial.WebGL", "value": "com.DefaultCompany.My-project"}
+{"key": "initial.Android", "value": "com.DefaultCompany.Myproject"}
+{"key": "initial.iPhone", "value": "com.DefaultCompany.My-project"}
+{"key": "initial.tvOS", "value": "com.DefaultCompany.My-project"}
+{"key": "initial.VisionOS", "value": "com.DefaultCompany.My-project"}
+{"key": "initial.Windows Store Apps", "value": "com.DefaultCompany.My-project"}
+{"key": "initial.EmbeddedLinux", "value": "com.DefaultCompany.My-project"}
+{"key": "initial.QNX", "value": "com.DefaultCompany.My-project"}
+{"key": "initial.PS4", "value": "com.DefaultCompany.My-project"}
+{"key": "initial.PS5", "value": "com.DefaultCompany.My-project"}
+{"key": "initial.XboxOne", "value": "com.DefaultCompany.My-project"}
+{"key": "initial.Nintendo Switch", "value": "com.DefaultCompany.My-project"}
+{"key": "initial.Nintendo Switch 2", "value": "com.DefaultCompany.My-project"}
+{"key": "initial.active", "value": "com.DefaultCompany.My-project"}
+{"key": "initial.runtime", "value": "com.DefaultCompany.My-project"}
+{"key": "emptyServer.active", "value": ""}
+{"key": "emptyServer.runtime", "value": ""}
+{"key": "restored.runtime", "value": "com.DefaultCompany.My-project"}
+{"key": "renamed.active", "value": "com.Probe-La-----Inc.My-project"}
+{"key": "renamed.runtime", "value": "com.Probe-La-----Inc.My-project"}
+{"key": "renamed.android", "value": "com.ProbeLa_Inc.Myproject"}
+{"key": "renamed.ios", "value": "com.Probe-La-----Inc.My-project"}
+{"key": "renamed.webgl", "value": "com.Probe-La-----Inc.My-project"}
+{"key": "assigned.Standalone", "value": "Com.Probe---Space---.------"}
+{"key": "assigned.Server", "value": "Com.Probe---Space---.------"}
+{"key": "assigned.WebGL", "value": "Com.Probe---Space---.------"}
+{"key": "assigned.Android", "value": "Com.Probe_Space."}
+{"key": "assigned.iPhone", "value": "Com.Probe---Space---.------"}
+{"key": "assigned.tvOS", "value": "Com.Probe---Space---.------"}
+{"key": "assigned.VisionOS", "value": "Com.Probe---Space---.------"}
+{"key": "assigned.Windows Store Apps", "value": "Com.Probe---Space---.------"}
+{"key": "assigned.EmbeddedLinux", "value": "Com.Probe---Space---.------"}
+{"key": "assigned.QNX", "value": "Com.Probe---Space---.------"}
+{"key": "assigned.PS4", "value": "Com.Probe---Space---.------"}
+{"key": "assigned.PS5", "value": "Com.Probe---Space---.------"}
+{"key": "assigned.XboxOne", "value": "Com.Probe---Space---.------"}
+{"key": "assigned.Nintendo Switch", "value": "Com.Probe---Space---.------"}
+{"key": "assigned.Nintendo Switch 2", "value": "Com.Probe---Space---.------"}
+{"key": "assigned.active", "value": "Com.Probe---Space---.------"}
+{"key": "assigned.runtime", "value": "Com.Probe---Space---.------"}
+{"key": "beforeSave.file", "value": "d7fcd18a80a5015bf58aa64e2361de65497d38bb184f1c404aa268bf40f351f0"}
+{"key": "saved.file", "value": "20de0d9ed8166f7d94aa37081dafb3ce4b720408b97e07f398d16528f237090b"}
