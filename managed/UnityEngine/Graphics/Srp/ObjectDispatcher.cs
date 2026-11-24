@@ -302,6 +302,12 @@ namespace Unbound.Runtime
             foreach (var system in s_Systems) system.RecordDestroyed(obj);
         }
 
+        internal static void IdReassigned(Object obj, int oldId, int newId)
+        {
+            if (s_Tracking == 0 || obj is null || oldId == newId) return;
+            foreach (var system in s_Systems) system.ReassignId(obj, oldId, newId);
+        }
+
         /// <summary>Whether the tracking flags take an object: a component of a GameObject in a
         /// scene is a scene object, a persistent asset an asset, any other object made at run time
         /// a scene object.</summary>
@@ -437,6 +443,15 @@ namespace Unbound.Runtime
                 foreach (var transforms in m_Transforms.Values) transforms.Forget(obj);
             }
 
+            internal void ReassignId(Object obj, int oldId, int newId)
+            {
+                for (int i = 0; i < m_Queues.Count; i++)
+                {
+                    var queue = m_Queues[i];
+                    if (queue.Type == obj.GetType()) queue.ReassignId(oldId, newId);
+                }
+            }
+
             /// <summary>The type's changes since the last time, in queue order (or by instance
             /// ID), the objects the tracking flags take; the queue empties.</summary>
             internal void TakeTypeChanges(Type type, List<int> changed, List<int> destroyed, bool sort)
@@ -552,6 +567,14 @@ namespace Unbound.Runtime
             {
                 if (m_At.Remove(id, out int at)) Order[at] = 0;
                 DestroyedIds.Add(id);
+            }
+
+            internal void ReassignId(int oldId, int newId)
+            {
+                if (!m_At.Remove(oldId, out int at)) return;
+                if (m_At.TryGetValue(newId, out int existing)) Order[existing] = 0;
+                Order[at] = newId;
+                m_At[newId] = at;
             }
 
             internal void Reset()

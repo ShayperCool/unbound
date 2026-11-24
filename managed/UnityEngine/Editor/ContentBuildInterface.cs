@@ -82,8 +82,18 @@ namespace UnityEditor.Build.Content
             return true;
         }
 
-        public static bool TryGetObjectIdentifier(int instanceID, out ObjectIdentifier objectId) =>
-            TryGetObjectIdentifier(ObjectRegistry.FindById(instanceID), out objectId);
+        public static bool TryGetObjectIdentifier(int instanceID, out ObjectIdentifier objectId)
+        {
+            var live = ObjectRegistry.FindById(instanceID);
+            if (live != null) return TryGetObjectIdentifier(live, out objectId);
+            if (AssetDatabaseRuntime.TryGetPersistentLocation(instanceID, out var guid, out var local))
+            {
+                objectId = Of(guid, local);
+                return true;
+            }
+            objectId = default;
+            return false;
+        }
 
         internal static ObjectIdentifier Of(string guid, long localId)
         {

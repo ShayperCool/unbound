@@ -28,6 +28,16 @@ namespace Unbound.Runtime
         // 6000.0.71f1 (tests/projects/bakeenvironment written/).
         internal static bool BakeFilesMeasured => Family == ReleaseFamily.Unity6000_0;
 
+        // Edit-mode Lightmapping.AdditionalBakeDelegate stepping, Lightmapping.Cancel() /
+        // bakeCancelled ordering, and Lightmapping.GetLightingDataAssetForScene measured on
+        // 6000.0.71f1 (tests/projects/lightmappinghooks).
+        internal static bool LightmappingHooksMeasured => Family == ReleaseFamily.Unity6000_0;
+
+        // Persistent asset instance IDs remembered across Resources.UnloadAsset (reload and
+        // non-loading metadata queries) and forgotten on Object.DestroyImmediate(asset, true),
+        // measured on 6000.0.71f1 (tests/projects/assetloaded).
+        internal static bool PersistentAssetInstanceIdsMeasured => Family == ReleaseFamily.Unity6000_0;
+
         // Baked lightmapping LOD Group ray/shadow/bounce/sky visibility rules, measured on
         // 6000.0.71f1 (tests/projects/bakedbuffers Shapes and Lod). Other families keep the
         // pre-LOD unmeasured warning and omit LOD Group ray filtering.

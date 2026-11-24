@@ -470,6 +470,7 @@ namespace UnityEngine
             if (m_Destroyed) return;
             m_Destroyed = true;
             if (this is Texture) Texture.s_DestroyedEpoch++;
+            if (IsPersistentAsset) AssetDatabaseRuntime.OnAssetDestroyed(this);
             ObjectDispatch.Destroyed(this);
             OnEngineDestroy();
             ObjectRegistry.Unregister(this);

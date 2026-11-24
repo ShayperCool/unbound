@@ -1270,7 +1270,9 @@ namespace Unbound.Runtime
             {
                 case ScriptableObject when file.Objects.Count == 1:
                     Invalidate(guid);
-                    Object.DestroyImmediate(asset, true);
+                    s_UnloadingAsset = true;
+                    try { Object.DestroyImmediate(asset, true); }
+                    finally { s_UnloadingAsset = false; }
                     return true;
                 // Only a material alone in its file: reading a shared file again would build
                 // and destroy fresh copies of its siblings (the reverted material would then
@@ -1539,12 +1541,15 @@ namespace Unbound.Runtime
             foreach (var pair in s_Objects) if (string.Equals(pair.Key.Item1, guid, StringComparison.OrdinalIgnoreCase)) objects[pair.Key] = pair.Value;
             s_Files.Remove(guid);
             LoadedFile fresh;
+            bool wasReadingAgain = s_ReadingAgain;
+            s_ReadingAgain = true;
             try
             {
                 fresh = LoadFile(guid);
             }
             finally
             {
+                s_ReadingAgain = wasReadingAgain;
                 s_Files[guid] = loaded;
                 foreach (var pair in objects) s_Objects[pair.Key] = pair.Value;
             }
@@ -1555,33 +1560,79 @@ namespace Unbound.Runtime
             return copy;
         }
 
+        static bool s_UnloadingAsset;
+        static bool s_ReadingAgain;
+        internal static Func<string, bool> AssetExistsOverride;
+
         static void RegisterObject(string guid, long fileId, Object obj)
         {
             var key = (guid, fileId);
             s_Objects[key] = obj;
-            if (s_AssetIds.TryGetValue(key, out int stableId))
+            if (s_ReadingAgain || obj.m_InstanceID == 0) return;
+            if (Compat.PersistentAssetInstanceIdsMeasured && s_AssetIds.TryGetValue(key, out int stableId))
             {
-                if (obj.m_InstanceID != stableId && ObjectRegistry.FindById(stableId) == null)
-                    ObjectRegistry.ReassignId(obj, stableId);
+                if (obj.m_InstanceID != stableId)
+                {
+                    if (ObjectRegistry.FindById(stableId) == null)
+                        ObjectRegistry.ReassignId(obj, stableId);
+                    else
+                    {
+                        s_IdLocations.Remove(stableId);
+                        s_AssetIds[key] = obj.m_InstanceID;
+                        s_IdLocations[obj.m_InstanceID] = key;
+                    }
+                }
             }
-            else if (obj.m_InstanceID != 0)
+            else
             {
+                if (s_AssetIds.TryGetValue(key, out int previousId) && previousId != obj.m_InstanceID)
+                    s_IdLocations.Remove(previousId);
                 s_AssetIds[key] = obj.m_InstanceID;
                 s_IdLocations[obj.m_InstanceID] = key;
             }
         }
 
+        internal static void OnAssetDestroyed(Object obj)
+        {
+            if (s_UnloadingAsset || obj is null) return;
+            int id = obj.m_InstanceID;
+            if (!s_IdLocations.Remove(id, out var loc)) return;
+            if (s_AssetIds.TryGetValue(loc, out int mapped) && mapped == id)
+                s_AssetIds.Remove(loc);
+        }
+
+        static bool AssetExists(string guid, long fileId)
+        {
+            if (s_Files.TryGetValue(guid, out var file))
+                return file != null && file.Objects.TryGetValue(fileId, out var obj) && obj != null && !obj.m_Destroyed;
+            if (AssetExistsOverride != null) return AssetExistsOverride(guid);
+            return Native.IsReady && UnityEditor.AssetDatabase.Lists(guid);
+        }
+
+        internal static bool TryGetPersistentLocation(int instanceId, out string guid, out long fileId)
+        {
+            if (Compat.PersistentAssetInstanceIdsMeasured
+                && s_IdLocations.TryGetValue(instanceId, out var loc)
+                && AssetExists(loc.Guid, loc.FileId))
+            {
+                guid = loc.Guid;
+                fileId = loc.FileId;
+                return true;
+            }
+            guid = null;
+            fileId = 0;
+            return false;
+        }
+
         internal static bool HasPersistentId(int instanceId) =>
-            s_IdLocations.TryGetValue(instanceId, out var loc)
-            && (s_Files.ContainsKey(loc.Guid) || UnityEditor.AssetDatabase.Lists(loc.Guid));
+            TryGetPersistentLocation(instanceId, out _, out _);
 
         internal static Object FindOrReloadById(int instanceId)
         {
             var live = ObjectRegistry.FindById(instanceId);
             if (live != null) return Reloaded(live);
-            if (s_IdLocations.TryGetValue(instanceId, out var loc)
-                && (s_Files.ContainsKey(loc.Guid) || UnityEditor.AssetDatabase.Lists(loc.Guid)))
-                return Load(loc.Guid, loc.FileId, null);
+            if (TryGetPersistentLocation(instanceId, out var guid, out var fileId))
+                return Load(guid, fileId, null);
             return null;
         }
 

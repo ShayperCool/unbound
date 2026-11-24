@@ -76,13 +76,15 @@ namespace Unbound.Runtime
 
         internal static void ReassignId(Object obj, int id)
         {
-            if (obj.m_InstanceID == id) return;
+            int oldId = obj.m_InstanceID;
+            if (oldId == id) return;
             lock (s_Objects)
             {
-                s_Objects.Remove(obj.m_InstanceID);
+                s_Objects.Remove(oldId);
                 obj.m_InstanceID = id;
                 s_Objects[id] = new WeakReference<Object>(obj);
             }
+            ObjectDispatch.IdReassigned(obj, oldId, id);
         }
 
         internal static void Unregister(Object obj)

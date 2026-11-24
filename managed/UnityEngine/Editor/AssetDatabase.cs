@@ -213,7 +213,9 @@ namespace UnityEditor
         {
             if (assetObject == null) return "";
             if (SettingsAssets.Of(assetObject) is SettingsFile settings) return settings.AssetPath;
-            if (assetObject is LightingDataAsset { ProjectGuid: { } lightingData }) return GUIDToAssetPath(lightingData);
+            if (assetObject is LightingDataAsset lightingData)
+                return lightingData.ProjectGuid != null ? GUIDToAssetPath(lightingData.ProjectGuid)
+                    : Compat.LightmappingHooksMeasured ? "Resources/unity_builtin_extra" : "";
             if (AssetDatabaseRuntime.TryGetLocation(assetObject, out var guid, out _) || BuiltinObjects.TryGetLocation(assetObject, out guid, out _))
                 return BuiltinResourcePath(guid) ?? GUIDToAssetPath(guid);
             if (assetObject is Component c && c.m_GameObject != null && c.m_GameObject.m_IsPrefabAsset)
@@ -230,11 +232,19 @@ namespace UnityEditor
             : string.Equals(guid, BuiltinShaders.DefaultGuid, StringComparison.OrdinalIgnoreCase) ? "Library/unity default resources"
             : null;
 
-        public static string GetAssetPath(int instanceID) => GetAssetPath(ObjectRegistry.FindById(instanceID));
+        public static string GetAssetPath(int instanceID)
+        {
+            var live = ObjectRegistry.FindById(instanceID);
+            if (live != null) return GetAssetPath(live);
+            if (AssetDatabaseRuntime.TryGetPersistentLocation(instanceID, out var guid, out _))
+                return BuiltinResourcePath(guid) ?? GUIDToAssetPath(guid);
+            return "";
+        }
 
         public static bool Contains(Object obj) => obj != null && obj.IsPersistentAsset;
 
-        public static bool Contains(int instanceID) => Contains(ObjectRegistry.FindById(instanceID));
+        public static bool Contains(int instanceID) =>
+            Contains(ObjectRegistry.FindById(instanceID)) || AssetDatabaseRuntime.HasPersistentId(instanceID);
 
         public static bool IsMainAsset(Object obj) => obj != null && AssetDatabaseRuntime.TryGetLocation(obj, out var guid, out _) && AssetDatabaseRuntime.LoadMain(guid, null) == obj;
 
@@ -282,8 +292,15 @@ namespace UnityEditor
             return false;
         }
 
-        public static bool TryGetGUIDAndLocalFileIdentifier(int instanceID, out string guid, out long localId) =>
-            TryGetGUIDAndLocalFileIdentifier(ObjectRegistry.FindById(instanceID), out guid, out localId);
+        public static bool TryGetGUIDAndLocalFileIdentifier(int instanceID, out string guid, out long localId)
+        {
+            var live = ObjectRegistry.FindById(instanceID);
+            if (live != null) return TryGetGUIDAndLocalFileIdentifier(live, out guid, out localId);
+            if (AssetDatabaseRuntime.TryGetPersistentLocation(instanceID, out guid, out localId)) return true;
+            guid = "";
+            localId = 0;
+            return false;
+        }
 
         public static string[] FindAssets(string filter) => FindAssets(filter, null);
 

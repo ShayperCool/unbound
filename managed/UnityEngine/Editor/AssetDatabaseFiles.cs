@@ -281,6 +281,7 @@ namespace UnityEditor
                     s_DeletedGuidByPath[change.Path] = change.Removed;
                     s_DeletedPathByGuid[change.Removed] = change.Path;
                     AssetDatabaseRuntime.Invalidate(change.Removed);
+                    AssetDatabaseRuntime.ForgetPersistentIds(change.Removed);
                 }
                 // A new or changed asset is imported in this session (its messages are logged at its load).
                 else AssetDatabaseRuntime.ImportedInSession(change.Guid);

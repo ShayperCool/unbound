@@ -1307,7 +1307,7 @@ namespace UnityEditor
                     ? raw.GetInstanceID()
                     : 0;
             }
-            set => objectReferenceValue = value == 0 ? null : ObjectRegistry.FindById(value);
+            set => objectReferenceValue = value == 0 ? null : AssetDatabaseRuntime.FindOrReloadById(value);
         }
 
         internal string objectReferenceStringValue

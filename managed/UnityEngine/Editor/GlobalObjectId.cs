@@ -51,7 +51,19 @@ namespace UnityEditor
             return id;
         }
 
-        public static GlobalObjectId GetGlobalObjectIdSlow(int instanceId) => GetGlobalObjectIdSlow(ObjectRegistry.FindById(instanceId));
+        public static GlobalObjectId GetGlobalObjectIdSlow(int instanceId)
+        {
+            var live = ObjectRegistry.FindById(instanceId);
+            if (live != null) return GetGlobalObjectIdSlow(live);
+            if (AssetDatabaseRuntime.TryGetPersistentLocation(instanceId, out var guid, out var fileId))
+                return new GlobalObjectId
+                {
+                    m_UnboundGuid = new GUID(guid),
+                    m_UnboundObject = unchecked((ulong)fileId),
+                    m_UnboundType = AssetType(guid),
+                };
+            return new GlobalObjectId { m_UnboundGuid = new GUID("") };
+        }
 
         public static void GetGlobalObjectIdsSlow(Object[] objects, [global::System.Runtime.InteropServices.Out] GlobalObjectId[] outputIdentifiers)
         {

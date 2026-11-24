@@ -43,6 +43,9 @@ public class AssetLoadedProbe : MonoBehaviour
                 Row("missing.loaded", Loaded("Assets/Data/Missing.asset"));
                 var unreferenced = AssetDatabase.LoadAssetAtPath<LoadedData>(Unreferenced);
                 int unreferencedId = unreferenced.GetInstanceID();
+                AssetDatabase.TryGetGUIDAndLocalFileIdentifier(unreferenced, out string expectedGuid, out long expectedFileId);
+                string expectedGlobalId = GlobalObjectId.GetGlobalObjectIdSlow(unreferenced).ToString();
+                bool expectedHasOid = UnityEditor.Build.Content.ObjectIdentifier.TryGetObjectIdentifier(unreferenced, out var expectedOid);
                 Row("unreferenced.afterLoad", Loaded(Unreferenced));
                 Resources.UnloadAsset(unreferenced);
                 Row("unreferenced.afterUnload", Loaded(Unreferenced));
@@ -66,6 +69,28 @@ public class AssetLoadedProbe : MonoBehaviour
                 Row("unreferenced.loadedAfterEditor", Loaded(Unreferenced));
 
                 Resources.UnloadAsset(byEditor);
+                // Sibling instance-ID metadata APIs while unloaded.
+                Row("unreferenced.getAssetPathAfterUnload", AssetDatabase.GetAssetPath(unreferencedId));
+                Row("unreferenced.containsAfterUnload", AssetDatabase.Contains(unreferencedId).ToString());
+                bool gotGuid = AssetDatabase.TryGetGUIDAndLocalFileIdentifier(unreferencedId, out string gotGuidVal, out long gotFileId);
+                Row("unreferenced.tryGetGuidAfterUnload", $"{gotGuid}|{gotGuidVal == expectedGuid}|{gotFileId == expectedFileId}");
+                var gotGlobal = GlobalObjectId.GetGlobalObjectIdSlow(unreferencedId);
+                Row("unreferenced.globalIdAfterUnload", $"type={gotGlobal.identifierType}|match={gotGlobal.ToString() == expectedGlobalId}");
+                bool gotOidOk = UnityEditor.Build.Content.ObjectIdentifier.TryGetObjectIdentifier(unreferencedId, out var gotOid);
+                Row("unreferenced.objectIdAfterUnload", $"{gotOidOk}|{expectedHasOid && gotOid == expectedOid}");
+                Row("unreferenced.loadedAfterMetadataQueries", Loaded(Unreferenced));
+
+                var spGo = new GameObject("sp-holder");
+                var spHolder = spGo.AddComponent<LoadedHolder>();
+                var spSo = new SerializedObject(spHolder);
+                var spProp = spSo.FindProperty("data");
+                spProp.objectReferenceInstanceIDValue = unreferencedId;
+                spSo.ApplyModifiedPropertiesWithoutUndo();
+                var assignedData = spHolder.data;
+                Row("unreferenced.serializedPropSetId", $"{assignedData != null}|sameId={(assignedData != null && assignedData.GetInstanceID() == unreferencedId)}|loaded={Loaded(Unreferenced)}");
+                DestroyImmediate(spGo);
+                if (assignedData != null) Resources.UnloadAsset(assignedData);
+
                 var byAssetDb = AssetDatabase.LoadAssetAtPath<LoadedData>(Unreferenced);
                 Row("unreferenced.byAssetDbSameId", byAssetDb == null ? "null" : $"{byAssetDb.value}|sameId={byAssetDb.GetInstanceID() == unreferencedId}");
 
@@ -75,6 +100,27 @@ public class AssetLoadedProbe : MonoBehaviour
                 Row("runtime.idValidAfterDestroy", Resources.InstanceIDIsValid(runtimeId).ToString());
                 Row("runtime.byResourcesAfterDestroy", (Resources.InstanceIDToObject(runtimeId) != null).ToString());
                 Row("runtime.byEditorAfterDestroy", (EditorUtility.InstanceIDToObject(runtimeId) != null).ToString());
+
+                // Direct DestroyImmediate(asset, true) on persistent ScriptableObject and Material.
+                int destroyedSoId = byAssetDb.GetInstanceID();
+                DestroyImmediate(byAssetDb, true);
+                Row("destroyAsset.so.idValid", Resources.InstanceIDIsValid(destroyedSoId).ToString());
+                Row("destroyAsset.so.byResources", (Resources.InstanceIDToObject(destroyedSoId) != null).ToString());
+                Row("destroyAsset.so.byEditor", (EditorUtility.InstanceIDToObject(destroyedSoId) != null).ToString());
+                Row("destroyAsset.so.getAssetPath", AssetDatabase.GetAssetPath(destroyedSoId));
+                Row("destroyAsset.so.contains", AssetDatabase.Contains(destroyedSoId).ToString());
+                Row("destroyAsset.so.loaded", Loaded(Unreferenced));
+
+                const string TestMatPath = "Assets/Data/TestMat.mat";
+                var testMat = AssetDatabase.LoadAssetAtPath<Material>(TestMatPath);
+                int destroyedMatId = testMat.GetInstanceID();
+                DestroyImmediate(testMat, true);
+                Row("destroyAsset.mat.idValid", Resources.InstanceIDIsValid(destroyedMatId).ToString());
+                Row("destroyAsset.mat.byResources", (Resources.InstanceIDToObject(destroyedMatId) != null).ToString());
+                Row("destroyAsset.mat.byEditor", (EditorUtility.InstanceIDToObject(destroyedMatId) != null).ToString());
+                Row("destroyAsset.mat.getAssetPath", AssetDatabase.GetAssetPath(destroyedMatId));
+                Row("destroyAsset.mat.contains", AssetDatabase.Contains(destroyedMatId).ToString());
+                Row("destroyAsset.mat.loaded", Loaded(TestMatPath));
                 output.Write("{\"k\":\"complete\",\"v\":true}\n");
             }
             EditorApplication.Exit(0);
