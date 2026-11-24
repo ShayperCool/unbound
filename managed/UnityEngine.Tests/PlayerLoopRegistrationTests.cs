@@ -42,7 +42,7 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
-        public void ARegistrationWhileItsNodeRunsTakesEffectFromTheNextRun()
+        public void ARegistrationWhileItsNodeRunsKeepsTheRunsList()
         {
             var logs = new LogCapture();
             var previous = Debug.unityLogger.logHandler;
@@ -62,8 +62,9 @@ namespace UnityEngine.Tests
                 PlayerLoopDriver.Register(typeof(LastNode), () => ran.Add("second"));
                 var running = Engine[typeof(LastNode)];
                 Run(typeof(LastNode));
-                // The run finished over the list it began with, which is left unchanged.
-                Assert.Equal(new[] { "first", "second" }, ran);
+                // The list the run began with is left unchanged; the appended action runs in the
+                // same pass, as it would had it been registered before; the one put first waits.
+                Assert.Equal(new[] { "first", "second", "added last" }, ran);
                 Assert.Equal(2, running.Count);
                 Assert.Empty(logs.Lines);
                 ran.Clear();
@@ -74,6 +75,50 @@ namespace UnityEngine.Tests
             finally
             {
                 Debug.unityLogger.logHandler = previous;
+                Engine.Remove(typeof(LastNode));
+            }
+        }
+
+        /// <summary>A system first used inside an action of its own node runs in that pass, as it
+        /// does once it is registered: the frame it serves does not depend on whether it was
+        /// used before.</summary>
+        [Fact]
+        public void ALazilyRegisteredSystemRunsInThePassItIsFirstUsedIn()
+        {
+            var ran = new List<string>();
+            bool registered = false;
+            void Use(string request)
+            {
+                ran.Add(request);
+                if (registered) return;
+                registered = true;
+                PlayerLoopDriver.Register(typeof(LastNode), () => ran.Add("served"));
+            }
+            try
+            {
+                PlayerLoopDriver.Register(typeof(LastNode), () => Use("first use"));
+                Run(typeof(LastNode));
+                Run(typeof(LastNode));
+                Assert.Equal(new[] { "first use", "served", "first use", "served" }, ran);
+                // Appended twice in one pass (a system registering two actions): both run.
+                ran.Clear();
+                Engine.Remove(typeof(LastNode));
+                PlayerLoopDriver.Register(typeof(LastNode), () =>
+                {
+                    ran.Add("user");
+                    if (ran.Count > 1) return;
+                    PlayerLoopDriver.Register(typeof(LastNode), () => ran.Add("a"));
+                    PlayerLoopDriver.Register(typeof(LastNode), () =>
+                    {
+                        ran.Add("b");
+                        if (ran.Count < 4) PlayerLoopDriver.Register(typeof(LastNode), () => ran.Add("c"));
+                    });
+                });
+                Run(typeof(LastNode));
+                Assert.Equal(new[] { "user", "a", "b", "c" }, ran);
+            }
+            finally
+            {
                 Engine.Remove(typeof(LastNode));
             }
         }

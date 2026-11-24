@@ -278,8 +278,9 @@ namespace Unbound.Runtime
 
         /// <summary>Engine code that runs where Unity runs the system of the given type, after the
         /// actions already there. Copy-on-write: a registration while the node runs (a system
-        /// first used inside another's action) leaves the list it enumerates unchanged, and the
-        /// new action runs from the node's next run.</summary>
+        /// first used inside another's action) leaves the list the run reads unchanged; the run
+        /// still reaches the appended action (<see cref="RunActions"/>), as it would had the system
+        /// been registered before, Unity's own systems all being there from the start.</summary>
         internal static void Register(Type system, Action action)
         {
             var next = s_Engine.TryGetValue(system, out var list) ? new List<Action>(list) : new List<Action>();
@@ -291,7 +292,8 @@ namespace Unbound.Runtime
         internal static IReadOnlyList<Action> Registered(Type system) =>
             s_Engine.TryGetValue(system, out var list) ? list : Array.Empty<Action>();
 
-        /// <summary>Runs an engine action before the existing actions at this same system node.</summary>
+        /// <summary>Runs an engine action before the existing actions at this same system node; a
+        /// registration while the node runs takes effect from its next run.</summary>
         internal static void RegisterFirst(Type system, Action action)
         {
             // Keep any node invocation already enumerating its old list unchanged.
@@ -660,13 +662,7 @@ namespace Unbound.Runtime
         static void RunSystem(PlayerLoopSystem system)
         {
             if (system.type != null && s_Engine.TryGetValue(system.type, out var actions))
-            {
-                foreach (var action in actions)
-                {
-                    try { action(); }
-                    catch (Exception e) { Debug.LogException(e); }
-                }
-            }
+                RunActions(system.type, actions);
             if (system.updateDelegate != null)
             {
                 try { system.updateDelegate(); }
@@ -675,6 +671,42 @@ namespace Unbound.Runtime
             if (system.subSystemList != null)
                 foreach (var sub in system.subSystemList)
                     RunSystem(sub);
+        }
+
+        /// <summary>Runs a node's engine actions. Registrations replace the node's list instead of
+        /// changing it (<see cref="Register"/>, <see cref="RegisterFirst"/>), so the run reads a
+        /// list no action changes; actions appended meanwhile (the run's list followed by more in
+        /// the node's new list) run after it in the same pass, actions put first wait for the next
+        /// run.</summary>
+        static void RunActions(Type node, List<Action> actions)
+        {
+            int next = 0;
+            while (true)
+            {
+                for (; next < actions.Count; next++)
+                {
+                    try { actions[next](); }
+                    catch (Exception e) { Debug.LogException(e); }
+                }
+                if (!s_Engine.TryGetValue(node, out var now) || ReferenceEquals(now, actions)) return;
+                int at = Offset(now, actions);
+                if (at < 0) return;
+                next = at + actions.Count;
+                actions = now;
+            }
+        }
+
+        /// <summary>Where <paramref name="part"/> lies in <paramref name="list"/> as a contiguous run
+        /// of the same actions (-1: nowhere).</summary>
+        static int Offset(List<Action> list, List<Action> part)
+        {
+            for (int at = 0; at + part.Count <= list.Count; at++)
+            {
+                int i = 0;
+                while (i < part.Count && ReferenceEquals(list[at + i], part[i])) i++;
+                if (i == part.Count) return at;
+            }
+            return -1;
         }
 
         static unsafe void UpdateTime()
