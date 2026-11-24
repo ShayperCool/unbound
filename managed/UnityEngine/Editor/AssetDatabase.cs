@@ -215,7 +215,7 @@ namespace UnityEditor
             if (SettingsAssets.Of(assetObject) is SettingsFile settings) return settings.AssetPath;
             if (assetObject is LightingDataAsset lightingData)
                 return lightingData.ProjectGuid != null ? GUIDToAssetPath(lightingData.ProjectGuid)
-                    : Compat.LightmappingHooksMeasured ? "Resources/unity_builtin_extra" : "";
+                    : lightingData.IsPersistentAsset && Compat.LightmappingHooksMeasured ? "Resources/unity_builtin_extra" : "";
             if (AssetDatabaseRuntime.TryGetLocation(assetObject, out var guid, out _) || BuiltinObjects.TryGetLocation(assetObject, out guid, out _))
                 return BuiltinResourcePath(guid) ?? GUIDToAssetPath(guid);
             if (assetObject is Component c && c.m_GameObject != null && c.m_GameObject.m_IsPrefabAsset)

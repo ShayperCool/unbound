@@ -1270,9 +1270,10 @@ namespace Unbound.Runtime
             {
                 case ScriptableObject when file.Objects.Count == 1:
                     Invalidate(guid);
-                    s_UnloadingAsset = true;
+                    var prevUnloading = s_UnloadingAsset;
+                    s_UnloadingAsset = asset;
                     try { Object.DestroyImmediate(asset, true); }
-                    finally { s_UnloadingAsset = false; }
+                    finally { s_UnloadingAsset = prevUnloading; }
                     return true;
                 // Only a material alone in its file: reading a shared file again would build
                 // and destroy fresh copies of its siblings (the reverted material would then
@@ -1560,7 +1561,7 @@ namespace Unbound.Runtime
             return copy;
         }
 
-        static bool s_UnloadingAsset;
+        static Object s_UnloadingAsset;
         static bool s_ReadingAgain;
         internal static Func<string, bool> AssetExistsOverride;
 
@@ -1597,7 +1598,7 @@ namespace Unbound.Runtime
 
         internal static void OnAssetDestroyed(Object obj)
         {
-            if (s_UnloadingAsset || obj is null) return;
+            if (obj is null || ReferenceEquals(obj, s_UnloadingAsset)) return;
             int id = obj.m_InstanceID;
             if (!s_IdLocations.Remove(id, out var loc)) return;
             if (s_AssetIds.TryGetValue(loc, out int mapped) && mapped == id)
