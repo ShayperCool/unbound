@@ -41,6 +41,9 @@ namespace UnityEngine.Tests.YogaLayout
             Assert.Equal(565f, Yoga.RoundValueToPixelGridUIToolkit(564.499023f, 1f));
             Assert.Equal(-10f, Yoga.RoundValueToPixelGridUIToolkit(-10.5009f, 1f));
             Assert.Equal(-11f, Yoga.RoundValueToPixelGridUIToolkit(-10.5010f, 1f));
+            Assert.Equal(0f, Yoga.RoundValueToPixelGridUIToolkit(-0.5010f, 1f));
+            Assert.Equal(-2f, Yoga.RoundValueToPixelGridUIToolkit(-2.5010f, 1f));
+            Assert.Equal(-564f, Yoga.RoundValueToPixelGridUIToolkit(-564.5010f, 1f));
             Assert.Equal(0f, Yoga.RoundValueToPixelGridUIToolkit(-0.0005f, 1f));
             Assert.Equal(-1f, Yoga.RoundValueToPixelGridUIToolkit(-0.9995f, 1f));
             Assert.Equal(564f / 1.5f, Yoga.RoundValueToPixelGridUIToolkit(564.4989f / 1.5f, 1.5f));
@@ -75,6 +78,18 @@ namespace UnityEngine.Tests.YogaLayout
                 Assert.Equal(565f / 1.5f, LayoutHeight(YogaConfig.UIToolkit(), 1.5f, 564.499023f / 1.5f));
                 Assert.Equal(564f / 1.5f, LayoutHeight(YogaConfig.UIToolkit(), 1.5f, 564.4989f / 1.5f));
                 Assert.Equal(564f / 1.5f, LayoutHeight(new YogaConfig(), 1.5f, 564.499023f / 1.5f));
+
+                // Measurement cache comparison keeps the standard 0.0001 epsilon (uitkpercent pixelRound.s1.cache).
+                var uitk = YogaConfig.UIToolkit();
+                uitk.PointScaleFactor = 1f;
+                Assert.True(Yoga.CanUseCachedMeasurement(
+                    YogaMeasureMode.AtMost, 10.4990f, YogaMeasureMode.AtMost, 40f,
+                    YogaMeasureMode.AtMost, 10.4989f, YogaMeasureMode.AtMost, 40f,
+                    20f, 10f, 0f, 0f, uitk));
+                Assert.False(Yoga.CanUseCachedMeasurement(
+                    YogaMeasureMode.AtMost, 10.5005f, YogaMeasureMode.AtMost, 40f,
+                    YogaMeasureMode.AtMost, 10.4989f, YogaMeasureMode.AtMost, 40f,
+                    20f, 10f, 0f, 0f, uitk));
             }
 
             using (TestRelease.Pin(TestRelease.Unmeasured))

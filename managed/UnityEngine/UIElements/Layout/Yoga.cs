@@ -3298,7 +3298,7 @@ namespace Unbound.UIElements.Layout
                 if (scaledValue < 0f)
                 {
                     float rounded = MathF.Round((scaledValue - floor) + Epsilon, MidpointRounding.AwayFromZero);
-                    scaledValue = floor != 0f ? floor + rounded : rounded;
+                    scaledValue = floor + rounded;
                 }
                 else
                 {
@@ -3322,14 +3322,10 @@ namespace Unbound.UIElements.Layout
                 || (!IsUndefined(lastComputedWidth) && lastComputedWidth < 0))
                 return false;
             bool useRoundedComparison = config != null && config.PointScaleFactor != 0;
-            bool uitkRound = useRoundedComparison && config.UsesUIToolkitPixelRounding && Compat.UIToolkitPixelRoundingMeasured;
-            float RoundCached(float v) => !useRoundedComparison ? v
-                : uitkRound ? RoundValueToPixelGridUIToolkit(v, config.PointScaleFactor)
-                : RoundValueToPixelGrid(v, config.PointScaleFactor, false, false);
-            float effectiveWidth = RoundCached(width);
-            float effectiveHeight = RoundCached(height);
-            float effectiveLastWidth = RoundCached(lastWidth);
-            float effectiveLastHeight = RoundCached(lastHeight);
+            float effectiveWidth = useRoundedComparison ? RoundValueToPixelGrid(width, config.PointScaleFactor, false, false) : width;
+            float effectiveHeight = useRoundedComparison ? RoundValueToPixelGrid(height, config.PointScaleFactor, false, false) : height;
+            float effectiveLastWidth = useRoundedComparison ? RoundValueToPixelGrid(lastWidth, config.PointScaleFactor, false, false) : lastWidth;
+            float effectiveLastHeight = useRoundedComparison ? RoundValueToPixelGrid(lastHeight, config.PointScaleFactor, false, false) : lastHeight;
 
             bool hasSameWidthSpec = lastWidthMode == widthMode && FloatsEqual(effectiveLastWidth, effectiveWidth);
             bool hasSameHeightSpec = lastHeightMode == heightMode && FloatsEqual(effectiveLastHeight, effectiveHeight);

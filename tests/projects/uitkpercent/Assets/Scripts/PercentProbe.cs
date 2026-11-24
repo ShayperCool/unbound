@@ -543,6 +543,9 @@ namespace PercentProbe
                 ("pos_564_499023", 564.499023f, 564.499023f, 10f),
                 ("neg_10_5009", -10.5009f, 10f, 10f),
                 ("neg_10_5010", -10.5010f, 10f, 10f),
+                ("neg_0_5010", -0.5010f, 10f, 10f),
+                ("neg_2_5010", -2.5010f, 10f, 10f),
+                ("neg_564_5010", -564.5010f, 10f, 10f),
             })
             {
                 var ve = Box(prRoot, name, width, height);
@@ -551,9 +554,26 @@ namespace PercentProbe
                 ve.style.top = 0;
                 prNodes.Add((name, ve));
             }
+            var prCacheHost = Case(root, "pixelRoundCache", 0);
+            prCacheHost.style.top = 12100;
+            prCacheHost.style.width = 10.4989f;
+            prCacheHost.style.height = 40f;
+            prCacheHost.style.alignItems = Align.FlexStart;
+            var prMeasured = new MeasuredBox { name = "measured" };
+            prCacheHost.Add(prMeasured);
             yield return Frames();
             foreach (var (name, ve) in prNodes)
                 Put("pixelRound.s1." + name, State(ve));
+            int cacheInit = prMeasured.Calls;
+            prMeasured.Calls = 0;
+            prCacheHost.style.width = 10.49895f;
+            yield return Frames();
+            int cacheSame = prMeasured.Calls;
+            prMeasured.Calls = 0;
+            prCacheHost.style.width = 10.4990f;
+            yield return Frames();
+            int cacheCross = prMeasured.Calls;
+            Put("pixelRound.s1.cache", $"init={cacheInit > 0} same={cacheSame > 0} cross={cacheCross > 0}");
 
             var ps = GetComponent<UIDocument>().panelSettings;
             ps.scale = 1.5f;
@@ -585,6 +605,16 @@ namespace PercentProbe
         }
 
         static string F(float f) => f.ToString("0.###", Inv);
+
+        sealed class MeasuredBox : TextElement
+        {
+            public int Calls;
+            protected override Vector2 DoMeasure(float desiredWidth, MeasureMode widthMode, float desiredHeight, MeasureMode heightMode)
+            {
+                Calls++;
+                return new Vector2(20f, 10f);
+            }
+        }
 
         void Put(string key, object value)
         {

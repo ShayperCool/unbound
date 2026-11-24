@@ -81,9 +81,11 @@ node bounds percentage min/max against its own available size (`wrapMaxPercent`:
 
 Pixel-grid rounding (`pixelRound.*`): positive and negative coordinates straddling the 0.001f
 tie threshold at scale 1 (`pixelRound.s1.*`: `10.4989` -> 10, `10.499` / `10.499023` -> 11,
-`564.4989` -> 564, `564.499023` -> 565, `-10.5009` -> -10, `-10.501` -> -11) and at scale 1.5
-(`pixelRound.s1_5.*`: `564.4989 / 1.5` -> 376, `564.499023 / 1.5` -> 376.667, `10.4989 / 1.5` ->
-6.667, `10.4995 / 1.5` -> 7.333).
+`564.4989` -> 564, `564.499023` -> 565, `-10.5009` -> -10, `-10.501` -> -11, and negative
+floor-split tie cases `-0.501` -> 0, `-2.501` -> -2, `-564.501` -> -564; plus `pixelRound.s1.cache`,
+confirming the measurement cache keeps the 0.0001 threshold across `10.4989` -> `10.499`) and at
+scale 1.5 (`pixelRound.s1_5.*`: `564.4989 / 1.5` -> 376, `564.499023 / 1.5` -> 376.667,
+`10.4989 / 1.5` -> 6.667, `10.4995 / 1.5` -> 7.333).
 
 Other releases are unmeasured.
 

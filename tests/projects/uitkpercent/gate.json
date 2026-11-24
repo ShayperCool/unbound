@@ -4,6 +4,7 @@
   ],
   "summary": "uitkpercent: .*",
   "engine_paths": [
+    "managed/UnityEngine/Runtime/Compat.cs",
     "managed/UnityEngine/UIElements/Layout/Yoga.cs",
     "managed/UnityEngine/UIElements/Core/VisualElementLayout.cs",
     "managed/UnityEngine/UIElements/Core/Panel.cs",

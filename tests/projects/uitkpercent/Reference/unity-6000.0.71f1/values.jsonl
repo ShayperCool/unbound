@@ -81,6 +81,10 @@
 {"k":"pixelRound.s1.pos_564_499023","v":"rect=565,0,564,10|basis=NaN"}
 {"k":"pixelRound.s1.neg_10_5009","v":"rect=-10,0,10,10|basis=NaN"}
 {"k":"pixelRound.s1.neg_10_5010","v":"rect=-11,0,10,10|basis=NaN"}
+{"k":"pixelRound.s1.neg_0_5010","v":"rect=0,0,10,10|basis=NaN"}
+{"k":"pixelRound.s1.neg_2_5010","v":"rect=-2,0,10,10|basis=NaN"}
+{"k":"pixelRound.s1.neg_564_5010","v":"rect=-564,0,10,10|basis=NaN"}
+{"k":"pixelRound.s1.cache","v":"init=True same=False cross=False"}
 {"k":"pixelRound.s1_5.h_564_4989","v":"rect=0,0,10,376|basis=NaN"}
 {"k":"pixelRound.s1_5.h_564_499023","v":"rect=0,0,10,376.667|basis=NaN"}
 {"k":"pixelRound.s1_5.h_10_4989","v":"rect=0,0,10,6.667|basis=NaN"}
