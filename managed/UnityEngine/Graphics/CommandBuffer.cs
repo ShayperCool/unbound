@@ -805,15 +805,20 @@ namespace UnityEngine.Rendering
             }, 16);
         }
 
-        /// <summary>A render texture is checked when the command runs and not bound (see
-        /// <see cref="RandomWriteTargets"/>): it takes the place of a buffer set at the index.</summary>
+        /// <summary>Binds a created random-write render texture at <paramref name="index"/> when
+        /// the command runs (or clears the slot when null or uncreated).</summary>
         public void SetRandomWriteTarget(int index, RenderTargetIdentifier rt)
         {
             RandomWriteTargets.CheckCommandIndex(index);
             Add(c =>
             {
-                if (Resolve(rt, c) is RenderTexture texture && !texture.enableRandomWrite)
-                    Debug.LogError($"CommandBuffer: RenderTexture '{texture.name}' cannot be used with SetRandomWriteTarget because it does not have random write enabled");
+                if (Resolve(rt, c) is RenderTexture texture)
+                {
+                    if (!texture.enableRandomWrite)
+                        Debug.LogError($"CommandBuffer: RenderTexture '{texture.name}' cannot be used with SetRandomWriteTarget because it does not have random write enabled");
+                    else
+                        RandomWriteTargets.SetTexture(index, texture.IsCreated() ? texture.m_NativeHandle : 0);
+                }
                 else RandomWriteTargets.Set(index, 0);
             }, 20);
         }

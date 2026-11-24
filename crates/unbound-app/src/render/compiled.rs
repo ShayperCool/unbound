@@ -378,6 +378,13 @@ fn texture_bindings_refused(program: &Compiled, limits: &wgpu::Limits) -> Option
             limits.max_sampled_textures_per_shader_stage
         ));
     }
+    let storage_textures = program.storage_textures.len() as u32;
+    if storage_textures > limits.max_storage_textures_per_shader_stage {
+        return Some(format!(
+            "it binds {storage_textures} storage textures, over the {} the device binds in a stage",
+            limits.max_storage_textures_per_shader_stage
+        ));
+    }
     (samplers > limits.max_samplers_per_shader_stage).then(|| {
         format!(
             "it binds {samplers} samplers, over the {} the device binds in a stage",
@@ -528,8 +535,8 @@ pub struct CompiledPrograms {
     compiler: Option<ShaderCompiler>,
     programs: Vec<ProgramGpu>,
     ids: HashMap<usize, u32>,
-    /// Variants that failed (program, keywords, linear).
-    failed: HashSet<(Program, Vec<String>, bool)>,
+    /// Variants that failed (program, keywords, linear, uav texture formats).
+    failed: HashSet<(Program, Vec<String>, bool, Vec<(u32, String)>)>,
     data: Vec<u8>,
     used: HashSet<u32>,
     buffer: Option<wgpu::Buffer>,
@@ -757,12 +764,47 @@ impl CompiledPrograms {
         linear: bool,
         main_texture_layout: &wgpu::BindGroupLayout,
     ) -> Option<u32> {
+        self.variant_with_uav_formats(
+            device,
+            shader,
+            source,
+            keywords,
+            linear,
+            main_texture_layout,
+            &[],
+        )
+    }
+
+    /// Like [`variant`], specializing fragment `RWTexture*` storage textures bound to UAV
+    /// registers (`register(uN)`) to the bound render texture formats.
+    pub fn variant_with_uav_formats(
+        &mut self,
+        device: &wgpu::Device,
+        shader: &str,
+        source: &Program,
+        keywords: &[String],
+        linear: bool,
+        main_texture_layout: &wgpu::BindGroupLayout,
+        uav_texture_formats: &[(u32, String)],
+    ) -> Option<u32> {
         let compiler = self.compiler.as_mut()?;
-        let failure = (source.clone(), keywords.to_vec(), linear);
+        let mut uav_formats = uav_texture_formats.to_vec();
+        uav_formats.sort();
+        let failure = (
+            source.clone(),
+            keywords.to_vec(),
+            linear,
+            uav_formats.clone(),
+        );
         if self.failed.contains(&failure) {
             return None;
         }
-        let program = match compiler.compile(source, keywords, linear) {
+        let program = match compiler.compile_with_uav_formats(
+            source,
+            keywords,
+            linear,
+            &uav_formats,
+        ) {
             Ok(p) => p,
             Err(e) => {
                 tracing::warn!(
@@ -879,34 +921,52 @@ impl CompiledPrograms {
             label: Some("unbound program textures"),
             entries: &texture_entries,
         });
-        let buffer_layout = (!program.buffers.is_empty()).then(|| {
-            let entries: Vec<_> = program
-                .buffers
-                .iter()
-                .enumerate()
-                .map(|(k, b)| wgpu::BindGroupLayoutEntry {
-                    binding: k as u32,
-                    // Written buffers are the fragment program's only.
-                    visibility: if b.read_only {
-                        wgpu::ShaderStages::VERTEX_FRAGMENT
-                    } else {
-                        wgpu::ShaderStages::FRAGMENT
-                    },
-                    ty: wgpu::BindingType::Buffer {
-                        ty: wgpu::BufferBindingType::Storage {
-                            read_only: b.read_only,
+        let buffer_layout = (!program.buffers.is_empty() || !program.storage_textures.is_empty())
+            .then(|| {
+                let mut entries: Vec<_> = program
+                    .buffers
+                    .iter()
+                    .enumerate()
+                    .map(|(k, b)| wgpu::BindGroupLayoutEntry {
+                        binding: k as u32,
+                        // Written buffers are the fragment program's only.
+                        visibility: if b.read_only {
+                            wgpu::ShaderStages::VERTEX_FRAGMENT
+                        } else {
+                            wgpu::ShaderStages::FRAGMENT
                         },
-                        has_dynamic_offset: false,
-                        min_binding_size: None,
-                    },
-                    count: None,
+                        ty: wgpu::BindingType::Buffer {
+                            ty: wgpu::BufferBindingType::Storage {
+                                read_only: b.read_only,
+                            },
+                            has_dynamic_offset: false,
+                            min_binding_size: None,
+                        },
+                        count: None,
+                    })
+                    .collect();
+                let base = program.buffers.len() as u32;
+                for (j, st) in program.storage_textures.iter().enumerate() {
+                    entries.push(wgpu::BindGroupLayoutEntry {
+                        binding: base + j as u32,
+                        visibility: wgpu::ShaderStages::FRAGMENT,
+                        ty: wgpu::BindingType::StorageTexture {
+                            access: if st.write_only {
+                                wgpu::StorageTextureAccess::WriteOnly
+                            } else {
+                                wgpu::StorageTextureAccess::ReadWrite
+                            },
+                            format: super::executor::compute::wgpu_storage_format(&st.format),
+                            view_dimension: view_dimension(st.dim),
+                        },
+                        count: None,
+                    });
+                }
+                device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+                    label: Some("unbound program buffers"),
+                    entries: &entries,
                 })
-                .collect();
-            device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-                label: Some("unbound program buffers"),
-                entries: &entries,
-            })
-        });
+            });
         let layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
             label: Some("unbound program"),
             bind_group_layouts: &[
@@ -2745,6 +2805,7 @@ mod tests {
                 block("AdditionalLights", 74752, 8192),
             ],
             buffers: Vec::new(),
+            storage_textures: Vec::new(),
             extra_vertex_inputs: false,
             vertex_inputs: true,
             framebuffer_fetch: 0,
@@ -2836,6 +2897,26 @@ mod tests {
         program.textures.push("_T15".into());
         program.texture_slots.push(shared);
         assert!(texture_bindings_refused(&program, &webgpu).is_some());
+        // Fragment storage textures count against max_storage_textures_per_shader_stage.
+        program.textures.clear();
+        program.texture_slots.clear();
+        program.main_texture = false;
+        let storage_slot = |r: u32| unbound_shaders::StorageTextureSlot {
+            name: format!("_U{r}"),
+            register: r,
+            dim: TextureDim::D3,
+            format: "Rgba16Float".into(),
+            write_only: true,
+        };
+        let few_storage = wgpu::Limits {
+            max_storage_textures_per_shader_stage: 1,
+            ..webgpu.clone()
+        };
+        program.storage_textures = vec![storage_slot(4)];
+        assert_eq!(texture_bindings_refused(&program, &few_storage), None);
+        program.storage_textures.push(storage_slot(5));
+        let why = texture_bindings_refused(&program, &few_storage).unwrap();
+        assert!(why.contains("2 storage textures, over the 1"), "{why}");
     }
 
     fn uniform(name: &str, offset: u32, rows: u32, columns: u32) -> Uniform {
@@ -2971,6 +3052,7 @@ mod tests {
             texture_slots: Vec::new(),
             texture_aliases: Vec::new(),
             buffers: Vec::new(),
+            storage_textures: Vec::new(),
             // A buffer bound over `_MainTex_ST` (offset 96).
             blocks: vec![unbound_shaders::BlockRange {
                 name: "Bound".into(),
@@ -3029,6 +3111,7 @@ mod tests {
             texture_slots: Vec::new(),
             texture_aliases: Vec::new(),
             buffers: Vec::new(),
+            storage_textures: Vec::new(),
             blocks: vec![unbound_shaders::BlockRange {
                 name: "Tiles".into(),
                 offset: 256,
@@ -3401,6 +3484,7 @@ mod tests {
             texture_slots: Vec::new(),
             texture_aliases: Vec::new(),
             buffers: Vec::new(),
+            storage_textures: Vec::new(),
             blocks: vec![unbound_shaders::BlockRange {
                 name: "Bound".into(),
                 offset: 160,
@@ -3703,6 +3787,7 @@ mod tests {
                 },
             ],
             buffers: Vec::new(),
+            storage_textures: Vec::new(),
             extra_vertex_inputs: false,
             vertex_inputs: true,
             framebuffer_fetch: 0,
@@ -4038,6 +4123,7 @@ mod tests {
             texture_aliases: Vec::new(),
             main_texture: true,
             buffers: Vec::new(),
+            storage_textures: Vec::new(),
             keywords: Vec::new(),
             blocks: vec![
                 unbound_shaders::BlockRange {
@@ -4318,6 +4404,7 @@ mod tests {
             texture_aliases: Vec::new(),
             main_texture: false,
             buffers: Vec::new(),
+            storage_textures: Vec::new(),
             keywords: Vec::new(),
             blocks: vec![
                 BlockRange {
@@ -4744,6 +4831,7 @@ mod tests {
             texture_aliases: Vec::new(),
             main_texture: false,
             buffers: Vec::new(),
+            storage_textures: Vec::new(),
             keywords: Vec::new(),
             blocks: Vec::new(),
             extra_vertex_inputs: false,

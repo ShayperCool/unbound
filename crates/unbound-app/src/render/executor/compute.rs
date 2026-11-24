@@ -322,7 +322,7 @@ pub(super) type KernelCache =
     bevy::platform::collections::HashMap<KernelKey, Result<Arc<KernelGpu>, String>>;
 
 /// naga's name of a texture format a kernel writes (its RW textures are compiled in it).
-fn storage_format_name(format: wgpu::TextureFormat) -> Option<&'static str> {
+pub(crate) fn storage_format_name(format: wgpu::TextureFormat) -> Option<&'static str> {
     use wgpu::TextureFormat as F;
     Some(match format.remove_srgb_suffix() {
         F::R8Unorm => "R8Unorm",
@@ -368,7 +368,7 @@ fn storage_format_name(format: wgpu::TextureFormat) -> Option<&'static str> {
     })
 }
 
-fn wgpu_storage_format(name: &str) -> wgpu::TextureFormat {
+pub(crate) fn wgpu_storage_format(name: &str) -> wgpu::TextureFormat {
     use wgpu::TextureFormat as F;
     match name {
         "R8Unorm" => F::R8Unorm,

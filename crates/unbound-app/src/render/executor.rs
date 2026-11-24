@@ -3,7 +3,7 @@
 //! queued at once, so later commands, `read_pixels` and the next frame see its results in order.
 //! The screen is a ring of offscreen targets; a completed frame's target is handed to the window
 //! (`Presented`), which the render world shows.
-mod compute;
+pub(super) mod compute;
 mod mesh_buffers;
 #[path = "mipmaps.rs"]
 mod mipmaps;
@@ -187,10 +187,12 @@ impl bevy::platform::collections::Equivalent<TextureGroupKey> for TextureGroupLo
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 struct BufferSlotKey {
-    /// Buffer handle (0 when unbound -> `empty_storage`).
+    /// Buffer or storage-texture handle (0 when unbound -> `empty_storage`).
     handle: u64,
     /// Whether this slot binds the buffer's hidden counter instead of its data buffer.
     counter: bool,
+    /// Whether this slot binds a storage texture view (`storage_views[0]`) rather than a buffer.
+    texture: bool,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
@@ -403,9 +405,20 @@ struct GpuMaterial {
     texture_plans: rustc_hash::FxHashMap<u32, Arc<MaterialTexturePlan>>,
     /// The program variant (and whether it is the error shader's) per (pass, global keyword
     /// set, linear colour space, standalone mesh replay).
-    /// By pass, keyword set, color space, instancing mode ([`InstancingMode`]) and whether the
-    /// target is multisampled (a framebuffer-fetching program's variant reads samples).
-    variants: rustc_hash::FxHashMap<(usize, u32, bool, InstancingMode, bool), (Option<u32>, bool)>,
+    /// By pass, keyword set, color space, instancing mode ([`InstancingMode`]), whether the
+    /// target is multisampled (a framebuffer-fetching program's variant reads samples), and
+    /// active random-write storage texture formats at UAV registers `0..8`.
+    variants: rustc_hash::FxHashMap<
+        (
+            usize,
+            u32,
+            bool,
+            InstancingMode,
+            bool,
+            [Option<wgpu::TextureFormat>; 8],
+        ),
+        (Option<u32>, bool),
+    >,
     /// Its uniform block per program variant (see `CompiledPrograms::material_block`).
     blocks: rustc_hash::FxHashMap<u32, Arc<compiled::MaterialBlock>>,
 }
@@ -482,9 +495,26 @@ impl ScreenTarget {
     }
 }
 
-/// The global buffer that holds the random write target at a UAV register (its number follows;
-/// the managed `Graphics.SetRandomWriteTarget` sets it).
+/// The global buffer or texture that holds the random write target at a UAV register (its number
+/// follows; the managed `Graphics.SetRandomWriteTarget` sets it).
 const RANDOM_WRITE_TARGET: &str = "<RandomWriteTarget>";
+
+/// Static property names for UAV registers `0..8`, avoiding per-draw `format!` allocations.
+const RANDOM_WRITE_TARGET_NAMES: [&str; 8] = [
+    "<RandomWriteTarget>0",
+    "<RandomWriteTarget>1",
+    "<RandomWriteTarget>2",
+    "<RandomWriteTarget>3",
+    "<RandomWriteTarget>4",
+    "<RandomWriteTarget>5",
+    "<RandomWriteTarget>6",
+    "<RandomWriteTarget>7",
+];
+
+fn random_write_target_register(name: &str) -> Option<usize> {
+    let r: usize = name.strip_prefix(RANDOM_WRITE_TARGET)?.parse().ok()?;
+    (r < RANDOM_WRITE_TARGET_NAMES.len()).then_some(r)
+}
 
 /// The latest complete frame, for the window.
 #[derive(Clone)]
@@ -1267,6 +1297,9 @@ pub struct UnityRenderer {
     globals_index: owned::NameIndex,
     /// Monotonic revision incremented whenever `globals` changes.
     globals_revision: u64,
+    /// Active random-write render texture handles bound at UAV registers `0..8` (0 when unbound
+    /// or holding a buffer), mirrored from `globals` to keep per-draw checks allocation-free.
+    uav_textures: [u64; 8],
     keywords: Vec<String>,
     /// An id of the global keyword set (equal sets, equal ids): what variants are cached by.
     keyword_set: u32,
@@ -1399,6 +1432,7 @@ impl UnityRenderer {
             globals: Arc::new(Vec::new()),
             globals_index: Default::default(),
             globals_revision: 0,
+            uav_textures: [0; 8],
             keywords: Vec::new(),
             keyword_set: 0,
             keyword_sets: Default::default(),
@@ -1816,12 +1850,20 @@ impl UnityRenderer {
                 .iter()
                 .any(|slot| handle::split(slot.raw).0 == handle)
         });
+        self.program_buffer_groups.retain(|key, _| {
+            !key.slots
+                .iter()
+                .any(|slot| slot.texture && slot.handle == handle)
+        });
     }
 
     /// Drops cached program storage-buffer bind groups referencing `handle`.
     pub(super) fn evict_buffer_groups(&mut self, handle: u64) {
-        self.program_buffer_groups
-            .retain(|key, _| !key.slots.iter().any(|slot| slot.handle == handle));
+        self.program_buffer_groups.retain(|key, _| {
+            !key.slots
+                .iter()
+                .any(|slot| !slot.texture && slot.handle == handle)
+        });
     }
 
     /// A texture's anisotropic level under the global setting.
@@ -2218,8 +2260,14 @@ impl UnityRenderer {
         // one binding nothing; else one of its name.
         let handle_of = |b: &unbound_shaders::BufferSlot| {
             let target = b.register.and_then(|r| {
-                let key = format!("{RANDOM_WRITE_TARGET}{r}");
-                match globals_index.find(globals, &key) {
+                let value = match RANDOM_WRITE_TARGET_NAMES.get(r as usize) {
+                    Some(&key) => globals_index.find(globals, key),
+                    None => {
+                        let key = format!("{RANDOM_WRITE_TARGET}{r}");
+                        globals_index.find(globals, &key)
+                    }
+                };
+                match value {
                     Some(owned::PropertyValue::Buffer(h)) if *h != 0 => Some(*h),
                     _ => None,
                 }
@@ -2277,19 +2325,65 @@ impl UnityRenderer {
                 self.buffer_slot_scratch.push(BufferSlotKey {
                     handle: owner_handle.unwrap(),
                     counter: true,
+                    texture: false,
                 });
             } else if let Some(h) = direct.filter(|h| self.buffers.contains_key(h)) {
                 self.buffer_slot_scratch.push(BufferSlotKey {
                     handle: h,
                     counter: false,
+                    texture: false,
                 });
             } else {
                 any_missing = true;
                 self.buffer_slot_scratch.push(BufferSlotKey {
                     handle: 0,
                     counter: false,
+                    texture: false,
                 });
             }
+        }
+        for st in &program.storage_textures {
+            let tex_handle = match self.uav_textures.get(st.register as usize) {
+                Some(&h) => (h != 0).then_some(h),
+                None => {
+                    let key = format!("{RANDOM_WRITE_TARGET}{}", st.register);
+                    match globals_index.find(globals, &key) {
+                        Some(owned::PropertyValue::Texture { handle, .. }) if *handle != 0 => {
+                            Some(*handle)
+                        }
+                        _ => None,
+                    }
+                }
+            };
+            let valid = tex_handle
+                .and_then(|h| self.textures.get(&h))
+                .is_some_and(|t| {
+                    let dim = if t.volume {
+                        unbound_shaders::TextureDim::D3
+                    } else if t.layers > 1 {
+                        unbound_shaders::TextureDim::D2Array
+                    } else {
+                        unbound_shaders::TextureDim::D2
+                    };
+                    !t.storage_views.is_empty()
+                        && dim == st.dim
+                        && compute::storage_format_name(t.texture.format())
+                            == Some(st.format.as_str())
+                });
+            if !valid {
+                self.warn_once(format!("drawuavtex{shader}{}", st.name), || {
+                    format!(
+                        "shader `{shader}` writes storage texture `{}` (u{}, format {}), which has no matching random-write render texture bound: the draw is skipped",
+                        st.name, st.register, st.format
+                    )
+                });
+                return Err(());
+            }
+            self.buffer_slot_scratch.push(BufferSlotKey {
+                handle: tex_handle.unwrap(),
+                counter: false,
+                texture: true,
+            });
         }
 
         if !any_missing {
@@ -2313,8 +2407,9 @@ impl UnityRenderer {
         }
         let slot_keys = self.buffer_slot_scratch.clone();
         let mut missing = Vec::new();
-        let mut bound: Vec<wgpu::Buffer> = Vec::with_capacity(slot_keys.len());
-        for (slot, b) in slot_keys.iter().zip(&program.buffers) {
+        let buf_count = program.buffers.len();
+        let mut bound: Vec<wgpu::Buffer> = Vec::with_capacity(buf_count);
+        for (slot, b) in slot_keys[..buf_count].iter().zip(&program.buffers) {
             let buffer = if slot.counter {
                 self.buffers[&slot.handle].counter.clone()
             } else if slot.handle != 0 {
@@ -2327,7 +2422,7 @@ impl UnityRenderer {
                 self.empty_storage.clone().unwrap()
             }));
         }
-        let entries: Vec<_> = bound
+        let mut entries: Vec<wgpu::BindGroupEntry<'_>> = bound
             .iter()
             .enumerate()
             .map(|(k, buffer)| wgpu::BindGroupEntry {
@@ -2335,6 +2430,14 @@ impl UnityRenderer {
                 resource: buffer.as_entire_binding(),
             })
             .collect();
+        for (j, slot) in slot_keys[buf_count..].iter().enumerate() {
+            entries.push(wgpu::BindGroupEntry {
+                binding: (buf_count + j) as u32,
+                resource: wgpu::BindingResource::TextureView(
+                    &self.textures[&slot.handle].storage_views[0],
+                ),
+            });
+        }
         let group = self.device.create_bind_group(&wgpu::BindGroupDescriptor {
             label: Some("unbound draw buffers"),
             layout: self.compiled.buffer_layout(id).ok_or(())?,
@@ -4498,6 +4601,12 @@ impl UnityRenderer {
                         }
                     }
                     Command::Global(name, value) => {
+                        if let Some(r) = random_write_target_register(&name) {
+                            self.uav_textures[r] = match &value {
+                                owned::PropertyValue::Texture { handle, .. } => *handle,
+                                _ => 0,
+                            };
+                        }
                         let globals = Arc::make_mut(&mut self.globals);
                         match self.globals_index.position(globals, &name) {
                             Some(i) => {
@@ -5190,6 +5299,24 @@ impl UnityRenderer {
         }
     }
 
+    /// Active random-write render texture formats bound at UAV registers `0..8`.
+    fn active_uav_format_key(&self) -> [Option<wgpu::TextureFormat>; 8] {
+        if self.uav_textures == [0; 8] {
+            return [None; 8];
+        }
+        std::array::from_fn(|r| {
+            let h = self.uav_textures[r];
+            (h != 0)
+                .then(|| {
+                    self.textures
+                        .get(&h)
+                        .filter(|t| !t.storage_views.is_empty())
+                        .map(|t| t.texture.format())
+                })
+                .flatten()
+        })
+    }
+
     /// Compile exactly the program a draw would use, including its existing error fallback.
     fn variant_or_error(
         &mut self,
@@ -5198,11 +5325,30 @@ impl UnityRenderer {
         keywords: &[String],
         linear: bool,
         layout: &wgpu::BindGroupLayout,
+        uav_key: &[Option<wgpu::TextureFormat>; 8],
     ) -> (Option<u32>, bool) {
         let device = self.device.clone();
-        let id = self
-            .compiled
-            .variant(&device, shader, source, keywords, linear, layout);
+        let uav_formats: Vec<(u32, String)> = if uav_key.iter().any(Option::is_some) {
+            uav_key
+                .iter()
+                .enumerate()
+                .filter_map(|(r, fmt)| {
+                    fmt.and_then(compute::storage_format_name)
+                        .map(|name| (r as u32, name.to_string()))
+                })
+                .collect()
+        } else {
+            Vec::new()
+        };
+        let id = self.compiled.variant_with_uav_formats(
+            &device,
+            shader,
+            source,
+            keywords,
+            linear,
+            layout,
+            &uav_formats,
+        );
         if id.is_some() {
             return (id, false);
         }
@@ -5523,7 +5669,15 @@ impl UnityRenderer {
                 InstancingMode::None
             };
             let multisampled = target.samples > 1;
-            let key = (pass_index, self.keyword_set, linear, mode, multisampled);
+            let uav_key = self.active_uav_format_key();
+            let key = (
+                pass_index,
+                self.keyword_set,
+                linear,
+                mode,
+                multisampled,
+                uav_key,
+            );
             let cached = self
                 .materials
                 .get(&draw.material)
@@ -5551,6 +5705,7 @@ impl UnityRenderer {
                         &keywords,
                         linear,
                         &layout,
+                        &uav_key,
                     );
                     // A program reading its color targets draws into a multisampled one with
                     // its variant that reads each fragment's own sample.
@@ -5565,6 +5720,7 @@ impl UnityRenderer {
                             &keywords,
                             linear,
                             &layout,
+                            &uav_key,
                         );
                     }
                     // A BatchRendererGroup draw of a pass without DOTS instancing (or that does
@@ -5966,6 +6122,9 @@ impl UnityRenderer {
 
     /// Sets the global texture `name` (0: none, the slots read their defaults).
     fn set_global_texture(&mut self, name: &str, handle: u64) {
+        if let Some(r) = random_write_target_register(name) {
+            self.uav_textures[r] = handle;
+        }
         let value = owned::PropertyValue::Texture {
             handle,
             st: [1.0, 1.0, 0.0, 0.0],
@@ -8275,10 +8434,12 @@ mod tests {
             BufferSlotKey {
                 handle: 11,
                 counter: false,
+                texture: false,
             },
             BufferSlotKey {
                 handle: 11,
                 counter: true,
+                texture: false,
             },
         ];
         buf_map.insert(

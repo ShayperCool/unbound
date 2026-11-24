@@ -292,7 +292,7 @@ fn typed_scalar_buffers_as_structured(source: &str) -> String {
     out
 }
 
-fn storage_format(name: &str) -> Option<naga::StorageFormat> {
+pub(crate) fn storage_format(name: &str) -> Option<naga::StorageFormat> {
     use naga::StorageFormat as F;
     Some(match name {
         "R8Unorm" => F::R8Unorm,
@@ -339,7 +339,7 @@ fn storage_format(name: &str) -> Option<naga::StorageFormat> {
 }
 
 /// The globals a module reads as images (`ImageLoad`) anywhere.
-fn loaded_images(module: &Module) -> HashSet<naga::Handle<naga::GlobalVariable>> {
+pub(crate) fn loaded_images(module: &Module) -> HashSet<naga::Handle<naga::GlobalVariable>> {
     let mut loaded = HashSet::new();
     let functions = module
         .functions
@@ -789,6 +789,53 @@ void Scale(uint3 id : SV_DispatchThreadID)
                 ..
             }
         )));
+    }
+
+    #[test]
+    fn packed_struct_buffers_use_tight_hlsl_offsets_for_float3_fields() {
+        let program = ComputeProgram {
+            file: PathBuf::from("PackedStruct.compute"),
+            source: "#pragma kernel Run
+struct OBB {
+    float3 corner;
+    float3 X;
+    float3 Y;
+    float3 Z;
+    int a;
+    int b;
+    int c;
+    int d;
+};
+RWStructuredBuffer<OBB> _Boxes;
+RWStructuredBuffer<float4> _Out;
+float3 Sum(OBB obb) { return obb.corner + obb.X + obb.Y + obb.Z; }
+[numthreads(1,1,1)]
+void Run(uint3 id : SV_DispatchThreadID) {
+    OBB obb = _Boxes[id.x];
+    _Out[id.x] = float4(Sum(obb), float(obb.a + obb.b + obb.c + obb.d));
+    obb.Y = obb.X;
+    _Boxes[id.x] = obb;
+    _Boxes[id.x].Z = float3(1, 2, 3);
+    _Boxes[id.x].X.y = 4.0;
+}"
+            .into(),
+        };
+        let mut compiler = ShaderCompiler::new(Settings::default()).unwrap();
+        let kernel = compiler.compile_kernel(&program, "Run", &[], &[]).unwrap();
+        let module = naga::front::wgsl::parse_str(&kernel.wgsl).unwrap();
+        // 4 x float3 (48 B) + 4 x int (16 B) = 64 B, not 80 B (std430).
+        assert!(
+            module.types.iter().any(|(_, t)| matches!(
+                t.inner,
+                naga::TypeInner::Array {
+                    size: naga::ArraySize::Dynamic,
+                    stride: 64,
+                    ..
+                }
+            )),
+            "expected 64-byte stride in WGSL:\n{}",
+            kernel.wgsl
+        );
     }
 
     /// A kernel can fetch stored depth while comparing through a separate binding in GLSL.

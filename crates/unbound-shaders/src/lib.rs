@@ -37,7 +37,7 @@ use std::{
 
 /// Bumped whenever the output for a given source changes (cache entries of other versions are
 /// never used).
-pub const FORMAT_VERSION: u32 = 74;
+pub const FORMAT_VERSION: u32 = 75;
 
 /// The identity of this build's compiler (`unbound_source_identity::SHADER_COMPILER`): the hash
 /// of the sources that decide its output. Cache entries are keyed by it beside
@@ -184,6 +184,10 @@ pub struct Compiled {
     /// Structured and byte address buffers, bound in group 3 at their index.
     #[serde(default)]
     pub buffers: Vec<BufferSlot>,
+    /// Storage textures (`RWTexture*`) written (and optionally read) by the fragment program,
+    /// bound in group 3 starting at `buffers.len()`.
+    #[serde(default)]
+    pub storage_textures: Vec<StorageTextureSlot>,
     /// Whether the vertex program reads `TEXCOORD4..7` (the second vertex buffer).
     #[serde(default)]
     pub extra_vertex_inputs: bool,
@@ -205,6 +209,18 @@ pub struct BufferSlot {
     /// write target set at that index (`Graphics.SetRandomWriteTarget`) binds there.
     #[serde(default)]
     pub register: Option<u32>,
+}
+
+/// A storage texture (`RWTexture2D`/`RWTexture3D`/...) the fragment program writes (and
+/// optionally reads), bound in group 3 after `buffers`: a random write render texture set at
+/// `register` (`Graphics.SetRandomWriteTarget(index, RenderTexture)`) binds there.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct StorageTextureSlot {
+    pub name: String,
+    pub dim: TextureDim,
+    pub format: String,
+    pub write_only: bool,
+    pub register: u32,
 }
 
 /// The most bytes a uniform binding holds: WebGPU's default `maxUniformBufferBindingSize`, which
@@ -724,8 +740,8 @@ float4x4 abs(float4x4 m) { return float4x4(abs(m[0]), abs(m[1]), abs(m[2]), abs(
 pub struct ShaderCompiler {
     settings: Settings,
     compiler: shaderc::Compiler,
-    /// Compiled variants by program and keywords.
-    memory: HashMap<(Program, Vec<String>, bool), Arc<Compiled>>,
+    /// Compiled variants by program, keywords, linear space, and UAV storage texture formats.
+    memory: HashMap<(Program, Vec<String>, bool, Vec<(u32, String)>), Arc<Compiled>>,
     pragmas: HashMap<(Program, bool), Pragmas>,
     /// The shader files and requirement names warned of ([`ShaderCompiler::pragmas`]): each
     /// once per file, however many of its passes and variants read them.
@@ -844,6 +860,18 @@ impl ShaderCompiler {
         keywords: &[String],
         linear: bool,
     ) -> Result<Arc<Compiled>> {
+        self.compile_with_uav_formats(program, keywords, linear, &[])
+    }
+
+    /// Like [`compile`], specializing fragment `RWTexture*` storage textures bound to UAV
+    /// registers (`register(uN)`) to the actual bound texture formats.
+    pub fn compile_with_uav_formats(
+        &mut self,
+        program: &Program,
+        keywords: &[String],
+        linear: bool,
+        uav_texture_formats: &[(u32, String)],
+    ) -> Result<Arc<Compiled>> {
         let pragmas = self.pragmas(program, linear)?;
         if let Some(what) = &pragmas.unsupported {
             bail!("{what} programs are not supported (Unbound compiles vertex/fragment programs)");
@@ -864,7 +892,14 @@ impl ShaderCompiler {
         if fetch_multisampled {
             selected.push(FETCH_MULTISAMPLED.into());
         }
-        let key = (program.clone(), selected.clone(), linear);
+        let mut uav_formats = uav_texture_formats.to_vec();
+        uav_formats.sort();
+        let key = (
+            program.clone(),
+            selected.clone(),
+            linear,
+            uav_formats.clone(),
+        );
         if let Some(c) = self.memory.get(&key) {
             return Ok(c.clone());
         }
@@ -973,6 +1008,12 @@ impl ShaderCompiler {
             h.update(selected.join(" ").as_bytes());
             h.update(instanced_properties.join(" ").as_bytes());
             h.update(format!("{mesh_instance_stride:?}/{mesh_instance_uniform_scaling}/{mesh_instance_max_count:?}").as_bytes());
+            h.update(&(uav_formats.len() as u64).to_le_bytes());
+            for (reg, fmt) in &uav_formats {
+                h.update(&reg.to_le_bytes());
+                h.update(&(fmt.len() as u64).to_le_bytes());
+                h.update(fmt.as_bytes());
+            }
             h.finalize().to_hex().to_string()
         };
         let cached = self.cache_dir().map(|d| d.join(format!("{hash}.json")));
@@ -1001,6 +1042,7 @@ impl ShaderCompiler {
             &vertex_spv,
             &fragment_spv,
             &uav_registers(&fragment_source),
+            &uav_formats,
             fit::ClipSpace::of(self.settings.device.conventions()),
             self.settings.device.named_samplers(),
             self.settings.opengl_shading_language,
@@ -5457,5 +5499,52 @@ void surf (Input IN, inout SurfaceOutput o) { o.Albedo = tex2D(_MainTex, IN.uv_M
         )
         .validate(&module)
         .unwrap();
+    }
+
+    /// Fragment programs writing an `RWTexture3D<float> : register(u4)` specialize to a bound
+    /// 4-channel storage texture format (such as `Rgba16Float` in APV `VoxelizeScene.hlsl`) and
+    /// widen the stored alpha channel to 1.0 to match D3D11/Vulkan UAV store expansion.
+    #[test]
+    fn fragment_rw_texture_specializes_format_and_widens_alpha() {
+        let mut compiler = ShaderCompiler::new(Settings::default()).unwrap();
+        let program = Program {
+            file: PathBuf::from("VoxelizeTest.shader"),
+            source: r#"
+#pragma vertex vert
+#pragma fragment frag
+RWTexture3D<float> _Output : register(u4);
+float4 vert(float4 p : POSITION) : SV_Position { return p; }
+float4 frag(float4 p : SV_Position) : SV_Target {
+    _Output[uint3(1, 2, 3)] = 1.0;
+    return float4(0, 0, 0, 1);
+}
+"#
+            .into(),
+            cg: false,
+            light_mode: None,
+        };
+        let compiled = compiler
+            .compile_with_uav_formats(&program, &[], true, &[(4, "Rgba16Float".into())])
+            .unwrap();
+        assert_eq!(compiled.storage_textures.len(), 1);
+        let slot = &compiled.storage_textures[0];
+        assert_eq!(slot.name, "_Output");
+        assert_eq!(slot.dim, TextureDim::D3);
+        assert_eq!(slot.format, "Rgba16Float");
+        assert!(slot.write_only);
+        assert_eq!(slot.register, 4);
+        assert!(
+            compiled.fragment.contains("@group(3) @binding(0)")
+                && compiled
+                    .fragment
+                    .contains("texture_storage_3d<rgba16float,write>"),
+            "{}",
+            compiled.fragment
+        );
+        assert!(
+            compiled.fragment.contains("1f)") || compiled.fragment.contains("1.0)"),
+            "expected widened alpha = 1.0 in textureStore:\n{}",
+            compiled.fragment
+        );
     }
 }

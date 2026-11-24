@@ -85,6 +85,7 @@ impl UnityRenderer {
                             &keywords,
                             self.color_space == 1,
                             &layout,
+                            &[None; 8],
                         );
                         let id = id.ok_or_else(|| {
                             format!(

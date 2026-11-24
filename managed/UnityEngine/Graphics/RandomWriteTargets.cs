@@ -33,6 +33,13 @@ namespace Unbound.Runtime
             s_Set |= 1 << index;
         }
 
+        internal static void SetTexture(int index, ulong handle)
+        {
+            if (handle != 0) GfxStream.GlobalTexture(s_Names[index], handle);
+            else GfxStream.GlobalBuffer(s_Names[index], 0);
+            s_Set |= 1 << index;
+        }
+
         internal static void Clear()
         {
             for (int i = 0; i < Count; i++)
@@ -77,14 +84,14 @@ namespace UnityEngine
         public static void SetRandomWriteTarget(int index, GraphicsBuffer uav, [Internal.DefaultValue("false")] bool preserveCounterValue) =>
             RandomWriteTargets.SetBuffer(index, uav, uav?.Storage, uav != null && uav.IsValid(), preserveCounterValue);
 
-        /// <summary>A render texture is checked (it must allow random writes; null is accepted) and
-        /// not bound (see <see cref="RandomWriteTargets"/>): it takes the place of a buffer set at
-        /// the index.</summary>
+        /// <summary>Binds a created random-write render texture at <paramref name="index"/>
+        /// without forcing creation (measured: tests/projects/cmdbuffers uav.arg.uncreated.created),
+        /// or clears the slot when null or uncreated.</summary>
         public static void SetRandomWriteTarget(int index, RenderTexture uav)
         {
             RandomWriteTargets.CheckIndex(index);
             if (uav != null && !uav.enableRandomWrite) throw new ArgumentException("uav RenderTexture must have random write enabled");
-            RandomWriteTargets.Set(index, 0);
+            RandomWriteTargets.SetTexture(index, uav != null && uav.IsCreated() ? uav.m_NativeHandle : 0);
         }
 
         public static void ClearRandomWriteTargets() => RandomWriteTargets.Clear();
