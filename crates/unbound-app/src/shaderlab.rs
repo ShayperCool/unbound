@@ -498,7 +498,7 @@ impl ProgramStage {
     /// Whether the Editor's device runs the stage (None: not measured).
     pub fn editor_runs(self, device: unbound_compat::GraphicsDevice) -> Option<bool> {
         match self {
-            Self::Geometry => Some(device.editor_runs_geometry_stages()),
+            Self::Geometry => device.editor_runs_geometry_stages(),
             Self::Hull | Self::Domain => device.editor_runs_tessellation_stages(),
         }
     }
@@ -803,6 +803,16 @@ impl ShaderLab {
         selection: &Selection,
         device: unbound_compat::GraphicsDevice,
     ) -> Option<Substitution> {
+        self.substitution_with(pipeline, selection, &|stage| stage.editor_runs(device))
+    }
+
+    /// [`ShaderLab::substitution`] on a device that runs each stage as `runs_stage` says.
+    fn substitution_with(
+        &self,
+        pipeline: &str,
+        selection: &Selection,
+        runs_stage: &dyn Fn(ProgramStage) -> Option<bool>,
+    ) -> Option<Substitution> {
         if self.shadow_collector() {
             return None;
         }
@@ -811,11 +821,12 @@ impl ShaderLab {
             if !self.matches(sub, pipeline, selection) {
                 continue;
             }
-            let runs = sub.editor_runs(device);
+            let runs = sub.editor_runs(runs_stage);
             if runs == Some(false) {
                 continue;
             }
-            // The Editor's pick (if measured).
+            // The Editor's pick (if it runs the SubShader's stages; not measured when `runs` is
+            // None, and then the renderer's pick is the same SubShader or a later one).
             if Some(i) == drawn {
                 return None;
             }
@@ -823,7 +834,7 @@ impl ShaderLab {
                 drawn,
                 editor: Some(i),
                 subshader: i,
-                stage: sub.deciding_stage(device)?,
+                stage: sub.deciding_stage(runs_stage)?,
                 unmeasured: runs.is_none(),
             });
         }
@@ -834,7 +845,7 @@ impl ShaderLab {
             drawn,
             editor: None,
             subshader: i,
-            stage: self.subshaders[i].deciding_stage(device)?,
+            stage: self.subshaders[i].deciding_stage(runs_stage)?,
             unmeasured: false,
         })
     }
@@ -1144,12 +1155,13 @@ impl SubShader {
         !self.unsupported_stages.is_empty()
     }
 
-    /// Whether the Editor's device runs it as far as its stages go: false when it does not run
-    /// one of them, None when that is not measured for one.
-    pub fn editor_runs(&self, device: unbound_compat::GraphicsDevice) -> Option<bool> {
+    /// Whether the Editor's device runs it as far as its stages go, given whether the device runs
+    /// each stage: false when it does not run one of them, None when that is not measured for
+    /// one.
+    fn editor_runs(&self, runs_stage: &dyn Fn(ProgramStage) -> Option<bool>) -> Option<bool> {
         let mut runs = Some(true);
-        for stage in &self.unsupported_stages {
-            match stage.editor_runs(device) {
+        for &stage in &self.unsupported_stages {
+            match runs_stage(stage) {
                 Some(false) => return Some(false),
                 None => runs = None,
                 Some(true) => {}
@@ -1158,14 +1170,17 @@ impl SubShader {
         runs
     }
 
-    /// The first of its stages the Editor's device does not run, else the first not measured,
-    /// else the first.
-    fn deciding_stage(&self, device: unbound_compat::GraphicsDevice) -> Option<ProgramStage> {
+    /// The first of its stages the device does not run, else the first not measured, else the
+    /// first.
+    fn deciding_stage(
+        &self,
+        runs_stage: &dyn Fn(ProgramStage) -> Option<bool>,
+    ) -> Option<ProgramStage> {
         let stages = &self.unsupported_stages;
         stages
             .iter()
-            .find(|s| s.editor_runs(device) == Some(false))
-            .or_else(|| stages.iter().find(|s| s.editor_runs(device).is_none()))
+            .find(|&&s| runs_stage(s) == Some(false))
+            .or_else(|| stages.iter().find(|&&s| runs_stage(s).is_none()))
             .or_else(|| stages.first())
             .copied()
     }
@@ -1949,17 +1964,19 @@ pub struct ShaderIndex {
 static SUBSTITUTIONS_WARNED: std::sync::Mutex<std::collections::BTreeSet<String>> =
     std::sync::Mutex::new(std::collections::BTreeSet::new());
 
-/// Warns of a SubShader substitution unless the same was warned before. Returns whether it
-/// warned.
-fn warn_substitution_once(message: &str) -> bool {
-    let mut warned = SUBSTITUTIONS_WARNED
+/// Whether a substitution warning is given for the first time in this process (and records it).
+fn first_substitution_warning(message: &str) -> bool {
+    SUBSTITUTIONS_WARNED
         .lock()
-        .unwrap_or_else(std::sync::PoisonError::into_inner);
-    if !warned.insert(message.to_string()) {
-        return false;
+        .unwrap_or_else(std::sync::PoisonError::into_inner)
+        .insert(message.to_string())
+}
+
+/// Warns of a SubShader substitution unless the same was warned before.
+fn warn_substitution_once(message: &str) {
+    if first_substitution_warning(message) {
+        tracing::warn!("{message}");
     }
-    tracing::warn!("{message}");
-    true
 }
 
 /// The folder of Unbound's project directory where the managed side writes the ShaderLab source
@@ -2151,11 +2168,7 @@ impl ShaderIndex {
             let mut pipelines = vec![String::new()];
             for sub in &lab.subshaders {
                 if let Some(tag) = sub.tags.get("RenderPipeline") {
-                    for part in tag.split(',').filter(|p| !p.is_empty()) {
-                        let name = PIPELINE_TAGS
-                            .iter()
-                            .find(|t| t.eq_ignore_ascii_case(part))
-                            .map_or(part, |t| t);
+                    for name in pipeline_tag_names(tag) {
                         if !pipelines.iter().any(|p| p == name) {
                             pipelines.push(name.to_string());
                         }
@@ -2310,6 +2323,18 @@ fn shader_name(text: &str) -> Option<String> {
 /// package is not measured.
 const PIPELINE_TAGS: [&str; 2] = ["UniversalPipeline", "HDRenderPipeline"];
 
+/// The pipelines a `RenderPipeline` tag names: its comma-separated parts, a render pipeline's
+/// own tag in another case reading as its spelling ([`PIPELINE_TAGS`]).
+fn pipeline_tag_names(tag: &str) -> impl Iterator<Item = &str> {
+    tag.split(',').filter(|p| !p.is_empty()).map(|part| {
+        PIPELINE_TAGS
+            .iter()
+            .find(|t| t.eq_ignore_ascii_case(part))
+            .copied()
+            .unwrap_or(part)
+    })
+}
+
 /// Whether a SubShader with this `RenderPipeline` tag runs under the pipeline tag: one without
 /// the tag, or whose tag lists no name, runs under any; otherwise a comma-separated name of the
 /// tag must equal a comma-separated name of the pipeline tag as written (no trimming, in case),
@@ -2319,13 +2344,8 @@ const PIPELINE_TAGS: [&str; 2] = ["UniversalPipeline", "HDRenderPipeline"];
 pub fn runs_under(tag: Option<&str>, pipeline: &str) -> bool {
     let Some(tag) = tag else { return true };
     let mut named = false;
-    for part in tag.split(',').filter(|p| !p.is_empty()) {
+    for name in pipeline_tag_names(tag) {
         named = true;
-        let name = PIPELINE_TAGS
-            .iter()
-            .find(|t| t.eq_ignore_ascii_case(part))
-            .copied()
-            .unwrap_or(part);
         if pipeline
             .split(',')
             .any(|active| !active.is_empty() && active == name)
@@ -3119,17 +3139,33 @@ Pass { Name "TAIL" }
                 );
             }
         }
-        // Metal runs no geometry stage: it draws SubShader 1 too.
-        assert_eq!(geometry.substitution(urp, &none, Metal), None);
-        // Whether it runs hull/domain is not measured.
-        let s = hull.substitution(urp, &none, Metal).unwrap();
-        assert!(s.unmeasured);
-        assert_eq!((s.drawn, s.editor, s.subshader), (Some(1), Some(0), 0));
+        // Whether Metal runs a geometry or hull/domain SubShader is not measured.
+        for (lab, stage) in [
+            (&geometry, ProgramStage::Geometry),
+            (&hull, ProgramStage::Hull),
+        ] {
+            let s = lab.substitution(urp, &none, Metal).unwrap();
+            assert_eq!(
+                s,
+                Substitution {
+                    drawn: Some(1),
+                    editor: Some(0),
+                    subshader: 0,
+                    stage,
+                    unmeasured: true
+                }
+            );
+        }
         // Under the built-in pipeline only SubShader 2 matches: the renderer draws it (its stage
-        // fails when compiled) as the Linux Editor does; the Metal Editor takes the Fallback.
+        // fails when compiled) as the Editor does where it runs the stage.
         assert_eq!(geometry.substitution("", &none, Vulkan), None);
+        assert_eq!(geometry.substitution("", &none, Metal), None);
+        // A device without the stage: the Editor passes over SubShader 0 and draws 1 as the
+        // renderer does; where SubShader 2 is the only match it takes the Fallback.
+        let without = |stage: ProgramStage| Some(stage != ProgramStage::Geometry);
+        assert_eq!(geometry.substitution_with(urp, &none, &without), None);
         assert_eq!(
-            geometry.substitution("", &none, Metal),
+            geometry.substitution_with("", &none, &without),
             Some(Substitution {
                 drawn: Some(2),
                 editor: None,
@@ -3137,6 +3173,11 @@ Pass { Name "TAIL" }
                 stage: ProgramStage::Geometry,
                 unmeasured: false
             })
+        );
+        assert_eq!(
+            hull.substitution_with(urp, &none, &without)
+                .map(|s| s.editor),
+            Some(Some(0))
         );
         // A replacement tag no SubShader has: neither draws any.
         let tagged = Selection::parse("X|tag=RenderType=Nope").1;
@@ -3155,8 +3196,8 @@ Pass { Name "TAIL" }
         );
         // Warned once per process.
         let unique = format!("{message} (test {:?})", std::thread::current().id());
-        assert!(warn_substitution_once(&unique));
-        assert!(!warn_substitution_once(&unique));
+        assert!(first_substitution_warning(&unique));
+        assert!(!first_substitution_warning(&unique));
     }
 
     /// Loading a substituted shader warns once, whatever its selection and however often it is
@@ -3213,21 +3254,24 @@ Pass { Name "TAIL" }
             .lines()
             .filter(|l| l.contains("Tests/WarnedOnce"))
             .collect();
-        if device.editor_runs_geometry_stages() {
-            assert_eq!(warned.len(), 1, "{text}");
-            assert!(warned[0].contains("WARN"), "{text}");
-            assert!(
-                warned[0].contains(&format!(
-                    "shader `Tests/WarnedOnce` under render pipeline `UniversalPipeline`: \
-                     SubShader 0 has a geometry stage (`#pragma geometry`), which Unbound's \
-                     renderer does not run; Unbound draws SubShader 1 where the Unity Editor on \
-                     {device} draws SubShader 0"
-                )),
-                "{text}"
-            );
-        } else {
-            assert!(warned.is_empty(), "{text}");
-        }
+        // Every device warns once (on Metal as not measured).
+        assert_eq!(warned.len(), 1, "{text}");
+        assert!(warned[0].contains("WARN"), "{text}");
+        let editor = match device.editor_runs_geometry_stages() {
+            Some(true) => format!("the Unity Editor on {device} draws SubShader 0"),
+            _ => format!(
+                "whether the Unity Editor on {device} runs its geometry stage is not measured (if \
+                 it does, it draws SubShader 0)"
+            ),
+        };
+        assert!(
+            warned[0].contains(&format!(
+                "shader `Tests/WarnedOnce` under render pipeline `UniversalPipeline`: SubShader 0 \
+                 has a geometry stage (`#pragma geometry`), which Unbound's renderer does not run; \
+                 Unbound draws SubShader 1 where {editor}"
+            )),
+            "{text}"
+        );
     }
 
     /// The doctor's list: each substituted shader of an index once per pipeline.

@@ -432,7 +432,7 @@ pub fn doctor(args: &ProjectArgs, all: bool, as_json: bool) -> Result<()> {
         println!("  {limitation}");
     }
     println!(
-        "\n{} shaders draw another SubShader than the Unity Editor on {shader_device}:",
+        "\n{} SubShader substitutions (a shader under a render pipeline) against the Unity Editor on {shader_device}, some not measured:",
         shader_substitutions.len()
     );
     for substitution in &shader_substitutions {

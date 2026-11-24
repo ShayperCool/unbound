@@ -138,20 +138,27 @@ impl GraphicsDevice {
         }
     }
 
-    /// Whether the Editor's device runs geometry stages (`#pragma geometry`, which requires
-    /// `geometry`): `SystemInfo.supportsGeometryShaders` of the Unity 6000.0.71f1 Editor, true on
-    /// OpenGL Core and Vulkan (NVIDIA), false on Metal (Apple M2 Pro); tests/projects/urp
-    /// `device-*.jsonl`. Unbound's renderer runs none.
-    pub fn editor_runs_geometry_stages(self) -> bool {
-        !matches!(self, Self::Metal)
+    /// Whether the Editor's device runs a SubShader with a geometry stage (`#pragma geometry`,
+    /// which requires `geometry`): true on OpenGL Core and Vulkan (NVIDIA), whose Unity
+    /// 6000.0.71f1 Editor answers `SystemInfo.supportsGeometryShaders` true (tests/projects/urp
+    /// `device-*.jsonl`). None on Metal: its Editor answers false there and refuses the geometry
+    /// variants of a keyword requirement (tests/projects/shadertargets `ReqStages`), but whether
+    /// it then passes over a SubShader whose stage is unconditional or draws it with the error
+    /// shader is not measured. Unbound's renderer runs no geometry stage.
+    pub fn editor_runs_geometry_stages(self) -> Option<bool> {
+        match self {
+            Self::Metal => None,
+            Self::OpenGLCore | Self::Vulkan => Some(true),
+        }
     }
 
-    /// Whether the Editor's device runs tessellation stages (`#pragma hull`/`domain`, which
-    /// require `tessellation`): true on OpenGL Core and Vulkan (`SystemInfo
-    /// .supportsTessellationShaders` of the Unity 6000.0.71f1 Editor, tests/projects/urp
-    /// `device-*.jsonl`). None on Metal: its Editor answers true there, but Unity's
-    /// `#pragma require` reference says Metal supports tessellation without hull or domain
-    /// stages, and which SubShader it then runs is not measured. Unbound's renderer runs none.
+    /// Whether the Editor's device runs a SubShader with tessellation stages (`#pragma
+    /// hull`/`domain`, which require `tessellation`): true on OpenGL Core and Vulkan
+    /// (`SystemInfo.supportsTessellationShaders` of the Unity 6000.0.71f1 Editor,
+    /// tests/projects/urp `device-*.jsonl`). None on Metal: its Editor answers true there, but
+    /// Unity's `#pragma require` reference says Metal supports tessellation without hull or
+    /// domain stages, and which SubShader it then draws is not measured. Unbound's renderer runs
+    /// none.
     pub fn editor_runs_tessellation_stages(self) -> Option<bool> {
         match self {
             Self::Metal => None,
