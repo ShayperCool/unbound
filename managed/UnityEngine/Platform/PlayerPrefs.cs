@@ -169,7 +169,8 @@ namespace UnityEngine
 
         internal static void Write(string path, Dictionary<string, object> values)
         {
-            Directory.CreateDirectory(Path.GetDirectoryName(path));
+            // A bare file name is in the current directory (Path.GetDirectoryName gives "").
+            Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(path)));
             var sb = new StringBuilder();
             sb.Append("<unity_prefs version_major=\"1\" version_minor=\"1\">\n");
             foreach (var pair in values)
