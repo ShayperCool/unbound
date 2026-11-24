@@ -1992,9 +1992,12 @@ fn importer_of_path(path: &str) -> Option<&'static str> {
         "wav" | "mp3" | "ogg" | "aif" | "aiff" | "mod" | "it" | "s3m" | "xm" => "AudioImporter",
         // Native and managed libraries, platform sources and archives, and the folders that are
         // one plug-in each.
-        "dll" | "so" | "a" | "dylib" | "jar" | "aar" | "jslib" | "jspre" | "c" | "cc" | "cpp"
-        | "h" | "m" | "mm" | "java" | "kt" | "swift" | "bundle" | "framework" | "xcframework"
-        | "plugin" | "androidlib" => "PluginImporter",
+        plugin
+            if unbound_assets::new_meta::PLUGIN_FILE_EXTENSIONS.contains(&plugin)
+                || unbound_assets::new_meta::FOLDER_PLUGIN_EXTENSIONS.contains(&plugin) =>
+        {
+            "PluginImporter"
+        }
         "ttf" | "otf" => "TrueTypeFontImporter",
         "spriteatlasv2" => "SpriteAtlasImporter",
         "prefab" => "PrefabImporter",

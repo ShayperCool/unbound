@@ -107,21 +107,29 @@ pub fn importer_for(path: &Path, is_dir: bool) -> Option<NewImporter> {
             script: THEME_STYLE_SHEET_IMPORTER,
             validation: true,
         },
-        // The PluginImporter's measured kinds (tests/projects/projectwrites `exit.Assets/Startup/Plugins/*`).
-        "dll" | "so" | "dylib" | "a" | "jar" | "aar" | "c" | "cc" | "cpp" | "h" | "m" | "mm"
-        | "java" | "kt" | "swift" | "jslib" | "jspre" => NewImporter::Plugin,
         // A program database beside a library: no importer claims it.
         "unity" | "pdb" => NewImporter::Default,
+        plugin if PLUGIN_FILE_EXTENSIONS.contains(&plugin) => NewImporter::Plugin,
         _ => return None,
     })
 }
 
+/// The files the PluginImporter imports, by extension (lowercase): managed and native libraries,
+/// archives and native sources (tests/projects/projectwrites `exit.Assets/Startup/Plugins/*`).
+pub const PLUGIN_FILE_EXTENSIONS: [&str; 17] = [
+    "dll", "so", "dylib", "a", "jar", "aar", "c", "cc", "cpp", "h", "m", "mm", "java", "kt",
+    "swift", "jslib", "jspre",
+];
+
+/// The folders the PluginImporter imports as one plug-in each, by extension (lowercase).
+pub const FOLDER_PLUGIN_EXTENSIONS: [&str; 5] =
+    ["bundle", "framework", "xcframework", "plugin", "androidlib"];
+
 /// A directory the Editor imports as one plug-in asset, whose contents are no assets.
 pub fn is_folder_plugin(path: &Path) -> bool {
-    path.extension().and_then(|e| e.to_str()).is_some_and(|e| {
-        ["bundle", "framework", "xcframework", "plugin", "androidlib"]
-            .contains(&e.to_ascii_lowercase().as_str())
-    })
+    path.extension()
+        .and_then(|e| e.to_str())
+        .is_some_and(|e| FOLDER_PLUGIN_EXTENSIONS.contains(&e.to_ascii_lowercase().as_str()))
 }
 
 /// What a new `.meta` depends on beyond the asset: the Editor installation's platform modules.

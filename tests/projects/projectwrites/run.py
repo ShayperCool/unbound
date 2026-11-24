@@ -77,7 +77,17 @@ STARTUP = {
     'Assets/Startup/Plugins/Bridge.mm': b'int probe_mm() { return 1; }\n',
     'Assets/Startup/Plugins/Native.java': b'class Native { }\n',
     'Assets/Startup/Plugins/bridge.jslib': b'mergeInto(LibraryManager.library, {});\n',
+    'Assets/Startup/Plugins/Source.c': b'int probe_c(void) { return 1; }\n',
+    'Assets/Startup/Plugins/Source.cc': b'int probe_cc() { return 1; }\n',
+    'Assets/Startup/Plugins/Bridge.m': b'int probe_m(void) { return 1; }\n',
+    'Assets/Startup/Plugins/Native.kt': b'class Native\n',
+    'Assets/Startup/Plugins/Native.swift': b'func probe() -> Int { 1 }\n',
+    'Assets/Startup/Plugins/prelude.jspre': b'var probe = 1;\n',
     'Assets/Startup/Plugins/Kit.bundle/Contents/Info.plist': b'<plist/>\n',
+    'Assets/Startup/Plugins/Kit.framework/Info.plist': b'<plist/>\n',
+    'Assets/Startup/Plugins/Kit.xcframework/Info.plist': b'<plist/>\n',
+    'Assets/Startup/Plugins/Kit.plugin/Contents/Info.plist': b'<plist/>\n',
+    'Assets/Startup/Plugins/Lib.androidlib/AndroidManifest.xml': b'<manifest/>\n',
     'Assets/Startup/Plugins/Managed.pdb': b'pdb\n',
 }
 COPIED = {

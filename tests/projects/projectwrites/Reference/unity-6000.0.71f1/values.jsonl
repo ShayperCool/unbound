@@ -330,12 +330,21 @@
 {"k": "play.exit.Assets/Startup/Payload.physicMaterial.meta", "v": "fileFormatVersion: 2\nguid: <guid:Assets/Startup/Payload.physicMaterial>\nNativeFormatImporter:\n  externalObjects: {}\n  mainObjectFileID: 0\n  userData: \n  assetBundleName: \n  assetBundleVariant: \n"}
 {"k": "play.exit.Assets/Startup/Payload.physicsMaterial2D.meta", "v": "fileFormatVersion: 2\nguid: <guid:Assets/Startup/Payload.physicsMaterial2D>\nNativeFormatImporter:\n  externalObjects: {}\n  mainObjectFileID: 0\n  userData: \n  assetBundleName: \n  assetBundleVariant: \n"}
 {"k": "play.exit.Assets/Startup/Plugins.meta", "v": "fileFormatVersion: 2\nguid: <guid:Assets/Startup/Plugins>\nfolderAsset: yes\nDefaultImporter:\n  externalObjects: {}\n  userData: \n  assetBundleName: \n  assetBundleVariant: \n"}
+{"k": "play.exit.Assets/Startup/Plugins/Bridge.m.meta", "v": "fileFormatVersion: 2\nguid: <guid:Assets/Startup/Plugins/Bridge.m>"}
 {"k": "play.exit.Assets/Startup/Plugins/Bridge.mm.meta", "v": "fileFormatVersion: 2\nguid: <guid:Assets/Startup/Plugins/Bridge.mm>"}
 {"k": "play.exit.Assets/Startup/Plugins/Header.h.meta", "v": "fileFormatVersion: 2\nguid: <guid:Assets/Startup/Plugins/Header.h>"}
 {"k": "play.exit.Assets/Startup/Plugins/Kit.bundle.meta", "v": "fileFormatVersion: 2\nguid: <guid:Assets/Startup/Plugins/Kit.bundle>"}
+{"k": "play.exit.Assets/Startup/Plugins/Kit.framework.meta", "v": "fileFormatVersion: 2\nguid: <guid:Assets/Startup/Plugins/Kit.framework>"}
+{"k": "play.exit.Assets/Startup/Plugins/Kit.plugin.meta", "v": "fileFormatVersion: 2\nguid: <guid:Assets/Startup/Plugins/Kit.plugin>"}
+{"k": "play.exit.Assets/Startup/Plugins/Kit.xcframework.meta", "v": "fileFormatVersion: 2\nguid: <guid:Assets/Startup/Plugins/Kit.xcframework>"}
+{"k": "play.exit.Assets/Startup/Plugins/Lib.androidlib.meta", "v": "fileFormatVersion: 2\nguid: <guid:Assets/Startup/Plugins/Lib.androidlib>"}
 {"k": "play.exit.Assets/Startup/Plugins/Managed.dll.meta", "v": "fileFormatVersion: 2\nguid: <guid:Assets/Startup/Plugins/Managed.dll>\nlabels:\n- plugin\nPluginImporter:\n  externalObjects: {}\n  serializedVersion: 3\n  iconMap: {}\n  executionOrder: {}\n  defineConstraints: []\n  isPreloaded: 0\n  isOverridable: 0\n  isExplicitlyReferenced: 0\n  validateReferences: 1\n  platformData:\n    Any:\n      enabled: 1\n      settings: {}\n    Editor:\n      enabled: 0\n      settings:\n        DefaultValueInitialized: true\n    WindowsStoreApps:\n      enabled: 0\n      settings:\n        CPU: AnyCPU\n  userData: \n  assetBundleName: \n  assetBundleVariant: \n"}
 {"k": "play.exit.Assets/Startup/Plugins/Managed.pdb.meta", "v": "fileFormatVersion: 2\nguid: <guid:Assets/Startup/Plugins/Managed.pdb>\nDefaultImporter:\n  externalObjects: {}\n  userData: \n  assetBundleName: \n  assetBundleVariant: \n"}
 {"k": "play.exit.Assets/Startup/Plugins/Native.java.meta", "v": "fileFormatVersion: 2\nguid: <guid:Assets/Startup/Plugins/Native.java>"}
+{"k": "play.exit.Assets/Startup/Plugins/Native.kt.meta", "v": "fileFormatVersion: 2\nguid: <guid:Assets/Startup/Plugins/Native.kt>"}
+{"k": "play.exit.Assets/Startup/Plugins/Native.swift.meta", "v": "fileFormatVersion: 2\nguid: <guid:Assets/Startup/Plugins/Native.swift>"}
+{"k": "play.exit.Assets/Startup/Plugins/Source.c.meta", "v": "fileFormatVersion: 2\nguid: <guid:Assets/Startup/Plugins/Source.c>"}
+{"k": "play.exit.Assets/Startup/Plugins/Source.cc.meta", "v": "fileFormatVersion: 2\nguid: <guid:Assets/Startup/Plugins/Source.cc>"}
 {"k": "play.exit.Assets/Startup/Plugins/Source.cpp.meta", "v": "fileFormatVersion: 2\nguid: <guid:Assets/Startup/Plugins/Source.cpp>"}
 {"k": "play.exit.Assets/Startup/Plugins/bridge.jslib.meta", "v": "fileFormatVersion: 2\nguid: <guid:Assets/Startup/Plugins/bridge.jslib>"}
 {"k": "play.exit.Assets/Startup/Plugins/libmac.dylib.meta", "v": "fileFormatVersion: 2\nguid: <guid:Assets/Startup/Plugins/libmac.dylib>"}
@@ -344,6 +353,7 @@
 {"k": "play.exit.Assets/Startup/Plugins/library.jar.meta", "v": "fileFormatVersion: 2\nguid: <guid:Assets/Startup/Plugins/library.jar>"}
 {"k": "play.exit.Assets/Startup/Plugins/libstatic.a.meta", "v": "fileFormatVersion: 2\nguid: <guid:Assets/Startup/Plugins/libstatic.a>"}
 {"k": "play.exit.Assets/Startup/Plugins/native.dll.meta", "v": "fileFormatVersion: 2\nguid: <guid:Assets/Startup/Plugins/native.dll>"}
+{"k": "play.exit.Assets/Startup/Plugins/prelude.jspre.meta", "v": "fileFormatVersion: 2\nguid: <guid:Assets/Startup/Plugins/prelude.jspre>"}
 {"k": "play.exit.Assets/Startup/Plugins/x86_64.meta", "v": "fileFormatVersion: 2\nguid: <guid:Assets/Startup/Plugins/x86_64>\nfolderAsset: yes\nDefaultImporter:\n  externalObjects: {}\n  userData: \n  assetBundleName: \n  assetBundleVariant: \n"}
 {"k": "play.exit.Assets/Startup/Plugins/x86_64/native64.dll.meta", "v": "fileFormatVersion: 2\nguid: <guid:Assets/Startup/Plugins/x86_64/native64.dll>"}
 {"k": "play.exit.Assets/Startup/Probe.renderTexture.meta", "v": "fileFormatVersion: 2\nguid: <guid:Assets/Startup/Probe.renderTexture>\nNativeFormatImporter:\n  externalObjects: {}\n  mainObjectFileID: 0\n  userData: \n  assetBundleName: \n  assetBundleVariant: \n"}
@@ -1280,12 +1290,21 @@
 {"k": "edit.exit.Assets/Startup/Payload.physicMaterial.meta", "v": "fileFormatVersion: 2\nguid: <guid:Assets/Startup/Payload.physicMaterial>\nNativeFormatImporter:\n  externalObjects: {}\n  mainObjectFileID: 0\n  userData: \n  assetBundleName: \n  assetBundleVariant: \n"}
 {"k": "edit.exit.Assets/Startup/Payload.physicsMaterial2D.meta", "v": "fileFormatVersion: 2\nguid: <guid:Assets/Startup/Payload.physicsMaterial2D>\nNativeFormatImporter:\n  externalObjects: {}\n  mainObjectFileID: 0\n  userData: \n  assetBundleName: \n  assetBundleVariant: \n"}
 {"k": "edit.exit.Assets/Startup/Plugins.meta", "v": "fileFormatVersion: 2\nguid: <guid:Assets/Startup/Plugins>\nfolderAsset: yes\nDefaultImporter:\n  externalObjects: {}\n  userData: \n  assetBundleName: \n  assetBundleVariant: \n"}
+{"k": "edit.exit.Assets/Startup/Plugins/Bridge.m.meta", "v": "fileFormatVersion: 2\nguid: <guid:Assets/Startup/Plugins/Bridge.m>"}
 {"k": "edit.exit.Assets/Startup/Plugins/Bridge.mm.meta", "v": "fileFormatVersion: 2\nguid: <guid:Assets/Startup/Plugins/Bridge.mm>"}
 {"k": "edit.exit.Assets/Startup/Plugins/Header.h.meta", "v": "fileFormatVersion: 2\nguid: <guid:Assets/Startup/Plugins/Header.h>"}
 {"k": "edit.exit.Assets/Startup/Plugins/Kit.bundle.meta", "v": "fileFormatVersion: 2\nguid: <guid:Assets/Startup/Plugins/Kit.bundle>"}
+{"k": "edit.exit.Assets/Startup/Plugins/Kit.framework.meta", "v": "fileFormatVersion: 2\nguid: <guid:Assets/Startup/Plugins/Kit.framework>"}
+{"k": "edit.exit.Assets/Startup/Plugins/Kit.plugin.meta", "v": "fileFormatVersion: 2\nguid: <guid:Assets/Startup/Plugins/Kit.plugin>"}
+{"k": "edit.exit.Assets/Startup/Plugins/Kit.xcframework.meta", "v": "fileFormatVersion: 2\nguid: <guid:Assets/Startup/Plugins/Kit.xcframework>"}
+{"k": "edit.exit.Assets/Startup/Plugins/Lib.androidlib.meta", "v": "fileFormatVersion: 2\nguid: <guid:Assets/Startup/Plugins/Lib.androidlib>"}
 {"k": "edit.exit.Assets/Startup/Plugins/Managed.dll.meta", "v": "fileFormatVersion: 2\nguid: <guid:Assets/Startup/Plugins/Managed.dll>\nlabels:\n- plugin\nPluginImporter:\n  externalObjects: {}\n  serializedVersion: 3\n  iconMap: {}\n  executionOrder: {}\n  defineConstraints: []\n  isPreloaded: 0\n  isOverridable: 0\n  isExplicitlyReferenced: 0\n  validateReferences: 1\n  platformData:\n    Any:\n      enabled: 1\n      settings: {}\n    Editor:\n      enabled: 0\n      settings:\n        DefaultValueInitialized: true\n    WindowsStoreApps:\n      enabled: 0\n      settings:\n        CPU: AnyCPU\n  userData: \n  assetBundleName: \n  assetBundleVariant: \n"}
 {"k": "edit.exit.Assets/Startup/Plugins/Managed.pdb.meta", "v": "fileFormatVersion: 2\nguid: <guid:Assets/Startup/Plugins/Managed.pdb>\nDefaultImporter:\n  externalObjects: {}\n  userData: \n  assetBundleName: \n  assetBundleVariant: \n"}
 {"k": "edit.exit.Assets/Startup/Plugins/Native.java.meta", "v": "fileFormatVersion: 2\nguid: <guid:Assets/Startup/Plugins/Native.java>"}
+{"k": "edit.exit.Assets/Startup/Plugins/Native.kt.meta", "v": "fileFormatVersion: 2\nguid: <guid:Assets/Startup/Plugins/Native.kt>"}
+{"k": "edit.exit.Assets/Startup/Plugins/Native.swift.meta", "v": "fileFormatVersion: 2\nguid: <guid:Assets/Startup/Plugins/Native.swift>"}
+{"k": "edit.exit.Assets/Startup/Plugins/Source.c.meta", "v": "fileFormatVersion: 2\nguid: <guid:Assets/Startup/Plugins/Source.c>"}
+{"k": "edit.exit.Assets/Startup/Plugins/Source.cc.meta", "v": "fileFormatVersion: 2\nguid: <guid:Assets/Startup/Plugins/Source.cc>"}
 {"k": "edit.exit.Assets/Startup/Plugins/Source.cpp.meta", "v": "fileFormatVersion: 2\nguid: <guid:Assets/Startup/Plugins/Source.cpp>"}
 {"k": "edit.exit.Assets/Startup/Plugins/bridge.jslib.meta", "v": "fileFormatVersion: 2\nguid: <guid:Assets/Startup/Plugins/bridge.jslib>"}
 {"k": "edit.exit.Assets/Startup/Plugins/libmac.dylib.meta", "v": "fileFormatVersion: 2\nguid: <guid:Assets/Startup/Plugins/libmac.dylib>"}
@@ -1294,6 +1313,7 @@
 {"k": "edit.exit.Assets/Startup/Plugins/library.jar.meta", "v": "fileFormatVersion: 2\nguid: <guid:Assets/Startup/Plugins/library.jar>"}
 {"k": "edit.exit.Assets/Startup/Plugins/libstatic.a.meta", "v": "fileFormatVersion: 2\nguid: <guid:Assets/Startup/Plugins/libstatic.a>"}
 {"k": "edit.exit.Assets/Startup/Plugins/native.dll.meta", "v": "fileFormatVersion: 2\nguid: <guid:Assets/Startup/Plugins/native.dll>"}
+{"k": "edit.exit.Assets/Startup/Plugins/prelude.jspre.meta", "v": "fileFormatVersion: 2\nguid: <guid:Assets/Startup/Plugins/prelude.jspre>"}
 {"k": "edit.exit.Assets/Startup/Plugins/x86_64.meta", "v": "fileFormatVersion: 2\nguid: <guid:Assets/Startup/Plugins/x86_64>\nfolderAsset: yes\nDefaultImporter:\n  externalObjects: {}\n  userData: \n  assetBundleName: \n  assetBundleVariant: \n"}
 {"k": "edit.exit.Assets/Startup/Plugins/x86_64/native64.dll.meta", "v": "fileFormatVersion: 2\nguid: <guid:Assets/Startup/Plugins/x86_64/native64.dll>"}
 {"k": "edit.exit.Assets/Startup/Probe.renderTexture.meta", "v": "fileFormatVersion: 2\nguid: <guid:Assets/Startup/Probe.renderTexture>\nNativeFormatImporter:\n  externalObjects: {}\n  mainObjectFileID: 0\n  userData: \n  assetBundleName: \n  assetBundleVariant: \n"}

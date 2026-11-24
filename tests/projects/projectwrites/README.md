@@ -88,7 +88,7 @@ changes during an import are written too. Settings changed through the API are w
 `SaveAssets` and when the Editor quits in Edit mode, never in Play mode. In Edit mode the lock
 follows a resolved manifest change by the time the Editor quits.
 
-Unbound on macOS, 2026-11-25: 1323/1355 values, 0 failures and 34 recorded residuals
+Unbound on macOS, 2026-11-25: 1343/1375 values, 0 failures and 34 recorded residuals
 (`residuals.json`): the lock not written again after an Edit-mode `Client.Resolve`, no
 `.meta` for a file of an extension no importer claims (when the project opens, Unbound cannot tell
 which extensions packages' ScriptedImporters claim), copies and folders refused in a read-only
