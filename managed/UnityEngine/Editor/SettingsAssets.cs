@@ -307,7 +307,9 @@ namespace Unbound.Runtime
         {
             ProjectInfo.ProductName = body.Str("productName", ProjectInfo.ProductName);
             ProjectInfo.CompanyName = body.Str("companyName", ProjectInfo.CompanyName);
+            ProjectInfo.BundleVersion = body.Str("bundleVersion", ProjectInfo.BundleVersion);
             PlayerSettings.s_ProductGuid = PlayerSettings.ParseProductGuid(body.Str("productGUID", null));
+            PlayerSettings.RefreshApplicationIdentifier();
             ProjectSettingsText.Invalidate();
         }
 

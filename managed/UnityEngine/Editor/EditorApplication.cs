@@ -312,6 +312,7 @@ namespace UnityEditor
             {
                 ProjectInfo.CompanyName = value;
                 SettingsAssets.Edit("ProjectSettings", body => body.Set("companyName", YText.Scalar(UnityYamlWriter.Scalar(value ?? ""))));
+                RefreshApplicationIdentifier();
             }
         }
 
@@ -322,6 +323,7 @@ namespace UnityEditor
             {
                 ProjectInfo.ProductName = value;
                 SettingsAssets.Edit("ProjectSettings", body => body.Set("productName", YText.Scalar(UnityYamlWriter.Scalar(value ?? ""))));
+                RefreshApplicationIdentifier();
             }
         }
 
