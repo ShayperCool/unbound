@@ -2014,4 +2014,105 @@ mod bounced {
         assert_eq!(sky_of(Viewer::Lod0), 0.0);
         assert!((sky_of(viewer_a1) - 1.0).abs() < 1e-5);
     }
+
+    #[test]
+    fn inclusive_probe_rays_hit_coplanar_triangles_at_t_zero() {
+        use crate::baked::light::Kind;
+        use crate::baked::probes;
+        use crate::baked::trace::{Lod, Viewer};
+
+        let tri = [[-5.0, 0.0, -5.0], [-5.0, 0.0, 5.0], [5.0, 0.0, 5.0]];
+        let scene = Scene::with_lods([(tri, Lod::NONE)]);
+        let ray_up = Ray {
+            origin: [-1.0, 0.0, 1.0],
+            direction: [0.0, 1.0, 0.0],
+        };
+        let ray_down = Ray {
+            origin: [-1.0, 0.0, 1.0],
+            direction: [0.0, -1.0, 0.0],
+        };
+        // Exclusive tracing (used by lightmap texels and depth > 0 bounces) misses t == 0.
+        assert!(!scene.occluded(&ray_up, f32::INFINITY));
+        assert!(
+            scene
+                .closest_from(&ray_up, ray_up.origin, f32::INFINITY, Viewer::Lod0)
+                .is_none()
+        );
+        // Inclusive tracing (used by probe origin rays) hits at t == 0 with front/back orientation.
+        assert!(scene.occluded_inclusive(&ray_up, f32::INFINITY));
+        let (hit_up, _, _) = scene
+            .closest_from_inclusive(&ray_up, ray_up.origin, f32::INFINITY, Viewer::Lod0)
+            .expect("upward coplanar ray hits at t == 0");
+        assert_eq!(hit_up.distance, 0.0);
+        assert!(!hit_up.front, "upward ray exits +Y plane from behind");
+        let (hit_down, _, _) = scene
+            .closest_from_inclusive(&ray_down, ray_down.origin, f32::INFINITY, Viewer::Lod0)
+            .expect("downward coplanar ray hits at t == 0");
+        assert_eq!(hit_down.distance, 0.0);
+        assert!(hit_down.front, "downward ray enters +Y plane from front");
+
+        // Probe sitting on a single-sided floor at y == 0: sun shadow ray hits at t == 0 and
+        // half the sphere's validity rays exit through the floor's backface (validity == 0.5).
+        let floor_tris = [
+            [[-5.0, 0.0, -5.0], [-5.0, 0.0, 5.0], [5.0, 0.0, 5.0]],
+            [[-5.0, 0.0, -5.0], [5.0, 0.0, 5.0], [5.0, 0.0, -5.0]],
+        ];
+        let floor_scene = Scene::new(floor_tris);
+        let sun = Light {
+            kind: Kind::Directional,
+            mode: Mode::Baked,
+            color: [2.0, 2.0, 2.0],
+            indirect_color: [2.0, 2.0, 2.0],
+            position: [0.0; 3],
+            forward: [0.0, -1.0, 0.0],
+            right: [1.0, 0.0, 0.0],
+            range: 0.0,
+            cone_angle: 0.0,
+            casts_shadows: true,
+        };
+        let grid = Grid::new(
+            &[sun],
+            Bounds {
+                min: [-5.0, -1.0, -5.0],
+                max: [5.0, 1.0, 5.0],
+            },
+        );
+        let coplanar_direct = probes::direct(&[[0.0, 0.0, 0.0]], &[sun], &grid, &floor_scene);
+        assert_eq!(
+            coplanar_direct[0],
+            probes::Coefficients::default(),
+            "probe coplanar with floor is shadowed at t == 0"
+        );
+        let surfaces: Vec<Surface> = floor_tris
+            .iter()
+            .map(|&corners| Surface {
+                material: 0,
+                mirrored: false,
+                double_sided: false,
+                corners,
+                normals: [[0.0, 1.0, 0.0]; 3],
+                uvs: [[0.0, 0.0]; 3],
+            })
+            .collect();
+        let materials = [Material {
+            albedo: Texture::uniform([0.5, 0.5, 0.5, 1.0]),
+            emissive: Texture::uniform([0.0, 0.0, 0.0, 1.0]),
+        }];
+        let world = World {
+            scene: &floor_scene,
+            casters: &floor_scene,
+            surfaces: &surfaces,
+            materials: &materials,
+            lights: &[sun],
+            grid: &grid,
+            sky: None,
+        };
+        let samples = Samples::new(&vec![0; BLUE_NOISE_BYTES]).unwrap();
+        let validity = indirect::probe_validity(&[[0.0, 0.0, 0.0]], &world, &samples, 256);
+        assert!(
+            (validity[0] - 0.5).abs() < 0.05,
+            "coplanar probe validity should be ~0.5, got {}",
+            validity[0]
+        );
+    }
 }

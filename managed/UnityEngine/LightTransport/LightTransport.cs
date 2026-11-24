@@ -690,8 +690,6 @@ namespace UnityEngine.LightTransport
                     if (copy != null) Object.DestroyImmediate(copy);
             }
 
-            if (GraphicsSettings.lightsUseLinearIntensity)
-                Warn("lt-light-linear", "LightTransport InputExtraction: GraphicsSettings.lightsUseLinearIntensity is enabled (unmeasured for CPU probe baking; using Light.ScaledColor).");
             if (!settings.bakedGI)
                 Warn("lt-bakedgi-off", "LightTransport InputExtraction: LightingSettings.bakedGI is false; BakedAtlas.SkyOf zeroes environment lighting via realtimeEnvironmentLighting (unmeasured).");
             var lightsJson = new List<object>();
@@ -717,6 +715,8 @@ namespace UnityEngine.LightTransport
                     Warn("lt-light-type:" + light.GetInstanceID(), $"LightTransport InputExtraction: '{light.name}' is a {light.type} light, which CPU probe baking does not support yet.");
                     continue;
                 }
+                if (GraphicsSettings.lightsUseLinearIntensity && kind != 0)
+                    Warn("lt-light-linear", $"LightTransport InputExtraction: GraphicsSettings.lightsUseLinearIntensity is enabled on non-directional light '{light.name}' (unmeasured for CPU probe baking; using Light.ScaledColor).");
                 if (light.cookie != null)
                     Warn("lt-light-cookie:" + light.GetInstanceID(), $"LightTransport InputExtraction: '{light.name}' has a cookie, which CPU probe baking ignores yet.");
                 if ((kind == 0 ? light.shadowAngle : light.shadowRadius) > 0f && light.shadows != LightShadows.None)
@@ -843,13 +843,13 @@ namespace UnityEngine.LightTransport
                     {
                         Vector3 fromLight = pos - light.Position;
                         float distSq = fromLight.sqrMagnitude;
-                        if (light.Range <= 0f || distSq >= light.Range * light.Range) continue;
+                        if (!(light.Range > 0f) || !(distSq < light.Range * light.Range)) continue;
                         if (light.Kind == 2 && distSq > 1e-12f)
                         {
                             float halfAngleRad = Mathf.Clamp(light.SpotAngle, 0f, 180f) * 0.5f * Mathf.Deg2Rad;
                             float cosHalf = Mathf.Cos(halfAngleRad);
                             float dirDot = Vector3.Dot(fromLight / Mathf.Sqrt(distSq), light.Forward.normalized);
-                            if (dirDot < cosHalf) continue;
+                            if (!(dirDot >= cosHalf)) continue;
                         }
                     }
                     usedChannels |= chBit;
