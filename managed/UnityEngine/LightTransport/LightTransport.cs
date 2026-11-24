@@ -225,13 +225,35 @@ namespace UnityEngine.LightTransport
             lock (m_Lock) m_Buffers.Remove(id.Value);
         }
 
+        internal bool TryGetBuffer(BufferID id, out byte[] data)
+        {
+            lock (m_Lock) return m_Buffers.TryGetValue(id.Value, out data);
+        }
+
         internal byte[] GetBuffer(BufferID id)
         {
-            lock (m_Lock)
+            if (!TryGetBuffer(id, out var data))
+                throw new ArgumentException($"Unknown LightTransport buffer ID {id.Value}.", nameof(id));
+            return data;
+        }
+
+        internal static bool TryByteRange(byte[] buf, ulong elemOffset, ulong elemCount, ulong elemBytes, out int startByte, out int lengthBytes)
+        {
+            startByte = 0;
+            lengthBytes = 0;
+            try
             {
-                if (!m_Buffers.TryGetValue(id.Value, out var data))
-                    throw new ArgumentException($"Unknown LightTransport buffer ID {id.Value}.", nameof(id));
-                return data;
+                ulong start = checked(elemOffset * elemBytes);
+                ulong length = checked(elemCount * elemBytes);
+                ulong end = checked(start + length);
+                if (end > (ulong)buf.Length) return false;
+                startByte = (int)start;
+                lengthBytes = (int)length;
+                return true;
+            }
+            catch (OverflowException)
+            {
+                return false;
             }
         }
 
@@ -242,7 +264,7 @@ namespace UnityEngine.LightTransport
             ulong elemSize = (ulong)UnsafeUtility.SizeOf<T>();
             ulong byteOffset = checked(dst.Offset * elemSize);
             ulong byteCount = checked((ulong)src.Length * elemSize);
-            if (byteOffset + byteCount > (ulong)data.Length)
+            if (checked(byteOffset + byteCount) > (ulong)data.Length)
                 throw new ArgumentOutOfRangeException(nameof(dst), $"Write of {byteCount} bytes at offset {byteOffset} exceeds buffer size {data.Length}.");
             void* srcPtr = NativeArrayUnsafeUtility.GetUnsafeReadOnlyPtr(src);
             fixed (byte* dstPtr = &data[byteOffset])
@@ -256,7 +278,7 @@ namespace UnityEngine.LightTransport
             ulong elemSize = (ulong)UnsafeUtility.SizeOf<T>();
             ulong byteOffset = checked(src.Offset * elemSize);
             ulong byteCount = checked((ulong)dst.Length * elemSize);
-            if (byteOffset + byteCount > (ulong)data.Length)
+            if (checked(byteOffset + byteCount) > (ulong)data.Length)
                 throw new ArgumentOutOfRangeException(nameof(src), $"Read of {byteCount} bytes at offset {byteOffset} exceeds buffer size {data.Length}.");
             void* dstPtr = NativeArrayUnsafeUtility.GetUnsafePtr(dst);
             fixed (byte* srcPtr = &data[byteOffset])
@@ -359,7 +381,13 @@ namespace UnityEngine.LightTransport
                 Native.Call("light-transport-release", JsonSerializer.Serialize(new { worldId = id }));
         }
 
-        public void Dispose() => ReleaseWorld();
+        public void Dispose()
+        {
+            ReleaseWorld();
+            GC.SuppressFinalize(this);
+        }
+
+        ~RadeonRaysWorld() => ReleaseWorld();
     }
 
     public unsafe static partial class InputExtraction
@@ -681,35 +709,56 @@ namespace UnityEngine.LightTransport
             int sampleCount,
             bool ignoreEnvironment,
             BufferID outBufferId,
-            ulong outByteOffset,
-            ulong expectedOutBytes,
+            ulong outElemOffset,
+            ulong outElemCount,
+            ulong outElemBytes,
             int maxLightsPerProbe = 0,
             BufferSlice<int>? lightIndices = null)
         {
             if (m_Progress != null && m_Progress.WasCancelled())
                 return new IProbeIntegrator.Result(IProbeIntegrator.ResultType.Cancelled, "Cancelled");
+            if (positionOffset < 0 || positionCount < 0)
+                return new IProbeIntegrator.Result(IProbeIntegrator.ResultType.InvalidInput, "Position offset and count must be non-negative.");
+            if (lightIndices.HasValue && maxLightsPerProbe <= 0)
+                return new IProbeIntegrator.Result(IProbeIntegrator.ResultType.InvalidInput, "maxLightsPerProbe must be positive.");
             var store = CpuDeviceBufferStore.Of(context);
             if (store == null || m_World == null || m_World.WorldId == 0)
                 return new IProbeIntegrator.Result(IProbeIntegrator.ResultType.InvalidInput, "Integrator is not prepared with a valid context and world.");
-            if (positionCount <= 0)
+            if (positionCount == 0)
                 return new IProbeIntegrator.Result(IProbeIntegrator.ResultType.Success, null);
 
-            byte[] posBuf = store.GetBuffer(m_Positions.Id);
-            ulong posStartByte = checked((m_Positions.Offset + (ulong)positionOffset) * 12UL);
-            ulong posByteCount = checked((ulong)positionCount * 12UL);
-            if (posStartByte + posByteCount > (ulong)posBuf.Length)
+            if (!store.TryGetBuffer(m_Positions.Id, out var posBuf))
+                return new IProbeIntegrator.Result(IProbeIntegrator.ResultType.InvalidInput, "Unknown position buffer.");
+            ulong posElemOffset;
+            try { posElemOffset = checked(m_Positions.Offset + (ulong)positionOffset); }
+            catch (OverflowException) { return new IProbeIntegrator.Result(IProbeIntegrator.ResultType.InvalidInput, "Position slice offset overflow."); }
+            if (!CpuDeviceBufferStore.TryByteRange(posBuf, posElemOffset, (ulong)positionCount, 12UL, out int posStartByte, out int posByteCount))
                 return new IProbeIntegrator.Result(IProbeIntegrator.ResultType.InvalidInput, "Position slice out of range.");
+
+            if (!store.TryGetBuffer(outBufferId, out var outBuf))
+                return new IProbeIntegrator.Result(IProbeIntegrator.ResultType.InvalidInput, "Unknown output buffer.");
+            if (!CpuDeviceBufferStore.TryByteRange(outBuf, outElemOffset, outElemCount, outElemBytes, out int outStartByte, out int expectedOutBytes))
+                return new IProbeIntegrator.Result(IProbeIntegrator.ResultType.InvalidInput, "Output slice out of range.");
 
             string indicesB64 = null;
             if (lightIndices.HasValue)
             {
                 var li = lightIndices.Value;
-                byte[] idxBuf = store.GetBuffer(li.Id);
-                ulong idxStartByte = checked((li.Offset + (ulong)(positionOffset * maxLightsPerProbe)) * 4UL);
-                ulong idxByteCount = checked((ulong)(positionCount * maxLightsPerProbe) * 4UL);
-                if (idxStartByte + idxByteCount > (ulong)idxBuf.Length)
+                if (!store.TryGetBuffer(li.Id, out var idxBuf))
+                    return new IProbeIntegrator.Result(IProbeIntegrator.ResultType.InvalidInput, "Unknown light indices buffer.");
+                ulong idxElemOffset, idxElemCount;
+                try
+                {
+                    idxElemOffset = checked(li.Offset + (ulong)positionOffset * (ulong)maxLightsPerProbe);
+                    idxElemCount = checked((ulong)positionCount * (ulong)maxLightsPerProbe);
+                }
+                catch (OverflowException)
+                {
+                    return new IProbeIntegrator.Result(IProbeIntegrator.ResultType.InvalidInput, "Light indices slice overflow.");
+                }
+                if (!CpuDeviceBufferStore.TryByteRange(idxBuf, idxElemOffset, idxElemCount, 4UL, out int idxStartByte, out int idxByteCount))
                     return new IProbeIntegrator.Result(IProbeIntegrator.ResultType.InvalidInput, "Light indices slice out of range.");
-                indicesB64 = Convert.ToBase64String(idxBuf, (int)idxStartByte, (int)idxByteCount);
+                indicesB64 = Convert.ToBase64String(idxBuf, idxStartByte, idxByteCount);
             }
 
             try
@@ -718,7 +767,7 @@ namespace UnityEngine.LightTransport
                 {
                     worldId = m_World.WorldId,
                     kind,
-                    positions = Convert.ToBase64String(posBuf, (int)posStartByte, (int)posByteCount),
+                    positions = Convert.ToBase64String(posBuf, posStartByte, posByteCount),
                     sampleCount = Math.Max(sampleCount, 0),
                     maxBounces = Math.Max(m_BounceCount, 0),
                     pushoff = m_Pushoff,
@@ -728,13 +777,10 @@ namespace UnityEngine.LightTransport
                 });
                 string answer = Native.Call("light-transport-integrate", req);
                 byte[] bytes = Convert.FromBase64String(JsonDocument.Parse(answer).RootElement.GetProperty("data").GetString());
-                if ((ulong)bytes.Length != expectedOutBytes)
+                if (bytes.Length != expectedOutBytes)
                     return new IProbeIntegrator.Result(IProbeIntegrator.ResultType.JobFailed, $"Unexpected result size {bytes.Length} (expected {expectedOutBytes}).");
 
-                byte[] outBuf = store.GetBuffer(outBufferId);
-                if (outByteOffset + expectedOutBytes > (ulong)outBuf.Length)
-                    return new IProbeIntegrator.Result(IProbeIntegrator.ResultType.InvalidInput, "Output slice out of range.");
-                Buffer.BlockCopy(bytes, 0, outBuf, (int)outByteOffset, bytes.Length);
+                Buffer.BlockCopy(bytes, 0, outBuf, outStartByte, bytes.Length);
                 m_Progress?.IncrementCompletedWorkSteps((ulong)positionCount);
                 return new IProbeIntegrator.Result(IProbeIntegrator.ResultType.Success, null);
             }
@@ -746,19 +792,20 @@ namespace UnityEngine.LightTransport
 
         public IProbeIntegrator.Result IntegrateDirectRadiance(IDeviceContext context, int positionOffset, int positionCount, int sampleCount, bool ignoreEnvironment, BufferSlice<SphericalHarmonicsL2> radianceEstimateOut) =>
             RunIntegration(context, "direct", positionOffset, positionCount, sampleCount, ignoreEnvironment,
-                radianceEstimateOut.Id, checked(radianceEstimateOut.Offset * 108UL), checked((ulong)positionCount * 108UL));
+                radianceEstimateOut.Id, radianceEstimateOut.Offset, positionCount > 0 ? (ulong)positionCount : 0UL, 108UL);
 
         public IProbeIntegrator.Result IntegrateIndirectRadiance(IDeviceContext context, int positionOffset, int positionCount, int sampleCount, bool ignoreEnvironment, BufferSlice<SphericalHarmonicsL2> radianceEstimateOut) =>
             RunIntegration(context, "indirect", positionOffset, positionCount, sampleCount, ignoreEnvironment,
-                radianceEstimateOut.Id, checked(radianceEstimateOut.Offset * 108UL), checked((ulong)positionCount * 108UL));
+                radianceEstimateOut.Id, radianceEstimateOut.Offset, positionCount > 0 ? (ulong)positionCount : 0UL, 108UL);
 
         public IProbeIntegrator.Result IntegrateValidity(IDeviceContext context, int positionOffset, int positionCount, int sampleCount, BufferSlice<float> validityEstimateOut) =>
             RunIntegration(context, "validity", positionOffset, positionCount, sampleCount, false,
-                validityEstimateOut.Id, checked(validityEstimateOut.Offset * 4UL), checked((ulong)positionCount * 4UL));
+                validityEstimateOut.Id, validityEstimateOut.Offset, positionCount > 0 ? (ulong)positionCount : 0UL, 4UL);
 
         public IProbeIntegrator.Result IntegrateOcclusion(IDeviceContext context, int positionOffset, int positionCount, int sampleCount, int maxLightsPerProbe, BufferSlice<int> perProbeLightIndices, BufferSlice<float> probeOcclusionEstimateOut) =>
             RunIntegration(context, "occlusion", positionOffset, positionCount, sampleCount, false,
-                probeOcclusionEstimateOut.Id, checked(probeOcclusionEstimateOut.Offset * 4UL), checked((ulong)(positionCount * maxLightsPerProbe) * 4UL),
+                probeOcclusionEstimateOut.Id, probeOcclusionEstimateOut.Offset,
+                positionCount > 0 && maxLightsPerProbe > 0 ? (ulong)positionCount * (ulong)maxLightsPerProbe : 0UL, 4UL,
                 maxLightsPerProbe, perProbeLightIndices);
 
         public void Dispose()
@@ -805,12 +852,10 @@ namespace UnityEngine.LightTransport.PostProcessing
         {
             floats = default;
             var store = CpuDeviceBufferStore.Of(context);
-            if (store == null || probeCount < 0) return false;
-            var buf = store.GetBuffer(slice.Id);
-            ulong byteOffset = checked(slice.Offset * 108UL);
-            ulong byteLength = checked((ulong)probeCount * 108UL);
-            if (byteOffset + byteLength > (ulong)buf.Length) return false;
-            floats = MemoryMarshal.Cast<byte, float>(buf.AsSpan((int)byteOffset, (int)byteLength));
+            if (store == null || probeCount < 0 || !store.TryGetBuffer(slice.Id, out var buf)) return false;
+            if (!CpuDeviceBufferStore.TryByteRange(buf, slice.Offset, (ulong)probeCount, 108UL, out int startByte, out int lengthBytes))
+                return false;
+            floats = MemoryMarshal.Cast<byte, float>(buf.AsSpan(startByte, lengthBytes));
             return true;
         }
 
@@ -905,25 +950,19 @@ namespace UnityEngine.LightTransport.PostProcessing
         {
             var store = CpuDeviceBufferStore.Of(context);
             if (store == null || probeCount < 0) return false;
-            if (probeCount == 0) return true;
-            var srcBuf = store.GetBuffer(shIn.Id);
-            var dstBuf = store.GetBuffer(shOut.Id);
-            ulong srcByteOffset = checked(shIn.Offset * 108UL);
-            ulong dstByteOffset = checked(shOut.Offset * 108UL);
-            ulong byteLength = checked((ulong)probeCount * 108UL);
-            if (srcByteOffset + byteLength > (ulong)srcBuf.Length || dstByteOffset + byteLength > (ulong)dstBuf.Length)
+            if (!store.TryGetBuffer(shIn.Id, out var srcBuf) || !store.TryGetBuffer(shOut.Id, out var dstBuf))
                 return false;
-            if (!Native.IsReady)
-            {
-                if (!ReferenceEquals(srcBuf, dstBuf) || srcByteOffset != dstByteOffset)
-                    Buffer.BlockCopy(srcBuf, (int)srcByteOffset, dstBuf, (int)dstByteOffset, (int)byteLength);
-                return true;
-            }
-            string req = JsonSerializer.Serialize(new { sh = Convert.ToBase64String(srcBuf, (int)srcByteOffset, (int)byteLength) });
+            if (!CpuDeviceBufferStore.TryByteRange(srcBuf, shIn.Offset, (ulong)probeCount, 108UL, out int srcByteOffset, out int byteLength))
+                return false;
+            if (!CpuDeviceBufferStore.TryByteRange(dstBuf, shOut.Offset, (ulong)probeCount, 108UL, out int dstByteOffset, out _))
+                return false;
+            if (probeCount == 0) return true;
+            if (!Native.IsReady) return false;
+            string req = JsonSerializer.Serialize(new { sh = Convert.ToBase64String(srcBuf, srcByteOffset, byteLength) });
             string answer = Native.Call("light-transport-dering", req);
             byte[] bytes = Convert.FromBase64String(JsonDocument.Parse(answer).RootElement.GetProperty("data").GetString());
-            if ((ulong)bytes.Length != byteLength) return false;
-            Buffer.BlockCopy(bytes, 0, dstBuf, (int)dstByteOffset, bytes.Length);
+            if (bytes.Length != byteLength) return false;
+            Buffer.BlockCopy(bytes, 0, dstBuf, dstByteOffset, bytes.Length);
             return true;
         }
     }

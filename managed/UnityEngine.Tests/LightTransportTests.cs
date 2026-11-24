@@ -141,5 +141,49 @@ namespace UnityEngine.Tests
             var channels = InputExtraction.GetShadowmaskChannelsFromLightIndices(input, indices);
             Assert.Equal(new[] { 0, -1, -1, -1, 0, 1, -1, -1 }, channels);
         }
+
+        [Fact]
+        public void IntegratorAndPostProcessorRejectInvalidSlicesAndNegativeCountsWithoutThrowing()
+        {
+            using var ctx = new RadeonRaysContext();
+            Assert.True(ctx.Initialize());
+            using var pp = new RadeonRaysProbePostProcessor();
+            Assert.True(pp.Initialize(ctx));
+
+            var unknownSlice = new BufferID(999UL).Slice<SphericalHarmonicsL2>(0UL);
+            Assert.False(pp.WindowSphericalHarmonicsL2(ctx, unknownSlice, unknownSlice, 1));
+            Assert.False(pp.DeringSphericalHarmonicsL2(ctx, unknownSlice, unknownSlice, 1));
+
+            var shBuf = ctx.CreateBuffer(27UL, sizeof(float));
+            var shSlice = shBuf.Slice<SphericalHarmonicsL2>(0UL);
+            Assert.False(pp.ConvolveRadianceToIrradiance(ctx, shSlice, shSlice, -1));
+            Assert.False(pp.ScaleSphericalHarmonicsL2(ctx, shBuf.Slice<SphericalHarmonicsL2>(ulong.MaxValue), shSlice, 1, 2f));
+            // Without native runtime, Dering fails loudly instead of silently returning un-deringed input.
+            Assert.False(pp.DeringSphericalHarmonicsL2(ctx, shSlice, shSlice, 1));
+            Assert.True(pp.DeringSphericalHarmonicsL2(ctx, shSlice, shSlice, 0));
+
+            using var world = new RadeonRaysWorld();
+            world.WorldId = 1UL;
+            using var integrator = new RadeonRaysProbeIntegrator();
+            var posBuf = ctx.CreateBuffer(2UL, 12UL);
+            integrator.Prepare(ctx, world, posBuf.Slice<Vector3>(0UL), 0.0001f, 2);
+
+            Assert.Equal(IProbeIntegrator.ResultType.InvalidInput,
+                integrator.IntegrateDirectRadiance(ctx, -1, 1, 16, false, shSlice).type);
+            Assert.Equal(IProbeIntegrator.ResultType.InvalidInput,
+                integrator.IntegrateDirectRadiance(ctx, 0, -1, 16, false, shSlice).type);
+            Assert.Equal(IProbeIntegrator.ResultType.InvalidInput,
+                integrator.IntegrateDirectRadiance(ctx, 0, 1, 16, false, unknownSlice).type);
+            Assert.Equal(IProbeIntegrator.ResultType.InvalidInput,
+                integrator.IntegrateOcclusion(ctx, 0, 1, 16, 0, new BufferID(999UL).Slice<int>(0UL), new BufferID(999UL).Slice<float>(0UL)).type);
+
+            using var progress = new BakeProgressState();
+            progress.Cancel();
+            integrator.SetProgressReporter(progress);
+            Assert.Equal(IProbeIntegrator.ResultType.Cancelled,
+                integrator.IntegrateDirectRadiance(ctx, 0, 1, 16, false, shSlice).type);
+
+            world.WorldId = 0UL; // Avoid native call on dispose in managed-only unit test.
+        }
     }
 }

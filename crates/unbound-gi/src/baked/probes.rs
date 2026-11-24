@@ -72,7 +72,7 @@ pub fn direct(
                     return;
                 };
                 let shadowed = light.casts_shadows
-                    && casters.occluded(
+                    && casters.occluded_inclusive(
                         &Ray {
                             origin: p,
                             direction: arriving.direction,

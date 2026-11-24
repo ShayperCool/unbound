@@ -166,6 +166,9 @@ struct Path<'a> {
     /// Whether the first samples take the blue noise numbers (a lightmap's texels; a light
     /// probe's paths take the sequence's alone).
     blue_noise: bool,
+    /// Whether the primary ray (`depth == 0`) accepts intersections right at `t == 0.0` (true for
+    /// probes, which start at the exact probe point without surface pushoff).
+    inclusive_origin: bool,
 }
 
 impl Path<'_> {
@@ -202,11 +205,16 @@ impl Path<'_> {
         let mut throughput = [1f32; 3];
         let first_origin = ray.origin;
         for depth in 0..self.settings.max_bounces {
-            let Some((hit, next_viewer, hit_origin)) =
+            let hit_result = if depth == 0 && self.inclusive_origin {
+                world
+                    .scene
+                    .closest_from_inclusive(&ray, first_origin, f32::INFINITY, viewer)
+            } else {
                 world
                     .scene
                     .closest_from(&ray, first_origin, f32::INFINITY, viewer)
-            else {
+            };
+            let Some((hit, next_viewer, hit_origin)) = hit_result else {
                 return false;
             };
             let surface = &world.surfaces[hit.triangle as usize];
@@ -379,6 +387,7 @@ pub fn indirect(
                 width: g.width,
                 distribution,
                 blue_noise: true,
+                inclusive_origin: false,
             };
             let place = samples.rotation(tx, ty, g.width, 0)[0];
             // Where a ray of the texel starts: one of its samples, picked by the ray's number;
@@ -558,6 +567,7 @@ fn group_probes(
                 width,
                 distribution: 0,
                 blue_noise: false,
+                inclusive_origin: true,
             };
             let rotation = samples.rotation(k, 0, width, 0);
             let number =
@@ -589,7 +599,7 @@ fn group_probes(
                 for index in 0..count {
                     let numbers = [number(index, 0), number(index, 1), number(index, 2)];
                     let (direction, light) = sky.around_point(numbers);
-                    if !world.scene.occluded(
+                    if !world.scene.occluded_inclusive(
                         &Ray {
                             origin: point,
                             direction,
@@ -636,7 +646,7 @@ pub fn probe_validity(
             let mut behind = 0u32;
             for index in 0..count {
                 let direction = sampling::sphere([number(index, 0), number(index, 1)]);
-                if let Some((hit, _, _)) = world.scene.closest_from(
+                if let Some((hit, _, _)) = world.scene.closest_from_inclusive(
                     &Ray {
                         origin: point,
                         direction,

@@ -281,6 +281,11 @@ pub fn integrate(request: IntegrateRequest) -> Result<Json> {
         .get(&request.world_id)
         .cloned()
         .with_context(|| format!("unknown light transport world {}", request.world_id))?;
+    ensure!(
+        request.pushoff.is_finite() && request.pushoff >= 0.0,
+        "pushoff must be finite and non-negative, got {}",
+        request.pushoff
+    );
     let points: Vec<[f32; 3]> = values(&request.positions, "probe positions", f32::from_le_bytes)?;
     let around = world_bounds_with_probes(world.bounds, &points);
     let grid = Grid::new(&world.lights, around);
@@ -370,7 +375,7 @@ pub fn integrate(request: IntegrateRequest) -> Result<Json> {
                                 .arriving_around(tables, light.color, p)
                                 .is_some_and(|arriving| {
                                     !(light.casts_shadows
-                                        && world.casters.occluded(
+                                        && world.casters.occluded_inclusive(
                                             &Ray {
                                                 origin: p,
                                                 direction: arriving.direction,
@@ -522,8 +527,10 @@ mod tests {
         let _ = std::fs::remove_file(&tmp);
         let world_id = pop_res["worldId"].as_u64().unwrap();
 
-        // Two probes: (0, 1, 0) above the floor, (0, -1, 0) below the floor (shadowed & seeing backfaces).
-        let probe_pos = b64_f32(&[0.0, 1.0, 0.0, 0.0, -1.0, 0.0]);
+        // Three probes: (0, 1, 0) above the floor, (0, -1, 0) below the floor (shadowed & seeing
+        // backfaces), and (0, 0, 0) coplanar on the floor (inclusive t >= 0 hits the floor in both
+        // hemispheres: shadowed direct light, 0.5 backface validity, occluded mixed light).
+        let probe_pos = b64_f32(&[0.0, 1.0, 0.0, 0.0, -1.0, 0.0, 0.0, 0.0, 0.0]);
 
         let direct_res = integrate(IntegrateRequest {
             world_id,
@@ -538,12 +545,16 @@ mod tests {
         })
         .unwrap();
         let direct_vals = decode_f32(direct_res["data"].as_str().unwrap());
-        assert_eq!(direct_vals.len(), 54);
+        assert_eq!(direct_vals.len(), 81);
         assert!(
             direct_vals[0] > 1.0,
             "above-floor probe receives sun direct L0"
         );
         assert_eq!(direct_vals[27], 0.0, "below-floor probe is shadowed");
+        assert_eq!(
+            direct_vals[54], 0.0,
+            "coplanar probe at y=0 hits floor at t=0 and is shadowed"
+        );
 
         let indirect_sky = integrate(IntegrateRequest {
             world_id,
@@ -593,12 +604,17 @@ mod tests {
         })
         .unwrap();
         let validity = decode_f32(val_res["data"].as_str().unwrap());
-        assert_eq!(validity.len(), 2);
+        assert_eq!(validity.len(), 3);
         assert_eq!(validity[0], 0.0, "above-floor probe sees no backfaces");
         assert!(
             validity[1] > 0.3,
             "below-floor probe hits floor backface: {}",
             validity[1]
+        );
+        assert!(
+            (validity[2] - 0.5).abs() < 0.05,
+            "coplanar probe at y=0 hits floor backface on upward hemisphere (~0.5): {}",
+            validity[2]
         );
 
         let occ_res = integrate(IntegrateRequest {
@@ -610,11 +626,14 @@ mod tests {
             pushoff: 0.0001,
             ignore_environment: false,
             max_lights_per_probe: 4,
-            per_probe_light_indices: Some(b64_i32(&[1, -1, -1, -1, 1, -1, -1, -1])),
+            per_probe_light_indices: Some(b64_i32(&[1, -1, -1, -1, 1, -1, -1, -1, 1, -1, -1, -1])),
         })
         .unwrap();
         let occ = decode_f32(occ_res["data"].as_str().unwrap());
-        assert_eq!(occ, vec![1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]);
+        assert_eq!(
+            occ,
+            vec![1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+        );
 
         // Deringing attenuates ringing L1 while keeping L0 unchanged.
         let mut sh = [0.0f32; 27];

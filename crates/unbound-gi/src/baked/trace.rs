@@ -207,9 +207,25 @@ impl Scene {
         self.occluded_for(ray, limit, Viewer::Lod0)
     }
 
+    /// Whether a triangle crosses the ray at or after its origin (`t >= 0`) and before `limit`
+    /// along it. Either side of a triangle stops the ray (seen as [`Viewer::Lod0`]).
+    pub fn occluded_inclusive(&self, ray: &Ray, limit: f32) -> bool {
+        self.occluded_for_inner(ray, limit, Viewer::Lod0, true)
+    }
+
     /// Whether a triangle visible to `viewer` crosses the ray after its origin and before `limit`
     /// along it. Either side of a triangle stops the ray.
     pub fn occluded_for(&self, ray: &Ray, limit: f32, viewer: Viewer) -> bool {
+        self.occluded_for_inner(ray, limit, viewer, false)
+    }
+
+    fn occluded_for_inner(
+        &self,
+        ray: &Ray,
+        limit: f32,
+        viewer: Viewer,
+        include_zero: bool,
+    ) -> bool {
         if self.nodes.is_empty() {
             return false;
         }
@@ -228,7 +244,7 @@ impl Scene {
                 if self.lods.is_empty() {
                     if self.triangles[range]
                         .iter()
-                        .any(|t| hit(t, ray).is_some_and(|h| h.distance < limit))
+                        .any(|t| hit(t, ray, include_zero).is_some_and(|h| h.distance < limit))
                     {
                         return true;
                     }
@@ -253,7 +269,9 @@ impl Scene {
                                 }
                             }
                         };
-                        if hit(&self.triangles[k], ray).is_some_and(|h| h.distance < max_t) {
+                        if hit(&self.triangles[k], ray, include_zero)
+                            .is_some_and(|h| h.distance < max_t)
+                        {
                             return true;
                         }
                     }
@@ -293,17 +311,42 @@ impl Scene {
         limit: f32,
         viewer: Viewer,
     ) -> Option<(Hit, Viewer, [f32; 3])> {
+        self.closest_from_inner(ray, base_origin, limit, viewer, false)
+    }
+
+    /// Like [`closest_from`](Self::closest_from), but also includes intersections right at the
+    /// ray's origin (`t >= 0`), matching Unity's probe ray tracing (`tMin = 0`) for coplanar
+    /// probes.
+    pub fn closest_from_inclusive(
+        &self,
+        ray: &Ray,
+        base_origin: [f32; 3],
+        limit: f32,
+        viewer: Viewer,
+    ) -> Option<(Hit, Viewer, [f32; 3])> {
+        self.closest_from_inner(ray, base_origin, limit, viewer, true)
+    }
+
+    fn closest_from_inner(
+        &self,
+        ray: &Ray,
+        base_origin: [f32; 3],
+        limit: f32,
+        viewer: Viewer,
+        include_zero: bool,
+    ) -> Option<(Hit, Viewer, [f32; 3])> {
         if self.nodes.is_empty() {
             return None;
         }
         match viewer {
             Viewer::Lod0 => self
-                .closest_matching(ray, limit, |lod| lod.is_lod0())
+                .closest_matching(ray, limit, include_zero, |lod| lod.is_lod0())
                 .map(|(hit, _)| (hit, Viewer::Lod0, ray.origin)),
             Viewer::Lod { group, level_bit } => {
                 if !self.lods.is_empty()
-                    && let Some((hit, _)) = self
-                        .closest_matching(ray, limit, |lod| lod.is_lower_level(group, level_bit))
+                    && let Some((hit, _)) = self.closest_matching(ray, limit, include_zero, |lod| {
+                        lod.is_lower_level(group, level_bit)
+                    })
                 {
                     return Some((hit, viewer, ray.origin));
                 }
@@ -311,7 +354,7 @@ impl Scene {
                     origin: base_origin,
                     direction: ray.direction,
                 };
-                self.closest_matching(&base_ray, limit, |lod| {
+                self.closest_matching(&base_ray, limit, include_zero, |lod| {
                     lod.visible_in_base(group, level_bit)
                 })
                 .map(|(hit, lod)| {
@@ -324,7 +367,9 @@ impl Scene {
                 })
             }
             Viewer::LodShared { group, level_bit } => self
-                .closest_matching(ray, limit, |lod| lod.visible_in_base(group, level_bit))
+                .closest_matching(ray, limit, include_zero, |lod| {
+                    lod.visible_in_base(group, level_bit)
+                })
                 .map(|(hit, lod)| {
                     let next = if lod.mask != 0 && lod.group == group {
                         viewer
@@ -340,6 +385,7 @@ impl Scene {
         &self,
         ray: &Ray,
         mut limit: f32,
+        include_zero: bool,
         accept: impl Fn(Lod) -> bool,
     ) -> Option<(Hit, Lod)> {
         let inverse: [f32; 3] = std::array::from_fn(|k| 1.0 / ray.direction[k]);
@@ -363,7 +409,7 @@ impl Scene {
                     if !accept(lod) {
                         continue;
                     }
-                    if let Some(found) = hit(&self.triangles[k], ray)
+                    if let Some(found) = hit(&self.triangles[k], ray, include_zero)
                         && found.distance < limit
                     {
                         limit = found.distance;
@@ -457,10 +503,11 @@ fn crosses(node: &Node, ray: &Ray, inverse: &[f32; 3], limit: f32) -> bool {
     near <= far
 }
 
-/// Where along the ray it crosses the triangle (first corner and two edges), after its origin.
+/// Where along the ray it crosses the triangle (first corner and two edges), after its origin
+/// (or at its origin when `include_zero` is set).
 /// In double precision: with 32-bit products a ray through an edge two triangles share can
 /// miss both.
-fn hit(triangle: &[[f32; 3]; 3], ray: &Ray) -> Option<Hit> {
+fn hit(triangle: &[[f32; 3]; 3], ray: &Ray, include_zero: bool) -> Option<Hit> {
     let wide = |v: [f32; 3]| v.map(f64::from);
     let cross = |a: [f64; 3], b: [f64; 3]| {
         [
@@ -493,9 +540,18 @@ fn hit(triangle: &[[f32; 3]; 3], ray: &Ray) -> Option<Hit> {
         return None;
     }
     let distance = dot(e2, q) * inverse;
-    (distance > 0.0).then_some(Hit {
+    let valid = if include_zero {
+        distance >= 0.0
+    } else {
+        distance > 0.0
+    };
+    valid.then_some(Hit {
         triangle: 0,
-        distance: distance as f32,
+        distance: if distance == 0.0 {
+            0.0
+        } else {
+            distance as f32
+        },
         weights: [u as f32, v as f32],
         // The corners' cross product is against the ray.
         front: determinant > 0.0,
