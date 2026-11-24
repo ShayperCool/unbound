@@ -30,7 +30,20 @@ namespace UnityEngine.Tests
                 catch (System.InvalidOperationException) { }
                 Debug.LogWarning("after");
                 using (Log.EarlierImport(false)) Debug.LogWarning("in session");
-                Assert.Equal(new[] { "after", "in session" }, heard);
+                // A Play mode step inside an earlier import (a sprite's atlas binding) is heard,
+                // and the import's own messages after it are not.
+                using (Log.EarlierImport(true))
+                {
+                    using (Log.EarlierImport(true))
+                    {
+                        using (Log.PlayModeStep()) Debug.LogWarning("binding");
+                        Debug.LogWarning("import again");
+                    }
+                    Debug.LogWarning("import");
+                }
+                Assert.Null(Log.PlayModeStep());
+                Debug.LogWarning("last");
+                Assert.Equal(new[] { "after", "in session", "binding", "last" }, heard);
             }
             finally
             {

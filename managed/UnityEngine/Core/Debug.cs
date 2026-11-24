@@ -383,6 +383,27 @@ namespace Unbound.Runtime
 
         static readonly IDisposable s_EndEarlierImport = new EndEarlierImport();
 
+        /// <summary>A Play mode step an earlier import makes (a sprite's atlas binding as its
+        /// texture loads): its messages are Play mode's, as Unity binds the sprite in Play mode
+        /// (tests/projects/spriteatlasmultibind loadLogs). Null outside an earlier import.</summary>
+        internal static IDisposable PlayModeStep() => s_EarlierImport > 0 ? new PlayModeStepScope() : null;
+
+        /// <summary>Lifts the earlier imports around a Play mode step and puts them back after it.</summary>
+        sealed class PlayModeStepScope : IDisposable
+        {
+            readonly int m_Saved = s_EarlierImport;
+            bool m_Disposed;
+
+            internal PlayModeStepScope() => s_EarlierImport = 0;
+
+            public void Dispose()
+            {
+                if (m_Disposed) return;
+                m_Disposed = true;
+                s_EarlierImport = m_Saved;
+            }
+        }
+
         /// <summary>Ends one EarlierImport scope (each `using` disposes it once).</summary>
         sealed class EndEarlierImport : IDisposable
         {

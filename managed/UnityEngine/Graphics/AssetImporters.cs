@@ -280,7 +280,9 @@ namespace Unbound.Runtime
                 {
                     file.Objects[fileId] = sprite;
                     sprites.Add(sprite);
-                    UnityEngine.U2D.SpriteAtlasPacking.Apply(sprite, info.Guid, fileId);
+                    // The binding is Play mode's even where the texture's import is an earlier one.
+                    using (Unbound.Runtime.Log.PlayModeStep())
+                        UnityEngine.U2D.SpriteAtlasPacking.Apply(sprite, info.Guid, fileId);
                 }
             UnityEditor.AssetPostprocessing.PostprocessTexture(info.Path, texture, sprites.ToArray());
             return file;
