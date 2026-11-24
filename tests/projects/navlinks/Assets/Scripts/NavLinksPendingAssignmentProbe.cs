@@ -383,7 +383,7 @@ public partial class NavLinksProbe
             size = new Vector3(12f, 1f, 8f), transform = Matrix4x4.Translate(lane.O + new Vector3(36f, -0.5f, 0f)) });
         if (reconnect)
             sources.Add(new NavMeshBuildSource { shape = NavMeshBuildSourceShape.Box, area = 6,
-                size = new Vector3(32f, 1f, 8f), transform = Matrix4x4.Translate(lane.O + new Vector3(0f, -0.5f, disconnected ? 10.5f : 8f)) });
+                size = new Vector3(32f, 1f, 8f), transform = Matrix4x4.Translate(lane.O + new Vector3(0f, -0.5f, disconnected ? 9.0f : 8f)) });
         var data = NavMeshBuilder.BuildNavMeshData(NavMesh.GetSettingsByID(0), sources,
             new Bounds(lane.O + new Vector3(15f, 0f, 0f), new Vector3(66f, 8f, reconnect ? 32f : 12f)), Vector3.zero, Quaternion.identity);
         var instance = NavMesh.AddNavMeshData(data);
