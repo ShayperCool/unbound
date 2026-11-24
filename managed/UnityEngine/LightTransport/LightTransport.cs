@@ -628,7 +628,7 @@ namespace UnityEngine.LightTransport
                         var uvMesh = BakedAtlas.BakedUVs(mesh, withUVs);
                         var uvs = uvMesh.uv2.Length == uvMesh.vertexCount ? uvMesh.uv2 : uvMesh.uv;
                         var scaleOffset = UvScaleOffset(uvs);
-                        if (uvs.Length == 0 || (scaleOffset.x == 0f && scaleOffset.y == 0f))
+                        if (uvs.Length == 0 || scaleOffset.x == 0f || scaleOffset.y == 0f)
                             Warn("lt-empty-uv:" + renderer.GetInstanceID(), $"LightTransport InputExtraction: '{renderer.name}' mesh '{mesh.name}' has no/zero-area UVs; its meta-pass albedo and emission may be collapsed.");
 
                         var albedoRt = RenderTexture.GetTemporary(MetaImageSize, MetaImageSize, 0, RenderTextureFormat.ARGB32, linear ? RenderTextureReadWrite.sRGB : RenderTextureReadWrite.Linear);
@@ -843,7 +843,7 @@ namespace UnityEngine.LightTransport
                     {
                         Vector3 fromLight = pos - light.Position;
                         float distSq = fromLight.sqrMagnitude;
-                        if (distSq >= light.Range * light.Range) continue;
+                        if (light.Range <= 0f || distSq >= light.Range * light.Range) continue;
                         if (light.Kind == 2 && distSq > 1e-12f)
                         {
                             float halfAngleRad = Mathf.Clamp(light.SpotAngle, 0f, 180f) * 0.5f * Mathf.Deg2Rad;
@@ -1213,7 +1213,7 @@ namespace UnityEngine.LightTransport.PostProcessing
                 try
                 {
                     context.WriteBuffer(shOut, output, ev);
-                    if (!context.Wait(ev)) return false;
+                    if (!context.Flush() || !context.Wait(ev)) return false;
                 }
                 finally { context.DestroyEvent(ev); }
                 return true;

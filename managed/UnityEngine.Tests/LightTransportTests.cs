@@ -267,6 +267,33 @@ namespace UnityEngine.Tests
             var positions = new[] { new Vector3(-2f, 0f, 3f), new Vector3(2f, 0f, 3f) };
             var indices = InputExtraction.ComputeOcclusionLightIndicesFromBakeInput(input, positions, 4U);
             Assert.Equal(new[] { 0, -1, -1, -1, 1, -1, -1, -1 }, indices);
+
+            // Two overlapping in-range lights sharing ShadowmaskChannel 0 must be deduplicated
+            // per probe (only the first light is kept), and a non-positive range light is rejected.
+            var overlapInput = new InputExtraction.BakeInput
+            {
+                Lights = new[]
+                {
+                    new InputExtraction.ExtractedLightMeta
+                    {
+                        Kind = 1, Mode = 1, Position = Vector3.zero, Range = -5f, ShadowmaskChannel = 0,
+                    },
+                    new InputExtraction.ExtractedLightMeta
+                    {
+                        Kind = 1, Mode = 1, Position = Vector3.zero, Range = 10f, ShadowmaskChannel = 0,
+                    },
+                    new InputExtraction.ExtractedLightMeta
+                    {
+                        Kind = 0, Mode = 1, Position = Vector3.zero, Range = 0f, ShadowmaskChannel = 0,
+                    },
+                    new InputExtraction.ExtractedLightMeta
+                    {
+                        Kind = 0, Mode = 1, Position = Vector3.zero, Range = 0f, ShadowmaskChannel = 1,
+                    },
+                }
+            };
+            var dedup = InputExtraction.ComputeOcclusionLightIndicesFromBakeInput(overlapInput, new[] { new Vector3(1f, 0f, 0f) }, 4U);
+            Assert.Equal(new[] { 1, 3, -1, -1 }, dedup);
         }
 
         [Fact]
