@@ -49,6 +49,16 @@ fn write_package_lock(project: &Project) {
     }
 }
 
+/// A path given on the command line: a relative one is relative to the directory Unbound was
+/// started in, not to the directory the game runs in.
+fn from_current_dir(path: &Path) -> Result<PathBuf> {
+    Ok(if path.is_absolute() {
+        path.to_path_buf()
+    } else {
+        std::env::current_dir()?.join(path)
+    })
+}
+
 /// Opens the project as the Editor opens it for editing or playing: what the Editor writes then
 /// is written (the version file's build revision, a `.meta` for each new file and folder of the
 /// project's own assets). Tools that only read the project (`info`, `doctor`, ...) use [`open`].
@@ -1376,8 +1386,7 @@ pub fn test(args: &ProjectArgs, test: TestArgs) -> Result<()> {
     };
     let project = open_in_editor(args)?;
     let results = match test.results {
-        Some(path) if path.is_absolute() => path,
-        Some(path) => std::env::current_dir()?.join(path),
+        Some(path) => from_current_dir(&path)?,
         None => project
             .unbound_dir()
             .join("TestResults")
@@ -1574,8 +1583,16 @@ fn run_session(args: &ProjectArgs, run: RunArgs) -> Result<()> {
         edit_mode: false,
         command_line: Vec::new(),
         code_optimization: unbound_project::CodeOptimization::at_startup(&[]),
-        player_prefs: run.player_prefs.clone(),
-        persistent_data_path: run.persistent_data_path.clone(),
+        player_prefs: run
+            .player_prefs
+            .as_deref()
+            .map(from_current_dir)
+            .transpose()?,
+        persistent_data_path: run
+            .persistent_data_path
+            .as_deref()
+            .map(from_current_dir)
+            .transpose()?,
         screen: Some((width, height)),
     };
     choose_graphics_device(
@@ -1681,6 +1698,28 @@ fn run_session(args: &ProjectArgs, run: RunArgs) -> Result<()> {
             remote,
         },
     )
+}
+
+#[cfg(test)]
+mod command_line_path_tests {
+    use super::*;
+
+    /// `--player-prefs prefs.xml` names a file of the directory Unbound was started in: the game
+    /// runs in the project view, which every run builds anew.
+    #[test]
+    fn a_relative_path_is_relative_to_the_start_directory() {
+        let start = std::env::current_dir().unwrap();
+        assert_eq!(
+            from_current_dir(Path::new("prefs.xml")).unwrap(),
+            start.join("prefs.xml")
+        );
+        assert_eq!(
+            from_current_dir(Path::new("saves/data")).unwrap(),
+            start.join("saves/data")
+        );
+        let absolute = start.join("elsewhere.xml");
+        assert_eq!(from_current_dir(&absolute).unwrap(), absolute);
+    }
 }
 
 #[cfg(test)]
