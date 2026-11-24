@@ -10,8 +10,9 @@
 //! measured get no `.meta` ([`importer_for`] says so), nor does an extension no importer of the
 //! Editor claims (the Editor gives it the DefaultImporter, measured with `.xyz`, but a package's
 //! ScriptedImporter may claim any extension, which is not known before the scripts compile): the
-//! caller reports them instead of writing a guess. A folder plug-in (`.bundle`, `.framework`, ...)
-//! is one asset of a plug-in importer, not measured either; nothing inside it gets a `.meta`.
+//! caller reports them instead of writing a guess. A plug-in (a managed or native library, a
+//! native source file, a folder plug-in such as `.bundle` or `.framework`) gets a `.meta` with its
+//! GUID alone, as a script does; nothing inside a folder plug-in gets one.
 
 use std::path::Path;
 use unbound_yaml::Guid;
@@ -24,6 +25,9 @@ pub enum NewImporter {
     Default,
     /// A C# script: the GUID only.
     Script,
+    /// A plug-in of the PluginImporter (a library, a native source, a folder plug-in): the GUID
+    /// only, as a script.
+    Plugin,
     AssemblyDefinition,
     TextScript,
     Shader,
@@ -59,7 +63,11 @@ const THEME_STYLE_SHEET_IMPORTER: i64 = 12388;
 /// importer has not been measured (a `.meta` would be a guess).
 pub fn importer_for(path: &Path, is_dir: bool) -> Option<NewImporter> {
     if is_dir {
-        return (!is_folder_plugin(path)).then_some(NewImporter::Folder);
+        return Some(if is_folder_plugin(path) {
+            NewImporter::Plugin
+        } else {
+            NewImporter::Folder
+        });
     }
     let extension = path
         .extension()
@@ -99,7 +107,11 @@ pub fn importer_for(path: &Path, is_dir: bool) -> Option<NewImporter> {
             script: THEME_STYLE_SHEET_IMPORTER,
             validation: true,
         },
-        "unity" => NewImporter::Default,
+        // The PluginImporter's measured kinds (tests/projects/projectwrites `exit.Assets/Startup/Plugins/*`).
+        "dll" | "so" | "dylib" | "a" | "jar" | "aar" | "c" | "cc" | "cpp" | "h" | "m" | "mm"
+        | "java" | "kt" | "swift" | "jslib" | "jspre" => NewImporter::Plugin,
+        // A program database beside a library: no importer claims it.
+        "unity" | "pdb" => NewImporter::Default,
         _ => return None,
     })
 }
@@ -194,8 +206,8 @@ pub fn text(importer: NewImporter, guid: Guid, asset: &Path, context: &MetaConte
             out.push_str(&simple("DefaultImporter"));
         }
         NewImporter::Default => out.push_str(&simple("DefaultImporter")),
-        // The Editor ends a script's .meta without a line break.
-        NewImporter::Script => {
+        // The Editor ends a script's or a plug-in's .meta without a line break.
+        NewImporter::Script | NewImporter::Plugin => {
             out.pop();
         }
         NewImporter::TextScript => out.push_str(&simple("TextScriptImporter")),
@@ -374,12 +386,56 @@ mod tests {
         assert_eq!(of("a.asmdef"), Some(NewImporter::AssemblyDefinition));
         assert_eq!(of("a.asmref"), None);
         assert_eq!(of("a.xyz"), None);
-        assert_eq!(importer_for(Path::new("Plugin.framework"), true), None);
-        assert_eq!(of("a.dll"), None);
+        assert_eq!(
+            importer_for(Path::new("Plugin.framework"), true),
+            Some(NewImporter::Plugin)
+        );
+        assert_eq!(of("a.dll"), Some(NewImporter::Plugin));
+        assert_eq!(of("A.DLL"), Some(NewImporter::Plugin));
+        assert_eq!(of("libx.so"), Some(NewImporter::Plugin));
+        assert_eq!(of("a.cpp"), Some(NewImporter::Plugin));
+        assert_eq!(of("a.pdb"), Some(NewImporter::Default));
+        assert_eq!(of("a.winmd"), None);
         assert_eq!(
             importer_for(Path::new("Folder.png"), true),
             Some(NewImporter::Folder)
         );
+    }
+
+    #[test]
+    fn plugins_get_the_guid_alone_and_nothing_inside_a_folder_plugin() {
+        let root =
+            std::env::temp_dir().join(format!("unbound-new-meta-plugins-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&root);
+        std::fs::create_dir_all(root.join("Plugins/Kit.bundle/Contents")).unwrap();
+        std::fs::write(
+            root.join("Plugins/Kit.bundle/Contents/Info.plist"),
+            "<plist/>",
+        )
+        .unwrap();
+        std::fs::write(root.join("Plugins/Lib.dll"), "MZ").unwrap();
+        std::fs::write(root.join("Plugins/Lib.pdb"), "pdb").unwrap();
+        let imported = import_new(&root, &MetaContext::default(), |_| false);
+        assert!(
+            imported.unsupported.is_empty(),
+            "{:?}",
+            imported.unsupported
+        );
+        let meta = |p: &str| std::fs::read_to_string(root.join(p)).unwrap();
+        for plugin in ["Plugins/Lib.dll.meta", "Plugins/Kit.bundle.meta"] {
+            let text = meta(plugin);
+            assert_eq!(text.lines().count(), 2, "{plugin}: {text}");
+            assert!(text.starts_with("fileFormatVersion: 2\nguid: ") && !text.ends_with('\n'));
+        }
+        assert!(meta("Plugins/Lib.pdb.meta").contains("\nDefaultImporter:\n"));
+        assert!(meta("Plugins.meta").contains("folderAsset: yes"));
+        assert!(!root.join("Plugins/Kit.bundle/Contents.meta").exists());
+        assert!(
+            !root
+                .join("Plugins/Kit.bundle/Contents/Info.plist.meta")
+                .exists()
+        );
+        std::fs::remove_dir_all(&root).unwrap();
     }
 
     #[test]
@@ -465,11 +521,13 @@ mod tests {
             .map(|p| p.strip_prefix(&dir).unwrap().to_string_lossy().into_owned())
             .collect();
         written.sort();
-        assert_eq!(written, ["Sub.meta", "Sub/a.txt.meta"]);
-        // The plug-in is reported, nothing inside it written.
-        assert_eq!(imported.unsupported.len(), 2);
+        assert_eq!(
+            written,
+            ["Native.bundle.meta", "Sub.meta", "Sub/a.txt.meta"]
+        );
+        // The unmeasured importer is reported; the folder plug-in is one asset, nothing inside it written.
+        assert_eq!(imported.unsupported.len(), 1);
         assert!(imported.unsupported.iter().any(|u| u.contains(".asmref")));
-        assert!(imported.unsupported.iter().any(|u| u.contains(".bundle")));
         assert!(!dir.join("Native.bundle/Contents.meta").exists());
         assert_eq!(
             std::fs::read_to_string(dir.join("Kept.txt.meta")).unwrap(),

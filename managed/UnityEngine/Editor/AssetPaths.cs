@@ -85,6 +85,15 @@ namespace Unbound.Runtime
 
         static readonly Regex s_ImporterSection = new Regex("^[A-Za-z]+:\\s*$", RegexOptions.Multiline);
 
+        /// <summary>Whether a <c>.meta</c> text has its importer's section (a script's or a
+        /// plug-in's new <c>.meta</c> has its GUID alone; a labels block is no section).</summary>
+        internal static bool HasImporterSection(string meta)
+        {
+            foreach (Match match in s_ImporterSection.Matches(meta))
+                if (!match.Value.StartsWith("labels:", StringComparison.Ordinal)) return true;
+            return false;
+        }
+
         /// <summary>A <c>.meta</c> text with these labels: after its GUID line, as written (the
         /// Editor writes them unquoted), in ordinal order, repeats kept; none: no labels block. The
         /// file is written again as the Editor writes it: LF endings, and a <c>.meta</c> without an
@@ -94,7 +103,7 @@ namespace Unbound.Runtime
         {
             var text = s_LabelsBlock.Replace(meta.Replace("\r\n", "\n"), "", 1);
             if (text.Length > 0 && !text.EndsWith("\n", StringComparison.Ordinal)) text += "\n";
-            if (!string.IsNullOrEmpty(missingSection) && !s_ImporterSection.IsMatch(text)) text += missingSection;
+            if (!string.IsNullOrEmpty(missingSection) && !HasImporterSection(text)) text += missingSection;
             var sorted = (labels ?? Array.Empty<string>()).Where(l => !string.IsNullOrEmpty(l)).OrderBy(l => l, StringComparer.Ordinal).ToArray();
             if (sorted.Length == 0) return text;
             var block = new StringBuilder("labels:\n");

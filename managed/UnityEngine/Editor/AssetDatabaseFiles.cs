@@ -614,7 +614,16 @@ namespace UnityEditor
             if (!File.Exists(meta)) return;
             // A script's .meta written again gets its importer's section (09.labels.script).
             var section = path.EndsWith(".cs", StringComparison.OrdinalIgnoreCase) ? ScriptMetaSection : null;
-            try { File.WriteAllText(meta, AssetPaths.WithLabels(File.ReadAllText(meta), labels, section)); }
+            try
+            {
+                var text = File.ReadAllText(meta);
+                // A plug-in's .meta written again gets its PluginImporter section, with settings
+                // that depend on the plug-in's kind, folder and the installed platform modules: not
+                // measured, so the labels are written without it.
+                if (string.IsNullOrEmpty(section) && !AssetPaths.HasImporterSection(text))
+                    Debug.LogWarning($"Unbound: {path}.meta is written without its importer's settings: Unbound does not know the settings the Editor writes there yet.");
+                File.WriteAllText(meta, AssetPaths.WithLabels(text, labels, section));
+            }
             catch (Exception e) when (e is IOException || e is UnauthorizedAccessException)
             {
                 Debug.LogError($"AssetDatabase.SetLabels: writing {path}.meta: {e.Message}");

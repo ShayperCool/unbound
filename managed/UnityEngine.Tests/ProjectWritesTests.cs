@@ -133,6 +133,21 @@ namespace UnityEngine.Tests
             // A .meta that has its section keeps it as it is.
             var textMeta = "fileFormatVersion: 2\nguid: 0123456789abcdef0123456789abcdef\nTextScriptImporter:\n  userData: \n";
             Assert.Equal(textMeta, AssetPaths.WithLabels(textMeta, null, section));
+            // A labels block is no section: a script's labelled .meta without one still gets it.
+            Assert.Equal("fileFormatVersion: 2\nguid: 0123456789abcdef0123456789abcdef\nlabels:\n- b\n" + section,
+                AssetPaths.WithLabels("fileFormatVersion: 2\nguid: 0123456789abcdef0123456789abcdef\nlabels:\n- a\n", new[] { "b" }, section));
+        }
+
+        /// <summary>A plug-in's new .meta has its GUID alone, as a script's (tests/projects/projectwrites
+        /// exit.Assets/Startup/Plugins/*): no importer section, also once labelled.</summary>
+        [Fact]
+        public void APluginsGuidOnlyMetaHasNoImporterSection()
+        {
+            const string plugin = "fileFormatVersion: 2\nguid: 0123456789abcdef0123456789abcdef";
+            Assert.False(AssetPaths.HasImporterSection(plugin));
+            Assert.False(AssetPaths.HasImporterSection(AssetPaths.WithLabels(plugin, new[] { "a" })));
+            Assert.True(AssetPaths.HasImporterSection(plugin + "\nPluginImporter:\n  externalObjects: {}\n"));
+            Assert.True(AssetPaths.HasImporterSection("fileFormatVersion: 2\nguid: 0123456789abcdef0123456789abcdef\nlabels:\n- a\nDefaultImporter:\n"));
         }
 
         [Fact]

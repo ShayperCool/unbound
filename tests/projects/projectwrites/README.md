@@ -5,7 +5,7 @@ these files depend on neither the OS nor the graphics device, apart from the ins
 platform modules, which the probe checks against what the installation holds (`*.platforms`).
 
 `run.py` stages the project for each run: the committed probe, files without a `.meta` under
-`Assets/Startup` (about forty formats: images, models, audio, fonts, text, shaders, native YAML
+`Assets/Startup` (about fifty formats: images, models, audio, fonts, text, shaders, plug-ins, native YAML
 assets, prefabs, scenes, UI Toolkit files, an unknown extension) and no `packages-lock.json`.
 `Assets/Editor/ProjectWritesProbe.cs` then runs the same steps twice, in separate runs: in Play
 mode (`play.*`, `-executeMethod ProjectWritesProbe.Record` / `unbound run`) and in Edit mode
@@ -45,7 +45,9 @@ window asked for; in Play mode a package and a missing file.
 Measured: a new file or folder gets its `.meta` when it is imported (opening the project, `Refresh`,
 `ImportAsset`, a new folder's parents too): `fileFormatVersion: 2`, a new GUID of 32 lowercase hex
 digits, the importer's defaults, LF endings, no creation time; a C# script's ends after its GUID
-without a line break; each importer's defaults are the same for every format it imports, a font's
+without a line break, and so does a plug-in's (managed and native libraries, native sources and a
+folder plug-in, inside which nothing gets a `.meta`; written again for its labels, a plug-in's gets
+the PluginImporter section); a program database (`.pdb`) gets the DefaultImporter's; each importer's defaults are the same for every format it imports, a font's
 names come from the font, a texture lists `DefaultTexturePlatform`, `Standalone` and the installed
 platform modules. `ProjectVersion.txt` gets the release's build revision and `packages-lock.json`
 is written when the project has none. Between `StartAssetEditing` and `StopAssetEditing` an import
@@ -86,18 +88,19 @@ changes during an import are written too. Settings changed through the API are w
 `SaveAssets` and when the Editor quits in Edit mode, never in Play mode. In Edit mode the lock
 follows a resolved manifest change by the time the Editor quits.
 
-Unbound on macOS, 2026-11-23: 1285/1313 values, 0 failures and 30 recorded residuals
+Unbound on macOS, 2026-11-25: 1323/1355 values, 0 failures and 34 recorded residuals
 (`residuals.json`): the lock not written again after an Edit-mode `Client.Resolve`, no
 `.meta` for a file of an extension no importer claims (when the project opens, Unbound cannot tell
 which extensions packages' ScriptedImporters claim), copies and folders refused in a read-only
 package (the Editor writes into its per-project copy of the package; Unbound's package files are
 the installation's or the shared store's), and labels YAML reads as something else (the Editor
-reads them back as YAML; Unbound keeps their text), a new object dirty from its creation and the
+reads them back as YAML; Unbound keeps their text), a plug-in's `.meta` written again for its labels
+(the Editor adds the PluginImporter section; Unbound writes the labels alone, with a warning), a new object dirty from its creation and the
 `Import Logs` object after a new main object's warning (RemoveObjectFromAsset), the import window
 `ImportPackage` is asked for (it never comes in batch mode; Unbound has none and imports the whole
 package) and a folder the package does not name among a second import's items.
 
-Unmeasured: other importers (`.asmref`, plug-ins and folder plug-ins such as `.bundle`, videos,
+Unmeasured: other importers (`.asmref`, plug-in kinds beyond the measured ones, videos,
 packages' ScriptedImporters: Unbound reports such new files and writes no `.meta`), file operations
 in registry or built-in packages (Unbound refuses them with an error and writes nothing), a `.meta`
 left without its asset, labels with YAML special characters, the trash's file names on a name
