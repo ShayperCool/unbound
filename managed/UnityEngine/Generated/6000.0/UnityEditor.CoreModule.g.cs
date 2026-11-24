@@ -13740,7 +13740,6 @@ namespace UnityEditor
         [global::Unbound.Stub] internal static int GetLightmapBakeGPUDeviceIndex() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Lightmapping.GetLightmapBakeGPUDeviceIndex"); return default; }
         [global::Unbound.Stub] internal static global::UnityEditor.DeviceAndPlatform[] GetLightmappingGpuDevices() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Lightmapping.GetLightmappingGpuDevices"); return global::System.Array.Empty<global::UnityEditor.DeviceAndPlatform>(); }
         [global::Unbound.Stub] internal static void PrintStateToConsole() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Lightmapping.PrintStateToConsole"); }
-        [global::Unbound.Stub] public static void Cancel() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Lightmapping.Cancel"); }
         [global::System.Obsolete("ForceStop is no longer available, use Cancel instead to stop a bake.")] [global::Unbound.Stub] public static void ForceStop() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Lightmapping.ForceStop"); }
         [global::Unbound.Stub] internal static void Internal_CallStartedRenderingFunctions() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Lightmapping.Internal_CallStartedRenderingFunctions"); }
         [global::Unbound.Stub] internal static void Internal_CallLightingDataUpdatedFunctions() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Lightmapping.Internal_CallLightingDataUpdatedFunctions"); }
@@ -13758,7 +13757,6 @@ namespace UnityEditor
         [global::Unbound.Stub] internal static void OnUpdateHDRCubemapEncoding(global::UnityEditor.BuildTargetGroup target) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Lightmapping.OnUpdateHDRCubemapEncoding"); }
         [global::Unbound.Stub] internal static void OnUpdateLightmapStreaming(global::UnityEditor.BuildTargetGroup target) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Lightmapping.OnUpdateLightmapStreaming"); }
         [global::Unbound.Stub] public static void GetTerrainGIChunks(global::UnityEngine.Terrain terrain, ref int numChunksX, ref int numChunksY) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Lightmapping.GetTerrainGIChunks"); }
-        [global::Unbound.Stub] public static global::UnityEditor.LightingDataAsset GetLightingDataAssetForScene(global::UnityEngine.SceneManagement.Scene scene) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Lightmapping.GetLightingDataAssetForScene"); return default; }
         [global::Unbound.Stub] public static void SetLightingDataAssetForScene(global::UnityEngine.SceneManagement.Scene scene, global::UnityEditor.LightingDataAsset lda) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Lightmapping.SetLightingDataAssetForScene"); }
         [global::Unbound.Stub] public static void BakeMultipleScenes(string[] paths) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Lightmapping.BakeMultipleScenes"); }
         [global::Unbound.Stub] internal static void Reset() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Lightmapping.Reset"); }
@@ -13777,10 +13775,6 @@ namespace UnityEditor
         [global::Unbound.Stub] internal static bool GetInstanceHash(global::UnityEngine.Renderer renderer, out global::UnityEngine.Hash128 instanceHash) { instanceHash = default; global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Lightmapping.GetInstanceHash"); return default; }
         [global::Unbound.Stub] internal static bool GetGeometryHash(global::UnityEngine.Renderer renderer, out global::UnityEngine.Hash128 geometryHash) { geometryHash = default; global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Lightmapping.GetGeometryHash"); return default; }
         [global::Unbound.Stub] internal static bool IsRendererValid(global::UnityEngine.Renderer renderer) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Lightmapping.IsRendererValid"); return default; }
-        [global::Unbound.Stub] public static void SetAdditionalBakeDelegate(global::UnityEditor.Lightmapping.AdditionalBakeDelegate del) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Lightmapping.SetAdditionalBakeDelegate"); }
-        [global::Unbound.Stub] public static global::UnityEditor.Lightmapping.AdditionalBakeDelegate GetAdditionalBakeDelegate() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Lightmapping.GetAdditionalBakeDelegate"); return default; }
-        [global::Unbound.Stub] public static void ResetAdditionalBakeDelegate() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Lightmapping.ResetAdditionalBakeDelegate"); }
-        [global::Unbound.Stub] internal static void AdditionalBake(ref float progress, ref bool done) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Lightmapping.AdditionalBake"); }
         [global::System.Obsolete("BakeSelectedAsync has been deprecated. Use BakeAsync instead (UnityUpgradable) -> BakeAsync()")] [global::Unbound.Stub] public static bool BakeSelectedAsync() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Lightmapping.BakeSelectedAsync"); return default; }
         [global::System.Obsolete("BakeSelected has been deprecated. Use Bake instead (UnityUpgradable) -> Bake()")] [global::Unbound.Stub] public static bool BakeSelected() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Lightmapping.BakeSelected"); return default; }
         [global::System.Obsolete("BakeLightProbesOnlyAsync has been deprecated. Use BakeAsync instead (UnityUpgradable) -> BakeAsync()")] [global::Unbound.Stub] public static bool BakeLightProbesOnlyAsync() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Lightmapping.BakeLightProbesOnlyAsync"); return default; }
@@ -13815,7 +13809,6 @@ namespace UnityEditor
         }
         public unsafe delegate void OnStartedFunction();
         public unsafe delegate void OnCompletedFunction();
-        public unsafe delegate void AdditionalBakeDelegate(ref float progress, ref bool done);
     }
     [global::Unbound.Stub]
     internal unsafe partial class LightsModuleUI : global::UnityEditor.ModuleUI

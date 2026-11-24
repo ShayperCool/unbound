@@ -40,6 +40,13 @@ namespace UnityEngine
 
         /// <summary>Lightmapping.isRunning: true while a bake runs.</summary>
         internal static bool Baking { get; private set; }
+        static bool s_InBake;
+        static bool s_CancelRequested;
+
+        internal static void RequestCancel()
+        {
+            if (s_InBake) s_CancelRequested = true;
+        }
 
         internal const string BakeOnLoad = "its bake on load (Lightmapping.bakeOnSceneLoad)";
         internal const string ScriptBake = "Lightmapping.Bake";
@@ -66,13 +73,16 @@ namespace UnityEngine
         /// </summary>
         internal static bool BakeInEditMode()
         {
-            UnityEditor.Lightmapping.RaiseBakeStarted();
-            Baking = true;
+            s_CancelRequested = false;
+            s_InBake = true;
             try
             {
+                UnityEditor.Lightmapping.RaiseBakeStarted();
+                Baking = true;
                 bool first = true;
                 foreach (var scene in Unbound.Runtime.SceneRegistry.Loaded.ToArray())
                 {
+                    if (s_CancelRequested) break;
                     if (!scene.IsLoaded || scene.IsPreview) continue;
                     if (!s_SceneFiles.TryGetValue(scene.Handle.Value, out var file))
                     {
@@ -105,11 +115,22 @@ namespace UnityEngine
                     first = false;
                     UnityEditor.SceneManagement.EditorSceneManager.Dirty(scene);
                 }
+                float progress = 0f;
+                bool done = false;
+                while (!done && !s_CancelRequested)
+                    UnityEditor.Lightmapping.AdditionalBake(ref progress, ref done);
+                if (s_CancelRequested)
+                {
+                    Baking = false;
+                    UnityEditor.Lightmapping.RaiseBakeCancelled();
+                }
                 UnityEditor.Lightmapping.RaiseLightingDataUpdated();
             }
             finally
             {
                 Baking = false;
+                s_InBake = false;
+                s_CancelRequested = false;
             }
             UnityEditor.Lightmapping.RaiseBakeCompleted();
             return true;

@@ -453,5 +453,105 @@ namespace UnityEngine.Tests
             // A destroyed GameObject is null to Unity's check.
             Assert.Throws<ArgumentNullException>(() => GameObjectUtility.GetStaticEditorFlags(go));
         }
+
+        [Fact]
+        public void AdditionalBakeDelegateStepsUntilDoneAndCancelFiresBakeCancelled()
+        {
+            var defaultDelegate = Lightmapping.GetAdditionalBakeDelegate();
+            Assert.NotNull(defaultDelegate);
+            float p0 = 0f;
+            bool d0 = false;
+            defaultDelegate(ref p0, ref d0);
+            Assert.Equal(100f, p0);
+            Assert.True(d0);
+
+            Lightmapping.SetAdditionalBakeDelegate(null);
+            Assert.Same(defaultDelegate, Lightmapping.GetAdditionalBakeDelegate());
+            Assert.Null(Lightmapping.GetLightingDataAssetForScene(default));
+
+            var events = new List<string>();
+            int step = 0;
+            Lightmapping.AdditionalBakeDelegate multiStep = (ref float progress, ref bool done) =>
+            {
+                step++;
+                events.Add($"A{step}:{progress:0.#}:{done}:{Lightmapping.isRunning}");
+                progress = step * 0.5f;
+                done = step >= 2;
+            };
+            Action onStart = () =>
+            {
+                events.Add("S:" + Lightmapping.isRunning);
+                Lightmapping.SetAdditionalBakeDelegate(multiStep);
+            };
+            Action onUpd = () => events.Add("U:" + Lightmapping.isRunning);
+            Action onDone = () => events.Add("C:" + Lightmapping.isRunning);
+            Action onCancel = () => events.Add("X:" + Lightmapping.isRunning);
+            Lightmapping.bakeStarted += onStart;
+            Lightmapping.lightingDataUpdated += onUpd;
+            Lightmapping.bakeCompleted += onDone;
+            Lightmapping.bakeCancelled += onCancel;
+            try
+            {
+                bool result = false;
+                Run(Phase.Edit, () => result = Lightmapping.Bake());
+                Assert.True(result);
+                Assert.Same(multiStep, Lightmapping.GetAdditionalBakeDelegate());
+                Assert.Equal(new[] { "S:False", "A1:0:False:True", "A2:0.5:False:True", "U:True", "C:False" }, events);
+
+                events.Clear();
+                step = 0;
+                Lightmapping.bakeStarted -= onStart;
+                Lightmapping.AdditionalBakeDelegate cancelStep = (ref float progress, ref bool done) =>
+                {
+                    step++;
+                    events.Add($"A{step}:{Lightmapping.isRunning}");
+                    Lightmapping.Cancel();
+                    done = false;
+                };
+                Action onStartCancel = () =>
+                {
+                    events.Add("S:" + Lightmapping.isRunning);
+                    Lightmapping.SetAdditionalBakeDelegate(cancelStep);
+                };
+                Lightmapping.bakeStarted += onStartCancel;
+                try
+                {
+                    Run(Phase.Edit, () => result = Lightmapping.Bake());
+                    Assert.True(result);
+                    Assert.Equal(1, step);
+                    Assert.Equal(new[] { "S:False", "A1:True", "X:False", "U:False", "C:False" }, events);
+                }
+                finally { Lightmapping.bakeStarted -= onStartCancel; }
+
+                // Cancel outside a bake is a no-op; Cancel inside bakeStarted skips additional bake steps.
+                events.Clear();
+                step = 0;
+                Lightmapping.Cancel();
+                Action onStartAbort = () =>
+                {
+                    events.Add("S:" + Lightmapping.isRunning);
+                    Lightmapping.SetAdditionalBakeDelegate(multiStep);
+                    Lightmapping.Cancel();
+                };
+                Lightmapping.bakeStarted += onStartAbort;
+                try
+                {
+                    Run(Phase.Edit, () => result = Lightmapping.Bake());
+                    Assert.True(result);
+                    Assert.Equal(0, step);
+                    Assert.Equal(new[] { "S:False", "X:False", "U:False", "C:False" }, events);
+                }
+                finally { Lightmapping.bakeStarted -= onStartAbort; }
+            }
+            finally
+            {
+                Lightmapping.bakeStarted -= onStart;
+                Lightmapping.lightingDataUpdated -= onUpd;
+                Lightmapping.bakeCompleted -= onDone;
+                Lightmapping.bakeCancelled -= onCancel;
+                Lightmapping.ResetAdditionalBakeDelegate();
+            }
+            Assert.Same(defaultDelegate, Lightmapping.GetAdditionalBakeDelegate());
+        }
     }
 }

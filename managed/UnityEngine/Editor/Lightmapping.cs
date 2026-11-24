@@ -44,16 +44,19 @@ namespace UnityEditor
         /// replaces the scene's baked lighting) is not supported.</summary>
         public static LightingDataAsset lightingDataAsset
         {
-            get
-            {
-                var scene = SceneRegistry.Active;
-                // (A bake whose lighting data Unbound wrote names it, as the Editor's does.)
-                bool unwritten = scene != null && scene.BakedOnOpen && !scene.LightingDataWritten;
-                if (unwritten)
-                    Stubs.Ignored("Lightmapping.lightingDataAsset", "of a scene the Editor baked (when it opened it, or by Lightmapping.Bake) is the Editor's new asset; Unbound answers null");
-                return scene == null || unwritten ? null : LightingDataAsset.Of(scene.LightingDataRef);
-            }
+            get => LightingDataOf(SceneRegistry.Active);
             set => throw new NotSupportedException("Unbound: assigning Lightmapping.lightingDataAsset (replacing a scene's baked lighting) is not supported.");
+        }
+
+        public static LightingDataAsset GetLightingDataAssetForScene(Scene scene) => LightingDataOf(scene.Data);
+
+        static LightingDataAsset LightingDataOf(SceneData scene)
+        {
+            // (A bake whose lighting data Unbound wrote names it, as the Editor's does.)
+            bool unwritten = scene != null && scene.BakedOnOpen && !scene.LightingDataWritten;
+            if (unwritten)
+                Stubs.Ignored("Lightmapping.lightingDataAsset", "of a scene the Editor baked (when it opened it, or by Lightmapping.Bake) is the Editor's new asset; Unbound answers null");
+            return scene == null || unwritten ? null : LightingDataAsset.Of(scene.LightingDataRef);
         }
 
         const string k_PlayMode = "Computing lightmaps is not available in play mode.";
@@ -95,7 +98,30 @@ namespace UnityEditor
 
         internal static void RaiseBakeStarted() => bakeStarted?.Invoke();
         internal static void RaiseBakeCompleted() => bakeCompleted?.Invoke();
+        internal static void RaiseBakeCancelled() => bakeCancelled?.Invoke();
         internal static void RaiseLightingDataUpdated() => lightingDataUpdated?.Invoke();
+
+        public delegate void AdditionalBakeDelegate(ref float progress, ref bool done);
+
+        static readonly AdditionalBakeDelegate s_DefaultAdditionalBakeDelegate = (ref float progress, ref bool done) =>
+        {
+            progress = 100.0f;
+            done = true;
+        };
+
+        static AdditionalBakeDelegate s_AdditionalBakeDelegate = s_DefaultAdditionalBakeDelegate;
+
+        public static void SetAdditionalBakeDelegate(AdditionalBakeDelegate del) =>
+            s_AdditionalBakeDelegate = del ?? s_DefaultAdditionalBakeDelegate;
+
+        public static AdditionalBakeDelegate GetAdditionalBakeDelegate() => s_AdditionalBakeDelegate;
+
+        public static void ResetAdditionalBakeDelegate() => s_AdditionalBakeDelegate = s_DefaultAdditionalBakeDelegate;
+
+        internal static void AdditionalBake(ref float progress, ref bool done) =>
+            s_AdditionalBakeDelegate(ref progress, ref done);
+
+        public static void Cancel() => RealtimeGI.RequestCancel();
 
         /// <summary>In Play mode as <see cref="Bake"/> (measured: the same warning, false); an
         /// asynchronous bake outside Play mode is not implemented.</summary>
