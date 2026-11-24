@@ -32,6 +32,14 @@ public class GraphicsGapsProbe : MonoBehaviour
         "Probe/SelA", "Probe/SelB", "Probe/SelC", "Probe/SelD", "Probe/SelE", "Probe/SelF", "Probe/SelH",
     };
 
+    /// <summary>Shaders whose first SubShader the device may not run: its only pass excludes
+    /// OpenGL Core, one of its two passes does, its only pass runs on Vulkan alone, a pass has a
+    /// geometry stage, a pass has tessellation stages (each with an untagged second SubShader).</summary>
+    static readonly string[] Restricted =
+    {
+        "Probe/SelX", "Probe/SelY", "Probe/SelO", "Probe/SelG", "Probe/SelT",
+    };
+
     static readonly string[] Builtin =
     {
         "Skybox/Procedural", "Skybox/6 Sided", "Standard", "Unlit/Transparent", "Unlit/Texture", "Sprites/Default", "UI/Default",
@@ -159,6 +167,7 @@ public class GraphicsGapsProbe : MonoBehaviour
                 Section("layers", RenderingLayers);
                 Section("rebind", Rebind);
                 Section("cameraUtils", CameraUtils);
+                Section("select.restricted", RestrictedSelection);
                 Logs("end.logs");
                 Row("queue.errors", string.Join(" | ", s_QueueErrors.Where(l => !l.Contains("Shader Unknown "))));
                 Row("queue.errors.unknown", string.Join(" | ", s_QueueErrors.Where(l => l.Contains("Shader Unknown "))));
@@ -214,9 +223,11 @@ public class GraphicsGapsProbe : MonoBehaviour
         return c.a == 0 ? "none" : c.r + "," + c.g;
     }
 
-    static void SelectionRead(string prefix)
+    static void SelectionRead(string prefix) => SelectionRead(prefix, Selection);
+
+    static void SelectionRead(string prefix, string[] names)
     {
-        foreach (var name in Selection)
+        foreach (var name in names)
         {
             var shader = Shader.Find(name);
             var key = prefix + "." + name.Substring(name.IndexOf('/') + 1);
@@ -234,6 +245,25 @@ public class GraphicsGapsProbe : MonoBehaviour
             Object.DestroyImmediate(material);
         }
         Logs(prefix + ".logs");
+    }
+
+    /// <summary>The SubShaders of shaders whose first SubShader the device may not run (read
+    /// last, so that the other sections run as they were recorded before it was added).</summary>
+    static void RestrictedSelection()
+    {
+        Row("select.restricted.subshaderCount", string.Join(",", Restricted.Select(n => Shader.Find(n) != null ? Shader.Find(n).subshaderCount.ToString() : "-")));
+        SelectionRead("select.restricted", Restricted);
+        foreach (var name in Restricted)
+        {
+            var shader = Shader.Find(name);
+            if (shader == null) continue;
+            var key = "select.restricted." + name.Substring(name.IndexOf('/') + 1);
+            Read(key + ".passCounts", () => string.Join(",", Enumerable.Range(0, shader.subshaderCount).Select(i => shader.GetPassCountInSubshader(i))));
+            var material = new Material(shader);
+            Read(key + ".extraPass", () => material.FindPass("ProbeExtra"));
+            Read(key + ".stagePass", () => material.FindPass("ProbeStage"));
+            Object.DestroyImmediate(material);
+        }
     }
 
     static void SelectionCases()

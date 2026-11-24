@@ -21,6 +21,11 @@ frame of Play mode, section by section (a section that throws records `<section>
   and the global one 150. The shaders' SubShaders are tagged for URP, HDRP, both, another pipeline,
   a name with a leading space, in lower case, an empty tag and none, in their own SubShaders and
   their Fallbacks'.
+* `select.restricted.<shader>.*` (`Assets/Shaders/SelX`, `SelY`, `SelO`, `SelG`, `SelT`, read
+  last): the same values, each SubShader's pass count and `FindPass` of a named pass, for shaders
+  whose first SubShader the device may not run: its only pass excludes OpenGL Core, one of its two
+  passes does, its only pass runs on Vulkan alone, a pass has a geometry stage, a pass has
+  tessellation stages (each with an untagged second SubShader of another Queue and `SubId`).
 * `builtin.<urp|none>.<shader>.*`: queue, pass and SubShader counts and tags of built-in and URP
   shaders under the pipeline's tag and under none.
 * `queue.SelQ<n>`: `Shader.renderQueue` of Queue values: `Bogus`, `Geometry+-3`, ` Transparent`,
@@ -43,7 +48,10 @@ frame of Play mode, section by section (a section that throws records `<section>
 * `cameraUtils.*`: `EditorCameraUtils` filtering results and hidden bits of two renderers, one
   hidden by `SceneVisibilityManager` (only renderer instance IDs: another ID crashes the Editor).
 
-Measured: the GPU Resident Drawer logs that the platform does not support its buffer target on
+Measured: a SubShader the device runs none of the passes of is not among the shader's
+SubShaders (OpenGL Core: `subshaderCount` 1 for SelX and SelO, whose second SubShader answers);
+one that lost a pass keeps the others; the geometry and tessellation SubShaders are the ones
+selected and drawn on OpenGL Core and on Vulkan. The GPU Resident Drawer logs that the platform does not support its buffer target on
 OpenGL Core (constant buffers) and nothing on Vulkan (raw buffers); URP shaders have one more pass
 on Vulkan than on OpenGL Core. An ObjectId request's destination reads back zero everywhere in
 Play mode (with and without depth); its mapping lists the camera's renderers far to near after a
