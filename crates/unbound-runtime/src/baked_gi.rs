@@ -138,15 +138,15 @@ struct IndirectData {
 /// face as a cube map has it, base64.
 #[derive(serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
-struct EnvironmentData {
-    samples: u32,
-    importance_sampling: bool,
-    side: usize,
-    faces: String,
+pub(crate) struct EnvironmentData {
+    pub(crate) samples: u32,
+    pub(crate) importance_sampling: bool,
+    pub(crate) side: usize,
+    pub(crate) faces: String,
 }
 
 impl EnvironmentData {
-    fn sky(&self) -> Result<Sky> {
+    pub(crate) fn sky(&self) -> Result<Sky> {
         let bytes = base64::engine::general_purpose::STANDARD
             .decode(&self.faces)
             .context("the sky's faces")?;
@@ -181,20 +181,20 @@ impl EnvironmentData {
 /// passes at the size the layout gave, and each submesh's Double Sided Global Illumination.
 #[derive(serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
-struct MaterialData {
-    albedo: ImageData,
-    emissive: ImageData,
+pub(crate) struct MaterialData {
+    pub(crate) albedo: ImageData,
+    pub(crate) emissive: ImageData,
     #[serde(default)]
-    double_sided: Vec<bool>,
+    pub(crate) double_sided: Vec<bool>,
 }
 
 /// An image: rows from the bottom (the first row is the lowest lightmap coordinate), base64.
 /// Albedo is four bytes a texel (sRGB levels and coverage), emission four 32-bit floats.
 #[derive(serde::Deserialize)]
-struct ImageData {
-    width: usize,
-    height: usize,
-    data: String,
+pub(crate) struct ImageData {
+    pub(crate) width: usize,
+    pub(crate) height: usize,
+    pub(crate) data: String,
 }
 
 impl ImageData {
@@ -230,7 +230,7 @@ impl ImageData {
 
     /// An albedo image: each level's linear value ([`levels::albedo`]), and 1 or 0 for a texel
     /// that is drawn or not.
-    fn albedo(&self, renderer: &str) -> Result<Texture> {
+    pub(crate) fn albedo(&self, renderer: &str) -> Result<Texture> {
         let bytes = self.bytes("albedo", renderer, 4)?;
         Ok(self.texture(
             bytes
@@ -247,7 +247,7 @@ impl ImageData {
         ))
     }
 
-    fn emissive(&self, renderer: &str) -> Result<Texture> {
+    pub(crate) fn emissive(&self, renderer: &str) -> Result<Texture> {
         let bytes = self.bytes("emission", renderer, 16)?;
         Ok(self.texture(
             bytes
@@ -265,29 +265,29 @@ impl ImageData {
 /// A light of the bake.
 #[derive(serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
-struct LightData {
+pub(crate) struct LightData {
     /// Its name, for the written description.
-    name: String,
+    pub(crate) name: String,
     /// Its file ID in the scene.
-    file_id: i64,
+    pub(crate) file_id: i64,
     /// 0 directional, 1 point, 2 spot.
-    kind: u8,
+    pub(crate) kind: u8,
     /// 1 mixed, 2 baked.
-    mode: u8,
+    pub(crate) mode: u8,
     /// Its colour times its intensity, linear, and the same times its Indirect Multiplier.
-    color: [f32; 3],
-    indirect_color: [f32; 3],
-    position: [f32; 3],
+    pub(crate) color: [f32; 3],
+    pub(crate) indirect_color: [f32; 3],
+    pub(crate) position: [f32; 3],
     /// Its rotation (x, y, z, w).
-    rotation: [f32; 4],
-    range: f32,
+    pub(crate) rotation: [f32; 4],
+    pub(crate) range: f32,
     /// Spot Angle, in degrees.
-    spot_angle: f32,
-    casts_shadows: bool,
+    pub(crate) spot_angle: f32,
+    pub(crate) casts_shadows: bool,
 }
 
 impl LightData {
-    fn light(&self) -> Result<Light> {
+    pub(crate) fn light(&self) -> Result<Light> {
         let [x, y, z, w] = self.rotation;
         Ok(Light {
             kind: match self.kind {
@@ -327,16 +327,16 @@ impl LightData {
 /// arrives as it is (also one that is not a number).
 #[derive(serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
-struct MeshData {
+pub(crate) struct MeshData {
     /// Local positions, three floats each.
-    positions: String,
+    pub(crate) positions: String,
     /// Three floats each; empty for a mesh without normals.
-    normals: String,
+    pub(crate) normals: String,
     /// Two floats each; empty for a mesh without that channel.
-    uv: String,
-    uv2: String,
+    pub(crate) uv: String,
+    pub(crate) uv2: String,
     /// The triangles of each submesh, three 32-bit indices each.
-    submeshes: Vec<String>,
+    pub(crate) submeshes: Vec<String>,
 }
 
 /// A renderer of the bake: its mesh, where it is and its lightmapping settings.
@@ -448,7 +448,7 @@ fn guid_words(text: &str) -> Result<[u32; 4]> {
 }
 
 /// Values of `N` four-byte numbers each from base64.
-fn values<T: Copy, const N: usize>(
+pub(crate) fn values<T: Copy, const N: usize>(
     text: &str,
     what: &str,
     read: fn([u8; 4]) -> T,
@@ -470,16 +470,16 @@ fn values<T: Copy, const N: usize>(
 }
 
 /// A mesh as sent.
-struct SourceMesh {
-    positions: Vec<[f32; 3]>,
-    normals: Vec<[f32; 3]>,
-    uv: Vec<[f32; 2]>,
-    uv2: Vec<[f32; 2]>,
-    submeshes: Vec<Vec<[u32; 3]>>,
+pub(crate) struct SourceMesh {
+    pub(crate) positions: Vec<[f32; 3]>,
+    pub(crate) normals: Vec<[f32; 3]>,
+    pub(crate) uv: Vec<[f32; 2]>,
+    pub(crate) uv2: Vec<[f32; 2]>,
+    pub(crate) submeshes: Vec<Vec<[u32; 3]>>,
 }
 
 impl SourceMesh {
-    fn read(data: &MeshData) -> Result<SourceMesh> {
+    pub(crate) fn read(data: &MeshData) -> Result<SourceMesh> {
         Ok(SourceMesh {
             positions: values(&data.positions, "positions", f32::from_le_bytes)?,
             normals: values(&data.normals, "normals", f32::from_le_bytes)?,
@@ -494,7 +494,7 @@ impl SourceMesh {
     }
 
     /// The UVs its lightmap takes: its lightmap UVs where it has them, else its UVs.
-    fn lightmap_uvs(&self) -> &[[f32; 2]] {
+    pub(crate) fn lightmap_uvs(&self) -> &[[f32; 2]] {
         if self.uv2.len() == self.positions.len() {
             &self.uv2
         } else {
@@ -504,7 +504,7 @@ impl SourceMesh {
 
     /// The Editor leaves a mesh without normals out of the bake (tests/projects/bakedbuffers
     /// `Bare`).
-    fn has_normals(&self) -> bool {
+    pub(crate) fn has_normals(&self) -> bool {
         self.normals.len() == self.positions.len()
     }
 }

@@ -55,6 +55,13 @@ pub fn coefficients(direct: &Coefficients, indirect: &Coefficients, dering: bool
     sum
 }
 
+/// Scales a Unity-format probe's first and second bands down until no direction falls below zero
+/// (Remove Ringing / `DeringSphericalHarmonicsL2`).
+pub fn dering(sh: &mut [f32; 27]) {
+    let (first, second) = dering_window(sh);
+    scale_bands(sh, first, second);
+}
+
 /// Multiplies each channel's first band by `first` and its second by `second`.
 fn scale_bands(sh: &mut [f32; 27], first: f32, second: f32) {
     for channel in 0..3 {

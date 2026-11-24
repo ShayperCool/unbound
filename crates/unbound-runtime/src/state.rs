@@ -668,6 +668,28 @@ pub fn dispatch(method: &str, request: &str) -> Result<String> {
             let r: crate::baked_gi::BakeRequest = serde_json::from_str(request)?;
             Ok(crate::baked_gi::bake_request(r)?.to_string())
         }
+        "light-transport-populate" => {
+            let r: crate::light_transport::PopulateRequest = serde_json::from_str(request)?;
+            Ok(crate::light_transport::populate(r)?.to_string())
+        }
+        "light-transport-release" => {
+            #[derive(serde::Deserialize)]
+            #[serde(rename_all = "camelCase")]
+            struct Request {
+                world_id: u64,
+            }
+            let r: Request = serde_json::from_str(request)?;
+            crate::light_transport::release(r.world_id);
+            Ok("null".into())
+        }
+        "light-transport-integrate" => {
+            let r: crate::light_transport::IntegrateRequest = serde_json::from_str(request)?;
+            Ok(crate::light_transport::integrate(r)?.to_string())
+        }
+        "light-transport-dering" => {
+            let r: crate::light_transport::DeringRequest = serde_json::from_str(request)?;
+            Ok(crate::light_transport::dering(r)?.to_string())
+        }
         "realtime-gi-release" => {
             #[derive(serde::Deserialize)]
             struct Request {

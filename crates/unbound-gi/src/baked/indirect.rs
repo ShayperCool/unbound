@@ -608,3 +608,51 @@ fn group_probes(
         validity: results.iter().map(|r| r.1).collect(),
     }
 }
+
+/// The backface validity fraction (`0` all front/miss, `1` all backfaces) for each probe point:
+/// `count` rays leave the point evenly over the sphere using the Sobol sequence, counting rays
+/// whose first surface hit is a single-sided backface.
+pub fn probe_validity(
+    positions: &[[f32; 3]],
+    world: &World,
+    samples: &Samples,
+    count: u32,
+) -> Vec<f32> {
+    if positions.is_empty() {
+        return Vec::new();
+    }
+    let width = positions.len().max(1);
+    let denom = count.max(1) as f32;
+    positions
+        .par_iter()
+        .enumerate()
+        .map(|(k, &point)| {
+            if count == 0 {
+                return 0.0;
+            }
+            let rotation = samples.rotation(k, 0, width, 0);
+            let number =
+                |index: u32, d: usize| sampling::fraction(samples.sobol(index, d) + rotation[d]);
+            let mut behind = 0u32;
+            for index in 0..count {
+                let direction = sampling::sphere([number(index, 0), number(index, 1)]);
+                if let Some((hit, _, _)) = world.scene.closest_from(
+                    &Ray {
+                        origin: point,
+                        direction,
+                    },
+                    point,
+                    f32::INFINITY,
+                    Viewer::Lod0,
+                ) {
+                    let surface = &world.surfaces[hit.triangle as usize];
+                    let front = hit.front != surface.mirrored;
+                    if !(front || surface.double_sided) {
+                        behind += 1;
+                    }
+                }
+            }
+            behind as f32 / denom
+        })
+        .collect()
+}
