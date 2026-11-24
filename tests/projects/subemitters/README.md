@@ -36,6 +36,11 @@ order does not matter):
   in the last `Update` (`stopped`, the parent played again at frame 20), from `OnParticleTrigger`
   (`trigger`), a one-shot parent whose Death children outlive it (`finish`), and Death children in
   0.05 s frames (`death`). The `finish` child's stop action is Callback.
+- `birth/distance/*`: Birth sub-emitters emitting over parent travel distance (`ten` at 10/unit,
+  `three` at 3/unit, `both` with rate over time too, `still` with 0 speed, `four` with four parents
+  at speeds 1–4, `disabled` with child Emission module disabled, `multi` and `bothmulti` for
+  multi-child substeps, `scaled` with local-space scaling, `nonloop` with non-looping child duration
+  0.25 s, and `played` in Play-mode 0.05 s frames).
 
 Record (two independent GPU Editor captures; publish only when they are byte-identical):
 
@@ -46,7 +51,7 @@ Record (two independent GPU Editor captures; publish only when they are byte-ide
 Check the engine (the landing gate, `gate.json`): `python3 tests/projects/subemitters/run.py check`.
 Run output stays under `$XDG_CACHE_HOME/unbound/validation/runs/subemitters/`.
 
-The canonical oracle is `Reference/unity-6000.0.71f1.jsonl` (1321 records, Unity 6000.0.71f1 on
+The canonical oracle is `Reference/unity-6000.0.71f1.jsonl` (1629 records, Unity 6000.0.71f1 on
 Linux, GPU Editor). Two independent captures were byte-identical.
 
 Documented (6000.0 Manual, Sub Emitters module: "The Collision, Death, Trigger, and Manual
