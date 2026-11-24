@@ -937,10 +937,73 @@ fn image_coordinate_vectors(words: &[u32]) -> Result<Vec<u32>> {
 }
 
 /// HLSL `StructuredBuffer<T3>` and `StructuredBuffer<Struct>` elements use tight 4-byte scalar
-/// packing (a `float3` occupies 12 bytes, not WGSL's 16-byte aligned `vec3`). Represent packed
-/// vectors and storage structs containing them as scalar-aligned twin structs, updating runtime
+/// Strips redundant `OpSwitch` target pairs whose branch target equals the switch's `default`
+/// label (e.g. HLSL `default: case 0:`). Naga 30.0.1's SPIR-V frontend assigns each explicit case
+/// a fresh body and skips mapping its label when `default_id` already claimed it, leaving the
+/// case empty so it falls through into the following case instead of executing `default`.
+/// Removing `(literal, default_label)` pairs is semantically identical in SPIR-V and avoids the
+/// miscompilation.
+fn strip_redundant_switch_default_cases(words: &[u32]) -> Result<Vec<u32>> {
+    let mut has_int64 = false;
+    let mut any_redundant = false;
+    let mut at = 5;
+    while at < words.len() {
+        let count = (words[at] >> 16) as usize;
+        if count == 0 || at + count > words.len() {
+            bail!("malformed SPIR-V");
+        }
+        let inst = &words[at..at + count];
+        match inst[0] & 0xffff {
+            21 if count >= 3 && inst[2] == 64 => has_int64 = true,
+            // SPIR-V OpSwitch is opcode 251.
+            251 if count >= 5 && (count - 3).is_multiple_of(2) => {
+                let default_label = inst[2];
+                if inst[3..].chunks_exact(2).any(|p| p[1] == default_label) {
+                    any_redundant = true;
+                }
+            }
+            _ => {}
+        }
+        at += count;
+    }
+    if !any_redundant || has_int64 {
+        return Ok(words.to_vec());
+    }
+    let mut out = Vec::with_capacity(words.len());
+    out.extend_from_slice(&words[..5]);
+    let mut at = 5;
+    while at < words.len() {
+        let count = (words[at] >> 16) as usize;
+        let inst = &words[at..at + count];
+        if (inst[0] & 0xffff) == 251 && count >= 5 && (count - 3).is_multiple_of(2) {
+            let default_label = inst[2];
+            let mut kept: Vec<u32> = Vec::with_capacity(count - 3);
+            for pair in inst[3..].chunks_exact(2) {
+                if pair[1] != default_label {
+                    kept.push(pair[0]);
+                    kept.push(pair[1]);
+                }
+            }
+            let new_count = (3 + kept.len()) as u32;
+            out.push((new_count << 16) | 251);
+            out.push(inst[1]);
+            out.push(default_label);
+            out.extend(kept);
+        } else {
+            out.extend_from_slice(inst);
+        }
+        at += count;
+    }
+    Ok(out)
+}
+
+/// Fits SPIR-V storage buffers whose element type is a `vec3` or a struct with HLSL tight
+/// packing (a `float3` occupies 12 bytes, not WGSL's 16-byte aligned `vec3`, and HLSL aligns
+/// `StructuredBuffer` structs to 4 bytes rather than std430's 8/16-byte vector alignment).
+/// Whenever a runtime-array element type's layout differs from WGSL std430, represent every
+/// vector and nested struct inside it as 4-byte-aligned scalar twin structs, updating runtime
 /// array strides and reconstructing/decomposing values on loads and stores while leaving local
-/// struct/vector types, arithmetic and constant component accesses intact.
+/// struct/vector types, arithmetic, non-rewritten buffers and constant component accesses intact.
 fn pack_storage_vectors(words: &[u32]) -> Result<Vec<u32>> {
     #[derive(Clone)]
     struct PackedStruct {
@@ -1021,14 +1084,70 @@ fn pack_storage_vectors(words: &[u32]) -> Result<Vec<u32>> {
     // Runtime arrays whose element type is rewritten: array_id -> (packed_elem_ty, packed_stride).
     let mut rewritten_arrays: HashMap<u32, (u32, u32)> = HashMap::new();
 
-    #[allow(clippy::too_many_arguments)]
-    fn plan_member(
+    /// Returns `(tight_byte_size, wgsl_align, needs_packing)` if `ty` can be packed tightly to
+    /// 4-byte scalar alignment (32-bit scalars, 2..=4 vectors of them, and non-block structs of
+    /// them). `needs_packing` is true whenever WGSL std430 layout differs from HLSL tight layout
+    /// (contains a `vec3`, any member offset mismatches tight packing or WGSL alignment, or a
+    /// struct's tight size is not a multiple of its WGSL alignment).
+    fn analyze_member(
         ty: u32,
-        offset: u32,
         scalar32: &std::collections::HashSet<u32>,
         vectors: &HashMap<u32, (u32, u32)>,
         structs: &HashMap<u32, Vec<u32>>,
         block_structs: &std::collections::HashSet<u32>,
+        member_offsets: &HashMap<(u32, u32), u32>,
+    ) -> Option<(u32, u32, bool)> {
+        if scalar32.contains(&ty) {
+            return Some((4, 4, false));
+        }
+        if let Some(&(_, count)) = vectors.get(&ty) {
+            let align = if count == 2 { 8 } else { 16 };
+            return Some((count * 4, align, count == 3));
+        }
+        if !block_structs.contains(&ty)
+            && let Some(fields) = structs.get(&ty)
+        {
+            let mut cur = 0u32;
+            let mut max_align = 4u32;
+            let mut needs = false;
+            for (idx, &field_ty) in fields.iter().enumerate() {
+                let (sz, align, child_needs) = analyze_member(
+                    field_ty,
+                    scalar32,
+                    vectors,
+                    structs,
+                    block_structs,
+                    member_offsets,
+                )?;
+                if member_offsets.get(&(ty, idx as u32)).copied() != Some(cur)
+                    || !cur.is_multiple_of(align)
+                {
+                    needs = true;
+                }
+                needs |= child_needs;
+                max_align = max_align.max(align);
+                cur += sz;
+            }
+            if !cur.is_multiple_of(max_align) {
+                needs = true;
+            }
+            return Some((cur, max_align, needs));
+        }
+        None
+    }
+
+    /// Unconditionally packs every `vec2`/`vec3`/`vec4` (and any nested struct containing one or
+    /// having non-tight SPIR-V member offsets) inside a rewritten storage struct into 4-byte
+    /// scalar-aligned twin structs, so WGSL alignment is always 4 and every vector member of a
+    /// rewritten struct has consistent packedness.
+    #[allow(clippy::too_many_arguments)]
+    fn plan_packed(
+        ty: u32,
+        scalar32: &std::collections::HashSet<u32>,
+        vectors: &HashMap<u32, (u32, u32)>,
+        structs: &HashMap<u32, Vec<u32>>,
+        block_structs: &std::collections::HashSet<u32>,
+        member_offsets: &HashMap<(u32, u32), u32>,
         packed_vecs: &mut HashMap<u32, u32>,
         packed_structs: &mut HashMap<u32, PackedStruct>,
         fresh: &mut impl FnMut() -> u32,
@@ -1037,13 +1156,8 @@ fn pack_storage_vectors(words: &[u32]) -> Result<Vec<u32>> {
             return Some((ty, 4, false));
         }
         if let Some(&(_, count)) = vectors.get(&ty) {
-            let size = count * 4;
-            let wgsl_align = if count == 2 { 8 } else { 16 };
-            if count == 3 || offset % wgsl_align != 0 {
-                let p = *packed_vecs.entry(ty).or_insert_with(fresh);
-                return Some((p, size, true));
-            }
-            return Some((ty, size, false));
+            let p = *packed_vecs.entry(ty).or_insert_with(fresh);
+            return Some((p, count * 4, true));
         }
         if !block_structs.contains(&ty)
             && let Some(fields) = structs.get(&ty)
@@ -1054,18 +1168,21 @@ fn pack_storage_vectors(words: &[u32]) -> Result<Vec<u32>> {
             let mut cur = 0u32;
             let mut planned = Vec::with_capacity(fields.len());
             let mut any_changed = false;
-            for &field_ty in fields {
-                let (pt, sz, ch) = plan_member(
+            for (idx, &field_ty) in fields.iter().enumerate() {
+                let (pt, sz, ch) = plan_packed(
                     field_ty,
-                    offset + cur,
                     scalar32,
                     vectors,
                     structs,
                     block_structs,
+                    member_offsets,
                     packed_vecs,
                     packed_structs,
                     fresh,
                 )?;
+                if member_offsets.get(&(ty, idx as u32)).copied() != Some(cur) {
+                    any_changed = true;
+                }
                 planned.push((field_ty, pt, cur, ch));
                 any_changed |= ch;
                 cur += sz;
@@ -1097,64 +1214,32 @@ fn pack_storage_vectors(words: &[u32]) -> Result<Vec<u32>> {
                 .or_insert_with(|| next_id(&mut bound));
             rewritten_arrays.insert(array_id, (p, 12));
         } else if !block_structs.contains(&elem_ty)
-            && let Some(fields) = structs.get(&elem_ty)
+            && structs.contains_key(&elem_ty)
+            && let Some((tight_size, _, struct_needs)) = analyze_member(
+                elem_ty,
+                &scalar32,
+                &vectors,
+                &structs,
+                &block_structs,
+                &member_offsets,
+            )
+            && tight_size > 0
+            && (struct_needs || array_strides.get(&array_id).copied() != Some(tight_size))
         {
-            // Check whether tight HLSL packing needs a packed twin (contains a vec3 or any
-            // member offset / array stride differs from SPIR-V's std430 layout).
-            let mut temp_vecs = packed_vecs.clone();
-            let mut temp_structs = packed_structs.clone();
-            let mut temp_bound = bound;
-            let mut temp_fresh = || next_id(&mut temp_bound);
-            let mut cur = 0u32;
-            let mut planned = Vec::with_capacity(fields.len());
-            let mut any_changed = false;
-            let mut ok = true;
-            for (idx, &field_ty) in fields.iter().enumerate() {
-                let Some((pt, sz, ch)) = plan_member(
-                    field_ty,
-                    cur,
-                    &scalar32,
-                    &vectors,
-                    &structs,
-                    &block_structs,
-                    &mut temp_vecs,
-                    &mut temp_structs,
-                    &mut temp_fresh,
-                ) else {
-                    ok = false;
-                    break;
-                };
-                if member_offsets.get(&(elem_ty, idx as u32)).copied() != Some(cur) {
-                    any_changed = true;
-                }
-                planned.push((field_ty, pt, cur, ch));
-                any_changed |= ch;
-                cur += sz;
-            }
-            if ok && array_strides.get(&array_id).copied() != Some(cur) {
-                any_changed = true;
-            }
-            if ok && any_changed && cur > 0 {
-                // Commit the planned types into our real tables.
-                packed_vecs = temp_vecs;
-                packed_structs = temp_structs;
-                bound = temp_bound;
-                let ps_id = if let Some(existing) = packed_structs.get(&elem_ty) {
-                    existing.id
-                } else {
-                    let id = next_id(&mut bound);
-                    packed_structs.insert(
-                        elem_ty,
-                        PackedStruct {
-                            id,
-                            members: planned,
-                            size: cur,
-                        },
-                    );
-                    id
-                };
-                rewritten_arrays.insert(array_id, (ps_id, cur));
-            }
+            let mut fresh = || next_id(&mut bound);
+            let (packed_elem_ty, size, _) = plan_packed(
+                elem_ty,
+                &scalar32,
+                &vectors,
+                &structs,
+                &block_structs,
+                &member_offsets,
+                &mut packed_vecs,
+                &mut packed_structs,
+                &mut fresh,
+            )
+            .expect("analyze_member already verified packability");
+            rewritten_arrays.insert(array_id, (packed_elem_ty, size));
         }
     }
 
@@ -1648,8 +1733,117 @@ fn runtime_nans(words: &[u32]) -> Result<Vec<u32>> {
     Ok(out)
 }
 
+/// Widens 2- and 3-channel SPIR-V `OpImageWrite` texel values (`vec2`, `vec3`) to 4-channel
+/// vectors by replicating channel `x` (`v.xyxx`, `v.xyzx`), matching Unity 6000.0.71f1's measured
+/// behavior on both OpenGL Core and Vulkan in both fragment and compute programs
+/// (`tests/projects/uavtextures`). Scalar `OpImageWrite` values are already splatted to `v.xxxx`
+/// by naga's SPIR-V frontend, whereas naga's `parse_image_write` otherwise replicates the last
+/// component (`v.xyyy` / `v.xyzz`) for `vec2` and `vec3`.
+fn widen_image_writes(words: &[u32]) -> Result<Vec<u32>> {
+    let mut list = Vec::new();
+    let mut at = 5;
+    while at < words.len() {
+        let count = (words[at] >> 16) as usize;
+        if count == 0 || at + count > words.len() {
+            bail!("malformed SPIR-V");
+        }
+        list.push(&words[at..at + count]);
+        at += count;
+    }
+    // vec2/vec3 type_id -> (scalar_id, count)
+    let mut vec23: HashMap<u32, (u32, u32)> = HashMap::new();
+    // scalar_id -> existing vec4 type_id
+    let mut vec4_for: HashMap<u32, u32> = HashMap::new();
+    // value_id -> vec2/vec3 type_id
+    let mut val_vec23: HashMap<u32, u32> = HashMap::new();
+    let mut any_write = false;
+    for i in &list {
+        let op = i[0] & 0xffff;
+        if op == 23 && i.len() == 4 {
+            match i[3] {
+                2 | 3 => {
+                    vec23.insert(i[1], (i[2], i[3]));
+                }
+                4 => {
+                    vec4_for.insert(i[2], i[1]);
+                }
+                _ => {}
+            }
+            continue;
+        }
+        if op == 99 && i.len() >= 4 {
+            if val_vec23.contains_key(&i[3]) {
+                any_write = true;
+            }
+            continue;
+        }
+        if !matches!(op, 5 | 6 | 19..=40 | 71 | 72 | 332 | 5632 | 5633)
+            && i.len() >= 3
+            && vec23.contains_key(&i[1])
+        {
+            val_vec23.insert(i[2], i[1]);
+        }
+    }
+    if !any_write {
+        return Ok(words.to_vec());
+    }
+    let mut bound = words[3];
+    // Ensure a vec4 type exists for every scalar kind used by a widened OpImageWrite.
+    let mut new_vec4: HashMap<u32, u32> = HashMap::new();
+    for i in &list {
+        if (i[0] & 0xffff) == 99
+            && i.len() >= 4
+            && let Some(&vty) = val_vec23.get(&i[3])
+        {
+            let scalar = vec23[&vty].0;
+            if !vec4_for.contains_key(&scalar) && !new_vec4.contains_key(&scalar) {
+                let id = bound;
+                bound += 1;
+                vec4_for.insert(scalar, id);
+                new_vec4.insert(scalar, id);
+            }
+        }
+    }
+    let mut out = Vec::with_capacity(words.len() + new_vec4.len() * 4 + 16);
+    out.extend_from_slice(&words[..5]);
+    for i in list {
+        let op = i[0] & 0xffff;
+        if (op == 21 || op == 22)
+            && i.len() >= 3
+            && let Some(&v4) = new_vec4.get(&i[1])
+        {
+            out.extend_from_slice(i);
+            out.extend([(4 << 16) | 23, v4, i[1], 4]);
+            continue;
+        }
+        if op == 99
+            && i.len() >= 4
+            && let Some(&vty) = val_vec23.get(&i[3])
+        {
+            let (scalar, count) = vec23[&vty];
+            let v4 = vec4_for[&scalar];
+            let widened = bound;
+            bound += 1;
+            let third = if count == 3 { 2 } else { 0 };
+            // OpVectorShuffle (79): vec4(v.x, v.y, v.x, v.x) or vec4(v.x, v.y, v.z, v.x)
+            out.extend([(9 << 16) | 79, v4, widened, i[3], i[3], 0, 1, third, 0]);
+            out.push(i[0]);
+            out.push(i[1]);
+            out.push(i[2]);
+            out.push(widened);
+            out.extend_from_slice(&i[4..]);
+            continue;
+        }
+        out.extend_from_slice(i);
+    }
+    out[3] = bound;
+    Ok(out)
+}
+
 pub(crate) fn parse(words: &[u32], clip: ClipSpace) -> Result<Module> {
-    let fitted = image_coordinate_vectors(&pack_storage_vectors(words)?)?;
+    let switched = strip_redundant_switch_default_cases(words)?;
+    let widened = widen_image_writes(&switched)?;
+    let fitted = image_coordinate_vectors(&pack_storage_vectors(&widened)?)?;
     let words = runtime_nans(&fitted)?;
     let made_nans = words.len() != fitted.len();
     let bytes: Vec<u8> = words.iter().flat_map(|w| w.to_le_bytes()).collect();
@@ -2099,6 +2293,28 @@ pub(crate) fn fit(
             }
         }
     }
+    // Collect explicit fragment `RWTexture*` registers before auto-assigning unnumbered buffers
+    // so an unnumbered buffer never collides with an explicit `RWTexture* : register(uN)`.
+    let explicit_storage_texture_registers: std::collections::HashSet<u32> = fragment
+        .global_variables
+        .iter()
+        .filter_map(|(_, g)| {
+            if g.space == AddressSpace::Handle
+                && matches!(
+                    fragment.types[g.ty].inner,
+                    TypeInner::Image {
+                        class: naga::ImageClass::Storage { .. },
+                        ..
+                    }
+                )
+            {
+                let name = g.name.as_deref().unwrap_or_default();
+                uav_registers.get(name).copied()
+            } else {
+                None
+            }
+        })
+        .collect();
     // A written buffer without a register takes the next free one after the render targets,
     // as FXC assigns it (measured: with one target, Unity binds the random write target at 1).
     let mut next = fragment_targets(&fragment);
@@ -2110,7 +2326,9 @@ pub(crate) fn fit(
         {
             continue;
         }
-        while buffers.iter().any(|b| b.register == Some(next)) {
+        while buffers.iter().any(|b| b.register == Some(next))
+            || explicit_storage_texture_registers.contains(&next)
+        {
             next += 1;
         }
         buffers[k].register = Some(next);
@@ -2145,7 +2363,6 @@ pub(crate) fn fit(
     }
     let loaded_frag = crate::compute::loaded_images(&fragment);
     let mut storage_textures: Vec<StorageTextureSlot> = Vec::new();
-    let mut widen_alpha: HashMap<Handle<naga::GlobalVariable>, naga::ScalarKind> = HashMap::new();
     let frag_handles: Vec<_> = fragment.global_variables.iter().map(|(h, _)| h).collect();
     for h in frag_handles {
         let g = &fragment.global_variables[h];
@@ -2166,6 +2383,7 @@ pub(crate) fn fit(
             Some(r) => r,
             None => {
                 while buffers.iter().any(|b| b.register == Some(next))
+                    || explicit_storage_texture_registers.contains(&next)
                     || storage_textures.iter().any(|t| t.register == next)
                 {
                     next += 1;
@@ -2180,9 +2398,6 @@ pub(crate) fn fit(
             .find(|(r, _)| *r == register)
             .and_then(|(_, f)| crate::compute::storage_format(f))
             .unwrap_or(format);
-        if storage_format_channels(format) < 4 && storage_format_channels(new_format) == 4 {
-            widen_alpha.insert(h, storage_format_scalar_kind(new_format));
-        }
         let write_only = !loaded_frag.contains(&h);
         let access = if write_only {
             naga::StorageAccess::STORE
@@ -2212,8 +2427,8 @@ pub(crate) fn fit(
             register,
         });
     }
-    if !widen_alpha.is_empty() {
-        widen_storage_image_store_alpha(&mut fragment, &widen_alpha);
+    if !storage_textures.is_empty() {
+        crate::compute::reject_storage_texture_params(&fragment)?;
     }
     let texture_dims: Vec<TextureDim> = keys
         .iter()
@@ -3434,167 +3649,6 @@ fn uniform_blocks(module: &Module) -> impl Iterator<Item = Handle<Type>> + '_ {
         .collect();
     blocks.sort_by_key(|(binding, _)| *binding);
     blocks.into_iter().map(|(_, ty)| ty)
-}
-
-fn storage_format_channels(format: naga::StorageFormat) -> u8 {
-    use naga::StorageFormat as F;
-    match format {
-        F::R8Unorm
-        | F::R8Snorm
-        | F::R8Uint
-        | F::R8Sint
-        | F::R16Unorm
-        | F::R16Snorm
-        | F::R16Uint
-        | F::R16Sint
-        | F::R16Float
-        | F::R32Uint
-        | F::R32Sint
-        | F::R32Float => 1,
-        F::Rg8Unorm
-        | F::Rg8Snorm
-        | F::Rg8Uint
-        | F::Rg8Sint
-        | F::Rg16Unorm
-        | F::Rg16Snorm
-        | F::Rg16Uint
-        | F::Rg16Sint
-        | F::Rg16Float
-        | F::Rg32Uint
-        | F::Rg32Sint
-        | F::Rg32Float => 2,
-        F::Rg11b10Ufloat => 3,
-        _ => 4,
-    }
-}
-
-fn storage_format_scalar_kind(format: naga::StorageFormat) -> naga::ScalarKind {
-    use naga::StorageFormat as F;
-    match format {
-        F::R8Sint
-        | F::Rg8Sint
-        | F::Rgba8Sint
-        | F::R16Sint
-        | F::Rg16Sint
-        | F::Rgba16Sint
-        | F::R32Sint
-        | F::Rg32Sint
-        | F::Rgba32Sint => naga::ScalarKind::Sint,
-        F::R8Uint
-        | F::Rg8Uint
-        | F::Rgba8Uint
-        | F::R16Uint
-        | F::Rg16Uint
-        | F::Rgba16Uint
-        | F::R32Uint
-        | F::Rg32Uint
-        | F::Rgba32Uint
-        | F::Rgb10a2Uint => naga::ScalarKind::Uint,
-        _ => naga::ScalarKind::Float,
-    }
-}
-
-/// When an HLSL 1/2/3-channel `RWTexture*` (e.g. `RWTexture3D<float>`) is specialized to a
-/// 4-channel storage texture format (e.g. `Rgba16Float`), naga's SPIR-V frontend zero-pads the
-/// missing channels in `ImageStore`, whereas D3D11/Vulkan UAV writes fill a missing alpha channel
-/// with 1. Rewrite those `ImageStore` values to `vec4(v.xyz, 1)`.
-fn widen_storage_image_store_alpha(
-    module: &mut Module,
-    targets: &HashMap<Handle<naga::GlobalVariable>, naga::ScalarKind>,
-) {
-    let mut vec4_types: HashMap<naga::ScalarKind, Handle<Type>> = HashMap::new();
-    for &kind in targets.values() {
-        vec4_types.entry(kind).or_insert_with(|| {
-            module.types.insert(
-                Type {
-                    name: None,
-                    inner: TypeInner::Vector {
-                        size: VectorSize::Quad,
-                        scalar: naga::Scalar { kind, width: 4 },
-                    },
-                },
-                Span::UNDEFINED,
-            )
-        });
-    }
-    fn rewrite_block(
-        block: &mut naga::Block,
-        expressions: &mut naga::Arena<Expression>,
-        targets: &HashMap<Handle<naga::GlobalVariable>, naga::ScalarKind>,
-        vec4_types: &HashMap<naga::ScalarKind, Handle<Type>>,
-    ) {
-        let old = std::mem::take(block);
-        for (mut stmt, span) in old.span_into_iter() {
-            match &mut stmt {
-                Statement::Block(b) => rewrite_block(b, expressions, targets, vec4_types),
-                Statement::If { accept, reject, .. } => {
-                    rewrite_block(accept, expressions, targets, vec4_types);
-                    rewrite_block(reject, expressions, targets, vec4_types);
-                }
-                Statement::Switch { cases, .. } => {
-                    for c in cases {
-                        rewrite_block(&mut c.body, expressions, targets, vec4_types);
-                    }
-                }
-                Statement::Loop {
-                    body, continuing, ..
-                } => {
-                    rewrite_block(body, expressions, targets, vec4_types);
-                    rewrite_block(continuing, expressions, targets, vec4_types);
-                }
-                Statement::ImageStore { image, value, .. } => {
-                    if let Expression::GlobalVariable(g) = expressions[*image]
-                        && let Some(&kind) = targets.get(&g)
-                    {
-                        let lit = match kind {
-                            naga::ScalarKind::Sint => Literal::I32(1),
-                            naga::ScalarKind::Uint => Literal::U32(1),
-                            _ => Literal::F32(1.0),
-                        };
-                        let one = expressions.append(Expression::Literal(lit), Span::UNDEFINED);
-                        let xyz = expressions.append(
-                            Expression::Swizzle {
-                                size: VectorSize::Tri,
-                                vector: *value,
-                                pattern: [
-                                    naga::SwizzleComponent::X,
-                                    naga::SwizzleComponent::Y,
-                                    naga::SwizzleComponent::Z,
-                                    naga::SwizzleComponent::X,
-                                ],
-                            },
-                            Span::UNDEFINED,
-                        );
-                        let composed = expressions.append(
-                            Expression::Compose {
-                                ty: vec4_types[&kind],
-                                components: vec![xyz, one],
-                            },
-                            Span::UNDEFINED,
-                        );
-                        block.push(
-                            Statement::Emit(naga::Range::new_from_bounds(xyz, composed)),
-                            span,
-                        );
-                        *value = composed;
-                    }
-                }
-                _ => {}
-            }
-            block.push(stmt, span);
-        }
-    }
-    for (_, f) in module.functions.iter_mut() {
-        rewrite_block(&mut f.body, &mut f.expressions, targets, &vec4_types);
-    }
-    for e in &mut module.entry_points {
-        rewrite_block(
-            &mut e.function.body,
-            &mut e.function.expressions,
-            targets,
-            &vec4_types,
-        );
-    }
 }
 
 /// Binds the uniform blocks and textures to the renderer's slots; returns the blocks' members, at

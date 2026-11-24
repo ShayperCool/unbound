@@ -990,6 +990,12 @@ impl ShaderCompiler {
             );
         }
 
+        let effective_uav_formats: &[(u32, String)] = if fragment_source.contains("RWTexture") {
+            &uav_formats
+        } else {
+            &[]
+        };
+
         let hash = {
             let mut h = cache_key_hasher();
             h.update(b"native-sampler-lod-bias-v1");
@@ -1008,8 +1014,8 @@ impl ShaderCompiler {
             h.update(selected.join(" ").as_bytes());
             h.update(instanced_properties.join(" ").as_bytes());
             h.update(format!("{mesh_instance_stride:?}/{mesh_instance_uniform_scaling}/{mesh_instance_max_count:?}").as_bytes());
-            h.update(&(uav_formats.len() as u64).to_le_bytes());
-            for (reg, fmt) in &uav_formats {
+            h.update(&(effective_uav_formats.len() as u64).to_le_bytes());
+            for (reg, fmt) in effective_uav_formats {
                 h.update(&reg.to_le_bytes());
                 h.update(&(fmt.len() as u64).to_le_bytes());
                 h.update(fmt.as_bytes());
@@ -1042,7 +1048,7 @@ impl ShaderCompiler {
             &vertex_spv,
             &fragment_spv,
             &uav_registers(&fragment_source),
-            &uav_formats,
+            effective_uav_formats,
             fit::ClipSpace::of(self.settings.device.conventions()),
             self.settings.device.named_samplers(),
             self.settings.opengl_shading_language,
@@ -5501,21 +5507,26 @@ void surf (Input IN, inout SurfaceOutput o) { o.Albedo = tex2D(_MainTex, IN.uv_M
         .unwrap();
     }
 
-    /// Fragment programs writing an `RWTexture3D<float> : register(u4)` specialize to a bound
-    /// 4-channel storage texture format (such as `Rgba16Float` in APV `VoxelizeScene.hlsl`) and
-    /// widen the stored alpha channel to 1.0 to match D3D11/Vulkan UAV store expansion.
+    /// Fragment and compute programs writing 1/2/3-channel `RWTexture*` into a 4-channel storage
+    /// format replicate channel `x` into the missing channels (`v.xxxx`, `v.xyxx`, `v.xyzx`),
+    /// matching Unity 6000.0.71f1 (`tests/projects/uavtextures`).
     #[test]
-    fn fragment_rw_texture_specializes_format_and_widens_alpha() {
+    fn fragment_rw_texture_specializes_format_and_widens_channels() {
         let mut compiler = ShaderCompiler::new(Settings::default()).unwrap();
         let program = Program {
             file: PathBuf::from("VoxelizeTest.shader"),
             source: r#"
 #pragma vertex vert
 #pragma fragment frag
-RWTexture3D<float> _Output : register(u4);
+RWTexture3D<float> _Out1 : register(u4);
+RWTexture2D<float2> _Out2 : register(u5);
+RWTexture2D<float3> _Out3 : register(u6);
+float4 _Val;
 float4 vert(float4 p : POSITION) : SV_Position { return p; }
 float4 frag(float4 p : SV_Position) : SV_Target {
-    _Output[uint3(1, 2, 3)] = 1.0;
+    _Out1[uint3(1, 2, 3)] = _Val.x;
+    _Out2[uint2(0, 0)] = _Val.xy;
+    _Out3[uint2(0, 0)] = _Val.xyz;
     return float4(0, 0, 0, 1);
 }
 "#
@@ -5524,27 +5535,232 @@ float4 frag(float4 p : SV_Position) : SV_Target {
             light_mode: None,
         };
         let compiled = compiler
-            .compile_with_uav_formats(&program, &[], true, &[(4, "Rgba16Float".into())])
+            .compile_with_uav_formats(
+                &program,
+                &[],
+                true,
+                &[
+                    (4, "Rgba16Float".into()),
+                    (5, "Rgba16Float".into()),
+                    (6, "Rgba16Float".into()),
+                ],
+            )
             .unwrap();
-        assert_eq!(compiled.storage_textures.len(), 1);
-        let slot = &compiled.storage_textures[0];
-        assert_eq!(slot.name, "_Output");
+        assert_eq!(compiled.storage_textures.len(), 3);
+        let slot = compiled
+            .storage_textures
+            .iter()
+            .find(|s| s.name == "_Out1")
+            .unwrap();
         assert_eq!(slot.dim, TextureDim::D3);
         assert_eq!(slot.format, "Rgba16Float");
         assert!(slot.write_only);
         assert_eq!(slot.register, 4);
         assert!(
-            compiled.fragment.contains("@group(3) @binding(0)")
-                && compiled
-                    .fragment
-                    .contains("texture_storage_3d<rgba16float,write>"),
+            compiled
+                .fragment
+                .contains("texture_storage_3d<rgba16float,write>"),
             "{}",
             compiled.fragment
         );
+        // 2- and 3-channel stores replicate .x (xyxx / xyzx), NOT naga's xyyy / xyzz.
         assert!(
-            compiled.fragment.contains("1f)") || compiled.fragment.contains("1.0)"),
-            "expected widened alpha = 1.0 in textureStore:\n{}",
+            compiled.fragment.contains(".xyxx") && compiled.fragment.contains(".xyzx"),
+            "expected .xyxx and .xyzx channel widening:\n{}",
             compiled.fragment
+        );
+        assert!(
+            !compiled.fragment.contains(".xyyy") && !compiled.fragment.contains(".xyzz"),
+            "unexpected naga last-component widening:\n{}",
+            compiled.fragment
+        );
+
+        let compute_src = r#"
+#pragma kernel CSMain
+RWTexture2D<float2> _C2;
+RWTexture2D<float3> _C3;
+float4 _Val;
+[numthreads(1, 1, 1)]
+void CSMain(uint3 id : SV_DispatchThreadID) {
+    _C2[id.xy] = _Val.xy;
+    _C3[id.xy] = _Val.xyz;
+}
+"#;
+        let cp = crate::compute::ComputeProgram {
+            file: PathBuf::from("WidenCompute.compute"),
+            source: compute_src.into(),
+        };
+        let kernel = compiler
+            .compile_kernel(
+                &cp,
+                "CSMain",
+                &[],
+                &[
+                    ("_C2".into(), "Rgba16Float".into()),
+                    ("_C3".into(), "Rgba16Float".into()),
+                ],
+            )
+            .unwrap();
+        assert!(
+            kernel.wgsl.contains(".xyxx") && kernel.wgsl.contains(".xyzx"),
+            "expected .xyxx and .xyzx in compute WGSL:\n{}",
+            kernel.wgsl
+        );
+    }
+
+    #[test]
+    fn pack_storage_vectors_handles_trailing_padding_mixed_vec4_and_nested_structs() {
+        let mut compiler = ShaderCompiler::new(Settings::default()).unwrap();
+        // 1) struct { float4; float; } -> tight stride 20 must lower vec4 to scalar struct (align 4)
+        //    so WGSL ArrayStride 20 does not fail Disalignment::ArrayStride.
+        // 2) struct { float3; float4 a; float; float4 b; } -> both a and b are packed consistently.
+        // 3) nested struct Inner { float4; float; } inside Outer { Inner; float; }, plus a
+        //    non-rewritten StructuredBuffer<Aligned> sharing vec4 in the same module.
+        let src = r#"
+#pragma kernel CSMain
+struct TrailingPad { float4 a; float b; };
+struct MixedVec4 { float3 p; float4 a; float s; float4 b; };
+struct Inner { float4 v; float k; };
+struct Outer { Inner inner; float tail; };
+struct Aligned { float4 x; };
+StructuredBuffer<TrailingPad> _Trailing;
+StructuredBuffer<MixedVec4> _Mixed;
+StructuredBuffer<Outer> _Nested;
+StructuredBuffer<Aligned> _Aligned;
+RWStructuredBuffer<float> _Out;
+[numthreads(1, 1, 1)]
+void CSMain(uint3 id : SV_DispatchThreadID) {
+    TrailingPad t = _Trailing[id.x];
+    MixedVec4 m = _Mixed[id.x];
+    Outer o = _Nested[id.x];
+    Aligned a = _Aligned[id.x];
+    _Out[id.x] = t.a.w + t.b + m.p.z + m.a.y + m.s + m.b.w
+               + o.inner.v.z + o.inner.k + o.tail + a.x.x;
+}
+"#;
+        let program = crate::compute::ComputeProgram {
+            file: PathBuf::from("PackedStructs.compute"),
+            source: src.into(),
+        };
+        let kernel = compiler
+            .compile_kernel(&program, "CSMain", &[], &[])
+            .unwrap();
+        assert!(!kernel.wgsl.is_empty());
+    }
+
+    #[test]
+    fn switch_default_falling_into_case_zero_preserves_top_branch() {
+        let mut compiler = ShaderCompiler::new(Settings::default()).unwrap();
+        let program = Program {
+            file: PathBuf::from("SwitchDefaultCase0.shader"),
+            source: r#"
+#pragma vertex vert
+#pragma fragment frag
+uint _AxisSwizzle;
+struct VOut { float4 pos : SV_Position; float3 val : TEXCOORD0; };
+VOut vert(float4 p : POSITION) {
+    VOut o;
+    float3 v = p.xyz;
+    switch (_AxisSwizzle) {
+        default:
+        case 0:
+            v = v.zxy;
+            break;
+        case 1:
+            v = v.yzx;
+            break;
+        case 2:
+            v = v.xyz;
+            break;
+    }
+    o.pos = float4(v, 1);
+    o.val = v;
+    return o;
+}
+float4 frag(VOut i) : SV_Target { return float4(i.val, 1); }
+"#
+            .into(),
+            cg: false,
+            light_mode: None,
+        };
+        let compiled = compiler.compile(&program, &[], true).unwrap();
+        // `case 0` must NOT be merged into `case 1` (Naga 30.0.1 OpSwitch bug).
+        assert!(
+            !compiled.vertex.contains("case 0, 1"),
+            "case 0 fell through into case 1:\n{}",
+            compiled.vertex
+        );
+        assert!(
+            compiled.vertex.contains("case 1:") && compiled.vertex.contains("default:"),
+            "expected case 1 and default branches:\n{}",
+            compiled.vertex
+        );
+    }
+
+    #[test]
+    fn fragment_rw_texture_register_reserves_slot_before_unnumbered_buffer() {
+        let mut compiler = ShaderCompiler::new(Settings::default()).unwrap();
+        let program = Program {
+            file: PathBuf::from("UavReserveTest.shader"),
+            source: r#"
+#pragma vertex vert
+#pragma fragment frag
+RWTexture2D<float4> _Tex : register(u1);
+RWStructuredBuffer<uint> _Buf;
+float4 vert(float4 p : POSITION) : SV_Position { return p; }
+float4 frag(float4 p : SV_Position) : SV_Target {
+    _Tex[uint2(0, 0)] = float4(1, 0, 0, 1);
+    _Buf[0] = 42u;
+    return float4(0, 0, 0, 1);
+}
+"#
+            .into(),
+            cg: false,
+            light_mode: None,
+        };
+        let compiled = compiler.compile(&program, &[], true).unwrap();
+        assert_eq!(compiled.storage_textures.len(), 1);
+        assert_eq!(compiled.storage_textures[0].register, 1);
+        let buf = compiled
+            .buffers
+            .iter()
+            .find(|b| b.name == "_Buf")
+            .expect("_Buf slot");
+        assert_eq!(
+            buf.register,
+            Some(2),
+            "unnumbered _Buf must not collide with explicit _Tex at u1"
+        );
+    }
+
+    #[test]
+    fn fragment_rw_texture_passed_to_function_fails_loudly() {
+        let mut module = naga::Module::default();
+        let tex_ty = module.types.insert(
+            naga::Type {
+                name: None,
+                inner: naga::TypeInner::Image {
+                    dim: naga::ImageDimension::D2,
+                    arrayed: false,
+                    class: naga::ImageClass::Storage {
+                        format: naga::StorageFormat::Rgba16Float,
+                        access: naga::StorageAccess::STORE,
+                    },
+                },
+            },
+            naga::Span::UNDEFINED,
+        );
+        let mut func = naga::Function::default();
+        func.arguments.push(naga::FunctionArgument {
+            name: Some("t".into()),
+            ty: tex_ty,
+            binding: None,
+        });
+        module.functions.append(func, naga::Span::UNDEFINED);
+        let err = crate::compute::reject_storage_texture_params(&module).unwrap_err();
+        assert!(
+            format!("{err:#}").contains("RW textures passed to functions are not supported"),
+            "unexpected error: {err:#}"
         );
     }
 }

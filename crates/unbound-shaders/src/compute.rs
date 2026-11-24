@@ -561,19 +561,7 @@ fn fit_kernel(
         next += 1;
     }
     // Image stores through a parameter would need the parameter's type changed too: rare.
-    for f in module.functions.iter().map(|(_, f)| f) {
-        for arg in &f.arguments {
-            if matches!(
-                module.types[arg.ty].inner,
-                TypeInner::Image {
-                    class: ImageClass::Storage { .. },
-                    ..
-                }
-            ) {
-                bail!("RW textures passed to functions are not supported");
-            }
-        }
-    }
+    reject_storage_texture_params(&module)?;
     // A safeguard: the kernel fitting inserts no types after their users today.
     crate::fit::order_types(&mut module);
     let info = naga::valid::Validator::new(
@@ -594,6 +582,25 @@ fn fit_kernel(
         resources,
         keywords: Vec::new(),
     })
+}
+
+/// Rejects `RWTexture*` passed as a function argument (rewriting the storage format/access on
+/// global variables would leave parameter types mismatched). Shared by compute and fragment fitting.
+pub(crate) fn reject_storage_texture_params(module: &naga::Module) -> Result<()> {
+    for f in module.functions.iter().map(|(_, f)| f) {
+        for arg in &f.arguments {
+            if matches!(
+                module.types[arg.ty].inner,
+                TypeInner::Image {
+                    class: ImageClass::Storage { .. },
+                    ..
+                }
+            ) {
+                bail!("RW textures passed to functions are not supported");
+            }
+        }
+    }
+    Ok(())
 }
 
 /// The kernel cache key: every input is length-prefixed, so two different inputs cannot join

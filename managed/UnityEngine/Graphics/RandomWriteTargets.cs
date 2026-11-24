@@ -6,12 +6,11 @@ namespace Unbound.Runtime
 {
     /// <summary>
     /// The random write targets of fragment programs (Graphics.SetRandomWriteTarget), by UAV index.
-    /// Each is a global buffer the renderer binds to the fragment program's written buffer at that
-    /// register, ahead of a buffer of the same name from the draw, the material or the globals
-    /// (measured, tests/projects/cmdbuffers uav.*). A program's buffer without a register is at u1,
-    /// after its one render target. Targets stay set until cleared, across command buffers.
-    /// Render textures are checked and not bound: Unbound's fragment programs cannot write
-    /// textures (such a shader fails to compile, with the reason).
+    /// Each is a global buffer or random-write render texture the renderer binds to the fragment
+    /// program's written buffer or `RWTexture*` at that register, ahead of a buffer of the same
+    /// name from the draw, the material or the globals (measured, tests/projects/cmdbuffers uav.*).
+    /// A program's buffer or `RWTexture*` without a register takes the next free slot after the
+    /// render targets. Targets stay set until cleared, across command buffers.
     /// </summary>
     internal static class RandomWriteTargets
     {

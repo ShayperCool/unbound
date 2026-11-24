@@ -5678,10 +5678,29 @@ impl UnityRenderer {
                 multisampled,
                 uav_key,
             );
-            let cached = self
-                .materials
-                .get(&draw.material)
-                .and_then(|m| m.variants.get(&key).copied());
+            let cached = self.materials.get(&draw.material).and_then(|m| {
+                m.variants.get(&key).copied().or_else(|| {
+                    if uav_key == [None; 8] {
+                        return None;
+                    }
+                    let base = (
+                        pass_index,
+                        self.keyword_set,
+                        linear,
+                        mode,
+                        multisampled,
+                        [None; 8],
+                    );
+                    let v @ (Some(id), false) = m.variants.get(&base).copied()? else {
+                        return None;
+                    };
+                    self.compiled
+                        .program(id)
+                        .storage_textures
+                        .is_empty()
+                        .then_some(v)
+                })
+            });
             let (id, errored) = match cached {
                 Some(v) => v,
                 None => {
