@@ -276,11 +276,15 @@ namespace Unbound.Runtime
             }
         }
 
-        /// <summary>Engine code that runs where Unity runs the system of the given type.</summary>
+        /// <summary>Engine code that runs where Unity runs the system of the given type, after the
+        /// actions already there. Copy-on-write: a registration while the node runs (a system
+        /// first used inside another's action) leaves the list it enumerates unchanged, and the
+        /// new action runs from the node's next run.</summary>
         internal static void Register(Type system, Action action)
         {
-            if (!s_Engine.TryGetValue(system, out var list)) s_Engine[system] = list = new List<Action>();
-            list.Add(action);
+            var next = s_Engine.TryGetValue(system, out var list) ? new List<Action>(list) : new List<Action>();
+            next.Add(action);
+            s_Engine[system] = next;
         }
 
         /// <summary>The engine actions registered at the system of the given type (for tests).</summary>
@@ -293,14 +297,6 @@ namespace Unbound.Runtime
             // Keep any node invocation already enumerating its old list unchanged.
             var next = new List<Action> { action };
             if (s_Engine.TryGetValue(system, out var list)) next.AddRange(list);
-            s_Engine[system] = next;
-        }
-
-        /// <summary>Appends without changing a list that a current node invocation is enumerating.</summary>
-        internal static void RegisterLast(Type system, Action action)
-        {
-            var next = s_Engine.TryGetValue(system, out var list) ? new List<Action>(list) : new List<Action>();
-            next.Add(action);
             s_Engine[system] = next;
         }
 
