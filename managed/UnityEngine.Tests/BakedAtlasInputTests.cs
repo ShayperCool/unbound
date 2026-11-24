@@ -292,8 +292,8 @@ namespace UnityEngine.Tests
                 Assert.Single(BakedAtlas.Lights(cookieFile, cookieFile.Path));
                 Assert.Contains(capture.Logs, l => l.StartsWith("Warning: ") && l.Contains("'Sun' has a cookie"));
 
-                // Lights whose intensity multiplies their linear colour are said once for the
-                // scene and none of them is of the bake.
+                // Non-directional lights whose intensity multiplies their linear colour are said
+                // once for the scene and left out; directional lights are baked with linear-intensity colour.
                 capture.Logs.Clear();
                 var linearFile = new LoadedFile { Path = "Assets/LitLinear.unity", Guid = "30000000000000000000000000000000" };
                 linearFile.Objects[1] = spot;
@@ -303,10 +303,21 @@ namespace UnityEngine.Tests
                 {
                     UnityEngine.Rendering.GraphicsSettings.lightsUseLinearIntensity = true;
                     Assert.Empty(BakedAtlas.Lights(linearFile, linearFile.Path));
+                    Assert.Single(capture.Logs, l => l.Contains("lightsUseLinearIntensity"));
+                    Assert.DoesNotContain(capture.Logs, l => l.Contains("soft baked shadows"));
+
+                    capture.Logs.Clear();
+                    var linearSunFile = new LoadedFile { Path = "Assets/LitLinearSun.unity", Guid = "31000000000000000000000000000000" };
+                    sun.cookie = null;
+                    linearSunFile.Objects[1] = sun;
+                    var linearLights = System.Text.Json.JsonDocument.Parse(System.Text.Json.JsonSerializer.Serialize(BakedAtlas.Lights(linearSunFile, linearSunFile.Path))).RootElement;
+                    Assert.Equal(1, linearLights.GetArrayLength());
+                    Assert.DoesNotContain(capture.Logs, l => l.Contains("lightsUseLinearIntensity"));
+                    // Linear intensity multiplies linear color directly: 1^2.2 * 2 = 2, 0.5^2.2 * 2 = 0.42809.
+                    Assert.Equal(2f, Channel(linearLights[0], "color", 0), 4);
+                    Assert.Equal(0.42809f, Channel(linearLights[0], "color", 1), 4);
                 }
                 finally { UnityEngine.Rendering.GraphicsSettings.lightsUseLinearIntensity = before; }
-                Assert.Single(capture.Logs, l => l.Contains("lightsUseLinearIntensity"));
-                Assert.DoesNotContain(capture.Logs, l => l.Contains("soft baked shadows"));
             }
             finally
             {

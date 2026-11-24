@@ -306,7 +306,8 @@ namespace UnityEngine
                 ? "directional lightmaps in the Shadowmask or Subtractive Lighting Mode are not measured"
             : folder == null ? "an untitled scene's is not measured"
             : !Compat.BakeFilesMeasured ? $"of Unity {Application.unityVersion} it is not measured (its release family)"
-            : renderPipeline ? "with a render pipeline asset it is not measured"
+            : renderPipeline && (!settings.bakedGI || settings.directionalityMode != LightmapsMode.NonDirectional || settings.mixedBakeMode != MixedLightingMode.IndirectOnly)
+                ? "with a render pipeline asset only non-directional Baked Indirect baked GI is measured"
             : !environmentMade ? "this bake did not make all of the environment lighting (said)"
             : !(editable ?? UnityEditor.AssetDatabase.Editable)(folder) ? "the scene is not in the project's own assets"
             : settings.bakedGI && !lightmapsMade ? "this bake did not make all of its lightmaps' light (said)"
@@ -640,10 +641,11 @@ namespace UnityEngine
                 }
                 // Adaptive Probe Volumes (a render pipeline's ProbeVolume components, active and
                 // enabled, where the pipeline has them in place of light probe groups:
-                // SupportedRenderingFeatures.overridesLightProbeSystem): the Editor's bake writes
-                // their Baking Set's cell data. (A pipeline says so when it first renders: a bake
-                // on its first scene's load comes before and does not say it.)
-                if (!volumes && (settings == null || settings.bakedGI) && Rendering.SupportedRenderingFeatures.active.overridesLightProbeSystem
+                // SupportedRenderingFeatures.overridesLightProbeSystem): a script bake runs the
+                // pipeline's additional bake delegate (Lightmapping.AdditionalBake) when measured,
+                // which bakes their Baking Set's cell data; a bake on scene load does not.
+                if (!volumes && (what != ScriptBake || !Compat.LightmappingHooksMeasured)
+                    && (settings == null || settings.bakedGI) && Rendering.SupportedRenderingFeatures.active.overridesLightProbeSystem
                     && obj is MonoBehaviour behaviour && behaviour != null && behaviour.isActiveAndEnabled
                     && behaviour.GetType().FullName == AdaptiveProbeVolumeType)
                 {

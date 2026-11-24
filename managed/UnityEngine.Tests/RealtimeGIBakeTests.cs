@@ -159,8 +159,8 @@ namespace Unbound.Tests
                 var file = new LoadedFile { Path = "Assets/Volumes.unity" };
                 var volume = made.AddComponent<UnityEngine.Rendering.ProbeVolume>();
                 file.Objects[1] = volume;
-                List<string> Said(LightingSettings settings) =>
-                    Logged(() => RealtimeGI.NoteBakeParts(file, settings, RealtimeGI.ScriptBake)).FindAll(l => l.Contains("Adaptive Probe Volumes"));
+                List<string> Said(LightingSettings settings, string what = RealtimeGI.BakeOnLoad) =>
+                    Logged(() => RealtimeGI.NoteBakeParts(file, settings, what)).FindAll(l => l.Contains("Adaptive Probe Volumes"));
                 // A pipeline without them (light probe groups): nothing of them is baked.
                 SupportedRenderingFeatures.active = new SupportedRenderingFeatures { overridesLightProbeSystem = false };
                 Assert.Empty(Said(new LightingSettings { bakedGI = true }));
@@ -174,15 +174,19 @@ namespace Unbound.Tests
                 made.SetActive(false);
                 Assert.Empty(Said(new LightingSettings { bakedGI = true }));
                 made.SetActive(true);
-                // With them, and baked lighting on (a scene without Lighting Settings has it on):
-                // said, once for two bakes.
+                // On scene load, APVs are not baked: said once for two bakes.
                 Assert.Single(Said(null));
                 var settings = new LightingSettings { bakedGI = true };
                 Assert.Single(Logged(() =>
                 {
-                    RealtimeGI.NoteBakeParts(file, settings, RealtimeGI.ScriptBake);
-                    RealtimeGI.NoteBakeParts(file, settings, RealtimeGI.ScriptBake);
+                    RealtimeGI.NoteBakeParts(file, settings, RealtimeGI.BakeOnLoad);
+                    RealtimeGI.NoteBakeParts(file, settings, RealtimeGI.BakeOnLoad);
                 }), l => l.Contains("Adaptive Probe Volumes"));
+                // A script bake runs AdditionalBake on measured releases, so no warning; unmeasured releases warn.
+                using (UnityEngine.Tests.TestRelease.Pin(UnityEngine.Tests.TestRelease.Measured))
+                    Assert.Empty(Said(settings, RealtimeGI.ScriptBake));
+                using (UnityEngine.Tests.TestRelease.Pin(UnityEngine.Tests.TestRelease.Unmeasured))
+                    Assert.Single(Said(settings, RealtimeGI.ScriptBake));
             }
             finally
             {

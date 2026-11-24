@@ -285,7 +285,20 @@ namespace UnityEngine.Tests
                     // an untitled scene, a scene of a package the project does not hold: not written.
                     Assert.Contains("did not make", Unwritten(environment, "Assets/Scenes/Lit", false));
                     Assert.Contains("untitled", Unwritten(environment, null, true));
-                    // A render pipeline asset's bake (made as the built-in pipeline's): not measured.
+                    // A render pipeline asset's bake is measured for non-directional Baked Indirect
+                    // baked GI (tests/projects/apvbake); other render pipeline modes stay unmeasured.
+                    environment.lightmapCompression = LightmapCompression.None;
+                    environment.bakedGI = true;
+                    environment.directionalityMode = LightmapsMode.NonDirectional;
+                    environment.mixedBakeMode = MixedLightingMode.IndirectOnly;
+                    Assert.Null(Unwritten(environment, "Assets/Scenes/Lit", true, pipeline: true, lightmaps: true));
+                    environment.directionalityMode = LightmapsMode.CombinedDirectional;
+                    Assert.Contains("render pipeline", Unwritten(environment, "Assets/Scenes/Lit", true, pipeline: true, lightmaps: true));
+                    environment.directionalityMode = LightmapsMode.NonDirectional;
+                    environment.mixedBakeMode = MixedLightingMode.Shadowmask;
+                    Assert.Contains("render pipeline", Unwritten(environment, "Assets/Scenes/Lit", true, pipeline: true, lightmaps: true));
+                    environment.mixedBakeMode = MixedLightingMode.IndirectOnly;
+                    environment.bakedGI = false;
                     Assert.Contains("render pipeline", Unwritten(environment, "Assets/Scenes/Lit", true, pipeline: true));
                     Assert.Contains("own assets", Unwritten(environment, "Packages/com.unity.render-pipelines.core/Samples/Lit", true));
                 }

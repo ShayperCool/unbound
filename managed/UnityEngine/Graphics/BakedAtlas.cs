@@ -497,9 +497,9 @@ namespace UnityEngine
                     Approximated("light-type:" + path + pair.Key, $"{path}: '{light.name}' is a {light.type} light, which Unbound's bake (Lightmapping.Bake) does not bake yet.");
                     continue;
                 }
-                if (UnityEngine.Rendering.GraphicsSettings.lightsUseLinearIntensity)
+                if (UnityEngine.Rendering.GraphicsSettings.lightsUseLinearIntensity && kind != 0)
                 {
-                    Approximated("light-linear:" + path, $"{path}: lights whose intensity multiplies their linear colour (GraphicsSettings.lightsUseLinearIntensity) are not baked by Unbound's bake (Lightmapping.Bake) yet.");
+                    Approximated("light-linear:" + path, $"{path}: non-directional lights whose intensity multiplies their linear colour (GraphicsSettings.lightsUseLinearIntensity) are not baked by Unbound's bake (Lightmapping.Bake) yet.");
                     continue;
                 }
                 if (light.cookie != null)
