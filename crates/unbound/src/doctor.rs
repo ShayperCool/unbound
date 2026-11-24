@@ -324,6 +324,9 @@ pub fn doctor(args: &ProjectArgs, all: bool, as_json: bool) -> Result<()> {
     let fields_seconds = fields_start.elapsed().as_secs_f64();
     let settings_start = Instant::now();
     let settings_coverage = fields::settings_report(&project, &runtime, &args.target)?;
+    let shaders_start = Instant::now();
+    let (shader_device, shader_substitutions) = shader_substitutions(&project)?;
+    let shaders_seconds = shaders_start.elapsed().as_secs_f64();
     if as_json {
         let classes: Vec<_> = coverage
             .classes
@@ -336,7 +339,7 @@ pub fn doctor(args: &ProjectArgs, all: bool, as_json: bool) -> Result<()> {
         let report = json!({
             "release": release,
             "target": args.target,
-            "analysisSeconds": {"project": project_seconds, "database": database_seconds, "inventory": inventory_seconds, "messages": message_seconds, "serializedFields": fields_seconds, "settings": settings_start.elapsed().as_secs_f64(), "total": start.elapsed().as_secs_f64()},
+            "analysisSeconds": {"project": project_seconds, "database": database_seconds, "inventory": inventory_seconds, "messages": message_seconds, "serializedFields": fields_seconds, "settings": settings_start.elapsed().as_secs_f64() - shaders_seconds, "shaders": shaders_seconds, "total": start.elapsed().as_secs_f64()},
             "hasTable": coverage.has_table,
             "classes": classes,
             "realtimeGI": field_coverage.realtime_gi,
@@ -345,6 +348,7 @@ pub fn doctor(args: &ProjectArgs, all: bool, as_json: bool) -> Result<()> {
             "projectSettingsFields": settings_coverage.project_settings_fields,
             "unreadInRelease": coverage.unread_in_release,
             "renderingLimitations": RENDERING_LIMITATIONS,
+            "shaderSubstitutions": {"device": shader_device.name(), "shaders": shader_substitutions},
             "audioLimitations": AUDIO_LIMITATIONS,
             "playModeSpriteAtlases": play_mode_atlases.as_ref().map(|a| json!({"mode": a.mode, "atlases": a.paths})),
             "unsupportedMessages": messages.messages,
@@ -427,6 +431,13 @@ pub fn doctor(args: &ProjectArgs, all: bool, as_json: bool) -> Result<()> {
     for limitation in RENDERING_LIMITATIONS {
         println!("  {limitation}");
     }
+    println!(
+        "\n{} shaders draw another SubShader than the Unity Editor on {shader_device}:",
+        shader_substitutions.len()
+    );
+    for substitution in &shader_substitutions {
+        println!("  {substitution}");
+    }
     if let Some(atlases) = &play_mode_atlases {
         println!("\nSprite atlases:\n  {}", atlases.doctor_message());
     }
@@ -450,6 +461,25 @@ pub fn doctor(args: &ProjectArgs, all: bool, as_json: bool) -> Result<()> {
         );
     }
     Ok(())
+}
+
+/// The project's shaders (its Assets, packages and generated shaders) whose SubShader the
+/// renderer substitutes ([`unbound_app::shaderlab::ShaderLab::substitution`]) on the graphics
+/// device a run of the project starts (the OS's Editor's choice from the project's API list).
+fn shader_substitutions(
+    project: &Project,
+) -> Result<(unbound_compat::GraphicsDevice, Vec<String>)> {
+    let device = unbound_compat::select_device(
+        &project.settings.device_request(None),
+        unbound_compat::HostOs::current(),
+        |_| true,
+    )
+    .map_err(anyhow::Error::msg)?;
+    let mut roots = vec![project.assets.clone()];
+    roots.extend(project.packages.iter().map(|p| p.root.clone()));
+    roots.push(unbound_app::shaderlab::generated_shaders(&project.root));
+    let index = unbound_app::shaderlab::ShaderIndex::scan(&roots);
+    Ok((device, index.substitutions(device)))
 }
 
 #[cfg(test)]

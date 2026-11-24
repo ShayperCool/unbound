@@ -764,7 +764,7 @@ impl State {
         for sub in &lab.subshaders {
             let mut passes = Vec::new();
             let mut surface_done = false;
-            let mut restricted = !sub.dropped.is_empty() || sub.uses_unsupported_stage;
+            let mut restricted = !sub.dropped.is_empty() || sub.uses_unsupported_stage();
             let mut kept = Vec::new();
             for pass in &sub.passes {
                 match &pass.use_pass {

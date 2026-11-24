@@ -474,6 +474,36 @@ pub struct PassProgram {
     pub surface: bool,
 }
 
+/// A program stage beside vertex and fragment that Unbound's renderer does not run.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum ProgramStage {
+    /// `#pragma geometry` (Unity adds `#pragma require geometry`).
+    Geometry,
+    /// `#pragma hull` (Unity adds `#pragma require tessellation`).
+    Hull,
+    /// `#pragma domain` (Unity adds `#pragma require tessellation`).
+    Domain,
+}
+
+impl ProgramStage {
+    /// The pragma that declares it.
+    pub fn pragma(self) -> &'static str {
+        match self {
+            Self::Geometry => "geometry",
+            Self::Hull => "hull",
+            Self::Domain => "domain",
+        }
+    }
+
+    /// Whether the Editor's device runs the stage (None: not measured).
+    pub fn editor_runs(self, device: unbound_compat::GraphicsDevice) -> Option<bool> {
+        match self {
+            Self::Geometry => Some(device.editor_runs_geometry_stages()),
+            Self::Hull | Self::Domain => device.editor_runs_tessellation_stages(),
+        }
+    }
+}
+
 /// How a pass takes part in built-in forward rendering, by its `LightMode` tag.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum LightMode {
@@ -531,28 +561,35 @@ impl PassInfo {
         })
     }
 
-    /// Whether the pass declares a geometry or tessellation stage (`#pragma geometry`,
-    /// `#pragma hull`, `#pragma domain`), which this renderer does not support; a SubShader
-    /// containing such a pass is skipped in favour of a fallback SubShader when one exists.
-    pub fn uses_unsupported_stage(&self) -> bool {
+    /// The geometry and tessellation stages the pass's program declares (`#pragma geometry`,
+    /// `#pragma hull`, `#pragma domain`), in order of their first pragma: stages Unbound's
+    /// renderer does not run.
+    pub fn unsupported_stages(&self) -> Vec<ProgramStage> {
+        let mut stages = Vec::new();
         let Some(program) = &self.program else {
-            return false;
+            return stages;
         };
-        program.code.lines().any(|line| {
+        for line in program.code.lines() {
             let Some(rest) = line.trim_start().strip_prefix('#') else {
-                return false;
+                continue;
             };
             let Some(rest) = rest.trim_start().strip_prefix("pragma") else {
-                return false;
+                continue;
             };
             if !rest.starts_with(char::is_whitespace) {
-                return false;
+                continue;
             }
-            matches!(
-                rest.split_whitespace().next(),
-                Some("geometry" | "hull" | "domain")
-            )
-        })
+            let stage = match rest.split_whitespace().next() {
+                Some("geometry") => ProgramStage::Geometry,
+                Some("hull") => ProgramStage::Hull,
+                Some("domain") => ProgramStage::Domain,
+                _ => continue,
+            };
+            if !stages.contains(&stage) {
+                stages.push(stage);
+            }
+        }
+        stages
     }
 
     pub fn light_mode(&self) -> LightMode {
@@ -686,12 +723,7 @@ impl ShaderLab {
     pub fn select_with(&mut self, pipeline: &str, selection: &Selection) {
         // The screen-space shadow collector's SubShaders, one per filter (`ShadowmapFilter`), are
         // all available, as passes in order: the engine picks hard or soft by pass.
-        if !self.subshaders.is_empty()
-            && self
-                .subshaders
-                .iter()
-                .all(|sub| sub.tags.contains_key("ShadowmapFilter"))
-        {
+        if self.shadow_collector() {
             self.has_subshader = true;
             self.tags = self.subshaders[0].tags.clone();
             self.passes = self
@@ -701,31 +733,9 @@ impl ShaderLab {
                 .collect();
             return;
         }
-        let matches = |sub: &&SubShader| {
-            let runs = runs_under(sub.tags.get("RenderPipeline").map(String::as_str), pipeline);
-            let vertex_lit = !selection.vertex_lit
-                || sub
-                    .passes
-                    .iter()
-                    .any(|p| matches!(p.light_mode(), LightMode::Vertex | LightMode::Always));
-            runs && vertex_lit
-                && !sub.unsupported
-                && selection.max_lod.is_none_or(|max| sub.lod <= max)
-                && selection
-                    .tag
-                    .as_ref()
-                    .is_none_or(|(key, value)| sub.tags.get(key).is_some_and(|v| v == value))
-        };
-        // Prefer a matching SubShader whose passes use only supported stages (vertex/fragment),
-        // falling back to a matching SubShader with geometry/tessellation passes when no fallback
-        // SubShader exists so working sibling passes still draw and unsupported passes fail loudly.
-        let found = self
-            .subshaders
-            .iter()
-            .find(|sub| matches(sub) && !sub.uses_unsupported_stage)
-            .or_else(|| self.subshaders.iter().find(matches));
-        match found {
-            Some(sub) => {
+        match self.renderer_pick(pipeline, selection) {
+            Some(i) => {
+                let sub = &self.subshaders[i];
                 self.has_subshader = true;
                 self.tags = sub.tags.clone();
                 self.passes = sub.passes.clone();
@@ -736,6 +746,97 @@ impl ShaderLab {
                 self.passes = Vec::new();
             }
         }
+    }
+
+    /// The screen-space shadow collector: every SubShader is one filter (`ShadowmapFilter`).
+    fn shadow_collector(&self) -> bool {
+        !self.subshaders.is_empty()
+            && self
+                .subshaders
+                .iter()
+                .all(|sub| sub.tags.contains_key("ShadowmapFilter"))
+    }
+
+    /// Whether a SubShader is one the selection may pick, whatever its stages.
+    fn matches(&self, sub: &SubShader, pipeline: &str, selection: &Selection) -> bool {
+        let runs = runs_under(sub.tags.get("RenderPipeline").map(String::as_str), pipeline);
+        let vertex_lit = !selection.vertex_lit
+            || sub
+                .passes
+                .iter()
+                .any(|p| matches!(p.light_mode(), LightMode::Vertex | LightMode::Always));
+        runs && vertex_lit
+            && !sub.unsupported
+            && selection.max_lod.is_none_or(|max| sub.lod <= max)
+            && selection
+                .tag
+                .as_ref()
+                .is_none_or(|(key, value)| sub.tags.get(key).is_some_and(|v| v == value))
+    }
+
+    /// The SubShader the renderer draws: the first matching one whose passes use only the stages
+    /// it runs (vertex/fragment), else the first matching one (its working passes still draw and
+    /// its geometry/tessellation passes fail loudly when compiled, rather than silently taking
+    /// the Fallback).
+    fn renderer_pick(&self, pipeline: &str, selection: &Selection) -> Option<usize> {
+        let matching = || {
+            self.subshaders
+                .iter()
+                .enumerate()
+                .filter(|(_, sub)| self.matches(sub, pipeline, selection))
+        };
+        matching()
+            .find(|(_, sub)| !sub.uses_unsupported_stage())
+            .or_else(|| matching().next())
+            .map(|(i, _)| i)
+    }
+
+    /// Where the renderer's SubShader ([`ShaderLab::select_with`]) is not the one the Editor's
+    /// `device` draws, or where that is not measured: the Editor draws the first matching
+    /// SubShader its device runs (Unity adds `#pragma require geometry` for a geometry stage and
+    /// `tessellation` for hull/domain ones and runs a program only where the device supports what
+    /// it requires; with none, the Fallback), while the renderer passes over SubShaders with
+    /// stages it does not run. None where both pick the same.
+    pub fn substitution(
+        &self,
+        pipeline: &str,
+        selection: &Selection,
+        device: unbound_compat::GraphicsDevice,
+    ) -> Option<Substitution> {
+        if self.shadow_collector() {
+            return None;
+        }
+        let drawn = self.renderer_pick(pipeline, selection);
+        for (i, sub) in self.subshaders.iter().enumerate() {
+            if !self.matches(sub, pipeline, selection) {
+                continue;
+            }
+            let runs = sub.editor_runs(device);
+            if runs == Some(false) {
+                continue;
+            }
+            // The Editor's pick (if measured).
+            if Some(i) == drawn {
+                return None;
+            }
+            return Some(Substitution {
+                drawn,
+                editor: Some(i),
+                subshader: i,
+                stage: sub.deciding_stage(device)?,
+                unmeasured: runs.is_none(),
+            });
+        }
+        // The Editor's device runs no matching SubShader: it takes the Fallback, where the
+        // renderer draws one with a stage the device does not run.
+        let i = drawn?;
+        Some(Substitution {
+            drawn,
+            editor: None,
+            subshader: i,
+            stage: self.subshaders[i].deciding_stage(device)?,
+            unmeasured: false,
+        })
     }
 
     /// The first pass any SubShader declares by this name (compared case-insensitively), one the
@@ -1031,9 +1132,96 @@ pub struct SubShader {
     /// Every pass it has is one the device does not run, so it is not chosen (Unbound's
     /// reading: unmeasured, where only a dropped pass among others is).
     pub unsupported: bool,
-    /// At least one kept pass declares a geometry or tessellation stage (`#pragma geometry`,
-    /// `hull`, or `domain`): skipped only when another matching SubShader runs without them.
-    pub uses_unsupported_stage: bool,
+    /// The geometry and tessellation stages its kept passes declare ([`PassInfo::
+    /// unsupported_stages`]), in order: the renderer passes it over when another matching
+    /// SubShader runs without them ([`ShaderLab::substitution`] says when that is not the
+    /// Editor's pick).
+    pub unsupported_stages: Vec<ProgramStage>,
+}
+
+impl SubShader {
+    pub fn uses_unsupported_stage(&self) -> bool {
+        !self.unsupported_stages.is_empty()
+    }
+
+    /// Whether the Editor's device runs it as far as its stages go: false when it does not run
+    /// one of them, None when that is not measured for one.
+    pub fn editor_runs(&self, device: unbound_compat::GraphicsDevice) -> Option<bool> {
+        let mut runs = Some(true);
+        for stage in &self.unsupported_stages {
+            match stage.editor_runs(device) {
+                Some(false) => return Some(false),
+                None => runs = None,
+                Some(true) => {}
+            }
+        }
+        runs
+    }
+
+    /// The first of its stages the Editor's device does not run, else the first not measured,
+    /// else the first.
+    fn deciding_stage(&self, device: unbound_compat::GraphicsDevice) -> Option<ProgramStage> {
+        let stages = &self.unsupported_stages;
+        stages
+            .iter()
+            .find(|s| s.editor_runs(device) == Some(false))
+            .or_else(|| stages.iter().find(|s| s.editor_runs(device).is_none()))
+            .or_else(|| stages.first())
+            .copied()
+    }
+}
+
+/// A SubShader pick of the renderer that differs from the Editor's device's, or whose agreement
+/// is not measured ([`ShaderLab::substitution`]).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Substitution {
+    /// The SubShader the renderer draws (None: none).
+    pub drawn: Option<usize>,
+    /// The SubShader the Editor's device draws (None: none of the shader's own, so its
+    /// Fallback), when known.
+    pub editor: Option<usize>,
+    /// The SubShader whose stage decides the difference and that stage.
+    pub subshader: usize,
+    pub stage: ProgramStage,
+    /// Whether the Editor's device runs that stage is not measured: `editor` is the pick if it
+    /// does.
+    pub unmeasured: bool,
+}
+
+impl Substitution {
+    /// The warning the renderer gives once per shader.
+    pub fn message(
+        &self,
+        shader: &str,
+        pipeline: &str,
+        device: unbound_compat::GraphicsDevice,
+    ) -> String {
+        let pick = |i: Option<usize>| match i {
+            Some(i) => format!("SubShader {i}"),
+            None => "its Fallback".to_string(),
+        };
+        let under = if pipeline.is_empty() {
+            "the built-in render pipeline".to_string()
+        } else {
+            format!("render pipeline `{pipeline}`")
+        };
+        let stage = self.stage.pragma();
+        let editor = if self.unmeasured {
+            format!(
+                "whether the Unity Editor on {device} runs its {stage} stage is not measured (if \
+                 it does, it draws SubShader {})",
+                self.subshader
+            )
+        } else {
+            format!("the Unity Editor on {device} draws {}", pick(self.editor))
+        };
+        format!(
+            "shader `{shader}` under {under}: SubShader {} has a {stage} stage (`#pragma {stage}`), \
+             which Unbound's renderer does not run; Unbound draws {} where {editor}",
+            self.subshader,
+            pick(self.drawn),
+        )
+    }
 }
 
 impl Parser<'_> {
@@ -1307,7 +1495,7 @@ impl Parser<'_> {
             dropped: Vec::new(),
             declared: Vec::new(),
             unsupported: false,
-            uses_unsupported_stage: false,
+            unsupported_stages: Vec::new(),
         };
         if self.next() != Some(Token::Open) {
             return sub;
@@ -1427,7 +1615,11 @@ impl Parser<'_> {
             .cloned()
             .partition(|pass| pass.runs_on(self.renderer));
         sub.unsupported = !sub.declared.is_empty() && sub.passes.is_empty();
-        sub.uses_unsupported_stage = sub.passes.iter().any(PassInfo::uses_unsupported_stage);
+        for stage in sub.passes.iter().flat_map(PassInfo::unsupported_stages) {
+            if !sub.unsupported_stages.contains(&stage) {
+                sub.unsupported_stages.push(stage);
+            }
+        }
         sub
     }
 
@@ -1751,6 +1943,24 @@ pub struct ShaderIndex {
     live: Vec<(PathBuf, Option<std::time::SystemTime>)>,
 }
 
+/// The substitution warnings given so far: each once per process (a shader is loaded again for
+/// every pipeline change, `UsePass` and selection).
+static SUBSTITUTIONS_WARNED: std::sync::Mutex<std::collections::BTreeSet<String>> =
+    std::sync::Mutex::new(std::collections::BTreeSet::new());
+
+/// Warns of a SubShader substitution unless the same was warned before. Returns whether it
+/// warned.
+fn warn_substitution_once(message: &str) -> bool {
+    let mut warned = SUBSTITUTIONS_WARNED
+        .lock()
+        .unwrap_or_else(std::sync::PoisonError::into_inner);
+    if !warned.insert(message.to_string()) {
+        return false;
+    }
+    tracing::warn!("{message}");
+    true
+}
+
 /// The folder of Unbound's project directory where the managed side writes the ShaderLab source
 /// importers generate (`ShaderUtil.CreateShaderAsset`).
 const GENERATED_SHADERS: &str = "GeneratedShaders";
@@ -1911,7 +2121,53 @@ impl ShaderIndex {
             lab.name = base.to_string();
         }
         lab.select_with(&self.pipeline, &selection);
+        let device = unbound_runtime::graphics_device::get();
+        if let Some(substitution) = lab.substitution(&self.pipeline, &selection, device) {
+            warn_substitution_once(&substitution.message(&lab.name, &self.pipeline, device));
+        }
         Some(lab)
+    }
+
+    /// Every SubShader substitution of the indexed shaders ([`ShaderLab::substitution`]) on
+    /// `device`, under the built-in pipeline and each pipeline a SubShader is tagged for: one
+    /// warning text each, sorted (what `unbound doctor` lists).
+    pub fn substitutions(&self, device: unbound_compat::GraphicsDevice) -> Vec<String> {
+        let mut paths: Vec<&PathBuf> = self.files.values().collect();
+        paths.sort();
+        paths.dedup();
+        let mut found = std::collections::BTreeSet::new();
+        for path in paths {
+            let Ok(bytes) = std::fs::read(path) else {
+                continue;
+            };
+            let text = String::from_utf8_lossy(&bytes);
+            let Some(lab) = ShaderLab::parse_file_for(&text, path, device.pragma_renderer()) else {
+                continue;
+            };
+            if lab.subshaders.iter().all(|s| !s.uses_unsupported_stage()) {
+                continue;
+            }
+            let mut pipelines = vec![String::new()];
+            for sub in &lab.subshaders {
+                if let Some(tag) = sub.tags.get("RenderPipeline") {
+                    for part in tag.split(',').filter(|p| !p.is_empty()) {
+                        let name = PIPELINE_TAGS
+                            .iter()
+                            .find(|t| t.eq_ignore_ascii_case(part))
+                            .map_or(part, |t| t);
+                        if !pipelines.iter().any(|p| p == name) {
+                            pipelines.push(name.to_string());
+                        }
+                    }
+                }
+            }
+            for pipeline in &pipelines {
+                if let Some(s) = lab.substitution(pipeline, &Selection::default(), device) {
+                    found.insert(s.message(&lab.name, pipeline, device));
+                }
+            }
+        }
+        found.into_iter().collect()
     }
 
     /// The active render pipeline's tag. Returns whether it changed (shaders then select their
@@ -2146,8 +2402,8 @@ mod tests {
             Pass { Name \"MeshFallback\" HLSLPROGRAM\n#pragma vertex v\n#pragma fragment f\nENDHLSL } } }";
         let lab = ShaderLab::parse(geom).unwrap();
         assert!(!lab.subshaders[0].unsupported);
-        assert!(lab.subshaders[0].uses_unsupported_stage);
-        assert!(!lab.subshaders[1].uses_unsupported_stage);
+        assert!(lab.subshaders[0].uses_unsupported_stage());
+        assert!(!lab.subshaders[1].uses_unsupported_stage());
         assert_eq!(names(&lab), vec!["Terrain", "MeshFallback"]);
 
         let names = |lab: &ShaderLab| {
@@ -2786,8 +3042,8 @@ Pass { Name "TAIL" }
         assert!(multi.has_subshader);
         assert_eq!(multi.passes.len(), 1);
         assert_eq!(multi.passes[0].name, "FallbackPass");
-        assert!(multi.subshaders[0].uses_unsupported_stage);
-        assert!(!multi.subshaders[1].uses_unsupported_stage);
+        assert!(multi.subshaders[0].uses_unsupported_stage());
+        assert!(!multi.subshaders[1].uses_unsupported_stage());
 
         // Single-SubShader with a working sibling pass + a geometry pass (and Fallback "Diffuse"):
         // must keep the SubShader selected so Pass 0 still renders and Pass 1 fails loudly at
@@ -2819,5 +3075,193 @@ Pass { Name "TAIL" }
         assert_eq!(single.passes.len(), 2);
         assert_eq!(single.passes[0].name, "WorkingPass");
         assert_eq!(single.passes[1].name, "GeomPass");
+    }
+
+    /// A SubShader passed over for its stage where the Editor's device would draw it is named:
+    /// the measured devices of Linux run geometry and tessellation, the macOS one no geometry and
+    /// tessellation unmeasured.
+    #[test]
+    fn a_subshader_passed_over_for_its_stage_is_a_substitution() {
+        use unbound_compat::GraphicsDevice::{Metal, OpenGLCore, Vulkan};
+        let source = |stage: &str| {
+            format!(
+                "Shader \"Tests/Stage\" {{ \
+                 SubShader {{ Tags {{ \"RenderPipeline\"=\"UniversalPipeline\" }} \
+                   Pass {{ Name \"A\" HLSLPROGRAM\n#pragma vertex v\n#pragma {stage} s\n#pragma fragment f\nENDHLSL }} }} \
+                 SubShader {{ Tags {{ \"RenderPipeline\"=\"UniversalPipeline\" }} \
+                   Pass {{ Name \"B\" HLSLPROGRAM\n#pragma vertex v\n#pragma fragment f\nENDHLSL }} }} \
+                 SubShader {{ Pass {{ Name \"C\" HLSLPROGRAM\n#pragma vertex v\n#pragma {stage} s\n#pragma fragment f\nENDHLSL }} }} \
+                 Fallback \"Diffuse\" }}"
+            )
+        };
+        let geometry = ShaderLab::parse(&source("geometry")).unwrap();
+        let hull = ShaderLab::parse(&source("hull")).unwrap();
+        let urp = "UniversalPipeline";
+        let none = Selection::default();
+        // OpenGL Core and Vulkan run SubShader 0; the renderer draws 1.
+        for device in [OpenGLCore, Vulkan] {
+            for (lab, stage) in [
+                (&geometry, ProgramStage::Geometry),
+                (&hull, ProgramStage::Hull),
+            ] {
+                let s = lab.substitution(urp, &none, device).unwrap();
+                assert_eq!(
+                    s,
+                    Substitution {
+                        drawn: Some(1),
+                        editor: Some(0),
+                        subshader: 0,
+                        stage,
+                        unmeasured: false
+                    }
+                );
+            }
+        }
+        // Metal runs no geometry stage: it draws SubShader 1 too.
+        assert_eq!(geometry.substitution(urp, &none, Metal), None);
+        // Whether it runs hull/domain is not measured.
+        let s = hull.substitution(urp, &none, Metal).unwrap();
+        assert!(s.unmeasured);
+        assert_eq!((s.drawn, s.editor, s.subshader), (Some(1), Some(0), 0));
+        // Under the built-in pipeline only SubShader 2 matches: the renderer draws it (its stage
+        // fails when compiled) as the Linux Editor does; the Metal Editor takes the Fallback.
+        assert_eq!(geometry.substitution("", &none, Vulkan), None);
+        assert_eq!(
+            geometry.substitution("", &none, Metal),
+            Some(Substitution {
+                drawn: Some(2),
+                editor: None,
+                subshader: 2,
+                stage: ProgramStage::Geometry,
+                unmeasured: false
+            })
+        );
+        // A replacement tag no SubShader has: neither draws any.
+        let tagged = Selection::parse("X|tag=RenderType=Nope").1;
+        assert_eq!(geometry.substitution(urp, &tagged, Vulkan), None);
+
+        let message =
+            geometry
+                .substitution(urp, &none, Vulkan)
+                .unwrap()
+                .message(&geometry.name, urp, Vulkan);
+        assert_eq!(
+            message,
+            "shader `Tests/Stage` under render pipeline `UniversalPipeline`: SubShader 0 has a \
+             geometry stage (`#pragma geometry`), which Unbound's renderer does not run; Unbound \
+             draws SubShader 1 where the Unity Editor on Vulkan draws SubShader 0"
+        );
+        // Warned once per process.
+        let unique = format!("{message} (test {:?})", std::thread::current().id());
+        assert!(warn_substitution_once(&unique));
+        assert!(!warn_substitution_once(&unique));
+    }
+
+    /// Loading a substituted shader warns once, whatever its selection and however often it is
+    /// loaded.
+    #[test]
+    fn loading_a_substituted_shader_warns_once() {
+        #[derive(Clone, Default)]
+        struct Captured(std::sync::Arc<std::sync::Mutex<Vec<u8>>>);
+        impl std::io::Write for Captured {
+            fn write(&mut self, bytes: &[u8]) -> std::io::Result<usize> {
+                self.0.lock().unwrap().extend_from_slice(bytes);
+                Ok(bytes.len())
+            }
+            fn flush(&mut self) -> std::io::Result<()> {
+                Ok(())
+            }
+        }
+        let dir = std::env::temp_dir().join(format!(
+            "unbound-substitution-warning-{}-{:?}",
+            std::process::id(),
+            std::thread::current().id()
+        ));
+        std::fs::create_dir_all(&dir).unwrap();
+        std::fs::write(
+            dir.join("Warned.shader"),
+            "Shader \"Tests/WarnedOnce\" { \
+             SubShader { Tags { \"RenderPipeline\"=\"UniversalPipeline\" } \
+               Pass { HLSLPROGRAM\n#pragma vertex v\n#pragma geometry g\n#pragma fragment f\nENDHLSL } } \
+             SubShader { Pass { HLSLPROGRAM\n#pragma vertex v\n#pragma fragment f\nENDHLSL } } }",
+        )
+        .unwrap();
+        let captured = Captured::default();
+        let writer = captured.clone();
+        let subscriber = tracing_subscriber::fmt()
+            .with_writer(move || writer.clone())
+            .with_ansi(false)
+            .finish();
+        let device = unbound_runtime::graphics_device::get();
+        tracing::subscriber::with_default(subscriber, || {
+            let mut index = ShaderIndex::scan(std::slice::from_ref(&dir));
+            // The built-in pipeline: SubShader 1 is the only match, nothing to warn.
+            assert!(index.get("Tests/WarnedOnce").is_some());
+            index.set_pipeline("UniversalPipeline");
+            let lab = index.get("Tests/WarnedOnce").unwrap();
+            assert_eq!(lab.passes.len(), 1);
+            assert!(index.get("Tests/WarnedOnce|lod=900").is_some());
+            index.set_pipeline("");
+            index.set_pipeline("UniversalPipeline");
+            assert!(index.get("Tests/WarnedOnce").is_some());
+        });
+        std::fs::remove_dir_all(&dir).ok();
+        let text = String::from_utf8(captured.0.lock().unwrap().clone()).unwrap();
+        let warned: Vec<&str> = text
+            .lines()
+            .filter(|l| l.contains("Tests/WarnedOnce"))
+            .collect();
+        if device.editor_runs_geometry_stages() {
+            assert_eq!(warned.len(), 1, "{text}");
+            assert!(warned[0].contains("WARN"), "{text}");
+            assert!(
+                warned[0].contains(&format!(
+                    "shader `Tests/WarnedOnce` under render pipeline `UniversalPipeline`: \
+                     SubShader 0 has a geometry stage (`#pragma geometry`), which Unbound's \
+                     renderer does not run; Unbound draws SubShader 1 where the Unity Editor on \
+                     {device} draws SubShader 0"
+                )),
+                "{text}"
+            );
+        } else {
+            assert!(warned.is_empty(), "{text}");
+        }
+    }
+
+    /// The doctor's list: each substituted shader of an index once per pipeline.
+    #[test]
+    fn the_index_lists_substitutions() {
+        let dir = std::env::temp_dir().join(format!(
+            "unbound-substitutions-{}-{:?}",
+            std::process::id(),
+            std::thread::current().id()
+        ));
+        std::fs::create_dir_all(&dir).unwrap();
+        std::fs::write(
+            dir.join("Stage.shader"),
+            "Shader \"Tests/Listed\" { \
+             SubShader { Tags { \"RenderPipeline\"=\"universalpipeline\" } \
+               Pass { HLSLPROGRAM\n#pragma vertex v\n#pragma domain d\n#pragma fragment f\nENDHLSL } } \
+             SubShader { Pass { HLSLPROGRAM\n#pragma vertex v\n#pragma fragment f\nENDHLSL } } }",
+        )
+        .unwrap();
+        std::fs::write(
+            dir.join("Plain.shader"),
+            "Shader \"Tests/Plain\" { SubShader { Pass { HLSLPROGRAM\n#pragma vertex v\nENDHLSL } } }",
+        )
+        .unwrap();
+        let index = ShaderIndex::scan(std::slice::from_ref(&dir));
+        let listed = index.substitutions(unbound_compat::GraphicsDevice::Vulkan);
+        std::fs::remove_dir_all(&dir).ok();
+        // Under URP SubShader 0 runs on the Editor's device; under the built-in pipeline only
+        // SubShader 1 (untagged) matches, a SubShader the Editor runs too.
+        assert_eq!(
+            listed,
+            [
+                "shader `Tests/Listed` under render pipeline `UniversalPipeline`: SubShader 0 has a \
+              domain stage (`#pragma domain`), which Unbound's renderer does not run; Unbound \
+              draws SubShader 1 where the Unity Editor on Vulkan draws SubShader 0"
+            ]
+        );
     }
 }
