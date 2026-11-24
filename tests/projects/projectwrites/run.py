@@ -70,6 +70,15 @@ STARTUP = {
     'Assets/Startup/Data.yaml': b'a: 1\n',
     'Assets/Startup/Page.html': b'<html></html>\n',
     'Assets/Startup/Unknown.xyz': b'xyz\n',
+    # Plug-ins (the PluginImporter): native sources, a folder plug-in (nothing inside it is an
+    # asset) and, beside a managed library, its program database (.pdb).
+    'Assets/Startup/Plugins/Source.cpp': b'int probe() { return 1; }\n',
+    'Assets/Startup/Plugins/Header.h': b'int probe();\n',
+    'Assets/Startup/Plugins/Bridge.mm': b'int probe_mm() { return 1; }\n',
+    'Assets/Startup/Plugins/Native.java': b'class Native { }\n',
+    'Assets/Startup/Plugins/bridge.jslib': b'mergeInto(LibraryManager.library, {});\n',
+    'Assets/Startup/Plugins/Kit.bundle/Contents/Info.plist': b'<plist/>\n',
+    'Assets/Startup/Plugins/Managed.pdb': b'pdb\n',
 }
 COPIED = {
     'Assets/Startup/Model.fbx': 'modelclips/Assets/Resources/AxisTies/U0pF1pC2p.fbx',
@@ -100,6 +109,14 @@ COPIED = {
     'Assets/Startup/Variants.shadervariants': 'classids/Assets/Lighting/Variants.shadervariants',
     'Assets/Startup/Sand.terrainlayer': 'terrain/Assets/Terrain/Sand.terrainlayer',
     'Assets/Startup/Room.giparams': 'realtimegi/Assets/Settings/RoomSystemsSystemTag1.giparams',
+    'Assets/Startup/Plugins/Managed.dll': 'compilesetup/Assets/Plugins/Same/ProbeSame.dll',
+    'Assets/Startup/Plugins/native.dll': 'defaultasset/Assets/PluginKinds/native.dll',
+    'Assets/Startup/Plugins/x86_64/native64.dll': 'defaultasset/Assets/PluginKinds/native.dll',
+    'Assets/Startup/Plugins/libnative.so': 'defaultasset/Assets/PluginKinds/libnative.so',
+    'Assets/Startup/Plugins/libmac.dylib': 'defaultasset/Assets/PluginKinds/libmac.dylib',
+    'Assets/Startup/Plugins/libstatic.a': 'defaultasset/Assets/PluginKinds/libstatic.a',
+    'Assets/Startup/Plugins/library.jar': 'defaultasset/Assets/PluginKinds/library.jar',
+    'Assets/Startup/Plugins/library.aar': 'defaultasset/Assets/PluginKinds/library.aar',
 }
 # Files whose .meta files use CRLF line endings (as some version control setups leave them).
 CRLF = {

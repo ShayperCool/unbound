@@ -10,6 +10,7 @@
     "crates/unbound-project/src/assetdb.rs",
     "managed/UnityEngine/Editor/AssetDatabase.cs",
     "managed/UnityEngine/Editor/AssetDatabaseFiles.cs",
+    "managed/UnityEngine/Editor/AssetPaths.cs",
     "managed/UnityEngine/Editor/AssetDatabaseCreate.cs",
     "managed/UnityEngine/Editor/AssetDatabasePackages.cs",
     "managed/UnityEngine/Editor/ImporterMetaFiles.cs",
@@ -69,6 +70,20 @@
     "tests/projects/uxmlattributes/Assets/UI/ProbeRT.renderTexture",
     "tests/projects/uxmlattributes/Assets/UI/ProbeRT.renderTexture.meta",
     "tests/projects/uxmltemplates/Assets/Resources/Row.uxml",
-    "tests/projects/uxmltemplates/Assets/Resources/Row.uxml.meta"
+    "tests/projects/uxmltemplates/Assets/Resources/Row.uxml.meta",
+    "tests/projects/compilesetup/Assets/Plugins/Same/ProbeSame.dll",
+    "tests/projects/compilesetup/Assets/Plugins/Same/ProbeSame.dll.meta",
+    "tests/projects/defaultasset/Assets/PluginKinds/libmac.dylib",
+    "tests/projects/defaultasset/Assets/PluginKinds/libmac.dylib.meta",
+    "tests/projects/defaultasset/Assets/PluginKinds/libnative.so",
+    "tests/projects/defaultasset/Assets/PluginKinds/libnative.so.meta",
+    "tests/projects/defaultasset/Assets/PluginKinds/library.aar",
+    "tests/projects/defaultasset/Assets/PluginKinds/library.aar.meta",
+    "tests/projects/defaultasset/Assets/PluginKinds/library.jar",
+    "tests/projects/defaultasset/Assets/PluginKinds/library.jar.meta",
+    "tests/projects/defaultasset/Assets/PluginKinds/libstatic.a",
+    "tests/projects/defaultasset/Assets/PluginKinds/libstatic.a.meta",
+    "tests/projects/defaultasset/Assets/PluginKinds/native.dll",
+    "tests/projects/defaultasset/Assets/PluginKinds/native.dll.meta"
   ]
 }

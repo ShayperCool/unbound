@@ -215,7 +215,8 @@ public static class ProjectWritesProbe
         Guard("00.open", () =>
         {
             foreach (var path in new[] { "Assets/Startup.meta", "Assets/Startup/Tex.png.meta", "Assets/Startup/Startup.cs.meta",
-                                         "Assets/Startup/Image.psd.meta", "Packages/packages-lock.json", "Assets/Crlf/Tex.png.meta", "Assets/Crlf/Notes.txt.meta" })
+                                         "Assets/Startup/Image.psd.meta", "Packages/packages-lock.json", "Assets/Crlf/Tex.png.meta", "Assets/Crlf/Notes.txt.meta",
+                                         "Assets/Startup/Plugins/Managed.dll.meta", "Assets/Startup/Plugins/Kit.bundle.meta", "Assets/Startup/Plugins/Managed.pdb.meta" })
                 Snap("00.open", path);
         });
         Guard("01.refresh", NewFilesAndRefresh);
@@ -682,6 +683,9 @@ public static class ProjectWritesProbe
         // A script's .meta ends after its GUID; labels YAML would read otherwise.
         AssetDatabase.SetLabels(AssetDatabase.LoadMainAssetAtPath("Assets/Startup/Startup.cs"), new[] { "script" });
         Snap("09.labels.script", "Assets/Startup/Startup.cs.meta");
+        // A plug-in's .meta ends after its GUID too; written again it gets its importer's section.
+        AssetDatabase.SetLabels(AssetDatabase.LoadMainAssetAtPath("Assets/Startup/Plugins/Managed.dll"), new[] { "plugin" });
+        Snap("09.labels.plugin", "Assets/Startup/Plugins/Managed.dll.meta");
         AssetDatabase.SetLabels(AssetDatabase.LoadMainAssetAtPath("Assets/Startup/Notes.txt"), new[] { "#x", "a: b", "[y]", "plain label" });
         Snap("09.labels.quoted", "Assets/Startup/Notes.txt.meta");
         Put("09.labels.quoted.get", AssetDatabase.GetLabels(AssetDatabase.LoadMainAssetAtPath("Assets/Startup/Notes.txt")));
