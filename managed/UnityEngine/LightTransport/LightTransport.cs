@@ -516,56 +516,26 @@ namespace UnityEngine.LightTransport
                 int cmp = string.CompareOrdinal(BakedAtlas.HierarchyPath(a.transform), BakedAtlas.HierarchyPath(b.transform));
                 return cmp != 0 ? cmp : a.GetInstanceID().CompareTo(b.GetInstanceID());
             });
-            bool customDelegate = UnityEngine.Experimental.GlobalIllumination.Lightmapping.HasCustomDelegate;
+            var active = new List<(long FileId, Light Light)>(sorted.Length);
             foreach (var light in sorted)
             {
                 if (light == null || !light.enabled || !light.gameObject.activeInHierarchy) continue;
                 if (light.lightmapBakeType == LightmapBakeType.Realtime) continue;
-                int kind = light.type == LightType.Directional ? 0 : light.type == LightType.Point ? 1 : light.type == LightType.Spot ? 2 : -1;
-                if (kind < 0)
-                {
-                    Warn("lt-light-type:" + light.GetInstanceID(), $"LightTransport InputExtraction: '{light.name}' is a {light.type} light, which CPU probe baking does not support yet.");
-                    continue;
-                }
-                if (GraphicsSettings.lightsUseLinearIntensity && kind != 0)
-                    Warn("lt-light-linear", $"LightTransport InputExtraction: GraphicsSettings.lightsUseLinearIntensity is enabled on non-directional light '{light.name}' (unmeasured for CPU probe baking; using Light.ScaledColor).");
-                if (GraphicsSettings.lightsUseLinearIntensity && light.useColorTemperature)
-                    Warn("lt-light-temp:" + light.GetInstanceID(), $"LightTransport InputExtraction: '{light.name}' uses color temperature with GraphicsSettings.lightsUseLinearIntensity (unmeasured for CPU probe baking; using Light.ScaledColor).");
-                if (light.cookie != null)
-                    Warn("lt-light-cookie:" + light.GetInstanceID(), $"LightTransport InputExtraction: '{light.name}' has a cookie, which CPU probe baking ignores yet.");
-                if ((kind == 0 ? light.shadowAngle : light.shadowRadius) > 0f && light.shadows != LightShadows.None)
-                    Warn("lt-light-soft:" + light.GetInstanceID(), $"LightTransport InputExtraction: '{light.name}' has soft baked shadows, which CPU probe baking bakes hard yet.");
-                if (customDelegate)
-                    Warn("lt-light-delegate", $"LightTransport InputExtraction: a custom Lightmapping.RequestLightsDelegate is set, but CPU probe baking extracts built-in light properties and legacy attenuation instead of invoking it (first seen on '{light.name}').");
-                int mode = light.lightmapBakeType == LightmapBakeType.Mixed ? 1 : 2;
-
-                var t = light.transform;
-                Color direct = light.ScaledColor(light.intensity, linear: true);
-                Color indirect = light.ScaledColor(light.intensity * light.bounceIntensity, linear: true);
-                Vector3 pos = t.position;
-                Quaternion rot = t.rotation;
-                lightsJson.Add(new
-                {
-                    name = BakedAtlas.HierarchyPath(t),
-                    fileId = (long)light.GetInstanceID(),
-                    kind,
-                    mode,
-                    color = new[] { direct.r, direct.g, direct.b },
-                    indirectColor = new[] { indirect.r, indirect.g, indirect.b },
-                    position = new[] { pos.x, pos.y, pos.z },
-                    rotation = new[] { rot.x, rot.y, rot.z, rot.w },
-                    range = light.range,
-                    spotAngle = light.spotAngle,
-                    castsShadows = light.shadows != LightShadows.None,
-                });
+                active.Add(((long)light.GetInstanceID(), light));
+            }
+            var extracted = BakedAtlas.ExtractLights(active, "LightTransport", Warn, skipUnmeasured: false,
+                renderPipeline: GraphicsSettings.currentRenderPipeline != null);
+            foreach (var item in extracted)
+            {
+                lightsJson.Add(item.Json);
                 lightMetas.Add(new ExtractedLightMeta
                 {
-                    Kind = kind,
-                    Mode = mode,
-                    Position = pos,
-                    Forward = t.forward,
-                    Range = light.range,
-                    SpotAngle = light.spotAngle,
+                    Kind = item.Kind,
+                    Mode = item.Mode,
+                    Position = item.Position,
+                    Forward = item.Forward,
+                    Range = item.Range,
+                    SpotAngle = item.SpotAngle,
                     ShadowmaskChannel = -1,
                 });
             }
@@ -724,6 +694,7 @@ namespace UnityEngine.LightTransport
                         }
 
                         var shared = renderer.sharedMaterials;
+                        BakedAtlas.CheckEmptySlotsForRenderPipeline("LightTransport", renderer.GetInstanceID(), renderer.name, shared, mesh.subMeshCount, s_Warn);
                         var hasMaterial = new bool[shared.Length];
                         var doubleSided = new bool[shared.Length];
                         for (int k = 0; k < shared.Length; k++)

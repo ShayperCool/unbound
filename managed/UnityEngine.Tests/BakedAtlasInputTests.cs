@@ -9,6 +9,10 @@ namespace UnityEngine.Tests
     /// out.</summary>
     public class BakedAtlasInputTests
     {
+        sealed class StubPipelineAsset : UnityEngine.Rendering.RenderPipelineAsset
+        {
+            protected override UnityEngine.Rendering.RenderPipeline CreatePipeline() => null;
+        }
         sealed class Capture : ILogHandler
         {
             readonly ILogHandler m_Inner;
@@ -378,6 +382,7 @@ namespace UnityEngine.Tests
 
                     // InitNoBake skips without warning.
                     capture.Logs.Clear();
+                    BakedAtlas.ClearApproximated();
                     UnityEngine.Experimental.GlobalIllumination.Lightmapping.SetDelegate((Light[] reqs, Unity.Collections.NativeArray<UnityEngine.Experimental.GlobalIllumination.LightDataGI> outs) =>
                     {
                         for (int i = 0; i < reqs.Length; i++)
@@ -389,6 +394,168 @@ namespace UnityEngine.Tests
                     });
                     Assert.Empty(BakedAtlas.Lights(delegateFile, delegateFile.Path));
                     Assert.Empty(capture.Logs);
+                    Assert.False(BakedAtlas.LastApproximated);
+
+                    // Throwing delegate is caught, warns, marks Approximated, and returns empty.
+                    capture.Logs.Clear();
+                    BakedAtlas.ClearApproximated();
+                    UnityEngine.Experimental.GlobalIllumination.Lightmapping.SetDelegate((Light[] _, Unity.Collections.NativeArray<UnityEngine.Experimental.GlobalIllumination.LightDataGI> _) =>
+                        throw new System.InvalidOperationException("boom"));
+                    Assert.Empty(BakedAtlas.Lights(delegateFile, "Assets/LitDelegateThrow.unity"));
+                    Assert.Contains(capture.Logs, l => l.Contains("RequestLightsDelegate failed") && l.Contains("boom"));
+                    Assert.True(BakedAtlas.LastApproximated);
+
+                    // Spot with Legacy falloff + AnalyticAndInnerAngle angular falloff is rejected loudly.
+                    capture.Logs.Clear();
+                    BakedAtlas.ClearApproximated();
+                    var angularFile = new LoadedFile { Path = "Assets/LitDelegateAngular.unity", Guid = "34000000000000000000000000000000" };
+                    angularFile.Objects[1] = spot;
+                    UnityEngine.Experimental.GlobalIllumination.Lightmapping.SetDelegate((Light[] reqs, Unity.Collections.NativeArray<UnityEngine.Experimental.GlobalIllumination.LightDataGI> outs) =>
+                    {
+                        var sl = new UnityEngine.Experimental.GlobalIllumination.SpotLight
+                        {
+                            instanceID = reqs[0].GetInstanceID(),
+                            mode = UnityEngine.Experimental.GlobalIllumination.LightMode.Baked,
+                            color = new UnityEngine.Experimental.GlobalIllumination.LinearColor { red = 1f, green = 1f, blue = 1f, intensity = 1f },
+                            indirectColor = new UnityEngine.Experimental.GlobalIllumination.LinearColor { red = 1f, green = 1f, blue = 1f, intensity = 1f },
+                            range = 5f,
+                            coneAngle = 1f,
+                            innerConeAngle = 0.5f,
+                            falloff = UnityEngine.Experimental.GlobalIllumination.FalloffType.Legacy,
+                            angularFalloff = UnityEngine.Experimental.GlobalIllumination.AngularFalloffType.AnalyticAndInnerAngle,
+                        };
+                        var d = new UnityEngine.Experimental.GlobalIllumination.LightDataGI();
+                        d.Init(ref sl);
+                        outs[0] = d;
+                    });
+                    Assert.Empty(BakedAtlas.Lights(angularFile, angularFile.Path));
+                    Assert.Contains(capture.Logs, l => l.Contains("non-LUT angular falloff"));
+                    Assert.True(BakedAtlas.LastApproximated);
+
+                    // Delegate Point with Legacy falloff under lightsUseLinearIntensity = true is rejected loudly.
+                    capture.Logs.Clear();
+                    BakedAtlas.ClearApproximated();
+                    var linDelFile = new LoadedFile { Path = "Assets/LitDelegateLinear.unity", Guid = "35000000000000000000000000000000" };
+                    linDelFile.Objects[1] = soft;
+                    UnityEngine.Experimental.GlobalIllumination.Lightmapping.SetDelegate((Light[] reqs, Unity.Collections.NativeArray<UnityEngine.Experimental.GlobalIllumination.LightDataGI> outs) =>
+                    {
+                        var pl = new UnityEngine.Experimental.GlobalIllumination.PointLight
+                        {
+                            instanceID = reqs[0].GetInstanceID(),
+                            mode = UnityEngine.Experimental.GlobalIllumination.LightMode.Baked,
+                            color = new UnityEngine.Experimental.GlobalIllumination.LinearColor { red = 1f, green = 1f, blue = 1f, intensity = 1f },
+                            indirectColor = new UnityEngine.Experimental.GlobalIllumination.LinearColor { red = 1f, green = 1f, blue = 1f, intensity = 1f },
+                            range = 5f,
+                            falloff = UnityEngine.Experimental.GlobalIllumination.FalloffType.Legacy,
+                        };
+                        var d = new UnityEngine.Experimental.GlobalIllumination.LightDataGI();
+                        d.Init(ref pl);
+                        outs[0] = d;
+                    });
+                    UnityEngine.Rendering.GraphicsSettings.lightsUseLinearIntensity = true;
+                    try
+                    {
+                        Assert.Empty(BakedAtlas.Lights(linDelFile, linDelFile.Path));
+                        Assert.Contains(capture.Logs, l => l.Contains("lightsUseLinearIntensity"));
+                        Assert.True(BakedAtlas.LastApproximated);
+
+                        // Delegate Directional with useColorTemperature = true under lightsUseLinearIntensity = true is rejected loudly.
+                        capture.Logs.Clear();
+                        BakedAtlas.ClearApproximated();
+                        var delTempFile = new LoadedFile { Path = "Assets/LitDelegateTemp.unity", Guid = "36000000000000000000000000000000" };
+                        sun.useColorTemperature = true;
+                        delTempFile.Objects[1] = sun;
+                        UnityEngine.Experimental.GlobalIllumination.Lightmapping.SetDelegate((Light[] reqs, Unity.Collections.NativeArray<UnityEngine.Experimental.GlobalIllumination.LightDataGI> outs) =>
+                        {
+                            var dl = new UnityEngine.Experimental.GlobalIllumination.DirectionalLight
+                            {
+                                instanceID = reqs[0].GetInstanceID(),
+                                mode = UnityEngine.Experimental.GlobalIllumination.LightMode.Baked,
+                                color = new UnityEngine.Experimental.GlobalIllumination.LinearColor { red = 1f, green = 1f, blue = 1f, intensity = 1f },
+                                indirectColor = new UnityEngine.Experimental.GlobalIllumination.LinearColor { red = 1f, green = 1f, blue = 1f, intensity = 1f },
+                                orientation = reqs[0].transform.rotation,
+                            };
+                            var d = new UnityEngine.Experimental.GlobalIllumination.LightDataGI();
+                            d.Init(ref dl);
+                            outs[0] = d;
+                        });
+                        Assert.Empty(BakedAtlas.Lights(delTempFile, delTempFile.Path));
+                        Assert.Contains(capture.Logs, l => l.Contains("color temperature"));
+                        Assert.True(BakedAtlas.LastApproximated);
+                        sun.useColorTemperature = false;
+                    }
+                    finally { UnityEngine.Rendering.GraphicsSettings.lightsUseLinearIntensity = before; }
+
+                    // Mixed light with a render pipeline asset is refused in both delegate and non-delegate paths.
+                    var prevRp = UnityEngine.Rendering.GraphicsSettings.defaultRenderPipeline;
+                    var stubRp = ScriptableObject.CreateInstance<StubPipelineAsset>();
+                    var mixedSun = Make("MixedSun", LightType.Directional, LightmapBakeType.Mixed);
+                    var rpMixedFile = new LoadedFile { Path = "Assets/LitRpMixed.unity", Guid = "37000000000000000000000000000000" };
+                    rpMixedFile.Objects[1] = mixedSun;
+                    try
+                    {
+                        UnityEngine.Rendering.GraphicsSettings.defaultRenderPipeline = stubRp;
+                        capture.Logs.Clear();
+                        BakedAtlas.ClearApproximated();
+                        UnityEngine.Experimental.GlobalIllumination.Lightmapping.SetDelegate((Light[] reqs, Unity.Collections.NativeArray<UnityEngine.Experimental.GlobalIllumination.LightDataGI> outs) =>
+                        {
+                            var dl = new UnityEngine.Experimental.GlobalIllumination.DirectionalLight
+                            {
+                                instanceID = reqs[0].GetInstanceID(),
+                                mode = UnityEngine.Experimental.GlobalIllumination.LightMode.Mixed,
+                                color = new UnityEngine.Experimental.GlobalIllumination.LinearColor { red = 1f, green = 1f, blue = 1f, intensity = 1f },
+                                indirectColor = new UnityEngine.Experimental.GlobalIllumination.LinearColor { red = 1f, green = 1f, blue = 1f, intensity = 1f },
+                                orientation = reqs[0].transform.rotation,
+                            };
+                            var d = new UnityEngine.Experimental.GlobalIllumination.LightDataGI();
+                            d.Init(ref dl);
+                            outs[0] = d;
+                        });
+                        Assert.Empty(BakedAtlas.Lights(rpMixedFile, "Assets/LitRpMixedDel.unity"));
+                        Assert.Contains(capture.Logs, l => l.Contains("Mixed light with a render pipeline asset"));
+                        Assert.True(BakedAtlas.LastApproximated);
+
+                        UnityEngine.Experimental.GlobalIllumination.Lightmapping.ResetDelegate();
+                        capture.Logs.Clear();
+                        BakedAtlas.ClearApproximated();
+                        Assert.Empty(BakedAtlas.Lights(rpMixedFile, "Assets/LitRpMixedBuiltin.unity"));
+                        Assert.Contains(capture.Logs, l => l.Contains("Mixed light with a render pipeline asset"));
+                        Assert.True(BakedAtlas.LastApproximated);
+
+                        // Empty material slots under a render pipeline asset: missing slot, null slot < subMeshCount, and trailing null >= subMeshCount.
+                        var shader = Shader.Create("Stub", 2000);
+                        var mat = new Material(shader);
+                        try
+                        {
+                            capture.Logs.Clear();
+                            BakedAtlas.ClearApproximated();
+                            Assert.True(BakedAtlas.CheckEmptySlotsForRenderPipeline("Assets/RpEmpty.unity", 1, "Short", new[] { mat }, 2, BakedAtlas.Approximated));
+                            Assert.Contains(capture.Logs, l => l.Contains("empty material slot"));
+                            Assert.True(BakedAtlas.LastApproximated);
+
+                            capture.Logs.Clear();
+                            BakedAtlas.ClearApproximated();
+                            Assert.True(BakedAtlas.CheckEmptySlotsForRenderPipeline("Assets/RpEmpty.unity", 2, "NullSub", new[] { mat, null }, 2, BakedAtlas.Approximated));
+                            Assert.Contains(capture.Logs, l => l.Contains("empty material slot"));
+                            Assert.True(BakedAtlas.LastApproximated);
+
+                            capture.Logs.Clear();
+                            BakedAtlas.ClearApproximated();
+                            Assert.False(BakedAtlas.CheckEmptySlotsForRenderPipeline("Assets/RpEmpty.unity", 3, "TrailingNull", new[] { mat, null }, 1, BakedAtlas.Approximated));
+                            Assert.Empty(capture.Logs);
+                            Assert.False(BakedAtlas.LastApproximated);
+                        }
+                        finally
+                        {
+                            Object.DestroyImmediate(mat);
+                            Object.DestroyImmediate(shader);
+                        }
+                    }
+                    finally
+                    {
+                        UnityEngine.Rendering.GraphicsSettings.defaultRenderPipeline = prevRp;
+                        Object.DestroyImmediate(stubRp);
+                    }
                 }
                 finally
                 {

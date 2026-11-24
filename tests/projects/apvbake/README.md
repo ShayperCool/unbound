@@ -24,7 +24,7 @@ with the Progressive CPU lightmapper.
   interior of its vertical faces (`x ∈ {1, 2}`, `y ∈ {1, 2, 3}`, `z ∈ {-1, -2}`), verifying
   Unity 6000.0's inclusive `t >= 0.0` probe ray intersection (`validity = 0.5` and coplanar direct
   sun shadowing / indirect bounces). `Red` and `Flat` enclose interior probes whose validities fall
-  in `0.63..0.95` (because the cubes are embedded into `Ground` at `y = 0.85`, whose upward front
+  in `0.60..0.95` (because the cubes are embedded into `Ground` at `y = 0.85`, whose upward front
   face intercepts downward rays inside the cubes).
 
 ## Reference

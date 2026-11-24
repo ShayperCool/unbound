@@ -350,8 +350,63 @@ namespace UnityEngine.Tests
                 Assert.Contains(capture.Logs, l => l.Contains("color temperature"));
 
                 capture.Logs.Clear();
+                InputExtraction.s_Warned.Clear();
                 InputExtraction.CollectSceneLights(new[] { point });
-                Assert.Contains(capture.Logs, l => l.Contains("non-directional light"));
+                Assert.Contains(capture.Logs, l => l.Contains("lightsUseLinearIntensity"));
+
+                // Custom RequestLightsDelegate is invoked by CollectSceneLights identically to BakedAtlas.Lights:
+                // custom color/orientation is extracted, InitNoBake skips, throwing/non-Legacy falloff warns.
+                dir.useColorTemperature = false;
+                var skipGo = new GameObject("LTSkip");
+                try
+                {
+                    var skip = skipGo.AddComponent<Light>();
+                    skip.type = LightType.Directional;
+                    skip.lightmapBakeType = LightmapBakeType.Baked;
+
+                    capture.Logs.Clear();
+                    InputExtraction.s_Warned.Clear();
+                    var customRot = Quaternion.Euler(45f, 0f, 0f);
+                    UnityEngine.Experimental.GlobalIllumination.Lightmapping.SetDelegate((Light[] reqs, Unity.Collections.NativeArray<UnityEngine.Experimental.GlobalIllumination.LightDataGI> outs) =>
+                    {
+                        for (int i = 0; i < reqs.Length; i++)
+                        {
+                            var d = new UnityEngine.Experimental.GlobalIllumination.LightDataGI();
+                            if (reqs[i] == skip)
+                            {
+                                d.InitNoBake(reqs[i].GetInstanceID());
+                            }
+                            else
+                            {
+                                var dl = new UnityEngine.Experimental.GlobalIllumination.DirectionalLight
+                                {
+                                    instanceID = reqs[i].GetInstanceID(),
+                                    mode = UnityEngine.Experimental.GlobalIllumination.LightMode.Baked,
+                                    color = new UnityEngine.Experimental.GlobalIllumination.LinearColor { red = 0.5f, green = 1f, blue = 0.25f, intensity = 4f },
+                                    indirectColor = new UnityEngine.Experimental.GlobalIllumination.LinearColor { red = 1f, green = 1f, blue = 1f, intensity = 2f },
+                                    orientation = customRot,
+                                    shadow = true,
+                                };
+                                d.Init(ref dl);
+                            }
+                            outs[i] = d;
+                        }
+                    });
+                    var (jsonList, metas) = InputExtraction.CollectSceneLights(new[] { dir, skip });
+                    Assert.Single(jsonList);
+                    Assert.Single(metas);
+                    Assert.Empty(capture.Logs);
+                    var doc = System.Text.Json.JsonDocument.Parse(System.Text.Json.JsonSerializer.Serialize(jsonList[0])).RootElement;
+                    Assert.Equal(2f, doc.GetProperty("color")[0].GetSingle(), 4);
+                    Assert.Equal(4f, doc.GetProperty("color")[1].GetSingle(), 4);
+                    Assert.Equal(1f, doc.GetProperty("color")[2].GetSingle(), 4);
+                    Assert.Equal(customRot * Vector3.forward, metas[0].Forward);
+                }
+                finally
+                {
+                    UnityEngine.Experimental.GlobalIllumination.Lightmapping.ResetDelegate();
+                    Object.DestroyImmediate(skipGo);
+                }
             }
             finally
             {
