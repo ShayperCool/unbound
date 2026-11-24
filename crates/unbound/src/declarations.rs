@@ -793,6 +793,13 @@ impl State {
     /// known (unmeasured stages, [`State::pass_runs_unknown`], a SubShader left without passes by
     /// a dropped `UsePass`, which the renderer keeps).
     fn subshaders(&mut self, inputs: &Inputs, lab: &ShaderLab) -> Result<Vec<Value>, Unknown> {
+        // A shader the device runs none of the SubShaders of: what the Editor's queries answer
+        // then (its Fallback's, the error shader's, none) is not measured.
+        if !lab.subshaders.is_empty() && lab.subshaders.iter().all(|sub| sub.unsupported) {
+            return Err(Unknown::fixed(
+                "the device runs none of its SubShaders' passes, which is not measured",
+            ));
+        }
         let mut out = Vec::new();
         for sub in &lab.subshaders {
             // The device's shader has no SubShader it runs none of the passes of

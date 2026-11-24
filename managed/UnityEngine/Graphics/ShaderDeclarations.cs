@@ -48,9 +48,10 @@ namespace Unbound.Runtime
             /// <summary>Its <c>LOD</c> (0: none); null when the host does not send it (an older
             /// host): Shader.passCount then keeps the renderer's pass list.</summary>
             internal int? Lod;
-            /// <summary>Whether the device runs it: false when it runs none of its passes (the
-            /// renderer passes it over), null when that is not known (unmeasured stages or
-            /// pragmas, or an older host that does not say).</summary>
+            /// <summary>Whether the device runs it (the host leaves out a SubShader the device
+            /// runs none of the passes of; false: a stage the device does not run), null when
+            /// that is not known (unmeasured stages or pragmas, or an older host that does not
+            /// say).</summary>
             internal bool? Runs;
         }
 

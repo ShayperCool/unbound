@@ -1276,6 +1276,51 @@ fn procedural_instancing_is_read_from_the_instancing_options() {
     );
 }
 
+/// A shader the device runs none of the SubShaders of has SubShaders not known, with or without
+/// a Fallback (what the Editor answers then is not measured).
+#[test]
+fn a_shader_the_device_runs_no_subshader_of_is_not_known() {
+    let scratch = Scratch::new("decl-none-run");
+    scratch.write("CGIncludes/UnityCG.cginc", "// stand-in\n");
+    // Excluded for the default device of either host OS in tests (OpenGL Core, Metal).
+    let only = "SubShader { Pass { HLSLPROGRAM\n#pragma vertex vert\n#pragma only_renderers d3d11 gles3\nENDHLSL } }";
+    scratch.write(
+        "Assets/None.shader",
+        &format!("Shader \"Tests/None\" {{ {only} Fallback Off }}"),
+    );
+    scratch.write(
+        "Assets/NoneFalls.shader",
+        &format!("Shader \"Tests/NoneFalls\" {{ {only} Fallback \"Tests/Plain\" }}"),
+    );
+    scratch.write(
+        "Assets/Plain.shader",
+        "Shader \"Tests/Plain\" { SubShader { Pass { } } }",
+    );
+    let data = scratch.0.join("unity");
+    std::fs::create_dir_all(&data).unwrap();
+    let provider = Provider::new(inputs(
+        &scratch,
+        scratch.0.join("CGIncludes"),
+        data,
+        MEASURED,
+        Arc::new(AtomicUsize::new(0)),
+        Arc::new(AtomicBool::new(false)),
+    ));
+    for name in ["Tests/None", "Tests/NoneFalls"] {
+        let answer = ask(&provider, name);
+        assert_eq!(answer["found"], true, "{answer}");
+        assert_eq!(answer["subshaders_known"], false, "{answer}");
+        assert!(
+            answer["reason"]
+                .as_str()
+                .unwrap()
+                .contains("none of its SubShaders"),
+            "{answer}"
+        );
+    }
+    assert_eq!(ask(&provider, "Tests/Plain")["subshaders_known"], true);
+}
+
 /// An `#include_with_pragmas` file's pragmas are read: keywords and targets leave the SubShader
 /// run; a renderer limit there, which the renderer does not apply, leaves it not known.
 #[test]

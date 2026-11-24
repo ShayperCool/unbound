@@ -1152,8 +1152,9 @@ pub struct SubShader {
     pub dropped: Vec<PassInfo>,
     /// Every pass it declares, the dropped ones included, in order.
     pub declared: Vec<PassInfo>,
-    /// Every pass it has is one the device does not run, so it is not chosen (Unbound's
-    /// reading: unmeasured, where only a dropped pass among others is).
+    /// Every pass it has is one the device does not run, so it is not chosen: the device's
+    /// shader has no such SubShader, while one that lost a pass among others keeps the rest
+    /// (Unity 6000.0.71f1 on OpenGL Core, tests/projects/graphicsgaps select.restricted.*).
     pub unsupported: bool,
     /// The geometry and tessellation stages its kept passes declare ([`PassInfo::
     /// unsupported_stages`]), in order: the renderer passes it over when another matching

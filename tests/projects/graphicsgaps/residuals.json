@@ -32,7 +32,7 @@
     "anamorphism.projection",
     "anamorphism.projection0"
   ],
-  "The renderer runs no geometry or tessellation stage: for a shader whose first SubShader has such a pass it draws the next SubShader (warned once per shader), while the Editor's OpenGL Core and Vulkan devices draw the first, which the queries answer from too. What is drawn and the pass list Material.FindPass reads under a render pipeline are the drawn SubShader's.": [
+  "The renderer runs no geometry or tessellation stage: for a shader whose first SubShader has such a pass it draws the next SubShader (warned once per shader), while the Editor's OpenGL Core and Vulkan devices draw the first, which the queries answer from too. What is drawn and the pass lists Material.FindPass under a render pipeline, GetPassName, SetPass and FindPassTagValue read are the drawn SubShader's, while passCount answers from the first.": [
     "select.restricted.SelG.drawn",
     "select.restricted.SelT.drawn",
     "select.restricted.SelG.stagePass",
