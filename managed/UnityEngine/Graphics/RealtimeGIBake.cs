@@ -75,9 +75,15 @@ namespace UnityEngine
         {
             s_CancelRequested = false;
             s_InBake = true;
+            bool abortedInStarted = false;
             try
             {
                 UnityEditor.Lightmapping.RaiseBakeStarted();
+                if (Compat.LightmappingHooksMeasured && s_CancelRequested)
+                {
+                    abortedInStarted = true;
+                    return false;
+                }
                 Baking = true;
                 bool first = true;
                 foreach (var scene in Unbound.Runtime.SceneRegistry.Loaded.ToArray())
@@ -115,16 +121,24 @@ namespace UnityEngine
                     first = false;
                     UnityEditor.SceneManagement.EditorSceneManager.Dirty(scene);
                 }
-                float progress = 0f;
-                bool done = false;
-                while (!done && !s_CancelRequested)
-                    UnityEditor.Lightmapping.AdditionalBake(ref progress, ref done);
-                if (s_CancelRequested)
-                {
-                    Baking = false;
-                    UnityEditor.Lightmapping.RaiseBakeCancelled();
-                }
                 UnityEditor.Lightmapping.RaiseLightingDataUpdated();
+                if (Compat.LightmappingHooksMeasured)
+                {
+                    bool customDelegate = !UnityEditor.Lightmapping.IsDefaultAdditionalBakeDelegate;
+                    float progress = 0f;
+                    bool done = false;
+                    while (!done && !s_CancelRequested)
+                        UnityEditor.Lightmapping.AdditionalBake(ref progress, ref done);
+                    if (s_CancelRequested)
+                    {
+                        Baking = false;
+                        UnityEditor.Lightmapping.RaiseBakeCancelled();
+                    }
+                    else if (customDelegate)
+                    {
+                        UnityEditor.Lightmapping.RaiseLightingDataUpdated();
+                    }
+                }
             }
             finally
             {
@@ -132,8 +146,9 @@ namespace UnityEngine
                 s_InBake = false;
                 s_CancelRequested = false;
             }
-            UnityEditor.Lightmapping.RaiseBakeCompleted();
-            return true;
+            if (!abortedInStarted)
+                UnityEditor.Lightmapping.RaiseBakeCompleted();
+            return !abortedInStarted;
         }
 
         /// <summary>The environment lighting a script's bake made of each scene (by path): kept for

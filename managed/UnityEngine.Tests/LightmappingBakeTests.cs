@@ -455,6 +455,49 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
+        public void GetLightingDataAssetForSceneResolvesActiveNonActiveAndUnloadedScenes()
+        {
+            Assert.Null(Lightmapping.GetLightingDataAssetForScene(default));
+            var previousActive = SceneRegistry.Active;
+            var activeSceneData = SceneRegistry.Create("PlainTest", "Assets/PlainTest.unity", -1);
+            activeSceneData.IsLoaded = true;
+            var bakedSceneData = SceneRegistry.Create("BakedTest", "Assets/BakedTest.unity", -1);
+            bakedSceneData.IsLoaded = true;
+            bakedSceneData.LightingDataRef = new ObjectRef(112000000, "0000000000000000f000000000000000", 0);
+            var activeScene = new UnityEngine.SceneManagement.Scene { m_Handle = activeSceneData.Handle.Value };
+            var bakedScene = new UnityEngine.SceneManagement.Scene { m_Handle = bakedSceneData.Handle.Value };
+            try
+            {
+                SceneRegistry.Active = activeSceneData;
+                Assert.Null(Lightmapping.GetLightingDataAssetForScene(activeScene));
+                Assert.Null(Lightmapping.lightingDataAsset);
+
+                // Non-active loaded scene returns its own LightingDataAsset while active stays null.
+                var nonActive = Lightmapping.GetLightingDataAssetForScene(bakedScene);
+                Assert.NotNull(nonActive);
+                Assert.Equal("LightingData", nonActive.name);
+                Assert.Null(Lightmapping.lightingDataAsset);
+
+                // Active baked scene returns the same instance as Lightmapping.lightingDataAsset.
+                SceneRegistry.Active = bakedSceneData;
+                var active = Lightmapping.GetLightingDataAssetForScene(bakedScene);
+                Assert.Same(nonActive, active);
+                Assert.Same(active, Lightmapping.lightingDataAsset);
+
+                // Unloaded scene returns null.
+                SceneRegistry.Active = activeSceneData;
+                bakedSceneData.IsLoaded = false;
+                Assert.Null(Lightmapping.GetLightingDataAssetForScene(bakedScene));
+            }
+            finally
+            {
+                SceneRegistry.Forget(bakedSceneData);
+                SceneRegistry.Forget(activeSceneData);
+                SceneRegistry.Active = previousActive;
+            }
+        }
+
+        [Fact]
         public void AdditionalBakeDelegateStepsUntilDoneAndCancelFiresBakeCancelled()
         {
             var defaultDelegate = Lightmapping.GetAdditionalBakeDelegate();
@@ -467,7 +510,6 @@ namespace UnityEngine.Tests
 
             Lightmapping.SetAdditionalBakeDelegate(null);
             Assert.Same(defaultDelegate, Lightmapping.GetAdditionalBakeDelegate());
-            Assert.Null(Lightmapping.GetLightingDataAssetForScene(default));
 
             var events = new List<string>();
             int step = 0;
@@ -492,56 +534,100 @@ namespace UnityEngine.Tests
             Lightmapping.bakeCancelled += onCancel;
             try
             {
-                bool result = false;
-                Run(Phase.Edit, () => result = Lightmapping.Bake());
-                Assert.True(result);
-                Assert.Same(multiStep, Lightmapping.GetAdditionalBakeDelegate());
-                Assert.Equal(new[] { "S:False", "A1:0:False:True", "A2:0.5:False:True", "U:True", "C:False" }, events);
-
-                events.Clear();
-                step = 0;
-                Lightmapping.bakeStarted -= onStart;
-                Lightmapping.AdditionalBakeDelegate cancelStep = (ref float progress, ref bool done) =>
+                using (TestRelease.Pin(TestRelease.Measured))
                 {
-                    step++;
-                    events.Add($"A{step}:{Lightmapping.isRunning}");
-                    Lightmapping.Cancel();
-                    done = false;
-                };
-                Action onStartCancel = () =>
-                {
-                    events.Add("S:" + Lightmapping.isRunning);
-                    Lightmapping.SetAdditionalBakeDelegate(cancelStep);
-                };
-                Lightmapping.bakeStarted += onStartCancel;
-                try
-                {
+                    bool result = false;
                     Run(Phase.Edit, () => result = Lightmapping.Bake());
                     Assert.True(result);
-                    Assert.Equal(1, step);
-                    Assert.Equal(new[] { "S:False", "A1:True", "X:False", "U:False", "C:False" }, events);
-                }
-                finally { Lightmapping.bakeStarted -= onStartCancel; }
+                    Assert.Same(multiStep, Lightmapping.GetAdditionalBakeDelegate());
+                    Assert.Equal(new[] { "S:False", "U:True", "A1:0:False:True", "A2:0.5:False:True", "U:True", "C:False" }, events);
 
-                // Cancel outside a bake is a no-op; Cancel inside bakeStarted skips additional bake steps.
-                events.Clear();
-                step = 0;
-                Lightmapping.Cancel();
-                Action onStartAbort = () =>
-                {
-                    events.Add("S:" + Lightmapping.isRunning);
-                    Lightmapping.SetAdditionalBakeDelegate(multiStep);
+                    events.Clear();
+                    step = 0;
+                    Lightmapping.bakeStarted -= onStart;
+                    Lightmapping.AdditionalBakeDelegate cancelStep = (ref float progress, ref bool done) =>
+                    {
+                        step++;
+                        events.Add($"A{step}:{Lightmapping.isRunning}");
+                        Lightmapping.Cancel();
+                        done = false;
+                    };
+                    Action onStartCancel = () =>
+                    {
+                        events.Add("S:" + Lightmapping.isRunning);
+                        Lightmapping.SetAdditionalBakeDelegate(cancelStep);
+                    };
+                    Lightmapping.bakeStarted += onStartCancel;
+                    try
+                    {
+                        Run(Phase.Edit, () => result = Lightmapping.Bake());
+                        Assert.True(result);
+                        Assert.Equal(1, step);
+                        Assert.Equal(new[] { "S:False", "U:True", "A1:True", "X:False", "C:False" }, events);
+                    }
+                    finally { Lightmapping.bakeStarted -= onStartCancel; }
+
+                    // Cancel outside a bake is a no-op; Cancel inside bakeStarted aborts and returns false.
+                    events.Clear();
+                    step = 0;
                     Lightmapping.Cancel();
-                };
-                Lightmapping.bakeStarted += onStartAbort;
-                try
+                    Action onStartAbort = () =>
+                    {
+                        events.Add("S:" + Lightmapping.isRunning);
+                        Lightmapping.SetAdditionalBakeDelegate(multiStep);
+                        Lightmapping.Cancel();
+                    };
+                    Lightmapping.bakeStarted += onStartAbort;
+                    try
+                    {
+                        Run(Phase.Edit, () => result = Lightmapping.Bake());
+                        Assert.False(result);
+                        Assert.Equal(0, step);
+                        Assert.Equal(new[] { "S:False" }, events);
+                    }
+                    finally { Lightmapping.bakeStarted -= onStartAbort; }
+
+                    // Cancel inside pre-additional lightingDataUpdated skips additional bake and fires X -> C.
+                    events.Clear();
+                    step = 0;
+                    bool cancelledInUpd = false;
+                    Action onUpdCancel = () =>
+                    {
+                        if (!cancelledInUpd)
+                        {
+                            cancelledInUpd = true;
+                            Lightmapping.Cancel();
+                        }
+                    };
+                    Lightmapping.bakeStarted += onStart;
+                    Lightmapping.lightingDataUpdated += onUpdCancel;
+                    try
+                    {
+                        Run(Phase.Edit, () => result = Lightmapping.Bake());
+                        Assert.True(result);
+                        Assert.Equal(0, step);
+                        Assert.Equal(new[] { "S:False", "U:True", "X:False", "C:False" }, events);
+                    }
+                    finally { Lightmapping.lightingDataUpdated -= onUpdCancel; }
+                }
+
+                // Unmeasured release family keeps Cancel() loud and skips 6000.0-measured stepping.
+                using (TestRelease.Pin(TestRelease.Unmeasured))
                 {
+                    events.Clear();
+                    step = 0;
+                    int beforeHits = 0;
+                    foreach (var h in Stubs.HitReport()) if (h.Key == "UnityEditor.Lightmapping.Cancel") beforeHits = h.Value;
+                    Lightmapping.Cancel();
+                    int afterHits = 0;
+                    foreach (var h in Stubs.HitReport()) if (h.Key == "UnityEditor.Lightmapping.Cancel") afterHits = h.Value;
+                    Assert.Equal(beforeHits + 1, afterHits);
+                    bool result = false;
                     Run(Phase.Edit, () => result = Lightmapping.Bake());
                     Assert.True(result);
                     Assert.Equal(0, step);
-                    Assert.Equal(new[] { "S:False", "X:False", "U:False", "C:False" }, events);
+                    Assert.Equal(new[] { "S:False", "U:True", "C:False" }, events);
                 }
-                finally { Lightmapping.bakeStarted -= onStartAbort; }
             }
             finally
             {

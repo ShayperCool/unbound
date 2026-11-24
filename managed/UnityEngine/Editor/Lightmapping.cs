@@ -44,19 +44,21 @@ namespace UnityEditor
         /// replaces the scene's baked lighting) is not supported.</summary>
         public static LightingDataAsset lightingDataAsset
         {
-            get => LightingDataOf(SceneRegistry.Active);
+            get => LightingDataOf(SceneRegistry.Active, "Lightmapping.lightingDataAsset");
             set => throw new NotSupportedException("Unbound: assigning Lightmapping.lightingDataAsset (replacing a scene's baked lighting) is not supported.");
         }
 
-        public static LightingDataAsset GetLightingDataAssetForScene(Scene scene) => LightingDataOf(scene.Data);
+        public static LightingDataAsset GetLightingDataAssetForScene(Scene scene) =>
+            LightingDataOf(scene.Data, "Lightmapping.GetLightingDataAssetForScene");
 
-        static LightingDataAsset LightingDataOf(SceneData scene)
+        static LightingDataAsset LightingDataOf(SceneData scene, string member)
         {
             // (A bake whose lighting data Unbound wrote names it, as the Editor's does.)
-            bool unwritten = scene != null && scene.BakedOnOpen && !scene.LightingDataWritten;
+            if (scene == null || !scene.IsLoaded) return null;
+            bool unwritten = scene.BakedOnOpen && !scene.LightingDataWritten;
             if (unwritten)
-                Stubs.Ignored("Lightmapping.lightingDataAsset", "of a scene the Editor baked (when it opened it, or by Lightmapping.Bake) is the Editor's new asset; Unbound answers null");
-            return scene == null || unwritten ? null : LightingDataAsset.Of(scene.LightingDataRef);
+                Stubs.Ignored(member, "of a scene the Editor baked (when it opened it, or by Lightmapping.Bake) is the Editor's new asset; Unbound answers null");
+            return unwritten ? null : LightingDataAsset.Of(scene.LightingDataRef);
         }
 
         const string k_PlayMode = "Computing lightmaps is not available in play mode.";
@@ -118,10 +120,20 @@ namespace UnityEditor
 
         public static void ResetAdditionalBakeDelegate() => s_AdditionalBakeDelegate = s_DefaultAdditionalBakeDelegate;
 
+        internal static bool IsDefaultAdditionalBakeDelegate => ReferenceEquals(s_AdditionalBakeDelegate, s_DefaultAdditionalBakeDelegate);
+
         internal static void AdditionalBake(ref float progress, ref bool done) =>
             s_AdditionalBakeDelegate(ref progress, ref done);
 
-        public static void Cancel() => RealtimeGI.RequestCancel();
+        public static void Cancel()
+        {
+            if (!Compat.LightmappingHooksMeasured)
+            {
+                Stubs.NotImplemented("UnityEditor.Lightmapping.Cancel");
+                return;
+            }
+            RealtimeGI.RequestCancel();
+        }
 
         /// <summary>In Play mode as <see cref="Bake"/> (measured: the same warning, false); an
         /// asynchronous bake outside Play mode is not implemented.</summary>
