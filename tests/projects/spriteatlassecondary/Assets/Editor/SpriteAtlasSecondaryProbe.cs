@@ -75,7 +75,7 @@ public static class SpriteAtlasSecondaryProbe
             sprites[n] = sprite;
             Describe(n, sprite);
         }
-        foreach (var n in new[] { "G", "H" })
+        foreach (var n in new[] { "G", "H", "I", "J" })
             Describe(n, AssetDatabase.LoadAssetAtPath<Sprite>($"Assets/Art/{n}.png"));
         yield return null;
         foreach (var n in names)

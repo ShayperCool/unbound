@@ -11,12 +11,14 @@ one), holding each secondary texture as it was imported (a normal map's (1, y, y
 sprite's secondary textures become those pages. A sprite without secondary textures is packed
 before those with them.
 
-Four hand-authored atlases (`Assets/Atlases`, sprites in `Assets/Art`): `Packed` (uncompressed)
+Five hand-authored atlases (`Assets/Atlases`, sprites in `Assets/Art`): `Packed` (uncompressed)
 with A (16 x 16, white, `_NormalMap` and `_MaskTex`), B (8 x 8, `_NormalMap`) and C (12 x 12,
 none); `Compressed` (compressed) with D (as A); `Swapped` with F, whose `_MaskTex` is linear and
 whose `_NormalMap` is an ordinary sRGB texture; `Order` (uncompressed) with G (16 x 16,
 `_NormalMap`) and H (8 x 8, `_NormalMap` and `_MaskTex`), where the smaller sprite's secondary-hash
-key precedes the larger sprite's. `Assets/Editor/SpriteAtlasSecondaryProbe.cs`
+key precedes the larger sprite's; and `SameSet` (uncompressed) with I (8 x 8, `_NormalMap`) and J
+(16 x 16, `_NormalMap`), sharing the same secondary property set so the low 32-bit GUID hash
+orders I before J despite I's smaller area. `Assets/Editor/SpriteAtlasSecondaryProbe.cs`
 records in Play mode each sprite's texture (the page name without its import hash), size,
 format, colour space, texture rect and secondary textures (name, texture, size, format, colour
 space, readability, and for uncompressed pages the texels at the texture rect's centre and

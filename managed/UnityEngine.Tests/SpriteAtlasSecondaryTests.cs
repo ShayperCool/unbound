@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using Unbound.Runtime;
 using Xunit;
 
@@ -88,6 +89,13 @@ namespace UnityEngine.Tests
             Assert.Same(before, sprite.SecondaryProperties());
         }
 
+        sealed class SingleTextureResolver : IReferenceResolver
+        {
+            readonly Texture2D m_Texture;
+            public SingleTextureResolver(Texture2D texture) => m_Texture = texture;
+            public Object Resolve(ObjectRef reference, Type expected) => expected == typeof(Texture2D) ? m_Texture : null;
+        }
+
         [Fact]
         public void ImportedSecondaryGuidsBindPagesWithoutLoadingReplacedTexturesAndResetOnDeserialize()
         {
@@ -119,12 +127,18 @@ namespace UnityEngine.Tests
             sprite.BindAtlasSecondary(Array.Empty<string>(), PageOf);
             Assert.Equal(2, sprite.GetSecondaryTextureCount());
 
-            // ReadSerialized resets prior atlas secondary bindings cleanly.
-            var yaml = "%YAML 1.1\n%TAG !u! tag:unity3d.com,2011:\n--- !u!213 &1\nSprite:\n  m_Name: Fresh\n  m_Rect:\n    x: 0\n    y: 0\n    width: 4\n    height: 4\n  m_Offset: {x: 0, y: 0}\n  m_Border: {x: 0, y: 0, z: 0, w: 0}\n  m_PixelsToUnits: 4\n  m_Pivot: {x: 0.5, y: 0.5}\n  m_Extrude: 0\n  m_IsPolygon: 0\n  m_RD:\n    serializedVersion: 3\n    texture: {fileID: 0}\n    alphaTexture: {fileID: 0}\n    secondaryTextures: []\n    m_SubMeshes: []\n    m_IndexBuffer: \n    m_VertexData:\n      serializedVersion: 3\n      m_VertexCount: 0\n      m_Channels: []\n      m_DataSize: 0\n      _typelessdata: \n    m_Bindpose: []\n    textureRect:\n      x: 0\n      y: 0\n      width: 4\n      height: 4\n    textureRectOffset: {x: 0, y: 0}\n    atlasRectOffset: {x: -1, y: -1}\n    settingsRaw: 0\n    uvTransform: {x: 4, y: 2, z: 4, w: 2}\n    downscaleMultiplier: 1\n  m_PhysicsShape: []\n  m_Bones: []\n";
+            // ReadSerialized resets prior atlas secondary bindings cleanly (including m_OwnSecondaryGuids
+            // and m_SecondaryBound so a subsequent empty BindAtlasSecondary cannot restore old entries).
+            var imported = new Texture2D(64, 64, TextureFormat.RGBA32, false) { name = "Imported" };
+            m_Made.Add(imported);
+            var yaml = File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "SpriteFixtures", "Rectangle.asset"));
             var doc = UnityYamlText.Parse(yaml)[0];
-            sprite.ReadSerialized(doc.Body.ToNode(), ObjectResolver.None);
+            sprite.ReadSerialized(doc.Body.ToNode(), new SingleTextureResolver(imported));
             Assert.Equal(0, sprite.GetSecondaryTextureCount());
-            Assert.Empty(sprite.SecondaryProperties());
+            Assert.Null(sprite.SecondaryProperties());
+            sprite.BindAtlasSecondary(Array.Empty<string>(), PageOf);
+            Assert.Equal(0, sprite.GetSecondaryTextureCount());
+            Assert.Null(sprite.SecondaryProperties());
         }
     }
 }

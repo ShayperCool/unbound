@@ -298,7 +298,7 @@ fn xxh32(data: &[u8], seed: u32) -> u32 {
         let mut v2 = seed.wrapping_add(P2);
         let mut v3 = seed;
         let mut v4 = seed.wrapping_sub(P1);
-        while i <= n - 16 {
+        while i + 16 <= n {
             v1 = round(v1, read32(i));
             v2 = round(v2, read32(i + 4));
             v3 = round(v3, read32(i + 8));
@@ -313,7 +313,7 @@ fn xxh32(data: &[u8], seed: u32) -> u32 {
         seed.wrapping_add(P5)
     };
     h = h.wrapping_add(n as u32);
-    while i <= n - 4 {
+    while i + 4 <= n {
         h = h
             .wrapping_add(read32(i).wrapping_mul(P3))
             .rotate_left(17)
@@ -1582,6 +1582,17 @@ mod tests {
         assert_eq!(h_f, 0x8b2b_77f9_a7a5_9d59);
         assert_eq!(h_a >> 32, h_d >> 32);
         assert_eq!(h_a >> 32, h_f >> 32);
+        // Short property names (<4 bytes) must not underflow xxh32 and produce distinct hashes.
+        let h_empty = secondary_hash([""], a_guid);
+        let h_1 = secondary_hash(["a"], a_guid);
+        let h_2 = secondary_hash(["_N"], a_guid);
+        let h_3 = secondary_hash(["tex"], a_guid);
+        assert_eq!(h_empty, 0);
+        assert_ne!(h_1, 0);
+        assert_ne!(h_2, 0);
+        assert_ne!(h_3, 0);
+        assert_ne!(h_1, h_2);
+        assert_ne!(h_2, h_3);
         // Long property names (>32 and >64 bytes) produce distinct non-zero hashes.
         let long40 = "_SecondaryPropertyNameLongerThanThirtyTwo";
         let long72 = "_SecondaryPropertyNameMuchLongerThanSixtyFourBytesForCityHashLoopCoverage";
