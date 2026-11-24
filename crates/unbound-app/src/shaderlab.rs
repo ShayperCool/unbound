@@ -1167,6 +1167,12 @@ impl SubShader {
         !self.unsupported_stages.is_empty()
     }
 
+    /// Whether the Editor's `device` runs it as far as its geometry and tessellation stages go
+    /// (None: not measured); one without them runs.
+    pub fn device_runs(&self, device: unbound_compat::GraphicsDevice) -> Option<bool> {
+        self.editor_runs(&|stage| stage.editor_runs(device))
+    }
+
     /// Whether the Editor's device runs it as far as its stages go, given whether the device runs
     /// each stage: false when it does not run one of them, None when that is not measured for
     /// one.

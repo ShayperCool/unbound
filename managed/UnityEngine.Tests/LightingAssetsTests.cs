@@ -59,7 +59,7 @@ namespace Unbound.Tests
             var words = string.Join(",", keywords.Select(k => "{\"name\":\"" + k + "\",\"local\":false,\"dynamic\":false}"));
             string flag = known ? "true" : "false";
             m_Declarations[shader.name] = "{\"found\":true,\"builtin\":false,\"subshaders_known\":" + flag + ",\"keywords_known\":" + flag
-                + ",\"transient\":false,\"reason\":\"\",\"subshaders\":[{\"tags\":[],\"passes\":[" + passes + "],\"lod\":0,\"restricted\":false}],\"keywords\":[" + words + "]}";
+                + ",\"transient\":false,\"reason\":\"\",\"subshaders\":[{\"tags\":[],\"passes\":[" + passes + "],\"lod\":0,\"runs\":true}],\"keywords\":[" + words + "]}";
             return shader;
         }
 

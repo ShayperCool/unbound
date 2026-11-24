@@ -72,7 +72,7 @@ namespace UnityEngine.Tests
             var name = document.RootElement.GetProperty("name").GetString();
             string sets = name == m_Dots.name ? "[[\"_\",\"DOTS_INSTANCING_ON\"]]" : "[[\"_\",\"SOMETHING_ELSE\"]]";
             return "{\"found\":true,\"subshaders_known\":true,\"keywords_known\":true,\"transient\":false,\"reason\":\"\",\"subshaders\":[{\"tags\":[],\"passes\":[{\"name\":\"P\",\"tags\":[],\"keyword_sets\":"
-                + sets + "}],\"lod\":0,\"restricted\":false}],\"keywords\":[]}";
+                + sets + "}],\"lod\":0,\"runs\":true}],\"keywords\":[]}";
         }
 
         T Keep<T>(T o) where T : Object

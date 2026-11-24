@@ -285,7 +285,7 @@ namespace UnityEngine.Tests
         public void ShaderLodCanRejectAnUploadedMaterialBeforeItsFirstDraw()
         {
             using var release = TestRelease.Pin(TestRelease.Measured);
-            const string declarations = "{\"found\":true,\"subshaders_known\":true,\"subshaders\":[{\"tags\":[],\"passes\":[{\"name\":\"P\",\"tags\":[]}],\"lod\":100,\"restricted\":false}]}";
+            const string declarations = "{\"found\":true,\"subshaders_known\":true,\"subshaders\":[{\"tags\":[],\"passes\":[{\"name\":\"P\",\"tags\":[]}],\"lod\":100,\"runs\":true}]}";
             const string noPasses = "{\"found\":false,\"known\":true,\"shader\":\"\",\"tags\":{},\"passes\":[]}";
             const string onePass = "{\"found\":true,\"known\":true,\"shader\":\"Tests/MaterialMemory\",\"tags\":{},\"passes\":[{\"name\":\"P\",\"tags\":{}}]}";
             ShaderDeclarations.ResetForTests();

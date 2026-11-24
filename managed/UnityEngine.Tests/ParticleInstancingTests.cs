@@ -50,7 +50,7 @@ namespace UnityEngine.Tests
             foreach (var p in procedural)
                 passes.Add("{\"name\":\"\",\"tags\":[],\"keyword_sets\":null,\"keyword_sets_reason\":\"\",\"keyword_sets_transient\":false,\"procedural_instancing\":" + p + "}");
             m_Answers[shader.name] = "{\"found\":true,\"builtin\":false,\"subshaders_known\":true,\"keywords_known\":false,\"transient\":false,\"reason\":\"\","
-                + "\"subshaders\":[{\"tags\":[],\"lod\":0,\"restricted\":false,\"passes\":[" + string.Join(",", passes) + "]}],\"keywords\":[]}";
+                + "\"subshaders\":[{\"tags\":[],\"lod\":0,\"runs\":true,\"passes\":[" + string.Join(",", passes) + "]}],\"keywords\":[]}";
             var material = new Material(shader);
             m_Owned.Add(material);
             return material;

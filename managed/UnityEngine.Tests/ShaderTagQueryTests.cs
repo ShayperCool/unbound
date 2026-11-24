@@ -54,7 +54,7 @@ namespace UnityEngine.Tests
             var tags = new List<string> { "[\"SubId\",\"" + id + "\"]" };
             if (pipeline != null) tags.Add("[\"RenderPipeline\",\"" + pipeline + "\"]");
             var list = string.Join(",", passes.Select(n => n == null ? "{\"tags\":[]}" : "{\"name\":\"" + n + "\",\"tags\":[]}"));
-            return "{\"tags\":[" + string.Join(",", tags) + "],\"passes\":[" + list + "],\"lod\":" + lod + ",\"restricted\":false}";
+            return "{\"tags\":[" + string.Join(",", tags) + "],\"passes\":[" + list + "],\"lod\":" + lod + ",\"runs\":true}";
         }
 
         static string[] Named(string id, int count) => Enumerable.Range(0, count).Select(i => id + "P" + i).ToArray();

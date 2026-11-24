@@ -54,8 +54,8 @@ namespace UnityEngine.Tests
         /// <summary>Two SubShaders without a Queue tag, as the committed 6000.0.71f1
         /// shaderkeywords rows record Particles/Standard Unlit's (stand-in for the host's answer).</summary>
         const string TwoWithoutQueue = "{\"found\":true,\"builtin\":true,\"subshaders_known\":true,\"keywords_known\":true,\"transient\":false,\"reason\":\"\",\"subshaders\":["
-            + "{\"tags\":[],\"passes\":[{\"name\":\"P\",\"tags\":[]}],\"lod\":0,\"restricted\":false},"
-            + "{\"tags\":[],\"passes\":[{\"name\":\"P\",\"tags\":[]}],\"lod\":0,\"restricted\":false}],\"keywords\":[]}";
+            + "{\"tags\":[],\"passes\":[{\"name\":\"P\",\"tags\":[]}],\"lod\":0,\"runs\":true},"
+            + "{\"tags\":[],\"passes\":[{\"name\":\"P\",\"tags\":[]}],\"lod\":0,\"runs\":true}],\"keywords\":[]}";
 
         public BuiltinMaterialQueueTests()
         {

@@ -15,9 +15,10 @@
 //!   "reason": string,          // why something is unknown (empty when everything is known)
 //!   "subshaders": [{ "tags": [[name, value]], "passes": [{ "name", "tags": [[name, value]] }],
 //!                    "lod": u32,          // its `LOD` (0: none)
-//!                    "restricted": bool   // a pass may limit the devices it runs on
-//!                  }],                    //   (`only_renderers`/`exclude_renderers`, GLSL,
-//!                                         //   `#include_with_pragmas` not read)
+//!                    "runs": bool|null    // whether the device runs it: false when it runs
+//!                  }],                    //   none of its passes; null when not known (GLSL,
+//!                                         //   `#include_with_pragmas` not read, stages not
+//!                                         //   measured on the device)
 //!   "keywords": [{ "name", "local", "dynamic" }] }
 //! ```
 //!
@@ -30,9 +31,9 @@
 //! (retry an unavailable input). These fields are optional for older hosts. A per-pass transient
 //! makes the managed answer retryable even when the root's other parts are known.
 //!
-//! `lod` and `restricted` are optional: an older host omits them, and the managed side then
-//! keeps the renderer's pass list for `Shader.passCount` (the behaviour before they were sent).
-//! A built-in shader's SubShaders are never `restricted` (their serialized form does not say).
+//! `lod` and `runs` are optional: an older host omits them, and the managed side then keeps the
+//! renderer's pass list for `Shader.passCount` (the behaviour before they were sent). A built-in
+//! shader's SubShaders always run (their serialized form does not say otherwise).
 //!
 //! A compute shader file (`{"file": ...}`): `{ found, keywords_known, transient, reason,
 //! keywords }`. A known keyword list may be empty (a file that declares nothing); an unknown one

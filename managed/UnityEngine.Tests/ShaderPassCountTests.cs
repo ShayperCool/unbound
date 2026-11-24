@@ -52,15 +52,15 @@ namespace UnityEngine.Tests
                 : "{\"found\":false,\"subshaders_known\":false,\"keywords_known\":false,\"transient\":false,\"reason\":\"\",\"subshaders\":[],\"keywords\":[]}";
         }
 
-        /// <summary>A SubShader: <paramref name="lod"/> or <paramref name="restricted"/> null
-        /// leaves the field out (an older host).</summary>
-        static string Sub(int? lod, int passes, string pipeline = null, bool? restricted = false)
+        /// <summary>A SubShader: <paramref name="lod"/> null leaves the field out (an older host),
+        /// <paramref name="runs"/> null the device's answer (an older host, or not known).</summary>
+        static string Sub(int? lod, int passes, string pipeline = null, bool? runs = true)
         {
             var tags = pipeline != null ? "[[\"RenderPipeline\",\"" + pipeline + "\"]]" : "[]";
             var list = string.Join(",", Enumerable.Range(0, passes).Select(i => "{\"name\":\"P" + i + "\",\"tags\":[]}"));
             return "{\"tags\":" + tags + ",\"passes\":[" + list + "]"
                 + (lod.HasValue ? ",\"lod\":" + lod.Value : "")
-                + (restricted.HasValue ? ",\"restricted\":" + (restricted.Value ? "true" : "false") : "")
+                + (runs.HasValue ? ",\"runs\":" + (runs.Value ? "true" : "false") : "")
                 + "}";
         }
 
@@ -197,14 +197,14 @@ namespace UnityEngine.Tests
         [Fact]
         public void AnOlderHostOrUnknownSubShadersKeepTheRenderersList()
         {
-            var older = Make(Sub(null, 3, restricted: null), Sub(null, 1, restricted: null));
+            var older = Make(Sub(null, 3, runs: null), Sub(null, 1, runs: null));
             SeedRenderer(older, 2);
             int before = Hits("Shader.passCount without SubShader LODs");
             Assert.Equal(2, older.passCount);
             Assert.Equal(2, new Material(older).passCount);
             Assert.True(Hits("Shader.passCount without SubShader LODs") > before);
 
-            var noFlag = Make(Sub(0, 3, restricted: null));
+            var noFlag = Make(Sub(0, 3, runs: null));
             SeedRenderer(noFlag, 2);
             Assert.Equal(2, noFlag.passCount);
 
@@ -215,15 +215,15 @@ namespace UnityEngine.Tests
             Assert.Equal(0, unknown.GetPassCountInSubshader(1));
         }
 
-        /// <summary>Unmeasured selections keep the renderer's pass list: a SubShader that may be
-        /// limited to some devices where one would be picked, a negative limit, nothing in reach
-        /// with a limited first SubShader. A limited SubShader out of reach does not matter. A
+        /// <summary>Unmeasured selections keep the renderer's pass list: a SubShader the device may
+        /// run or not where one would be picked, a negative limit, nothing in reach with such a
+        /// first SubShader. Such a SubShader out of reach does not matter. A
         /// RenderPipeline tag of a space names a pipeline (no trimming), and with nothing in reach
         /// a first SubShader for another pipeline answers (graphicsgaps select.*).</summary>
         [Fact]
         public void UnmeasuredSelectionsKeepTheRenderersList()
         {
-            var restricted = Make(Sub(400, 3, restricted: true), Sub(200, 2));
+            var restricted = Make(Sub(400, 3, runs: null), Sub(200, 2));
             SeedRenderer(restricted, 7);
             Assert.Equal(7, restricted.passCount);
             restricted.maximumLOD = 300;
@@ -241,12 +241,32 @@ namespace UnityEngine.Tests
             Assert.Equal(2, space.passCount);
 
             var taggedFirst = Make(Sub(300, 3, "UniversalPipeline"), Sub(200, 2));
-            var limitedFirst = Make(Sub(300, 3, restricted: true), Sub(200, 2));
+            var limitedFirst = Make(Sub(300, 3, runs: null), Sub(200, 2));
             Shader.globalMaximumLOD = 100;
             SeedRenderer(taggedFirst, 7);
             SeedRenderer(limitedFirst, 7);
             Assert.Equal(3, taggedFirst.passCount);
             Assert.Equal(7, limitedFirst.passCount);
+        }
+
+        /// <summary>A SubShader the device runs none of the passes of is passed over, one it runs
+        /// is picked whatever its passes' limits (graphicsgaps select.restricted.*): with nothing
+        /// in reach, a first SubShader the device does not run leaves the answer unknown.</summary>
+        [Fact]
+        public void ASubShaderTheDeviceDoesNotRunIsPassedOver()
+        {
+            var skipped = Make(Sub(0, 3, runs: false), Sub(0, 2));
+            SeedRenderer(skipped, 7);
+            Assert.Equal(2, skipped.passCount);
+            Assert.Equal(2, new Material(skipped).passCount);
+            var runs = Make(Sub(0, 3, runs: true), Sub(0, 2));
+            SeedRenderer(runs, 7);
+            Assert.Equal(3, runs.passCount);
+            var none = Make(Sub(300, 3, runs: false), Sub(200, 2));
+            Shader.globalMaximumLOD = 100;
+            SeedRenderer(none, 7);
+            Assert.Equal(7, none.passCount);
+            Shader.globalMaximumLOD = m_GlobalLod;
         }
 
         /// <summary>Under a render pipeline its tagged SubShader is selected (graphicsgaps

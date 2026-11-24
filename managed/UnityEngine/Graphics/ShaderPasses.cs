@@ -243,10 +243,14 @@ namespace UnityEngine
         /// the first SubShader, whatever its tag. Matches the Unity 6000.0.71f1 Editor:
         /// tests/projects/shaderpasscount (the built-in pipeline's LOD cells) and
         /// tests/projects/graphicsgaps select.* (under URP and other pipeline tags, a Fallback's
-        /// SubShader, tagged first SubShaders when none is in reach). Null (unknown, warned once
-        /// per <paramref name="api"/> and condition) for a negative limit, a SubShader that may be
-        /// limited to some devices or an older-host answer; the caller then keeps its
-        /// renderer-based answer.
+        /// SubShader, tagged first SubShaders when none is in reach). A SubShader the device runs
+        /// none of the passes of is passed over, one that lost some of them answers with the rest,
+        /// and one with geometry or tessellation stages counts as the Editor's device runs them
+        /// (tests/projects/graphicsgaps select.restricted.*, OpenGL Core and Vulkan). Null
+        /// (unknown, warned once per <paramref name="api"/> and condition) for a negative limit, a
+        /// SubShader the device may run or not (not known: <see
+        /// cref="Unbound.Runtime.ShaderDeclarations.SubShader.Runs"/>) or an older-host answer; the
+        /// caller then keeps its renderer-based answer.
         /// </summary>
         internal Unbound.Runtime.ShaderDeclarations.SubShader ActiveSubShader(string api, string keeps)
         {
@@ -260,13 +264,15 @@ namespace UnityEngine
                 if (sub.Lod is not int lod) return SelectionUnknown(api, keeps, "without SubShader LODs", "this host does not send them");
                 if (lod > limit || !Unbound.Runtime.ShaderDeclarations.RunsUnder(Unbound.Runtime.ShaderDeclarations.Tag(sub.Tags, "RenderPipeline"), pipeline))
                     continue;
-                if (sub.Restricted)
-                    return SelectionUnknown(api, keeps, "with SubShaders limited to some devices", "their selection is not measured");
+                // One the device does not run is passed over, as the renderer passes it over.
+                if (sub.Runs == false) continue;
+                if (sub.Runs == null)
+                    return SelectionUnknown(api, keeps, "with a SubShader the device may not run", "whether it runs it is not known");
                 return sub;
             }
             var first = d.SubShaders[0];
-            if (first.Restricted)
-                return SelectionUnknown(api, keeps, "with no SubShader in reach", "a first SubShader limited to some devices is not measured");
+            if (first.Runs != true)
+                return SelectionUnknown(api, keeps, "with no SubShader in reach", "a first SubShader the device may not run is not measured");
             return first;
         }
 

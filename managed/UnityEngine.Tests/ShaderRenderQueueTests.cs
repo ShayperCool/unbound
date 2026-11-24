@@ -55,13 +55,13 @@ namespace UnityEngine.Tests
 
         /// <summary>A declared SubShader as the host sends it: its tags as Unity stores them
         /// (<c>QUEUE</c> upper-cased; null: no Queue tag), one pass, its LOD.</summary>
-        static string Sub(string queue, int lod = 0, string pipeline = null, bool restricted = false)
+        static string Sub(string queue, int lod = 0, string pipeline = null, bool? runs = true)
         {
             var tags = new List<string>();
             if (queue != null) tags.Add("[\"QUEUE\",\"" + queue + "\"]");
             if (pipeline != null) tags.Add("[\"RenderPipeline\",\"" + pipeline + "\"]");
             return "{\"tags\":[" + string.Join(",", tags) + "],\"passes\":[{\"name\":\"P\",\"tags\":[]}],\"lod\":" + lod
-                + ",\"restricted\":" + (restricted ? "true" : "false") + "}";
+                + ",\"runs\":" + (runs == null ? "null" : runs.Value ? "true" : "false") + "}";
         }
 
         static string Answer(string[] subshaders, bool known = true, bool transient = false) =>
@@ -234,10 +234,13 @@ namespace UnityEngine.Tests
             Assert.Equal(2007, unknown.renderQueue);
             Assert.True(Hits("Shader.renderQueue for a shader whose SubShaders the host does not know") > before);
 
-            var restricted = Make(Decoy, Sub("Transparent", restricted: true));
-            before = Hits("Shader.renderQueue with SubShaders limited to some devices");
+            var restricted = Make(Decoy, Sub("Transparent", runs: null));
+            before = Hits("Shader.renderQueue with a SubShader the device may not run");
             Assert.Equal(2007, restricted.renderQueue);
-            Assert.True(Hits("Shader.renderQueue with SubShaders limited to some devices") > before);
+            Assert.True(Hits("Shader.renderQueue with a SubShader the device may not run") > before);
+            // One the device does not run is passed over (graphicsgaps select.restricted.*).
+            var skipped = Make(Decoy, Sub("Transparent", runs: false), Sub("Overlay"));
+            Assert.Equal(4000, skipped.renderQueue);
 
             var shader = Make(Decoy, Sub("Overlay", pipeline: "UniversalPipeline"), Sub("Transparent"));
             Assert.Equal(3000, shader.renderQueue);

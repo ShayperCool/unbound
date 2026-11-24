@@ -48,9 +48,10 @@ namespace Unbound.Runtime
             /// <summary>Its <c>LOD</c> (0: none); null when the host does not send it (an older
             /// host): Shader.passCount then keeps the renderer's pass list.</summary>
             internal int? Lod;
-            /// <summary>Whether a pass may limit the devices it runs on (or the host does not
-            /// say): which SubShader the device then runs is not measured.</summary>
-            internal bool Restricted = true;
+            /// <summary>Whether the device runs it: false when it runs none of its passes (the
+            /// renderer passes it over), null when that is not known (unmeasured stages or
+            /// pragmas, or an older host that does not say).</summary>
+            internal bool? Runs;
         }
 
         /// <summary>Whether the host knows a shader (a compute file) by the name.</summary>
@@ -241,11 +242,11 @@ namespace Unbound.Runtime
                 {
                     var s = new SubShader();
                     Tags(sub.GetProperty("tags"), s.Tags);
-                    // Optional (an older host sends neither): a missing LOD is unknown, a missing
-                    // device limit counts as one.
+                    // Optional (an older host sends neither): a missing LOD or `runs` is unknown.
                     if (sub.TryGetProperty("lod", out var lod) && lod.ValueKind == JsonValueKind.Number && lod.TryGetInt64(out var l) && l >= 0)
                         s.Lod = (int)Math.Min(l, int.MaxValue);
-                    s.Restricted = !(sub.TryGetProperty("restricted", out var restricted) && restricted.ValueKind == JsonValueKind.False);
+                    s.Runs = sub.TryGetProperty("runs", out var runs) && runs.ValueKind is JsonValueKind.True or JsonValueKind.False
+                        ? runs.GetBoolean() : null;
                     foreach (var pass in sub.GetProperty("passes").EnumerateArray())
                     {
                         var tags = new Dictionary<string, string>(StringComparer.Ordinal);

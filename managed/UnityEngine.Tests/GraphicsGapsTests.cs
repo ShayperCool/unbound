@@ -333,7 +333,7 @@ namespace Unbound.Tests
             Application.LogCallback listen = (message, _, type) => { if (type == LogType.Error) logged.Add(message); };
             ShaderDeclarations.s_CallForTests = (method, request) => request.Contains("Tests/GapsQueue")
                 ? "{\"found\":true,\"builtin\":false,\"transient\":false,\"reason\":\"\",\"subshaders_known\":true,\"keywords_known\":true,\"keywords\":[],"
-                  + "\"subshaders\":[{\"tags\":[[\"QUEUE\",\"2450\"]],\"passes\":[{\"name\":\"P\",\"tags\":[]}],\"lod\":0,\"restricted\":false}]}"
+                  + "\"subshaders\":[{\"tags\":[[\"QUEUE\",\"2450\"]],\"passes\":[{\"name\":\"P\",\"tags\":[]}],\"lod\":0,\"runs\":true}]}"
                 : "{\"found\":false}";
             ShaderDeclarations.ResetForTests();
             var previous = Shader.globalRenderPipeline;
@@ -362,8 +362,8 @@ namespace Unbound.Tests
             var shader = ShaderUtil.CreateShaderAsset("Shader \"Tests/GapsPassless\" { SubShader { Pass { } } }");
             ShaderDeclarations.s_CallForTests = (method, request) => request.Contains("Tests/GapsPassless")
                 ? "{\"found\":true,\"builtin\":false,\"transient\":false,\"reason\":\"\",\"subshaders_known\":true,\"keywords_known\":true,\"keywords\":[],"
-                  + "\"subshaders\":[{\"tags\":[[\"QUEUE\",\"Transparent\"]],\"passes\":[],\"lod\":0,\"restricted\":false},"
-                  + "{\"tags\":[],\"passes\":[{\"name\":\"P\",\"tags\":[]}],\"lod\":0,\"restricted\":false}]}"
+                  + "\"subshaders\":[{\"tags\":[[\"QUEUE\",\"Transparent\"]],\"passes\":[],\"lod\":0,\"runs\":true},"
+                  + "{\"tags\":[],\"passes\":[{\"name\":\"P\",\"tags\":[]}],\"lod\":0,\"runs\":true}]}"
                 : "{\"found\":false}";
             ShaderDeclarations.ResetForTests();
             try

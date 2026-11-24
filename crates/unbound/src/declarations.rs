@@ -241,35 +241,21 @@ fn builtin_subshaders(builtin: &Builtin) -> Result<Vec<Value>, Unknown> {
                 "lod": sub.lod,
                 // The serialized form does not say which devices a SubShader runs on; a built-in
                 // SubShader is taken as one the device runs, as the renderer does.
-                "restricted": false,
+                "runs": true,
             })
         })
         .collect())
 }
 
-/// Whether a program may limit the graphics devices it runs on: `#pragma only_renderers` or
-/// `exclude_renderers`, or an `#include_with_pragmas` whose pragmas are not read here. Whether
-/// the device then skips its SubShader is not measured.
-fn limits_renderers(code: &str) -> bool {
+/// Whether a program has pragmas not read here (an `#include_with_pragmas`, whose file may
+/// limit the devices the program runs on): whether the device runs it is then not known.
+fn unread_pragmas(code: &str) -> bool {
     code.lines().any(|line| {
-        let Some(rest) = line.trim_start().strip_prefix('#') else {
-            return false;
-        };
-        let rest = rest.trim_start();
-        if rest
-            .strip_prefix("include_with_pragmas")
+        line.trim_start()
+            .strip_prefix('#')
+            .map(str::trim_start)
+            .and_then(|rest| rest.strip_prefix("include_with_pragmas"))
             .is_some_and(|r| r.starts_with(char::is_whitespace))
-        {
-            return true;
-        }
-        let Some(rest) = rest.strip_prefix("pragma") else {
-            return false;
-        };
-        rest.starts_with(char::is_whitespace)
-            && matches!(
-                rest.split_whitespace().next(),
-                Some("only_renderers" | "exclude_renderers")
-            )
     })
 }
 
@@ -715,15 +701,16 @@ impl State {
         }
     }
 
-    /// Whether a pass's program may not run on every device (see [`limits_renderers`]): a
-    /// `GLSLPROGRAM`, a limiting pragma, or a `UsePass` of a project shader's pass that is one.
-    /// A `UsePass` of a built-in shader's pass is taken as its SubShader is (`restricted` false).
-    fn pass_limits_renderers(&mut self, inputs: &Inputs, pass: &PassInfo, depth: u32) -> bool {
+    /// Whether it is not known whether the device runs a pass it keeps: a `GLSLPROGRAM` (which
+    /// devices run one is not measured), a program with pragmas not read ([`unread_pragmas`]),
+    /// or a `UsePass` of a project shader's pass that is one. A `UsePass` of a built-in shader's
+    /// pass is taken as its SubShader is (run).
+    fn pass_runs_unknown(&mut self, inputs: &Inputs, pass: &PassInfo, depth: u32) -> bool {
         if pass.glsl {
             return true;
         }
         if let Some(program) = &pass.program {
-            return limits_renderers(&program.code);
+            return unread_pragmas(&program.code);
         }
         let Some(target) = &pass.use_pass else {
             return false;
@@ -736,7 +723,7 @@ impl State {
             .get(shader)
             .and_then(|lab| lab.declared_pass(name).cloned());
         match found {
-            Some(found) if depth < 4 => self.pass_limits_renderers(inputs, &found, depth + 1),
+            Some(found) if depth < 4 => self.pass_runs_unknown(inputs, &found, depth + 1),
             Some(_) => true,
             None => false,
         }
@@ -754,31 +741,46 @@ impl State {
 
     /// A project shader's own SubShaders: tags and passes (names and own tags as Unity stores
     /// them; a surface program stands for the passes Unity generates for it), their `LOD` and
-    /// whether a pass limits the devices it runs on. The passes are the ones the device runs (a
-    /// pass whose program excludes it, or a `UsePass` of such a pass, is not among them, as on
-    /// the Editor's OpenGL Core device), and a SubShader that lost one is `restricted` (its
-    /// selection then is the renderer's); a SubShader the device runs no pass of keeps its
-    /// declared passes, `restricted` (the renderer passes it over).
+    /// whether the device runs them (`runs`). The passes are the ones the device runs (a pass
+    /// whose program excludes it, or a `UsePass` of such a pass, is not among them, as on the
+    /// Editor's OpenGL Core device), and a SubShader the device runs no pass of is not among the
+    /// SubShaders (tests/projects/graphicsgaps select.restricted.*, OpenGL Core and Vulkan); one
+    /// whose passes have geometry or tessellation stages runs as the Editor's device runs them
+    /// ([`unbound_app::shaderlab::SubShader::device_runs`]); `runs` is null where that is not
+    /// known (unmeasured stages, [`State::pass_runs_unknown`], a SubShader left without passes by
+    /// a dropped `UsePass`, which the renderer keeps).
     fn subshaders(&mut self, inputs: &Inputs, lab: &ShaderLab) -> Result<Vec<Value>, Unknown> {
         let mut out = Vec::new();
         for sub in &lab.subshaders {
+            // The device's shader has no SubShader it runs none of the passes of
+            // (tests/projects/graphicsgaps select.restricted.SelX/SelO.subshaderCount on OpenGL
+            // Core); the renderer passes it over.
+            if sub.unsupported {
+                continue;
+            }
             let mut passes = Vec::new();
             let mut surface_done = false;
-            let mut restricted = !sub.dropped.is_empty() || sub.uses_unsupported_stage();
             let mut kept = Vec::new();
             for pass in &sub.passes {
                 match &pass.use_pass {
-                    Some(target) if self.use_pass_dropped(inputs, target) => restricted = true,
+                    Some(target) if self.use_pass_dropped(inputs, target) => {}
                     _ => kept.push(pass),
                 }
             }
+            let mut runs = if kept.is_empty() && !sub.passes.is_empty() {
+                None
+            } else {
+                sub.device_runs(unbound_runtime::graphics_device::get())
+            };
             let listed: Vec<&PassInfo> = if kept.is_empty() {
                 sub.declared.iter().collect()
             } else {
                 kept
             };
             for pass in listed {
-                restricted |= self.pass_limits_renderers(inputs, pass, 0);
+                if runs == Some(true) && self.pass_runs_unknown(inputs, pass, 0) {
+                    runs = None;
+                }
                 if let Some(program) = pass.program.as_ref().filter(|p| p.surface) {
                     if let Some(option) = surface_options(&program.code).first() {
                         return Err(Unknown::fixed(format!(
@@ -821,7 +823,7 @@ impl State {
                 "tags": tags_json(&canonical_tags(sub.tags.iter())),
                 "passes": passes,
                 "lod": sub.lod,
-                "restricted": restricted,
+                "runs": runs,
             }));
         }
         Ok(out)

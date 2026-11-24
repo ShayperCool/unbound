@@ -31,5 +31,11 @@
   "The physical camera's projection differs from the Editor's in the last bits of m00 and m11 (Unbound computes 2 * focalLength / sensor width; the Editor's arithmetic is not reproduced). Anamorphism changes neither (both captures show the same matrix with it set and at 0).": [
     "anamorphism.projection",
     "anamorphism.projection0"
+  ],
+  "The renderer runs no geometry or tessellation stage: for a shader whose first SubShader has such a pass it draws the next SubShader (warned once per shader), while the Editor's OpenGL Core and Vulkan devices draw the first, which the queries answer from too. What is drawn and the pass list Material.FindPass reads under a render pipeline are the drawn SubShader's.": [
+    "select.restricted.SelG.drawn",
+    "select.restricted.SelT.drawn",
+    "select.restricted.SelG.stagePass",
+    "select.restricted.SelT.stagePass"
   ]
 }

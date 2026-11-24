@@ -693,12 +693,19 @@ fn probe_shaders_match_the_canonical_reference() {
             .map(|s| s["passes"].as_array().unwrap().len().to_string())
             .collect();
         assert_eq!(json!(counts), *key("passCountInSubshader"), "{shader}");
-        // LODs from the probe sources (the Fallback Unlit/Color's as serialized); only
-        // KwForms's first SubShader may limit its devices (its `#include_with_pragmas`).
-        let (lods, restricted): (&[u64], &[bool]) = match shader {
-            "Probe/KwForms" => (&[300, 0, 100][..], &[true, false, false][..]),
-            "Probe/KwFixed" => (&[400, 200, 100][..], &[false; 3][..]),
-            _ => (&[0][..], &[false][..]),
+        // LODs from the probe sources (the Fallback Unlit/Color's as serialized); only for
+        // KwForms's first SubShader is it not known whether the device runs it (its
+        // `#include_with_pragmas` is not read).
+        let (lods, runs): (&[u64], &[Value]) = match shader {
+            "Probe/KwForms" => (
+                &[300, 0, 100][..],
+                &[Value::Null, json!(true), json!(true)][..],
+            ),
+            "Probe/KwFixed" => (
+                &[400, 200, 100][..],
+                &[json!(true), json!(true), json!(true)][..],
+            ),
+            _ => (&[0][..], &[json!(true)][..]),
         };
         assert_eq!(
             subs.iter()
@@ -708,10 +715,8 @@ fn probe_shaders_match_the_canonical_reference() {
             "{shader}"
         );
         assert_eq!(
-            subs.iter()
-                .map(|s| s["restricted"].as_bool().unwrap())
-                .collect::<Vec<_>>(),
-            restricted,
+            subs.iter().map(|s| s["runs"].clone()).collect::<Vec<_>>(),
+            runs,
             "{shader}"
         );
         let tag = |tags: &Value, name: &str| {
@@ -1109,33 +1114,32 @@ fn unresolved_builtin_use_passes_are_unknown_not_tagless() {
     );
 }
 
-/// Pragmas that may limit the devices a program runs on; other pragmas and words do not.
+/// An `#include_with_pragmas` leaves pragmas unread; other lines do not.
 #[test]
-fn renderer_limits_are_read_from_pragmas() {
-    for limited in [
-        "#pragma only_renderers d3d11",
-        "  #pragma exclude_renderers gles",
-        "# pragma\texclude_renderers nomrt",
+fn unread_pragmas_are_include_with_pragmas() {
+    for unread in [
         "#include_with_pragmas \"Pragmas.cginc\"",
+        "  # include_with_pragmas\t\"Pragmas.hlsl\"",
     ] {
-        assert!(limits_renderers(&format!("a\n{limited}\nb")), "{limited}");
+        assert!(unread_pragmas(&format!("a\n{unread}\nb")), "{unread}");
     }
     for plain in [
-        "#pragma vertex vert",
-        "#pragmaonly_renderers d3d11",
-        "// only_renderers d3d11",
-        "#pragma multi_compile _ ONLY_RENDERERS",
+        "#pragma only_renderers d3d11",
+        "#pragma exclude_renderers gles",
+        "#include_with_pragmasX",
+        "// #include_with_pragmas \"P.cginc\"",
         "#include \"UnityCG.cginc\"",
         "",
     ] {
-        assert!(!limits_renderers(plain), "{plain}");
+        assert!(!unread_pragmas(plain), "{plain}");
     }
 }
 
-/// Every SubShader carries its `LOD` (0 without one) and whether a pass may limit its devices
-/// (a limiting pragma, GLSL, a `UsePass` of such a project pass), in the merged order: own,
-/// then the Fallback chain's, a built-in Fallback's LOD from its serialized form and never
-/// restricted. Shader.passCount picks by them (managed ShaderPassCountTests).
+/// Every SubShader carries its `LOD` (0 without one) and whether the device runs it, in the
+/// merged order: own, then the Fallback chain's, a built-in Fallback's LOD from its serialized
+/// form and always run. One whose every pass the device drops is not among them; for GLSL, or one
+/// left without passes by a dropped `UsePass`, whether the device runs it is not known. Shader.passCount picks by them
+/// (managed ShaderPassCountTests).
 #[test]
 fn a_pass_the_device_does_not_run_is_not_among_the_passes() {
     let scratch = Scratch::new("decl-dropped");
@@ -1172,9 +1176,9 @@ fn a_pass_the_device_does_not_run_is_not_among_the_passes() {
     };
     assert_eq!(names(&subs[0]), ["FORWARD", "META"]);
     assert_eq!(names(&subs[1]), ["OTHER"]);
-    // A SubShader that lost a pass is one whose selection the renderer answers.
-    assert_eq!(subs[0]["restricted"], true);
-    assert_eq!(subs[1]["restricted"], true);
+    // A SubShader that lost a pass, or a UsePass of one, runs with the rest.
+    assert_eq!(subs[0]["runs"], true);
+    assert_eq!(subs[1]["runs"], true);
     // The keyword space is every declared pass's, the dropped one's and its UsePass's included.
     assert_eq!(answer["keywords_known"], true, "{answer}");
     // In declaration order, the dropped pass's keyword where it is declared.
@@ -1237,10 +1241,17 @@ fn subshaders_carry_their_lod_and_device_limits() {
     assert_eq!(answer["subshaders_known"], true, "{answer}");
     let subs = answer["subshaders"].as_array().unwrap();
     let field = |name: &str| subs.iter().map(|s| s[name].clone()).collect::<Vec<_>>();
-    assert_eq!(field("lod"), [400, 200, 0, 100, 50, 150].map(|l| json!(l)));
+    // The SubShader whose only pass runs on Direct3D 11 alone is not among them.
+    assert_eq!(field("lod"), [400, 0, 100, 50, 150].map(|l| json!(l)));
     assert_eq!(
-        field("restricted"),
-        [false, true, false, true, true, false].map(|r| json!(r))
+        field("runs"),
+        [
+            json!(true),
+            json!(true),
+            Value::Null,
+            Value::Null,
+            json!(true)
+        ]
     );
     // The passes are unchanged: one each.
     assert!(
@@ -1307,12 +1318,12 @@ fn subshader_with_unsupported_geometry_stage_is_marked_restricted() {
     assert_eq!(answer["subshaders_known"], true, "{answer}");
     let subs = answer["subshaders"].as_array().unwrap();
     assert_eq!(subs.len(), 2);
-    assert_eq!(
-        subs[0]["restricted"], true,
-        "geometry SubShader must be restricted: {answer}"
-    );
-    assert_eq!(
-        subs[1]["restricted"], false,
-        "fallback vert/frag SubShader must not be restricted: {answer}"
-    );
+    // The Editor's OpenGL Core and Vulkan devices run the geometry stage
+    // (tests/projects/graphicsgaps select.restricted.SelG); Metal's is not measured.
+    let geometry = match unbound_runtime::graphics_device::get().editor_runs_geometry_stages() {
+        Some(runs) => json!(runs),
+        None => Value::Null,
+    };
+    assert_eq!(subs[0]["runs"], geometry, "{answer}");
+    assert_eq!(subs[1]["runs"], true, "{answer}");
 }
