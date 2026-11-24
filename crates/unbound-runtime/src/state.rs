@@ -690,6 +690,10 @@ pub fn dispatch(method: &str, request: &str) -> Result<String> {
             let r: crate::light_transport::DeringRequest = serde_json::from_str(request)?;
             Ok(crate::light_transport::dering(r)?.to_string())
         }
+        "light-transport-assign-channels" => {
+            let r: crate::light_transport::AssignChannelsRequest = serde_json::from_str(request)?;
+            Ok(crate::light_transport::assign_channels(r)?.to_string())
+        }
         "realtime-gi-release" => {
             #[derive(serde::Deserialize)]
             struct Request {

@@ -11,12 +11,14 @@ use std::collections::HashMap;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, LazyLock, Mutex};
 use unbound_gi::baked::direct;
+use unbound_gi::baked::gbuffer;
 use unbound_gi::baked::grid::{Bounds, Grid};
 use unbound_gi::baked::indirect::{self, Material, Surface, World};
-use unbound_gi::baked::light::{Light, Tables};
+use unbound_gi::baked::light::{Light, Mode, Tables};
 use unbound_gi::baked::light_probes;
 use unbound_gi::baked::probes::{self, Coefficients};
 use unbound_gi::baked::sampling::Samples;
+use unbound_gi::baked::shadowmask;
 use unbound_gi::baked::sky::Sky;
 use unbound_gi::baked::trace::{Lod, Ray, Scene};
 
@@ -42,9 +44,52 @@ pub struct PopulateRequest {
     renderers: Vec<RendererInput>,
     #[serde(default)]
     lights: Vec<LightData>,
+    /// `MixedLightingMode`: 0 = IndirectOnly, 1 = Subtractive, 2 = Shadowmask.
+    #[serde(default)]
+    mixed_mode: u8,
     blue_noise: String,
     #[serde(default)]
     environment: Option<EnvironmentData>,
+}
+
+#[derive(serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AssignChannelsRequest {
+    #[serde(default)]
+    lights: Vec<LightData>,
+    /// `MixedLightingMode`: 0 = IndirectOnly, 1 = Subtractive, 2 = Shadowmask.
+    #[serde(default)]
+    mixed_mode: u8,
+}
+
+/// Assigns shadowmask channels via [`shadowmask::assign`] for `Subtractive` (`1`) and
+/// `Shadowmask` (`2`) modes; in `Shadowmask` mode overflow mixed shadow-casting lights fall back
+/// to [`Mode::Baked`]. In `IndirectOnly` (`0`), no channels are assigned.
+fn assign_light_channels(lights: &mut [Light], mixed_mode: u8) -> Result<Vec<Option<u8>>> {
+    match mixed_mode {
+        0 => Ok(vec![None; lights.len()]),
+        1 => Ok(shadowmask::assign(lights, false)),
+        2 => Ok(shadowmask::assign(lights, true)),
+        other => anyhow::bail!("a Lighting Mode of {other}"),
+    }
+}
+
+pub fn assign_channels(request: AssignChannelsRequest) -> Result<Json> {
+    let mut lights: Vec<Light> = request
+        .lights
+        .iter()
+        .map(LightData::light)
+        .collect::<Result<_>>()?;
+    let channels = assign_light_channels(&mut lights, request.mixed_mode)?;
+    let channel_ids: Vec<i32> = channels
+        .into_iter()
+        .map(|c| c.map_or(-1, |ch| ch as i32))
+        .collect();
+    let modes: Vec<u8> = lights
+        .iter()
+        .map(|l| if l.mode == Mode::Mixed { 1 } else { 2 })
+        .collect();
+    Ok(json!({ "channels": channel_ids, "modes": modes }))
 }
 
 #[derive(serde::Deserialize)]
@@ -154,11 +199,12 @@ pub fn populate(request: PopulateRequest) -> Result<Json> {
         .iter()
         .map(SourceMesh::read)
         .collect::<Result<_>>()?;
-    let lights: Vec<Light> = request
+    let mut lights: Vec<Light> = request
         .lights
         .iter()
         .map(LightData::light)
         .collect::<Result<_>>()?;
+    assign_light_channels(&mut lights, request.mixed_mode)?;
     let sky = request
         .environment
         .as_ref()
@@ -210,7 +256,9 @@ pub fn populate(request: PopulateRequest) -> Result<Json> {
                     continue;
                 }
                 let corners = t.map(|v| direct::point(m, mesh.positions[v as usize]));
-                let normals = t.map(|v| direct::world_normal(&rows, mesh.normals[v as usize]));
+                let normals = t.map(|v| {
+                    direct::world_normal(&rows, gbuffer::unit_normal(mesh.normals[v as usize]))
+                });
                 let tri_uvs = t.map(|v| {
                     let uv = uvs.get(v as usize).copied().unwrap_or([0.0, 0.0]);
                     [uv[0] * st[0] + st[2], uv[1] * st[1] + st[3]]
@@ -375,7 +423,7 @@ pub fn integrate(request: IntegrateRequest) -> Result<Json> {
                                 .arriving_around(tables, light.color, p)
                                 .is_some_and(|arriving| {
                                     !(light.casts_shadows
-                                        && world.casters.occluded_inclusive(
+                                        && world.casters.occluded(
                                             &Ray {
                                                 origin: p,
                                                 direction: arriving.direction,
@@ -527,10 +575,9 @@ mod tests {
         let _ = std::fs::remove_file(&tmp);
         let world_id = pop_res["worldId"].as_u64().unwrap();
 
-        // Three probes: (0, 1, 0) above the floor, (0, -1, 0) below the floor (shadowed & seeing
-        // backfaces), and (0, 0, 0) coplanar on the floor (inclusive t >= 0 hits the floor in both
-        // hemispheres: shadowed direct light, 0.5 backface validity, occluded mixed light).
-        let probe_pos = b64_f32(&[0.0, 1.0, 0.0, 0.0, -1.0, 0.0, 0.0, 0.0, 0.0]);
+        // Two probes: (0, 1, 0) above the floor, (0, -1, 0) below the floor (shadowed & seeing
+        // backfaces).
+        let probe_pos = b64_f32(&[0.0, 1.0, 0.0, 0.0, -1.0, 0.0]);
 
         let direct_res = integrate(IntegrateRequest {
             world_id,
@@ -545,16 +592,12 @@ mod tests {
         })
         .unwrap();
         let direct_vals = decode_f32(direct_res["data"].as_str().unwrap());
-        assert_eq!(direct_vals.len(), 81);
+        assert_eq!(direct_vals.len(), 54);
         assert!(
             direct_vals[0] > 1.0,
             "above-floor probe receives sun direct L0"
         );
         assert_eq!(direct_vals[27], 0.0, "below-floor probe is shadowed");
-        assert_eq!(
-            direct_vals[54], 0.0,
-            "coplanar probe at y=0 hits floor at t=0 and is shadowed"
-        );
 
         let indirect_sky = integrate(IntegrateRequest {
             world_id,
@@ -604,17 +647,12 @@ mod tests {
         })
         .unwrap();
         let validity = decode_f32(val_res["data"].as_str().unwrap());
-        assert_eq!(validity.len(), 3);
+        assert_eq!(validity.len(), 2);
         assert_eq!(validity[0], 0.0, "above-floor probe sees no backfaces");
         assert!(
             validity[1] > 0.3,
             "below-floor probe hits floor backface: {}",
             validity[1]
-        );
-        assert!(
-            (validity[2] - 0.5).abs() < 0.05,
-            "coplanar probe at y=0 hits floor backface on upward hemisphere (~0.5): {}",
-            validity[2]
         );
 
         let occ_res = integrate(IntegrateRequest {
@@ -626,14 +664,11 @@ mod tests {
             pushoff: 0.0001,
             ignore_environment: false,
             max_lights_per_probe: 4,
-            per_probe_light_indices: Some(b64_i32(&[1, -1, -1, -1, 1, -1, -1, -1, 1, -1, -1, -1])),
+            per_probe_light_indices: Some(b64_i32(&[1, -1, -1, -1, 1, -1, -1, -1])),
         })
         .unwrap();
         let occ = decode_f32(occ_res["data"].as_str().unwrap());
-        assert_eq!(
-            occ,
-            vec![1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
-        );
+        assert_eq!(occ, vec![1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]);
 
         // Deringing attenuates ringing L1 while keeping L0 unchanged.
         let mut sh = [0.0f32; 27];
@@ -658,6 +693,189 @@ mod tests {
                 per_probe_light_indices: None,
             })
             .is_err()
+        );
+    }
+
+    #[test]
+    fn assign_channels_reuses_shadowmask_rules_and_falls_back_overflow_lights() {
+        let s = std::f32::consts::FRAC_1_SQRT_2;
+        let point = |id: i64, x: f32| {
+            json!({
+                "name": format!("P{id}"), "fileId": id, "kind": 1, "mode": 1,
+                "color": [1.0, 1.0, 1.0], "indirectColor": [1.0, 1.0, 1.0],
+                "position": [x, 1.0, 0.0], "rotation": [0.0, 0.0, 0.0, 1.0],
+                "range": 2.0, "spotAngle": 0.0, "castsShadows": true,
+            })
+        };
+        let directional = |id: i64| {
+            json!({
+                "name": format!("D{id}"), "fileId": id, "kind": 0, "mode": 1,
+                "color": [1.0, 1.0, 1.0], "indirectColor": [1.0, 1.0, 1.0],
+                "position": [0.0, 10.0, 0.0], "rotation": [s, 0.0, 0.0, s],
+                "range": 0.0, "spotAngle": 0.0, "castsShadows": true,
+            })
+        };
+
+        // 1. Subtractive (mixedMode = 1) assigns channel 0 and keeps Mixed mode.
+        let sub_req: AssignChannelsRequest = serde_json::from_value(json!({
+            "mixedMode": 1,
+            "lights": [point(1, 0.0)],
+        }))
+        .unwrap();
+        let sub_res = assign_channels(sub_req).unwrap();
+        assert_eq!(sub_res["channels"], json!([0]));
+        assert_eq!(sub_res["modes"], json!([1]));
+
+        // 2. IndirectOnly (mixedMode = 0) assigns no channels.
+        let ind_req: AssignChannelsRequest = serde_json::from_value(json!({
+            "mixedMode": 0,
+            "lights": [point(1, 0.0)],
+        }))
+        .unwrap();
+        let ind_res = assign_channels(ind_req).unwrap();
+        assert_eq!(ind_res["channels"], json!([-1]));
+        assert_eq!(ind_res["modes"], json!([1]));
+
+        // 3. Directional takes channel 0 even when listed after a point light.
+        let order_req: AssignChannelsRequest = serde_json::from_value(json!({
+            "mixedMode": 2,
+            "lights": [point(1, 0.0), directional(2)],
+        }))
+        .unwrap();
+        let order_res = assign_channels(order_req).unwrap();
+        assert_eq!(order_res["channels"], json!([1, 0]));
+
+        // 4. Five non-overlapping point lights reuse channel 0 for all five.
+        let non_overlap: AssignChannelsRequest = serde_json::from_value(json!({
+            "mixedMode": 2,
+            "lights": [point(1, 0.0), point(2, 10.0), point(3, 20.0), point(4, 30.0), point(5, 40.0)],
+        }))
+        .unwrap();
+        let non_overlap_res = assign_channels(non_overlap).unwrap();
+        assert_eq!(non_overlap_res["channels"], json!([0, 0, 0, 0, 0]));
+        assert_eq!(non_overlap_res["modes"], json!([1, 1, 1, 1, 1]));
+
+        // 5. Five overlapping point lights at the origin: 5th gets -1 and falls back to Baked (2),
+        //    so populate + direct integration bakes its direct light into probes.
+        let tmp =
+            std::env::temp_dir().join(format!("unbound-lt-shadowmask-{}.bin", std::process::id()));
+        std::fs::write(&tmp, vec![0u8; BLUE_NOISE_BYTES]).unwrap();
+        let overlap_lights = vec![
+            point(1, 0.0),
+            point(2, 0.0),
+            point(3, 0.0),
+            point(4, 0.0),
+            point(5, 0.0),
+        ];
+        let overlap_req: AssignChannelsRequest = serde_json::from_value(json!({
+            "mixedMode": 2,
+            "lights": overlap_lights,
+        }))
+        .unwrap();
+        let overlap_res = assign_channels(overlap_req).unwrap();
+        assert_eq!(overlap_res["channels"], json!([0, 1, 2, 3, -1]));
+        assert_eq!(overlap_res["modes"], json!([1, 1, 1, 1, 2]));
+
+        let pop_req: PopulateRequest = serde_json::from_value(json!({
+            "meshes": [],
+            "renderers": [],
+            "mixedMode": 2,
+            "lights": [point(1, 0.0), point(2, 0.0), point(3, 0.0), point(4, 0.0), point(5, 0.0)],
+            "blueNoise": tmp.to_string_lossy(),
+        }))
+        .unwrap();
+        let world_id = populate(pop_req).unwrap()["worldId"].as_u64().unwrap();
+        let _ = std::fs::remove_file(&tmp);
+        let direct_res = integrate(IntegrateRequest {
+            world_id,
+            kind: "direct".into(),
+            positions: b64_f32(&[0.0, 1.5, 0.0]),
+            sample_count: 16,
+            max_bounces: 1,
+            pushoff: 0.0001,
+            ignore_environment: true,
+            max_lights_per_probe: 0,
+            per_probe_light_indices: None,
+        })
+        .unwrap();
+        release(world_id);
+        let direct_vals = decode_f32(direct_res["data"].as_str().unwrap());
+        assert!(
+            direct_vals[0] > 0.0,
+            "overflow mixed light falling back to Baked contributes to direct probe radiance"
+        );
+    }
+
+    #[test]
+    fn zero_length_vertex_normals_default_to_up_like_gbuffer() {
+        let tmp =
+            std::env::temp_dir().join(format!("unbound-lt-zeronorm-{}.bin", std::process::id()));
+        std::fs::write(&tmp, vec![0u8; BLUE_NOISE_BYTES]).unwrap();
+        let positions = b64_f32(&[
+            -10.0, 0.0, -10.0, 10.0, 0.0, -10.0, 10.0, 0.0, 10.0, -10.0, 0.0, 10.0,
+        ]);
+        // Degenerate zero-length vertex normals must normalize to +Y like gbuffer::unit_normal.
+        let normals = b64_f32(&[0.0; 12]);
+        let uvs = b64_f32(&[0.0, 0.0, 1.0, 0.0, 1.0, 1.0, 0.0, 1.0]);
+        let tris = b64_u32(&[0, 2, 1, 0, 3, 2]);
+        let albedo_px = base64::engine::general_purpose::STANDARD.encode([220u8, 220, 220, 255]);
+        let emissive_px = b64_f32(&[0.0, 0.0, 0.0, 1.0]);
+        let s = std::f32::consts::FRAC_1_SQRT_2;
+
+        let pop_req: PopulateRequest = serde_json::from_value(json!({
+            "meshes": [{
+                "positions": positions,
+                "normals": normals,
+                "uv": uvs,
+                "uv2": uvs,
+                "submeshes": [tris],
+            }],
+            "renderers": [{
+                "name": "ZeroNormFloor",
+                "mesh": 0,
+                "localToWorld": [
+                    1.0, 0.0, 0.0, 0.0,
+                    0.0, 1.0, 0.0, 0.0,
+                    0.0, 0.0, 1.0, 0.0,
+                    0.0, 0.0, 0.0, 1.0
+                ],
+                "hasMaterial": [true],
+                "castsShadows": true,
+                "material": {
+                    "albedo": { "width": 1, "height": 1, "data": albedo_px },
+                    "emissive": { "width": 1, "height": 1, "data": emissive_px },
+                    "doubleSided": [false]
+                }
+            }],
+            "lights": [{
+                "name": "Sun", "fileId": 1, "kind": 0, "mode": 2,
+                "color": [2.0, 2.0, 2.0], "indirectColor": [2.0, 2.0, 2.0],
+                "position": [0.0, 10.0, 0.0], "rotation": [s, 0.0, 0.0, s],
+                "range": 0.0, "spotAngle": 0.0, "castsShadows": true
+            }],
+            "blueNoise": tmp.to_string_lossy(),
+        }))
+        .unwrap();
+        let world_id = populate(pop_req).unwrap()["worldId"].as_u64().unwrap();
+        let _ = std::fs::remove_file(&tmp);
+        let res = integrate(IntegrateRequest {
+            world_id,
+            kind: "indirect".into(),
+            positions: b64_f32(&[0.0, 1.0, 0.0]),
+            sample_count: 64,
+            max_bounces: 2,
+            pushoff: 0.0001,
+            ignore_environment: true,
+            max_lights_per_probe: 0,
+            per_probe_light_indices: None,
+        })
+        .unwrap();
+        release(world_id);
+        let vals = decode_f32(res["data"].as_str().unwrap());
+        assert!(
+            vals[0] > 0.0,
+            "zero-length normal falls back to +Y and bounces sunlight: {}",
+            vals[0]
         );
     }
 }

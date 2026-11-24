@@ -415,7 +415,7 @@ pub fn occlusion(
                         .arriving_around(&tables, light.color, p)
                         .is_some_and(|arriving| {
                             !(light.casts_shadows
-                                && casters.occluded_inclusive(
+                                && casters.occluded(
                                     &Ray {
                                         origin: p,
                                         direction: arriving.direction,

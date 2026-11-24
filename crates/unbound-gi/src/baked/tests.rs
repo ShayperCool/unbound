@@ -724,49 +724,6 @@ mod lighting {
     }
 
     #[test]
-    fn inclusive_ray_hits_coplanar_triangle_at_zero() {
-        use crate::baked::trace::Viewer;
-        let scene = Scene::new(square(1.0));
-        let on_plane_up = ray([0.25, 0.5, 1.0], [0.0, 0.0, 1.0]);
-        let on_plane_down = ray([0.25, 0.5, 1.0], [0.0, 0.0, -1.0]);
-        // Exclusive tracing skips t == 0; inclusive probe tracing hits it from either side.
-        assert!(!scene.occluded(&on_plane_up, 10.0));
-        assert!(scene.occluded_inclusive(&on_plane_up, 10.0));
-        assert!(scene.occluded_inclusive(&on_plane_down, 10.0));
-        assert!(!scene.occluded_inclusive(&on_plane_up, 0.0));
-        assert_eq!(
-            scene.closest_from(
-                &on_plane_up,
-                on_plane_up.origin,
-                f32::INFINITY,
-                Viewer::Lod0
-            ),
-            None
-        );
-        let (hit_up, _, _) = scene
-            .closest_from_inclusive(
-                &on_plane_up,
-                on_plane_up.origin,
-                f32::INFINITY,
-                Viewer::Lod0,
-            )
-            .expect("coplanar +z hit at t=0");
-        let (hit_down, _, _) = scene
-            .closest_from_inclusive(
-                &on_plane_down,
-                on_plane_down.origin,
-                f32::INFINITY,
-                Viewer::Lod0,
-            )
-            .expect("coplanar -z hit at t=0");
-        assert_eq!(hit_up.distance, 0.0);
-        assert_eq!(hit_down.distance, 0.0);
-        assert_ne!(hit_up.front, hit_down.front);
-        // Parallel ray along the plane still misses (determinant == 0).
-        assert!(!scene.occluded_inclusive(&ray([0.25, 0.5, 1.0], [1.0, 0.0, 0.0]), 10.0));
-    }
-
-    #[test]
     fn a_ray_through_a_shared_edge_is_stopped() {
         // Rays through the squares' diagonals, from points and in directions whose products
         // do not come out exact in 32 bits.

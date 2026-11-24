@@ -83,12 +83,13 @@ namespace UnityEngine.LightTransport
 
         public BufferSlice<U> SafeReinterpret<U>() where U : struct
         {
-            ulong srcSize = (ulong)UnsafeUtility.SizeOf<T>();
-            ulong dstSize = (ulong)UnsafeUtility.SizeOf<U>();
-            ulong byteOffset = Offset * srcSize;
-            if (dstSize == 0 || (byteOffset % dstSize) != 0)
-                throw new InvalidOperationException($"Cannot safely reinterpret BufferSlice<{typeof(T).Name}> (offset {Offset}, size {srcSize}) as {typeof(U).Name} (size {dstSize}).");
-            return new BufferSlice<U>(Id, byteOffset / dstSize);
+            if (!UnsafeUtility.IsBlittable<U>())
+                throw new ArgumentException($"Type {typeof(U)} must be blittable. {UnsafeUtility.GetReasonForTypeNonBlittable(typeof(U))}.");
+            int oldSize = UnsafeUtility.SizeOf<T>();
+            int newSize = UnsafeUtility.SizeOf<U>();
+            if (oldSize % newSize != 0)
+                throw new ArgumentException($"Type {typeof(T)} size must be a multiple of {typeof(U)} size.");
+            return UnsafeReinterpret<U>();
         }
 
         public BufferSlice<U> UnsafeReinterpret<U>() where U : struct
@@ -175,7 +176,7 @@ namespace UnityEngine.LightTransport
             }
 
             public override string ToString() =>
-                string.IsNullOrEmpty(message) ? type.ToString() : $"{type}: {message}";
+                string.IsNullOrEmpty(message) ? $"Result type: '{type}'" : $"Result type: '{type}', message: '{message}'";
         }
     }
 
@@ -312,9 +313,7 @@ namespace UnityEngine.LightTransport
             lock (m_Lock) return m_Initialized;
         }
         internal static CpuDeviceBufferStore Of(IDeviceContext context) =>
-            context is RadeonRaysContext rr ? rr.m_Store
-            : context is ReferenceContext rc ? rc.m_Store
-            : null;
+            context is RadeonRaysContext rr ? rr.m_Store : null;
     }
 
     [StructLayout(LayoutKind.Sequential)]
@@ -344,22 +343,119 @@ namespace UnityEngine.LightTransport
     [StructLayout(LayoutKind.Sequential)]
     public unsafe partial class ReferenceContext : IDeviceContext, IDisposable
     {
-        internal readonly CpuDeviceBufferStore m_Store = new CpuDeviceBufferStore();
+        readonly object m_Lock = new object();
+        readonly Dictionary<BufferID, NativeArray<byte>> m_Buffers = new Dictionary<BufferID, NativeArray<byte>>();
+        uint m_NextFreeBufferId;
+        uint m_NextFreeEventId;
 
         public ReferenceContext() { }
-        public void Dispose() => m_Store.Dispose();
-        public bool Initialize() => m_Store.Initialize();
-        public BufferID CreateBuffer(ulong count, ulong stride) => m_Store.CreateBuffer(count, stride);
-        public void DestroyBuffer(BufferID id) => m_Store.DestroyBuffer(id);
-        public void ReadBuffer<T>(BufferSlice<T> src, NativeArray<T> dst) where T : struct => m_Store.ReadBuffer(src, dst);
-        public void ReadBuffer<T>(BufferSlice<T> src, NativeArray<T> dst, EventID id) where T : struct => m_Store.ReadBuffer(src, dst);
-        public void WriteBuffer<T>(BufferSlice<T> dst, NativeArray<T> src) where T : struct => m_Store.WriteBuffer(dst, src);
-        public void WriteBuffer<T>(BufferSlice<T> dst, NativeArray<T> src, EventID id) where T : struct => m_Store.WriteBuffer(dst, src);
-        public EventID CreateEvent() => m_Store.CreateEvent();
-        public void DestroyEvent(EventID id) => m_Store.DestroyEvent(id);
-        public bool IsCompleted(EventID id) => m_Store.IsCompleted(id);
-        public bool Wait(EventID id) => m_Store.Wait(id);
-        public bool Flush() => m_Store.Flush();
+
+        [Unbound.EditorFaithful("Unity's CPU ReferenceContext.Initialize always returns true (UnityCsReference 6000.0 DeviceContext.bindings.cs)")]
+        public bool Initialize() => true;
+
+        public void Dispose()
+        {
+            lock (m_Lock)
+            {
+                foreach (var entry in m_Buffers)
+                    if (entry.Value.IsCreated) entry.Value.Dispose();
+                m_Buffers.Clear();
+            }
+        }
+
+        public BufferID CreateBuffer(ulong count, ulong stride)
+        {
+            ulong bytes = checked(count * stride);
+            if (bytes > int.MaxValue)
+                throw new ArgumentOutOfRangeException(nameof(count), $"Buffer size {bytes} bytes exceeds supported range.");
+            var buffer = new NativeArray<byte>((int)bytes, Allocator.Persistent);
+            lock (m_Lock)
+            {
+                var id = new BufferID(m_NextFreeBufferId++);
+                m_Buffers[id] = buffer;
+                return id;
+            }
+        }
+
+        public void DestroyBuffer(BufferID id)
+        {
+            lock (m_Lock)
+            {
+                if (m_Buffers.TryGetValue(id, out var buffer))
+                {
+                    if (buffer.IsCreated) buffer.Dispose();
+                    m_Buffers.Remove(id);
+                }
+            }
+        }
+
+        public NativeArray<byte> GetNativeArray(BufferID id)
+        {
+            lock (m_Lock) return m_Buffers[id];
+        }
+
+        internal bool TryGetBufferSpan(BufferID id, ulong elemOffset, ulong elemCount, ulong elemBytes, out Span<byte> span)
+        {
+            span = default;
+            NativeArray<byte> buffer;
+            lock (m_Lock)
+            {
+                if (!m_Buffers.TryGetValue(id, out buffer) || !buffer.IsCreated) return false;
+            }
+            try
+            {
+                ulong start = checked(elemOffset * elemBytes);
+                ulong length = checked(elemCount * elemBytes);
+                ulong end = checked(start + length);
+                if (end > (ulong)buffer.Length) return false;
+                span = new Span<byte>((byte*)buffer.GetUnsafePtr() + start, (int)length);
+                return true;
+            }
+            catch (OverflowException)
+            {
+                return false;
+            }
+        }
+
+        public void WriteBuffer<T>(BufferSlice<T> dst, NativeArray<T> src) where T : struct
+        {
+            if (src.Length == 0) return;
+            var buffer = GetNativeArray(dst.Id);
+            ulong elemSize = (ulong)UnsafeUtility.SizeOf<T>();
+            ulong byteOffset = checked(dst.Offset * elemSize);
+            ulong byteCount = checked((ulong)src.Length * elemSize);
+            if (checked(byteOffset + byteCount) > (ulong)buffer.Length)
+                throw new ArgumentOutOfRangeException(nameof(dst), $"Write of {byteCount} bytes at offset {byteOffset} exceeds buffer size {buffer.Length}.");
+            void* srcPtr = NativeArrayUnsafeUtility.GetUnsafeReadOnlyPtr(src);
+            byte* dstPtr = (byte*)buffer.GetUnsafePtr() + byteOffset;
+            UnsafeUtility.MemCpy(dstPtr, srcPtr, (long)byteCount);
+        }
+
+        public void ReadBuffer<T>(BufferSlice<T> src, NativeArray<T> dst) where T : struct
+        {
+            if (dst.Length == 0) return;
+            var buffer = GetNativeArray(src.Id);
+            ulong elemSize = (ulong)UnsafeUtility.SizeOf<T>();
+            ulong byteOffset = checked(src.Offset * elemSize);
+            ulong byteCount = checked((ulong)dst.Length * elemSize);
+            if (checked(byteOffset + byteCount) > (ulong)buffer.Length)
+                throw new ArgumentOutOfRangeException(nameof(src), $"Read of {byteCount} bytes at offset {byteOffset} exceeds buffer size {buffer.Length}.");
+            void* dstPtr = NativeArrayUnsafeUtility.GetUnsafePtr(dst);
+            byte* srcPtr = (byte*)buffer.GetUnsafeReadOnlyPtr() + byteOffset;
+            UnsafeUtility.MemCpy(dstPtr, srcPtr, (long)byteCount);
+        }
+
+        public void WriteBuffer<T>(BufferSlice<T> dst, NativeArray<T> src, EventID id) where T : struct => WriteBuffer(dst, src);
+        public void ReadBuffer<T>(BufferSlice<T> src, NativeArray<T> dst, EventID id) where T : struct => ReadBuffer(src, dst);
+        public EventID CreateEvent() { lock (m_Lock) return new EventID(m_NextFreeEventId++); }
+        [Unbound.EditorFaithful("Unity's CPU ReferenceContext.DestroyEvent is a no-op (UnityCsReference 6000.0 DeviceContext.bindings.cs)")]
+        public void DestroyEvent(EventID id) { }
+        [Unbound.EditorFaithful("Unity's CPU ReferenceContext executes synchronously so IsCompleted always returns true (UnityCsReference 6000.0 DeviceContext.bindings.cs)")]
+        public bool IsCompleted(EventID id) => true;
+        [Unbound.EditorFaithful("Unity's CPU ReferenceContext executes synchronously so Wait always returns true (UnityCsReference 6000.0 DeviceContext.bindings.cs)")]
+        public bool Wait(EventID id) => true;
+        [Unbound.EditorFaithful("Unity's CPU ReferenceContext executes synchronously so Flush always returns true (UnityCsReference 6000.0 DeviceContext.bindings.cs)")]
+        public bool Flush() => true;
     }
 
     public unsafe partial class RadeonRaysWorld : IWorld, IDisposable
@@ -398,7 +494,41 @@ namespace UnityEngine.LightTransport
         const string BlueNoiseData = "Resources/GI/SamplingData/bluenoisedata";
 
         static readonly Func<Material, bool> s_Emits = BakedAtlas.Emits;
-        static readonly Action<string, string> s_Warn = (_, msg) => Debug.LogWarning("Unbound: " + msg);
+        static readonly HashSet<string> s_Warned = new HashSet<string>();
+        static readonly Action<string, string> s_Warn = Warn;
+
+        static void Warn(string key, string message)
+        {
+            if (s_Warned.Add(key)) Debug.LogWarning("Unbound: " + message);
+        }
+
+        /// <summary>Per-axis UV scale/offset mapping <paramref name="uvs"/> into `[0, 1]`,
+        /// matching `gbuffer::uv_scale_offset` (an axis without extent has scale 0).</summary>
+        internal static Vector4 UvScaleOffset(Vector2[] uvs)
+        {
+            if (uvs == null || uvs.Length == 0) return new Vector4(0f, 0f, 0f, 0f);
+            float minU = float.PositiveInfinity, minV = float.PositiveInfinity;
+            float maxU = float.NegativeInfinity, maxV = float.NegativeInfinity;
+            for (int i = 0; i < uvs.Length; i++)
+            {
+                float u = uvs[i].x, v = uvs[i].y;
+                if (float.IsFinite(u) && float.IsFinite(v))
+                {
+                    if (u < minU) minU = u;
+                    if (v < minV) minV = v;
+                    if (u > maxU) maxU = u;
+                    if (v > maxV) maxV = v;
+                }
+            }
+            if (!float.IsFinite(minU)) return new Vector4(0f, 0f, 0f, 0f);
+            float extentU = maxU - minU;
+            float extentV = maxV - minV;
+            float sx = extentU > 0f ? 1f / extentU : 0f;
+            float sy = extentV > 0f ? 1f / extentV : 0f;
+            if (!float.IsFinite(sx)) sx = 0f;
+            if (!float.IsFinite(sy)) sy = 0f;
+            return new Vector4(sx, sy, -(minU * sx), -(minV * sy));
+        }
 
         internal struct ExtractedLightMeta
         {
@@ -435,6 +565,23 @@ namespace UnityEngine.LightTransport
             var renderers = new List<object>();
             var withUVs = new Dictionary<Mesh, Mesh>();
 
+            foreach (var terrain in Object.FindObjectsByType<Terrain>(FindObjectsSortMode.None))
+            {
+                if (terrain != null && terrain.enabled && terrain.gameObject.activeInHierarchy
+                    && (terrain.gameObject.m_StaticEditorFlags & ContributeGI) != 0)
+                {
+                    Warn("lt-terrain:" + terrain.GetInstanceID(), $"LightTransport InputExtraction: '{terrain.name}' is a lightmapped Terrain, which is omitted by CPU probe baking yet.");
+                }
+            }
+            foreach (var lodGroup in Object.FindObjectsByType<LODGroup>(FindObjectsSortMode.None))
+            {
+                if (lodGroup != null && lodGroup.enabled && lodGroup.gameObject.activeInHierarchy)
+                {
+                    Warn("lt-lodgroup", $"LightTransport InputExtraction: active LODGroup '{lodGroup.name}' has no per-LOD filtering yet; all ContributeGI LOD renderers are included.");
+                    break;
+                }
+            }
+
             var allRenderers = Object.FindObjectsByType<MeshRenderer>(FindObjectsSortMode.None);
             try
             {
@@ -445,11 +592,20 @@ namespace UnityEngine.LightTransport
                         if (renderer == null || !renderer.enabled || !renderer.gameObject.activeInHierarchy) continue;
                         if ((renderer.gameObject.m_StaticEditorFlags & ContributeGI) == 0) continue;
                         var mesh = renderer.GetComponent<MeshFilter>()?.sharedMesh;
-                        if (mesh == null || mesh.vertexCount == 0 || mesh.normals.Length != mesh.vertexCount) continue;
+                        if (mesh == null || mesh.vertexCount == 0) continue;
+                        if (mesh.normals.Length != mesh.vertexCount)
+                        {
+                            Warn("lt-nonormals:" + renderer.GetInstanceID(), $"LightTransport InputExtraction: '{renderer.name}' mesh '{mesh.name}' has no normals and is skipped.");
+                            continue;
+                        }
                         bool allTriangles = true;
                         for (int sub = 0; sub < mesh.subMeshCount; sub++)
                             if (mesh.GetTopology(sub) != MeshTopology.Triangles) { allTriangles = false; break; }
-                        if (!allTriangles) continue;
+                        if (!allTriangles)
+                        {
+                            Warn("lt-topology:" + renderer.GetInstanceID(), $"LightTransport InputExtraction: '{renderer.name}' mesh '{mesh.name}' has non-triangle topology and is skipped.");
+                            continue;
+                        }
 
                         if (!meshIndex.TryGetValue(mesh, out int index))
                         {
@@ -469,25 +625,7 @@ namespace UnityEngine.LightTransport
 
                         var uvMesh = BakedAtlas.BakedUVs(mesh, withUVs);
                         var uvs = uvMesh.uv2.Length == uvMesh.vertexCount ? uvMesh.uv2 : uvMesh.uv;
-                        float minU = float.PositiveInfinity, minV = float.PositiveInfinity;
-                        float maxU = float.NegativeInfinity, maxV = float.NegativeInfinity;
-                        for (int i = 0; i < uvs.Length; i++)
-                        {
-                            float u = uvs[i].x, v = uvs[i].y;
-                            if (float.IsFinite(u) && float.IsFinite(v))
-                            {
-                                if (u < minU) minU = u;
-                                if (v < minV) minV = v;
-                                if (u > maxU) maxU = u;
-                                if (v > maxV) maxV = v;
-                            }
-                        }
-                        var scaleOffset = new Vector4(1f, 1f, 0f, 0f);
-                        if (float.IsFinite(minU) && maxU > minU && maxV > minV)
-                        {
-                            float sx = 1f / (maxU - minU), sy = 1f / (maxV - minV);
-                            scaleOffset = new Vector4(sx, sy, -minU * sx, -minV * sy);
-                        }
+                        var scaleOffset = UvScaleOffset(uvs);
 
                         var albedoRt = RenderTexture.GetTemporary(MetaImageSize, MetaImageSize, 0, RenderTextureFormat.ARGB32, linear ? RenderTextureReadWrite.sRGB : RenderTextureReadWrite.Linear);
                         var emissionRt = RenderTexture.GetTemporary(MetaImageSize, MetaImageSize, 0, RenderTextureFormat.ARGBHalf, RenderTextureReadWrite.Linear);
@@ -550,19 +688,34 @@ namespace UnityEngine.LightTransport
 
             var lightsJson = new List<object>();
             var lightMetas = new List<ExtractedLightMeta>();
-            int nextShadowmaskChannel = 0;
-            bool assignShadowmask = settings.mixedBakeMode == MixedLightingMode.Shadowmask;
+            int mixedMode = (int)settings.mixedBakeMode;
+            bool customDelegate = UnityEngine.Experimental.GlobalIllumination.Lightmapping.HasCustomDelegate;
             var allLights = Object.FindObjectsByType<Light>(FindObjectsSortMode.None);
+            Array.Sort(allLights, (a, b) =>
+            {
+                if (a == null && b == null) return 0;
+                if (a == null) return -1;
+                if (b == null) return 1;
+                int cmp = string.CompareOrdinal(BakedAtlas.HierarchyPath(a.transform), BakedAtlas.HierarchyPath(b.transform));
+                return cmp != 0 ? cmp : a.GetInstanceID().CompareTo(b.GetInstanceID());
+            });
             foreach (var light in allLights)
             {
                 if (light == null || !light.enabled || !light.gameObject.activeInHierarchy) continue;
                 if (light.lightmapBakeType == LightmapBakeType.Realtime) continue;
                 int kind = light.type == LightType.Directional ? 0 : light.type == LightType.Point ? 1 : light.type == LightType.Spot ? 2 : -1;
-                if (kind < 0) continue;
+                if (kind < 0)
+                {
+                    Warn("lt-light-type:" + light.GetInstanceID(), $"LightTransport InputExtraction: '{light.name}' is a {light.type} light, which CPU probe baking does not support yet.");
+                    continue;
+                }
+                if (light.cookie != null)
+                    Warn("lt-light-cookie:" + light.GetInstanceID(), $"LightTransport InputExtraction: '{light.name}' has a cookie, which CPU probe baking ignores yet.");
+                if ((kind == 0 ? light.shadowAngle : light.shadowRadius) > 0f && light.shadows != LightShadows.None)
+                    Warn("lt-light-soft:" + light.GetInstanceID(), $"LightTransport InputExtraction: '{light.name}' has soft baked shadows, which CPU probe baking bakes hard yet.");
+                if (kind != 0 && customDelegate)
+                    Warn("lt-light-falloff", $"LightTransport InputExtraction: a custom Lightmapping.RequestLightsDelegate is set (e.g. SRP inverse-square falloff), but CPU probe baking uses built-in legacy attenuation for '{light.name}'.");
                 int mode = light.lightmapBakeType == LightmapBakeType.Mixed ? 1 : 2;
-                int channel = -1;
-                if (assignShadowmask && mode == 1 && light.shadows != LightShadows.None && nextShadowmaskChannel < 4)
-                    channel = nextShadowmaskChannel++;
 
                 var t = light.transform;
                 Color direct = light.ScaledColor(light.intensity, linear: true);
@@ -589,8 +742,24 @@ namespace UnityEngine.LightTransport
                     Mode = mode,
                     Position = pos,
                     Range = light.range,
-                    ShadowmaskChannel = channel,
+                    ShadowmaskChannel = -1,
                 });
+            }
+
+            if (lightsJson.Count > 0)
+            {
+                string assignReq = JsonSerializer.Serialize(new { lights = lightsJson, mixedMode });
+                string assignAns = Native.Call("light-transport-assign-channels", assignReq);
+                using var doc = JsonDocument.Parse(assignAns);
+                var chArr = doc.RootElement.GetProperty("channels");
+                var modeArr = doc.RootElement.GetProperty("modes");
+                for (int i = 0; i < lightMetas.Count; i++)
+                {
+                    var meta = lightMetas[i];
+                    meta.ShadowmaskChannel = chArr[i].GetInt32();
+                    meta.Mode = modeArr[i].GetInt32();
+                    lightMetas[i] = meta;
+                }
             }
 
             var sky = BakedAtlas.SkyOf(settings);
@@ -601,6 +770,7 @@ namespace UnityEngine.LightTransport
                 meshes,
                 renderers,
                 lights = lightsJson,
+                mixedMode,
                 blueNoise,
                 environment = new
                 {
@@ -746,17 +916,17 @@ namespace UnityEngine.LightTransport
                 var li = lightIndices.Value;
                 if (!store.TryGetBuffer(li.Id, out var idxBuf))
                     return new IProbeIntegrator.Result(IProbeIntegrator.ResultType.InvalidInput, "Unknown light indices buffer.");
-                ulong idxElemOffset, idxElemCount;
+                ulong idxElemCount;
                 try
                 {
-                    idxElemOffset = checked(li.Offset + (ulong)positionOffset * (ulong)maxLightsPerProbe);
                     idxElemCount = checked((ulong)positionCount * (ulong)maxLightsPerProbe);
                 }
                 catch (OverflowException)
                 {
                     return new IProbeIntegrator.Result(IProbeIntegrator.ResultType.InvalidInput, "Light indices slice overflow.");
                 }
-                if (!CpuDeviceBufferStore.TryByteRange(idxBuf, idxElemOffset, idxElemCount, 4UL, out int idxStartByte, out int idxByteCount))
+                // Unity offsets only _positions by positionOffset; perProbeLightIndices is read from li.Offset.
+                if (!CpuDeviceBufferStore.TryByteRange(idxBuf, li.Offset, idxElemCount, 4UL, out int idxStartByte, out int idxByteCount))
                     return new IProbeIntegrator.Result(IProbeIntegrator.ResultType.InvalidInput, "Light indices slice out of range.");
                 indicesB64 = Convert.ToBase64String(idxBuf, idxStartByte, idxByteCount);
             }
@@ -790,6 +960,8 @@ namespace UnityEngine.LightTransport
             }
         }
 
+        // Direct radiance integration passes envSampleCount = 0 in Unity's RadeonRaysProbeIntegrator
+        // (environment lighting is integrated in IntegrateIndirectRadiance when !ignoreEnvironment).
         public IProbeIntegrator.Result IntegrateDirectRadiance(IDeviceContext context, int positionOffset, int positionCount, int sampleCount, bool ignoreEnvironment, BufferSlice<SphericalHarmonicsL2> radianceEstimateOut) =>
             RunIntegration(context, "direct", positionOffset, positionCount, sampleCount, ignoreEnvironment,
                 radianceEstimateOut.Id, radianceEstimateOut.Offset, positionCount > 0 ? (ulong)positionCount : 0UL, 108UL);
@@ -848,21 +1020,27 @@ namespace UnityEngine.LightTransport.PostProcessing
         const float WindowL1 = 0.922066f;
         const float WindowL2 = 0.731864f;
 
-        static bool TrySpan(IDeviceContext context, BufferSlice<SphericalHarmonicsL2> slice, int probeCount, out Span<float> floats)
+        static bool TryRadeonSpan(RadeonRaysContext rr, BufferSlice<SphericalHarmonicsL2> slice, int probeCount, out Span<float> floats)
         {
             floats = default;
-            var store = CpuDeviceBufferStore.Of(context);
-            if (store == null || probeCount < 0 || !store.TryGetBuffer(slice.Id, out var buf)) return false;
+            if (rr == null || probeCount < 0 || !rr.m_Store.TryGetBuffer(slice.Id, out var buf)) return false;
             if (!CpuDeviceBufferStore.TryByteRange(buf, slice.Offset, (ulong)probeCount, 108UL, out int startByte, out int lengthBytes))
                 return false;
             floats = MemoryMarshal.Cast<byte, float>(buf.AsSpan(startByte, lengthBytes));
             return true;
         }
 
-        internal static bool ConvolveRadianceToIrradiance(IDeviceContext context, BufferSlice<SphericalHarmonicsL2> radianceIn, BufferSlice<SphericalHarmonicsL2> irradianceOut, int probeCount)
+        static bool TryReferenceSpan(ReferenceContext rc, BufferSlice<SphericalHarmonicsL2> slice, int probeCount, out Span<float> floats)
         {
-            if (!TrySpan(context, radianceIn, probeCount, out var src) || !TrySpan(context, irradianceOut, probeCount, out var dst))
+            floats = default;
+            if (rc == null || probeCount < 0 || !rc.TryGetBufferSpan(slice.Id, slice.Offset, (ulong)probeCount, 108UL, out var bytes))
                 return false;
+            floats = MemoryMarshal.Cast<byte, float>(bytes);
+            return true;
+        }
+
+        internal static void ConvolveSpan(ReadOnlySpan<float> src, Span<float> dst, int probeCount)
+        {
             for (int p = 0; p < probeCount; p++)
             {
                 int b = p * 27;
@@ -874,13 +1052,10 @@ namespace UnityEngine.LightTransport.PostProcessing
                     for (int i = 4; i < 9; i++) dst[o + i] = src[o + i] * AHat2;
                 }
             }
-            return true;
         }
 
-        internal static bool ConvertToUnityFormat(IDeviceContext context, BufferSlice<SphericalHarmonicsL2> irradianceIn, BufferSlice<SphericalHarmonicsL2> irradianceOut, int probeCount)
+        internal static void ConvertSpan(ReadOnlySpan<float> src, Span<float> dst, int probeCount)
         {
-            if (!TrySpan(context, irradianceIn, probeCount, out var src) || !TrySpan(context, irradianceOut, probeCount, out var dst))
-                return false;
             const float invPi = 1f / Mathf.PI;
             for (int p = 0; p < probeCount; p++)
             {
@@ -909,29 +1084,20 @@ namespace UnityEngine.LightTransport.PostProcessing
                     dst[o + 8] = l22 * ShL22Norm * invPi;
                 }
             }
-            return true;
         }
 
-        internal static bool Add(IDeviceContext context, BufferSlice<SphericalHarmonicsL2> a, BufferSlice<SphericalHarmonicsL2> b, BufferSlice<SphericalHarmonicsL2> sum, int probeCount)
+        internal static void AddSpan(ReadOnlySpan<float> sa, ReadOnlySpan<float> sb, Span<float> dst)
         {
-            if (!TrySpan(context, a, probeCount, out var sa) || !TrySpan(context, b, probeCount, out var sb) || !TrySpan(context, sum, probeCount, out var dst))
-                return false;
             for (int i = 0; i < dst.Length; i++) dst[i] = sa[i] + sb[i];
-            return true;
         }
 
-        internal static bool Scale(IDeviceContext context, BufferSlice<SphericalHarmonicsL2> shIn, BufferSlice<SphericalHarmonicsL2> shOut, int probeCount, float scale)
+        internal static void ScaleSpan(ReadOnlySpan<float> src, Span<float> dst, float scale)
         {
-            if (!TrySpan(context, shIn, probeCount, out var src) || !TrySpan(context, shOut, probeCount, out var dst))
-                return false;
             for (int i = 0; i < dst.Length; i++) dst[i] = src[i] * scale;
-            return true;
         }
 
-        internal static bool Window(IDeviceContext context, BufferSlice<SphericalHarmonicsL2> shIn, BufferSlice<SphericalHarmonicsL2> shOut, int probeCount)
+        internal static void WindowSpan(ReadOnlySpan<float> src, Span<float> dst, int probeCount)
         {
-            if (!TrySpan(context, shIn, probeCount, out var src) || !TrySpan(context, shOut, probeCount, out var dst))
-                return false;
             for (int p = 0; p < probeCount; p++)
             {
                 int b = p * 27;
@@ -943,27 +1109,144 @@ namespace UnityEngine.LightTransport.PostProcessing
                     for (int i = 4; i < 9; i++) dst[o + i] = src[o + i] * WindowL2;
                 }
             }
+        }
+
+        internal static bool DeringBytes(ReadOnlySpan<byte> src, Span<byte> dst)
+        {
+            if (src.Length != dst.Length) return false;
+            if (src.Length == 0) return true;
+            if (!Native.IsReady) return false;
+            string req = JsonSerializer.Serialize(new { sh = Convert.ToBase64String(src) });
+            string answer = Native.Call("light-transport-dering", req);
+            byte[] bytes = Convert.FromBase64String(JsonDocument.Parse(answer).RootElement.GetProperty("data").GetString());
+            if (bytes.Length != dst.Length) return false;
+            bytes.AsSpan().CopyTo(dst);
             return true;
         }
 
-        internal static bool Dering(IDeviceContext context, BufferSlice<SphericalHarmonicsL2> shIn, BufferSlice<SphericalHarmonicsL2> shOut, int probeCount)
+        internal static bool ConvolveRadeon(IDeviceContext context, BufferSlice<SphericalHarmonicsL2> radianceIn, BufferSlice<SphericalHarmonicsL2> irradianceOut, int probeCount)
         {
-            var store = CpuDeviceBufferStore.Of(context);
-            if (store == null || probeCount < 0) return false;
-            if (!store.TryGetBuffer(shIn.Id, out var srcBuf) || !store.TryGetBuffer(shOut.Id, out var dstBuf))
+            if (context is not RadeonRaysContext rr || !TryRadeonSpan(rr, radianceIn, probeCount, out var src) || !TryRadeonSpan(rr, irradianceOut, probeCount, out var dst))
                 return false;
-            if (!CpuDeviceBufferStore.TryByteRange(srcBuf, shIn.Offset, (ulong)probeCount, 108UL, out int srcByteOffset, out int byteLength))
+            ConvolveSpan(src, dst, probeCount);
+            return true;
+        }
+
+        internal static bool ConvertRadeon(IDeviceContext context, BufferSlice<SphericalHarmonicsL2> irradianceIn, BufferSlice<SphericalHarmonicsL2> irradianceOut, int probeCount)
+        {
+            if (context is not RadeonRaysContext rr || !TryRadeonSpan(rr, irradianceIn, probeCount, out var src) || !TryRadeonSpan(rr, irradianceOut, probeCount, out var dst))
                 return false;
-            if (!CpuDeviceBufferStore.TryByteRange(dstBuf, shOut.Offset, (ulong)probeCount, 108UL, out int dstByteOffset, out _))
+            ConvertSpan(src, dst, probeCount);
+            return true;
+        }
+
+        internal static bool AddRadeon(IDeviceContext context, BufferSlice<SphericalHarmonicsL2> a, BufferSlice<SphericalHarmonicsL2> b, BufferSlice<SphericalHarmonicsL2> sum, int probeCount)
+        {
+            if (context is not RadeonRaysContext rr || !TryRadeonSpan(rr, a, probeCount, out var sa) || !TryRadeonSpan(rr, b, probeCount, out var sb) || !TryRadeonSpan(rr, sum, probeCount, out var dst))
                 return false;
+            AddSpan(sa, sb, dst);
+            return true;
+        }
+
+        internal static bool ScaleRadeon(IDeviceContext context, BufferSlice<SphericalHarmonicsL2> shIn, BufferSlice<SphericalHarmonicsL2> shOut, int probeCount, float scale)
+        {
+            if (context is not RadeonRaysContext rr || !TryRadeonSpan(rr, shIn, probeCount, out var src) || !TryRadeonSpan(rr, shOut, probeCount, out var dst))
+                return false;
+            ScaleSpan(src, dst, scale);
+            return true;
+        }
+
+        internal static bool WindowRadeon(IDeviceContext context, BufferSlice<SphericalHarmonicsL2> shIn, BufferSlice<SphericalHarmonicsL2> shOut, int probeCount)
+        {
+            if (context is not RadeonRaysContext rr || !TryRadeonSpan(rr, shIn, probeCount, out var src) || !TryRadeonSpan(rr, shOut, probeCount, out var dst))
+                return false;
+            WindowSpan(src, dst, probeCount);
+            return true;
+        }
+
+        internal static unsafe bool DeringAnyContext(IDeviceContext context, BufferSlice<SphericalHarmonicsL2> shIn, BufferSlice<SphericalHarmonicsL2> shOut, int probeCount)
+        {
+            if (context == null || probeCount < 0) return false;
             if (probeCount == 0) return true;
             if (!Native.IsReady) return false;
-            string req = JsonSerializer.Serialize(new { sh = Convert.ToBase64String(srcBuf, srcByteOffset, byteLength) });
-            string answer = Native.Call("light-transport-dering", req);
-            byte[] bytes = Convert.FromBase64String(JsonDocument.Parse(answer).RootElement.GetProperty("data").GetString());
-            if (bytes.Length != byteLength) return false;
-            Buffer.BlockCopy(bytes, 0, dstBuf, dstByteOffset, bytes.Length);
+            try
+            {
+                using var input = new NativeArray<SphericalHarmonicsL2>(probeCount, Allocator.Temp, NativeArrayOptions.UninitializedMemory);
+                using var output = new NativeArray<SphericalHarmonicsL2>(probeCount, Allocator.Temp, NativeArrayOptions.UninitializedMemory);
+                EventID ev = context.CreateEvent();
+                try
+                {
+                    context.ReadBuffer(shIn, input, ev);
+                    if (!context.Flush() || !context.Wait(ev)) return false;
+                }
+                finally { context.DestroyEvent(ev); }
+
+                int byteLength = checked(probeCount * 108);
+                var srcSpan = new ReadOnlySpan<byte>(input.GetUnsafeReadOnlyPtr(), byteLength);
+                var dstSpan = new Span<byte>(output.GetUnsafePtr(), byteLength);
+                if (!DeringBytes(srcSpan, dstSpan)) return false;
+
+                ev = context.CreateEvent();
+                try
+                {
+                    context.WriteBuffer(shOut, output, ev);
+                    if (!context.Wait(ev)) return false;
+                }
+                finally { context.DestroyEvent(ev); }
+                return true;
+            }
+            catch (Exception)
+            {
+                return false;
+            }
+        }
+
+        internal static bool ConvolveReference(IDeviceContext context, BufferSlice<SphericalHarmonicsL2> radianceIn, BufferSlice<SphericalHarmonicsL2> irradianceOut, int probeCount)
+        {
+            if (context is not ReferenceContext rc || !TryReferenceSpan(rc, radianceIn, probeCount, out var src) || !TryReferenceSpan(rc, irradianceOut, probeCount, out var dst))
+                return false;
+            ConvolveSpan(src, dst, probeCount);
             return true;
+        }
+
+        internal static bool ConvertReference(IDeviceContext context, BufferSlice<SphericalHarmonicsL2> irradianceIn, BufferSlice<SphericalHarmonicsL2> irradianceOut, int probeCount)
+        {
+            if (context is not ReferenceContext rc || !TryReferenceSpan(rc, irradianceIn, probeCount, out var src) || !TryReferenceSpan(rc, irradianceOut, probeCount, out var dst))
+                return false;
+            ConvertSpan(src, dst, probeCount);
+            return true;
+        }
+
+        internal static bool AddReference(IDeviceContext context, BufferSlice<SphericalHarmonicsL2> a, BufferSlice<SphericalHarmonicsL2> b, BufferSlice<SphericalHarmonicsL2> sum, int probeCount)
+        {
+            if (context is not ReferenceContext rc || !TryReferenceSpan(rc, a, probeCount, out var sa) || !TryReferenceSpan(rc, b, probeCount, out var sb) || !TryReferenceSpan(rc, sum, probeCount, out var dst))
+                return false;
+            AddSpan(sa, sb, dst);
+            return true;
+        }
+
+        internal static bool ScaleReference(IDeviceContext context, BufferSlice<SphericalHarmonicsL2> shIn, BufferSlice<SphericalHarmonicsL2> shOut, int probeCount, float scale)
+        {
+            if (context is not ReferenceContext rc || !TryReferenceSpan(rc, shIn, probeCount, out var src) || !TryReferenceSpan(rc, shOut, probeCount, out var dst))
+                return false;
+            ScaleSpan(src, dst, scale);
+            return true;
+        }
+
+        internal static bool WindowReference(IDeviceContext context, BufferSlice<SphericalHarmonicsL2> shIn, BufferSlice<SphericalHarmonicsL2> shOut, int probeCount)
+        {
+            if (context is not ReferenceContext rc || !TryReferenceSpan(rc, shIn, probeCount, out var src) || !TryReferenceSpan(rc, shOut, probeCount, out var dst))
+                return false;
+            WindowSpan(src, dst, probeCount);
+            return true;
+        }
+
+        internal static bool DeringReference(IDeviceContext context, BufferSlice<SphericalHarmonicsL2> shIn, BufferSlice<SphericalHarmonicsL2> shOut, int probeCount)
+        {
+            if (context is not ReferenceContext rc || probeCount < 0) return false;
+            if (!rc.TryGetBufferSpan(shIn.Id, shIn.Offset, (ulong)probeCount, 108UL, out var src) || !rc.TryGetBufferSpan(shOut.Id, shOut.Offset, (ulong)probeCount, 108UL, out var dst))
+                return false;
+            return DeringBytes(src, dst);
         }
     }
 
@@ -972,40 +1255,40 @@ namespace UnityEngine.LightTransport.PostProcessing
         bool m_Initialized;
 
         public RadeonRaysProbePostProcessor() { }
-        public bool Initialize(IDeviceContext context) => m_Initialized = CpuDeviceBufferStore.Of(context) != null;
+        public bool Initialize(IDeviceContext context) => m_Initialized = context is RadeonRaysContext;
         public bool ConvolveRadianceToIrradiance(IDeviceContext context, BufferSlice<SphericalHarmonicsL2> radianceIn, BufferSlice<SphericalHarmonicsL2> irradianceOut, int probeCount) =>
-            m_Initialized && CpuProbePostProcess.ConvolveRadianceToIrradiance(context, radianceIn, irradianceOut, probeCount);
+            m_Initialized && CpuProbePostProcess.ConvolveRadeon(context, radianceIn, irradianceOut, probeCount);
         public bool ConvertToUnityFormat(IDeviceContext context, BufferSlice<SphericalHarmonicsL2> irradianceIn, BufferSlice<SphericalHarmonicsL2> irradianceOut, int probeCount) =>
-            m_Initialized && CpuProbePostProcess.ConvertToUnityFormat(context, irradianceIn, irradianceOut, probeCount);
+            m_Initialized && CpuProbePostProcess.ConvertRadeon(context, irradianceIn, irradianceOut, probeCount);
         public bool AddSphericalHarmonicsL2(IDeviceContext context, BufferSlice<SphericalHarmonicsL2> a, BufferSlice<SphericalHarmonicsL2> b, BufferSlice<SphericalHarmonicsL2> sum, int probeCount) =>
-            m_Initialized && CpuProbePostProcess.Add(context, a, b, sum, probeCount);
+            m_Initialized && CpuProbePostProcess.AddRadeon(context, a, b, sum, probeCount);
         public bool ScaleSphericalHarmonicsL2(IDeviceContext context, BufferSlice<SphericalHarmonicsL2> shIn, BufferSlice<SphericalHarmonicsL2> shOut, int probeCount, float scale) =>
-            m_Initialized && CpuProbePostProcess.Scale(context, shIn, shOut, probeCount, scale);
+            m_Initialized && CpuProbePostProcess.ScaleRadeon(context, shIn, shOut, probeCount, scale);
         public bool WindowSphericalHarmonicsL2(IDeviceContext context, BufferSlice<SphericalHarmonicsL2> shIn, BufferSlice<SphericalHarmonicsL2> shOut, int probeCount) =>
-            m_Initialized && CpuProbePostProcess.Window(context, shIn, shOut, probeCount);
+            m_Initialized && CpuProbePostProcess.WindowRadeon(context, shIn, shOut, probeCount);
         public bool DeringSphericalHarmonicsL2(IDeviceContext context, BufferSlice<SphericalHarmonicsL2> shIn, BufferSlice<SphericalHarmonicsL2> shOut, int probeCount) =>
-            m_Initialized && CpuProbePostProcess.Dering(context, shIn, shOut, probeCount);
+            CpuProbePostProcess.DeringAnyContext(context, shIn, shOut, probeCount);
         public void Dispose() => m_Initialized = false;
     }
 
     public unsafe partial class ReferenceProbePostProcessor : IProbePostProcessor, IDisposable
     {
-        bool m_Initialized;
-
         public ReferenceProbePostProcessor() { }
-        public bool Initialize(IDeviceContext context) => m_Initialized = CpuDeviceBufferStore.Of(context) != null;
+        [Unbound.EditorFaithful("Unity's ReferenceProbePostProcessor.Initialize always returns true (UnityCsReference 6000.0 PostProcessing.bindings.cs)")]
+        public bool Initialize(IDeviceContext context) => true;
         public bool ConvolveRadianceToIrradiance(IDeviceContext context, BufferSlice<SphericalHarmonicsL2> radianceIn, BufferSlice<SphericalHarmonicsL2> irradianceOut, int probeCount) =>
-            m_Initialized && CpuProbePostProcess.ConvolveRadianceToIrradiance(context, radianceIn, irradianceOut, probeCount);
+            CpuProbePostProcess.ConvolveReference(context, radianceIn, irradianceOut, probeCount);
         public bool ConvertToUnityFormat(IDeviceContext context, BufferSlice<SphericalHarmonicsL2> irradianceIn, BufferSlice<SphericalHarmonicsL2> irradianceOut, int probeCount) =>
-            m_Initialized && CpuProbePostProcess.ConvertToUnityFormat(context, irradianceIn, irradianceOut, probeCount);
+            CpuProbePostProcess.ConvertReference(context, irradianceIn, irradianceOut, probeCount);
         public bool AddSphericalHarmonicsL2(IDeviceContext context, BufferSlice<SphericalHarmonicsL2> a, BufferSlice<SphericalHarmonicsL2> b, BufferSlice<SphericalHarmonicsL2> sum, int probeCount) =>
-            m_Initialized && CpuProbePostProcess.Add(context, a, b, sum, probeCount);
+            CpuProbePostProcess.AddReference(context, a, b, sum, probeCount);
         public bool ScaleSphericalHarmonicsL2(IDeviceContext context, BufferSlice<SphericalHarmonicsL2> shIn, BufferSlice<SphericalHarmonicsL2> shOut, int probeCount, float scale) =>
-            m_Initialized && CpuProbePostProcess.Scale(context, shIn, shOut, probeCount, scale);
+            CpuProbePostProcess.ScaleReference(context, shIn, shOut, probeCount, scale);
         public bool WindowSphericalHarmonicsL2(IDeviceContext context, BufferSlice<SphericalHarmonicsL2> shIn, BufferSlice<SphericalHarmonicsL2> shOut, int probeCount) =>
-            m_Initialized && CpuProbePostProcess.Window(context, shIn, shOut, probeCount);
+            CpuProbePostProcess.WindowReference(context, shIn, shOut, probeCount);
         public bool DeringSphericalHarmonicsL2(IDeviceContext context, BufferSlice<SphericalHarmonicsL2> shIn, BufferSlice<SphericalHarmonicsL2> shOut, int probeCount) =>
-            m_Initialized && CpuProbePostProcess.Dering(context, shIn, shOut, probeCount);
-        public void Dispose() => m_Initialized = false;
+            CpuProbePostProcess.DeringReference(context, shIn, shOut, probeCount);
+        [Unbound.EditorFaithful("Unity's ReferenceProbePostProcessor holds no native resources to release (UnityCsReference 6000.0 PostProcessing.bindings.cs)")]
+        public void Dispose() { }
     }
 }

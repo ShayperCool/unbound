@@ -28,19 +28,27 @@ namespace UnityEngine.Tests
             Assert.True(progress.WasCancelled());
         }
 
+        struct NonBlittableStruct
+        {
+            public string Label;
+        }
+
         [Fact]
-        public void BufferSliceReinterpretsAlignedOffsetsAndRejectsMisaligned()
+        public void BufferSliceReinterpretsDivisibleElementSizesAndRejectsInvalidOnes()
         {
             var id = new BufferID(7UL);
             var vec4Slice = id.Slice<Vector4>(3UL);
             var floatSlice = vec4Slice.SafeReinterpret<float>();
             Assert.Equal(id, floatSlice.Id);
             Assert.Equal(12UL, floatSlice.Offset);
-            Assert.Equal(vec4Slice, floatSlice.SafeReinterpret<Vector4>());
 
-            var misaligned = id.Slice<float>(1UL);
-            Assert.Throws<InvalidOperationException>(() => misaligned.SafeReinterpret<Vector4>());
-            Assert.Equal(0UL, misaligned.UnsafeReinterpret<Vector4>().Offset);
+            // Unity checks oldSize % newSize == 0 (4 % 16 != 0 throws ArgumentException even when offset is aligned).
+            Assert.Throws<ArgumentException>(() => floatSlice.SafeReinterpret<Vector4>());
+            Assert.Throws<ArgumentException>(() => id.Slice<float>(1UL).SafeReinterpret<Vector4>());
+            Assert.Throws<ArgumentException>(() => vec4Slice.SafeReinterpret<NonBlittableStruct>());
+
+            Assert.Equal(3UL, floatSlice.UnsafeReinterpret<Vector4>().Offset);
+            Assert.Equal(0UL, id.Slice<float>(1UL).UnsafeReinterpret<Vector4>().Offset);
         }
 
         [Fact]
@@ -90,36 +98,129 @@ namespace UnityEngine.Tests
             raw[1, 2] = 2f;   // raw L1_y G -> Unity index 1
             raw[2, 3] = 3f;   // raw L1_z B -> Unity index 2
             raw[0, 4] = 5f;   // L2_-2 R
+            raw[1, 5] = 6f;   // L2_-1 G
+            raw[2, 6] = 7f;   // L2_0 B
+            raw[0, 7] = 8f;   // L2_1 R
+            raw[1, 8] = 9f;   // L2_2 G
 
             using var input = new NativeArray<SphericalHarmonicsL2>(new[] { raw }, Allocator.Temp);
             using var output = new NativeArray<SphericalHarmonicsL2>(1, Allocator.Temp);
             ctx.WriteBuffer(aSlice, input);
 
-            // Windowing scales L1 by 0.922066 and L2 by 0.731864.
+            // Windowing scales L1 by 0.922066 and L2 by 0.731864 across all L2 indices.
             Assert.True(pp.WindowSphericalHarmonicsL2(ctx, aSlice, bSlice, 1));
             ctx.ReadBuffer(bSlice, output);
             Assert.Equal(1f, output[0][0, 0], 5);
             Assert.Equal(4f * 0.922066f, output[0][0, 1], 5);
             Assert.Equal(5f * 0.731864f, output[0][0, 4], 5);
+            Assert.Equal(6f * 0.731864f, output[0][1, 5], 5);
+            Assert.Equal(7f * 0.731864f, output[0][2, 6], 5);
+            Assert.Equal(8f * 0.731864f, output[0][0, 7], 5);
+            Assert.Equal(9f * 0.731864f, output[0][1, 8], 5);
 
             // Scale + Add
             Assert.True(pp.ScaleSphericalHarmonicsL2(ctx, aSlice, bSlice, 1, 2f));
             Assert.True(pp.AddSphericalHarmonicsL2(ctx, aSlice, bSlice, outSlice, 1));
             ctx.ReadBuffer(outSlice, output);
             Assert.Equal(3f, output[0][0, 0], 5);
+            Assert.Equal(27f, output[0][1, 8], 5);
 
             // Convolve + ConvertToUnityFormat (in-place aliasing supported).
             Assert.True(pp.ConvolveRadianceToIrradiance(ctx, aSlice, outSlice, 1));
             Assert.True(pp.ConvertToUnityFormat(ctx, outSlice, outSlice, 1));
             ctx.ReadBuffer(outSlice, output);
 
-            // Product of aHat * (SH_NORM / PI): L0=0.28209478, L1=0.325735, L2_2=0.2731371;
-            // L1 indices permute (1->3, 2->1, 3->2).
-            Assert.Equal(0.28209478f, output[0][0, 0], 5);
-            Assert.Equal(4f * 0.325735f, output[0][0, 3], 4);
-            Assert.Equal(2f * 0.325735f, output[0][1, 1], 4);
-            Assert.Equal(3f * 0.325735f, output[0][2, 2], 4);
-            Assert.Equal(5f * 0.2731371f, output[0][0, 4], 4);
+            // Independent analytical aHat_l * Y_lm / pi factors:
+            // L0: 1 * sqrt(1/pi)/2; L1: (2/3) * sqrt(3/pi)/2; L2_±2,±1: (1/4) * sqrt(15/pi)/2;
+            // L2_0: (1/4) * sqrt(5/pi)/4; L2_2: (1/4) * sqrt(15/pi)/4.
+            float f0 = MathF.Sqrt(1f / MathF.PI) / 2f;
+            float f1 = (2f / 3f) * MathF.Sqrt(3f / MathF.PI) / 2f;
+            float f2Off = 0.25f * MathF.Sqrt(15f / MathF.PI) / 2f;
+            float f20 = 0.25f * MathF.Sqrt(5f / MathF.PI) / 4f;
+            float f22 = 0.25f * MathF.Sqrt(15f / MathF.PI) / 4f;
+            Assert.Equal(1f * f0, output[0][0, 0], 1e-5f);
+            Assert.Equal(4f * f1, output[0][0, 3], 1e-5f);
+            Assert.Equal(2f * f1, output[0][1, 1], 1e-5f);
+            Assert.Equal(3f * f1, output[0][2, 2], 1e-5f);
+            Assert.Equal(5f * f2Off, output[0][0, 4], 1e-5f);
+            Assert.Equal(6f * f2Off, output[0][1, 5], 1e-5f);
+            Assert.Equal(7f * f20, output[0][2, 6], 1e-5f);
+            Assert.Equal(8f * f2Off, output[0][0, 7], 1e-5f);
+            Assert.Equal(9f * f22, output[0][1, 8], 1e-5f);
+        }
+
+        [Fact]
+        public void ReferenceContextAndPostProcessorMatchUnityContracts()
+        {
+            using var refCtx = new ReferenceContext();
+            Assert.True(refCtx.Initialize());
+            using var rrCtx = new RadeonRaysContext();
+            Assert.True(rrCtx.Initialize());
+
+            var shBuf = refCtx.CreateBuffer(27UL, sizeof(float));
+            var outBuf = refCtx.CreateBuffer(27UL, sizeof(float));
+            var raw = new SphericalHarmonicsL2();
+            raw[0, 0] = 2f;
+            raw[0, 1] = 3f;
+            raw[2, 6] = 4f;
+            raw[1, 8] = 5f;
+            using var input = new NativeArray<SphericalHarmonicsL2>(new[] { raw }, Allocator.Temp);
+            using var output = new NativeArray<SphericalHarmonicsL2>(1, Allocator.Temp);
+            refCtx.WriteBuffer(shBuf.Slice<SphericalHarmonicsL2>(0UL), input);
+
+            // ReferenceContext.GetNativeArray exposes the backing NativeArray<byte>.
+            var nativeBytes = refCtx.GetNativeArray(shBuf);
+            Assert.True(nativeBytes.IsCreated);
+            Assert.Equal(108, nativeBytes.Length);
+            Assert.Equal(2f, nativeBytes.Reinterpret<float>(1)[0], 1e-5f);
+
+            // ReferenceProbePostProcessor works without Initialize() and rejects RadeonRaysContext.
+            using var refPp = new ReferenceProbePostProcessor();
+            Assert.True(refPp.ConvolveRadianceToIrradiance(refCtx, shBuf.Slice<SphericalHarmonicsL2>(0UL), outBuf.Slice<SphericalHarmonicsL2>(0UL), 1));
+            Assert.True(refPp.ConvertToUnityFormat(refCtx, outBuf.Slice<SphericalHarmonicsL2>(0UL), outBuf.Slice<SphericalHarmonicsL2>(0UL), 1));
+            refCtx.ReadBuffer(outBuf.Slice<SphericalHarmonicsL2>(0UL), output);
+            Assert.Equal(2f * (MathF.Sqrt(1f / MathF.PI) / 2f), output[0][0, 0], 1e-5f);
+            Assert.Equal(3f * ((2f / 3f) * MathF.Sqrt(3f / MathF.PI) / 2f), output[0][0, 3], 1e-5f);
+            Assert.Equal(4f * (0.25f * MathF.Sqrt(5f / MathF.PI) / 4f), output[0][2, 6], 1e-5f);
+            Assert.Equal(5f * (0.25f * MathF.Sqrt(15f / MathF.PI) / 4f), output[0][1, 8], 1e-5f);
+
+            var rrBuf = rrCtx.CreateBuffer(27UL, sizeof(float));
+            Assert.False(refPp.WindowSphericalHarmonicsL2(rrCtx, rrBuf.Slice<SphericalHarmonicsL2>(0UL), rrBuf.Slice<SphericalHarmonicsL2>(0UL), 1));
+
+            // RadeonRaysProbePostProcessor rejects ReferenceContext on Initialize and GPU ops,
+            // while Dering accepts any IDeviceContext (returns true for 0 probes, false without native for >0).
+            using var rrPp = new RadeonRaysProbePostProcessor();
+            Assert.False(rrPp.Initialize(refCtx));
+            Assert.True(rrPp.Initialize(rrCtx));
+            Assert.False(rrPp.WindowSphericalHarmonicsL2(refCtx, shBuf.Slice<SphericalHarmonicsL2>(0UL), outBuf.Slice<SphericalHarmonicsL2>(0UL), 1));
+            Assert.True(rrPp.DeringSphericalHarmonicsL2(refCtx, shBuf.Slice<SphericalHarmonicsL2>(0UL), outBuf.Slice<SphericalHarmonicsL2>(0UL), 0));
+            Assert.False(rrPp.DeringSphericalHarmonicsL2(refCtx, shBuf.Slice<SphericalHarmonicsL2>(0UL), outBuf.Slice<SphericalHarmonicsL2>(0UL), 1));
+
+            refCtx.DestroyBuffer(shBuf);
+            refCtx.DestroyBuffer(outBuf);
+        }
+
+        [Fact]
+        public void UvScaleOffsetNormalizesEachAxisIndependentlyAndResultFormatsLikeUnity()
+        {
+            // Normal 2D bounds
+            var normal = InputExtraction.UvScaleOffset(new[] { new Vector2(2f, 4f), new Vector2(6f, 12f) });
+            Assert.Equal(0.25f, normal.x, 5);
+            Assert.Equal(0.125f, normal.y, 5);
+            Assert.Equal(-0.5f, normal.z, 5);
+            Assert.Equal(-0.5f, normal.w, 5);
+
+            // 1D degenerate U (constant u = 2.0, v in [2.0, 4.0]): V is still normalized while U scale is 0.
+            var oneD = InputExtraction.UvScaleOffset(new[] { new Vector2(2f, 2f), new Vector2(2f, 4f) });
+            Assert.Equal(0f, oneD.x, 5);
+            Assert.Equal(0.5f, oneD.y, 5);
+            Assert.Equal(0f, oneD.z, 5);
+            Assert.Equal(-1f, oneD.w, 5);
+
+            Assert.Equal(Vector4.zero, InputExtraction.UvScaleOffset(Array.Empty<Vector2>()));
+
+            Assert.Equal("Result type: 'Success'", new IProbeIntegrator.Result(IProbeIntegrator.ResultType.Success, "").ToString());
+            Assert.Equal("Result type: 'InvalidInput', message: 'bad'", new IProbeIntegrator.Result(IProbeIntegrator.ResultType.InvalidInput, "bad").ToString());
         }
 
         [Fact]
@@ -165,7 +266,9 @@ namespace UnityEngine.Tests
             using var world = new RadeonRaysWorld();
             world.WorldId = 1UL;
             using var integrator = new RadeonRaysProbeIntegrator();
-            var posBuf = ctx.CreateBuffer(2UL, 12UL);
+            var posBuf = ctx.CreateBuffer(10UL, 12UL);
+            var batchIdxBuf = ctx.CreateBuffer(16UL, sizeof(int));
+            var batchOccBuf = ctx.CreateBuffer(16UL, sizeof(float));
             integrator.Prepare(ctx, world, posBuf.Slice<Vector3>(0UL), 0.0001f, 2);
 
             Assert.Equal(IProbeIntegrator.ResultType.InvalidInput,
@@ -176,6 +279,16 @@ namespace UnityEngine.Tests
                 integrator.IntegrateDirectRadiance(ctx, 0, 1, 16, false, unknownSlice).type);
             Assert.Equal(IProbeIntegrator.ResultType.InvalidInput,
                 integrator.IntegrateOcclusion(ctx, 0, 1, 16, 0, new BufferID(999UL).Slice<int>(0UL), new BufferID(999UL).Slice<float>(0UL)).type);
+            // positionOffset offsets only positions, NOT perProbeLightIndices: a batch-sized 16-int
+            // index buffer passes slice validation at positionOffset=4, positionCount=4 (reaching
+            // Native.Call -> JobFailed without native runtime rather than InvalidInput), whereas
+            // positionOffset=8, positionCount=4 exceeds the 10-probe position buffer -> InvalidInput.
+            var occWithOffset = integrator.IntegrateOcclusion(ctx, 4, 4, 16, 4,
+                batchIdxBuf.Slice<int>(0UL), batchOccBuf.Slice<float>(0UL));
+            Assert.Equal(IProbeIntegrator.ResultType.JobFailed, occWithOffset.type);
+            Assert.Equal(IProbeIntegrator.ResultType.InvalidInput,
+                integrator.IntegrateOcclusion(ctx, 8, 4, 16, 4,
+                    batchIdxBuf.Slice<int>(0UL), batchOccBuf.Slice<float>(0UL)).type);
 
             using var progress = new BakeProgressState();
             progress.Cancel();

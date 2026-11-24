@@ -52066,10 +52066,6 @@ namespace UnityEngine.LightTransport
         [global::Unbound.Stub] public global::UnityEngine.LightTransport.IntegrationContext GetIntegrationContext() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightTransport.RadeonRaysWorld.GetIntegrationContext"); return default; }
         [global::Unbound.Stub] public void SetIntegrationContext(global::UnityEngine.LightTransport.IntegrationContext context) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightTransport.RadeonRaysWorld.SetIntegrationContext"); }
     }
-    unsafe partial class ReferenceContext
-    {
-        [global::Unbound.Stub] public global::Unity.Collections.NativeArray<byte> GetNativeArray(global::UnityEngine.LightTransport.BufferID id) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightTransport.ReferenceContext.GetNativeArray"); return default; }
-    }
     [global::Unbound.Stub]
     internal unsafe partial class WintermuteContext : global::UnityEngine.LightTransport.IDeviceContext, global::System.IDisposable
     {
