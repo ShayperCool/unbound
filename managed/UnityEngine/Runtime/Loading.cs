@@ -1574,7 +1574,10 @@ namespace Unbound.Runtime
                 if (obj.m_InstanceID != stableId)
                 {
                     if (ObjectRegistry.FindById(stableId) == null)
+                    {
                         ObjectRegistry.ReassignId(obj, stableId);
+                        s_IdLocations[stableId] = key;
+                    }
                     else
                     {
                         s_IdLocations.Remove(stableId);
@@ -1599,6 +1602,21 @@ namespace Unbound.Runtime
             if (!s_IdLocations.Remove(id, out var loc)) return;
             if (s_AssetIds.TryGetValue(loc, out int mapped) && mapped == id)
                 s_AssetIds.Remove(loc);
+            // Also clear any secondary fileId alias pointing at the same instance ID (e.g. SpriteAtlas v2).
+            List<(string Guid, long FileId)> aliases = null;
+            foreach (var kv in s_AssetIds)
+            {
+                if (kv.Value == id)
+                {
+                    aliases ??= new List<(string, long)>();
+                    aliases.Add(kv.Key);
+                }
+            }
+            if (aliases != null)
+            {
+                foreach (var alias in aliases)
+                    s_AssetIds.Remove(alias);
+            }
         }
 
         static bool AssetExists(string guid, long fileId)

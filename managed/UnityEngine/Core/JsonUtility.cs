@@ -326,10 +326,18 @@ namespace UnityEngine
 
             void WriteReference(Object o, int id)
             {
-                if (m_Editor && Alive(o) && o.IsPersistentAsset && AssetDatabaseRuntime.TryGetLocation(o, out var guid, out var fileId))
+                if (m_Editor)
                 {
-                    Fields(("fileID", fileId), ("guid", guid), ("type", AssetReferenceType(guid)));
-                    return;
+                    if (Alive(o) && o.IsPersistentAsset && AssetDatabaseRuntime.TryGetLocation(o, out var guid, out var fileId))
+                    {
+                        Fields(("fileID", fileId), ("guid", guid), ("type", AssetReferenceType(guid)));
+                        return;
+                    }
+                    if ((object)o == null && id != 0 && AssetDatabaseRuntime.TryGetPersistentLocation(id, out var unloadedGuid, out var unloadedFileId))
+                    {
+                        Fields(("fileID", unloadedFileId), ("guid", unloadedGuid), ("type", AssetReferenceType(unloadedGuid)));
+                        return;
+                    }
                 }
                 m_Out.Append(m_Pretty ? "{\n" : "{");
                 if (m_Pretty) m_Out.Append(' ', (m_Indent + 1) * 4);

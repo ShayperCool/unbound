@@ -919,9 +919,13 @@ namespace Unbound.Runtime
                     {
                         int id = LazyReferences.Id(value);
                         var target = id == 0 ? null : ObjectRegistry.FindById(id);
-                        if (id != 0 && target == null)
+                        if (target != null)
+                            return Reference(target);
+                        if (id != 0 && AssetDatabaseRuntime.TryGetPersistentLocation(id, out var guid, out var fileId))
+                            return FormatGuidReference(guid, fileId);
+                        if (id != 0)
                             throw new NotSupportedException("Unbound cannot write an unresolved LazyLoadReference without losing its target reference.");
-                        return Reference(target);
+                        return "{fileID: 0}";
                     }
                     case Shape.Vector2: { var v = (Vector2)value; return $"{{x: {F(v.x)}, y: {F(v.y)}}}"; }
                     case Shape.Vector3: { var v = (Vector3)value; return $"{{x: {F(v.x)}, y: {F(v.y)}, z: {F(v.z)}}}"; }
@@ -967,19 +971,22 @@ namespace Unbound.Runtime
             internal static bool IsBuiltinGuid(string guid) =>
                 guid != null && guid.StartsWith("0000000000000000", StringComparison.Ordinal) && !AssetDatabase.Lists(guid);
 
+            static string FormatGuidReference(string guid, long fileId)
+            {
+                int kind;
+                if (IsBuiltinGuid(guid)) kind = 0;
+                else
+                {
+                    try { kind = AssetDatabaseRuntime.Info(guid)?.Kind is "yaml" or "prefab" ? 2 : 3; }
+                    catch (Exception) { kind = 2; }
+                }
+                return $"{{fileID: {fileId}, guid: {guid}, type: {kind}}}";
+            }
+
             static string Located(Object o)
             {
                 if (AssetDatabaseRuntime.TryGetLocation(o, out var guid, out var fileId))
-                {
-                    int kind;
-                    if (IsBuiltinGuid(guid)) kind = 0;
-                    else
-                    {
-                        try { kind = AssetDatabaseRuntime.Info(guid)?.Kind is "yaml" or "prefab" ? 2 : 3; }
-                        catch (Exception) { kind = 2; }
-                    }
-                    return $"{{fileID: {fileId}, guid: {guid}, type: {kind}}}";
-                }
+                    return FormatGuidReference(guid, fileId);
                 return "{fileID: 0}";
             }
 

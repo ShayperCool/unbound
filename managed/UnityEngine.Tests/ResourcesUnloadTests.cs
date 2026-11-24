@@ -146,6 +146,23 @@ namespace Unbound.Tests
                         Assert.True(UnityEditor.AssetDatabase.TryGetGUIDAndLocalFileIdentifier(id, out string outGuid, out long outFileId));
                         Assert.Equal(guid, outGuid);
                         Assert.Equal(11400000L, outFileId);
+
+                        // Serializing an unloaded LazyLoadReference<T> preserves {fileID, guid, type} without loading.
+                        var holder = ScriptableObject.CreateInstance<LazyRefHolder>();
+                        holder.target = new LazyLoadReference<ScriptableObject> { instanceID = id };
+                        try
+                        {
+                            string json = UnityEditor.EditorJsonUtility.ToJson(holder);
+                            Assert.Contains($"\"fileID\":11400000", json);
+                            Assert.Contains($"\"guid\":\"{guid}\"", json);
+                            string yaml = Unbound.Runtime.UnityYamlWriter.Write(new Object[] { holder });
+                            Assert.Contains($"{{fileID: 11400000, guid: {guid}, type: 2}}", yaml);
+                            Assert.Null(ObjectRegistry.FindById(id));
+                        }
+                        finally
+                        {
+                            Object.DestroyImmediate(holder);
+                        }
                     }
                     using (UnityEngine.Tests.TestRelease.Pin(UnityEngine.Tests.TestRelease.Unmeasured))
                     {
@@ -201,6 +218,24 @@ namespace Unbound.Tests
                     Assert.False(Resources.InstanceIDIsValid(matId));
                     Assert.True(ReferenceEquals(Resources.InstanceIDToObject(matId), null));
                     Assert.False(UnityEditor.AssetDatabase.Contains(matId));
+
+                    // Dual-fileId persistent object (e.g. SpriteAtlas v2): DestroyImmediate clears both aliases.
+                    var dual = ScriptableObject.CreateInstance<ScriptableObject>();
+                    dual.IsPersistentAsset = true;
+                    var dualFile = new LoadedFile { Guid = matGuid, Path = "Assets/DualAlias.asset", MainObject = dual };
+                    dualFile.Objects[11400000] = dual;
+                    dualFile.Objects[21300000] = dual;
+                    AssetDatabaseRuntime.AddLoaded(dualFile);
+                    int dualId = dual.GetInstanceID();
+                    Object.DestroyImmediate(dual, true);
+                    Assert.False(Resources.InstanceIDIsValid(dualId));
+                    AssetDatabaseRuntime.Invalidate(matGuid);
+                    var dualReloaded = ScriptableObject.CreateInstance<ScriptableObject>();
+                    dualReloaded.IsPersistentAsset = true;
+                    var dualReloadedFile = new LoadedFile { Guid = matGuid, Path = "Assets/DualAlias.asset", MainObject = dualReloaded };
+                    dualReloadedFile.Objects[11400000] = dualReloaded;
+                    AssetDatabaseRuntime.AddLoaded(dualReloadedFile);
+                    Assert.NotEqual(dualId, dualReloaded.GetInstanceID());
                 }
             }
             finally
@@ -212,6 +247,11 @@ namespace Unbound.Tests
                 AssetDatabaseRuntime.Invalidate(matGuid);
                 AssetDatabaseRuntime.ForgetPersistentIds(matGuid);
             }
+        }
+
+        class LazyRefHolder : ScriptableObject
+        {
+            public LazyLoadReference<ScriptableObject> target;
         }
     }
 }
