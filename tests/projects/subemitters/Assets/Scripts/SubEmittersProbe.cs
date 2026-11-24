@@ -425,6 +425,42 @@ public class SubEmittersProbe : MonoBehaviour
             p => { p.transform.localScale = new Vector3(1f, 2f, 1f); var m = p.main; m.scalingMode = ParticleSystemScalingMode.Local; });
         BirthDistance("birth/distance/nonloop", 10f, 0f, new[] { 2f }, true, null,
             c => { var m = c.main; m.loop = false; m.duration = 0.25f; });
+        BirthDistance("birth/distance/nonloop_both", 10f, 8f, new[] { 2f }, true, null,
+            c => { var m = c.main; m.loop = false; m.duration = 0.15f; });
+        BirthDistance("birth/distance/speedmod_0", 10f, 0f, new[] { 2f }, true,
+            p => { var v = p.velocityOverLifetime; v.enabled = true; v.speedModifier = 0f; });
+        BirthDistance("birth/distance/speedmod_2", 10f, 0f, new[] { 2f }, true,
+            p => { var v = p.velocityOverLifetime; v.enabled = true; v.speedModifier = 2f; });
+        BirthDistance("birth/distance/tiny_below", 0.0032f, 0f, new[] { 1f }, true, null,
+            c => { var em = c.emission; em.rateOverTime = 0f; });
+        BirthDistance("birth/distance/tiny_above", 0.008f, 0f, new[] { 1f }, true, null,
+            c => { var em = c.emission; em.rateOverTime = 0f; });
+        // Stationary parent with probabilistic bursts proves a non-zero distance scalar still draws from emissionRandom.
+        BirthDistance("birth/distance/rng_zero", 0f, 0f, new[] { 0f }, true, null, c =>
+        {
+            var em = c.emission;
+            var bursts = new ParticleSystem.Burst[8];
+            for (int k = 0; k < bursts.Length; k++)
+                bursts[k] = new ParticleSystem.Burst(0.02f + 0.05f * k, 1) { probability = 0.5f };
+            em.SetBursts(bursts);
+        });
+        BirthDistance("birth/distance/rng_nonzero", 10f, 0f, new[] { 0f }, true, null, c =>
+        {
+            var em = c.emission;
+            var bursts = new ParticleSystem.Burst[8];
+            for (int k = 0; k < bursts.Length; k++)
+                bursts[k] = new ParticleSystem.Burst(0.02f + 0.05f * k, 1) { probability = 0.5f };
+            em.SetBursts(bursts);
+        });
+        BirthDistance("birth/distance/twoconst", 0f, 0f, new[] { 2f }, true, null,
+            c => { var em = c.emission; em.rateOverDistance = new ParticleSystem.MinMaxCurve(5f, 15f); });
+        BirthDistance("birth/distance/curve_loop", 0f, 0f, new[] { 2f }, true, null,
+            c => { var em = c.emission; em.rateOverDistance = new ParticleSystem.MinMaxCurve(10f, AnimationCurve.Linear(0f, 0f, 1f, 1f)); });
+        BirthDistance("birth/distance/curve_nonloop", 0f, 0f, new[] { 2f }, true, null, c =>
+        {
+            var m = c.main; m.loop = false; m.duration = 0.5f;
+            var em = c.emission; em.rateOverDistance = new ParticleSystem.MinMaxCurve(20f, AnimationCurve.Linear(0f, 0f, 1f, 1f));
+        });
     }
 
     static void Direction(string scenario, Vector3 direction, Vector3 childRotation, Vector3 parentRotation, Action<ParticleSystem> configure)

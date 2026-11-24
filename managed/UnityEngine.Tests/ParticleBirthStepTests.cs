@@ -373,6 +373,109 @@ namespace UnityEngine.Tests
             }
         }
 
+        [Fact]
+        public void BirthRateOverDistanceMultiChildSingleSubstepSpacingAndVelocityOverLifetime()
+        {
+            WithSystems((parent, child) =>
+            {
+                // Multi-child single substep: rate 45/unit * speed 3 * dt 0.025 = 3.375 -> 3 children in one substep.
+                var pm = parent.main; pm.startLifetime = 5f; pm.startSpeed = 0f;
+                var cm = child.main; cm.simulationSpace = ParticleSystemSimulationSpace.World; cm.startLifetime = 2.013f; cm.startSpeed = 1f;
+                var ce = child.emission; ce.SetBursts(Array.Empty<ParticleSystem.Burst>());
+                ce.rateOverDistance = 45f; ce.rateOverTime = 0f;
+                parent.transform.position = new Vector3(1f, 2f, 3f);
+                parent.Emit(new ParticleSystem.EmitParams { position = Vector3.zero, velocity = new Vector3(0f, 3f, 0f), startLifetime = 5f }, 1);
+                parent.Simulate(0.025f, true, false, false);
+                var all = new ParticleSystem.Particle[8];
+                Assert.Equal(3, child.GetParticles(all));
+                Array.Sort(all, 0, 3, Comparer<ParticleSystem.Particle>.Create((a, b) => a.remainingLifetime.CompareTo(b.remainingLifetime)));
+                // Uniform spacing dt / toEmit = 1 / (45 * 3) = 1 / 135 s between siblings in the same substep.
+                float expectedSpacing = 1f / (45f * 3f);
+                float s01 = all[1].remainingLifetime - all[0].remainingLifetime;
+                float s12 = all[2].remainingLifetime - all[1].remainingLifetime;
+                Assert.InRange(Math.Abs(s01 - expectedSpacing), 0f, 0.0001f);
+                Assert.InRange(Math.Abs(s12 - expectedSpacing), 0f, 0.0001f);
+            });
+
+            // VelocityOverLifetime.speedModifier = 0 still emits from simVelocity and interpolates position by simVelocity.
+            WithSystems((parent, child) =>
+            {
+                var pm = parent.main; pm.startLifetime = 5f; pm.startSpeed = 0f;
+                var vol = parent.velocityOverLifetime; vol.enabled = true; vol.speedModifier = 0f;
+                var cm = child.main; cm.simulationSpace = ParticleSystemSimulationSpace.World; cm.startLifetime = 2.013f; cm.startSpeed = 1f;
+                var ce = child.emission; ce.SetBursts(Array.Empty<ParticleSystem.Burst>());
+                ce.rateOverDistance = 10f; ce.rateOverTime = 0f;
+                parent.transform.position = new Vector3(1f, 2f, 3f);
+                parent.Emit(new ParticleSystem.EmitParams { position = Vector3.zero, velocity = new Vector3(0f, 2f, 0f), startLifetime = 5f }, 1);
+                parent.Simulate(0.05f, true, false, false);
+                Assert.Equal(0, child.particleCount);
+                parent.Simulate(0.05f, true, false, false);
+                var p = Read(child);
+                Near(2.015f, p.position.y);
+                Near(1.948f, p.remainingLifetime);
+            });
+        }
+
+        [Fact]
+        public void BirthRateOverDistanceCurveModeTinyThresholdAndUnmeasuredRelease()
+        {
+            // Looping child evaluates rateOverDistance curve at t = 0 (Linear(0,0,1,1) -> 0); non-looping at to / duration.
+            WithSystems((parent, child) =>
+            {
+                var pm = parent.main; pm.startLifetime = 5f; pm.startSpeed = 0f;
+                var cm = child.main; cm.simulationSpace = ParticleSystemSimulationSpace.World; cm.startLifetime = 2.013f; cm.startSpeed = 1f;
+                cm.loop = true;
+                var ce = child.emission; ce.SetBursts(Array.Empty<ParticleSystem.Burst>());
+                ce.rateOverDistance = new ParticleSystem.MinMaxCurve(10f, AnimationCurve.Linear(0f, 0f, 1f, 1f));
+                ce.rateOverTime = 0f;
+                parent.Emit(new ParticleSystem.EmitParams { position = Vector3.zero, velocity = new Vector3(0f, 2f, 0f), startLifetime = 5f }, 1);
+                for (int s = 0; s < 10; s++) parent.Simulate(0.05f, true, false, false);
+                Assert.Equal(0, child.particleCount);
+            });
+
+            WithSystems((parent, child) =>
+            {
+                var pm = parent.main; pm.startLifetime = 5f; pm.startSpeed = 0f;
+                var cm = child.main; cm.simulationSpace = ParticleSystemSimulationSpace.World; cm.startLifetime = 2.013f; cm.startSpeed = 1f;
+                cm.loop = false; cm.duration = 0.5f;
+                var ce = child.emission; ce.SetBursts(Array.Empty<ParticleSystem.Burst>());
+                ce.rateOverDistance = new ParticleSystem.MinMaxCurve(20f, AnimationCurve.Linear(0f, 0f, 1f, 1f));
+                ce.rateOverTime = 0f;
+                parent.Emit(new ParticleSystem.EmitParams { position = Vector3.zero, velocity = new Vector3(0f, 2f, 0f), startLifetime = 5f }, 1);
+                for (int s = 0; s < 10; s++) parent.Simulate(0.05f, true, false, false);
+                Assert.True(child.particleCount > 0);
+            });
+
+            // Unmeasured release still runs rateOverDistance cleanly (no release-pinned crash or drop).
+            using (TestRelease.Pin(TestRelease.Unmeasured))
+            {
+                var go = new GameObject("unmeasured birth parent");
+                go.SetActive(false);
+                try
+                {
+                    var parent = go.AddComponent<ParticleSystem>();
+                    var cg = new GameObject("unmeasured birth child"); cg.transform.SetParent(go.transform, false);
+                    var child = cg.AddComponent<ParticleSystem>();
+                    foreach (var ps in new[] { parent, child })
+                    {
+                        ps.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+                        var m = ps.main; m.playOnAwake = false; m.startLifetime = 5f; m.startSpeed = 0f; m.gravityModifier = 0f;
+                        var s = ps.shape; s.enabled = false;
+                        var e = ps.emission; e.rateOverTime = 0f; e.SetBursts(Array.Empty<ParticleSystem.Burst>());
+                    }
+                    var cm = child.main; cm.simulationSpace = ParticleSystemSimulationSpace.World; cm.startLifetime = 2.013f; cm.startSpeed = 1f;
+                    var ce = child.emission; ce.rateOverDistance = 10f;
+                    var sub = parent.subEmitters; sub.enabled = true;
+                    sub.AddSubEmitter(child, ParticleSystemSubEmitterType.Birth, ParticleSystemSubEmitterProperties.InheritNothing);
+                    go.SetActive(true);
+                    parent.Emit(new ParticleSystem.EmitParams { position = Vector3.zero, velocity = new Vector3(0f, 2f, 0f), startLifetime = 5f }, 1);
+                    for (int s = 0; s < 6; s++) parent.Simulate(0.05f, true, false, false);
+                    Assert.True(child.particleCount >= 5);
+                }
+                finally { Object.DestroyImmediate(go); }
+            }
+        }
+
         static void Near(float expected, float actual) => Assert.InRange(Math.Abs(expected - actual), 0f, 0.000002f);
 
         static void WithSystems(Action<ParticleSystem, ParticleSystem> run)

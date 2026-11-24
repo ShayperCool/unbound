@@ -1797,9 +1797,10 @@ namespace UnityEngine
             c.NoiseTime = m_NoiseScroll;
             c.BirthSubs = m_SubEmitters.enabled && HasSubEmitters(ParticleSystemSubEmitterType.Birth);
             c.BirthsInFinalStep = !Compat.ParticleBirthStepsMeasured;
+            if (m_Collision.enabled || c.BirthSubs)
+                c.SimToWorld = SimulationToWorld();
             if (m_Collision.enabled)
             {
-                c.SimToWorld = SimulationToWorld();
                 c.WorldToSimMatrix = c.SimToWorld.inverseDoublePrecision;
                 if (m_Collision.type == ParticleSystemCollisionType.Planes) PrepareCollisionPlanes(c.WorldToSimMatrix, simWorld);
             }
@@ -1967,7 +1968,7 @@ namespace UnityEngine
             // A particle whose life ends exactly at the end of this step (kept at zero life until
             // the next) emits no Birth children in it, as one that dies inside it (6000.0.71f1,
             // tests/projects/particlerender birthstart/deathtie05 and deathin05, subcull/*).
-            if (c.BirthSubs && (p.m_AgePercent < 100f || c.BirthsInFinalStep)) BirthSubEmitters(ref p, ageBefore, p.m_StartLifetime - p.m_Lifetime, dt, before);
+            if (c.BirthSubs && (p.m_AgePercent < 100f || c.BirthsInFinalStep)) BirthSubEmitters(ref p, ageBefore, p.m_StartLifetime - p.m_Lifetime, dt, before, in c.SimToWorld);
             return true;
         }
 
@@ -2354,7 +2355,7 @@ namespace UnityEngine
             else child.EmitFromParent(this, ref parent, properties, count, 0f);
         }
 
-        void BirthSubEmitters(ref Particle parent, float ageBefore, float ageAfter, float dt, Vector3 positionBefore)
+        void BirthSubEmitters(ref Particle parent, float ageBefore, float ageAfter, float dt, Vector3 positionBefore, in Matrix4x4 simToWorld)
         {
             bool held = !m_SimulatingBirths && ParticleSystemManager.Updating && Compat.ParticleBirthStepsMeasured;
             bool intervals = m_SimulatingBirths || held;
@@ -2414,16 +2415,19 @@ namespace UnityEngine
                 ref float accumulator = ref (slot == 0 ? ref parent.m_EmitAccumulator0 : ref parent.m_EmitAccumulator1);
                 // Rate over distance precedes rate over time and shares the parent particle's
                 // per-slot accumulator (6000.0.71f1, tests/projects/subemitters birth/distance/*).
-                // A statically zero distance rate skips evaluation so rate-over-time-only random
-                // draws stay unchanged.
+                // A zero scalar skips evaluation without drawing from emissionRandom. Curve modes
+                // evaluate at 0 for looping children and at to / duration for non-looping children;
+                // world speed and birth-position back-interpolation use the particle's velocity
+                // before VelocityOverLifetime.speedModifier.
                 var distCurve = child.m_Emission.rateOverDistance;
-                if (distCurve.scalar > 0f || (distCurve.mode == ParticleSystemCurveMode.TwoConstants && distCurve.minScalar > 0f))
+                if (distCurve.scalar != 0f)
                 {
-                    float distRate = Mathf.Max(0f, distCurve.Evaluate(age01, emissionRandom.NextValue()));
+                    float distT = child.m_Main.loop ? 0f : (child.m_Main.duration > 0f ? to / child.m_Main.duration : 0f);
+                    float distRate = Mathf.Max(0f, distCurve.Evaluate(distT, emissionRandom.NextValue()));
                     var simVelocity = parent.m_Velocity + parent.m_AnimatedVelocity;
                     float worldSpeed = m_Main.simulationSpace == ParticleSystemSimulationSpace.World
                         ? simVelocity.magnitude
-                        : SimulationToWorld().MultiplyVector(simVelocity).magnitude;
+                        : simToWorld.MultiplyVector(simVelocity).magnitude;
                     float toEmit = distRate * emissionDt * worldSpeed;
                     if (toEmit > 0f)
                     {
@@ -2439,8 +2443,8 @@ namespace UnityEngine
                                 count = distCount,
                                 age = distAge,
                                 spacing = -distSpacing * emissionDt,
-                                velocity = travel,
-                                position = Vector3.LerpUnclamped(positionBefore, parent.m_Position, dt > 0f ? 1f - distAge / dt : 0f),
+                                velocity = simVelocity,
+                                position = parent.m_Position - simVelocity * distAge,
                             };
                             DispatchBirthEmission(child, ref parent, e.properties, distCount, distEmission, null, held);
                         }

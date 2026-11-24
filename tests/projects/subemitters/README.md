@@ -1,6 +1,7 @@
-# Sub-emitters probe (Death and Manual)
+# Sub-emitters probe (Death, Manual, Collision, Trigger, and Birth over distance)
 
-Measures what Death and Manual (`ParticleSystem.TriggerSubEmitter`) sub-emitters emit.
+Measures what Death, Manual (`ParticleSystem.TriggerSubEmitter`), Collision, Trigger, and Birth
+rate-over-distance sub-emitters emit.
 `Assets/Scripts/SubEmittersProbe.cs` builds every system in code. Parents get their particles from
 `Emit` with explicit positions, velocities (+Y at 1 unit/s), lifetimes, colors, sizes and rotations;
 children use world simulation space, no shape, a constant start speed of 1 along +Z and a 2.013 s
@@ -39,8 +40,11 @@ order does not matter):
 - `birth/distance/*`: Birth sub-emitters emitting over parent travel distance (`ten` at 10/unit,
   `three` at 3/unit, `both` with rate over time too, `still` with 0 speed, `four` with four parents
   at speeds 1–4, `disabled` with child Emission module disabled, `multi` and `bothmulti` for
-  multi-child substeps, `scaled` with local-space scaling, `nonloop` with non-looping child duration
-  0.25 s, and `played` in Play-mode 0.05 s frames).
+  multi-child substeps, `scaled` with local-space scaling, `nonloop` and `nonloop_both` with
+  non-looping child durations, `speedmod_0`/`speedmod_2` with `VelocityOverLifetime.speedModifier`,
+  `tiny_below`/`tiny_above` straddling the `1e-4` `toEmit` spacing cutoff, `rng_zero`/`rng_nonzero`
+  probing `emissionRandom` draw order on a stationary parent, `twoconst` TwoConstants mode,
+  `curve_loop`/`curve_nonloop` Curve mode, and `played` in Play-mode 0.05 s frames).
 
 Record (two independent GPU Editor captures; publish only when they are byte-identical):
 
@@ -51,7 +55,7 @@ Record (two independent GPU Editor captures; publish only when they are byte-ide
 Check the engine (the landing gate, `gate.json`): `python3 tests/projects/subemitters/run.py check`.
 Run output stays under `$XDG_CACHE_HOME/unbound/validation/runs/subemitters/`.
 
-The canonical oracle is `Reference/unity-6000.0.71f1.jsonl` (1629 records, Unity 6000.0.71f1 on
+The canonical oracle is `Reference/unity-6000.0.71f1.jsonl` (1909 records, Unity 6000.0.71f1 on
 Linux, GPU Editor). Two independent captures were byte-identical.
 
 Documented (6000.0 Manual, Sub Emitters module: "The Collision, Death, Trigger, and Manual
@@ -106,8 +110,9 @@ particle seed; burst probability and count use the parent particle seed plus the
 seed. The comparator has no statistical count allowance.
 
 Birth origin and Simulate age controls are in [particlerandom](../particlerandom/README.md).
-They extend that probe's fixed-seed Birth histories; this probe retains its Death and Manual scope.
+This probe covers Death, Manual, Collision/Trigger, and Birth `rateOverDistance` sub-emitters.
 
-Unmeasured here: other releases; Birth sub-emitters (measured by particlerandom); Collision and
-Trigger counts beyond one burst, their inheritance and played frames (particlerender inherit/*,
-birthstart/events02); a paused parent; Inherit Duration.
+Unmeasured here: other releases; Birth rate-over-time and burst timing (measured by
+`particlerandom` and `particlerender`); Birth `rateOverDistance` `TwoCurves` mode; Collision and
+Trigger counts beyond one burst, their inheritance and played frames (`particlerender inherit/*`,
+`birthstart/events02`); a paused parent; Inherit Duration.

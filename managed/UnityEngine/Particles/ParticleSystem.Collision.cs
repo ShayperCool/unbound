@@ -306,7 +306,7 @@ namespace UnityEngine
                     continue;
                 }
                 if (h.birthSubs && (p.m_AgePercent < 100f || h.birthsInFinalStep))
-                    BirthSubEmitters(ref p, h.ageBefore, p.m_StartLifetime - p.m_Lifetime, h.dt, h.before);
+                    BirthSubEmitters(ref p, h.ageBefore, p.m_StartLifetime - p.m_Lifetime, h.dt, h.before, in c.SimToWorld);
             }
         }
 
