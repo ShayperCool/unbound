@@ -147,6 +147,36 @@ fn fetch_with(release: UnityVersion, modules: &[String], required: bool) -> Resu
     let editor = index.linux_editor().with_context(|| {
         format!("Unity {release} has no Linux Editor archive to take its files from")
     })?;
+    // What would be downloaded: the Editor archive when it is not cached, the missing modules
+    // the release has. The user agrees to it first.
+    let mut parts = Vec::new();
+    let mut bytes = Some(0u64);
+    let mut add = |name: String, size: Option<&releases::Size>| {
+        parts.push(name);
+        bytes = bytes.zip(size).map(|(total, size)| total + size.value);
+    };
+    if cached(release).is_none() {
+        add(
+            "its Editor archive".to_string(),
+            editor.download_size.as_ref(),
+        );
+    }
+    for id in &missing {
+        if let Some(module) = editor.modules.iter().find(|m| m.id == **id) {
+            add(format!("its {id} module"), module.download_size.as_ref());
+        }
+    }
+    if !parts.is_empty()
+        && let Err(e) = confirm_download(release, &parts, bytes, &root)
+    {
+        match cached(release) {
+            Some(data) if !required => {
+                tracing::warn!("{e:#}");
+                return Ok(data);
+            }
+            _ => return Err(e),
+        }
+    }
     if cached(release).is_none() {
         fetch_editor(release, &root, editor)?;
     }
@@ -169,6 +199,81 @@ fn fetch_with(release: UnityVersion, modules: &[String], required: bool) -> Resu
         }
     }
     Ok(root.join("Editor/Data"))
+}
+
+/// Set (to anything but `0`) to download Unity's files without asking: scripts, CI, machines
+/// without a terminal.
+pub const ACCEPT_DOWNLOAD_VARIABLE: &str = "UNBOUND_ACCEPT_UNITY_DOWNLOAD";
+
+/// Asks the user before Unity's files (`parts` of the release, `bytes` in all when known) are
+/// downloaded from Unity's servers into `root`; [`ACCEPT_DOWNLOAD_VARIABLE`] answers yes.
+/// Without a terminal to ask on, the download is refused with what to do instead.
+fn confirm_download(
+    release: UnityVersion,
+    parts: &[String],
+    bytes: Option<u64>,
+    root: &Path,
+) -> Result<()> {
+    use std::io::{IsTerminal, Write};
+    let accepted =
+        std::env::var_os(ACCEPT_DOWNLOAD_VARIABLE).is_some_and(|v| !v.is_empty() && v != "0");
+    let interactive = io::stdin().is_terminal() && io::stderr().is_terminal();
+    decide_download(
+        release,
+        parts,
+        bytes,
+        root,
+        accepted,
+        interactive,
+        |question| {
+            let mut stderr = io::stderr();
+            write!(stderr, "{question} [y/N] ")?;
+            stderr.flush()?;
+            let mut answer = String::new();
+            io::stdin().read_line(&mut answer)?;
+            Ok(answer)
+        },
+    )
+}
+
+fn decide_download(
+    release: UnityVersion,
+    parts: &[String],
+    bytes: Option<u64>,
+    root: &Path,
+    accepted: bool,
+    interactive: bool,
+    ask: impl FnOnce(&str) -> io::Result<String>,
+) -> Result<()> {
+    if accepted {
+        return Ok(());
+    }
+    let what = parts.join(" and ");
+    let size = bytes
+        .filter(|&b| b > 0)
+        .map(|b| format!(", {:.1} GB", b as f64 / 1e9))
+        .unwrap_or_default();
+    let instead = format!(
+        "install Unity {release} with the Unity Hub, point UNBOUND_UNITY (--unity) at an \
+         installation of it, or set {ACCEPT_DOWNLOAD_VARIABLE}=1 to download them"
+    );
+    if !interactive {
+        bail!(
+            "Unity {release}'s files are not installed, and downloading {what}{size} from Unity's \
+             servers needs your consent, which cannot be asked without a terminal: {instead}"
+        );
+    }
+    let question = format!(
+        "Unity {release} is not installed. Download {what}{size} from Unity's servers and unpack \
+         the files Unbound reads into {}? (Unity's files are Unity's, under Unity's terms.)",
+        root.display()
+    );
+    let answer = ask(&question).context("reading the answer")?;
+    if matches!(answer.trim().to_ascii_lowercase().as_str(), "y" | "yes") {
+        Ok(())
+    } else {
+        bail!("not downloading Unity {release}'s files: {instead}")
+    }
 }
 
 /// Unpacks the Editor archive into `root` (atomically: in a sibling folder, then renamed).
@@ -574,6 +679,49 @@ impl Read for Stream {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn decide(accepted: bool, interactive: bool, answer: &str) -> Result<()> {
+        decide_download(
+            "6000.0.71f1".parse().unwrap(),
+            &[
+                "its Editor archive".to_string(),
+                "its android module".to_string(),
+            ],
+            Some(2_500_000_000),
+            Path::new("/cache/editors/v2/6000.0.71f1"),
+            accepted,
+            interactive,
+            |question| {
+                assert!(
+                    question.contains("Download its Editor archive and its android module, 2.5 GB")
+                );
+                assert!(question.contains("/cache/editors/v2/6000.0.71f1"));
+                Ok(answer.to_string())
+            },
+        )
+    }
+
+    #[test]
+    fn download_needs_consent() {
+        assert!(decide(true, false, "").is_ok());
+        assert!(decide(false, true, "y\n").is_ok());
+        assert!(decide(false, true, " Yes \n").is_ok());
+        for answer in ["\n", "n\n", "no\n", ""] {
+            let error = format!("{:#}", decide(false, true, answer).unwrap_err());
+            assert!(
+                error.contains("not downloading Unity 6000.0.71f1's files"),
+                "{error}"
+            );
+            assert!(error.contains(ACCEPT_DOWNLOAD_VARIABLE), "{error}");
+        }
+        let error = format!("{:#}", decide(false, false, "y\n").unwrap_err());
+        assert!(
+            error.contains("cannot be asked without a terminal"),
+            "{error}"
+        );
+        assert!(error.contains("UNBOUND_UNITY"), "{error}");
+        assert!(error.contains(ACCEPT_DOWNLOAD_VARIABLE), "{error}");
+    }
 
     #[test]
     fn unpacks_only_what_unbound_reads() {

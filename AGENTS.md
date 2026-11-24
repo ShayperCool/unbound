@@ -147,8 +147,10 @@ The full workflow is in [tools/agents/WORKFLOW.md](tools/agents/WORKFLOW.md). In
 - Unity's files (reference assemblies, resources, built-in packages; never executed) come from the
   Hub installation of the project's release, else of the profile's release (`~/Unity/Hub/Editor/<version>/Editor` on Linux,
   `/Applications/Unity/Hub/Editor/<version>/Unity.app` on macOS), else from its downloads, unpacked
-  once into `<cache>/editors/` (`UNBOUND_UNITY`/`--unity` overrides, `UNBOUND_OFFLINE` forbids
-  downloading, `UNBOUND_EDITOR_MODULES` picks the platform modules, default `android,ios`).
+  once into `<cache>/editors/` after the user agrees on the terminal (`UNBOUND_ACCEPT_UNITY_DOWNLOAD=1`
+  agrees without asking; without a terminal the download is refused) (`UNBOUND_UNITY`/`--unity`
+  overrides, `UNBOUND_OFFLINE` forbids downloading, `UNBOUND_EDITOR_MODULES` picks the platform
+  modules, default `android,ios`).
 - Platforms: Linux x86_64 and macOS arm64. What the OS decides follows the macOS Editor there:
   platform, paths, prefs, native plugins, OS fonts, and the graphics device's answers (Metal:
   device type, SystemInfo caps, format support and defaults, sample counts, depth formats, shader
