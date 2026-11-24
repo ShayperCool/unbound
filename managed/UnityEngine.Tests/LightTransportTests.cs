@@ -244,6 +244,32 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
+        public void ComputeOcclusionLightIndicesFiltersSpotConesAndAvoidsDuplicateChannels()
+        {
+            // Two mixed spot lights whose range spheres overlap at (-2, 0, 3) but whose 30-deg cones
+            // do not overlap, so shadowmask::assign puts both on channel 0.
+            var input = new InputExtraction.BakeInput
+            {
+                Lights = new[]
+                {
+                    new InputExtraction.ExtractedLightMeta
+                    {
+                        Kind = 2, Mode = 1, Position = new Vector3(-2f, 3f, 3f),
+                        Forward = Vector3.down, Range = 6f, SpotAngle = 30f, ShadowmaskChannel = 0,
+                    },
+                    new InputExtraction.ExtractedLightMeta
+                    {
+                        Kind = 2, Mode = 1, Position = new Vector3(2f, 3f, 3f),
+                        Forward = Vector3.down, Range = 6f, SpotAngle = 30f, ShadowmaskChannel = 0,
+                    },
+                }
+            };
+            var positions = new[] { new Vector3(-2f, 0f, 3f), new Vector3(2f, 0f, 3f) };
+            var indices = InputExtraction.ComputeOcclusionLightIndicesFromBakeInput(input, positions, 4U);
+            Assert.Equal(new[] { 0, -1, -1, -1, 1, -1, -1, -1 }, indices);
+        }
+
+        [Fact]
         public void IntegratorAndPostProcessorRejectInvalidSlicesAndNegativeCountsWithoutThrowing()
         {
             using var ctx = new RadeonRaysContext();

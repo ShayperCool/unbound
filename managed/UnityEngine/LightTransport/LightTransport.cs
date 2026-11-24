@@ -535,7 +535,9 @@ namespace UnityEngine.LightTransport
             public int Kind;
             public int Mode;
             public Vector3 Position;
+            public Vector3 Forward;
             public float Range;
+            public float SpotAngle;
             public int ShadowmaskChannel;
         }
 
@@ -626,6 +628,8 @@ namespace UnityEngine.LightTransport
                         var uvMesh = BakedAtlas.BakedUVs(mesh, withUVs);
                         var uvs = uvMesh.uv2.Length == uvMesh.vertexCount ? uvMesh.uv2 : uvMesh.uv;
                         var scaleOffset = UvScaleOffset(uvs);
+                        if (uvs.Length == 0 || (scaleOffset.x == 0f && scaleOffset.y == 0f))
+                            Warn("lt-empty-uv:" + renderer.GetInstanceID(), $"LightTransport InputExtraction: '{renderer.name}' mesh '{mesh.name}' has no/zero-area UVs; its meta-pass albedo and emission may be collapsed.");
 
                         var albedoRt = RenderTexture.GetTemporary(MetaImageSize, MetaImageSize, 0, RenderTextureFormat.ARGB32, linear ? RenderTextureReadWrite.sRGB : RenderTextureReadWrite.Linear);
                         var emissionRt = RenderTexture.GetTemporary(MetaImageSize, MetaImageSize, 0, RenderTextureFormat.ARGBHalf, RenderTextureReadWrite.Linear);
@@ -686,6 +690,10 @@ namespace UnityEngine.LightTransport
                     if (copy != null) Object.DestroyImmediate(copy);
             }
 
+            if (GraphicsSettings.lightsUseLinearIntensity)
+                Warn("lt-light-linear", "LightTransport InputExtraction: GraphicsSettings.lightsUseLinearIntensity is enabled (unmeasured for CPU probe baking; using Light.ScaledColor).");
+            if (!settings.bakedGI)
+                Warn("lt-bakedgi-off", "LightTransport InputExtraction: LightingSettings.bakedGI is false; BakedAtlas.SkyOf zeroes environment lighting via realtimeEnvironmentLighting (unmeasured).");
             var lightsJson = new List<object>();
             var lightMetas = new List<ExtractedLightMeta>();
             int mixedMode = (int)settings.mixedBakeMode;
@@ -713,8 +721,8 @@ namespace UnityEngine.LightTransport
                     Warn("lt-light-cookie:" + light.GetInstanceID(), $"LightTransport InputExtraction: '{light.name}' has a cookie, which CPU probe baking ignores yet.");
                 if ((kind == 0 ? light.shadowAngle : light.shadowRadius) > 0f && light.shadows != LightShadows.None)
                     Warn("lt-light-soft:" + light.GetInstanceID(), $"LightTransport InputExtraction: '{light.name}' has soft baked shadows, which CPU probe baking bakes hard yet.");
-                if (kind != 0 && customDelegate)
-                    Warn("lt-light-falloff", $"LightTransport InputExtraction: a custom Lightmapping.RequestLightsDelegate is set (e.g. SRP inverse-square falloff), but CPU probe baking uses built-in legacy attenuation for '{light.name}'.");
+                if (customDelegate)
+                    Warn("lt-light-delegate", $"LightTransport InputExtraction: a custom Lightmapping.RequestLightsDelegate is set, but CPU probe baking extracts built-in light properties and legacy attenuation instead of invoking it (first seen on '{light.name}').");
                 int mode = light.lightmapBakeType == LightmapBakeType.Mixed ? 1 : 2;
 
                 var t = light.transform;
@@ -741,7 +749,9 @@ namespace UnityEngine.LightTransport
                     Kind = kind,
                     Mode = mode,
                     Position = pos,
+                    Forward = t.forward,
                     Range = light.range,
+                    SpotAngle = light.spotAngle,
                     ShadowmaskChannel = -1,
                 });
             }
@@ -822,14 +832,27 @@ namespace UnityEngine.LightTransport
             {
                 Vector3 pos = probePositions[p];
                 int slot = 0;
+                int usedChannels = 0;
                 for (int li = 0; li < lights.Length && slot < maxLights; li++)
                 {
-                    if (lights[li].Mode != 1 || lights[li].ShadowmaskChannel < 0) continue;
-                    if (lights[li].Kind != 0)
+                    ref readonly var light = ref lights[li];
+                    if (light.Mode != 1 || light.ShadowmaskChannel < 0 || light.ShadowmaskChannel >= 32) continue;
+                    int chBit = 1 << light.ShadowmaskChannel;
+                    if ((usedChannels & chBit) != 0) continue;
+                    if (light.Kind != 0)
                     {
-                        Vector3 d = lights[li].Position - pos;
-                        if (d.sqrMagnitude >= lights[li].Range * lights[li].Range) continue;
+                        Vector3 fromLight = pos - light.Position;
+                        float distSq = fromLight.sqrMagnitude;
+                        if (distSq >= light.Range * light.Range) continue;
+                        if (light.Kind == 2 && distSq > 1e-12f)
+                        {
+                            float halfAngleRad = Mathf.Clamp(light.SpotAngle, 0f, 180f) * 0.5f * Mathf.Deg2Rad;
+                            float cosHalf = Mathf.Cos(halfAngleRad);
+                            float dirDot = Vector3.Dot(fromLight / Mathf.Sqrt(distSq), light.Forward.normalized);
+                            if (dirDot < cosHalf) continue;
+                        }
                     }
+                    usedChannels |= chBit;
                     result[p * maxLights + slot] = li;
                     slot++;
                 }
@@ -895,7 +918,7 @@ namespace UnityEngine.LightTransport
             if (store == null || m_World == null || m_World.WorldId == 0)
                 return new IProbeIntegrator.Result(IProbeIntegrator.ResultType.InvalidInput, "Integrator is not prepared with a valid context and world.");
             if (positionCount == 0)
-                return new IProbeIntegrator.Result(IProbeIntegrator.ResultType.Success, null);
+                return new IProbeIntegrator.Result(IProbeIntegrator.ResultType.Success, string.Empty);
 
             if (!store.TryGetBuffer(m_Positions.Id, out var posBuf))
                 return new IProbeIntegrator.Result(IProbeIntegrator.ResultType.InvalidInput, "Unknown position buffer.");
@@ -952,7 +975,7 @@ namespace UnityEngine.LightTransport
 
                 Buffer.BlockCopy(bytes, 0, outBuf, outStartByte, bytes.Length);
                 m_Progress?.IncrementCompletedWorkSteps((ulong)positionCount);
-                return new IProbeIntegrator.Result(IProbeIntegrator.ResultType.Success, null);
+                return new IProbeIntegrator.Result(IProbeIntegrator.ResultType.Success, string.Empty);
             }
             catch (Exception e)
             {

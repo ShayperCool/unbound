@@ -261,7 +261,16 @@ pub fn populate(request: PopulateRequest) -> Result<Json> {
                 });
                 let tri_uvs = t.map(|v| {
                     let uv = uvs.get(v as usize).copied().unwrap_or([0.0, 0.0]);
-                    [uv[0] * st[0] + st[2], uv[1] * st[1] + st[3]]
+                    if !uv[0].is_finite() || !uv[1].is_finite() {
+                        [0.0, 0.0]
+                    } else {
+                        let mapped = [uv[0] * st[0] + st[2], uv[1] * st[1] + st[3]];
+                        if mapped[0].is_finite() && mapped[1].is_finite() {
+                            mapped
+                        } else {
+                            [0.0, 0.0]
+                        }
+                    }
                 });
                 surfaces.push(Surface {
                     material: material_index,
@@ -593,9 +602,21 @@ mod tests {
         .unwrap();
         let direct_vals = decode_f32(direct_res["data"].as_str().unwrap());
         assert_eq!(direct_vals.len(), 54);
+        let k0_pi = 0.282_094_8 * std::f32::consts::PI;
         assert!(
-            direct_vals[0] > 1.0,
-            "above-floor probe receives sun direct L0"
+            (direct_vals[0] - 2.0 * k0_pi).abs() < 1e-4,
+            "above-floor probe R L0 matches BakedSun only (excludes MixedSun): {}",
+            direct_vals[0]
+        );
+        assert!(
+            (direct_vals[9] - 1.0 * k0_pi).abs() < 1e-4,
+            "above-floor probe G L0 matches BakedSun only: {}",
+            direct_vals[9]
+        );
+        assert!(
+            (direct_vals[18] - 0.5 * k0_pi).abs() < 1e-4,
+            "above-floor probe B L0 matches BakedSun only: {}",
+            direct_vals[18]
         );
         assert_eq!(direct_vals[27], 0.0, "below-floor probe is shadowed");
 
@@ -877,5 +898,77 @@ mod tests {
             "zero-length normal falls back to +Y and bounces sunlight: {}",
             vals[0]
         );
+    }
+
+    #[test]
+    fn non_finite_vertex_uvs_do_not_poison_indirect_sh_with_nan() {
+        let tmp = std::env::temp_dir().join(format!("unbound-lt-nanuv-{}.bin", std::process::id()));
+        std::fs::write(&tmp, vec![0u8; BLUE_NOISE_BYTES]).unwrap();
+        let positions = b64_f32(&[
+            -10.0, 0.0, -10.0, 10.0, 0.0, -10.0, 10.0, 0.0, 10.0, -10.0, 0.0, 10.0,
+        ]);
+        let normals = b64_f32(&[0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0]);
+        let uvs = b64_f32(&[f32::NAN, 0.0, f32::INFINITY, 0.0, 1.0, 1.0, 0.0, 1.0]);
+        let tris = b64_u32(&[0, 2, 1, 0, 3, 2]);
+        let albedo_px = base64::engine::general_purpose::STANDARD.encode([200u8, 200, 200, 255]);
+        let emissive_px = b64_f32(&[0.0, 0.0, 0.0, 1.0]);
+        let s = std::f32::consts::FRAC_1_SQRT_2;
+
+        let pop_req: PopulateRequest = serde_json::from_value(json!({
+            "meshes": [{
+                "positions": positions,
+                "normals": normals,
+                "uv": uvs,
+                "uv2": uvs,
+                "submeshes": [tris],
+            }],
+            "renderers": [{
+                "name": "NanUvFloor",
+                "mesh": 0,
+                "localToWorld": [
+                    1.0, 0.0, 0.0, 0.0,
+                    0.0, 1.0, 0.0, 0.0,
+                    0.0, 0.0, 1.0, 0.0,
+                    0.0, 0.0, 0.0, 1.0
+                ],
+                "hasMaterial": [true],
+                "castsShadows": true,
+                "material": {
+                    "albedo": { "width": 1, "height": 1, "data": albedo_px },
+                    "emissive": { "width": 1, "height": 1, "data": emissive_px },
+                    "doubleSided": [false]
+                }
+            }],
+            "lights": [{
+                "name": "Sun", "fileId": 1, "kind": 0, "mode": 2,
+                "color": [2.0, 2.0, 2.0], "indirectColor": [2.0, 2.0, 2.0],
+                "position": [0.0, 10.0, 0.0], "rotation": [s, 0.0, 0.0, s],
+                "range": 0.0, "spotAngle": 0.0, "castsShadows": true
+            }],
+            "blueNoise": tmp.to_string_lossy(),
+        }))
+        .unwrap();
+        let world_id = populate(pop_req).unwrap()["worldId"].as_u64().unwrap();
+        let _ = std::fs::remove_file(&tmp);
+        let res = integrate(IntegrateRequest {
+            world_id,
+            kind: "indirect".into(),
+            positions: b64_f32(&[0.0, 1.0, 0.0]),
+            sample_count: 64,
+            max_bounces: 2,
+            pushoff: 0.0001,
+            ignore_environment: true,
+            max_lights_per_probe: 0,
+            per_probe_light_indices: None,
+        })
+        .unwrap();
+        release(world_id);
+        let vals = decode_f32(res["data"].as_str().unwrap());
+        assert_eq!(vals.len(), 27);
+        assert!(
+            vals.iter().all(|v| v.is_finite()),
+            "non-finite UVs must not produce NaN/Inf SH values: {vals:?}"
+        );
+        assert!(vals[0] > 0.0, "floor still bounces light: {}", vals[0]);
     }
 }
