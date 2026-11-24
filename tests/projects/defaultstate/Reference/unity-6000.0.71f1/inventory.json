@@ -4009,6 +4009,12 @@
       "category": "struct",
       "module": "UnityEngine.CoreModule",
       "status": "candidate",
+      "type": "UnityEngine.BoneWeight1"
+    },
+    {
+      "category": "struct",
+      "module": "UnityEngine.CoreModule",
+      "status": "candidate",
       "type": "UnityEngine.BoundingSphere"
     },
     {
@@ -5348,6 +5354,84 @@
       "module": "UnityEngine.CoreModule",
       "status": "candidate",
       "type": "UnityEngine.LightProbesQuery"
+    },
+    {
+      "category": "class",
+      "module": "UnityEditor.CoreModule",
+      "status": "candidate",
+      "type": "UnityEngine.LightTransport.BakeProgressState"
+    },
+    {
+      "category": "struct",
+      "module": "UnityEditor.CoreModule",
+      "status": "candidate",
+      "type": "UnityEngine.LightTransport.BufferID"
+    },
+    {
+      "category": "struct",
+      "module": "UnityEditor.CoreModule",
+      "status": "open-generic",
+      "type": "UnityEngine.LightTransport.BufferSlice`1"
+    },
+    {
+      "category": "struct",
+      "module": "UnityEditor.CoreModule",
+      "status": "candidate",
+      "type": "UnityEngine.LightTransport.EventID"
+    },
+    {
+      "category": "struct",
+      "module": "UnityEditor.CoreModule",
+      "status": "candidate",
+      "type": "UnityEngine.LightTransport.IProbeIntegrator+Result"
+    },
+    {
+      "category": "class",
+      "module": "UnityEditor.CoreModule",
+      "status": "static",
+      "type": "UnityEngine.LightTransport.InputExtraction"
+    },
+    {
+      "category": "class",
+      "module": "UnityEditor.CoreModule",
+      "status": "no-public-parameterless-constructor",
+      "type": "UnityEngine.LightTransport.InputExtraction+BakeInput"
+    },
+    {
+      "category": "class",
+      "module": "UnityEditor.CoreModule",
+      "status": "candidate",
+      "type": "UnityEngine.LightTransport.PostProcessing.RadeonRaysProbePostProcessor"
+    },
+    {
+      "category": "class",
+      "module": "UnityEditor.CoreModule",
+      "status": "candidate",
+      "type": "UnityEngine.LightTransport.PostProcessing.ReferenceProbePostProcessor"
+    },
+    {
+      "category": "class",
+      "module": "UnityEditor.CoreModule",
+      "status": "candidate",
+      "type": "UnityEngine.LightTransport.RadeonRaysContext"
+    },
+    {
+      "category": "class",
+      "module": "UnityEditor.CoreModule",
+      "status": "candidate",
+      "type": "UnityEngine.LightTransport.RadeonRaysProbeIntegrator"
+    },
+    {
+      "category": "class",
+      "module": "UnityEditor.CoreModule",
+      "status": "candidate",
+      "type": "UnityEngine.LightTransport.RadeonRaysWorld"
+    },
+    {
+      "category": "class",
+      "module": "UnityEditor.CoreModule",
+      "status": "candidate",
+      "type": "UnityEngine.LightTransport.ReferenceContext"
     },
     {
       "category": "class",

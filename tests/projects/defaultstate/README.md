@@ -879,3 +879,10 @@ hand-written, and they enter the inventory; two Unity 6000.0.71f1 batch Editor c
 `UnityEditorInternal.PackageManifest` (a package's `package.json`) is hand-written now and enters the
 inventory; two Unity 6000.0.71f1 batch Editor captures on macOS write its one `@factory` row. Every
 earlier row is unchanged, and no queued row shifts on macOS.
+
+The CPU `UnityEngine.LightTransport` probe baking types (13 types: `BakeProgressState`, `BufferID`,
+`BufferSlice`1`, `EventID`, `IProbeIntegrator+Result`, `InputExtraction`, `InputExtraction+BakeInput`,
+`PostProcessing.RadeonRaysProbePostProcessor`, `PostProcessing.ReferenceProbePostProcessor`,
+`RadeonRaysContext`, `RadeonRaysProbeIntegrator`, `RadeonRaysWorld`, `ReferenceContext`) and the
+hand-written `UnityEngine.BoneWeight1` enter the inventory; two identical Unity 6000.0.71f1 GPU Editor
+captures on Linux write their 20 rows. Every earlier row is unchanged.
