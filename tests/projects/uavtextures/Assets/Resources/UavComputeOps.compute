@@ -1,0 +1,130 @@
+#pragma kernel Clear2DFloat4
+#pragma kernel Clear3DFloat4
+#pragma kernel Clear2DUint4
+#pragma kernel Write2DFloat
+#pragma kernel Write2DFloat2
+#pragma kernel Write2DFloat3
+#pragma kernel Write2DFloat4
+#pragma kernel Write2DUint
+#pragma kernel Write3DFloat
+#pragma kernel Read2DFloat4
+#pragma kernel Read3DFloat4
+#pragma kernel Read2DUint4
+#pragma kernel PackedStructs
+
+RWTexture2D<float4> _Clear2F;
+RWTexture3D<float4> _Clear3F;
+RWTexture2D<uint4> _Clear2U;
+RWTexture2D<float> _OutF;
+RWTexture2D<float2> _OutF2;
+RWTexture2D<float3> _OutF3;
+RWTexture2D<float4> _OutF4;
+RWTexture2D<uint> _OutU;
+RWTexture3D<float> _Out3F;
+
+Texture2D<float4> _In2F;
+Texture3D<float4> _In3F;
+Texture2D<uint4> _In2U;
+RWStructuredBuffer<float> _ReadF;
+RWStructuredBuffer<uint> _ReadU;
+
+float _Val;
+float4 _Val4;
+uint _UVal;
+uint _Slice;
+
+[numthreads(1, 1, 1)]
+void Clear2DFloat4(uint3 id : SV_DispatchThreadID)
+{
+    _Clear2F[uint2(0, 0)] = float4(0.125, 0.25, 0.375, 0.5);
+}
+
+[numthreads(1, 1, 1)]
+void Clear3DFloat4(uint3 id : SV_DispatchThreadID)
+{
+    _Clear3F[uint3(1, 2, _Slice)] = float4(0.125, 0.25, 0.375, 0.5);
+}
+
+[numthreads(1, 1, 1)]
+void Clear2DUint4(uint3 id : SV_DispatchThreadID)
+{
+    _Clear2U[uint2(0, 0)] = uint4(11u, 22u, 33u, 44u);
+}
+
+[numthreads(1, 1, 1)]
+void Write2DFloat(uint3 id : SV_DispatchThreadID) { _OutF[uint2(0, 0)] = _Val; }
+
+[numthreads(1, 1, 1)]
+void Write2DFloat2(uint3 id : SV_DispatchThreadID) { _OutF2[uint2(0, 0)] = _Val4.xy; }
+
+[numthreads(1, 1, 1)]
+void Write2DFloat3(uint3 id : SV_DispatchThreadID) { _OutF3[uint2(0, 0)] = _Val4.xyz; }
+
+[numthreads(1, 1, 1)]
+void Write2DFloat4(uint3 id : SV_DispatchThreadID) { _OutF4[uint2(0, 0)] = _Val4; }
+
+[numthreads(1, 1, 1)]
+void Write2DUint(uint3 id : SV_DispatchThreadID) { _OutU[uint2(0, 0)] = _UVal; }
+
+[numthreads(1, 1, 1)]
+void Write3DFloat(uint3 id : SV_DispatchThreadID) { _Out3F[uint3(1, 2, _Slice)] = _Val; }
+
+[numthreads(1, 1, 1)]
+void Read2DFloat4(uint3 id : SV_DispatchThreadID)
+{
+    float4 c = _In2F.Load(int3(0, 0, 0));
+    _ReadF[0] = c.x;
+    _ReadF[1] = c.y;
+    _ReadF[2] = c.z;
+    _ReadF[3] = c.w;
+}
+
+[numthreads(1, 1, 1)]
+void Read3DFloat4(uint3 id : SV_DispatchThreadID)
+{
+    float4 c = _In3F.Load(int4(1, 2, _Slice, 0));
+    _ReadF[0] = c.x;
+    _ReadF[1] = c.y;
+    _ReadF[2] = c.z;
+    _ReadF[3] = c.w;
+}
+
+[numthreads(1, 1, 1)]
+void Read2DUint4(uint3 id : SV_DispatchThreadID)
+{
+    uint4 c = _In2U.Load(int3(0, 0, 0));
+    _ReadU[0] = c.x;
+    _ReadU[1] = c.y;
+    _ReadU[2] = c.z;
+    _ReadU[3] = c.w;
+}
+
+struct TrailingPad { float4 a; float b; };
+struct MixedVec4 { float3 p; float4 a; float s; float4 b; };
+struct Inner { float4 v; float k; };
+struct Outer { Inner inner; float tail; };
+struct Aligned { float4 x; };
+
+StructuredBuffer<TrailingPad> _Trailing;
+StructuredBuffer<MixedVec4> _Mixed;
+StructuredBuffer<Outer> _Nested;
+StructuredBuffer<Aligned> _Aligned;
+
+[numthreads(1, 1, 1)]
+void PackedStructs(uint3 id : SV_DispatchThreadID)
+{
+    TrailingPad t0 = _Trailing[0];
+    TrailingPad t1 = _Trailing[1];
+    MixedVec4 m0 = _Mixed[0];
+    MixedVec4 m1 = _Mixed[1];
+    Outer o0 = _Nested[0];
+    Outer o1 = _Nested[1];
+    Aligned a1 = _Aligned[1];
+    _ReadF[0] = t0.a.w + t0.b;
+    _ReadF[1] = t1.a.x + t1.a.w + t1.b;
+    _ReadF[2] = m0.p.z + m0.a.y + m0.s + m0.b.w;
+    _ReadF[3] = m1.p.x + m1.a.z + m1.s + m1.b.y;
+    _ReadF[4] = o0.inner.v.z + o0.inner.k + o0.tail;
+    _ReadF[5] = o1.inner.v.x + o1.inner.v.w + o1.inner.k + o1.tail;
+    _ReadF[6] = a1.x.x + a1.x.w;
+}

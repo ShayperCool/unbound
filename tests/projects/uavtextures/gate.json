@@ -1,0 +1,13 @@
+{
+ "commands": ["python3 tests/projects/uavtextures/run.py check"],
+ "summary": "\\d+/\\d+ records match.*",
+ "engine_paths": [
+  "crates/unbound-shaders/src/fit.rs",
+  "crates/unbound-shaders/src/compute.rs",
+  "crates/unbound-shaders/src/lib.rs",
+  "crates/unbound-app/src/render/compiled.rs",
+  "crates/unbound-app/src/render/executor.rs",
+  "managed/UnityEngine/Graphics/RandomWriteTargets.cs",
+  "managed/UnityEngine/Graphics/CommandBuffer.cs"
+ ]
+}
