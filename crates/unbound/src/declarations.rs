@@ -259,6 +259,11 @@ fn unread_pragmas(code: &str) -> bool {
     })
 }
 
+/// Whether a shader has SubShaders and the device runs none of their passes.
+fn runs_no_subshader(lab: &ShaderLab) -> bool {
+    !lab.subshaders.is_empty() && lab.subshaders.iter().all(|sub| sub.unsupported)
+}
+
 /// An answer for a shader, its parts known or not.
 struct Description {
     found: bool,
@@ -491,7 +496,15 @@ impl State {
                 keywords: Err(why),
             };
         };
-        let mut subshaders = self.subshaders(inputs, lab);
+        // A shader the device runs none of the SubShaders of: what the Editor's queries answer
+        // then (its Fallback's, the error shader's, none) is not measured.
+        let mut subshaders = if runs_no_subshader(lab) {
+            Err(Unknown::fixed(
+                "the device runs none of its SubShaders' passes, which is not measured",
+            ))
+        } else {
+            self.subshaders(inputs, lab)
+        };
         if let (Ok(list), Some(fallback)) = (&mut subshaders, &lab.fallback)
             && let Err(u) = self.fallbacks(inputs, fallback, list, 0)
         {
@@ -793,19 +806,16 @@ impl State {
     /// known (unmeasured stages, [`State::pass_runs_unknown`], a SubShader left without passes by
     /// a dropped `UsePass`, which the renderer keeps).
     fn subshaders(&mut self, inputs: &Inputs, lab: &ShaderLab) -> Result<Vec<Value>, Unknown> {
-        // A shader the device runs none of the SubShaders of: what the Editor's queries answer
-        // then (its Fallback's, the error shader's, none) is not measured.
-        if !lab.subshaders.is_empty() && lab.subshaders.iter().all(|sub| sub.unsupported) {
-            return Err(Unknown::fixed(
-                "the device runs none of its SubShaders' passes, which is not measured",
-            ));
-        }
+        // A Fallback the device runs none of the SubShaders of keeps them, not known to run (a
+        // query reaching them is unknown, the shader's own answers are not); the asked shader
+        // itself is not described then ([`State::describe_project`]).
+        let none_run = runs_no_subshader(lab);
         let mut out = Vec::new();
         for sub in &lab.subshaders {
             // The device's shader has no SubShader it runs none of the passes of
             // (tests/projects/graphicsgaps select.restricted.SelX/SelO.subshaderCount on OpenGL
             // Core); the renderer passes it over.
-            if sub.unsupported {
+            if sub.unsupported && !none_run {
                 continue;
             }
             let mut passes = Vec::new();
@@ -817,7 +827,7 @@ impl State {
                     _ => kept.push(pass),
                 }
             }
-            let mut runs = if kept.is_empty() && !sub.passes.is_empty() {
+            let mut runs = if sub.unsupported || (kept.is_empty() && !sub.passes.is_empty()) {
                 None
             } else {
                 sub.device_runs(unbound_runtime::graphics_device::get())

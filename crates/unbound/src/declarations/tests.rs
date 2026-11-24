@@ -1277,7 +1277,8 @@ fn procedural_instancing_is_read_from_the_instancing_options() {
 }
 
 /// A shader the device runs none of the SubShaders of has SubShaders not known, with or without
-/// a Fallback (what the Editor answers then is not measured).
+/// a Fallback (what the Editor answers then is not measured); as another's Fallback its
+/// SubShaders are listed, not known to run.
 #[test]
 fn a_shader_the_device_runs_no_subshader_of_is_not_known() {
     let scratch = Scratch::new("decl-none-run");
@@ -1295,6 +1296,10 @@ fn a_shader_the_device_runs_no_subshader_of_is_not_known() {
     scratch.write(
         "Assets/Plain.shader",
         "Shader \"Tests/Plain\" { SubShader { Pass { } } }",
+    );
+    scratch.write(
+        "Assets/FallsToNone.shader",
+        "Shader \"Tests/FallsToNone\" { SubShader { Tags { \"Queue\"=\"Geometry+5\" } Pass { } } Fallback \"Tests/None\" }",
     );
     let data = scratch.0.join("unity");
     std::fs::create_dir_all(&data).unwrap();
@@ -1319,6 +1324,17 @@ fn a_shader_the_device_runs_no_subshader_of_is_not_known() {
         );
     }
     assert_eq!(ask(&provider, "Tests/Plain")["subshaders_known"], true);
+    // A shader whose own SubShaders run, falling back to one the device runs none of: its own
+    // answers stay known, the Fallback's SubShader is listed, not known to run.
+    let answer = ask(&provider, "Tests/FallsToNone");
+    assert_eq!(answer["subshaders_known"], true, "{answer}");
+    let subs = answer["subshaders"].as_array().unwrap();
+    assert_eq!(
+        subs.iter().map(|s| s["runs"].clone()).collect::<Vec<_>>(),
+        [json!(true), Value::Null],
+        "{answer}"
+    );
+    assert_eq!(subs[1]["passes"].as_array().unwrap().len(), 1, "{answer}");
 }
 
 /// An `#include_with_pragmas` file's pragmas are read: keywords and targets leave the SubShader
