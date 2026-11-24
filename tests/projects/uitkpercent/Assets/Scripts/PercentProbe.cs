@@ -529,6 +529,56 @@ namespace PercentProbe
             Put("resize.larger", "percent " + State(rPercent) + "|points " + State(rPoints) + "|auto " + State(rAuto));
             Put("reshown.shown", State(rePercent));
 
+            // pixelRound: single-precision pixel-grid rounding boundaries at scale 1 and scale 1.5
+            // (positive and negative half-ties straddling the 0.001f threshold).
+            var prRoot = Case(root, "pixelRound", 0);
+            prRoot.style.top = 12000;
+            var prNodes = new List<(string name, VisualElement ve)>();
+            foreach (var (name, left, width, height) in new (string, float, float, float)[]
+            {
+                ("pos_10_4989", 10.4989f, 10.4989f, 10f),
+                ("pos_10_4990", 10.4990f, 10.4990f, 10f),
+                ("pos_10_499023", 10.499023f, 10.499023f, 10f),
+                ("pos_564_4989", 564.4989f, 564.4989f, 10f),
+                ("pos_564_499023", 564.499023f, 564.499023f, 10f),
+                ("neg_10_5009", -10.5009f, 10f, 10f),
+                ("neg_10_5010", -10.5010f, 10f, 10f),
+            })
+            {
+                var ve = Box(prRoot, name, width, height);
+                ve.style.position = Position.Absolute;
+                ve.style.left = left;
+                ve.style.top = 0;
+                prNodes.Add((name, ve));
+            }
+            yield return Frames();
+            foreach (var (name, ve) in prNodes)
+                Put("pixelRound.s1." + name, State(ve));
+
+            var ps = GetComponent<UIDocument>().panelSettings;
+            ps.scale = 1.5f;
+            var pr15Root = Case(root, "pixelRound15", 0);
+            pr15Root.style.top = 0;
+            var pr15Nodes = new List<(string name, VisualElement ve)>();
+            foreach (var (name, height) in new (string, float)[]
+            {
+                ("h_564_4989", 564.4989f / 1.5f),
+                ("h_564_499023", 564.499023f / 1.5f),
+                ("h_10_4989", 10.4989f / 1.5f),
+                ("h_10_4995", 10.4995f / 1.5f),
+            })
+            {
+                var ve = Box(pr15Root, name, 10f, height);
+                ve.style.position = Position.Absolute;
+                ve.style.left = 0;
+                ve.style.top = 0;
+                pr15Nodes.Add((name, ve));
+            }
+            yield return Frames();
+            foreach (var (name, ve) in pr15Nodes)
+                Put("pixelRound.s1_5." + name, State(ve));
+            ps.scale = 1f;
+
             Put("complete", true);
             File.WriteAllText(Path.Combine(dir, "values.jsonl"), m_Out.ToString());
             EditorApplication.Exit(0);

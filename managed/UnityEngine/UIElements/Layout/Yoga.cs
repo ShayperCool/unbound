@@ -11,6 +11,7 @@
 using System;
 using System.Collections.Generic;
 using System.Threading;
+using Unbound.Runtime;
 
 namespace Unbound.UIElements.Layout
 {
@@ -197,6 +198,11 @@ namespace Unbound.UIElements.Layout
         /// tests/projects/uitkpercent absoluteText.wrapMaxPercent).</summary>
         public bool BoundsMeasuredNodesByAvailableSize { get; set; }
 
+        /// <summary>Rounds pixel-grid coordinates in single precision with UI Toolkit's 0.001f
+        /// grid/midpoint epsilon under measured releases (Unity 6000.0.71f1 Editor,
+        /// tests/projects/uitkpercent pixelRound.*).</summary>
+        public bool UsesUIToolkitPixelRounding { get; set; }
+
         /// <summary>The configuration of UI Toolkit's layout engine: standard flexbox layout with the
         /// differences each flag above names. Percentage margins, paddings and offsets and the minimum
         /// over a smaller maximum follow UI Toolkit (and CSS) in every configuration, not by flag.</summary>
@@ -213,6 +219,7 @@ namespace Unbound.UIElements.Layout
             MeasuresLinesByTheirBases = true,
             AbsoluteChildrenTakeTheirContentWidth = true,
             BoundsMeasuredNodesByAvailableSize = true,
+            UsesUIToolkitPixelRounding = true,
         };
 
         /// <summary>To the nearest pixel, halves up (measured: a -3pt margin at 1.25
@@ -3267,6 +3274,42 @@ namespace Unbound.UIElements.Layout
                 : (float)(scaledValue / pointScaleFactor);
         }
 
+        /// <summary>UI Toolkit's single-precision pixel-grid rounding (Unity 6000.0.71f1,
+        /// tests/projects/uitkpercent pixelRound.*): scales in float32, snaps fractions within 0.001f of
+        /// 0 or 1 to the grid, and otherwise rounds toward +infinity with a 0.001f midpoint bias
+        /// (splitting negative values around their floor so half-ties still bias toward +infinity).</summary>
+        internal static float RoundValueToPixelGridUIToolkit(float value, float pointScaleFactor)
+        {
+            const float Epsilon = 0.001f;
+            float scaledValue = value * pointScaleFactor;
+            if (float.IsInfinity(scaledValue)) return value;
+            float fractial = scaledValue % 1.0f;
+            if (!float.IsNaN(fractial) && MathF.Abs(fractial) < Epsilon)
+            {
+                scaledValue -= fractial;
+            }
+            else if (!float.IsNaN(fractial) && MathF.Abs(fractial - 1.0f) < Epsilon)
+            {
+                scaledValue = scaledValue - fractial + 1.0f;
+            }
+            else
+            {
+                float floor = MathF.Floor(scaledValue);
+                if (scaledValue < 0f)
+                {
+                    float rounded = MathF.Round((scaledValue - floor) + Epsilon, MidpointRounding.AwayFromZero);
+                    scaledValue = floor != 0f ? floor + rounded : rounded;
+                }
+                else
+                {
+                    scaledValue = MathF.Round(scaledValue + Epsilon, MidpointRounding.AwayFromZero);
+                }
+            }
+            return float.IsNaN(scaledValue) || float.IsNaN(pointScaleFactor)
+                ? Undefined
+                : scaledValue / pointScaleFactor;
+        }
+
         static bool DoublesEqual(double a, double b) =>
             double.IsNaN(a) || double.IsNaN(b) ? double.IsNaN(a) && double.IsNaN(b) : Math.Abs(a - b) < 0.0001;
 
@@ -3279,18 +3322,14 @@ namespace Unbound.UIElements.Layout
                 || (!IsUndefined(lastComputedWidth) && lastComputedWidth < 0))
                 return false;
             bool useRoundedComparison = config != null && config.PointScaleFactor != 0;
-            float effectiveWidth = useRoundedComparison
-                ? RoundValueToPixelGrid(width, config.PointScaleFactor, false, false)
-                : width;
-            float effectiveHeight = useRoundedComparison
-                ? RoundValueToPixelGrid(height, config.PointScaleFactor, false, false)
-                : height;
-            float effectiveLastWidth = useRoundedComparison
-                ? RoundValueToPixelGrid(lastWidth, config.PointScaleFactor, false, false)
-                : lastWidth;
-            float effectiveLastHeight = useRoundedComparison
-                ? RoundValueToPixelGrid(lastHeight, config.PointScaleFactor, false, false)
-                : lastHeight;
+            bool uitkRound = useRoundedComparison && config.UsesUIToolkitPixelRounding && Compat.UIToolkitPixelRoundingMeasured;
+            float RoundCached(float v) => !useRoundedComparison ? v
+                : uitkRound ? RoundValueToPixelGridUIToolkit(v, config.PointScaleFactor)
+                : RoundValueToPixelGrid(v, config.PointScaleFactor, false, false);
+            float effectiveWidth = RoundCached(width);
+            float effectiveHeight = RoundCached(height);
+            float effectiveLastWidth = RoundCached(lastWidth);
+            float effectiveLastHeight = RoundCached(lastHeight);
 
             bool hasSameWidthSpec = lastWidthMode == widthMode && FloatsEqual(effectiveLastWidth, effectiveWidth);
             bool hasSameHeightSpec = lastHeightMode == heightMode && FloatsEqual(effectiveLastHeight, effectiveHeight);
@@ -3495,18 +3534,24 @@ namespace Unbound.UIElements.Layout
 
             // A node with a measure function is never rounded down, which could truncate its text.
             bool textRounding = node.isTextNode && !node.config.MeasuredNodesRoundAsOthers;
+            bool uitkRound = node.config.UsesUIToolkitPixelRounding && Compat.UIToolkitPixelRoundingMeasured && !textRounding;
+            float Round(double value, bool forceCeil, bool forceFloor) =>
+                uitkRound && !forceCeil && !forceFloor
+                    ? RoundValueToPixelGridUIToolkit((float)value, pointScaleFactor)
+                    : RoundValueToPixelGrid(value, pointScaleFactor, forceCeil, forceFloor);
+
+            float roundedAbsoluteNodeLeft = Round(absoluteNodeLeft, false, textRounding);
+            float roundedAbsoluteNodeTop = Round(absoluteNodeTop, false, textRounding);
 
             if (node.config.RoundPositionsFromAbsolute)
             {
-                node.layout.Position[(int)YogaEdge.Left] = RoundValueToPixelGrid(absoluteNodeLeft, pointScaleFactor, false, textRounding)
-                    - RoundValueToPixelGrid(absoluteLeft, pointScaleFactor, false, false);
-                node.layout.Position[(int)YogaEdge.Top] = RoundValueToPixelGrid(absoluteNodeTop, pointScaleFactor, false, textRounding)
-                    - RoundValueToPixelGrid(absoluteTop, pointScaleFactor, false, false);
+                node.layout.Position[(int)YogaEdge.Left] = roundedAbsoluteNodeLeft - Round(absoluteLeft, false, false);
+                node.layout.Position[(int)YogaEdge.Top] = roundedAbsoluteNodeTop - Round(absoluteTop, false, false);
             }
             else
             {
-                node.layout.Position[(int)YogaEdge.Left] = RoundValueToPixelGrid(nodeLeft, pointScaleFactor, false, textRounding);
-                node.layout.Position[(int)YogaEdge.Top] = RoundValueToPixelGrid(nodeTop, pointScaleFactor, false, textRounding);
+                node.layout.Position[(int)YogaEdge.Left] = Round(nodeLeft, false, textRounding);
+                node.layout.Position[(int)YogaEdge.Top] = Round(nodeTop, false, textRounding);
             }
 
             // A scaled dimension close to a whole number (from either side) has no fraction.
@@ -3516,14 +3561,12 @@ namespace Unbound.UIElements.Layout
                 && !DoublesEqual((nodeHeight * pointScaleFactor) % 1.0, 1.0);
 
             node.layout.Dimensions[DimWidth] = EdgeDistance(
-                RoundValueToPixelGrid(absoluteNodeRight, pointScaleFactor, textRounding && hasFractionalWidth,
-                    textRounding && !hasFractionalWidth),
-                RoundValueToPixelGrid(absoluteNodeLeft, pointScaleFactor, false, textRounding), absoluteNodeLeft, nodeWidth);
+                Round(absoluteNodeRight, textRounding && hasFractionalWidth, textRounding && !hasFractionalWidth),
+                roundedAbsoluteNodeLeft, absoluteNodeLeft, nodeWidth);
 
             node.layout.Dimensions[DimHeight] = EdgeDistance(
-                RoundValueToPixelGrid(absoluteNodeBottom, pointScaleFactor, textRounding && hasFractionalHeight,
-                    textRounding && !hasFractionalHeight),
-                RoundValueToPixelGrid(absoluteNodeTop, pointScaleFactor, false, textRounding), absoluteNodeTop, nodeHeight);
+                Round(absoluteNodeBottom, textRounding && hasFractionalHeight, textRounding && !hasFractionalHeight),
+                roundedAbsoluteNodeTop, absoluteNodeTop, nodeHeight);
 
             foreach (var child in node.Children)
                 RoundToPixelGrid(child, pointScaleFactor, absoluteNodeLeft, absoluteNodeTop);

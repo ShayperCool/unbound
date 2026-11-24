@@ -126,6 +126,10 @@ namespace Unbound.Runtime
         /// two-argument overload accepts it) and UxmlAttributeNames normalizes a null obsoleteNames
         /// array to an empty array. Other families retain their unmeasured constructor values.</summary>
         internal static bool UxmlSerializedDataMeasured => Family == ReleaseFamily.Unity6000_0;
+        /// <summary>UI Toolkit layout pixel-grid rounding measured on 6000.0.71f1
+        /// (tests/projects/uitkpercent pixelRound.*): single-precision scaling and 0.001f tie/grid
+        /// epsilon. Other families retain standard double-precision Yoga pixel rounding.</summary>
+        internal static bool UIToolkitPixelRoundingMeasured => Family == ReleaseFamily.Unity6000_0;
         /// <summary>Uncreated object wrappers measured by defaultstate on 6000.0.71f1.
         /// Other releases retain their previous unmeasured wrapper state.</summary>
         internal static bool UncreatedObjectWrappersMeasured => Family == ReleaseFamily.Unity6000_0;

@@ -29,6 +29,59 @@ namespace UnityEngine.Tests.YogaLayout
             Assert.Equal(6.0f, Yoga.RoundValueToPixelGrid(5.99f, 2.0f, true, false));
             Assert.Equal(5.5f, Yoga.RoundValueToPixelGrid(5.99f, 2.0f, false, true));
         }
+
+        [Fact]
+        public void UIToolkit_pixel_rounding_uses_float32_milli_epsilon_and_gates_by_release()
+        {
+            // Direct helper boundary cases measured on Unity 6000.0.71f1 (uitkpercent pixelRound.*).
+            Assert.Equal(10f, Yoga.RoundValueToPixelGridUIToolkit(10.4989f, 1f));
+            Assert.Equal(11f, Yoga.RoundValueToPixelGridUIToolkit(10.4990f, 1f));
+            Assert.Equal(11f, Yoga.RoundValueToPixelGridUIToolkit(10.499023f, 1f));
+            Assert.Equal(564f, Yoga.RoundValueToPixelGridUIToolkit(564.4989f, 1f));
+            Assert.Equal(565f, Yoga.RoundValueToPixelGridUIToolkit(564.499023f, 1f));
+            Assert.Equal(-10f, Yoga.RoundValueToPixelGridUIToolkit(-10.5009f, 1f));
+            Assert.Equal(-11f, Yoga.RoundValueToPixelGridUIToolkit(-10.5010f, 1f));
+            Assert.Equal(0f, Yoga.RoundValueToPixelGridUIToolkit(-0.0005f, 1f));
+            Assert.Equal(-1f, Yoga.RoundValueToPixelGridUIToolkit(-0.9995f, 1f));
+            Assert.Equal(564f / 1.5f, Yoga.RoundValueToPixelGridUIToolkit(564.4989f / 1.5f, 1.5f));
+            Assert.Equal(565f / 1.5f, Yoga.RoundValueToPixelGridUIToolkit(564.499023f / 1.5f, 1.5f));
+            Assert.Equal(5f, Yoga.RoundValueToPixelGridUIToolkit(10.4989f / 2f, 2f));
+            Assert.Equal(5.5f, Yoga.RoundValueToPixelGridUIToolkit(10.4990f / 2f, 2f));
+            Assert.True(float.IsPositiveInfinity(Yoga.RoundValueToPixelGridUIToolkit(float.PositiveInfinity, 1f)));
+            Assert.True(float.IsNegativeInfinity(Yoga.RoundValueToPixelGridUIToolkit(float.NegativeInfinity, 1f)));
+            Assert.True(Yoga.IsUndefined(Yoga.RoundValueToPixelGridUIToolkit(float.NaN, 1f)));
+
+            // Layout pass: UIToolkit config under 6000.0 rounds 564.499023/1.5 up to 565/1.5;
+            // standard YogaConfig and unmeasured releases keep the 0.0001 epsilon (564/1.5).
+            float LayoutHeight(YogaConfig config, float scale, float rawHeight)
+            {
+                config.PointScaleFactor = scale;
+                var root = new YogaNode(config) { Width = YogaValue.Point(1000f), Height = YogaValue.Point(1000f) };
+                var child = new YogaNode(config)
+                {
+                    PositionType = YogaPositionType.Absolute,
+                    Width = YogaValue.Point(10f),
+                    Height = YogaValue.Point(rawHeight),
+                };
+                child.SetPosition(YogaEdge.Left, YogaValue.Point(0f));
+                child.SetPosition(YogaEdge.Top, YogaValue.Point(0f));
+                root.Insert(0, child);
+                root.CalculateLayout(1000f, 1000f, YogaDirection.LTR);
+                return child.LayoutHeight;
+            }
+
+            using (TestRelease.Pin(TestRelease.Measured))
+            {
+                Assert.Equal(565f / 1.5f, LayoutHeight(YogaConfig.UIToolkit(), 1.5f, 564.499023f / 1.5f));
+                Assert.Equal(564f / 1.5f, LayoutHeight(YogaConfig.UIToolkit(), 1.5f, 564.4989f / 1.5f));
+                Assert.Equal(564f / 1.5f, LayoutHeight(new YogaConfig(), 1.5f, 564.499023f / 1.5f));
+            }
+
+            using (TestRelease.Pin(TestRelease.Unmeasured))
+            {
+                Assert.Equal(564f / 1.5f, LayoutHeight(YogaConfig.UIToolkit(), 1.5f, 564.499023f / 1.5f));
+            }
+        }
     }
 
     public class YGRoundingMeasureFuncTest

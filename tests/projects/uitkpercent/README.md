@@ -79,6 +79,12 @@ capping a defined size to a smaller max: `wrapWidthOverMax`, `wrapMaxHeightPerce
 node bounds percentage min/max against its own available size (`wrapMaxPercent`: 75% of 150 -> 113;
 `wrapMaxHeightPercent`: 50% of 50 -> 25; `inFlowMaxPercent` in-flow control).
 
+Pixel-grid rounding (`pixelRound.*`): positive and negative coordinates straddling the 0.001f
+tie threshold at scale 1 (`pixelRound.s1.*`: `10.4989` -> 10, `10.499` / `10.499023` -> 11,
+`564.4989` -> 564, `564.499023` -> 565, `-10.5009` -> -10, `-10.501` -> -11) and at scale 1.5
+(`pixelRound.s1_5.*`: `564.4989 / 1.5` -> 376, `564.499023 / 1.5` -> 376.667, `10.4989 / 1.5` ->
+6.667, `10.4995 / 1.5` -> 7.333).
+
 Other releases are unmeasured.
 
 ## Usage

@@ -74,4 +74,15 @@
 {"k":"hiddenParent.shown","v":"rect=0,0,40,160|basis=160"}
 {"k":"resize.larger","v":"percent rect=0,0,20,120|basis=120|points rect=0,120,20,50|basis=50|auto rect=0,170,20,30|basis=30"}
 {"k":"reshown.shown","v":"rect=0,0,40,160|basis=160"}
+{"k":"pixelRound.s1.pos_10_4989","v":"rect=10,0,11,10|basis=NaN"}
+{"k":"pixelRound.s1.pos_10_4990","v":"rect=11,0,10,10|basis=NaN"}
+{"k":"pixelRound.s1.pos_10_499023","v":"rect=11,0,10,10|basis=NaN"}
+{"k":"pixelRound.s1.pos_564_4989","v":"rect=564,0,565,10|basis=NaN"}
+{"k":"pixelRound.s1.pos_564_499023","v":"rect=565,0,564,10|basis=NaN"}
+{"k":"pixelRound.s1.neg_10_5009","v":"rect=-10,0,10,10|basis=NaN"}
+{"k":"pixelRound.s1.neg_10_5010","v":"rect=-11,0,10,10|basis=NaN"}
+{"k":"pixelRound.s1_5.h_564_4989","v":"rect=0,0,10,376|basis=NaN"}
+{"k":"pixelRound.s1_5.h_564_499023","v":"rect=0,0,10,376.667|basis=NaN"}
+{"k":"pixelRound.s1_5.h_10_4989","v":"rect=0,0,10,6.667|basis=NaN"}
+{"k":"pixelRound.s1_5.h_10_4995","v":"rect=0,0,10,7.333|basis=NaN"}
 {"k":"complete","v":true}
