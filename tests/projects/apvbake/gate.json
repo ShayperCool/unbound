@@ -1,0 +1,16 @@
+{
+  "commands": [
+    "python3 tests/projects/apvbake/apv_bake.py check"
+  ],
+  "summary": "PASS: \\d+ cells, \\d+ probes match reference",
+  "engine_paths": [
+    "crates/unbound-gi/src/baked",
+    "crates/unbound-runtime/src/light_transport.rs",
+    "crates/unbound-runtime/src/baked_gi.rs",
+    "managed/UnityEngine/LightTransport",
+    "managed/UnityEngine/Graphics/BakedAtlas.cs",
+    "managed/UnityEngine/Graphics/RealtimeGIBake.cs",
+    "managed/UnityEngine/Editor/Lightmapping.cs",
+    "managed/UnityEngine/Graphics/RandomWriteTargets.cs"
+  ]
+}

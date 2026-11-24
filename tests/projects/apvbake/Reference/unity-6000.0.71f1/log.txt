@@ -1,0 +1,23 @@
+prv initialized=True
+bakeStarted
+lightingDataUpdated
+bakeCompleted
+bake True
+wrote Assets/Scenes/Apv Baking Set-Default.CellData.bytes
+wrote Assets/Scenes/Apv Baking Set-Default.CellData.bytes.meta
+wrote Assets/Scenes/Apv Baking Set-Default.CellOptionalData.bytes
+wrote Assets/Scenes/Apv Baking Set-Default.CellOptionalData.bytes.meta
+wrote Assets/Scenes/Apv Baking Set.CellBricksData.bytes
+wrote Assets/Scenes/Apv Baking Set.CellBricksData.bytes.meta
+wrote Assets/Scenes/Apv Baking Set.CellSharedData.bytes
+wrote Assets/Scenes/Apv Baking Set.CellSharedData.bytes.meta
+wrote Assets/Scenes/Apv Baking Set.CellSupportData.bytes
+wrote Assets/Scenes/Apv Baking Set.CellSupportData.bytes.meta
+wrote Assets/Scenes/Apv Baking Set.asset
+wrote Assets/Scenes/Apv.meta
+wrote Assets/Scenes/Apv/LightingData.asset
+wrote Assets/Scenes/Apv/LightingData.asset.meta
+wrote Assets/Scenes/Apv/Lightmap-0_comp_light.exr
+wrote Assets/Scenes/Apv/Lightmap-0_comp_light.exr.meta
+wrote Assets/Scenes/Apv/ReflectionProbe-0.exr
+wrote Assets/Scenes/Apv/ReflectionProbe-0.exr.meta
