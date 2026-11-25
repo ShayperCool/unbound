@@ -58,6 +58,9 @@ static class AnimMaterialBindingsProbe
         Put("shaders", string.Join(",", shaders.Select(s => s == null ? "null" : s.name + ":" + s.GetPropertyCount())));
         Record("default/SpriteRenderer", typeof(SpriteRenderer), null);
         Record("default/MeshRenderer", typeof(MeshRenderer), null);
+        // A built-in shader whose names the Editor registers at startup.
+        var standard = Shader.Find("Standard");
+        if (standard != null) Record("standard/MeshRenderer", typeof(MeshRenderer), r => r.sharedMaterial = new Material(standard));
         foreach (var shader in shaders.Where(s => s != null))
         {
             var name = shader.name.Substring(5);
@@ -99,7 +102,12 @@ static class AnimMaterialBindingsProbe
         var loaded = new SortedDictionary<int, string>();
         foreach (var shader in Resources.FindObjectsOfTypeAll<Shader>())
             for (int i = 0; i < shader.GetPropertyCount(); i++)
+            {
                 loaded[shader.GetPropertyNameId(i)] = shader.GetPropertyName(i);
+                if (shader.GetPropertyType(i) != UnityEngine.Rendering.ShaderPropertyType.Texture) continue;
+                foreach (var suffix in new[] { "_ST", "_TexelSize", "_HDR" })
+                    loaded[Shader.PropertyToID(shader.GetPropertyName(i) + suffix)] = shader.GetPropertyName(i) + suffix;
+            }
         ids += "\n# loaded shaders' properties by id\n" + string.Join("\n", loaded.Select(e => e.Key + " " + e.Value));
         s_Out.Append("{\"k\":\"complete\",\"v\":true}\n");
         Directory.CreateDirectory(directory);

@@ -8,7 +8,8 @@ Unity 6000.0.71f1 Editor's order (Play mode, two identical Linux batch Editor ca
 orders under names of their own; `Q758/Builtin` mixes built-in names (`_MainTex`, `_Color`,
 `_Cutoff`) with new ones. Each is recorded on a SpriteRenderer and a MeshRenderer, then a material
 with values set for names its shader lacks, a MeshRenderer with two materials, one whose shader was
-replaced, and both renderers' default materials.
+replaced, a Standard material (a built-in shader whose names the Editor registers at startup), and
+both renderers' default materials.
 
 Measured: for each material in slot order, its float properties, then its vector properties
 (colours, vectors and each texture's `_ST`, `_TexelSize` and `_HDR`), each kind in the order of
