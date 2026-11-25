@@ -39,7 +39,9 @@ Editor's architectures turns the Editor off and excludes it; `GetCompatibleWithP
 
 `GetImporters("Android")` leaves out a package's static library that has the name of one in the
 project: as Unity's own C# `PluginImporter.GetImporters`, an overridable (package) plug-in going to
-the same place in a build as another is left out.
+the same place in a build as another is left out. Unmeasured: where the Android module puts its
+other plug-ins (with a CPU, Java and Kotlin sources, libraries, archives); Unbound leaves none of them
+out, with a notice for an overridable one.
 
 Residual (`residuals.json`): a section that has platform settings, written again, is written as it
 was (the Editor writes it as it reads it).

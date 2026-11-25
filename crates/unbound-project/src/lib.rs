@@ -1295,6 +1295,59 @@ mod tests {
         );
     }
 
+    /// Unity 6000.0 Manual, Streaming Assets: ".dll and script files located in the StreamingAssets
+    /// folder aren't included during script compilation"; the Editor imports what is there with
+    /// the DefaultImporter (tests/projects/defaultasset). A StreamingAssets folder deeper down is
+    /// an ordinary folder.
+    #[test]
+    fn libraries_in_streaming_assets_are_no_plugins() {
+        let scratch = std::env::temp_dir().join(format!(
+            "unbound-plugins-streaming-{}-{:?}",
+            std::process::id(),
+            std::thread::current().id()
+        ));
+        let _ = std::fs::remove_dir_all(&scratch);
+        let root = scratch.join("project");
+        let dll = Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("../../tests/projects/compilesetup/Assets/Plugins/Dup/ProbeDup.dll");
+        let native = format!("libprobe.{}", plugins::NATIVE_EXTENSIONS[0]);
+        for dir in ["Assets/StreamingAssets/Libs", "Assets/Data/StreamingAssets"] {
+            let dir = root.join(dir);
+            std::fs::create_dir_all(&dir).unwrap();
+            std::fs::copy(&dll, dir.join("ProbeDup.dll")).unwrap();
+            std::fs::write(dir.join(&native), b"native").unwrap();
+            // A .meta of its GUID alone: the defaults put both on the Editor.
+            for file in ["ProbeDup.dll", native.as_str()] {
+                std::fs::write(
+                    dir.join(format!("{file}.meta")),
+                    "fileFormatVersion: 2\nguid: 0123456789abcdef0123456789abcdef",
+                )
+                .unwrap();
+            }
+        }
+        let data = scratch.join("install/Editor/Data");
+        let version: UnityVersion = "6000.0.71f1".parse().unwrap();
+        let project = Project {
+            assets: root.join("Assets"),
+            root: root.clone(),
+            version,
+            profile: Profile::for_version(version).unwrap(),
+            install: UnityInstall { data, version },
+            settings: Settings::default(),
+            packages: Vec::new(),
+            missing_packages: Vec::new(),
+            inexact_packages: Vec::new(),
+        };
+        let managed: Vec<String> = project.plugins().into_iter().map(|p| p.path).collect();
+        let natives = project.native_plugins();
+        let _ = std::fs::remove_dir_all(&scratch);
+        assert_eq!(managed, ["Assets/Data/StreamingAssets/ProbeDup.dll"]);
+        assert_eq!(
+            natives,
+            [root.join("Assets/Data/StreamingAssets").join(&native)]
+        );
+    }
+
     /// In the Editor the predefined assemblies reference the auto-referenced Editor-only
     /// assemblies too (runtime scripts use them under `#if UNITY_EDITOR`); a player build has none
     /// (Unity 6000.0.71f1, tests/projects/compilesetup `assembly.Assembly-CSharp.references`).

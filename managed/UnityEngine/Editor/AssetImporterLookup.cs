@@ -400,7 +400,14 @@ namespace UnityEditor
         {
             var all = Array.FindAll(GetAllImporters(), i => i.GetCompatibleWithPlatformOrAnyPlatformBuildTarget(platformName));
             var finalPath = FinalPathRule(platformName);
-            if (finalPath == null) return all;
+            return finalPath == null ? all : LeaveOutOverridden(all, finalPath);
+        }
+
+        /// <summary>Unity's own loop (PluginImporter.GetImporters): of plug-ins with one final path
+        /// the first stays, a later one that is not overridable takes an overridable one's place,
+        /// a later overridable one is left out; a plug-in without a final path always stays.</summary>
+        internal static PluginImporter[] LeaveOutOverridden(PluginImporter[] all, Func<PluginImporter, string> finalPath)
+        {
             var importers = new List<PluginImporter>();
             var byFinalPath = new Dictionary<string, PluginImporter>(StringComparer.Ordinal);
             foreach (var importer in all)
@@ -422,11 +429,14 @@ namespace UnityEditor
         }
 
         /// <summary>Where a platform's importer extension puts a plug-in in a build (its final path),
-        /// or null when the platform has no extension here: its module is not installed, or it is the
-        /// Editor. The standalone players' rule is Unity's own C# (DesktopPluginImporterExtension);
-        /// Android's is the base rule (the plug-in's CPU folder, then its file name; measured for a
-        /// plug-in without CPU). Other installed modules' rules are not known: no plug-in is left
-        /// out for them, with a notice.</summary>
+        /// or null when the platform has none here: the Editor, a platform whose module is not
+        /// installed, one Unbound does not know (those leave out nothing, as Unity's C# without an
+        /// extension). The standalone players' rule is Unity's own C#
+        /// (DesktopPluginImporterExtension); Android's is the base rule for a static library without
+        /// a CPU (its file name; tests/projects/plugindefaults `importers.Android`). Where the rule is
+        /// not known (Android's other plug-ins, which its module may place by kind, folder or CPU;
+        /// iOS, WebGL) the plug-in is compared with no other, with a notice for an overridable one,
+        /// which the platform's module might leave out.</summary>
         static Func<PluginImporter, string> FinalPathRule(string platformName)
         {
             BuildTarget target;
@@ -444,18 +454,30 @@ namespace UnityEditor
             if (!BuildPipeline.IsBuildTargetSupported(BuildTargetGroup.Unknown, target)) return null;
             switch (target)
             {
-                case BuildTarget.Android: return importer => BaseFinalPath(importer, platformName);
                 case BuildTarget.StandaloneWindows:
                 case BuildTarget.StandaloneWindows64:
                 case BuildTarget.StandaloneOSX:
                 case BuildTarget.StandaloneLinux64:
                     return importer => DesktopFinalPath(importer, platformName, target);
+                case BuildTarget.Android:
+                    return importer => IsStaticLibrary(importer.assetPath) && string.IsNullOrEmpty(importer.GetPlatformData(platformName, "CPU"))
+                        ? Path.GetFileName(importer.assetPath)
+                        : UnknownFinalPath(importer, platformName);
                 default:
-                    Stubs.Ignored("PluginImporter.GetImporters", $"keeps every plug-in for {platformName}: which of two going to one place the platform's module leaves out is not known");
-                    return null;
+                    return importer => UnknownFinalPath(importer, platformName);
             }
         }
 
+        static string UnknownFinalPath(PluginImporter importer, string platformName)
+        {
+            if (importer.GetIsOverridable())
+                Stubs.Ignored("PluginImporter.GetImporters(" + platformName + ")",
+                    $"keeps {importer.assetPath}: whether the platform's module leaves out an overridable plug-in going to the same place in a build as another is not known");
+            return "";
+        }
+
+        /// <summary>The base rule (DefaultPluginImporterExtension.CalculateFinalPluginPath): a CPU's
+        /// folder, then the file name.</summary>
         static string BaseFinalPath(PluginImporter importer, string platformName)
         {
             var cpu = importer.GetPlatformData(platformName, "CPU");
@@ -468,10 +490,16 @@ namespace UnityEditor
         static readonly System.Text.RegularExpressions.Regex s_LinuxLibrary =
             new System.Text.RegularExpressions.Regex(@"\.so(\.[0-9]+)*$", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
 
+        static bool IsStaticLibrary(string path) =>
+            string.Equals(Path.GetExtension(path), ".a", StringComparison.OrdinalIgnoreCase);
+
         static bool IsCppSource(string path) =>
             Path.GetExtension(path).ToLowerInvariant() is ".cpp" or ".c" or ".h" or ".mm" or ".m";
 
-        static string DesktopFinalPath(PluginImporter importer, string platformName, BuildTarget target)
+        /// <summary>DesktopPluginImporterExtension.CalculateFinalPluginPath (Unity's own C#): "" for a
+        /// native plug-in the player cannot use or a CPU of None; Windows by its CPU folder, macOS by
+        /// the base rule, Linux by the file name.</summary>
+        internal static string DesktopFinalPath(PluginImporter importer, string platformName, BuildTarget target)
         {
             var path = importer.assetPath;
             bool native = importer.isNativePlugin;
