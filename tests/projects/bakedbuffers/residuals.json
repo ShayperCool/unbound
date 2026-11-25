@@ -34,7 +34,8 @@
     "LinearLamps.lightProbes.cellOrder": "12 of 12 cells in another place or corner order, first at [0, 1, 2, 3, 4, 5]",
     "SoftProbes.lightProbes.cellOrder": "12 of 12 cells in another place or corner order, first at [0, 1, 2, 3, 4, 5]",
     "SoftProbesArea.lightProbes.cellOrder": "12 of 12 cells in another place or corner order, first at [0, 1, 2, 3, 4, 5]",
-    "SoftProbesMore.lightProbes.cellOrder": "32 of 32 cells in another place or corner order, first at [0, 1, 2, 3, 4, 5]"
+    "SoftProbesMore.lightProbes.cellOrder": "32 of 32 cells in another place or corner order, first at [0, 1, 2, 3, 4, 5]",
+    "CookieSpot.lightProbes.cellOrder": "12 of 12 cells in another place or corner order, first at [0, 1, 2, 3, 4, 5]"
   },
   "The ambient occlusion of 26 texels of the LOD scene's lower-level renderers (LOD Group levels below 0): more of their rays (a few of 32) are occluded in the Editor than the LOD rules of the paths give; neither every level, LOD 0 alone, shadow casters alone, nor the own group's LOD 0 as well give the Editor's counts. Not chased: the buffer is read only with ambient occlusion on (said for lower-LOD renderers), and no scene with it on has LOD Groups.": {
     "Lod.lightmap0.ambientOcclusion": "26 of 4096 texels differ, first at [693, 694, 697, 757, 758, 761]"
