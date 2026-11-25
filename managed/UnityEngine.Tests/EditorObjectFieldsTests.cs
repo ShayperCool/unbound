@@ -247,6 +247,20 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
+        public void AnEngineScriptableObjectIsDropped()
+        {
+            using var release = TestRelease.Pin(TestRelease.Measured);
+            Reset();
+            var skin = ScriptableObject.CreateInstance<GUISkin>();
+            try
+            {
+                DragAndDrop.objectReferences = new Object[] { skin };
+                Assert.Same(skin, Pass(Drop(Body), () => EditorGUI.ObjectField(Field, null, typeof(GUISkin), true)));
+            }
+            finally { Object.DestroyImmediate(skin); Reset(); }
+        }
+
+        [Fact]
         public void AnEnumsOptionsAreMadeOnce()
         {
             var data = UnityEditor.EnumDataUtility.GetCachedEnumData(typeof(KeyCode), true);

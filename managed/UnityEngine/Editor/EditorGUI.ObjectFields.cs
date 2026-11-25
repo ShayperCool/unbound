@@ -262,8 +262,12 @@ namespace UnityEditor
             }
         }
 
+        /// <summary>Whether a script object's class has its script. The engine's own classes
+        /// (GUISkin, PanelSettings, ...) have theirs among the Editor's built-in scripts, which
+        /// Unbound does not list as assets.</summary>
         static bool HasValidScript(Object obj)
         {
+            if (obj.GetType().Assembly == typeof(Object).Assembly) return true;
             MonoScript script = obj is MonoBehaviour behaviour ? MonoScript.FromMonoBehaviour(behaviour)
                 : obj is ScriptableObject scriptable ? MonoScript.FromScriptableObject(scriptable) : null;
             return script != null && script.GetClass() != null;
