@@ -898,8 +898,6 @@ namespace UnityEngine
             {
                 var lights = Lights(file, path, settings.maxBounces);
                 var probes = Probes(file);
-                if (probes.Count > 0 && ProbesMissLights(file))
-                    Approximated("probes-soft:" + path, $"{path}: its light probes would take the light of area lights or lights with soft baked shadows, which Unbound's bake (Lightmapping.Bake) does not sample for light probes yet.");
                 string Request(bool layoutOnly, object indirect) => JsonSerializer.Serialize(new
                 {
                     maxSize = settings.lightmapMaxSize,
