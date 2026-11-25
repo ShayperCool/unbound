@@ -11,9 +11,9 @@ measures, in a game's `OnGUI`:
 - a scripted sequence of mouse and keyboard events, one per frame in place of the frame's
   Repaint, given to controls at fixed rects: a foldout's arrow and label clicked (the label toggles
   only with `toggleOnLabelClick`), a click that ends off the arrow, left and right arrows on the
-  focused foldout, and a min-max slider's thumb, each of its ends, the track beside it and the
-  track's start pressed and dragged; the int popup's key step starts again from the slider's
-  initial values.
+  focused foldout, and a min-max slider's thumb, a track click beside it, each of its ends (from
+  3..7), the track beside it and the track's start pressed and dragged; the int popup's key step
+  starts again from the slider's initial values.
 
 ```sh
 UNBOUND_PROBE_UNITY_VERSION=6000.0.71f1 python3 tests/projects/editorfoldoutfields/run.py record --label native-a
@@ -22,4 +22,6 @@ UNBOUND_PROBE_UNITY_VERSION=6000.0.71f1 python3 tests/projects/editorfoldoutfiel
 UNBOUND_PROBE_UNITY_VERSION=6000.0.71f1 python3 tests/projects/editorfoldoutfields/run.py gate
 ```
 
-The engine run keeps the window focused (`--focus 1:on`).
+The engine run keeps the window focused (`--focus 1:on`). Residual (`residuals.json`): the
+track click's values differ in the last float bits (the Editor's Mono evaluates the slider's
+arithmetic with wider intermediates).

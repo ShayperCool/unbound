@@ -171,8 +171,10 @@ public sealed class EditorFoldoutFieldsProbe : MonoBehaviour
         ("minMax.thumb.down", () => Mouse(EventType.MouseDown, new Vector2(MinMaxRect.x + 80, MinMaxRect.center.y))),
         ("minMax.thumb.drag", () => Mouse(EventType.MouseDrag, new Vector2(MinMaxRect.x + 100, MinMaxRect.center.y), new Vector2(20, 0))),
         ("minMax.thumb.up", () => Mouse(EventType.MouseUp, new Vector2(MinMaxRect.x + 100, MinMaxRect.center.y))),
-        // After the thumb step (about 3.05..7.05, 19 points per unit) the thumb spans x 67..155:
-        // its 6-point ends resize it.
+        // A press on the track beside the thumb (about 3.05..7.05) moves the thumb to the press.
+        ("minMax.click.down", () => Mouse(EventType.MouseDown, new Vector2(MinMaxRect.x + 160, MinMaxRect.center.y))),
+        ("minMax.click.up", () => Mouse(EventType.MouseUp, new Vector2(MinMaxRect.x + 160, MinMaxRect.center.y))),
+        // From 3..7 again (19 points per unit) the thumb spans x 66..154: its 6-point ends resize it.
         ("minMax.maxEnd.down", () => Mouse(EventType.MouseDown, new Vector2(MinMaxRect.x + 142, MinMaxRect.center.y))),
         ("minMax.maxEnd.drag", () => Mouse(EventType.MouseDrag, new Vector2(MinMaxRect.x + 162, MinMaxRect.center.y), new Vector2(20, 0))),
         ("minMax.maxEnd.up", () => Mouse(EventType.MouseUp, new Vector2(MinMaxRect.x + 162, MinMaxRect.center.y))),
@@ -228,7 +230,9 @@ public sealed class EditorFoldoutFieldsProbe : MonoBehaviour
         var real = Event.current;
         var step = Script[m_Step];
         var scripted = step.Make();
-        // The popup step starts from the slider's initial values, so it is compared on its own.
+        // The end steps start from 3..7 and the popup step from the slider's initial values, so
+        // each is compared on its own.
+        if (step.Name == "minMax.maxEnd.down") { m_Min = 3f; m_Max = 7f; }
         if (step.Name == "popup.key") { m_Min = 2f; m_Max = 6f; }
         Event.current = scripted;
         object[] answer;
