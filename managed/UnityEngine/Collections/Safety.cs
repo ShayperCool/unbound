@@ -291,17 +291,19 @@ namespace Unbound.Runtime
         /// Profiler.GetTempAllocatorSize reports (measured: tests/projects/appfacts).</summary>
         internal const int MainTempBlockSize = 16 << 20;
 
-        /// <summary>The block of a job worker's temp allocator: 256 KiB, the default job worker
-        /// temp allocator block size of Unity's memory settings (the Manual's "Memory allocator
-        /// customization"; not measured).</summary>
+        /// <summary>The block of a job worker's temp allocator: 256 KiB, the job worker block size
+        /// the Unity 6000.0 Manual documents (Native memory allocator reference); not measured.</summary>
         internal const int JobTempBlockSize = 256 << 10;
 
         /// <summary>
         /// The temp memory handles of a scope (the main thread's frame, a job's execution), all
         /// released when it ends, and its temp memory. A scope that ends allocates as Unity's temp
         /// allocator does, from a stack: one block, each allocation after the previous one, the
-        /// whole block free again when the scope ends; what does not fit in the block comes from
-        /// the heap (Unity falls back the same way). So writing a little past the newest allocation
+        /// whole block free again when the scope ends. What does not fit in the block comes from
+        /// the heap; Unity first grows the block and then falls back to another linear allocator
+        /// before its heap (the Unity 6000.0 Manual, Native memory allocators), which is not
+        /// modelled, nor is freeing the newest allocation early (Free does nothing until the scope
+        /// ends, as com.unity.collections documents for Temp). So writing a little past the newest allocation
         /// lands in the block's free part, as it does in Unity: a package's development-build
         /// clear of a grown Temp buffer reaches past it (com.unity.multiplayer.tools
         /// FastBufferWriter.Grow clears sizeof(WriterHandle) bytes more than it allocates).

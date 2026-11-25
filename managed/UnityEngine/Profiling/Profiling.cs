@@ -754,7 +754,7 @@ namespace UnityEngine.Profiling
         /// <summary>The Editor's main-thread temp allocator: 16 MiB, which a request does not change
         /// in Play mode (measured: tests/projects/appfacts).</summary>
         [Unbound.EditorFaithful("measured: tests/projects/appfacts")]
-        public static uint GetTempAllocatorSize() => 16u << 20;
+        public static uint GetTempAllocatorSize() => (uint)Unbound.Runtime.Safety.MainTempBlockSize;
         [Unbound.EditorFaithful("measured: tests/projects/appfacts (accepted, the size stays)")]
         public static bool SetTempAllocatorRequestedSize(uint size) => true;
 

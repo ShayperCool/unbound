@@ -667,7 +667,11 @@ namespace Unbound.Runtime.Jobs
             int previousIndex = t_ThreadIndex;
             t_Executing = record;
             t_FreeJobScopes ??= new Stack<Safety.TempScope>();
-            t_JobScope = t_FreeJobScopes.TryPop(out var availableScope) ? availableScope : new Safety.TempScope(blockSize: Safety.JobTempBlockSize);
+            // A worker's or the main thread's job scope keeps a temp stack block; a thread that only
+            // completes a job now and then (a pool thread) takes its temp memory from the heap, so
+            // no block outlives it.
+            t_JobScope = t_FreeJobScopes.TryPop(out var availableScope) ? availableScope
+                : new Safety.TempScope(blockSize: threadIndex != 0 || PlayerLoopDriver.IsMainThread ? Safety.JobTempBlockSize : 0);
             // A thread that is neither a worker nor the main thread runs a job as a worker would.
             t_ThreadIndex = threadIndex != 0 || PlayerLoopDriver.IsMainThread ? threadIndex : 1;
             byte* data = record.Data;

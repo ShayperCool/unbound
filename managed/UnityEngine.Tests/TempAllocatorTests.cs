@@ -1,3 +1,5 @@
+using System;
+using System.Reflection;
 using Unbound.Runtime;
 using Unity.Collections;
 using Unity.Collections.LowLevel.Unsafe;
@@ -11,8 +13,54 @@ namespace UnityEngine.Tests
     /// after the previous one in the scope's block, the block free again when the scope ends, the
     /// heap for what the block cannot hold.
     /// </summary>
+    [Collection("Frames")]
     public unsafe class TempAllocatorTests
     {
+        static readonly FieldInfo MainThread = typeof(PlayerLoopDriver).GetField("s_MainThreadId", BindingFlags.Static | BindingFlags.NonPublic);
+
+        /// <summary>A booted game's main thread takes its Temp memory from the frame's stack block,
+        /// which the end of the frame frees as a whole.</summary>
+        [Fact]
+        public void TheMainThreadsTempMemoryIsTheFramesStack()
+        {
+            var previous = MainThread.GetValue(null);
+            MainThread.SetValue(null, Environment.CurrentManagedThreadId);
+            try
+            {
+                Safety.EndFrame();
+                byte* first = (byte*)UnsafeUtility.Malloc(64, 1, Allocator.Temp);
+                byte* second = (byte*)UnsafeUtility.Malloc(8, 8, Allocator.Temp);
+                Assert.True(second == first + 64);
+                Assert.True(Safety.CurrentScope.InBlock(first, 64 + 40));
+                Safety.EndFrame();
+                Assert.True(UnsafeUtility.Malloc(64, 1, Allocator.Temp) == first);
+            }
+            finally
+            {
+                Safety.EndFrame();
+                MainThread.SetValue(null, previous);
+            }
+        }
+
+        /// <summary>Before a game boots (tools, tests: every thread counts as the main thread) Temp
+        /// memory comes from the heap.</summary>
+        [Fact]
+        public void BeforeBootTempMemoryComesFromTheHeap()
+        {
+            var previous = MainThread.GetValue(null);
+            MainThread.SetValue(null, -1);
+            try
+            {
+                byte* memory = (byte*)UnsafeUtility.Malloc(64, 1, Allocator.Temp);
+                Assert.False(Safety.CurrentScope.InBlock(memory, 1));
+            }
+            finally
+            {
+                Safety.EndFrame();
+                MainThread.SetValue(null, previous);
+            }
+        }
+
         [Fact]
         public void AScopesTempMemoryIsAStack()
         {
