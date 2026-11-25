@@ -67,9 +67,7 @@
   "projection/target 160x90",
   "projection/target 320x180"
  ],
- "Camera.worldToCameraMatrix: the Editor's is the transform's worldToLocalMatrix with its third row negated (apart from signs of zero); Unbound inverts the single-precision TRS in double precision (switch queued, camera matrices row)": [
-  "world to camera/child of nonuniform parent",
-  "world to camera/child of scaled parent",
+ "Camera.worldToCameraMatrix of a root camera: the Editor's is the transform's worldToLocalMatrix with its third row negated (apart from signs of zero); Unbound inverts the single-precision TRS in double precision (switch queued, docs/COMPATIBILITY_GAPS.md camera matrices row)": [
   "world to camera/euler -89 0 0 at 0",
   "world to camera/euler -89 0 0 at 1",
   "world to camera/euler -89 0 0 at 2",
@@ -100,6 +98,10 @@
   "world to camera/quaternion 0.08715574 0 0 0.9961947 at 1",
   "world to camera/quaternion 0.08715574 0 0 0.9961947 at 2",
   "world to camera/quaternion 0.08715574 0 0 0.9961947 at 3"
+ ],
+ "Camera.worldToCameraMatrix under a scaled parent: the Editor's view has no scale (it is not the worldToLocalMatrix then); Unbound's differs in last bits; rule not identified (camera matrices row)": [
+  "world to camera/child of nonuniform parent",
+  "world to camera/child of scaled parent"
  ],
  "Transform.worldToLocalMatrix: signs of zero differ from the Editor's (rule not identified, camera matrices row)": [
   "world to local/euler -89 0 0 at 0",

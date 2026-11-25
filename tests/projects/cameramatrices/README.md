@@ -25,8 +25,9 @@ Measured in the Unity 6000.0.71f1 Editor (Linux, OpenGL Core; two identical batc
 Unbound matches 92 of the 198 rows; `residuals.json` lists the other 106 with their causes. The
 Editor's `projectionMatrix` is the single-precision `Matrix4x4.Perspective` at every measured field
 of view and aspect, where Unbound's camera uses its double-precision variant (one or two float
-steps apart); its `worldToCameraMatrix` is the transform's `worldToLocalMatrix` with the third row
-negated (apart from signs of zero), where Unbound inverts the TRS in double precision; the other
+steps apart); for a root camera its `worldToCameraMatrix` is the transform's `worldToLocalMatrix` with the
+third row negated (apart from signs of zero), where Unbound inverts the TRS in double precision
+(under a scaled parent the Editor's view has no scale: rule not identified); the other
 inverse matrices differ in last bits and signs of zero. These were found while tracing the STP
 upscaler's residual (docs/COMPATIBILITY_GAPS.md, Q227); making the 60-degree projection and the
 view rotation bit-equal did not change that residual. Switching the camera's matrices to these
