@@ -102,6 +102,10 @@ places and turned at random angles, in a system of sixteen, unless said otherwis
   motion vectors with a target offset reads a value it does not declare and does not compile
   in the Editor either: its system still simulates, and the lines are drawn without motion; a
   lit strip output compiles with no motion vector pass.
+  `MovingBareGraph`, `MovingLinesTarget`: twenty quads of an unlit Shader Graph of the render
+  pipeline without properties (`Assets/Graphs/Bare.shadergraph`, its image a node's own texture;
+  such a graph's motion vector pass zeroes a struct that holds an empty one), and twenty lines
+  to target positions that stay where they were set.
 - `SingleMesh`: two single mesh outputs (`Output Single Mesh`) of the probe's wedge, turned
   and scaled by their transforms: one through the render pipeline's unlit shader (both
   submeshes, its colour an exposed property of the output), one through its lit shader (the
@@ -224,6 +228,7 @@ effect's alive count, whether it is culled and awake, its renderer's state).
   `MovingGraph` and `MovingStrip` the same way, after the point and line stages.
 - `moving points`, `moving lines`, `moving turning`, `moving lit mesh`, `moving lit strip`:
   those graphs the same way, after the Forward+ stages.
+- `moving bare graph`, `moving lines target`: those graphs the same way, after them.
 - `points`, `points listed`, `lines`, `lines listed`, `lines soft`, `points dying`, `lines dying`,
   `lines offset`: those graphs at frame 5.
 - `decal`: `LitDecal` projected onto a lit wall through the renderer with the decal feature,
@@ -246,10 +251,10 @@ adds to that is not separated.
 
 ## Not covered
 
-- Motion vectors of unlit Shader Graphs, Shader Graph meshes and lines to a target position, and
-  of particles that change size other than by a factor at each update (lit and unlit quads and
-  meshes, lit Shader Graph quads, unlit strips, points and quads that turn and grow are
-  measured here, `moving *`; half transparent quads, cubes and lit strips compile with no
+- Motion vectors of Shader Graph meshes, and of particles that change size other than by a
+  factor at each update (lit and unlit quads and meshes, lit and unlit Shader Graph quads,
+  unlit strips, points, lines to a target position and quads that turn and grow are measured
+  here, `moving *`; half transparent quads, cubes and lit strips compile with no
   motion vector pass, and lines to a target offset are drawn without motion; unlit quads in
   `tests/projects/vfxoutputs`).
   Strips lit by 2D lights and meshes chosen among several by
