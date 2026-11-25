@@ -335,6 +335,9 @@ namespace UnityEngine.Tests
                     environment.directionalityMode = LightmapsMode.CombinedDirectional;
                     Assert.Contains("Indirect Intensity", Unwritten(environment, "Assets/Scenes/Lit", true, lightmaps: true));
                     environment.directionalityMode = LightmapsMode.NonDirectional;
+                    environment.mixedBakeMode = MixedLightingMode.Subtractive;
+                    Assert.Contains("Indirect Intensity other than 1 in the Shadowmask", Unwritten(environment, "Assets/Scenes/Lit", true, lightmaps: true));
+                    environment.mixedBakeMode = MixedLightingMode.IndirectOnly;
                     environment.indirectScale = 1f;
                     Assert.Null(Unwritten(environment, "Assets/Scenes/Lit", true, lightmaps: true));
                     environment.lightmapCompression = LightmapCompression.NormalQuality;

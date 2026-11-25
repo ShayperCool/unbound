@@ -376,7 +376,8 @@ whole bake of a scene still failed is not published. Not measured: back-face tex
 texel holding its own light reaches (a chart all of whose texels met back faces: Unbound keeps
 their light and spreads none from them), Backface Tolerances other than 0.9 and padding other
 than 2 (the runner refuses another Backface Tolerance), directional lightmaps
-with an Indirect Intensity other than 1 (said, not written), the OptiX denoiser (the Editor runs
+and the Shadowmask and Subtractive modes with an Indirect Intensity other than 1 (said, not
+written), the OptiX denoiser (the Editor runs
 it only on Windows), the Editor's denoiser on macOS (another build of the library, on another
 processor), the texels beyond the padding; of the filters: the A-Trous filter with 4 x 4 samples a texel (only 2 x
 2 measured; it reads each texel's first sample's normal), the ambient occlusion target, charts
