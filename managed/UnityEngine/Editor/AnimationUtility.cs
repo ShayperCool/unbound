@@ -342,11 +342,11 @@ namespace UnityEditor
                     // properties, a skinned mesh's blend shapes, constraint sources, and material slots
                     // other than the fresh component's.
                     if (engine.Materials || component is Renderer withMaterials && Array.Exists(withMaterials.sharedMaterials, m => m != null))
-                        Unbound.Runtime.Stubs.Ignored("AnimationUtility.GetAnimatableBindings", "lists no material property bindings of a renderer's materials");
+                        Unbound.Runtime.Stubs.Ignored("AnimationUtility.GetAnimatableBindings material properties", "lists no material property bindings of a renderer's materials");
                     if (component is SkinnedMeshRenderer { sharedMesh: { blendShapeCount: > 0 } })
-                        Unbound.Runtime.Stubs.Ignored("AnimationUtility.GetAnimatableBindings", "lists no blend shape bindings");
+                        Unbound.Runtime.Stubs.Ignored("AnimationUtility.GetAnimatableBindings blend shapes", "lists no blend shape bindings");
                     if (component is UnityEngine.Animations.IConstraint { sourceCount: > 0 })
-                        Unbound.Runtime.Stubs.Ignored("AnimationUtility.GetAnimatableBindings", "lists no constraint source bindings");
+                        Unbound.Runtime.Stubs.Ignored("AnimationUtility.GetAnimatableBindings constraint sources", "lists no constraint source bindings");
                     foreach (var name in engine.Floats) list.Add(EditorCurveBinding.FloatCurve(path, type, name));
                     int slots = 0;
                     foreach (var name in engine.Objects)
@@ -355,11 +355,11 @@ namespace UnityEditor
                         if (name.StartsWith("m_Materials.Array.data[", StringComparison.Ordinal)) slots++;
                     }
                     if (slots > 0 && component is Renderer renderer && renderer.sharedMaterials.Length != slots)
-                        Unbound.Runtime.Stubs.Ignored("AnimationUtility.GetAnimatableBindings", "lists the material slots of a fresh renderer only (other material counts are unmeasured)");
+                        Unbound.Runtime.Stubs.Ignored("AnimationUtility.GetAnimatableBindings material slots", "lists the material slots of a fresh renderer only (other material counts are unmeasured)");
                     continue;
                 }
                 if (component is not MonoBehaviour)
-                    Unbound.Runtime.Stubs.Ignored("AnimationUtility.GetAnimatableBindings", "lists an unmeasured engine component's serialized numbers and flags (" + type.FullName + ")");
+                    Unbound.Runtime.Stubs.Ignored("AnimationUtility.GetAnimatableBindings unmeasured components", "lists an unmeasured engine component's serialized numbers and flags (" + type.FullName + ")");
                 using var so = new SerializedObject(component);
                 var it = so.GetIterator();
                 for (bool enter = true; it.NextVisible(enter); enter = false)
