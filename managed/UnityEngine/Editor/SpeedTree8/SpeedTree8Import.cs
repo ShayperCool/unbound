@@ -96,7 +96,7 @@ namespace Unbound.SpeedTree
                 m_Name = Path.GetFileNameWithoutExtension(path);
                 int slash = path.LastIndexOf('/');
                 m_Folder = slash >= 0 ? path.Substring(0, slash + 1) : "";
-                m_Scale = importer.scaleFactor;
+                m_Scale = importer.ImportScale;
                 m_Levels = importer.ImportLevels();
                 m_External = importer.GetExternalObjectMap();
                 m_External8 = importer.materialLocation == SpeedTreeImporter.MaterialLocation.External;
@@ -119,14 +119,23 @@ namespace Unbound.SpeedTree
                 var lods = new LOD[lodCount];
                 for (int i = 0; i < lodCount; i++) lods[i] = new LOD(m_Levels[i].Height, new Renderer[] { CreateLevel(i) });
                 if (m_Importer.generateColliders) CreateColliders();
+                // Without smooth transitions the group keeps its defaults (no fade mode, no animated
+                // cross-fading). With them, cross-fading that is not animated fades the last level
+                // over the fade-out width and, before a billboard level, the last mesh level over the
+                // billboard transition width (tests/projects/speedtree8 Card_Units0, Field_Embedded).
+                bool smooth = m_Importer.enableSmoothLODTransition;
+                if (smooth && lodCount > 0 && !m_Importer.animateCrossFading)
+                {
+                    lods[lodCount - 1].fadeTransitionWidth = m_Importer.fadeOutWidth;
+                    if (m_Tree.LastLodIsBillboard && lodCount > 2)
+                        lods[lodCount - 2].fadeTransitionWidth = m_Importer.billboardTransitionCrossFadeWidth;
+                }
                 group.SetLODs(lods);
-                if (m_Importer.enableSmoothLODTransition)
+                if (smooth)
                 {
                     group.fadeMode = LODFadeMode.SpeedTree;
                     group.animateCrossFading = m_Importer.animateCrossFading;
                     group.lastLODBillboard = m_Tree.LastLodIsBillboard;
-                    // The levels' fade widths stay 0 (measured with animated cross-fading; the
-                    // SpeedTree 9 importer keeps 0 without it too).
                 }
                 group.RecalculateBounds();
             }
@@ -272,13 +281,13 @@ namespace Unbound.SpeedTree
             {
                 string name = source.Name.EndsWith("_Mat", StringComparison.Ordinal) ? source.Name.Substring(0, source.Name.Length - 4) : source.Name;
                 string identifier = m_External8 || level.Overrides ? name + "_LOD" + lod.ToString(CultureInfo.InvariantCulture) : name;
+                // A remap whose target is gone leaves the slot empty (tests/projects/speedtree8 Card_Dangling).
                 if (m_External.TryGetValue(new AssetImporter.SourceAssetIdentifier(typeof(Material), identifier), out var remapped))
                     return remapped as Material;
                 if (m_ByIdentifier.TryGetValue(identifier, out var made)) return made;
                 if (m_External8)
                     throw new NotSupportedException($"{m_Path}: its External material {identifier} is not in its .meta's externalObjects; Unbound does not write the Editor's materials into {m_Importer.materialFolderPath}");
-                var shader = Shader.Find("Nature/SpeedTree8");
-                if (shader == null) throw new InvalidOperationException("the Nature/SpeedTree8 shader is missing");
+                var shader = MaterialShader();
                 var material = new Material(shader) { name = identifier };
                 material.SetColor("_Color", m_Importer.mainColor);
                 var color = Map(source, 0, out _);
@@ -295,13 +304,10 @@ namespace Unbound.SpeedTree
                     material.SetFloat("_Metallic", 1f);
                 }
                 else if (extraUsed)
-                {
-                    // A map without a texture gives its color (the SpeedTree 9 importer's rule; unmeasured).
-                    var c = source.Maps[2];
-                    material.SetFloat("_Glossiness", c.R);
-                    material.SetFloat("_Metallic", c.G);
-                }
+                    Stubs.Ignored("SpeedTree 8 extra maps without a texture", "keep the shader's smoothness and metallic: what the Editor sets for them is unmeasured");
                 if (extraUsed) material.EnableKeyword("EFFECT_EXTRA_TEX");
+                if (extra != null && AssetImporter.GetAtPath(AssetDatabase.GetAssetPath(extra)) is TextureImporter { sRGBTexture: true })
+                    Stubs.Ignored("SpeedTree 8 extra maps in sRGB", "stay sRGB: the Editor's SpeedTree postprocessor turns it off and imports them again (" + AssetDatabase.GetAssetPath(extra) + ")");
                 if (source.TwoSided || source.Billboard)
                 {
                     var subsurface = Map(source, 3, out bool subsurfaceUsed);
@@ -315,12 +321,31 @@ namespace Unbound.SpeedTree
                 material.SetFloat("_TwoSided", source.TwoSided ? 0f : 2f);
                 int quality = Mathf.Clamp(level.WindQuality, 0, SpeedTreeImporter.windQualityNames.Length - 1);
                 material.SetFloat("_WindQuality", quality);
-                material.EnableKeyword("_WINDQUALITY_" + SpeedTreeImporter.windQualityNames[quality].ToUpperInvariant());
+                // One wind quality keyword: the level's (not the shader's default None).
+                for (int q = 0; q < SpeedTreeImporter.windQualityNames.Length; q++)
+                {
+                    string keyword = "_WINDQUALITY_" + SpeedTreeImporter.windQualityNames[q].ToUpperInvariant();
+                    if (q == quality) material.EnableKeyword(keyword);
+                    else material.DisableKeyword(keyword);
+                }
                 material.enableInstancing = true;
                 material.doubleSidedGI = source.TwoSided;
                 m_ByIdentifier[identifier] = material;
                 m_Materials.Add((identifier, material));
                 return material;
+            }
+
+            /// <summary>Nature/SpeedTree8 (the measured built-in pipeline's); under a render pipeline
+            /// its SpeedTree 8 shader, with the same settings (unmeasured, reported).</summary>
+            Shader MaterialShader()
+            {
+                var pipeline = GraphicsSettings.currentRenderPipeline;
+                if (pipeline != null && pipeline.defaultSpeedTree8Shader != null)
+                {
+                    Stubs.Ignored("SpeedTree 8 materials under a render pipeline", "take the pipeline's SpeedTree 8 shader with the built-in shader's settings: the Editor's materials there are unmeasured");
+                    return pipeline.defaultSpeedTree8Shader;
+                }
+                return Shader.Find("Nature/SpeedTree8") ?? throw new InvalidOperationException("the Nature/SpeedTree8 shader is missing");
             }
 
             static void Toggle(Material material, string property, string keyword, bool on)
@@ -358,8 +383,9 @@ namespace Unbound.SpeedTree
                     float radius = collision.Radius * m_Scale;
                     go.transform.localPosition = (a + b) * 0.5f;
                     var along = b - a;
-                    // Ends 0.03 apart make a capsule (measured); only ends that meet make a sphere.
-                    if (along == Vector3.zero)
+                    // Only ends that meet make a sphere: 0.0003 apart is a capsule (tests/projects/speedtree8
+                    // Card_Spheres).
+                    if (along.x == 0f && along.y == 0f && along.z == 0f)
                     {
                         go.AddComponent<SphereCollider>().radius = radius;
                         continue;

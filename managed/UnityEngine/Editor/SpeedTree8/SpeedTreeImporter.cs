@@ -87,9 +87,16 @@ namespace UnityEditor
             get { CheckImporterState("get_isV8"); return string.Equals(System.IO.Path.GetExtension(assetPath), ".st", StringComparison.OrdinalIgnoreCase); }
         }
 
+        /// <summary>The render pipeline's SpeedTree shader, else the built-in one.</summary>
         public Shader defaultShader
         {
-            get { CheckImporterState("get_defaultShader"); return Shader.Find(isV8 ? "Nature/SpeedTree8" : "Nature/SpeedTree"); }
+            get
+            {
+                CheckImporterState("get_defaultShader");
+                var pipeline = UnityEngine.Rendering.GraphicsSettings.currentRenderPipeline;
+                var shader = pipeline == null ? null : isV8 ? pipeline.defaultSpeedTree8Shader : pipeline.defaultSpeedTree7Shader;
+                return shader != null ? shader : Shader.Find(isV8 ? "Nature/SpeedTree8" : "Nature/SpeedTree");
+            }
         }
 
         /// <summary>SpeedTree 7's billboard shader; none for SpeedTree 8, whose billboards are mesh levels.</summary>
@@ -98,9 +105,13 @@ namespace UnityEditor
             get { CheckImporterState("get_defaultBillboardShader"); return isV8 ? null : Shader.Find("Nature/SpeedTree Billboard"); }
         }
 
+        /// <summary>The import scale: the unit conversion's (Leave As Is 1, feet, centimetres and
+        /// inches to metres, Custom the .meta's <c>scaleFactor</c>); an older .meta without a unit
+        /// conversion has its <c>scaleFactor</c> (tests/projects/speedtree8 Card_Units0, Card_Inches,
+        /// Card_Custom: the getter answers the scale the import uses).</summary>
         public float scaleFactor
         {
-            get { CheckImporterState("get_scaleFactor"); return F("scaleFactor", 1f); }
+            get { CheckImporterState("get_scaleFactor"); return ImportScale; }
             set { CheckImporterState("set_scaleFactor"); Unsupported("scaleFactor"); }
         }
 
@@ -336,6 +347,22 @@ namespace UnityEditor
             var result = new Level[levels.Length];
             for (int i = 0; i < result.Length; i++) result[i] = new Level(this, levels[i]);
             return result;
+        }
+
+        internal float ImportScale
+        {
+            get
+            {
+                if (MetaSettings.Find(m_Settings, "unitConversionEnumValue") == null) return F("scaleFactor", 1f);
+                switch (I("unitConversionEnumValue"))
+                {
+                    case 0: return 1f;
+                    case 1: return UnityEditor.SpeedTree.Importer.SpeedTreeConstants.kFeetToMetersRatio;
+                    case 2: return UnityEditor.SpeedTree.Importer.SpeedTreeConstants.kCentimetersToMetersRatio;
+                    case 3: return UnityEditor.SpeedTree.Importer.SpeedTreeConstants.kInchesToMetersRatio;
+                    default: return F("scaleFactor", 1f);
+                }
+            }
         }
 
         /// <summary>The settings' file id kind: 0 class number counters, 1 names, 2 hierarchy paths.</summary>
