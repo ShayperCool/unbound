@@ -121,8 +121,14 @@ public static class EditorUIProbe
         }
     }
 
+    // EDITORUI_PROBE_SKIP: comma-separated call names left out of a run (the windowed Editor
+    // waits for a click on each dialog, so its record skips the EditorUtility.DisplayDialog calls).
+    static readonly string[] s_Skip = (Environment.GetEnvironmentVariable("EDITORUI_PROBE_SKIP") ?? "")
+        .Split(',', StringSplitOptions.RemoveEmptyEntries);
+
     static void Call(string name, Func<object> f)
     {
+        if (Array.IndexOf(s_Skip, name) >= 0) return;
         var logs = new List<string>();
         Application.LogCallback handler = (message, trace, type) => logs.Add(type + ": " + message.Split('\n')[0]);
         Application.logMessageReceived += handler;

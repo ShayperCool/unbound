@@ -1,6 +1,6 @@
 # Editor UI API without editor windows
 
-Unbound has no editor windows, so editor GUI code runs as in the batch-mode Editor. `EditorUIProbe`
+Unbound plays as the interactive Editor (`Application.isBatchMode` is false). `EditorUIProbe`
 (an editor script, run when Play mode starts) calls the Editor UI API the packages use most — the
 IMGUI editor state (indent, change checks, disabled and mixed-value scopes), metrics and content
 (EditorGUIUtility), EditorStyles, the editor field functions outside OnGUI, property heights (with
@@ -9,13 +9,28 @@ custom and built-in inspectors), generic menus and dialogs, tree views and multi
 drag and drop, handles and scene views, curve bindings and AnimationUtility — and records each
 call's result, exception and logs.
 
-Measured (see `managed/UnityEngine/Editor/EditorGUIState.cs`, `Editors.cs`, `TreeViews.cs`,
+Measured (see `managed/UnityEngine/Editor/EditorGUIState.cs`, `Editors.cs`, `TreeView/`,
 `AnimationUtility.cs`): the state and the measurements work anywhere; drawing outside OnGUI throws
 (a NullReferenceException; IMGUI's own controls an ArgumentException), and so do EditorStyles in Play
-mode; dialogs are cancelled; a TreeView's rows, expansion, search and selection live in its state;
+mode in the batch-mode Editor; dialogs are cancelled; a TreeView's rows, expansion, search and selection live in its state;
 editors get their targets before OnEnable; a non-legacy clip keeps a Transform's vector curves
 whole. `Editor/Data/editor-icons-6000.0.txt` is the Editor's icon names (the textures of
 `Editor/Data/Resources/unity editor resources`, listed by `tools/builtin-resources/names.py`).
+
+The reference was recorded in the batch-mode Editor, a context Unbound does not model. Rows
+re-recorded in the windowed Editor (two identical captures, the `EditorUtility.DisplayDialog*`
+calls left out with `EDITORUI_PROBE_SKIP`, since the windowed Editor waits for a click on a dialog;
+every other row of those captures was compared with the batch reference): `TreeView.metrics` (the
+interactive Editor's styles exist before any GUI has run: foldout width 11, no log). The windowed
+captures also differ in the `EditorStyles.*` rows, `EditorGUI.PrefixLabel`,
+`EditorGUI.GetPropertyHeight.area`, `.noChildren.area`, `.afterHeader`, `.noChildren.afterHeader`
+(the styles exist outside a GUI pass) and the logs of `Handles.PositionHandle` and `Handles.Button`;
+those rows keep the batch answer until Q757 re-records them. The dialog rows stay batch-mode
+answers (unmeasured in the windowed Editor).
+
+    EDITORUI_PROBE_OUT=<dir> EDITORUI_PROBE_SKIP=EditorUtility.DisplayDialog,EditorUtility.DisplayDialog.cancel,EditorUtility.DisplayDialogComplex \
+        python3 tests/private_display.py --gpu -- ~/Unity/Hub/Editor/6000.0.71f1/Editor/Unity \
+        -projectPath <private copy of tests/projects/editorui> -executeMethod ProbeRunner.Record -logFile <log>
 
 Make the probe scene (once; it is committed):
 
