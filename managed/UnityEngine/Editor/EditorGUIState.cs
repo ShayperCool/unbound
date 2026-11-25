@@ -371,9 +371,6 @@ namespace UnityEditor
         public static bool Toggle(bool value, params GUILayoutOption[] options) => EditorGUIControls.Toggle(Line(options), GUIContent.none, value);
         public static bool Toggle(string label, bool value, params GUILayoutOption[] options) => EditorGUIControls.Toggle(Line(options), new GUIContent(label), value);
         public static bool Toggle(GUIContent label, bool value, params GUILayoutOption[] options) => EditorGUIControls.Toggle(Line(options), label, value);
-        public static Enum EnumPopup(Enum selected, params GUILayoutOption[] options) => EditorGUIControls.EnumPopup(Line(options), GUIContent.none, selected);
-        public static Enum EnumPopup(string label, Enum selected, params GUILayoutOption[] options) => EditorGUIControls.EnumPopup(Line(options), new GUIContent(label), selected);
-        public static Enum EnumPopup(GUIContent label, Enum selected, params GUILayoutOption[] options) => EditorGUIControls.EnumPopup(Line(options), label, selected);
         public static bool Foldout(bool foldout, string content) => EditorGUIControls.Foldout(Line(null), foldout, new GUIContent(content));
         public static bool Foldout(bool foldout, GUIContent content) => EditorGUIControls.Foldout(Line(null), foldout, content);
         public static bool Foldout(bool foldout, string content, bool toggleOnLabelClick) => EditorGUIControls.Foldout(Line(null), foldout, new GUIContent(content));
@@ -394,9 +391,6 @@ namespace UnityEditor
                 rect = GetControlRect(label == null || label.text != string.Empty || label.image != null, EditorGUI.GetPropertyHeight(property, label, includeChildren), options);
             return EditorGUI.PropertyField(rect, property, label, includeChildren);
         }
-        public static Object ObjectField(Object obj, Type objType, bool allowSceneObjects, params GUILayoutOption[] options) => EditorGUIControls.ObjectField(Line(options), GUIContent.none, obj, objType);
-        public static Object ObjectField(string label, Object obj, Type objType, bool allowSceneObjects, params GUILayoutOption[] options) => EditorGUIControls.ObjectField(Line(options), new GUIContent(label), obj, objType);
-        public static Object ObjectField(GUIContent label, Object obj, Type objType, bool allowSceneObjects, params GUILayoutOption[] options) => EditorGUIControls.ObjectField(Line(options), label, obj, objType);
         public static Rect GetControlRect(params GUILayoutOption[] options) => GetControlRect(true, options);
         public static Rect GetControlRect(bool hasLabel, params GUILayoutOption[] options) =>
             GetControlRect(hasLabel, EditorGUIUtility.singleLineHeight, options);
@@ -708,18 +702,6 @@ namespace UnityEditor
 
         internal static bool Foldout(Rect position, bool foldout, GUIContent content) => GUI.Toggle(EditorGUI.IndentedRect(position), foldout, content);
 
-        internal static Enum EnumPopup(Rect position, GUIContent label, Enum selected)
-        {
-            GUI.Label(Field(position, label), selected?.ToString() ?? "");
-            return selected;
-        }
-
-        internal static Object ObjectField(Rect position, GUIContent label, Object obj, Type type)
-        {
-            GUI.Label(Field(position, label), EditorGUIUtility.ObjectContent(obj, type));
-            return obj;
-        }
-
         internal static bool Property(Rect position, SerializedProperty property, GUIContent label)
         {
             label = EditorGUI.BeginProperty(position, label, property);
@@ -733,6 +715,7 @@ namespace UnityEditor
                     case SerializedPropertyType.Boolean: property.boolValue = Toggle(position, label, property.boolValue); break;
                     case SerializedPropertyType.String: property.stringValue = EditorGUI.TextField(position, label, property.stringValue); break;
                     default:
+                        if (EditorGUI.DefaultPickerPropertyField(position, property, label)) break;
                         if (property.hasVisibleChildren) property.isExpanded = Foldout(position, property.isExpanded, label);
                         else Label(position, label);
                         break;
@@ -1036,9 +1019,39 @@ namespace UnityEditor
                     : s_LightPopup ??= CreatePopup(dark: false);
             }
         }
-        public static GUIStyle objectField => Style();
-        public static GUIStyle colorField => Style();
-        public static GUIStyle layerMaskField => Style();
+        public static GUIStyle objectField => SkinStyle("ObjectField");
+        public static GUIStyle objectFieldThumb => SkinStyle("ObjectFieldThumb");
+        public static GUIStyle objectFieldMiniThumb => SkinStyle("ObjectFieldMiniThumb");
+        internal static GUIStyle objectFieldButton => SkinStyle("ObjectFieldButton");
+        public static GUIStyle colorField => SkinStyle("ColorField");
+        internal static GUIStyle colorPickerBox => SkinStyle("ColorPickerBox");
+        /// <summary>The layer mask field's style is the popup's (the same style).</summary>
+        public static GUIStyle layerMaskField => popup;
+
+        static readonly System.Collections.Generic.Dictionary<string, GUIStyle> s_SkinStyles = new System.Collections.Generic.Dictionary<string, GUIStyle>();
+        static GUISkin s_SkinStylesSkin;
+
+        /// <summary>A style of the Editor's skin by name, as the Editor's EditorStyles take it
+        /// (the game skin has none of these): one instance per skin.</summary>
+        static GUIStyle SkinStyle(string name)
+        {
+            if (!HasInspectorStyles) return Style();
+            var skin = Unbound.Runtime.EditorGuiSkins.Current;
+            if (s_SkinStylesSkin != skin)
+            {
+                s_SkinStyles.Clear();
+                s_SkinStylesSkin = skin;
+            }
+            if (s_SkinStyles.TryGetValue(name, out var style)) return style;
+            style = skin.FindStyle(name);
+            if (style == null)
+            {
+                Debug.LogError("Missing built-in guistyle " + name);
+                style = GUISkin.error;
+            }
+            s_SkinStyles[name] = style;
+            return style;
+        }
         public static GUIStyle toggle
         {
             get
