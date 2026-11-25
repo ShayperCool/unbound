@@ -4,11 +4,15 @@
 //! back face (Lightmap Parameters' Backface Tolerance) given their neighbours' light instead;
 //! and the texels around the charts given their neighbours' light, as many texels out as the
 //! Lighting Settings' padding, so that filtering at a chart's edge reads the chart's light. The
-//! seams are stitched afterwards ([`super::seams`]). Where the Lighting Settings filter (Advanced,
-//! Gaussian or A-Trous filters), the direct light and the indirect and sky's light are filtered
-//! each on its own before they are summed ([`super::filter`]). Not made: the texels further out.
+//! seams are stitched afterwards ([`super::seams`]). Where the Lighting Settings filter (the Auto
+//! filtering, or the Advanced one's Open Image Denoise denoiser and Gaussian or A-Trous filters),
+//! the direct light and the indirect and sky's light are denoised ([`super::denoise`]) and
+//! filtered ([`super::filter`]) each on its own before they are summed. Not made: the texels
+//! further out.
 
-use super::{dilate, filter};
+use super::{denoise, dilate, filter};
+use anyhow::Result;
+use std::path::Path;
 
 /// The buffers of one lightmap, `width` × `height` texels, rows from the first.
 pub struct Buffers<'a> {
@@ -40,24 +44,41 @@ pub enum PartFilter {
     ATrous(f32),
 }
 
-/// The filters of the direct light and of the indirect and sky's light (None: unfiltered).
+/// What becomes of one part of the light: denoised by Open Image Denoise or not, then filtered by
+/// a filter or not.
 #[derive(Clone, Copy, Debug, Default, PartialEq)]
-pub struct Filtering {
-    pub direct: Option<PartFilter>,
-    pub indirect: Option<PartFilter>,
+pub struct PartFiltering {
+    pub denoise: bool,
+    pub filter: Option<PartFilter>,
 }
 
-/// The lightmap's texels: red, green, blue, and 1 for a texel that holds light (a used one whose
-/// light stands or that its neighbours' reaches, or one within `padding` texels of those), 0 for
-/// the others (which hold none).
+/// What becomes of the direct light and of the indirect and sky's light.
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
+pub struct Filtering {
+    pub direct: PartFiltering,
+    pub indirect: PartFiltering,
+}
+
+impl Filtering {
+    /// Whether a part is denoised (and so Open Image Denoise's library needed).
+    pub fn denoises(&self) -> bool {
+        self.direct.denoise || self.indirect.denoise
+    }
+}
+
+/// The lightmap's texels: red, green, blue, and above 0 for a texel that holds light (a used one
+/// whose light stands or that its neighbours' reaches, or one within `padding` texels of those),
+/// 0 for the others (which hold none).
 /// `backface_tolerance` is the part of a texel's rays that must meet front faces for its own
-/// light to stand.
+/// light to stand. `denoiser` is the path of Open Image Denoise 1.4.2's library, needed where
+/// `filtering` denoises (an error otherwise, as is the library's failure).
 pub fn composite(
     buffers: &Buffers,
     backface_tolerance: f32,
     padding: u32,
     filtering: Option<Filtering>,
-) -> Vec<[f32; 4]> {
+    denoiser: Option<&Path>,
+) -> Result<Vec<[f32; 4]>> {
     let (width, height) = (buffers.width, buffers.height);
     let texels = width * height;
     // The direct light, and the indirect and sky's light, of each used texel.
@@ -91,7 +112,9 @@ pub fn composite(
     // The texels whose light does not stand (more of their rays met back faces than the
     // tolerance allows, or no number).
     let marks = dilate::markers(buffers.used, buffers.validity, backface_tolerance, &out);
-    // Filtered: each part on its own, weighed by those marks, then summed.
+    // Filtered: each part on its own, weighed by those marks; denoised (after one pass of the
+    // fill gave the texels without light standing their neighbours' light and weight), then
+    // filtered; then summed, each texel's weight the product of its parts' weights.
     if let Some(filtering) = filtering {
         for (part, with) in [
             (&mut indirect, filtering.indirect),
@@ -100,7 +123,15 @@ pub fn composite(
             for (texel, mark) in part.iter_mut().zip(&marks) {
                 texel[3] = *mark;
             }
-            match with {
+            if with.denoise {
+                let Some(library) = denoiser else {
+                    anyhow::bail!("denoising needs Open Image Denoise's library");
+                };
+                let mut filled = vec![[0.0f32; 4]; texels];
+                dilate::pass(part, &mut filled, None, width, height);
+                denoise::denoise(library, &filled, part, width, height)?;
+            }
+            match with.filter {
                 Some(PartFilter::Gaussian(radius)) => {
                     filter::gaussian(part, buffers.charts, width, height, radius)
                 }
@@ -122,20 +153,20 @@ pub fn composite(
             }
         }
         for (k, texel) in out.iter_mut().enumerate() {
-            if buffers.used[k] {
-                for c in 0..3 {
-                    texel[c] = direct[k][c] + indirect[k][c];
-                }
+            for c in 0..3 {
+                texel[c] = direct[k][c] + indirect[k][c];
             }
+            texel[3] = direct[k][3] * indirect[k][3];
+        }
+    } else {
+        for (texel, mark) in out.iter_mut().zip(marks) {
+            texel[3] = mark;
         }
     }
-    // Those texels given their neighbours' light, then `padding` rings around the charts
-    // ([`dilate`]; a group of them no texel holding its own light reaches holds none: not
+    // The texels without light given their neighbours' light, then `padding` rings around the
+    // charts ([`dilate`]; a group of them no texel holding its own light reaches holds none: not
     // measured).
-    for (texel, mark) in out.iter_mut().zip(marks) {
-        texel[3] = mark;
-    }
-    dilate::fill(out, buffers.used, width, height, padding)
+    Ok(dilate::fill(out, buffers.used, width, height, padding))
 }
 
 #[cfg(test)]
@@ -167,7 +198,9 @@ mod tests {
             0.9,
             0,
             None,
-        );
+            None,
+        )
+        .unwrap();
         assert_eq!(out, vec![[1.75, 1.75, 1.75, 1.0], [0.0; 4]]);
     }
 
@@ -193,7 +226,9 @@ mod tests {
             0.9,
             0,
             None,
-        );
+            None,
+        )
+        .unwrap();
         // The fourth takes the third's light; the fifth, beside no texel whose light stands at
         // first, the fourth's as the first ring gave it (each a mean as the fill makes it,
         // within a bit).
@@ -222,7 +257,9 @@ mod tests {
             0.9,
             2,
             None,
-        );
+            None,
+        )
+        .unwrap();
         assert_eq!(out, vec![[0.0; 4]; 3]);
     }
 
@@ -242,13 +279,13 @@ mod tests {
             charts: &[],
             normals: None,
         };
-        let out = composite(&buffers, 0.9, 1, None);
+        let out = composite(&buffers, 0.9, 1, None, None).unwrap();
         let alpha: Vec<f32> = out.iter().map(|t| t[3]).collect();
         assert_eq!(alpha, vec![0.0, 1.0, 1.0, 1.0, 0.0]);
         let near = |a: f32, b: f32| (a - b).abs() < 1e-5;
         assert!(near(out[1][0], 3.0));
         // Two rings: the mean of the neighbours that hold light, ring by ring.
-        let out = composite(&buffers, 0.9, 2, None);
+        let out = composite(&buffers, 0.9, 2, None, None).unwrap();
         assert!(out.iter().all(|t| near(t[0], 3.0)), "{out:?}");
         // A texel between two charts takes the mean of both.
         let used = [true, false, true];
@@ -268,7 +305,9 @@ mod tests {
             0.9,
             1,
             None,
-        );
+            None,
+        )
+        .unwrap();
         assert!(near(out[1][0], 2.0) && out[1][3] == 1.0, "{:?}", out[1]);
     }
 
@@ -293,10 +332,13 @@ mod tests {
             normals: None,
         };
         let filtering = Filtering {
-            direct: Some(PartFilter::Gaussian(1.0)),
-            indirect: None,
+            direct: PartFiltering {
+                denoise: false,
+                filter: Some(PartFilter::Gaussian(1.0)),
+            },
+            indirect: PartFiltering::default(),
         };
-        let out = composite(&buffers, 0.9, 0, Some(filtering));
+        let out = composite(&buffers, 0.9, 0, Some(filtering), None).unwrap();
         let k = filter::kernel(1.0);
         // Direct: the first two mix (the fourth does not stand); indirect + sky unfiltered.
         let d0 = 4.0 * k[1] / (k[1] + k[2]);
@@ -304,10 +346,11 @@ mod tests {
         let near = |a: f32, b: f32| (a - b).abs() < 1e-5;
         assert!(near(out[0][0], d0) && near(out[1][0], d1 + 2.0), "{out:?}");
         assert!(near(out[2][0], 1.0), "{out:?}");
-        // The fourth's light does not stand: its neighbour's, as before filtering.
-        assert!(near(out[3][0], out[2][0]) && out[3][3] == 1.0, "{out:?}");
+        // The fourth's light does not stand: its neighbour's, as before filtering. (A filtered
+        // texel's weight is its filtered weights' mean, 1 within the reciprocal's last bit.)
+        assert!(near(out[3][0], out[2][0]) && near(out[3][3], 1.0), "{out:?}");
         // Without filtering the sum stays as it was.
-        let plain = composite(&buffers, 0.9, 0, None);
+        let plain = composite(&buffers, 0.9, 0, None, None).unwrap();
         assert!(
             near(plain[0][0], 4.0) && near(plain[1][0], 2.0),
             "{plain:?}"

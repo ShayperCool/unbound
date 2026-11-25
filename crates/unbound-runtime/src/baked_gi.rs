@@ -65,20 +65,31 @@ pub struct BakeRequest {
     /// The scene's light probe groups.
     #[serde(default)]
     probes: Vec<ProbeGroupData>,
-    /// The Gaussian filters of the Lighting Settings' Advanced filtering, when its lightmaps are
-    /// filtered (the managed side asks only for what is measured).
+    /// What becomes of the lightmaps' light under the Lighting Settings' filtering (the
+    /// managed side asks only for what is measured); without it they are unfiltered.
     #[serde(default)]
     filtering: Option<FilteringData>,
 }
 
-/// The filters of the direct light and of the indirect and sky's light (none: unfiltered).
-#[derive(serde::Deserialize, Clone, Copy)]
+/// What becomes of the direct light and of the indirect and sky's light.
+#[derive(serde::Deserialize, Clone, Copy, Default)]
 #[serde(rename_all = "camelCase")]
 struct FilteringData {
     #[serde(default)]
-    direct: Option<PartFilterData>,
+    direct: PartFilteringData,
     #[serde(default)]
-    indirect: Option<PartFilterData>,
+    indirect: PartFilteringData,
+}
+
+/// One part's: `{"denoise": true, "filter": {"gaussian": 1}}`; each left out: not done.
+#[derive(serde::Deserialize, Clone, Copy, Default)]
+#[serde(rename_all = "camelCase")]
+struct PartFilteringData {
+    /// Denoised by Open Image Denoise.
+    #[serde(default)]
+    denoise: bool,
+    #[serde(default)]
+    filter: Option<PartFilterData>,
 }
 
 /// A filter: `{"gaussian": radius}` or `{"aTrous": position sigma}`, in texels.
@@ -89,11 +100,14 @@ enum PartFilterData {
     ATrous(f32),
 }
 
-impl PartFilterData {
-    fn filter(self) -> composite::PartFilter {
-        match self {
-            Self::Gaussian(radius) => composite::PartFilter::Gaussian(radius),
-            Self::ATrous(spread) => composite::PartFilter::ATrous(spread),
+impl PartFilteringData {
+    fn part(self) -> composite::PartFiltering {
+        composite::PartFiltering {
+            denoise: self.denoise,
+            filter: self.filter.map(|filter| match filter {
+                PartFilterData::Gaussian(radius) => composite::PartFilter::Gaussian(radius),
+                PartFilterData::ATrous(spread) => composite::PartFilter::ATrous(spread),
+            }),
         }
     }
 }
@@ -760,6 +774,17 @@ impl<'a> Buffers<'a> {
         }
         // The lightmap the bake makes of them.
         let used: Vec<bool> = g.occupancy.iter().map(|&o| o > 0).collect();
+        let filtering = filtering.map(|f| composite::Filtering {
+            direct: f.direct.part(),
+            indirect: f.indirect.part(),
+        });
+        let denoiser =
+            match filtering.filter(composite::Filtering::denoises) {
+                Some(_) => Some(unbound_project::denoiser::library().context(
+                    "the Lighting Settings denoise the lightmaps with Open Image Denoise",
+                )?),
+                None => None,
+            };
         let mut lightmap = composite::composite(
             &composite::Buffers {
                 width: g.width,
@@ -774,11 +799,9 @@ impl<'a> Buffers<'a> {
             },
             backface_tolerance,
             padding,
-            filtering.map(|f| composite::Filtering {
-                direct: f.direct.map(PartFilterData::filter),
-                indirect: f.indirect.map(PartFilterData::filter),
-            }),
-        );
+            filtering,
+            denoiser.as_deref(),
+        )?;
         // Then the seams of the renderers that stitch them: red, green and blue, as high as
         // they go.
         for (pairs, scale_offset) in stitched {

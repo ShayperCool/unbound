@@ -7,6 +7,8 @@ license.workspace = true
 [dependencies]
 anyhow.workspace = true
 half = "2"
+# Open Image Denoise, loaded where a bake denoises its lightmaps.
+libloading = "0.8"
 unbound-assets.workspace = true
 unbound-compat.workspace = true
 unbound-yaml.workspace = true

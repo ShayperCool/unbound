@@ -68,7 +68,7 @@ pub fn markers(
 /// their weights, times [`mean_factor`] of the weights' sum, and that sum within [0, 1] as its
 /// weight (a texel no neighbour holds light for comes to hold nothing: not measured). Whether any texel came
 /// to hold light.
-fn pass(
+pub(crate) fn pass(
     src: &[[f32; 4]],
     dst: &mut [[f32; 4]],
     within: Option<&[bool]>,
