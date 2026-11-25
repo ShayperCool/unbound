@@ -154,13 +154,18 @@ public sealed class ImguiTreeViewProbe : MonoBehaviour
         tree.RecordRows = rows;
         bool changed = GUI.changed;
         GUI.changed = false;
+        var logs = new List<string>();
+        Application.LogCallback log = (message, trace, type) => logs.Add(type + ": " + message.Split('\n')[0]);
+        Application.logMessageReceived += log;
         int before = GUIUtility.GetControlID(FocusType.Passive);
-        object error = Try(() => { tree.OnGUI(rect); return "ok"; });
+        object error;
+        try { error = Try(() => { tree.OnGUI(rect); return "ok"; }); }
+        finally { Application.logMessageReceived -= log; }
         int after = GUIUtility.GetControlID(FocusType.Passive);
         bool reported = GUI.changed;
         GUI.changed = changed;
         tree.RecordRows = false;
-        return new object[] { error, after - before - 1, reported, tree.RowArgs.ToArray() };
+        return new object[] { error, after - before - 1, reported, tree.RowArgs.ToArray(), logs.ToArray() };
     }
 
     // The game OnGUI's root clip, and groups that leave the 640-point screen in part and in
@@ -309,7 +314,9 @@ public sealed class ImguiTreeViewProbe : MonoBehaviour
         finally { Event.current = real; }
         m_Step++;
         Hold();
-        Put("script/" + step.Name, ((object[])a)[0], ((object[])a)[2], State(m_Tree), ((object[])b)[0], State(m_Columns), scripted.type.ToString());
+        // After the trees' clips are popped: whether the scripted event still has its own position.
+        bool keptPosition = scripted.mousePosition.x > 1000 || scripted.mousePosition.y > 1000;
+        Put("script/" + step.Name, ((object[])a)[0], ((object[])a)[2], State(m_Tree), ((object[])b)[0], State(m_Columns), scripted.type.ToString(), keptPosition);
         if (m_Step == m_Script.Length)
         {
             m_Done = true;
