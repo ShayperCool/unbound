@@ -217,8 +217,6 @@ namespace UnityEditor
             return EditorGUIControls.LeftToggle(position, label, value, labelStyle ?? EditorStyles.label);
         }
 
-        public static bool Foldout(Rect position, bool foldout, string content) { RequireGUI(); return EditorGUIControls.Foldout(position, foldout, new GUIContent(content)); }
-        public static bool Foldout(Rect position, bool foldout, GUIContent content) { RequireGUI(); return EditorGUIControls.Foldout(position, foldout, content); }
         public static bool PropertyField(Rect position, SerializedProperty property) => PropertyField(position, property, null, false);
         public static bool PropertyField(Rect position, SerializedProperty property, bool includeChildren) => PropertyField(position, property, null, includeChildren);
         public static bool PropertyField(Rect position, SerializedProperty property, GUIContent label) => PropertyField(position, property, label, false);
@@ -373,10 +371,6 @@ namespace UnityEditor
         public static bool Toggle(bool value, params GUILayoutOption[] options) => EditorGUIControls.Toggle(Line(options), GUIContent.none, value);
         public static bool Toggle(string label, bool value, params GUILayoutOption[] options) => EditorGUIControls.Toggle(Line(options), new GUIContent(label), value);
         public static bool Toggle(GUIContent label, bool value, params GUILayoutOption[] options) => EditorGUIControls.Toggle(Line(options), label, value);
-        public static bool Foldout(bool foldout, string content) => EditorGUIControls.Foldout(Line(null), foldout, new GUIContent(content));
-        public static bool Foldout(bool foldout, GUIContent content) => EditorGUIControls.Foldout(Line(null), foldout, content);
-        public static bool Foldout(bool foldout, string content, bool toggleOnLabelClick) => EditorGUIControls.Foldout(Line(null), foldout, new GUIContent(content));
-        public static bool Foldout(bool foldout, GUIContent content, bool toggleOnLabelClick) => EditorGUIControls.Foldout(Line(null), foldout, content);
         public static bool PropertyField(SerializedProperty property, params GUILayoutOption[] options) => PropertyField(property, null, false, options);
         public static bool PropertyField(SerializedProperty property, GUIContent label, params GUILayoutOption[] options) => PropertyField(property, label, false, options);
         public static bool PropertyField(SerializedProperty property, bool includeChildren, params GUILayoutOption[] options) => PropertyField(property, null, includeChildren, options);
@@ -1096,6 +1090,7 @@ namespace UnityEditor
             }
         }
         public static GUIStyle radioButton => SkinStyle("Radio");
+        internal static GUIStyle minMaxHorizontalSliderThumb => SkinStyle("MinMaxHorizontalSliderThumb");
         public static GUIStyle foldout => SkinStyle("Foldout");
         public static GUIStyle foldoutHeader => SkinStyle("FoldoutHeader");
         public static GUIStyle helpBox
