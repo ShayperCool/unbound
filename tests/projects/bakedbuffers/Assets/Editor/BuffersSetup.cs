@@ -1028,6 +1028,40 @@ public static class BuffersSetup
         Filter("FilterAtrous", LightingSettings.FilterType.ATrous, 0.5f, 1.5f);
     }
 
+    /// <summary>The coloured scene under a sun denoised: the Auto filtering, and the Advanced
+    /// filtering with Open Image Denoise on every target, without a filter and with Gaussian
+    /// filters of radius 1 (what the Manual says Auto adds to a denoiser); and Auto over other
+    /// Advanced settings.</summary>
+    static void Denoised()
+    {
+        void Denoise(string name, LightingSettings.FilterMode mode, LightingSettings.FilterType type)
+        {
+            var scene = Coloured(name, 64, 1);
+            var settings = Lightmapping.lightingSettings;
+            settings.filteringMode = mode;
+            if (type != LightingSettings.FilterType.None || mode == LightingSettings.FilterMode.Advanced)
+            {
+                var denoiser = mode == LightingSettings.FilterMode.Advanced ? LightingSettings.DenoiserType.OpenImage : LightingSettings.DenoiserType.None;
+                settings.denoiserTypeDirect = denoiser;
+                settings.denoiserTypeIndirect = denoiser;
+                settings.denoiserTypeAO = denoiser;
+                settings.filterTypeDirect = type;
+                settings.filterTypeIndirect = type;
+                settings.filterTypeAO = type;
+                settings.filteringGaussianRadiusDirect = 1f;
+                settings.filteringGaussianRadiusIndirect = 1f;
+                settings.filteringGaussianRadiusAO = 1f;
+            }
+            WhiteSun();
+            Save(scene, name);
+        }
+        Denoise("DenoiseAuto", LightingSettings.FilterMode.Auto, LightingSettings.FilterType.None);
+        // Auto over Advanced settings of its own (no denoiser, A-Trous filters): what Auto reads of them.
+        Denoise("DenoiseAutoOver", LightingSettings.FilterMode.Auto, LightingSettings.FilterType.ATrous);
+        Denoise("DenoiseOidn", LightingSettings.FilterMode.Advanced, LightingSettings.FilterType.None);
+        Denoise("DenoiseOidnGauss", LightingSettings.FilterMode.Advanced, LightingSettings.FilterType.Gaussian);
+    }
+
     /// <summary>Makes the scenes <c>BAKED_BUFFERS_SCENES</c> names (comma-separated), else all.</summary>
     public static void Create()
     {
@@ -1040,7 +1074,7 @@ public static class BuffersSetup
                 ("ModeSubtractive", () => Modes("ModeSubtractive", MixedLightingMode.Subtractive)),
                 ("ModeShadowmask", () => Modes("ModeShadowmask", MixedLightingMode.Shadowmask)),
                 ("Bounce", Bounces), ("Glow", Glow), ("Roof", Roof), ("Textured", Textured), ("Levels", Levels), ("Sky", Skies), ("Spare", Spare),
-                ("SkyRealtime", RealtimeSkies), ("SpareEmpty", SpareEmpty), ("Spread", Spread), ("Far", Far), ("Masks", Masks), ("MasksBright", MasksBright), ("MasksEdges", MasksEdges), ("Probes", Probes), ("ProbesGrid", ProbesGrid), ("ProbesReach", ProbesReach), ("ProbesSky", ProbesSky), ("Directional", Directional), ("Lod", Lod), ("Filter", Filtered),
+                ("SkyRealtime", RealtimeSkies), ("SpareEmpty", SpareEmpty), ("Spread", Spread), ("Far", Far), ("Masks", Masks), ("MasksBright", MasksBright), ("MasksEdges", MasksEdges), ("Probes", Probes), ("ProbesGrid", ProbesGrid), ("ProbesReach", ProbesReach), ("ProbesSky", ProbesSky), ("Directional", Directional), ("Lod", Lod), ("Filter", Filtered), ("Denoise", Denoised),
             };
             var only = Environment.GetEnvironmentVariable("BAKED_BUFFERS_SCENES");
             var wanted = string.IsNullOrEmpty(only) ? null : new HashSet<string>(only.Split(','));
