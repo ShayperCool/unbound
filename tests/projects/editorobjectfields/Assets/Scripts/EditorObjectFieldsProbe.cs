@@ -50,6 +50,7 @@ public sealed class EditorObjectFieldsProbe : MonoBehaviour
     static readonly Rect MaskRect = new Rect(10, 454, 300, 18);
     static readonly Rect SpV3Rect = new Rect(10, 476, 300, 18);
     static readonly Rect SpObjRect = new Rect(10, 498, 300, 18);
+    static readonly Rect SpTargetRect = new Rect(10, 520, 300, 18);
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
     static void StartProbe()
@@ -429,6 +430,10 @@ public sealed class EditorObjectFieldsProbe : MonoBehaviour
         ("sp.obj.down", () => Mouse(EventType.MouseDown, new Vector2(100, 507)), false),
         ("sp.obj.delete", () => Key("delete"), false),
         ("sp.obj.dragPerform", () => { Refs(m_MatB); return Drag(EventType.DragPerform, new Vector2(100, 507)); }, false),
+        ("sp.target.down", () => { Refs(); return Mouse(EventType.MouseDown, new Vector2(200, 529)); }, false),
+        ("sp.target.delete", () => Key("delete"), false),
+        ("sp.target.dropGameObject", () => { Refs(m_Go); return Drag(EventType.DragPerform, new Vector2(200, 529)); }, false),
+        ("sp.target.dropMaterial", () => { Refs(m_MatA); return Drag(EventType.DragPerform, new Vector2(200, 529)); }, false),
         ("color.body.down", () => { Refs(); return Mouse(EventType.MouseDown, new Vector2(200, 375)); }, true),
         ("color.eyedropper.down", () => Mouse(EventType.MouseDown, new Vector2(10 + 300 - 8, 375)), true),
         ("curve.down", () => Mouse(EventType.MouseDown, new Vector2(200, 419)), true),
@@ -452,13 +457,14 @@ public sealed class EditorObjectFieldsProbe : MonoBehaviour
         var h = Field(() => m_Mask = EditorGUI.MaskField(MaskRect, m_Mask, MaskNames));
         var i = Field(() => { EditorGUI.PropertyField(SpV3Rect, m_So.FindProperty("v3"), GUIContent.none); return m_So.FindProperty("v3").vector3Value; });
         var j = Field(() => { EditorGUI.PropertyField(SpObjRect, m_So.FindProperty("material")); return m_So.FindProperty("material").objectReferenceValue; });
+        var k = Field(() => { EditorGUI.PropertyField(SpTargetRect, m_So.FindProperty("target")); return m_So.FindProperty("target").objectReferenceValue; });
         m_So.ApplyModifiedProperties();
         return new object[]
         {
             a[0], b[0], c[0], d[0], e[0], f[0], g[0], h[0], i[0], j[0],
             new object[] { a[2], b[2], c[2], d[2], e[2], f[2], g[2], h[2], i[2], j[2] },
             GUIUtility.keyboardControl != 0, GUIUtility.hotControl != 0, EditorGUIUtility.editingTextField,
-            DragAndDrop.activeControlID != 0, DragAndDrop.visualMode.ToString(),
+            DragAndDrop.activeControlID != 0, DragAndDrop.visualMode.ToString(), k[0], k[2],
         };
     }
 
