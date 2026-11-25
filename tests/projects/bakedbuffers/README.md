@@ -194,10 +194,10 @@ from their first surface on whatever the Min Bounces.
 - `FilterGauss`, `FilterGaussHalf`, `FilterAtrous` (4, 128): the coloured scene of `Bounce`
   under the sun with the Advanced filtering, no denoisers, Gaussian filters of radius 1 (direct)
   and 5 (indirect), and 2.5 and 0.5, and A-Trous filters of position sigma 0.5 and 1.5.
-  `FilterDirectional`, `FilterShadowmask`, `FilterSubtractive` and their `*Auto` (and
-  `FilterDirectionalShadowmaskAuto`): the same filtered (Gaussian filters of radius 1 and 5, or
-  the Auto filtering) with directional lightmaps, and in the Shadowmask and Subtractive Lighting
-  Modes under a mixed sun and a mixed and a baked point light.
+  `FilterDirectional`, `FilterShadowmask`, `FilterSubtractive` and their `*Auto`: the same
+  filtered (Gaussian filters of radius 1 and 5, or the Auto filtering) with directional
+  lightmaps, and in the Shadowmask and Subtractive Lighting Modes under a mixed sun and a mixed
+  and a baked point light.
 - `DenoiseAuto`, `DenoiseAutoOver`, `DenoiseOidn`, `DenoiseOidnGauss` (4, 128): the same scene
   denoised: the Auto filtering (over the new Lighting Settings' Advanced settings, and over
   Advanced settings of no denoisers and A-Trous filters), and the Advanced filtering with Open

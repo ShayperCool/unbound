@@ -1061,7 +1061,6 @@ public static class BuffersSetup
         Moded("FilterShadowmaskAuto", true, false, MixedLightingMode.Shadowmask);
         Moded("FilterSubtractive", false, false, MixedLightingMode.Subtractive);
         Moded("FilterSubtractiveAuto", true, false, MixedLightingMode.Subtractive);
-        Moded("FilterDirectionalShadowmaskAuto", true, true, MixedLightingMode.Shadowmask);
     }
 
     /// <summary>The coloured scene under a sun denoised: the Auto filtering, and the Advanced
