@@ -241,8 +241,7 @@ namespace UnityEditor
                 case "uss": return typeof(UnityEngine.UIElements.StyleSheet);
                 case "uxml": return typeof(UnityEngine.UIElements.VisualTreeAsset);
                 case "yaml":
-                    // Native-format files whose extension names their main object's class, and
-                    // scriptable objects by their script.
+                    // Native-format files whose extension names their main object's class.
                     if (path.EndsWith(".mat", StringComparison.OrdinalIgnoreCase)) return typeof(Material);
                     if (path.EndsWith(".spriteatlas", StringComparison.OrdinalIgnoreCase)) return typeof(UnityEngine.U2D.SpriteAtlas);
                     if (path.EndsWith(".anim", StringComparison.OrdinalIgnoreCase)) return typeof(AnimationClip);
@@ -524,7 +523,12 @@ namespace UnityEditor
             }
             if ((options & ImportAssetOptions.ForceUpdate) != 0)
             {
-                if (VisualEffectImports.Reimport(path)) return;
+                // What a forced import imports is the session's import, not the next start's.
+                if (VisualEffectImports.Reimport(path))
+                {
+                    ProjectImports.Wrote(path);
+                    return;
+                }
                 var guid = AssetPathToGUID(path);
                 if (!string.IsNullOrEmpty(guid) && !IsValidFolder(path))
                 {
@@ -538,6 +542,7 @@ namespace UnityEditor
                         if (AssetImporter.TryGetCached(path) is UnityEditor.U2D.SpriteAtlasImporter cached && EditorUtility.IsDirty(cached))
                             ImporterMeta.Write(cached);
                         UnityEditor.U2D.SpriteAtlasImporter.ReimportAsset(path, guid);
+                        ProjectImports.Wrote(path);
                         return;
                     }
                     if (!AssetDatabaseRuntime.IsLoaded(guid))
@@ -545,6 +550,7 @@ namespace UnityEditor
                         // Imported now: its import's messages are logged now.
                         AssetDatabaseRuntime.ImportedInSession(guid);
                         AssetDatabaseRuntime.LoadFile(guid);
+                        ProjectImports.Wrote(path);
                         return;
                     }
                 }

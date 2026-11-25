@@ -129,6 +129,38 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
+        public void AFolderTheSessionDeletedOrMovedCoversWhatItHeldAndARefreshsImportsAreTheSessions()
+        {
+            Directory.CreateDirectory(Path.Combine(m_Root, "Assets/N"));
+            Write("Assets/N.meta", "guid: n1\n");
+            Write("Assets/N/E.mat", "e");
+            Write("Assets/N/E.mat.meta", "guid: e1\n");
+            var withN = Initial();
+            withN.AddRange(Assets(("Assets/N", "n1"), ("Assets/N/E.mat", "e1")));
+            ProjectImports.Scan(withN, Record, out var start);
+            ProjectImports.ResetForTests();
+            ProjectImports.BaseForTests(start);
+            try
+            {
+                // The session deletes folder N (and so E); a refresh finds B changed outside and imports it.
+                Directory.Delete(Path.Combine(m_Root, "Assets/N"), true);
+                File.Delete(Path.Combine(m_Root, "Assets/N.meta"));
+                ProjectImports.Wrote("Assets/N", tree: true);
+                Write("Assets/M/B.mat", "b changed outside");
+                AssetDatabase.ApplyRefresh("{\"assets\":[{\"path\":\"Assets/M/B.mat\",\"guid\":\"b1\"}]}");
+                ProjectImports.Settle(Initial(), Record);
+                var next = ProjectImports.Scan(Initial(), Record, out _);
+                Assert.Empty(next.Imported);
+                Assert.Empty(next.Deleted);
+            }
+            finally
+            {
+                ProjectImports.ResetForTests();
+                AssetDatabase.Invalidate();
+            }
+        }
+
+        [Fact]
         public void ARecordOfAnotherFormatIsAFirstOpen()
         {
             Scan(Initial());
@@ -272,7 +304,7 @@ namespace UnityEngine.Tests
             var kept = ScriptableObject.CreateInstance<Data>();
             kept.name = "Edited";
             EditorUtility.SetDirty(before);
-            Data loaded = null, edited = null, added = null;
+            Data loaded = null, edited = null, added = null, upgraded = null;
             try
             {
                 var files = EditorInitialization.ChangedDuring(() =>
@@ -290,13 +322,19 @@ namespace UnityEngine.Tests
                     added = ScriptableObject.CreateInstance<Data>();
                     added.name = "Added";
                     EditorUtility.SetDirty(added);
-                    // Dirtied again after its load: a change.
+                    // Read during the call, then edited (a pipeline's material upgrade): a change.
+                    upgraded = ScriptableObject.CreateInstance<Data>();
+                    upgraded.name = "Upgraded";
+                    var read = new LoadedFile();
+                    read.Objects[11400000] = upgraded;
+                    AssetDatabaseRuntime.FileRead?.Invoke(read);
+                    EditorUtility.SetDirty(upgraded);
                 }, o => o is Data ? o.name : null);
-                Assert.Equal(new[] { "Added", "Edited" }, files.OrderBy(f => f, StringComparer.Ordinal));
+                Assert.Equal(new[] { "Added", "Edited", "Upgraded" }, files.OrderBy(f => f, StringComparer.Ordinal));
             }
             finally
             {
-                foreach (var o in new Object[] { before, kept, loaded, added })
+                foreach (var o in new Object[] { before, kept, loaded, added, upgraded })
                     if (o != null) { EditorUtility.ClearDirty(o); Object.DestroyImmediate(o); }
             }
         }
