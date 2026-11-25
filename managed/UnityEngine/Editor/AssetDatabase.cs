@@ -211,10 +211,9 @@ namespace UnityEditor
         /// and leaves the asset unloaded (matches the Unity 6000.0.71f1 Editor,
         /// tests/projects/firstimport types.*); so does Unbound for an asset not loaded whose import
         /// decides the type alone: a folder, a model, an audio clip and a 2D texture of the Editor's
-        /// own importers, a prefab, a scene, a script, a shader file or graph, a text, style sheet,
-        /// UXML or font file, a material, an animation clip, an animator controller, a V1 sprite
-        /// atlas and a scriptable object asset (by its script). Any other asset is loaded to
-        /// answer.</summary>
+        /// own importers, a prefab, a scene, a script, a shader file, a text or font file of the
+        /// Editor's importers, a style sheet, a UXML file, a material, an animation clip, an
+        /// animator controller and a V1 sprite atlas. Any other asset is loaded to answer.</summary>
         public static Type GetMainAssetTypeAtPath(string assetPath) => MainTypeUnloaded(assetPath) ?? LoadMainAssetAtPath(assetPath)?.GetType();
 
         static Type MainTypeUnloaded(string path)
@@ -234,13 +233,13 @@ namespace UnityEditor
                 case "scene": return typeof(SceneAsset);
                 case "script": return AssetImporter.GetAtPath(path)?.GetType() == typeof(MonoImporter) ? typeof(MonoScript) : null;
                 case "shader":
-                    if (path.EndsWith(".shadergraph", StringComparison.OrdinalIgnoreCase)) return typeof(Shader);
                     return path.EndsWith(".shader", StringComparison.OrdinalIgnoreCase) && AssetImporter.GetAtPath(path)?.GetType() == typeof(ShaderImporter) ? typeof(Shader) : null;
-                case "text": return typeof(TextAsset);
+                // By the importer the path and the .meta both name (a package manifest is a
+                // PackageManifest, a ScriptedImporter's asset its importer's main object).
+                case "text": return e.Importer == "TextScriptImporter" && MetaImporter(path) == "TextScriptImporter" ? typeof(TextAsset) : null;
+                case "font": return e.Importer == "TrueTypeFontImporter" && MetaImporter(path) == "TrueTypeFontImporter" ? typeof(Font) : null;
                 case "uss": return typeof(UnityEngine.UIElements.StyleSheet);
-                case "tss": return typeof(UnityEngine.UIElements.ThemeStyleSheet);
                 case "uxml": return typeof(UnityEngine.UIElements.VisualTreeAsset);
-                case "font": return typeof(Font);
                 case "yaml":
                     // Native-format files whose extension names their main object's class, and
                     // scriptable objects by their script.
@@ -248,11 +247,13 @@ namespace UnityEditor
                     if (path.EndsWith(".spriteatlas", StringComparison.OrdinalIgnoreCase)) return typeof(UnityEngine.U2D.SpriteAtlas);
                     if (path.EndsWith(".anim", StringComparison.OrdinalIgnoreCase)) return typeof(AnimationClip);
                     if (path.EndsWith(".controller", StringComparison.OrdinalIgnoreCase)) return typeof(UnityEditor.Animations.AnimatorController);
-                    if (path.EndsWith(".asset", StringComparison.OrdinalIgnoreCase)) return ScriptTypeOfAsset(e.Guid);
                     return null;
             }
             return null;
         }
+
+        /// <summary>The importer an asset's .meta names, or null.</summary>
+        static string MetaImporter(string path) => AssetImporter.GetAtPath(path)?.m_SettingsType;
 
         public static string GetAssetPath(Object assetObject)
         {
@@ -458,8 +459,8 @@ namespace UnityEditor
 
         static readonly Dictionary<string, string> s_ScriptOfAsset = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
 
-        /// <summary>The script class of a native-format asset whose main object is a scriptable
-        /// object (read from its file without loading it), or null.</summary>
+        /// <summary>The script class of a native-format asset's scriptable object (the file's first
+        /// script reference, read without loading it), or null.</summary>
         static Type ScriptTypeOfAsset(string guid)
         {
             if (!s_ScriptOfAsset.TryGetValue(guid, out var scriptGuid))

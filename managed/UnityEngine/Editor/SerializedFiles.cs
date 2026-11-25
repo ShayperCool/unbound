@@ -110,6 +110,7 @@ namespace UnityEditorInternal
                 return;
             }
             File.WriteAllText(target, UnityYamlWriter.Write(obj));
+            UnityEditor.ProjectImports.Wrote(target);
         }
     }
 }

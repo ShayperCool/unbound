@@ -78,8 +78,10 @@ namespace UnityEditor
         /// <summary>The record the session's end brings up to date (null: no record kept).</summary>
         static List<Entry> s_Base;
         static List<Entry> s_Pending;
-        /// <summary>The project paths the session wrote, moved or deleted (a folder: all it holds).</summary>
+        /// <summary>The project paths the session wrote, imported, created, moved or deleted.</summary>
         static readonly HashSet<string> s_Written = new HashSet<string>(StringComparer.Ordinal);
+        /// <summary>The folders the session moved, copied or deleted whole: all they hold.</summary>
+        static readonly HashSet<string> s_WrittenTrees = new HashSet<string>(StringComparer.Ordinal);
 
         /// <summary>The start's import, once per process: null after the first call, and for a
         /// session relaunched for a script edit (its start lists nothing and the record stays as it
@@ -112,9 +114,10 @@ namespace UnityEditor
             Settle();
         }
 
-        /// <summary>Unbound wrote, created, moved or deleted <paramref name="file"/> (a project path
-        /// or a file of the project; a .meta stands for its asset).</summary>
-        internal static void Wrote(string file)
+        /// <summary>Unbound wrote, imported, created, moved or deleted <paramref name="file"/> (a
+        /// project path or a file of the project; a .meta stands for its asset); with
+        /// <paramref name="tree"/>, a folder with everything it holds (a move, a copy, a deletion).</summary>
+        internal static void Wrote(string file, bool tree = false)
         {
             if (string.IsNullOrEmpty(file)) return;
             var path = file.Replace('\\', '/');
@@ -125,7 +128,9 @@ namespace UnityEditor
                 if (path == null) return;
             }
             if (path.EndsWith(".meta", StringComparison.OrdinalIgnoreCase)) path = path.Substring(0, path.Length - ".meta".Length);
-            s_Written.Add(path.TrimEnd('/'));
+            path = path.TrimEnd('/');
+            s_Written.Add(path);
+            if (tree) s_WrittenTrees.Add(path);
         }
 
         /// <summary>A file's path relative to a folder it is in, or null.</summary>
@@ -138,13 +143,10 @@ namespace UnityEditor
 
         static bool IsWritten(string path)
         {
-            for (var p = path; ; )
-            {
-                if (s_Written.Contains(p)) return true;
-                int slash = p.LastIndexOf('/');
-                if (slash <= 0) return false;
-                p = p.Substring(0, slash);
-            }
+            if (s_Written.Contains(path)) return true;
+            for (int slash = path.LastIndexOf('/'); slash > 0; slash = path.LastIndexOf('/', slash - 1))
+                if (s_WrittenTrees.Contains(path.Substring(0, slash))) return true;
+            return false;
         }
 
         /// <summary>The session ends: the record takes what the session itself wrote, created, moved
@@ -352,6 +354,7 @@ namespace UnityEditor
             s_Base = null;
             s_Pending = null;
             s_Written.Clear();
+            s_WrittenTrees.Clear();
         }
     }
 }

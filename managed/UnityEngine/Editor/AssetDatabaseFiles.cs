@@ -244,6 +244,7 @@ namespace UnityEditor
                     if (listed.Add(p)) requests.Add(p);
             }
             Import(requests.Select(p => new ImportRequest { Path = p }));
+            foreach (var p in requests) ProjectImports.Wrote(p);
             // The import runs the assets' preprocessors (whose settings changes their .meta keeps).
             foreach (var path in paths) AssetPostprocessing.EnsurePreprocessed(path, Kind(path));
         }
@@ -276,6 +277,8 @@ namespace UnityEditor
                     continue;
                 }
                 SayConflict(change.Path, change);
+                // What the session imports is not imported again at the next start.
+                ProjectImports.Wrote(change.Path);
                 // An asset gone from disk is remembered as deleted (tests/projects/projectwrites 07.outside).
                 if (!string.IsNullOrEmpty(change.Removed))
                 {
@@ -427,7 +430,7 @@ namespace UnityEditor
                 }
             }
             else File.Copy(source, target);
-            ProjectImports.Wrote(target);
+            ProjectImports.Wrote(target, tree: true);
             if (File.Exists(source + ".meta"))
             {
                 var meta = AssetPaths.WithGuid(File.ReadAllText(source + ".meta"), GUID.Generate().ToString());
@@ -484,8 +487,8 @@ namespace UnityEditor
             if (Directory.Exists(source)) Directory.Move(source, target);
             else File.Move(source, target);
             if (File.Exists(source + ".meta")) File.Move(source + ".meta", target + ".meta");
-            ProjectImports.Wrote(source);
-            ProjectImports.Wrote(target);
+            ProjectImports.Wrote(source, tree: true);
+            ProjectImports.Wrote(target, tree: true);
             foreach (var created in s_Created.Values)
                 if (created.Path.Equals(oldPath, StringComparison.OrdinalIgnoreCase) || created.Path.StartsWith(oldPath + "/", StringComparison.OrdinalIgnoreCase))
                     created.Path = newPath + created.Path.Substring(oldPath.Length);
@@ -585,7 +588,7 @@ namespace UnityEditor
                 AssetDatabaseRuntime.ForgetPersistentIds(guid);
             }
             var file = FileOf(path);
-            ProjectImports.Wrote(file);
+            ProjectImports.Wrote(file, tree: true);
             if (trash) Trash.Move(file);
             else if (Directory.Exists(file)) Directory.Delete(file, true);
             else File.Delete(file);

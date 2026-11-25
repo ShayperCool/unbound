@@ -81,6 +81,8 @@ namespace UnityEditor
         /// afterAssemblyReload.</summary>
         internal static void LoadEditorDomain(bool enteringPlayMode = false)
         {
+            // A new domain orders its OnPostprocessAllAssets callbacks anew, as Unity's does.
+            AssetPostprocessing.ForgetOrder();
             MainView.Open();
             DomainLoading = true;
             try
@@ -168,12 +170,26 @@ namespace UnityEditor
         /// import record is written after that save.</summary>
         static void ProjectOpened(ProjectImports.Changes start, string[] deferred)
         {
-            if (!start.First)
+            try
             {
-                AssetPostprocessing.ProjectOpened(start, deferred);
-                ProjectImports.CommitStart();
-                return;
+                if (!start.First)
+                {
+                    AssetPostprocessing.ProjectOpened(start, deferred);
+                    return;
+                }
+                var files = ChangedDuring(() => AssetPostprocessing.ProjectOpened(start, deferred), o =>
+                    o.IsPersistentAsset && AssetDatabaseRuntime.TryGetLocation(o, out var guid, out _) ? guid : null);
+                if (files.Count > 0) AssetFiles.SaveDirty(onlyFiles: files);
             }
+            finally { ProjectImports.CommitStart(); }
+        }
+
+        /// <summary>The files (by <paramref name="fileOf"/>) holding an object marked dirty while
+        /// <paramref name="action"/> ran, after the object's own load: dirtiness an asset had
+        /// before, or that its load gave it (a file read whole re-baselines its objects), is not a
+        /// change.</summary>
+        internal static HashSet<string> ChangedDuring(Action action, Func<UnityEngine.Object, string> fileOf)
+        {
             Undo.FlushDirtiness();
             var baseline = new Dictionary<int, int>();
             foreach (var id in EditorUtility.DirtyIds) baseline[id] = EditorUtility.GetDirtyCount(id);
@@ -183,7 +199,7 @@ namespace UnityEditor
                     if (o is not null) baseline[o.GetInstanceID()] = EditorUtility.GetDirtyCount(o.GetInstanceID());
             }
             AssetDatabaseRuntime.FileRead += Read;
-            try { AssetPostprocessing.ProjectOpened(start, deferred); }
+            try { action(); }
             finally { AssetDatabaseRuntime.FileRead -= Read; }
             Undo.FlushDirtiness();
             var files = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -191,10 +207,9 @@ namespace UnityEditor
             {
                 if (baseline.TryGetValue(id, out var count) && EditorUtility.GetDirtyCount(id) <= count) continue;
                 var o = ObjectRegistry.FindById(id);
-                if (o != null && o.IsPersistentAsset && AssetDatabaseRuntime.TryGetLocation(o, out var guid, out _)) files.Add(guid);
+                if (o != null && fileOf(o) is string file) files.Add(file);
             }
-            if (files.Count > 0) AssetFiles.SaveDirty(onlyFiles: files);
-            ProjectImports.CommitStart();
+            return files;
         }
 
         /// <summary>While the editor domain's load callbacks run (its initializers, on the reload path

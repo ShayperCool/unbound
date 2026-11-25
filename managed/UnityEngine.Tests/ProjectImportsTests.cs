@@ -117,6 +117,8 @@ namespace UnityEngine.Tests
                 ProjectImports.Wrote("Assets/M/C.mat.meta");
                 Write("Assets/M/B.mat", "b changed outside");
                 Write("Assets/M/D.mat", "d");
+                // A folder the session made does not cover a file added to it from outside.
+                ProjectImports.Wrote("Assets/M");
                 var now = Assets(("Assets", ""), ("Assets/M", "f0"), ("Assets/M/A.mat", "a1"), ("Assets/M/B.mat", "b1"), ("Assets/M/D.mat", "d1"));
                 ProjectImports.Settle(now, Record);
                 var next = ProjectImports.Scan(now, Record, out _);
@@ -258,6 +260,45 @@ namespace UnityEngine.Tests
             var prefix = typeof(ProjectImportsTests).FullName + "+";
             Assert.Equal(new[] { "Error: Found cycles in callback dependency graph for OnPostprocessAllAssets.\nThe following nodes could not be added:\n"
                 + prefix + "CycleA\n-" + prefix + "CycleB\n--<color=red>" + prefix + "CycleA</color>\n" }, logs.Lines.Select(l => l.Replace("\r\n", "\n")));
+        }
+
+        sealed class Data : ScriptableObject { }
+
+        [Fact]
+        public void TheFirstOpenWritesWhatTheDispatchDirtiedNotWhatWasDirtyBeforeOrByItsLoad()
+        {
+            var before = ScriptableObject.CreateInstance<Data>();
+            before.name = "DirtyBefore";
+            var kept = ScriptableObject.CreateInstance<Data>();
+            kept.name = "Edited";
+            EditorUtility.SetDirty(before);
+            Data loaded = null, edited = null, added = null;
+            try
+            {
+                var files = EditorInitialization.ChangedDuring(() =>
+                {
+                    // A load that dirties its own object (OnEnable calling SetDirty), then read whole.
+                    loaded = ScriptableObject.CreateInstance<Data>();
+                    loaded.name = "DirtiedByItsLoad";
+                    EditorUtility.SetDirty(loaded);
+                    var file = new LoadedFile();
+                    file.Objects[11400000] = loaded;
+                    AssetDatabaseRuntime.FileRead?.Invoke(file);
+                    // A loaded asset a postprocessor edits, and a new object it adds to an asset.
+                    edited = kept;
+                    EditorUtility.SetDirty(edited);
+                    added = ScriptableObject.CreateInstance<Data>();
+                    added.name = "Added";
+                    EditorUtility.SetDirty(added);
+                    // Dirtied again after its load: a change.
+                }, o => o is Data ? o.name : null);
+                Assert.Equal(new[] { "Added", "Edited" }, files.OrderBy(f => f, StringComparer.Ordinal));
+            }
+            finally
+            {
+                foreach (var o in new Object[] { before, kept, loaded, added })
+                    if (o != null) { EditorUtility.ClearDirty(o); Object.DestroyImmediate(o); }
+            }
         }
 
         [Fact]

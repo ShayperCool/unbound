@@ -244,8 +244,8 @@ namespace UnityEditor
         /// tests/projects/firstimport and tests/projects/assetpostprocessors allAssets.*).</summary>
         internal static List<MethodInfo> Ordered(List<MethodInfo> callbacks)
         {
-            // Ordered once per set of callbacks, as Unity's collection sorts once per domain (a
-            // cycle is reported once).
+            // Ordered once per domain and set of callbacks, as Unity's collection sorts once per
+            // domain (a cycle is reported once per domain).
             if (s_OrderedFor != null && s_OrderedFor.Length == callbacks.Count && System.Linq.Enumerable.SequenceEqual(s_OrderedFor, callbacks))
                 return new List<MethodInfo>(s_OrderedResult);
             var key = callbacks.ToArray();
@@ -257,6 +257,9 @@ namespace UnityEditor
 
         static MethodInfo[] s_OrderedFor;
         static MethodInfo[] s_OrderedResult;
+
+        /// <summary>Forgets the order (a new editor domain).</summary>
+        internal static void ForgetOrder() => s_OrderedFor = s_OrderedResult = null;
 
         static List<MethodInfo> OrderedUncached(List<MethodInfo> callbacks)
         {
