@@ -664,8 +664,9 @@ namespace UnityEditor
                     if (plugin.Length > 0) text = AssetPaths.WithImporterSection(text, plugin);
                 }
                 // A .meta holding its GUID alone gets the section a new asset of its kind gets
-                // (tests/projects/scenesave label-metas labelled.*), where that is measured.
-                if (string.IsNullOrEmpty(section) && !AssetPaths.HasImporterSection(text)) section = LabelMetaSection(path);
+                // (tests/projects/scenesave label-metas labelled.*), where that is measured; one
+                // with other lines (a folder's folderAsset, a timeCreated) keeps them as they are.
+                if (string.IsNullOrEmpty(section) && AssetPaths.HoldsGuidAlone(text)) section = LabelMetaSection(path);
                 if (string.IsNullOrEmpty(section) && !AssetPaths.HasImporterSection(text))
                     Debug.LogWarning($"Unbound: {path}.meta is written without its importer's settings: Unbound does not know the settings the Editor writes there yet.");
                 File.WriteAllText(meta, AssetPaths.WithLabels(text, labels, section));

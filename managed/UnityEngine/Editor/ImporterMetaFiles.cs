@@ -77,12 +77,11 @@ namespace Unbound.Runtime
             var root = UnityYamlText.ParseTopLevel(text);
             var section = root.Get(importer.m_SettingsType);
             if (section == null || section.Kind != YKind.Map) return false;
+            var common = (importer.userData, importer.assetBundleName?.ToLowerInvariant(), importer.assetBundleVariant?.ToLowerInvariant());
             if (importer.UsesDirtyFlagForWrite)
             {
                 bool wasDirty = EditorUtility.IsDirty(importer) || importer.m_SettingsChanged;
-                SetScalar(section, "userData", importer.userData);
-                SetScalar(section, "assetBundleName", importer.assetBundleName?.ToLowerInvariant());
-                SetScalar(section, "assetBundleVariant", importer.assetBundleVariant?.ToLowerInvariant());
+                SetCommonScalars(section, common);
                 // An importer written for any change writes its own settings whole.
                 if (wasDirty || UnityYamlText.WriteTopLevel(root) != text.Replace("\r\n", "\n"))
                     importer.WriteCustomMeta(section);
@@ -94,33 +93,59 @@ namespace Unbound.Runtime
                 return textChanged;
             }
             var unwritten = new List<string>();
-            Patch(section, importer.m_Settings, "", unwritten);
-            SetScalar(section, "userData", importer.userData);
-            SetScalar(section, "assetBundleName", importer.assetBundleName?.ToLowerInvariant());
-            SetScalar(section, "assetBundleVariant", importer.assetBundleVariant?.ToLowerInvariant());
-            var original = text.Replace("\r\n", "\n");
-            var written = UnityYamlText.WriteTopLevel(root);
+            bool texture = importer.m_SettingsType == "TextureImporter";
+            var written = Rewritten(text, importer.m_SettingsType, importer.m_Settings, common, texture ? TextureTemplate() : "",
+                texture ? InstalledPlatformEntries : null, unwritten);
             importer.m_ImportedSettings = MetaSettings.ToJson(importer.m_Settings);
-            // Settings that did not change write nothing (tests/projects/projectwrites 06.crlf unchanged).
-            if (written == original && unwritten.Count == 0) return false;
-            if (importer.m_SettingsType == "TextureImporter")
-            {
-                // A texture's section that lacks settings of its version is written whole, as the
-                // Editor writes it (tests/projects/scenesave label-metas kept.*, missingSetting.*),
-                // and lists every installed platform module (the Editor adds the missing ones at
-                // their defaults: tests/projects/projectwrites 06.crlf).
-                FillTextureSection(section);
-                unwritten.Clear();
-                Patch(section, importer.m_Settings, "", unwritten);
-                AddInstalledPlatforms(section);
-                written = UnityYamlText.WriteTopLevel(root);
-            }
             if (unwritten.Count > 0)
                 Debug.LogWarning($"Unbound does not write these {importer.m_SettingsType} settings of '{path}' into its .meta yet (their place in it is not measured): {string.Join(", ", unwritten)}");
-            if (written == original) return false;
+            if (written == null) return false;
             File.WriteAllText(meta, written);
             UnityEditor.ProjectImports.Wrote(meta);
             return true;
+        }
+
+        /// <summary>The <c>.meta</c> text with the importer's settings patched into its section
+        /// (<paramref name="type"/>), or null when nothing is to be written; the settings whose
+        /// place is not known go to <paramref name="unwritten"/>. <paramref name="textureTemplate"/>:
+        /// the texture section at its defaults ("" but for a texture of a measured release);
+        /// <paramref name="installedPlatforms"/>: a texture's installed modules' entries.</summary>
+        internal static string Rewritten(string text, string type, YNode settings, (string UserData, string Bundle, string Variant) common,
+            string textureTemplate, Func<IEnumerable<YText>> installedPlatforms, List<string> unwritten)
+        {
+            var root = UnityYamlText.ParseTopLevel(text);
+            var section = root.Get(type);
+            if (section == null || section.Kind != YKind.Map) return null;
+            Patch(section, settings, "", unwritten);
+            SetCommonScalars(section, common);
+            var original = text.Replace("\r\n", "\n");
+            var written = UnityYamlText.WriteTopLevel(root);
+            // A texture's section of the current version that lacks settings is written whole, as
+            // the Editor writes it (tests/projects/scenesave label-metas kept.*, missingSetting.*).
+            bool fill = installedPlatforms != null && TextureSectionFillable(section, textureTemplate);
+            // Settings that did not change write nothing (tests/projects/projectwrites 06.crlf
+            // unchanged), and neither do settings the file lacks where it is not filled.
+            if (written == original && !(fill && unwritten.Count > 0)) return null;
+            if (installedPlatforms == null) return written == original ? null : written;
+            if (fill)
+            {
+                // A missing setting given the value its default reads is no change (unmeasured).
+                var defaults = UnityYamlText.ParseTopLevel(text);
+                var plain = defaults.Get(type);
+                FillTextureSection(plain, textureTemplate);
+                SetCommonScalars(plain, common);
+                FillTextureSection(section, textureTemplate);
+                unwritten.Clear();
+                Patch(section, settings, "", unwritten);
+                SetCommonScalars(section, common);
+                if (written == original && UnityYamlText.WriteTopLevel(root) == UnityYamlText.WriteTopLevel(defaults)) return null;
+            }
+            // A texture's settings written again list every installed platform module (the
+            // Editor adds the missing ones at their defaults: tests/projects/projectwrites 06.crlf).
+            var list = section.Get("platformSettings");
+            if (list?.Kind == YKind.Seq) AppendMissingPlatforms(list, installedPlatforms());
+            written = UnityYamlText.WriteTopLevel(root);
+            return written == original ? null : written;
         }
 
         /// <summary>The asset imported again with the importer's settings: its loaded objects
@@ -158,17 +183,33 @@ namespace Unbound.Runtime
 
         static Platform[] s_Platforms;
 
+        static void SetCommonScalars(YText section, (string UserData, string Bundle, string Variant) common)
+        {
+            SetScalar(section, "userData", common.UserData);
+            SetScalar(section, "assetBundleName", common.Bundle);
+            SetScalar(section, "assetBundleVariant", common.Variant);
+        }
+
         static string s_TextureTemplate;
+
+        static string TextureTemplate() =>
+            s_TextureTemplate ??= System.Text.Json.JsonDocument.Parse(Native.Call("texture-meta-template", "{}")).RootElement.GetProperty("section").GetString() ?? "";
+
+        /// <summary>Whether a texture's section is of the template's version (and the template known).</summary>
+        static bool TextureSectionFillable(YText section) => TextureSectionFillable(section, TextureTemplate());
+
+        internal static bool TextureSectionFillable(YText section, string templateText)
+        {
+            if (string.IsNullOrEmpty(templateText)) return false;
+            var template = UnityYamlText.ParseTopLevel(templateText).Get("TextureImporter");
+            return template?.Kind == YKind.Map && section.Get("serializedVersion")?.Text == template.Get("serializedVersion")?.Text;
+        }
 
         /// <summary>The settings a texture's section of the current version lacks, at their
         /// defaults in the Editor's order, and the platforms it lacks (DefaultTexturePlatform,
         /// Standalone, then the installed modules) after its own. A section of another version, or none, is left
         /// as it is (its settings would take that version's values: unmeasured).</summary>
-        static void FillTextureSection(YText section)
-        {
-            s_TextureTemplate ??= System.Text.Json.JsonDocument.Parse(Native.Call("texture-meta-template", "{}")).RootElement.GetProperty("section").GetString() ?? "";
-            FillTextureSection(section, s_TextureTemplate);
-        }
+        static void FillTextureSection(YText section) => FillTextureSection(section, TextureTemplate());
 
         /// <summary><paramref name="templateText"/>: the TextureImporter section at its defaults
         /// ("" for a release family whose files are not measured: nothing is added).</summary>
@@ -219,17 +260,16 @@ namespace Unbound.Runtime
             return -1;
         }
 
-        static bool AddInstalledPlatforms(YText section)
+        /// <summary>The installation's platform modules' entries at their defaults.</summary>
+        static IEnumerable<YText> InstalledPlatformEntries()
         {
-            var list = section.Get("platformSettings");
-            if (list == null || list.Kind != YKind.Seq) return false;
             s_Platforms ??= System.Text.Json.JsonSerializer.Deserialize<Platform[]>(Native.Call("texture-platforms", "{}"),
                 new System.Text.Json.JsonSerializerOptions { PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase }) ?? Array.Empty<Platform>();
-            return AppendMissingPlatforms(list, s_Platforms.Select(platform =>
+            return s_Platforms.Select(platform =>
             {
                 var entry = UnityYamlText.ParseTopLevel("platformSettings:\n" + platform.Entry).Get("platformSettings");
                 return entry?.Kind == YKind.Seq && entry.Items.Count == 1 ? entry.Items[0] : null;
-            }));
+            });
         }
 
         /// <summary>Each scalar of <paramref name="settings"/> (the importer's tree) into the same

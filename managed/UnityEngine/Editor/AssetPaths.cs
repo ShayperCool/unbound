@@ -94,6 +94,21 @@ namespace Unbound.Runtime
             return false;
         }
 
+        /// <summary>Whether a <c>.meta</c> text holds its format version and GUID and nothing else
+        /// but labels (what tests/projects/scenesave label-metas measures).</summary>
+        internal static bool HoldsGuidAlone(string meta)
+        {
+            int lines = 0;
+            foreach (var raw in s_LabelsBlock.Replace(meta.Replace("\r\n", "\n"), "", 1).Split('\n'))
+            {
+                var line = raw.TrimEnd();
+                if (line.Length == 0) continue;
+                if (line != "fileFormatVersion: 2" && !s_GuidLine.IsMatch(line)) return false;
+                lines++;
+            }
+            return lines == 2;
+        }
+
         /// <summary>A <c>.meta</c> text whose importer section (from its line to the end) is
         /// <paramref name="section"/>; one without a section gets it at the end.</summary>
         internal static string WithImporterSection(string meta, string section)

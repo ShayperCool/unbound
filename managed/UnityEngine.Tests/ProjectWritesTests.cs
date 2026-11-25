@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -193,6 +194,26 @@ namespace UnityEngine.Tests
             Assert.Equal(new[] { "notInTheFile" }, unwritten);
         }
 
+        static string LabelSnapshots() =>
+            Path.Combine(Repo(), "tests", "projects", "scenesave", "Reference", "unity-6000.0.71f1", "label-metas", "snapshots");
+
+        static string NewMetaTemplate(string name) => File.ReadAllText(Path.Combine(Repo(), "crates", "unbound-assets", "src", "new_meta", name));
+
+        /// <summary>The engine's texture section at its defaults with the platforms of the Mac
+        /// Editor that recorded label-metas (its Android module installed).</summary>
+        static string TextureTemplate() => NewMetaTemplate("texture_importer.yaml").Replace("{platforms}",
+            string.Concat(new[] { "DefaultTexturePlatform", "Standalone", "Android" }.Select(p => NewMetaTemplate("texture_platform.yaml").Replace("{platform}", p))));
+
+        static IEnumerable<YText> Installed() =>
+            UnityYamlText.ParseTopLevel("platformSettings:\n" + NewMetaTemplate("texture_platform.yaml").Replace("{platform}", "Android")).Get("platformSettings").Items;
+
+        static string Rewrite(string text, Action<YNode> change, List<string> unwritten, string template = null)
+        {
+            var settings = UnityYamlText.ParseTopLevel(text).Get("TextureImporter").ToNode();
+            change(settings);
+            return ImporterMeta.Rewritten(text, "TextureImporter", settings, ("", "", ""), template ?? TextureTemplate(), Installed, unwritten);
+        }
+
         /// <summary>A texture's section of the current version that lacks settings and a platform
         /// (tests/projects/scenesave label-metas, whose files are the input and the expected
         /// output) is written whole: the missing settings at their defaults where the Editor
@@ -202,32 +223,55 @@ namespace UnityEngine.Tests
         [InlineData("start.Partial.png.meta", "missingSetting.Partial.png.meta", "streamingMipmaps", 1)]
         public void ATextureSectionLackingSettingsIsWrittenWholeAsTheEditorWritesIt(string start, string saved, string setting, int value)
         {
-            var snapshots = Path.Combine(Repo(), "tests", "projects", "scenesave", "Reference", "unity-6000.0.71f1", "label-metas", "snapshots");
-            var templates = Path.Combine(Repo(), "crates", "unbound-assets", "src", "new_meta");
-            var platform = File.ReadAllText(Path.Combine(templates, "texture_platform.yaml"));
-            // The engine's section at its defaults with the Mac Editor's modules (Android).
-            var template = File.ReadAllText(Path.Combine(templates, "texture_importer.yaml")).Replace("{platforms}",
-                string.Concat(new[] { "DefaultTexturePlatform", "Standalone", "Android" }.Select(p => platform.Replace("{platform}", p))));
-            var root = UnityYamlText.ParseTopLevel(File.ReadAllText(Path.Combine(snapshots, start)));
-            var settings = root.Get("TextureImporter").ToNode();
-            MetaSettings.SetInt(settings, setting, value);
-            ImporterMeta.FillTextureSection(root.Get("TextureImporter"), template);
             var unwritten = new List<string>();
-            ImporterMeta.Patch(root.Get("TextureImporter"), settings, "", unwritten);
+            var written = Rewrite(File.ReadAllText(Path.Combine(LabelSnapshots(), start)), s => MetaSettings.SetInt(s, setting, value), unwritten);
             Assert.Empty(unwritten);
-            Assert.Equal(File.ReadAllText(Path.Combine(snapshots, saved)), UnityYamlText.WriteTopLevel(root));
+            Assert.Equal(File.ReadAllText(Path.Combine(LabelSnapshots(), saved)), written);
         }
 
+        /// <summary>What is not filled writes nothing new: no change at all (projectwrites 06.crlf
+        /// unchanged), a missing setting given the value its default reads, and a missing setting of
+        /// a section of another version, which stays reported; a changed setting there is written
+        /// with the installed modules, as before.</summary>
         [Fact]
-        public void ATextureSectionOfAnotherVersionIsNotFilled()
+        public void ATextureSectionIsFilledOnlyForAChangeOfASectionOfTheCurrentVersion()
         {
-            const string meta = "fileFormatVersion: 2\nguid: 0123456789abcdef0123456789abcdef\nTextureImporter:\n  serializedVersion: 12\n  mipmaps:\n    enableMipMap: 1\n  userData: \n";
-            var root = UnityYamlText.ParseTopLevel(meta);
-            var template = File.ReadAllText(Path.Combine(Repo(), "crates", "unbound-assets", "src", "new_meta", "texture_importer.yaml")).Replace("{platforms}", "");
-            ImporterMeta.FillTextureSection(root.Get("TextureImporter"), template);
-            Assert.Equal(meta, UnityYamlText.WriteTopLevel(root));
-            ImporterMeta.FillTextureSection(root.Get("TextureImporter"), "");
-            Assert.Equal(meta, UnityYamlText.WriteTopLevel(root));
+            var partial = File.ReadAllText(Path.Combine(LabelSnapshots(), "start.Partial.png.meta"));
+            var unwritten = new List<string>();
+            Assert.Null(Rewrite(partial, s => { }, unwritten));
+            Assert.Null(Rewrite(partial, s => MetaSettings.SetInt(s, "streamingMipmaps", 0), unwritten));
+            Assert.Empty(unwritten);
+            const string old = "fileFormatVersion: 2\nguid: 0123456789abcdef0123456789abcdef\nTextureImporter:\n  serializedVersion: 12\n  mipmaps:\n    enableMipMap: 1\n  platformSettings:\n  - serializedVersion: 3\n    buildTarget: DefaultTexturePlatform\n    maxTextureSize: 2048\n  userData: \n";
+            Assert.Null(Rewrite(old, s => MetaSettings.SetInt(s, "streamingMipmaps", 1), unwritten));
+            Assert.Equal(new[] { "streamingMipmaps" }, unwritten);
+            unwritten.Clear();
+            var changed = Rewrite(old, s => MetaSettings.SetInt(s, "mipmaps.enableMipMap", 0), unwritten);
+            Assert.Empty(unwritten);
+            Assert.StartsWith(old.Replace("enableMipMap: 1", "enableMipMap: 0").Replace("  userData: \n", ""), changed);
+            Assert.Contains("    buildTarget: Android\n", changed);
+            Assert.DoesNotContain("buildTarget: Standalone", changed);
+            // A release family whose files are not measured: no template, nothing filled.
+            Assert.Null(Rewrite(partial, s => MetaSettings.SetInt(s, "streamingMipmaps", 1), unwritten, template: ""));
+        }
+
+        /// <summary>SetLabels gives a .meta holding the GUID alone its importer's section; one with
+        /// other lines keeps them and gets the labels alone (a folder's .meta with folderAsset but no
+        /// section would otherwise get the key twice).</summary>
+        [Fact]
+        public void OnlyAMetaHoldingItsGuidAloneGetsTheLabelsSection()
+        {
+            var guidOnly = File.ReadAllText(Path.Combine(LabelSnapshots(), "start.Folder.meta"));
+            Assert.True(AssetPaths.HoldsGuidAlone(guidOnly));
+            Assert.True(AssetPaths.HoldsGuidAlone(guidOnly.Replace("\n", "\r\n")));
+            Assert.True(AssetPaths.HoldsGuidAlone(AssetPaths.WithLabels(guidOnly, new[] { "a" })));
+            var section = "folderAsset: yes\nDefaultImporter:\n  externalObjects: {}\n  userData: \n  assetBundleName: \n  assetBundleVariant: \n";
+            Assert.Equal(File.ReadAllText(Path.Combine(LabelSnapshots(), "labelled.Folder.meta")), AssetPaths.WithLabels(guidOnly, new[] { "probe", "Alpha" }, section));
+            var folder = guidOnly + "folderAsset: yes\n";
+            Assert.False(AssetPaths.HasImporterSection(folder));
+            Assert.False(AssetPaths.HoldsGuidAlone(folder));
+            Assert.False(AssetPaths.HoldsGuidAlone(guidOnly + "timeCreated: 1731677241"));
+            Assert.False(AssetPaths.HoldsGuidAlone(guidOnly + section));
+            Assert.False(AssetPaths.HoldsGuidAlone("fileFormatVersion: 2\n"));
         }
 
         [Fact]
