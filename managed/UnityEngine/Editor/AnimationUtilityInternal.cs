@@ -18,9 +18,14 @@ namespace UnityEditor
             key.tangentModeInternal = broken ? key.tangentModeInternal | k_BrokenMask : key.tangentModeInternal & ~k_BrokenMask;
 
         /// <summary>The rotation's angles for the order nearest the hint (the Timeline editor keeps
-        /// its offsets' Euler angles with it); see <see cref="ClosestEulerAngles"/>.</summary>
-        internal static Vector3 GetClosestEuler(Quaternion q, Vector3 eulerHint, RotationOrder rotationOrder) =>
-            ClosestEulerAngles.Of(q, eulerHint, rotationOrder);
+        /// its offsets' Euler angles with it); see <see cref="ClosestEulerAngles"/>. A release
+        /// without the measurement reports it not implemented.</summary>
+        internal static Vector3 GetClosestEuler(Quaternion q, Vector3 eulerHint, RotationOrder rotationOrder)
+        {
+            if (Unbound.Runtime.Compat.ClosestEulerMeasured) return ClosestEulerAngles.Of(q, eulerHint, rotationOrder);
+            Unbound.Runtime.Stubs.NotImplemented("UnityEditor.AnimationUtility.GetClosestEuler");
+            return default;
+        }
     }
 
     public partial class AnimationMode

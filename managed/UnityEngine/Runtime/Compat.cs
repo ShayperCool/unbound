@@ -985,6 +985,10 @@ namespace Unbound.Runtime
         /// Begin leaf (unmeasured there).</summary>
         internal static bool AnimationUpdateSplitMeasured => Family == ReleaseFamily.Unity6000_0;
 
+        /// <summary>AnimationUtility.GetClosestEuler's angles, measured by tests/projects/animinternal
+        /// <c>euler.*</c> on 6000.0.71f1. Other releases report it not implemented, as before.</summary>
+        internal static bool ClosestEulerMeasured => Family == ReleaseFamily.Unity6000_0;
+
         /// <summary>Humanoid hips scale writes through a TransformStreamHandle (humanoid bone.scaleHips).</summary>
         internal static bool HumanStreamHipsScale => Family == ReleaseFamily.Unity6000_0;
 

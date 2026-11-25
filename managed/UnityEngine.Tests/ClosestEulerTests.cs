@@ -53,6 +53,7 @@ namespace UnityEngine.Tests
         [Fact]
         public void EveryRotationHintAndOrderAnswersAsTheEditor()
         {
+            using var release = TestRelease.Pin(TestRelease.Measured);
             var reference = Reference();
             var hints = new[] { Vector3.zero, new Vector3(360f, 0f, 0f), new Vector3(-720f, 400f, 10f), new Vector3(170f, 170f, 170f), new Vector3(1000f, -1000f, 0.5f) };
             var failures = new List<string>();
@@ -76,6 +77,7 @@ namespace UnityEngine.Tests
         [Fact]
         public void ARotationAtItsHintGivesTheHintBack()
         {
+            using var release = TestRelease.Pin(TestRelease.Measured);
             var reference = Reference();
             var cases = new (Vector3 Hint, RotationOrder Order)[]
             {
@@ -101,6 +103,7 @@ namespace UnityEngine.Tests
         [Fact]
         public void AZeroRotationReadsItsUndefinedAnglesAsTheLinuxEditor()
         {
+            using var release = TestRelease.Pin(TestRelease.Measured);
             // Not in the probe: the Linux Editor (6000.0.71f1, two batch captures) answers this,
             // the macOS Editor gives NaN angles.
             var zero = new Quaternion(0f, 0f, 0f, 0f);
@@ -108,10 +111,40 @@ namespace UnityEngine.Tests
             Assert.Equal("96.25 180 96.25", V(AnimationUtility.GetClosestEuler(zero, new Vector3(170f, 170f, 170f), RotationOrder.OrderXYZ)));
         }
 
+        /// <summary>A release without the measurement reports the member not implemented and
+        /// answers nothing, as before.</summary>
+        [Fact]
+        public void AnUnmeasuredReleaseReportsItNotImplemented()
+        {
+            using var release = TestRelease.Pin(TestRelease.Unmeasured);
+            var logs = new LogCapture();
+            var previous = Debug.unityLogger.logHandler;
+            Debug.unityLogger.logHandler = logs;
+            try
+            {
+                var rotation = new Quaternion(0.127679437f, 0.144878134f, 0.239298329f, 0.9515485f);
+                Assert.Equal(Vector3.zero, AnimationUtility.GetClosestEuler(rotation, new Vector3(10f, 20f, 30f), RotationOrder.OrderZXY));
+            }
+            finally
+            {
+                Debug.unityLogger.logHandler = previous;
+            }
+            Assert.Contains(logs.Lines, l => l.Contains("UnityEditor.AnimationUtility.GetClosestEuler is not implemented"));
+        }
+
+        sealed class LogCapture : ILogHandler
+        {
+            public readonly List<string> Lines = new List<string>();
+            public void LogException(Exception exception, Object context) => Lines.Add("Exception: " + exception.Message);
+            public void LogFormat(LogType logType, Object context, string format, params object[] args) =>
+                Lines.Add(args.Length == 0 ? format : string.Format(format, args));
+        }
+
         /// <summary>Unbound's own answer (unmeasured): an order outside the enum fails loudly.</summary>
         [Fact]
         public void AnUnknownOrderThrows()
         {
+            using var release = TestRelease.Pin(TestRelease.Measured);
             Assert.Throws<ArgumentOutOfRangeException>(() => AnimationUtility.GetClosestEuler(Quaternion.identity, Vector3.zero, (RotationOrder)6));
         }
     }
