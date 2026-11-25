@@ -215,7 +215,13 @@ namespace UnityEditor
         static bool HasKeyboardFocus(int controlID) =>
             GUIUtility.keyboardControl == controlID && EditorGUIUtility.HasCurrentWindowKeyFocus();
 
-        internal static string DoTextField(RecycledTextEditor editor, int id, Rect position, string text, GUIStyle style, string allowedletters, out bool changed, bool reset, bool multiline, bool passwordField)
+        internal static string DoTextField(RecycledTextEditor editor, int id, Rect position, string text, GUIStyle style, string allowedletters, out bool changed, bool reset, bool multiline, bool passwordField) =>
+            DoTextField(editor, id, position, text, style, allowedletters, out changed, reset, multiline, passwordField, null);
+
+        /// <summary>Unity's text field; a search field passes its cancel button's style (the text
+        /// cursor rect leaves the button out while there is text) and checks the 1024-character
+        /// search limit.</summary>
+        internal static string DoTextField(RecycledTextEditor editor, int id, Rect position, string text, GUIStyle style, string allowedletters, out bool changed, bool reset, bool multiline, bool passwordField, GUIStyle cancelButtonStyle, bool checkTextLimit = false)
         {
             EditorGUI.RequireGUI();
             Event evt = Event.current;
@@ -510,8 +516,11 @@ namespace UnityEditor
                     else
                         editor.DrawCursor(drawText);
 
-                    if (position.Contains(evt.mousePosition) && GUIUtility.hotControl == 0)
-                        EditorGUIUtility.AddCursorRect(position, MouseCursor.Text);
+                    var cursorRect = position;
+                    if (cancelButtonStyle != null && !string.IsNullOrEmpty(text))
+                        cursorRect.width -= cancelButtonStyle.fixedWidth;
+                    if (cursorRect.Contains(evt.mousePosition) && GUIUtility.hotControl == 0)
+                        EditorGUIUtility.AddCursorRect(cursorRect, MouseCursor.Text);
                     break;
                 case EventType.ScrollWheel:
                     editor.UpdateScrollOffset();
@@ -529,11 +538,41 @@ namespace UnityEditor
             }
             if (changed)
             {
+                if (GUIUtility.keyboardControl != s_SavekeyboardControl)
+                {
+                    s_SavekeyboardControl = GUIUtility.keyboardControl;
+                    s_SearchFieldTextLimitApproved = false;
+                }
+                if (editor.text.Length > kSearchFieldTextLimit && checkTextLimit)
+                {
+                    if ((evt.control || evt.command || evt.commandName == EventCommandNames.Paste) && !s_SearchFieldTextLimitApproved)
+                        editor.text = ValidateTextLimit(editor.text);
+                    else if (editor.text.Length == kSearchFieldTextLimit + 1 && evt.keyCode != KeyCode.Backspace && !s_SearchFieldTextLimitApproved)
+                        editor.text = ValidateTextLimit(editor.text);
+                }
                 GUI.changed = true;
                 return editor.text;
             }
             RecycledTextEditor.s_AllowContextCutOrPaste = true;
             return origText;
+        }
+
+        const int kSearchFieldTextLimit = 1024;
+        static bool s_SearchFieldTextLimitApproved;
+        static int s_SavekeyboardControl;
+
+        /// <summary>Unity's confirmation for a search string over the limit; the dialog is
+        /// cancelled (Unbound shows none), so the text is cut to the limit.</summary>
+        static string ValidateTextLimit(string editorText)
+        {
+            string title = "Search String Character Limit Exceeded";
+            string fullMessage = string.Format("You have entered {0} characters. The character limit is {1} characters because of risk of Editor slowdown. Please confirm that you would like to continue (not recommended) or clear the field", editorText.Length, kSearchFieldTextLimit);
+            if (EditorUtility.DisplayDialog(title, fullMessage, "Continue", "Cancel"))
+                s_SearchFieldTextLimitApproved = true;
+            else
+                editorText = editorText.Substring(0, kSearchFieldTextLimit);
+            GUIUtility.SetKeyboardControlToLastControlId();
+            return editorText;
         }
 
         internal static string TextFieldInternal(Rect position, string text, GUIStyle style)
