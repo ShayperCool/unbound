@@ -229,7 +229,8 @@ namespace UnityEditor.MPE
 
         public void Dispose()
         {
-            // Null only where the service's answers are unmeasured (no channel was opened).
+            // Null where the service's answers are unmeasured (no channel was opened) and for a
+            // default ChannelScope, whose Dispose throws in Unity's C# (Unbound returns).
             m_Off?.Invoke();
             if (m_CloseChannelOnExit)
                 ChannelService.CloseChannel(m_ChannelName);
