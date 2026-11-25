@@ -6783,13 +6783,6 @@ namespace UnityEditor
         FromSkybox = 0,
         Custom = 1,
     }
-    [global::Unbound.Stub]
-    internal unsafe partial class DelayedCallback : global::UnityEditor.IDelayedCallback
-    {
-        [global::Unbound.Stub] public DelayedCallback(global::System.Action function, double timeFromNow) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.DelayedCallback.ctor"); }
-        [global::Unbound.Stub] public void Clear() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.DelayedCallback.Clear"); }
-        [global::Unbound.Stub] public void Reset() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.DelayedCallback.Reset"); }
-    }
     unsafe partial class DelayedDrawer
     {
         [global::Unbound.Stub] public override void OnGUI(global::UnityEngine.Rect position, global::UnityEditor.SerializedProperty property, global::UnityEngine.GUIContent label) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.DelayedDrawer.OnGUI"); }
@@ -6991,13 +6984,6 @@ namespace UnityEditor
         [global::Unbound.Stub] internal static global::UnityEditor.DragAndDropVisualMode Drop(int dropDstId, params object[] args) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.DragAndDrop.Drop"); return default; }
         [global::Unbound.Stub] internal static bool HandleDelayedDrag(global::UnityEngine.Rect position, int id, global::UnityEngine.Object objectToDrag) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.DragAndDrop.HandleDelayedDrag"); return default; }
         [global::Unbound.Stub] internal static void Cleanup() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.DragAndDrop.Cleanup"); }
-    }
-    [global::Unbound.Stub]
-    internal unsafe partial class DragAndDropDelay
-    {
-        [global::Unbound.Stub] public global::UnityEngine.Vector2 mouseDownPosition;
-        [global::Unbound.Stub] public bool CanStartDrag() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.DragAndDropDelay.CanStartDrag"); return default; }
-        [global::Unbound.Stub] public DragAndDropDelay() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.DragAndDropDelay.ctor"); }
     }
     [global::Unbound.Stub]
     internal unsafe partial class DragRectGUI
@@ -7476,14 +7462,12 @@ namespace UnityEditor
         [global::Unbound.Stub] internal static string s_UnitString;
         internal const int kInspTitlebarIconWidth = 16;
         internal const int kInspTitlebarFoldoutIconWidth = 13;
-        [global::Unbound.Stub] internal static readonly global::UnityEditor.StyleSheets.SVC<float> kWindowToolbarHeight;
         internal const int kTabButtonHeight = 22;
         internal const int kLargeButtonHeight = 24;
         [global::Unbound.Stub] internal static global::UnityEngine.GUIContent s_PleasePressAKey;
         [global::Unbound.Stub] internal static readonly global::UnityEngine.GUIContent s_ClipingPlanesLabel;
         [global::Unbound.Stub] internal static readonly global::UnityEngine.GUIContent[] s_NearAndFarLabels;
         internal const float kNearFarLabelsWidth = 35f;
-        [global::Unbound.Stub] internal static global::UnityEditor.EditorGUIUtility.SkinnedColor kSplitLineSkinnedColor;
         [global::Unbound.Stub] internal static global::UnityEngine.Color k_OverrideMarginColor;
         [global::Unbound.Stub] internal static global::UnityEngine.Color k_OverrideMarginColorSelected;
         [global::Unbound.Stub] internal static global::UnityEngine.Color k_OverrideMarginColorNotApplicable;
@@ -7719,10 +7703,6 @@ namespace UnityEditor
         [global::Unbound.Stub] internal static bool Button(global::UnityEngine.Rect position, global::UnityEngine.GUIContent content) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUI.Button"); return default; }
         [global::Unbound.Stub] internal static bool Button(global::UnityEngine.Rect position, global::UnityEngine.GUIContent content, global::UnityEngine.GUIStyle style) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUI.Button"); return default; }
         [global::Unbound.Stub] internal static bool IconButton(int id, global::UnityEngine.Rect position, global::UnityEngine.GUIContent content, global::UnityEngine.GUIStyle style) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUI.IconButton"); return default; }
-        [global::Unbound.Stub] internal static float WidthResizer(global::UnityEngine.Rect position, float width, float minWidth, float maxWidth) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUI.WidthResizer"); return default; }
-        [global::Unbound.Stub] internal static float WidthResizer(global::UnityEngine.Rect position, float width, float minWidth, float maxWidth, out bool hasControl) { hasControl = default; global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUI.WidthResizer"); return default; }
-        [global::Unbound.Stub] internal static float HeightResizer(global::UnityEngine.Rect position, float height, float minHeight, float maxHeight) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUI.HeightResizer"); return default; }
-        [global::Unbound.Stub] internal static float HeightResizer(global::UnityEngine.Rect position, float height, float minHeight, float maxHeight, out bool hasControl) { hasControl = default; global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUI.HeightResizer"); return default; }
         [global::Unbound.Stub] internal static global::UnityEngine.Vector2 MouseDeltaReader(global::UnityEngine.Rect position, bool activated) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUI.MouseDeltaReader"); return default; }
         [global::Unbound.Stub] public static bool LargeSplitButtonWithDropdownList(global::UnityEngine.GUIContent content, string[] buttonNames, global::UnityEditor.GenericMenu.MenuFunction2 callback) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUI.LargeSplitButtonWithDropdownList"); return default; }
         [global::Unbound.Stub] public static bool LargeSplitButtonWithDropdownList(global::UnityEngine.GUIContent content, string[] buttonNames, global::UnityEditor.GenericMenu.MenuFunction2 callback, bool disableMainButton) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUI.LargeSplitButtonWithDropdownList"); return default; }
@@ -7730,7 +7710,6 @@ namespace UnityEditor
         [global::Unbound.Stub] internal static bool ButtonWithDropdownList(global::UnityEngine.GUIContent content, string[] buttonNames, global::UnityEditor.GenericMenu.MenuFunction2 callback, params global::UnityEngine.GUILayoutOption[] options) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUI.ButtonWithDropdownList"); return default; }
         [global::Unbound.Stub] internal static void GameViewSizePopup(global::UnityEngine.Rect buttonRect, global::UnityEditor.GameViewSizeGroupType groupType, int selectedIndex, global::UnityEditor.IGameViewSizeMenuUser gameView, global::UnityEngine.GUIStyle guiStyle) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUI.GameViewSizePopup"); }
         [global::Unbound.Stub] internal static void DrawDelimiterLine(global::UnityEngine.Rect rect) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUI.DrawDelimiterLine"); }
-        [global::Unbound.Stub] internal static void DrawOutline(global::UnityEngine.Rect rect, float size, global::UnityEngine.Color color) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUI.DrawOutline"); }
         [global::Unbound.Stub] internal static float Knob(global::UnityEngine.Rect position, global::UnityEngine.Vector2 knobSize, float currentValue, float start, float end, string unit, global::UnityEngine.Color backgroundColor, global::UnityEngine.Color activeColor, bool showValue, int id) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUI.Knob"); return default; }
         [global::Unbound.Stub] internal static float OffsetKnob(global::UnityEngine.Rect position, float currentValue, float start, float end, float median, string unit, global::UnityEngine.Color backgroundColor, global::UnityEngine.Color activeColor, global::UnityEngine.GUIStyle knob, int id) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUI.OffsetKnob"); return default; }
         [global::Unbound.Stub] internal static global::UnityEngine.Object DoObjectField(global::UnityEngine.Rect position, global::UnityEngine.Rect dropRect, int id, global::UnityEngine.Object obj, global::UnityEngine.Object objBeingEdited, global::System.Type objType, global::UnityEditor.EditorGUI.ObjectFieldValidator validator, bool allowSceneObjects, global::System.Type additionalType, global::UnityEngine.GUIStyle style = null) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUI.DoObjectField"); return default; }
@@ -8078,7 +8057,6 @@ namespace UnityEditor
         [global::Unbound.Stub] internal static global::UnityEngine.GUIContent TempContent(string t, global::UnityEngine.Texture i) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUIUtility.TempContent"); return default; }
         [global::Unbound.Stub] internal static global::UnityEngine.GUIContent[] TempContent(string[] texts) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUIUtility.TempContent"); return global::System.Array.Empty<global::UnityEngine.GUIContent>(); }
         [global::Unbound.Stub] internal static global::UnityEngine.GUIContent[] TempContent(string[] texts, string[] tooltips) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUIUtility.TempContent"); return global::System.Array.Empty<global::UnityEngine.GUIContent>(); }
-        [global::Unbound.Stub] internal static bool HasHolddownKeyModifiers(global::UnityEngine.Event evt) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUIUtility.HasHolddownKeyModifiers"); return default; }
         [global::Unbound.Stub] internal static global::UnityEngine.GUIStyle GetBasicTextureStyle(global::UnityEngine.Texture2D tex) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUIUtility.GetBasicTextureStyle"); return default; }
         [global::Unbound.Stub] internal static void NotifyLanguageChanged(global::UnityEngine.SystemLanguage newLanguage) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUIUtility.NotifyLanguageChanged"); }
         [global::Unbound.Stub] internal static void MoveFocusAndScroll(bool forward) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUIUtility.MoveFocusAndScroll"); }
@@ -8114,7 +8092,6 @@ namespace UnityEditor
         internal static int skinIndex { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUIUtility.skinIndex"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUIUtility.skinIndex"); } }
         internal static global::UnityEngine.Material GUITextureBlit2SRGBMaterial { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUIUtility.GUITextureBlit2SRGBMaterial"); return default; } }
         internal static global::UnityEngine.Material GUITextureBlitSceneGUIMaterial { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUIUtility.GUITextureBlitSceneGUIMaterial"); return default; } }
-        internal static bool renameWasCompleted { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUIUtility.renameWasCompleted"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUIUtility.renameWasCompleted"); } }
         public static bool textFieldHasSelection { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUIUtility.textFieldHasSelection"); return default; } }
         internal static global::UnityEditor.EditorGUIUtility.ComparisonViewMode comparisonViewMode { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUIUtility.comparisonViewMode"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUIUtility.comparisonViewMode"); } }
         internal static float leftMarginCoord { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUIUtility.leftMarginCoord"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUIUtility.leftMarginCoord"); } }
@@ -8148,14 +8125,6 @@ namespace UnityEditor
         {
             [global::Unbound.Stub] public IconSizeScope(global::UnityEngine.Vector2 iconSizeWithinScope) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUIUtility.IconSizeScope.ctor"); }
             [global::Unbound.Stub] protected override void CloseScope() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUIUtility.IconSizeScope.CloseScope"); }
-        }
-        [global::Unbound.Stub]
-        internal unsafe partial class SkinnedColor
-        {
-            [global::Unbound.Stub] public SkinnedColor(global::UnityEngine.Color color, global::UnityEngine.Color proColor) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUIUtility.SkinnedColor.ctor"); }
-            [global::Unbound.Stub] public SkinnedColor(global::UnityEngine.Color color) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUIUtility.SkinnedColor.ctor"); }
-            [global::Unbound.Stub] public static implicit operator global::UnityEngine.Color(global::UnityEditor.EditorGUIUtility.SkinnedColor colorSkin) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUIUtility.SkinnedColor.op_Implicit"); return default; }
-            public global::UnityEngine.Color color { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUIUtility.SkinnedColor.color"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUIUtility.SkinnedColor.color"); } }
         }
         [global::System.Serializable]
         [global::Unbound.Stub]
@@ -9718,8 +9687,6 @@ namespace UnityEditor
     unsafe partial class GUIView : global::UnityEditor.IWindowModel
     {
         [global::Unbound.Stub] protected global::UnityEngine.EventInterests m_EventInterests;
-        [global::Unbound.Stub] public void Repaint() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.GUIView.Repaint"); }
-        [global::Unbound.Stub] public void Focus() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.GUIView.Focus"); }
         [global::Unbound.Stub] public void RepaintImmediately() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.GUIView.RepaintImmediately"); }
         [global::Unbound.Stub] public void CaptureRenderDocScene() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.GUIView.CaptureRenderDocScene"); }
         [global::Unbound.Stub] public void CaptureRenderDocFullContent() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.GUIView.CaptureRenderDocFullContent"); }
@@ -9744,7 +9711,6 @@ namespace UnityEditor
         [global::Unbound.Stub] internal int GetKeyboardControl() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.GUIView.GetKeyboardControl"); return default; }
         [global::Unbound.Stub] internal void GrabPixels(global::UnityEngine.RenderTexture rd, global::UnityEngine.Rect rect) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.GUIView.GrabPixels"); }
         [global::Unbound.Stub] internal float GetBackingScaleFactor() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.GUIView.GetBackingScaleFactor"); return default; }
-        [global::Unbound.Stub] internal void MarkHotRegion(global::UnityEngine.Rect hotRegionRect) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.GUIView.MarkHotRegion"); }
         [global::Unbound.Stub] internal void EnableVSync(bool value) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.GUIView.EnableVSync"); }
         [global::Unbound.Stub] internal void SetActualViewName(string viewName) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.GUIView.SetActualViewName"); }
         [global::Unbound.Stub] protected void Internal_SetAsActiveWindow() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.GUIView.Internal_SetAsActiveWindow"); }
@@ -9769,10 +9735,7 @@ namespace UnityEditor
         [global::Unbound.Stub] internal void CaptureMetalScene() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.GUIView.CaptureMetalScene"); }
         [global::Unbound.Stub] internal void IncrementVersionForUITKText(global::UnityEngine.UIElements.VersionChangeType changeType) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.GUIView.IncrementVersionForUITKText"); }
         [global::Unbound.Stub] internal void UpdateEditorTextRenderingMode(global::UnityEngine.UIElements.EditorTextRenderingMode mode) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.GUIView.UpdateEditorTextRenderingMode"); }
-        public static global::UnityEditor.GUIView current { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.GUIView.current"); return default; } }
         public static global::UnityEditor.GUIView focusedView { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.GUIView.focusedView"); return default; } }
-        public static global::UnityEditor.GUIView mouseOverView { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.GUIView.mouseOverView"); return default; } }
-        public bool hasFocus { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.GUIView.hasFocus"); return default; } }
         internal bool vSyncEnabled { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.GUIView.vSyncEnabled"); return default; } }
         internal bool mouseRayInvisible { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.GUIView.mouseRayInvisible"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.GUIView.mouseRayInvisible"); } }
         internal bool disableInputEvents { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.GUIView.disableInputEvents"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.GUIView.disableInputEvents"); } }
@@ -11415,11 +11378,6 @@ namespace UnityEditor
     public unsafe partial interface IDataModeHandlerAndDispatcher : global::UnityEditor.IDataModeHandler
     {
         event global::System.Action<global::UnityEditor.DataMode> dataModeChanged;
-    }
-    internal unsafe partial interface IDelayedCallback
-    {
-        void Clear();
-        void Reset();
     }
     [global::Unbound.Stub]
     internal unsafe static partial class IDeviceUtils
@@ -16187,21 +16145,6 @@ namespace UnityEditor
         public static global::UnityEditor.PickingObject Empty { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.PickingObject.Empty"); return default; } }
     }
     [global::Unbound.Stub]
-    internal unsafe partial class PingData
-    {
-        [global::Unbound.Stub] public float m_ZoomTime;
-        [global::Unbound.Stub] public float m_WaitTime;
-        [global::Unbound.Stub] public float m_FadeOutTime;
-        [global::Unbound.Stub] public float m_PeakScale;
-        [global::Unbound.Stub] public global::System.Action<global::UnityEngine.Rect> m_ContentDraw;
-        [global::Unbound.Stub] public global::UnityEngine.Rect m_ContentRect;
-        [global::Unbound.Stub] public float m_AvailableWidth;
-        [global::Unbound.Stub] public global::UnityEngine.GUIStyle m_PingStyle;
-        [global::Unbound.Stub] public void HandlePing() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.PingData.HandlePing"); }
-        [global::Unbound.Stub] public PingData() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.PingData.ctor"); }
-        public bool isPinging { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.PingData.isPinging"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.PingData.isPinging"); } }
-    }
-    [global::Unbound.Stub]
     public unsafe partial class PlatformIcon
     {
         [global::Unbound.Stub] internal global::System.Collections.Generic.List<global::UnityEngine.Texture2D> m_Textures;
@@ -19708,28 +19651,6 @@ namespace UnityEditor
         MoveAssetToTrash = 0,
         DeleteAssets = 2,
     }
-    [global::System.Serializable]
-    [global::Unbound.Stub]
-    internal unsafe partial class RenameOverlay
-    {
-        [global::Unbound.Stub] public bool BeginRename(string name, int userData, float delay) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.RenameOverlay.BeginRename"); return default; }
-        [global::Unbound.Stub] public void EndRename(bool acceptChanges) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.RenameOverlay.EndRename"); }
-        [global::Unbound.Stub] public void Clear() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.RenameOverlay.Clear"); }
-        [global::Unbound.Stub] public bool HasKeyboardFocus() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.RenameOverlay.HasKeyboardFocus"); return default; }
-        [global::Unbound.Stub] public bool IsRenaming() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.RenameOverlay.IsRenaming"); return default; }
-        [global::Unbound.Stub] public bool OnEvent() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.RenameOverlay.OnEvent"); return default; }
-        [global::Unbound.Stub] public bool OnGUI() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.RenameOverlay.OnGUI"); return default; }
-        [global::Unbound.Stub] public bool OnGUI(global::UnityEngine.GUIStyle textFieldStyle) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.RenameOverlay.OnGUI"); return default; }
-        [global::Unbound.Stub] public RenameOverlay() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.RenameOverlay.ctor"); }
-        public string name { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.RenameOverlay.name"); return default; } [global::Unbound.Stub] internal set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.RenameOverlay.name"); } }
-        public string originalName { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.RenameOverlay.originalName"); return default; } }
-        public bool userAcceptedRename { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.RenameOverlay.userAcceptedRename"); return default; } }
-        public int userData { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.RenameOverlay.userData"); return default; } }
-        public bool isWaitingForDelay { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.RenameOverlay.isWaitingForDelay"); return default; } }
-        public global::UnityEngine.Rect editFieldRect { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.RenameOverlay.editFieldRect"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.RenameOverlay.editFieldRect"); } }
-        public bool isRenamingFilename { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.RenameOverlay.isRenamingFilename"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.RenameOverlay.isRenamingFilename"); } }
-        public bool trimLeadingAndTrailingWhitespace { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.RenameOverlay.trimLeadingAndTrailingWhitespace"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.RenameOverlay.trimLeadingAndTrailingWhitespace"); } }
-    }
     [global::Unbound.Stub]
     internal unsafe partial class RenderDocUtil
     {
@@ -21301,14 +21222,6 @@ namespace UnityEditor
         Off = 0,
         Premerge = 1,
         Ask = 2,
-    }
-    [global::System.Serializable]
-    [global::Unbound.Stub]
-    internal unsafe partial class SerializableDelayedCallback : global::UnityEngine.ScriptableObject
-    {
-        [global::Unbound.Stub] protected SerializableDelayedCallback() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SerializableDelayedCallback.ctor"); }
-        [global::Unbound.Stub] public static global::UnityEditor.SerializableDelayedCallback SubscribeCallback(global::UnityEngine.Events.UnityAction action, global::System.TimeSpan delayUntilCallback) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SerializableDelayedCallback.SubscribeCallback"); return default; }
-        [global::Unbound.Stub] public void Cancel() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.SerializableDelayedCallback.Cancel"); }
     }
     [global::Unbound.Stub]
     internal unsafe sealed partial class SerializationDebug
@@ -29822,101 +29735,6 @@ namespace UnityEditor.IMGUI.Controls
             Z = 2,
         }
     }
-    internal unsafe partial interface ITreeViewDataSource
-    {
-        void OnInitialize();
-        void ReloadData();
-        void InitIfNeeded();
-        global::UnityEditor.IMGUI.Controls.TreeViewItem FindItem(int id);
-        int GetRow(int id);
-        global::UnityEditor.IMGUI.Controls.TreeViewItem GetItem(int row);
-        global::System.Collections.Generic.IList<global::UnityEditor.IMGUI.Controls.TreeViewItem> GetRows();
-        bool IsRevealed(int id);
-        void RevealItem(int id);
-        void RevealItems(int[] ids);
-        void SetExpandedWithChildren(global::UnityEditor.IMGUI.Controls.TreeViewItem item, bool expand);
-        void SetExpanded(global::UnityEditor.IMGUI.Controls.TreeViewItem item, bool expand);
-        bool IsExpanded(global::UnityEditor.IMGUI.Controls.TreeViewItem item);
-        bool IsExpandable(global::UnityEditor.IMGUI.Controls.TreeViewItem item);
-        void SetExpandedWithChildren(int id, bool expand);
-        int[] GetExpandedIDs();
-        void SetExpandedIDs(int[] ids);
-        bool SetExpanded(int id, bool expand);
-        bool IsExpanded(int id);
-        bool CanBeMultiSelected(global::UnityEditor.IMGUI.Controls.TreeViewItem item);
-        bool CanBeParent(global::UnityEditor.IMGUI.Controls.TreeViewItem item);
-        global::System.Collections.Generic.List<int> GetNewSelection(global::UnityEditor.IMGUI.Controls.TreeViewItem clickedItem, global::UnityEditor.IMGUI.Controls.TreeViewSelectState selectState);
-        bool IsRenamingItemAllowed(global::UnityEditor.IMGUI.Controls.TreeViewItem item);
-        void InsertFakeItem(int id, int parentID, string name, global::UnityEngine.Texture2D icon);
-        void RemoveFakeItem();
-        bool HasFakeItem();
-        void OnSearchChanged();
-        global::UnityEditor.IMGUI.Controls.TreeViewItem root { get; }
-        int rowCount { get; }
-    }
-    internal unsafe partial interface ITreeViewDragging
-    {
-        void OnInitialize();
-        bool CanStartDrag(global::UnityEditor.IMGUI.Controls.TreeViewItem targetItem, global::System.Collections.Generic.List<int> draggedItemIDs, global::UnityEngine.Vector2 mouseDownPosition);
-        void StartDrag(global::UnityEditor.IMGUI.Controls.TreeViewItem draggedItem, global::System.Collections.Generic.List<int> draggedItemIDs);
-        bool DragElement(global::UnityEditor.IMGUI.Controls.TreeViewItem targetItem, global::UnityEngine.Rect targetItemRect, int row);
-        void DragCleanup(bool revertExpanded);
-        int GetDropTargetControlID();
-        int GetRowMarkerControlID();
-        bool drawRowMarkerAbove { get; set; }
-    }
-    internal unsafe partial interface ITreeViewGUI
-    {
-        void OnInitialize();
-        global::UnityEngine.Vector2 GetTotalSize();
-        void GetFirstAndLastRowVisible(out int firstRowVisible, out int lastRowVisible);
-        global::UnityEngine.Rect GetRowRect(int row, float rowWidth);
-        global::UnityEngine.Rect GetRectForFraming(int row);
-        int GetNumRowsOnPageUpDown(global::UnityEditor.IMGUI.Controls.TreeViewItem fromItem, bool pageUp, float heightOfTreeView);
-        void OnRowGUI(global::UnityEngine.Rect rowRect, global::UnityEditor.IMGUI.Controls.TreeViewItem item, int row, bool selected, bool focused);
-        void BeginRowGUI();
-        void EndRowGUI();
-        void BeginPingItem(global::UnityEditor.IMGUI.Controls.TreeViewItem item, float topPixelOfRow, float availableWidth);
-        void EndPingItem();
-        bool BeginRename(global::UnityEditor.IMGUI.Controls.TreeViewItem item, float delay);
-        void EndRename();
-        global::UnityEngine.Rect GetRenameRect(global::UnityEngine.Rect rowRect, int row, global::UnityEditor.IMGUI.Controls.TreeViewItem item);
-        float GetContentIndent(global::UnityEditor.IMGUI.Controls.TreeViewItem item);
-        float halfDropBetweenHeight { get; }
-        float topRowMargin { get; }
-        float bottomRowMargin { get; }
-    }
-    [global::Unbound.Stub]
-    internal unsafe abstract partial class LazyTreeViewDataSource : global::UnityEditor.IMGUI.Controls.TreeViewDataSource
-    {
-        [global::Unbound.Stub] public LazyTreeViewDataSource(global::UnityEditor.IMGUI.Controls.TreeViewController treeView) : base(default(global::UnityEditor.IMGUI.Controls.TreeViewController)) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.LazyTreeViewDataSource.ctor"); }
-        [global::Unbound.Stub] public static global::System.Collections.Generic.List<global::UnityEditor.IMGUI.Controls.TreeViewItem> CreateChildListForCollapsedParent() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.LazyTreeViewDataSource.CreateChildListForCollapsedParent"); return new global::System.Collections.Generic.List<global::UnityEditor.IMGUI.Controls.TreeViewItem>(); }
-        [global::Unbound.Stub] public static bool IsChildListForACollapsedParent(global::System.Collections.Generic.IList<global::UnityEditor.IMGUI.Controls.TreeViewItem> childList) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.LazyTreeViewDataSource.IsChildListForACollapsedParent"); return default; }
-        protected abstract void GetParentsAbove(int id, global::System.Collections.Generic.HashSet<int> parentsAbove);
-        protected abstract void GetParentsBelow(int id, global::System.Collections.Generic.HashSet<int> parentsBelow);
-        [global::Unbound.Stub] public override void RevealItem(int itemID) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.LazyTreeViewDataSource.RevealItem"); }
-        [global::Unbound.Stub] public override void RevealItems(int[] itemIDs) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.LazyTreeViewDataSource.RevealItems"); }
-        [global::Unbound.Stub] public override global::UnityEditor.IMGUI.Controls.TreeViewItem FindItem(int itemID) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.LazyTreeViewDataSource.FindItem"); return default; }
-        [global::Unbound.Stub] public override void SetExpandedWithChildren(global::UnityEditor.IMGUI.Controls.TreeViewItem item, bool expand) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.LazyTreeViewDataSource.SetExpandedWithChildren"); }
-        [global::Unbound.Stub] public override void SetExpandedWithChildren(int id, bool expand) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.LazyTreeViewDataSource.SetExpandedWithChildren"); }
-        [global::Unbound.Stub] public override void InitIfNeeded() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.LazyTreeViewDataSource.InitIfNeeded"); }
-        [global::Unbound.Stub] public override global::System.Collections.Generic.IList<global::UnityEditor.IMGUI.Controls.TreeViewItem> GetRows() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.LazyTreeViewDataSource.GetRows"); return global::System.Array.Empty<global::UnityEditor.IMGUI.Controls.TreeViewItem>(); }
-    }
-    unsafe partial class MultiColumnHeader
-    {
-        [global::Unbound.Stub] internal virtual void DrawColumnResizing(global::UnityEngine.Rect headerRect, global::UnityEditor.IMGUI.Controls.MultiColumnHeaderState.Column column) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.MultiColumnHeader.DrawColumnResizing"); }
-        [global::Unbound.Stub] internal virtual void DrawDivider(global::UnityEngine.Rect dividerRect, global::UnityEditor.IMGUI.Controls.MultiColumnHeaderState.Column column) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.MultiColumnHeader.DrawDivider"); }
-        [global::Unbound.Stub] internal virtual global::UnityEngine.Rect GetArrowRect(global::UnityEditor.IMGUI.Controls.MultiColumnHeaderState.Column column, global::UnityEngine.Rect headerRect) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.MultiColumnHeader.GetArrowRect"); return default; }
-        [global::Unbound.Stub]
-        public unsafe static partial class DefaultStyles
-        {
-            [global::Unbound.Stub] public static global::UnityEngine.GUIStyle columnHeader;
-            [global::Unbound.Stub] public static global::UnityEngine.GUIStyle columnHeaderRightAligned;
-            [global::Unbound.Stub] public static global::UnityEngine.GUIStyle columnHeaderCenterAligned;
-            [global::Unbound.Stub] public static global::UnityEngine.GUIStyle background;
-            [global::Unbound.Stub] internal static global::UnityEngine.GUIStyle arrowStyle;
-        }
-    }
     [global::Unbound.Stub]
     internal unsafe partial class MultiLevelDataSource : global::UnityEditor.IMGUI.Controls.AdvancedDropdownDataSource
     {
@@ -30011,458 +29829,6 @@ namespace UnityEditor.IMGUI.Controls
         [global::Unbound.Stub] protected override void DrawWireframe() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.SphereBoundsHandle.DrawWireframe"); }
         [global::Unbound.Stub] protected override global::UnityEngine.Bounds OnHandleChanged(global::UnityEditor.IMGUI.Controls.PrimitiveBoundsHandle.HandleDirection handle, global::UnityEngine.Bounds boundsOnClick, global::UnityEngine.Bounds newBounds) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.SphereBoundsHandle.OnHandleChanged"); return default; }
         public float radius { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.SphereBoundsHandle.radius"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.SphereBoundsHandle.radius"); } }
-    }
-    unsafe partial class TreeView
-    {
-        [global::Unbound.Stub] protected global::UnityEngine.Rect GetCellRectForTreeFoldouts(global::UnityEngine.Rect rowRect) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeView.GetCellRectForTreeFoldouts"); return default; }
-        [global::Unbound.Stub] protected void SelectionClick(global::UnityEditor.IMGUI.Controls.TreeViewItem item, bool keepMultiSelection) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeView.SelectionClick"); }
-        [global::Unbound.Stub] protected virtual void RenameEnded(global::UnityEditor.IMGUI.Controls.TreeView.RenameEndedArgs args) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeView.RenameEnded"); }
-        [global::Unbound.Stub] protected virtual bool CanStartDrag(global::UnityEditor.IMGUI.Controls.TreeView.CanStartDragArgs args) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeView.CanStartDrag"); return default; }
-        [global::Unbound.Stub] protected virtual void SetupDragAndDrop(global::UnityEditor.IMGUI.Controls.TreeView.SetupDragAndDropArgs args) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeView.SetupDragAndDrop"); }
-        [global::Unbound.Stub] protected virtual global::UnityEditor.DragAndDropVisualMode HandleDragAndDrop(global::UnityEditor.IMGUI.Controls.TreeView.DragAndDropArgs args) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeView.HandleDragAndDrop"); return default; }
-        [global::Unbound.Stub] protected virtual void RowGUI(global::UnityEditor.IMGUI.Controls.TreeView.RowGUIArgs args) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeView.RowGUI"); }
-        [global::Unbound.Stub] protected virtual global::UnityEngine.Rect GetRenameRect(global::UnityEngine.Rect rowRect, int row, global::UnityEditor.IMGUI.Controls.TreeViewItem item) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeView.GetRenameRect"); return default; }
-        protected global::UnityEditor.IMGUI.Controls.TreeView.GetNewSelectionFunction getNewSelectionOverride { [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeView.getNewSelectionOverride"); } }
-        internal bool deselectOnUnhandledMouseDown { [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeView.deselectOnUnhandledMouseDown"); } }
-        protected global::UnityEditor.IMGUI.Controls.TreeView.DoFoldoutCallback foldoutOverride { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeView.foldoutOverride"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeView.foldoutOverride"); } }
-        internal global::UnityEditor.IMGUI.Controls.TreeViewController controller { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeView.controller"); return default; } }
-        internal bool drawSelection { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeView.drawSelection"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeView.drawSelection"); } }
-        public unsafe delegate bool DoFoldoutCallback(global::UnityEngine.Rect position, bool expandedState, global::UnityEngine.GUIStyle style);
-        public unsafe delegate global::System.Collections.Generic.List<int> GetNewSelectionFunction(global::UnityEditor.IMGUI.Controls.TreeViewItem clickedItem, bool keepMultiSelection, bool useActionKeyAsShift);
-        [global::Unbound.Stub]
-        protected unsafe partial struct RowGUIArgs
-        {
-            [global::Unbound.Stub] public global::UnityEditor.IMGUI.Controls.TreeViewItem item;
-            [global::Unbound.Stub] public string label;
-            [global::Unbound.Stub] public global::UnityEngine.Rect rowRect;
-            [global::Unbound.Stub] public int row;
-            [global::Unbound.Stub] public bool selected;
-            [global::Unbound.Stub] public bool focused;
-            [global::Unbound.Stub] public bool isRenaming;
-            [global::Unbound.Stub] public int GetNumVisibleColumns() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeView.RowGUIArgs.GetNumVisibleColumns"); return default; }
-            [global::Unbound.Stub] public int GetColumn(int visibleColumnIndex) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeView.RowGUIArgs.GetColumn"); return default; }
-            [global::Unbound.Stub] public global::UnityEngine.Rect GetCellRect(int visibleColumnIndex) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeView.RowGUIArgs.GetCellRect"); return default; }
-            [global::Unbound.Stub] internal bool HasMultiColumnInfo() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeView.RowGUIArgs.HasMultiColumnInfo"); return default; }
-            internal global::UnityEditor.IMGUI.Controls.TreeView.RowGUIArgs.MultiColumnInfo columnInfo { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeView.RowGUIArgs.columnInfo"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeView.RowGUIArgs.columnInfo"); } }
-            [global::Unbound.Stub]
-            internal unsafe partial struct MultiColumnInfo
-            {
-                [global::Unbound.Stub] public global::UnityEditor.IMGUI.Controls.MultiColumnHeaderState multiColumnHeaderState;
-                [global::Unbound.Stub] public global::UnityEngine.Rect[] cellRects;
-                [global::Unbound.Stub] internal MultiColumnInfo(global::UnityEditor.IMGUI.Controls.MultiColumnHeaderState multiColumnHeaderState, global::UnityEngine.Rect[] cellRects) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeView.RowGUIArgs.MultiColumnInfo.ctor"); }
-            }
-        }
-        [global::Unbound.Stub]
-        protected unsafe partial struct DragAndDropArgs
-        {
-            [global::Unbound.Stub] public global::UnityEditor.IMGUI.Controls.TreeView.DragAndDropPosition dragAndDropPosition;
-            [global::Unbound.Stub] public global::UnityEditor.IMGUI.Controls.TreeViewItem parentItem;
-            [global::Unbound.Stub] public int insertAtIndex;
-            [global::Unbound.Stub] public bool performDrop;
-        }
-        [global::Unbound.Stub]
-        protected unsafe partial struct SetupDragAndDropArgs
-        {
-            [global::Unbound.Stub] public global::System.Collections.Generic.IList<int> draggedItemIDs;
-        }
-        [global::Unbound.Stub]
-        protected unsafe partial struct CanStartDragArgs
-        {
-            [global::Unbound.Stub] public global::UnityEditor.IMGUI.Controls.TreeViewItem draggedItem;
-            [global::Unbound.Stub] public global::System.Collections.Generic.IList<int> draggedItemIDs;
-        }
-        [global::Unbound.Stub]
-        protected unsafe partial struct RenameEndedArgs
-        {
-            [global::Unbound.Stub] public bool acceptedRename;
-            [global::Unbound.Stub] public int itemID;
-            [global::Unbound.Stub] public string originalName;
-            [global::Unbound.Stub] public string newName;
-        }
-        protected enum DragAndDropPosition
-        {
-            UponItem = 0,
-            BetweenItems = 1,
-            OutsideItems = 2,
-        }
-        [global::Unbound.Stub]
-        internal unsafe partial class TreeViewControlDataSource : global::UnityEditor.IMGUI.Controls.LazyTreeViewDataSource
-        {
-            [global::Unbound.Stub] public TreeViewControlDataSource(global::UnityEditor.IMGUI.Controls.TreeViewController treeView, global::UnityEditor.IMGUI.Controls.TreeView owner) : base(default(global::UnityEditor.IMGUI.Controls.TreeViewController)) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeView.TreeViewControlDataSource.ctor"); }
-            [global::Unbound.Stub] public override void ReloadData() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeView.TreeViewControlDataSource.ReloadData"); }
-            [global::Unbound.Stub] public override void FetchData() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeView.TreeViewControlDataSource.FetchData"); }
-            [global::Unbound.Stub] public void SearchFullTree(string search, global::System.Collections.Generic.List<global::UnityEditor.IMGUI.Controls.TreeViewItem> result) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeView.TreeViewControlDataSource.SearchFullTree"); }
-            [global::Unbound.Stub] protected override void GetParentsAbove(int id, global::System.Collections.Generic.HashSet<int> ancestors) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeView.TreeViewControlDataSource.GetParentsAbove"); }
-            [global::Unbound.Stub] protected override void GetParentsBelow(int id, global::System.Collections.Generic.HashSet<int> children) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeView.TreeViewControlDataSource.GetParentsBelow"); }
-            [global::Unbound.Stub] public override bool IsExpandable(global::UnityEditor.IMGUI.Controls.TreeViewItem item) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeView.TreeViewControlDataSource.IsExpandable"); return default; }
-            [global::Unbound.Stub] public override bool CanBeMultiSelected(global::UnityEditor.IMGUI.Controls.TreeViewItem item) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeView.TreeViewControlDataSource.CanBeMultiSelected"); return default; }
-            [global::Unbound.Stub] public override bool CanBeParent(global::UnityEditor.IMGUI.Controls.TreeViewItem item) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeView.TreeViewControlDataSource.CanBeParent"); return default; }
-            [global::Unbound.Stub] public override bool IsRenamingItemAllowed(global::UnityEditor.IMGUI.Controls.TreeViewItem item) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeView.TreeViewControlDataSource.IsRenamingItemAllowed"); return default; }
-        }
-        [global::Unbound.Stub]
-        public unsafe static partial class DefaultGUI
-        {
-            [global::Unbound.Stub] public static void FoldoutLabel(global::UnityEngine.Rect rect, string label, bool selected, bool focused) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeView.DefaultGUI.FoldoutLabel"); }
-            [global::Unbound.Stub] public static void Label(global::UnityEngine.Rect rect, string label, bool selected, bool focused) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeView.DefaultGUI.Label"); }
-            [global::Unbound.Stub] public static void LabelRightAligned(global::UnityEngine.Rect rect, string label, bool selected, bool focused) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeView.DefaultGUI.LabelRightAligned"); }
-            [global::Unbound.Stub] public static void BoldLabel(global::UnityEngine.Rect rect, string label, bool selected, bool focused) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeView.DefaultGUI.BoldLabel"); }
-            [global::Unbound.Stub] public static void BoldLabelRightAligned(global::UnityEngine.Rect rect, string label, bool selected, bool focused) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeView.DefaultGUI.BoldLabelRightAligned"); }
-            internal static float contentLeftMargin { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeView.DefaultGUI.contentLeftMargin"); return default; } }
-        }
-        [global::Unbound.Stub]
-        public unsafe static partial class DefaultStyles
-        {
-            [global::Unbound.Stub] public static global::UnityEngine.GUIStyle foldoutLabel;
-            [global::Unbound.Stub] public static global::UnityEngine.GUIStyle label;
-            [global::Unbound.Stub] public static global::UnityEngine.GUIStyle labelRightAligned;
-            [global::Unbound.Stub] public static global::UnityEngine.GUIStyle boldLabel;
-            [global::Unbound.Stub] public static global::UnityEngine.GUIStyle boldLabelRightAligned;
-            [global::Unbound.Stub] public static global::UnityEngine.GUIStyle backgroundEven;
-            [global::Unbound.Stub] public static global::UnityEngine.GUIStyle backgroundOdd;
-        }
-    }
-    [global::Unbound.Stub]
-    internal unsafe partial class TreeViewAnimationInput
-    {
-        [global::Unbound.Stub] public global::System.Action<global::UnityEditor.IMGUI.Controls.TreeViewAnimationInput> animationEnded;
-        [global::Unbound.Stub] public TreeViewAnimationInput() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewAnimationInput.ctor"); }
-        [global::Unbound.Stub] public void CaptureTime() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewAnimationInput.CaptureTime"); }
-        [global::Unbound.Stub] public void FireAnimationEndedEvent() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewAnimationInput.FireAnimationEndedEvent"); }
-        [global::Unbound.Stub] public override string ToString() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewAnimationInput.ToString"); return default; }
-        public float elapsedTimeNormalized { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewAnimationInput.elapsedTimeNormalized"); return default; } }
-        public double elapsedTime { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewAnimationInput.elapsedTime"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewAnimationInput.elapsedTime"); } }
-        public int startRow { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewAnimationInput.startRow"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewAnimationInput.startRow"); } }
-        public int endRow { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewAnimationInput.endRow"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewAnimationInput.endRow"); } }
-        public global::UnityEngine.Rect rowsRect { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewAnimationInput.rowsRect"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewAnimationInput.rowsRect"); } }
-        public global::UnityEngine.Rect startRowRect { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewAnimationInput.startRowRect"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewAnimationInput.startRowRect"); } }
-        public double startTime { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewAnimationInput.startTime"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewAnimationInput.startTime"); } }
-        public double timeCaptured { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewAnimationInput.timeCaptured"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewAnimationInput.timeCaptured"); } }
-        public double animationDuration { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewAnimationInput.animationDuration"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewAnimationInput.animationDuration"); } }
-        public bool expanding { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewAnimationInput.expanding"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewAnimationInput.expanding"); } }
-        public bool includeChildren { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewAnimationInput.includeChildren"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewAnimationInput.includeChildren"); } }
-        public global::UnityEditor.IMGUI.Controls.TreeViewItem item { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewAnimationInput.item"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewAnimationInput.item"); } }
-        public global::UnityEditor.IMGUI.Controls.TreeViewController treeView { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewAnimationInput.treeView"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewAnimationInput.treeView"); } }
-    }
-    [global::Unbound.Stub]
-    internal unsafe partial class TreeViewController
-    {
-        internal const string kExpansionAnimationPrefKey = "TreeViewExpansionAnimation";
-        [global::Unbound.Stub] public TreeViewController(global::UnityEditor.EditorWindow editorWindow, global::UnityEditor.IMGUI.Controls.TreeViewState treeViewState) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewController.ctor"); }
-        [global::Unbound.Stub] public void Init(global::UnityEngine.Rect rect, global::UnityEditor.IMGUI.Controls.ITreeViewDataSource data, global::UnityEditor.IMGUI.Controls.ITreeViewGUI gui, global::UnityEditor.IMGUI.Controls.ITreeViewDragging dragging) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewController.Init"); }
-        [global::Unbound.Stub] public bool IsDraggingItem(global::UnityEditor.IMGUI.Controls.TreeViewItem item) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewController.IsDraggingItem"); return default; }
-        [global::Unbound.Stub] public bool IsSelected(int id) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewController.IsSelected"); return default; }
-        [global::Unbound.Stub] public bool HasSelection() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewController.HasSelection"); return default; }
-        [global::Unbound.Stub] public int[] GetSelection() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewController.GetSelection"); return global::System.Array.Empty<int>(); }
-        [global::Unbound.Stub] public int[] GetRowIDs() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewController.GetRowIDs"); return global::System.Array.Empty<int>(); }
-        [global::Unbound.Stub] public void SetSelection(int[] selectedIDs, bool revealSelectionAndFrameLastSelected) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewController.SetSelection"); }
-        [global::Unbound.Stub] public void SetSelection(int[] selectedIDs, bool revealSelectionAndFrameLastSelected, bool animatedFraming) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewController.SetSelection"); }
-        [global::Unbound.Stub] public global::UnityEditor.IMGUI.Controls.TreeViewItem FindItem(int id) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewController.FindItem"); return default; }
-        [global::System.Obsolete("SetUseScrollView has been deprecated. Use property useScrollView instead.")] [global::Unbound.Stub] public void SetUseScrollView(bool useScrollView) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewController.SetUseScrollView"); }
-        [global::Unbound.Stub] public void SetConsumeKeyDownEvents(bool consume) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewController.SetConsumeKeyDownEvents"); }
-        [global::Unbound.Stub] public void Repaint() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewController.Repaint"); }
-        [global::Unbound.Stub] public void ReloadData() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewController.ReloadData"); }
-        [global::Unbound.Stub] public bool HasFocus() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewController.HasFocus"); return default; }
-        [global::Unbound.Stub] internal static int GetItemControlID(global::UnityEditor.IMGUI.Controls.TreeViewItem item) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewController.GetItemControlID"); return default; }
-        [global::Unbound.Stub] public void HandleUnusedMouseEventsForItem(global::UnityEngine.Rect rect, global::UnityEditor.IMGUI.Controls.TreeViewItem item, int row) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewController.HandleUnusedMouseEventsForItem"); }
-        [global::Unbound.Stub] public void GrabKeyboardFocus() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewController.GrabKeyboardFocus"); }
-        [global::Unbound.Stub] public void NotifyListenersThatSelectionChanged() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewController.NotifyListenersThatSelectionChanged"); }
-        [global::Unbound.Stub] public void NotifyListenersThatDragEnded(int[] draggedIDs, bool draggedItemsFromOwnTreeView) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewController.NotifyListenersThatDragEnded"); }
-        [global::Unbound.Stub] public global::UnityEngine.Vector2 GetContentSize() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewController.GetContentSize"); return default; }
-        [global::Unbound.Stub] public global::UnityEngine.Rect GetTotalRect() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewController.GetTotalRect"); return default; }
-        [global::Unbound.Stub] public void SetTotalRect(global::UnityEngine.Rect rect) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewController.SetTotalRect"); }
-        [global::Unbound.Stub] public bool IsItemDragSelectedOrSelected(global::UnityEditor.IMGUI.Controls.TreeViewItem item) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewController.IsItemDragSelectedOrSelected"); return default; }
-        [global::Unbound.Stub] public void OnGUI(global::UnityEngine.Rect rect, int keyboardControlID) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewController.OnGUI"); }
-        [global::Unbound.Stub] public void UserInputChangedExpandedState(global::UnityEditor.IMGUI.Controls.TreeViewItem item, int row, bool expand) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewController.UserInputChangedExpandedState"); }
-        [global::Unbound.Stub] internal void ChangeExpandedState(global::UnityEditor.IMGUI.Controls.TreeViewItem item, bool expand, bool includeChildren) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewController.ChangeExpandedState"); }
-        [global::Unbound.Stub] protected virtual global::UnityEngine.Rect GetRectForRows(int startRow, int endRow, float rowWidth) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewController.GetRectForRows"); return default; }
-        [global::Unbound.Stub] public void OnEvent() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewController.OnEvent"); }
-        [global::Unbound.Stub] public bool BeginNameEditing(float delay) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewController.BeginNameEditing"); return default; }
-        [global::Unbound.Stub] public void EndNameEditing(bool acceptChanges) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewController.EndNameEditing"); }
-        [global::Unbound.Stub] internal static int GetIndexOfID(global::System.Collections.Generic.IList<global::UnityEditor.IMGUI.Controls.TreeViewItem> items, int id) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewController.GetIndexOfID"); return default; }
-        [global::Unbound.Stub] public bool IsLastClickedPartOfRows() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewController.IsLastClickedPartOfRows"); return default; }
-        [global::Unbound.Stub] public void OffsetSelection(int offset) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewController.OffsetSelection"); }
-        [global::Unbound.Stub] public void SelectionClick(global::UnityEditor.IMGUI.Controls.TreeViewItem itemClicked, bool keepMultiSelection) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewController.SelectionClick"); }
-        [global::Unbound.Stub] public void RemoveSelection() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewController.RemoveSelection"); }
-        [global::Unbound.Stub] public void Frame(int id, bool frame, bool ping) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewController.Frame"); }
-        [global::Unbound.Stub] public void Frame(int id, bool frame, bool ping, bool animated) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewController.Frame"); }
-        [global::Unbound.Stub] public void EndPing() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewController.EndPing"); }
-        [global::Unbound.Stub] public global::System.Collections.Generic.List<int> SortIDsInVisiblityOrder(global::System.Collections.Generic.IList<int> ids) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewController.SortIDsInVisiblityOrder"); return new global::System.Collections.Generic.List<int>(); }
-        public global::System.Action<int[]> selectionChangedCallback { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewController.selectionChangedCallback"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewController.selectionChangedCallback"); } }
-        public global::System.Action<int> itemSingleClickedCallback { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewController.itemSingleClickedCallback"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewController.itemSingleClickedCallback"); } }
-        public global::System.Action<int> itemDoubleClickedCallback { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewController.itemDoubleClickedCallback"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewController.itemDoubleClickedCallback"); } }
-        public global::System.Action<int[], bool> dragEndedCallback { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewController.dragEndedCallback"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewController.dragEndedCallback"); } }
-        public global::System.Action<int> contextClickItemCallback { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewController.contextClickItemCallback"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewController.contextClickItemCallback"); } }
-        public global::System.Action contextClickOutsideItemsCallback { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewController.contextClickOutsideItemsCallback"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewController.contextClickOutsideItemsCallback"); } }
-        public global::System.Action keyboardInputCallback { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewController.keyboardInputCallback"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewController.keyboardInputCallback"); } }
-        public global::System.Action expandedStateChanged { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewController.expandedStateChanged"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewController.expandedStateChanged"); } }
-        public global::System.Action<string> searchChanged { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewController.searchChanged"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewController.searchChanged"); } }
-        public global::System.Action<global::UnityEngine.Vector2> scrollChanged { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewController.scrollChanged"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewController.scrollChanged"); } }
-        public global::System.Action<int, global::UnityEngine.Rect> onGUIRowCallback { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewController.onGUIRowCallback"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewController.onGUIRowCallback"); } }
-        internal global::System.Action<int, global::UnityEngine.Rect> onFoldoutButton { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewController.onFoldoutButton"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewController.onFoldoutButton"); } }
-        public global::UnityEditor.IMGUI.Controls.ITreeViewDataSource data { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewController.data"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewController.data"); } }
-        public global::UnityEditor.IMGUI.Controls.ITreeViewDragging dragging { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewController.dragging"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewController.dragging"); } }
-        public global::UnityEditor.IMGUI.Controls.ITreeViewGUI gui { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewController.gui"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewController.gui"); } }
-        public global::UnityEditor.IMGUI.Controls.TreeViewState state { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewController.state"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewController.state"); } }
-        public global::UnityEngine.GUIStyle horizontalScrollbarStyle { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewController.horizontalScrollbarStyle"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewController.horizontalScrollbarStyle"); } }
-        public global::UnityEngine.GUIStyle verticalScrollbarStyle { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewController.verticalScrollbarStyle"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewController.verticalScrollbarStyle"); } }
-        public global::UnityEngine.GUIStyle scrollViewStyle { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewController.scrollViewStyle"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewController.scrollViewStyle"); } }
-        public global::UnityEditor.IMGUI.Controls.TreeViewItemExpansionAnimator expansionAnimator { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewController.expansionAnimator"); return default; } }
-        public bool deselectOnUnhandledMouseDown { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewController.deselectOnUnhandledMouseDown"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewController.deselectOnUnhandledMouseDown"); } }
-        public bool enableItemHovering { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewController.enableItemHovering"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewController.enableItemHovering"); } }
-        public bool useExpansionAnimation { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewController.useExpansionAnimation"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewController.useExpansionAnimation"); } }
-        public global::UnityEditor.IMGUI.Controls.TreeViewItem hoveredItem { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewController.hoveredItem"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewController.hoveredItem"); } }
-        public bool isSearching { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewController.isSearching"); return default; } }
-        public bool isDragging { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewController.isDragging"); return default; } }
-        public bool showingVerticalScrollBar { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewController.showingVerticalScrollBar"); return default; } }
-        public bool showingHorizontalScrollBar { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewController.showingHorizontalScrollBar"); return default; } }
-        public string searchString { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewController.searchString"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewController.searchString"); } }
-        public bool useScrollView { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewController.useScrollView"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewController.useScrollView"); } }
-        public global::UnityEngine.Rect visibleRect { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewController.visibleRect"); return default; } }
-        public bool animatingExpansion { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewController.animatingExpansion"); return default; } }
-        public global::System.Func<global::UnityEditor.IMGUI.Controls.TreeViewItem, bool, bool, global::System.Collections.Generic.List<int>> getNewSelectionOverride { [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewController.getNewSelectionOverride"); } }
-    }
-    [global::Unbound.Stub]
-    internal unsafe abstract partial class TreeViewDataSource : global::UnityEditor.IMGUI.Controls.ITreeViewDataSource
-    {
-        [global::Unbound.Stub] protected readonly global::UnityEditor.IMGUI.Controls.TreeViewController m_TreeView;
-        [global::Unbound.Stub] protected global::UnityEditor.IMGUI.Controls.TreeViewItem m_RootItem;
-        [global::Unbound.Stub] protected global::System.Collections.Generic.IList<global::UnityEditor.IMGUI.Controls.TreeViewItem> m_Rows;
-        [global::Unbound.Stub] protected bool m_NeedRefreshRows;
-        [global::Unbound.Stub] protected global::UnityEditor.IMGUI.Controls.TreeViewItem m_FakeItem;
-        [global::Unbound.Stub] public global::System.Action onVisibleRowsChanged;
-        [global::Unbound.Stub] public TreeViewDataSource(global::UnityEditor.IMGUI.Controls.TreeViewController treeView) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewDataSource.ctor"); }
-        [global::Unbound.Stub] public virtual void OnInitialize() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewDataSource.OnInitialize"); }
-        public abstract void FetchData();
-        [global::Unbound.Stub] public virtual void ReloadData() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewDataSource.ReloadData"); }
-        [global::Unbound.Stub] public virtual global::UnityEditor.IMGUI.Controls.TreeViewItem FindItem(int id) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewDataSource.FindItem"); return default; }
-        [global::Unbound.Stub] public virtual bool IsRevealed(int id) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewDataSource.IsRevealed"); return default; }
-        [global::Unbound.Stub] public virtual void RevealItem(int id) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewDataSource.RevealItem"); }
-        [global::Unbound.Stub] public virtual void RevealItems(int[] ids) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewDataSource.RevealItems"); }
-        [global::Unbound.Stub] public virtual void OnSearchChanged() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewDataSource.OnSearchChanged"); }
-        [global::Unbound.Stub] protected void GetVisibleItemsRecursive(global::UnityEditor.IMGUI.Controls.TreeViewItem item, global::System.Collections.Generic.IList<global::UnityEditor.IMGUI.Controls.TreeViewItem> items) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewDataSource.GetVisibleItemsRecursive"); }
-        [global::Unbound.Stub] protected void SearchRecursive(global::UnityEditor.IMGUI.Controls.TreeViewItem item, string search, global::System.Collections.Generic.IList<global::UnityEditor.IMGUI.Controls.TreeViewItem> searchResult) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewDataSource.SearchRecursive"); }
-        [global::Unbound.Stub] protected virtual global::System.Collections.Generic.List<global::UnityEditor.IMGUI.Controls.TreeViewItem> ExpandedRows(global::UnityEditor.IMGUI.Controls.TreeViewItem root) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewDataSource.ExpandedRows"); return new global::System.Collections.Generic.List<global::UnityEditor.IMGUI.Controls.TreeViewItem>(); }
-        [global::Unbound.Stub] protected virtual global::System.Collections.Generic.List<global::UnityEditor.IMGUI.Controls.TreeViewItem> Search(global::UnityEditor.IMGUI.Controls.TreeViewItem root, string search) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewDataSource.Search"); return new global::System.Collections.Generic.List<global::UnityEditor.IMGUI.Controls.TreeViewItem>(); }
-        [global::Unbound.Stub] public virtual int GetRow(int id) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewDataSource.GetRow"); return default; }
-        [global::Unbound.Stub] public virtual global::UnityEditor.IMGUI.Controls.TreeViewItem GetItem(int row) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewDataSource.GetItem"); return default; }
-        [global::Unbound.Stub] public virtual global::System.Collections.Generic.IList<global::UnityEditor.IMGUI.Controls.TreeViewItem> GetRows() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewDataSource.GetRows"); return global::System.Array.Empty<global::UnityEditor.IMGUI.Controls.TreeViewItem>(); }
-        [global::Unbound.Stub] public virtual void InitIfNeeded() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewDataSource.InitIfNeeded"); }
-        [global::Unbound.Stub] public virtual int[] GetExpandedIDs() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewDataSource.GetExpandedIDs"); return global::System.Array.Empty<int>(); }
-        [global::Unbound.Stub] public virtual void SetExpandedIDs(int[] ids) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewDataSource.SetExpandedIDs"); }
-        [global::Unbound.Stub] public virtual bool IsExpanded(int id) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewDataSource.IsExpanded"); return default; }
-        [global::Unbound.Stub] public virtual bool SetExpanded(int id, bool expand) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewDataSource.SetExpanded"); return default; }
-        [global::Unbound.Stub] public virtual void SetExpandedWithChildren(int id, bool expand) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewDataSource.SetExpandedWithChildren"); }
-        [global::Unbound.Stub] public virtual void SetExpandedWithChildren(global::UnityEditor.IMGUI.Controls.TreeViewItem fromItem, bool expand) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewDataSource.SetExpandedWithChildren"); }
-        [global::Unbound.Stub] public virtual void SetExpanded(global::UnityEditor.IMGUI.Controls.TreeViewItem item, bool expand) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewDataSource.SetExpanded"); }
-        [global::Unbound.Stub] public virtual bool IsExpanded(global::UnityEditor.IMGUI.Controls.TreeViewItem item) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewDataSource.IsExpanded"); return default; }
-        [global::Unbound.Stub] public virtual bool IsExpandable(global::UnityEditor.IMGUI.Controls.TreeViewItem item) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewDataSource.IsExpandable"); return default; }
-        [global::Unbound.Stub] public virtual bool CanBeMultiSelected(global::UnityEditor.IMGUI.Controls.TreeViewItem item) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewDataSource.CanBeMultiSelected"); return default; }
-        [global::Unbound.Stub] public virtual bool CanBeParent(global::UnityEditor.IMGUI.Controls.TreeViewItem item) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewDataSource.CanBeParent"); return default; }
-        [global::Unbound.Stub] public virtual global::System.Collections.Generic.List<int> GetNewSelection(global::UnityEditor.IMGUI.Controls.TreeViewItem clickedItem, global::UnityEditor.IMGUI.Controls.TreeViewSelectState selectState) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewDataSource.GetNewSelection"); return new global::System.Collections.Generic.List<int>(); }
-        [global::Unbound.Stub] public virtual void OnExpandedStateChanged() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewDataSource.OnExpandedStateChanged"); }
-        [global::Unbound.Stub] public virtual bool IsRenamingItemAllowed(global::UnityEditor.IMGUI.Controls.TreeViewItem item) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewDataSource.IsRenamingItemAllowed"); return default; }
-        [global::Unbound.Stub] public virtual void InsertFakeItem(int id, int parentID, string name, global::UnityEngine.Texture2D icon) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewDataSource.InsertFakeItem"); }
-        [global::Unbound.Stub] public virtual bool HasFakeItem() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewDataSource.HasFakeItem"); return default; }
-        [global::Unbound.Stub] public virtual void RemoveFakeItem() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewDataSource.RemoveFakeItem"); }
-        public bool showRootItem { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewDataSource.showRootItem"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewDataSource.showRootItem"); } }
-        public bool rootIsCollapsable { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewDataSource.rootIsCollapsable"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewDataSource.rootIsCollapsable"); } }
-        public bool alwaysAddFirstItemToSearchResult { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewDataSource.alwaysAddFirstItemToSearchResult"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewDataSource.alwaysAddFirstItemToSearchResult"); } }
-        public global::UnityEditor.IMGUI.Controls.TreeViewItem root { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewDataSource.root"); return default; } }
-        protected global::System.Collections.Generic.List<int> expandedIDs { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewDataSource.expandedIDs"); return new global::System.Collections.Generic.List<int>(); } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewDataSource.expandedIDs"); } }
-        public virtual int rowCount { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewDataSource.rowCount"); return default; } }
-        public bool isInitialized { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewDataSource.isInitialized"); return default; } }
-    }
-    [global::Unbound.Stub]
-    internal unsafe abstract partial class TreeViewDragging : global::UnityEditor.IMGUI.Controls.ITreeViewDragging
-    {
-        [global::Unbound.Stub] protected global::UnityEditor.IMGUI.Controls.TreeViewController m_TreeView;
-        [global::Unbound.Stub] protected global::UnityEditor.IMGUI.Controls.TreeViewDragging.DropData m_DropData;
-        [global::Unbound.Stub] public global::System.Func<int> getIndentLevelForMouseCursor;
-        [global::Unbound.Stub] public TreeViewDragging(global::UnityEditor.IMGUI.Controls.TreeViewController treeView) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewDragging.ctor"); }
-        [global::Unbound.Stub] public virtual void OnInitialize() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewDragging.OnInitialize"); }
-        [global::Unbound.Stub] public int GetDropTargetControlID() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewDragging.GetDropTargetControlID"); return default; }
-        [global::Unbound.Stub] public int GetRowMarkerControlID() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewDragging.GetRowMarkerControlID"); return default; }
-        [global::Unbound.Stub] public int GetAncestorControlID() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewDragging.GetAncestorControlID"); return default; }
-        [global::Unbound.Stub] public virtual bool CanStartDrag(global::UnityEditor.IMGUI.Controls.TreeViewItem targetItem, global::System.Collections.Generic.List<int> draggedItemIDs, global::UnityEngine.Vector2 mouseDownPosition) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewDragging.CanStartDrag"); return default; }
-        public abstract void StartDrag(global::UnityEditor.IMGUI.Controls.TreeViewItem draggedItem, global::System.Collections.Generic.List<int> draggedItemIDs);
-        public abstract global::UnityEditor.DragAndDropVisualMode DoDrag(global::UnityEditor.IMGUI.Controls.TreeViewItem parentItem, global::UnityEditor.IMGUI.Controls.TreeViewItem targetItem, bool perform, global::UnityEditor.IMGUI.Controls.TreeViewDragging.DropPosition dropPosition);
-        [global::Unbound.Stub] protected float GetDropBetweenHalfHeight(global::UnityEditor.IMGUI.Controls.TreeViewItem item, global::UnityEngine.Rect itemRect) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewDragging.GetDropBetweenHalfHeight"); return default; }
-        [global::Unbound.Stub] internal void HandleSiblingInsertionAtAvailableDepthsAndChangeTargetIfNeeded(ref global::UnityEditor.IMGUI.Controls.TreeViewItem targetItem, int targetItemRow, ref global::UnityEditor.IMGUI.Controls.TreeViewDragging.DropPosition dropPosition, int cursorDepth, out bool didChangeTargetToAncestor) { didChangeTargetToAncestor = default; global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewDragging.HandleSiblingInsertionAtAvailableDepthsAndChangeTargetIfNeeded"); }
-        [global::Unbound.Stub] protected bool TryGetDropPosition(global::UnityEditor.IMGUI.Controls.TreeViewItem item, global::UnityEngine.Rect itemRect, int row, out global::UnityEditor.IMGUI.Controls.TreeViewDragging.DropPosition dropPosition) { dropPosition = default; global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewDragging.TryGetDropPosition"); return default; }
-        [global::Unbound.Stub] public virtual bool DragElement(global::UnityEditor.IMGUI.Controls.TreeViewItem targetItem, global::UnityEngine.Rect targetItemRect, int row) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewDragging.DragElement"); return default; }
-        [global::Unbound.Stub] protected virtual void HandleAutoExpansion(int itemControlID, global::UnityEditor.IMGUI.Controls.TreeViewItem targetItem, global::UnityEngine.Rect targetItemRect) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewDragging.HandleAutoExpansion"); }
-        [global::Unbound.Stub] public virtual void DragCleanup(bool revertExpanded) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewDragging.DragCleanup"); }
-        [global::Unbound.Stub] public global::System.Collections.Generic.List<int> GetCurrentExpanded() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewDragging.GetCurrentExpanded"); return new global::System.Collections.Generic.List<int>(); }
-        [global::Unbound.Stub] public void RestoreExpanded(global::System.Collections.Generic.List<int> ids) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewDragging.RestoreExpanded"); }
-        [global::Unbound.Stub] internal static int GetInsertionIndex(global::UnityEditor.IMGUI.Controls.TreeViewItem parentItem, global::UnityEditor.IMGUI.Controls.TreeViewItem targetItem, global::UnityEditor.IMGUI.Controls.TreeViewDragging.DropPosition dropPosition) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewDragging.GetInsertionIndex"); return default; }
-        public bool drawRowMarkerAbove { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewDragging.drawRowMarkerAbove"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewDragging.drawRowMarkerAbove"); } }
-        public float insertionMarkerYPosition { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewDragging.insertionMarkerYPosition"); return default; } }
-        public global::UnityEditor.IMGUI.Controls.TreeViewItem insertRelativeToSibling { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewDragging.insertRelativeToSibling"); return default; } }
-        [global::Unbound.Stub]
-        protected unsafe partial class DropData
-        {
-            [global::Unbound.Stub] public int[] expandedArrayBeforeDrag;
-            [global::Unbound.Stub] public int lastControlID;
-            [global::Unbound.Stub] public int dropTargetControlID;
-            [global::Unbound.Stub] public int rowMarkerControlID;
-            [global::Unbound.Stub] public int ancestorControlID;
-            [global::Unbound.Stub] public double expandItemBeginTimer;
-            [global::Unbound.Stub] public global::UnityEngine.Vector2 expandItemBeginPosition;
-            [global::Unbound.Stub] public float insertionMarkerYPosition;
-            [global::Unbound.Stub] public global::UnityEditor.IMGUI.Controls.TreeViewItem insertRelativeToSibling;
-            [global::Unbound.Stub] public void ClearPerEventState() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewDragging.DropData.ClearPerEventState"); }
-            [global::Unbound.Stub] public DropData() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewDragging.DropData.ctor"); }
-        }
-        public enum DropPosition
-        {
-            Upon = 0,
-            Below = 1,
-            Above = 2,
-        }
-    }
-    [global::Unbound.Stub]
-    internal unsafe abstract partial class TreeViewGUI : global::UnityEditor.IMGUI.Controls.ITreeViewGUI
-    {
-        [global::Unbound.Stub] protected global::UnityEditor.IMGUI.Controls.TreeViewController m_TreeView;
-        [global::Unbound.Stub] protected global::UnityEditor.PingData m_Ping;
-        [global::Unbound.Stub] protected global::UnityEngine.Rect m_DraggingInsertionMarkerRect;
-        [global::Unbound.Stub] protected global::UnityEngine.Rect m_DraggingAncestorMarkerRect;
-        [global::Unbound.Stub] protected bool m_UseHorizontalScroll;
-        [global::Unbound.Stub] public float k_BaseIndent;
-        [global::Unbound.Stub] public float k_IndentWidth;
-        [global::Unbound.Stub] public float k_IconWidth;
-        [global::Unbound.Stub] public float k_SpaceBetweenIconAndText;
-        [global::Unbound.Stub] public float k_TopRowMargin;
-        [global::Unbound.Stub] public float k_BottomRowMargin;
-        [global::Unbound.Stub] public float k_HalfDropBetweenHeight;
-        [global::Unbound.Stub] public float customFoldoutYOffset;
-        [global::Unbound.Stub] public float extraInsertionMarkerIndent;
-        [global::Unbound.Stub] public TreeViewGUI(global::UnityEditor.IMGUI.Controls.TreeViewController treeView) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewGUI.ctor"); }
-        [global::Unbound.Stub] public TreeViewGUI(global::UnityEditor.IMGUI.Controls.TreeViewController treeView, bool useHorizontalScroll) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewGUI.ctor"); }
-        [global::Unbound.Stub] public virtual void OnInitialize() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewGUI.OnInitialize"); }
-        [global::Unbound.Stub] internal global::UnityEngine.Texture GetEffectiveIcon(global::UnityEditor.IMGUI.Controls.TreeViewItem item, bool selected, bool focused) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewGUI.GetEffectiveIcon"); return default; }
-        [global::Unbound.Stub] protected virtual global::UnityEngine.Texture GetIconForItem(global::UnityEditor.IMGUI.Controls.TreeViewItem item) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewGUI.GetIconForItem"); return default; }
-        [global::Unbound.Stub] internal virtual global::UnityEngine.Texture GetIconForSelectedItem(global::UnityEditor.IMGUI.Controls.TreeViewItem item) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewGUI.GetIconForSelectedItem"); return default; }
-        [global::Unbound.Stub] public virtual global::UnityEngine.Vector2 GetTotalSize() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewGUI.GetTotalSize"); return default; }
-        [global::Unbound.Stub] protected float GetMaxWidth(global::System.Collections.Generic.IList<global::UnityEditor.IMGUI.Controls.TreeViewItem> rows) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewGUI.GetMaxWidth"); return default; }
-        [global::Unbound.Stub] public virtual int GetNumRowsOnPageUpDown(global::UnityEditor.IMGUI.Controls.TreeViewItem fromItem, bool pageUp, float heightOfTreeView) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewGUI.GetNumRowsOnPageUpDown"); return default; }
-        [global::Unbound.Stub] public virtual void GetFirstAndLastRowVisible(out int firstRowVisible, out int lastRowVisible) { firstRowVisible = default; lastRowVisible = default; global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewGUI.GetFirstAndLastRowVisible"); }
-        [global::Unbound.Stub] public virtual void BeginRowGUI() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewGUI.BeginRowGUI"); }
-        [global::Unbound.Stub] public virtual void EndRowGUI() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewGUI.EndRowGUI"); }
-        [global::Unbound.Stub] public virtual void OnRowGUI(global::UnityEngine.Rect rowRect, global::UnityEditor.IMGUI.Controls.TreeViewItem item, int row, bool selected, bool focused) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewGUI.OnRowGUI"); }
-        [global::Unbound.Stub] protected virtual void DrawItemBackground(global::UnityEngine.Rect rect, int row, global::UnityEditor.IMGUI.Controls.TreeViewItem item, bool selected, bool focused) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewGUI.DrawItemBackground"); }
-        [global::Unbound.Stub] public virtual global::UnityEngine.Rect GetRenameRect(global::UnityEngine.Rect rowRect, int row, global::UnityEditor.IMGUI.Controls.TreeViewItem item) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewGUI.GetRenameRect"); return default; }
-        [global::Unbound.Stub] protected virtual void DoItemGUI(global::UnityEngine.Rect rect, int row, global::UnityEditor.IMGUI.Controls.TreeViewItem item, bool selected, bool focused, bool useBoldFont) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewGUI.DoItemGUI"); }
-        [global::Unbound.Stub] protected virtual global::UnityEngine.Rect GetDropTargetRect(global::UnityEngine.Rect rect) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewGUI.GetDropTargetRect"); return default; }
-        [global::Unbound.Stub] public virtual global::UnityEngine.Rect GetRowRect(int row, float rowWidth) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewGUI.GetRowRect"); return default; }
-        [global::Unbound.Stub] public virtual global::UnityEngine.Rect GetRectForFraming(int row) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewGUI.GetRectForFraming"); return default; }
-        [global::Unbound.Stub] protected virtual global::UnityEngine.Rect DoFoldout(global::UnityEngine.Rect rect, global::UnityEditor.IMGUI.Controls.TreeViewItem item, int row) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewGUI.DoFoldout"); return default; }
-        [global::Unbound.Stub] protected virtual void FoldoutButton(global::UnityEngine.Rect foldoutRect, global::UnityEditor.IMGUI.Controls.TreeViewItem item, int row, global::UnityEngine.GUIStyle foldoutStyle) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewGUI.FoldoutButton"); }
-        [global::Unbound.Stub] protected virtual bool DoFoldoutButton(global::UnityEngine.Rect foldoutRect, bool expandedState, global::UnityEngine.GUIStyle foldoutStyle) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewGUI.DoFoldoutButton"); return default; }
-        [global::Unbound.Stub] protected virtual void OnAdditionalGUI(global::UnityEngine.Rect rect, int row, global::UnityEditor.IMGUI.Controls.TreeViewItem item, bool selected, bool focused) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewGUI.OnAdditionalGUI"); }
-        [global::Unbound.Stub] protected virtual void OnContentGUI(global::UnityEngine.Rect rect, int row, global::UnityEditor.IMGUI.Controls.TreeViewItem item, string label, bool selected, bool focused, bool useBoldFont, bool isPinging) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewGUI.OnContentGUI"); }
-        [global::Unbound.Stub] public virtual void BeginPingItem(global::UnityEditor.IMGUI.Controls.TreeViewItem item, float topPixelOfRow, float availableWidth) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewGUI.BeginPingItem"); }
-        [global::Unbound.Stub] public virtual void EndPingItem() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewGUI.EndPingItem"); }
-        [global::Unbound.Stub] protected global::UnityEditor.RenameOverlay GetRenameOverlay() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewGUI.GetRenameOverlay"); return default; }
-        [global::Unbound.Stub] protected virtual bool IsRenaming(int id) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewGUI.IsRenaming"); return default; }
-        [global::Unbound.Stub] public virtual bool BeginRename(global::UnityEditor.IMGUI.Controls.TreeViewItem item, float delay) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewGUI.BeginRename"); return default; }
-        [global::Unbound.Stub] public virtual void EndRename() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewGUI.EndRename"); }
-        [global::Unbound.Stub] protected virtual void RenameEnded() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewGUI.RenameEnded"); }
-        [global::Unbound.Stub] public virtual void DoRenameOverlay() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewGUI.DoRenameOverlay"); }
-        [global::Unbound.Stub] protected virtual void SyncFakeItem() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewGUI.SyncFakeItem"); }
-        [global::Unbound.Stub] protected virtual void ClearRenameAndNewItemState() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewGUI.ClearRenameAndNewItemState"); }
-        [global::Unbound.Stub] public virtual float GetFoldoutIndent(global::UnityEditor.IMGUI.Controls.TreeViewItem item) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewGUI.GetFoldoutIndent"); return default; }
-        [global::Unbound.Stub] public virtual float GetContentIndent(global::UnityEditor.IMGUI.Controls.TreeViewItem item) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewGUI.GetContentIndent"); return default; }
-        public float iconLeftPadding { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewGUI.iconLeftPadding"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewGUI.iconLeftPadding"); } }
-        public float iconRightPadding { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewGUI.iconRightPadding"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewGUI.iconRightPadding"); } }
-        public float iconTotalPadding { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewGUI.iconTotalPadding"); return default; } }
-        public global::System.Action<global::UnityEditor.IMGUI.Controls.TreeViewItem, global::UnityEngine.Rect> iconOverlayGUI { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewGUI.iconOverlayGUI"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewGUI.iconOverlayGUI"); } }
-        public global::System.Action<global::UnityEditor.IMGUI.Controls.TreeViewItem, global::UnityEngine.Rect> labelOverlayGUI { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewGUI.labelOverlayGUI"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewGUI.labelOverlayGUI"); } }
-        public float k_LineHeight { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewGUI.k_LineHeight"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewGUI.k_LineHeight"); } }
-        public float indentWidth { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewGUI.indentWidth"); return default; } }
-        public float extraSpaceBeforeIconAndLabel { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewGUI.extraSpaceBeforeIconAndLabel"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewGUI.extraSpaceBeforeIconAndLabel"); } }
-        public bool drawSelection { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewGUI.drawSelection"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewGUI.drawSelection"); } }
-        public float halfDropBetweenHeight { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewGUI.halfDropBetweenHeight"); return default; } }
-        public virtual float topRowMargin { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewGUI.topRowMargin"); return default; } }
-        public virtual float bottomRowMargin { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewGUI.bottomRowMargin"); return default; } }
-        protected global::UnityEngine.GUIStyle foldoutStyle { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewGUI.foldoutStyle"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewGUI.foldoutStyle"); } }
-        protected global::UnityEngine.GUIStyle insertionStyle { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewGUI.insertionStyle"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewGUI.insertionStyle"); } }
-        protected global::UnityEngine.GUIStyle insertionRelativeToSiblingStyle { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewGUI.insertionRelativeToSiblingStyle"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewGUI.insertionRelativeToSiblingStyle"); } }
-        protected global::UnityEngine.GUIStyle pingStyle { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewGUI.pingStyle"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewGUI.pingStyle"); } }
-        protected global::UnityEngine.GUIStyle toolbarButtonStyle { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewGUI.toolbarButtonStyle"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewGUI.toolbarButtonStyle"); } }
-        protected global::UnityEngine.GUIStyle lineStyle { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewGUI.lineStyle"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewGUI.lineStyle"); } }
-        protected global::UnityEngine.GUIStyle selectionStyle { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewGUI.selectionStyle"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewGUI.selectionStyle"); } }
-        protected float foldoutStyleWidth { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewGUI.foldoutStyleWidth"); return default; } }
-        [global::Unbound.Stub]
-        internal unsafe static partial class Styles
-        {
-            [global::Unbound.Stub] public static global::UnityEngine.GUIStyle foldout;
-            [global::Unbound.Stub] public static global::UnityEngine.GUIStyle insertion;
-            [global::Unbound.Stub] public static global::UnityEngine.GUIStyle insertionRelativeToSibling;
-            [global::Unbound.Stub] public static global::UnityEngine.GUIStyle ping;
-            [global::Unbound.Stub] public static global::UnityEngine.GUIStyle toolbarButton;
-            [global::Unbound.Stub] public static global::UnityEngine.GUIStyle lineStyle;
-            [global::Unbound.Stub] public static global::UnityEngine.GUIStyle lineBoldStyle;
-            [global::Unbound.Stub] public static global::UnityEngine.GUIStyle selectionStyle;
-            [global::Unbound.Stub] public static global::UnityEngine.GUIContent content;
-        }
-    }
-    [global::Unbound.Stub]
-    internal unsafe partial class TreeViewItemAlphaNumericSort : global::System.Collections.Generic.IComparer<global::UnityEditor.IMGUI.Controls.TreeViewItem>
-    {
-        [global::Unbound.Stub] public int Compare(global::UnityEditor.IMGUI.Controls.TreeViewItem lhs, global::UnityEditor.IMGUI.Controls.TreeViewItem rhs) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewItemAlphaNumericSort.Compare"); return default; }
-        [global::Unbound.Stub] public TreeViewItemAlphaNumericSort() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewItemAlphaNumericSort.ctor"); }
-    }
-    [global::Unbound.Stub]
-    internal unsafe partial class TreeViewItemExpansionAnimator
-    {
-        [global::Unbound.Stub] public void BeginAnimating(global::UnityEditor.IMGUI.Controls.TreeViewAnimationInput setup) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewItemExpansionAnimator.BeginAnimating"); }
-        [global::Unbound.Stub] public void SkipAnimating() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewItemExpansionAnimator.SkipAnimating"); }
-        [global::Unbound.Stub] public bool CullRow(int row, global::UnityEditor.IMGUI.Controls.ITreeViewGUI gui) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewItemExpansionAnimator.CullRow"); return default; }
-        [global::Unbound.Stub] public void OnRowGUI(int row) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewItemExpansionAnimator.OnRowGUI"); }
-        [global::Unbound.Stub] public global::UnityEngine.Rect OnBeginRowGUI(int row, global::UnityEngine.Rect rowRect) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewItemExpansionAnimator.OnBeginRowGUI"); return default; }
-        [global::Unbound.Stub] public void OnEndRowGUI(int row) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewItemExpansionAnimator.OnEndRowGUI"); }
-        [global::Unbound.Stub] public void OnBeforeAllRowsGUI() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewItemExpansionAnimator.OnBeforeAllRowsGUI"); }
-        [global::Unbound.Stub] public void OnAfterAllRowsGUI() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewItemExpansionAnimator.OnAfterAllRowsGUI"); }
-        [global::Unbound.Stub] public bool IsAnimating(int itemID) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewItemExpansionAnimator.IsAnimating"); return default; }
-        [global::Unbound.Stub] public TreeViewItemExpansionAnimator() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewItemExpansionAnimator.ctor"); }
-        public float expandedValueNormalized { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewItemExpansionAnimator.expandedValueNormalized"); return default; } }
-        public int startRow { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewItemExpansionAnimator.startRow"); return default; } }
-        public int endRow { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewItemExpansionAnimator.endRow"); return default; } }
-        public float deltaHeight { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewItemExpansionAnimator.deltaHeight"); return default; } }
-        public bool isAnimating { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewItemExpansionAnimator.isAnimating"); return default; } }
-        public bool isExpanding { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewItemExpansionAnimator.isExpanding"); return default; } }
-    }
-    [global::Unbound.Stub]
-    internal unsafe static partial class TreeViewItemExtension
-    {
-        [global::Unbound.Stub] internal static bool Exists(this global::UnityEditor.IMGUI.Controls.TreeViewItem parentItem, global::System.Func<global::UnityEditor.IMGUI.Controls.TreeViewItem, bool> condition) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewItemExtension.Exists"); return default; }
-    }
-    [global::Unbound.Stub]
-    internal unsafe partial struct TreeViewSelectState
-    {
-        [global::Unbound.Stub] public global::System.Collections.Generic.List<int> selectedIDs;
-        [global::Unbound.Stub] public int lastClickedID;
-        [global::Unbound.Stub] public bool keepMultiSelection;
-        [global::Unbound.Stub] public bool useShiftAsActionKey;
-    }
-    unsafe partial class TreeViewState
-    {
-        [global::Unbound.Stub] internal virtual void OnAwake() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewState.OnAwake"); }
-        internal global::UnityEditor.RenameOverlay renameOverlay { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewState.renameOverlay"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewState.renameOverlay"); } }
-    }
-    [global::Unbound.Stub]
-    internal unsafe static partial class TreeViewUtility
-    {
-        [global::Unbound.Stub] internal static void SetParentAndChildrenForItems(global::System.Collections.Generic.IList<global::UnityEditor.IMGUI.Controls.TreeViewItem> rows, global::UnityEditor.IMGUI.Controls.TreeViewItem root) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewUtility.SetParentAndChildrenForItems"); }
-        [global::Unbound.Stub] internal static void SetDepthValuesForItems(global::UnityEditor.IMGUI.Controls.TreeViewItem root) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewUtility.SetDepthValuesForItems"); }
-        [global::Unbound.Stub] internal static global::System.Collections.Generic.List<global::UnityEditor.IMGUI.Controls.TreeViewItem> FindItemsInList(global::System.Collections.Generic.IEnumerable<int> itemIDs, global::System.Collections.Generic.IList<global::UnityEditor.IMGUI.Controls.TreeViewItem> treeViewItems) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewUtility.FindItemsInList"); return new global::System.Collections.Generic.List<global::UnityEditor.IMGUI.Controls.TreeViewItem>(); }
-        [global::Unbound.Stub] internal static global::UnityEditor.IMGUI.Controls.TreeViewItem FindItemInList<T>(int id, global::System.Collections.Generic.IList<T> treeViewItems) where T : global::UnityEditor.IMGUI.Controls.TreeViewItem { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewUtility.FindItemInList"); return default; }
-        [global::Unbound.Stub] internal static global::UnityEditor.IMGUI.Controls.TreeViewItem FindItem(int id, global::UnityEditor.IMGUI.Controls.TreeViewItem searchFromThisItem) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewUtility.FindItem"); return default; }
-        [global::Unbound.Stub] internal static void GetParentsAboveItem(global::UnityEditor.IMGUI.Controls.TreeViewItem fromItem, global::System.Collections.Generic.HashSet<int> parentsAbove) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewUtility.GetParentsAboveItem"); }
-        [global::Unbound.Stub] internal static void GetParentsBelowItem(global::UnityEditor.IMGUI.Controls.TreeViewItem fromItem, global::System.Collections.Generic.HashSet<int> parentsBelow) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewUtility.GetParentsBelowItem"); }
-        [global::Unbound.Stub] internal static void DebugPrintToEditorLogRecursive(global::UnityEditor.IMGUI.Controls.TreeViewItem item) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewUtility.DebugPrintToEditorLogRecursive"); }
-        [global::Unbound.Stub] internal static void SetChildParentReferences(global::System.Collections.Generic.IList<global::UnityEditor.IMGUI.Controls.TreeViewItem> visibleItems, global::UnityEditor.IMGUI.Controls.TreeViewItem root) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.IMGUI.Controls.TreeViewUtility.SetChildParentReferences"); }
     }
 }
 namespace UnityEditor.InsightsEditor
@@ -44501,10 +43867,8 @@ namespace UnityEditor.StyleSheets
         [global::Unbound.Stub] public global::UnityEngine.UIElements.StyleProperty p2;
         [global::Unbound.Stub] public PropertyPair() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.StyleSheets.PropertyPair.ctor"); }
     }
-    [global::Unbound.Stub]
-    internal unsafe partial class SVC<T>
+    unsafe partial class SVC<T>
     {
-        [global::Unbound.Stub] protected T m_Value;
         [global::Unbound.Stub] protected int m_Key;
         [global::Unbound.Stub] protected int m_Prop;
         [global::Unbound.Stub] protected global::UnityEditor.StyleSheets.StyleState[] m_States;
@@ -44516,9 +43880,6 @@ namespace UnityEditor.StyleSheets
         [global::Unbound.Stub] public SVC(int name, string property, T defaultValue = default, params global::UnityEditor.StyleSheets.StyleState[] states) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.StyleSheets.SVC<T>.ctor"); }
         [global::Unbound.Stub] public SVC(string name, int property, global::System.Func<T> lateInitHandler, params global::UnityEditor.StyleSheets.StyleState[] states) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.StyleSheets.SVC<T>.ctor"); }
         [global::Unbound.Stub] public SVC(int property, T defaultValue = default) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.StyleSheets.SVC<T>.ctor"); }
-        [global::Unbound.Stub] public SVC(string property, T defaultValue = default) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.StyleSheets.SVC<T>.ctor"); }
-        [global::Unbound.Stub] public static implicit operator T(global::UnityEditor.StyleSheets.SVC<T> sc) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.StyleSheets.SVC<T>.op_Implicit"); return default; }
-        public T value { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.StyleSheets.SVC<T>.value"); return default; } }
     }
     internal enum SkinTarget
     {
@@ -48716,8 +48077,6 @@ namespace UnityEditorInternal
         [global::Unbound.Stub] public static string TextAreaForDocBrowser(global::UnityEngine.Rect position, string text, global::UnityEngine.GUIStyle style) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditorInternal.InternalEditorUtility.TextAreaForDocBrowser"); return default; }
         [global::Unbound.Stub] public static global::UnityEngine.Camera[] GetSceneViewCameras() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditorInternal.InternalEditorUtility.GetSceneViewCameras"); return global::System.Array.Empty<global::UnityEngine.Camera>(); }
         [global::Unbound.Stub] public static void ShowGameView() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditorInternal.InternalEditorUtility.ShowGameView"); }
-        [global::Unbound.Stub] public static global::System.Collections.Generic.List<int> GetNewSelection(int clickedInstanceID, global::System.Collections.Generic.List<int> allInstanceIDs, global::System.Collections.Generic.List<int> selectedInstanceIDs, int lastClickedInstanceID, bool keepMultiSelection, bool useShiftAsActionKey, bool allowMultiSelection) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditorInternal.InternalEditorUtility.GetNewSelection"); return new global::System.Collections.Generic.List<int>(); }
-        [global::Unbound.Stub] internal static global::System.Collections.Generic.List<int> GetNewSelection(int clickedInstanceID, global::System.Collections.Generic.List<int> allInstanceIDs, global::System.Collections.Generic.List<int> selectedInstanceIDs, int lastClickedInstanceID, bool keepMultiSelection, bool useShiftAsActionKey, bool allowMultiSelection, bool shiftKeyIsDown, bool actionKeyIsDown) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditorInternal.InternalEditorUtility.GetNewSelection"); return new global::System.Collections.Generic.List<int>(); }
         [global::Unbound.Stub] internal static bool TrySetInstanceId(ref global::UnityEditorInternal.InternalEditorUtility.AssetReference entry) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditorInternal.InternalEditorUtility.TrySetInstanceId"); return default; }
         [global::Unbound.Stub] internal static global::System.Collections.Generic.List<int> TryGetInstanceIds(global::System.Collections.Generic.List<int> entryInstanceIds, global::System.Collections.Generic.List<string> entryInstanceGuids, int from, int to) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditorInternal.InternalEditorUtility.TryGetInstanceIds"); return new global::System.Collections.Generic.List<int>(); }
         [global::Unbound.Stub] internal static global::System.Collections.Generic.List<int> GetNewSelection(ref global::UnityEditorInternal.InternalEditorUtility.AssetReference clickedEntry, global::System.Collections.Generic.List<int> allEntryInstanceIDs, global::System.Collections.Generic.List<string> allEntryGuids, global::System.Collections.Generic.List<int> selectedInstanceIDs, int lastClickedInstanceID, bool keepMultiSelection, bool useShiftAsActionKey, bool allowMultiSelection) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditorInternal.InternalEditorUtility.GetNewSelection"); return new global::System.Collections.Generic.List<int>(); }

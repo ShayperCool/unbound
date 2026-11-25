@@ -69,6 +69,8 @@ namespace UnityEngine
 
         internal Color RGBMultiplied(float multiplier) => new Color(r * multiplier, g * multiplier, b * multiplier, a);
 
+        internal Color AlphaMultiplied(float multiplier) => new Color(r, g, b, a * multiplier);
+
         public static Color red => new Color(1F, 0F, 0F, 1F);
         public static Color green => new Color(0F, 1F, 0F, 1F);
         public static Color blue => new Color(0F, 0F, 1F, 1F);

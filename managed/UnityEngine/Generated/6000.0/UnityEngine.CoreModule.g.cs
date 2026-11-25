@@ -582,7 +582,6 @@ namespace UnityEngine
     }
     unsafe partial struct Color
     {
-        [global::Unbound.Stub] internal global::UnityEngine.Color AlphaMultiplied(float multiplier) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Color.AlphaMultiplied"); return default; }
         [global::Unbound.Stub] internal global::UnityEngine.Color RGBMultiplied(global::UnityEngine.Color multiplier) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Color.RGBMultiplied"); return default; }
     }
     unsafe partial class Component
