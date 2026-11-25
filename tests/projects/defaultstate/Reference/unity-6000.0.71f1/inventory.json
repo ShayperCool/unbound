@@ -1066,6 +1066,18 @@
       "type": "UnityEditor.Animations.ChildMotion"
     },
     {
+      "category": "struct",
+      "module": "UnityEditor.CoreModule",
+      "status": "candidate",
+      "type": "UnityEditor.Animations.CurveFilterOptions"
+    },
+    {
+      "category": "class",
+      "module": "UnityEditor.CoreModule",
+      "status": "candidate",
+      "type": "UnityEditor.Animations.GameObjectRecorder"
+    },
+    {
       "category": "class",
       "module": "UnityEditor.CoreModule",
       "status": "candidate",

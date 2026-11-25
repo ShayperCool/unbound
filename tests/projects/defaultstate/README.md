@@ -899,3 +899,9 @@ inventory: two Unity 6000.0.71f1 GPU Editor captures on Linux agree on its one r
 OnGUI, its constructor throws NullReferenceException); every earlier row is unchanged. The ten
 queued `EditorWindow.rootVisualElement` rows keep their Editor values and now hold Unbound's root
 (made as Unity's, without the default editor style sheet, named `rootVisualContainer2`).
+
+The Recorder slice adds `UnityEditor.Animations.GameObjectRecorder` and `CurveFilterOptions` (13 rows) to the inventory,
+as two Unity 6000.0.71f1 batch Editor captures on macOS write them (neither type's default state depends on the OS or
+the graphics device); every earlier row is unchanged. A recorder made with the obsolete parameterless constructor has
+no engine side: every property getter throws NullReferenceException. The added types shift the text assets' queued
+`instanceID` rows by the macOS-measured -10 (`debt.json`).
