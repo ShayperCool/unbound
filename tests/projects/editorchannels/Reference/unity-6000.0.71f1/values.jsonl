@@ -31,7 +31,7 @@
 {"k":"mpe.process.stopped","v":"False"}
 {"k":"localization.type","v":"found"}
 {"k":"localization.currentEditorLanguage","v":"English"}
-{"k":"localization.enableEditorLocalization","v":"True"}
+{"k":"localization.enableEditorLocalization","v":"False"}
 {"k":"collab.type","v":"found"}
 {"k":"collab.instance","v":"UnityEditor.Collaboration.Collab"}
 {"k":"toolbar.type","v":"found"}

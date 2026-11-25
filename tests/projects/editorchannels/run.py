@@ -20,6 +20,9 @@ def main():
     parser.add_argument('labels', nargs='*')
     parser.add_argument('--label', default=f'check-{time.time_ns()}')
     args = parser.parse_args()
+    # The host OS decides one value (localization.enableEditorLocalization): on macOS arm64 the
+    # probe records, publishes and gates against the macOS Editor's reference (metal/).
+    value_probe.METAL = value_probe.MACOS_ARM64
     if any(Path(label).name != label for label in (args.label, *args.labels)):
         parser.error('labels must be single directory names')
     if args.mode == 'record':

@@ -1,0 +1,39 @@
+{"k":"mpe.running.start","v":"False"}
+{"k":"mpe.process.start","v":"False"}
+{"k":"mpe.start","v":"True"}
+{"k":"mpe.process.started","v":"False"}
+{"k":"mpe.channels.start","v":"echo,echoAll,event,status"}
+{"k":"mpe.id.before","v":"-332022498"}
+{"k":"mpe.id.name.","v":"714770103"}
+{"k":"mpe.id.name.a","v":"1121120513"}
+{"k":"mpe.id.name.b","v":"-979975142"}
+{"k":"mpe.id.name.ab","v":"-2019496724"}
+{"k":"mpe.id.name.abc","v":"-1101065775"}
+{"k":"mpe.id.name.echo","v":"1046493865"}
+{"k":"mpe.id.name.status","v":"1024476513"}
+{"k":"mpe.id.name.A","v":"-1909990454"}
+{"k":"mpe.create","v":"an action"}
+{"k":"mpe.running.created","v":"True"}
+{"k":"mpe.id.created","v":"-332022498"}
+{"k":"mpe.channels.created","v":"echo,echoAll,event,probe.channel,status"}
+{"k":"mpe.register.again","v":"throws Exception: Cannot add already existing channel handler for channel: probe.channel"}
+{"k":"mpe.register.unknown","v":"throws Exception: Channel doesn't exists or is not open."}
+{"k":"mpe.broadcast","v":"sent"}
+{"k":"mpe.broadcast.string","v":"sent"}
+{"k":"mpe.clients","v":"0"}
+{"k":"mpe.port","v":"positive"}
+{"k":"mpe.address","v":"127.0.0.1"}
+{"k":"mpe.unregister","v":"done"}
+{"k":"mpe.close","v":"closed"}
+{"k":"mpe.channels.closed","v":"echo,echoAll,event,status"}
+{"k":"mpe.id.closed","v":"-332022498"}
+{"k":"mpe.stop","v":"False"}
+{"k":"mpe.process.stopped","v":"False"}
+{"k":"localization.type","v":"found"}
+{"k":"localization.currentEditorLanguage","v":"English"}
+{"k":"localization.enableEditorLocalization","v":"True"}
+{"k":"collab.type","v":"found"}
+{"k":"collab.instance","v":"UnityEditor.Collaboration.Collab"}
+{"k":"toolbar.type","v":"found"}
+{"k":"toolbar.event","v":"added and removed"}
+{"k":"complete","v":true}

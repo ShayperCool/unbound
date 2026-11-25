@@ -201,11 +201,13 @@ namespace UnityEditor.MPE
 namespace UnityEditor
 {
     /// <summary>The Editor's interface language settings as the Unity 6000.0.71f1 Editor answers them
-    /// (tests/projects/editorchannels localization.*): English, localization enabled.</summary>
+    /// (tests/projects/editorchannels localization.*): English; localization enabled in the macOS
+    /// Editor and disabled in the Linux Editor (both measured; that the host OS decides it, as the
+    /// Linux Editor installs no language packs, is an inference).</summary>
     internal partial class LocalizationDatabase
     {
         static SystemLanguage s_EditorLanguage = SystemLanguage.English;
-        static bool s_EnableEditorLocalization = true;
+        static bool s_EnableEditorLocalization = OperatingSystem.IsMacOS();
 
         public static SystemLanguage currentEditorLanguage { get => s_EditorLanguage; set => s_EditorLanguage = value; }
 
@@ -229,8 +231,6 @@ namespace UnityEditor.Collaboration
 
 namespace UnityEditor.Toolbars
 {
-    /// <summary>The play mode toolbar: Unbound shows no toolbar, so the event is never raised (as in
-    /// the batch-mode Editor); handlers are added and removed as on any event.</summary>
     /// <summary>Names a toolbar element (Unity's C#).</summary>
     [AttributeUsage(AttributeTargets.Class, AllowMultiple = true, Inherited = false)]
     public sealed partial class EditorToolbarElementAttribute : Attribute
@@ -246,6 +246,8 @@ namespace UnityEditor.Toolbars
         public Type[] targetWindows { get; }
     }
 
+    /// <summary>The play mode toolbar: Unbound shows no toolbar, so the event is never raised (as in
+    /// the batch-mode Editor); handlers are added and removed as on any event.</summary>
     [EditorToolbarElement("Editor Utility/Play Mode")]
     internal sealed partial class PlayModeButtons : UnityEngine.UIElements.VisualElement
     {
