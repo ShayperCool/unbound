@@ -44,6 +44,20 @@ Unmeasured here: L2 (`ProbeVolumeSHBands.SphericalHarmonicsL2`), per-vertex and 
 evaluation (`ShEvalMode`; Auto is per pixel on this desktop target), sky occlusion, rendering
 layers, lighting scenarios and blending, streaming, Shader Graph and VFX Graph lit outputs.
 
+## Result
+
+Measured in the Unity 6000.0.71f1 Editor (Linux, OpenGL Core, NVIDIA driver; two identical
+captures): Unbound on its OpenGL Core device matches every row and draws 17 of the 18 images to
+the Editor's pixel; in `room` one pixel of the floor's edge is one level apart
+(`image_limits.json`). Drawn without the probe volume's data (a bake whose baking set does not
+reference its cell files), every image differs by about 40 levels on average: the images measure
+the probe volume lighting.
+
+`bake.py bake` lets the Editor run 30 updates after `Lightmapping.Bake()` returns before it saves
+and quits: the baking set gets the references to its cell files after Bake returns, and an Editor
+that quits at once leaves them out of the saved set (nothing loads the cells then; measured). The
+bake fails unless the saved set references its five cell files.
+
 ## Usage
 
 ```bash

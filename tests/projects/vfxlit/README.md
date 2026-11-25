@@ -274,7 +274,8 @@ adds to that is not separated.
   culling left out.
 - A lit output that fades against the camera's depth (soft particles are measured for unlit
   outputs, `tests/projects/vfx`).
-- Probe volume lighting (the Editor here cannot bake probe volumes); more lights than one
+- Probe volume lighting (the Vulkan Editor bakes probe volumes: tests/projects/apvlighting
+  draws URP's own lit shaders under one, no VFX output); more lights than one
   Forward+ cluster holds; light cookies, light layers, reflection probes (with either
   renderer), light probes other than the ambient one, fog, additional lights' shadows, soft
   shadows, shadow cascades, screen space occlusion, the specular workflow, normal, occlusion,

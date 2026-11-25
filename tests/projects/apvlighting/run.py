@@ -5,8 +5,9 @@
     run.py publish A B            two byte-identical captures -> Reference/unity-<release>/
     run.py gate [--label L]       Unbound on the baked project, compared with Reference/
 
-The baked scene is the authored set `baked` (bake.py). The capture's scripts live in Capture/, outside the fixture: `record` and `gate` copy them into
-the assembled project's Assets/ApvLightingCapture/, so a change to them leaves the bake usable.
+The baked scene is the authored set `baked` (bake.py). The capture's scripts live in Capture/,
+outside the fixture: `record` and `gate` copy them into the assembled project's
+Assets/ApvLightingCapture/, so a change to them leaves the bake usable.
 """
 import argparse
 import os

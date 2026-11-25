@@ -1,0 +1,110 @@
+{
+ "grid-forward-20.png": {
+  "mean": 0,
+  "worst": 0,
+  "over8": 0,
+  "reason": "exact on NVIDIA, OpenGL Core"
+ },
+ "grid-forward-4.png": {
+  "mean": 0,
+  "worst": 0,
+  "over8": 0,
+  "reason": "exact on NVIDIA, OpenGL Core"
+ },
+ "grid-forward-plus-20.png": {
+  "mean": 0,
+  "worst": 0,
+  "over8": 0,
+  "reason": "exact on NVIDIA, OpenGL Core"
+ },
+ "grid-forward-plus-4.png": {
+  "mean": 0,
+  "worst": 0,
+  "over8": 0,
+  "reason": "exact on NVIDIA, OpenGL Core"
+ },
+ "grid-options-20.png": {
+  "mean": 0,
+  "worst": 0,
+  "over8": 0,
+  "reason": "exact on NVIDIA, OpenGL Core"
+ },
+ "grid-options-4.png": {
+  "mean": 0,
+  "worst": 0,
+  "over8": 0,
+  "reason": "exact on NVIDIA, OpenGL Core"
+ },
+ "particles-forward-20.png": {
+  "mean": 0,
+  "worst": 0,
+  "over8": 0,
+  "reason": "exact on NVIDIA, OpenGL Core"
+ },
+ "particles-forward-4.png": {
+  "mean": 0,
+  "worst": 0,
+  "over8": 0,
+  "reason": "exact on NVIDIA, OpenGL Core"
+ },
+ "particles-forward-plus-20.png": {
+  "mean": 0,
+  "worst": 0,
+  "over8": 0,
+  "reason": "exact on NVIDIA, OpenGL Core"
+ },
+ "particles-forward-plus-4.png": {
+  "mean": 0,
+  "worst": 0,
+  "over8": 0,
+  "reason": "exact on NVIDIA, OpenGL Core"
+ },
+ "room-20.png": {
+  "mean": 0.001,
+  "worst": 1,
+  "over8": 0,
+  "reason": "one pixel of the room's floor edge one level apart (measured on NVIDIA, OpenGL Core); every other pixel exact"
+ },
+ "room-4.png": {
+  "mean": 0.001,
+  "worst": 1,
+  "over8": 0,
+  "reason": "one pixel of the room's floor edge one level apart (measured on NVIDIA, OpenGL Core); every other pixel exact"
+ },
+ "shaders-forward-20.png": {
+  "mean": 0,
+  "worst": 0,
+  "over8": 0,
+  "reason": "exact on NVIDIA, OpenGL Core"
+ },
+ "shaders-forward-4.png": {
+  "mean": 0,
+  "worst": 0,
+  "over8": 0,
+  "reason": "exact on NVIDIA, OpenGL Core"
+ },
+ "shaders-forward-plus-20.png": {
+  "mean": 0,
+  "worst": 0,
+  "over8": 0,
+  "reason": "exact on NVIDIA, OpenGL Core"
+ },
+ "shaders-forward-plus-4.png": {
+  "mean": 0,
+  "worst": 0,
+  "over8": 0,
+  "reason": "exact on NVIDIA, OpenGL Core"
+ },
+ "simple-particles-forward-20.png": {
+  "mean": 0,
+  "worst": 0,
+  "over8": 0,
+  "reason": "exact on NVIDIA, OpenGL Core"
+ },
+ "simple-particles-forward-4.png": {
+  "mean": 0,
+  "worst": 0,
+  "over8": 0,
+  "reason": "exact on NVIDIA, OpenGL Core"
+ }
+}
