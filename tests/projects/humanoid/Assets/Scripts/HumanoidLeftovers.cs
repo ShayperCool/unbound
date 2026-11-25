@@ -273,14 +273,17 @@ public partial class HumanoidProbe
 
     /// <summary>An immediate cut (AnimatorControllerPlayable.Play at step 12) between a humanoid
     /// state (HumanA's clip) and a generic one (HumanGenericMove) of one controller layer, both
-    /// ways, root motion off.</summary>
+    /// ways, root motion off and on; and a cross-fade (CrossFade at step 12, a quarter of the
+    /// target's length) both ways with root motion on.</summary>
     static void GenericControllerCuts()
     {
 #if UNITY_EDITOR
-        foreach (var mode in new[] { "toGenericOff", "toHumanOff" })
+        foreach (var mode in new[] { "toGenericOff", "toHumanOff", "toGenericOn", "toHumanOn", "fadeToGenericOn", "fadeToHumanOn" })
         {
             string key = "genericCut." + mode;
-            bool toGeneric = mode == "toGenericOff";
+            bool toGeneric = mode.IndexOf("Generic", StringComparison.Ordinal) >= 0;
+            bool rootMotion = mode.EndsWith("On", StringComparison.Ordinal);
+            bool fade = mode.StartsWith("fade", StringComparison.Ordinal);
             AnimatorControllerPlayable playable = default;
             Guarded(key, () => PlayGraph(key, graph =>
             {
@@ -294,7 +297,12 @@ public partial class HumanoidProbe
                 machine.defaultState = toGeneric ? human : generic;
                 playable = AnimatorControllerPlayable.Create(graph, controller);
                 return playable;
-            }, false, before: step => { if (step == 12) playable.Play(toGeneric ? "Generic" : "Humanoid", 0, 0f); },
+            }, rootMotion, before: step =>
+            {
+                if (step != 12) return;
+                if (fade) playable.CrossFade(toGeneric ? "Generic" : "Humanoid", 0.25f, 0, 0f);
+                else playable.Play(toGeneric ? "Generic" : "Humanoid", 0, 0f);
+            },
                 velocities: true, localsEvery: 4));
         }
 #endif
