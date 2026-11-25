@@ -1,0 +1,15 @@
+{"k":"outside/editorGUI","v":["throws NullReferenceException: Object reference not set to an instance of an object","throws NullReferenceException: Object reference not set to an instance of an object","throws NullReferenceException: Object reference not set to an instance of an object"]}
+{"k":"outside/editorGUILayout","v":["throws NullReferenceException: Object reference not set to an instance of an object","throws NullReferenceException: Object reference not set to an instance of an object","throws NullReferenceException: Object reference not set to an instance of an object"]}
+{"k":"outside/names","v":[["Default","Lights","Shadows"],[1,2,4],7]}
+{"k":"rect/layout/masks","v":[[1,1,false],[3,1,false],[7,1,false],[0,1,false],[4294967295,1,false],[1048576,1,false],[2,1,false],[5,1,false],[6,1,false],[1,1,false]]}
+{"k":"rect/layout/mixed","v":[3,1,false]}
+{"k":"rect/layout/property","v":[["ok",1,false],["ok",1,false],3]}
+{"k":"layout/layout/fields","v":[[3,1,false],[5,1,false],[6,1,false],[1,1,false],[3,1,false],[3,1,false],[3,1,false],[3,1,false],["ok",1,false],[1048576,1,false]]}
+{"k":"layout/layout/rects","v":[[0,0,1,1],[0,0,1,1],[0,0,1,1],[0,0,1,1],[0,0,1,1],[0,0,1,1],[0,0,1,1],[0,0,1,1],[0,0,1,1],[0,0,1,1]]}
+{"k":"rect/repaint/masks","v":[[1,1,false],[3,1,false],[7,1,false],[0,1,false],[4294967295,1,false],[1048576,1,false],[2,1,false],[5,1,false],[6,1,false],[1,1,false]]}
+{"k":"rect/repaint/mixed","v":[3,1,false]}
+{"k":"rect/repaint/property","v":[["ok",1,false],["ok",1,false],3]}
+{"k":"layout/repaint/fields","v":[[3,1,false],[5,1,false],[6,1,false],[1,1,false],[3,1,false],[3,1,false],[3,1,false],[3,1,false],["ok",1,false],[1048576,1,false]]}
+{"k":"layout/repaint/rects","v":[[0,0,300,18],[0,20,300,18],[0,40,300,18],[0,60,120,18],[0,80,300,18],[0,100,300,18],[0,120,300,18],[0,140,150,18],[0,160,300,18],[0,180,300,18]]}
+{"k":"logs","v":[]}
+{"k":"complete","v":true}

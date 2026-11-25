@@ -1,0 +1,13 @@
+{
+  "commands": [
+    "python3 tests/projects/editorrenderinglayers/run.py gate"
+  ],
+  "summary": "editorrenderinglayers: .*",
+  "engine_paths": [
+    "managed/UnityEngine/Editor/",
+    "managed/UnityEngine/IMGUI/",
+    "managed/UnityEngine/Graphics/Srp/",
+    "tests/projects/editorrenderinglayers/",
+    "tests/projects/imguiskin/"
+  ]
+}
