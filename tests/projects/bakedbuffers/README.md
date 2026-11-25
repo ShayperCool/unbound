@@ -191,9 +191,9 @@ from their first surface on whatever the Min Bounces.
   0-only renderers; on a bounce from a same-level hit that misses its own level, the fallback
   to non-LOD and LOD 0 starts from the path's first origin), and their sky rays test
   shadow-casting renderers only.
-- `FilterGauss`, `FilterGaussHalf` (4, 128): the coloured scene of `Bounce` under the sun with
-  the Advanced filtering, no denoisers, Gaussian filters of radius 1 (direct) and 5 (indirect),
-  and 2.5 and 0.5.
+- `FilterGauss`, `FilterGaussHalf`, `FilterAtrous` (4, 128): the coloured scene of `Bounce`
+  under the sun with the Advanced filtering, no denoisers, Gaussian filters of radius 1 (direct)
+  and 5 (indirect), and 2.5 and 0.5, and A-Trous filters of position sigma 0.5 and 1.5.
 
 The scenes above them have the default sky (`Bare`, `Charts`, `Samples`, `Shapes`: the default
 skybox, with the default Lighting Settings' picked directions) or none (a black sky: one picked
@@ -251,7 +251,9 @@ bakes them in the Editor's process and writes each lightmap's buffers unprocesse
   filtered before they are summed: a kernel of 2 ceil(radius) + 1 texels, each the Gaussian's
   integral over its texel, rows then columns, a texel's light mixed only with that of its own
   chart's texels whose light stands (the rules' model is the comparator's
-  `gaussian_filter`).
+  `gaussian_filter`). With A-Trous filters (`FilterAtrous`), four passes over a 5 x 5 grid of
+  taps 1, 2, 4 and 8 texels apart, weighed by terms of how alike the taps' light, first sample's
+  normal and place are (the comparator's `atrous_filter` says how).
 - `lightingData.json`, the lighting data the whole bake writes beside the scene
   (`LightingData.asset`) as its fields (`unbound dump`), normalized as `tests/baked_files.py`
   says (the GUIDs of the assets the bake made, new with every bake): its bytes change from bake
@@ -326,9 +328,9 @@ whole bake of a scene still failed is not published. Not measured: back-face tex
 texel holding its own light reaches (a chart all of whose texels met back faces: Unbound keeps
 their light and spreads none from them), Backface Tolerances other than 0.9 and padding other
 than 2 (the runner refuses another Backface Tolerance), the Lighting Settings' Indirect
-Intensity other than 1 (Unbound's lightmap leaves it out), the Auto filtering, denoising, the
-A-Trous filter, filtering of directional lightmaps and in the Shadowmask and Subtractive
-Lighting Modes, the texels beyond the padding.
+Intensity other than 1 (Unbound's lightmap leaves it out), the Auto filtering, denoising,
+filtering of directional lightmaps and in the Shadowmask and Subtractive Lighting Modes, the
+texels beyond the padding.
 
 `residuals.json` names the known differences, each with the exact text the comparison gives it
 (another text, or none, fails the run); the lightmap made of a buffer with a residual differs
