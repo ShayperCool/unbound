@@ -10,6 +10,25 @@ namespace UnityEngine.Tests
         static TextureImporter Importer(string settings) => (TextureImporter)AssetImporter.FromMeta("Assets/Pivot.png", "8123456789abcdef0123456789abcdef",
             "TextureImporter", TestYaml.DocumentBody("TextureImporter:\n  serializedVersion: 13\n" + settings + "  userData: \n"));
 
+        /// <summary>The flipbook a .meta holds, one cell where it holds none (tests/projects/importermeta
+        /// change.Current, change.Missing), written back by SetTextureSettings.</summary>
+        [Fact]
+        public void TheFlipbookIsTheMetasAndOneCellWithoutIt()
+        {
+            var settings = new TextureImporterSettings();
+            Importer("  flipbookRows: 3\n  flipbookColumns: 4\n").ReadTextureSettings(settings);
+            Assert.Equal((3, 4), (settings.flipbookRows, settings.flipbookColumns));
+            var bare = Importer("");
+            bare.ReadTextureSettings(settings);
+            Assert.Equal((1, 1), (settings.flipbookRows, settings.flipbookColumns));
+            settings.flipbookRows = 2;
+            settings.flipbookColumns = 5;
+            bare.SetTextureSettings(settings);
+            var read = new TextureImporterSettings();
+            bare.ReadTextureSettings(read);
+            Assert.Equal((2, 5), (read.flipbookRows, read.flipbookColumns));
+        }
+
         [Fact]
         public void ThePivotAndBorderAreTheMetasAndSetOnes()
         {
