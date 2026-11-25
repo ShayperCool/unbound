@@ -300,12 +300,16 @@ impl Path<'_> {
                 else {
                     return;
                 };
+                // (A light with soft shadows aims its shadow ray at a point of its disk, by the
+                // bounce's first two numbers.)
+                let direction = if light.shadow_size > 0.0 {
+                    light.jittered(&arriving, origin, [numbers[0], numbers[1]])
+                } else {
+                    arriving.direction
+                };
                 let shadowed = light.casts_shadows
                     && world.casters.occluded_for(
-                        &Ray {
-                            origin,
-                            direction: arriving.direction,
-                        },
+                        &Ray { origin, direction },
                         arriving.distance,
                         next_viewer,
                     );

@@ -589,6 +589,7 @@ mod tests {
             range: 10.0,
             cone_angle: 60f32.to_radians(),
             casts_shadows: true,
+            shadow_size: 0.0,
         }
     }
 

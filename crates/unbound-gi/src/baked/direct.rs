@@ -8,6 +8,7 @@
 use super::directional::{NONE, Toward};
 use super::gbuffer::GBuffer;
 use super::light::{Light, Mode, Tables};
+use super::sampling::{self, Samples};
 use super::trace::{Ray, Scene, Viewer};
 use rayon::prelude::*;
 
@@ -105,6 +106,13 @@ pub struct Direct {
 /// rays start, `direct_samples` the Lighting Settings' Direct Samples: the texel's direction
 /// is weighed as if its light were summed over that many samples (each of its own samples
 /// standing for its part of them; tests/projects/bakedbuffers `DirectionalFaint*`).
+///
+/// A light with soft shadows (a Baked Shadow Radius or Angle) is sampled as the Editor samples
+/// it: Direct Samples samples, each at a sample of the texel picked by the Sobol sequence's
+/// third dimension (turned by the texel's rotation), its light's colour that of the light's
+/// centre and its shadow ray aimed at a point of a disk around the light picked by the texel's
+/// blue noise ([`Light::jittered`]); its light is the mean over the samples. `samples` holds
+/// the sequences (none: such a light is an error of the caller).
 #[allow(clippy::too_many_arguments)]
 pub fn direct(
     g: &GBuffer,
@@ -115,19 +123,35 @@ pub fn direct(
     scene: &Scene,
     pushoff: f32,
     direct_samples: u32,
+    samples_of: Option<&Samples>,
 ) -> Direct {
     assert!(
         channels.is_empty() || channels.len() == lights.len(),
         "a shadowmask channel per light, or none"
     );
     let tables = Tables::new();
-    let masked: Vec<(&Light, usize)> = lights
+    let soft = |l: &Light| l.casts_shadows && l.shadow_size > 0.0 && samples_of.is_some();
+    let masked_all: Vec<(&Light, usize)> = lights
         .iter()
         .zip(channels)
         .filter(|(l, _)| mixed == MixedMode::Shadowmask && l.mode == Mode::Mixed)
         .filter_map(|(l, c)| c.map(|c| (l, c as usize)))
         .collect();
-    let lights: Vec<&Light> = lights.iter().filter(|l| bakes_direct(l, mixed)).collect();
+    let masked: Vec<(&Light, usize)> = masked_all
+        .iter()
+        .copied()
+        .filter(|(l, _)| !soft(l))
+        .collect();
+    let soft_masked: Vec<(&Light, usize)> = masked_all
+        .iter()
+        .copied()
+        .filter(|(l, _)| soft(l))
+        .collect();
+    let all: Vec<&Light> = lights.iter().filter(|l| bakes_direct(l, mixed)).collect();
+    let lights: Vec<&Light> = all.iter().copied().filter(|l| !soft(l)).collect();
+    let soft_lights: Vec<&Light> = all.iter().copied().filter(|l| soft(l)).collect();
+    let count = direct_samples.max(1);
+    let distribution = sampling::distribution(count);
     let normals: Vec<[[f32; 3]; 3]> = receivers
         .iter()
         .map(|r| normal_matrix(&r.local_to_world))
@@ -208,8 +232,116 @@ pub fn direct(
                 return ([0.0; 4], NONE, [0.0; 4]);
             }
             let scale = 1.0 / samples as f32;
+            let mut light_sum = [sum[0] * scale, sum[1] * scale, sum[2] * scale];
+            // The soft lights, sample by sample; their shadowmask channels likewise.
+            let (mut soft_reached, mut soft_seen, mut soft_channels) =
+                ([0u32; 4], [0u32; 4], [false; 4]);
+            if let Some(seq) =
+                samples_of.filter(|_| !soft_lights.is_empty() || !soft_masked.is_empty())
+            {
+                let rotation = seq.rotation(tx, ty, g.width, 0);
+                let ss = s * s;
+                let at_sample = |i: u32| {
+                    let r = sampling::fraction(seq.sobol(i, 2) + rotation[0]);
+                    let k = ((ss as f32 * r).floor() as usize) % ss;
+                    let (at, receiver) = sample(g, tx, ty, k, receivers.len());
+                    let receiver = receiver?;
+                    let local = g.positions[at];
+                    let matrix = &receivers[receiver].local_to_world;
+                    let position = point(matrix, [local[0], local[1], local[2]]);
+                    let smooth = g.normals[at];
+                    let plane = g.plane_normals[at];
+                    let smooth =
+                        world_normal(&normals[receiver], [smooth[0], smooth[1], smooth[2]]);
+                    let plane = world_normal(&normals[receiver], [plane[0], plane[1], plane[2]]);
+                    let origin: [f32; 3] =
+                        std::array::from_fn(|c| position[c] + plane[c] * pushoff);
+                    Some((
+                        origin,
+                        smooth,
+                        receivers[receiver].receives_shadows,
+                        receivers[receiver].viewer,
+                    ))
+                };
+                let rnd = |i: u32| -> [f32; 2] {
+                    if (i as usize) < sampling::BLUE_SAMPLES {
+                        [
+                            seq.blue(i, 0, tx, ty, distribution),
+                            seq.blue(i, 1, tx, ty, distribution),
+                        ]
+                    } else {
+                        [
+                            sampling::fraction(seq.sobol(i, 0) + rotation[0]),
+                            sampling::fraction(seq.sobol(i, 1) + rotation[1]),
+                        ]
+                    }
+                };
+                // Whether a sample sees the light through its jittered shadow ray.
+                let sees = |light: &Light,
+                            arriving: &super::light::Arriving,
+                            origin: [f32; 3],
+                            receives: bool,
+                            viewer,
+                            u: [f32; 2]|
+                 -> ([f32; 3], bool) {
+                    let direction = light.jittered(arriving, origin, u);
+                    let shadowed = receives
+                        && scene.occluded_for(
+                            &Ray { origin, direction },
+                            arriving.distance,
+                            viewer,
+                        );
+                    (direction, !shadowed)
+                };
+                for light in &soft_lights {
+                    let (mut acc, mut counted) = ([0f32; 3], 0u32);
+                    let mut toward_light = Toward::default();
+                    for i in 0..count {
+                        let Some((origin, smooth, receives, viewer)) = at_sample(i) else {
+                            continue;
+                        };
+                        counted += 1;
+                        let Some(arriving) = light.arriving(&tables, light.color, origin, smooth)
+                        else {
+                            continue;
+                        };
+                        let (direction, seen_here) =
+                            sees(light, &arriving, origin, receives, viewer, rnd(i));
+                        if seen_here {
+                            for c in 0..3 {
+                                acc[c] += arriving.color[c];
+                            }
+                            toward_light.add(direction, arriving.color);
+                        }
+                    }
+                    if counted > 0 {
+                        let mean = 1.0 / counted as f32;
+                        for c in 0..3 {
+                            light_sum[c] += acc[c] * mean;
+                        }
+                        // (In the units of the texel's own samples, as the hard lights add.)
+                        toward.merge(&toward_light, samples as f32 * mean);
+                    }
+                }
+                for &(light, channel) in &soft_masked {
+                    soft_channels[channel] = true;
+                    for i in 0..count {
+                        let Some((origin, smooth, receives, viewer)) = at_sample(i) else {
+                            continue;
+                        };
+                        let Some(arriving) = light.arriving(&tables, light.color, origin, smooth)
+                        else {
+                            continue;
+                        };
+                        soft_reached[channel] += 1;
+                        if sees(light, &arriving, origin, receives, viewer, rnd(i)).1 {
+                            soft_seen[channel] += 1;
+                        }
+                    }
+                }
+            }
             (
-                [sum[0] * scale, sum[1] * scale, sum[2] * scale, 1.0],
+                [light_sum[0], light_sum[1], light_sum[2], 1.0],
                 // (No fewer than one Direct Sample, as an asset's raw number may say.)
                 toward.encode(
                     facing,
@@ -217,10 +349,15 @@ pub fn direct(
                     direct_samples.max(1) as f32 / samples as f32,
                 ),
                 std::array::from_fn(|c| {
-                    if reached[c] == 0 {
+                    let (reached, seen) = if soft_channels[c] {
+                        (soft_reached[c], soft_seen[c])
+                    } else {
+                        (reached[c], seen[c])
+                    };
+                    if reached == 0 {
                         0.0
                     } else {
-                        seen[c] as f32 / reached[c] as f32
+                        seen as f32 / reached as f32
                     }
                 }),
             )

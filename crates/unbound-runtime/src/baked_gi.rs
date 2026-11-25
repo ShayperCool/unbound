@@ -365,6 +365,10 @@ pub(crate) struct LightData {
     /// Spot Angle, in degrees.
     pub(crate) spot_angle: f32,
     pub(crate) casts_shadows: bool,
+    /// Its Baked Shadow Radius (point, spot) or Angle in radians (directional) where its
+    /// shadows are soft, else 0.
+    #[serde(default)]
+    pub(crate) shadow_size: f32,
 }
 
 impl LightData {
@@ -400,6 +404,7 @@ impl LightData {
             range: self.range,
             cone_angle: self.spot_angle.to_radians(),
             casts_shadows: self.casts_shadows,
+            shadow_size: self.shadow_size,
         })
     }
 }
@@ -1359,6 +1364,14 @@ fn bake(request: BakeRequest, buffers: Option<&Path>) -> Result<Json> {
                 parameters.supersampling as usize,
                 &placed,
             );
+            // (Soft shadows are sampled with the sequences the indirect light brings.)
+            anyhow::ensure!(
+                bounce.is_some()
+                    || !baked_lights
+                        .iter()
+                        .any(|l| l.casts_shadows && l.shadow_size > 0.0),
+                "soft baked shadows are sampled with the bake's blue noise, which comes with its indirect light (a session with a graphics device)"
+            );
             let lit = direct::direct(
                 &g,
                 &receivers,
@@ -1368,6 +1381,7 @@ fn bake(request: BakeRequest, buffers: Option<&Path>) -> Result<Json> {
                 &scene,
                 parameters.pushoff,
                 request.direct_samples,
+                bounce.as_ref().map(|b| &b.samples),
             );
             let bounced = bounce.as_ref().map(|b| {
                 indirect::indirect(

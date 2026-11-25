@@ -12,7 +12,7 @@ pub const SOBOL_DIMENSIONS: usize = 1024;
 /// The side of the tile the blue noise tables repeat with over a lightmap.
 const TILE: usize = 128;
 /// The samples and the dimensions of the blue noise sequence.
-const BLUE_SAMPLES: usize = 256;
+pub(crate) const BLUE_SAMPLES: usize = 256;
 const BLUE_DIMENSIONS: usize = 256;
 /// The dimensions the ranking and scrambling tables have values for (further ones repeat).
 const TILE_DIMENSIONS: usize = 8;
@@ -189,7 +189,7 @@ const HALF_PI: f32 = 1.570_796_326_794_897;
 const QUARTER_PI: f32 = 0.785_398_163_397_448_3;
 
 /// A point of the unit disk for a point of the unit square (Shirley's concentric map).
-fn disk(u: [f32; 2]) -> [f32; 2] {
+pub fn disk(u: [f32; 2]) -> [f32; 2] {
     let (a, b) = (u[0] * 2.0 - 1.0, u[1] * 2.0 - 1.0);
     let (radius, angle) = if a * a > b * b {
         (a, QUARTER_PI * (b / a))

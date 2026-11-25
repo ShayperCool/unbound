@@ -643,8 +643,14 @@ namespace UnityEngine
                 }
                 if (light.cookie != null)
                     warn("light-cookie:" + path + fileId, $"{path}: '{light.name}' has a cookie, which Unbound's bake (Lightmapping.Bake) does not apply yet.");
-                if ((kind == 0 ? light.shadowAngle : light.shadowRadius) > 0f && light.shadows != LightShadows.None)
-                    warn("light-soft:" + path + fileId, $"{path}: '{light.name}' has soft baked shadows (its Baked Shadow {(kind == 0 ? "Angle" : "Radius")}), which Unbound's bake (Lightmapping.Bake) bakes hard yet.");
+                // Soft baked shadows: its Baked Shadow Angle (in radians) or Radius
+                // (tests/projects/bakedbuffers Soft*); with hard shadows a size is not measured.
+                float shadowSize = kind == 0 ? light.shadowAngle * Mathf.Deg2Rad : light.shadowRadius;
+                if (shadowSize > 0f && light.shadows == LightShadows.Hard)
+                {
+                    warn("light-soft:" + path + fileId, $"{path}: '{light.name}' has hard shadows with a Baked Shadow {(kind == 0 ? "Angle" : "Radius")}, which Unbound's bake (Lightmapping.Bake) has not measured yet.");
+                    if (skipUnmeasured) continue;
+                }
                 var t = light.transform;
                 int mode = light.lightmapBakeType == LightmapBakeType.Mixed ? 1 : 2;
                 Color direct = light.ScaledColor(light.intensity, linear: true), indirect = light.ScaledColor(light.intensity * light.bounceIntensity, linear: true);
@@ -663,6 +669,7 @@ namespace UnityEngine
                     range = light.range,
                     spotAngle = light.spotAngle,
                     castsShadows = light.shadows != LightShadows.None,
+                    shadowSize = light.shadows == LightShadows.Soft ? shadowSize : 0f,
                 };
                 lights.Add(new ExtractedLight(json, kind, mode, position, t.forward, light.range, light.spotAngle));
             }

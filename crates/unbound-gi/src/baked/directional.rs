@@ -35,6 +35,14 @@ impl Toward {
         self.weight += weight;
     }
 
+    /// Adds another's directions and luminance, times `scale`.
+    pub fn merge(&mut self, other: &Toward, scale: f32) {
+        for k in 0..3 {
+            self.sum[k] += other.sum[k] * scale;
+        }
+        self.weight += other.weight * scale;
+    }
+
     /// The texel's value: the mean direction (of length up to 1, shorter where light comes
     /// from several sides, and where the luminance summed over the rays is less than
     /// [`LEAST_WEIGHT`]) mapped from -1..1 to 0..1, and how much the texel's samples face it,

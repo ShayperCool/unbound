@@ -35,6 +35,9 @@ pub struct Light {
     /// A spot light's whole cone angle, in radians.
     pub cone_angle: f32,
     pub casts_shadows: bool,
+    /// Where its baked shadows are soft: its Baked Shadow Radius (a point or spot light) or
+    /// Angle in radians (a directional light); 0 where they are hard.
+    pub shadow_size: f32,
 }
 
 /// The samples of the distance falloff table.
@@ -142,6 +145,40 @@ pub struct Arriving {
 
 /// A directional light is this far away for its shadow rays.
 pub const FAR: f32 = 1e27;
+
+impl Light {
+    /// The radius of the disk a soft shadow's rays aim at, at the light (a directional
+    /// light's one unit away: its angle in radians, tests/projects/bakedbuffers `SoftSun`,
+    /// `SoftMixed`); 0 for hard shadows.
+    pub fn shadow_radius(&self) -> f32 {
+        self.shadow_size
+    }
+
+    /// The direction a soft shadow's ray of the sample at `position` takes towards the light
+    /// (`arriving`'s), aimed at a point of a disk around it facing the sample: the direction
+    /// times the light's distance (1 for a directional light) plus the disk point of `rnd` (a
+    /// point of the unit square, mapped to the unit disk) times the radius, in a basis around
+    /// the direction; of unit length.
+    pub fn jittered(&self, arriving: &Arriving, position: [f32; 3], rnd: [f32; 2]) -> [f32; 3] {
+        let l = arriving.direction;
+        let distance = match self.kind {
+            Kind::Directional => 1.0,
+            _ if arriving.distance == FAR => {
+                let d: [f32; 3] = std::array::from_fn(|k| self.position[k] - position[k]);
+                (d[0] * d[0] + d[1] * d[1] + d[2] * d[2]).sqrt()
+            }
+            _ => arriving.distance,
+        };
+        let radius = self.shadow_radius();
+        let [dx, dy] = super::sampling::disk(rnd);
+        let (b1, b2) = super::sampling::basis(l);
+        let v: [f32; 3] = std::array::from_fn(|k| {
+            l[k] * distance + (b1[k] * (radius * dx) + b2[k] * (radius * dy))
+        });
+        let length = (v[0] * v[0] + v[1] * v[1] + v[2] * v[2]).sqrt();
+        v.map(|x| x / length)
+    }
+}
 /// A point this near a light takes its full colour whatever it faces.
 const AT_THE_LIGHT: f32 = 1e-19;
 

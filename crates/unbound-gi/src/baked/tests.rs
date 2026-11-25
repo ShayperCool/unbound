@@ -820,6 +820,7 @@ mod lighting {
             range: 10.0,
             cone_angle: 60f32.to_radians(),
             casts_shadows: true,
+            shadow_size: 0.0,
         }
     }
 
@@ -1012,7 +1013,18 @@ mod lighting {
             viewer: crate::baked::trace::Viewer::Lod0,
         }];
         let masks = |mixed: MixedMode, channel: Option<u8>| {
-            direct::direct(&g, &receivers, &[sun], &[channel], mixed, &roof, 0.0001, 32).shadowmask
+            direct::direct(
+                &g,
+                &receivers,
+                &[sun],
+                &[channel],
+                mixed,
+                &roof,
+                0.0001,
+                32,
+                None,
+            )
+            .shadowmask
         };
         let mask = masks(MixedMode::Shadowmask, Some(2));
         for (texel, value) in mask.iter().enumerate() {
@@ -1052,6 +1064,7 @@ mod lighting {
             &Scene::new([]),
             0.0001,
             32,
+            None,
         )
         .shadowmask;
         assert!(lit.iter().all(|v| v[0] == 0.0 || v[0] == 1.0), "{lit:?}");
@@ -1083,7 +1096,7 @@ mod lighting {
                 receives_shadows: receives,
                 viewer: crate::baked::trace::Viewer::Lod0,
             }];
-            direct::direct(&g, &receivers, &[sun], &[], mixed, scene, 0.0001, 32).irradiance
+            direct::direct(&g, &receivers, &[sun], &[], mixed, scene, 0.0001, 32, None).irradiance
         };
         let open = lit(
             true,
@@ -1156,6 +1169,7 @@ mod lighting {
             &film,
             0.0001,
             32,
+            None,
         )
         .irradiance;
         let below = direct::direct(
@@ -1167,6 +1181,7 @@ mod lighting {
             &film,
             0.0,
             32,
+            None,
         )
         .irradiance;
         assert!(above.iter().all(|t| near(t[0], 1.6)) && below.iter().all(|t| t[0] == 0.0));
@@ -1191,6 +1206,7 @@ mod lighting {
             &Scene::new([]),
             0.0001,
             32,
+            None,
         )
         .irradiance;
         assert_eq!(values[3], [0.0; 4]);
@@ -1227,6 +1243,7 @@ mod lighting {
             &Scene::new([]),
             0.0001,
             32,
+            None,
         )
         .irradiance;
         assert!(lit.iter().all(|t| near(t[0], 2.0)));
@@ -1241,6 +1258,7 @@ mod lighting {
             &wall,
             0.0001,
             32,
+            None,
         )
         .irradiance;
         assert!(shadowed.iter().all(|t| t[0] == 0.0 && t[3] == 1.0));
@@ -1473,6 +1491,7 @@ mod bounced {
             range: 0.0,
             cone_angle: 1.0,
             casts_shadows: true,
+            shadow_size: 0.0,
         }
     }
 
@@ -2018,6 +2037,7 @@ mod bounced {
                 casters,
                 0.0001,
                 32,
+                None,
             )
             .irradiance[0][0]
         };
@@ -2111,6 +2131,7 @@ mod bounced {
             range: 0.0,
             cone_angle: 0.0,
             casts_shadows: true,
+            shadow_size: 0.0,
         };
         let grid = Grid::new(
             &[sun],
@@ -2174,6 +2195,7 @@ mod bounced {
             range: 10.0,
             cone_angle: 60f32.to_radians(),
             casts_shadows: false,
+            shadow_size: 0.0,
         };
         assert!(
             base_spot

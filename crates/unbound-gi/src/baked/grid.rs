@@ -353,6 +353,7 @@ mod tests {
             range,
             cone_angle: 0.0,
             casts_shadows: true,
+            shadow_size: 0.0,
         }
     }
 

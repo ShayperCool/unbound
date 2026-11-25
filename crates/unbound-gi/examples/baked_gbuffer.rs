@@ -153,6 +153,7 @@ fn main() {
                 range: r.f32(),
                 cone_angle: r.f32(),
                 casts_shadows: r.u32() != 0,
+                shadow_size: 0.0,
             }
         })
         .collect();
@@ -174,7 +175,7 @@ fn main() {
     // (Only the shadowmask is written: Direct Samples, which weigh the directions, do not
     // matter; a new Lighting Settings asset's.)
     let lit = direct::direct(
-        &g, &receivers, &lights, &assigned, mixed, &casters, pushoff, 32,
+        &g, &receivers, &lights, &assigned, mixed, &casters, pushoff, 32, None,
     );
     std::fs::write(out.join("shadowmask.f32"), floats(&lit.shadowmask)).unwrap();
     // Light probes at the points a file names (three floats each), with the lights' grid over
