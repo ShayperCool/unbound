@@ -785,7 +785,10 @@ impl<'a> Buffers<'a> {
                 )?),
                 None => None,
             };
-        let mut lightmap = composite::composite(
+        let composite::Composed {
+            mut lightmap,
+            parts,
+        } = composite::composite(
             &composite::Buffers {
                 width: g.width,
                 height: g.height,
@@ -838,6 +841,14 @@ impl<'a> Buffers<'a> {
             };
             // The directions (stitched with all four values within [0, 1]) and the shadowmask
             // (red, green and blue, as high as they go, where the project stitches it).
+            // Where the lightmap is filtered, so are the images, by the same processing.
+            let post = composite::Post {
+                width: g.width,
+                height: g.height,
+                charts: &g.charts,
+                normals: Some((&normals, g.supersampling)),
+                denoiser: denoiser.as_deref(),
+            };
             if directional {
                 let mut image = images::directional(
                     &made,
@@ -845,15 +856,21 @@ impl<'a> Buffers<'a> {
                     bounced.map(|b| b.directionality.as_slice()),
                     backface_tolerance,
                     padding,
-                );
+                    parts.as_ref().map(|parts| (parts, &post)),
+                )?;
                 for (pairs, scale_offset) in stitched {
                     seams::stitch(&mut image, g.width, g.height, pairs, *scale_offset, 4, 1.0);
                 }
                 self.directions.push(png(&image));
             }
             if let Some(stitching) = shadowmask {
-                let mut image =
-                    images::shadowmask(&made, &lit.shadowmask, backface_tolerance, padding);
+                let mut image = images::shadowmask(
+                    &made,
+                    &lit.shadowmask,
+                    backface_tolerance,
+                    padding,
+                    filtering.map(|f| (f.direct, &post)),
+                )?;
                 if stitching {
                     for (pairs, scale_offset) in stitched {
                         seams::stitch(

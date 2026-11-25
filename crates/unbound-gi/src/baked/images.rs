@@ -4,12 +4,16 @@
 //! the shadowmask, each as 8-bit texels.
 //!
 //! The directional image blends each texel's direct and indirect directions by how much light
-//! each brings; both images then fill the texels whose light does not stand (back faces) and the
-//! padding rings around the charts from their neighbours, a mean weighed by which neighbours
-//! hold their own; the directional image then fills every other texel from a chain of halved
-//! images. The seams are stitched afterwards ([`super::seams`]).
+//! each brings (as filtered, where the lightmap is); both images then fill the texels whose light
+//! does not stand (back faces) and the padding rings around the charts from their neighbours, a
+//! mean weighed by which neighbours hold their own (where the lightmap is filtered, after their
+//! own filtering: the directional image's by a Gaussian filter of radius 5, the shadowmask's as
+//! the direct light is denoised and filtered); the directional image then fills every other
+//! texel from a chain of halved images. The seams are stitched afterwards ([`super::seams`]).
 
+use super::composite::{self, PartFilter, PartFiltering, Post};
 use super::{dilate, directional};
+use anyhow::Result;
 
 /// A texel's luminance by its red, green and blue.
 const LUMINANCE: [f32; 4] = [0.22, 0.707, 0.071, 0.0];
@@ -68,34 +72,48 @@ fn lengths(v: [f32; 4]) -> [f32; 4] {
     [even, odd, even, odd]
 }
 
+/// The radius of the Gaussian filter of a filtered lightmap's directional image, whatever the
+/// Lighting Settings' filters.
+const DIRECTIONAL_RADIUS: f32 = 5.0;
+
 /// The directional image of a lightmap: per texel the direct and indirect directions (as
 /// [`super::directional::Toward::encode`] gives them) blended by each one's length times its
 /// light's luminance; filled where the light does not stand and `padding` rings out, then
-/// every other texel from halved images. 32-bit floats, before stitching and rounding.
+/// every other texel from halved images. Where the lightmap is filtered, `filtered` is its
+/// direct light and indirect and sky's light as processed ([`composite::Composed::parts`])
+/// and how its images are processed: the light weighs the directions as processed, and the
+/// image is filtered before it is filled. 32-bit floats, before stitching and rounding.
 pub fn directional(
     b: &Buffers,
     toward_direct: &[[f32; 4]],
     toward_indirect: Option<&[[f32; 4]]>,
     backface_tolerance: f32,
     padding: u32,
-) -> Vec<[f32; 4]> {
+    filtered: Option<(&[Vec<[f32; 4]>; 2], &Post)>,
+) -> Result<Vec<[f32; 4]>> {
     let texels = b.width * b.height;
     let none = vec![[0.0f32; 4]; texels];
-    let direct_marks = markers(b, backface_tolerance, b.direct);
-    let d = direct_light(b.direct, &direct_marks);
-    let indirect_raw = b.indirect.unwrap_or(&none);
-    let indirect_marks = markers(b, backface_tolerance, indirect_raw);
-    let environment = b.environment.unwrap_or(&none);
-    let i: Vec<[f32; 4]> = (0..texels)
-        .map(|k| {
-            let mut t = indirect_raw[k];
-            for c in 0..3 {
-                t[c] = environment[k][c] + t[c];
-            }
-            t[3] = indirect_marks[k];
-            t
-        })
-        .collect();
+    let (d, i) = match filtered {
+        Some(([direct, indirect], _)) => (direct.clone(), indirect.clone()),
+        None => {
+            let direct_marks = markers(b, backface_tolerance, b.direct);
+            let d = direct_light(b.direct, &direct_marks);
+            let indirect_raw = b.indirect.unwrap_or(&none);
+            let indirect_marks = markers(b, backface_tolerance, indirect_raw);
+            let environment = b.environment.unwrap_or(&none);
+            let i: Vec<[f32; 4]> = (0..texels)
+                .map(|k| {
+                    let mut t = indirect_raw[k];
+                    for c in 0..3 {
+                        t[c] = environment[k][c] + t[c];
+                    }
+                    t[3] = indirect_marks[k];
+                    t
+                })
+                .collect();
+            (d, i)
+        }
+    };
     let unlit = vec![directional::NONE; texels];
     let toward_indirect = toward_indirect.unwrap_or(&unlit);
     let mut out: Vec<[f32; 4]> = (0..texels)
@@ -117,30 +135,39 @@ pub fn directional(
         })
         .collect();
     let marks = markers(b, backface_tolerance, &out);
-    out = dilate(&out, &marks, b.used, b.width, b.height, padding);
+    let process = filtered.map(|(_, post)| {
+        let with = PartFiltering {
+            denoise: false,
+            filter: Some(PartFilter::Gaussian(DIRECTIONAL_RADIUS)),
+        };
+        (with, post)
+    });
+    out = dilate(&out, &marks, b.used, b.width, b.height, padding, process)?;
     fill_background(&mut out, b.width, b.height);
-    out
+    Ok(out)
 }
 
 /// The shadowmask image of a lightmap (the direct pass's per-channel visibility of the mixed
-/// lights): its fourth channel kept within [0, 1]; filled where the light does not stand and
-/// `padding` rings out (no further). 32-bit floats, before stitching and rounding.
+/// lights): its fourth channel kept within [0, 1]; where the lightmap is filtered, processed as
+/// its direct light is (`filtered`); filled where the light does not stand and `padding` rings
+/// out (no further). 32-bit floats, before stitching and rounding.
 pub fn shadowmask(
     b: &Buffers,
     mask: &[[f32; 4]],
     backface_tolerance: f32,
     padding: u32,
-) -> Vec<[f32; 4]> {
+    filtered: Option<(PartFiltering, &Post)>,
+) -> Result<Vec<[f32; 4]>> {
     let out: Vec<[f32; 4]> = mask
         .iter()
         .map(|t| [t[0], t[1], t[2], t[3].clamp(0.0, 1.0)])
         .collect();
     let marks = markers(b, backface_tolerance, &out);
-    dilate(&out, &marks, b.used, b.width, b.height, padding)
+    dilate(&out, &marks, b.used, b.width, b.height, padding, filtered)
 }
 
-/// The fill of a four-channel image: its first three channels and its fourth filled apart
-/// (each with the markers as its weights).
+/// The fill of a four-channel image: its first three channels and its fourth apart (each with
+/// the markers as its weights), each first processed as `process` says where given.
 fn dilate(
     image: &[[f32; 4]],
     marks: &[f32],
@@ -148,24 +175,29 @@ fn dilate(
     width: usize,
     height: usize,
     padding: u32,
-) -> Vec<[f32; 4]> {
-    let first: Vec<[f32; 4]> = image
+    process: Option<(PartFiltering, &Post)>,
+) -> Result<Vec<[f32; 4]>> {
+    let mut first: Vec<[f32; 4]> = image
         .iter()
         .zip(marks)
         .map(|(t, &m)| [t[0], t[1], t[2], m])
         .collect();
-    let fourth: Vec<[f32; 4]> = image
+    let mut fourth: Vec<[f32; 4]> = image
         .iter()
         .zip(marks)
         .map(|(t, &m)| [t[3], t[3], t[3], m])
         .collect();
+    if let Some((with, post)) = process {
+        composite::process(&mut first, with, post)?;
+        composite::process(&mut fourth, with, post)?;
+    }
     let first = dilate::fill(first, used, width, height, padding);
     let fourth = dilate::fill(fourth, used, width, height, padding);
-    first
+    Ok(first
         .iter()
         .zip(&fourth)
         .map(|(a, b)| [a[0], a[1], a[2], b[0]])
-        .collect()
+        .collect())
 }
 
 /// Fills every texel of the directional image that holds nothing (all four values 0) from a
@@ -273,7 +305,7 @@ mod tests {
         // Directions of equal lengths.
         let dd = [1.0, 0.5, 0.5, 1.0];
         let di = [0.5, 1.0, 0.5, 0.0];
-        let out = directional(&b, &[dd; 4], Some(&[di; 4]), 0.9, 0);
+        let out = directional(&b, &[dd; 4], Some(&[di; 4]), 0.9, 0, None).unwrap();
         assert_eq!(out[0], dd);
         // (No light either way: the indirect direction.)
         assert_eq!(out[1], di);
@@ -300,7 +332,7 @@ mod tests {
         };
         let dd = [1.0, 0.5, 0.5, 1.0];
         let di = [0.5, 1.0, 0.5, 0.0];
-        let out = directional(&b, &[dd; 4], Some(&[di; 4]), 0.9, 0);
+        let out = directional(&b, &[dd; 4], Some(&[di; 4]), 0.9, 0, None).unwrap();
         assert_eq!(out[0], [0.75, 0.75, 0.5, 0.5]);
         assert_eq!(out[1], dd);
     }
@@ -343,7 +375,7 @@ mod tests {
             [0.0, 0.0, 0.0, 0.5],
             [1.0, 0.0, 1.0, 1.0],
         ];
-        let out = shadowmask(&b, &mask, 0.9, 0);
+        let out = shadowmask(&b, &mask, 0.9, 0, None).unwrap();
         assert_eq!(out[0], [0.2, 0.4, 0.6, 1.0]);
         assert_eq!(out[1], [1.0, 1.0, 1.0, 0.0]);
         assert_eq!(out[2], [0.0, 0.0, 0.0, 0.5]);

@@ -355,8 +355,8 @@ namespace UnityEngine
         /// <summary>Why a bake's lightmaps with the Lighting Settings' filtering are not made
         /// (null: they are, or nothing is filtered). Measured: the Auto filtering, and the
         /// Advanced filtering with Open Image Denoise or no denoiser and Gaussian or A-Trous
-        /// filters (or none) of the direct and indirect light, in the Baked Indirect Lighting
-        /// Mode without directional lightmaps (the ambient occlusion target's settings matter only
+        /// filters (or none) of the direct and indirect light, with directional lightmaps or
+        /// without, in each Lighting Mode (the ambient occlusion target's settings matter only
         /// with ambient occlusion, which is not made). The OptiX denoiser, which the Editor runs
         /// only on Windows (elsewhere it does not start such a bake), is not made.</summary>
         internal static string UnmadeFiltering(LightingSettings settings) =>
@@ -364,8 +364,6 @@ namespace UnityEngine
             : settings.filteringMode == LightingSettings.FilterMode.Advanced
                 && (Unmade(settings.denoiserTypeDirect) || Unmade(settings.denoiserTypeIndirect))
                 ? $"lightmaps with the {DenoiserName(Unmade(settings.denoiserTypeDirect) ? settings.denoiserTypeDirect : settings.denoiserTypeIndirect)} denoiser are not made"
-            : settings.directionalityMode == LightmapsMode.CombinedDirectional ? "directional lightmaps with filtering are not measured"
-            : settings.mixedBakeMode != MixedLightingMode.IndirectOnly ? "filtered lightmaps in the Shadowmask or Subtractive Lighting Mode are not measured"
             : null;
 
         static bool Unmade(LightingSettings.DenoiserType denoiser) =>

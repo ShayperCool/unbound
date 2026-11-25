@@ -310,11 +310,17 @@ namespace UnityEngine.Tests
                     Assert.Null(Unwritten(environment, "Assets/Scenes/Lit", true, lightmaps: true));
                     Assert.Equal("{\"direct\":{\"denoise\":false,\"filter\":{\"gaussian\":2.5}},\"indirect\":{\"denoise\":false,\"filter\":{\"aTrous\":1.5}}}", Json(RealtimeGI.Filtering(environment)));
                     environment.filterTypeIndirect = LightingSettings.FilterType.Gaussian;
+                    // Filtered in the Shadowmask and Subtractive modes and with directional lightmaps
+                    // (tests/projects/bakedbuffers FilterShadowmask*, FilterSubtractive*,
+                    // FilterDirectional*).
                     environment.mixedBakeMode = MixedLightingMode.Shadowmask;
-                    Assert.Contains("filtered lightmaps in the Shadowmask", Unwritten(environment, "Assets/Scenes/Lit", true, lightmaps: true));
+                    Assert.Null(Unwritten(environment, "Assets/Scenes/Lit", true, lightmaps: true));
+                    environment.mixedBakeMode = MixedLightingMode.Subtractive;
+                    Assert.Null(Unwritten(environment, "Assets/Scenes/Lit", true, lightmaps: true));
                     environment.mixedBakeMode = MixedLightingMode.IndirectOnly;
                     environment.directionalityMode = LightmapsMode.CombinedDirectional;
-                    Assert.Contains("directional lightmaps with filtering", Unwritten(environment, "Assets/Scenes/Lit", true, lightmaps: true));
+                    Assert.Null(Unwritten(environment, "Assets/Scenes/Lit", true, lightmaps: true));
+                    Assert.NotNull(RealtimeGI.Filtering(environment));
                     environment.directionalityMode = LightmapsMode.NonDirectional;
                     Assert.Null(Unwritten(environment, "Assets/Scenes/Lit", true, lightmaps: true));
                     environment.filteringMode = LightingSettings.FilterMode.None;
