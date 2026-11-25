@@ -184,9 +184,12 @@ namespace UnityEngine
                 foreach (var c in m_Curves)
                     if ((c.Curve != null && c.Curve.length > 0) || c.Sampled != null)
                     { end = Math.Max(end, c.LastKeyTime); found = true; }
+                // An object reference curve's last key lasts a frame of the clip's current frame
+                // rate (tests/projects/animrecorder objectLength.*).
+                float frame = m_SampleRate > 0f ? 1f / m_SampleRate : 0f;
                 foreach (var c in m_ObjectCurves)
                     if (c.Times.Length > 0)
-                    { end = Math.Max(end, c.Times[c.Times.Length - 1]); found = true; }
+                    { end = Math.Max(end, c.Times[c.Times.Length - 1] + frame); found = true; }
                 foreach (var e in m_Events) { end = Math.Max(end, e.m_Time); found = true; }
                 return found ? end : EmptyClipLength;
             }
