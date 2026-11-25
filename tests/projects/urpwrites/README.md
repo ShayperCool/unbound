@@ -56,9 +56,12 @@ given), and a pass enabled again leaves its place to the last entry; passes a sc
 the first use come before those its validation disables (`PassNamesEdited`).
 `ProjectSettings/URPProjectSettings.asset` is created in Play mode.
 
-Residuals (`residuals.json`): the Editor's first import of the project runs the pipeline's material
-postprocessor on every material and saves the upgraded `LitV9` (version 10) and `LitNoVersion` (a
-version object); Unbound does not import the opened project and writes neither.
+The project's first open runs the pipeline's material postprocessor on every material
+(OnPostprocessAllAssets of the start's import, tests/projects/firstimport) and saves the upgraded
+`LitV9` (version 10) and `LitNoVersion` (a version object).
+
+Residual (`residuals.json`): `Material.passCount` of URP Lit reads 1 in the batch-mode Editor, the
+shader's pass count (9) in Unbound.
 
 Unmeasured: when the Editor validates a material again after its first use (a project editor counted
 a second validation at a later access in a later frame, tests/projects/materialvalidation

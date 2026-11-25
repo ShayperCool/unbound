@@ -1,10 +1,4 @@
 {
-  "At its first import of a project the Editor imports every material, and the render pipeline's material postprocessor upgrades the ones saved by an older pipeline version (an AssetVersion below 10 is raised, a material without one gets one) and saves them; Unbound does not import the opened project and runs no OnPostprocessAllAssets for its materials, so it writes neither": [
-    "exit.Assets/Resources/M/LitV9.mat",
-    "exit.Assets/Resources/M/LitV9.mat.idsAscending",
-    "exit.Assets/Resources/M/LitNoVersion.mat",
-    "exit.Assets/Resources/M/LitNoVersion.mat.idsAscending"
-  ],
   "Material.passCount of the URP Lit material reads 1 in the macOS batch-mode Editor and the shader's pass count (9) in Unbound; which SubShader or state the Editor counts is not measured: follow-up": [
     "meta.LitStaleMeta.passCount"
   ]
