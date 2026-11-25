@@ -106,6 +106,10 @@ public sealed class EditorRenderingLayersProbe : MonoBehaviour
             Field(() => { EditorGUI.RenderingLayerMaskField(r, "Label", Mask); return "ok"; }),
             Field(() => { EditorGUI.RenderingLayerMaskField(r, label, Mask); return "ok"; }),
             m_Holder.mask.value);
+        // The default property field of a rendering layer mask, and its height.
+        Put($"rect/{phase}/propertyField",
+            Field(() => EditorGUI.PropertyField(r, Mask)), Field(() => EditorGUI.PropertyField(r, Mask, label)),
+            Field(() => EditorGUI.PropertyField(r, Mask, true)), EditorGUI.GetPropertyHeight(Mask), Mask.hasVisibleChildren, Mask.isExpanded);
     }
 
     void RecordLayoutFields(string phase)
@@ -129,6 +133,7 @@ public sealed class EditorRenderingLayersProbe : MonoBehaviour
             L(() => EditorGUILayout.RenderingLayerMaskField(new GUIContent("Label"), m, GUILayout.Width(150))),
             L(() => EditorGUILayout.RenderingLayerMaskField(new GUIContent("Label"), m, EditorStyles.miniButton, GUILayout.Width(150))),
             L(() => { EditorGUILayout.RenderingLayerMaskField(new GUIContent("Label"), Mask); return "ok"; }),
+            L(() => EditorGUILayout.PropertyField(Mask)),
             L(() => EditorGUILayout.RenderingLayerMaskField("Label", (RenderingLayerMask)(1u << 20))));
         GUILayout.EndArea();
         Put($"layout/{phase}/rects", rects.ToArray());
