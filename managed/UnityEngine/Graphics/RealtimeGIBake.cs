@@ -300,12 +300,10 @@ namespace UnityEngine
             // (What the bake does not make yet, or makes only where measured:
             // tests/projects/bakedbuffers bakes with the filtering UnmadeFiltering allows, without
             // ambient occlusion and with an Indirect Intensity of 1, its directional lightmaps in
-            // the Baked Indirect mode.)
+            // every Lighting Mode.)
             : settings.bakedGI && UnmadeFiltering(settings) is { } filtering ? filtering
             : settings.bakedGI && settings.ao ? "lightmaps with ambient occlusion are not made yet"
             : settings.bakedGI && settings.indirectScale != 1f ? "an Indirect Intensity other than 1 is not measured"
-            : settings.bakedGI && settings.directionalityMode == LightmapsMode.CombinedDirectional && settings.mixedBakeMode != MixedLightingMode.IndirectOnly
-                ? "directional lightmaps in the Shadowmask or Subtractive Lighting Mode are not measured"
             : folder == null ? "an untitled scene's is not measured"
             : !Compat.BakeFilesMeasured ? $"of Unity {Application.unityVersion} it is not measured (its release family)"
             : renderPipeline && (!settings.bakedGI || settings.directionalityMode != LightmapsMode.NonDirectional || settings.mixedBakeMode != MixedLightingMode.IndirectOnly)

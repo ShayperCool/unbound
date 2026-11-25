@@ -251,16 +251,16 @@ namespace UnityEngine.Tests
                     Assert.Contains("untitled", Unwritten(environment, null, true));
                     // Light probes the bake could not write as measured: why.
                     Assert.Equal("why", Unwritten(environment, "Assets/Scenes/Lit", true, lightmaps: true, probes: "why"));
-                    // Directional lightmaps (in the Baked Indirect mode) and the Shadowmask Lighting
-                    // Mode (with its shadowmask made) are written too; the two together, directional
-                    // lightmaps in the Subtractive mode and the Shadowmask mode without a shadowmask
-                    // (no light on a channel) are not measured.
+                    // Directional lightmaps (in every Lighting Mode) and the Shadowmask Lighting Mode
+                    // (with its shadowmask made) are written too; the Shadowmask mode without a
+                    // shadowmask (no light on a channel) is not measured.
                     environment.directionalityMode = LightmapsMode.CombinedDirectional;
                     Assert.Null(Unwritten(environment, "Assets/Scenes/Lit", true, lightmaps: true));
+                    // (tests/projects/bakedbuffers DirectionalShadowmask, DirectionalSubtractive.)
                     environment.mixedBakeMode = MixedLightingMode.Shadowmask;
-                    Assert.Contains("directional lightmaps in the Shadowmask", Unwritten(environment, "Assets/Scenes/Lit", true, lightmaps: true));
+                    Assert.Null(Unwritten(environment, "Assets/Scenes/Lit", true, lightmaps: true));
                     environment.mixedBakeMode = MixedLightingMode.Subtractive;
-                    Assert.Contains("directional lightmaps in the Shadowmask or Subtractive", Unwritten(environment, "Assets/Scenes/Lit", true, lightmaps: true));
+                    Assert.Null(Unwritten(environment, "Assets/Scenes/Lit", true, lightmaps: true));
                     environment.directionalityMode = LightmapsMode.NonDirectional;
                     environment.mixedBakeMode = MixedLightingMode.Shadowmask;
                     Assert.Null(Unwritten(environment, "Assets/Scenes/Lit", true, lightmaps: true));
