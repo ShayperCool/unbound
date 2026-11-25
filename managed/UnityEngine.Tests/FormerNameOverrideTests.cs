@@ -20,6 +20,7 @@ namespace UnityEngine.Tests
             [FormerlySerializedAs("oldNumber")] public int number;
             [FormerlySerializedAs("oldPair")] public Pair pair;
             [FormerlySerializedAs("oldTarget")] public Asset target;
+            [FormerlySerializedAs("oldList")] public int[] list;
         }
 
         static Asset Read(string yaml, IReferenceResolver resolver = null)
@@ -49,6 +50,18 @@ namespace UnityEngine.Tests
             // A composite takes the old name's members over the current name's, member by member.
             Assert.Equal(1, asset.pair.a);
             Assert.Equal(5, asset.pair.b);
+        }
+
+        /// <summary>An override of one element of a renamed array (the flattened old name holds
+        /// empty elements before it) keeps the base's other elements.</summary>
+        [Fact]
+        public void AnOldNameElementOverrideKeepsTheOtherElements()
+        {
+            var body = TestYaml.DocumentBody("MonoBehaviour:\n  list:\n  - 1\n  - 2\n  - 3\n  oldList:\n  - 0\n  - 9\n");
+            body.Get("oldList").Items[0] = YNode.Null;
+            var asset = ScriptableObject.CreateInstance<Asset>();
+            new YamlReader(null).ReadScriptObject(asset, body);
+            Assert.Equal(new[] { 1, 9, 3 }, asset.list);
         }
 
         [Fact]

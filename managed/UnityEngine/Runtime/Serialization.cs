@@ -334,9 +334,23 @@ namespace Unbound.Runtime
         }
 
         /// <summary>A node with <paramref name="over"/>'s values over <paramref name="under"/>'s:
-        /// maps key by key, anything else whole.</summary>
+        /// maps key by key; sequences element by element, an element the override left empty (an
+        /// override of a later element only) keeping the base's, the longer length kept (an
+        /// override that shrinks a renamed array is not told from one of its later elements; not
+        /// measured); anything else whole.</summary>
         static YNode Overlay(YNode under, YNode over)
         {
+            if (under.Kind == YKind.Seq && over.Kind == YKind.Seq)
+            {
+                var items = new YNode[Math.Max(under.Items.Length, over.Items.Length)];
+                for (int i = 0; i < items.Length; i++)
+                {
+                    var top = i < over.Items.Length ? over.Items[i] : null;
+                    var bottom = i < under.Items.Length ? under.Items[i] : null;
+                    items[i] = top == null || top.IsNull ? bottom ?? top : bottom == null ? top : Overlay(bottom, top);
+                }
+                return new YNode { Kind = YKind.Seq, Items = items };
+            }
             if (under.Kind != YKind.Map || over.Kind != YKind.Map) return over;
             var keys = new List<string>(under.Keys);
             var values = new List<YNode>(under.Values);
