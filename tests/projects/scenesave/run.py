@@ -234,10 +234,10 @@ def seed_label_metas(project):
     textures whose TextureImporter section lacks some settings and the Standalone platform."""
     labels = project/'Assets/Labels'
     labels.mkdir()
-    copies = {'Tex.png': 'Textures/Probe.png', 'Mat.mat': 'Materials/MatEdit.mat', 'Thing.prefab': 'Prefabs/Thing.prefab',
+    copies = {'Tex.png': 'Textures/Probe.png', 'MatEdit.mat': 'Materials/MatEdit.mat', 'Thing.prefab': 'Prefabs/Thing.prefab',
               'Level.unity': 'Scenes/Second.unity',
               'Bouncy.physicMaterial': 'Native/Bouncy.physicMaterial', 'Move.anim': 'Native/Move.anim',
-              'Basic.controller': 'Existing/Basic.controller', 'Data.asset': 'Data/DataSaved.asset',
+              'Basic.controller': 'Existing/Basic.controller', 'DataSaved.asset': 'Data/DataSaved.asset',
               'Partial.png': 'Textures/Probe.png', 'PartialKept.png': 'Textures/Probe.png'}
     for name, source in copies.items():
         shutil.copyfile(project/'Assets'/source, labels/name)

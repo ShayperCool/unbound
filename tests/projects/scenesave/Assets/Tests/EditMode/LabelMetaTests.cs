@@ -16,8 +16,8 @@ public class LabelMetaTests
 {
     static readonly string[] Labelled =
     {
-        "Tex.png", "Notes.txt", "Data.json", "Mat.mat", "Thing.prefab", "Level.unity", "Beep.wav", "Folder",
-        "Unlit.shader", "Style.uss", "Bouncy.physicMaterial", "Move.anim", "Basic.controller", "Data.asset", "Other.xyz",
+        "Tex.png", "Notes.txt", "Data.json", "MatEdit.mat", "Thing.prefab", "Level.unity", "Beep.wav", "Folder",
+        "Unlit.shader", "Style.uss", "Bouncy.physicMaterial", "Move.anim", "Basic.controller", "DataSaved.asset", "Other.xyz",
     };
 
     const string Root = "Assets/Labels/";
