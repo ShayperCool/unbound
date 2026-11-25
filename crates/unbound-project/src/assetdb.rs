@@ -71,6 +71,26 @@ pub struct Root<'a> {
     pub virtual_path: String,
 }
 
+/// Top-level `Assets/` trees whose files the Editor imports with `DefaultImporter` as
+/// `DefaultAsset` instead of their extension's importer, the root's name matched in any case
+/// (matches the Unity 6000.0.71f1 Editor, `tests/projects/defaultasset`: `Assets/StreamingAssets/`,
+/// `Assets/WebGLTemplates/`, `Assets/webplayertemplates/`; a nested `Assets/Data/StreamingAssets/`
+/// is not special).
+pub fn is_special_default_imported_folder(path: &str) -> bool {
+    const ROOTS: [&str; 3] = [
+        "assets/streamingassets/",
+        "assets/webgltemplates/",
+        "assets/webplayertemplates/",
+    ];
+    ROOTS.iter().any(|root| {
+        path.len() > root.len()
+            && path
+                .as_bytes()
+                .get(..root.len())
+                .is_some_and(|prefix| prefix.eq_ignore_ascii_case(root.as_bytes()))
+    })
+}
+
 /// Unity skips hidden names: a leading `.`, a trailing `~`, `cvs`, and `.tmp` files.
 pub fn is_hidden(name: &str) -> bool {
     name.starts_with('.')

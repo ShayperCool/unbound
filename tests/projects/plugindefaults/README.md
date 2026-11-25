@@ -37,11 +37,16 @@ Editor's architectures turns the Editor off and excludes it; `GetCompatibleWithP
 `GetCompatibleWithEditor` answer the platform's own setting; `GetPlatformData` gives "" for `Any` and
 `Editor`.
 
-Residuals (`residuals.json`): a section that has platform settings, written again, is written as it
-was (the Editor writes it as it reads it); `GetImporters("Android")` leaves out a static library in
-a package's `Plugins/iOS`, for no rule known.
+`GetImporters("Android")` leaves out a package's static library that has the name of one in the
+project: as Unity's own C# `PluginImporter.GetImporters`, an overridable (package) plug-in going to
+the same place in a build as another is left out.
 
-Unmeasured: other release families, an installation without the Android module, the importer's
+Residual (`residuals.json`): a section that has platform settings, written again, is written as it
+was (the Editor writes it as it reads it).
+
+Unmeasured: other release families, an installation without the Android module, a section that
+has platform settings but no `DefaultValueInitialized` (the Editor gives some kinds their defaults
+again; Unbound reads it as it is), the importer's
 answers after the Editor has written a plug-in's `.meta` with its defaults (an `x86` plug-in is then
 read with the Editor off), the Editor's log line for an Android shared object without an ABI folder.
 

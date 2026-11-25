@@ -537,11 +537,12 @@ impl Project {
                     .extension()
                     .is_some_and(|e| e.eq_ignore_ascii_case("dll"))
                 {
-                    dlls.push((
-                        path.to_path_buf(),
-                        format!("{virtual_path}/{}", relative.to_string_lossy()),
-                        mutable,
-                    ));
+                    let project_path = format!("{virtual_path}/{}", relative.to_string_lossy());
+                    // A file the Editor imports with the DefaultImporter (StreamingAssets, ...)
+                    // is no plug-in.
+                    if !assetdb::is_special_default_imported_folder(&project_path) {
+                        dlls.push((path.to_path_buf(), project_path, mutable));
+                    }
                 } else if relative.extension().is_some_and(|ext| ext == "meta")
                     && is_folder_plugin.is_some_and(|test| !relative.ancestors().skip(1).any(test))
                     && path.with_extension("").exists()
@@ -611,6 +612,11 @@ impl Project {
                 }
                 let relative = path.strip_prefix(root.dir).unwrap_or(path);
                 let project_path = format!("{}/{}", root.virtual_path, relative.to_string_lossy());
+                // A file the Editor imports with the DefaultImporter (StreamingAssets, ...) is no
+                // plug-in.
+                if assetdb::is_special_default_imported_folder(&project_path) {
+                    continue;
+                }
                 let Some(plugin) = plugins::native_plugin(path, &project_path) else {
                     continue;
                 };

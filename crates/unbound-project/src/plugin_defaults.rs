@@ -13,7 +13,7 @@
 //!   `WebGL`, `WSA` or `Metro`): that platform;
 //! - else the kind's own platforms.
 //!
-//! Folder names compare without case. A managed library also gets its Windows Store CPU setting and
+//! Folder names compare without case (ABI folders exactly). A managed library also gets its Windows Store CPU setting and
 //! a shared object its Android 16 KB alignment setting (the Android module's) whatever its folder.
 
 use unbound_yaml::Value;
@@ -157,9 +157,9 @@ fn platform_folder(folder: &str) -> Option<&'static str> {
     })
 }
 
-/// An Android shared object's CPU by the ABI folder nearest to it; `Some(None)` for `armeabi`,
-/// which leaves Android off. Without an ABI folder the Editor picks ARMv7 (and logs that it
-/// could not tell).
+/// An Android shared object's CPU by the ABI folder nearest to it (names as the Android NDK spells
+/// them, compared exactly); None for `armeabi`, which leaves Android off. Without an ABI folder the
+/// Editor picks ARMv7 (and logs that it could not tell).
 fn android_abi(folders: &[&str]) -> Option<&'static str> {
     for folder in folders.iter().rev() {
         match *folder {
@@ -374,6 +374,47 @@ impl Defaults {
             .and_then(|meta| meta.get("PluginImporter").cloned())
             .unwrap_or_default()
     }
+}
+
+/// A `.meta`'s PluginImporter settings with these defaults where it has none: its own section's
+/// settings kept, the defaults' platform settings and the settings it lacks added. Every reader
+/// of a plug-in's settings (the compile graph, the native libraries, the managed importer) reads
+/// them so.
+pub fn with_defaults(meta: &Value, defaults: &Defaults) -> Value {
+    let importer = defaults.importer();
+    let (Some(section), Some(defaults)) = (
+        meta.get("PluginImporter").and_then(Value::as_map),
+        importer.as_map(),
+    ) else {
+        return importer;
+    };
+    let mut merged = section.clone();
+    for (key, value) in defaults.iter() {
+        if key == "platformData" || merged.get(key).is_none() {
+            merged.insert(key, value.clone());
+        }
+    }
+    Value::Map(merged)
+}
+
+/// Whether the importer section of a `.meta` without platform settings (its PluginImporter
+/// section, or another importer's) holds only what these defaults write: then the Editor's
+/// section with the defaults can take its place without losing a setting.
+pub fn section_holds_only_defaults(meta: &Value, defaults: &Defaults) -> bool {
+    let importer = defaults.importer();
+    let Some(section) = meta.as_map().and_then(|m| {
+        m.iter()
+            .find(|(key, _)| key.ends_with("Importer"))
+            .map(|(_, section)| section)
+    }) else {
+        return true;
+    };
+    let Some(section) = section.as_map() else {
+        return true;
+    };
+    section.iter().all(|(key, value)| {
+        key == "platformData" || importer.get(key).is_some_and(|default| default == value)
+    })
 }
 
 /// Whether a `.meta`'s PluginImporter settings say on which platforms the plug-in is: without them
@@ -853,5 +894,53 @@ mod tests {
                 "{settings}"
             );
         }
+    }
+
+    /// A section without platform settings keeps its own settings beside the defaults' platforms;
+    /// the Editor's section takes its place in a write only when it holds nothing else.
+    #[test]
+    fn a_section_without_platform_settings_keeps_its_own() {
+        let found = defaults("Assets/Plugins/Foo.dll", true, true).unwrap();
+        let own = unbound_yaml::parse_value(
+            "fileFormatVersion: 2\nguid: 0123456789abcdef0123456789abcdef\nPluginImporter:\n  isExplicitlyReferenced: 1\n  defineConstraints:\n  - FOO\n",
+        )
+        .unwrap();
+        let merged = with_defaults(&own, &found);
+        assert_eq!(
+            merged
+                .get("isExplicitlyReferenced")
+                .and_then(Value::as_bool),
+            Some(true)
+        );
+        assert_eq!(
+            merged
+                .get("defineConstraints")
+                .and_then(Value::as_seq)
+                .map(|list| list.len()),
+            Some(1)
+        );
+        let any = merged
+            .get("platformData")
+            .and_then(|d| d.get("Any"))
+            .unwrap();
+        assert_eq!(any.get("enabled").and_then(Value::as_bool), Some(true));
+        assert!(!section_holds_only_defaults(&own, &found));
+        // tests/projects/plugindefaults NoPlatforms.dll and DefaultImporter.dll: written with the
+        // Editor's section.
+        for meta in [
+            "fileFormatVersion: 2\nguid: 0123456789abcdef0123456789abcdef\nPluginImporter:\n  externalObjects: {}\n  serializedVersion: 3\n  userData: \n  assetBundleName: \n  assetBundleVariant: \n",
+            "fileFormatVersion: 2\nguid: 0123456789abcdef0123456789abcdef\nDefaultImporter:\n  externalObjects: {}\n  userData: \n  assetBundleName: \n  assetBundleVariant: \n",
+            "fileFormatVersion: 2\nguid: 0123456789abcdef0123456789abcdef",
+        ] {
+            assert!(
+                section_holds_only_defaults(&unbound_yaml::parse_value(meta).unwrap(), &found),
+                "{meta}"
+            );
+        }
+        let user_data = unbound_yaml::parse_value(
+            "fileFormatVersion: 2\nguid: 0123456789abcdef0123456789abcdef\nDefaultImporter:\n  userData: kept\n",
+        )
+        .unwrap();
+        assert!(!section_holds_only_defaults(&user_data, &found));
     }
 }

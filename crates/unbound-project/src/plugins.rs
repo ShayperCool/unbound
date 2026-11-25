@@ -137,13 +137,13 @@ pub fn native_plugin_from_meta(file: &Path, path: &str, meta: &Value) -> Plugin 
     }
 }
 
-/// Says once that plug-ins whose `.meta` has no platform settings get those of Unity 6000.0 in a
-/// project of a release whose Editor was not measured.
+/// Says once that plug-ins' importer settings are given and read as the Unity 6000.0 Editor does
+/// in a project of a release whose Editor was not measured.
 pub fn warn_unmeasured_defaults(release: &dyn std::fmt::Display) {
     static WARNED: std::sync::Once = std::sync::Once::new();
     WARNED.call_once(|| {
         tracing::warn!(
-            "Unbound: plug-ins whose .meta has no platform settings get the ones the Unity 6000.0 Editor gives them; what the {release} Editor gives them is not known"
+            "Unbound: plug-ins' PluginImporter settings are given and read as the Unity 6000.0 Editor does (the defaults of a .meta without them); what the {release} Editor does is not known"
         )
     });
 }
@@ -274,10 +274,10 @@ fn importer_settings(meta: &Value, path: &str, managed: bool) -> (Value, bool) {
             false,
         );
     }
-    let defaults = crate::plugin_defaults::defaults(path, managed, false)
-        .map(|defaults| defaults.importer())
+    let importer = crate::plugin_defaults::defaults(path, managed, false)
+        .map(|defaults| crate::plugin_defaults::with_defaults(meta, &defaults))
         .unwrap_or_default();
-    (defaults, true)
+    (importer, true)
 }
 
 /// A PE file with a CLI header (data directory 14).
@@ -365,13 +365,14 @@ mod tests {
     #[test]
     fn a_guid_only_meta_gets_the_editors_defaults_by_folder() {
         let guid_only = "fileFormatVersion: 2\nguid: 0123456789abcdef0123456789abcdef";
-        let managed = |path: &str| {
+        let managed_with = |meta: &str, path: &str| {
             plugin_from_meta(
                 Path::new("A.dll"),
                 path.to_string(),
-                &unbound_yaml::parse_value(guid_only).unwrap(),
+                &unbound_yaml::parse_value(meta).unwrap(),
             )
         };
+        let managed = |path: &str| managed_with(guid_only, path);
         let any = managed("Assets/Plugins/Managed.dll");
         assert!(any.settings_defaulted);
         assert!(any.compatible_with("Editor") && any.compatible_with("Android"));
@@ -382,6 +383,14 @@ mod tests {
         // In Plugins/x86 the Editor's CPU is x86: no Editor's.
         let x86 = managed("Assets/Plugins/x86/Managed.dll");
         assert!(x86.compatible_with("Editor") && !x86.editor_machine_allowed());
+        // A section without platform settings keeps its own settings.
+        let own = managed_with(
+            "fileFormatVersion: 2\nguid: 0123456789abcdef0123456789abcdef\nPluginImporter:\n  isExplicitlyReferenced: 1\n  defineConstraints:\n  - FOO\n",
+            "Assets/Plugins/Own.dll",
+        );
+        assert!(own.settings_defaulted && own.explicitly_referenced);
+        assert_eq!(own.define_constraints, ["FOO"]);
+        assert!(own.compatible_with("Editor"));
         // A section with platform settings is read as it is.
         let section = plugin("PluginImporter:\n  platformData:\n    Any:\n      enabled: 0\n");
         assert!(!section.settings_defaulted && !section.compatible_with("Editor"));

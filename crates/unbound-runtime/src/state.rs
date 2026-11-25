@@ -500,29 +500,9 @@ fn resources_keys(path: &str) -> Vec<String> {
     keys
 }
 
-/// Top-level `Assets/` trees whose files the Editor imports with `DefaultImporter` as
-/// `DefaultAsset` instead of their extension's importer, the root's name matched in any case
-/// (matches the Unity 6000.0.71f1 Editor, `tests/projects/defaultasset`: `Assets/StreamingAssets/`,
-/// `Assets/WebGLTemplates/`, `Assets/webplayertemplates/`; a nested `Assets/Data/StreamingAssets/`
-/// is not special).
-fn is_special_default_imported_folder(path: &str) -> bool {
-    const ROOTS: [&str; 3] = [
-        "assets/streamingassets/",
-        "assets/webgltemplates/",
-        "assets/webplayertemplates/",
-    ];
-    ROOTS.iter().any(|root| {
-        path.len() > root.len()
-            && path
-                .as_bytes()
-                .get(..root.len())
-                .is_some_and(|prefix| prefix.eq_ignore_ascii_case(root.as_bytes()))
-    })
-}
-
 /// What the managed side asks about an asset: how it loads.
 fn asset_kind(path: &str) -> &'static str {
-    if is_special_default_imported_folder(path) {
+    if unbound_project::assetdb::is_special_default_imported_folder(path) {
         return "unknown";
     }
     match default_importer(path) {
@@ -1939,17 +1919,7 @@ fn load_importer_settings(guid: &str) -> Result<Vec<u8>> {
     }
     // A plug-in whose .meta has no platform settings gets the ones the Editor gives it.
     if let Some(defaults) = plugin_defaults(asset, &meta) {
-        let mut body = meta.get("PluginImporter").cloned().unwrap_or_default();
-        let defaults = defaults.importer();
-        if let (Some(map), Some(defaults)) = (body.as_map_mut(), defaults.as_map()) {
-            for (key, value) in defaults.iter() {
-                if key == "platformData" || map.get(key).is_none() {
-                    map.insert(key, value.clone());
-                }
-            }
-        } else {
-            body = defaults;
-        }
+        let body = unbound_project::plugin_defaults::with_defaults(&meta, &defaults);
         let doc = unbound_yaml::Document {
             class_id: 0,
             file_id: 0,
@@ -1975,6 +1945,9 @@ fn load_importer_settings(guid: &str) -> Result<Vec<u8>> {
             )
         });
     if type_name == "PluginImporter" {
+        if !s.new_meta_measured {
+            unbound_project::plugins::warn_unmeasured_defaults(&s.release);
+        }
         unbound_project::plugin_defaults::read_settings(
             &mut body,
             &asset.path,
@@ -2022,17 +1995,30 @@ fn plugin_default_section(request: &str) -> Result<String> {
         path: String,
     }
     let Request { path } = serde_json::from_str(request)?;
+    let none = || Ok(json!({ "section": "" }).to_string());
     let s = state();
     let db = s.db();
-    let asset = db
-        .by_path(&path)
-        .with_context(|| format!("no asset {path}"))?;
-    let text = std::fs::read_to_string(format!("{}.meta", asset.file.display()))?;
-    let meta = unbound_yaml::parse_value(&text)?;
+    // An asset the database does not list or a .meta that does not read: its labels are written
+    // into it as it is.
+    let Some(asset) = db.by_path(&path) else {
+        return none();
+    };
+    let Some(meta) = std::fs::read_to_string(format!("{}.meta", asset.file.display()))
+        .ok()
+        .and_then(|text| unbound_yaml::parse_value(&text).ok())
+    else {
+        return none();
+    };
     let defaults = match plugin_defaults(asset, &meta) {
         Some(defaults) if s.new_meta_measured => defaults,
-        _ => return Ok(json!({ "section": "" }).to_string()),
+        _ => return none(),
     };
+    if !unbound_project::plugin_defaults::section_holds_only_defaults(&meta, &defaults) {
+        tracing::warn!(
+            "Unbound: {path}.meta is written without the platform settings the Editor adds: its importer section holds settings Unbound does not write into the Editor's section"
+        );
+        return none();
+    }
     if !s.new_meta.platforms.iter().any(|p| p == "Android")
         && unbound_project::plugin_defaults::kind(&path, false)
             == Some(unbound_project::plugin_defaults::Kind::SharedObject)
@@ -2055,7 +2041,7 @@ fn default_importer(path: &str) -> &'static str {
 /// The importer the Editor picks for a path by its extension (and the special root folders); None
 /// for an extension the list does not know.
 fn importer_of_path(path: &str) -> Option<&'static str> {
-    if is_special_default_imported_folder(path) {
+    if unbound_project::assetdb::is_special_default_imported_folder(path) {
         return Some("DefaultImporter");
     }
     let name = path.rsplit('/').next().unwrap_or(path);

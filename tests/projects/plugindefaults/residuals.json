@@ -7,8 +7,5 @@
     "Assets/Controls/EditorWindows.dll.labelled",
     "Assets/Controls/EditorX86.dll.labelled",
     "Assets/Controls/libsection.so.labelled"
-  ],
-  "PluginImporter.GetImporters(\"Android\") leaves out a static library in a package's Plugins/iOS folder that is on for any platform (the same library in Assets/Foo/Plugins/iOS is listed, and the package's one is listed for the other platforms); no rule known explains it": [
-    "importers.Android"
   ]
 }

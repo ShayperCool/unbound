@@ -264,8 +264,10 @@ namespace UnityEditor
 
         public void SetCompatibleWithAnyPlatform(bool enable) => PlatformOf("Any", true).Enabled = enable;
 
+        /// <summary>The "Exclude &lt;platform&gt;" setting of "Any Platform", read as a .meta flag
+        /// (1 or true; crates/unbound-project/src/plugins.rs `compatible_with` reads it so too).</summary>
         public bool GetExcludeFromAnyPlatform(string platformName) =>
-            PlatformOf("Any", false)?.Settings.TryGetValue("Exclude " + platformName, out var v) == true && v == "1";
+            PlatformOf("Any", false)?.Settings.TryGetValue("Exclude " + platformName, out var v) == true && (v == "1" || v == "true");
 
         public bool GetExcludeFromAnyPlatform(BuildTarget platform) => GetExcludeFromAnyPlatform(NameOf(platform));
 
@@ -365,6 +367,8 @@ namespace UnityEditor
         {
             ".dll", ".so", ".dylib", ".a", ".jar", ".aar", ".c", ".cc", ".cpp", ".h", ".m", ".mm", ".java", ".kt", ".swift", ".jslib", ".jspre",
             ".bundle", ".framework", ".xcframework", ".plugin", ".androidlib",
+            // A Windows metadata file: its .meta names the PluginImporter (not measured).
+            ".winmd",
         };
 
         /// <summary>Whether the PluginImporter imports the file or folder at the path, by its extension.</summary>
@@ -387,13 +391,117 @@ namespace UnityEditor
         internal bool GetCompatibleWithPlatformOrAnyPlatformBuildTarget(string buildTarget) =>
             GetCompatibleWithAnyPlatform() ? !GetExcludeFromAnyPlatform(buildTarget) : Enabled(buildTarget);
 
-        public static PluginImporter[] GetImporters(string platformName) =>
-            Array.FindAll(GetAllImporters(), i => i.GetCompatibleWithPlatformOrAnyPlatformBuildTarget(platformName));
+        /// <summary>The plug-ins of a platform. As Unity's own C# (UnityCsReference 6000.0
+        /// PluginImporter.GetImporters): with an installed platform module's importer extension, of
+        /// the plug-ins that go to one place in a build (the extension's final path) a package's
+        /// overridable one is left out beside one of the project (tests/projects/plugindefaults
+        /// `importers.Android`: a static library of one name in a package and in the project).</summary>
+        public static PluginImporter[] GetImporters(string platformName)
+        {
+            var all = Array.FindAll(GetAllImporters(), i => i.GetCompatibleWithPlatformOrAnyPlatformBuildTarget(platformName));
+            var finalPath = FinalPathRule(platformName);
+            if (finalPath == null) return all;
+            var importers = new List<PluginImporter>();
+            var byFinalPath = new Dictionary<string, PluginImporter>(StringComparer.Ordinal);
+            foreach (var importer in all)
+            {
+                var path = finalPath(importer);
+                if (!string.IsNullOrEmpty(path))
+                {
+                    if (!byFinalPath.TryGetValue(path, out var first)) byFinalPath.Add(path, importer);
+                    else if (first.GetIsOverridable() && !importer.GetIsOverridable())
+                    {
+                        byFinalPath[path] = importer;
+                        importers.Remove(first);
+                    }
+                    else if (importer.GetIsOverridable()) continue;
+                }
+                importers.Add(importer);
+            }
+            return importers.ToArray();
+        }
+
+        /// <summary>Where a platform's importer extension puts a plug-in in a build (its final path),
+        /// or null when the platform has no extension here: its module is not installed, or it is the
+        /// Editor. The standalone players' rule is Unity's own C# (DesktopPluginImporterExtension);
+        /// Android's is the base rule (the plug-in's CPU folder, then its file name; measured for a
+        /// plug-in without CPU). Other installed modules' rules are not known: no plug-in is left
+        /// out for them, with a notice.</summary>
+        static Func<PluginImporter, string> FinalPathRule(string platformName)
+        {
+            BuildTarget target;
+            switch (platformName)
+            {
+                case "Win": target = BuildTarget.StandaloneWindows; break;
+                case "Win64": target = BuildTarget.StandaloneWindows64; break;
+                case "OSXUniversal": target = BuildTarget.StandaloneOSX; break;
+                case "Linux64": target = BuildTarget.StandaloneLinux64; break;
+                case "Android": target = BuildTarget.Android; break;
+                case "iOS": target = BuildTarget.iOS; break;
+                case "WebGL": target = BuildTarget.WebGL; break;
+                default: return null;
+            }
+            if (!BuildPipeline.IsBuildTargetSupported(BuildTargetGroup.Unknown, target)) return null;
+            switch (target)
+            {
+                case BuildTarget.Android: return importer => BaseFinalPath(importer, platformName);
+                case BuildTarget.StandaloneWindows:
+                case BuildTarget.StandaloneWindows64:
+                case BuildTarget.StandaloneOSX:
+                case BuildTarget.StandaloneLinux64:
+                    return importer => DesktopFinalPath(importer, platformName, target);
+                default:
+                    Stubs.Ignored("PluginImporter.GetImporters", $"keeps every plug-in for {platformName}: which of two going to one place the platform's module leaves out is not known");
+                    return null;
+            }
+        }
+
+        static string BaseFinalPath(PluginImporter importer, string platformName)
+        {
+            var cpu = importer.GetPlatformData(platformName, "CPU");
+            var name = Path.GetFileName(importer.assetPath);
+            return !string.IsNullOrEmpty(cpu) && !string.Equals(cpu, "AnyCPU", StringComparison.OrdinalIgnoreCase) && !string.Equals(cpu, "None", StringComparison.OrdinalIgnoreCase)
+                ? Path.Combine(cpu, name)
+                : name;
+        }
+
+        static readonly System.Text.RegularExpressions.Regex s_LinuxLibrary =
+            new System.Text.RegularExpressions.Regex(@"\.so(\.[0-9]+)*$", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+
+        static bool IsCppSource(string path) =>
+            Path.GetExtension(path).ToLowerInvariant() is ".cpp" or ".c" or ".h" or ".mm" or ".m";
+
+        static string DesktopFinalPath(PluginImporter importer, string platformName, BuildTarget target)
+        {
+            var path = importer.assetPath;
+            bool native = importer.isNativePlugin;
+            var extension = Path.GetExtension(path).ToLowerInvariant();
+            bool usable = target switch
+            {
+                BuildTarget.StandaloneWindows or BuildTarget.StandaloneWindows64 => !native || extension == ".dll" || IsCppSource(path),
+                BuildTarget.StandaloneOSX => !native || extension is ".bundle" or ".dylib" or ".xcprivacy" || s_LinuxLibrary.IsMatch(path) || IsCppSource(path),
+                _ => !native || s_LinuxLibrary.IsMatch(path) || IsCppSource(path),
+            };
+            if (!usable) return "";
+            var cpu = importer.GetPlatformData(platformName, "CPU");
+            if (string.Equals(cpu, "None", StringComparison.OrdinalIgnoreCase)) return "";
+            var name = Path.GetFileName(path);
+            if (target == BuildTarget.StandaloneWindows || target == BuildTarget.StandaloneWindows64)
+            {
+                if (string.Equals(cpu, "ARM64", StringComparison.OrdinalIgnoreCase)) return Path.Combine(cpu, name);
+                return Path.Combine(target == BuildTarget.StandaloneWindows ? "x86" : "x86_64", name);
+            }
+            return target == BuildTarget.StandaloneOSX ? BaseFinalPath(importer, platformName) : name;
+        }
 
         public static PluginImporter[] GetImporters(BuildTarget platform) => GetImporters(NameOf(platform));
 
-        public static PluginImporter[] GetImporters(string buildTargetGroup, string buildTarget) => GetImporters(buildTarget);
+        /// <summary>With "Any Platform" on unless excluded, or enabled for the target; no plug-in is
+        /// left out (Unity's own C#).</summary>
+        public static PluginImporter[] GetImporters(string buildTargetGroup, string buildTarget) =>
+            Array.FindAll(GetAllImporters(), i => i.GetCompatibleWithPlatformOrAnyPlatformBuildTarget(buildTarget));
 
-        public static PluginImporter[] GetImporters(BuildTargetGroup buildTargetGroup, BuildTarget buildTarget) => GetImporters(buildTarget);
+        public static PluginImporter[] GetImporters(BuildTargetGroup buildTargetGroup, BuildTarget buildTarget) =>
+            GetImporters(buildTargetGroup.ToString(), NameOf(buildTarget));
     }
 }
