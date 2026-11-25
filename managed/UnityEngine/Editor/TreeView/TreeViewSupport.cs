@@ -43,8 +43,12 @@ namespace UnityEditor
         internal void MarkHotRegion(Rect hotRegionRect) { }
     }
 
-    /// <summary>The tree views' named styles: the Editor skin's (the Editor's windows make them
-    /// before any game GUI runs), else the current skin's.</summary>
+    /// <summary>The named styles of TreeViewGUI, TreeView.DefaultStyles and the rename overlay: the
+    /// Editor skin's, else the current skin's. The Editor's own windows draw tree views before any
+    /// game GUI runs, so these classes already hold the Editor skin's styles there (no log, foldout
+    /// width 11: tests/projects/imguitreeview, editorui TreeView.metrics). MultiColumnHeader's
+    /// default styles are not among them: they come from the current skin at their first use, as
+    /// in Unity's C#.</summary>
     internal static class TreeViewEditorStyles
     {
         internal static GUIStyle Get(string name) => Unbound.Runtime.EditorGuiSkins.Current.FindStyle(name) ?? GUI.skin.GetStyle(name);
