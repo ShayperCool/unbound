@@ -996,10 +996,10 @@ public static class BuffersSetup
 
     /// <summary>The coloured scene under a sun with the Advanced filtering of its lightmaps, no
     /// denoiser: Gaussian filters of whole radii (direct 1, indirect 5) and of fractional ones
-    /// (2.5 and 0.5).</summary>
+    /// (2.5 and 0.5), and A-Trous filters (position sigma 0.5 and 1.5).</summary>
     static void Filtered()
     {
-        void Filter(string name, float direct, float indirect)
+        void Filter(string name, LightingSettings.FilterType type, float direct, float indirect)
         {
             var scene = Coloured(name, 64, 1);
             var settings = Lightmapping.lightingSettings;
@@ -1007,16 +1007,25 @@ public static class BuffersSetup
             settings.denoiserTypeDirect = LightingSettings.DenoiserType.None;
             settings.denoiserTypeIndirect = LightingSettings.DenoiserType.None;
             settings.denoiserTypeAO = LightingSettings.DenoiserType.None;
-            settings.filterTypeDirect = LightingSettings.FilterType.Gaussian;
-            settings.filterTypeIndirect = LightingSettings.FilterType.Gaussian;
-            settings.filterTypeAO = LightingSettings.FilterType.Gaussian;
-            settings.filteringGaussianRadiusDirect = direct;
-            settings.filteringGaussianRadiusIndirect = indirect;
+            settings.filterTypeDirect = type;
+            settings.filterTypeIndirect = type;
+            settings.filterTypeAO = type;
+            if (type == LightingSettings.FilterType.Gaussian)
+            {
+                settings.filteringGaussianRadiusDirect = direct;
+                settings.filteringGaussianRadiusIndirect = indirect;
+            }
+            else
+            {
+                settings.filteringAtrousPositionSigmaDirect = direct;
+                settings.filteringAtrousPositionSigmaIndirect = indirect;
+            }
             WhiteSun();
             Save(scene, name);
         }
-        Filter("FilterGauss", 1f, 5f);
-        Filter("FilterGaussHalf", 2.5f, 0.5f);
+        Filter("FilterGauss", LightingSettings.FilterType.Gaussian, 1f, 5f);
+        Filter("FilterGaussHalf", LightingSettings.FilterType.Gaussian, 2.5f, 0.5f);
+        Filter("FilterAtrous", LightingSettings.FilterType.ATrous, 0.5f, 1.5f);
     }
 
     /// <summary>Makes the scenes <c>BAKED_BUFFERS_SCENES</c> names (comma-separated), else all.</summary>

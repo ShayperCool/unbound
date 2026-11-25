@@ -757,9 +757,10 @@ def lighting_padding(scene):
 
 
 def lighting_filtering(scene):
-    """The Gaussian filters of a scene's Lighting Settings (its .lighting file) as (direct radius,
-    indirect radius), 0 for none, where its filtering is Advanced without denoisers; None without
-    filtering. Other filtering is not made by the bake (and has no scene here)."""
+    """The filters of a scene's Lighting Settings (its .lighting file) as (direct, indirect), each
+    ('gaussian', radius), ('atrous', position sigma) or None, where its filtering is Advanced
+    without denoisers; None without filtering. Other filtering is not made by the bake (and has
+    no scene here)."""
     text = (PROBE/'Assets/Scenes'/f'{scene}.lighting').read_text()
 
     def value(key):
@@ -772,13 +773,12 @@ def lighting_filtering(scene):
         return None
     if mode != 2 or value('m_PVRDenoiserTypeDirect') or value('m_PVRDenoiserTypeIndirect'):
         raise ValueError(f'{scene}.lighting: filtering the rules here do not make')
-    radius = {}
+    parts = []
     for part in ('Direct', 'Indirect'):
         kind = value(f'm_PVRFilterType{part}')
-        if kind not in (0, 2):
-            raise ValueError(f'{scene}.lighting: the {part.lower()} filter is not Gaussian or none')
-        radius[part] = value(f'm_PVRFilteringGaussRadius{part}') if kind == 0 else 0.0
-    return radius['Direct'], radius['Indirect']
+        parts.append(('gaussian', value(f'm_PVRFilteringGaussRadius{part}')) if kind == 0
+                     else ('atrous', value(f'm_PVRFilteringAtrousPositionSigma{part}')) if kind == 1 else None)
+    return tuple(parts)
 
 
 def gaussian_kernel(radius):
@@ -830,6 +830,77 @@ def gaussian_filter(values, weights, charts, width, height, radius):
     return values
 
 
+# The A-Trous filter's taps (x, y) on its 5 x 5 grid, as the Editor has them: (0, -2) twice and
+# no (0, -1).
+ATROUS_TAPS = [(-2, -2), (-1, -2), (0, -2), (1, -2), (2, -2), (-2, -1), (-1, -1), (0, -2), (1, -1), (2, -1),
+               (-2, 0), (-1, 0), (0, 0), (1, 0), (2, 0), (-2, 1), (-1, 1), (0, 1), (1, 1), (2, 1),
+               (-2, 2), (-1, 2), (0, 2), (1, 2), (2, 2)]
+
+
+def atrous_filter(values, weights, charts, normals, width, height, supersampling, spread):
+    """`values` (three per texel, with `weights`) filtered by the Editor's A-Trous filter: four
+    passes over ATROUS_TAPS spread 1, 2, 4 and 8 texels apart; a texel of a chart whose weight is
+    above 0 takes the mean of its own chart's taps whose weight is above 0, weighed by three
+    terms: of how alike their light (and weight) is, with a spread of 0.1 halved each pass; their
+    first sample's normal, 0.01; their places, `spread`. A term of factor k and squared distance
+    d is (exp(-k d) - b) min(k, 1) + b with b = 1 - min(d, 1), k = m / (1 + m (2 s^2 - 1)) for a
+    spread s and m = min(s, 1) (1 / (2 s^2) from a spread of 1)."""
+    if spread == 0:
+        return values
+
+    def factor(s):
+        m = min(max(s, 0.0), 1.0)
+        return m / (1 + m * (2 * s * s - 1))
+
+    def term(k, d):
+        b = 1 - min(max(d, 0.0), 1.0)
+        return (math.exp(-k * d) - b) * min(max(k, 0.0), 1.0) + b
+
+    def normal(x, y):
+        k = ((y * supersampling) * (width * supersampling) + x * supersampling) * 4
+        return normals[k:k + 3]
+    current = [values[3 * k:3 * k + 3] + [weights[k]] for k in range(width * height)]
+    for step in (1, 2, 4, 8):
+        light, surface, place = factor(0.1 / step), factor(0.01), factor(spread)
+        following = [list(t) for t in current]
+        for y in range(height):
+            for x in range(width):
+                k = y * width + x
+                p = current[k]
+                if charts[k] < 0 or not p[3] > 0:
+                    continue
+                own = normal(x, y)
+                total, sums = 0.0, [0.0] * 4
+                for dx, dy in ATROUS_TAPS:
+                    qx, qy = x + dx * step, y + dy * step
+                    if not (0 <= qx < width and 0 <= qy < height):
+                        continue
+                    q = qy * width + qx
+                    v = current[q]
+                    if charts[q] != charts[k] or not v[3] > 0:
+                        continue
+                    w = (term(light, sum((v[c] - p[c]) ** 2 for c in range(4)))
+                         * term(surface, sum((a - b) ** 2 for a, b in zip(normal(qx, qy), own)))
+                         * term(place, (qx - x) ** 2 + (qy - y) ** 2))
+                    total += w
+                    for c in range(4):
+                        sums[c] += v[c] * w
+                following[k] = [v / total for v in sums]
+        current = following
+    return [current[k][c] for k in range(width * height) for c in range(3)]
+
+
+def part_filter(values, weights, lightmap, with_):
+    """A part's light filtered as `with_` says (see lighting_filtering)."""
+    if with_ is None:
+        return values
+    kind, amount = with_
+    width, height, charts = lightmap['width'], lightmap['height'], lightmap['charts']
+    if kind == 'gaussian':
+        return gaussian_filter(values, weights, charts, width, height, amount)
+    return atrous_filter(values, weights, charts, lightmap['normals'], width, height, lightmap['supersampling'], amount)
+
+
 def composite(lightmap, padding, filtering=None):
     """The lightmap the bake makes of a capture's buffers by the measured rules (red, green, blue,
     alpha per texel): each used texel's direct, indirect and sky's light summed; a texel more of
@@ -854,8 +925,8 @@ def composite(lightmap, padding, filtering=None):
         direct = [lightmap['direct'][4 * k + c] if used[k] else 0.0 for k in range(width * height) for c in range(3)]
         indirect = [lightmap['indirect'][4 * k + c] + lightmap['environment'][4 * k + c] if used[k] else 0.0
                     for k in range(width * height) for c in range(3)]
-        direct = gaussian_filter(direct, weights, lightmap['charts'], width, height, filtering[0])
-        indirect = gaussian_filter(indirect, weights, lightmap['charts'], width, height, filtering[1])
+        direct = part_filter(direct, weights, lightmap, filtering[0])
+        indirect = part_filter(indirect, weights, lightmap, filtering[1])
         for k in range(width * height):
             if used[k]:
                 out[4 * k:4 * k + 3] = [direct[3 * k + c] + indirect[3 * k + c] for c in range(3)]
