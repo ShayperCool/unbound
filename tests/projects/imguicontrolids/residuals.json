@@ -29,7 +29,6 @@
   ],
   "OnGUI order across components (Q771): the Editor runs every component's Layout before the Repaints, and the Repaints in reverse order (second, then main); Unbound runs each component's Layout with its event. The second component's canonical ordinals follow (the main Repaint's permanent id is seen before them)": [
     "order",
-    "canon/f0/layout/second",
     "canon/f0/repaint/second",
     "canon/f1/layout/second",
     "canon/f1/repaint/second",

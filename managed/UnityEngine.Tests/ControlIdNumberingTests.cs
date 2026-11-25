@@ -47,6 +47,8 @@ namespace UnityEngine.Tests
         public void OutsideOnGuiAnIdTakesTheNextNumber()
         {
             // outside: two permanent ids, then GetControlID outside OnGUI, one after another.
+            // (Outside OnGUI the last scope's list is used: start from fresh lists.)
+            GUIUtility.ResetControlIdListsForTests();
             var previous = Event.current;
             Event.current = null;
             try
