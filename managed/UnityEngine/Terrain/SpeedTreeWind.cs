@@ -2,10 +2,10 @@ using Unbound.Runtime;
 
 namespace UnityEngine
 {
-    /// <summary>The wind configuration of a SpeedTree tree (its importer makes one). Each SpeedTree 9
-    /// wind asset keeps one wind its trees draw with, from its creation until it is destroyed
-    /// (<see cref="SpeedTreeWindSystem"/>). A SpeedTree 8 tree's asset (version 0, the
-    /// <see cref="Config8"/> of its file) is not simulated: its trees draw without wind.</summary>
+    /// <summary>The wind configuration of a SpeedTree tree (its importer makes one). Each wind asset
+    /// keeps one wind its trees draw with, from its creation until it is destroyed
+    /// (<see cref="SpeedTreeWindSystem"/>): a SpeedTree 9 asset's <see cref="Wind"/>, a SpeedTree 8
+    /// tree's asset's (version 0, the <see cref="Config8"/> of its file) <see cref="Wind8"/>.</summary>
     [ClassId(228)]
     [ExcludeFromPreset]
     public partial class SpeedTreeWindAsset : Object
@@ -15,6 +15,8 @@ namespace UnityEngine
         /// <summary>A SpeedTree 8 tree's wind (null for SpeedTree 9).</summary>
         internal readonly SpeedTreeWindConfig8 Config8;
         internal readonly SpeedTreeWindState Wind = new SpeedTreeWindState();
+        /// <summary>A SpeedTree 8 tree's wind (null for SpeedTree 9).</summary>
+        internal readonly SpeedTree8WindState Wind8;
 
         internal SpeedTreeWindAsset(int version, SpeedTreeWindConfig9 config)
         {
@@ -24,14 +26,16 @@ namespace UnityEngine
         }
 
         /// <summary>A SpeedTree 8 tree's wind asset: version 0 (the Unity 6000.0.71f1 Editor's
-        /// for a .st file, SpeedTree8ImportTests), not registered with the SpeedTree 9 wind.</summary>
+        /// for a .st file, SpeedTree8ImportTests).</summary>
         internal SpeedTreeWindAsset(SpeedTreeWindConfig8 config)
         {
             m_Version = 0;
             Config8 = config;
+            Wind8 = new SpeedTree8WindState();
+            SpeedTreeWindSystem.Register(this);
         }
 
-        /// <summary>Whether the asset holds a SpeedTree 8 tree's wind, which nothing simulates yet.</summary>
+        /// <summary>Whether the asset holds a SpeedTree 8 tree's wind.</summary>
         internal bool IsSpeedTree8 => Config8 != null;
 
         internal override void OnEngineDestroy()

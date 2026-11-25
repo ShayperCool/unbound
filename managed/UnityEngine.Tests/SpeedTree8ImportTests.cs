@@ -252,50 +252,53 @@ namespace UnityEngine.Tests
             Assert.Equal(0f, config.LeafGroups[1].RollSeparation);
         }
 
-        sealed class Logs : ILogHandler
-        {
-            internal readonly List<string> Messages = new List<string>();
-            public void LogException(Exception exception, Object context) => Messages.Add(exception.Message);
-            public void LogFormat(LogType logType, Object context, string format, params object[] args) =>
-                Messages.Add(logType + ": " + string.Format(format, args));
-        }
-
-        /// <summary>A SpeedTree 8 tree's wind asset (version 0) is no SpeedTree 9 wind: its tree's
-        /// draws get no wind constants, and that is reported once.</summary>
+        /// <summary>A SpeedTree 8 tree's wind asset (version 0) keeps its own wind: its tree's draws
+        /// get the 15 SpeedTree 8 constants and their history (zeros for a renderer without
+        /// per-object motion vectors), the asset's wind values.</summary>
         [Fact]
-        public void ASpeedTree8TreeDrawsWithoutWind()
+        public void ASpeedTree8TreeDrawsWithItsAssetsWind()
         {
             var config = SpeedTreeWindConfig8.From(NumberedWind(), 1f);
             var asset = new SpeedTreeWindAsset(config);
             Assert.Equal(0, asset.Version);
             Assert.True(asset.IsSpeedTree8);
             var go = new GameObject("Tree8");
-            var logs = new Logs();
-            var previous = Debug.unityLogger.logHandler;
+            var zone = new GameObject("Wind").AddComponent<WindZone>();
+            float time = (float)Time.s_Time;
             try
             {
-                Debug.unityLogger.logHandler = logs;
-                SpeedTreeWindSystem.s_SpeedTree8WindReported = false;
-                int Hits() => Unbound.Runtime.Stubs.HitReport().FirstOrDefault(h => h.Key == "SpeedTree 8 wind").Value;
-                int before = Hits();
                 var renderer = go.AddComponent<MeshRenderer>();
+                renderer.motionVectorGenerationMode = MotionVectorGenerationMode.Object;
                 go.AddComponent<Tree>().windAsset = asset;
-                SpeedTreeWindSystem.Update();
-                var properties = new Dictionary<int, object>();
+                for (int frame = 1; frame <= 3; frame++)
+                {
+                    Time.s_Time = frame / 30f;
+                    SpeedTreeWindSystem.Update();
+                }
+                Assert.True(asset.Wind8.Blowing);
                 using (Unbound.Runtime.DrawPropertyPool.Begin())
                 {
-                    Assert.Same(properties, SpeedTreeWindSystem.Apply(renderer, properties));
-                    Assert.Same(properties, SpeedTreeWindSystem.Apply(renderer, properties));
+                    var drawn = SpeedTreeWindSystem.Apply(renderer, new Dictionary<int, object>());
+                    Assert.Equal(SpeedTree8WindState.ConstantCount, drawn.Count);
+                    var vector = (Vector4)drawn[Shader.PropertyToID("_ST_WindVector")];
+                    Assert.Equal((Vector4)asset.Wind8.Values[0], vector);
+                    // The zone blows along +z.
+                    Assert.True(vector.z > 0.99f && vector.w > 0f, vector.ToString());
+                    Assert.Equal((Vector4)asset.Wind8.Values[SpeedTree8WindState.HistoryOffset + 14],
+                        (Vector4)drawn[Shader.PropertyToID("_ST_WindFrondRippleHistory")]);
+                    Assert.False(drawn.ContainsKey(Shader.PropertyToID("_ST_WindAnimation")));
+                    renderer.motionVectorGenerationMode = MotionVectorGenerationMode.Camera;
+                    drawn = SpeedTreeWindSystem.Apply(renderer, new Dictionary<int, object>());
+                    Assert.Equal(Vector4.zero, (Vector4)drawn[Shader.PropertyToID("_ST_WindVectorHistory")]);
                 }
-                Assert.Empty(properties);
-                // Reported once, however often the tree draws.
-                Assert.Equal(1, Hits() - before);
             }
             finally
             {
-                Debug.unityLogger.logHandler = previous;
+                Time.s_Time = time;
                 Object.DestroyImmediate(go);
+                Object.DestroyImmediate(zone.gameObject);
                 Object.DestroyImmediate(asset);
+                SpeedTreeWindSystem.Update();
             }
         }
     }

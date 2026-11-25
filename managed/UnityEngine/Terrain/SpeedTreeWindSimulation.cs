@@ -7,6 +7,143 @@ using UnityEngine.Rendering;
 namespace UnityEngine
 {
     /// <summary>
+    /// What every SpeedTree wind does alike (SpeedTree 8 and 9 assets, Unity 6000.0.71f1,
+    /// tests/projects/speedtree9wind and speedtree8wind): its time, and its direction and strength
+    /// easing toward the scene's wind over the asset's responses (see <see cref="SpeedTreeWindState"/>),
+    /// and the reading of its curves at the strength.
+    /// </summary>
+    internal abstract class SpeedTreeWindMotion
+    {
+        /// <summary>A time not set yet.</summary>
+        protected const float Unset = -1f;
+        /// <summary>How close the direction and strength must be to their targets to count as
+        /// arrived.</summary>
+        protected const float Arrived = 1e-6f;
+        protected float m_Time = Unset, m_PreviousTime = Unset;
+        protected float m_Strength, m_PreviousStrength, m_StrengthTarget, m_StrengthFrom, m_StrengthStart, m_StrengthEnd;
+        protected Vector3 m_Direction, m_PreviousDirection, m_DirectionTarget, m_DirectionFrom, m_DirectionMiddle;
+        protected float m_DirectionStart, m_DirectionEnd;
+
+        /// <summary>The strength the constants and curves take (clamped to [0, 1]).</summary>
+        internal float DrawnStrength => Clamp01(m_Strength);
+
+        /// <summary>Whether the wind still moves: on its way to its target, or with strength.</summary>
+        internal bool Blowing => InTransition || Clamp01(m_Strength) > 0f;
+
+        internal bool InTransition =>
+            Math.Abs(m_Direction.x - m_DirectionTarget.x) > Arrived || Math.Abs(m_Direction.y - m_DirectionTarget.y) > Arrived ||
+            Math.Abs(m_Direction.z - m_DirectionTarget.z) > Arrived || Math.Abs(m_Strength - m_StrengthTarget) > Arrived;
+
+        protected void SetDirection(float time, Vector3 direction, float response)
+        {
+            if ((direction.x * direction.x + direction.y * direction.y) + direction.z * direction.z == 0f) return;
+            if (direction.x == m_DirectionTarget.x && direction.y == m_DirectionTarget.y && m_DirectionStart <= time && direction.z == m_DirectionTarget.z) return;
+            m_DirectionTarget = direction;
+            float change = 1f - ((m_Direction.y * direction.y + m_Direction.x * direction.x) + m_Direction.z * direction.z + 1f) * 0.5f;
+            float start = m_Time == Unset ? time : m_Time;
+            m_DirectionStart = start;
+            m_DirectionEnd = change * response + (1f - change) * (response * 0.5f) + start;
+            m_DirectionFrom = m_Direction;
+            var middle = new Vector3((m_DirectionTarget.x + m_DirectionFrom.x) * 0.5f, (m_DirectionFrom.y + m_DirectionTarget.y) * 0.5f,
+                (m_DirectionTarget.z + m_DirectionFrom.z) * 0.5f);
+            float length = (middle.y * middle.y + middle.x * middle.x) + middle.z * middle.z;
+            m_DirectionMiddle = length != 0f ? Divide(middle, MathF.Sqrt(length)) : Vector3.zero;
+        }
+
+        protected void SetStrength(float time, float strength, float response)
+        {
+            if (m_StrengthTarget == strength && !(time < m_StrengthStart)) return;
+            float start = m_Time > 0f ? m_Time : time;
+            m_StrengthStart = start;
+            float change = Math.Abs(strength - m_Strength);
+            m_StrengthEnd = change * response + (1f - change) * (0.5f * response) + start;
+            m_StrengthFrom = m_Strength;
+            m_StrengthTarget = strength;
+        }
+
+        protected void Advance(float time)
+        {
+            float before = m_Time;
+            m_PreviousTime = before == Unset ? time : before;
+            m_PreviousDirection = m_Direction;
+            m_PreviousStrength = Clamp01(m_Strength);
+            m_Time = time;
+            float f = m_DirectionEnd != m_DirectionStart ? Progress(time, m_DirectionStart, m_DirectionEnd) : 1f;
+            // Half linear, half smoothstep.
+            float s = f * 0.5f + (3f - (f + f)) * (f * f) * 0.5f;
+            Vector3 d;
+            if (s < 0.5f)
+            {
+                float u = s + s;
+                d = new Vector3(u * m_DirectionMiddle.x + (1f - u) * m_DirectionFrom.x, u * m_DirectionMiddle.y + (1f - u) * m_DirectionFrom.y,
+                    u * m_DirectionMiddle.z + (1f - u) * m_DirectionFrom.z);
+            }
+            else
+            {
+                float u = s + -0.5f;
+                u += u;
+                d = new Vector3(u * m_DirectionTarget.x + (1f - u) * m_DirectionMiddle.x, u * m_DirectionTarget.y + (1f - u) * m_DirectionMiddle.y,
+                    u * m_DirectionTarget.z + (1f - u) * m_DirectionMiddle.z);
+            }
+            float length = MathF.Sqrt((d.y * d.y + d.x * d.x) + d.z * d.z);
+            m_Direction = length > 0f ? Divide(d, length) : d;
+            float g = m_StrengthEnd != m_StrengthStart ? Progress(time, m_StrengthStart, m_StrengthEnd) : 0f;
+            float h = 0f * g + (3f - (g + g)) * (g * g);
+            m_Strength = h * m_StrengthTarget + (1f - h) * m_StrengthFrom;
+        }
+
+        /// <summary>How far <paramref name="time"/> is from <paramref name="start"/> to
+        /// <paramref name="end"/>, in [0, 1].</summary>
+        protected static float Progress(float time, float start, float end)
+        {
+            float x = (time - start) / (end - start);
+            return 0f > x ? 0f : 1f < x ? 1f : x;
+        }
+
+        protected static Vector3 Divide(Vector3 v, float length) => new Vector3(v.x / length, v.y / length, v.z / length);
+
+        /// <summary>The strength as the curves read it.</summary>
+        protected static float Clamp01(float strength)
+        {
+            float clamped = strength <= 1f ? strength : 1f;
+            return strength < 0f ? 0f : clamped;
+        }
+
+        /// <summary>The two curve samples around <paramref name="strength"/> and the weight of the
+        /// second.</summary>
+        protected static void Curve(int samples, float strength, out int i0, out int i1, out float t)
+        {
+            float x = (samples - 1f) * strength;
+            i0 = (int)x;
+            i1 = i0 + 1;
+            t = 0f;
+            if (i1 >= samples)
+            {
+                i0 = i1 = samples - 1;
+                return;
+            }
+            if (i0 < 0)
+            {
+                i0 = i1 = 0;
+                return;
+            }
+            t = x - i0;
+        }
+
+        protected static unsafe float Sample(float* curve, int i0, int i1, float t) => curve[i1] * t + curve[i0] * (1f - t);
+
+        protected static float Sample(float[] curve, int i0, int i1, float t) => curve[i1] * t + curve[i0] * (1f - t);
+
+        /// <summary><paramref name="count"/> constants as boxed Vector4 values, updated in place.</summary>
+        internal static object[] NewValues(int count)
+        {
+            var values = new object[count];
+            for (int i = 0; i < values.Length; i++) values[i] = Vector4.zero;
+            return values;
+        }
+    }
+
+    /// <summary>
     /// The wind one SpeedTree 9 wind asset gives its trees (Unity 6000.0.71f1,
     /// tests/projects/speedtree9wind). Each frame the wind eases toward the scene's directional wind:
     /// its direction over the asset's direction response, smoothed (half linear, half smoothstep)
@@ -19,15 +156,10 @@ namespace UnityEngine
     /// for motion vectors, the previous frame's. A tree in reach of a spherical zone gets a local
     /// wind of its own (<see cref="Begin"/>, <see cref="UpdateLocal"/>).
     /// </summary>
-    internal sealed class SpeedTreeWindState
+    internal sealed class SpeedTreeWindState : SpeedTreeWindMotion
     {
         internal const int ConstantCount = 22, HistoryOffset = 11;
         const int CurveSamples = 20;
-        /// <summary>A time not set yet.</summary>
-        const float Unset = -1f;
-        /// <summary>How close the direction and strength must be to their targets to count as
-        /// arrived.</summary>
-        const float Arrived = 1e-6f;
         /// <summary>How close a local wind's noise positions, and its wind vector, must be to its
         /// asset's wind to count as the same.</summary>
         const float Close = 1e-5f, CloseSquared = Close * Close;
@@ -39,10 +171,6 @@ namespace UnityEngine
         /// <summary>Distances below this (between noise positions) take no catching up.</summary>
         const float NoDistance = 1e-6f;
 
-        float m_Time = Unset, m_PreviousTime = Unset;
-        float m_Strength, m_PreviousStrength, m_StrengthTarget, m_StrengthFrom, m_StrengthStart, m_StrengthEnd;
-        Vector3 m_Direction, m_PreviousDirection, m_DirectionTarget, m_DirectionFrom, m_DirectionMiddle;
-        float m_DirectionStart, m_DirectionEnd;
         /// <summary>The noise positions of the shared part, the two branch levels and the ripple,
         /// and those of the frame before.</summary>
         readonly Vector3[] m_Noise = new Vector3[4], m_PreviousNoise = new Vector3[4];
@@ -61,16 +189,6 @@ namespace UnityEngine
             for (int i = 0; i < values.Length; i++) values[i] = Vector4.zero;
             return values;
         }
-
-        /// <summary>The strength the constants and curves take (clamped to [0, 1]).</summary>
-        internal float DrawnStrength => Clamp01(m_Strength);
-
-        /// <summary>Whether the wind still moves: on its way to its target, or with strength.</summary>
-        internal bool Blowing => InTransition || Clamp01(m_Strength) > 0f;
-
-        internal bool InTransition =>
-            Math.Abs(m_Direction.x - m_DirectionTarget.x) > Arrived || Math.Abs(m_Direction.y - m_DirectionTarget.y) > Arrived ||
-            Math.Abs(m_Direction.z - m_DirectionTarget.z) > Arrived || Math.Abs(m_Strength - m_StrengthTarget) > Arrived;
 
         /// <summary>Advances the wind to <paramref name="time"/> under the scene's wind (a unit
         /// direction, or zero, and its strength) and updates <see cref="Values"/>.</summary>
@@ -102,7 +220,7 @@ namespace UnityEngine
         /// the previous update, at its speed for the current strength.</summary>
         unsafe void MoveNoises(SpeedTreeWindConfig9* c)
         {
-            Curve(Clamp01(m_Strength), out int i0, out int i1, out float t);
+            Curve(CurveSamples, Clamp01(m_Strength), out int i0, out int i1, out float t);
             float dt = m_Time - m_PreviousTime;
             var step = new Vector3(m_Direction.x * dt, m_Direction.y * dt, dt * m_Direction.z);
             if (c->doShared != 0) MoveNoise(0, step, Sample(c->speedShared, i0, i1, t));
@@ -223,7 +341,7 @@ namespace UnityEngine
         {
             bool late = false;
             var direction = asset.m_Direction;
-            Curve(strength, out int i0, out int i1, out float t);
+            Curve(CurveSamples, strength, out int i0, out int i1, out float t);
             for (int part = 0; part < 4; part++)
             {
                 if (m_ReturnStart[part] != Unset) continue;
@@ -289,74 +407,6 @@ namespace UnityEngine
             }
         }
 
-        void SetDirection(float time, Vector3 direction, float response)
-        {
-            if ((direction.x * direction.x + direction.y * direction.y) + direction.z * direction.z == 0f) return;
-            if (direction.x == m_DirectionTarget.x && direction.y == m_DirectionTarget.y && m_DirectionStart <= time && direction.z == m_DirectionTarget.z) return;
-            m_DirectionTarget = direction;
-            float change = 1f - ((m_Direction.y * direction.y + m_Direction.x * direction.x) + m_Direction.z * direction.z + 1f) * 0.5f;
-            float start = m_Time == Unset ? time : m_Time;
-            m_DirectionStart = start;
-            m_DirectionEnd = change * response + (1f - change) * (response * 0.5f) + start;
-            m_DirectionFrom = m_Direction;
-            var middle = new Vector3((m_DirectionTarget.x + m_DirectionFrom.x) * 0.5f, (m_DirectionFrom.y + m_DirectionTarget.y) * 0.5f,
-                (m_DirectionTarget.z + m_DirectionFrom.z) * 0.5f);
-            float length = (middle.y * middle.y + middle.x * middle.x) + middle.z * middle.z;
-            m_DirectionMiddle = length != 0f ? Divide(middle, MathF.Sqrt(length)) : Vector3.zero;
-        }
-
-        void SetStrength(float time, float strength, float response)
-        {
-            if (m_StrengthTarget == strength && !(time < m_StrengthStart)) return;
-            float start = m_Time > 0f ? m_Time : time;
-            m_StrengthStart = start;
-            float change = Math.Abs(strength - m_Strength);
-            m_StrengthEnd = change * response + (1f - change) * (0.5f * response) + start;
-            m_StrengthFrom = m_Strength;
-            m_StrengthTarget = strength;
-        }
-
-        void Advance(float time)
-        {
-            float before = m_Time;
-            m_PreviousTime = before == Unset ? time : before;
-            m_PreviousDirection = m_Direction;
-            m_PreviousStrength = Clamp01(m_Strength);
-            m_Time = time;
-            float f = m_DirectionEnd != m_DirectionStart ? Progress(time, m_DirectionStart, m_DirectionEnd) : 1f;
-            // Half linear, half smoothstep.
-            float s = f * 0.5f + (3f - (f + f)) * (f * f) * 0.5f;
-            Vector3 d;
-            if (s < 0.5f)
-            {
-                float u = s + s;
-                d = new Vector3(u * m_DirectionMiddle.x + (1f - u) * m_DirectionFrom.x, u * m_DirectionMiddle.y + (1f - u) * m_DirectionFrom.y,
-                    u * m_DirectionMiddle.z + (1f - u) * m_DirectionFrom.z);
-            }
-            else
-            {
-                float u = s + -0.5f;
-                u += u;
-                d = new Vector3(u * m_DirectionTarget.x + (1f - u) * m_DirectionMiddle.x, u * m_DirectionTarget.y + (1f - u) * m_DirectionMiddle.y,
-                    u * m_DirectionTarget.z + (1f - u) * m_DirectionMiddle.z);
-            }
-            float length = MathF.Sqrt((d.y * d.y + d.x * d.x) + d.z * d.z);
-            m_Direction = length > 0f ? Divide(d, length) : d;
-            float g = m_StrengthEnd != m_StrengthStart ? Progress(time, m_StrengthStart, m_StrengthEnd) : 0f;
-            float h = 0f * g + (3f - (g + g)) * (g * g);
-            m_Strength = h * m_StrengthTarget + (1f - h) * m_StrengthFrom;
-        }
-
-        /// <summary>How far <paramref name="time"/> is from <paramref name="start"/> to
-        /// <paramref name="end"/>, in [0, 1].</summary>
-        static float Progress(float time, float start, float end)
-        {
-            float x = (time - start) / (end - start);
-            return 0f > x ? 0f : 1f < x ? 1f : x;
-        }
-
-        static Vector3 Divide(Vector3 v, float length) => new Vector3(v.x / length, v.y / length, v.z / length);
-
         void MoveNoise(int part, Vector3 step, float speed)
         {
             var noise = m_Noise[part];
@@ -364,42 +414,12 @@ namespace UnityEngine
             m_Noise[part] = new Vector3(noise.x - step.x * speed, noise.y - step.y * speed, noise.z - speed * step.z);
         }
 
-        /// <summary>The strength as the curves read it.</summary>
-        static float Clamp01(float strength)
-        {
-            float clamped = strength <= 1f ? strength : 1f;
-            return strength < 0f ? 0f : clamped;
-        }
-
-        /// <summary>The two curve samples around <paramref name="strength"/> and the weight of the
-        /// second.</summary>
-        static void Curve(float strength, out int i0, out int i1, out float t)
-        {
-            float x = (CurveSamples - 1f) * strength;
-            i0 = (int)x;
-            i1 = i0 + 1;
-            t = 0f;
-            if (i1 >= CurveSamples)
-            {
-                i0 = i1 = CurveSamples - 1;
-                return;
-            }
-            if (i0 < 0)
-            {
-                i0 = i1 = 0;
-                return;
-            }
-            t = x - i0;
-        }
-
-        static unsafe float Sample(float* curve, int i0, int i1, float t) => curve[i1] * t + curve[i0] * (1f - t);
-
         /// <summary>One set of 11 constants: the wind vector, the tree's extents and limits, and
         /// each enabled part's noise position and curve values at <paramref name="strength"/> (a
         /// disabled part's stay zero).</summary>
         unsafe void Write(int at, SpeedTreeWindConfig9* c, Vector3 direction, float strength, Vector3[] noise)
         {
-            Curve(strength, out int i0, out int i1, out float t);
+            Curve(CurveSamples, strength, out int i0, out int i1, out float t);
             Set(at + 0, new Vector4(direction.x, direction.y, direction.z, strength));
             Set(at + 1, new Vector4(c->treeExtentX, c->treeExtentY, c->treeExtentZ, c->sharedHeightStart));
             Set(at + 2, new Vector4(c->branch1StretchLimit, c->branch2StretchLimit, c->windIndependence, c->importScale));
@@ -468,6 +488,8 @@ namespace UnityEngine
         /// renderer without per-object motion vectors.</summary>
         static readonly object[] s_Zero = SpeedTreeWindState.NewValues();
         static readonly int[] s_Ids = Ids();
+        static readonly int[] s_Ids8 = Ids8();
+        static readonly object[] s_Zero8 = SpeedTreeWindMotion.NewValues(SpeedTree8WindState.ConstantCount);
         /// <summary>Whether a spherical zone was active at this frame's wind update (the draws
         /// look for local winds only then, though they take the zones active when they draw).</summary>
         static bool s_AnySpherical;
@@ -503,6 +525,26 @@ namespace UnityEngine
             {
                 ids[i] = Shader.PropertyToID(names[i]);
                 ids[SpeedTreeWindState.HistoryOffset + i] = Shader.PropertyToID(names[i].Insert(4, "History"));
+            }
+            return ids;
+        }
+
+        /// <summary>The SpeedTree 8 constants (Unity 6000.0.71f1's SpeedTreeWind buffer of 15, and
+        /// SpeedTreeWindHistory, each name with "History" after it).</summary>
+        static int[] Ids8()
+        {
+            string[] names =
+            {
+                "_ST_WindVector", "_ST_WindGlobal", "_ST_WindBranch", "_ST_WindBranchTwitch", "_ST_WindBranchWhip",
+                "_ST_WindBranchAnchor", "_ST_WindBranchAdherences", "_ST_WindTurbulences", "_ST_WindLeaf1Ripple",
+                "_ST_WindLeaf1Tumble", "_ST_WindLeaf1Twitch", "_ST_WindLeaf2Ripple", "_ST_WindLeaf2Tumble",
+                "_ST_WindLeaf2Twitch", "_ST_WindFrondRipple",
+            };
+            var ids = new int[SpeedTree8WindState.ConstantCount];
+            for (int i = 0; i < names.Length; i++)
+            {
+                ids[i] = Shader.PropertyToID(names[i]);
+                ids[SpeedTree8WindState.HistoryOffset + i] = Shader.PropertyToID(names[i] + "History");
             }
             return ids;
         }
@@ -557,6 +599,12 @@ namespace UnityEngine
             bool blowing = false;
             foreach (var asset in s_Assets)
             {
+                if (asset.IsSpeedTree8)
+                {
+                    asset.Wind8.Update(time, direction, strength, asset.Config8);
+                    blowing |= asset.Wind8.Blowing;
+                    continue;
+                }
                 asset.Wind.Update(time, direction, strength, ref asset.Config);
                 blowing |= asset.Wind.Blowing;
             }
@@ -758,8 +806,16 @@ namespace UnityEngine
                 }
                 if (tree.windAsset.IsSpeedTree8)
                 {
-                    SpeedTree8WindNotSimulated();
-                    ClearParams(data, buffer, at);
+                    if (history && renderer.m_MotionVectorGenerationMode != MotionVectorGenerationMode.Object)
+                    {
+                        ClearParams(data, buffer, at);
+                        continue;
+                    }
+                    var eight = Wind8Of(tree).Values;
+                    int first = history ? SpeedTree8WindState.HistoryOffset : 0;
+                    for (int p = 0; p < SpeedTree8WindState.HistoryOffset; p++)
+                        *(Vector4*)(data + buffer.uintParamOffsets[p] + at) = Unsafe.Unbox<Vector4>(eight[first + p]);
+                    ClearParams(data, buffer, at, SpeedTree8WindState.HistoryOffset);
                     continue;
                 }
                 var values = WindOf(tree, renderer, tree.windAsset).Values;
@@ -775,18 +831,24 @@ namespace UnityEngine
             }
         }
 
-        /// <summary>A SpeedTree 8 tree draws without wind: its wind asset (the file's wind) is not
-        /// simulated, so it binds no wind constants and gets zero resident-drawer parameters.</summary>
-        static void SpeedTree8WindNotSimulated()
+        /// <summary>A SpeedTree 8 tree's wind: its asset's. Spherical zones reaching it give it no
+        /// local wind of its own (a SpeedTree 9 tree's would): not measured, said once per session.</summary>
+        static SpeedTree8WindState Wind8Of(Tree tree)
         {
-            // Once per session, without a lookup per draw.
-            if (s_SpeedTree8WindReported) return;
-            s_SpeedTree8WindReported = true;
-            Stubs.Ignored("SpeedTree 8 wind", "is not simulated: SpeedTree 8 trees draw without wind");
+            if (s_AnySpherical && !s_SpeedTree8LocalWindReported)
+            {
+                var spherical = SphericalWind(TreeBounds(tree));
+                if (spherical.x != 0f || spherical.y != 0f || spherical.z != 0f)
+                {
+                    s_SpeedTree8LocalWindReported = true;
+                    Stubs.Ignored("SpeedTree 8 local wind", "is not simulated: a SpeedTree 8 tree spherical wind zones reach draws with its asset's wind");
+                }
+            }
+            return tree.windAsset.Wind8;
         }
 
         /// <summary>Whether the session has reported it (tests clear it).</summary>
-        internal static bool s_SpeedTree8WindReported;
+        internal static bool s_SpeedTree8LocalWindReported;
 
         /// <summary>Zeros an instance's parameters from <paramref name="first"/> on.</summary>
         static unsafe void ClearParams(uint* data, in SpeedTreeWindParamsBufferIterator buffer, int at, int first = 0)
@@ -807,12 +869,16 @@ namespace UnityEngine
             // none. A destroyed asset's wind is no longer advanced, and its tree draws the same
             // way (unmeasured).
             if (asset == null) return properties;
+            if (s_AnyWind) tree.m_DrawnWithWind = true;
             if (asset.IsSpeedTree8)
             {
-                SpeedTree8WindNotSimulated();
-                return properties;
+                var eight = tree.m_DrawnWithWind ? Wind8Of(tree).Values : s_Zero8;
+                var past = renderer.m_MotionVectorGenerationMode == MotionVectorGenerationMode.Object ? eight : s_Zero8;
+                var with8 = DrawPropertyPool.Copy(properties);
+                for (int i = 0; i < SpeedTree8WindState.HistoryOffset; i++) with8[s_Ids8[i]] = eight[i];
+                for (int i = SpeedTree8WindState.HistoryOffset; i < s_Ids8.Length; i++) with8[s_Ids8[i]] = past[i];
+                return with8;
             }
-            if (s_AnyWind) tree.m_DrawnWithWind = true;
             var wind = WindOf(tree, renderer, asset);
             var values = tree.m_DrawnWithWind ? wind.Values : s_Zero;
             var history = renderer.m_MotionVectorGenerationMode == MotionVectorGenerationMode.Object ? values : s_Zero;
