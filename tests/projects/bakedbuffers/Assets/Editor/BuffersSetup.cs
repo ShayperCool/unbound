@@ -1028,8 +1028,8 @@ public static class BuffersSetup
         Filter("FilterGaussHalf", LightingSettings.FilterType.Gaussian, 2.5f, 0.5f);
         Filter("FilterAtrous", LightingSettings.FilterType.ATrous, 0.5f, 1.5f);
         // Directional lightmaps and the Lighting Modes with mixed lights, filtered (Gaussian,
-        // direct radius 1, indirect 5) and with the Auto filtering.
-        void Moded(string name, bool auto, bool directional, MixedLightingMode mixed)
+        // direct radius 1, indirect 5, unless `tune` changes them) and with the Auto filtering.
+        void Moded(string name, bool auto, bool directional, MixedLightingMode mixed, Action<LightingSettings> tune = null)
         {
             var scene = Coloured(name, 64, 1);
             var settings = Lightmapping.lightingSettings;
@@ -1042,6 +1042,7 @@ public static class BuffersSetup
                 settings.filterTypeDirect = settings.filterTypeIndirect = settings.filterTypeAO = LightingSettings.FilterType.Gaussian;
                 settings.filteringGaussianRadiusDirect = 1f;
                 settings.filteringGaussianRadiusIndirect = 5f;
+                tune?.Invoke(settings);
             }
             if (mixed == MixedLightingMode.IndirectOnly)
                 WhiteSun();
@@ -1061,6 +1062,41 @@ public static class BuffersSetup
         Moded("FilterShadowmaskAuto", true, false, MixedLightingMode.Shadowmask);
         Moded("FilterSubtractive", false, false, MixedLightingMode.Subtractive);
         Moded("FilterSubtractiveAuto", true, false, MixedLightingMode.Subtractive);
+        // Which of the parts' settings the directional image and the shadowmask follow:
+        // directional lightmaps with an indirect Gaussian of radius 2, with an indirect A-Trous
+        // filter, without filters, and denoised by Open Image Denoise; a shadowmask whose direct
+        // settings (Gaussian 2.5, no denoiser) differ from the ambient occlusion's (Open Image
+        // Denoise, no filter), one under a direct A-Trous filter and one under Open Image
+        // Denoise alone.
+        Moded("FilterDirectionalRadius", false, true, MixedLightingMode.IndirectOnly, s => s.filteringGaussianRadiusIndirect = 2f);
+        Moded("FilterDirectionalAtrous", false, true, MixedLightingMode.IndirectOnly, s =>
+        {
+            s.filterTypeIndirect = LightingSettings.FilterType.ATrous;
+            s.filteringAtrousPositionSigmaIndirect = 1.5f;
+        });
+        Moded("FilterDirectionalNone", false, true, MixedLightingMode.IndirectOnly, s =>
+            s.filterTypeDirect = s.filterTypeIndirect = s.filterTypeAO = LightingSettings.FilterType.None);
+        Moded("FilterDirectionalOidn", false, true, MixedLightingMode.IndirectOnly, s =>
+        {
+            s.denoiserTypeDirect = s.denoiserTypeIndirect = LightingSettings.DenoiserType.OpenImage;
+            s.filterTypeDirect = s.filterTypeIndirect = LightingSettings.FilterType.None;
+        });
+        Moded("FilterShadowmaskAo", false, false, MixedLightingMode.Shadowmask, s =>
+        {
+            s.filteringGaussianRadiusDirect = 2.5f;
+            s.denoiserTypeAO = LightingSettings.DenoiserType.OpenImage;
+            s.filterTypeAO = LightingSettings.FilterType.None;
+        });
+        Moded("FilterShadowmaskAtrous", false, false, MixedLightingMode.Shadowmask, s =>
+        {
+            s.filterTypeDirect = LightingSettings.FilterType.ATrous;
+            s.filteringAtrousPositionSigmaDirect = 0.5f;
+        });
+        Moded("FilterShadowmaskOidn", false, false, MixedLightingMode.Shadowmask, s =>
+        {
+            s.denoiserTypeDirect = LightingSettings.DenoiserType.OpenImage;
+            s.filterTypeDirect = LightingSettings.FilterType.None;
+        });
     }
 
     /// <summary>The coloured scene under a sun denoised: the Auto filtering, and the Advanced
