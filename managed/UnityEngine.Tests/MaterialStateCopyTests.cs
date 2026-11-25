@@ -26,7 +26,6 @@ namespace UnityEngine.Tests
         readonly List<Object> m_Owned = new List<Object>();
         static int s_Made;
 
-        const string ResetFromNoShader = "Material.shader set to or from no shader";
         const string ResetOnInheritingVariant = "Material.shader of a variant that takes its parent's render queue";
         const string CopyIntoVariant = "Material.CopyPropertiesFromMaterial into a material variant";
         const string MatchingIntoVariant = "Material.CopyMatchingPropertiesFromMaterial into a material variant";
@@ -348,11 +347,11 @@ namespace UnityEngine.Tests
             var geometry = Make("Geometry");
             var transparent = Make("Transparent");
             var m = Own(new Material(geometry));
-            int warned = Hits(ResetFromNoShader) + Hits(ResetOnInheritingVariant);
+            int warned = Hits(ResetOnInheritingVariant);
             m.shader = transparent;
             Assert.Equal(-1, m.rawRenderQueue);
             Assert.Equal(transparent.renderQueue, m.renderQueue);
-            Assert.Equal(warned, Hits(ResetFromNoShader) + Hits(ResetOnInheritingVariant));
+            Assert.Equal(warned, Hits(ResetOnInheritingVariant));
         }
 
         /// <summary>Unmeasured: assigning the shader it has is no change ("is changed").</summary>
@@ -365,20 +364,20 @@ namespace UnityEngine.Tests
             Assert.Equal(2450, m.rawRenderQueue);
         }
 
-        /// <summary>Unmeasured: to and from no shader the override stays, with a warning. Old
-        /// source: kept, silently.</summary>
+        /// <summary>No shader gives the error shader (tests/projects/missingshader assign.null), and
+        /// a change from or to it resets the queue as any shader change does (assign.unlit).</summary>
         [Fact]
-        public void UnmeasuredNoShaderKeepsTheQueueAndWarns()
+        public void NoShaderIsTheErrorShaderAndResetsTheQueue()
         {
             var geometry = Make("Geometry");
             var transparent = Make("Transparent");
             var m = Own(new Material(geometry) { renderQueue = 2450 });
-            int before = Hits(ResetFromNoShader);
             m.shader = null;
-            Assert.Equal(2450, m.rawRenderQueue);
+            Assert.Same(Shader.Find("Hidden/InternalErrorShader"), m.shader);
+            Assert.Equal(-1, m.rawRenderQueue);
+            m.renderQueue = 2450;
             m.shader = transparent;
-            Assert.Equal(2450, m.rawRenderQueue);
-            Assert.Equal(before + 2, Hits(ResetFromNoShader));
+            Assert.Equal(-1, m.rawRenderQueue);
         }
 
         /// <summary>Unmeasured: a variant taking its parent's queue keeps it, with a warning; a

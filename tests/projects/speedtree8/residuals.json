@@ -68,26 +68,6 @@
   "v8/Card_Tree_Sample/Card_Units0.st/go/Card_Units0/CollisionObject0/transform",
   "v8/Field_Embedded.st/go/Field_Embedded/CollisionObject1/transform"
  ],
- "A material file whose shader is not in the project (URP shaders in a built-in project) reports no shader where the Editor reports Hidden/InternalErrorShader (Material loading follow-up)": [
-  "v8/Broadleaf_Desktop_Field.st/material/v8/Materials/Broadleaf_Desktop_Field.mat",
-  "v8/Broadleaf_Desktop_Field.st/material/v8/Materials/Broadleaf_Desktop_Field_Billboard_LOD3.mat",
-  "v8/Broadleaf_Desktop_Field.st/material/v8/Materials/Main_Bark.mat",
-  "v8/Broadleaf_Desktop_Field_OptionsOff.st/material/v8/Broadleaf_Desktop_Field_OptionsOff Materials/LOD0/Broadleaf_Desktop_Field.mat",
-  "v8/Broadleaf_Desktop_Field_OptionsOff.st/material/v8/Broadleaf_Desktop_Field_OptionsOff Materials/LOD0/Main_Bark.mat",
-  "v8/Broadleaf_Desktop_Field_OptionsOff.st/material/v8/Broadleaf_Desktop_Field_OptionsOff Materials/LOD1/Broadleaf_Desktop_Field.mat",
-  "v8/Broadleaf_Desktop_Field_OptionsOff.st/material/v8/Broadleaf_Desktop_Field_OptionsOff Materials/LOD1/Main_Bark.mat",
-  "v8/Broadleaf_Desktop_Field_OptionsOff.st/material/v8/Broadleaf_Desktop_Field_OptionsOff Materials/LOD2/Broadleaf_Desktop_Field.mat",
-  "v8/Broadleaf_Desktop_Field_OptionsOff.st/material/v8/Broadleaf_Desktop_Field_OptionsOff Materials/LOD2/Main_Bark.mat",
-  "v8/Broadleaf_Desktop_Field_OptionsOff.st/material/v8/Broadleaf_Desktop_Field_OptionsOff Materials/LOD3/Broadleaf_Desktop_Field_Billboard.mat",
-  "v8/Broadleaf_Desktop_Field_OptionsOn.st/material/v8/Broadleaf_Desktop_Field_OptionsOn Materials/LOD0/Broadleaf_Desktop_Field.mat",
-  "v8/Broadleaf_Desktop_Field_OptionsOn.st/material/v8/Broadleaf_Desktop_Field_OptionsOn Materials/LOD0/Main_Bark.mat",
-  "v8/Broadleaf_Desktop_Field_OptionsOn.st/material/v8/Broadleaf_Desktop_Field_OptionsOn Materials/LOD1/Broadleaf_Desktop_Field.mat",
-  "v8/Broadleaf_Desktop_Field_OptionsOn.st/material/v8/Broadleaf_Desktop_Field_OptionsOn Materials/LOD1/Main_Bark.mat",
-  "v8/Broadleaf_Desktop_Field_OptionsOn.st/material/v8/Broadleaf_Desktop_Field_OptionsOn Materials/LOD2/Broadleaf_Desktop_Field.mat",
-  "v8/Broadleaf_Desktop_Field_OptionsOn.st/material/v8/Broadleaf_Desktop_Field_OptionsOn Materials/LOD2/Main_Bark.mat",
-  "v8/Broadleaf_Desktop_Field_OptionsOn.st/material/v8/Broadleaf_Desktop_Field_OptionsOn Materials/LOD3/Broadleaf_Desktop_Field_Billboard.mat",
-  "v8/Card_Tree_Sample/card-tree-sample.st/material/v8/Card_Tree_Sample/card-tree-sample.mat"
- ],
  "LODGroup.RecalculateBounds unions the corners of the renderers bounds; the Editor reference point matches a union of the bounds themselves, 4 ulps off in x here (LODGroup follow-up)": [
   "scene/go/CardInScene/LODGroup",
   "v8/Card_Tree_Sample/Card_Dangling.st/go/Card_Dangling/LODGroup",

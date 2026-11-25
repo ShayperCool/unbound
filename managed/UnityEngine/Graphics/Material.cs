@@ -150,6 +150,10 @@ namespace UnityEngine
         sealed class MaterialState
         {
             internal Shader m_Shader;
+            /// <summary>The shader reference the material's data holds when it names no shader that
+            /// loads (no shader, an asset or object that is not there): the material then has the
+            /// error shader, and its data keeps the reference as it was (see <see cref="UnresolvedShaderReference"/>).</summary>
+            internal ObjectRef? m_UnresolvedShader;
             internal PendingValidation m_PendingEditorValidation;
             /// <summary>Floats whose write caused the material's validation: the value written, which
             /// the material reads and draws with, and the one the validation gave it, which its data
@@ -215,6 +219,19 @@ namespace UnityEngine
                 m_State.m_Shader = value;
             }
         }
+        /// <summary>The shader the Editor gives a material whose shader reference does not load.</summary>
+        static Shader ErrorShader => Shader.Find("Hidden/InternalErrorShader");
+
+        /// <summary>The reference the material's data holds in place of its shader's when that
+        /// names no shader that loads; null when the data holds its shader's own. A material read
+        /// with a shader reference of no shader (none, a GUID of no asset, a file id of no object
+        /// in a project shader or among the built-in ones) has the error shader, and a save writes
+        /// the reference as read (matches the Unity 6000.0.71f1 Editor, tests/projects/missingshader
+        /// material.*, save.*). Not measured: a reference to an object that is not a shader (the
+        /// Editor logs a failed cast wherever the shader is read), and a shader that is imported
+        /// after the material loaded (the material keeps the error shader here).</summary>
+        internal ObjectRef? UnresolvedShaderReference => m_State.m_UnresolvedShader;
+
         internal PendingValidation PendingEditorValidation
         {
             get => m_State.m_PendingEditorValidation;
@@ -356,6 +373,7 @@ namespace UnityEngine
         void CopyFrom(Material source)
         {
             m_Shader = source.m_Shader;
+            m_State.m_UnresolvedShader = source.m_State.m_UnresolvedShader;
             // Copies share the sheet until one of them changes it.
             m_Sheet = source.m_Sheet;
             if (m_Sheet != null) m_Sheet.Shared = true;
@@ -439,6 +457,10 @@ namespace UnityEngine
             get { MainThreadCheck.Check("get_shader"); return m_Shader; }
             set
             { MainThreadCheck.Check("set_shader");
+                // No shader gives the error shader, as a material whose data names none has
+                // (tests/projects/missingshader assign.null); its data then holds no shader.
+                m_State.m_UnresolvedShader = value == null ? default(ObjectRef) : null;
+                if (value == null) value = ErrorShader;
                 if (value != m_Shader)
                 {
                     KeepDefaultsOf(m_Shader);
@@ -524,9 +546,10 @@ namespace UnityEngine
         /// the new shader's (rawRenderQueue -1). The same page's limitation: in batch mode an SRP
         /// loads only when something first renders, which can change the selected SubShader and so
         /// the shader's queue read afterwards (Shader.renderQueue answers that; not decided here).
-        /// Assigning the shader it has is no change and keeps it. Not documented, so the override
-        /// stays, with a warning: a change to or from no shader, and a variant that takes its
-        /// parent's queue (the parent's state, taken again later).
+        /// Assigning the shader it has is no change and keeps it; a material that has the error
+        /// shader for a reference of no shader resets as well (tests/projects/missingshader
+        /// assign.unlit). Not documented, so the override stays, with a warning: a variant that
+        /// takes its parent's queue (the parent's state, taken again later).
         /// </summary>
         void ResetRenderQueue(Shader next)
         {
@@ -538,12 +561,6 @@ namespace UnityEngine
                 return;
             }
             if (m_CustomRenderQueue < 0) return;
-            if (m_Shader == null || next == null)
-            {
-                Unbound.Runtime.Stubs.Ignored("Material.shader set to or from no shader",
-                    "keeps the material's render queue: the documented reset is to the shader's queue");
-                return;
-            }
             m_CustomRenderQueue = -1;
         }
 
@@ -1147,9 +1164,13 @@ namespace UnityEngine
         /// <summary>Texture getters read every slot the material has, saved for another shader too.</summary>
         bool HasTextureSlot(int nameID) => IsTexture(nameID) || m_Textures.ContainsKey(nameID) || m_TextureNames.Contains(nameID);
 
-        /// <summary>What a getter logs for a name the material does not have (it returns the default).</summary>
-        void Missing(int nameID, string kind) =>
+        /// <summary>What a getter logs for a name the material does not have (it returns the default):
+        /// nothing under the error shader (tests/projects/missingshader material.*, scripted.*).</summary>
+        void Missing(int nameID, string kind)
+        {
+            if (m_Shader != null && m_Shader == ErrorShader) return;
             Debug.LogError($"Material '{m_Name}' with Shader '{(m_Shader != null ? m_Shader.name : "")}' doesn't have {kind} property '{Shader.IdToName(nameID)}'", this);
+        }
 
         public bool HasFloat(string name) => IsFloat(Shader.PropertyToID(name));
         public bool HasFloat(int nameID) => IsFloat(nameID);
@@ -1816,7 +1837,9 @@ namespace UnityEngine
         {
             StopMeasuringPropertyStorage();
             var shaderRef = body.Ref("m_Shader");
-            m_Shader = shaderRef.IsNull ? null : resolver.Resolve(shaderRef, typeof(Shader)) as Shader;
+            var shader = shaderRef.IsNull ? null : resolver.Resolve(shaderRef, typeof(Shader)) as Shader;
+            m_State.m_UnresolvedShader = shader == null ? shaderRef : null;
+            m_Shader = shader != null ? shader : ErrorShader;
             m_CustomRenderQueue = body.Int("m_CustomRenderQueue", -1);
             m_SerializedQueue = m_CustomRenderQueue;
             var keywords = body.Str("m_ShaderKeywords");

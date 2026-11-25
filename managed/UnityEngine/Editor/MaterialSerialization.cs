@@ -75,6 +75,22 @@ namespace Unbound.Runtime
             return map;
         }
 
+        /// <summary>A reference as the data holds it: the file id, with the GUID and type of an
+        /// object of another file, on one line as the Editor writes references.</summary>
+        static YText Reference(ObjectRef reference)
+        {
+            var map = YText.Map(flow: true);
+            map.Add("fileID", Number(reference.FileId));
+            if (reference.Guid != null)
+            {
+                map.Add("guid", Scalar(reference.Guid));
+                map.Add("type", Number(reference.Type));
+            }
+            map.Raw = reference.Guid == null ? $"{{fileID: {map.Values[0].Raw}}}"
+                : $"{{fileID: {map.Values[0].Raw}, guid: {reference.Guid}, type: {map.Values[2].Raw}}}";
+            return map;
+        }
+
         static YText Vector2Map(Vector2 v)
         {
             var map = YText.Map(flow: true);
@@ -189,7 +205,7 @@ namespace Unbound.Runtime
             body.Add("m_PrefabInstance", Ref(null));
             body.Add("m_PrefabAsset", Ref(null));
             body.Add("m_Name", Text(m.name));
-            body.Add("m_Shader", Ref(m.shader));
+            body.Add("m_Shader", m.UnresolvedShaderReference is ObjectRef kept ? Reference(kept) : Ref(m.shader));
             var (valid, invalid) = m.SerializedKeywords();
             body.Add("m_ValidKeywords", Strings(valid));
             body.Add("m_InvalidKeywords", Strings(invalid));
