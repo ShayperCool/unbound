@@ -20,7 +20,9 @@ VARIABLE = 'PLUGIN_DEFAULTS_OUT'
 PACKAGE = 'com.unbound.plugindefaults'
 
 # What each plug-in file is: a managed library (compiled), a folder plug-in, or a file whose
-# kind its extension gives (a native library, a native source, an Android or web library).
+# kind its extension gives (a native library, a native source, an Android or web library). Every
+# other managed plug-in has a name of its own (Managed<Folder>.dll): the Editor compiles against
+# one precompiled assembly per file name.
 KINDS = {
     'Managed.dll': 'managed', 'Other.DLL': 'managed', 'native.dll': 'file', 'libnative.so': 'file',
     'libmac.dylib': 'file', 'libstatic.a': 'file', 'library.jar': 'file', 'library.aar': 'file',
@@ -34,13 +36,13 @@ KINDS = {
 # folders whose names the Editor reads (and some it does not), in a package, in Editor folders.
 FOLDERS = {
     'Assets/Plugins': list(KINDS),
-    'Assets/Other': ['Managed.dll', 'native.dll', 'libnative.so', 'libmac.dylib', 'Kit.bundle', 'Source.cpp',
+    'Assets/Other': ['ManagedOther.dll', 'native.dll', 'libnative.so', 'libmac.dylib', 'Kit.bundle', 'Source.cpp',
                      'library.aar', 'libstatic.a', 'bridge.jslib', 'Bridge.mm', 'Kit.framework'],
-    'Assets/Plugins/x86': ['native.dll', 'libnative.so', 'Managed.dll', 'libmac.dylib', 'Kit.bundle'],
-    'Assets/Plugins/x86_64': ['native.dll', 'libnative.so', 'Managed.dll', 'libmac.dylib', 'Kit.bundle', 'Source.cpp',
+    'Assets/Plugins/x86': ['native.dll', 'libnative.so', 'ManagedX86.dll', 'libmac.dylib', 'Kit.bundle'],
+    'Assets/Plugins/x86_64': ['native.dll', 'libnative.so', 'ManagedX64.dll', 'libmac.dylib', 'Kit.bundle', 'Source.cpp',
                               'library.jar', 'Bridge.mm', 'bridge.jslib'],
     'Assets/Plugins/ARM64': ['native.dll', 'libnative.so', 'libmac.dylib'],
-    'Assets/Plugins/Android': ['libnative.so', 'Managed.dll', 'native.dll', 'Source.cpp', 'library.jar', 'libmac.dylib',
+    'Assets/Plugins/Android': ['libnative.so', 'ManagedAndroid.dll', 'native.dll', 'Source.cpp', 'library.jar', 'libmac.dylib',
                                'library.aar', 'Bridge.mm', 'Kit.framework'],
     'Assets/Plugins/Android/libs/arm64-v8a': ['libnative.so'],
     'Assets/Plugins/Android/libs/armeabi-v7a': ['libnative.so'],
@@ -50,23 +52,23 @@ FOLDERS = {
     'Assets/Plugins/Android/arm64-v8a': ['libnative.so'],
     'Assets/Plugins/Android/x86_64': ['libnative.so'],
     'Assets/Libs/arm64-v8a': ['libnative.so'],
-    'Assets/Plugins/iOS': ['libstatic.a', 'Bridge.mm', 'Managed.dll', 'native.dll', 'Kit.framework', 'libmac.dylib',
+    'Assets/Plugins/iOS': ['libstatic.a', 'Bridge.mm', 'ManagediOS.dll', 'native.dll', 'Kit.framework', 'libmac.dylib',
                            'Kit.bundle', 'Kit.xcframework', 'libnative.so', 'library.jar'],
-    'Assets/Plugins/WebGL': ['bridge.jslib', 'Managed.dll', 'native.dll', 'libnative.so'],
+    'Assets/Plugins/WebGL': ['bridge.jslib', 'ManagedWebGL.dll', 'native.dll', 'libnative.so'],
     'Assets/Plugins/macOS': ['libmac.dylib', 'native.dll', 'Kit.bundle'],
-    'Assets/Plugins/Editor': ['native.dll', 'Managed.dll', 'libnative.so', 'libmac.dylib', 'Kit.bundle', 'library.jar',
+    'Assets/Plugins/Editor': ['native.dll', 'ManagedPluginsEditor.dll', 'libnative.so', 'libmac.dylib', 'Kit.bundle', 'library.jar',
                               'Bridge.mm', 'bridge.jslib', 'Source.cpp'],
-    'Assets/Editor': ['Managed.dll', 'native.dll', 'libnative.so', 'libmac.dylib', 'Kit.bundle'],
-    'Assets/Foo/Editor': ['Managed.dll', 'native.dll'],
+    'Assets/Editor': ['ManagedEditor.dll', 'native.dll', 'libnative.so', 'libmac.dylib', 'Kit.bundle'],
+    'Assets/Foo/Editor': ['ManagedFooEditor.dll', 'native.dll'],
     'Assets/Foo/Plugins/x86_64': ['native.dll'],
     'Assets/Foo/x86_64': ['native.dll', 'libnative.so'],
     'Assets/Plugins/Foo/x86_64': ['native.dll'],
-    'Assets/Plugins/WSA': ['native.dll', 'Managed.dll'],
+    'Assets/Plugins/WSA': ['native.dll', 'ManagedWSA.dll'],
     'Assets/Plugins/Metro': ['native.dll'],
     'Assets/plugins/x86_64': ['native.dll'],
     'Assets/Plugins/android': ['libnative.so'],
     'Assets/Plugins/arm64': ['native.dll'],
-    'Assets/editor': ['Managed.dll'],
+    'Assets/editor': ['ManagedLowerEditor.dll'],
     'Assets/Plugins/x86_64/Editor': ['native.dll'],
     'Assets/Plugins/Editor/x86_64': ['native.dll'],
     'Assets/Editor/Plugins/x86_64': ['native.dll'],
@@ -99,9 +101,9 @@ FOLDERS = {
     'Assets/Plugins/WSA/More': ['library.jar', 'Bridge.mm'],
     'Assets/Plugins/visionOS/More': ['library.jar', 'Bridge.mm', 'Kit.framework'],
     'Assets/Plugins/Android/More': ['bridge.jslib'],
-    f'Packages/{PACKAGE}/Runtime': ['Managed.dll', 'native.dll', 'libmac.dylib'],
+    f'Packages/{PACKAGE}/Runtime': ['ManagedPackage.dll', 'native.dll', 'libmac.dylib'],
     f'Packages/{PACKAGE}/Runtime/Plugins/x86_64': ['native.dll'],
-    f'Packages/{PACKAGE}/Editor': ['Managed.dll'],
+    f'Packages/{PACKAGE}/Editor': ['ManagedPackageEditor.dll'],
     f'Packages/{PACKAGE}/Plugins/Android': ['libnative.so'],
     f'Packages/{PACKAGE}/Runtime/Plugins/Android': ['libnative.so'],
     f'Packages/{PACKAGE}/Plugins/iOS': ['libstatic.a'],
@@ -136,7 +138,26 @@ SECTION_TAIL = '  userData: \n  assetBundleName: \n  assetBundleVariant: \n'
 
 
 def cases():
-    return [f'{folder}/{name}' for folder, names in FOLDERS.items() for name in names] + list(CONTROLS)
+    """The plug-ins' paths. A native library outside Assets/Plugins gets a number after its name: the
+    Editor reports two libraries of one name that it could load as an error."""
+    paths, seen = [], {}
+    for folder, names in FOLDERS.items():
+        for name in names:
+            stem, dot, extension = name.partition('.')
+            if extension.lower() in ('dll', 'so', 'dylib', 'bundle') and not name.startswith('Managed') \
+                    and name != 'Other.DLL' and folder != 'Assets/Plugins':
+                seen[name] = seen.get(name, 0) + 1
+                name = f'{stem}{seen[name]}{dot}{extension}'
+            paths.append(f'{folder}/{name}')
+    return paths + list(CONTROLS)
+
+
+def kind(name):
+    """A managed library, a folder plug-in or a file, by the plug-in's name (as KINDS gives it)."""
+    if name.startswith('Managed'):
+        return 'managed'
+    stem, _, extension = name.partition('.')
+    return KINDS[stem.rstrip('0123456789') + '.' + extension]
 
 
 def guid(path):
@@ -150,10 +171,10 @@ def stage(project):
         name = path.rsplit('/', 1)[1]
         target = project/path
         target.parent.mkdir(parents=True, exist_ok=True)
-        kind = 'managed' if path in CONTROLS else KINDS[name]
-        if kind == 'managed':
+        what = 'managed' if path in CONTROLS else kind(name)
+        if what == 'managed':
             managed.append((path, target))
-        elif kind == 'folder':
+        elif what == 'folder':
             (target/'Contents').mkdir(parents=True)
             (target/'Contents/Info.plist').write_text('<plist/>\n')
         else:
