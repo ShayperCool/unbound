@@ -143,6 +143,18 @@ namespace UnityEngine
         internal int GetRotationOrderInternal() => (int)m_RotationOrder;
         internal void SetRotationOrderInternal(RotationOrder rotationOrder) => m_RotationOrder = rotationOrder;
 
+        /// <summary>The axes (0 x, 1 y, 2 z) an order turns about, first applied first: XYZ is
+        /// (0, 1, 2); ZXY, the Transform default, also answers an order outside the enum.</summary>
+        internal static (int First, int Middle, int Last) RotationAxes(RotationOrder order) => order switch
+        {
+            RotationOrder.OrderXYZ => (0, 1, 2),
+            RotationOrder.OrderXZY => (0, 2, 1),
+            RotationOrder.OrderYZX => (1, 2, 0),
+            RotationOrder.OrderYXZ => (1, 0, 2),
+            RotationOrder.OrderZYX => (2, 1, 0),
+            _ => (2, 0, 1),
+        };
+
         /// <summary>The local rotation as angles about the axes applied in the order's sequence (the
         /// first letter first), in single precision from the normalized rotation: the middle angle
         /// from its sine; in gimbal lock (|sine| at least 0.999998) the last angle is zero and the
@@ -153,15 +165,7 @@ namespace UnityEngine
         internal Vector3 GetLocalEulerAngles(RotationOrder order)
         {
             const float gimbalLock = 0.999998f;
-            var (i, j, k) = order switch
-            {
-                RotationOrder.OrderXYZ => (0, 1, 2),
-                RotationOrder.OrderXZY => (0, 2, 1),
-                RotationOrder.OrderYZX => (1, 2, 0),
-                RotationOrder.OrderYXZ => (1, 0, 2),
-                RotationOrder.OrderZYX => (2, 1, 0),
-                _ => (2, 0, 1),
-            };
+            var (i, j, k) = RotationAxes(order);
             Quaternion r = m_LocalRotation;
             float length = MathF.Sqrt(r.x * r.x + r.y * r.y + r.z * r.z + r.w * r.w);
             Quaternion q = length < RotationMatrix.MinimumLength ? Quaternion.identity

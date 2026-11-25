@@ -36,19 +36,11 @@ namespace UnityEditor
         /// <summary>The value an undefined (NaN) angle rounds to.</summary>
         const float UndefinedRounded = -2147483648f;
 
-        /// <summary>The axes (0 x, 1 y, 2 z) of each <see cref="RotationOrder"/>: first, middle,
-        /// last; even orders take the middle angle with the opposite sign.</summary>
-        static readonly (int First, int Middle, int Last, bool Even)[] s_Axes =
-        {
-            (0, 1, 2, true), (0, 2, 1, false), (1, 2, 0, true), (1, 0, 2, false), (2, 0, 1, true), (2, 1, 0, false),
-        };
-
         internal static Vector3 Of(Quaternion q, Vector3 hint, RotationOrder order)
         {
-            int o = (int)order;
-            if (o < 0 || o >= s_Axes.Length) throw new ArgumentOutOfRangeException(nameof(order));
-            var (i, j, k, _) = s_Axes[o];
-            var radians = Angles(q, o);
+            if (order < RotationOrder.OrderXYZ || order > RotationOrder.OrderZYX) throw new ArgumentOutOfRangeException(nameof(order));
+            var (i, j, k) = Transform.RotationAxes(order);
+            var radians = Angles(q, order);
             Span<float> angles = stackalloc float[3], other = stackalloc float[3];
             for (int a = 0; a < 3; a++)
                 angles[a] = RoundHalfEven(radians[a] * ToDegrees * 1000f) / 1000f;
@@ -76,7 +68,7 @@ namespace UnityEditor
         static float RoundHalfEven(float v) => float.IsNaN(v) ? UndefinedRounded : MathF.Round(v, MidpointRounding.ToEven);
 
         /// <summary>The rotation's angles (radians) about x, y and z for the order.</summary>
-        static Vector3 Angles(Quaternion q, int order)
+        static Vector3 Angles(Quaternion q, RotationOrder order)
         {
             float x = q.x, y = q.y, z = q.z, w = q.w;
             // Doubled products with w, doubled cross products, squares.
@@ -84,7 +76,7 @@ namespace UnityEditor
             float xy = x * y * 2f, yz = y * z * 2f, zx = z * x * 2f;
             float xx = x * x, yy = y * y, zz = z * z, ww = w * w;
             float sine, n1, d1, n3, d3, g0, g1, g2, g3, gimbalNumerator;
-            switch (order)
+            switch ((int)order)
             {
                 case 0: // XYZ
                     sine = zx - yw; n1 = yz + xw; d1 = zz + ww - yy - xx; n3 = xy + zw; d3 = xx + ww - yy - zz;
@@ -111,7 +103,10 @@ namespace UnityEditor
                     g0 = zx; g1 = yw; g2 = yz; g3 = xw; gimbalNumerator = zx * xw + yw * yz;
                     break;
             }
-            var (first, middleAxis, last, even) = s_Axes[order];
+            var (first, middleAxis, last) = Transform.RotationAxes(order);
+            // Orders whose middle axis follows the first cyclically (XYZ, YZX, ZXY) take the middle
+            // angle with the opposite sign.
+            bool even = (middleAxis - first + 3) % 3 == 1;
             float a1, a2, a3;
             if (sine * sine < GimbalSineSquared)
             {
