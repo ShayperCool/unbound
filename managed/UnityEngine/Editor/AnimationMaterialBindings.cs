@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 using UnityEngine.Rendering;
 
@@ -84,15 +85,17 @@ namespace UnityEditor
             {
                 if (!name.EndsWith(s_TextureSuffixes[i], StringComparison.Ordinal)) continue;
                 var texture = name.Substring(0, name.Length - s_TextureSuffixes[i].Length);
-                if (s_EngineNameIds.TryGetValue(texture + "_ST", out var st) && st >= k_FirstStartupShaderId) return st + i;
-                if (s_EngineNameIds.TryGetValue(texture, out var tex) && tex >= k_FirstStartupShaderId) return tex + 1 + i;
+                // A texture's channels follow its measured _ST, which the Editor registers with
+                // them when a shader loads (only the _TexelSize and _HDR come here: the _ST is in
+                // the table or not measured).
+                if (i > 0 && s_EngineNameIds.TryGetValue(texture + "_ST", out var st) && st >= k_FirstStartupShaderId) return st + i;
                 break;
             }
             if (!s_SeenNames.TryGetValue(name, out var seen)) s_SeenNames[name] = seen = s_SeenNames.Count;
             return k_AfterEngineNames + seen;
         }
 
-        static readonly Dictionary<string, Shader> s_FirstShaderOf = new Dictionary<string, Shader>();
+        static readonly Dictionary<string, string> s_FirstShaderOf = new Dictionary<string, string>();
 
         static void SeeShaderNames(Shader shader)
         {
@@ -109,8 +112,9 @@ namespace UnityEditor
         static void SeeShaderName(Shader shader, string name)
         {
             if (NameOrder(name) < k_AfterEngineNames) return;
-            if (!s_FirstShaderOf.TryGetValue(name, out var first)) s_FirstShaderOf[name] = shader;
-            else if (first != shader && first != null)
+            var shaderName = shader.m_Name ?? "";
+            if (!s_FirstShaderOf.TryGetValue(name, out var first)) s_FirstShaderOf[name] = shaderName;
+            else if (first != shaderName)
                 Unbound.Runtime.Stubs.Ignored("AnimationUtility.GetAnimatableBindings names shaders share",
                     "orders a name two shaders declare as the first shader seen declares it (the Editor numbers it in its own shader load order; not measured)");
         }
@@ -167,8 +171,9 @@ namespace UnityEditor
                     if (material.m_Floats.ContainsKey(id) && !floats.Contains(name)) floats.Add(name);
                     else if (material.m_Vectors.ContainsKey(id) && !vectors.Exists(v => v.Name == name)) vectors.Add((name, s_Xyzw));
                 }
-                floats.Sort((a, b) => NameOrder(a).CompareTo(NameOrder(b)));
-                vectors.Sort((a, b) => NameOrder(a.Name).CompareTo(NameOrder(b.Name)));
+                // Stable: equal orders (an unmeasured id meeting a measured one) keep the listing's order.
+                floats = floats.Select((n, i) => (n, i)).OrderBy(x => NameOrder(x.n)).ThenBy(x => x.i).Select(x => x.n).ToList();
+                vectors = vectors.Select((v, i) => (v, i)).OrderBy(x => NameOrder(x.v.Name)).ThenBy(x => x.i).Select(x => x.v).ToList();
                 // A binding names a property, not a slot: a name two materials share is listed once
                 // (two Sprites-Default materials: tests/projects/animbindings SpriteShapeRenderer).
                 foreach (var name in floats) AddOnce(list, EditorCurveBinding.FloatCurve(path, type, "material." + name));
