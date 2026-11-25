@@ -222,6 +222,16 @@ from their first surface on whatever the Min Bounces.
   alone denoised), `DenoiseOidnAtrous` (denoised, then A-Trous filters of position sigma 0.5 and
   1.5) and `DenoiseOidnAoOptix` (the ambient occlusion target's denoiser OptiX, ambient
   occlusion off: the Editor bakes it).
+- `SoftSun`, `SoftPoint`, `SoftSpot`, `SoftMixed`, `SoftRect`, `SoftDisc` (the lit scene):
+  soft baked shadows of a sun of Baked Shadow Angle 5 (16 Direct Samples), a point light of
+  Baked Shadow Radius 0.25 (16), a spot light of 0.15 (64), a mixed sun of angle 3 in the
+  Shadowmask mode (32, its shadowmask); a rectangle area light of 1.5 by 0.75 and a disc of
+  radius 0.6 (32 each). Each Direct Sample is taken at a texel sample the Sobol sequence's
+  third dimension picks (turned by the texel's rotation); a soft shadow's ray aims at a point
+  of a disk around the light the texel's blue noise picks (a directional light's disk one unit
+  away, its radius the angle in radians); an area light's sample is the light of a point of
+  its surface (a rectangle's over its solid angle, a disc's over its area), its range the
+  light's dilated range.
 - `CompressLow`, `CompressNormal`, `CompressHigh`, `CompressImages` (the coloured scene under
   the sun; the last directional in the Shadowmask mode under a mixed sun): the lightmap
   compression low, normal and high quality. The buffers and images are those of uncompressed
@@ -444,11 +454,11 @@ horizon: the procedural sky computes its colours per vertex, so the mesh shows),
 gamma-encoded values times the ambient intensity; a black sky where the realtime lightmaps
 take the environment's light (`LightingSettings.realtimeEnvironmentLighting`).
 
-Not baked by Unbound: without a graphics device, the indirect light and the ambient occlusion
-(said). Not baked (said, each once per
-scene): area lights, light cookies, soft baked
-shadows (a Baked Shadow Angle or Radius: baked hard), lights whose intensity multiplies their
-linear colour (GraphicsSettings.lightsUseLinearIntensity). Not done
+Not baked by Unbound: without a graphics device, the indirect light, the ambient occlusion and
+soft baked shadows (said). Not baked (said, each once per scene): light cookies, lights whose
+intensity multiplies their linear colour (GraphicsSettings.lightsUseLinearIntensity), light
+probes under area lights or soft baked shadows, a Baked Shadow Angle or Radius with hard
+shadows. Not done
 and not said: materials that let light through stop it.
 
 Not measured, of where the light comes from: ambient occlusion and emission in a directional
