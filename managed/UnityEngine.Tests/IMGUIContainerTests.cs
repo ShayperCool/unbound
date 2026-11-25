@@ -39,8 +39,6 @@ namespace UnityEngine.Tests
                 GUIUtility.hotControl = 0;
                 GUIUtility.keyboardControl = 0;
                 Unbound.Runtime.GuiEvents.MousePosition = Vector2.zero;
-                // Other tests' Editor GUI passes leave the Editor's styles loaded.
-                EditorStyles.Loaded = false;
             }
 
             internal void Tick()
@@ -74,7 +72,6 @@ namespace UnityEngine.Tests
                 GUIUtility.hotControl = 0;
                 GUIUtility.keyboardControl = 0;
                 Unbound.Runtime.GuiEvents.MousePosition = Vector2.zero;
-                EditorStyles.Loaded = false;
                 Panel.Dispose();
                 Object.DestroyImmediate(Settings);
                 m_Release.Dispose();
@@ -481,9 +478,14 @@ namespace UnityEngine.Tests
             var rects = new Dictionary<string, float>();
             try
             {
-                // Before any Editor GUI pass a header's height is not there.
-                Assert.Throws<NullReferenceException>(() => EditorGUI.GetPropertyHeight(so.FindProperty("headed")));
-                Assert.Throws<NullReferenceException>(() => EditorGUI.GetPropertyHeight(so.FindProperty("note")));
+                // Before any GUI pass the interactive Editor's styles are there, so a header's height
+                // is; a text area's needs the context width, which needs a GUI pass (the windowed
+                // Editor: tests/projects/editorui EditorGUI.GetPropertyHeight.afterHeader, .area).
+                GUIClip.ClearForTests();
+                EditorGUIUtility.currentViewWidth = 0f;
+                Assert.True(EditorGUI.GetPropertyHeight(so.FindProperty("headed")) > 18f);
+                var outside = Assert.Throws<ArgumentException>(() => EditorGUI.GetPropertyHeight(so.FindProperty("note")));
+                Assert.Equal("You can only call GUI functions from inside OnGUI.", outside.Message);
                 var drawn = f.Add(() => editor.DrawDefaultInspector());
                 var measured = f.Add(() =>
                 {
