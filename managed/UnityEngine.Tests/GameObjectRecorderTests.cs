@@ -130,6 +130,73 @@ namespace UnityEngine.Tests
             }
         }
 
+        [Fact]
+        public void AnAnimatorOffersItsControllersFloatParametersFirst()
+        {
+            using var release = TestRelease.Pin(TestRelease.Measured);
+            var go = new GameObject("animated");
+            try
+            {
+                var animator = go.AddComponent<Animator>();
+                var controller = new AnimatorController();
+                controller.AddLayer("Base");
+                controller.AddParameter("speed", AnimatorControllerParameterType.Float);
+                controller.AddParameter("count", AnimatorControllerParameterType.Int);
+                controller.AddParameter("on", AnimatorControllerParameterType.Bool);
+                controller.AddParameter("hit", AnimatorControllerParameterType.Trigger);
+                controller.AddParameter("blend", AnimatorControllerParameterType.Float);
+                var offered = new List<string>();
+                foreach (var b in AnimationUtility.GetAnimatableBindings(go, go))
+                    if (b.type == typeof(Animator)) offered.Add(b.propertyName);
+                Assert.Equal(new[] { "m_Enabled" }, offered); // no controller: the table's binding only
+                animator.runtimeAnimatorController = controller;
+                offered.Clear();
+                foreach (var b in AnimationUtility.GetAnimatableBindings(go, go))
+                    if (b.type == typeof(Animator)) offered.Add(b.propertyName);
+                Assert.Equal(new[] { "speed", "blend", "m_Enabled" }, offered); // animator.offered (one float parameter there)
+                var recorder = new GameObjectRecorder(go);
+                recorder.BindComponent(animator);
+                var bound = new List<string>();
+                foreach (var b in recorder.GetBindings()) bound.Add(b.propertyName);
+                Assert.Equal(new[] { "speed", "blend" }, bound); // animator.bound: never the enabled state
+            }
+            finally
+            {
+                Object.DestroyImmediate(go);
+            }
+        }
+
+        /// <summary>Keys go in time order whatever the snapshots' steps; a time already keyed keeps
+        /// its first key.</summary>
+        [Fact]
+        public void SnapshotsKeyInTimeOrder()
+        {
+            using var release = TestRelease.Pin(TestRelease.Measured);
+            var root = new GameObject("order");
+            var light = root.AddComponent<Light>();
+            try
+            {
+                var range = EditorCurveBinding.FloatCurve("", typeof(Light), "m_Range");
+                var recorder = new GameObjectRecorder(root);
+                recorder.Bind(range);
+                foreach (var (dt, value) in new[] { (0f, 1f), (0.5f, 2f), (-0.25f, 3f), (0f, 4f), (0.25f, 5f) })
+                {
+                    light.range = value;
+                    recorder.TakeSnapshot(dt);
+                }
+                var clip = new AnimationClip();
+                recorder.SaveToClip(clip, 4f, new CurveFilterOptions { keyframeReduction = false });
+                var curve = AnimationUtility.GetEditorCurve(clip, range);
+                // Keys at 0 (1), 0.25 (3; 4 at the same time is not keyed) and 0.5 (2; 5 likewise),
+                // as AnimationCurve.AddKey keys them.
+                Assert.Equal(new[] { 1f, 3f, 2f }, System.Linq.Enumerable.ToArray(System.Linq.Enumerable.Select(curve.keys, k => k.value)));
+            }
+            finally
+            {
+                Object.DestroyImmediate(root);
+            }
+        }
+
         static int Hits(string member) => System.Linq.Enumerable.FirstOrDefault(Stubs.HitReport(), h => h.Key == member).Value;
 
         static Keyframe Stepped(float time, float value) => new Keyframe(time, value, float.PositiveInfinity, float.PositiveInfinity);
@@ -157,21 +224,27 @@ namespace UnityEngine.Tests
             Assert.Equal(new[] { 0, 1, 2, 4, 5 }, kept);
         }
 
-        /// <summary>A ClampedAuto key whose interval to the key before is under 1e-5 seconds has no
-        /// slope over it, so it is flat.</summary>
-        [Fact]
-        public void AClampedAutoKeyAfterATinyIntervalIsFlat()
+        /// <summary>ClampedAuto slopes of keys a tiny interval or rise apart: an interval or a
+        /// quarter of the rise under 1e-5 counts as no slope (tests/projects/animrecorder
+        /// <c>clampedAuto.*</c>, Unity 6000.0.71f1).</summary>
+        [Theory]
+        [InlineData(0f, 0f, 5e-6f, 1f, 1f, 2f, 0f)] // clampedAuto.tinyInterval
+        [InlineData(0f, 1f, 1f, 1.000005f, 2f, 1.000039f, 0f)] // clampedAuto.tinyRise
+        [InlineData(0f, 1f, 1f, 1.00003f, 2f, 1.000039f, 1.94907188E-05f)] // clampedAuto.tinyRise2
+        [InlineData(0f, 0f, 0.1f, 0.8f, 2f, 1f, 0.399999976f)] // clampedAuto.uneven
+        public void ClampedAutoSlopesOfTinyIntervalsAndRises(float t0, float v0, float t1, float v1, float t2, float v2, float slope)
         {
-            var curve = new AnimationCurve(new Keyframe(0f, 0f), new Keyframe(1e-6f, 0.5f), new Keyframe(1f, 1f));
-            var control = new AnimationCurve(new Keyframe(0f, 0f), new Keyframe(0.5f, 0.5f), new Keyframe(1f, 1f));
-            foreach (var c in new[] { curve, control })
-                for (int i = 0; i < c.length; i++)
-                {
-                    AnimationUtility.SetKeyLeftTangentMode(c, i, AnimationUtility.TangentMode.ClampedAuto);
-                    AnimationUtility.SetKeyRightTangentMode(c, i, AnimationUtility.TangentMode.ClampedAuto);
-                }
-            Assert.Equal(0f, curve[1].inTangent);
-            Assert.Equal(1f, control[1].inTangent);
+            var curve = new AnimationCurve(new Keyframe(t0, v0), new Keyframe(t1, v1), new Keyframe(t2, v2));
+            for (int i = 0; i < curve.length; i++)
+            {
+                AnimationUtility.SetKeyLeftTangentMode(curve, i, AnimationUtility.TangentMode.ClampedAuto);
+                AnimationUtility.SetKeyRightTangentMode(curve, i, AnimationUtility.TangentMode.ClampedAuto);
+            }
+            Assert.Equal(slope, curve[1].inTangent, 1e-11f);
+            Assert.Equal(slope, curve[1].outTangent, 1e-11f);
+            Assert.Equal(0f, curve[0].outTangent);
+            Assert.Equal(0f, curve[2].inTangent);
+            foreach (var key in curve.keys) Assert.Equal((1f / 3f, 1f / 3f), (key.inWeight, key.outWeight)); // weights a third
         }
     }
 }
