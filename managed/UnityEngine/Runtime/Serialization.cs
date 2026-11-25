@@ -312,16 +312,45 @@ namespace Unbound.Runtime
             }
         }
 
+        /// <summary>
+        /// The node of a member: its own name's, else a former name's
+        /// ([FormerlySerializedAs]). When both are there, the former name's value lies over the
+        /// current one: the Editor writes only a field's current name, so a former name beside it
+        /// is a prefab instance's override written before the rename (the base object keeps the
+        /// current name, the override the old one; the Editor applies such an override to the
+        /// renamed field).
+        /// </summary>
         YNode MemberNode(YNode map, SerializedMember member)
         {
             var node = map.Get(m_MetaNames ? member.MetaName : member.Name);
-            if (node == null)
-                foreach (var former in m_MetaNames ? member.FormerMetaNames : member.FormerNames)
-                {
-                    node = map.Get(former);
-                    if (node != null) break;
-                }
+            foreach (var former in m_MetaNames ? member.FormerMetaNames : member.FormerNames)
+            {
+                var old = map.Get(former);
+                if (old == null) continue;
+                node = node == null ? old : Overlay(node, old);
+                break;
+            }
             return node;
+        }
+
+        /// <summary>A node with <paramref name="over"/>'s values over <paramref name="under"/>'s:
+        /// maps key by key, anything else whole.</summary>
+        static YNode Overlay(YNode under, YNode over)
+        {
+            if (under.Kind != YKind.Map || over.Kind != YKind.Map) return over;
+            var keys = new List<string>(under.Keys);
+            var values = new List<YNode>(under.Values);
+            for (int i = 0; i < over.Keys.Length; i++)
+            {
+                int at = keys.IndexOf(over.Keys[i]);
+                if (at < 0)
+                {
+                    keys.Add(over.Keys[i]);
+                    values.Add(over.Values[i]);
+                }
+                else values[at] = Overlay(values[at], over.Values[i]);
+            }
+            return new YNode { Kind = YKind.Map, Keys = keys.ToArray(), Values = values.ToArray() };
         }
 
         /// <summary>Use the reader's member table and built-in value readers without constructing
