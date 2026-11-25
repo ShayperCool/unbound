@@ -316,7 +316,9 @@ namespace UnityEditor
         }
 
         /// <summary>The bindings the animation window offers for an object: its Transform's
-        /// position, rotation and scale, and its components' animatable fields.</summary>
+        /// position, rotation and scale, an engine component's measured bindings (in the Editor's
+        /// order, object references included: tests/projects/animbindings), and a script's
+        /// serialized numbers and flags.</summary>
         public static EditorCurveBinding[] GetAnimatableBindings(GameObject targetObject, GameObject root)
         {
             if (targetObject == null || root == null) return Array.Empty<EditorCurveBinding>();
@@ -330,7 +332,21 @@ namespace UnityEditor
                     list.Add(EditorCurveBinding.FloatCurve(path, typeof(Transform), head + "." + axis));
             foreach (var component in targetObject.GetComponents<Component>())
             {
-                if (component == null || component is Transform) continue;
+                // The Transform's bindings are listed above; a RectTransform's come from the table.
+                if (component == null || component.GetType() == typeof(Transform)) continue;
+                var type = component.GetType();
+                if (type.FullName != null && s_EngineBindings.TryGetValue(type.FullName, out var engine))
+                {
+                    // An engine component: the Editor's bindings of its type (measured table). The
+                    // material property bindings some renderers list first are not listed yet.
+                    if (engine.Materials)
+                        Unbound.Runtime.Stubs.Ignored("AnimationUtility.GetAnimatableBindings", "lists no material property bindings of a renderer's materials");
+                    foreach (var name in engine.Floats) list.Add(EditorCurveBinding.FloatCurve(path, type, name));
+                    foreach (var name in engine.Objects) list.Add(EditorCurveBinding.PPtrCurve(path, type, name));
+                    continue;
+                }
+                if (component is not MonoBehaviour)
+                    Unbound.Runtime.Stubs.Ignored("AnimationUtility.GetAnimatableBindings", "lists an unmeasured engine component's serialized numbers and flags (" + type.FullName + ")");
                 using var so = new SerializedObject(component);
                 var it = so.GetIterator();
                 for (bool enter = true; it.NextVisible(enter); enter = false)

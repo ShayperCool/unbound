@@ -24,9 +24,8 @@ Unmeasured, and left binding as before: the legacy Animation component and
 `AnimationClip.SampleAnimation` (which treat discrete curves otherwise), the Animator's own curves,
 and a player (bundle) clip's discrete curves (its bindings' `isIntCurve` flag is not read).
 
-Known residuals (`residuals.json`): Unbound animates any serialized field of an engine component,
-also those the Editor does not offer, and its `GetAnimatableBindings` lists no object-reference
-bindings and not `m_SortingOrder`.
+Unbound lists an engine component's bindings as the Editor measures them (tests/projects/animbindings)
+and binds a float curve only to a property its type offers.
 
 The scene is the uitkpanelutils probe's, the settings the modelroot probe's. Other releases are
 unmeasured.

@@ -1199,6 +1199,11 @@ namespace Unbound.Runtime
             if (component is Renderer r2 && attribute == "m_SortingOrder")
                 return Make(r2, "sortingOrder", 0, () => new AccessorGroup(r2, 1, () => new Vector4(r2.sortingOrder, 0), v => r2.sortingOrder = (int)Math.Floor(v.x + 0.5f)));
 
+            // An engine component's property the Editor does not offer as a float binding animates
+            // nothing (measured: tests/projects/enginediscrete play.*.float, with the offered bindings
+            // of tests/projects/animbindings); unmeasured engine types keep the reflection below.
+            if (component is not MonoBehaviour && UnityEditor.AnimationUtility.OffersEngineFloat(component.GetType(), attribute) == false)
+                return spec;
             // Scripts (and engine objects whose fields carry the serialized names): by reflection.
             var chain = FieldChain(component.GetType(), attribute, component is MonoBehaviour);
             if (chain != null && !typeof(Object).IsAssignableFrom(chain[chain.Length - 1].FieldType))
