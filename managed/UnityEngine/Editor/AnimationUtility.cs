@@ -416,6 +416,8 @@ namespace UnityEditor
                     Unbound.Runtime.Stubs.Ignored("AnimationUtility.GetAnimatableBindings blend shapes", "lists no blend shape bindings");
                 if (component is UnityEngine.Animations.IConstraint { sourceCount: > 0 })
                     Unbound.Runtime.Stubs.Ignored("AnimationUtility.GetAnimatableBindings constraint sources", "lists no constraint source bindings");
+                if (Unbound.Runtime.Compat.GameObjectRecorderMeasured && component is Animator animator)
+                    AddAnimatorParameterBindings(animator, path, list);
                 foreach (var name in engine.Floats) list.Add(EditorCurveBinding.FloatCurve(path, type, name));
                 int slots = 0;
                 foreach (var name in engine.Objects)
@@ -442,6 +444,20 @@ namespace UnityEditor
                 if (discrete || it.propertyType == SerializedPropertyType.Float || it.propertyType == SerializedPropertyType.Boolean || it.propertyType == SerializedPropertyType.Integer)
                     list.Add(discrete ? EditorCurveBinding.DiscreteCurve(path, type, it.propertyPath) : EditorCurveBinding.FloatCurve(path, type, it.propertyPath));
             }
+        }
+
+        /// <summary>An Animator's bindings ahead of its table's: its controller's float parameters
+        /// in the controller's order (not its integer, bool and trigger ones; matches the Unity
+        /// 6000.0.71f1 Editor, tests/projects/animrecorder <c>animator.*</c>). A human Animator's
+        /// muscle and root bindings are not listed and are reported.</summary>
+        static void AddAnimatorParameterBindings(Animator animator, string path, List<EditorCurveBinding> list)
+        {
+            if (animator.m_Controller != null && animator.m_Controller.Graph is { } graph)
+                foreach (var parameter in graph.Parameters)
+                    if (parameter.Type == AnimatorControllerParameterType.Float)
+                        list.Add(EditorCurveBinding.FloatCurve(path, typeof(Animator), parameter.Name));
+            if (animator.IsHuman)
+                Unbound.Runtime.Stubs.Ignored("AnimationUtility.GetAnimatableBindings humanoid muscles", "lists no muscle or root bindings of a human Animator");
         }
 
         /// <summary>The Transform's position, Euler angles and scale, as listed before the
