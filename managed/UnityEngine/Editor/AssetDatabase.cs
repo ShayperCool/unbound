@@ -211,7 +211,8 @@ namespace UnityEditor
         /// and leaves the asset unloaded (matches the Unity 6000.0.71f1 Editor,
         /// tests/projects/firstimport types.*); so does Unbound for an asset not loaded whose import
         /// decides the type alone: a folder, a model, an audio clip and a 2D texture of the Editor's
-        /// own importers. Any other asset is loaded to answer.</summary>
+        /// own importers, a prefab, a scene, a script, a shader file, a material and a V1 sprite
+        /// atlas. Any other asset is loaded to answer.</summary>
         public static Type GetMainAssetTypeAtPath(string assetPath) => MainTypeUnloaded(assetPath) ?? LoadMainAssetAtPath(assetPath)?.GetType();
 
         static Type MainTypeUnloaded(string path)
@@ -227,6 +228,15 @@ namespace UnityEditor
                 case "texture":
                     return AssetImporter.GetAtPath(path) is TextureImporter t && t.GetType() == typeof(TextureImporter)
                         && t.textureShape == TextureImporterShape.Texture2D ? typeof(Texture2D) : null;
+                case "prefab": return typeof(GameObject);
+                case "scene": return typeof(SceneAsset);
+                case "script": return AssetImporter.GetAtPath(path)?.GetType() == typeof(MonoImporter) ? typeof(MonoScript) : null;
+                case "shader": return path.EndsWith(".shader", StringComparison.OrdinalIgnoreCase) && AssetImporter.GetAtPath(path)?.GetType() == typeof(ShaderImporter) ? typeof(Shader) : null;
+                case "yaml":
+                    // Native-format files whose extension names their main object's class.
+                    if (path.EndsWith(".mat", StringComparison.OrdinalIgnoreCase)) return typeof(Material);
+                    if (path.EndsWith(".spriteatlas", StringComparison.OrdinalIgnoreCase)) return typeof(UnityEngine.U2D.SpriteAtlas);
+                    return null;
             }
             return null;
         }

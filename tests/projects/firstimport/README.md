@@ -18,7 +18,8 @@ by Kahn's algorithm over the classes sorted by full name.
 The project is a URP project (`ProjectSettings/URPProjectSettings.asset` up to date, so the
 pipeline does not re-import every material) with materials in `Assets/M` (`LitV9`, saved by the
 pipeline's material version 9; `LitNoVersion`, without a version object; the others as the Editor
-writes them), a folder, a texture, an audio clip and a model in `Assets/Types`, and the recorder
+writes them), a folder, a texture, an audio clip, a model, a prefab and a V1 sprite atlas in
+`Assets/Types`, and the recorder
 `Assets/Editor/FirstImportProbe.cs`: seven postprocessor classes, `AAAFive` (first by name, the
 `didDomainReload` form), `AAAFour` (the four-argument form), `aLower` and `BUpper` (an ordinal
 order and a culture's disagree), `ZZZFive`, `ZDependent` (`RunAfterClass(AAAFive)`) and `ZLast`
@@ -26,7 +27,8 @@ order and a culture's disagree), `ZZZFive`, `ZDependent` (`RunAfterClass(AAAFive
 `didDomainReload`, Edit or Play mode and the version LitV9 holds; the first class of a dispatch
 also its lists (`imported.assets` and `imported.settings` sorted, `imported.packages` a count,
 `imported.other`, `deleted`, `moved`, `counts`) and, in Edit mode, the main asset type of each of
-`Assets/Types` and whether asking for it loaded the asset (`types.*`).
+`Assets/Types`, a material, the scene, the recorder's script and the pipeline's Lit shader, with
+whether it was loaded before and after asking (`types.*`).
 
 `run.py` opens one copy of the project three times (the Editor with `-executeMethod
 FirstImportProbe.Record`, which enters Play mode; `unbound run`; each leaves after a few Play mode
@@ -49,12 +51,14 @@ pipeline's material postprocessor after its `UniversalRenderPipelineGlobalSettin
 (LitV9 is still version 9 for `ZZZFive` and `ZDependent`, 10 for `ZLast`). Play mode's domain
 reload lists nothing. After the first open's dispatch the Editor writes the assets its
 postprocessors changed (LitV9 upgraded, LitNoVersion given a version object, its documents by file
-id) and imports them again (`session.0`); at a later open the changed assets stay dirty until saved
+id; not the V1 sprite atlas, dirty as loaded, tests/projects/spriteatlaseditor v1wholewrite) and
+imports them again (`session.0`); at a later open the changed assets stay dirty until saved
 (the pipeline saves `New.mat` in Play mode, `open3.session.0`). `GetMainAssetTypeAtPath` answers
-the types of a folder, a texture, an audio clip and a model without loading them.
+the types without loading the assets.
 
-Residuals (`residuals.json`): the two `Library/` files the Editor lists, and the Editor's imports
-of the files saved during a session (`session.*`), which Unbound does not make.
+Residuals (`residuals.json`): the two `Library/` files the Editor lists; the Editor's imports of
+the files saved during a session (`session.*`), which Unbound does not make; assets the Editor has
+loaded already when asked for their type (the script's MonoScript, the atlas at the third open).
 
 Record (macOS, holding the machine's heavy-job lock), publish and check:
 

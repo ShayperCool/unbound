@@ -30,11 +30,11 @@ namespace Unbound.Runtime
         /// <summary>Writes the files of the dirty asset objects (<paramref name="only"/>: of that
         /// object only, when it is dirty); with <paramref name="unchangedStays"/>, a file whose text
         /// would not change is left untouched.</summary>
-        internal static void SaveDirty(Object only = null, bool unchangedStays = false)
+        internal static void SaveDirty(Object only = null, bool unchangedStays = false, ICollection<string> onlyFiles = null)
         {
             Undo.FlushDirtiness();
             // The assets CreateAsset made are written from their objects (and so no longer dirty).
-            AssetDatabase.SaveCreated(only);
+            AssetDatabase.SaveCreated(only, onlyFiles);
             var dirty = new List<int>(EditorUtility.DirtyIds);
             var byGuid = new Dictionary<string, List<Object>>(StringComparer.OrdinalIgnoreCase);
             foreach (var id in dirty)
@@ -49,6 +49,7 @@ namespace Unbound.Runtime
                 if (o is UnityEngine.U2D.SpriteAtlas sa && sa.IsFromImporter) continue;
                 if (only is not null && !ReferenceEquals(o, only)) continue;
                 if (!AssetDatabaseRuntime.TryGetLocation(o, out var guid, out _) || guid.StartsWith("0000000000000000", StringComparison.Ordinal)) continue;
+                if (onlyFiles != null && !onlyFiles.Contains(guid)) continue;
                 if (!byGuid.TryGetValue(guid, out var list)) byGuid[guid] = list = new List<Object>();
                 list.Add(o);
             }

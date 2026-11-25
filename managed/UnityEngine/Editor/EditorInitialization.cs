@@ -160,12 +160,30 @@ namespace UnityEditor
         }
 
         /// <summary>The start's OnPostprocessAllAssets; after a project's first open the Editor writes
-        /// the assets its postprocessors changed (matches the Unity 6000.0.71f1 Editor,
-        /// tests/projects/firstimport; on a later open they stay dirty).</summary>
+        /// the assets its postprocessors changed, those an object of which was marked dirty during
+        /// the call, not assets dirty before it (matches the Unity 6000.0.71f1 Editor,
+        /// tests/projects/firstimport and tests/projects/spriteatlaseditor v1wholewrite; on a later
+        /// open they stay dirty).</summary>
         static void ProjectOpened(ProjectImports.Changes start, string[] deferred)
         {
+            Dictionary<int, int> before = null;
+            if (start.First)
+            {
+                Undo.FlushDirtiness();
+                before = new Dictionary<int, int>();
+                foreach (var id in EditorUtility.DirtyIds) before[id] = EditorUtility.GetDirtyCount(id);
+            }
             AssetPostprocessing.ProjectOpened(start, deferred);
-            if (start.First) AssetFiles.SaveDirty();
+            if (before == null) return;
+            Undo.FlushDirtiness();
+            var files = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var id in new List<int>(EditorUtility.DirtyIds))
+            {
+                if (before.TryGetValue(id, out var count) && EditorUtility.GetDirtyCount(id) <= count) continue;
+                var o = ObjectRegistry.FindById(id);
+                if (o != null && o.IsPersistentAsset && AssetDatabaseRuntime.TryGetLocation(o, out var guid, out _)) files.Add(guid);
+            }
+            if (files.Count > 0) AssetFiles.SaveDirty(onlyFiles: files);
         }
 
         /// <summary>While the editor domain's load callbacks run (its initializers, on the reload path

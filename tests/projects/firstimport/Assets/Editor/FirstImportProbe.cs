@@ -62,10 +62,16 @@ static class FirstImportProbe
         Line("moved", string.Join(",", moved.Select((p, i) => p + "<-" + movedFrom[i]).OrderBy(p => p, StringComparer.Ordinal)));
     }
 
-    static readonly string[] TypePaths = { "Assets/Types", "Assets/Types/Plain.png", "Assets/Types/Tone.wav", "Assets/Types/Plain.fbx" };
+    static readonly string[] TypePaths =
+    {
+        "Assets/Types", "Assets/Types/Plain.png", "Assets/Types/Tone.wav", "Assets/Types/Plain.fbx", "Assets/Types/Thing.prefab",
+        "Assets/Types/Atlas.spriteatlas", "Assets/M/Touched.mat", "Assets/Scenes/Probe.unity", "Assets/Editor/FirstImportProbe.cs",
+        "Packages/com.unity.render-pipelines.universal/Shaders/Lit.shader",
+    };
 
-    /// <summary>The main asset types of a folder, a texture, an audio clip and a model, asked while
-    /// none of them is loaded, and whether asking loaded them.</summary>
+    /// <summary>The main asset types of a folder, a texture, an audio clip, a model, a prefab, a sprite
+    /// atlas, a material, a scene, a script and a shader: whether the asset was loaded, its type and
+    /// whether asking loaded it.</summary>
     internal static void Types()
     {
         foreach (var path in TypePaths)

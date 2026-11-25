@@ -21,5 +21,13 @@
     "open3.session.0.counts",
     "open3.session.0.deleted",
     "open3.session.0.moved"
+  ],
+  "The Editor has a script's MonoScript loaded once its assembly is compiled (the type is the same); Unbound loads it when it is asked for": [
+    "open1.types.Assets/Editor/FirstImportProbe.cs",
+    "open2.types.Assets/Editor/FirstImportProbe.cs",
+    "open3.types.Assets/Editor/FirstImportProbe.cs"
+  ],
+  "At the open after the outside changes the Editor has the V1 sprite atlas loaded before the start's dispatch (which of its start's steps loads it is not measured; the type is the same); Unbound has not loaded it": [
+    "open3.types.Assets/Types/Atlas.spriteatlas"
   ]
 }

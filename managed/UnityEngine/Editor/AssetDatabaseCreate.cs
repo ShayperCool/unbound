@@ -328,7 +328,7 @@ namespace UnityEditor
         /// <summary>The saves of the assets CreateAsset made (<see cref="AssetFiles.SaveDirty"/>):
         /// each one with objects added or marked dirty since it was written is written again
         /// (<paramref name="only"/>: the one holding that object).</summary>
-        internal static void SaveCreated(Object only = null)
+        internal static void SaveCreated(Object only = null, ICollection<string> onlyFiles = null)
         {
             foreach (var pair in s_Created.ToList())
             {
@@ -339,6 +339,7 @@ namespace UnityEditor
                     continue;
                 }
                 if (only is not null && !created.Objects.ContainsKey(only)) continue;
+                if (onlyFiles != null && !onlyFiles.Contains(pair.Key)) continue;
                 if (!created.Unsaved && !created.Objects.Keys.Any(o => o != null && EditorUtility.IsDirty(o))) continue;
                 string text;
                 try { text = created.Text(); }
