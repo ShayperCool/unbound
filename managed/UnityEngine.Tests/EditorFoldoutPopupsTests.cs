@@ -140,6 +140,47 @@ namespace UnityEngine.Tests
                 Assert.True(after[i] == before[i] + 1, members[i] + " reported " + (after[i] - before[i]) + " times");
         }
 
+        [Fact]
+        public void ThePropertyFieldOfAPropertyWithChildrenIsAFoldoutThatTogglesOnItsLabel()
+        {
+            var holder = ScriptableObject.CreateInstance<ObjectFieldsHolder>();
+            Reset();
+            try
+            {
+                var so = new SerializedObject(holder);
+                var at = new Rect(10, 300, 300, 18);
+                bool Click()
+                {
+                    var property = so.FindProperty("nested");
+                    Pass(Mouse(EventType.MouseDown, at.x + 80, at.center.y), () => EditorGUI.PropertyField(at, property));
+                    Pass(Mouse(EventType.MouseUp, at.x + 80, at.center.y), () => EditorGUI.PropertyField(at, property));
+                    return property.isExpanded;
+                }
+                using (TestRelease.Pin(TestRelease.Measured))
+                {
+                    so.FindProperty("nested").isExpanded = false;
+                    Assert.True(Click());
+                    // The clicked foldout has the keyboard focus: Left closes it (a toggle would not).
+                    var property = so.FindProperty("nested");
+                    Pass(Event.KeyboardEvent("left"), () => EditorGUI.PropertyField(at, property));
+                    Assert.False(property.isExpanded);
+                    Assert.True(Click());
+                    Assert.False(Click());
+                }
+                using (TestRelease.Pin(TestRelease.Unmeasured))
+                {
+                    int before = Hits("UnityEditor.EditorGUI.Foldout");
+                    Assert.False(Click());
+                    Assert.True(Hits("UnityEditor.EditorGUI.Foldout") > before);
+                }
+            }
+            finally
+            {
+                Reset();
+                Object.DestroyImmediate(holder);
+            }
+        }
+
         // The Editor skin's slider and min-max thumb paddings (editorskin): 19 points per unit on a
         // 200-point track over 0..10.
         static readonly GUIStyle s_Slider = new GUIStyle { padding = new RectOffset(-1, -1, 0, 0) };
