@@ -56,11 +56,12 @@ namespace Unbound.Runtime
         /// the materials the scenes Play mode starts with draw were validated before it (matches the
         /// Unity 6000.0.71f1 Editor, tests/projects/graphqueue scene.start;
         /// tests/projects/urpwrites played.LitStaleDrawn): those of their renderers, the skybox of
-        /// the active scene and of cameras' Skybox components, and terrains' templates, for every
-        /// enabled component whose object and parents are saved active. Unbound draws no Edit mode
+        /// the active scene and of enabled cameras' Skybox components, and terrains' templates, for
+        /// every enabled component whose object and parents are saved active. Unbound draws no Edit mode
         /// frames of its own (a script's Edit mode render validates what it draws,
         /// <see cref="Material.ValidateDeferredEditorForDraw"/>). Which of them a real Editor's views
-        /// reach is unmeasured, and so are UI materials (not validated here: a follow-up).
+        /// reach is unmeasured; UI materials, terrains' tree and detail prototype materials and the
+        /// pipeline's default terrain material (no template) are not validated here (a follow-up).
         /// </summary>
         internal static void ValidateDrawnBeforePlay(SceneData scene)
         {
@@ -72,8 +73,10 @@ namespace Unbound.Runtime
                 foreach (var renderer in root.GetComponentsInChildren<Renderer>(true))
                     if (renderer.enabled && ActiveInScene(renderer.transform))
                         foreach (var material in renderer.sharedMaterials) Drawn(material);
+                // A Skybox draws for the camera on its object (Skybox.Of).
                 foreach (var skybox in root.GetComponentsInChildren<Skybox>(true))
-                    if (skybox.enabled && ActiveInScene(skybox.transform)) Drawn(skybox.material);
+                    if (skybox.enabled && ActiveInScene(skybox.transform) && skybox.GetComponent<Camera>() is Camera camera && camera.enabled)
+                        Drawn(skybox.material);
                 foreach (var terrain in root.GetComponentsInChildren<Terrain>(true))
                     if (terrain.enabled && ActiveInScene(terrain.transform)) Drawn(terrain.materialTemplate);
             }

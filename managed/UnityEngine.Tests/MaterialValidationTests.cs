@@ -337,13 +337,36 @@ namespace UnityEngine.Tests
                 var sky = ProjectEdited();
                 MaterialValidation.ValidateLoaded(FileOf(sky));
                 var cameraObject = new GameObject("camera");
+                cameraObject.AddComponent<Camera>();
                 cameraObject.AddComponent<Skybox>().material = sky;
                 SceneRegistry.MoveToScene(cameraObject, scene);
-                var waitingRoot = scene.Roots.Count - 2;
+                // A Skybox without a camera on its object is not drawn.
+                var lone = ProjectEdited();
+                MaterialValidation.ValidateLoaded(FileOf(lone));
+                var loneObject = new GameObject("lone skybox");
+                loneObject.AddComponent<Skybox>().material = lone;
+                SceneRegistry.MoveToScene(loneObject, scene);
+                var template = ProjectEdited();
+                MaterialValidation.ValidateLoaded(FileOf(template));
+                var terrainObject = new GameObject("terrain");
+                terrainObject.AddComponent<Terrain>().materialTemplate = template;
+                SceneRegistry.MoveToScene(terrainObject, scene);
+                var skyboxBefore = RenderSettings.skybox;
+                var settings = ProjectEdited();
+                MaterialValidation.ValidateLoaded(FileOf(settings));
+                RenderSettings.skybox = settings;
+                var waitingRoot = scene.Roots.Count - 4;
                 scene.Roots[waitingRoot].m_AwaitingSceneAwake = true;
-                MaterialValidation.ValidateDrawnBeforePlay(scene);
-                scene.Roots[waitingRoot].m_AwaitingSceneAwake = false;
+                try { MaterialValidation.ValidateDrawnBeforePlay(scene); }
+                finally
+                {
+                    scene.Roots[waitingRoot].m_AwaitingSceneAwake = false;
+                    RenderSettings.skybox = skyboxBefore;
+                }
                 Assert.Equal("PROJECT_VALIDATED", Keywords(sky));
+                Assert.Equal("", Keywords(lone));
+                Assert.Equal("PROJECT_VALIDATED", Keywords(template));
+                Assert.Equal("PROJECT_VALIDATED", Keywords(settings));
                 Assert.Equal("PROJECT_VALIDATED", Keywords(drawn));
                 Assert.Equal("PROJECT_VALIDATED", Keywords(waiting));
                 Assert.Equal("", Keywords(disabled));
@@ -378,6 +401,56 @@ namespace UnityEngine.Tests
                     Assert.Equal("PROJECT_VALIDATED", Keywords(edited));
                 }
                 finally { EditorSession.IsPlaying = playing; }
+            });
+        }
+
+        /// <summary>Entering Play mode from Edit mode validates the open scenes' drawn materials before
+        /// its first callback, as a direct start does (the Editor's views drew them in Edit mode).</summary>
+        [Fact]
+        public void EnteringPlayModeFromEditModeValidatesTheOpenScenesDrawnMaterials()
+        {
+            using var release = TestRelease.Pin(TestRelease.Measured);
+            using var scenes = new Unbound.Tests.LightProbesTests.Scenes();
+            bool playing = EditorSession.IsPlaying, startedInEdit = EditorSession.StartedInEditMode;
+            WithProjectEditors(() =>
+            {
+                var scene = scenes.Loaded("Open");
+                var m = ProjectEdited();
+                MaterialValidation.ValidateLoaded(FileOf(m));
+                var go = new GameObject("drawn");
+                go.AddComponent<MeshRenderer>().sharedMaterial = m;
+                SceneRegistry.MoveToScene(go, scene);
+                string atExitingEditMode = null;
+                Action<PlayModeStateChange> seen = state =>
+                {
+                    if (state == PlayModeStateChange.ExitingEditMode) atExitingEditMode = Keywords(m);
+                };
+                EditorApplication.playModeStateChanged += seen;
+                // Leaving Play mode destroys the DontDestroyOnLoad roots and opens an untitled scene.
+                var persistent = SceneRegistry.DontDestroyOnLoad;
+                var persistentRoots = persistent.Roots.ToArray();
+                persistent.Roots.Clear();
+                try
+                {
+                    EditorSession.IsPlaying = false;
+                    EditorSession.StartedInEditMode = true;
+                    Assert.Equal("", Keywords(m));
+                    EditorSession.Request(true);
+                    EditorSession.ApplyRequest();
+                    Assert.Equal("PROJECT_VALIDATED", atExitingEditMode);
+                }
+                finally
+                {
+                    EditorApplication.playModeStateChanged -= seen;
+                    EditorSession.Request(false);
+                    EditorSession.ApplyRequest();
+                    if (SceneRegistry.Active != null && SceneRegistry.Active != scene && SceneRegistry.Active.Path == "")
+                        SceneRegistry.Forget(SceneRegistry.Active);
+                    persistent.Roots.AddRange(persistentRoots);
+                    EditorSession.IsPlaying = playing;
+                    EditorSession.StartedInEditMode = startedInEdit;
+                    foreach (var root in scene.Roots.ToArray()) if (root != null) Object.DestroyImmediate(root);
+                }
             });
         }
 
