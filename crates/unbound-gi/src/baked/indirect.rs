@@ -489,7 +489,7 @@ pub fn indirect(
                 mean(sum, rays),
                 validity,
                 mean(sky_sum, sky_rays),
-                toward.encode(facing, faced),
+                toward.encode(facing, faced, 1.0),
             )
         })
         .collect();

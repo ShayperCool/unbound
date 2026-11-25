@@ -102,7 +102,10 @@ pub struct Direct {
 /// The direct light of every texel of the lightmap. `receivers` are the lightmap's renderers
 /// by their place in it, `channels` the lights' shadowmask channels (one per light, or none at
 /// all for no shadowmask), `pushoff` how far a sample is pushed off its triangle before its
-/// rays start.
+/// rays start, `direct_samples` the Lighting Settings' Direct Samples: the texel's direction
+/// is weighed as if its light were summed over that many samples (each of its own samples
+/// standing for its part of them; tests/projects/bakedbuffers `DirectionalFaint*`).
+#[allow(clippy::too_many_arguments)]
 pub fn direct(
     g: &GBuffer,
     receivers: &[Receiver],
@@ -111,6 +114,7 @@ pub fn direct(
     mixed: MixedMode,
     scene: &Scene,
     pushoff: f32,
+    direct_samples: u32,
 ) -> Direct {
     assert!(
         channels.is_empty() || channels.len() == lights.len(),
@@ -206,7 +210,7 @@ pub fn direct(
             let scale = 1.0 / samples as f32;
             (
                 [sum[0] * scale, sum[1] * scale, sum[2] * scale, 1.0],
-                toward.encode(facing, samples),
+                toward.encode(facing, samples, direct_samples as f32 / samples as f32),
                 std::array::from_fn(|c| {
                     if reached[c] == 0 {
                         0.0

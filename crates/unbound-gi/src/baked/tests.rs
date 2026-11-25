@@ -1012,7 +1012,7 @@ mod lighting {
             viewer: crate::baked::trace::Viewer::Lod0,
         }];
         let masks = |mixed: MixedMode, channel: Option<u8>| {
-            direct::direct(&g, &receivers, &[sun], &[channel], mixed, &roof, 0.0001).shadowmask
+            direct::direct(&g, &receivers, &[sun], &[channel], mixed, &roof, 0.0001, 32).shadowmask
         };
         let mask = masks(MixedMode::Shadowmask, Some(2));
         for (texel, value) in mask.iter().enumerate() {
@@ -1051,6 +1051,7 @@ mod lighting {
             MixedMode::Shadowmask,
             &Scene::new([]),
             0.0001,
+            32,
         )
         .shadowmask;
         assert!(lit.iter().all(|v| v[0] == 0.0 || v[0] == 1.0), "{lit:?}");
@@ -1082,7 +1083,7 @@ mod lighting {
                 receives_shadows: receives,
                 viewer: crate::baked::trace::Viewer::Lod0,
             }];
-            direct::direct(&g, &receivers, &[sun], &[], mixed, scene, 0.0001).irradiance
+            direct::direct(&g, &receivers, &[sun], &[], mixed, scene, 0.0001, 32).irradiance
         };
         let open = lit(
             true,
@@ -1154,6 +1155,7 @@ mod lighting {
             MixedMode::IndirectOnly,
             &film,
             0.0001,
+            32,
         )
         .irradiance;
         let below = direct::direct(
@@ -1164,6 +1166,7 @@ mod lighting {
             MixedMode::IndirectOnly,
             &film,
             0.0,
+            32,
         )
         .irradiance;
         assert!(above.iter().all(|t| near(t[0], 1.6)) && below.iter().all(|t| t[0] == 0.0));
@@ -1187,6 +1190,7 @@ mod lighting {
             MixedMode::IndirectOnly,
             &Scene::new([]),
             0.0001,
+            32,
         )
         .irradiance;
         assert_eq!(values[3], [0.0; 4]);
@@ -1222,6 +1226,7 @@ mod lighting {
             MixedMode::IndirectOnly,
             &Scene::new([]),
             0.0001,
+            32,
         )
         .irradiance;
         assert!(lit.iter().all(|t| near(t[0], 2.0)));
@@ -1235,6 +1240,7 @@ mod lighting {
             MixedMode::IndirectOnly,
             &wall,
             0.0001,
+            32,
         )
         .irradiance;
         assert!(shadowed.iter().all(|t| t[0] == 0.0 && t[3] == 1.0));
@@ -1976,6 +1982,7 @@ mod bounced {
                 crate::baked::direct::MixedMode::IndirectOnly,
                 casters,
                 0.0001,
+                32,
             )
             .irradiance[0][0]
         };

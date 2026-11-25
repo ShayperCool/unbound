@@ -846,6 +846,7 @@ namespace UnityEngine
                     lights,
                     mixedMode = (int)settings.mixedBakeMode,
                     directional = settings.directionalityMode == LightmapsMode.CombinedDirectional,
+                    directSamples = settings.directSampleCount,
                     probes,
                     layoutOnly,
                     indirect,

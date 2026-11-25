@@ -59,6 +59,10 @@ pub struct BakeRequest {
     /// comes from.
     #[serde(default)]
     directional: bool,
+    /// The Lighting Settings' Direct Samples (what a texel's direction of direct light is
+    /// weighed over).
+    #[serde(default = "default_direct_samples")]
+    direct_samples: u32,
     /// What the indirect light is baked with; without it only the direct light is.
     #[serde(default)]
     indirect: Option<IndirectData>,
@@ -462,6 +466,11 @@ impl Renderer {
 
 fn yes() -> bool {
     true
+}
+
+/// Direct Samples of a new Lighting Settings asset.
+fn default_direct_samples() -> u32 {
+    32
 }
 
 #[derive(serde::Deserialize)]
@@ -1288,6 +1297,7 @@ fn bake(request: BakeRequest, buffers: Option<&Path>) -> Result<Json> {
                 mixed,
                 &scene,
                 parameters.pushoff,
+                request.direct_samples,
             );
             let bounced = bounce.as_ref().map(|b| {
                 indirect::indirect(

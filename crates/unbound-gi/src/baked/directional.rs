@@ -19,6 +19,11 @@ pub struct Toward {
 /// What a texel without light, or a bake without directional lightmaps, holds.
 pub const NONE: [f32; 4] = [0.5; 4];
 
+/// The least the luminance summed over a texel's rays (or samples) divides its directions by:
+/// a texel of less light gets a shorter mean direction, in proportion (tests/projects/bakedbuffers
+/// `DirectionalFaint*`, `DirectionalShadowmask`).
+const LEAST_WEIGHT: f32 = 1e-3;
+
 impl Toward {
     /// Light of `color` that arrives from `direction` (towards where it comes from, of unit
     /// length).
@@ -31,14 +36,17 @@ impl Toward {
     }
 
     /// The texel's value: the mean direction (of length up to 1, shorter where light comes
-    /// from several sides) mapped from -1..1 to 0..1, and how much the texel's samples face it,
+    /// from several sides, and where the luminance summed over the rays is less than
+    /// [`LEAST_WEIGHT`]) mapped from -1..1 to 0..1, and how much the texel's samples face it,
     /// the mean over its samples of their normals' cosine with it, mapped the same way.
-    /// `normals` is the sum of the texel's samples' normals, `samples` their number.
-    pub fn encode(&self, normals: [f32; 3], samples: u32) -> [f32; 4] {
+    /// `normals` is the sum of the texel's samples' normals, `samples` their number; `rays` how
+    /// many rays each light [`Self::add`]ed stands for in that sum.
+    pub fn encode(&self, normals: [f32; 3], samples: u32, rays: f32) -> [f32; 4] {
         if !(self.weight > 0.0) || samples == 0 {
             return NONE;
         }
-        let mean = self.sum.map(|v| v / self.weight);
+        let weight = (self.weight * rays).max(LEAST_WEIGHT) / rays;
+        let mean = self.sum.map(|v| v / weight);
         let facing =
             (normals[0] * mean[0] + normals[1] * mean[1] + normals[2] * mean[2]) / samples as f32;
         [
@@ -60,14 +68,14 @@ mod tests {
 
     #[test]
     fn a_texel_without_light_holds_the_middle_values() {
-        assert_eq!(Toward::default().encode([0.0, 2.0, 0.0], 2), NONE);
+        assert_eq!(Toward::default().encode([0.0, 2.0, 0.0], 2, 1.0), NONE);
         let mut black = Toward::default();
         black.add([0.0, 1.0, 0.0], [0.0; 3]);
-        assert_eq!(black.encode([0.0, 2.0, 0.0], 2), NONE);
+        assert_eq!(black.encode([0.0, 2.0, 0.0], 2, 1.0), NONE);
         // No sample with a surface.
         let mut lit = Toward::default();
         lit.add([0.0, 1.0, 0.0], [1.0; 3]);
-        assert_eq!(lit.encode([0.0; 3], 0), NONE);
+        assert_eq!(lit.encode([0.0; 3], 0, 1.0), NONE);
     }
 
     #[test]
@@ -79,7 +87,7 @@ mod tests {
         let normals = [0.6 + 0.0 + 0.0, 0.8 + 1.0 + 1.0, 0.0];
         let facing = (1.0 + 0.8 + 0.8) / 3.0;
         assert!(near(
-            toward.encode(normals, 3),
+            toward.encode(normals, 3, 1.0),
             [0.8, 0.9, 0.5, facing * 0.5 + 0.5]
         ));
     }
@@ -91,12 +99,31 @@ mod tests {
         toward.add([1.0, 0.0, 0.0], [0.0, 1.0, 0.0]);
         toward.add([-1.0, 0.0, 0.0], [1.0, 0.0, 0.0]);
         let mean = (0.707 - 0.22) / (0.707 + 0.22);
-        let value = toward.encode([0.0, 1.0, 0.0], 1);
+        let value = toward.encode([0.0, 1.0, 0.0], 1, 1.0);
         assert!(near(value, [mean * 0.5 + 0.5, 0.5, 0.5, 0.5]), "{value:?}");
         // Equal light from opposite sides cancels: the mean direction has no length.
         let mut even = Toward::default();
         even.add([0.0, 0.0, 1.0], [1.0; 3]);
         even.add([0.0, 0.0, -1.0], [1.0; 3]);
-        assert!(near(even.encode([0.0, 0.0, 1.0], 1), [0.5; 4]));
+        assert!(near(even.encode([0.0, 0.0, 1.0], 1, 1.0), [0.5; 4]));
+    }
+
+    #[test]
+    fn a_texel_of_little_light_gets_a_shorter_direction() {
+        // Up, of luminance 0.0005 summed: half the length; 0.001 and more: the whole.
+        let green = |l: f32| [0.0, l / 0.707, 0.0];
+        let mut faint = Toward::default();
+        faint.add([0.0, 1.0, 0.0], green(0.0005));
+        let value = faint.encode([0.0, 1.0, 0.0], 1, 1.0);
+        assert!(near(value, [0.5, 0.75, 0.5, 0.75]), "{value:?}");
+        // Each light added standing for four rays: four times the luminance.
+        let value = faint.encode([0.0, 1.0, 0.0], 1, 4.0);
+        assert!(near(value, [0.5, 1.0, 0.5, 1.0]), "{value:?}");
+        let mut enough = Toward::default();
+        enough.add([0.0, 1.0, 0.0], green(0.001));
+        assert!(near(
+            enough.encode([0.0, 1.0, 0.0], 1, 1.0),
+            [0.5, 1.0, 0.5, 1.0]
+        ));
     }
 }
