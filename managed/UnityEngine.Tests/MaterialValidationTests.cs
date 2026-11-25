@@ -133,6 +133,179 @@ namespace UnityEngine.Tests
             Assert.Equal(new[] { "_ALPHATEST_ON" }, material.shaderKeywords);
         }
 
+        static LoadedFile FileOf(Material material)
+        {
+            var file = new LoadedFile { MainObject = material };
+            file.Objects[1] = material;
+            return file;
+        }
+
+        /// <summary>Runs <paramref name="action"/> with this assembly's shader editors among the game's.</summary>
+        static void WithProjectEditors(Action action)
+        {
+            var assemblies = (List<System.Reflection.Assembly>)typeof(GameDomain)
+                .GetField("s_Assemblies", System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.NonPublic).GetValue(null);
+            var own = typeof(ValidationTestProjectGUI).Assembly;
+            bool added = !assemblies.Contains(own);
+            if (added) assemblies.Add(own);
+            try { action(); }
+            finally { if (added) assemblies.Remove(own); }
+        }
+
+        /// <summary>A loaded material asset with a render pipeline's or project's editor keeps its
+        /// saved state as it loads, through reads of its keywords, queue, tags and passes, keyword
+        /// and pass changes and draws, and its first property value access validates it, once
+        /// (tests/projects/urpwrites load.*, read.*, meta.*, drawn.*). A model's imported material
+        /// is validated by a draw (the control).</summary>
+        [Fact]
+        public void ALoadedAssetIsValidatedAtItsFirstPropertyValueAccessNotAsItLoadsOrDraws()
+        {
+            using var release = TestRelease.Pin(TestRelease.Measured);
+            WithProjectEditors(() =>
+            {
+                var m = ProjectEdited();
+                Assert.Empty(CaptureLogs(() => MaterialValidation.ValidateLoaded(FileOf(m))).Messages);
+                _ = m.renderQueue;
+                _ = m.GetTag("RenderType", false);
+                _ = m.passCount;
+                _ = m.IsKeywordEnabled("PROJECT_VALIDATED");
+                _ = m.enabledKeywords;
+                m.EnableKeyword("OTHER");
+                m.SetShaderPassEnabled("Always", false);
+                m.QueueForDraw();
+                m.Sync();
+                Assert.Equal("OTHER", Keywords(m));
+                Assert.Equal(PendingValidation.Loaded, m.PendingEditorValidation);
+
+                m.GetFloat("_Value");
+                Assert.Equal("OTHER PROJECT_VALIDATED", Keywords(m));
+                m.DisableKeyword("PROJECT_VALIDATED");
+                m.GetFloat("_Value");
+                Assert.Equal("OTHER", Keywords(m));
+            });
+
+            var imported = Standard();
+            imported.SetFloat("_Mode", 1);
+            MaterialValidation.DeferImportedEditor(imported);
+            imported.QueueForDraw();
+            Assert.Equal(new[] { "_ALPHATEST_ON" }, imported.shaderKeywords);
+        }
+
+        /// <summary>The accesses that validate a loaded asset first (tests/projects/urpwrites
+        /// access.*; the Editor's whole list in tests/projects/urpwrites/README.md).</summary>
+        [Theory]
+        [InlineData("has")]
+        [InlineData("hasfloat")]
+        [InlineData("getfloat")]
+        [InlineData("getcolor")]
+        [InlineData("setcolor")]
+        [InlineData("setpass")]
+        [InlineData("shader")]
+        public void ALoadedAssetsFirstPropertyAccessValidatesIt(string access)
+        {
+            using var release = TestRelease.Pin(TestRelease.Measured);
+            WithProjectEditors(() =>
+            {
+                var m = ProjectEdited();
+                MaterialValidation.ValidateLoaded(FileOf(m));
+                Assert.Equal("", Keywords(m));
+                switch (access)
+                {
+                    case "has": m.HasProperty("_Value"); break;
+                    case "hasfloat": m.HasFloat("_Value"); break;
+                    case "getfloat": m.GetFloat("_Value"); break;
+                    case "getcolor": m.GetColor("_Tint"); break;
+                    case "setcolor": m.SetColor("_Tint", Color.green); break;
+                    case "setpass": m.SetPass(0); break;
+                    case "shader": m.shader = m.shader; break;
+                }
+                Assert.Equal("PROJECT_VALIDATED", Keywords(m));
+                Assert.Equal(PendingValidation.None, m.PendingEditorValidation);
+            });
+        }
+
+        /// <summary>A write to a loaded asset is made before the validation it causes, which sees it
+        /// (a mode written gives its states); the material then reads the value written while its
+        /// data holds the validation's (tests/projects/materialvalidation LaterWrittenCutout,
+        /// tests/projects/urpwrites edit.LitStaleSrcBlend), until the float is written again. A
+        /// model's imported material reads the factor written too (tests/projects/modelimport
+        /// BuiltinBlend).</summary>
+        [Fact]
+        public void AWriteThatValidatesALoadedAssetReadsAsWrittenAndIsSavedAsValidated()
+        {
+            using var release = TestRelease.Pin(TestRelease.Measured);
+            int srcBlend = Shader.PropertyToID("_SrcBlend");
+            var factor = Standard();
+            MaterialValidation.ValidateLoaded(FileOf(factor));
+            factor.SetFloat("_SrcBlend", 7);
+            Assert.Equal(7f, factor.GetFloat("_SrcBlend"));
+            Assert.Equal(1f, factor.SheetFloat(srcBlend));
+            factor.SetFloat("_SrcBlend", 7);
+            Assert.Equal(7f, factor.SheetFloat(srcBlend));
+
+            var mode = Standard();
+            MaterialValidation.ValidateLoaded(FileOf(mode));
+            mode.SetFloat("_Mode", 2);
+            Assert.Equal(5f, mode.GetFloat("_SrcBlend"));
+            Assert.Equal(10f, mode.GetFloat("_DstBlend"));
+            Assert.Equal(2f, mode.SheetFloat(Shader.PropertyToID("_Mode")));
+
+            var imported = Standard();
+            MaterialValidation.DeferImportedEditor(imported);
+            imported.SetFloat("_SrcBlend", 7);
+            Assert.Equal(7f, imported.GetFloat("_SrcBlend"));
+            Assert.Equal(1f, imported.SheetFloat(srcBlend));
+        }
+
+        /// <summary>Play mode starts as in an Editor whose views drew the startup scene: the pending
+        /// materials of its active, enabled renderers are validated (tests/projects/graphqueue
+        /// scene.start); a disabled renderer's and an inactive object's are not.</summary>
+        [Fact]
+        public void TheStartupScenesDrawnMaterialsAreValidatedBeforePlay()
+        {
+            using var release = TestRelease.Pin(TestRelease.Measured);
+            using var scenes = new Unbound.Tests.LightProbesTests.Scenes();
+            WithProjectEditors(() =>
+            {
+                var scene = scenes.Loaded("Startup");
+                Material Drawn(string name, bool enabled, bool active)
+                {
+                    var m = ProjectEdited();
+                    MaterialValidation.ValidateLoaded(FileOf(m));
+                    var go = new GameObject(name);
+                    var renderer = go.AddComponent<MeshRenderer>();
+                    renderer.sharedMaterial = m;
+                    renderer.enabled = enabled;
+                    go.SetActive(active);
+                    SceneRegistry.MoveToScene(go, scene);
+                    return m;
+                }
+                var drawn = Drawn("drawn", true, true);
+                var disabled = Drawn("disabled", false, true);
+                var inactive = Drawn("inactive", true, false);
+                MaterialValidation.ValidateDrawnBeforePlay(scene);
+                Assert.Equal("PROJECT_VALIDATED", Keywords(drawn));
+                Assert.Equal("", Keywords(disabled));
+                Assert.Equal("", Keywords(inactive));
+                foreach (var root in scene.Roots.ToArray()) Object.DestroyImmediate(root);
+            });
+        }
+
+        /// <summary>A release whose validation timing is unmeasured validates a loaded material as it
+        /// loads, as before.</summary>
+        [Fact]
+        public void AnUnmeasuredReleaseValidatesALoadedAssetAsItLoads()
+        {
+            using var release = TestRelease.Pin(TestRelease.Unmeasured);
+            WithProjectEditors(() =>
+            {
+                var m = ProjectEdited();
+                MaterialValidation.ValidateLoaded(FileOf(m));
+                Assert.Equal("PROJECT_VALIDATED", Keywords(m));
+                Assert.Equal(PendingValidation.None, m.PendingEditorValidation);
+            });
+        }
+
         [Fact]
         public void AStandardCutoutBelowItsRangeTakesTheModesStatesAndSaysSo()
         {

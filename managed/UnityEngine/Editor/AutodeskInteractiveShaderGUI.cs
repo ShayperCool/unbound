@@ -10,7 +10,7 @@ namespace UnityEditor
 
         public override void ValidateMaterial(Material material)
         {
-            if (Compat.DeferredBuiltinMaterialValidationMeasured) StandardShaderGUI.ValidateAutodeskInteractive(material);
+            if (Compat.DeferredMaterialValidationMeasured) StandardShaderGUI.ValidateAutodeskInteractive(material);
             else Stubs.Ignored("UnityEditor.AutodeskInteractiveShaderGUI.ValidateMaterial",
                 "is unmeasured for this release. The material keeps its saved settings.");
         }

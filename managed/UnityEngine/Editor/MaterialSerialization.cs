@@ -127,6 +127,11 @@ namespace Unbound.Runtime
             return body;
         }
 
+        /// <summary>The material's data as text (what its SerializedObject and a save see), to tell
+        /// whether a change left it as it was.</summary>
+        internal static string Snapshot(Material m) =>
+            UnityYamlText.Write(new List<YTextDocument> { new YTextDocument { Header = "", ClassName = "Material", Body = Write(m, Ref) } });
+
         /// <summary>The material's serialized version, the Editor writes first in its document.</summary>
         const string SerializedVersion = "8";
 

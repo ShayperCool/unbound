@@ -5,9 +5,9 @@
     run.py publish L1 L2         # two byte-identical captures -> Reference/
     run.py check                 # Unbound against the reference
 
-Two repeat captures on Linux agree with the macOS Editor reference. Every record is compared
-exactly. The two project editors' initial keywords and later validation counts are reported
-(see README)."""
+Two repeat captures on Linux agree with the macOS Editor reference's first 363 records. Every
+record is compared exactly. The two project editors' later validation counts are reported (see
+README)."""
 import argparse
 import json
 import os
@@ -109,9 +109,7 @@ def rows(path):
 
 
 REPORTED = {
-    'ProjectGui.load.keywords',
     'ProjectGui._Value',
-    'ProjectGuiNamespaced.load.keywords',
     'ProjectGuiNamespaced._Value',
 }
 

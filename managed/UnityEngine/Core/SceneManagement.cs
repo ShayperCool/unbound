@@ -637,7 +637,12 @@ namespace UnityEngine.SceneManagement
             if (parameters.loadSceneMode == LoadSceneMode.Single || previousActive == null)
                 SceneRegistry.Active = data;
             Action beforeAwake = reported == PlayModeEntry
-                ? () => Unbound.Runtime.RuntimeInitializers.Run(RuntimeInitializeLoadType.BeforeSceneLoad) : null;
+                ? () =>
+                {
+                    Unbound.Runtime.MaterialValidation.ValidateDrawnBeforePlay(data);
+                    Unbound.Runtime.RuntimeInitializers.Run(RuntimeInitializeLoadType.BeforeSceneLoad);
+                }
+                : null;
             if (prepared) SceneLoader.LoadPrepared(data, documents, beforeAwake);
             else SceneLoader.LoadInto(data, beforeAwake);
             // Play mode processes the loaded scene after its objects woke up (measured:

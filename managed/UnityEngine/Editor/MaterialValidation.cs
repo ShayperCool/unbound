@@ -13,15 +13,12 @@ namespace Unbound.Runtime
     /// current editor: the one it names for the active render pipeline, else its
     /// <c>CustomEditor</c>, a <see cref="ShaderGUI"/> class whose full name is that name or
     /// <c>UnityEditor.</c> and that name (the Editor's own, which Unbound makes, and those of
-    /// render pipelines and projects). With a built-in shader editor, description-imported
-    /// materials and loaded material assets keep their saved metadata until a property access
-    /// or draw validates them. The Unity 6000.0.71f1 Editor's metadata-only controls retain
-    /// their saved values through three updates in Play mode (tests/projects/modelimport,
-    /// BuiltinBlend). Unsupported editors report on first use. Render pipelines' and
-    /// projects' editors validate as the model imports (<see cref="ModelMaterialImport"/>).
-    /// Loaded assets with project editors validate when Unbound loads them. The Editor
-    /// can also validate them again after a script accesses them (tests/projects/materialvalidation).
-    /// Validation of newly scripted materials and of built-in resources is separate.
+    /// render pipelines and projects). The Unity 6000.0.71f1 Editor validates a loaded material
+    /// asset when it is first used, not as it loads (<see cref="PendingValidation"/>); materials a
+    /// model's import makes with a built-in shader editor wait for their first use too, and
+    /// render pipelines' and projects' editors validate those as the model imports
+    /// (<see cref="ModelMaterialImport"/>). Unsupported editors report on first use. Validation of
+    /// newly scripted materials and of built-in resources is separate.
     /// </summary>
     internal static class MaterialValidation
     {
@@ -29,14 +26,15 @@ namespace Unbound.Runtime
 
         internal static void DeferImportedEditor(Material material)
         {
-            if (Compat.DeferredBuiltinMaterialValidationMeasured && material != null)
-                material.PendingEditorValidation = UsesBuiltinEditor(material.shader);
+            if (Compat.DeferredMaterialValidationMeasured && material != null)
+                material.PendingEditorValidation = UsesBuiltinEditor(material.shader) ? PendingValidation.Imported : PendingValidation.None;
         }
 
         internal static bool UsesBuiltinEditor(Shader shader) =>
             SelectedEditor(shader)?.Assembly == typeof(ShaderGUI).Assembly;
 
-        /// <summary>Validates materials in a loaded project file or schedules their first-use validation.</summary>
+        /// <summary>Schedules the first-use validation of the materials in a loaded project file.
+        /// A release whose timing is unmeasured validates them as they load, leaving them clean.</summary>
         internal static void ValidateLoaded(LoadedFile file)
         {
             if (file == null) return;
@@ -44,22 +42,44 @@ namespace Unbound.Runtime
             foreach (var obj in file.Objects.Values)
             {
                 if (obj is not Material material || !(seen ??= new HashSet<Material>()).Add(material)) continue;
-                if (Compat.DeferredBuiltinMaterialValidationMeasured && UsesBuiltinEditor(material.shader))
-                    material.PendingEditorValidation = true;
+                if (Compat.DeferredMaterialValidationMeasured)
+                    material.PendingEditorValidation = PendingValidation.Loaded;
                 else
                     Validate(material, keepClean: true);
             }
         }
 
+        /// <summary>
+        /// Play mode starts in an Editor that has drawn its views (as for the pipeline's shader tag,
+        /// <see cref="UnityEngine.Rendering.RenderPipelineManager.ActivateConfiguredPipelineTag"/>):
+        /// an Edit mode render validates the materials it draws, which a Play mode draw does not, so
+        /// the materials the startup scene's renderers draw were validated before Play mode (matches
+        /// the Unity 6000.0.71f1 Editor, tests/projects/graphqueue scene.start;
+        /// tests/projects/urpwrites played.LitStaleDrawn). Which renderers a real Editor's views
+        /// reach is unmeasured (Unbound: every active, enabled renderer of the scene), as are other
+        /// drawn materials (skybox, UI, terrain).
+        /// </summary>
+        internal static void ValidateDrawnBeforePlay(SceneData scene)
+        {
+            if (!Compat.DeferredMaterialValidationMeasured || scene == null) return;
+            foreach (var root in scene.Roots.ToArray())
+            {
+                if (root == null) continue;
+                foreach (var renderer in root.GetComponentsInChildren<Renderer>(false))
+                {
+                    if (!renderer.enabled || !renderer.gameObject.activeInHierarchy) continue;
+                    foreach (var material in renderer.sharedMaterials)
+                        if (material != null) material.ValidateDeferredEditor();
+                }
+            }
+        }
+
         /// <param name="editorsOfTheEditor">Whether the Editor's own shader editors (Unbound's
         /// UnityEditor) validate too, or only those of render pipelines and projects.</param>
-        /// <param name="keepClean">The validation of a material as it loads: its changes leave a
-        /// clean asset clean. The Unity 6000.0.71f1 Editor validates a URP Lit material only once it
-        /// is changed and saved, so a material nobody changes is never written
-        /// (tests/projects/urpwrites load.*.dirty and exit.*; that Unbound validates earlier is a
-        /// recorded residual there). A validation on first use (the Editor's own editors,
-        /// deferred) dirties the material (access.StandardStale.dirty), as do the changes that
-        /// cause one.</param>
+        /// <param name="keepClean">The validation of a material as it loads, for a release whose
+        /// timing is unmeasured: its changes leave a clean asset clean. A validation on first use
+        /// that changes the material dirties it (tests/projects/urpwrites access.StandardStale.dirty,
+        /// read.LitStaleRead.dirty), as do the changes that cause one.</param>
         internal static void Validate(Material material, bool editorsOfTheEditor = true, bool keepClean = false)
         {
             var type = SelectedEditor(material.shader);
@@ -74,8 +94,11 @@ namespace Unbound.Runtime
                     "is not implemented: materials of its shaders keep their saved keywords, render queue and tags when they load");
                 return;
             }
-            bool wasDirty = !keepClean || EditorUtility.IsDirty(material);
+            bool wasDirty = EditorUtility.IsDirty(material);
             int dirtyCount = EditorUtility.GetDirtyCount(material);
+            // A validation that leaves the material's data as it was leaves a clean asset clean
+            // (tests/projects/urpwrites read.LitCleanRead.dirty).
+            string before = wasDirty || keepClean ? null : MaterialTypeTree.Snapshot(material);
             try
             {
                 var editor = (ShaderGUI)Activator.CreateInstance(type, nonPublic: true);
@@ -87,7 +110,8 @@ namespace Unbound.Runtime
             }
             finally
             {
-                if (!wasDirty) EditorUtility.RestoreClean(material, dirtyCount);
+                if (!wasDirty && (keepClean || before == MaterialTypeTree.Snapshot(material)))
+                    EditorUtility.RestoreClean(material, dirtyCount);
             }
         }
 
@@ -127,5 +151,25 @@ namespace Unbound.Runtime
                     return type;
             return null;
         }
+    }
+
+    /// <summary>A validation by its shader's editor that a material is owed (the Unity 6000.0.71f1
+    /// Editor's first-use validation). A float written by the access that validates is seen by the
+    /// validation; the material then reads and draws with the value written while its data holds
+    /// the validation's (<see cref="Material.SheetFloat"/>).</summary>
+    internal enum PendingValidation : byte
+    {
+        None,
+        /// <summary>A material a model's import made, with a built-in shader editor: its first
+        /// property access, SetPass or draw validates it (tests/projects/modelimport BuiltinBlend).</summary>
+        Imported,
+        /// <summary>A material asset loaded from its file, with any editor: its first property value
+        /// access through the Material API (Get*, Set*, Has*, HasProperty, <c>color</c>,
+        /// <c>mainTexture</c>), SetPass or a shader set validates it; reading its keywords, render
+        /// queue, tags or passes, changing keywords or passes, copies and drawing do not
+        /// (tests/projects/urpwrites with URP, tests/projects/materialvalidation Later* with the
+        /// built-in pipeline). The Editor can validate it again at a later access
+        /// (tests/projects/materialvalidation ProjectGui._Value); Unbound validates it once.</summary>
+        Loaded,
     }
 }

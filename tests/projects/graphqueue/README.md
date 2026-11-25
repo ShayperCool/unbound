@@ -32,9 +32,10 @@ Lit editor validates a material on load (exploratory runs outside the probe foun
 the materials loaded afresh after `Resources.UnloadAsset`, and for the Lit material loaded in Edit
 mode), though [ShaderGUI.ValidateMaterial](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/ShaderGUI.ValidateMaterial.html)
 says the Editor validates a material it loads into memory. tests/projects/materialvalidation
-measured validation for Standard materials in a macOS batch-mode Editor with the built-in
-pipeline; the captures also differ in OS, graphics device and this probe's render and re-import
-before Play, and which condition decides is not resolved. Unbound validates every loaded project material, see `residuals.json`.
+and tests/projects/urpwrites (macOS batch mode, built-in pipeline and URP) resolve it: the Editor
+validates a loaded material at its first property value access through the Material API, not as
+it loads, and an Edit mode render validates the materials it draws, while a Play mode draw does
+not; the scene's quad was drawn by the render before Play, so its material is validated (2950).
 
     ~/Unity/Hub/Editor/6000.0.71f1/Editor/Unity -batchmode -quit -projectPath <copy of this probe> \
         -executeMethod ProbeRunner.Create -logFile create.log   # once; copy Assets/ back

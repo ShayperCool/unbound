@@ -122,10 +122,19 @@ namespace UnityEngine
             return names;
         }
 
-        /// <summary>The sheet's stored value of a float, int or colour entry: the material's own,
-        /// else its shader's default.</summary>
-        internal float SheetFloat(int id) =>
-            m_Floats.TryGetValue(id, out var f) ? f : m_Shader != null && m_Shader.PropertyById(id) is ShaderPropertyInfo p ? p.DefaultValue.x : 0f;
+        /// <summary>The sheet's stored value of a float, int or colour entry: the material's own
+        /// (for a float a write validated, the value its validation gave it), else its shader's
+        /// default.</summary>
+        internal float SheetFloat(int id)
+        {
+            if (!m_Floats.TryGetValue(id, out var f))
+                return m_Shader != null && m_Shader.PropertyById(id) is ShaderPropertyInfo p ? p.DefaultValue.x : 0f;
+            var validated = m_State.m_ValidatedFloats;
+            if (validated == null || !validated.TryGetValue(id, out var entry)) return f;
+            if (entry.Written == f) return entry.Saved;
+            validated.Remove(id);
+            return f;
+        }
 
         internal int SheetInt(int id) =>
             m_Ints.TryGetValue(id, out var i) ? i : m_Shader != null && m_Shader.PropertyById(id) is ShaderPropertyInfo p ? (int)p.DefaultValue.x : 0;
@@ -141,7 +150,11 @@ namespace UnityEngine
         sealed class MaterialState
         {
             internal Shader m_Shader;
-            internal bool m_PendingEditorValidation;
+            internal PendingValidation m_PendingEditorValidation;
+            /// <summary>Floats whose write caused the material's validation: the value written, which
+            /// the material reads and draws with, and the one the validation gave it, which its data
+            /// holds (what a SerializedObject reads and a save writes) until the float changes.</summary>
+            internal Dictionary<int, (float Written, float Saved)> m_ValidatedFloats;
             internal int m_CustomRenderQueue = -1;
             /// <summary>A variant's own m_CustomRenderQueue, as its data holds it while it takes its
             /// parent's queue (what its SerializedObject reads).</summary>
@@ -202,7 +215,7 @@ namespace UnityEngine
                 m_State.m_Shader = value;
             }
         }
-        internal bool PendingEditorValidation
+        internal PendingValidation PendingEditorValidation
         {
             get => m_State.m_PendingEditorValidation;
             set => m_State.m_PendingEditorValidation = value;
@@ -445,8 +458,10 @@ namespace UnityEngine
                 }
                 bool changed = value != m_Shader;
                 m_Shader = value;
-                if (changed && PendingEditorValidation)
-                    PendingEditorValidation = MaterialValidation.UsesBuiltinEditor(value);
+                // A model's material owes the validation of the Editor's own editors only; a loaded
+                // asset is validated by the new shader's editor as the shader is set (below).
+                if (changed && PendingEditorValidation == PendingValidation.Imported && !MaterialValidation.UsesBuiltinEditor(value))
+                    PendingEditorValidation = PendingValidation.None;
                 TouchSheet();
                 AddTextureNames();
                 MarkDirty();
@@ -477,16 +492,25 @@ namespace UnityEngine
             if (validateDeferred) ValidateDeferredEditor();
         }
 
+        /// <summary>The validation the material still owes (<see cref="PendingValidation"/>), on a
+        /// property value access, SetPass or a shader set.</summary>
         internal void ValidateDeferredEditor()
         {
-            if (!PendingEditorValidation) return;
-            PendingEditorValidation = false;
+            if (PendingEditorValidation == PendingValidation.None) return;
+            PendingEditorValidation = PendingValidation.None;
             MaterialValidation.Validate(this);
+        }
+
+        /// <summary>The validation a draw makes: a model's imported material's; a loaded material
+        /// asset is not validated by drawing (<see cref="PendingValidation.Loaded"/>).</summary>
+        internal void ValidateDeferredEditorForDraw()
+        {
+            if (PendingEditorValidation == PendingValidation.Imported) ValidateDeferredEditor();
         }
 
         internal int QueueForDraw()
         {
-            ValidateDeferredEditor();
+            ValidateDeferredEditorForDraw();
             return renderQueue;
         }
 
@@ -1200,18 +1224,29 @@ namespace UnityEngine
         {
             MainThreadCheck.Check("SetFloatImpl");
             TouchSheet(validateDeferred: false);
+            // The value the material's data holds, written again, leaves an asset clean (matches the
+            // Unity 6000.0.71f1 Editor, tests/projects/urpwrites same.LitCleanSame).
+            bool same = m_Floats.TryGetValue(nameID, out var held) && held == value && !m_RawBindings.Contains(nameID)
+                && m_State.m_ValidatedFloats?.ContainsKey(nameID) != true;
             m_RawBindings.Remove(nameID);
             m_Floats[nameID] = value;
             RecordProfilerPropertyWrite(nameID, ShaderPropertyType.Float);
             ScriptSet(nameID);
-            if (PendingEditorValidation)
+            m_State.m_ValidatedFloats?.Remove(nameID);
+            if (PendingEditorValidation != PendingValidation.None)
             {
-                // The editor sees the mode written by the caller. A write to a blend
-                // factor also keeps the explicit value after the first validation.
+                // The editor sees the value written by the caller; the material then reads and
+                // draws with the written value while its data holds the validation's (a blend
+                // factor its mode's; tests/projects/modelimport BuiltinBlend,
+                // tests/projects/materialvalidation LaterWrittenCutout, tests/projects/urpwrites
+                // edit.LitStaleSrcBlend).
                 ValidateDeferredEditor();
+                if (m_Floats.TryGetValue(nameID, out var validated) && validated != value)
+                    (m_State.m_ValidatedFloats ??= new Dictionary<int, (float, float)>())[nameID] = (value, validated);
                 m_Floats[nameID] = value;
             }
-            MarkDirty();
+            if (same) MarkChanged();
+            else MarkDirty();
         }
 
         public float GetFloat(string name) => GetFloat(Shader.PropertyToID(name));
@@ -1587,6 +1622,7 @@ namespace UnityEngine
         {
             StopMeasuringPropertyStorage();
             m_Floats.Clear(); m_Ints.Clear(); m_Vectors.Clear(); m_Matrices.Clear(); m_Keywords.Clear(); m_KeywordExtras.Clear();
+            m_State.m_ValidatedFloats = null;
             m_ScriptSet.Clear(); m_TextureNames.Clear(); m_RawBindings.Clear(); m_VectorsAfterTexture.Clear();
             m_Buffers.Clear();
             foreach (var id in m_Arrays.Keys)
@@ -1877,6 +1913,7 @@ namespace UnityEngine
                 Unbound.Runtime.Stubs.Ignored("SerializedObject.ApplyModifiedProperties on a material variant",
                     "is not measured: the applied sheet becomes the variant's overrides, the rest is taken from the parent again");
             m_Floats.Clear(); m_Ints.Clear(); m_Vectors.Clear(); m_RawBindings.Clear(); m_VectorsAfterTexture.Clear();
+            m_State.m_ValidatedFloats = null;
             m_Keywords.Clear(); m_KeywordExtras.Clear(); m_Tags.Clear(); m_TextureNames.Clear();
             m_DisabledPasses = null;
             m_Locked = null;
@@ -1976,7 +2013,7 @@ namespace UnityEngine
 
         internal unsafe ulong Sync(bool profileDraw = true)
         {
-            ValidateDeferredEditor();
+            ValidateDeferredEditorForDraw();
             if (profileDraw) MarkProfilerDrawEmitted();
             if (m_Handle == 0) m_Handle = RenderHandles.Next();
             // A maximum LOD changed: the shader goes again when the SubShader it names changed.
