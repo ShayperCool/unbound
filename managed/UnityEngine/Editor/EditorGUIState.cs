@@ -706,8 +706,6 @@ namespace UnityEditor
             }
         }
 
-        internal static bool Foldout(Rect position, bool foldout, GUIContent content) => GUI.Toggle(EditorGUI.IndentedRect(position), foldout, content);
-
         internal static bool Property(Rect position, SerializedProperty property, GUIContent label)
         {
             label = EditorGUI.BeginProperty(position, label, property);
@@ -722,7 +720,11 @@ namespace UnityEditor
                     case SerializedPropertyType.String: property.stringValue = EditorGUI.TextField(position, label, property.stringValue); break;
                     default:
                         if (EditorGUI.DefaultPickerPropertyField(position, property, label)) break;
-                        if (property.hasVisibleChildren) property.isExpanded = Foldout(position, property.isExpanded, label);
+                        // Unity's DefaultPropertyField: a foldout that also toggles on its label.
+                        if (property.hasVisibleChildren)
+                            property.isExpanded = EditorGUI.Unmeasured("UnityEditor.EditorGUI.Foldout")
+                                ? property.isExpanded
+                                : EditorGUI.Foldout(position, property.isExpanded, label, true, EditorStyles.foldout);
                         else Label(position, label);
                         break;
                 }

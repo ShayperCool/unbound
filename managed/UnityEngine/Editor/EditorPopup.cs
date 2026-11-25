@@ -78,6 +78,8 @@ namespace UnityEditor
 
         internal static int DoPopup(Rect position, int controlID, int selected, GUIContent[] popupValues, Func<int, bool> checkEnabled, GUIStyle style)
         {
+            // (Outside OnGUI there is no event: Mono's NullReferenceException, as the Editor's.)
+            RequireGUI();
             selected = PopupCallbackInfo.GetSelectedValueForControl(controlID, selected);
             var current = Event.current;
             switch (current.type)

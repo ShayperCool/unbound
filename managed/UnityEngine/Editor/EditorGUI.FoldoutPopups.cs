@@ -13,13 +13,19 @@ namespace UnityEditor
         static int s_DragUpdatedOverID;
         static double s_FoldoutDestTime;
 
-        public static bool Foldout(Rect position, bool foldout, string content) => Foldout(position, foldout, content, EditorStyles.foldout);
-        public static bool Foldout(Rect position, bool foldout, string content, GUIStyle style) => Foldout(position, foldout, new GUIContent(content), style);
-        public static bool Foldout(Rect position, bool foldout, string content, bool toggleOnLabelClick) => Foldout(position, foldout, new GUIContent(content), toggleOnLabelClick, EditorStyles.foldout);
-        public static bool Foldout(Rect position, bool foldout, string content, bool toggleOnLabelClick, GUIStyle style) => Foldout(position, foldout, new GUIContent(content), toggleOnLabelClick, style);
-        public static bool Foldout(Rect position, bool foldout, GUIContent content) => Foldout(position, foldout, content, EditorStyles.foldout);
+        // The forms with the Editor skin's styles: only this release family's styles are measured;
+        // another family's report themselves and keep the value given, as EditorGUI.Popup's do.
+        public static bool Foldout(Rect position, bool foldout, string content) =>
+            Unmeasured("UnityEditor.EditorGUI.Foldout") ? foldout : Foldout(position, foldout, content, EditorStyles.foldout);
+        public static bool Foldout(Rect position, bool foldout, string content, GUIStyle style) => Foldout(position, foldout, EditorGUIUtility.TempContent(content), style);
+        public static bool Foldout(Rect position, bool foldout, string content, bool toggleOnLabelClick) =>
+            Unmeasured("UnityEditor.EditorGUI.Foldout") ? foldout : Foldout(position, foldout, EditorGUIUtility.TempContent(content), toggleOnLabelClick, EditorStyles.foldout);
+        public static bool Foldout(Rect position, bool foldout, string content, bool toggleOnLabelClick, GUIStyle style) => Foldout(position, foldout, EditorGUIUtility.TempContent(content), toggleOnLabelClick, style);
+        public static bool Foldout(Rect position, bool foldout, GUIContent content) =>
+            Unmeasured("UnityEditor.EditorGUI.Foldout") ? foldout : Foldout(position, foldout, content, EditorStyles.foldout);
         public static bool Foldout(Rect position, bool foldout, GUIContent content, GUIStyle style) => Foldout(position, foldout, content, false, style);
-        public static bool Foldout(Rect position, bool foldout, GUIContent content, bool toggleOnLabelClick) => Foldout(position, foldout, content, toggleOnLabelClick, EditorStyles.foldout);
+        public static bool Foldout(Rect position, bool foldout, GUIContent content, bool toggleOnLabelClick) =>
+            Unmeasured("UnityEditor.EditorGUI.Foldout") ? foldout : Foldout(position, foldout, content, toggleOnLabelClick, EditorStyles.foldout);
         public static bool Foldout(Rect position, bool foldout, GUIContent content, bool toggleOnLabelClick, GUIStyle style) => FoldoutInternal(position, foldout, content, toggleOnLabelClick, style);
 
         internal static bool FoldoutInternal(Rect position, bool foldout, GUIContent content, bool toggleOnLabelClick, GUIStyle style)
@@ -33,6 +39,8 @@ namespace UnityEditor
             }
 
             int id = GUIUtility.GetControlID(s_FoldoutHash, FocusType.Keyboard, position);
+            // (Outside OnGUI there is no event: Mono's NullReferenceException, as the Editor's.)
+            RequireGUI();
             EventType eventType = Event.current.type;
             // A disabled foldout still takes mouse events, so it can be expanded and collapsed.
             if (!GUI.enabled && GUIClip.enabled && (Event.current.rawType == EventType.MouseDown || Event.current.rawType == EventType.MouseDrag || Event.current.rawType == EventType.MouseUp))
@@ -133,21 +141,21 @@ namespace UnityEditor
         }
 
         public static int IntPopup(Rect position, int selectedValue, string[] displayedOptions, int[] optionValues) =>
-            IntPopup(position, selectedValue, displayedOptions, optionValues, EditorStyles.popup);
+            Unmeasured("UnityEditor.EditorGUI.IntPopup") ? selectedValue : IntPopup(position, selectedValue, displayedOptions, optionValues, EditorStyles.popup);
         public static int IntPopup(Rect position, int selectedValue, string[] displayedOptions, int[] optionValues, GUIStyle style) =>
             IntPopup(position, GUIContent.none, selectedValue, Contents(displayedOptions), optionValues, style);
         public static int IntPopup(Rect position, int selectedValue, GUIContent[] displayedOptions, int[] optionValues) =>
-            IntPopup(position, selectedValue, displayedOptions, optionValues, EditorStyles.popup);
+            Unmeasured("UnityEditor.EditorGUI.IntPopup") ? selectedValue : IntPopup(position, selectedValue, displayedOptions, optionValues, EditorStyles.popup);
         public static int IntPopup(Rect position, int selectedValue, GUIContent[] displayedOptions, int[] optionValues, GUIStyle style) =>
             IntPopup(position, GUIContent.none, selectedValue, displayedOptions, optionValues, style);
         public static int IntPopup(Rect position, GUIContent label, int selectedValue, GUIContent[] displayedOptions, int[] optionValues) =>
-            IntPopup(position, label, selectedValue, displayedOptions, optionValues, EditorStyles.popup);
+            Unmeasured("UnityEditor.EditorGUI.IntPopup") ? selectedValue : IntPopup(position, label, selectedValue, displayedOptions, optionValues, EditorStyles.popup);
         public static int IntPopup(Rect position, GUIContent label, int selectedValue, GUIContent[] displayedOptions, int[] optionValues, GUIStyle style) =>
             IntPopupInternal(position, label, selectedValue, displayedOptions, optionValues, style);
         public static int IntPopup(Rect position, string label, int selectedValue, string[] displayedOptions, int[] optionValues) =>
-            IntPopup(position, label, selectedValue, displayedOptions, optionValues, EditorStyles.popup);
+            Unmeasured("UnityEditor.EditorGUI.IntPopup") ? selectedValue : IntPopup(position, label, selectedValue, displayedOptions, optionValues, EditorStyles.popup);
         public static int IntPopup(Rect position, string label, int selectedValue, string[] displayedOptions, int[] optionValues, GUIStyle style) =>
-            IntPopup(position, new GUIContent(label), selectedValue, Contents(displayedOptions), optionValues, style);
+            IntPopup(position, EditorGUIUtility.TempContent(label), selectedValue, Contents(displayedOptions), optionValues, style);
 
         static int IntPopupInternal(Rect position, GUIContent label, int selectedValue, GUIContent[] displayedOptions, int[] optionValues, GUIStyle style)
         {
@@ -173,16 +181,21 @@ namespace UnityEditor
         }
 
         public static void MinMaxSlider(Rect position, string label, ref float minValue, ref float maxValue, float minLimit, float maxLimit) =>
-            MinMaxSlider(position, new GUIContent(label), ref minValue, ref maxValue, minLimit, maxLimit);
+            MinMaxSlider(position, EditorGUIUtility.TempContent(label), ref minValue, ref maxValue, minLimit, maxLimit);
 
+        // (Every form draws with the skin's min-max thumb, so every form is measured per family.)
         public static void MinMaxSlider(Rect position, GUIContent label, ref float minValue, ref float maxValue, float minLimit, float maxLimit)
         {
+            if (Unmeasured("UnityEditor.EditorGUI.MinMaxSlider")) return;
             int id = GUIUtility.GetControlID(s_MinMaxSliderHash, FocusType.Passive);
             DoMinMaxSlider(PrefixLabel(position, id, label), id, ref minValue, ref maxValue, minLimit, maxLimit);
         }
 
-        public static void MinMaxSlider(Rect position, ref float minValue, ref float maxValue, float minLimit, float maxLimit) =>
+        public static void MinMaxSlider(Rect position, ref float minValue, ref float maxValue, float minLimit, float maxLimit)
+        {
+            if (Unmeasured("UnityEditor.EditorGUI.MinMaxSlider")) return;
             DoMinMaxSlider(IndentedRect(position), GUIUtility.GetControlID(s_MinMaxSliderHash, FocusType.Passive), ref minValue, ref maxValue, minLimit, maxLimit);
+        }
 
         [Obsolete("Switch the order of the first two parameters.")]
         public static void MinMaxSlider(GUIContent label, Rect position, ref float minValue, ref float maxValue, float minLimit, float maxLimit) =>
@@ -192,12 +205,17 @@ namespace UnityEditor
         {
             float size = maxValue - minValue;
             BeginChangeCheck();
+            // (Outside OnGUI GUI.skin throws first: "You can only call GUI functions from inside OnGUI.")
             EditorGUIExt.DoMinMaxSlider(position, id, ref minValue, ref size, minLimit, maxLimit, minLimit, maxLimit, GUI.skin.horizontalSlider, EditorStyles.minMaxHorizontalSliderThumb, true);
             if (EndChangeCheck())
                 maxValue = minValue + size;
         }
 
-        public static void SelectableLabel(Rect position, string text) => SelectableLabel(position, text, EditorStyles.label);
+        public static void SelectableLabel(Rect position, string text)
+        {
+            if (Unmeasured("UnityEditor.EditorGUI.SelectableLabel")) return;
+            SelectableLabel(position, text, EditorStyles.label);
+        }
 
         public static void SelectableLabel(Rect position, string text, GUIStyle style) => SelectableLabelInternal(position, text, style);
 
@@ -234,6 +252,7 @@ namespace UnityEditor
         internal static void SelectableLabelInternal(Rect position, string text, GUIStyle style)
         {
             int id = GUIUtility.GetControlID(s_SelectableLabelHash, FocusType.Keyboard, position);
+            RequireGUI();
             var sendEventToTextEditor = SendEventToTextEditor(id, Event.current);
             // The cursor is hidden while the label edits (Unity's CursorColorScope).
             var settings = GUI.skin.settings;
@@ -251,13 +270,19 @@ namespace UnityEditor
 
     public sealed partial class EditorGUILayout
     {
-        public static bool Foldout(bool foldout, string content) => Foldout(foldout, content, EditorStyles.foldout);
-        public static bool Foldout(bool foldout, string content, GUIStyle style) => Foldout(foldout, new GUIContent(content), false, style);
-        public static bool Foldout(bool foldout, GUIContent content) => Foldout(foldout, content, EditorStyles.foldout);
+        // (The skin-styled forms are measured per family, as EditorGUI's; another family's take no
+        // layout space.)
+        public static bool Foldout(bool foldout, string content) =>
+            EditorGUI.Unmeasured("UnityEditor.EditorGUILayout.Foldout") ? foldout : Foldout(foldout, content, EditorStyles.foldout);
+        public static bool Foldout(bool foldout, string content, GUIStyle style) => Foldout(foldout, EditorGUIUtility.TempContent(content), false, style);
+        public static bool Foldout(bool foldout, GUIContent content) =>
+            EditorGUI.Unmeasured("UnityEditor.EditorGUILayout.Foldout") ? foldout : Foldout(foldout, content, EditorStyles.foldout);
         public static bool Foldout(bool foldout, GUIContent content, GUIStyle style) => Foldout(foldout, content, false, style);
-        public static bool Foldout(bool foldout, string content, bool toggleOnLabelClick) => Foldout(foldout, content, toggleOnLabelClick, EditorStyles.foldout);
-        public static bool Foldout(bool foldout, string content, bool toggleOnLabelClick, GUIStyle style) => FoldoutInternal(foldout, new GUIContent(content), toggleOnLabelClick, style);
-        public static bool Foldout(bool foldout, GUIContent content, bool toggleOnLabelClick) => Foldout(foldout, content, toggleOnLabelClick, EditorStyles.foldout);
+        public static bool Foldout(bool foldout, string content, bool toggleOnLabelClick) =>
+            EditorGUI.Unmeasured("UnityEditor.EditorGUILayout.Foldout") ? foldout : Foldout(foldout, content, toggleOnLabelClick, EditorStyles.foldout);
+        public static bool Foldout(bool foldout, string content, bool toggleOnLabelClick, GUIStyle style) => FoldoutInternal(foldout, EditorGUIUtility.TempContent(content), toggleOnLabelClick, style);
+        public static bool Foldout(bool foldout, GUIContent content, bool toggleOnLabelClick) =>
+            EditorGUI.Unmeasured("UnityEditor.EditorGUILayout.Foldout") ? foldout : Foldout(foldout, content, toggleOnLabelClick, EditorStyles.foldout);
         public static bool Foldout(bool foldout, GUIContent content, bool toggleOnLabelClick, GUIStyle style) => FoldoutInternal(foldout, content, toggleOnLabelClick, style);
 
         internal static bool FoldoutInternal(bool foldout, GUIContent content, bool toggleOnLabelClick, GUIStyle style)
@@ -267,30 +292,40 @@ namespace UnityEditor
         }
 
         public static int IntPopup(int selectedValue, string[] displayedOptions, int[] optionValues, params GUILayoutOption[] options) =>
-            IntPopup(selectedValue, displayedOptions, optionValues, EditorStyles.popup, options);
+            EditorGUI.Unmeasured("UnityEditor.EditorGUILayout.IntPopup") ? selectedValue : IntPopup(selectedValue, displayedOptions, optionValues, EditorStyles.popup, options);
         public static int IntPopup(int selectedValue, string[] displayedOptions, int[] optionValues, GUIStyle style, params GUILayoutOption[] options) =>
             EditorGUI.IntPopup(GetControlRect(false, EditorGUI.kSingleLineHeight, style, options), selectedValue, displayedOptions, optionValues, style);
         public static int IntPopup(int selectedValue, GUIContent[] displayedOptions, int[] optionValues, params GUILayoutOption[] options) =>
-            IntPopup(selectedValue, displayedOptions, optionValues, EditorStyles.popup, options);
+            EditorGUI.Unmeasured("UnityEditor.EditorGUILayout.IntPopup") ? selectedValue : IntPopup(selectedValue, displayedOptions, optionValues, EditorStyles.popup, options);
         public static int IntPopup(int selectedValue, GUIContent[] displayedOptions, int[] optionValues, GUIStyle style, params GUILayoutOption[] options) =>
             EditorGUI.IntPopup(GetControlRect(false, EditorGUI.kSingleLineHeight, style, options), GUIContent.none, selectedValue, displayedOptions, optionValues, style);
         public static int IntPopup(string label, int selectedValue, string[] displayedOptions, int[] optionValues, params GUILayoutOption[] options) =>
-            IntPopup(label, selectedValue, displayedOptions, optionValues, EditorStyles.popup, options);
+            EditorGUI.Unmeasured("UnityEditor.EditorGUILayout.IntPopup") ? selectedValue : IntPopup(label, selectedValue, displayedOptions, optionValues, EditorStyles.popup, options);
         public static int IntPopup(string label, int selectedValue, string[] displayedOptions, int[] optionValues, GUIStyle style, params GUILayoutOption[] options) =>
             EditorGUI.IntPopup(GetControlRect(true, EditorGUI.kSingleLineHeight, style, options), label, selectedValue, displayedOptions, optionValues, style);
         public static int IntPopup(GUIContent label, int selectedValue, GUIContent[] displayedOptions, int[] optionValues, params GUILayoutOption[] options) =>
-            IntPopup(label, selectedValue, displayedOptions, optionValues, EditorStyles.popup, options);
+            EditorGUI.Unmeasured("UnityEditor.EditorGUILayout.IntPopup") ? selectedValue : IntPopup(label, selectedValue, displayedOptions, optionValues, EditorStyles.popup, options);
         public static int IntPopup(GUIContent label, int selectedValue, GUIContent[] displayedOptions, int[] optionValues, GUIStyle style, params GUILayoutOption[] options) =>
             EditorGUI.IntPopup(GetControlRect(true, EditorGUI.kSingleLineHeight, style, options), label, selectedValue, displayedOptions, optionValues, style);
 
-        public static void MinMaxSlider(ref float minValue, ref float maxValue, float minLimit, float maxLimit, params GUILayoutOption[] options) =>
+        public static void MinMaxSlider(ref float minValue, ref float maxValue, float minLimit, float maxLimit, params GUILayoutOption[] options)
+        {
+            if (EditorGUI.Unmeasured("UnityEditor.EditorGUILayout.MinMaxSlider")) return;
             EditorGUI.MinMaxSlider(GetSliderRect(false, options), ref minValue, ref maxValue, minLimit, maxLimit);
+        }
         public static void MinMaxSlider(string label, ref float minValue, ref float maxValue, float minLimit, float maxLimit, params GUILayoutOption[] options) =>
-            MinMaxSlider(new GUIContent(label), ref minValue, ref maxValue, minLimit, maxLimit, options);
-        public static void MinMaxSlider(GUIContent label, ref float minValue, ref float maxValue, float minLimit, float maxLimit, params GUILayoutOption[] options) =>
+            MinMaxSlider(EditorGUIUtility.TempContent(label), ref minValue, ref maxValue, minLimit, maxLimit, options);
+        public static void MinMaxSlider(GUIContent label, ref float minValue, ref float maxValue, float minLimit, float maxLimit, params GUILayoutOption[] options)
+        {
+            if (EditorGUI.Unmeasured("UnityEditor.EditorGUILayout.MinMaxSlider")) return;
             EditorGUI.MinMaxSlider(GetSliderRect(true, options), label, ref minValue, ref maxValue, minLimit, maxLimit);
+        }
 
-        public static void SelectableLabel(string text, params GUILayoutOption[] options) => SelectableLabel(text, EditorStyles.label, options);
+        public static void SelectableLabel(string text, params GUILayoutOption[] options)
+        {
+            if (EditorGUI.Unmeasured("UnityEditor.EditorGUILayout.SelectableLabel")) return;
+            SelectableLabel(text, EditorStyles.label, options);
+        }
 
         public static void SelectableLabel(string text, GUIStyle style, params GUILayoutOption[] options) =>
             EditorGUI.SelectableLabel(GetControlRect(false, EditorGUI.kSingleLineHeight * 2, style, options), text, style);

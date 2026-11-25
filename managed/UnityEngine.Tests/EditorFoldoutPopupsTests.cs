@@ -80,6 +80,61 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
+        public void OutsideOnGuiTheControlsThrowMonosNullReference()
+        {
+            using var release = TestRelease.Pin(TestRelease.Measured);
+            var previous = Event.current;
+            var clips = GUIClip.Save();
+            Event.current = null;
+            GUIClip.ClearForTests();
+            try
+            {
+                // editorui EditorGUI.Foldout outside OnGUI: Mono's message, without a final period.
+                var r = new Rect(0, 0, 100, 18);
+                float min = 1f, max = 2f;
+                foreach (var call in new Action[] {
+                             () => EditorGUI.Foldout(r, true, "x", s_Foldout), () => EditorGUI.IntPopup(r, 20, new[] { "a" }, new[] { 20 }, s_Popup),
+                             () => EditorGUI.SelectableLabel(r, "s", s_Popup) })
+                    Assert.Equal("Object reference not set to an instance of an object", Assert.Throws<NullReferenceException>(call).Message);
+                // The min-max slider reads GUI.skin first (outside/editorGUI).
+                Assert.Equal("You can only call GUI functions from inside OnGUI.",
+                    Assert.Throws<ArgumentException>(() => EditorGUI.MinMaxSlider(r, ref min, ref max, 0f, 10f)).Message);
+            }
+            finally
+            {
+                Event.current = previous;
+                GUIClip.Restore(clips);
+            }
+        }
+
+        [Fact]
+        public void AnUnmeasuredFamilysSkinStyledControlsKeepTheirValues()
+        {
+            using var release = TestRelease.Pin(TestRelease.Unmeasured);
+            var r = new Rect(0, 0, 100, 18);
+            float min = 1f, max = 2f;
+            Assert.True(EditorGUI.Foldout(r, true, "x"));
+            Assert.Equal(20, EditorGUI.IntPopup(r, 20, new[] { "a" }, new[] { 10 }));
+            EditorGUI.MinMaxSlider(r, ref min, ref max, 0f, 10f);
+            Assert.Equal((1f, 2f), (min, max));
+            Assert.False(EditorGUILayout.Foldout(false, "x"));
+            Assert.Equal(30, EditorGUILayout.IntPopup(30, new[] { "a" }, new[] { 10 }));
+        }
+
+        // The Editor skin's slider and min-max thumb paddings (editorskin): 19 points per unit on a
+        // 200-point track over 0..10.
+        static readonly GUIStyle s_Slider = new GUIStyle { padding = new RectOffset(-1, -1, 0, 0) };
+        static readonly GUIStyle s_Thumb = new GUIStyle { padding = new RectOffset(6, 6, 0, 0) };
+
+        static void Slide(Rect r, ref float min, ref float max)
+        {
+            float size = max - min;
+            int id = GUIUtility.GetControlID("EditorMinMaxSlider".GetHashCode(), FocusType.Passive);
+            EditorGUIExt.DoMinMaxSlider(r, id, ref min, ref size, 0f, 10f, 0f, 10f, s_Slider, s_Thumb, true);
+            max = min + size;
+        }
+
+        [Fact]
         public void AMinMaxSlidersThumbMovesBothEnds()
         {
             using var release = TestRelease.Pin(TestRelease.Measured);
@@ -88,13 +143,13 @@ namespace UnityEngine.Tests
             float min = 2f, max = 6f;
             try
             {
-                // script/minMax.thumb.*: the thumb dragged 20 points moves both ends by the same amount.
-                Pass(Mouse(EventType.MouseDown, r.x + 80, r.center.y), () => { EditorGUI.MinMaxSlider(r, ref min, ref max, 0f, 10f); return 0; });
+                // script/minMax.thumb.*: the thumb dragged 20 points moves both ends by 20/19.
+                Pass(Mouse(EventType.MouseDown, r.x + 80, r.center.y), () => { Slide(r, ref min, ref max); return 0; });
                 Pass(new Event { type = EventType.MouseDrag, mousePosition = new Vector2(r.x + 100, r.center.y), delta = new Vector2(20, 0) },
-                    () => { EditorGUI.MinMaxSlider(r, ref min, ref max, 0f, 10f); return 0; });
-                Assert.True(min > 2f);
-                Assert.Equal(4f, max - min, 4);
-                Pass(Mouse(EventType.MouseUp, r.x + 100, r.center.y), () => { EditorGUI.MinMaxSlider(r, ref min, ref max, 0f, 10f); return 0; });
+                    () => { Slide(r, ref min, ref max); return 0; });
+                Assert.Equal(3.05263162f, min, 6);
+                Assert.Equal(7.05263138f, max, 6);
+                Pass(Mouse(EventType.MouseUp, r.x + 100, r.center.y), () => { Slide(r, ref min, ref max); return 0; });
                 Assert.Equal(0, GUIUtility.hotControl);
             }
             finally { Reset(); }
