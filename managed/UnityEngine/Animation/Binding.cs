@@ -1201,8 +1201,9 @@ namespace Unbound.Runtime
 
             // An engine component's property the Editor does not offer as a float binding animates
             // nothing (measured: tests/projects/enginediscrete play.*.float, with the offered bindings
-            // of tests/projects/animbindings); unmeasured engine types keep the reflection below.
-            if (component is not MonoBehaviour && UnityEditor.AnimationUtility.OffersEngineFloat(component.GetType(), attribute) == false)
+            // of tests/projects/animbindings); unmeasured engine types keep the reflection below. An
+            // Animator's float curves are its parameters, handled above and below.
+            if (component is not MonoBehaviour && component is not Animator && UnityEditor.AnimationUtility.OffersEngineFloat(component.GetType(), attribute) == false)
                 return spec;
             // Scripts (and engine objects whose fields carry the serialized names): by reflection.
             var chain = FieldChain(component.GetType(), attribute, component is MonoBehaviour);
