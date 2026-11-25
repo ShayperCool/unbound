@@ -502,10 +502,14 @@ namespace UnityEngine
         }
 
         /// <summary>The validation a draw makes: a model's imported material's; a loaded material
-        /// asset is not validated by drawing (<see cref="PendingValidation.Loaded"/>).</summary>
+        /// asset's in Edit mode only (an Edit mode render validates what it draws, a Play mode draw
+        /// does not: tests/projects/graphqueue scene.*, tests/projects/urpwrites played.LitStaleDrawn,
+        /// <see cref="PendingValidation.Loaded"/>).</summary>
         internal void ValidateDeferredEditorForDraw()
         {
-            if (PendingEditorValidation == PendingValidation.Imported) ValidateDeferredEditor();
+            var pending = PendingEditorValidation;
+            if (pending == PendingValidation.Imported || (pending == PendingValidation.Loaded && !Unbound.Runtime.EditorSession.IsPlaying))
+                ValidateDeferredEditor();
         }
 
         internal int QueueForDraw()

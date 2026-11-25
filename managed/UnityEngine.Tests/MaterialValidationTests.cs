@@ -305,6 +305,34 @@ namespace UnityEngine.Tests
             });
         }
 
+        /// <summary>An Edit mode draw validates a loaded asset it draws, a Play mode draw does not
+        /// (tests/projects/graphqueue scene.*: the Edit mode render before Play;
+        /// tests/projects/urpwrites played.LitStaleDrawn).</summary>
+        [Fact]
+        public void AnEditModeDrawValidatesALoadedAssetAPlayModeDrawDoesNot()
+        {
+            using var release = TestRelease.Pin(TestRelease.Measured);
+            bool playing = EditorSession.IsPlaying;
+            WithProjectEditors(() =>
+            {
+                try
+                {
+                    EditorSession.IsPlaying = true;
+                    var played = ProjectEdited();
+                    MaterialValidation.ValidateLoaded(FileOf(played));
+                    played.QueueForDraw();
+                    played.Sync();
+                    Assert.Equal("", Keywords(played));
+                    EditorSession.IsPlaying = false;
+                    var edited = ProjectEdited();
+                    MaterialValidation.ValidateLoaded(FileOf(edited));
+                    edited.QueueForDraw();
+                    Assert.Equal("PROJECT_VALIDATED", Keywords(edited));
+                }
+                finally { EditorSession.IsPlaying = playing; }
+            });
+        }
+
         /// <summary>A release whose validation timing is unmeasured validates a loaded material as it
         /// loads, as before.</summary>
         [Fact]

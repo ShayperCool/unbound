@@ -50,14 +50,17 @@ namespace Unbound.Runtime
         }
 
         /// <summary>
-        /// Play mode starts in an Editor that has drawn its views (as for the pipeline's shader tag,
+        /// Play mode started directly from its startup scene starts as in an Editor that has drawn
+        /// its views (as for the pipeline's shader tag,
         /// <see cref="UnityEngine.Rendering.RenderPipelineManager.ActivateConfiguredPipelineTag"/>):
         /// an Edit mode render validates the materials it draws, which a Play mode draw does not, so
         /// the materials the startup scene's renderers draw were validated before Play mode (matches
         /// the Unity 6000.0.71f1 Editor, tests/projects/graphqueue scene.start;
-        /// tests/projects/urpwrites played.LitStaleDrawn). Which renderers a real Editor's views
-        /// reach is unmeasured (Unbound: every active, enabled renderer of the scene), as are other
-        /// drawn materials (skybox, UI, terrain).
+        /// tests/projects/urpwrites played.LitStaleDrawn). A session that starts in Edit mode
+        /// validates them as it draws there (<see cref="Material.ValidateDeferredEditorForDraw"/>).
+        /// Which renderers a real Editor's views reach is unmeasured (Unbound: every enabled renderer
+        /// of the scene whose object and parents are saved active), as are other drawn materials
+        /// (skybox, UI, terrain).
         /// </summary>
         internal static void ValidateDrawnBeforePlay(SceneData scene)
         {
@@ -175,9 +178,10 @@ namespace Unbound.Runtime
         /// <summary>A material asset loaded from its file, with any editor: its first property value
         /// access through the Material API (Get*, Set*, Has*, HasProperty, <c>color</c>,
         /// <c>mainTexture</c>), SetPass or a shader set validates it; reading its keywords, render
-        /// queue, tags or passes, changing keywords or passes, copies and drawing do not
-        /// (tests/projects/urpwrites with URP, tests/projects/materialvalidation Later* with the
-        /// built-in pipeline). The Editor can validate it again at a later access
+        /// queue, tags or passes, changing keywords or passes, copies and drawing in Play mode do
+        /// not, an Edit mode draw does (tests/projects/urpwrites with URP,
+        /// tests/projects/materialvalidation Later* with the built-in pipeline,
+        /// tests/projects/graphqueue scene.*). The Editor can validate it again at a later access
         /// (tests/projects/materialvalidation ProjectGui._Value); Unbound validates it once.</summary>
         Loaded,
     }
