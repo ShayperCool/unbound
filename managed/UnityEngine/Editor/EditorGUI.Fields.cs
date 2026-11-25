@@ -1407,12 +1407,8 @@ namespace UnityEditor
         static Rect NumberRect(bool hasLabel, GUIStyle style, GUILayoutOption[] options) =>
             GetControlRect(hasLabel, EditorGUIUtility.singleLineHeight, style, options);
 
-        internal static Rect GetSliderRect(bool hasLabel, params GUILayoutOption[] options)
-        {
-            return GUILayoutUtility.GetRect(hasLabel ? kLabelFloatMinW : EditorGUIUtility.fieldWidth,
-                kLabelFloatMaxW + EditorGUI.kSpacing + EditorGUI.kSliderMaxW,
-                EditorGUIUtility.singleLineHeight, EditorGUIUtility.singleLineHeight, GUI.skin.horizontalSlider, options);
-        }
+        internal static Rect GetSliderRect(bool hasLabel, params GUILayoutOption[] options) =>
+            GetSliderRect(hasLabel, GUI.skin.horizontalSlider, options);
 
         public static string TextField(string text, params GUILayoutOption[] options) => TextField(text, EditorGUI.TextStyle, options);
         public static string TextField(string text, GUIStyle style, params GUILayoutOption[] options) => EditorGUI.TextField(NumberRect(false, style, options), text, style);

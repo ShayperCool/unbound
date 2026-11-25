@@ -136,8 +136,8 @@ namespace UnityEditor
             EndProperty();
         }
 
-        // (Outside OnGUI the Editor throws before it looks the style up by name: no "Unable to find
-        // style" warning, tests/projects/editortogglefields outside/* and logs.)
+        // (Outside OnGUI the Editor throws with no "Unable to find style" warning,
+        // tests/projects/editortogglefields outside/editorGUI and logs: the event is checked first.)
         public static void DropShadowLabel(Rect position, string text)
         {
             RequireGUI();
@@ -221,6 +221,9 @@ namespace UnityEditor
             EditorGUI.RequireGUI();
             Event evt = Event.current;
 
+            // (A mixed value draws with the Editor skin's style: measured for this family only.)
+            if (EditorGUI.showMixedValue && EditorGUI.Unmeasured("UnityEditor.EditorGUI.Toggle"))
+                return value;
             if (EditorGUI.showMixedValue)
                 style = mixedToggleStyle;
 
@@ -270,8 +273,11 @@ namespace UnityEditor
             return EditorGUI.Toggle(r, label, value);
         }
 
+        // (The layout rect is sized with the Editor skin's number field: every layout form is
+        // measured per family.)
         public static bool Toggle(bool value, GUIStyle style, params GUILayoutOption[] options)
         {
+            if (EditorGUI.Unmeasured("UnityEditor.EditorGUILayout.Toggle")) return value;
             Rect r = GetToggleRect(false, options);
             return EditorGUI.Toggle(r, value, style);
         }
@@ -281,6 +287,7 @@ namespace UnityEditor
 
         public static bool Toggle(GUIContent label, bool value, GUIStyle style, params GUILayoutOption[] options)
         {
+            if (EditorGUI.Unmeasured("UnityEditor.EditorGUILayout.Toggle")) return value;
             Rect r = GetToggleRect(true, options);
             return EditorGUI.Toggle(r, label, value, style);
         }
