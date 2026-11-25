@@ -54,6 +54,8 @@ namespace UnityEngine.Tests
             return shader;
         }
 
+        static int Hits(string member) => Unbound.Runtime.Stubs.HitReport().FirstOrDefault(h => h.Key == member).Value;
+
         static string[] MaterialNames(GameObject go, System.Type type) =>
             Names(go, type).Where(n => n.StartsWith("material.")).Select(n => n.Substring(9)).ToArray();
 
@@ -153,6 +155,41 @@ namespace UnityEngine.Tests
                 Object.DestroyImmediate(go);
                 Object.DestroyImmediate(plain);
                 Object.DestroyImmediate(second);
+            }
+        }
+
+        // The unmeasured cases report: more than two slots, a name two shaders declare, and a
+        // texture's _TexelSize read through a binding (counted: a notice logs only its first use).
+        [Fact]
+        public void TheUnmeasuredMaterialCasesReport()
+        {
+            using var release = TestRelease.Pin(TestRelease.Measured);
+            const string slots = "AnimationUtility.GetAnimatableBindings material slots";
+            const string shared = "AnimationUtility.GetAnimatableBindings names shaders share";
+            const string texel = "Material property binding texel size and HDR channels";
+            int slotsBefore = Hits(slots), sharedBefore = Hits(shared), texelBefore = Hits(texel);
+            var a = new Material(ProbeShader("Q758 test/shared a", ("_L4Shared", Rendering.ShaderPropertyType.Float, 0)));
+            var b = new Material(ProbeShader("Q758 test/shared b", ("_L4Shared", Rendering.ShaderPropertyType.Float, 0)));
+            var go = new GameObject("renderer");
+            try
+            {
+                var renderer = go.AddComponent<MeshRenderer>();
+                renderer.sharedMaterials = new[] { a, a, a };
+                AnimationUtility.GetAnimatableBindings(go, go);
+                Assert.Equal(slotsBefore + 1, Hits(slots));
+                Assert.Equal(sharedBefore, Hits(shared));
+                renderer.sharedMaterials = new[] { a, b };
+                AnimationUtility.GetAnimatableBindings(go, go);
+                Assert.Equal(sharedBefore + 1, Hits(shared));
+                Assert.Equal(slotsBefore + 1, Hits(slots));
+                AnimationUtility.GetFloatValue(go, EditorCurveBinding.FloatCurve("", typeof(MeshRenderer), "material._MainTex_TexelSize.x"), out _);
+                Assert.Equal(texelBefore + 1, Hits(texel));
+            }
+            finally
+            {
+                Object.DestroyImmediate(go);
+                Object.DestroyImmediate(a);
+                Object.DestroyImmediate(b);
             }
         }
 
