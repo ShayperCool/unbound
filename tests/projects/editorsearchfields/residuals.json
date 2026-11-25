@@ -1,0 +1,19 @@
+{
+  "Where the control id counter stands (Q770, not modelled): in the Editor its other views take ids before the game's first OnGUI, so the first id here is 53 (Unbound 108); every step between the ids matches. The controls' own answers (text, focus, ids taken, GUI.changed) are compared exactly in the other keys": [
+    "ids/layout",
+    "ids/repaint",
+    "ids/script/search.click.down",
+    "ids/script/search.click.up",
+    "ids/script/search.type.a",
+    "ids/script/search.type.b",
+    "ids/script/search.down",
+    "ids/script/search.up",
+    "ids/script/search.cancel.up",
+    "ids/script/toolbar.cancel.up",
+    "ids/script/find.validate",
+    "ids/script/find.execute",
+    "ids/script/find.repaint",
+    "ids/script/find.type.c",
+    "ids/script/other.command"
+  ]
+}

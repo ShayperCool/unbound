@@ -1,0 +1,12 @@
+{
+  "commands": [
+    "python3 tests/projects/editorsearchfields/run.py gate"
+  ],
+  "summary": "editorsearchfields: .*",
+  "engine_paths": [
+    "managed/UnityEngine/Editor/",
+    "managed/UnityEngine/IMGUI/",
+    "tests/projects/editorsearchfields/",
+    "tests/projects/imguiskin/"
+  ]
+}
