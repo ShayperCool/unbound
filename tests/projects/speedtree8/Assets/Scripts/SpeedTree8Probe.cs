@@ -313,10 +313,8 @@ public sealed class SpeedTree8Probe : MonoBehaviour
         Rec(t, importer.textureType + " srgb " + importer.sRGBTexture + " alpha " + importer.alphaSource
             + " transparency " + importer.alphaIsTransparency + " mips " + importer.mipmapEnabled + " wrap " + importer.wrapMode
             + " filter " + importer.filterMode + " max " + importer.maxTextureSize + " readable " + importer.isReadable);
-        // What the .meta file says of the settings the trees' import changes.
-        if (s_Fresh)
-            Rec(t + "/metafile", string.Join(" ", File.ReadAllLines(path + ".meta").Select(l => l.Trim())
-                .Where(l => l.StartsWith("alphaIsTransparency:", StringComparison.Ordinal) || l.StartsWith("sRGBTexture:", StringComparison.Ordinal))));
+        // The .meta file as the import left it (the trees' import changes some settings).
+        if (s_Fresh) Rec(t + "/metafile", MetaText(path));
     }
 
     /// <summary>Each tree's SpeedTree callbacks in the order its import made them.</summary>

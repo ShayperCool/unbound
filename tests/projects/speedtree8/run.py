@@ -110,6 +110,8 @@ FRESH_VARIANTS = [
     ('Card_Tree_Sample/card-tree-sample.st', 'Card_Tree_Sample/Card_Wind2.st', None, 2),
     # A tree with its .meta whose maps' .meta files lack what the import sets (below).
     ('Card_Tree_Sample/card-tree-sample.st', 'AlphaCheck/Card_Alpha.st', ('a2b2c3d4e5f60718293a4b5c6d7e8f90', {}, True), None),
+    # The same with a colour map that is transparent but does not preserve coverage.
+    ('Card_Tree_Sample/card-tree-sample.st', 'AlphaCheck2/Card_Alpha2.st', ('a5b2c3d4e5f60718293a4b5c6d7e8f90', {}, True), None),
 ]
 # The maps of AlphaCheck/Card_Alpha.st, with the samples' .meta files edited: (sample, copy, guid,
 # settings set).
@@ -118,6 +120,9 @@ FRESH_MAPS = [
      {'alphaIsTransparency': '0'}),
     ('Card_Tree_Sample/card-tree-sample_Extra.png', 'AlphaCheck/card-tree-sample_Extra.png', 'a4b2c3d4e5f60718293a4b5c6d7e8f90',
      {'sRGBTexture': '1'}),
+    ('Card_Tree_Sample/card-tree-sample_Color.png', 'AlphaCheck2/card-tree-sample_Color.png', 'a6b2c3d4e5f60718293a4b5c6d7e8f90',
+     {'mipMapsPreserveCoverage': '0'}),
+    ('Card_Tree_Sample/card-tree-sample_Extra.png', 'AlphaCheck2/card-tree-sample_Extra.png', 'a7b2c3d4e5f60718293a4b5c6d7e8f90', {}),
 ]
 
 
