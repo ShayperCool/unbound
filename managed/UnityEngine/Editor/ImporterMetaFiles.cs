@@ -142,7 +142,8 @@ namespace Unbound.Runtime
                 if (written == original && UnityYamlText.WriteTopLevel(root) == UnityYamlText.WriteTopLevel(defaults))
                 {
                     // Still reported: whether the Editor writes the section then is not known.
-                    foreach (var key in missing) unwritten.Add(key + " (given the value its default reads)");
+                    foreach (var key in missing)
+                        if (!unwritten.Contains(key)) unwritten.Add(key + " (given the value its default reads)");
                     return null;
                 }
             }
@@ -211,10 +212,10 @@ namespace Unbound.Runtime
 
         /// <summary>The settings a texture's section of the current version lacks, at their
         /// defaults in the Editor's order, and the platforms it lacks (DefaultTexturePlatform,
-        /// Standalone, then the installed modules) after its own. A section of another version, or none, is left
-        /// as it is (its settings would take that version's values: unmeasured).</summary>
-        /// <summary><paramref name="templateText"/>: the TextureImporter section at its defaults
-        /// ("" for a release family whose files are not measured: nothing is added).</summary>
+        /// Standalone, then the installed modules) after its own. A section of another version is
+        /// left as it is (its settings would take that version's values: unmeasured).
+        /// <paramref name="templateText"/>: the TextureImporter section at its defaults ("" for a
+        /// release family whose files are not measured: nothing is added).</summary>
         internal static void FillTextureSection(YText section, string templateText)
         {
             if (string.IsNullOrEmpty(templateText)) return;
