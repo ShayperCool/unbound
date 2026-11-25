@@ -1004,50 +1004,69 @@ namespace UnityEngine
             s_ScrollViews.Push(state);
 
             var clip = new Rect(position.x, position.y, position.width, position.height);
-            bool needH = alwaysShowHorizontal, needV = alwaysShowVertical;
-            float hHeight = horizontalScrollbar.fixedHeight + horizontalScrollbar.margin.top;
-            float vWidth = verticalScrollbar.fixedWidth + verticalScrollbar.margin.left;
-            if (needH || viewRect.width > clip.width)
+            // As Unity's GUI.BeginScrollView: Layout reserves the ids of both scrollbars without
+            // measuring them, and a used event takes no ids and keeps the whole rect.
+            switch (Current.type)
             {
-                needH = true;
-                clip.height = position.height - hHeight;
-            }
-            if (needV || viewRect.height > clip.height)
-            {
-                needV = true;
-                clip.width = position.width - vWidth;
-                if (!needH && viewRect.width > clip.width)
+                case EventType.Layout:
+                    GUIUtility.GetControlID(s_SliderHint, FocusType.Passive);
+                    GUIUtility.GetControlID(s_RepeatButtonHint, FocusType.Passive);
+                    GUIUtility.GetControlID(s_RepeatButtonHint, FocusType.Passive);
+                    GUIUtility.GetControlID(s_SliderHint, FocusType.Passive);
+                    GUIUtility.GetControlID(s_RepeatButtonHint, FocusType.Passive);
+                    GUIUtility.GetControlID(s_RepeatButtonHint, FocusType.Passive);
+                    break;
+                case EventType.Used:
+                    break;
+                default:
                 {
-                    needH = true;
-                    clip.height = position.height - hHeight;
-                }
-            }
-            state.visibleRect = new Rect(0, 0, clip.width, clip.height);
+                    bool needH = alwaysShowHorizontal, needV = alwaysShowVertical;
+                    float hHeight = horizontalScrollbar.fixedHeight + horizontalScrollbar.margin.top;
+                    float vWidth = verticalScrollbar.fixedWidth + verticalScrollbar.margin.left;
+                    if (needH || viewRect.width > clip.width)
+                    {
+                        needH = true;
+                        clip.height = position.height - hHeight;
+                    }
+                    if (needV || viewRect.height > clip.height)
+                    {
+                        needV = true;
+                        clip.width = position.width - vWidth;
+                        if (!needH && viewRect.width > clip.width)
+                        {
+                            needH = true;
+                            clip.height = position.height - hHeight;
+                        }
+                    }
+                    state.visibleRect = new Rect(0, 0, clip.width, clip.height);
 
-            if (Current.type == EventType.Repaint && background != GUIStyle.none) background.Draw(position, position.Contains(Current.mousePosition), false, needH && needV, false);
-            if (needH && horizontalScrollbar != GUIStyle.none)
-            {
-                scrollPosition.x = HorizontalScrollbar(new Rect(position.x, position.yMax - horizontalScrollbar.fixedHeight, clip.width, horizontalScrollbar.fixedHeight),
-                    scrollPosition.x, Math.Min(clip.width, viewRect.width), 0f, viewRect.width, horizontalScrollbar);
-            }
-            else
-            {
-                GUIUtility.GetControlID(s_SliderHint, FocusType.Passive);
-                GUIUtility.GetControlID(s_RepeatButtonHint, FocusType.Passive);
-                GUIUtility.GetControlID(s_RepeatButtonHint, FocusType.Passive);
-                scrollPosition.x = horizontalScrollbar != GUIStyle.none ? 0f : Mathf.Clamp(scrollPosition.x, 0f, Math.Max(viewRect.width - position.width, 0f));
-            }
-            if (needV && verticalScrollbar != GUIStyle.none)
-            {
-                scrollPosition.y = VerticalScrollbar(new Rect(clip.xMax + verticalScrollbar.margin.left, clip.y, verticalScrollbar.fixedWidth, clip.height),
-                    scrollPosition.y, Math.Min(clip.height, viewRect.height), 0f, viewRect.height, verticalScrollbar);
-            }
-            else
-            {
-                GUIUtility.GetControlID(s_SliderHint, FocusType.Passive);
-                GUIUtility.GetControlID(s_RepeatButtonHint, FocusType.Passive);
-                GUIUtility.GetControlID(s_RepeatButtonHint, FocusType.Passive);
-                scrollPosition.y = verticalScrollbar != GUIStyle.none ? 0f : Mathf.Clamp(scrollPosition.y, 0f, Math.Max(viewRect.height - position.height, 0f));
+                    if (Current.type == EventType.Repaint && background != GUIStyle.none) background.Draw(position, position.Contains(Current.mousePosition), false, needH && needV, false);
+                    if (needH && horizontalScrollbar != GUIStyle.none)
+                    {
+                        scrollPosition.x = HorizontalScrollbar(new Rect(position.x, position.yMax - horizontalScrollbar.fixedHeight, clip.width, horizontalScrollbar.fixedHeight),
+                            scrollPosition.x, Math.Min(clip.width, viewRect.width), 0f, viewRect.width, horizontalScrollbar);
+                    }
+                    else
+                    {
+                        GUIUtility.GetControlID(s_SliderHint, FocusType.Passive);
+                        GUIUtility.GetControlID(s_RepeatButtonHint, FocusType.Passive);
+                        GUIUtility.GetControlID(s_RepeatButtonHint, FocusType.Passive);
+                        scrollPosition.x = horizontalScrollbar != GUIStyle.none ? 0f : Mathf.Clamp(scrollPosition.x, 0f, Math.Max(viewRect.width - position.width, 0f));
+                    }
+                    if (needV && verticalScrollbar != GUIStyle.none)
+                    {
+                        scrollPosition.y = VerticalScrollbar(new Rect(clip.xMax + verticalScrollbar.margin.left, clip.y, verticalScrollbar.fixedWidth, clip.height),
+                            scrollPosition.y, Math.Min(clip.height, viewRect.height), 0f, viewRect.height, verticalScrollbar);
+                    }
+                    else
+                    {
+                        GUIUtility.GetControlID(s_SliderHint, FocusType.Passive);
+                        GUIUtility.GetControlID(s_RepeatButtonHint, FocusType.Passive);
+                        GUIUtility.GetControlID(s_RepeatButtonHint, FocusType.Passive);
+                        scrollPosition.y = verticalScrollbar != GUIStyle.none ? 0f : Mathf.Clamp(scrollPosition.y, 0f, Math.Max(viewRect.height - position.height, 0f));
+                    }
+                    break;
+                }
             }
             state.scrollPosition = scrollPosition;
             GUIClip.Push(clip, new Vector2(Mathf.Round(-scrollPosition.x - viewRect.x), Mathf.Round(-scrollPosition.y - viewRect.y)), Vector2.zero, false);
