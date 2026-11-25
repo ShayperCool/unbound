@@ -207,18 +207,22 @@ namespace UnityEngine.Tests
             Assert.Equal(blockName, EditorStyleCatalog.BlockNameOfStyle(styleName));
 
         [Fact]
-        public void OnlyTheStylesOfASkinThatHaveABlockChangeAndLoseTheirBackgrounds()
+        public void OnlyTheStylesOfASkinThatHaveABlockChangeAndLoseTheirBackgroundsButNotTheirScaledOnes()
         {
             var catalog = Catalog("Button { padding: 2px 6px; }");
             var skin = ScriptableObject.CreateInstance<GUISkin>();
             var texture = new Texture2D(2, 2);
             skin.button.normal.background = texture;
+            var scaled = new Texture2D(4, 4);
+            skin.button.normal.scaledBackgrounds = new[] { scaled };
             skin.label.normal.background = texture;
             skin.label.padding = new RectOffset(7, 7, 7, 7);
             catalog.ApplyTo(skin);
             Assert.Equal(6, skin.button.padding.left);
             Assert.Equal(2, skin.button.padding.top);
             Assert.Null(skin.button.normal.background);
+            // Its scaled backgrounds stay (tests/projects/editorobjectfields style/*).
+            Assert.Same(scaled, skin.button.normal.scaledBackgrounds[0]);
             Assert.Equal(7, skin.label.padding.left);
             Assert.Same(texture, skin.label.normal.background);
         }

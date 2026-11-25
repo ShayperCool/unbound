@@ -174,13 +174,11 @@ namespace UnityEngine
             set => m_TextColor = value;
         }
 
-        /// <summary>Drops the background and the first scaled background, as the Editor does
-        /// for a style it draws from its style catalog.</summary>
-        internal void ClearBackgrounds()
-        {
-            m_Background = null;
-            if (m_ScaledBackgrounds.Length >= 1) m_ScaledBackgrounds[0] = null;
-        }
+        /// <summary>Drops the background, as the Editor does for a style it draws from its style
+        /// catalog. Its scaled backgrounds stay: the Editor clears the first of a copy of them
+        /// (matches the Unity 6000.0.71f1 Editor, tests/projects/editorobjectfields style/*:
+        /// ObjectField and ColorField keep their @2x images).</summary>
+        internal void ClearBackgrounds() => m_Background = null;
     }
 
     /// <summary>
