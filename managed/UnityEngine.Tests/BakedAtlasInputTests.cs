@@ -312,18 +312,25 @@ namespace UnityEngine.Tests
                 crowdFile.Objects[1] = mixedArea;
                 Assert.Empty(BakedAtlas.Lights(crowdFile, crowdFile.Path));
                 Assert.Contains(capture.Logs, l => l.Contains("'MixedArea' is a Mixed area light"));
+                // (A path's surfaces test 4, 3, 2 and then 1 of a region's lights: with 2 bounces,
+                // 3 are tested at the second.)
                 crowdFile.Objects.Clear();
                 crowdFile.Objects[1] = area;
-                for (int k = 0; k < 4; k++) crowdFile.Objects[2 + k] = Make("Crowd" + k, LightType.Point, LightmapBakeType.Baked);
-                Assert.Equal(5, BakedAtlas.Lights(crowdFile, crowdFile.Path).Count);
-                Assert.Contains(capture.Logs, l => l.Contains("an area light among more than four point, spot or area lights"));
-                crowdFile.Objects.Remove(5);
+                for (int k = 0; k < 3; k++) crowdFile.Objects[2 + k] = Make("Crowd" + k, LightType.Point, LightmapBakeType.Baked);
+                Assert.Equal(4, BakedAtlas.Lights(crowdFile, crowdFile.Path, maxBounces: 2).Count);
+                Assert.Contains(capture.Logs, l => l.Contains("an area light among more"));
                 capture.Logs.Clear();
-                RealtimeGI.s_Warned.Clear();
                 var fewFile = new LoadedFile { Path = "Assets/LitFew.unity", Guid = "40000000000000000000000000000000" };
                 foreach (var pair in crowdFile.Objects) fewFile.Objects[pair.Key] = pair.Value;
-                BakedAtlas.Lights(fewFile, fewFile.Path);
+                // One bounce: all 4 are tested.
+                BakedAtlas.Lights(fewFile, fewFile.Path, maxBounces: 1);
                 Assert.DoesNotContain(capture.Logs, l => l.Contains("an area light among"));
+                // Four bounces: at the last surface 1 is tested, of two lights.
+                var pairFile = new LoadedFile { Path = "Assets/LitPair.unity", Guid = "50000000000000000000000000000000" };
+                pairFile.Objects[1] = area;
+                pairFile.Objects[2] = crowdFile.Objects[2];
+                BakedAtlas.Lights(pairFile, pairFile.Path, maxBounces: 4);
+                Assert.Contains(capture.Logs, l => l.Contains("an area light among more"));
 
                 // A cookie is said and not applied: the light is still of the bake.
                 capture.Logs.Clear();

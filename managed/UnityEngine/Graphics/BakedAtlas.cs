@@ -709,7 +709,8 @@ namespace UnityEngine
         /// soft baked shadows (a Baked Shadow Radius or Angle).</summary>
         internal static bool IsSampled(Light light) =>
             light.type == LightType.Rectangle || light.type == LightType.Disc
-            || (light.shadows == LightShadows.Soft && (light.type == LightType.Directional ? light.shadowAngle : light.shadowRadius) > 0f);
+            || ((light.type == LightType.Directional || light.type == LightType.Point || light.type == LightType.Spot)
+                && light.shadows == LightShadows.Soft && (light.type == LightType.Directional ? light.shadowAngle : light.shadowRadius) > 0f);
 
         /// <summary>The scene's lights that take part in a bake: enabled mixed and baked lights of
         /// active GameObjects, made from its file, each with its colour as the bake takes it
@@ -721,7 +722,7 @@ namespace UnityEngine
         /// lights with non-LUT angular falloff, color temperature under linear intensity, mixed
         /// lights under a render pipeline asset, cookies (ignored), a Baked Shadow Radius or Angle
         /// with hard shadows.</summary>
-        internal static List<object> Lights(LoadedFile file, string path)
+        internal static List<object> Lights(LoadedFile file, string path, int maxBounces = 2)
         {
             var active = new List<(long FileId, Light Light)>();
             foreach (var pair in file.Objects)
@@ -735,8 +736,9 @@ namespace UnityEngine
             var lights = new List<object>(extracted.Count);
             for (int i = 0; i < extracted.Count; i++) lights.Add(extracted[i].Json);
             // An area light among more point, spot and area lights than a surface of the
-            // indirect light tests (4): which of them a bounce picks, by their power and their
-            // place among them, is not measured for area lights.
+            // indirect light tests: which of them a bounce picks, by their power and their place
+            // among them, is not measured for area lights. (A path's first surface tests 4, each
+            // further one 1 fewer, at least 1: the bake's grid, crates/unbound-gi/src/baked/grid.rs.)
             int nonDirectional = 0;
             bool area = false;
             foreach (var light in extracted)
@@ -744,8 +746,9 @@ namespace UnityEngine
                 if (light.Kind != 0) nonDirectional++;
                 if (light.Kind >= 3) area = true;
             }
-            if (area && nonDirectional > 4)
-                Approximated("light-area-picked:" + path, $"{path}: an area light among more than four point, spot or area lights is picked by Unbound's bake (Lightmapping.Bake) as not measured yet.");
+            int tested = Math.Max(1, 5 - Math.Max(1, maxBounces));
+            if (area && maxBounces > 0 && nonDirectional > tested)
+                Approximated("light-area-picked:" + path, $"{path}: an area light among more point, spot or area lights than a surface of the indirect light tests ({tested} with Max Bounces {maxBounces}) is picked by Unbound's bake (Lightmapping.Bake) as not measured yet.");
             return lights;
         }
 
@@ -894,7 +897,7 @@ namespace UnityEngine
             BakeResult result = null;
             try
             {
-                var lights = Lights(file, path);
+                var lights = Lights(file, path, settings.maxBounces);
                 var probes = Probes(file);
                 if (probes.Count > 0 && ProbesMissLights(file))
                     Approximated("probes-soft:" + path, $"{path}: its light probes would take the light of area lights or lights with soft baked shadows, which Unbound's bake (Lightmapping.Bake) does not sample for light probes yet.");

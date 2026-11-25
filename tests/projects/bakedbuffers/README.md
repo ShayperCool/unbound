@@ -454,11 +454,12 @@ horizon: the procedural sky computes its colours per vertex, so the mesh shows),
 gamma-encoded values times the ambient intensity; a black sky where the realtime lightmaps
 take the environment's light (`LightingSettings.realtimeEnvironmentLighting`).
 
-Not baked by Unbound: without a graphics device, the indirect light, the ambient occlusion and
-soft baked shadows (said). Not baked (said, each once per scene): light cookies, lights whose
+Not baked by Unbound: without a graphics device, the indirect light, the ambient occlusion,
+soft baked shadows and area lights (said). Not baked (said, each once per scene): light cookies, lights whose
 intensity multiplies their linear colour (GraphicsSettings.lightsUseLinearIntensity), light
 probes under area lights or soft baked shadows, a Baked Shadow Angle or Radius with hard
-shadows. Not done
+shadows, a mixed area light, an area light among more point, spot or area lights than a
+surface of the indirect light tests (4 at a path's first surface, 1 fewer at each further one). Not done
 and not said: materials that let light through stop it.
 
 Not measured, of where the light comes from: ambient occlusion and emission in a directional
