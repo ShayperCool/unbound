@@ -542,7 +542,7 @@ namespace UnityEditor
                         if (AssetImporter.TryGetCached(path) is UnityEditor.U2D.SpriteAtlasImporter cached && EditorUtility.IsDirty(cached))
                             ImporterMeta.Write(cached);
                         UnityEditor.U2D.SpriteAtlasImporter.ReimportAsset(path, guid);
-                        ProjectImports.Wrote(path);
+                        ProjectImports.Wrote(GUIDToAssetPath(guid));
                         return;
                     }
                     if (!AssetDatabaseRuntime.IsLoaded(guid))
@@ -550,7 +550,7 @@ namespace UnityEditor
                         // Imported now: its import's messages are logged now.
                         AssetDatabaseRuntime.ImportedInSession(guid);
                         AssetDatabaseRuntime.LoadFile(guid);
-                        ProjectImports.Wrote(path);
+                        ProjectImports.Wrote(GUIDToAssetPath(guid));
                         return;
                     }
                 }

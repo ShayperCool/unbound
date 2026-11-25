@@ -161,6 +161,32 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
+        public void AForcedImportOfAnUnloadedAssetIsTheSessionsImport()
+        {
+            ProjectImports.Scan(Initial(), Record, out var start);
+            ProjectImports.ResetForTests();
+            ProjectImports.BaseForTests(start);
+            var logs = new LogCapture();
+            var previous = Debug.unityLogger.logHandler;
+            Debug.unityLogger.logHandler = logs;
+            try
+            {
+                AssetDatabase.List("[{\"guid\":\"c1\",\"path\":\"Assets/M/C.mat\",\"kind\":\"yaml\"}]");
+                // Changed outside, then imported by a tool in a different spelling of its path.
+                Write("Assets/M/C.mat", "c changed outside");
+                AssetDatabase.ImportAsset("assets/m/c.mat", ImportAssetOptions.ForceUpdate);
+                ProjectImports.Settle(Initial(), Record);
+                Assert.Empty(ProjectImports.Scan(Initial(), Record, out _).Imported);
+            }
+            finally
+            {
+                Debug.unityLogger.logHandler = previous;
+                ProjectImports.ResetForTests();
+                AssetDatabase.Invalidate();
+            }
+        }
+
+        [Fact]
         public void ARecordOfAnotherFormatIsAFirstOpen()
         {
             Scan(Initial());
