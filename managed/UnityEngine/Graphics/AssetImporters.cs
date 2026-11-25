@@ -31,6 +31,7 @@ namespace Unbound.Runtime
             };
             AssetDatabaseRuntime.Importers["script"] = ImportScript;
             AssetDatabaseRuntime.Importers["scripted"] = ScriptedImports.Import;
+            AssetDatabaseRuntime.Importers[Unbound.SpeedTree.SpeedTree8Imports.Kind] = Unbound.SpeedTree.SpeedTree8Imports.Import;
             AssetDatabaseRuntime.Importers["scene"] = ImportScene;
             FontImporter.Register();
             Unbound.UIElements.UiImporters.Register();

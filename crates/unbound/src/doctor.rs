@@ -95,7 +95,7 @@ struct UnsupportedMessage {
 struct MessageCoverage {
     messages: Vec<UnsupportedMessage>,
     failed_assemblies: Vec<String>,
-    /// SpeedTree 7 and 8 assets, which Unbound does not import (the managed engine decides which
+    /// SpeedTree 7 assets, which Unbound does not import (the managed engine decides which
     /// messages such assets make reachable, as its editor domain load reports them).
     #[serde(default)]
     unimported_speed_trees: Vec<String>,
@@ -449,7 +449,7 @@ pub fn doctor(args: &ProjectArgs, all: bool, as_json: bool) -> Result<()> {
     }
     if !messages.unimported_speed_trees.is_empty() {
         println!(
-            "\n{} SpeedTree 7 and 8 assets Unbound does not import: {}",
+            "\n{} SpeedTree 7 assets Unbound does not import: {}",
             messages.unimported_speed_trees.len(),
             some_files(
                 &messages.unimported_speed_trees.iter().cloned().collect(),

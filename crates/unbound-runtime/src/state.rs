@@ -421,8 +421,14 @@ pub fn initialize(project: &Project) -> Result<&'static RuntimeState> {
                     .extension()
                     .is_some_and(|e| e.eq_ignore_ascii_case("asset"));
                 if !is_asset {
-                    // A ScriptedImporter's prefab (a SpeedTree 9 tree): the managed engine runs the
-                    // importer and writes the documents of its hierarchy.
+                    // A ScriptedImporter's prefab (a SpeedTree 9 tree) or a SpeedTree 8 tree: the
+                    // managed engine runs the importer and writes the documents of its hierarchy.
+                    let is_speedtree8 = file
+                        .extension()
+                        .is_some_and(|e| e.eq_ignore_ascii_case("st"));
+                    if is_speedtree8 {
+                        return Some(crate::imported_prefabs::documents(guid));
+                    }
                     return unbound_assets::meta::scripted_importer_of(file)
                         .map(|_| crate::imported_prefabs::documents(guid));
                 }
@@ -526,6 +532,8 @@ fn asset_kind(path: &str) -> &'static str {
         "compute" => "compute",
         "vfx" | "vfxoperator" | "vfxblock" => "vfx",
         "raytrace" => "raytrace",
+        // A SpeedTree 8 tree, which the managed SpeedTreeImporter builds.
+        "st" => "speedtree",
         "uxml" => "uxml",
         "uss" => "uss",
         "tss" => "tss",
@@ -2063,6 +2071,7 @@ fn importer_of_path(path: &str) -> Option<&'static str> {
             "TextureImporter"
         }
         "fbx" | "obj" | "dae" | "3ds" | "dxf" | "blend" => "ModelImporter",
+        "st" => "SpeedTreeImporter",
         "wav" | "mp3" | "ogg" | "aif" | "aiff" | "mod" | "it" | "s3m" | "xm" => "AudioImporter",
         // Native and managed libraries, platform sources and archives, and the folders that are
         // one plug-in each.
@@ -3065,6 +3074,17 @@ mod tests {
             default_importer("Assets/Data/StreamingAssets/nested_not_root.txt"),
             "TextScriptImporter"
         );
+    }
+
+    #[test]
+    fn speedtree8_trees_load_through_the_speedtree_importer() {
+        assert_eq!(asset_kind("Assets/Trees/Oak.st"), "speedtree");
+        assert_eq!(asset_kind("Assets/Trees/Oak.ST"), "speedtree");
+        assert_eq!(importer_of_path("Assets/Trees/Oak.st"), Some("SpeedTreeImporter"));
+        // SpeedTree 9 trees stay ScriptedImporter assets, SpeedTree 7 ones unimported.
+        assert_eq!(asset_kind("Assets/Trees/Oak.st9"), "unknown");
+        assert_eq!(asset_kind("Assets/Trees/Oak.spm"), "unknown");
+        assert_eq!(importer_of_path("Assets/Trees/Oak.spm"), None);
     }
 
     #[test]

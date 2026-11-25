@@ -37,9 +37,10 @@ namespace UnityEditor
         /// <summary>The callbacks Unbound does not run yet (<see cref="ScriptMessages.NotSent"/>,
         /// which <c>unbound doctor</c> lists too): animated user properties and the camera and light
         /// descriptions of models (Unbound imports neither), the 2D array and 3D texture
-        /// postprocessors, the SpeedTree 7/8 ones and asset bundle name changes. Each postprocessor
-        /// declaring one is reported once as the editor domain loads (the SpeedTree ones only in a
-        /// project that holds a SpeedTree 7 or 8 asset, <see cref="SpeedTreeCallbacks"/>).</summary>
+        /// postprocessors, the SpeedTree ones of SpeedTree 7 trees and asset bundle name changes. Each
+        /// postprocessor declaring one is reported once as the editor domain loads (the SpeedTree ones
+        /// only in a project that holds a SpeedTree 7 asset, <see cref="SpeedTreeCallbacks"/>: a
+        /// SpeedTree 8 tree's import sends them).</summary>
         internal static readonly string[] Unsupported =
         {
             "OnPostprocessGameObjectWithAnimatedUserProperties", "OnPreprocessCameraDescription", "OnPreprocessLightDescription",
@@ -54,23 +55,22 @@ namespace UnityEditor
         /// SpeedTree9Importer C#, which Unbound runs).</summary>
         internal static readonly string[] SpeedTreeCallbacks = { "OnPreprocessSpeedTree", "OnPostprocessSpeedTree" };
 
-        /// <summary>The SpeedTree 7 and 8 assets among the asset files <paramref name="files"/> (no
-        /// folders), which the Editor's SpeedTreeImporter imports and Unbound does not.</summary>
+        /// <summary>The SpeedTree 7 (<c>.spm</c>) assets among the asset files <paramref name="files"/>
+        /// (no folders), which the Editor's SpeedTreeImporter imports and Unbound does not (it imports
+        /// SpeedTree 8 <c>.st</c> files).</summary>
         internal static List<string> SpeedTreeAssets(IEnumerable<string> files)
         {
             var trees = new List<string>();
             foreach (var path in files)
-            {
-                var extension = System.IO.Path.GetExtension(path);
-                if (string.Equals(extension, ".spm", StringComparison.OrdinalIgnoreCase) || string.Equals(extension, ".st", StringComparison.OrdinalIgnoreCase))
+                if (string.Equals(System.IO.Path.GetExtension(path), ".spm", StringComparison.OrdinalIgnoreCase))
                     trees.Add(path);
-            }
             return trees;
         }
 
         /// <summary>The not-sent callbacks (<see cref="Unsupported"/>) nothing in the project could
-        /// get in the Editor either, given its SpeedTree 7 and 8 assets: without one, the SpeedTree
-        /// callbacks; else none (null). <c>unbound doctor</c> lists by the same rule.</summary>
+        /// get unsent, given its SpeedTree 7 assets: without one, the SpeedTree callbacks (no tree
+        /// gets them, or SpeedTree 8 trees do); else none (null). <c>unbound doctor</c> lists by the
+        /// same rule.</summary>
         internal static string[] Unreachable(IReadOnlyCollection<string> speedTrees) =>
             speedTrees.Count == 0 ? SpeedTreeCallbacks : null;
 
@@ -78,7 +78,7 @@ namespace UnityEditor
         static void ReportUnsupported() =>
             ReportUnsupported(PostprocessorTypes(), Native.IsReady ? ProjectSpeedTreeAssets() : new List<string>());
 
-        /// <summary>The project's SpeedTree 7 and 8 assets (its packages' too; folders are not).</summary>
+        /// <summary>The project's SpeedTree 7 assets (its packages' too; folders are not).</summary>
         internal static List<string> ProjectSpeedTreeAssets()
         {
             var files = new List<string>();
@@ -87,13 +87,13 @@ namespace UnityEditor
             return SpeedTreeAssets(files);
         }
 
-        /// <summary>Reports, once each, the SpeedTree 7 and 8 assets Unbound does not import and the
+        /// <summary>Reports, once each, the SpeedTree 7 assets Unbound does not import and the
         /// not-sent callbacks the postprocessors declare that something in the project could
         /// get.</summary>
         internal static void ReportUnsupported(IEnumerable<Type> postprocessors, IReadOnlyList<string> speedTrees)
         {
             if (speedTrees.Count > 0)
-                Stubs.Ignored("SpeedTree 7 and 8 assets", $"are not imported ({speedTrees[0]}{(speedTrees.Count > 1 ? $" and {speedTrees.Count - 1} more" : "")}): Unbound makes no tree of them and their postprocessors' {string.Join(" and ", SpeedTreeCallbacks)} are not called");
+                Stubs.Ignored("SpeedTree 7 assets", $"are not imported ({speedTrees[0]}{(speedTrees.Count > 1 ? $" and {speedTrees.Count - 1} more" : "")}): Unbound makes no tree of them and their postprocessors' {string.Join(" and ", SpeedTreeCallbacks)} are not called");
             var skipped = Unreachable(speedTrees);
             foreach (var type in postprocessors) ScriptMessages.WarnNotSent(type, skipped);
         }

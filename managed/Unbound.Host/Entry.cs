@@ -92,7 +92,7 @@ public static unsafe class Entry
             case "message-coverage":
                 var scripts = JsonSerializer.Deserialize<MessageCoverageRequest>(body, Json)
                     ?? throw new ArgumentException("empty message-coverage request");
-                // The project's SpeedTree 7 and 8 assets decide which callbacks it could get, as the
+                // The project's SpeedTree 7 assets decide which callbacks it could get, as the
                 // editor domain load reports them.
                 var speedTrees = UnityEditor.AssetPostprocessing.SpeedTreeAssets(scripts.AssetFiles);
                 var unreachable = UnityEditor.AssetPostprocessing.Unreachable(speedTrees) ?? Array.Empty<string>();

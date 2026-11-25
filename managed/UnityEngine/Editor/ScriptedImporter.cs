@@ -416,7 +416,7 @@ namespace Unbound.Runtime
         /// NotEditable added to each object, and to a GameObject's hierarchy, whose components are
         /// also HideInHierarchy; flags the importer set stay (matches the Unity 6000.0.71f1 Editor,
         /// tests/projects/toolapis imported.*).</summary>
-        static void MarkImported(Object obj)
+        internal static void MarkImported(Object obj)
         {
             if (obj == null) return;
             if (!(obj is GameObject go))
