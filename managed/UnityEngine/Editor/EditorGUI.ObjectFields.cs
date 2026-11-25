@@ -318,8 +318,7 @@ namespace UnityEditor
             else if (visualType == ObjectFieldVisualType.LargePreview)
                 EditorGUIUtility.SetIconSize(new Vector2(64, 64));
 
-            // The icon size is restored also when the field exits the GUI (the Editor resets it
-            // for the next GUI pass).
+            // The icon size is restored even when the field exits the GUI.
             try
             {
                 if (eventType == EventType.ContextClick && visualType == ObjectFieldVisualType.IconAndText && position.Contains(evt.mousePosition))
