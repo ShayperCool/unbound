@@ -289,6 +289,7 @@ namespace UnityEditor
         /// and pose), its added and removed components and its added GameObjects.</summary>
         public static void ApplyPrefabInstance(GameObject instanceRoot, InteractionMode action)
         {
+            using var write = SessionImports.Write();
             var data = RequireInstance(instanceRoot);
             var plan = new ApplyPlan();
             foreach (var o in PrefabInstances.ObjectsOf(data))
@@ -554,6 +555,7 @@ namespace UnityEditor
         /// assetSave.*).</summary>
         public static GameObject SavePrefabAsset(GameObject asset, out bool savedSuccessfully)
         {
+            using var write = SessionImports.Write();
             savedSuccessfully = false;
             if (asset == null) throw new ArgumentNullException(nameof(asset));
             if (!IsPartOfPrefabAsset(asset) || asset.transform.parent != null)
@@ -616,6 +618,7 @@ namespace UnityEditor
         /// variant of its prefab (<see cref="PrefabAssets.Create"/>).</summary>
         public static GameObject SaveAsPrefabAsset(GameObject instanceRoot, string assetPath, out bool success)
         {
+            using var write = SessionImports.Write();
             success = false;
             var path = PrefabPath(instanceRoot, assetPath, connect: false);
             // Saving an instance takes its changes into its modifications (scenesave prefab-nested
@@ -654,6 +657,7 @@ namespace UnityEditor
         /// </summary>
         public static GameObject SaveAsPrefabAssetAndConnect(GameObject instanceRoot, string assetPath, InteractionMode action, out bool success)
         {
+            using var write = SessionImports.Write();
             success = false;
             var path = PrefabPath(instanceRoot, assetPath, connect: true);
             if (PrefabAssets.FileAt(path) != null || PrefabContents.Of(instanceRoot) != null || IsPartOfAnyPrefab(instanceRoot))

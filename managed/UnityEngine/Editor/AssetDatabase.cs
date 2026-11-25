@@ -487,12 +487,14 @@ namespace UnityEditor
         /// dirty assets, in both modes (<see cref="AssetFiles"/>).</summary>
         public static void SaveAssets()
         {
+            using var write = SessionImports.Write();
             SettingsAssets.Save();
             AssetFiles.SaveDirty();
         }
 
         public static void SaveAssetIfDirty(Object obj)
         {
+            using var write = SessionImports.Write();
             if (SettingsAssets.Of(obj) is SettingsFile settings) SettingsAssets.Save(settings);
             else if (obj != null && EditorUtility.IsDirty(obj)) AssetFiles.SaveDirty(obj);
         }
@@ -515,6 +517,7 @@ namespace UnityEditor
         {
             // Asked for while the editor domain loads: it runs once the load has ended.
             if (EditorInitialization.DeferImport(path, options)) return;
+            using var write = SessionImports.Write();
             // A file or folder the database does not list yet is imported: its .meta written
             // (tests/projects/projectwrites 02.import).
             var normalized = path?.Replace('\\', '/').TrimEnd('/');
@@ -529,6 +532,7 @@ namespace UnityEditor
                 if (VisualEffectImports.Reimport(path))
                 {
                     ProjectImports.Wrote(path);
+                    SessionImports.Imported(path);
                     return;
                 }
                 var guid = AssetPathToGUID(path);
@@ -545,6 +549,7 @@ namespace UnityEditor
                             ImporterMeta.Write(cached);
                         UnityEditor.U2D.SpriteAtlasImporter.ReimportAsset(path, guid);
                         ProjectImports.Wrote(GUIDToAssetPath(guid));
+                        SessionImports.Imported(GUIDToAssetPath(guid));
                         return;
                     }
                     if (!AssetDatabaseRuntime.IsLoaded(guid))
@@ -553,10 +558,15 @@ namespace UnityEditor
                         AssetDatabaseRuntime.ImportedInSession(guid);
                         AssetDatabaseRuntime.LoadFile(guid);
                         ProjectImports.Wrote(GUIDToAssetPath(guid));
+                        SessionImports.Imported(GUIDToAssetPath(guid));
                         return;
                     }
                 }
             }
+            // An asset of the database is imported (and reported so) whether or not it changed
+            // (tests/projects/scenesave session-imports plain-import, force-import).
+            var existing = path?.Replace('\\', '/').TrimEnd('/');
+            if (!string.IsNullOrEmpty(existing) && !string.IsNullOrEmpty(AssetPathToGUID(existing))) SessionImports.Imported(existing);
             Stubs.Ignored("AssetDatabase.ImportAsset", "does not re-import (assets are read from the project as they are)");
         }
 

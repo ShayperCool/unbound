@@ -233,6 +233,7 @@ namespace UnityEditor.SceneManagement
             Undo.FlushDirtiness();
             var data = scene.Data;
             if (data == null) return false;
+            using var write = SessionImports.Write();
             var path = string.IsNullOrEmpty(dstScenePath) ? data.Path : dstScenePath;
             if (string.IsNullOrEmpty(path))
             {
@@ -261,6 +262,7 @@ namespace UnityEditor.SceneManagement
         /// <summary>Saves the dirty ones of the scenes.</summary>
         public static bool SaveScenes(Scene[] scenes)
         {
+            using var write = SessionImports.Write();
             if (scenes == null) throw new ArgumentNullException(nameof(scenes));
             if (UnityEngine.Application.isPlaying) throw new InvalidOperationException(PlayModeRefusal);
             Undo.FlushDirtiness();

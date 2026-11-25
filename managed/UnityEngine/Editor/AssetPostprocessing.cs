@@ -154,6 +154,10 @@ namespace UnityEditor
         internal static void ImportedAssets(Assembly assembly, string[] imported) =>
             PostprocessAll(new List<MethodInfo>(s_Callbacks.GetValue(assembly, Callbacks)), imported, s_None, s_None, s_None, false);
 
+        /// <summary>A session write's call (<see cref="SessionImports"/>): <c>didDomainReload</c> false.</summary>
+        internal static void SessionImported(string[] imported, string[] deleted, string[] moved, string[] movedFrom) =>
+            PostprocessAll(AllCallbacks(), imported, deleted, moved, movedFrom, false);
+
         /// <summary>The call every editor domain load makes, with <c>didDomainReload</c> true and the
         /// assets imports asked for during the load imported (none usually: then the four-argument
         /// callbacks are not called; tests/projects/assetpostprocessors allAssets.*,

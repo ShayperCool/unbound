@@ -105,6 +105,7 @@ namespace UnityEditor
                 }
                 SayConflict(list[i].Path, asset);
                 if (relist) Relist(list[i].Path, asset);
+                if (!string.IsNullOrEmpty(guids[i])) SessionImports.Imported(list[i].Path);
             }
             if (!relist) Invalidate();
             return guids;
@@ -266,6 +267,7 @@ namespace UnityEditor
         /// <summary>The listing brought up to date with what a refresh found changed.</summary>
         internal static void ApplyRefresh(string json)
         {
+            using var write = SessionImports.Write();
             var changes = JsonSerializer.Deserialize<ImportResult>(json, s_Json)?.Assets ?? Array.Empty<Imported>();
             foreach (var change in changes)
             {
@@ -286,9 +288,14 @@ namespace UnityEditor
                     s_DeletedPathByGuid[change.Removed] = change.Path;
                     AssetDatabaseRuntime.Invalidate(change.Removed);
                     AssetDatabaseRuntime.ForgetPersistentIds(change.Removed);
+                    SessionImports.Deleted(change.Path);
                 }
                 // A new or changed asset is imported in this session (its messages are logged at its load).
-                else AssetDatabaseRuntime.ImportedInSession(change.Guid);
+                else
+                {
+                    AssetDatabaseRuntime.ImportedInSession(change.Guid);
+                    SessionImports.Imported(change.Path);
+                }
                 if (changes.Length <= RelistLimit) Relist(change.Path, change);
             }
             if (changes.Length > RelistLimit) Invalidate();
@@ -298,17 +305,23 @@ namespace UnityEditor
         /// StopAssetEditing; calls nest (tests/projects/projectwrites 07.batch).</summary>
         public static void StartAssetEditing() => s_Editing++;
 
+        /// <summary>Whether StartAssetEditing holds imports back now.</summary>
+        internal static bool Editing => s_Editing > 0;
+
         public static void StopAssetEditing()
         {
             if (s_Editing == 0) return;
             if (--s_Editing > 0) return;
-            var pending = s_PendingImports.Distinct(StringComparer.OrdinalIgnoreCase).ToList();
-            s_PendingImports.Clear();
-            if (pending.Count > 0) ImportNew(pending);
-            if (s_PendingRefresh)
+            using (SessionImports.Write())
             {
-                s_PendingRefresh = false;
-                Refresh();
+                var pending = s_PendingImports.Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+                s_PendingImports.Clear();
+                if (pending.Count > 0) ImportNew(pending);
+                if (s_PendingRefresh)
+                {
+                    s_PendingRefresh = false;
+                    Refresh();
+                }
             }
         }
 
@@ -401,9 +414,12 @@ namespace UnityEditor
                 return false;
             }
             var copied = new List<string>();
+            using var write = SessionImports.Write();
             CopyTree(FileOf(path), FileOf(newPath), newPath, copied);
             RenameMainObject(newPath);
             Import(copied.Select(p => new ImportRequest { Path = p }));
+            // A copied folder is reported by itself, then what it holds.
+            SessionImports.ReportFirst(newPath);
             return true;
         }
 
@@ -482,6 +498,7 @@ namespace UnityEditor
                 return $"Cannot move asset. {end} is not an asset of the project's own.";
             }
             var moved = TreeOf(oldPath);
+            using var write = SessionImports.Write();
             var source = FileOf(oldPath);
             var target = FileOf(newPath);
             if (Directory.Exists(source)) Directory.Move(source, target);
@@ -493,8 +510,13 @@ namespace UnityEditor
                 if (created.Path.Equals(oldPath, StringComparison.OrdinalIgnoreCase) || created.Path.StartsWith(oldPath + "/", StringComparison.OrdinalIgnoreCase))
                     created.Path = newPath + created.Path.Substring(oldPath.Length);
             RenameMainObject(newPath);
-            Import(moved.Select(p => new ImportRequest { Path = p })
-                .Concat(moved.Select(p => new ImportRequest { Path = newPath + p.Substring(oldPath.Length) })));
+            using (SessionImports.Muted())
+                Import(moved.Select(p => new ImportRequest { Path = p })
+                    .Concat(moved.Select(p => new ImportRequest { Path = newPath + p.Substring(oldPath.Length) })));
+            // Reported as the Editor reports a move: the asset (a folder alone, not what it holds)
+            // imported at its new path, and it and all it holds moved.
+            SessionImports.Imported(newPath);
+            foreach (var p in moved) SessionImports.Moved(p, newPath + p.Substring(oldPath.Length));
             return "";
         }
 
@@ -578,6 +600,7 @@ namespace UnityEditor
                 return false;
             }
             var removed = TreeOf(path);
+            using var write = SessionImports.Write();
             foreach (var p in removed)
             {
                 var guid = ExistingGuid(p);
@@ -597,7 +620,9 @@ namespace UnityEditor
                 if (trash) Trash.Move(file + ".meta");
                 else File.Delete(file + ".meta");
             }
-            Import(removed.Select(p => new ImportRequest { Path = p }));
+            using (SessionImports.Muted()) Import(removed.Select(p => new ImportRequest { Path = p }));
+            // Reported deleted: the asset and all it holds.
+            foreach (var p in removed) SessionImports.Deleted(p);
             return true;
         }
 

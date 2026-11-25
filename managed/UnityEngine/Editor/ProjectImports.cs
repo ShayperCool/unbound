@@ -119,18 +119,26 @@ namespace UnityEditor
         /// <paramref name="tree"/>, a folder with everything it holds (a move, a copy, a deletion).</summary>
         internal static void Wrote(string file, bool tree = false)
         {
-            if (string.IsNullOrEmpty(file)) return;
+            var path = AssetPathOf(file);
+            if (path == null) return;
+            s_Written.Add(path);
+            if (tree) s_WrittenTrees.Add(path);
+        }
+
+        /// <summary>The asset a project path or a file of the project stands for (a .meta for its
+        /// asset), or null.</summary>
+        internal static string AssetPathOf(string file)
+        {
+            if (string.IsNullOrEmpty(file)) return null;
             var path = file.Replace('\\', '/');
             if (System.IO.Path.IsPathRooted(path))
             {
                 // A file of the project view the game runs in, or of the project itself.
                 path = Below(ProjectInfo.ProjectPath, path) ?? Below(ProjectInfo.ProjectRootPath, path);
-                if (path == null) return;
+                if (path == null) return null;
             }
             if (path.EndsWith(".meta", StringComparison.OrdinalIgnoreCase)) path = path.Substring(0, path.Length - ".meta".Length);
-            path = path.TrimEnd('/');
-            s_Written.Add(path);
-            if (tree) s_WrittenTrees.Add(path);
+            return path.TrimEnd('/');
         }
 
         /// <summary>A file's path relative to a folder it is in, or null.</summary>

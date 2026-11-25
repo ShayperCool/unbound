@@ -59,6 +59,7 @@ namespace UnityEditor
                 return;
             }
             AssetModificationProcessorInternal.OnWillCreateAsset(path);
+            using var write = SessionImports.Write();
             // An asset already at the path is replaced.
             if (Exists(path)) Remove(path, trash: false);
             asset.name = Path.GetFileNameWithoutExtension(path);

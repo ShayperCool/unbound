@@ -71,6 +71,8 @@ namespace Unbound.Runtime
                 File.WriteAllText(temporary, text);
                 File.Move(temporary, file, overwrite: true);
                 UnityEditor.ProjectImports.Wrote(file);
+                // The Editor imports what it saves.
+                UnityEditor.SessionImports.ImportedFile(file);
             }
             catch
             {

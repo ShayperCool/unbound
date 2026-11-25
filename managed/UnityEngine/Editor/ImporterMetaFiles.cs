@@ -15,8 +15,11 @@ namespace UnityEditor
         public void SaveAndReimport()
         {
             CheckImporterState("SaveAndReimport");
+            using var write = SessionImports.Write();
             ImporterMeta.Write(this);
             ImporterMeta.Reimport(this);
+            // Reimported (and reported so) whether or not its settings changed.
+            SessionImports.Imported(assetPath);
         }
 
         public void SetAssetBundleNameAndVariant(string assetBundleName, string assetBundleVariant)
@@ -85,7 +88,7 @@ namespace Unbound.Runtime
                 var customWritten = UnityYamlText.WriteTopLevel(root);
                 bool textChanged = customWritten != text.Replace("\r\n", "\n");
                 if (!textChanged && !wasDirty) return false;
-                if (textChanged) { File.WriteAllText(meta, customWritten); UnityEditor.ProjectImports.Wrote(meta); }
+                if (textChanged) { File.WriteAllText(meta, customWritten); UnityEditor.ProjectImports.Wrote(meta); UnityEditor.SessionImports.ImportedFile(meta); }
                 importer.ClearModifiedState();
                 return textChanged;
             }
@@ -105,6 +108,8 @@ namespace Unbound.Runtime
                 written = UnityYamlText.WriteTopLevel(root);
             File.WriteAllText(meta, written);
             UnityEditor.ProjectImports.Wrote(meta);
+            // The asset is imported again with its new settings.
+            UnityEditor.SessionImports.ImportedFile(meta);
             return true;
         }
 
