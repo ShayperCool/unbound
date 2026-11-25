@@ -345,8 +345,9 @@ namespace UnityEngine
 
         /// <summary>A copy; of a variant, a variant of the same parent with the same overrides and
         /// locks (canonical variant.instance and variant.newFrom). It has every setting of the source,
-        /// its GI flags and double-sided GI too ("copying all properties", 6000.0).</summary>
-        public Material(Material source) : this(source, measureProfilerAllocation: true) { }
+        /// its GI flags and double-sided GI too ("copying all properties", 6000.0), but not the names
+        /// set from script that its shader does not declare (<see cref="ForgetScriptNamesOutsideShader"/>).</summary>
+        public Material(Material source) : this(source, measureProfilerAllocation: true) => ForgetScriptNamesOutsideShader();
 
         internal Material(Material source, bool measureProfilerAllocation)
         {
@@ -827,6 +828,15 @@ namespace UnityEngine
             if (m_Parent != null) m_Own?.Add(nameID);
         }
 
+        /// <summary>A texture, its scale or its offset set from script: a texture property of the
+        /// material, whose _ST, _TexelSize and _HDR names get their ids with it (the Editor lists them
+        /// in that place among the vectors: tests/projects/materialnames set.names.Vector).</summary>
+        void ScriptSetTexture(int nameID)
+        {
+            if (!m_ScriptSet.Contains(nameID)) Shader.TextureCompanionIds(nameID);
+            ScriptSet(nameID);
+        }
+
         // Cyclic variant chains are unsupported. Fail explicitly instead of hanging an API call.
         IEnumerable<Material> Ancestors()
         {
@@ -1143,7 +1153,8 @@ namespace UnityEngine
         bool IsFloat(int nameID)
         {
             ValidateDeferredEditor();
-            return Declared(nameID) is ShaderPropertyType.Float or ShaderPropertyType.Range || SetFromScript(nameID, m_Floats);
+            return Declared(nameID) is ShaderPropertyType.Float or ShaderPropertyType.Range || SetFromScript(nameID, m_Floats)
+                || ScriptSetArray(nameID) is float[];
         }
         bool IsInteger(int nameID)
         {
@@ -1154,7 +1165,7 @@ namespace UnityEngine
         {
             ValidateDeferredEditor();
             return Declared(nameID) is ShaderPropertyType.Color or ShaderPropertyType.Vector
-                || SetFromScript(nameID, m_Vectors) || ScaleOffsetOf(nameID, out _);
+                || SetFromScript(nameID, m_Vectors) || ScaleOffsetOf(nameID, out _) || ScriptSetArray(nameID) is Vector4[];
         }
         bool IsTexture(int nameID)
         {
@@ -1165,8 +1176,13 @@ namespace UnityEngine
         {
             ValidateDeferredEditor();
             RealizeProfilerPropertyStorage();
-            return SetFromScript(nameID, m_Matrices);
+            return SetFromScript(nameID, m_Matrices) || ScriptSetArray(nameID) is Matrix4x4[];
         }
+
+        /// <summary>An array set from script is a property of its element's kind, whose getter
+        /// reads its first element (matches the Unity 6000.0.71f1 Editor, tests/projects/materialnames
+        /// set.has._Fa, set.get._Va).</summary>
+        object ScriptSetArray(int nameID) => m_Arrays.Count == 0 || !m_ScriptSet.Contains(nameID) ? null : ScriptArray(nameID);
         /// <summary>Texture getters read every slot the material has, saved for another shader too.</summary>
         bool HasTextureSlot(int nameID) => IsTexture(nameID) || m_Textures.ContainsKey(nameID) || m_TextureNames.Contains(nameID);
 
@@ -1193,29 +1209,116 @@ namespace UnityEngine
         public bool HasMatrix(string name) => IsMatrix(Shader.PropertyToID(name));
         public bool HasMatrix(int nameID) => IsMatrix(nameID);
 
-        /// <summary>The shader's properties of a kind, in declaration order; a texture brings its
-        /// _ST, _TexelSize and _HDR vectors (measured, 6000.0).</summary>
+        /// <summary>
+        /// The material's properties of a kind: its shader's in declaration order, then the ones set
+        /// from script for names the shader does not declare, by property id (the order of
+        /// <see cref="Shader.PropertyToID"/>). A texture brings its _ST, _TexelSize and _HDR vectors;
+        /// an array set from script is a property of its element's kind (matches the Unity
+        /// 6000.0.71f1 Editor, tests/projects/materialnames set.*, order.*; tests/projects/materials).
+        /// The Editor lists every name by id, and a shader's names get theirs, in declaration order,
+        /// when it loads; it gives the names its built-in shaders use ids before a project's
+        /// (materialnames order.early_ids), which Unbound does not model.
+        /// </summary>
         public string[] GetPropertyNames(MaterialPropertyType type)
         {
             RealizeProfilerPropertyStorage();
             var names = new List<string>();
-            if (m_Shader == null) return names.ToArray();
-            foreach (var p in m_Shader.m_Properties)
+            if (m_Shader != null)
+                foreach (var p in m_Shader.m_Properties)
+                {
+                    switch (type)
+                    {
+                        case MaterialPropertyType.Float when p.Type is ShaderPropertyType.Float or ShaderPropertyType.Range:
+                        case MaterialPropertyType.Int when p.Type == ShaderPropertyType.Int:
+                        case MaterialPropertyType.Texture when p.Type == ShaderPropertyType.Texture:
+                        case MaterialPropertyType.Vector when p.Type is ShaderPropertyType.Color or ShaderPropertyType.Vector:
+                            names.Add(p.Name);
+                            break;
+                        case MaterialPropertyType.Vector when p.Type == ShaderPropertyType.Texture:
+                            foreach (var suffix in Shader.TextureCompanionSuffixes) names.Add(p.Name + suffix);
+                            break;
+                    }
+                }
+            List<int> scripted = null;
+            foreach (var id in m_ScriptSet)
             {
+                if (Declared(id) != null) continue;
                 switch (type)
                 {
-                    case MaterialPropertyType.Float when p.Type is ShaderPropertyType.Float or ShaderPropertyType.Range:
-                    case MaterialPropertyType.Int when p.Type == ShaderPropertyType.Int:
-                    case MaterialPropertyType.Texture when p.Type == ShaderPropertyType.Texture:
-                    case MaterialPropertyType.Vector when p.Type is ShaderPropertyType.Color or ShaderPropertyType.Vector:
-                        names.Add(p.Name);
+                    case MaterialPropertyType.Float when m_Floats.ContainsKey(id) || ScriptArray(id) is float[]:
+                    case MaterialPropertyType.Int when m_Ints.ContainsKey(id):
+                    case MaterialPropertyType.Texture when m_Textures.ContainsKey(id):
+                    case MaterialPropertyType.Matrix when m_Matrices.ContainsKey(id) || ScriptArray(id) is Matrix4x4[]:
+                        (scripted ??= new List<int>()).Add(id);
                         break;
-                    case MaterialPropertyType.Vector when p.Type == ShaderPropertyType.Texture:
-                        foreach (var suffix in Shader.TextureCompanionSuffixes) names.Add(p.Name + suffix);
+                    case MaterialPropertyType.Vector:
+                        if (m_Vectors.ContainsKey(id) || ScriptArray(id) is Vector4[]) (scripted ??= new List<int>()).Add(id);
+                        if (m_Textures.ContainsKey(id)) (scripted ??= new List<int>()).AddRange(Shader.TextureCompanionIds(id));
                         break;
                 }
             }
+            if (scripted != null)
+            {
+                scripted.Sort();
+                for (int i = 0; i < scripted.Count; i++)
+                {
+                    var name = Shader.IdToName(scripted[i]);
+                    if ((i == 0 || scripted[i] != scripted[i - 1]) && !names.Contains(name)) names.Add(name);
+                }
+            }
             return names.ToArray();
+        }
+
+        /// <summary>The array set from script for a name, if any (null for an empty one).</summary>
+        object ScriptArray(int nameID) =>
+            m_Arrays.TryGetValue(nameID, out var array) && array is Array { Length: > 0 } ? array : null;
+
+        /// <summary>
+        /// A copy (<c>new Material(source)</c>, Object.Instantiate) and a save of the material asset
+        /// (AssetDatabase.SaveAssetIfDirty, SaveAssets, CreateAsset): the names set from script for
+        /// which the shader has no property stop being the material's, of every kind, arrays and
+        /// matrices too; a value its saved property sheet lists stays as saved data, unseen as a
+        /// loaded material's is, and the others are gone (matches the Unity 6000.0.71f1 Editor,
+        /// tests/projects/materialnames copy.*, instantiate.*, save_*, create.*; the renderer's own
+        /// material and CopyPropertiesFromMaterial keep them). Not measured: a material variant
+        /// (kept as it is), buffers (kept), and whether a copy keeps the values of the names it
+        /// drops (dropped, as a save does).
+        /// </summary>
+        internal void ForgetScriptNamesOutsideShader()
+        {
+            if (m_Parent != null) return;
+            List<int> gone = null;
+            foreach (var id in m_ScriptSet)
+                if (Declared(id) == null && !m_Buffers.ContainsKey(id)) (gone ??= new List<int>()).Add(id);
+            if (gone == null) return;
+            foreach (var id in gone)
+            {
+                m_ScriptSet.Remove(id);
+                m_Arrays.Remove(id);
+                m_Matrices.Remove(id);
+                if (SheetLists(id)) continue;
+                m_Floats.Remove(id);
+                m_Ints.Remove(id);
+                m_Vectors.Remove(id);
+                m_State.m_ValidatedFloats?.Remove(id);
+                m_RawBindings.Remove(id);
+                m_VectorsAfterTexture.Remove(id);
+                if (!m_TextureNames.Contains(id) && m_Textures.Remove(id, out var slot))
+                {
+                    slot.Texture = null;
+                    (m_State.m_SpareSlots ??= new List<TextureSlot>()).Add(slot);
+                }
+            }
+            MarkChanged();
+        }
+
+        /// <summary>Whether the saved property sheet lists a name, of any kind.</summary>
+        bool SheetLists(int id)
+        {
+            var sheet = m_Sheet;
+            if (sheet == null) return Declared(id) != null;
+            return sheet.List(SheetKind.Floats).Contains(id) || sheet.List(SheetKind.Ints).Contains(id)
+                || sheet.List(SheetKind.Colors).Contains(id) || sheet.List(SheetKind.Textures).Contains(id);
         }
 
         public void SetFloat(string name, float value) => SetFloat(Shader.PropertyToID(name), value);
@@ -1292,6 +1395,7 @@ namespace UnityEngine
             if (!IsFloat(nameID)) { Missing(nameID, "a float or range"); return 0f; }
             if (m_Floats.TryGetValue(nameID, out var f)) return ConvertsProperty(nameID) ? Mathf.LinearToGammaSpace(Mathf.GammaToLinearSpace(f)) : f;
             if (m_Ints.TryGetValue(nameID, out var i)) return i;
+            if (ScriptSetArray(nameID) is float[] floats) return floats[0];
             return m_Shader != null && m_Shader.TryGetDefault(Shader.IdToName(nameID), out var info) ? info.DefaultValue.x : 0f;
         }
 
@@ -1365,6 +1469,7 @@ namespace UnityEngine
                 var offset = GetTextureOffset(texture);
                 return new Vector4(scale.x, scale.y, offset.x, offset.y);
             }
+            if (ScriptSetArray(nameID) is Vector4[] vectors) return vectors[0];
             var value = m_Shader != null && m_Shader.TryGetDefault(Shader.IdToName(nameID), out var info) ? info.DefaultValue : Vector4.zero;
             return ConvertsProperty(nameID) ? (Vector4)((Color)value).linear.gamma : value;
         }
@@ -1386,7 +1491,8 @@ namespace UnityEngine
         {
             TouchSheet();
             if (!IsMatrix(nameID)) { Missing(nameID, "a matrix"); return Matrix4x4.identity; }
-            return m_Matrices.TryGetValue(nameID, out var m) ? m : Matrix4x4.identity;
+            if (m_Matrices.TryGetValue(nameID, out var m)) return m;
+            return ScriptSetArray(nameID) is Matrix4x4[] matrices ? matrices[0] : Matrix4x4.identity;
         }
 
         public void SetTexture(string name, Texture value) => SetTexture(Shader.PropertyToID(name), value);
@@ -1411,7 +1517,7 @@ namespace UnityEngine
                 if (elementBinding) StopMeasuringPropertyStorage();
                 else RecordProfilerPropertyWrite(nameID, ShaderPropertyType.Texture);
             }
-            ScriptSet(nameID);
+            ScriptSetTexture(nameID);
             ValidateDeferredEditor();
             MarkDirty();
         }
@@ -1426,13 +1532,20 @@ namespace UnityEngine
         {
             TouchSheet();
             Inherit();
-            if (!HasTextureSlot(nameID)) { Missing(nameID, "a texture"); return null; }
+            if (!HasTextureSlot(nameID) || ScriptOnlyTexture(nameID)) { Missing(nameID, "a texture"); return null; }
             if (!m_Textures.TryGetValue(nameID, out var slot)) return null;
             if (slot.ElementBinding && Declared(nameID) != ShaderPropertyType.Texture) { Missing(nameID, "a texture"); return null; }
             // A destroyed texture reads as null itself, not as its destroyed object (matches the
             // Unity 6000.0.71f1 Editor, tests/projects/defaulttextures destroyed.*.held).
             return slot.Texture ? slot.Texture : null;
         }
+
+        /// <summary>A texture set from script for a name the shader does not declare and the
+        /// material's data does not list: HasTexture, GetTextureScale and GetTextureOffset answer
+        /// for it, GetTexture and GetTexturePropertyNames do not (matches the Unity 6000.0.71f1
+        /// Editor, tests/projects/materialnames set.get._Zt, set.texture_names).</summary>
+        bool ScriptOnlyTexture(int nameID) =>
+            m_ScriptSet.Contains(nameID) && !m_TextureNames.Contains(nameID) && Declared(nameID) != ShaderPropertyType.Texture;
 
         TextureSlot Slot(int nameID)
         {
@@ -1460,7 +1573,7 @@ namespace UnityEngine
         public void SetTextureOffset(int nameID, Vector2 value)
         {
             TouchSheet();
-            m_Own?.Add(nameID);
+            ScriptSetTexture(nameID);
             Slot(nameID).Offset = value;
             StopMeasuringPropertyStorage();
             MarkDirty();
@@ -1471,7 +1584,7 @@ namespace UnityEngine
         public void SetTextureScale(int nameID, Vector2 value)
         {
             TouchSheet();
-            m_Own?.Add(nameID);
+            ScriptSetTexture(nameID);
             Slot(nameID).Scale = value;
             StopMeasuringPropertyStorage();
             MarkDirty();
@@ -1512,7 +1625,8 @@ namespace UnityEngine
         public int[] GetTexturePropertyNameIDs()
         {
             var ids = new SortedSet<int>(m_TextureNames);
-            ids.UnionWith(m_Textures.Keys);
+            foreach (var id in m_Textures.Keys)
+                if (!ScriptOnlyTexture(id)) ids.Add(id);
             var array = new int[ids.Count];
             ids.CopyTo(array);
             return array;
@@ -1596,6 +1710,8 @@ namespace UnityEngine
         void SetArray<T>(int nameID, IReadOnlyList<T> values)
         {
             PropertyArrays.Set(m_Arrays, nameID, values);
+            // A property of the material from here on, not an override of a variant (unmeasured).
+            m_ScriptSet.Add(nameID);
             StopMeasuringPropertyStorage();
             MarkDirty();
         }

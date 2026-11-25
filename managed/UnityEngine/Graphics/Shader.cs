@@ -578,6 +578,25 @@ namespace UnityEngine
         static readonly string[] s_TextureCompanionSuffixes = { "_ST", "_TexelSize", "_HDR" };
         internal static ReadOnlySpan<string> TextureCompanionSuffixes => s_TextureCompanionSuffixes;
 
+        /// <summary>The index of <c>_HDR</c> among <see cref="TextureCompanionSuffixes"/>.</summary>
+        internal const int HdrCompanion = 2;
+
+        static readonly Dictionary<int, int[]> s_TextureCompanionIds = new Dictionary<int, int[]>();
+
+        /// <summary>The ids of a texture's _ST, _TexelSize and _HDR names (given on the first call).</summary>
+        internal static int[] TextureCompanionIds(int textureId)
+        {
+            lock (s_TextureCompanionIds)
+            {
+                if (s_TextureCompanionIds.TryGetValue(textureId, out var ids)) return ids;
+                var name = IdToName(textureId) ?? "";
+                ids = new int[s_TextureCompanionSuffixes.Length];
+                for (int i = 0; i < ids.Length; i++) ids[i] = PropertyToID(name + s_TextureCompanionSuffixes[i]);
+                s_TextureCompanionIds[textureId] = ids;
+                return ids;
+            }
+        }
+
         internal (long Keys, long Words, bool MixedWords)? ProfilerPropertyLayout { get; private set; }
         internal int ProfilerLayoutVersion { get; private set; }
 

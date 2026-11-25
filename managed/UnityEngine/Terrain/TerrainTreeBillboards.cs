@@ -145,8 +145,9 @@ namespace UnityEngine
             {
                 if (materials[i] == null) continue;
                 // A copy drawn with the shader's BillboardShader, given the material's color and
-                // its cutoff as 0.5 / cutoff, unbent.
-                var copy = new Material(materials[i]) { hideFlags = HideFlags.HideAndDontSave };
+                // its cutoff as 0.5 / cutoff, unbent; every value of the material, the names set
+                // from script that its shader lacks too (unlike new Material(source)).
+                var copy = new Material(materials[i], measureProfilerAllocation: true) { hideFlags = HideFlags.HideAndDontSave };
                 var billboard = materials[i].shader != null ? materials[i].shader.GetDependency("BillboardShader") : null;
                 if (billboard != null)
                 {

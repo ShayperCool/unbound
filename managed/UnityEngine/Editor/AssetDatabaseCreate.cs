@@ -67,6 +67,7 @@ namespace UnityEditor
             long mainId = MainFileId(asset);
             created.Objects[asset] = mainId;
             File.WriteAllText(FileOf(path), created.Text());
+            AssetFiles.Written(created.Objects.Keys);
             ProjectImports.Wrote(path);
             Track(ImportOne(path, mainId), created);
         }
@@ -355,6 +356,7 @@ namespace UnityEditor
                 created.Unsaved = false;
                 created.Added.Clear();
                 foreach (var o in created.Objects.Keys) if (o != null) EditorUtility.ClearDirty(o);
+                AssetFiles.Written(created.Objects.Keys);
             }
         }
     }

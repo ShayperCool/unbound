@@ -127,6 +127,16 @@ namespace Unbound.Runtime
                 SceneFiles.WriteFile(info.File, written);
             foreach (var o in loaded.Objects.Values)
                 if (o is not null) EditorUtility.ClearDirty(o);
+            Written(loaded.Objects.Values);
+        }
+
+        /// <summary>What the objects of a file just written become: a material no longer has the
+        /// names set from script that its shader does not declare
+        /// (<see cref="Material.ForgetScriptNamesOutsideShader"/>).</summary>
+        internal static void Written(IEnumerable<Object> objects)
+        {
+            foreach (var o in objects)
+                if (o is Material material && material != null) material.ForgetScriptNamesOutsideShader();
         }
     }
 }

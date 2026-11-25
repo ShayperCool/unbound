@@ -276,7 +276,9 @@ namespace UnityEditor
             {
                 if (!(o is Material m)) continue;
                 var description = ModelMaterialImport.TakeDeferred(m);
-                pass.Own[m] = (new Material(m), description);
+                // Copies with every value the import gave (new Material(source) drops script-set
+                // names the shader lacks).
+                pass.Own[m] = (new Material(m, measureProfilerAllocation: true), description);
             }
 
             string rootNodeName = json.TryGetProperty("rootNodeName", out var n) && n.ValueKind == JsonValueKind.String ? n.GetString() : null;
@@ -361,7 +363,7 @@ namespace UnityEditor
                 return given != null ? given : material;
             }
             pass.Used.Add(material);
-            var temporary = new Material(own.Source);
+            var temporary = new Material(own.Source, measureProfilerAllocation: true);
             if (pass.Legacy || own.Description == null)
                 RunMaterialHooks(pass, temporary);
             else

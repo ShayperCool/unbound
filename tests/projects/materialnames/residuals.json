@@ -1,0 +1,23 @@
+{
+ "The Editor gives the names its built-in shaders use (_MainTex and its _ST, _TexelSize and _HDR, _Color, _Cutoff, _Stencil, _TintColor) property ids before a project's, so it lists _MainTex's vectors before a _Color declared first and these names before the project's; Unbound's ids follow first use (built-in property ids follow-up)": [
+  "copy/names/Vector",
+  "copy_properties/names/Vector",
+  "create/after/names/Vector",
+  "fresh/names/Vector",
+  "instantiate/names/Vector",
+  "not_dirty/after/names/Vector",
+  "not_dirty/before/names/Vector",
+  "order/early_ids",
+  "order/ids",
+  "order/names/Float",
+  "order/names/Int",
+  "order/names/Vector",
+  "renderer_material/names/Vector",
+  "save_assets/after/names/Vector",
+  "save_assets/before/names/Vector",
+  "save_if_dirty/after/names/Vector",
+  "save_if_dirty/before/names/Vector",
+  "set/names/Vector",
+  "switched_back/names/Vector"
+ ]
+}

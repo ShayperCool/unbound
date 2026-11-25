@@ -63,4 +63,4 @@ Record and gate:
     python3 tests/projects/missingshader/run.py publish A B
     python3 tests/projects/missingshader/run.py gate
 
-`residuals.json` names the open differences (Material property names and saves, a follow-up).
+The names a script sets and what a save does to them are measured in tests/projects/materialnames.

@@ -62,14 +62,15 @@ namespace UnityEngine
         static readonly Dictionary<int, int> s_Owners = new();
 
         /// <summary>The property ID of a texture property's <c>&lt;name&gt;_HDR</c> (made once per
-        /// property), remembered with its texture property (<see cref="TextureOf"/>).</summary>
+        /// property, with its other companions: <see cref="Shader.TextureCompanionIds"/>),
+        /// remembered with its texture property (<see cref="TextureOf"/>).</summary>
         internal static int IdOf(int texture)
         {
             lock (s_Lock)
             {
                 if (!s_Ids.TryGetValue(texture, out int id))
                 {
-                    s_Ids[texture] = id = Shader.PropertyToID(NameOf(Shader.IdToName(texture) ?? ""));
+                    s_Ids[texture] = id = Shader.TextureCompanionIds(texture)[Shader.HdrCompanion];
                     s_Owners[id] = texture;
                 }
                 return id;
