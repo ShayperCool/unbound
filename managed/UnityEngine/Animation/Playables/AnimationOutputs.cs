@@ -1355,6 +1355,10 @@ namespace Unbound.Runtime.Playables
             if (Result == null || Evaluation != Animator.m_OutputEvaluations || !Animator.isActiveAndEnabled) return;
             PoseWriter.WriteStream(Result, onlyRoot: Animator.transform);
             if (Mode == RootMotionMode.GenericControllerWithoutRootMotion) AnimationEvaluation.CaptureRootWithoutMotion(Animator);
+            // Without root motion the root accessors read the root as written, also when the write
+            // moves it, as at a cut from a generic state to a humanoid one (6000.0.71f1,
+            // tests/projects/humanoid genericCut.toHumanOff).
+            else if (Mode == RootMotionMode.Human && !Animator.m_ApplyRootMotion && !MoveCallbacks.Any(Animator)) Animator.CaptureRootMotionPose();
             RootWritten = true;
         }
 

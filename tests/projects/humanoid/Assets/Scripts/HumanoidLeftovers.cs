@@ -271,6 +271,35 @@ public partial class HumanoidProbe
 #endif
     }
 
+    /// <summary>An immediate cut (AnimatorControllerPlayable.Play at step 12) between a humanoid
+    /// state (HumanA's clip) and a generic one (HumanGenericMove) of one controller layer, both
+    /// ways, root motion off.</summary>
+    static void GenericControllerCuts()
+    {
+#if UNITY_EDITOR
+        foreach (var mode in new[] { "toGenericOff", "toHumanOff" })
+        {
+            string key = "genericCut." + mode;
+            bool toGeneric = mode == "toGenericOff";
+            AnimatorControllerPlayable playable = default;
+            Guarded(key, () => PlayGraph(key, graph =>
+            {
+                var controller = new UnityEditor.Animations.AnimatorController();
+                controller.AddLayer("Base Layer");
+                var machine = controller.layers[0].stateMachine;
+                var human = machine.AddState("Humanoid");
+                human.motion = ControllerClip("HumanA");
+                var generic = machine.AddState("Generic");
+                generic.motion = ControllerClip("HumanGenericMove");
+                machine.defaultState = toGeneric ? human : generic;
+                playable = AnimatorControllerPlayable.Create(graph, controller);
+                return playable;
+            }, false, before: step => { if (step == 12) playable.Play(toGeneric ? "Generic" : "Humanoid", 0, 0f); },
+                velocities: true, localsEvery: 4));
+        }
+#endif
+    }
+
     static void GenericAdditiveMotion()
     {
 #if UNITY_EDITOR
@@ -405,6 +434,7 @@ public partial class HumanoidProbe
         AdditiveEmptyBody();
         GenericControllerMotion();
         GenericAdditiveMotion();
+        GenericControllerCuts();
         foreach (var mode in new[] { "setCurve", "editorCurve", "mirror", "mirrorFootIK", "plainFootIK",
             "plainJob", "plainJobFootIK", "mirrorJob", "mirrorJobFootIK", "mirrorJobPartialFoot",
             "mirrorJobPartialHand", "mirrorJobFootPosition", "mirrorJobFullFoot",

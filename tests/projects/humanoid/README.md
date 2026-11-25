@@ -431,6 +431,12 @@ with the root and body pose, velocities, and delta motion recorded at each step.
 [Root motion](https://docs.unity3d.com/6000.0/Documentation/Manual/RootMotion.html),
 [AnimatorControllerPlayable](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Animations.AnimatorControllerPlayable.html).
 
+Two `genericCut.*` controls append 190 rows from two identical Linux 6000.0.71f1 Editor
+captures. A manual controller playable on HumanA cuts at once (`Play` at step 12) from a humanoid
+state to a generic one (`toGenericOff`) and back (`toHumanOff`), root motion off. At the cut to the
+generic state the humanoid body sample is gone; at the cut to the humanoid state the root accessors
+read the root as the write restores it. Cuts and cross-fades with root motion on are unmeasured.
+
 Five `genericAdditive.*` controls append 475 rows from matching macOS 6000.0.71f1
 Editor captures. A stable positive-weight additive humanoid clip changes the body and muscles
 over a generic base without changing the root step. The body difference uses the layer weight
