@@ -153,12 +153,24 @@ namespace UnityEngine.Tests
                 offered.Clear();
                 foreach (var b in AnimationUtility.GetAnimatableBindings(go, go))
                     if (b.type == typeof(Animator)) offered.Add(b.propertyName);
-                Assert.Equal(new[] { "speed", "blend", "m_Enabled" }, offered); // animator.offered (one float parameter there)
+                Assert.Equal(new[] { "speed", "blend", "m_Enabled" }, offered); // animator.offered
                 var recorder = new GameObjectRecorder(go);
                 recorder.BindComponent(animator);
                 var bound = new List<string>();
                 foreach (var b in recorder.GetBindings()) bound.Add(b.propertyName);
                 Assert.Equal(new[] { "speed", "blend" }, bound); // animator.bound: never the enabled state
+                // Below the recorder's root the Animator offers no parameters (animator.child*).
+                var top = new GameObject("top");
+                go.transform.SetParent(top.transform, false);
+                offered.Clear();
+                foreach (var b in AnimationUtility.GetAnimatableBindings(go, top))
+                    if (b.type == typeof(Animator)) offered.Add(b.propertyName);
+                Assert.Equal(new[] { "m_Enabled" }, offered);
+                recorder = new GameObjectRecorder(top);
+                recorder.BindComponent(animator);
+                Assert.Empty(recorder.GetBindings());
+                go.transform.SetParent(null, false);
+                Object.DestroyImmediate(top);
             }
             finally
             {
@@ -195,6 +207,68 @@ namespace UnityEngine.Tests
             {
                 Object.DestroyImmediate(root);
             }
+        }
+
+        public sealed class RecordedFields : MonoBehaviour
+        {
+            public float speed;
+        }
+
+        /// <summary>Each snapshot reads the bound values as they are then: a script's field through
+        /// its SerializedObject, a Light's colour and range.</summary>
+        [Fact]
+        public void SnapshotsReadValuesAsTheyChange()
+        {
+            using var release = TestRelease.Pin(TestRelease.Measured);
+            var root = new GameObject("changing");
+            var light = root.AddComponent<Light>();
+            var fields = root.AddComponent<RecordedFields>();
+            try
+            {
+                var bindings = new[]
+                {
+                    EditorCurveBinding.FloatCurve("", typeof(RecordedFields), "speed"),
+                    EditorCurveBinding.FloatCurve("", typeof(Light), "m_Color.r"),
+                    EditorCurveBinding.FloatCurve("", typeof(Light), "m_Range"),
+                };
+                var recorder = new GameObjectRecorder(root);
+                foreach (var b in bindings) recorder.Bind(b);
+                for (int i = 0; i < 3; i++)
+                {
+                    fields.speed = 1f + i;
+                    light.color = new Color(0.25f * i, 0f, 0f);
+                    light.range = 10f - i;
+                    recorder.TakeSnapshot(0.5f);
+                }
+                var clip = new AnimationClip();
+                recorder.SaveToClip(clip, 2f, new CurveFilterOptions { keyframeReduction = false });
+                float[] Values(EditorCurveBinding b) => System.Linq.Enumerable.ToArray(System.Linq.Enumerable.Select(AnimationUtility.GetEditorCurve(clip, b).keys, k => k.value));
+                Assert.Equal(new[] { 1f, 2f, 3f }, Values(bindings[0]));
+                Assert.Equal(new[] { 0f, 0.25f, 0.5f }, Values(bindings[1]));
+                Assert.Equal(new[] { 10f, 9f, 8f }, Values(bindings[2]));
+            }
+            finally
+            {
+                Object.DestroyImmediate(root);
+            }
+        }
+
+        /// <summary>A lone ClampedAuto key keeps its tangents and weights (clampedAuto.single); a
+        /// weighted key gets the default weights and keeps its weighted mode (clampedAuto.weighted).</summary>
+        [Fact]
+        public void ClampedAutoLeavesALoneKeyAndResetsWeightedOnes()
+        {
+            var single = new AnimationCurve(new Keyframe(1f, 2f, 0.5f, 0.5f, 0.2f, 0.7f));
+            AnimationUtility.SetKeyLeftTangentMode(single, 0, AnimationUtility.TangentMode.ClampedAuto);
+            AnimationUtility.SetKeyRightTangentMode(single, 0, AnimationUtility.TangentMode.ClampedAuto);
+            Assert.Equal((0.5f, 0.5f, 0.2f, 0.7f), (single[0].inTangent, single[0].outTangent, single[0].inWeight, single[0].outWeight));
+            var weighted = new AnimationCurve(new Keyframe(0f, 0f), new Keyframe(1f, 0.5f, 0f, 0f, 0.2f, 0.7f) { weightedMode = WeightedMode.Both }, new Keyframe(2f, 2f));
+            for (int i = 0; i < weighted.length; i++)
+            {
+                AnimationUtility.SetKeyLeftTangentMode(weighted, i, AnimationUtility.TangentMode.ClampedAuto);
+                AnimationUtility.SetKeyRightTangentMode(weighted, i, AnimationUtility.TangentMode.ClampedAuto);
+            }
+            Assert.Equal((1f, 1f / 3f, 1f / 3f, WeightedMode.Both), (weighted[1].inTangent, weighted[1].inWeight, weighted[1].outWeight, weighted[1].weightedMode));
         }
 
         static int Hits(string member) => System.Linq.Enumerable.FirstOrDefault(Stubs.HitReport(), h => h.Key == member).Value;
