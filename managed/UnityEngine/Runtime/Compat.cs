@@ -62,6 +62,13 @@ namespace Unbound.Runtime
         // Elsewhere the texture keeps its colour space.
         internal static bool ReinitializeFormatLinearMeasured => Family == ReleaseFamily.Unity6000_0;
 
+        // The Editor's quit callbacks, measured on 6000.0.71f1 (tests/projects/tmpatlas quit.*): leaving
+        // Play mode raises Application.quitting between ExitingPlayMode and EnteredEditMode; the
+        // Editor's exit raises EditorApplication.quitting in Edit mode, before the dirty assets are
+        // saved, and no Application.quitting. Elsewhere Application.quitting is raised as Unbound's
+        // session ends and EditorApplication.quitting is not.
+        internal static bool QuitCallbacksMeasured => Family == ReleaseFamily.Unity6000_0;
+
         /// <summary>The build facts InternalEditorUtility reports (GetUnityBuildBranch,
         /// GetUnityRevision, GetUnityVersionDate, GetUnityDisplayVersionVerbose, GetUnityProductName,
         /// GetUnityCopyright), measured on 6000.0.71f1 and answered by every release of its family

@@ -736,26 +736,47 @@ namespace Unbound.Runtime
             Trace.ReportUnread();
             if (s_QuitDone) return;
             s_QuitDone = true;
+            // A session that ends with Play mode ends it as the Editor leaves it, then the Editor quits.
+            bool leavesPlayMode = EditorSession.IsPlaying && !s_EditorExit;
             try
             {
                 // Direct Editor exit omits the Play-mode quit message; stopping Play sends it.
-                if (EditorSession.IsPlaying && !s_EditorExit) Lifecycle.Broadcast(m => m.OnApplicationQuit, null);
-                Application.Internal_Quitting();
+                if (leavesPlayMode && Compat.QuitCallbacksMeasured) UnityEditor.EditorApplication.Internal_PlayModeStateChanged(UnityEditor.PlayModeStateChange.ExitingPlayMode);
+                if (leavesPlayMode) Lifecycle.Broadcast(m => m.OnApplicationQuit, null);
+                // The Editor's exit in Edit mode raises no Application.quitting (tests/projects/tmpatlas
+                // quit.*); Application.unloading is raised as before (unmeasured).
+                if (!Compat.QuitCallbacksMeasured || EditorSession.IsPlaying) Application.Internal_Quitting();
+                else Application.Internal_Unloading();
             }
-            finally { FinishQuit(s_EditorExit, PlayerPrefs.SaveOnQuit, NativePlugins.Shutdown, () => AssetFiles.SaveDirty()); }
+            finally { FinishQuit(s_EditorExit, PlayerPrefs.SaveOnQuit, NativePlugins.Shutdown, () => AssetFiles.SaveDirty(), leavesPlayMode); }
         }
 
         /// <param name="saveAssets">The Editor's exit writes the assets still dirty (measured:
-        /// tests/projects/scenesave, Edit and Play mode edits), after Play mode has ended.</param>
-        internal static void FinishQuit(bool editorExit, Action savePreferences, Action shutdownPlugins, Action saveAssets = null)
+        /// tests/projects/scenesave, Edit and Play mode edits), after Play mode has ended and
+        /// EditorApplication.quitting (tests/projects/tmpatlas quit.*, exit.*).</param>
+        /// <param name="leftPlayMode">The session ended with Play mode: EnteredEditMode follows its
+        /// teardown, in Edit mode.</param>
+        internal static void FinishQuit(bool editorExit, Action savePreferences, Action shutdownPlugins, Action saveAssets = null, bool leftPlayMode = false)
         {
             try
             {
-                if (editorExit) SceneManagerInternal.CloseEditorScenes();
+                if (editorExit)
+                {
+                    // The Editor's exit: EditorApplication.quitting while its scenes are open.
+                    if (Compat.QuitCallbacksMeasured) UnityEditor.EditorApplication.Internal_Quitting();
+                    SceneManagerInternal.CloseEditorScenes();
+                }
                 else
                 {
+                    if (Compat.QuitCallbacksMeasured && !leftPlayMode) UnityEditor.EditorApplication.Internal_Quitting();
                     EditorSession.DestroyPlayModeObjects(destroyDetached: true);
                     SceneRegistry.ResetToUntitled();
+                    if (Compat.QuitCallbacksMeasured && leftPlayMode)
+                    {
+                        EditorSession.IsPlaying = false;
+                        UnityEditor.EditorApplication.Internal_PlayModeStateChanged(UnityEditor.PlayModeStateChange.EnteredEditMode);
+                        UnityEditor.EditorApplication.Internal_Quitting();
+                    }
                 }
             }
             finally

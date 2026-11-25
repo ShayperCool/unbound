@@ -93,6 +93,7 @@ namespace Unbound.Runtime
 
         static void EnterPlayMode()
         {
+            Application.Internal_PlayModeStarting();
             LeaveEditModeForPlay();
             UnityEngine.U2D.SpriteAtlasPacking.PackV1ForPlayMode();
             IsPlaying = true;
@@ -158,6 +159,7 @@ namespace Unbound.Runtime
         {
             EditorApplication.Internal_PlayModeStateChanged(PlayModeStateChange.ExitingPlayMode);
             Lifecycle.Broadcast(m => m.OnApplicationQuit, null);
+            if (Compat.QuitCallbacksMeasured) Application.Internal_PlayModeQuitting();
             DestroyPlayModeObjects();
             IsPlaying = false;
             SceneRegistry.ResetToUntitled();

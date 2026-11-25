@@ -279,6 +279,20 @@ namespace UnityEditor
         public static void UpdateMainWindowTitle() { }
 
         /// <summary>Each handler runs on its own: one that throws is logged and the others still run.</summary>
+        /// <summary>The Editor's exit, in Edit mode, before the dirty assets are saved
+        /// (<see cref="Unbound.Runtime.Compat.QuitCallbacksMeasured"/>): TextMeshPro, for one, clears
+        /// its dynamic font assets' data here.</summary>
+        internal static void Internal_Quitting()
+        {
+            var handlers = quitting;
+            if (handlers == null) return;
+            foreach (Action handler in handlers.GetInvocationList())
+            {
+                try { handler(); }
+                catch (Exception e) { Debug.LogException(e); }
+            }
+        }
+
         internal static void Internal_PlayModeStateChanged(PlayModeStateChange state)
         {
             var handlers = playModeStateChanged;

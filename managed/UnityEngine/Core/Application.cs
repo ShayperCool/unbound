@@ -117,10 +117,31 @@ namespace UnityEngine
             return true;
         }
 
+        /// <summary>Play mode ends in the Editor: Application.quitting, and the exit token is cancelled
+        /// (<see cref="Compat.QuitCallbacksMeasured"/>).</summary>
+        internal static void Internal_PlayModeQuitting()
+        {
+            try { s_ExitCancellation.Cancel(); } catch (Exception e) { Debug.LogException(e); }
+            quitting?.Invoke();
+        }
+
+        /// <summary>Play mode starts again: a new exit token.</summary>
+        internal static void Internal_PlayModeStarting()
+        {
+            if (s_ExitCancellation.IsCancellationRequested) s_ExitCancellation = new CancellationTokenSource();
+        }
+
         internal static void Internal_Quitting()
         {
             try { s_ExitCancellation.Cancel(); } catch (Exception e) { Debug.LogException(e); }
             quitting?.Invoke();
+            unloading?.Invoke();
+        }
+
+        /// <summary>The session's end without Application.quitting (the Editor's exit in Edit mode).</summary>
+        internal static void Internal_Unloading()
+        {
+            try { s_ExitCancellation.Cancel(); } catch (Exception e) { Debug.LogException(e); }
             unloading?.Invoke();
         }
 
