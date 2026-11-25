@@ -21,8 +21,9 @@ namespace UnityEditor
     /// a hash order Unity does not specify).
     /// Unbound keeps what it saw of each asset (GUID, size, time, content hash of the file and of its
     /// <c>.meta</c>) in <c>ImportRecord.json</c> of its project directory: written after the start's
-    /// import and again as the session ends, so that what the session itself wrote is not imported
-    /// again at the next start (the Editor imports such files during the session).
+    /// import and its writes, and as the session ends for the files the session itself wrote, moved
+    /// or deleted, so that those are not imported again at the next start (the Editor imports them
+    /// during the session) while changes made outside are.
     /// </summary>
     internal static class ProjectImports
     {
@@ -74,32 +75,111 @@ namespace UnityEditor
         }
 
         static bool s_Taken;
-        static bool s_Recorded;
+        /// <summary>The record the session's end brings up to date (null: no record kept).</summary>
+        static List<Entry> s_Base;
+        static List<Entry> s_Pending;
+        /// <summary>The project paths the session wrote, moved or deleted (a folder: all it holds).</summary>
+        static readonly HashSet<string> s_Written = new HashSet<string>(StringComparer.Ordinal);
 
         /// <summary>The start's import, once per process: null after the first call, and for a
-        /// session relaunched for a script edit (its start lists nothing; the record is brought up
-        /// to date, as the Editor imports the edit during the session). Without the native side
-        /// (unit tests) there is no project: null.</summary>
+        /// session relaunched for a script edit (its start lists nothing and the record stays as it
+        /// is, so the next start lists what changed meanwhile; the Editor imports the edit during
+        /// the session). The record is written by <see cref="CommitStart"/>, once the start's
+        /// postprocessing and its writes are done. Without the native side (unit tests) there is
+        /// no project: null.</summary>
         internal static Changes TakeStart()
         {
             if (s_Taken) return null;
             s_Taken = true;
             if (!Native.IsReady || string.IsNullOrEmpty(ProjectInfo.ProjectPath)) return null;
             var file = RecordPath();
-            var changes = Scan(ProjectAssets(), file, out var record);
-            Save(file, record);
-            s_Recorded = true;
-            return EditorInitialization.ContinuesScriptReload() ? null : changes;
+            if (EditorInitialization.ContinuesScriptReload())
+            {
+                s_Base = Load(file);
+                return null;
+            }
+            var changes = Scan(ProjectAssets(), file, out s_Pending);
+            return changes;
         }
 
-        /// <summary>The session ends: the record takes the project's files as they are now.</summary>
+        /// <summary>Writes the record of what the start's import found, with the files the start
+        /// itself wrote as they are now.</summary>
+        internal static void CommitStart()
+        {
+            if (s_Pending == null) return;
+            s_Base = s_Pending;
+            s_Pending = null;
+            Settle();
+        }
+
+        /// <summary>Unbound wrote, created, moved or deleted <paramref name="file"/> (a project path
+        /// or a file of the project; a .meta stands for its asset).</summary>
+        internal static void Wrote(string file)
+        {
+            if (string.IsNullOrEmpty(file)) return;
+            var path = file.Replace('\\', '/');
+            if (System.IO.Path.IsPathRooted(path))
+            {
+                // A file of the project view the game runs in, or of the project itself.
+                path = Below(ProjectInfo.ProjectPath, path) ?? Below(ProjectInfo.ProjectRootPath, path);
+                if (path == null) return;
+            }
+            if (path.EndsWith(".meta", StringComparison.OrdinalIgnoreCase)) path = path.Substring(0, path.Length - ".meta".Length);
+            s_Written.Add(path.TrimEnd('/'));
+        }
+
+        /// <summary>A file's path relative to a folder it is in, or null.</summary>
+        static string Below(string root, string file)
+        {
+            if (string.IsNullOrEmpty(root)) return null;
+            var relative = System.IO.Path.GetRelativePath(System.IO.Path.GetFullPath(root), System.IO.Path.GetFullPath(file)).Replace('\\', '/');
+            return relative == "." || relative.StartsWith("../", StringComparison.Ordinal) || System.IO.Path.IsPathRooted(relative) ? null : relative;
+        }
+
+        static bool IsWritten(string path)
+        {
+            for (var p = path; ; )
+            {
+                if (s_Written.Contains(p)) return true;
+                int slash = p.LastIndexOf('/');
+                if (slash <= 0) return false;
+                p = p.Substring(0, slash);
+            }
+        }
+
+        /// <summary>The session ends: the record takes what the session itself wrote, created, moved
+        /// or deleted as it is now; every other asset keeps its recorded state, so a change made
+        /// outside during the session is imported at the next start.</summary>
         internal static void Settle()
         {
-            if (!s_Recorded) return;
-            var file = RecordPath();
-            Scan(ProjectAssets(), file, out var record);
-            Save(file, record);
+            if (s_Base == null) return;
+            Settle(ProjectAssets(), RecordPath());
         }
+
+        /// <summary><see cref="Settle()"/> of these assets into this record file.</summary>
+        internal static void Settle(IReadOnlyList<Asset> assets, string file)
+        {
+            if (s_Base == null) return;
+            var known = new Dictionary<string, Entry>(StringComparer.Ordinal);
+            foreach (var e in s_Base) known[e.Path] = e;
+            var now = new List<Entry>();
+            var seen = new HashSet<string>(StringComparer.Ordinal);
+            foreach (var a in assets)
+            {
+                seen.Add(a.Path);
+                known.TryGetValue(a.Path, out var before);
+                if (IsWritten(a.Path)) now.Add(Observe(a, before));
+                else if (before != null) now.Add(before);
+            }
+            // Gone from the project: kept unless the session removed it (the next start lists it deleted).
+            foreach (var e in s_Base)
+                if (!seen.Contains(e.Path) && !IsWritten(e.Path)) now.Add(e);
+            Save(file, now);
+            s_Base = now;
+        }
+
+        /// <summary>The record the session's end brings up to date (tests).</summary>
+        internal static void BaseForTests(List<Entry> entries) => s_Base = entries;
 
         static string RecordPath() => ProjectInfo.UnboundPath(RecordFile);
 
@@ -269,7 +349,9 @@ namespace UnityEditor
         internal static void ResetForTests()
         {
             s_Taken = false;
-            s_Recorded = false;
+            s_Base = null;
+            s_Pending = null;
+            s_Written.Clear();
         }
     }
 }

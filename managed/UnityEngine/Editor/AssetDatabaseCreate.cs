@@ -66,6 +66,7 @@ namespace UnityEditor
             long mainId = MainFileId(asset);
             created.Objects[asset] = mainId;
             File.WriteAllText(FileOf(path), created.Text());
+            ProjectImports.Wrote(path);
             Track(ImportOne(path, mainId), created);
         }
 

@@ -147,6 +147,7 @@ namespace UnityEditor
                 return "";
             }
             File.WriteAllBytes(FileOf(path), bytes);
+            ProjectImports.Wrote(path);
             return ImportOne(path, main);
         }
 
@@ -325,6 +326,7 @@ namespace UnityEditor
                 return "";
             }
             Directory.CreateDirectory(FileOf(path));
+            ProjectImports.Wrote(path);
             return ImportOne(path);
         }
 
@@ -425,6 +427,7 @@ namespace UnityEditor
                 }
             }
             else File.Copy(source, target);
+            ProjectImports.Wrote(target);
             if (File.Exists(source + ".meta"))
             {
                 var meta = AssetPaths.WithGuid(File.ReadAllText(source + ".meta"), GUID.Generate().ToString());
@@ -481,6 +484,8 @@ namespace UnityEditor
             if (Directory.Exists(source)) Directory.Move(source, target);
             else File.Move(source, target);
             if (File.Exists(source + ".meta")) File.Move(source + ".meta", target + ".meta");
+            ProjectImports.Wrote(source);
+            ProjectImports.Wrote(target);
             foreach (var created in s_Created.Values)
                 if (created.Path.Equals(oldPath, StringComparison.OrdinalIgnoreCase) || created.Path.StartsWith(oldPath + "/", StringComparison.OrdinalIgnoreCase))
                     created.Path = newPath + created.Path.Substring(oldPath.Length);
@@ -517,6 +522,7 @@ namespace UnityEditor
             var renamed = AssetPaths.WithMainObjectName(File.ReadAllText(file), main.Groups[1].Value, name);
             if (renamed == null) return;
             File.WriteAllText(file, renamed);
+            ProjectImports.Wrote(file);
             var guid = s_GuidLine.Match(meta);
             if (guid.Success && AssetDatabaseRuntime.IsMainLoaded(guid.Value.Substring("guid: ".Length)))
                 AssetDatabaseRuntime.LoadMain(guid.Value.Substring("guid: ".Length), null).name = name;
@@ -579,6 +585,7 @@ namespace UnityEditor
                 AssetDatabaseRuntime.ForgetPersistentIds(guid);
             }
             var file = FileOf(path);
+            ProjectImports.Wrote(file);
             if (trash) Trash.Move(file);
             else if (Directory.Exists(file)) Directory.Delete(file, true);
             else File.Delete(file);
@@ -628,6 +635,7 @@ namespace UnityEditor
                 if (string.IsNullOrEmpty(section) && !AssetPaths.HasImporterSection(text))
                     Debug.LogWarning($"Unbound: {path}.meta is written without its importer's settings: Unbound does not know the settings the Editor writes there yet.");
                 File.WriteAllText(meta, AssetPaths.WithLabels(text, labels, section));
+                ProjectImports.Wrote(meta);
             }
             catch (Exception e) when (e is IOException || e is UnauthorizedAccessException)
             {

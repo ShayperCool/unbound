@@ -206,6 +206,7 @@ namespace UnityEditor
                         Directory.CreateDirectory(Path.GetDirectoryName(file));
                         File.WriteAllBytes(file, item.Asset);
                     }
+                    ProjectImports.Wrote(file);
                     File.WriteAllBytes(file + ".meta", item.Meta ?? Encoding.UTF8.GetBytes("fileFormatVersion: 2\nguid: " + item.Guid + "\n"));
                     written.Add(path);
                 }

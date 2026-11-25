@@ -211,8 +211,10 @@ namespace UnityEditor
         /// and leaves the asset unloaded (matches the Unity 6000.0.71f1 Editor,
         /// tests/projects/firstimport types.*); so does Unbound for an asset not loaded whose import
         /// decides the type alone: a folder, a model, an audio clip and a 2D texture of the Editor's
-        /// own importers, a prefab, a scene, a script, a shader file, a material and a V1 sprite
-        /// atlas. Any other asset is loaded to answer.</summary>
+        /// own importers, a prefab, a scene, a script, a shader file or graph, a text, style sheet,
+        /// UXML or font file, a material, an animation clip, an animator controller, a V1 sprite
+        /// atlas and a scriptable object asset (by its script). Any other asset is loaded to
+        /// answer.</summary>
         public static Type GetMainAssetTypeAtPath(string assetPath) => MainTypeUnloaded(assetPath) ?? LoadMainAssetAtPath(assetPath)?.GetType();
 
         static Type MainTypeUnloaded(string path)
@@ -231,11 +233,22 @@ namespace UnityEditor
                 case "prefab": return typeof(GameObject);
                 case "scene": return typeof(SceneAsset);
                 case "script": return AssetImporter.GetAtPath(path)?.GetType() == typeof(MonoImporter) ? typeof(MonoScript) : null;
-                case "shader": return path.EndsWith(".shader", StringComparison.OrdinalIgnoreCase) && AssetImporter.GetAtPath(path)?.GetType() == typeof(ShaderImporter) ? typeof(Shader) : null;
+                case "shader":
+                    if (path.EndsWith(".shadergraph", StringComparison.OrdinalIgnoreCase)) return typeof(Shader);
+                    return path.EndsWith(".shader", StringComparison.OrdinalIgnoreCase) && AssetImporter.GetAtPath(path)?.GetType() == typeof(ShaderImporter) ? typeof(Shader) : null;
+                case "text": return typeof(TextAsset);
+                case "uss": return typeof(UnityEngine.UIElements.StyleSheet);
+                case "tss": return typeof(UnityEngine.UIElements.ThemeStyleSheet);
+                case "uxml": return typeof(UnityEngine.UIElements.VisualTreeAsset);
+                case "font": return typeof(Font);
                 case "yaml":
-                    // Native-format files whose extension names their main object's class.
+                    // Native-format files whose extension names their main object's class, and
+                    // scriptable objects by their script.
                     if (path.EndsWith(".mat", StringComparison.OrdinalIgnoreCase)) return typeof(Material);
                     if (path.EndsWith(".spriteatlas", StringComparison.OrdinalIgnoreCase)) return typeof(UnityEngine.U2D.SpriteAtlas);
+                    if (path.EndsWith(".anim", StringComparison.OrdinalIgnoreCase)) return typeof(AnimationClip);
+                    if (path.EndsWith(".controller", StringComparison.OrdinalIgnoreCase)) return typeof(UnityEditor.Animations.AnimatorController);
+                    if (path.EndsWith(".asset", StringComparison.OrdinalIgnoreCase)) return ScriptTypeOfAsset(e.Guid);
                     return null;
             }
             return null;
@@ -428,12 +441,7 @@ namespace UnityEditor
             }
             if (ext != ".asset") return false;
             // A ScriptableObject asset: compare with its script class and base classes.
-            if (!s_ScriptOfAsset.TryGetValue(e.Guid, out var scriptGuid))
-            {
-                scriptGuid = JsonDocument.Parse(Native.Call("asset-script", JsonSerializer.Serialize(new { guid = e.Guid }))).RootElement.GetProperty("script").GetString();
-                s_ScriptOfAsset[e.Guid] = scriptGuid;
-            }
-            var scriptType = string.IsNullOrEmpty(scriptGuid) ? null : GameDomain.ResolveScript(scriptGuid, 11500000);
+            var scriptType = ScriptTypeOfAsset(e.Guid);
             if (type.Equals("ScriptableObject", StringComparison.OrdinalIgnoreCase)) return scriptType != null;
             for (var t = scriptType; t != null; t = t.BaseType)
                 if (t.Name.Equals(type, StringComparison.OrdinalIgnoreCase) || (t.FullName ?? "").Equals(type, StringComparison.OrdinalIgnoreCase)) return true;
@@ -449,6 +457,18 @@ namespace UnityEditor
         public static string[] GetDependencies(string[] pathNames, bool recursive) => pathNames;
 
         static readonly Dictionary<string, string> s_ScriptOfAsset = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+
+        /// <summary>The script class of a native-format asset whose main object is a scriptable
+        /// object (read from its file without loading it), or null.</summary>
+        static Type ScriptTypeOfAsset(string guid)
+        {
+            if (!s_ScriptOfAsset.TryGetValue(guid, out var scriptGuid))
+            {
+                scriptGuid = JsonDocument.Parse(Native.Call("asset-script", JsonSerializer.Serialize(new { guid }))).RootElement.GetProperty("script").GetString();
+                s_ScriptOfAsset[guid] = scriptGuid;
+            }
+            return string.IsNullOrEmpty(scriptGuid) ? null : GameDomain.ResolveScript(scriptGuid, 11500000);
+        }
 
         static Entry EntryOf(Object obj)
         {

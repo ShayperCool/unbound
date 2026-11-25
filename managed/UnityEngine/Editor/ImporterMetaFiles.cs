@@ -85,7 +85,7 @@ namespace Unbound.Runtime
                 var customWritten = UnityYamlText.WriteTopLevel(root);
                 bool textChanged = customWritten != text.Replace("\r\n", "\n");
                 if (!textChanged && !wasDirty) return false;
-                if (textChanged) File.WriteAllText(meta, customWritten);
+                if (textChanged) { File.WriteAllText(meta, customWritten); UnityEditor.ProjectImports.Wrote(meta); }
                 importer.ClearModifiedState();
                 return textChanged;
             }
@@ -104,6 +104,7 @@ namespace Unbound.Runtime
             if (importer.m_SettingsType == "TextureImporter" && AddInstalledPlatforms(section))
                 written = UnityYamlText.WriteTopLevel(root);
             File.WriteAllText(meta, written);
+            UnityEditor.ProjectImports.Wrote(meta);
             return true;
         }
 

@@ -66,12 +66,15 @@ static class FirstImportProbe
     {
         "Assets/Types", "Assets/Types/Plain.png", "Assets/Types/Tone.wav", "Assets/Types/Plain.fbx", "Assets/Types/Thing.prefab",
         "Assets/Types/Atlas.spriteatlas", "Assets/M/Touched.mat", "Assets/Scenes/Probe.unity", "Assets/Editor/FirstImportProbe.cs",
-        "Packages/com.unity.render-pipelines.universal/Shaders/Lit.shader",
+        "Packages/com.unity.render-pipelines.universal/Shaders/Lit.shader", "Assets/Types/Notes.txt", "Assets/Types/Style.uss",
+        "Assets/Types/Layout.uxml", "Assets/Types/Clip.anim", "Assets/Types/Control.controller", "Assets/DefaultVolumeProfile.asset",
+        "Packages/com.unity.render-pipelines.universal/Shaders/AutodeskInteractive/AutodeskInteractive.shadergraph",
+        "Packages/com.unity.render-pipelines.universal/Editor/Converter/converter_editor.uss",
+        "Packages/com.unity.searcher/Editor/Resources/FlatSkin/Font/Roboto-Black.ttf",
     };
 
-    /// <summary>The main asset types of a folder, a texture, an audio clip, a model, a prefab, a sprite
-    /// atlas, a material, a scene, a script and a shader: whether the asset was loaded, its type and
-    /// whether asking loaded it.</summary>
+    /// <summary>The main asset types of assets of most kinds: whether the asset was loaded, its type
+    /// and whether asking loaded it.</summary>
     internal static void Types()
     {
         foreach (var path in TypePaths)

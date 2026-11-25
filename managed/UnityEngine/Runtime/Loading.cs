@@ -1232,8 +1232,13 @@ namespace Unbound.Runtime
                         try { action(); }
                         catch (Exception e) { Debug.LogException(e); }
                     }
+                if (read && s_Files.TryGetValue(guid, out var done) && done != null) FileRead?.Invoke(done);
             }
         }
+
+        /// <summary>Told of each file once it is read whole, its load's own work done
+        /// (UnityEditor.EditorInitialization: the dirtiness a load gives its objects is not a change).</summary>
+        internal static Action<LoadedFile> FileRead;
 
         /// <summary>Actions waiting for a file being loaded to be read whole, by its GUID.</summary>
         static readonly Dictionary<string, List<Action>> s_WhenLoaded = new Dictionary<string, List<Action>>();

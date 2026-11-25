@@ -102,6 +102,31 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
+        public void TheSessionsEndRecordsOnlyWhatTheSessionWroteSoOutsideChangesAreImportedNext()
+        {
+            ProjectImports.Scan(Initial(), Record, out var start);
+            ProjectImports.ResetForTests();
+            ProjectImports.BaseForTests(start);
+            try
+            {
+                // Unbound writes A and deletes C; outside the session B changes and D appears.
+                Write("Assets/M/A.mat", "a written");
+                ProjectImports.Wrote("Assets/M/A.mat");
+                File.Delete(Path.Combine(m_Root, "Assets/M/C.mat"));
+                File.Delete(Path.Combine(m_Root, "Assets/M/C.mat.meta"));
+                ProjectImports.Wrote("Assets/M/C.mat.meta");
+                Write("Assets/M/B.mat", "b changed outside");
+                Write("Assets/M/D.mat", "d");
+                var now = Assets(("Assets", ""), ("Assets/M", "f0"), ("Assets/M/A.mat", "a1"), ("Assets/M/B.mat", "b1"), ("Assets/M/D.mat", "d1"));
+                ProjectImports.Settle(now, Record);
+                var next = ProjectImports.Scan(now, Record, out _);
+                Assert.Equal(new[] { "Assets/M/B.mat", "Assets/M/D.mat" }, next.Imported);
+                Assert.Empty(next.Deleted);
+            }
+            finally { ProjectImports.ResetForTests(); }
+        }
+
+        [Fact]
         public void ARecordOfAnotherFormatIsAFirstOpen()
         {
             Scan(Initial());
@@ -226,6 +251,8 @@ namespace UnityEngine.Tests
             {
                 var ordered = AssetPostprocessing.Ordered(Methods(typeof(CycleA), typeof(Root1), typeof(CycleB)));
                 Assert.Equal(new[] { "Root1" }, ordered.Select(m => m.DeclaringType.Name));
+                // The same callbacks again: ordered once, reported once.
+                Assert.Equal(new[] { "Root1" }, AssetPostprocessing.Ordered(Methods(typeof(CycleA), typeof(Root1), typeof(CycleB))).Select(m => m.DeclaringType.Name));
             }
             finally { Debug.unityLogger.logHandler = previous; }
             var prefix = typeof(ProjectImportsTests).FullName + "+";

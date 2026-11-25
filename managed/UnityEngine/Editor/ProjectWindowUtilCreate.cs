@@ -63,6 +63,7 @@ namespace UnityEditor
             AssetModificationProcessorInternal.OnWillCreateAsset(assetPath);
             scriptContent = SetLineEndings(scriptContent, EditorSettings.lineEndingsForNewScripts);
             File.WriteAllText(AssetDatabase.FileOf(assetPath), scriptContent);
+            ProjectImports.Wrote(assetPath);
             AssetDatabase.ImportAsset(assetPath);
             return AssetDatabase.LoadAssetAtPath(assetPath, typeof(Object));
         }

@@ -403,6 +403,7 @@ namespace Unbound.Runtime
                 try
                 {
                     File.WriteAllText(f.FilePath, UnityYamlText.Write(f.Documents));
+                    UnityEditor.ProjectImports.Wrote(f.FilePath);
                     f.Dirty = false;
                     if (f.Object != null) EditorUtility.ClearDirty(f.Object);
                 }
