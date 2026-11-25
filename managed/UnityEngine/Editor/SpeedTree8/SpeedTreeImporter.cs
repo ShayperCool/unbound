@@ -110,14 +110,14 @@ namespace UnityEditor
             set { CheckImporterState("set_mainColor"); Unsupported("mainColor"); }
         }
 
-        [Obsolete("specColor is no longer used and has been deprecated.")]
+        [Obsolete("specColor is no longer used and has been deprecated.", true)]
         public Color specColor
         {
             get { CheckImporterState("get_specColor"); return new Color(0f, 0f, 0f, 0f); }
             set { CheckImporterState("set_specColor"); }
         }
 
-        [Obsolete("shininess is no longer used and has been deprecated.")]
+        [Obsolete("shininess is no longer used and has been deprecated.", true)]
         public float shininess
         {
             get { CheckImporterState("get_shininess"); return 0f; }
