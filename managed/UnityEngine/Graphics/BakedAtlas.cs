@@ -888,7 +888,7 @@ namespace UnityEngine
                 var lights = Lights(file, path, settings.maxBounces);
                 var probes = Probes(file);
                 // A probe's samples are the Light Probe Sample Multiplier times a texel's
-                // (tests/projects/bakedbuffers SoftProbesMore: 8); a product that is not a whole
+                // (tests/projects/bakedbuffers SoftProbesMore: 8); a multiplier that is not a whole
                 // number is not measured.
                 float multiplier = settings.lightProbeSampleCountMultiplier;
                 if (probes.Count > 0 && multiplier != MathF.Floor(multiplier))
