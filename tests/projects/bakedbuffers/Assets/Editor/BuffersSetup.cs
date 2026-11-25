@@ -1046,7 +1046,8 @@ public static class BuffersSetup
     /// <summary>Baked lights with cookies, each cookie's red, green, blue and alpha different (what
     /// the bake takes of them), its alpha telling rows from columns and each way along them: a spot light's 16 by 16 clamped cookie over a light probe group,
     /// a sun's 8 by 8 repeating cookie of size 2.5, a point light's cube cookie of 8 a side, a spot
-    /// light's cookie of 128 a side with mipmaps, and a sun's clamped cookie of Point filter.</summary>
+    /// light's cookie of 128 a side with mipmaps, a sun's clamped cookie of Point filter, and a spot
+    /// light's Alpha8 cookie of 1024 a side of Trilinear filter.</summary>
     static void Cookies()
     {
         Color32 Texel(int x, int y, int n) => new Color32((byte)(x * 255 / (n - 1)), (byte)(y * 255 / (n - 1)), (byte)(((x ^ y) & 1) == 0 ? 230 : 40), (byte)(20 + ((x * 5 + y * 3) % 8) * 33));
@@ -1122,6 +1123,24 @@ public static class BuffersSetup
             sun.cookie = cookie;
             sun.cookieSize = 2.5f;
             Save(scene, "CookieSunPoint");
+        }
+        // A spot light's cookie of 1024 a side, Alpha8, of Trilinear filter.
+        {
+            var scene = Lit("CookieHuge");
+            const int n = 1024;
+            var cookie = new Texture2D(n, n, TextureFormat.Alpha8, false, false) { name = "CookieHugeCookie", filterMode = FilterMode.Trilinear, wrapMode = TextureWrapMode.Clamp };
+            var texels = new Color32[n * n];
+            for (int y = 0; y < n; y++)
+                for (int x = 0; x < n; x++)
+                    texels[y * n + x] = new Color32(255, 255, 255, (byte)(20 + ((x / 32 * 5 + y / 32 * 3) % 8) * 33 + ((x + 2 * y) & 3)));
+            cookie.SetPixels32(texels);
+            cookie.Apply();
+            AssetDatabase.CreateAsset(cookie, $"{Folder}/CookieHugeCookie.asset");
+            var spot = NewLight("Spot", LightType.Spot, new Vector3(0.3f, 3.2f, -0.2f), new Vector3(85f, 10f, 0f), new Color(1f, 0.95f, 0.9f), 6f);
+            spot.range = 8f;
+            spot.spotAngle = 70f;
+            spot.cookie = cookie;
+            Save(scene, "CookieHuge");
         }
     }
 
