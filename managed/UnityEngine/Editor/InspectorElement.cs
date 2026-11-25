@@ -297,7 +297,9 @@ namespace UnityEditor.UIElements
             inspector.onGUIHandler = () =>
             {
                 if (targetEditor.target == null || !targetEditor.serializedObject.isValid) return;
-                // As Unity's: the view width the inspector sets is undone after its GUI.
+                // The view width the inspector sets is undone after its GUI (Unity's InspectorElement
+                // restores the width it read; Unbound restores the override itself, having no host
+                // view that clears it before the next view's GUI).
                 float viewWidth = EditorGUIUtility.s_CurrentViewWidth;
                 bool hierarchyMode = EditorGUIUtility.hierarchyMode;
                 EditorGUIUtility.hierarchyMode = true;

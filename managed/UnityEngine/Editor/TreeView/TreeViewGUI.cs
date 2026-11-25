@@ -195,8 +195,11 @@ namespace UnityEditor.IMGUI.Controls
 
         internal virtual Texture GetIconForSelectedItem(TreeViewItem item)
         {
-            // (Unbound has no separate active-state icons.)
-            return GetIconForItem(item);
+            // Unity loads the "on" variant of a built-in icon here; Unbound draws the icon itself.
+            var icon = GetIconForItem(item);
+            if (icon != null && Event.current != null && Event.current.type == EventType.Repaint)
+                Unbound.Runtime.Stubs.Ignored("UnityEditor.IMGUI.Controls.TreeViewGUI selected icon", "a selected, focused row draws its icon's normal variant, not the built-in icon's active one");
+            return icon;
         }
 
         // ------------------
