@@ -996,7 +996,8 @@ public static class BuffersSetup
 
     /// <summary>The coloured scene under a sun with the Advanced filtering of its lightmaps, no
     /// denoiser: Gaussian filters of whole radii (direct 1, indirect 5) and of fractional ones
-    /// (2.5 and 0.5), and A-Trous filters (position sigma 0.5 and 1.5).</summary>
+    /// (2.5 and 0.5), and A-Trous filters (position sigma 0.5 and 1.5); and filtered with
+    /// directional lightmaps and in the Shadowmask and Subtractive Lighting Modes.</summary>
     static void Filtered()
     {
         void Filter(string name, LightingSettings.FilterType type, float direct, float indirect)
@@ -1026,6 +1027,41 @@ public static class BuffersSetup
         Filter("FilterGauss", LightingSettings.FilterType.Gaussian, 1f, 5f);
         Filter("FilterGaussHalf", LightingSettings.FilterType.Gaussian, 2.5f, 0.5f);
         Filter("FilterAtrous", LightingSettings.FilterType.ATrous, 0.5f, 1.5f);
+        // Directional lightmaps and the Lighting Modes with mixed lights, filtered (Gaussian,
+        // direct radius 1, indirect 5) and with the Auto filtering.
+        void Moded(string name, bool auto, bool directional, MixedLightingMode mixed)
+        {
+            var scene = Coloured(name, 64, 1);
+            var settings = Lightmapping.lightingSettings;
+            settings.mixedBakeMode = mixed;
+            if (directional) settings.directionalityMode = LightmapsMode.CombinedDirectional;
+            settings.filteringMode = auto ? LightingSettings.FilterMode.Auto : LightingSettings.FilterMode.Advanced;
+            if (!auto)
+            {
+                settings.denoiserTypeDirect = settings.denoiserTypeIndirect = settings.denoiserTypeAO = LightingSettings.DenoiserType.None;
+                settings.filterTypeDirect = settings.filterTypeIndirect = settings.filterTypeAO = LightingSettings.FilterType.Gaussian;
+                settings.filteringGaussianRadiusDirect = 1f;
+                settings.filteringGaussianRadiusIndirect = 5f;
+            }
+            if (mixed == MixedLightingMode.IndirectOnly)
+                WhiteSun();
+            else
+            {
+                // A mixed sun and a mixed point light (each on a shadowmask channel), and a
+                // baked point light.
+                NewLight("MixedSun", LightType.Directional, Vector3.zero, new Vector3(50f, -30f, 0f), Color.white, 2f, LightmapBakeType.Mixed);
+                NewLight("MixedBulb", LightType.Point, new Vector3(1.013f, 2.017f, -0.991f), Vector3.zero, new Color(1f, 0.9f, 0.7f), 2f, LightmapBakeType.Mixed).range = 6f;
+                NewLight("BakedBulb", LightType.Point, new Vector3(-1.21f, 1.53f, 1.07f), Vector3.zero, new Color(0.6f, 0.8f, 1f), 2f).range = 5f;
+            }
+            Save(scene, name);
+        }
+        Moded("FilterDirectional", false, true, MixedLightingMode.IndirectOnly);
+        Moded("FilterDirectionalAuto", true, true, MixedLightingMode.IndirectOnly);
+        Moded("FilterShadowmask", false, false, MixedLightingMode.Shadowmask);
+        Moded("FilterShadowmaskAuto", true, false, MixedLightingMode.Shadowmask);
+        Moded("FilterSubtractive", false, false, MixedLightingMode.Subtractive);
+        Moded("FilterSubtractiveAuto", true, false, MixedLightingMode.Subtractive);
+        Moded("FilterDirectionalShadowmaskAuto", true, true, MixedLightingMode.Shadowmask);
     }
 
     /// <summary>The coloured scene under a sun denoised: the Auto filtering, and the Advanced
