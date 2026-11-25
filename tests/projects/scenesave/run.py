@@ -16,7 +16,7 @@ MeshBoundsTests), `native-saves` (Edit Mode NativeSaveTests), `clip-assets` (Edi
 ControllerAssetTests), `controller-additions` (Edit Mode ControllerAdditionTests), `modification-timing` (Edit Mode ModificationTimingTests), `scene-api-rest`
 (Edit Mode SceneApiRestTests), `build-scenes` (Edit Mode BuildSceneTests), `generic-refs` (Edit Mode GenericRefTests),
 `session-imports` (Edit Mode SessionImportTests), `build-index-edit` (Edit Mode BuildIndexTests) and
-`build-index-play` (Play Mode BuildIndexPlayTests).
+`build-index-play` (Play Mode BuildIndexPlayTests), `label-metas` (Edit Mode LabelMetaTests).
 """
 import argparse
 import json
@@ -26,6 +26,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import wave
 
 PROBE = Path(__file__).resolve().parent
 REPO = PROBE.parents[2]
@@ -58,6 +59,7 @@ CASES = {
     'session-imports': ('EditMode', 'SessionImportTests.SessionImports'),
     'build-index-edit': ('EditMode', 'BuildIndexTests.EditMode'),
     'build-index-play': ('PlayMode', 'BuildIndexPlayTests.PlayMode'),
+    'label-metas': ('EditMode', 'LabelMetaTests.LabelMetas'),
 }
 SKIPPED = {'Library', 'LibraryUnbound', 'Logs', 'Temp', 'UserSettings', 'obj', 'run.py', 'README.md', 'Reference',
            'gate.json', 'scenesave_compare.py', 'test_compare.py', '__pycache__'}
@@ -107,6 +109,160 @@ def seed_stale_build_scene(project):
                                            b'    guid: e0fd96c04ed5f4230bfb1fc1aa060f13\n'))
 
 
+# A TextureImporter section as the Editor writes it (DefaultTexturePlatform and Android listed),
+# without ignorePngGamma, swizzle, streamingMipmaps and the Standalone platform (as a .meta of
+# an older release may lack them).
+PARTIAL_TEXTURE_META = '''fileFormatVersion: 2
+guid: GUIDHERE
+TextureImporter:
+  internalIDToNameTable: []
+  externalObjects: {}
+  serializedVersion: 13
+  mipmaps:
+    mipMapMode: 0
+    enableMipMap: 1
+    sRGBTexture: 1
+    linearTexture: 0
+    fadeOut: 0
+    borderMipMap: 0
+    mipMapsPreserveCoverage: 0
+    alphaTestReferenceValue: 0.5
+    mipMapFadeDistanceStart: 1
+    mipMapFadeDistanceEnd: 3
+  bumpmap:
+    convertToNormalMap: 0
+    externalNormalMap: 0
+    heightScale: 0.25
+    normalMapFilter: 0
+    flipGreenChannel: 0
+  isReadable: 0
+  streamingMipmapsPriority: 0
+  vTOnly: 0
+  ignoreMipmapLimit: 0
+  grayScaleToAlpha: 0
+  generateCubemap: 6
+  cubemapConvolution: 0
+  seamlessCubemap: 0
+  textureFormat: 1
+  maxTextureSize: 2048
+  textureSettings:
+    serializedVersion: 2
+    filterMode: 1
+    aniso: 1
+    mipBias: 0
+    wrapU: 0
+    wrapV: 0
+    wrapW: 0
+  nPOTScale: 1
+  lightmap: 0
+  compressionQuality: 50
+  spriteMode: 0
+  spriteExtrude: 1
+  spriteMeshType: 1
+  alignment: 0
+  spritePivot: {x: 0.5, y: 0.5}
+  spritePixelsToUnits: 100
+  spriteBorder: {x: 0, y: 0, z: 0, w: 0}
+  spriteGenerateFallbackPhysicsShape: 1
+  alphaUsage: 1
+  alphaIsTransparency: 0
+  spriteTessellationDetail: -1
+  textureType: 0
+  textureShape: 1
+  singleChannelComponent: 0
+  flipbookRows: 1
+  flipbookColumns: 1
+  maxTextureSizeSet: 0
+  compressionQualitySet: 0
+  textureFormatSet: 0
+  applyGammaDecoding: 0
+  cookieLightType: 0
+  platformSettings:
+  - serializedVersion: 4
+    buildTarget: DefaultTexturePlatform
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: Android
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  spriteSheet:
+    serializedVersion: 2
+    sprites: []
+    outline: []
+    customData: 
+    physicsShape: []
+    bones: []
+    spriteID: 
+    internalID: 0
+    vertices: []
+    indices: 
+    edges: []
+    weights: []
+    secondaryTextures: []
+    spriteCustomMetadata:
+      entries: []
+    nameFileIdTable: {}
+  mipmapLimitGroupName: 
+  pSDRemoveMatte: 0
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+'''
+
+
+def seed_label_metas(project):
+    """Assets/Labels: assets of each common kind with a .meta holding their GUID alone, and two
+    textures whose TextureImporter section lacks some settings and the Standalone platform."""
+    labels = project/'Assets/Labels'
+    labels.mkdir()
+    copies = {'Tex.png': 'Textures/Probe.png', 'Mat.mat': 'Materials/MatEdit.mat', 'Thing.prefab': 'Prefabs/Thing.prefab',
+              'Level.unity': 'Scenes/Second.unity',
+              'Bouncy.physicMaterial': 'Native/Bouncy.physicMaterial', 'Move.anim': 'Native/Move.anim',
+              'Basic.controller': 'Existing/Basic.controller', 'Data.asset': 'Data/DataSaved.asset',
+              'Partial.png': 'Textures/Probe.png', 'PartialKept.png': 'Textures/Probe.png'}
+    for name, source in copies.items():
+        shutil.copyfile(project/'Assets'/source, labels/name)
+    texts = {'Notes.txt': 'notes\n', 'Data.json': '{"a": 1}\n', 'Style.uss': '.probe { color: red; }\n', 'Other.xyz': 'xyz\n',
+             'Unlit.shader': 'Shader "Probe/Unlit" { SubShader { Pass { Color (1,0,0,1) } } }\n'}
+    for name, text in texts.items():
+        (labels/name).write_bytes(text.encode())
+    with wave.open(str(labels/'Beep.wav'), 'wb') as clip:
+        clip.setnchannels(1)
+        clip.setsampwidth(2)
+        clip.setframerate(22050)
+        clip.writeframes(bytes(2 * 2205))
+    (labels/'Folder').mkdir()
+    folder_meta = 'fileFormatVersion: 2\nguid: {}\nfolderAsset: yes\nDefaultImporter:\n  externalObjects: {{}}\n  userData: \n  assetBundleName: \n  assetBundleVariant: \n'
+    (labels.parent/'Labels.meta').write_bytes(folder_meta.format('5a1b2c3d4e5f40718293a4b5c6d7e8f9').encode())
+    names = sorted(list(copies) + list(texts) + ['Beep.wav', 'Folder'])
+    for index, name in enumerate(names):
+        guid = f'{0x7a5e0000 + index:08x}' + '4c1b4d2e8f3a6b5c7d9e0f12'
+        if name.startswith('Partial'):
+            text = PARTIAL_TEXTURE_META.replace('GUIDHERE', guid)
+        else:
+            text = f'fileFormatVersion: 2\nguid: {guid}\n'
+        (labels/(name + '.meta')).write_bytes(text.encode())
+
+
 def seed_build_index_list(project, play):
     """An EditorBuildSettings.asset listing Second disabled, Base, a missing scene, Second under a
     stale path, Base disabled and Assets/Scenes/Deep/Third.unity (a copy of Second added to the
@@ -147,6 +303,8 @@ def run_case(kind, case, out, cli=None):
         seed_stale_build_scene(project)
     if case.startswith('build-index-'):
         seed_build_index_list(project, play=case == 'build-index-play')
+    if case == 'label-metas':
+        seed_label_metas(project)
     rows = work/'rows.jsonl'
     env = dict(os.environ, SCENESAVE_LOG=str(rows))
     results = work/'results.xml'
