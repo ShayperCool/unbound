@@ -869,6 +869,15 @@ namespace Unbound.Runtime.Playables
             pending.Evaluation = animator.m_OutputEvaluations;
             if (e.MotionMode == RootMotionMode.Human)
             {
+                // Humanoid root motion moves the Animator, so the root's own position and rotation
+                // channels (bound by generic clips of the same graph, a controller's generic states)
+                // are not written, as with generic root motion (6000.0.71f1, tests/projects/humanoid
+                // genericCut.toGenericOn: a controller's unused generic state leaves the motion alone).
+                if ((animator.m_ApplyRootMotion || MoveCallbacks.Any(animator)) && RootAnimation.Channels(e, out int rootPos, out int rootRot))
+                {
+                    if (rootPos >= 0) for (int c = rootPos; c < rootPos + 3 && c < result.FloatCount; c++) result.Animated[c] = false;
+                    if (rootRot >= 0) for (int c = rootRot; c < rootRot + 4 && c < result.FloatCount; c++) result.Animated[c] = false;
+                }
                 // The same sample and feet-pivot memory as controller-driven humanoid motion.
                 // Advance it once even when motion is not requested, as the controller does.
                 AnimatorRootMotion step;
