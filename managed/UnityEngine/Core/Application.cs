@@ -125,17 +125,12 @@ namespace UnityEngine
             RaiseQuitting();
         }
 
-        /// <summary>Application.quitting: a handler that throws is logged and the others still run,
-        /// and leaving Play mode goes on.</summary>
+        /// <summary>Application.quitting, invoked once as Unity's own C# does (a handler that throws
+        /// stops the ones after it); the exception is logged and leaving Play mode or quitting goes on.</summary>
         static void RaiseQuitting()
         {
-            var handlers = quitting;
-            if (handlers == null) return;
-            foreach (Action handler in handlers.GetInvocationList())
-            {
-                try { handler(); }
-                catch (Exception e) { Debug.LogException(e); }
-            }
+            try { quitting?.Invoke(); }
+            catch (Exception e) { Debug.LogException(e); }
         }
 
         /// <summary>Play mode starts again: a new exit token.</summary>

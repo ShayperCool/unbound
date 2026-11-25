@@ -101,7 +101,7 @@ namespace UnityEngine.Tests
         public void ARenamedReadAssetIsWrittenWithItsNewName()
         {
             using var release = TestRelease.Pin(TestRelease.Measured);
-            foreach (var path in new[] { "Assets/Native/Tri.asset", "Assets/Native/Alpha.asset" })
+            foreach (var path in new[] { "Assets/Native/Tri.asset", "Assets/Native/Alpha.asset", "Assets/Native/Bouncy.physicMaterial" })
             {
                 var written = Rewrite(Reference(path), o => { o.name = "Renamed"; return o; });
                 Assert.NotNull(written);

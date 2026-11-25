@@ -280,17 +280,12 @@ namespace UnityEditor
 
         /// <summary>The Editor's exit, in Edit mode, before the dirty assets are saved
         /// (<see cref="Unbound.Runtime.Compat.QuitCallbacksMeasured"/>): TextMeshPro, for one, clears
-        /// its dynamic font assets' data here. Each handler runs on its own: one that throws is
-        /// logged and the others still run.</summary>
+        /// its dynamic font assets' data here. Invoked once as Unity's own C# does (a handler that
+        /// throws stops the ones after it); the exception is logged and the exit goes on.</summary>
         internal static void Internal_Quitting()
         {
-            var handlers = quitting;
-            if (handlers == null) return;
-            foreach (Action handler in handlers.GetInvocationList())
-            {
-                try { handler(); }
-                catch (Exception e) { Debug.LogException(e); }
-            }
+            try { quitting?.Invoke(); }
+            catch (Exception e) { Debug.LogException(e); }
         }
 
         /// <summary>Each handler runs on its own: one that throws is logged and the others still run.</summary>

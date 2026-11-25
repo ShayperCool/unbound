@@ -466,10 +466,10 @@ namespace UnityEngine
             return Reinitialized(ReinitializeImage(width, height, format, MipmapCount() > 1, m_Linear));
         }
 
-        /// <summary>The format resolves as a new texture's does: an sRGB texture stays sRGB in a Linear
-        /// project and becomes linear in a Gamma one, whatever the format; a linear texture stays
-        /// linear (matches the Unity 6000.0.71f1 Editor, tests/projects/tmpatlas Gamma and Linear
-        /// op.Reinit*, op.LinearReinitRGBA32); elsewhere the texture keeps its colour space.</summary>
+        /// <summary>An sRGB texture stays sRGB in a Linear project and becomes linear in a Gamma one,
+        /// whatever the format; a linear texture stays linear (matches the Unity 6000.0.71f1 Editor,
+        /// tests/projects/tmpatlas Gamma and Linear op.Reinit*, op.LinearReinitRGBA32); elsewhere the
+        /// texture keeps its colour space.</summary>
         public bool Reinitialize(int width, int height, TextureFormat format, bool hasMipMap)
         {
             MainThreadCheck.Check("Reinitialize");

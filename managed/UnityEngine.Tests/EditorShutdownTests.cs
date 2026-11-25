@@ -121,9 +121,10 @@ namespace UnityEngine.Tests
             }
         }
 
-        /// <summary>A quitting handler that throws is logged, the others run, and Play mode still ends.</summary>
+        /// <summary>A quitting handler that throws is logged and stops the handlers after it (one
+        /// invoke, as Unity's Application.Internal_ApplicationQuit), and Play mode still ends.</summary>
         [Fact]
-        public void AThrowingQuittingHandlerDoesNotStopLeavingPlayMode()
+        public void AThrowingQuittingHandlerIsLoggedAndPlayModeStillEnds()
         {
             using var release = TestRelease.Pin(TestRelease.Measured);
             using var scenes = new Unbound.Tests.LightProbesTests.Scenes();
@@ -148,7 +149,7 @@ namespace UnityEngine.Tests
                 EditorSession.IsPlaying = true;
                 EditorSession.Request(false);
                 EditorSession.ApplyRequest();
-                Assert.Equal(new[] { "ExitingPlayMode", "after", "EnteredEditMode" }, calls);
+                Assert.Equal(new[] { "ExitingPlayMode", "EnteredEditMode" }, calls);
                 Assert.False(EditorSession.IsPlaying);
                 Assert.Contains(logs, l => l.Contains("quitting control"));
             }
