@@ -27,20 +27,12 @@ namespace UnityEngine.Tests
             finally { Object.DestroyImmediate(go); }
         }
 
-        sealed class Capture : ILogHandler
-        {
-            internal readonly System.Collections.Generic.List<string> Lines = new System.Collections.Generic.List<string>();
-            public void LogException(System.Exception exception, Object context) => Lines.Add(exception.Message);
-            public void LogFormat(LogType logType, Object context, string format, params object[] args) => Lines.Add(string.Format(format, args));
-        }
-
         [Fact]
         public void OtherMaterialCountsListTheFreshSlotAndSaySo()
         {
             using var release = TestRelease.Pin(TestRelease.Measured);
-            var capture = new Capture();
-            var previous = Debug.unityLogger.logHandler;
-            Debug.unityLogger.logHandler = capture;
+            const string slotsNotice = "AnimationUtility.GetAnimatableBindings material slots";
+            int before = Hits(slotsNotice);
             var go = new GameObject("renderer");
             try
             {
@@ -53,10 +45,10 @@ namespace UnityEngine.Tests
             }
             finally
             {
-                Debug.unityLogger.logHandler = previous;
                 Object.DestroyImmediate(go);
             }
-            Assert.Contains(capture.Lines, line => line.Contains("material slots of a fresh renderer only"));
+            // Counted, not read from the log: a notice logs only its first use in the process.
+            Assert.Equal(before + 1, Hits(slotsNotice));
         }
 
         static int Hits(string member) => Unbound.Runtime.Stubs.HitReport().FirstOrDefault(h => h.Key == member).Value;
