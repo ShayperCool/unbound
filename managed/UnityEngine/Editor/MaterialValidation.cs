@@ -67,11 +67,20 @@ namespace Unbound.Runtime
                 if (root == null) continue;
                 foreach (var renderer in root.GetComponentsInChildren<Renderer>(false))
                 {
-                    if (!renderer.enabled || !renderer.gameObject.activeInHierarchy) continue;
+                    if (!renderer.enabled || !ActiveInScene(renderer.transform)) continue;
                     foreach (var material in renderer.sharedMaterials)
                         if (material != null) material.ValidateDeferredEditor();
                 }
             }
+        }
+
+        /// <summary>Whether the object and its parents are active as saved (before the scene's
+        /// objects wake, activeInHierarchy is still false).</summary>
+        static bool ActiveInScene(Transform transform)
+        {
+            for (var t = transform; t != null; t = t.parent)
+                if (!t.gameObject.activeSelf) return false;
+            return true;
         }
 
         /// <param name="editorsOfTheEditor">Whether the Editor's own shader editors (Unbound's

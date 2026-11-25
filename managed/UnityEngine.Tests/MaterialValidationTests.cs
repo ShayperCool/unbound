@@ -283,10 +283,24 @@ namespace UnityEngine.Tests
                 var drawn = Drawn("drawn", true, true);
                 var disabled = Drawn("disabled", false, true);
                 var inactive = Drawn("inactive", true, false);
+                var child = ProjectEdited();
+                MaterialValidation.ValidateLoaded(FileOf(child));
+                var parent = new GameObject("inactive parent");
+                var childObject = new GameObject("child");
+                childObject.AddComponent<MeshRenderer>().sharedMaterial = child;
+                childObject.transform.SetParent(parent.transform);
+                parent.SetActive(false);
+                SceneRegistry.MoveToScene(parent, scene);
+                // A scene's objects wait for its Awake as Play mode starts: still drawn by the views.
+                var waiting = Drawn("waiting", true, true);
+                scene.Roots[scene.Roots.Count - 1].m_AwaitingSceneAwake = true;
                 MaterialValidation.ValidateDrawnBeforePlay(scene);
+                scene.Roots[scene.Roots.Count - 1].m_AwaitingSceneAwake = false;
                 Assert.Equal("PROJECT_VALIDATED", Keywords(drawn));
+                Assert.Equal("PROJECT_VALIDATED", Keywords(waiting));
                 Assert.Equal("", Keywords(disabled));
                 Assert.Equal("", Keywords(inactive));
+                Assert.Equal("", Keywords(child));
                 foreach (var root in scene.Roots.ToArray()) Object.DestroyImmediate(root);
             });
         }
