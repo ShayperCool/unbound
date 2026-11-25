@@ -77,6 +77,9 @@ public static class BuffersRecord
                 var name = Path.GetFileNameWithoutExtension(path);
                 EditorSceneManager.OpenScene(path.Replace('\\', '/'));
                 log.Add(name + ": " + bake(name));
+                // (The runner watches this for progress: a whole capture takes longer than its
+                // progress timeout.)
+                File.WriteAllLines(Path.Combine(output, "progress.txt"), log);
             }
             log.Add("complete");
             File.WriteAllLines(Path.Combine(output, "log.txt.tmp"), log);

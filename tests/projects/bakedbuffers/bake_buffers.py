@@ -377,7 +377,7 @@ def native(label):
     tools = str(editor_path().parent/'Data/Tools')
     env = {'BAKED_BUFFERS_OUT': str(out/'raw'),
            'LD_LIBRARY_PATH': tools + (':' + os.environ['LD_LIBRARY_PATH'] if os.environ.get('LD_LIBRARY_PATH') else '')}
-    code = editor(out, 'BuffersRecord.Record', env, label, progress=out/'raw/log.txt')
+    code = editor(out, 'BuffersRecord.Record', env, label, progress=out/'raw/progress.txt')
     if code or not (out/'raw/log.txt').is_file():
         return code or 1
     log = dict(line.split(': ', 1) for line in (out/'raw/log.txt').read_text().splitlines() if ': ' in line)
