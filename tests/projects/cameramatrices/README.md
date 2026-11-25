@@ -22,13 +22,15 @@ difference of one float step or of the sign of a zero shows.
   (1, 2, 3), turned 30 degrees about y, scaled 2 (then (1, 3, 0.5)).
 
 Measured in the Unity 6000.0.71f1 Editor (Linux, OpenGL Core; two identical batch captures).
-Unbound matches 92 of the 198 rows; `residuals.json` lists the other 106 with their causes: the
-perspective's diagonal one float step off at most fields of view, the view matrix inverted in
-double precision where the Editor's rotation is the single-precision rotation's transpose, and
-signs of zero and last bits of the inverse matrices. These were found while tracing the STP
+Unbound matches 92 of the 198 rows; `residuals.json` lists the other 106 with their causes. The
+Editor's `projectionMatrix` is the single-precision `Matrix4x4.Perspective` at every measured field
+of view and aspect, where Unbound's camera uses its double-precision variant (one or two float
+steps apart); its `worldToCameraMatrix` is the transform's `worldToLocalMatrix` with the third row
+negated (apart from signs of zero), where Unbound inverts the TRS in double precision; the other
+inverse matrices differ in last bits and signs of zero. These were found while tracing the STP
 upscaler's residual (docs/COMPATIBILITY_GAPS.md, Q227); making the 60-degree projection and the
-view rotation bit-equal did not change that residual. Fitting the Editor's rules is a queued
-follow-up.
+view rotation bit-equal did not change that residual. Switching the camera's matrices to these
+rules is a queued follow-up.
 
 ```bash
 python3 tests/projects/cameramatrices/run.py record --label a

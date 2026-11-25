@@ -1,5 +1,5 @@
 {
- "Camera.cameraToWorldMatrix: Unbound inverts worldToCameraMatrix again; the Editor's matrix differs in the last bit and in signs of zero (follow-up queued, Q227 row)": [
+ "Camera.cameraToWorldMatrix: Unbound inverts worldToCameraMatrix again; the Editor's differs in last bits and signs of zero (rule not identified, camera matrices row)": [
   "camera to world/child of scaled parent",
   "camera to world/euler -89 0 0 at 0",
   "camera to world/euler -89 0 0 at 1",
@@ -38,7 +38,7 @@
   "camera to world/quaternion 0.08715574 0 0 0.9961947 at 2",
   "camera to world/quaternion 0.08715574 0 0 0.9961947 at 3"
  ],
- "Camera.cullingMatrix: the product of the projection and view rows above (follow-up queued, Q227 row)": [
+ "Camera.cullingMatrix: the product of the projection and view rows above (camera matrices row)": [
   "culling/euler -89 0 0",
   "culling/euler 0 0 90",
   "culling/euler 0 37 0",
@@ -49,11 +49,11 @@
   "culling/identity",
   "culling/quaternion 0.08715574 0 0 0.9961947"
  ],
- "GL.GetGPUProjectionMatrix of the projection above (follow-up queued, Q227 row)": [
+ "GL.GetGPUProjectionMatrix of the projection above (camera matrices row)": [
   "gpu projection/perspective",
   "gpu projection/perspective texture"
  ],
- "Camera.projectionMatrix perspective m00/m11 one float step from the Editor at most fields of view: Unbound takes fov * Mathf.Deg2Rad in single precision before a double-precision tangent (Managed Matrix4x4.PerspectiveDoublePrecision); the Editor's rounding is not yet fitted (follow-up queued, docs/COMPATIBILITY_GAPS.md Q227 row)": [
+ "Camera.projectionMatrix: the Editor's is the single-precision Matrix4x4.Perspective (cosine over sine of the half angle) at every measured field of view and aspect; Unbound's camera getter uses PerspectiveDoublePrecision, one or two float steps off (switch queued, docs/COMPATIBILITY_GAPS.md camera matrices row)": [
   "projection/clip 0.01 100000",
   "projection/clip 0.3 1000",
   "projection/clip 1 1500",
@@ -67,7 +67,7 @@
   "projection/target 160x90",
   "projection/target 320x180"
  ],
- "Camera.worldToCameraMatrix: Unbound inverts the single-precision TRS in double precision; the Editor's rotation is the single-precision rotation's transpose, and its translation differs in the last bit (follow-up queued, Q227 row)": [
+ "Camera.worldToCameraMatrix: the Editor's is the transform's worldToLocalMatrix with its third row negated (apart from signs of zero); Unbound inverts the single-precision TRS in double precision (switch queued, camera matrices row)": [
   "world to camera/child of nonuniform parent",
   "world to camera/child of scaled parent",
   "world to camera/euler -89 0 0 at 0",
@@ -101,7 +101,7 @@
   "world to camera/quaternion 0.08715574 0 0 0.9961947 at 2",
   "world to camera/quaternion 0.08715574 0 0 0.9961947 at 3"
  ],
- "Transform.worldToLocalMatrix: signs of zero (and last bits under a scaled parent) differ from the Editor's (follow-up queued, Q227 row)": [
+ "Transform.worldToLocalMatrix: signs of zero differ from the Editor's (rule not identified, camera matrices row)": [
   "world to local/euler -89 0 0 at 0",
   "world to local/euler -89 0 0 at 1",
   "world to local/euler -89 0 0 at 2",
