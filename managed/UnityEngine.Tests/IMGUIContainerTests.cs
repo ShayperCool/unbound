@@ -481,11 +481,16 @@ namespace UnityEngine.Tests
                 // Before any GUI pass the interactive Editor's styles are there, so a header's height
                 // is; a text area's needs the context width, which needs a GUI pass (the windowed
                 // Editor: tests/projects/editorui EditorGUI.GetPropertyHeight.afterHeader, .area).
+                var clips = GUIClip.Save();
                 GUIClip.ClearForTests();
                 EditorGUIUtility.currentViewWidth = 0f;
-                Assert.True(EditorGUI.GetPropertyHeight(so.FindProperty("headed")) > 18f);
-                var outside = Assert.Throws<ArgumentException>(() => EditorGUI.GetPropertyHeight(so.FindProperty("note")));
-                Assert.Equal("You can only call GUI functions from inside OnGUI.", outside.Message);
+                try
+                {
+                    Assert.True(EditorGUI.GetPropertyHeight(so.FindProperty("headed")) > 18f);
+                    var outside = Assert.Throws<ArgumentException>(() => EditorGUI.GetPropertyHeight(so.FindProperty("note")));
+                    Assert.Equal("You can only call GUI functions from inside OnGUI.", outside.Message);
+                }
+                finally { GUIClip.Restore(clips); }
                 var drawn = f.Add(() => editor.DrawDefaultInspector());
                 var measured = f.Add(() =>
                 {

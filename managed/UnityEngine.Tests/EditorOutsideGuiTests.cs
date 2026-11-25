@@ -26,6 +26,7 @@ namespace UnityEngine.Tests
         {
             readonly Event m_Event = Event.current;
             readonly Color m_Color = GUI.color;
+            readonly GUIClip.State m_Clips = GUIClip.Save();
             internal OutsideGui()
             {
                 Event.current = null;
@@ -38,6 +39,7 @@ namespace UnityEngine.Tests
                 GUIUtility.GetControlID(FocusType.Passive);
                 Event.current = m_Event;
                 GUI.color = m_Color;
+                GUIClip.Restore(m_Clips);
             }
         }
 
