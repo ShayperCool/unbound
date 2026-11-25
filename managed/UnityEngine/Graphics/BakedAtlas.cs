@@ -634,11 +634,9 @@ namespace UnityEngine
                     warn("light-type:" + path + fileId, $"{path}: '{light.name}' is a {light.type} light, which Unbound's bake (Lightmapping.Bake) does not bake yet.");
                     continue;
                 }
-                if (UnityEngine.Rendering.GraphicsSettings.lightsUseLinearIntensity && kind != 0)
-                {
-                    warn("light-linear:" + path, $"{path}: non-directional lights whose intensity multiplies their linear colour (GraphicsSettings.lightsUseLinearIntensity) are not baked by Unbound's bake (Lightmapping.Bake) yet.");
-                    if (skipUnmeasured) continue;
-                }
+                // With GraphicsSettings.lightsUseLinearIntensity a light's intensity multiplies its
+                // linear colour (Light.ScaledColor); its falloff is the same (tests/projects/
+                // bakedbuffers Linear*).
                 if (UnityEngine.Rendering.GraphicsSettings.lightsUseLinearIntensity && light.useColorTemperature)
                 {
                     warn("light-temp:" + path + fileId, $"{path}: '{light.name}' uses color temperature with GraphicsSettings.lightsUseLinearIntensity, which Unbound's bake (Lightmapping.Bake) has not measured yet.");

@@ -1,3 +1,4 @@
+using System.Linq;
 using System.Collections.Generic;
 using Unbound.Runtime;
 using Xunit;
@@ -340,19 +341,31 @@ namespace UnityEngine.Tests
                 Assert.Single(BakedAtlas.Lights(cookieFile, cookieFile.Path));
                 Assert.Contains(capture.Logs, l => l.StartsWith("Warning: ") && l.Contains("'Sun' has a cookie"));
 
-                // Non-directional lights whose intensity multiplies their linear colour are said
-                // once for the scene and left out; directional lights are baked with linear-intensity colour.
+                // Point and spot lights whose intensity multiplies their linear colour are baked
+                // with that colour, unsaid (tests/projects/bakedbuffers LinearLamps: the Editor's
+                // bake input has a spot of colour (1, 0.6, 0.3) and intensity 2.5 as (2.5, 0.79637,
+                // 0.18310), its falloff as without linear intensity).
                 capture.Logs.Clear();
                 var linearFile = new LoadedFile { Path = "Assets/LitLinear.unity", Guid = "30000000000000000000000000000000" };
                 linearFile.Objects[1] = spot;
                 linearFile.Objects[2] = soft;
                 bool before = UnityEngine.Rendering.GraphicsSettings.lightsUseLinearIntensity;
+                Color spotColor = spot.color;
+                float spotIntensity = spot.intensity;
                 try
                 {
                     UnityEngine.Rendering.GraphicsSettings.lightsUseLinearIntensity = true;
-                    Assert.Empty(BakedAtlas.Lights(linearFile, linearFile.Path));
-                    Assert.Single(capture.Logs, l => l.Contains("lightsUseLinearIntensity"));
-                    Assert.DoesNotContain(capture.Logs, l => l.Contains("soft baked shadows"));
+                    spot.color = new Color(1f, 0.6f, 0.3f);
+                    spot.intensity = 2.5f;
+                    var linearLamps = System.Text.Json.JsonDocument.Parse(System.Text.Json.JsonSerializer.Serialize(BakedAtlas.Lights(linearFile, linearFile.Path))).RootElement;
+                    Assert.Equal(2, linearLamps.GetArrayLength());
+                    Assert.DoesNotContain(capture.Logs, l => l.Contains("lightsUseLinearIntensity"));
+                    var linearSpot = linearLamps.EnumerateArray().Single(l => l.GetProperty("name").GetString() == "Spot");
+                    Assert.Equal(2.5f, Channel(linearSpot, "color", 0), 4);
+                    Assert.Equal(0.79637f, Channel(linearSpot, "color", 1), 4);
+                    Assert.Equal(0.18310f, Channel(linearSpot, "color", 2), 4);
+                    spot.color = spotColor;
+                    spot.intensity = spotIntensity;
 
                     capture.Logs.Clear();
                     var linearSunFile = new LoadedFile { Path = "Assets/LitLinearSun.unity", Guid = "31000000000000000000000000000000" };

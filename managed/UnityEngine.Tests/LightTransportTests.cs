@@ -359,7 +359,7 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
-        public void CollectSceneLightsWarnsLinearIntensityOnlyForNonDirectionalOrColorTemperature()
+        public void CollectSceneLightsWarnsLinearIntensityOnlyForColorTemperature()
         {
             var prevHandler = Debug.unityLogger.logHandler;
             var capture = new LogCapture();
@@ -388,10 +388,12 @@ namespace UnityEngine.Tests
                 InputExtraction.CollectSceneLights(new[] { dir });
                 Assert.Contains(capture.Logs, l => l.Contains("color temperature"));
 
+                // A point light is taken with its linear colour, unsaid (tests/projects/bakedbuffers
+                // LinearLamps).
                 capture.Logs.Clear();
                 InputExtraction.s_Warned.Clear();
-                InputExtraction.CollectSceneLights(new[] { point });
-                Assert.Contains(capture.Logs, l => l.Contains("lightsUseLinearIntensity"));
+                Assert.Single(InputExtraction.CollectSceneLights(new[] { point }).LightsJson);
+                Assert.DoesNotContain(capture.Logs, l => l.Contains("lightsUseLinearIntensity"));
 
                 // Custom RequestLightsDelegate is invoked by CollectSceneLights identically to BakedAtlas.Lights:
                 // custom color/orientation is extracted, InitNoBake skips, throwing/non-Legacy falloff warns.
