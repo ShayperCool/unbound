@@ -262,8 +262,30 @@ namespace UnityEditor
                 s_PendingRefresh = true;
                 return;
             }
+            using var write = SessionImports.Write();
             ApplyRefresh(Native.Call("asset-refresh", "{}"));
+            ReimportChanged(ProjectImports.ChangedSinceSeen());
         }
+
+        /// <summary>Assets whose file or .meta changed on disk since the session saw them are
+        /// imported again, their loaded objects kept, and reported imported (matches the Unity
+        /// 6000.0.71f1 Editor, tests/projects/scenesave refresh-changes; scripts and assembly
+        /// definitions are left to the script compilation).</summary>
+        internal static void ReimportChanged(IEnumerable<string> paths)
+        {
+            foreach (var path in paths)
+            {
+                var guid = AssetPathToGUID(path);
+                if (string.IsNullOrEmpty(guid) || IsValidFolder(path) || CompilesScripts(path)) continue;
+                AssetDatabaseRuntime.ReimportInPlace(guid);
+                ProjectImports.Wrote(path);
+                SessionImports.Imported(path);
+            }
+        }
+
+        static bool CompilesScripts(string path) =>
+            path.EndsWith(".cs", StringComparison.OrdinalIgnoreCase) || path.EndsWith(".asmdef", StringComparison.OrdinalIgnoreCase)
+            || path.EndsWith(".asmref", StringComparison.OrdinalIgnoreCase);
 
         /// <summary>The listing brought up to date with what a refresh found changed.</summary>
         internal static void ApplyRefresh(string json)

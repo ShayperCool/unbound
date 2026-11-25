@@ -160,6 +160,82 @@ namespace UnityEngine.Tests
             }
         }
 
+        /// <summary>A Refresh imports again what changed on disk since the session saw it (its file
+        /// or its .meta), not a file only touched, not what the session wrote itself, and each change
+        /// once (tests/projects/scenesave refresh-changes touch, text, meta).</summary>
+        [Fact]
+        public void TheSessionViewFindsFilesChangedOnDiskOnce()
+        {
+            ProjectImports.Scan(Initial(), Record, out var start);
+            var before = ProjectInfo.ProjectPath;
+            ProjectImports.ResetForTests();
+            ProjectImports.SessionForTests(start);
+            ProjectInfo.ProjectPath = m_Root;
+            AssetDatabase.List("[{\"guid\":\"a1\",\"path\":\"Assets/M/A.mat\",\"kind\":\"yaml\"},{\"guid\":\"b1\",\"path\":\"Assets/M/B.mat\",\"kind\":\"yaml\"},"
+                + "{\"guid\":\"c1\",\"path\":\"Assets/M/C.mat\",\"kind\":\"yaml\"}]");
+            try
+            {
+                Assert.Empty(ProjectImports.ChangedSinceSeen());
+                var b = Path.Combine(m_Root, "Assets/M/B.mat");
+                File.SetLastWriteTimeUtc(b, File.GetLastWriteTimeUtc(b).AddMinutes(5));
+                Write("Assets/M/C.mat", "c changed outside");
+                // The session's own write, as an AssetDatabase write ends.
+                Write("Assets/M/A.mat", "a saved");
+                ProjectImports.Wrote("Assets/M/A.mat");
+                ProjectImports.SeeWrites();
+                Assert.Equal(new[] { "Assets/M/C.mat" }, ProjectImports.ChangedSinceSeen());
+                Assert.Empty(ProjectImports.ChangedSinceSeen());
+                // A .meta edited outside, then one asset asked about alone (ImportAsset).
+                Write("Assets/M/B.mat.meta", "guid: b1\nNativeFormatImporter:\n  mainObjectFileID: 0\n");
+                Assert.Equal(new[] { "Assets/M/B.mat" }, ProjectImports.ChangedSinceSeen());
+                Write("Assets/M/A.mat", "a changed outside");
+                Assert.True(ProjectImports.ChangedSinceSeen("Assets/M/A.mat"));
+                Assert.False(ProjectImports.ChangedSinceSeen("Assets/M/A.mat"));
+                Assert.Empty(ProjectImports.ChangedSinceSeen());
+            }
+            finally
+            {
+                ProjectInfo.ProjectPath = before;
+                ProjectImports.ResetForTests();
+                AssetDatabase.Invalidate();
+            }
+        }
+
+        /// <summary>Without a session view (no project) nothing is compared.</summary>
+        [Fact]
+        public void WithoutASessionViewNothingIsFound()
+        {
+            ProjectImports.ResetForTests();
+            Assert.Empty(ProjectImports.ChangedSinceSeen());
+            Assert.False(ProjectImports.ChangedSinceSeen("Assets/M/A.mat"));
+        }
+
+        /// <summary>A loaded text asset and 2D texture take a new import's content (the copy, destroyed
+        /// next, the old one), a texture counting as updated; other engine kinds are not kept in place.</summary>
+        [Fact]
+        public void ALoadedTextAssetAndTextureTakeTheNewContent()
+        {
+            var kept = new TextAsset("notes");
+            var copy = new TextAsset("changed notes");
+            AssetDatabaseRuntime.SwapContent(copy, kept);
+            Assert.Equal("changed notes", kept.text);
+            Assert.Equal("notes", copy.text);
+            var texture = new Texture2D(4, 4);
+            var fresh = new Texture2D(8, 8);
+            uint updates = texture.updateCount;
+            AssetDatabaseRuntime.SwapContent(fresh, texture);
+            Assert.Equal(8, texture.width);
+            Assert.Equal(4, fresh.width);
+            Assert.True(texture.updateCount != updates);
+            Assert.True(AssetDatabaseRuntime.TakesContentInPlace(texture));
+            Assert.True(AssetDatabaseRuntime.TakesContentInPlace(kept));
+            Assert.True(AssetDatabaseRuntime.TakesContentInPlace(ScriptableObject.CreateInstance<ScriptableObject>()));
+            Assert.False(AssetDatabaseRuntime.TakesContentInPlace(new Material(Shader.Find("Hidden/InternalErrorShader"))));
+            Assert.False(AssetDatabaseRuntime.TakesContentInPlace(new Mesh()));
+            Object.DestroyImmediate(texture);
+            Object.DestroyImmediate(fresh);
+        }
+
         [Fact]
         public void AForcedImportOfAnUnloadedAssetIsTheSessionsImport()
         {

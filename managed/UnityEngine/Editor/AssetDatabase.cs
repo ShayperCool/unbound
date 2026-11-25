@@ -564,10 +564,18 @@ namespace UnityEditor
                 }
             }
             // An asset of the database is imported (and reported so) whether or not it changed
-            // (tests/projects/scenesave session-imports plain-import, force-import).
+            // (tests/projects/scenesave session-imports plain-import, force-import); one whose file
+            // or .meta changed on disk is imported again, its loaded objects kept (refresh-changes
+            // import).
             var existing = path?.Replace('\\', '/').TrimEnd('/');
-            if (!string.IsNullOrEmpty(existing) && !string.IsNullOrEmpty(AssetPathToGUID(existing))) SessionImports.Imported(existing);
-            Stubs.Ignored("AssetDatabase.ImportAsset", "does not re-import (assets are read from the project as they are)");
+            if (string.IsNullOrEmpty(existing) || string.IsNullOrEmpty(AssetPathToGUID(existing))) return;
+            if (ProjectImports.ChangedSinceSeen(existing)) ReimportChanged(new[] { existing });
+            else
+            {
+                SessionImports.Imported(existing);
+                if ((options & ImportAssetOptions.ForceUpdate) != 0)
+                    Stubs.Ignored("AssetDatabase.ImportAsset", "a forced import of an unchanged asset does not import it again");
+            }
         }
 
         [Unbound.EditorFaithful("Unbound keeps no asset files open")]

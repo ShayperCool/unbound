@@ -82,6 +82,14 @@ namespace UnityEditor
         static readonly HashSet<string> s_Written = new HashSet<string>(StringComparer.Ordinal);
         /// <summary>The folders the session moved, copied or deleted whole: all they hold.</summary>
         static readonly HashSet<string> s_WrittenTrees = new HashSet<string>(StringComparer.Ordinal);
+        /// <summary>Each asset of the database as the session last saw it (the start's scan, then
+        /// what Unbound wrote and imported): a Refresh imports again what changed on disk since
+        /// (null: no project, nothing is compared).</summary>
+        static Dictionary<string, Entry> s_Session;
+        /// <summary>What Unbound wrote since the session view last took it in (a folder with
+        /// everything it holds): taken in again without being reported.</summary>
+        static readonly HashSet<string> s_Unseen = new HashSet<string>(StringComparer.Ordinal);
+        static readonly HashSet<string> s_UnseenTrees = new HashSet<string>(StringComparer.Ordinal);
 
         /// <summary>The start's import, once per process: null after the first call, and for a
         /// session relaunched for a script edit (its start lists nothing and the record stays as it
@@ -98,9 +106,12 @@ namespace UnityEditor
             if (EditorInitialization.ContinuesScriptReload())
             {
                 s_Base = Load(file);
+                // As the last session left the record: what changed outside since is found by a Refresh.
+                See(s_Base);
                 return null;
             }
             var changes = Scan(ProjectAssets(), file, out s_Pending);
+            See(s_Pending);
             return changes;
         }
 
@@ -123,6 +134,92 @@ namespace UnityEditor
             if (path == null) return;
             s_Written.Add(path);
             if (tree) s_WrittenTrees.Add(path);
+            if (s_Session == null) return;
+            s_Unseen.Add(path);
+            if (tree) s_UnseenTrees.Add(path);
+        }
+
+        static void See(List<Entry> entries)
+        {
+            if (entries == null) return;
+            s_Session = new Dictionary<string, Entry>(StringComparer.Ordinal);
+            foreach (var e in entries) s_Session[e.Path] = e;
+        }
+
+        /// <summary>A write of Unbound's has ended (the outermost AssetDatabase write): what it
+        /// wrote is taken into the session view as it is now, so that only a later change of a
+        /// file is imported again by a Refresh. What a folder write holds is taken in at the next
+        /// Refresh (a change between the two is not found: unmeasured).</summary>
+        internal static void SeeWrites()
+        {
+            if (s_Session == null || s_Unseen.Count == 0) return;
+            var root = ProjectInfo.ProjectPath;
+            foreach (var path in s_Unseen)
+            {
+                if (s_UnseenTrees.Contains(path)) continue;
+                var file = Physical(root, Packages(), path);
+                s_Session.TryGetValue(path, out var known);
+                if (file != null && (File.Exists(file) || Directory.Exists(file))) s_Session[path] = Observe(new Asset(path, known?.Guid, file), known);
+                else s_Session.Remove(path);
+            }
+            s_Unseen.Clear();
+        }
+
+        /// <summary>AssetDatabase.Refresh: the assets of the database whose file or .meta changed
+        /// since the session last saw them (a file only touched has not), in the database's order;
+        /// the session view takes them in. Assets new to the session view are taken in without
+        /// being listed (the refresh lists them as new), and so is what a folder write held.</summary>
+        internal static List<string> ChangedSinceSeen()
+        {
+            var changed = new List<string>();
+            if (s_Session == null) return changed;
+            SeeWrites();
+            var root = ProjectInfo.ProjectPath;
+            var packages = Packages();
+            foreach (var path in AssetDatabase.GetAllAssetPaths())
+            {
+                var file = Physical(root, packages, path);
+                if (file == null) continue;
+                s_Session.TryGetValue(path, out var known);
+                var now = Observe(new Asset(path, AssetDatabase.AssetPathToGUID(path), file), known);
+                if (known != null && !InUnseenTree(path) && !SameContent(now, known)) changed.Add(path);
+                s_Session[path] = now;
+            }
+            s_UnseenTrees.Clear();
+            return changed;
+        }
+
+        /// <summary>AssetDatabase.ImportAsset of an asset: whether its file or .meta changed since
+        /// the session last saw it; the session view takes it in.</summary>
+        internal static bool ChangedSinceSeen(string path)
+        {
+            if (s_Session == null || string.IsNullOrEmpty(path)) return false;
+            SeeWrites();
+            var file = Physical(ProjectInfo.ProjectPath, Packages(), path);
+            if (file == null || !s_Session.TryGetValue(path, out var known)) return false;
+            var now = Observe(new Asset(path, known.Guid, file), known);
+            s_Session[path] = now;
+            return !InUnseenTree(path) && !SameContent(now, known);
+        }
+
+        static bool InUnseenTree(string path)
+        {
+            if (s_UnseenTrees.Count == 0) return false;
+            for (int slash = path.LastIndexOf('/'); slash > 0; slash = path.LastIndexOf('/', slash - 1))
+                if (s_UnseenTrees.Contains(path.Substring(0, slash))) return true;
+            return s_UnseenTrees.Contains(path);
+        }
+
+        static Dictionary<string, string> s_Packages;
+
+        /// <summary>The registered packages' folders by name (they do not change in a session).</summary>
+        static Dictionary<string, string> Packages()
+        {
+            if (s_Packages != null) return s_Packages;
+            var packages = new Dictionary<string, string>(StringComparer.Ordinal);
+            foreach (var package in PackageManager.PackageInfo.GetAllRegisteredPackages())
+                if (!string.IsNullOrEmpty(package.resolvedPath)) packages[package.name] = package.resolvedPath;
+            return s_Packages = packages;
         }
 
         /// <summary>The asset a project path or a file of the project stands for (a .meta for its
@@ -197,9 +294,7 @@ namespace UnityEditor
         static List<Asset> ProjectAssets()
         {
             var root = ProjectInfo.ProjectPath;
-            var packages = new Dictionary<string, string>(StringComparer.Ordinal);
-            foreach (var package in PackageManager.PackageInfo.GetAllRegisteredPackages())
-                if (!string.IsNullOrEmpty(package.resolvedPath)) packages[package.name] = package.resolvedPath;
+            var packages = Packages();
             var assets = new List<Asset>();
             foreach (var path in AssetDatabase.GetAllAssetPaths())
                 assets.Add(new Asset(path, AssetDatabase.AssetPathToGUID(path), Physical(root, packages, path)));
@@ -363,6 +458,13 @@ namespace UnityEditor
             s_Pending = null;
             s_Written.Clear();
             s_WrittenTrees.Clear();
+            s_Session = null;
+            s_Unseen.Clear();
+            s_UnseenTrees.Clear();
+            s_Packages = null;
         }
+
+        /// <summary>The session view as given (tests).</summary>
+        internal static void SessionForTests(List<Entry> entries) => See(entries);
     }
 }

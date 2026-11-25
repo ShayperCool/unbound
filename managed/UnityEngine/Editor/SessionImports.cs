@@ -34,7 +34,10 @@ namespace UnityEditor
 
             public void Dispose()
             {
-                if (s_Depth > 0 && --s_Depth == 0 && !AssetDatabase.Editing) Flush();
+                if (s_Depth <= 0 || --s_Depth > 0) return;
+                // What the write wrote is what the session has seen of it (a Refresh finds later changes).
+                ProjectImports.SeeWrites();
+                if (!AssetDatabase.Editing) Flush();
             }
         }
 

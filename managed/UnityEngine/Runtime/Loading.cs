@@ -1544,28 +1544,108 @@ namespace Unbound.Runtime
         /// objects stay what they are. The copy's other objects are destroyed.</summary>
         static Object ReadAgain(string guid, long fileId)
         {
+            var (fresh, objects) = ReadFileAgain(guid);
+            if (fresh == null) return null;
+            fresh.Objects.TryGetValue(fileId, out var copy);
+            foreach (var o in fresh.Objects.Values)
+                if (!ReferenceEquals(o, copy) && !objects.ContainsValue(o)) Object.DestroyImmediate(o, true);
+            return copy;
+        }
+
+        /// <summary>An asset whose file changed imported again with its loaded objects kept, as the
+        /// Editor reimports it (matches the Unity 6000.0.71f1 Editor, tests/projects/scenesave
+        /// refresh-changes: a text file, a YAML asset and an image changed on disk, an image's
+        /// importer setting changed in its .meta; each object loaded before is alive with the new
+        /// content and the asset loads as it, of the same instance id). A script object takes
+        /// the new serialized values (its references to the file's other objects pointing at the
+        /// kept ones), a text asset and a 2D texture the new content. An asset with objects of
+        /// other kinds, or whose objects the new import no longer has, has its objects replaced
+        /// instead (the next load makes new ones), with a warning: not measured. Nothing loaded:
+        /// the next load reads the file.</summary>
+        internal static void ReimportInPlace(string guid)
+        {
+            if (!s_Files.TryGetValue(guid, out var loaded) || loaded == null)
+            {
+                Invalidate(guid);
+                return;
+            }
+            ImportedInSession(guid);
+            var (fresh, registered) = ReadFileAgain(guid);
+            var kept = new Dictionary<Object, Object>(ReferenceEqualityComparer.Instance);
+            string refused = fresh == null ? "its file no longer imports" : null;
+            if (fresh != null)
+                foreach (var pair in loaded.Objects)
+                {
+                    var old = pair.Value;
+                    if (old == null || old.m_Destroyed) continue;
+                    if (!fresh.Objects.TryGetValue(pair.Key, out var copy) || copy == null || copy.GetType() != old.GetType())
+                        refused ??= $"its {old.GetType().Name} '{old.name}' is not in its new import";
+                    else if (!TakesContentInPlace(old))
+                        refused ??= $"Unbound keeps the loaded objects of a {old.GetType().Name} only for text assets, 2D textures and script objects";
+                    else kept[copy] = old;
+                }
+            if (refused != null)
+            {
+                Debug.LogWarning($"Unbound: {loaded.Path} is imported again with new objects (the ones loaded before keep their old content): {refused}");
+                if (fresh != null) DestroyFresh(fresh, registered);
+                Invalidate(guid);
+                return;
+            }
+            var copier = new SerializedCopier(o => o != null && kept.TryGetValue(o, out var mine) ? mine : o);
+            foreach (var pair in kept)
+            {
+                if (pair.Value is ScriptableObject) copier.CopyScriptObject(pair.Key, pair.Value);
+                else SwapContent(pair.Key, pair.Value);
+            }
+            DestroyFresh(fresh, registered);
+        }
+
+        /// <summary>Whether a loaded object takes a new import's content in place (measured kinds).</summary>
+        internal static bool TakesContentInPlace(Object o) =>
+            o is ScriptableObject || (o is TextAsset && o is not UnityEditor.MonoScript) || o.GetType() == typeof(Texture2D);
+
+        /// <summary>The fields an engine object's own classes declare (everything below Object)
+        /// traded between a new import's copy and the loaded object, which then holds the new
+        /// content; the copy, destroyed next, takes the old one (its GPU resources among it). A
+        /// texture counts as updated (Texture.updateCount).</summary>
+        internal static void SwapContent(Object copy, Object kept)
+        {
+            for (var type = kept.GetType(); type != null && type != typeof(Object); type = type.BaseType)
+                foreach (var field in type.GetFields(System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public
+                    | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.DeclaredOnly))
+                {
+                    if (field.IsInitOnly) continue;
+                    var value = field.GetValue(kept);
+                    field.SetValue(kept, field.GetValue(copy));
+                    field.SetValue(copy, value);
+                }
+            if (kept is Texture texture) texture.IncrementUpdateCount();
+        }
+
+        /// <summary>The new import's own objects destroyed (not the asset's registered ones).</summary>
+        static void DestroyFresh(LoadedFile fresh, Dictionary<(string, long), Object> registered)
+        {
+            foreach (var o in fresh.Objects.Values)
+                if (o != null && !o.m_Destroyed && !registered.ContainsValue(o)) Object.DestroyImmediate(o, true);
+        }
+
+        /// <summary>The file read again as a new import whose objects are not the asset's (the
+        /// loaded file and its registered objects, also returned, stay registered).</summary>
+        static (LoadedFile Fresh, Dictionary<(string, long), Object> Registered) ReadFileAgain(string guid)
+        {
             var loaded = s_Files[guid];
             var objects = new Dictionary<(string, long), Object>();
             foreach (var pair in s_Objects) if (string.Equals(pair.Key.Item1, guid, StringComparison.OrdinalIgnoreCase)) objects[pair.Key] = pair.Value;
             s_Files.Remove(guid);
-            LoadedFile fresh;
             bool wasReadingAgain = s_ReadingAgain;
             s_ReadingAgain = true;
-            try
-            {
-                fresh = LoadFile(guid);
-            }
+            try { return (LoadFile(guid), objects); }
             finally
             {
                 s_ReadingAgain = wasReadingAgain;
                 s_Files[guid] = loaded;
                 foreach (var pair in objects) s_Objects[pair.Key] = pair.Value;
             }
-            if (fresh == null) return null;
-            fresh.Objects.TryGetValue(fileId, out var copy);
-            foreach (var o in fresh.Objects.Values)
-                if (!ReferenceEquals(o, copy) && !objects.ContainsValue(o)) Object.DestroyImmediate(o, true);
-            return copy;
         }
 
         static Object s_UnloadingAsset;
