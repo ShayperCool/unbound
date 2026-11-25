@@ -2545,7 +2545,7 @@ mod tests {
         // No lights: no light. Kinds, modes and Lighting Modes that are none of the bake's
         // are refused.
         assert_eq!(bake_with(vec![], 0).unwrap().0, [0.0, 0.0, 0.0, 1.0]);
-        assert!(bake_with(vec![light("area", 1, 3, 2)], 0).is_err());
+        assert!(bake_with(vec![light("box", 1, 5, 2)], 0).is_err());
         assert!(bake_with(vec![light("realtime", 1, 0, 0)], 0).is_err());
         assert!(bake_with(vec![], 3).is_err());
         let _ = std::fs::remove_dir_all(&folder);
