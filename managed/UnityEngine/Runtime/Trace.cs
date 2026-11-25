@@ -26,7 +26,8 @@ namespace Unbound.Runtime
         internal static readonly bool HierarchyOn = On("hierarchy");
         /// <summary>The managed heap and the engine objects in it, every 600 frames.</summary>
         internal static readonly bool MemoryOn = On("memory");
-        /// <summary>The first call of each unimplemented (stub) member logs where it came from.</summary>
+        /// <summary>The first call of each unimplemented (stub) member logs where it came from; at the
+        /// end of a session every one used and how often (<see cref="Stubs.ReportAtExit"/>).</summary>
         internal static readonly bool StubsOn = On("stubs");
         /// <summary>Serialized fields of engine objects that their readers skip although they hold a
         /// value (settings Unbound does not honour yet), summed up at quit.</summary>

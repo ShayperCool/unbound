@@ -162,7 +162,9 @@ Modelled on what the Unity Editor itself records in `Library/Bee/*-inputdata.jso
   canvases and draws per frame, and what the renderer skips), `exceptions` (every exception as it
   is thrown, also the ones plugins swallow), `perf` (time per script callback and native call,
   reported at quit), `memory` (every 600 frames: the GC heap, engine objects by type, textures holding CPU pixels, an estimate of texture VRAM, the native side's audio and sprite tables), `input` (each press and what the EventSystem's raycasters hit), `hierarchy`
-  (the live scene graph at quit, in `LibraryUnbound/hierarchy.txt`), `stubs` (where each unimplemented member is first called from).
+  (the live scene graph at quit, in `LibraryUnbound/hierarchy.txt`), `stubs` (where each unimplemented member is first called from, and at the end of a session every
+  one used and how often, in `LibraryUnbound/stub-hits.tsv` and the log, added to those of the
+  sessions it continues after a relaunch for a script reload).
 * **Scripted input**: `unbound run --tap FRAME:X,Y` taps at a frame (window pixels from the top
   left), `--type FRAME:TEXT` types (`\n` Return, `\b` Backspace), `--move FRAME:X,Y` moves the
   pointer, `--press`/`--release FRAME:KEY` hold and release a key or button (Unity `KeyCode` names,

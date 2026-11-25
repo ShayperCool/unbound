@@ -528,5 +528,14 @@ public static unsafe class Game
         {
             Native.Log((int)LogType.Exception, $"Unbound shutdown failed: {e}");
         }
+        // Last, so the quit callbacks' uses are counted too.
+        try
+        {
+            Stubs.ReportAtExit(UnityEditor.EditorInitialization.ContinuesScriptReload());
+        }
+        catch (Exception e)
+        {
+            Native.Log((int)LogType.Exception, $"Unbound stub report failed: {e}");
+        }
     }
 }
