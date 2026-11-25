@@ -266,4 +266,48 @@ mod tests {
             Coefficients::default()
         );
     }
+
+    #[test]
+    fn sampled_lights_reach_a_probe_sample_by_sample() {
+        let samples = Samples::new(&vec![0; sampling::BLUE_NOISE_BYTES]).unwrap();
+        let sampling = Sampling::new(&samples, 64, [2]);
+        let grid = |lights: &[Light]| {
+            Grid::new(
+                lights,
+                Bounds {
+                    min: [-1.0; 3],
+                    max: [1.0; 3],
+                },
+            )
+        };
+        let at = |lights: &[Light], scene: &Scene| {
+            direct(&[[0.0; 3]], lights, &grid(lights), scene, Some(&sampling))[0]
+        };
+        // Two probes of a group take differently turned numbers.
+        assert_ne!(sampling.numbers(0, 0), sampling.numbers(1, 0));
+        // A soft sun in the open: all of its light, its constant term as a hard sun's; its
+        // directions spread around the sun's, so less of it along the sun's axis.
+        let mut soft = sun([0.0, -1.0, 0.0]);
+        soft.shadow_size = 0.2;
+        let open = Scene::new([]);
+        let (s, h) = (at(&[soft], &open), at(&[sun([0.0, -1.0, 0.0])], &open));
+        assert!((s[0][0] - h[0][0]).abs() < 1e-5, "{s:?} {h:?}");
+        assert!(s[2][0] < h[2][0] && s[2][0] > 0.9 * h[2][0], "{s:?} {h:?}");
+        // A roof over half the sky above the probe shadows some of its samples, not all.
+        let half_roof = Scene::new([
+            [[-5.0, 2.0, -5.0], [0.0, 2.0, -5.0], [0.0, 2.0, 5.0]],
+            [[-5.0, 2.0, -5.0], [0.0, 2.0, 5.0], [-5.0, 2.0, 5.0]],
+        ]);
+        let shaded = at(&[soft], &half_roof)[0][0];
+        assert!(shaded > 0.1 * h[0][0] && shaded < 0.9 * h[0][0], "{shaded}");
+        // A rectangle light facing down: no light unsampled, its light sampled.
+        let mut rect = sun([0.0, -1.0, 0.0]);
+        rect.kind = Kind::Rectangle;
+        rect.position = [0.0, 1.0, 0.0];
+        rect.up = [0.0, 0.0, 1.0];
+        rect.size = [1.0, 1.0];
+        rect.range = 10.0;
+        assert_eq!(bake(&[rect], &open), Coefficients::default());
+        assert!(at(&[rect], &open)[0][0] > 0.0);
+    }
 }
