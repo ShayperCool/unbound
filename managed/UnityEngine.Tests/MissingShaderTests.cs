@@ -156,6 +156,32 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
+        public void CopyingPropertiesKeepsEachMaterialsOwnReference()
+        {
+            string reference = "{fileID: 4800000, guid: " + MissingGuid + ", type: 3}";
+            var plain = Plain();
+            var missing = Read(reference);
+            var present = Read("{fileID: 4800000, guid: " + ShaderGuid + ", type: 3}", present: plain);
+            var fromMissing = Own(new Material(plain));
+            fromMissing.CopyPropertiesFromMaterial(missing);
+            Assert.Same(plain, fromMissing.shader);
+            Assert.Null(fromMissing.UnresolvedShaderReference);
+            var intoMissing = Read(reference);
+            intoMissing.CopyPropertiesFromMaterial(present);
+            Assert.Same(Error, intoMissing.shader);
+            Assert.Equal("  m_Shader: " + reference, ShaderLine(intoMissing));
+        }
+
+        [Fact]
+        public void AssigningTheShaderItHasNamesTheErrorShaderInItsData()
+        {
+            var m = Read("{fileID: 4800000, guid: " + MissingGuid + ", type: 3}");
+            m.shader = m.shader;
+            Assert.Same(Error, m.shader);
+            Assert.Null(m.UnresolvedShaderReference);
+        }
+
+        [Fact]
         public void NoShaderAssignedGivesTheErrorShaderAndDataOfNoShader()
         {
             var m = Own(new Material(Plain()));

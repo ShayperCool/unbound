@@ -227,9 +227,9 @@ namespace UnityEngine
         /// with a shader reference of no shader (none, a GUID of no asset, a file id of no object
         /// in a project shader or among the built-in ones) has the error shader, and a save writes
         /// the reference as read (matches the Unity 6000.0.71f1 Editor, tests/projects/missingshader
-        /// material.*, save.*). Not measured: a reference to an object that is not a shader (the
-        /// Editor logs a failed cast wherever the shader is read), and a shader that is imported
-        /// after the material loaded (the material keeps the error shader here).</summary>
+        /// material.*, save.*, saved_after.*). Not measured: a reference to an object that is not
+        /// a shader (the Editor logs a failed cast wherever the shader is read), and a shader that
+        /// is imported after the material loaded (the material keeps the error shader here).</summary>
         internal ObjectRef? UnresolvedShaderReference => m_State.m_UnresolvedShader;
 
         internal PendingValidation PendingEditorValidation
@@ -294,6 +294,7 @@ namespace UnityEngine
         internal void StartWith(Shader shader)
         {
             m_Shader = shader;
+            m_State.m_UnresolvedShader = null;
             m_TextureNames.Clear();
             AddTextureNames();
             foreach (var pair in shader.m_DefaultTextures)
@@ -457,8 +458,9 @@ namespace UnityEngine
             get { MainThreadCheck.Check("get_shader"); return m_Shader; }
             set
             { MainThreadCheck.Check("set_shader");
-                // No shader gives the error shader, as a material whose data names none has
-                // (tests/projects/missingshader assign.null); its data then holds no shader.
+                // No shader gives the error shader, as a material whose data names none has, and
+                // its data then holds no shader; any shader assigned, its own included, is the one
+                // the data names (tests/projects/missingshader assign.null, saved_after.*).
                 m_State.m_UnresolvedShader = value == null ? default(ObjectRef) : null;
                 if (value == null) value = ErrorShader;
                 if (value != m_Shader)
@@ -546,9 +548,9 @@ namespace UnityEngine
         /// the new shader's (rawRenderQueue -1). The same page's limitation: in batch mode an SRP
         /// loads only when something first renders, which can change the selected SubShader and so
         /// the shader's queue read afterwards (Shader.renderQueue answers that; not decided here).
-        /// Assigning the shader it has is no change and keeps it; a material that has the error
-        /// shader for a reference of no shader resets as well (tests/projects/missingshader
-        /// assign.unlit). Not documented, so the override stays, with a warning: a variant that
+        /// Assigning the shader it has is no change and keeps it; a change to and from the error
+        /// shader resets as well, no shader included (tests/projects/missingshader assign.unlit,
+        /// assign.null_queue, assign.error_queue). Not documented, so the override stays, with a warning: a variant that
         /// takes its parent's queue (the parent's state, taken again later).
         /// </summary>
         void ResetRenderQueue(Shader next)
@@ -1601,6 +1603,7 @@ namespace UnityEngine
             m_Tags.Clear();
             CopyProperties(saved);
             m_Shader = saved.m_Shader;
+            m_State.m_UnresolvedShader = saved.m_State.m_UnresolvedShader;
             m_DoubleSidedGI = saved.m_DoubleSidedGI;
             if (Compat.MaterialReloadWrappersMeasured)
             {
@@ -1633,10 +1636,14 @@ namespace UnityEngine
             mat.Inherit();
             Inherit();
             if (mat == this) return;
+            // The material keeps its shader and the reference its data holds for it
+            // (tests/projects/missingshader saved_after.copy_*).
             var shaderBefore = m_Shader;
+            var referenceBefore = m_State.m_UnresolvedShader;
             ClearForCopyOf(mat);
             CopyFrom(mat);
             m_Shader = shaderBefore;
+            m_State.m_UnresolvedShader = referenceBefore;
         }
 
         /// <summary><see cref="CopyPropertiesFromMaterial"/> for Unbound's own materials made from

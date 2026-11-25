@@ -364,8 +364,8 @@ namespace UnityEngine.Tests
             Assert.Equal(2450, m.rawRenderQueue);
         }
 
-        /// <summary>No shader gives the error shader (tests/projects/missingshader assign.null), and
-        /// a change from or to it resets the queue as any shader change does (assign.unlit).</summary>
+        /// <summary>No shader gives the error shader, and a change to or from it resets the queue
+        /// as any shader change does (tests/projects/missingshader assign.null_queue, assign.unlit).</summary>
         [Fact]
         public void NoShaderIsTheErrorShaderAndResetsTheQueue()
         {

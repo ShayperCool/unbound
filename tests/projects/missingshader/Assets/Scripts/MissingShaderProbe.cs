@@ -151,6 +151,47 @@ public class MissingShaderProbe : MonoBehaviour
             Try("assign/error", () => { m.shader = Shader.Find("Hidden/InternalErrorShader"); return ShaderOf(m) + " queue " + m.renderQueue + " raw " + m.rawRenderQueue; });
         }
 
+        // A custom queue under a present shader, then no shader or the error shader.
+        Try("assign/null_queue", () =>
+        {
+            var m = new Material(Shader.Find("Probe/Transparent")) { renderQueue = 2450 };
+            m.shader = null;
+            return ShaderOf(m) + " queue " + m.renderQueue + " raw " + m.rawRenderQueue;
+        });
+        Try("assign/error_queue", () =>
+        {
+            var m = new Material(Shader.Find("Probe/Transparent")) { renderQueue = 2450 };
+            m.shader = Shader.Find("Hidden/InternalErrorShader");
+            return ShaderOf(m) + " queue " + m.renderQueue + " raw " + m.rawRenderQueue;
+        });
+
+        // The reference a save writes after an assignment or a property copy: a copy of
+        // DanglingGuid given its own shader, no shader, the error shader, or Present's properties;
+        // a copy of Present given DanglingGuid's properties.
+        var actions = new (string Name, string Source, Action<Material> Act)[]
+        {
+            ("same", "DanglingGuid", m => m.shader = m.shader),
+            ("null", "DanglingGuid", m => m.shader = null),
+            ("error", "DanglingGuid", m => m.shader = Shader.Find("Hidden/InternalErrorShader")),
+            ("copy_from_present", "DanglingGuid", m => m.CopyPropertiesFromMaterial(loaded["Present"])),
+            ("copy_from_dangling", "Present", m => m.CopyPropertiesFromMaterial(loaded["DanglingGuid"])),
+        };
+        AssetDatabase.CreateFolder("Assets", "Assigned");
+        foreach (var (actionName, source, act) in actions)
+        {
+            string copyPath = "Assets/Assigned/" + actionName + ".mat";
+            Try("saved_after/" + actionName, () =>
+            {
+                if (!AssetDatabase.CopyAsset("Assets/Materials/" + source + ".mat", copyPath)) return "not copied";
+                var m = AssetDatabase.LoadAssetAtPath<Material>(copyPath);
+                act(m);
+                EditorUtility.SetDirty(m);
+                AssetDatabase.SaveAssetIfDirty(m);
+                string line = File.ReadAllLines(copyPath).First(l => l.StartsWith("  m_Shader:", StringComparison.Ordinal));
+                return ShaderOf(m) + " | " + line.Trim();
+            });
+        }
+
         // A save of each missing-shader material after a change (a copy of the file, so the
         // project's own materials stay as they are): the file it writes.
         AssetDatabase.CreateFolder("Assets", "Saved");

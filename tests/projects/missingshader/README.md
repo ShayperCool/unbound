@@ -29,7 +29,12 @@ Rows:
 * `error_shader/find_same`: two `Shader.Find` calls give one object.
 * `copy/<material>/*`: the same of `new Material(source)`.
 * `assign/null`: a new Unlit/Color material given `shader = null`; `assign/unlit`, `assign/error`:
-  a copy of `DanglingQueue` given Unlit/Color, then the error shader (queue reset).
+  a copy of `DanglingQueue` given Unlit/Color, then the error shader (queue reset);
+  `assign/null_queue`, `assign/error_queue`: a `Probe/Transparent` material with queue 2450 given
+  no shader, the error shader.
+* `saved_after/<action>`: the `m_Shader` line a save writes after `shader = shader` (`same`),
+  `shader = null`, the error shader assigned, and `CopyPropertiesFromMaterial` from `Present` into a
+  copy of `DanglingGuid` and back (`copy_from_present`, `copy_from_dangling`).
 * `scripted/<shader>/before`, `/after`: a new material of the error shader, `Probe/NoProperties` and
   `Probe/Transparent`: `GetFloat("_New")` before and after `SetFloat`, `HasProperty`, a colour set
   for a name the shader lacks, the float property names.
@@ -42,12 +47,15 @@ shader (`Hidden/InternalErrorShader`, the same object `Shader.Find` returns: 3 p
 queue 2000); the material keeps its custom render queue, keywords, flags and saved texture scale and
 offset; getters of its saved names return 0 and log nothing under the error shader (a shader without
 properties logs the missing-property error). A save writes the reference as it was read, with every
-keyword invalid. `shader = null` gives the error shader; a later shader change resets the queue.
+keyword invalid, and so does one after a property copy (each material keeps its own reference).
+`shader = null` gives the error shader and data of no shader (`{fileID: 0}`); an assigned shader,
+the error shader or the material's own included, is the one its data then names (the error shader is
+`{fileID: 17, guid: 0000000000000000e000000000000000, type: 0}`). A change to or from the error shader
+resets a custom queue.
 
 Not covered: a reference to an object that is not a shader (the Editor logs `PPtr cast failed when
 dereferencing!` wherever the material reads its shader), a shader imported after the material was
-loaded, and the reference a save writes after `shader = null` or an explicit assignment of the error
-shader.
+loaded.
 
 Record and gate:
 
