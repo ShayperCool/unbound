@@ -262,6 +262,9 @@ namespace UnityEngine.Tests
                 Assert.NotNull(AssetDatabaseRuntime.InPlaceRefusal(variant, copy));
                 Assert.NotNull(AssetDatabaseRuntime.InPlaceRefusal(plain, null));
                 Assert.NotNull(AssetDatabaseRuntime.InPlaceRefusal(plain, text));
+                // A material that locks a property for its variants.
+                parent.SetPropertyLock("_Color", true);
+                Assert.NotNull(AssetDatabaseRuntime.InPlaceRefusal(parent, copy));
             }
             finally
             {
