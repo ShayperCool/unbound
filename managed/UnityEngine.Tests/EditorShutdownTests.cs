@@ -168,6 +168,36 @@ namespace UnityEngine.Tests
             }
         }
 
+        /// <summary>An EditorApplication.quitting handler that throws is logged and stops the handlers
+        /// after it (one invoke, as Unity's Internal_EditorApplicationQuit), and the exit still saves.</summary>
+        [Fact]
+        public void AThrowingEditorQuittingHandlerIsLoggedAndTheExitStillSaves()
+        {
+            using var release = TestRelease.Pin(TestRelease.Measured);
+            using var scenes = new Unbound.Tests.LightProbesTests.Scenes();
+            scenes.Loaded("Open");
+            var calls = new List<string>();
+            var logs = new List<string>();
+            Action throws = () => throw new InvalidOperationException("editor quitting control");
+            Action after = () => calls.Add("after");
+            var handler = Debug.unityLogger.logHandler;
+            UnityEditor.EditorApplication.quitting += throws;
+            UnityEditor.EditorApplication.quitting += after;
+            try
+            {
+                Debug.unityLogger.logHandler = new CapturingLog(logs);
+                PlayerLoopDriver.FinishQuit(true, () => { }, () => { }, () => calls.Add("save"));
+                Assert.Equal(new[] { "save" }, calls);
+                Assert.Contains(logs, l => l.Contains("editor quitting control"));
+            }
+            finally
+            {
+                Debug.unityLogger.logHandler = handler;
+                UnityEditor.EditorApplication.quitting -= throws;
+                UnityEditor.EditorApplication.quitting -= after;
+            }
+        }
+
         sealed class CapturingLog : ILogHandler
         {
             readonly List<string> m_Logs;
