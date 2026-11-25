@@ -256,14 +256,19 @@ namespace UnityEngine.Tests
                 Make("Realtime", LightType.Point, LightmapBakeType.Realtime);
                 Make("Disabled", LightType.Point, LightmapBakeType.Baked).enabled = false;
                 Make("Inactive", LightType.Point, LightmapBakeType.Baked).gameObject.SetActive(false);
-                Make("Area", LightType.Rectangle, LightmapBakeType.Baked);
+                var area = Make("Area", LightType.Rectangle, LightmapBakeType.Baked);
+                area.areaSize = new Vector2(1.5f, 0.75f);
+                var hardRadius = Make("HardRadius", LightType.Point, LightmapBakeType.Baked);
+                hardRadius.shadows = LightShadows.Hard;
+                hardRadius.shadowRadius = 0.5f;
                 long id = 100;
                 foreach (var go in made) file.Objects[id++] = go.GetComponent<Light>();
 
                 var lights = System.Text.Json.JsonDocument.Parse(System.Text.Json.JsonSerializer.Serialize(BakedAtlas.Lights(file, file.Path))).RootElement;
-                // Realtime, disabled and inactive lights are not of the bake; an area light is
-                // said and left out.
-                Assert.Equal(3, lights.GetArrayLength());
+                // Realtime, disabled and inactive lights are not of the bake; an area light is,
+                // with its size and its dilated range; a Baked Shadow Radius with hard shadows
+                // (not measured) is said and left out.
+                Assert.Equal(4, lights.GetArrayLength());
                 var first = lights[0];
                 Assert.Equal("Sun", first.GetProperty("name").GetString());
                 Assert.Equal(100, first.GetProperty("fileId").GetInt64());
@@ -284,8 +289,14 @@ namespace UnityEngine.Tests
                 Assert.Equal((7f, 40f), (second.GetProperty("range").GetSingle(), second.GetProperty("spotAngle").GetSingle()));
                 Assert.Equal(new[] { 1f, 2f, 3f }, new[] { Channel(second, "position", 0), Channel(second, "position", 1), Channel(second, "position", 2) });
                 Assert.Equal("Soft", lights[2].GetProperty("name").GetString());
-                Assert.Contains(capture.Logs, l => l.StartsWith("Warning: ") && l.Contains("'Area' is a ") && l.Contains(" light, which Unbound's bake"));
-                Assert.Contains(capture.Logs, l => l.StartsWith("Warning: ") && l.Contains("'Soft' has soft baked shadows"));
+                Assert.Equal(0.5f, lights[2].GetProperty("shadowSize").GetSingle());
+                Assert.Equal(0f, first.GetProperty("shadowSize").GetSingle());
+                var areaLight = lights[3];
+                Assert.Equal(("Area", 3), (areaLight.GetProperty("name").GetString(), areaLight.GetProperty("kind").GetInt32()));
+                Assert.Equal((1.5f, 0.75f), (Channel(areaLight, "size", 0), Channel(areaLight, "size", 1)));
+                Assert.Equal(area.dilatedRange, areaLight.GetProperty("range").GetSingle());
+                Assert.DoesNotContain(capture.Logs, l => l.Contains("'Area'") || l.Contains("'Soft'"));
+                Assert.Contains(capture.Logs, l => l.StartsWith("Warning: ") && l.Contains("'HardRadius' has hard shadows with a Baked Shadow Radius"));
                 Assert.DoesNotContain(capture.Logs, l => l.Contains("'Sun'") || l.Contains("'Spot'") || l.Contains("'Realtime'"));
 
                 // A cookie is said and not applied: the light is still of the bake.
