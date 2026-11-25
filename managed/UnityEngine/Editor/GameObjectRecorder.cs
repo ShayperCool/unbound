@@ -56,7 +56,11 @@ namespace UnityEditor.Animations
 
         readonly GameObject m_Root;
         readonly List<EditorCurveBinding> m_FloatBindings = new List<EditorCurveBinding>();
-        readonly List<AnimationCurve> m_FloatCurves = new List<AnimationCurve>();
+        /// <summary>Each number binding's keys in time order.</summary>
+        readonly List<List<Keyframe>> m_FloatKeys = new List<List<Keyframe>>();
+        /// <summary>The object each number binding reads, found at the first snapshot that needs it
+        /// and again once it is destroyed.</summary>
+        readonly List<Object> m_FloatTargets = new List<Object>();
         readonly List<EditorCurveBinding> m_ObjectBindings = new List<EditorCurveBinding>();
         readonly List<List<ObjectReferenceKeyframe>> m_ObjectCurves = new List<List<ObjectReferenceKeyframe>>();
         bool m_Idle = true;
@@ -121,7 +125,11 @@ namespace UnityEditor.Animations
             if (bindings.Contains(binding)) return;
             bindings.Add(binding);
             if (binding.isPPtrCurve) m_ObjectCurves.Add(new List<ObjectReferenceKeyframe>());
-            else m_FloatCurves.Add(new AnimationCurve());
+            else
+            {
+                m_FloatKeys.Add(new List<Keyframe>());
+                m_FloatTargets.Add(null);
+            }
         }
 
         public EditorCurveBinding[] GetBindings()
@@ -144,15 +152,40 @@ namespace UnityEditor.Animations
                 m_Time += dt;
             for (int i = 0; i < m_FloatBindings.Count; i++)
             {
-                if (!AnimationUtility.GetFloatValue(m_Root, m_FloatBindings[i], out float value))
+                var binding = m_FloatBindings[i];
+                var target = m_FloatTargets[i];
+                if (target == null) m_FloatTargets[i] = target = AnimationUtility.GetAnimatedObject(m_Root, binding);
+                float value = 0f;
+                if (target == null || !AnimationUtility.ReadFloatValue(m_Root, target, binding, out value))
                     Stubs.Ignored("GameObjectRecorder.TakeSnapshot unreadable binding", "keys 0 for a bound property it cannot read (the Editor keys an undefined value)");
-                m_FloatCurves[i].AddKey(new Keyframe(m_Time, value) { inWeight = 1f / 3f, outWeight = 1f / 3f });
+                AddKey(m_FloatKeys[i], new Keyframe(m_Time, value) { inWeight = 1f / 3f, outWeight = 1f / 3f });
             }
             for (int i = 0; i < m_ObjectBindings.Count; i++)
             {
                 AnimationUtility.GetObjectReferenceValue(m_Root, m_ObjectBindings[i], out Object value);
                 m_ObjectCurves[i].Add(new ObjectReferenceKeyframe { time = m_Time, value = value });
             }
+        }
+
+        /// <summary>Adds a key in time order, as AnimationCurve.AddKey does (none at a time already
+        /// keyed); snapshots usually only move on, so the key goes at the end.</summary>
+        static void AddKey(List<Keyframe> keys, Keyframe key)
+        {
+            int n = keys.Count;
+            if (n == 0 || keys[n - 1].time < key.time)
+            {
+                keys.Add(key);
+                return;
+            }
+            int low = 0, high = n;
+            while (low < high)
+            {
+                int middle = (low + high) / 2;
+                if (keys[middle].time < key.time) low = middle + 1;
+                else high = middle;
+            }
+            if (keys[low].time == key.time) return;
+            keys.Insert(low, key);
         }
 
         public void SaveToClip(AnimationClip clip) => SaveToClip(clip, 60.0f);
@@ -187,7 +220,8 @@ namespace UnityEditor.Animations
         public void ResetRecording()
         {
             m_FloatBindings.Clear();
-            m_FloatCurves.Clear();
+            m_FloatKeys.Clear();
+            m_FloatTargets.Clear();
             m_ObjectBindings.Clear();
             m_ObjectCurves.Clear();
             m_Idle = true;
@@ -212,10 +246,12 @@ namespace UnityEditor.Animations
             clip.ClearCurves();
             clip.frameRate = fps;
             float rate = clip.frameRate;
-            // The cleared clip's length (one second, that of a clip without curves) against a frame.
+            // The cleared clip's length (one second, that of a clip without curves) against a frame;
+            // measured on clips without a stored range (a clip with one keeps its range's length
+            // here, unmeasured).
             bool longEnough = clip.length >= 1f / fps;
-            var curves = new AnimationCurve[m_FloatCurves.Count];
-            for (int i = 0; i < curves.Length; i++) curves[i] = new AnimationCurve(m_FloatCurves[i].keys);
+            var curves = new AnimationCurve[m_FloatKeys.Count];
+            for (int i = 0; i < curves.Length; i++) curves[i] = new AnimationCurve(m_FloatKeys[i].ToArray());
             if (options.unrollRotation && longEnough) UnrollEuler(curves);
             var floats = new bool[curves.Length];
             for (int i = 0; i < curves.Length; i++)

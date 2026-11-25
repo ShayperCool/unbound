@@ -261,7 +261,13 @@ namespace UnityEditor
         {
             data = 0f;
             var target = GetAnimatedObject(root, binding);
-            if (target == null) return false;
+            return target != null && ReadFloatValue(root, target, binding, out data);
+        }
+
+        /// <summary><see cref="GetFloatValue"/> of the object the binding animates, found already.</summary>
+        internal static bool ReadFloatValue(GameObject root, Object target, EditorCurveBinding binding, out float data)
+        {
+            data = 0f;
             if (Unbound.Runtime.Compat.GameObjectRecorderMeasured && binding.isDiscreteCurve && target is MonoBehaviour)
             {
                 if (!GetDiscreteIntValue(root, binding, out int bits)) return false;
@@ -280,8 +286,8 @@ namespace UnityEditor
             {
                 Vector3? v = null;
                 int dot = propertyName.LastIndexOf('.');
-                var head = dot < 0 ? propertyName : propertyName.Substring(0, dot);
-                var axis = dot < 0 ? "" : propertyName.Substring(dot + 1);
+                ReadOnlySpan<char> head = dot < 0 ? propertyName : propertyName.AsSpan(0, dot);
+                ReadOnlySpan<char> axis = dot < 0 ? default : propertyName.AsSpan(dot + 1);
                 switch (head)
                 {
                     case "m_LocalPosition": v = t.localPosition; break;
