@@ -1,0 +1,116 @@
+{
+ "mixedMode": 2,
+ "lights": [
+  {
+   "color": [
+    4.594793796539307,
+    4.594793796539307,
+    4.594793796539307
+   ],
+   "indirectColor": [
+    4.594793796539307,
+    4.594793796539307,
+    4.594793796539307
+   ],
+   "orientation": [
+    0.4082179367542267,
+    -0.2345697283744812,
+    0.10938166081905365,
+    0.8754261136054993
+   ],
+   "position": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "range": 0.0,
+   "cookie": 4294967295,
+   "cookieScale": 1.0,
+   "coneAngle": 1.0,
+   "innerConeAngle": 1.0,
+   "shape0": 0.0,
+   "shape1": 0.0,
+   "type": 0,
+   "mode": 1,
+   "falloff": 4,
+   "angularFalloff": 0,
+   "castsShadows": true,
+   "shadowMaskChannel": 0,
+   "name": "MixedSun"
+  },
+  {
+   "color": [
+    1.4934778213500977,
+    2.8123152256011963,
+    4.594793796539307
+   ],
+   "indirectColor": [
+    1.4934778213500977,
+    2.8123152256011963,
+    4.594793796539307
+   ],
+   "orientation": [
+    0.0,
+    0.0,
+    0.0,
+    1.0
+   ],
+   "position": [
+    -1.2100000381469727,
+    1.5299999713897705,
+    1.0700000524520874
+   ],
+   "range": 5.0,
+   "cookie": 4294967295,
+   "cookieScale": 1.0,
+   "coneAngle": 0.0,
+   "innerConeAngle": 0.0,
+   "shape0": 0.0,
+   "shape1": 0.0,
+   "type": 1,
+   "mode": 2,
+   "falloff": 3,
+   "angularFalloff": 0,
+   "castsShadows": true,
+   "shadowMaskChannel": 4294967295,
+   "name": "BakedBulb"
+  },
+  {
+   "color": [
+    4.594793796539307,
+    3.644177198410034,
+    2.0964362621307373
+   ],
+   "indirectColor": [
+    4.594793796539307,
+    3.644177198410034,
+    2.0964362621307373
+   ],
+   "orientation": [
+    0.0,
+    0.0,
+    0.0,
+    1.0
+   ],
+   "position": [
+    1.0130000114440918,
+    2.0169999599456787,
+    -0.9909999966621399
+   ],
+   "range": 6.0,
+   "cookie": 4294967295,
+   "cookieScale": 1.0,
+   "coneAngle": 0.0,
+   "innerConeAngle": 0.0,
+   "shape0": 0.0,
+   "shape1": 0.0,
+   "type": 1,
+   "mode": 1,
+   "falloff": 3,
+   "angularFalloff": 0,
+   "castsShadows": true,
+   "shadowMaskChannel": 1,
+   "name": "MixedBulb"
+  }
+ ]
+}
