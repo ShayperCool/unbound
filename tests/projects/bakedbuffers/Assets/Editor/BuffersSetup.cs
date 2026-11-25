@@ -724,10 +724,11 @@ public static class BuffersSetup
         }
         // Directional lightmaps under a faint sun, where a texel's light is so little that its
         // direction's length is cut: 16 rays a texel under a sun of 0.0001, 64 under one of
-        // 0.00001.
-        foreach (var (name, samples, intensity) in new[] { ("DirectionalFaint", 16, 1e-4f), ("DirectionalFainter", 64, 1e-5f) })
+        // 0.00001, and 16 rays and 64 Direct Samples under one of 0.0001.
+        foreach (var (name, samples, intensity, direct) in new[] { ("DirectionalFaint", 16, 1e-4f, 16), ("DirectionalFainter", 64, 1e-5f, 16), ("DirectionalFaintDirect", 16, 1e-4f, 64) })
         {
             var scene = Coloured(name, samples, 1);
+            Lightmapping.lightingSettings.directSampleCount = direct;
             Directed();
             NewLight("Sun", LightType.Directional, Vector3.zero, new Vector3(50f, -30f, 0f), Color.white, intensity);
             Save(scene, name);
