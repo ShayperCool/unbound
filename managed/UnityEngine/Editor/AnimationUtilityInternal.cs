@@ -16,6 +16,11 @@ namespace UnityEditor
 
         internal static void SetKeyBroken(ref Keyframe key, bool broken) =>
             key.tangentModeInternal = broken ? key.tangentModeInternal | k_BrokenMask : key.tangentModeInternal & ~k_BrokenMask;
+
+        /// <summary>The rotation's angles for the order nearest the hint (the Timeline editor keeps
+        /// its offsets' Euler angles with it); see <see cref="ClosestEulerAngles"/>.</summary>
+        internal static Vector3 GetClosestEuler(Quaternion q, Vector3 eulerHint, RotationOrder rotationOrder) =>
+            ClosestEulerAngles.Of(q, eulerHint, rotationOrder);
     }
 
     public partial class AnimationMode
