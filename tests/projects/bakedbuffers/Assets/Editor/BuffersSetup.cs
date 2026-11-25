@@ -1047,7 +1047,7 @@ public static class BuffersSetup
     /// the bake takes of them), its alpha telling rows from columns and each way along them: a spot light's 16 by 16 clamped cookie over a light probe group,
     /// a sun's 8 by 8 repeating cookie of size 2.5, a point light's cube cookie of 8 a side, a spot
     /// light's cookie of 128 a side with mipmaps, a sun's clamped cookie of Point filter, and a spot
-    /// light's Alpha8 cookie of 1024 a side of Trilinear filter.</summary>
+    /// light's Alpha8 cookie of 1024 a side of Trilinear filter, and four cookies at once.</summary>
     static void Cookies()
     {
         Color32 Texel(int x, int y, int n) => new Color32((byte)(x * 255 / (n - 1)), (byte)(y * 255 / (n - 1)), (byte)(((x ^ y) & 1) == 0 ? 230 : 40), (byte)(20 + ((x * 5 + y * 3) % 8) * 33));
@@ -1085,8 +1085,9 @@ public static class BuffersSetup
                     for (int x = 0; x < 8; x++)
                     {
                         Color32 c = Texel(x, y, 8);
-                        // Each face its own blue, to tell the faces apart.
-                        texels[y * 8 + x] = new Color32(c.r, c.g, (byte)(40 + face * 40), c.a);
+                        // Each face its own blue and its own alpha (the pattern moved along by
+                        // the face), to tell the faces apart.
+                        texels[y * 8 + x] = new Color32(c.r, c.g, (byte)(40 + face * 40), (byte)(20 + ((x * 5 + y * 3 + face * 3) % 8) * 33));
                     }
                 cube.SetPixels(texels, (CubemapFace)face);
             }
@@ -1141,6 +1142,35 @@ public static class BuffersSetup
             spot.spotAngle = 70f;
             spot.cookie = cookie;
             Save(scene, "CookieHuge");
+        }
+        // Several cookies at once: the 1024 one on a spot light and three of 256 a side on three
+        // more.
+        {
+            var scene = Lit("CookieMany");
+            var huge = AssetDatabase.LoadAssetAtPath<Texture2D>($"{Folder}/CookieHugeCookie.asset");
+            Light Spot(string name, Vector3 at, Vector3 euler, Texture cookie)
+            {
+                var spot = NewLight(name, LightType.Spot, at, euler, new Color(1f, 0.95f, 0.9f), 3f);
+                spot.range = 8f;
+                spot.spotAngle = 60f;
+                spot.cookie = cookie;
+                return spot;
+            }
+            Spot("Huge", new Vector3(0.3f, 3.2f, -0.2f), new Vector3(85f, 10f, 0f), huge);
+            for (int k = 0; k < 3; k++)
+            {
+                const int n = 256;
+                var cookie = new Texture2D(n, n, TextureFormat.Alpha8, false, false) { name = $"CookieManyCookie{k}", filterMode = FilterMode.Bilinear, wrapMode = TextureWrapMode.Clamp };
+                var texels = new Color32[n * n];
+                for (int y = 0; y < n; y++)
+                    for (int x = 0; x < n; x++)
+                        texels[y * n + x] = new Color32(255, 255, 255, (byte)(20 + ((x / 16 * (5 + k) + y / 16 * 3) % 8) * 33 + ((x + 2 * y + k) & 3)));
+                cookie.SetPixels32(texels);
+                cookie.Apply();
+                AssetDatabase.CreateAsset(cookie, $"{Folder}/CookieManyCookie{k}.asset");
+                Spot($"Small{k}", new Vector3(-2f + 2f * k, 2.5f, 1.5f), new Vector3(80f, -20f + 20f * k, 0f), cookie);
+            }
+            Save(scene, "CookieMany");
         }
     }
 
