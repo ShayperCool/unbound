@@ -488,7 +488,8 @@ namespace UnityEditor
             if (settings == importer.m_ImportedSettings) return;
             // The Editor saves the settings the preprocessors changed into the .meta
             // (tests/projects/assetpostprocessors meta.*, tests/projects/projectwrites 10.preprocessor).
-            ImporterMeta.Write(importer);
+            // A save in the release's layout gives the importer the settings as written.
+            if (ImporterMeta.Write(importer)) settings = MetaSettings.ToJson(importer.m_Settings);
             importer.m_ImportedSettings = settings;
             guid ??= AssetDatabase.AssetPathToGUID(path);
             if (AssetDatabaseRuntime.IsMainLoaded(guid))

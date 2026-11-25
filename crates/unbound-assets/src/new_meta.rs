@@ -168,6 +168,19 @@ pub fn texture_platform_entry(name: &str) -> String {
     include_str!("new_meta/texture_platform.yaml").replace("{platform}", name)
 }
 
+/// The Editor's layout of an importer's settings, as it writes them whenever it saves them: the
+/// section of a new asset's `.meta` (the importer named and its keys in order, at their defaults).
+/// Measured for the audio and model importers (tests/projects/importermeta); a texture's layout is
+/// its new-asset section with its platforms (`texture-meta-template`); `None` for the others. The
+/// second element, a per-platform entry, is for layouts whose own section lists none.
+pub fn importer_layout(importer: &str) -> Option<(String, Option<String>)> {
+    match importer {
+        "AudioImporter" => Some((include_str!("new_meta/audio_importer.yaml").into(), None)),
+        "ModelImporter" => Some((include_str!("new_meta/model_importer.yaml").into(), None)),
+        _ => None,
+    }
+}
+
 /// A new GUID, as random as the Editor's.
 pub fn new_guid() -> Guid {
     let mut bytes = [0u8; 16];
@@ -494,6 +507,20 @@ mod tests {
             &MetaContext::default(),
         );
         assert_eq!(bare.matches("buildTarget:").count(), 2);
+    }
+
+    #[test]
+    fn layouts_are_the_new_meta_sections_of_the_measured_importers() {
+        let (audio, none) = importer_layout("AudioImporter").unwrap();
+        assert!(audio.starts_with("AudioImporter:\n") && none.is_none());
+        assert!(
+            importer_layout("ModelImporter")
+                .unwrap()
+                .0
+                .starts_with("ModelImporter:\n")
+        );
+        assert!(importer_layout("TextureImporter").is_none());
+        assert!(importer_layout("TrueTypeFontImporter").is_none());
     }
 
     #[test]

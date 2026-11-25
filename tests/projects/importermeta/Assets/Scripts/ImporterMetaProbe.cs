@@ -92,7 +92,7 @@ public class ImporterMetaProbe : MonoBehaviour
 #endif
     }
 
-    static readonly string[] Textures = { "Current", "Missing", "Extra", "Reordered", "SwitchName", "Version12", "Untouched", "Reimported", "SameValue", "WriteIfDirty" };
+    static readonly string[] Textures = { "Current", "Missing", "Extra", "Reordered", "SwitchName", "Version12", "GuiNoWrap", "DefaultNoWrap", "Untouched", "Reimported", "SameValue", "WriteIfDirty" };
 
     static void Run()
     {
@@ -101,7 +101,7 @@ public class ImporterMetaProbe : MonoBehaviour
         // What opening the project left.
         foreach (var path in all) Meta("open/" + path, path);
 
-        foreach (var name in new[] { "Current", "Missing", "Extra", "Reordered", "SwitchName", "Version12" })
+        foreach (var name in new[] { "Current", "Missing", "Extra", "Reordered", "SwitchName", "Version12", "GuiNoWrap", "DefaultNoWrap" })
         {
             string path = "Assets/Textures/" + name + ".png";
             Try("change/" + path, () =>
@@ -110,13 +110,17 @@ public class ImporterMetaProbe : MonoBehaviour
                 var settings = new TextureImporterSettings();
                 importer.ReadTextureSettings(settings);
                 string before = "readable " + importer.isReadable + " mipmapsPreserveCoverage " + importer.mipMapsPreserveCoverage
-                    + " flipbook " + settings.flipbookRows + "x" + settings.flipbookColumns;
+                    + " flipbook " + settings.flipbookRows + "x" + settings.flipbookColumns
+                    + " wrap " + importer.wrapModeU + "," + importer.wrapModeV + "," + importer.wrapModeW;
                 importer.isReadable = true;
                 importer.SaveAndReimport();
                 return before;
             });
             Meta("change/" + path + "/meta", path);
         }
+        // A second write with nothing changed after a save that renamed a platform.
+        Try("again/Assets/Textures/SwitchName.png", () => "written " + AssetDatabase.WriteImportSettingsIfDirty("Assets/Textures/SwitchName.png"));
+        Meta("again/Assets/Textures/SwitchName.png/meta", "Assets/Textures/SwitchName.png");
         Try("forced/Assets/Textures/Reimported.png", () =>
         {
             AssetDatabase.ImportAsset("Assets/Textures/Reimported.png", ImportAssetOptions.ForceUpdate);

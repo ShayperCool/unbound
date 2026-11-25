@@ -63,13 +63,21 @@ pub struct AudioSettings {
     pub sample: SampleSettings,
 }
 
+/// The AudioImporter's serialized version in the 6000.0 Editor's .meta files
+/// (crates/unbound-assets/src/new_meta/audio_importer.yaml).
+const CURRENT_SERIALIZED_VERSION: i64 = 8;
+
 impl AudioSettings {
     /// Reads the settings, applying the `platformSettingOverrides` entry of `build_target` when
     /// present.
     pub fn read(meta: &Value, build_target: &str) -> Self {
         let imp = importer(meta, "AudioImporter");
-        // Before 2022 `preloadAudioData` lived at the top level; now it is per platform.
-        let preload_default = boolean(imp, "preloadAudioData").unwrap_or(true);
+        // Before 2022 `preloadAudioData` lived at the top level; now it is per platform, off where
+        // settings of the release's serialized version lack it (matches the Unity 6000.0.71f1
+        // Editor, tests/projects/importermeta change.Assets/Audio/Missing.wav; older versions
+        // without it are not measured and preload, as before).
+        let preload_default = boolean(imp, "preloadAudioData")
+            .unwrap_or(int(imp, "serializedVersion").unwrap_or(0) < CURRENT_SERIALIZED_VERSION);
         let sample = |v: &Value| SampleSettings {
             load_type: match int(v, "loadType").unwrap_or(0) {
                 1 => LoadType::CompressedInMemory,
@@ -174,7 +182,8 @@ impl Importer for AudioImporter {
     const KIND: &'static str = "audio";
     // 4: converted PCM samples (mono downmix, resampling) are stored as 16-bit samples.
     // 5: so are unconverted samples finer than 16 bits (24-bit, float).
-    const VERSION: u32 = 5;
+    // 6: settings of serialized version 8 without `preloadAudioData` do not preload (did).
+    const VERSION: u32 = 6;
 
     fn import(&self, source: &Path, bytes: &[u8], meta: &Value) -> Result<ImportedAudio> {
         let settings = AudioSettings::read(meta, &self.build_target);
@@ -527,6 +536,16 @@ AudioImporter:
   ambisonic: 0
   3D: 1
 "#;
+
+    #[test]
+    fn settings_of_the_current_version_without_preload_do_not_preload() {
+        let current = "AudioImporter:\n  serializedVersion: 8\n  defaultSettings:\n    loadType: 0\n  forceToMono: 0\n";
+        let s = AudioSettings::read(&unbound_yaml::parse_value(current).unwrap(), "Standalone");
+        assert!(!s.sample.preload_audio_data);
+        let older = "AudioImporter:\n  serializedVersion: 6\n  defaultSettings:\n    loadType: 0\n  forceToMono: 0\n";
+        let s = AudioSettings::read(&unbound_yaml::parse_value(older).unwrap(), "Standalone");
+        assert!(s.sample.preload_audio_data);
+    }
 
     #[test]
     fn reads_settings() {

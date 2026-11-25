@@ -18,6 +18,7 @@ with these edits:
 | `Reordered` | `isReadable` first |
 | `SwitchName` | a third platform entry named `Nintendo Switch` |
 | `Version12` | `serializedVersion: 12`, otherwise the release's layout |
+| `GuiNoWrap`, `DefaultNoWrap` | a GUI and a Default texture without `wrapU`, `wrapV`, `wrapW` |
 | `Untouched`, `Reimported`, `SameValue`, `WriteIfDirty` | as `Missing` |
 
 `Assets/Audio` (`Current`, `Missing`: without `loadInBackground` and the default settings'
@@ -30,24 +31,30 @@ and model importers.
 
 * `open/<path>`: every `.meta` as the project opened with it.
 * `change/<texture>`: the settings a missing key reads (`isReadable`, `mipMapsPreserveCoverage`,
-  the flipbook of `ReadTextureSettings`) before `isReadable` is set and `SaveAndReimport` saves;
-  `change/<texture>/meta`: the file then.
+  the flipbook of `ReadTextureSettings`, the wrap modes) before `isReadable` is set and
+  `SaveAndReimport` saves; `change/<texture>/meta`: the file then.
+* `again/Assets/Textures/SwitchName.png`: `WriteImportSettingsIfDirty` once more after that save,
+  nothing changed.
 * `forced/...`: `ImportAsset(ForceUpdate)` with nothing changed; `same/...`: `isReadable` set to its
   value and `SaveAndReimport`; `written/...`: `isReadable` set and `WriteImportSettingsIfDirty`.
 * `change/Assets/Audio/<clip>`, `change/Assets/Models/<model>`: `forceToMono` and `globalScale`
   set and saved, the values read before, the file after.
 * `end/Assets/Textures/Untouched.png`: the file nothing touched.
 
-What it shows: opening the project, a forced import and a save without a change write nothing; a
-save of a changed setting writes the importer's whole section in the release's layout: keys the
+What it shows: opening the project, a forced import, a save without a change and a second write
+write nothing; a missing wrap key reads Repeat for a GUI texture too, a missing audio preload flag
+off; a save of a changed setting writes the importer's whole section in the release's layout: keys the
 file lacks at their defaults in the release's places, keys the release does not have left out, keys
 in the release's order, the platform `Nintendo Switch` named `Switch`, `serializedVersion` 12 written
 as 13, and the installation's platform entries added (texture). The same holds for the audio and
 model importers.
 
-Not covered: files of older serialized versions with the keys of those versions (Unbound keeps
-such a file's layout and warns), the entries of lists (sprites, clips, external objects) in an older
-layout, other importers.
+Not covered: files of older serialized versions with the keys of those versions, or of none, files
+lacking other keys than the ones above, values of another kind than the release's and a texture
+without a platform list (Unbound keeps such a file's layout, patches the change in and warns), a missing wrap key or audio preload flag in older
+settings (Unbound keeps the type's default and preloading), the entries of lists (sprites, clips,
+external objects) in an older layout, other importers, a sprite's first import (the Editor then
+writes its `.meta`: a sprite ID, no NPOT scaling, the wrap keys).
 
 Record and gate:
 

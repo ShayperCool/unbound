@@ -25,6 +25,10 @@ use serde::{Deserialize, Serialize};
 use std::{path::Path, sync::OnceLock};
 use unbound_yaml::Value;
 
+/// The TextureImporter's serialized version in the 6000.0 Editor's .meta files
+/// (crates/unbound-assets/src/new_meta/texture_importer.yaml).
+const CURRENT_SERIALIZED_VERSION: i64 = 13;
+
 /// File extensions Unity's TextureImporter handles that this importer decodes.
 pub const EXTENSIONS: &[&str] = &[
     "png", "jpg", "jpeg", "tga", "bmp", "gif", "psd", "tif", "tiff", "hdr", "exr",
@@ -323,16 +327,20 @@ impl TextureSettings {
         let format_alpha = platform_format(imp, build_target).map(format_has_alpha);
         let normal_map = texture_type == TextureType::NormalMap;
 
-        // Sampler state. `-1` (and `-100` for the mip bias) mean "the type's default".
+        // Sampler state. `-1` (and `-100` for the mip bias) mean "the type's default"; a wrap key
+        // that settings of the release's serialized version lack (and no older `wrapMode`) reads
+        // Repeat whatever the type (matches the Unity 6000.0.71f1 Editor, tests/projects/importermeta
+        // change.GuiNoWrap), the type's default in older settings (not measured).
+        let current = int(imp, "serializedVersion").unwrap_or(0) >= CURRENT_SERIALIZED_VERSION;
         let wrap = |key: &str| -> WrapMode {
             let value = int(imp, &format!("textureSettings.{key}"))
                 .or_else(|| int(imp, "textureSettings.wrapMode"))
-                .unwrap_or(-1);
+                .or(if current { Some(0) } else { None });
             match value {
-                0 => WrapMode::Repeat,
-                1 => WrapMode::Clamp,
-                2 => WrapMode::Mirror,
-                3 => WrapMode::MirrorOnce,
+                Some(0) => WrapMode::Repeat,
+                Some(1) => WrapMode::Clamp,
+                Some(2) => WrapMode::Mirror,
+                Some(3) => WrapMode::MirrorOnce,
                 _ if texture_type.is_ui() => WrapMode::Clamp,
                 _ => WrapMode::Repeat,
             }
@@ -1510,7 +1518,8 @@ impl Importer for TextureImporter {
     // 49: a SpeedTree 9 tree's normal map is also marked linear (its import settings' hash).
     // 50: cubemaps from images: faces the next power of two up, panoramas half the image's
     //     width, sphere maps and the corner square; AutoCubemap by measured aspect bands.
-    const VERSION: u32 = 50;
+    // 51: a wrap key a serializedVersion 13 .meta lacks reads Repeat for the UI types too (was Clamp).
+    const VERSION: u32 = 51;
 
     fn import(&self, source: &Path, bytes: &[u8], meta: &Value) -> Result<ImportedTexture> {
         let tree_meta = self.tree_textures.apply(source, meta);

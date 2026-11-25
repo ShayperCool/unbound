@@ -491,6 +491,10 @@ namespace UnityEditor
             Float("spriteBorder.w", 0, s => s.spriteBorder.w, (s, v) => s.spriteBorder = new Vector4(s.spriteBorder.x, s.spriteBorder.y, s.spriteBorder.z, v)),
         };
 
+        /// <summary>The TextureImporter's serialized version in the 6000.0 Editor's .meta files
+        /// (crates/unbound-assets/src/new_meta/texture_importer.yaml).</summary>
+        const int CurrentSerializedVersion = 13;
+
         /// <summary>The <c>alphaTestReferenceValue</c> of a .meta without one.</summary>
         const float AlphaTestReference = 0.5f;
 
@@ -509,8 +513,13 @@ namespace UnityEditor
                     case "textureSettings.wrapU":
                     case "textureSettings.wrapV":
                     case "textureSettings.wrapW":
+                        // The older per-texture key, else in settings of the release's serialized
+                        // version Repeat whatever the type (tests/projects/importermeta
+                        // change.GuiNoWrap), in older ones the type's default (not measured).
                         int legacy = MetaSettings.Int(root, "textureSettings.wrapMode", -1);
                         if (legacy >= 0) return legacy;
+                        if (MetaSettings.Find(root, "textureSettings.wrapMode") == null
+                            && MetaSettings.Int(root, "serializedVersion", 0) >= CurrentSerializedVersion) return 0;
                         break;
                     case "mipmaps.sRGBTexture":
                         return MetaSettings.Bool(root, "mipmaps.linearTexture") ? 0 : 1;

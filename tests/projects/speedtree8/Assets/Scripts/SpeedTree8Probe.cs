@@ -132,7 +132,7 @@ public sealed class SpeedTree8Probe : MonoBehaviour
                 Rec(t + "/importer/" + name, value);
             }
         Rec(t + "/main", main == null ? "null" : main.GetType().Name + " " + main.name);
-        if (s_Fresh) Rec(t + "/meta", MetaText(path));
+        if (s_Fresh) Meta(t + "/meta", path);
         Rec(t + "/mainType", Value(AssetDatabase.GetMainAssetTypeAtPath(path)));
         Rec(t + "/prefabType", main == null ? "null" : PrefabUtility.GetPrefabAssetType(main).ToString());
         var all = AssetDatabase.LoadAllAssetsAtPath(path);
@@ -300,10 +300,47 @@ public sealed class SpeedTree8Probe : MonoBehaviour
     static readonly bool s_Fresh = File.Exists("SpeedTree8Profile.txt");
 
     /// <summary>An asset's .meta as written, its random GUID left out.</summary>
-    static string MetaText(string path) =>
-        File.Exists(path + ".meta")
-            ? string.Join("\n", File.ReadAllLines(path + ".meta").Select(l => l.StartsWith("guid: ", StringComparison.Ordinal) ? "guid: (new)" : l))
-            : "none";
+    // The same list and entry pattern as tests/projects/importermeta (ImporterMetaProbe.cs); keep them in step.
+    /// <summary>The platform modules of this Editor installation, by the names texture settings give them.</summary>
+    static IEnumerable<string> Installed()
+    {
+        var platforms = new (BuildTargetGroup group, BuildTarget target, string name)[]
+        {
+            (BuildTargetGroup.Android, BuildTarget.Android, "Android"), (BuildTargetGroup.iOS, BuildTarget.iOS, "iOS"),
+            (BuildTargetGroup.WebGL, BuildTarget.WebGL, "WebGL"), (BuildTargetGroup.WSA, BuildTarget.WSAPlayer, "Windows Store Apps"),
+            (BuildTargetGroup.tvOS, BuildTarget.tvOS, "tvOS"), (BuildTargetGroup.VisionOS, BuildTarget.VisionOS, "VisionOS"),
+        };
+        return platforms.Where(p => BuildPipeline.IsBuildTargetSupported(p.group, p.target)).Select(p => p.name);
+    }
+
+    /// <summary>A .meta's text with its GUID read "(new)" and the per-platform entries of the
+    /// installation's platform modules left out (they differ between installations); the names
+    /// left out, as "<key>.platforms" says for a .meta with platform settings, are the installed modules.</summary>
+    void Meta(string key, string path)
+    {
+        if (!File.Exists(path + ".meta")) { Rec(key, "none"); return; }
+        var installed = Installed().ToList();
+        var lines = File.ReadAllLines(path + ".meta");
+        var kept = new List<string>();
+        var removed = new List<string>();
+        for (int i = 0; i < lines.Length; i++)
+        {
+            // An entry of the platform list: "  - serializedVersion: N", "    buildTarget: <name>", then its deeper lines.
+            if (lines[i].StartsWith("  - serializedVersion: ", StringComparison.Ordinal) && i + 1 < lines.Length
+                && lines[i + 1].StartsWith("    buildTarget: ", StringComparison.Ordinal)
+                && installed.Contains(lines[i + 1].Substring("    buildTarget: ".Length)))
+            {
+                removed.Add(lines[i + 1].Substring("    buildTarget: ".Length));
+                i++;
+                while (i + 1 < lines.Length && lines[i + 1].StartsWith("    ", StringComparison.Ordinal)) i++;
+                continue;
+            }
+            kept.Add(lines[i].StartsWith("guid: ", StringComparison.Ordinal) ? "guid: (new)" : lines[i]);
+        }
+        Rec(key, string.Join("\n", kept));
+        if (lines.Contains("  platformSettings:"))
+            Rec(key + ".platforms", string.Join(",", removed) == string.Join(",", installed) ? "the installed modules" : "differ: " + string.Join(",", removed));
+    }
 
     void DumpTexture(string path)
     {
@@ -314,7 +351,7 @@ public sealed class SpeedTree8Probe : MonoBehaviour
             + " transparency " + importer.alphaIsTransparency + " mips " + importer.mipmapEnabled + " wrap " + importer.wrapMode
             + " filter " + importer.filterMode + " max " + importer.maxTextureSize + " readable " + importer.isReadable);
         // The .meta file as the import left it (the trees' import changes some settings).
-        if (s_Fresh) Rec(t + "/metafile", MetaText(path));
+        if (s_Fresh) Meta(t + "/metafile", path);
     }
 
     /// <summary>Each tree's SpeedTree callbacks in the order its import made them.</summary>

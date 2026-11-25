@@ -29,6 +29,18 @@ namespace UnityEngine.Tests
             Assert.Equal((2, 5), (read.flipbookRows, read.flipbookColumns));
         }
 
+        /// <summary>A UI texture's serializedVersion 13 settings without wrap keys repeat
+        /// (tests/projects/importermeta change.GuiNoWrap); -1 is the type's default.</summary>
+        [Fact]
+        public void AMissingWrapKeyRepeatsForAUiTexture()
+        {
+            var gui = Importer("  textureType: 2\n");
+            Assert.Equal((TextureWrapMode.Repeat, TextureWrapMode.Repeat, TextureWrapMode.Repeat), (gui.wrapModeU, gui.wrapModeV, gui.wrapModeW));
+            var auto = Importer("  textureSettings:\n    wrapU: -1\n  textureType: 8\n  spriteMode: 1\n");
+            Assert.Equal(TextureWrapMode.Clamp, auto.wrapModeU);
+            Assert.Equal(TextureWrapMode.Repeat, auto.wrapModeV);
+        }
+
         [Fact]
         public void ThePivotAndBorderAreTheMetasAndSetOnes()
         {

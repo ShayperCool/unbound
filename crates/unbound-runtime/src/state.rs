@@ -899,6 +899,24 @@ pub fn dispatch(method: &str, request: &str) -> Result<String> {
                 .collect();
             Ok(serde_json::Value::Array(entries).to_string())
         }
+        "importer-layout" => {
+            // The Editor's layout of an importer's settings, which it writes whole whenever it
+            // saves them (tests/projects/importermeta). Measured for the 6000.0 family only.
+            #[derive(Deserialize)]
+            struct Request {
+                importer: String,
+            }
+            let r: Request = serde_json::from_str(request)?;
+            let layout = s
+                .new_meta_measured
+                .then(|| unbound_assets::new_meta::importer_layout(&r.importer))
+                .flatten();
+            Ok(match layout {
+                Some((section, entry)) => json!({ "section": section, "platformEntry": entry }),
+                None => json!({ "section": null, "platformEntry": null }),
+            }
+            .to_string())
+        }
         "script-meta-section" => Ok(json!({
             "section": if s.new_meta_measured { unbound_assets::new_meta::MONO_IMPORTER_SECTION } else { "" }
         })

@@ -122,6 +122,24 @@ fn reads_legacy_settings() {
     assert_eq!(settings(META_54, "Standalone").max_size, 128);
 }
 
+/// A GUI texture's serializedVersion 13 .meta without wrap keys repeats (tests/projects/importermeta
+/// change.GuiNoWrap); `-1` and older settings without them keep the type's default (Clamp for the
+/// UI types, `reads_legacy_settings`).
+#[test]
+fn a_missing_wrap_key_repeats_for_every_type() {
+    let gui = "TextureImporter:\n  serializedVersion: 13\n  textureSettings:\n    filterMode: 1\n  textureType: 2\n";
+    let s = settings(gui, "Standalone");
+    assert_eq!(s.texture_type, TextureType::Gui);
+    assert_eq!(
+        (s.wrap_u, s.wrap_v, s.wrap_w),
+        (WrapMode::Repeat, WrapMode::Repeat, WrapMode::Repeat)
+    );
+    let auto = gui.replace("    filterMode: 1\n", "    filterMode: 1\n    wrapU: -1\n");
+    assert_eq!(settings(&auto, "Standalone").wrap_u, WrapMode::Clamp);
+    let older = gui.replace("serializedVersion: 13", "serializedVersion: 12");
+    assert_eq!(settings(&older, "Standalone").wrap_u, WrapMode::Clamp);
+}
+
 #[test]
 fn defaults_without_a_meta() {
     let s = TextureSettings::default();
