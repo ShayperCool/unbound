@@ -13,7 +13,8 @@
 //!   `WebGL`, `WSA` or `Metro`): that platform;
 //! - else the kind's own platforms.
 //!
-//! Folder names compare without case (ABI folders exactly). A managed library also gets its Windows Store CPU setting and
+//! Folder names compare without case (`editor`, `EDITOR`, `plugins/x86_64`, `arm64`, `metro` measured;
+//! ABI folders exactly). A managed library also gets its Windows Store CPU setting and
 //! a shared object its Android 16 KB alignment setting (the Android module's) whatever its folder.
 
 use unbound_yaml::Value;
@@ -543,8 +544,6 @@ mod tests {
                 false,
                 "Any=0 Editor=1 OSXUniversal=1{CPU=AnyCPU}",
             ),
-            ("Assets/Plugins/libstatic.a", false, "Any=1 Editor=0"),
-            ("Assets/Plugins/Kit.xcframework", false, "Any=1 Editor=0"),
             (
                 "Assets/Plugins/library.jar",
                 false,
@@ -581,17 +580,7 @@ mod tests {
                 "Android=0{Is16KbAligned=false} Any=1 Editor=0{CPU=ARM64} Linux64=0{CPU=None} OSXUniversal=1{CPU=ARM64} Win=0{CPU=None} Win64=1{CPU=ARM64}",
             ),
             (
-                "Assets/plugins/x86_64/native17.dll",
-                false,
-                "Any=1 Editor=0{CPU=x86_64} Linux64=1{CPU=x86_64} OSXUniversal=1{CPU=x86_64} Win=0{CPU=None} Win64=1{CPU=x86_64}",
-            ),
-            (
-                "Assets/Plugins/arm64/native18.dll",
-                false,
-                "Any=1 Editor=0{CPU=ARM64} Linux64=0{CPU=None} OSXUniversal=1{CPU=ARM64} Win=0{CPU=None} Win64=1{CPU=ARM64}",
-            ),
-            (
-                "Assets/Plugins/x64/native27.dll",
+                "Assets/Plugins/x64/native25.dll",
                 false,
                 "Any=1 Editor=0{CPU=x86_64} Linux64=1{CPU=x86_64} OSXUniversal=1{CPU=x86_64} Win=0{CPU=None} Win64=1{CPU=x86_64}",
             ),
@@ -601,12 +590,12 @@ mod tests {
                 "Android=1 Any=0 Editor=0 WindowsStoreApps=0{CPU=AnyCPU}",
             ),
             (
-                "Assets/Plugins/Android/libs/x86/libnative8.so",
+                "Assets/Plugins/Android/libs/x86/libnative9.so",
                 false,
                 "Android=1{CPU=x86,Is16KbAligned=false} Any=0 Editor=0",
             ),
             (
-                "Assets/Plugins/Android/libs/armeabi/libnative9.so",
+                "Assets/Plugins/Android/libs/armeabi/libnative10.so",
                 false,
                 "Android=0{Is16KbAligned=false} Any=0 Editor=0",
             ),
@@ -626,11 +615,6 @@ mod tests {
                 "Android=1 Any=0 Editor=0",
             ),
             (
-                "Assets/Plugins/android/libnative18.so",
-                false,
-                "Android=1{CPU=ARMv7,Is16KbAligned=false} Any=0 Editor=0",
-            ),
-            (
                 "Assets/Plugins/Android/More/bridge.jslib",
                 false,
                 "Android=1 Any=0 Editor=0",
@@ -641,7 +625,7 @@ mod tests {
                 "Any=0 Editor=0 iOS=1{AddToEmbeddedBinaries=true}",
             ),
             (
-                "Assets/Plugins/iOS/libnative13.so",
+                "Assets/Plugins/iOS/libnative14.so",
                 false,
                 "Android=0{Is16KbAligned=false} Any=0 Editor=0 iOS=1{AddToEmbeddedBinaries=false}",
             ),
@@ -661,7 +645,7 @@ mod tests {
                 "Android=1 Any=0 Editor=0",
             ),
             (
-                "Assets/Plugins/visionOS/native25.dll",
+                "Assets/Plugins/visionOS/native23.dll",
                 false,
                 "Any=0 Editor=0 VisionOS=1{AddToEmbeddedBinaries=false}",
             ),
@@ -676,38 +660,32 @@ mod tests {
                 "Any=0 Editor=0 WebGL=1",
             ),
             (
-                "Assets/Plugins/Metro/native16.dll",
-                false,
-                "Any=0 Editor=0 WindowsStoreApps=1{CPU=AnyCPU}",
-            ),
-            (
                 "Assets/Plugins/WSA/ManagedWSA.dll",
                 true,
                 "Any=0 Editor=0 WindowsStoreApps=1{CPU=AnyCPU}",
             ),
             (
-                "Assets/Plugins/tvOS/native24.dll",
+                "Assets/Plugins/tvOS/native22.dll",
                 false,
                 "Any=0 Editor=1{CPU=AnyCPU} Win=1{CPU=AnyCPU} Win64=1{CPU=AnyCPU} WindowsStoreApps=0{CPU=AnyCPU}",
             ),
             (
-                "Assets/Plugins/Editor/libnative15.so",
+                "Assets/Plugins/Editor/libnative16.so",
                 false,
                 "Android=0{Is16KbAligned=false} Any=0 Editor=1",
             ),
-            ("Assets/Plugins/Editor/library.jar", false, "Any=0 Editor=1"),
             (
-                "Assets/Editor/Plugins/x86_64/native21.dll",
+                "Assets/Editor/Plugins/x86_64/native19.dll",
                 false,
                 "Any=0 Editor=1{CPU=x86_64}",
             ),
             (
-                "Assets/Plugins/x86_64/Editor/native19.dll",
+                "Assets/Plugins/x86_64/Editor/native17.dll",
                 false,
                 "Any=0 Editor=1{CPU=x86_64}",
             ),
             (
-                "Assets/Foo/Editor/x86_64/native31.dll",
+                "Assets/Foo/Editor/x86_64/native29.dll",
                 false,
                 "Any=0 Editor=1{CPU=x86_64}",
             ),
@@ -717,14 +695,9 @@ mod tests {
                 "Android=0{Is16KbAligned=false} Any=0 Editor=1",
             ),
             (
-                "Assets/EditorTools/native22.dll",
+                "Assets/EditorTools/native20.dll",
                 false,
                 "Any=0 Editor=1{CPU=AnyCPU} Win=1{CPU=AnyCPU} Win64=1{CPU=AnyCPU} WindowsStoreApps=0{CPU=AnyCPU}",
-            ),
-            (
-                "Assets/editor/ManagedLowerEditor.dll",
-                true,
-                "Any=0 Editor=1 WindowsStoreApps=0{CPU=AnyCPU}",
             ),
             (
                 "Assets/Foo/Plugins/x86_64/native12.dll",
@@ -737,7 +710,7 @@ mod tests {
                 "Android=0{Is16KbAligned=false} Any=1 Editor=0",
             ),
             (
-                "Assets/Foo/Plugins/WSA/native33.dll",
+                "Assets/Foo/Plugins/WSA/native31.dll",
                 false,
                 "Any=0 Editor=1{CPU=AnyCPU} Win=1{CPU=AnyCPU} Win64=1{CPU=AnyCPU} WindowsStoreApps=0{CPU=AnyCPU}",
             ),
@@ -747,7 +720,7 @@ mod tests {
                 "Any=0 Editor=1{CPU=AnyCPU} Win=1{CPU=AnyCPU} Win64=1{CPU=AnyCPU} WindowsStoreApps=0{CPU=AnyCPU}",
             ),
             (
-                "Assets/Libs/arm64-v8a/libnative12.so",
+                "Assets/Libs/arm64-v8a/libnative13.so",
                 false,
                 "Android=0{Is16KbAligned=false} Any=1 Editor=0",
             ),
@@ -757,12 +730,12 @@ mod tests {
                 "Any=1 Editor=0 WindowsStoreApps=0{CPU=AnyCPU} overridable",
             ),
             (
-                "Packages/com.unbound.plugindefaults/Plugins/x86_64/native38.dll",
+                "Packages/com.unbound.plugindefaults/Plugins/x86_64/native36.dll",
                 false,
                 "Any=1 Editor=0{CPU=x86_64} Linux64=1{CPU=x86_64} OSXUniversal=1{CPU=x86_64} Win=0{CPU=None} Win64=1{CPU=x86_64} overridable",
             ),
             (
-                "Packages/com.unbound.plugindefaults/Plugins/WebGL/native37.dll",
+                "Packages/com.unbound.plugindefaults/Plugins/WebGL/native35.dll",
                 false,
                 "Any=0 Editor=1{CPU=AnyCPU} Win=1{CPU=AnyCPU} Win64=1{CPU=AnyCPU} WindowsStoreApps=0{CPU=AnyCPU} overridable",
             ),
@@ -770,6 +743,38 @@ mod tests {
                 "Packages/com.unbound.plugindefaults/Plugins/Android/libnative27.so",
                 false,
                 "Android=0{Is16KbAligned=false} Any=1 Editor=0 overridable",
+            ),
+            // Folder names in another case than the Editor's own spelling.
+            (
+                "Assets/Plugins/metro/native16.dll",
+                false,
+                "Any=0 Editor=0 WindowsStoreApps=1{CPU=AnyCPU}",
+            ),
+            (
+                "Assets/Bar/editor/ManagedBarEditor.dll",
+                true,
+                "Any=0 Editor=1 WindowsStoreApps=0{CPU=AnyCPU}",
+            ),
+            ("Assets/Bar/editor/native37.dll", false, "Any=0 Editor=1"),
+            (
+                "Assets/Bar/plugins/x86_64/native38.dll",
+                false,
+                "Any=1 Editor=0{CPU=x86_64} Linux64=1{CPU=x86_64} OSXUniversal=1{CPU=x86_64} Win=0{CPU=None} Win64=1{CPU=x86_64}",
+            ),
+            (
+                "Assets/Foo/Plugins/arm64/native39.dll",
+                false,
+                "Any=1 Editor=0{CPU=ARM64} Linux64=0{CPU=None} OSXUniversal=1{CPU=ARM64} Win=0{CPU=None} Win64=1{CPU=ARM64}",
+            ),
+            (
+                "Assets/Foo/Plugins/arm64/libnative29.so",
+                false,
+                "Android=0{Is16KbAligned=false} Any=1 Editor=0{CPU=ARM64} Linux64=0{CPU=None} OSXUniversal=1{CPU=ARM64} Win=0{CPU=None} Win64=1{CPU=ARM64}",
+            ),
+            (
+                "Assets/Baz/EDITOR/x64/native40.dll",
+                false,
+                "Any=0 Editor=1{CPU=x86_64}",
             ),
         ];
         for (path, managed, expected) in cases {

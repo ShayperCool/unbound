@@ -67,7 +67,9 @@ FOLDERS = {
     'Assets/Foo/x86_64': ['native.dll', 'libnative.so'],
     'Assets/Plugins/Foo/x86_64': ['native.dll'],
     'Assets/Plugins/WSA': ['native.dll', 'ManagedWSA.dll'],
-    'Assets/Plugins/Metro': ['native.dll'],
+    # Folder names in another case than the Editor's own spelling, none of them a folder of the
+    # probe in another case (Metro is measured as `metro`; WSA names the same platform).
+    'Assets/Plugins/metro': ['native.dll'],
     'Assets/Plugins/x86_64/Editor': ['native.dll'],
     'Assets/Plugins/Editor/x86_64': ['native.dll'],
     'Assets/Editor/Plugins/x86_64': ['native.dll'],
@@ -107,6 +109,10 @@ FOLDERS = {
     f'Packages/{PACKAGE}/Plugins/iOS': ['libstatic.a'],
     f'Packages/{PACKAGE}/Plugins/WebGL': ['bridge.jslib', 'native.dll'],
     f'Packages/{PACKAGE}/Plugins/x86_64': ['native.dll'],
+    'Assets/Bar/editor': ['ManagedBarEditor.dll', 'native.dll'],
+    'Assets/Bar/plugins/x86_64': ['native.dll'],
+    'Assets/Foo/Plugins/arm64': ['native.dll', 'libnative.so'],
+    'Assets/Baz/EDITOR/x64': ['native.dll'],
 }
 
 
