@@ -45,7 +45,11 @@ impl Toward {
         if !(self.weight > 0.0) || samples == 0 {
             return NONE;
         }
-        let weight = (self.weight * rays).max(LEAST_WEIGHT) / rays;
+        let weight = if self.weight * rays < LEAST_WEIGHT {
+            LEAST_WEIGHT / rays
+        } else {
+            self.weight
+        };
         let mean = self.sum.map(|v| v / weight);
         let facing =
             (normals[0] * mean[0] + normals[1] * mean[1] + normals[2] * mean[2]) / samples as f32;

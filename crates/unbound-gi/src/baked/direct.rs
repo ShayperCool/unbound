@@ -210,7 +210,12 @@ pub fn direct(
             let scale = 1.0 / samples as f32;
             (
                 [sum[0] * scale, sum[1] * scale, sum[2] * scale, 1.0],
-                toward.encode(facing, samples, direct_samples as f32 / samples as f32),
+                // (No fewer than one Direct Sample, as an asset's raw number may say.)
+                toward.encode(
+                    facing,
+                    samples,
+                    direct_samples.max(1) as f32 / samples as f32,
+                ),
                 std::array::from_fn(|c| {
                     if reached[c] == 0 {
                         0.0

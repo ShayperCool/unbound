@@ -171,7 +171,11 @@ fn main() {
         .collect();
     std::fs::write(out.join("channels.txt"), channels.join(" ")).unwrap();
     let pushoff = r.f32();
-    let lit = direct::direct(&g, &receivers, &lights, &assigned, mixed, &casters, pushoff);
+    // (Only the shadowmask is written: Direct Samples, which weigh the directions, do not
+    // matter; a new Lighting Settings asset's.)
+    let lit = direct::direct(
+        &g, &receivers, &lights, &assigned, mixed, &casters, pushoff, 32,
+    );
     std::fs::write(out.join("shadowmask.f32"), floats(&lit.shadowmask)).unwrap();
     // Light probes at the points a file names (three floats each), with the lights' grid over
     // the lightmap's own renderers.
