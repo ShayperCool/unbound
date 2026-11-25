@@ -232,6 +232,15 @@ from their first surface on whatever the Min Bounces.
   away, its radius the angle in radians); an area light's sample is the light of a point of
   its surface (a rectangle's over its solid angle, a disc's over its area), its range the
   light's dilated range.
+- `SoftProbes`, `SoftProbesArea`: light probes under a soft point light and a soft mixed sun
+  (Shadowmask mode, the probes' occlusion of it), and under a rectangle and a disc area light:
+  each probe takes the Light Probe Sample Multiplier (4 by default) times the Direct Samples
+  of such a light, its numbers the Sobol sequence's first two dimensions turned by the probe's
+  place in its group (its index, the group's size).
+- `SoftProbesMore`: the same soft lights with a Light Probe Sample Multiplier of 8 (every probe
+  sample count 8 times a texel's) and Direct Samples set to 20, which the Editor keeps as 16;
+  a second group's four probes in the penumbra of the cube's shadow under the soft mixed sun,
+  their occlusion of it the part of their samples that see it (in 128ths).
 - `LinearSun`, `LinearLamps`, `LinearArea`: lights whose intensity multiplies their linear
   colour (GraphicsSettings.lightsUseLinearIntensity, which the capture turns on for the scenes
   named `Linear*`): a coloured sun, a point and a spot light over a light probe group, and a
@@ -462,7 +471,7 @@ take the environment's light (`LightingSettings.realtimeEnvironmentLighting`).
 Not baked by Unbound: without a graphics device, the indirect light, the ambient occlusion,
 soft baked shadows and area lights (said). Not baked (said, each once per scene, or once per light where it is
 the light's): light cookies, a colour temperature with linear intensity
-(GraphicsSettings.lightsUseLinearIntensity), light probes under area lights or soft baked shadows, a Baked Shadow Angle or Radius with hard
+(GraphicsSettings.lightsUseLinearIntensity), a Baked Shadow Angle or Radius with hard
 shadows, a mixed area light, an area light among more point, spot or area lights than a
 surface of the indirect light tests (4 at a path's first surface, 1 fewer at each further one). Not done
 and not said: materials that let light through stop it.

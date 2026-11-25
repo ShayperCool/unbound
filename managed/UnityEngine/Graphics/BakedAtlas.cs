@@ -692,17 +692,6 @@ namespace UnityEngine
             return lights;
         }
 
-        /// <summary>Whether a scene's light probes would take the light of a light Unbound's
-        /// probes do not sample yet: an area light, or one with soft baked shadows.</summary>
-        internal static bool ProbesMissLights(LoadedFile file)
-        {
-            foreach (var obj in file.Objects.Values)
-                if (obj is Light light && light != null && light.enabled && light.gameObject.activeInHierarchy && light.lightmapBakeType != LightmapBakeType.Realtime
-                    && IsSampled(light))
-                    return true;
-            return false;
-        }
-
         /// <summary>Whether the bake samples a light sample by sample: an area light, or one with
         /// soft baked shadows (a Baked Shadow Radius or Angle).</summary>
         internal static bool IsSampled(Light light) =>
