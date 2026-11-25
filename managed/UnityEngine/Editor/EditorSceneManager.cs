@@ -234,7 +234,15 @@ namespace UnityEditor.SceneManagement
             var data = scene.Data;
             if (data == null) return false;
             var path = string.IsNullOrEmpty(dstScenePath) ? data.Path : dstScenePath;
-            if (string.IsNullOrEmpty(path) || !SceneFiles.CanSave(data, path)) return false;
+            if (string.IsNullOrEmpty(path))
+            {
+                // An untitled scene saved without a path asks where with the save panel, cancelled
+                // as the batch-mode Editor cancels it (matches the Unity 6000.0.71f1 Editor,
+                // tests/projects/scenesave build-scenes untitled.*, SaveScenes and SaveOpenScenes too).
+                EditorUtility.Cancelled("FileDialog", "Save Scene ");
+                return false;
+            }
+            if (!SceneFiles.CanSave(data, path)) return false;
             path = SceneFiles.ProjectRelative(path);
             sceneSaving?.Invoke(scene, path);
             if (!SceneFiles.Save(data, path)) return false;

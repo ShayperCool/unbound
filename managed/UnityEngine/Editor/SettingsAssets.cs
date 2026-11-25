@@ -196,6 +196,7 @@ namespace Unbound.Runtime
         internal static void Reset()
         {
             s_Files = null;
+            UnityEditor.EditorBuildSettings.Reset();
             s_ByObject.Clear();
             PlayerSettings.Android.s_BundleVersionCode = 1;
             PlayerSettings.iOS.s_BuildNumber = "1";
