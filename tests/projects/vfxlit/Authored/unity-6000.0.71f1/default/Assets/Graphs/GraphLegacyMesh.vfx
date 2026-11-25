@@ -731,7 +731,7 @@ MonoBehaviour:
   raytracedScaleMode: 0
   needsOwnSort: 0
   needsOwnAabbBuffer: 0
-  shaderGraph: {fileID: -5475051401550479605, guid: dc0bbde51db925b55bb1f801460f4514, type: 3}
+  shaderGraph: {fileID: -5475051401550479605, guid: f2f763cb699da50c8b8859418a18051d, type: 3}
   materialSettings:
     m_PropertyNames: []
     m_PropertyValues: []
@@ -763,7 +763,7 @@ MonoBehaviour:
       m_Type:
         m_SerializableType: UnityEngine.Mesh, UnityEngine.CoreModule, Version=0.0.0.0,
           Culture=neutral, PublicKeyToken=null
-      m_SerializableObject: '{"obj":{"fileID":4300000,"guid":"7ab85bd227bdfa25e9b8dc11d896209b","type":2}}'
+      m_SerializableObject: '{"obj":{"fileID":4300000,"guid":"384f33af6877078ceb183e23d9d118c6","type":2}}'
     m_Space: -1
   m_Property:
     name: mesh

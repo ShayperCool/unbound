@@ -276,7 +276,12 @@ public static class LitAuthoring
                 output.SetSettingValue("useTargetOffset", true);
             }
             else if (name == "MovingLitMesh") (spawn, init, update, output) = System<VFXURPLitMeshOutput>(graph, 64);
-            else if (name == "MovingLinesTarget") (spawn, init, update, output) = System<VFXLineOutput>(graph, 64);
+            else if (name == "MovingLinesTarget")
+            {
+                // To each particle's target position: the output's default is a target offset.
+                (spawn, init, update, output) = System<VFXLineOutput>(graph, 64);
+                output.SetSettingValue("useTargetOffset", false);
+            }
             else if (name == "MovingBareGraph")
             {
                 (spawn, init, update, output) = System<VFXComposedParticleOutput>(graph, 64);

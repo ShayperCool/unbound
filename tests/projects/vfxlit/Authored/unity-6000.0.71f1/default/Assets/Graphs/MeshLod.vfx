@@ -769,7 +769,7 @@ MonoBehaviour:
       m_Type:
         m_SerializableType: UnityEngine.Texture2D, UnityEngine.CoreModule, Version=0.0.0.0,
           Culture=neutral, PublicKeyToken=null
-      m_SerializableObject: '{"obj":{"fileID":2800000,"guid":"16b379b97ab468c1288a4821a77b8067","type":3}}'
+      m_SerializableObject: '{"obj":{"fileID":2800000,"guid":"758c849641ec61bbabd3be3357b18b38","type":3}}'
     m_Space: -1
   m_Property:
     name: mainTexture
@@ -821,7 +821,7 @@ MonoBehaviour:
       m_Type:
         m_SerializableType: UnityEngine.Mesh, UnityEngine.CoreModule, Version=0.0.0.0,
           Culture=neutral, PublicKeyToken=null
-      m_SerializableObject: '{"obj":{"fileID":4300000,"guid":"7ab85bd227bdfa25e9b8dc11d896209b","type":2}}'
+      m_SerializableObject: '{"obj":{"fileID":4300000,"guid":"384f33af6877078ceb183e23d9d118c6","type":2}}'
     m_Space: -1
   m_Property:
     name: mesh0
@@ -889,7 +889,7 @@ MonoBehaviour:
       m_Type:
         m_SerializableType: UnityEngine.Mesh, UnityEngine.CoreModule, Version=0.0.0.0,
           Culture=neutral, PublicKeyToken=null
-      m_SerializableObject: '{"obj":{"fileID":4300000,"guid":"4d1a127c21d2a3cf895caa8db8a84ec2","type":2}}'
+      m_SerializableObject: '{"obj":{"fileID":4300000,"guid":"9f3189e7f7c71ff879b4c60a75de0ad6","type":2}}'
     m_Space: -1
   m_Property:
     name: mesh1
