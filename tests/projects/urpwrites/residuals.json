@@ -1,0 +1,19 @@
+{
+  "At its first import of a project the Editor imports every material, and the render pipeline's material postprocessor upgrades the ones saved by an older pipeline version (an AssetVersion below 10 is raised, a material without one gets one) and saves them; Unbound does not import the opened project and runs no OnPostprocessAllAssets for its materials, so it writes neither": [
+    "exit.Assets/Resources/M/LitV9.mat",
+    "exit.Assets/Resources/M/LitV9.mat.idsAscending",
+    "exit.Assets/Resources/M/LitNoVersion.mat",
+    "exit.Assets/Resources/M/LitNoVersion.mat.idsAscending"
+  ],
+  "The Editor leaves a URP Lit material it loads as saved (its keywords and disabled passes) and validates it with its shader's editor only once it is changed and saved, so a material nobody changes keeps its saved state in memory and is drawn with it; Unbound validates pipeline and project editors' materials as they load (without dirtying them), so their keywords and passes are corrected from the start, and passes the load validation disables come before those a script disables later": [
+    "load.LitOpaquePassesEdited.passes",
+    "load.LitPassesAddedEdited.keywords",
+    "load.LitPassesAddedEdited.passes",
+    "load.LitStale.keywords",
+    "load.LitStaleEdited.keywords",
+    "load.PassNamesEdited.passes",
+    "played.LitStale.keywords",
+    "played.PassNamesEdited.passes",
+    "exit.Assets/Resources/M/PassNamesEdited.mat"
+  ]
+}

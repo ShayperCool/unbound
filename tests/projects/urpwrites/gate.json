@@ -1,0 +1,16 @@
+{
+  "commands": [
+    "python3 tests/projects/urpwrites/run.py check"
+  ],
+  "summary": "urpwrites: \\d+/\\d+ rows match; \\d+ differ; \\d+ known residuals",
+  "engine_paths": [
+    "managed/UnityEngine/Editor/MaterialValidation.cs",
+    "managed/UnityEngine/Editor/MaterialSerialization.cs",
+    "managed/UnityEngine/Editor/AssetFiles.cs",
+    "managed/UnityEngine/Editor/EditorState.cs",
+    "managed/UnityEngine/Graphics/Material.cs",
+    "managed/UnityEngine/Graphics/DisabledPassList.cs",
+    "tests/projects/materialvalidation/Assets/Resources/EmissionRealtimeNoKeyword.mat",
+    "tests/projects/urpwrites/"
+  ]
+}
