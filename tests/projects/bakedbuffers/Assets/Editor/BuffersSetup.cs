@@ -932,6 +932,29 @@ public static class BuffersSetup
         }
     }
 
+    /// <summary>The coloured scene under a sun with compressed lightmaps (low, normal and high
+    /// quality), and with high quality directional lightmaps in the Shadowmask Lighting Mode
+    /// under a mixed sun (its three images).</summary>
+    static void Compressed()
+    {
+        foreach (var (name, compression) in new[] { ("CompressLow", LightmapCompression.LowQuality), ("CompressNormal", LightmapCompression.NormalQuality), ("CompressHigh", LightmapCompression.HighQuality) })
+        {
+            var scene = Coloured(name, 16, 1);
+            Lightmapping.lightingSettings.lightmapCompression = compression;
+            WhiteSun();
+            Save(scene, name);
+        }
+        {
+            var scene = Coloured("CompressImages", 16, 1);
+            var settings = Lightmapping.lightingSettings;
+            settings.lightmapCompression = LightmapCompression.HighQuality;
+            settings.directionalityMode = LightmapsMode.CombinedDirectional;
+            settings.mixedBakeMode = MixedLightingMode.Shadowmask;
+            NewLight("MixedSun", LightType.Directional, Vector3.zero, new Vector3(50f, -30f, 0f), Color.white, 2f, LightmapBakeType.Mixed);
+            Save(scene, "CompressImages");
+        }
+    }
+
     /// <summary>Light probes under a sky of three colours (the gradient), with directions picked
     /// by its brightness and without, in the Shadowmask Lighting Mode with a probe in a mixed
     /// spot light's cone; beside the probes' group, a disabled group and a group of an inactive
@@ -1302,7 +1325,7 @@ public static class BuffersSetup
                 ("ModeSubtractive", () => Modes("ModeSubtractive", MixedLightingMode.Subtractive)),
                 ("ModeShadowmask", () => Modes("ModeShadowmask", MixedLightingMode.Shadowmask)),
                 ("Bounce", Bounces), ("Glow", Glow), ("Roof", Roof), ("Textured", Textured), ("Levels", Levels), ("Sky", Skies), ("Spare", Spare),
-                ("SkyRealtime", RealtimeSkies), ("SpareEmpty", SpareEmpty), ("Spread", Spread), ("Far", Far), ("Masks", Masks), ("MasksBright", MasksBright), ("MasksEdges", MasksEdges), ("Probes", Probes), ("ProbesGrid", ProbesGrid), ("ProbesReach", ProbesReach), ("ProbesSky", ProbesSky), ("Directional", Directional), ("Lod", Lod), ("Filter", Filtered), ("Denoise", Denoised), ("Intensity", Intensities), ("Ao", Occluded),
+                ("SkyRealtime", RealtimeSkies), ("SpareEmpty", SpareEmpty), ("Spread", Spread), ("Far", Far), ("Masks", Masks), ("MasksBright", MasksBright), ("MasksEdges", MasksEdges), ("Probes", Probes), ("ProbesGrid", ProbesGrid), ("ProbesReach", ProbesReach), ("ProbesSky", ProbesSky), ("Directional", Directional), ("Lod", Lod), ("Filter", Filtered), ("Denoise", Denoised), ("Intensity", Intensities), ("Ao", Occluded), ("Compress", Compressed),
             };
             var only = Environment.GetEnvironmentVariable("BAKED_BUFFERS_SCENES");
             var wanted = string.IsNullOrEmpty(only) ? null : new HashSet<string>(only.Split(','));
