@@ -49,8 +49,9 @@ namespace Unbound.Runtime
     /// (matches the Unity 6000.0.71f1 Editor, tests/projects/projectwrites 08.importer and
     /// 10.preprocessor, tests/projects/assetpostprocessors meta.*): the file's text with each
     /// changed setting's value replaced in place, the common <c>userData</c> and AssetBundle
-    /// fields (the bundle names lowercased), nothing else touched; a file whose settings did
-    /// not change is not written. Saved by SaveAndReimport, WriteImportSettingsIfDirty, and by an
+    /// fields (the bundle names lowercased), nothing else touched but a texture section of the
+    /// current version that lacks settings, which is written whole (tests/projects/scenesave
+    /// label-metas); a file whose settings did not change is not written. Saved by SaveAndReimport, WriteImportSettingsIfDirty, and by an
     /// import whose preprocessors changed the settings.
     /// </summary>
     internal static class ImporterMeta
@@ -92,6 +93,10 @@ namespace Unbound.Runtime
                 importer.ClearModifiedState();
                 return textChanged;
             }
+            // A texture's section that lacks settings of its version gets them first, as the
+            // Editor writes the whole section (tests/projects/scenesave label-metas kept.*,
+            // missingSetting.*, missingPlatform.*).
+            if (importer.m_SettingsType == "TextureImporter") FillTextureSection(section);
             var unwritten = new List<string>();
             Patch(section, importer.m_Settings, "", unwritten);
             if (unwritten.Count > 0)
@@ -146,22 +151,78 @@ namespace Unbound.Runtime
 
         static Platform[] s_Platforms;
 
+        static string s_TextureTemplate;
+
+        /// <summary>The settings a texture's section of the current version lacks, at their
+        /// defaults in the Editor's order, and the platforms it lacks (DefaultTexturePlatform,
+        /// Standalone, then the installed modules) after its own. A section of another version, or none, is left
+        /// as it is (its settings would take that version's values: unmeasured).</summary>
+        static void FillTextureSection(YText section)
+        {
+            s_TextureTemplate ??= System.Text.Json.JsonDocument.Parse(Native.Call("texture-meta-template", "{}")).RootElement.GetProperty("section").GetString() ?? "";
+            FillTextureSection(section, s_TextureTemplate);
+        }
+
+        /// <summary><paramref name="templateText"/>: the TextureImporter section at its defaults
+        /// ("" for a release family whose files are not measured: nothing is added).</summary>
+        internal static void FillTextureSection(YText section, string templateText)
+        {
+            if (string.IsNullOrEmpty(templateText)) return;
+            var template = UnityYamlText.ParseTopLevel(templateText).Get("TextureImporter");
+            if (template?.Kind != YKind.Map || section.Get("serializedVersion")?.Text != template.Get("serializedVersion")?.Text) return;
+            Fill(section, template);
+        }
+
+        static void Fill(YText text, YText template)
+        {
+            for (int i = 0; i < template.Keys.Count; i++)
+            {
+                var key = template.Keys[i];
+                var want = template.Values[i];
+                var have = text.Get(key);
+                if (have == null)
+                {
+                    text.SetInOrder(key, want, template.Keys);
+                    if (text.Flow) text.Raw = null;
+                }
+                else if (have.Kind == YKind.Map && want.Kind == YKind.Map) Fill(have, want);
+                else if (have.Kind == YKind.Seq && want.Kind == YKind.Seq && key == "platformSettings") AppendMissingPlatforms(have, want.Items);
+            }
+        }
+
+        /// <summary>The platform entries a list lacks, after the list's own, in the order given
+        /// (label-metas kept.*: DefaultTexturePlatform, Android, then Standalone); whether any was
+        /// added.</summary>
+        static bool AppendMissingPlatforms(YText list, IEnumerable<YText> entries)
+        {
+            bool added = false;
+            foreach (var entry in entries)
+            {
+                if (entry?.Get("buildTarget")?.Text is not string name || IndexOfPlatform(list, name) >= 0) continue;
+                list.Items.Add(entry);
+                added = true;
+            }
+            return added;
+        }
+
+        static int IndexOfPlatform(YText list, string name)
+        {
+            for (int i = 0; i < list.Items.Count; i++)
+                if (list.Items[i].Kind == YKind.Map && list.Items[i].Get("buildTarget")?.Text == name) return i;
+            return -1;
+        }
+
         static bool AddInstalledPlatforms(YText section)
         {
             var list = section.Get("platformSettings");
             if (list == null || list.Kind != YKind.Seq) return false;
             s_Platforms ??= System.Text.Json.JsonSerializer.Deserialize<Platform[]>(Native.Call("texture-platforms", "{}"),
                 new System.Text.Json.JsonSerializerOptions { PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase }) ?? Array.Empty<Platform>();
-            bool added = false;
-            foreach (var platform in s_Platforms)
+            return AppendMissingPlatforms(list, s_Platforms.Select(platform =>
             {
-                if (list.Items.Any(item => item.Get("buildTarget")?.Text == platform.Name)) continue;
                 var entry = UnityYamlText.ParseTopLevel("platformSettings:\n" + platform.Entry).Get("platformSettings");
-                if (entry?.Kind != YKind.Seq || entry.Items.Count != 1) continue;
-                list.Items.Add(entry.Items[0]);
-                added = true;
-            }
-            return added;
+                return entry?.Kind == YKind.Seq && entry.Items.Count == 1 ? entry.Items[0] : null;
+            }));
         }
 
         /// <summary>Each scalar of <paramref name="settings"/> (the importer's tree) into the same

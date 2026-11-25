@@ -146,6 +146,14 @@ file the run added, changed or removed.
   loads by each index and by names, the index of a scene `LoadSceneInPlayMode` loads, and all of
   it after `EditorBuildSettings.scenes` is set in Play mode. Recorded in the macOS Editor (batch
   mode, no graphics: two identical captures; nothing depends on the OS).
+- `label-metas` (Edit Mode, `LabelMetaTests`): `run.py` adds `Assets/Labels` with assets of fifteen
+  kinds (a texture, text and JSON files, a material, a prefab, a scene, a sound, a folder, a shader,
+  a style sheet, a physics material, an animation clip, an animator controller, a ScriptableObject
+  asset, a file of an extension no importer claims) whose `.meta` holds the GUID alone, and two
+  textures whose current-version TextureImporter section lacks some settings and the Standalone
+  platform: each `.meta` as the project opens, after `SetLabels` and after `ClearLabels`, and the
+  textures' after `SaveAndReimport` of a setting the section has and of one it lacks. Recorded in
+  the macOS Editor (batch mode, no graphics, the Android module installed: two identical captures).
 - `generic-refs` (Edit Mode, `GenericRefTests`): a scriptable object whose [SerializeReference] fields
   hold objects of generic classes (`Box<int>`, `Pair<string, Vector3>`, `Box<Box<float>>`,
   `Box<List<int>>`, a namespaced `Tagged<Circle>`, one shared, one added later) made an asset by

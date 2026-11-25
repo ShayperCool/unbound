@@ -636,7 +636,9 @@ namespace UnityEditor
 
         /// <summary>The labels written into the asset's <c>.meta</c> at once, after its GUID, in
         /// ordinal order with repeats kept; none: no labels block (matches the Unity 6000.0.71f1
-        /// Editor, tests/projects/projectwrites 09.labels).</summary>
+        /// Editor, tests/projects/projectwrites 09.labels). A <c>.meta</c> holding the GUID alone
+        /// gets its importer's section with them, where it is measured (tests/projects/scenesave
+        /// label-metas).</summary>
         public static void SetLabels(Object obj, string[] labels)
         {
             var path = obj != null ? GetAssetPath(obj) : null;
@@ -661,6 +663,9 @@ namespace UnityEditor
                     var plugin = PluginMetaSection(path);
                     if (plugin.Length > 0) text = AssetPaths.WithImporterSection(text, plugin);
                 }
+                // A .meta holding its GUID alone gets the section a new asset of its kind gets
+                // (tests/projects/scenesave label-metas labelled.*), where that is measured.
+                if (string.IsNullOrEmpty(section) && !AssetPaths.HasImporterSection(text)) section = LabelMetaSection(path);
                 if (string.IsNullOrEmpty(section) && !AssetPaths.HasImporterSection(text))
                     Debug.LogWarning($"Unbound: {path}.meta is written without its importer's settings: Unbound does not know the settings the Editor writes there yet.");
                 File.WriteAllText(meta, AssetPaths.WithLabels(text, labels, section));
@@ -682,6 +687,12 @@ namespace UnityEditor
         /// not measured).</summary>
         static string PluginMetaSection(string path) =>
             JsonDocument.Parse(Native.Call("plugin-meta-section", JsonSerializer.Serialize(new { path }))).RootElement.GetProperty("section").GetString() ?? "";
+
+        /// <summary>The section the Editor writes into a .meta that holds the GUID alone ("" where
+        /// it is not measured: the texture, model and audio importers write their oldest version's
+        /// values there).</summary>
+        static string LabelMetaSection(string path) =>
+            JsonDocument.Parse(Native.Call("label-meta-section", JsonSerializer.Serialize(new { path }))).RootElement.GetProperty("section").GetString() ?? "";
 
         static string s_ScriptMetaSection;
 

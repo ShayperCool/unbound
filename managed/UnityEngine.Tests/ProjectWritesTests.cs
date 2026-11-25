@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using Unbound.Runtime;
 using Xunit;
 
@@ -190,6 +191,43 @@ namespace UnityEngine.Tests
                 .Replace("{x: 0.5, y: 0.5}", "{x: 0.25, y: 0.5}").Replace("maxTextureSize: 2048", "maxTextureSize: 64"),
                 UnityYamlText.WriteTopLevel(root));
             Assert.Equal(new[] { "notInTheFile" }, unwritten);
+        }
+
+        /// <summary>A texture's section of the current version that lacks settings and a platform
+        /// (tests/projects/scenesave label-metas, whose files are the input and the expected
+        /// output) is written whole: the missing settings at their defaults where the Editor
+        /// writes them, the missing platform after the listed ones, the changed values patched in.</summary>
+        [Theory]
+        [InlineData("start.PartialKept.png.meta", "kept.PartialKept.png.meta", "mipmaps.enableMipMap", 0)]
+        [InlineData("start.Partial.png.meta", "missingSetting.Partial.png.meta", "streamingMipmaps", 1)]
+        public void ATextureSectionLackingSettingsIsWrittenWholeAsTheEditorWritesIt(string start, string saved, string setting, int value)
+        {
+            var snapshots = Path.Combine(Repo(), "tests", "projects", "scenesave", "Reference", "unity-6000.0.71f1", "label-metas", "snapshots");
+            var templates = Path.Combine(Repo(), "crates", "unbound-assets", "src", "new_meta");
+            var platform = File.ReadAllText(Path.Combine(templates, "texture_platform.yaml"));
+            // The engine's section at its defaults with the Mac Editor's modules (Android).
+            var template = File.ReadAllText(Path.Combine(templates, "texture_importer.yaml")).Replace("{platforms}",
+                string.Concat(new[] { "DefaultTexturePlatform", "Standalone", "Android" }.Select(p => platform.Replace("{platform}", p))));
+            var root = UnityYamlText.ParseTopLevel(File.ReadAllText(Path.Combine(snapshots, start)));
+            var settings = root.Get("TextureImporter").ToNode();
+            MetaSettings.SetInt(settings, setting, value);
+            ImporterMeta.FillTextureSection(root.Get("TextureImporter"), template);
+            var unwritten = new List<string>();
+            ImporterMeta.Patch(root.Get("TextureImporter"), settings, "", unwritten);
+            Assert.Empty(unwritten);
+            Assert.Equal(File.ReadAllText(Path.Combine(snapshots, saved)), UnityYamlText.WriteTopLevel(root));
+        }
+
+        [Fact]
+        public void ATextureSectionOfAnotherVersionIsNotFilled()
+        {
+            const string meta = "fileFormatVersion: 2\nguid: 0123456789abcdef0123456789abcdef\nTextureImporter:\n  serializedVersion: 12\n  mipmaps:\n    enableMipMap: 1\n  userData: \n";
+            var root = UnityYamlText.ParseTopLevel(meta);
+            var template = File.ReadAllText(Path.Combine(Repo(), "crates", "unbound-assets", "src", "new_meta", "texture_importer.yaml")).Replace("{platforms}", "");
+            ImporterMeta.FillTextureSection(root.Get("TextureImporter"), template);
+            Assert.Equal(meta, UnityYamlText.WriteTopLevel(root));
+            ImporterMeta.FillTextureSection(root.Get("TextureImporter"), "");
+            Assert.Equal(meta, UnityYamlText.WriteTopLevel(root));
         }
 
         [Fact]

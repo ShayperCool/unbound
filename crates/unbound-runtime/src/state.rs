@@ -1804,6 +1804,19 @@ pub fn dispatch(method: &str, request: &str) -> Result<String> {
         // The PluginImporter section the Editor writes into a plug-in's `.meta` that has no
         // platform settings when it writes the file again; "" when the `.meta` has them.
         "plugin-meta-section" => plugin_default_section(request),
+        // The importer section the Editor writes into a `.meta` that holds a GUID alone when it
+        // writes the file again (its labels set); "" where that is not measured.
+        "label-meta-section" => label_meta_section(request),
+        // A texture's importer section at the Editor's defaults, the installed platforms listed:
+        // the order and the values of the settings a texture's section lacks.
+        "texture-meta-template" => Ok(json!({
+            "section": if s.new_meta_measured {
+                meta_section(unbound_assets::new_meta::NewImporter::Texture, Path::new("Texture.png"), &s.new_meta)
+            } else {
+                String::new()
+            }
+        })
+        .to_string()),
         // The system clipboard's text (`GUIUtility.systemCopyBuffer`).
         "clipboard-get" => crate::clipboard::get(request),
         "clipboard-set" => crate::clipboard::set(request),
@@ -2036,6 +2049,70 @@ fn plugin_default_section(request: &str) -> Result<String> {
         );
     }
     Ok(json!({ "section": defaults.section() }).to_string())
+}
+
+/// A new `.meta`'s importer section: its text after the format version and GUID lines.
+fn meta_section(
+    importer: unbound_assets::new_meta::NewImporter,
+    asset: &Path,
+    context: &unbound_assets::new_meta::MetaContext,
+) -> String {
+    let text = unbound_assets::new_meta::text(importer, unbound_yaml::Guid(1), asset, context);
+    text.splitn(3, '\n').nth(2).unwrap_or("").to_string()
+}
+
+/// The section a `.meta` holding its asset's GUID alone gets when the Editor writes it again: the
+/// one a new asset of its kind gets, for the importers without a serialized version (matches the
+/// Unity 6000.0.71f1 Editor, tests/projects/scenesave label-metas `labelled.*`, `cleared.*`). The
+/// texture, model and audio importers write the values of their oldest version there instead, and
+/// the other importers are not measured: "" for those.
+fn label_meta_section(request: &str) -> Result<String> {
+    #[derive(serde::Deserialize)]
+    struct Request {
+        path: String,
+    }
+    let Request { path } = serde_json::from_str(request)?;
+    let s = state();
+    let db = s.db();
+    let section = db
+        .by_path(&path)
+        .filter(|_| s.new_meta_measured)
+        .and_then(|asset| {
+            label_meta_importer(&asset.file, asset.is_folder)
+                .map(|kind| meta_section(kind, &asset.file, &s.new_meta))
+        })
+        .unwrap_or_default();
+    Ok(json!({ "section": section }).to_string())
+}
+
+/// The importer whose new-asset section a GUID-only `.meta` of `file` gets when it is written
+/// again, for the measured importers without a serialized version.
+fn label_meta_importer(
+    file: &Path,
+    is_folder: bool,
+) -> Option<unbound_assets::new_meta::NewImporter> {
+    use unbound_assets::new_meta::{NewImporter, importer_for};
+    let is_asset = file
+        .extension()
+        .is_some_and(|e| e.eq_ignore_ascii_case("asset"));
+    // A YAML asset found on disk names its main object 0 (label-metas `labelled.Data.asset`).
+    let importer = if !is_folder && is_asset {
+        Some(NewImporter::NativeFormat { main: 0 })
+    } else {
+        importer_for(file, is_folder)
+    };
+    importer.filter(|kind| {
+        matches!(
+            kind,
+            NewImporter::Folder
+                | NewImporter::Default
+                | NewImporter::TextScript
+                | NewImporter::NativeFormat { .. }
+                | NewImporter::Prefab
+                | NewImporter::Shader
+                | NewImporter::Scripted { .. }
+        )
+    })
 }
 
 /// The importer the Editor uses for a file or folder by its path and extension, what a .meta that
@@ -2953,6 +3030,53 @@ fn json_to_yaml(value: &serde_json::Value) -> unbound_yaml::Value {
 
 #[cfg(test)]
 mod tests {
+    /// A GUID-only `.meta` written again gets the section the Editor writes (the reference's
+    /// `labelled.*` files after their GUID and labels); the texture, audio and unknown kinds none.
+    #[test]
+    fn guid_only_metas_get_the_editors_section_where_measured() {
+        let snapshots = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join(
+            "../../tests/projects/scenesave/Reference/unity-6000.0.71f1/label-metas/snapshots",
+        );
+        let context = unbound_assets::new_meta::MetaContext { platforms: vec![] };
+        for name in [
+            "Notes.txt",
+            "Data.json",
+            "Mat.mat",
+            "Thing.prefab",
+            "Level.unity",
+            "Folder",
+            "Unlit.shader",
+            "Style.uss",
+            "Bouncy.physicMaterial",
+            "Move.anim",
+            "Basic.controller",
+            "Data.asset",
+        ] {
+            let file = std::path::Path::new("Assets/Labels").join(name);
+            let kind = super::label_meta_importer(&file, name == "Folder")
+                .unwrap_or_else(|| panic!("{name}"));
+            let written =
+                std::fs::read_to_string(snapshots.join(format!("labelled.{name}.meta"))).unwrap();
+            let expected: String = written
+                .lines()
+                .skip(2)
+                .filter(|line| *line != "labels:" && !line.starts_with("- "))
+                .map(|line| format!("{line}\n"))
+                .collect();
+            assert_eq!(
+                super::meta_section(kind, &file, &context),
+                expected,
+                "{name}"
+            );
+        }
+        for name in ["Tex.png", "Beep.wav", "Other.xyz", "Model.fbx"] {
+            assert!(
+                super::label_meta_importer(std::path::Path::new(name), false).is_none(),
+                "{name}"
+            );
+        }
+    }
+
     #[test]
     fn etc_block_codes_keep_colour_and_data_distinct() {
         use unbound_assets::texture::BlockFormat as B;
@@ -3080,7 +3204,10 @@ mod tests {
     fn speedtree8_trees_load_through_the_speedtree_importer() {
         assert_eq!(asset_kind("Assets/Trees/Oak.st"), "speedtree");
         assert_eq!(asset_kind("Assets/Trees/Oak.ST"), "speedtree");
-        assert_eq!(importer_of_path("Assets/Trees/Oak.st"), Some("SpeedTreeImporter"));
+        assert_eq!(
+            importer_of_path("Assets/Trees/Oak.st"),
+            Some("SpeedTreeImporter")
+        );
         // SpeedTree 9 trees stay ScriptedImporter assets, SpeedTree 7 ones unimported.
         assert_eq!(asset_kind("Assets/Trees/Oak.st9"), "unknown");
         assert_eq!(asset_kind("Assets/Trees/Oak.spm"), "unknown");
