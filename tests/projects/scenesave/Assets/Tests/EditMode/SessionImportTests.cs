@@ -29,7 +29,7 @@ public class SessionImportRecorder : AssetPostprocessor
 /// and one imported by ImportAsset, a changed file found by Refresh, a forced import, writes
 /// between StartAssetEditing and StopAssetEditing, an import of an unchanged asset, the open scene saved
 /// as a copy,
-/// a prefab saved, an importer's SaveAndReimport, a folder copied and moved, a folder moved to the
+/// a prefab saved, a new image imported, its importer's SaveAndReimport, a folder copied and moved, a folder moved to the
 /// trash, deletes of an asset and of a folder. Each step
 /// logs the calls made by the time its writes returned (`<step>`) and those made by the next
 /// editor update (`<step>.later`).
@@ -114,10 +114,15 @@ public class SessionImportTests
             PrefabUtility.SaveAsPrefabAsset(go, Root + "/Made.prefab");
             Object.DestroyImmediate(go);
         });
+        yield return Step("png-import", () =>
+        {
+            File.WriteAllBytes(Root + "/Pic.png", new Texture2D(4, 4).EncodeToPNG());
+            AssetDatabase.ImportAsset(Root + "/Pic.png");
+        });
         yield return Step("importer", () =>
         {
-            var importer = (TextureImporter)AssetImporter.GetAtPath("Assets/Textures/Probe.png");
-            importer.maxTextureSize = importer.maxTextureSize == 64 ? 128 : 64;
+            var importer = (TextureImporter)AssetImporter.GetAtPath(Root + "/Pic.png");
+            importer.maxTextureSize = 64;
             importer.SaveAndReimport();
         });
         yield return Step("folder-copy", () =>

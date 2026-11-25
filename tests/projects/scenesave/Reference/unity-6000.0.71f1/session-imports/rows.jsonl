@@ -1,0 +1,49 @@
+{"key": "folder", "value": "reload=False imported=[Assets/Session] deleted=[] moved=[] from=[]"}
+{"key": "folder.later", "value": ""}
+{"key": "create", "value": "reload=False imported=[Assets/Session/Data.asset] deleted=[] moved=[] from=[]"}
+{"key": "create.later", "value": ""}
+{"key": "material", "value": "reload=False imported=[Assets/Session/Mat.mat] deleted=[] moved=[] from=[]"}
+{"key": "material.later", "value": ""}
+{"key": "dirty-save", "value": "reload=False imported=[Assets/Session/Mat.mat] deleted=[] moved=[] from=[]"}
+{"key": "dirty-save.later", "value": ""}
+{"key": "clean-save", "value": ""}
+{"key": "clean-save.later", "value": ""}
+{"key": "add-object", "value": "reload=False imported=[Assets/Session/Data.asset] deleted=[] moved=[] from=[]"}
+{"key": "add-object.later", "value": ""}
+{"key": "copy", "value": "reload=False imported=[Assets/Session/Copy.asset] deleted=[] moved=[] from=[]"}
+{"key": "copy.later", "value": ""}
+{"key": "move", "value": "reload=False imported=[Assets/Session/Moved.asset] deleted=[] moved=[Assets/Session/Moved.asset] from=[Assets/Session/Copy.asset]"}
+{"key": "move.later", "value": ""}
+{"key": "rename", "value": "reload=False imported=[Assets/Session/Renamed.asset] deleted=[] moved=[Assets/Session/Renamed.asset] from=[Assets/Session/Moved.asset]"}
+{"key": "rename.later", "value": ""}
+{"key": "write-refresh", "value": "reload=False imported=[Assets/Session/Notes.txt] deleted=[] moved=[] from=[]"}
+{"key": "write-refresh.later", "value": ""}
+{"key": "write-import", "value": "reload=False imported=[Assets/Session/Other.txt] deleted=[] moved=[] from=[]"}
+{"key": "write-import.later", "value": ""}
+{"key": "change-refresh", "value": "reload=False imported=[Assets/Session/Notes.txt] deleted=[] moved=[] from=[]"}
+{"key": "change-refresh.later", "value": ""}
+{"key": "force-import", "value": "reload=False imported=[Assets/Session/Data.asset] deleted=[] moved=[] from=[]"}
+{"key": "force-import.later", "value": ""}
+{"key": "batch.inside", "value": ""}
+{"key": "batch", "value": "reload=False imported=[Assets/Session/First.asset,Assets/Session/Second.asset] deleted=[] moved=[] from=[]"}
+{"key": "batch.later", "value": ""}
+{"key": "plain-import", "value": "reload=False imported=[Assets/Session/Data.asset] deleted=[] moved=[] from=[]"}
+{"key": "plain-import.later", "value": ""}
+{"key": "scene-save", "value": "reload=False imported=[Assets/Session/Saved.unity] deleted=[] moved=[] from=[]"}
+{"key": "scene-save.later", "value": ""}
+{"key": "prefab", "value": "reload=False imported=[Assets/Session/Made.prefab] deleted=[] moved=[] from=[]"}
+{"key": "prefab.later", "value": ""}
+{"key": "png-import", "value": "reload=False imported=[Assets/Session/Pic.png] deleted=[] moved=[] from=[]"}
+{"key": "png-import.later", "value": ""}
+{"key": "importer", "value": "reload=False imported=[Assets/Session/Pic.png] deleted=[] moved=[] from=[]"}
+{"key": "importer.later", "value": ""}
+{"key": "folder-copy", "value": "reload=False imported=[Assets/Session/InnerCopy] deleted=[] moved=[] from=[] | reload=False imported=[Assets/Session/InnerCopy/Held.asset] deleted=[] moved=[] from=[]"}
+{"key": "folder-copy.later", "value": ""}
+{"key": "folder-move", "value": "reload=False imported=[Assets/Session/InnerMoved] deleted=[] moved=[Assets/Session/InnerMoved,Assets/Session/InnerMoved/Held.asset] from=[Assets/Session/InnerCopy,Assets/Session/InnerCopy/Held.asset]"}
+{"key": "folder-move.later", "value": ""}
+{"key": "trash", "value": "reload=False imported=[] deleted=[Assets/Session/InnerMoved,Assets/Session/InnerMoved/Held.asset] moved=[] from=[]"}
+{"key": "trash.later", "value": ""}
+{"key": "delete", "value": "reload=False imported=[] deleted=[Assets/Session/Renamed.asset] moved=[] from=[]"}
+{"key": "delete.later", "value": ""}
+{"key": "delete-folder", "value": "reload=False imported=[] deleted=[Assets/Session,Assets/Session/Data.asset,Assets/Session/First.asset,Assets/Session/Inner,Assets/Session/Inner/Held.asset,Assets/Session/Made.prefab,Assets/Session/Mat.mat,Assets/Session/Notes.txt,Assets/Session/Other.txt,Assets/Session/Pic.png,Assets/Session/Saved.unity,Assets/Session/Second.asset] moved=[] from=[]"}
+{"key": "delete-folder.later", "value": ""}

@@ -220,5 +220,16 @@
       "4:Assets/Scenes/Base.unity,Assets/Scenes/Missing.unity,Assets/Scenes/Base.unity,Assets/Scenes/Second.unity|second=3|base=0"
     ],
     "reason": "In Edit mode the Editor answers SceneManager.sceneCountInBuildSettings and SceneUtility.GetScenePathByBuildIndex from the whole EditorBuildSettings list, disabled scenes included, and GetBuildIndexByScenePath from its enabled scenes; Unbound answers all three from the enabled scenes (the list Play mode loads by build index): follow-up"
+  },
+  {
+    "case": "session-imports",
+    "key": "change-refresh",
+    "reference": [
+      "reload=False imported=[Assets/Session/Notes.txt] deleted=[] moved=[] from=[]"
+    ],
+    "actual": [
+      ""
+    ],
+    "reason": "AssetDatabase.Refresh does not notice a file whose content changed (here a text file written again by the test): Unbound's refresh compares only the .meta files' headers, so the file is neither imported again nor reported to OnPostprocessAllAssets (queued as Q761). The Editor reimports it and reports it."
   }
 ]
