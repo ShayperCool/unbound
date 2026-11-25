@@ -1,0 +1,5 @@
+{
+  "A texture reinitialized in a float format holds the bytes 0xCD in the Editor (the float 0xCDCDCDCD) until written; Unbound fills a float texture with the value 205/255, as its 8-bit fill of 205 reads: follow-up": [
+    "exit.Assets/Tex/ReinitRFloat.asset"
+  ]
+}

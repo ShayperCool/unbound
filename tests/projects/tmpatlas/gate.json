@@ -1,0 +1,15 @@
+{
+  "commands": [
+    "python3 tests/projects/tmpatlas/run.py check"
+  ],
+  "summary": "tmpatlas: \\d+/\\d+ rows match; \\d+ differ; \\d+ known residuals",
+  "engine_paths": [
+    "managed/UnityEngine/Graphics/Texture2D.cs",
+    "managed/UnityEngine/Editor/EditorApplication.cs",
+    "managed/UnityEngine/Editor/EditorSession.cs",
+    "managed/UnityEngine/Editor/AssetFiles.cs",
+    "managed/UnityEngine/Runtime/PlayerLoopDriver.cs",
+    "tests/file_writes.py",
+    "tests/projects/tmpatlas/"
+  ]
+}
