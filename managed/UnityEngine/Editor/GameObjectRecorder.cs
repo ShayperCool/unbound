@@ -73,11 +73,11 @@ namespace UnityEditor.Animations
             m_Root = root;
         }
 
-        public GameObject root => m_Root;
+        public GameObject root { get { ThrowIfUncreated(); return m_Root; } }
 
-        public float currentTime => m_Time;
+        public float currentTime { get { ThrowIfUncreated(); return m_Time; } }
 
-        public bool isRecording => !m_Idle;
+        public bool isRecording { get { ThrowIfUncreated(); return !m_Idle; } }
 
         public void BindComponentsOfType<T>(GameObject target, bool recursive) where T : Component =>
             BindComponentsOfType(target, typeof(T), recursive);
@@ -227,8 +227,13 @@ namespace UnityEditor.Animations
             m_Idle = true;
         }
 
+        /// <summary>Creates no recorder: the Editor's object has no engine side, so its properties
+        /// throw NullReferenceException (tests/projects/defaultstate).</summary>
         [Obsolete("The GameObjectRecorder constructor now takes a root GameObject", true)]
-        public GameObjectRecorder() { }
+        public GameObjectRecorder()
+        {
+            if (Compat.UncreatedObjectWrappersMeasured && !ObjectConstruction.TakeBacking(this)) MarkUncreated();
+        }
 
         [Obsolete("BindComponent() using a System::Type is obsolete, use BindComponentsOfType() instead (UnityUpgradable) -> BindComponentsOfType(*)", true)]
         [Unbound.EditorFaithful("an obsolete member that does nothing, as in the Editor")]
