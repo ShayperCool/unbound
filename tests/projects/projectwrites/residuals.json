@@ -44,11 +44,5 @@
   ],
   "A second import of a package also lists a folder the package does not name (made by the first import) among its items; when the Editor lists such folders is not known, Unbound lists the package's own items": [
     "edit.14.package.again.later.events"
-  ],
-  "A plug-in's .meta written again (labels) gets the PluginImporter section, whose platform entries the Editor derives from the plug-in's kind, folder and the installed platform modules; Unbound does not know those defaults yet and writes the labels without the section, with a warning": [
-    "edit.09.labels.plugin.Assets/Startup/Plugins/Managed.dll.meta",
-    "edit.exit.Assets/Startup/Plugins/Managed.dll.meta",
-    "play.09.labels.plugin.Assets/Startup/Plugins/Managed.dll.meta",
-    "play.exit.Assets/Startup/Plugins/Managed.dll.meta"
   ]
 }

@@ -95,8 +95,7 @@ Unbound on macOS, 2026-11-25: 1361/1393 values, 0 failures and 34 recorded resid
 which extensions packages' ScriptedImporters claim), copies and folders refused in a read-only
 package (the Editor writes into its per-project copy of the package; Unbound's package files are
 the installation's or the shared store's), and labels YAML reads as something else (the Editor
-reads them back as YAML; Unbound keeps their text), a plug-in's `.meta` written again for its labels
-(the Editor adds the PluginImporter section; Unbound writes the labels alone, with a warning), a new object dirty from its creation and the
+reads them back as YAML; Unbound keeps their text), a new object dirty from its creation and the
 `Import Logs` object after a new main object's warning (RemoveObjectFromAsset), the import window
 `ImportPackage` is asked for (it never comes in batch mode; Unbound has none and imports the whole
 package) and a folder the package does not name among a second import's items.

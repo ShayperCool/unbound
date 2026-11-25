@@ -173,7 +173,9 @@ namespace UnityEditor
         }
     }
 
-    /// <summary>A precompiled plugin's settings: on which platforms it is enabled, and with what.</summary>
+    /// <summary>A precompiled plugin's settings: on which platforms it is enabled, and with what. A
+    /// plug-in whose .meta has none has those the Editor gives it by its kind and folders (Unbound's
+    /// .meta reader fills them in; matches the Unity 6000.0.71f1 Editor, tests/projects/plugindefaults).</summary>
     [global::UnityEngine.@ExcludeFromPresetAttribute] public sealed partial class PluginImporter : AssetImporter
     {
         sealed class Platform
@@ -184,6 +186,7 @@ namespace UnityEditor
 
         readonly Dictionary<string, Platform> m_Platforms = new Dictionary<string, Platform>(StringComparer.OrdinalIgnoreCase);
         bool m_IsPreloaded;
+        bool m_IsOverridable;
         bool m_IsExplicitlyReferenced;
         string[] m_DefineConstraints = Array.Empty<string>();
 
@@ -192,6 +195,7 @@ namespace UnityEditor
         internal override void ReadSettings(YNode body)
         {
             m_IsPreloaded = body.Bool("isPreloaded");
+            m_IsOverridable = body.Bool("isOverridable");
             m_IsExplicitlyReferenced = body.Bool("isExplicitlyReferenced");
             var constraints = new List<string>();
             foreach (var item in body.Get("defineConstraints")?.Seq() ?? Array.Empty<YNode>()) constraints.Add(item.AsString());
@@ -251,7 +255,12 @@ namespace UnityEditor
             _ => target.ToString(),
         };
 
-        public bool GetCompatibleWithAnyPlatform() => PlatformOf("Any", false)?.Enabled ?? false;
+        /// <summary>Whether the platform's own setting enables the plug-in ("Any" and "Editor" included):
+        /// "Any Platform" is not taken into account (tests/projects/plugindefaults `*.compatible`,
+        /// `*.flags` editor).</summary>
+        bool Enabled(string platformName) => PlatformOf(platformName, false)?.Enabled ?? false;
+
+        public bool GetCompatibleWithAnyPlatform() => Enabled("Any");
 
         public void SetCompatibleWithAnyPlatform(bool enable) => PlatformOf("Any", true).Enabled = enable;
 
@@ -269,9 +278,7 @@ namespace UnityEditor
 
         public void SetExcludeEditorFromAnyPlatform(bool excludedFromAny) => SetExcludeFromAnyPlatform("Editor", excludedFromAny);
 
-        /// <summary>With "Any Platform" on, unless excluded; otherwise when enabled for it.</summary>
-        public bool GetCompatibleWithPlatform(string platformName) =>
-            GetCompatibleWithAnyPlatform() ? !GetExcludeFromAnyPlatform(platformName) : PlatformOf(platformName, false)?.Enabled ?? false;
+        public bool GetCompatibleWithPlatform(string platformName) => Enabled(platformName);
 
         public bool GetCompatibleWithPlatform(BuildTarget platform) => GetCompatibleWithPlatform(NameOf(platform));
 
@@ -279,7 +286,7 @@ namespace UnityEditor
 
         public void SetCompatibleWithPlatform(BuildTarget platform, bool enable) => SetCompatibleWithPlatform(NameOf(platform), enable);
 
-        public bool GetCompatibleWithEditor() => GetCompatibleWithPlatform("Editor");
+        public bool GetCompatibleWithEditor() => Enabled("Editor");
 
         public bool GetCompatibleWithEditor(string buildTarget) => GetCompatibleWithEditor();
 
@@ -287,7 +294,13 @@ namespace UnityEditor
 
         public void SetCompatibleWithEditor(bool enable) => SetCompatibleWithPlatform("Editor", enable);
 
+        /// <summary>A build target's setting; "Any" and "Editor" are no build targets and give ""
+        /// (their settings are read with GetEditorData and GetExcludeFromAnyPlatform; tests/projects/plugindefaults
+        /// `*.data`).</summary>
         public string GetPlatformData(string platformName, string key) =>
+            platformName == "Any" || platformName == "Editor" ? "" : Setting(platformName, key);
+
+        string Setting(string platformName, string key) =>
             PlatformOf(platformName, false)?.Settings.TryGetValue(key, out var v) == true ? v : "";
 
         public string GetPlatformData(BuildTarget platform, string key) => GetPlatformData(NameOf(platform), key);
@@ -296,17 +309,15 @@ namespace UnityEditor
 
         public void SetPlatformData(BuildTarget platform, string key, string value) => SetPlatformData(NameOf(platform), key, value);
 
-        public string GetEditorData(string key) => GetPlatformData("Editor", key);
+        public string GetEditorData(string key) => Setting("Editor", key);
 
         public void SetEditorData(string key, string value) => SetPlatformData("Editor", key, value);
 
         public void ClearSettings() => m_Platforms.Clear();
 
-        public bool GetIsOverridable()
-        {
-            Stubs.Ignored("PluginImporter.GetIsOverridable");
-            return false;
-        }
+        /// <summary>A package's plug-in, which one of the same name in the project overrides (its
+        /// .meta's setting; tests/projects/plugindefaults `*.flags` overridable).</summary>
+        public bool GetIsOverridable() => m_IsOverridable;
 
         /// <summary>A delegate set with SetIncludeInBuildDelegate may leave the plugin out;
         /// otherwise it is included (its define constraints and platform settings are not checked
@@ -348,22 +359,35 @@ namespace UnityEditor
             }
         }
 
-        static readonly string[] s_PluginExtensions = { ".dll", ".so", ".a", ".aar", ".jar", ".bundle", ".dylib", ".jslib", ".jspre", ".framework", ".xcframework", ".winmd" };
+        /// <summary>The extensions the PluginImporter imports (crates/unbound-project/src/plugin_defaults.rs
+        /// PLUGIN_FILE_EXTENSIONS and FOLDER_PLUGIN_EXTENSIONS).</summary>
+        static readonly string[] s_PluginExtensions =
+        {
+            ".dll", ".so", ".dylib", ".a", ".jar", ".aar", ".c", ".cc", ".cpp", ".h", ".m", ".mm", ".java", ".kt", ".swift", ".jslib", ".jspre",
+            ".bundle", ".framework", ".xcframework", ".plugin", ".androidlib",
+        };
+
+        /// <summary>Whether the PluginImporter imports the file or folder at the path, by its extension.</summary>
+        internal static bool IsPluginPath(string path) =>
+            Array.IndexOf(s_PluginExtensions, Path.GetExtension(path).ToLowerInvariant()) >= 0;
 
         public static PluginImporter[] GetAllImporters()
         {
             var importers = new List<PluginImporter>();
             foreach (var path in AssetDatabase.GetAllAssetPaths())
             {
-                var extension = Path.GetExtension(path);
-                if (Array.IndexOf(s_PluginExtensions, extension.ToLowerInvariant()) < 0) continue;
-                if (GetAtPath(path) is PluginImporter importer) importers.Add(importer);
+                if (IsPluginPath(path) && GetAtPath(path) is PluginImporter importer) importers.Add(importer);
             }
             return importers.ToArray();
         }
 
+        /// <summary>With "Any Platform" on, unless excluded from it; otherwise when enabled for it
+        /// (tests/projects/plugindefaults `importers.*`).</summary>
+        internal bool GetCompatibleWithPlatformOrAnyPlatformBuildTarget(string buildTarget) =>
+            GetCompatibleWithAnyPlatform() ? !GetExcludeFromAnyPlatform(buildTarget) || Enabled(buildTarget) : Enabled(buildTarget);
+
         public static PluginImporter[] GetImporters(string platformName) =>
-            Array.FindAll(GetAllImporters(), i => i.GetCompatibleWithPlatform(platformName));
+            Array.FindAll(GetAllImporters(), i => i.GetCompatibleWithPlatformOrAnyPlatformBuildTarget(platformName));
 
         public static PluginImporter[] GetImporters(BuildTarget platform) => GetImporters(NameOf(platform));
 

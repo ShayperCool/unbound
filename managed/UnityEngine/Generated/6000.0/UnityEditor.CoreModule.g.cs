@@ -18328,7 +18328,6 @@ namespace UnityEditor
     }
     unsafe partial class PluginImporter
     {
-        [global::Unbound.Stub] internal bool GetCompatibleWithPlatformOrAnyPlatformBuildTarget(string buildTarget) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.PluginImporter.GetCompatibleWithPlatformOrAnyPlatformBuildTarget"); return default; }
         [global::Unbound.Stub] internal static global::System.Collections.Generic.IEnumerable<global::UnityEditorInternal.PluginDesc> GetExtensionPlugins(global::UnityEditor.BuildTarget target) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.PluginImporter.GetExtensionPlugins"); return global::System.Array.Empty<global::UnityEditorInternal.PluginDesc>(); }
         [global::Unbound.Stub] internal void SetCompatibleWithEditorWithBuildTargetsInternal(global::UnityEditor.BuildTargetGroup buildTargetGroup, global::UnityEditor.BuildTarget buildTarget, bool enable) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.PluginImporter.SetCompatibleWithEditorWithBuildTargetsInternal"); }
         [global::Unbound.Stub] internal bool IsCompatibleWithDefines(string[] defines) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.PluginImporter.IsCompatibleWithDefines"); return default; }

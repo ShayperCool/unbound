@@ -617,9 +617,14 @@ namespace UnityEditor
             try
             {
                 var text = File.ReadAllText(meta);
-                // A plug-in's .meta written again gets its PluginImporter section, with settings
-                // that depend on the plug-in's kind, folder and the installed platform modules: not
-                // measured, so the labels are written without it.
+                // A plug-in's .meta without platform settings written again gets the PluginImporter
+                // section with those the Editor gives it by its kind and folders, in place of any
+                // other section (tests/projects/plugindefaults *.labelled).
+                if (section == null && PluginImporter.IsPluginPath(path))
+                {
+                    var plugin = PluginMetaSection(path);
+                    if (plugin.Length > 0) text = AssetPaths.WithImporterSection(text, plugin);
+                }
                 if (string.IsNullOrEmpty(section) && !AssetPaths.HasImporterSection(text))
                     Debug.LogWarning($"Unbound: {path}.meta is written without its importer's settings: Unbound does not know the settings the Editor writes there yet.");
                 File.WriteAllText(meta, AssetPaths.WithLabels(text, labels, section));
@@ -633,6 +638,12 @@ namespace UnityEditor
         }
 
         public static void ClearLabels(Object obj) => SetLabels(obj, Array.Empty<string>());
+
+        /// <summary>The PluginImporter section the Editor writes into a plug-in's .meta that has no
+        /// platform settings ("" for one that has them, and for a release family whose files are
+        /// not measured).</summary>
+        static string PluginMetaSection(string path) =>
+            JsonDocument.Parse(Native.Call("plugin-meta-section", JsonSerializer.Serialize(new { path }))).RootElement.GetProperty("section").GetString() ?? "";
 
         static string s_ScriptMetaSection;
 

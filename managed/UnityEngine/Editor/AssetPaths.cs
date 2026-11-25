@@ -94,6 +94,17 @@ namespace Unbound.Runtime
             return false;
         }
 
+        /// <summary>A <c>.meta</c> text whose importer section (from its line to the end) is
+        /// <paramref name="section"/>; one without a section gets it at the end.</summary>
+        internal static string WithImporterSection(string meta, string section)
+        {
+            var text = meta.Replace("\r\n", "\n");
+            foreach (Match match in s_ImporterSection.Matches(text))
+                if (!match.Value.StartsWith("labels:", StringComparison.Ordinal)) return text.Substring(0, match.Index) + section;
+            if (text.Length > 0 && !text.EndsWith("\n", StringComparison.Ordinal)) text += "\n";
+            return text + section;
+        }
+
         /// <summary>A <c>.meta</c> text with these labels: after its GUID line, as written (the
         /// Editor writes them unquoted), in ordinal order, repeats kept; none: no labels block. The
         /// file is written again as the Editor writes it: LF endings, and a <c>.meta</c> without an
