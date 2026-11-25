@@ -53,6 +53,8 @@ namespace UnityEngine.Tests
             GUIUtility.keyboardControl = 0;
             GUIUtility.hotControl = 0;
             DragAndDrop.PrepareStartDrag();
+            // An object field that exits the GUI (its picker) leaves its icon size set.
+            EditorGUIUtility.SetIconSize(Vector2.zero);
         }
 
         static readonly Rect Field = new Rect(10, 300, 300, 18);
