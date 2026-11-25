@@ -138,8 +138,9 @@ namespace UnityEngine.VFX
             s_HandedSize = new Vector2Int(width, height);
         }
 
-        /// <summary>Before a camera renders. The work an effect does per camera (sorting,
-        /// culling its particles) is not done yet: outputs that need it are not drawn.</summary>
+        /// <summary>Before a camera renders: nothing to do. The work an effect does per camera
+        /// (its per-camera kernels and sorts) is done when the camera collects the effect's
+        /// draws, before its shadows and colour (<see cref="VFXParticleSystem.PrepareCamera"/>).</summary>
         public static void PrepareCamera(Camera cam) => PrepareCamera(cam, kDefaultCameraXRSettings);
 
         public static void PrepareCamera(Camera cam, VFXCameraXRSettings camXRSettings) => CheckCamera(cam);
@@ -163,8 +164,10 @@ namespace UnityEngine.VFX
         public static void ProcessCameraCommand(Camera cam, CommandBuffer cmd, VFXCameraXRSettings camXRSettings, CullingResults results, CullingResults customPassResults) =>
             Internal_ProcessCameraCommand(cam, cmd, camXRSettings, results.ptr, customPassResults.ptr);
 
-        /// <summary>The per-camera commands of the effects into a camera's command buffer: none
-        /// yet (see <see cref="PrepareCamera(Camera, VFXCameraXRSettings)"/>).</summary>
+        /// <summary>The per-camera commands of the effects into a camera's command buffer: none,
+        /// the work is done when the camera collects the effect's draws (see
+        /// <see cref="PrepareCamera(Camera, VFXCameraXRSettings)"/>); a pipeline that never calls
+        /// this still gets it (not measured).</summary>
         static void Internal_ProcessCameraCommand(Camera cam, CommandBuffer cmd, VFXCameraXRSettings camXRSettings, IntPtr cullResults, IntPtr customPassCullResults) => CheckCamera(cam);
     }
 }

@@ -140,6 +140,13 @@ effect's alive count, whether it is culled and awake, its renderer's state).
   What differs in this image differs without any effect (see the image limits).
 - `deferred`, `mesh deferred`: `LitMatte` and `MeshLit` through the deferred renderer (the
   outputs' `UniversalGBuffer` pass), with a point light.
+- `forward plus`, `mesh forward plus`: `LitMatte` and `MeshLit` through a renderer in Forward+
+  mode (`Assets/Settings/ProbeForwardPlus.asset`, the pipeline asset's fifth renderer) under six
+  point lights of colours of their own round the stage, more than the pipeline's limit of four
+  per object; `many lamps`, `mesh many lamps`: the same through the forward renderer, which
+  takes four of them for each object (the images of the two renderers differ);
+  `forward plus plain`: no effect, a lit sphere of the scene's under such lights through
+  Forward+. Appended after every other stage.
 - `mesh unlit`: the wedge textured with the image whose quarters differ.
 - `mesh exposed`: both submeshes (frame 5), then what the probe sets (`act/mesh exposed/*` rows
   say what was set and what the effect then answers): mask 1 (frame 8: the first submesh), mask
@@ -250,7 +257,8 @@ adds to that is not separated.
   culling left out.
 - A lit output that fades against the camera's depth (soft particles are measured for unlit
   outputs, `tests/projects/vfx`).
-- Forward+, light cookies, light layers, reflection probes, light probes other than the ambient
+- Probe volume lighting (the Editor here cannot bake probe volumes); Forward+ with reflection
+  probes, light cookies or more lights than one cluster holds; light cookies, light layers, reflection probes, light probes other than the ambient
   one, fog, additional lights' shadows, soft shadows, shadow cascades, screen space occlusion,
   the specular workflow, normal, occlusion, metallic and emissive maps, the six-way smoke lit
   material, double sided lighting, an output that receives no shadows: the generated shaders
