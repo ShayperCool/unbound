@@ -207,7 +207,29 @@ namespace UnityEditor
                 .Select(MissingScripts.Loaded).ToArray();
         }
 
-        public static Type GetMainAssetTypeAtPath(string assetPath) => LoadMainAssetAtPath(assetPath)?.GetType();
+        /// <summary>The type of the asset's main object. The Editor answers from the asset's import
+        /// and leaves the asset unloaded (matches the Unity 6000.0.71f1 Editor,
+        /// tests/projects/firstimport types.*); so does Unbound for an asset not loaded whose import
+        /// decides the type alone: a folder, a model, an audio clip and a 2D texture of the Editor's
+        /// own importers. Any other asset is loaded to answer.</summary>
+        public static Type GetMainAssetTypeAtPath(string assetPath) => MainTypeUnloaded(assetPath) ?? LoadMainAssetAtPath(assetPath)?.GetType();
+
+        static Type MainTypeUnloaded(string path)
+        {
+            if (path == null) return null;
+            _ = Entries;
+            if (!s_ByPath.TryGetValue(path, out var e) || string.IsNullOrEmpty(e.Guid) || AssetDatabaseRuntime.IsMainLoaded(e.Guid)) return null;
+            switch (e.Kind)
+            {
+                case "folder": return typeof(DefaultAsset);
+                case "model": return AssetImporter.GetAtPath(path)?.GetType() == typeof(ModelImporter) ? typeof(GameObject) : null;
+                case "audio": return AssetImporter.GetAtPath(path)?.GetType() == typeof(AudioImporter) ? typeof(AudioClip) : null;
+                case "texture":
+                    return AssetImporter.GetAtPath(path) is TextureImporter t && t.GetType() == typeof(TextureImporter)
+                        && t.textureShape == TextureImporterShape.Texture2D ? typeof(Texture2D) : null;
+            }
+            return null;
+        }
 
         public static string GetAssetPath(Object assetObject)
         {
