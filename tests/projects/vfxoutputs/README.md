@@ -197,8 +197,8 @@ machine, an NVIDIA driver, the Linux Editor on OpenGL Core).
   `tests/projects/vfxstrips`), and motion vectors of outputs other than opaque quads, which are
   drawn, not measured here.
 - A global sort longer than one pass of the sort (merged through the scratch list), of a custom
-  key whose kernel compiles, or reversed; a strip system's global sort, which Unbound refuses
-  loudly.
+  key whose kernel compiles, or reversed; a strip system's global sort is
+  `tests/projects/vfxstrips` `global`.
 - Motion vectors beyond `Moving`'s one still camera, effect at rest and particles three frames
   old: several cameras on one effect, a moving camera (URP sets the view-projection the
   output-update kernel reads in its motion vectors pass, after the effects' camera commands),

@@ -172,9 +172,9 @@ namespace Unbound.Runtime
                 // strip output does by default), from the list the system's update makes, and
                 // from each camera's frustum-culled list; the particles as quads from a list
                 // culled in a compute pass, and as half transparent meshes sorted from such a
-                // list (tests/projects/vfxstrips `alpha`, `listed`, `culled`, `meshes culled`).
-                if (Parameter(task, IndirectDrawName) != 0 && SortsForAll(system))
-                    return "its system sorts one list for all its outputs, which is not measured for strips yet";
+                // list; strips and quads of the particles from the system's list that one sort
+                // orders for both, by distance and by age (tests/projects/vfxstrips `alpha`,
+                // `listed`, `culled`, `meshes culled`, `global`, `global youngest`).
             }
             if (Parameter(task, IndirectDrawName) != 0)
             {

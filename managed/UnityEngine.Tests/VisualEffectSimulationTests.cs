@@ -1254,10 +1254,11 @@ namespace UnityEngine.Tests
             var sortingKeyless = sorting;
             sortingKeyless.buffers = new[] { new VFXMapping("indirectBuffer0", 2) };
             Assert.Equal("it draws a list of particles no task of its system makes or can sort", VFXOutput.Refusal(sortingKeyless, Indirect(2, 2), material));
-            // Strips of such a system are not measured.
+            // Strips of such a system are drawn from that list too (tests/projects/vfxstrips
+            // `global`, `global youngest`).
             var sortingStrips = sorting;
             sortingStrips.flags = VFXSystemFlag.SystemHasStrips;
-            Assert.Equal("its system sorts one list for all its outputs, which is not measured for strips yet",
+            Assert.Null(
                 VFXOutput.Refusal(sortingStrips, new VFXEditorTaskDesc { type = VFXTaskType.ParticleQuadOutput, parameters = new[] { new VFXMapping("indirectDraw", 1), new VFXMapping("strips", 1), new VFXMapping("indirectIndex", 2) }, buffers = new[] { new VFXMapping("indirectBuffer", 2) } }, material));
             // A mesh output's task names its mesh and the mask of its submeshes; it draws itself
             // or through an indirect buffer. An output of several meshes compiles to one such
