@@ -351,22 +351,22 @@ mod tests {
             uniform.iter().all(|t| (t[0] - 2.0).abs() < 1e-5),
             "{uniform:?}"
         );
+        // Texel 1 does not stand: texel 0 mixes with texel 2 only (two texels apart).
         let mut buffer = vec![
             [1.0, 0.0, 0.0, 1.0],
-            [1.05, 0.0, 0.0, 1.0],
             [9.0, 0.0, 0.0, 0.0],
+            [1.05, 0.0, 0.0, 1.0],
             [4.0, 0.0, 0.0, 1.0],
             [4.02, 0.0, 0.0, 1.0],
             [7.0, 0.0, 0.0, 1.0],
         ];
+        let charts = [0, 0, 0, 1, 1, -1];
         atrous(&mut buffer, &charts, &normals, w, h, 1, 1.5);
-        assert_eq!(buffer[2], [9.0, 0.0, 0.0, 0.0]);
+        assert_eq!(buffer[1], [9.0, 0.0, 0.0, 0.0]);
         assert_eq!(buffer[5], [7.0, 0.0, 0.0, 1.0]);
-        // Chart 0 mixes its two standing texels only, chart 1 its own.
-        assert!(
-            buffer[0][0] > 1.0 && buffer[0][0] < 1.05 && buffer[1][0] > 1.0 && buffer[1][0] < 1.05,
-            "{buffer:?}"
-        );
+        // Neither the non-standing 9 nor chart 1's light reaches chart 0: within its own range.
+        assert!(buffer[0][0] > 1.0 && buffer[0][0] < 1.05, "{buffer:?}");
+        assert!(buffer[2][0] > 1.0 && buffer[2][0] < 1.05, "{buffer:?}");
         assert!(buffer[3][0] > 4.0 && buffer[3][0] < 4.02, "{buffer:?}");
         let mut same = buffer.clone();
         atrous(&mut same, &charts, &normals, w, h, 1, 0.0);

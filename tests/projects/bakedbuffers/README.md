@@ -330,7 +330,9 @@ their light and spreads none from them), Backface Tolerances other than 0.9 and 
 than 2 (the runner refuses another Backface Tolerance), the Lighting Settings' Indirect
 Intensity other than 1 (Unbound's lightmap leaves it out), the Auto filtering, denoising,
 filtering of directional lightmaps and in the Shadowmask and Subtractive Lighting Modes, the
-texels beyond the padding.
+texels beyond the padding; of the filters: the A-Trous filter with 4 x 4 samples a texel (only 2 x
+2 measured; it reads each texel's first sample's normal), the ambient occlusion target, charts
+reaching the lightmap's border, filter radii and sigmas other than those above.
 
 `residuals.json` names the known differences, each with the exact text the comparison gives it
 (another text, or none, fails the run); the lightmap made of a buffer with a residual differs

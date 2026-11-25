@@ -776,6 +776,8 @@ def lighting_filtering(scene):
     parts = []
     for part in ('Direct', 'Indirect'):
         kind = value(f'm_PVRFilterType{part}')
+        if kind not in (0, 1, 2):
+            raise ValueError(f'{scene}.lighting: the {part.lower()} filter type {kind} is not known')
         parts.append(('gaussian', value(f'm_PVRFilteringGaussRadius{part}')) if kind == 0
                      else ('atrous', value(f'm_PVRFilteringAtrousPositionSigma{part}')) if kind == 1 else None)
     return tuple(parts)
