@@ -222,6 +222,11 @@ from their first surface on whatever the Min Bounces.
   alone denoised), `DenoiseOidnAtrous` (denoised, then A-Trous filters of position sigma 0.5 and
   1.5) and `DenoiseOidnAoOptix` (the ambient occlusion target's denoiser OptiX, ambient
   occlusion off: the Editor bakes it).
+- `CompressLow`, `CompressNormal`, `CompressHigh`, `CompressImages` (the coloured scene under
+  the sun; the last directional in the Shadowmask mode under a mixed sun): the lightmap
+  compression low, normal and high quality. The buffers and images are those of uncompressed
+  lightmaps; each written image is imported with the texture compression CompressedLQ,
+  Compressed or CompressedHQ (its `.meta`; the textures' formats are the texture importer's).
 - `IntensityTwice`, `IntensityHalf` (the scene of `Probes`), `IntensityAuto` (the coloured scene
   under the sun, the Auto filtering): Indirect Intensity 2, 0.5 and 2. The buffers are those of
   an Indirect Intensity of 1; the lightmap's indirect and sky's light is multiplied by it (the
