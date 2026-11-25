@@ -15,6 +15,7 @@ pub mod preprocess;
 
 mod buffer_members;
 mod buffer_parameters;
+mod empty_structs;
 mod exponents;
 pub mod fetch;
 mod fit;
@@ -37,7 +38,7 @@ use std::{
 
 /// Bumped whenever the output for a given source changes (cache entries of other versions are
 /// never used).
-pub const FORMAT_VERSION: u32 = 75;
+pub const FORMAT_VERSION: u32 = 76;
 
 /// The identity of this build's compiler (`unbound_source_identity::SHADER_COMPILER`): the hash
 /// of the sources that decide its output. Cache entries are keyed by it beside
@@ -1411,16 +1412,19 @@ const FRAMEBUFFER_INPUT_MACROS: &[&str] = &[
 /// with their counters ([`buffer_parameters`]), matrix
 /// swizzles of several elements ([`matrix_swizzles`]), `frexp` and `ldexp` ([`exponents`]),
 /// arguments converted to scalar and vector `inout` parameters ([`inout_parameters`]),
-/// functions declared to return a `const` value ([`plain_returns`]).
+/// functions declared to return a `const` value ([`plain_returns`]), structs declared without
+/// members ([`empty_structs`]).
 fn fxc_compatible(source: &str, inout: inout_parameters::Scope) -> String {
-    buffer_members::buffer_members(&writable_globals(&constructor_statements(
-        &flat_bool_varyings(&rename_type_semantics(&drop_empty_declarations(
-            &drop_duplicate_overloads(&half_literals(&matrix_swizzles::matrix_swizzles(
-                &exponents::exponent_calls(&buffer_parameters::buffer_parameters(&plain_returns(
-                    &opaque_members::opaque_members(&scopes::flatten_scopes(
-                        &inout_parameters::inout_parameters(source, inout),
+    empty_structs::empty_structs(&buffer_members::buffer_members(&writable_globals(
+        &constructor_statements(&flat_bool_varyings(&rename_type_semantics(
+            &drop_empty_declarations(&drop_duplicate_overloads(&half_literals(
+                &matrix_swizzles::matrix_swizzles(&exponents::exponent_calls(
+                    &buffer_parameters::buffer_parameters(&plain_returns(
+                        &opaque_members::opaque_members(&scopes::flatten_scopes(
+                            &inout_parameters::inout_parameters(source, inout),
+                        )),
                     )),
-                ))),
+                )),
             ))),
         ))),
     )))
