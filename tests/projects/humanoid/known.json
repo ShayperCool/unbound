@@ -28,7 +28,8 @@
       "stream.stance.step5.motion velocity[1]",
       "stream.weightsNoSolve.step17.motion velocity[1]",
       "stream.weightsNoSolve.step5.motion velocity[1]",
-      "genericCut.toGenericOn.step5.motion velocity[1]"
+      "genericCut.toGenericOn.step5.motion velocity[1]",
+      "genericCut.fadeToGenericOn.step5.motion velocity[1]"
     ]
   },
   "foot-ik-legs": {
@@ -489,7 +490,6 @@
       "genericCut.fadeToGenericOn.step28.pose bodyPosition[0]",
       "genericCut.fadeToGenericOn.step28.pose bodyPosition[1]",
       "genericCut.fadeToGenericOn.step28.pose bodyRotation",
-      "genericCut.fadeToGenericOn.step5.motion velocity[1]",
       "genericCut.fadeToHumanOn.step12.body bodyPosition[0]",
       "genericCut.fadeToHumanOn.step12.body bodyPosition[1]",
       "genericCut.fadeToHumanOn.step12.body bodyRotation",

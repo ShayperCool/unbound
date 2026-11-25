@@ -441,7 +441,7 @@ cross-fades of a quarter of the target's length (`fadeToGenericOn`, `fadeToHuman
 unused generic state does not stop the humanoid state's root motion (the root's own channels are not
 written while root motion applies); while the generic state moves the root the feet take an idle
 update (pivot weight 0.5). The cross-fades' blend of the two motions is listed in `known.json`
-(`humanoid-generic-crossfade-root-motion`), open.
+(`humanoid-generic-crossfade-root-motion`; Unbound reports it), open.
 
 Five `genericAdditive.*` controls append 475 rows from matching macOS 6000.0.71f1
 Editor captures. A stable positive-weight additive humanoid clip changes the body and muscles
