@@ -197,9 +197,12 @@ namespace UnityEditor
                     break;
                 }
             bool created = window == null;
+            // Unity's C# for GetWindowWithRect: an open window keeps its rect, size limits and
+            // title, and is only focused (measured: tests/projects/editorwindowgui window/withRect*).
+            bool keepOpen = rect.HasValue && !created && Compat.EditorWindowGuiMeasured;
             if (created) window = Create(type, title);
-            else if (title != null) window.titleContent = new GUIContent(title);
-            if (rect.HasValue)
+            else if (title != null && !keepOpen) window.titleContent = new GUIContent(title);
+            if (rect.HasValue && !keepOpen)
             {
                 window.position = rect.Value;
                 window.minSize = window.maxSize = rect.Value.size;

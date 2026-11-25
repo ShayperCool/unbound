@@ -51,6 +51,36 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
+        public void GetWindowWithRectOnlyFocusesAnOpenWindow()
+        {
+            using var release = TestRelease.Pin(TestRelease.Measured);
+            var window = EditorWindow.GetWindow<GuiProbeWindow>("Open");
+            try
+            {
+                var position = window.position;
+                var min = window.minSize;
+                var max = window.maxSize;
+                var rect = new Rect(123, 145, 321, 234);
+                Assert.Same(window, EditorWindow.GetWindowWithRect<GuiProbeWindow>(rect, false, "WithRect", true));
+                Assert.Same(window, EditorWindow.GetWindowWithRect(typeof(GuiProbeWindow), rect, false, "WithRectType"));
+                Assert.Equal(position, window.position);
+                Assert.Equal(min, window.minSize);
+                Assert.Equal(max, window.maxSize);
+                Assert.Equal("Open", window.titleContent.text);
+            }
+            finally { window.Close(); }
+            // A new window takes the rect's size as its size limits.
+            var created = EditorWindow.GetWindowWithRect<GuiProbeWindow>(new Rect(10, 20, 300, 200), false, "New");
+            try
+            {
+                Assert.Equal(new Vector2(300, 200), created.minSize);
+                Assert.Equal(new Vector2(300, 200), created.maxSize);
+                Assert.Equal("New", created.titleContent.text);
+            }
+            finally { created.Close(); }
+        }
+
+        [Fact]
         public void ATexturedPolyLineReadsTheTextureInEveryEvent()
         {
             var previous = Event.current;
