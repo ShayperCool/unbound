@@ -50,31 +50,38 @@ namespace Unbound.Runtime
         }
 
         /// <summary>
-        /// Play mode started directly from its startup scene starts as in an Editor that has drawn
-        /// its views (as for the pipeline's shader tag,
-        /// <see cref="UnityEngine.Rendering.RenderPipelineManager.ActivateConfiguredPipelineTag"/>):
+        /// Play mode starts as in an Editor that has drawn its views (as for the pipeline's shader
+        /// tag, <see cref="UnityEngine.Rendering.RenderPipelineManager.ActivateConfiguredPipelineTag"/>):
         /// an Edit mode render validates the materials it draws, which a Play mode draw does not, so
-        /// the materials the startup scene's renderers draw were validated before Play mode (matches
-        /// the Unity 6000.0.71f1 Editor, tests/projects/graphqueue scene.start;
-        /// tests/projects/urpwrites played.LitStaleDrawn). A session that starts in Edit mode
-        /// validates them as it draws there (<see cref="Material.ValidateDeferredEditorForDraw"/>).
-        /// Which renderers a real Editor's views reach is unmeasured (Unbound: every enabled renderer
-        /// of the scene whose object and parents are saved active), as are other drawn materials
-        /// (skybox, UI, terrain).
+        /// the materials the scenes Play mode starts with draw were validated before it (matches the
+        /// Unity 6000.0.71f1 Editor, tests/projects/graphqueue scene.start;
+        /// tests/projects/urpwrites played.LitStaleDrawn): those of their renderers, the skybox of
+        /// the active scene and of cameras' Skybox components, and terrains' templates, for every
+        /// enabled component whose object and parents are saved active. Unbound draws no Edit mode
+        /// frames of its own (a script's Edit mode render validates what it draws,
+        /// <see cref="Material.ValidateDeferredEditorForDraw"/>). Which of them a real Editor's views
+        /// reach is unmeasured, and so are UI materials (not validated here: a follow-up).
         /// </summary>
         internal static void ValidateDrawnBeforePlay(SceneData scene)
         {
             if (!Compat.DeferredMaterialValidationMeasured || scene == null) return;
+            if (scene == SceneRegistry.Active) Drawn(RenderSettings.skybox);
             foreach (var root in scene.Roots.ToArray())
             {
                 if (root == null) continue;
-                foreach (var renderer in root.GetComponentsInChildren<Renderer>(false))
-                {
-                    if (!renderer.enabled || !ActiveInScene(renderer.transform)) continue;
-                    foreach (var material in renderer.sharedMaterials)
-                        if (material != null) material.ValidateDeferredEditor();
-                }
+                foreach (var renderer in root.GetComponentsInChildren<Renderer>(true))
+                    if (renderer.enabled && ActiveInScene(renderer.transform))
+                        foreach (var material in renderer.sharedMaterials) Drawn(material);
+                foreach (var skybox in root.GetComponentsInChildren<Skybox>(true))
+                    if (skybox.enabled && ActiveInScene(skybox.transform)) Drawn(skybox.material);
+                foreach (var terrain in root.GetComponentsInChildren<Terrain>(true))
+                    if (terrain.enabled && ActiveInScene(terrain.transform)) Drawn(terrain.materialTemplate);
             }
+        }
+
+        static void Drawn(Material material)
+        {
+            if (material != null) material.ValidateDeferredEditor();
         }
 
         /// <summary>Whether the object and its parents are active as saved (before the scene's
@@ -176,8 +183,11 @@ namespace Unbound.Runtime
         /// property access, SetPass or draw validates it (tests/projects/modelimport BuiltinBlend).</summary>
         Imported,
         /// <summary>A material asset loaded from its file, with any editor: its first property value
-        /// access through the Material API (Get*, Set*, Has*, HasProperty, <c>color</c>,
-        /// <c>mainTexture</c>), SetPass or a shader set validates it; reading its keywords, render
+        /// access through the Material API, SetPass or a shader set validates it (measured for
+        /// GetFloat, SetFloat, SetPass and a shader set; exploratory captures outside the probes found
+        /// the same for HasProperty, HasFloat, GetColor, GetTexture, <c>color</c>, <c>mainTexture</c>,
+        /// SetColor, SetTexture and SetInt, and every other value accessor takes the same path here);
+        /// reading its keywords, render
         /// queue, tags or passes, changing keywords or passes, copies and drawing in Play mode do
         /// not, an Edit mode draw does (tests/projects/urpwrites with URP,
         /// tests/projects/materialvalidation Later* with the built-in pipeline,

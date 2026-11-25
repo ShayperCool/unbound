@@ -1229,9 +1229,11 @@ namespace UnityEngine
             MainThreadCheck.Check("SetFloatImpl");
             TouchSheet(validateDeferred: false);
             // The value the material's data holds, written again, leaves an asset clean (matches the
-            // Unity 6000.0.71f1 Editor, tests/projects/urpwrites same.LitCleanSame).
+            // Unity 6000.0.71f1 Editor, tests/projects/urpwrites same.LitCleanSame); a variant's
+            // value it takes from its parent is no data of its own: the write makes it an override.
             bool same = m_Floats.TryGetValue(nameID, out var held) && held == value && !m_RawBindings.Contains(nameID)
-                && m_State.m_ValidatedFloats?.ContainsKey(nameID) != true;
+                && m_State.m_ValidatedFloats?.ContainsKey(nameID) != true
+                && (m_Parent == null || m_Own?.Contains(nameID) == true);
             m_RawBindings.Remove(nameID);
             m_Floats[nameID] = value;
             RecordProfilerPropertyWrite(nameID, ShaderPropertyType.Float);

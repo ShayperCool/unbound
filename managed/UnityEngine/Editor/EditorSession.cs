@@ -84,6 +84,8 @@ namespace Unbound.Runtime
 
         static void EnterPlayMode()
         {
+            // The Editor's views drew the open scenes in Edit mode (MaterialValidation.ValidateDrawnBeforePlay).
+            foreach (var scene in SceneRegistry.Loaded.ToArray()) MaterialValidation.ValidateDrawnBeforePlay(scene);
             EditorApplication.Internal_PlayModeStateChanged(PlayModeStateChange.ExitingEditMode);
             UnityEngine.U2D.SpriteAtlasPacking.PackV1ForPlayMode();
             IsPlaying = true;

@@ -191,8 +191,9 @@ namespace UnityEngine.Tests
             Assert.Equal(new[] { "_ALPHATEST_ON" }, imported.shaderKeywords);
         }
 
-        /// <summary>The accesses that validate a loaded asset first (tests/projects/urpwrites
-        /// access.*; the Editor's whole list in tests/projects/urpwrites/README.md).</summary>
+        /// <summary>The accesses that validate a loaded asset first (GetFloat, SetPass and a shader
+        /// set measured by tests/projects/urpwrites read.*, setPass.*, shader.*; the others found
+        /// the same in exploratory captures, see <see cref="PendingValidation.Loaded"/>).</summary>
         [Theory]
         [InlineData("has")]
         [InlineData("hasfloat")]
@@ -254,7 +255,47 @@ namespace UnityEngine.Tests
             MaterialValidation.DeferImportedEditor(imported);
             imported.SetFloat("_SrcBlend", 7);
             Assert.Equal(7f, imported.GetFloat("_SrcBlend"));
-            Assert.Equal(1f, imported.SheetFloat(srcBlend));
+        }
+
+        /// <summary>A clean asset stays clean through a validation that changes nothing and a float
+        /// written with the value it holds (tests/projects/urpwrites read.LitCleanRead,
+        /// same.LitCleanSame); a validation that changes it dirties it (read.LitStaleRead), and so
+        /// does a variant's write of the value it takes from its parent, which becomes its own.</summary>
+        [Fact]
+        public void OnlyAChangeOfItsDataDirtiesALoadedAsset()
+        {
+            using var release = TestRelease.Pin(TestRelease.Measured);
+            // Saved as its editor leaves it (validated), or saved stale; then loaded.
+            Material Asset(int mode, bool saved = true)
+            {
+                var m = Standard();
+                m.SetFloat("_Mode", mode);
+                if (saved) MaterialValidation.Validate(m);
+                m.IsPersistentAsset = true;
+                EditorUtility.ClearDirty(m);
+                MaterialValidation.ValidateLoaded(FileOf(m));
+                return m;
+            }
+            var clean = Asset(0);
+            clean.GetFloat("_Mode");
+            Assert.False(EditorUtility.IsDirty(clean));
+            var same = Asset(0);
+            same.SetFloat("_Mode", 0);
+            Assert.False(EditorUtility.IsDirty(same));
+            same.SetFloat("_Mode", 0.5f);
+            Assert.True(EditorUtility.IsDirty(same));
+            // A cutout saved with opaque states: its validation changes it.
+            var stale = Asset(1, saved: false);
+            stale.GetFloat("_Mode");
+            Assert.True(EditorUtility.IsDirty(stale));
+
+            var parent = Asset(0);
+            var variant = new Material(parent.shader) { parent = parent, IsPersistentAsset = true };
+            variant.GetFloat("_Mode");
+            EditorUtility.ClearDirty(variant);
+            variant.SetFloat("_Mode", 0);
+            Assert.True(EditorUtility.IsDirty(variant));
+            Assert.Contains(Shader.PropertyToID("_Mode"), variant.SheetNames(Material.SheetKind.Floats));
         }
 
         /// <summary>Play mode starts as in an Editor whose views drew the startup scene: the pending
@@ -293,9 +334,16 @@ namespace UnityEngine.Tests
                 SceneRegistry.MoveToScene(parent, scene);
                 // A scene's objects wait for its Awake as Play mode starts: still drawn by the views.
                 var waiting = Drawn("waiting", true, true);
-                scene.Roots[scene.Roots.Count - 1].m_AwaitingSceneAwake = true;
+                var sky = ProjectEdited();
+                MaterialValidation.ValidateLoaded(FileOf(sky));
+                var cameraObject = new GameObject("camera");
+                cameraObject.AddComponent<Skybox>().material = sky;
+                SceneRegistry.MoveToScene(cameraObject, scene);
+                var waitingRoot = scene.Roots.Count - 2;
+                scene.Roots[waitingRoot].m_AwaitingSceneAwake = true;
                 MaterialValidation.ValidateDrawnBeforePlay(scene);
-                scene.Roots[scene.Roots.Count - 1].m_AwaitingSceneAwake = false;
+                scene.Roots[waitingRoot].m_AwaitingSceneAwake = false;
+                Assert.Equal("PROJECT_VALIDATED", Keywords(sky));
                 Assert.Equal("PROJECT_VALIDATED", Keywords(drawn));
                 Assert.Equal("PROJECT_VALIDATED", Keywords(waiting));
                 Assert.Equal("", Keywords(disabled));

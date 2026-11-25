@@ -38,7 +38,9 @@ material's document first; `.idsAscending` records the file's order).
 Measured: the Editor leaves a URP Lit material as saved when it loads it (`load.*.keywords`,
 `load.*.passes`) and validates it with its shader's editor at its first property value access
 through the Material API: a float read (`read.LitStaleRead`), a write (`edit.*`), `SetPass`, a shader
-set, also the same shader (`shader.*`). Reads of its keywords, queue, tag and passes, a keyword
+set, also the same shader (`shader.*`); exploratory captures outside the probe found the same for
+`HasProperty`, `HasFloat`, `GetColor`, `GetTexture`, `color`, `mainTexture`, `SetColor`, `SetTexture`
+and `SetInt`. Reads of its keywords, queue, tag and passes, a keyword
 change, a copy and drawing do not validate it (`meta.*`, `keyword.*`, `copy.*`,
 `played.LitStaleDrawn`), so a material nobody uses that way is not written (`LitStale`). The
 validation sees a value written; the material then reads that value while its data, which is saved,
