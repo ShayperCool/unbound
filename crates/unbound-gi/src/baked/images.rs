@@ -313,6 +313,42 @@ mod tests {
         assert_eq!(out[3], di);
     }
 
+    /// Where the lightmap is filtered, the directions are weighed by the light as processed,
+    /// not by the raw buffers: raw direct light everywhere and no indirect, but processed
+    /// (here: denoised away) direct light none and indirect light everywhere, gives the
+    /// indirect direction. (One chart per texel: the radius-5 filter leaves each alone.)
+    #[test]
+    fn a_filtered_lightmaps_directions_are_weighed_by_the_processed_light() {
+        let used = [true; 4];
+        let light = [1.0, 1.0, 1.0, 1.0];
+        let dark = [0.0, 0.0, 0.0, 1.0];
+        let b = Buffers {
+            width: 4,
+            height: 1,
+            used: &used,
+            validity: None,
+            direct: &[light; 4],
+            indirect: Some(&[dark; 4]),
+            environment: None,
+        };
+        let charts = [0, 1, 2, 3];
+        let post = Post {
+            width: 4,
+            height: 1,
+            charts: &charts,
+            normals: None,
+            denoiser: None,
+        };
+        let dd = [1.0, 0.5, 0.5, 1.0];
+        let di = [0.5, 1.0, 0.5, 0.0];
+        let raw = directional(&b, &[dd; 4], Some(&[di; 4]), 0.9, 0, None).unwrap();
+        assert!(raw.iter().all(|t| *t == dd), "{raw:?}");
+        let parts = [vec![dark; 4], vec![light; 4]];
+        let out = directional(&b, &[dd; 4], Some(&[di; 4]), 0.9, 0, Some((&parts, &post))).unwrap();
+        let near = |a: &[f32; 4]| a.iter().zip(&di).all(|(x, y)| (x - y).abs() < 1e-6);
+        assert!(out.iter().all(near), "{out:?}");
+    }
+
     #[test]
     fn a_texel_without_indirect_light_of_its_own_keeps_its_direct_direction() {
         // The second texel's indirect light is no number: it does not stand, so the texel

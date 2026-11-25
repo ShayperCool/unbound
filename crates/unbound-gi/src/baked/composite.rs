@@ -178,19 +178,6 @@ pub fn composite(
     };
     let mut parts = None;
     if let Some(filtering) = filtering {
-        // (The direct light of a group of four texels, in the buffer's order, whose fourth
-        // numbers sum to no more than 0 is none.)
-        for group in 0..texels / 4 {
-            let at = 4 * group;
-            let sum = ((buffers.direct[at][3] + buffers.direct[at + 1][3])
-                + buffers.direct[at + 2][3])
-                + buffers.direct[at + 3][3];
-            if !(sum > 0.0) {
-                for texel in &mut direct[at..at + 4] {
-                    *texel = [0.0; 4];
-                }
-            }
-        }
         for (part, with) in [
             (&mut indirect, filtering.indirect),
             (&mut direct, filtering.direct),
