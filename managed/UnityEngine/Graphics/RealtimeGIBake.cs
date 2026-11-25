@@ -307,6 +307,11 @@ namespace UnityEngine
                 ? "directional lightmaps with an Indirect Intensity other than 1 are not measured"
             : settings.bakedGI && settings.indirectScale != 1f && settings.mixedBakeMode != MixedLightingMode.IndirectOnly
                 ? "an Indirect Intensity other than 1 in the Shadowmask or Subtractive Lighting Mode is not measured"
+            // (Measured with filters that commute with the factor: none, Gaussian, Open Image
+            // Denoise; the A-Trous filter weighs the light's differences, which the factor changes.)
+            : settings.bakedGI && settings.indirectScale != 1f && settings.filteringMode == LightingSettings.FilterMode.Advanced
+                && settings.filterTypeIndirect == LightingSettings.FilterType.ATrous
+                ? "an Indirect Intensity other than 1 with the indirect light's A-Trous filter is not measured"
             : folder == null ? "an untitled scene's is not measured"
             : !Compat.BakeFilesMeasured ? $"of Unity {Application.unityVersion} it is not measured (its release family)"
             : renderPipeline && (!settings.bakedGI || settings.directionalityMode != LightmapsMode.NonDirectional || settings.mixedBakeMode != MixedLightingMode.IndirectOnly)

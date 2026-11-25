@@ -338,6 +338,13 @@ namespace UnityEngine.Tests
                     environment.mixedBakeMode = MixedLightingMode.Subtractive;
                     Assert.Contains("Indirect Intensity other than 1 in the Shadowmask", Unwritten(environment, "Assets/Scenes/Lit", true, lightmaps: true));
                     environment.mixedBakeMode = MixedLightingMode.IndirectOnly;
+                    environment.filteringMode = LightingSettings.FilterMode.Advanced;
+                    environment.denoiserTypeDirect = environment.denoiserTypeIndirect = LightingSettings.DenoiserType.None;
+                    environment.filterTypeIndirect = LightingSettings.FilterType.Gaussian;
+                    Assert.Null(Unwritten(environment, "Assets/Scenes/Lit", true, lightmaps: true));
+                    environment.filterTypeIndirect = LightingSettings.FilterType.ATrous;
+                    Assert.Contains("A-Trous", Unwritten(environment, "Assets/Scenes/Lit", true, lightmaps: true));
+                    environment.filteringMode = LightingSettings.FilterMode.None;
                     environment.indirectScale = 1f;
                     Assert.Null(Unwritten(environment, "Assets/Scenes/Lit", true, lightmaps: true));
                     environment.lightmapCompression = LightmapCompression.NormalQuality;

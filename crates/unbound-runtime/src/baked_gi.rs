@@ -692,6 +692,12 @@ impl<'a> Buffers<'a> {
         filtering: Option<FilteringData>,
         indirect_scale: f32,
     ) -> Result<()> {
+        // (The managed side asks for neither: the directions would weigh the light unscaled
+        // where it is not filtered, and the combination is not measured.)
+        anyhow::ensure!(
+            !(directional && indirect_scale != 1.0),
+            "directional lightmaps with an Indirect Intensity other than 1 are not made"
+        );
         let index = self.lightmaps.len();
         self.write(format!("occupancy{index}.u8"), g.occupancy.clone())?;
         self.write(

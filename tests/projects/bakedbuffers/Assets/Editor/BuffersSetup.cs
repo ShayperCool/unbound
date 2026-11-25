@@ -899,10 +899,6 @@ public static class BuffersSetup
         Save(scene, "ProbesReach");
     }
 
-    /// <summary>Light probes under a sky of three colours (the gradient), with directions picked
-    /// by its brightness and without, in the Shadowmask Lighting Mode with a probe in a mixed
-    /// spot light's cone; beside the probes' group, a disabled group and a group of an inactive
-    /// object.</summary>
     /// <summary>The scene of <c>Probes</c> (a sun, a point light, a mixed spot light, an
     /// ambient colour, two bounces, light probes) with an Indirect Intensity of 2 and of 0.5,
     /// and the coloured scene under a sun with one of 2 under the Auto filtering.</summary>
@@ -936,6 +932,10 @@ public static class BuffersSetup
         }
     }
 
+    /// <summary>Light probes under a sky of three colours (the gradient), with directions picked
+    /// by its brightness and without, in the Shadowmask Lighting Mode with a probe in a mixed
+    /// spot light's cone; beside the probes' group, a disabled group and a group of an inactive
+    /// object.</summary>
     static void ProbesSky()
     {
         foreach (var (name, picked) in new[] { ("ProbesSky", true), ("ProbesSkyEven", false) })

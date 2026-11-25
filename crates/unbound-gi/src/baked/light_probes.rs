@@ -483,8 +483,10 @@ mod tests {
     #[test]
     fn the_editors_probe_coefficients_are_made_of_its_buffers() {
         // (The buffers and the lighting data come from two Editor bakes, whose sums differ in
-        // their last bits: within 1e-5. Every group of these scenes removes ringing.)
-        for scene in SCENES {
+        // their last bits: within 1e-5. Every group of these scenes removes ringing. The
+        // Intensity scenes are the Probes scene under an Indirect Intensity of 2 and 0.5.)
+        let scaled = [("IntensityTwice", 2.0), ("IntensityHalf", 0.5)];
+        for (scene, scale) in SCENES.iter().map(|s| (*s, 1.0)).chain(scaled) {
             let (direct, indirect) = (
                 buffer(scene, "radianceDirect0.shl2"),
                 buffer(scene, "radianceIndirect0.shl2"),
@@ -495,7 +497,7 @@ mod tests {
                 .clone();
             assert_eq!(expected.len(), direct.len(), "{scene}");
             for (p, want) in expected.iter().enumerate() {
-                let made = coefficients(&direct[p], &indirect[p], 1.0, true);
+                let made = coefficients(&direct[p], &indirect[p], scale, true);
                 for (k, v) in made.iter().enumerate() {
                     let w = number(&want[format!("sh[{k:2}]")]);
                     assert!(
