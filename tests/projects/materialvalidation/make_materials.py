@@ -58,6 +58,12 @@ CASES = {
     'ProjectGuiNamespaced': dict(shader=(4800000, SHADERS['ProbeNamespaced']), slots=(), plain=True, floats={'_Value': 1}),
     'NoGui': dict(shader=(4800000, SHADERS['ProbePlain']), slots=(), plain=True, floats={'_Value': 1},
                   keywords=['PROBE_OTHER'], queue=2600, colors={'_EmissionColor': RED}, flags=1),
+    # Used after the cases above before any property read: drawn, written to, activated by SetPass.
+    'LaterDrawnCutout': dict(floats={'_Mode': 1}, queue=2000),
+    'LaterWrittenCutout': dict(floats={'_Mode': 1}, queue=2000),
+    'LaterSetPassCutout': dict(floats={'_Mode': 1}, queue=2000),
+    'LaterProjectDrawn': dict(shader=(4800000, SHADERS['ProbeValidated']), slots=(), plain=True, floats={'_Value': 1}),
+    'LaterProjectWritten': dict(shader=(4800000, SHADERS['ProbeValidated']), slots=(), plain=True, floats={'_Value': 1}),
 }
 
 

@@ -18,6 +18,16 @@ GUIDS = {
     'LitPassesAddedEdited': 'c1a0c0de000000000000000000000007',
     'LitOpaquePassesEdited': 'c1a0c0de000000000000000000000008',
     'PassNamesEdited': 'c1a0c0de000000000000000000000009',
+    'LitStaleRead': 'c1a0c0de00000000000000000000000a',
+    'LitCleanRead': 'c1a0c0de00000000000000000000000b',
+    'LitStaleMeta': 'c1a0c0de00000000000000000000000c',
+    'LitStaleKeyword': 'c1a0c0de00000000000000000000000d',
+    'LitStaleDrawn': 'c1a0c0de00000000000000000000000e',
+    'LitStaleSetPass': 'c1a0c0de00000000000000000000000f',
+    'LitStaleShader': 'c1a0c0de000000000000000000000010',
+    'LitStaleCopy': 'c1a0c0de000000000000000000000011',
+    'LitStaleSrcBlend': 'c1a0c0de000000000000000000000012',
+    'LitCleanSame': 'c1a0c0de000000000000000000000013',
 }
 
 
@@ -70,6 +80,17 @@ MATERIALS = {
     'LitOpaquePassesEdited': passes(named(LIT, 'LitOpaquePassesEdited'), ['SHADOWCASTER', 'DepthOnly', 'MOTIONVECTORS']),
     # The probe disables and enables passes by script (the names' spelling and order as written).
     'PassNamesEdited': passes(named(LIT, 'PassNamesEdited'), []),
+    # What validates a material on first use and what does not (the probe's use of each).
+    'LitStaleRead': stale(named(LIT, 'LitStaleRead')),
+    'LitCleanRead': named(LIT, 'LitCleanRead'),
+    'LitStaleMeta': stale(named(LIT, 'LitStaleMeta')),
+    'LitStaleKeyword': stale(named(LIT, 'LitStaleKeyword')),
+    'LitStaleDrawn': stale(named(LIT, 'LitStaleDrawn')),
+    'LitStaleSetPass': stale(named(LIT, 'LitStaleSetPass')),
+    'LitStaleShader': stale(named(LIT, 'LitStaleShader')),
+    'LitStaleCopy': stale(named(LIT, 'LitStaleCopy')),
+    'LitStaleSrcBlend': stale(named(LIT, 'LitStaleSrcBlend')),
+    'LitCleanSame': named(LIT, 'LitCleanSame'),
 }
 
 

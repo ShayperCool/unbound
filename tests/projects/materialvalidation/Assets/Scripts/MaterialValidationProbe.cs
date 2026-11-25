@@ -54,6 +54,57 @@ public class MaterialValidationProbe : MonoBehaviour
             if (m.HasProperty(p)) Write(name + "." + p, m.GetFloat(p));
     }
 
+    /// <summary>The keywords, render queue and RenderType of a material: no property value read,
+    /// so no validation.</summary>
+    void Metadata(string name, Material m)
+    {
+        var keywords = new List<string>(m.shaderKeywords);
+        keywords.Sort(StringComparer.Ordinal);
+        Write(name + ".keywords", string.Join(" ", keywords));
+        Write(name + ".renderQueue", m.renderQueue);
+        Write(name + ".renderType", m.GetTag("RenderType", false, "<none>"));
+    }
+
+    /// <summary>Loaded materials used before any property read: drawn for three frames, written
+    /// to (then read), activated by SetPass.</summary>
+    IEnumerator Later()
+    {
+        var drawn = Resources.Load<Material>("LaterDrawnCutout");
+        var drawnProject = Resources.Load<Material>("LaterProjectDrawn");
+        var camera = new GameObject("LaterCamera").AddComponent<Camera>();
+        camera.transform.position = new Vector3(0, 0, -5);
+        GameObject.CreatePrimitive(PrimitiveType.Cube).GetComponent<Renderer>().sharedMaterial = drawn;
+        var sphere = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+        sphere.transform.position = new Vector3(1.5f, 0, 0);
+        sphere.GetComponent<Renderer>().sharedMaterial = drawnProject;
+        var written = Resources.Load<Material>("LaterWrittenCutout");
+        written.SetFloat("_SrcBlend", 7);
+        Metadata("LaterWrittenCutout.written", written);
+        Write("LaterWrittenCutout.written._SrcBlend", written.GetFloat("_SrcBlend"));
+#if UNITY_EDITOR
+        // The value the material's data holds (what is saved).
+        var floats = new UnityEditor.SerializedObject(written).FindProperty("m_SavedProperties.m_Floats");
+        for (int i = 0; i < floats.arraySize; i++)
+        {
+            var entry = floats.GetArrayElementAtIndex(i);
+            if (entry.FindPropertyRelative("first").stringValue == "_SrcBlend")
+                Write("LaterWrittenCutout.written._SrcBlendSaved", entry.FindPropertyRelative("second").floatValue);
+        }
+#endif
+        var writtenProject = Resources.Load<Material>("LaterProjectWritten");
+        writtenProject.SetFloat("_Value", 5);
+        Metadata("LaterProjectWritten.written", writtenProject);
+        Write("LaterProjectWritten.written._Value", writtenProject.GetFloat("_Value"));
+        var setPass = Resources.Load<Material>("LaterSetPassCutout");
+        setPass.SetPass(0);
+        Metadata("LaterSetPassCutout.setPass", setPass);
+        int rendered = Time.renderedFrameCount;
+        for (int i = 0; i < 3; i++) yield return null;
+        Write("Later.drawnFrames", Time.renderedFrameCount > rendered);
+        Metadata("LaterDrawnCutout.drawn", drawn);
+        Metadata("LaterProjectDrawn.drawn", drawnProject);
+    }
+
     IEnumerator Start()
     {
         Application.logMessageReceived += OnLog;
@@ -77,6 +128,7 @@ public class MaterialValidationProbe : MonoBehaviour
         var cube = GameObject.CreatePrimitive(PrimitiveType.Cube);
         Record("BuiltinDefault", cube.GetComponent<Renderer>().sharedMaterial);
         Write("Controls.log", string.Join(" || ", m_Logs));
+        yield return Later();
         Application.logMessageReceived -= OnLog;
         Write("complete", 1);
         File.WriteAllLines(s_Out + ".tmp", m_Lines);

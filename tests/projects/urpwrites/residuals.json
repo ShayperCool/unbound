@@ -15,5 +15,8 @@
     "played.LitStale.keywords",
     "played.PassNamesEdited.passes",
     "exit.Assets/Resources/M/PassNamesEdited.mat"
+  ],
+  "Material.passCount of the URP Lit material reads 1 in the macOS batch-mode Editor and the shader's pass count (9) in Unbound; which SubShader or state the Editor counts is not measured: follow-up": [
+    "meta.LitStaleMeta.passCount"
   ]
 }
