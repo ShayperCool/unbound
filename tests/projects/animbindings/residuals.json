@@ -1,8 +1,0 @@
-{
-  "Material property bindings are not listed: the Editor lists the renderer's material's shader properties first (material.<name>, .r/.g/.b/.a, .x/.y/.z/.w, <texture>_ST/_TexelSize/_HDR) in an order not yet established; Unbound lists the renderer's own bindings, which match": [
-    "UnityEngine.SpriteMask",
-    "UnityEngine.SpriteRenderer",
-    "UnityEngine.Tilemaps.TilemapRenderer",
-    "UnityEngine.U2D.SpriteShapeRenderer"
-  ]
-}

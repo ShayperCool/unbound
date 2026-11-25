@@ -13,9 +13,9 @@ Unbound lists an engine component's bindings from this measurement
 does not offer animates nothing (tests/projects/enginediscrete). Scripts keep their serialized
 numbers and flags; an engine type outside the table keeps them too, with a notice.
 
-Residual (`residuals.json`): the four renderers whose default material has shader properties
-(SpriteRenderer, SpriteMask, TilemapRenderer, SpriteShapeRenderer) list `material.*` bindings first,
-in an order not established yet; Unbound lists only the renderer's own bindings, which match.
+The four renderers whose default material has shader properties (SpriteRenderer, SpriteMask,
+TilemapRenderer, SpriteShapeRenderer) list `material.*` bindings first, in the order
+tests/projects/animmaterialbindings measures.
 
 ```sh
 python3 tests/projects/animbindings/run.py record --label a
