@@ -66,6 +66,8 @@
 {"k":"renderer/moving turning","v":"cast=Off receive=0 motion=Object probes=Off reflections=Off materials=Hidden/VFX/MovingTurning/System (1)/Output Particle|Unlit Quad"}
 {"k":"renderer/moving lit mesh","v":"cast=Off receive=0 motion=Object probes=Off reflections=Off materials=Hidden/VFX/MovingLitMesh/System (1)/Output Particle|URP Lit|Mesh"}
 {"k":"renderer/moving lit strip","v":"cast=Off receive=0 motion=Camera probes=Off reflections=Off materials=Hidden/VFX/MovingLitStrip/System (1)/Output ParticleStrip|URP Lit|Quad"}
+{"k":"renderer/moving bare graph","v":"cast=On receive=0 motion=Object probes=Off reflections=Off materials=Hidden/VFX/MovingBareGraph/System (1)/Output Particle|Shader Graph Quad - Unlit"}
+{"k":"renderer/moving lines target","v":"cast=Off receive=0 motion=Object probes=Off reflections=Off materials=Hidden/VFX/MovingLinesTarget/System (1)/Output Particle Line"}
 {"k":"renderer/no asset","v":"cast=Off receive=0 motion=Camera materials=0"}
 {"k":"renderer/asset given","v":"cast=On receive=0 motion=Camera materials=1"}
 {"k":"renderer/asset taken","v":"cast=Off receive=0 motion=Camera materials=0"}
@@ -154,6 +156,8 @@
 {"k":"draw/moving turning/f009","v":"alive=20 culled=0 awake=1 renderer enabled=1 visible=1"}
 {"k":"draw/moving lit mesh/f009","v":"alive=20 culled=0 awake=1 renderer enabled=1 visible=1"}
 {"k":"draw/moving lit strip/f009","v":"alive=16 culled=0 awake=1 renderer enabled=1 visible=1"}
+{"k":"draw/moving bare graph/f009","v":"alive=20 culled=0 awake=1 renderer enabled=1 visible=1"}
+{"k":"draw/moving lines target/f009","v":"alive=20 culled=0 awake=1 renderer enabled=1 visible=1"}
 {"k":"draw/sprite sorting/f010","v":"alive=9 culled=0 awake=1 renderer enabled=1 visible=1"}
 {"k":"draw/mesh sorted/f010","v":"alive=9 culled=0 awake=1 renderer enabled=1 visible=1"}
 {"k":"draw/mesh paused/f010","v":"alive=9 culled=0 awake=1 renderer enabled=1 visible=1"}
@@ -168,6 +172,8 @@
 {"k":"draw/moving turning/f010","v":"alive=20 culled=0 awake=1 renderer enabled=1 visible=1"}
 {"k":"draw/moving lit mesh/f010","v":"alive=20 culled=0 awake=1 renderer enabled=1 visible=1"}
 {"k":"draw/moving lit strip/f010","v":"alive=16 culled=0 awake=1 renderer enabled=1 visible=1"}
+{"k":"draw/moving bare graph/f010","v":"alive=20 culled=0 awake=1 renderer enabled=1 visible=1"}
+{"k":"draw/moving lines target/f010","v":"alive=20 culled=0 awake=1 renderer enabled=1 visible=1"}
 {"k":"draw/mesh exposed/f011","v":"alive=9 culled=0 awake=1 renderer enabled=1 visible=1"}
 {"k":"act/mesh exposed/f012","v":"Mask=0xfffffffe -> Shape=Wedge Mask=4294967294"}
 {"k":"draw/offscreen caster/f012","v":"alive=9 culled=0 awake=1 renderer enabled=1 visible=1"}

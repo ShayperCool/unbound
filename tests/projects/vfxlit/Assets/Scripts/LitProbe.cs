@@ -233,6 +233,10 @@ public sealed class LitProbe : MonoBehaviour
             // grow as they move.
             foreach (var (key, graph) in new[] { ("moving points", "MovingPoints"), ("moving lines", "MovingLines"), ("moving turning", "MovingTurning"), ("moving lit mesh", "MovingLitMesh"), ("moving lit strip", "MovingLitStrip") })
                 Blurred(Lamp(Draw(key, graph, 9, 10), LightType.Point));
+            // Quads of an unlit Shader Graph without properties, and lines to target positions
+            // that stay where they were set.
+            foreach (var (key, graph) in new[] { ("moving bare graph", "MovingBareGraph"), ("moving lines target", "MovingLinesTarget") })
+                Blurred(Lamp(Draw(key, graph, 9, 10), LightType.Point));
             // What each effect's renderer is set to: an asset whose graph has an output that
             // casts shadows asks its renderer to.
             foreach (var stage in m_Stages)

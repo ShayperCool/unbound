@@ -224,10 +224,21 @@ public static class LitAuthoring
     /// unlit cubes, opaque quads of the probe's lit Shader Graph, a strip of sixteen
     /// particles (opaque, unlit, and lit by the render pipeline), points, lines to an offset
     /// target, meshes lit by the render pipeline, and unlit quads that also turn (two turns a
-    /// second) and grow (a tenth at each update).</summary>
+    /// second) and grow (a tenth at each update); then quads of an unlit Shader Graph without
+    /// properties (its image a node's own texture), and lines to target positions that stay
+    /// where they were set.</summary>
     static void MovingOthers()
     {
-        foreach (var name in new[] { "MovingAlpha", "MovingCubes", "MovingGraph", "MovingStrip", "MovingPoints", "MovingLines", "MovingTurning", "MovingLitMesh", "MovingLitStrip" })
+        // An unlit graph of the render pipeline without properties.
+        var bare = new UniversalTarget();
+        bare.TrySetActiveSubTarget(typeof(UniversalUnlitSubTarget));
+        typeof(UniversalTarget).GetField("m_SupportVFX", BindingFlags.NonPublic | BindingFlags.Instance).SetValue(bare, true);
+        WriteImageGraph(BareGraph, bare, new[]
+        {
+            BlockFields.VertexDescription.Position, BlockFields.VertexDescription.Normal, BlockFields.VertexDescription.Tangent,
+            BlockFields.SurfaceDescription.BaseColor,
+        }, false);
+        foreach (var name in new[] { "MovingAlpha", "MovingCubes", "MovingGraph", "MovingStrip", "MovingPoints", "MovingLines", "MovingTurning", "MovingLitMesh", "MovingLitStrip", "MovingBareGraph", "MovingLinesTarget" })
         {
             var graph = NewGraph(name);
             VFXBasicSpawner spawn;
@@ -265,6 +276,13 @@ public static class LitAuthoring
                 output.SetSettingValue("useTargetOffset", true);
             }
             else if (name == "MovingLitMesh") (spawn, init, update, output) = System<VFXURPLitMeshOutput>(graph, 64);
+            else if (name == "MovingLinesTarget") (spawn, init, update, output) = System<VFXLineOutput>(graph, 64);
+            else if (name == "MovingBareGraph")
+            {
+                (spawn, init, update, output) = System<VFXComposedParticleOutput>(graph, 64);
+                output.SetSettingValue("m_Topology", new ParticleTopologyPlanarPrimitive(VFXPrimitiveType.Quad));
+                output.SetSettingValue("shaderGraph", ShaderGraph(BareGraph));
+            }
             else if (name == "MovingGraph")
             {
                 (spawn, init, update, output) = System<VFXComposedParticleOutput>(graph, 64);
@@ -280,6 +298,8 @@ public static class LitAuthoring
             SetRandom(init, "position", new Vector3(-1.4f, -1f, 0f), new Vector3(-0.8f, 1f, 0f));
             SetVector(init, "velocity", new Vector3(6f, 0f, 0f));
             Set(init, "size", 0.25f);
+            // Lines from each moving particle to a target position that stays where it was set.
+            if (name == "MovingLinesTarget") SetRandom(init, "targetPosition", new Vector3(-1.2f, -0.2f, 0f), new Vector3(-1f, 0.2f, 0f));
             if (name == "MovingCubes" || name == "MovingLitMesh") SetRandom(init, "angle", new Vector3(0f, 0f, 0f), new Vector3(90f, 90f, 90f));
             if (name == "MovingTurning")
             {
@@ -585,6 +605,8 @@ public static class LitAuthoring
     /// support for particles on, its base colour the probe's image through a texture property
     /// of its own.</summary>
     const string LitGraph = GraphFolder + "/Lit.shadergraph";
+    /// <summary>An unlit graph of the render pipeline without properties (MovingOthers).</summary>
+    const string BareGraph = GraphFolder + "/Bare.shadergraph";
 
     static ShaderGraphVfxAsset ShaderGraph(string path) =>
         AssetDatabase.LoadAllAssetsAtPath(path).OfType<ShaderGraphVfxAsset>().FirstOrDefault()
