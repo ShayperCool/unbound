@@ -232,6 +232,11 @@ from their first surface on whatever the Min Bounces.
   away, its radius the angle in radians); an area light's sample is the light of a point of
   its surface (a rectangle's over its solid angle, a disc's over its area), its range the
   light's dilated range.
+- `LinearSun`, `LinearLamps`, `LinearArea`: lights whose intensity multiplies their linear
+  colour (GraphicsSettings.lightsUseLinearIntensity, which the capture turns on for the scenes
+  named `Linear*`): a coloured sun, a point and a spot light over a light probe group, and a
+  rectangle area light. The bake takes each light's linear colour times its intensity, its
+  falloff the same as without linear intensity.
 - `CompressLow`, `CompressNormal`, `CompressHigh`, `CompressImages` (the coloured scene under
   the sun; the last directional in the Shadowmask mode under a mixed sun): the lightmap
   compression low, normal and high quality. The buffers and images are those of uncompressed
@@ -455,8 +460,8 @@ gamma-encoded values times the ambient intensity; a black sky where the realtime
 take the environment's light (`LightingSettings.realtimeEnvironmentLighting`).
 
 Not baked by Unbound: without a graphics device, the indirect light, the ambient occlusion,
-soft baked shadows and area lights (said). Not baked (said, each once per scene): light cookies, lights whose
-intensity multiplies their linear colour (GraphicsSettings.lightsUseLinearIntensity), light
+soft baked shadows and area lights (said). Not baked (said, each once per scene): light cookies, a colour
+temperature with linear intensity (GraphicsSettings.lightsUseLinearIntensity), light
 probes under area lights or soft baked shadows, a Baked Shadow Angle or Radius with hard
 shadows, a mixed area light, an area light among more point, spot or area lights than a
 surface of the indirect light tests (4 at a path's first surface, 1 fewer at each further one). Not done
