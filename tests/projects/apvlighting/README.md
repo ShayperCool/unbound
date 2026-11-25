@@ -28,11 +28,18 @@ Play mode the probe adds dynamic objects (none takes part in the bake) and camer
 - `grid forward`, `grid forward plus`: 15 matte Lit spheres across the room (x -3..3, y 0.5..2.5,
   z 0), under the roof by the red wall and in the sun by the green one, through the forward and
   the Forward+ renderer.
-- `grid options`: the grid through a volume of its own (volume layer 12) that overrides the
-  `ProbeVolumesOptions` the shaders read: normal bias 0.4, view bias 0.6, no sampling noise, no
-  leak reduction, intensity 0.5.
-- `shaders forward`, `shaders forward plus`: Simple Lit, Complex Lit, Baked Lit, a Lit sphere with
-  `lightProbeUsage = Off` and Unlit (control) in a row by the back wall.
+- `grid options`: the grid through a volume of its own (volume layer 12) that overrides five
+  `ProbeVolumesOptions`: normal bias 0.4, view bias 0.6, no sampling noise, no leak reduction,
+  intensity 0.5.
+- `shaders forward`, `shaders forward plus`: Simple Lit, Complex Lit, Baked Lit, a smooth Lit
+  sphere (smoothness 0.9), a Lit sphere with `lightProbeUsage = Off` and Unlit (control) in a row
+  by the back wall, all six whole in the view.
+- `shaders options`: that row through a volume (volume layer 13) that overrides the other options
+  the shaders read: `worldOffset` (0.4, 0, 0.3), `scaleBiasWithMinProbeDistance` on,
+  `occlusionOnlyReflectionNormalization` off, `animateSamplingNoise` off. The offset moves the
+  lighting visibly; with this bake's probe spacing of 1 the scaled biases equal the plain ones,
+  and without TAA URP passes frame index 0 for the noise, so those two leave the image as it is
+  (unmeasured); the normalization clamp's own effect is not separated from the offset's.
 - `particles forward`, `particles forward plus`, `simple particles forward`: Particles/Lit and
   Particles/Simple Lit billboards where the grid's spheres are (z -1).
 - `room`: the room alone from a corner.
@@ -42,16 +49,18 @@ video memory cost).
 
 Unmeasured here: L2 (`ProbeVolumeSHBands.SphericalHarmonicsL2`), per-vertex and mixed SH
 evaluation (`ShEvalMode`; Auto is per pixel on this desktop target), sky occlusion, rendering
-layers, lighting scenarios and blending, streaming, Shader Graph and VFX Graph lit outputs.
+layers, lighting scenarios and blending, streaming, Shader Graph and VFX Graph lit outputs,
+Unbound's Vulkan device and other GPUs.
 
 ## Result
 
 Measured in the Unity 6000.0.71f1 Editor (Linux, OpenGL Core, NVIDIA driver; two identical
-captures): Unbound on its OpenGL Core device matches every row and draws 17 of the 18 images to
-the Editor's pixel; in `room` one pixel of the floor's edge is one level apart
+captures): Unbound on its OpenGL Core device matches every row and draws 18 of the 20 images to
+the Editor's pixel; in `room`, at both frames, one pixel of the floor's edge is one level apart
 (`image_limits.json`). Drawn without the probe volume's data (a bake whose baking set does not
-reference its cell files), every image differs by about 40 levels on average: the images measure
-the probe volume lighting.
+reference its cell files), every image of the first layout differed by 30 to 44 levels on
+average: the images measure the probe volume lighting. `shaders options` differs from
+`shaders forward` by 9 levels on average, in the Editor and in Unbound alike.
 
 `bake.py bake` lets the Editor run 30 updates after `Lightmapping.Bake()` returns before it saves
 and quits: the baking set gets the references to its cell files after Bake returns, and an Editor

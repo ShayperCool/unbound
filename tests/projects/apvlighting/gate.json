@@ -4,6 +4,12 @@
   ],
   "summary": "apvlighting: .*",
   "engine_paths": [
+    "managed/UnityEngine/Graphics/TextureArrays.cs",
+    "managed/UnityEngine/Graphics/GraphicsFormats.cs",
+    "managed/UnityEngine/Graphics/Immediate.cs",
+    "managed/UnityEngine/Graphics/CommandStream.cs",
+    "managed/UnityEngine/Core/SceneManagement.cs",
+    "managed/UnityEngine/Editor/AssetDatabase.cs",
     "tests/projects/apvlighting/"
   ]
 }

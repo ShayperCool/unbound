@@ -95,6 +95,18 @@
   "over8": 0,
   "reason": "exact on NVIDIA, OpenGL Core"
  },
+ "shaders-options-20.png": {
+  "mean": 0,
+  "worst": 0,
+  "over8": 0,
+  "reason": "exact on NVIDIA, OpenGL Core"
+ },
+ "shaders-options-4.png": {
+  "mean": 0,
+  "worst": 0,
+  "over8": 0,
+  "reason": "exact on NVIDIA, OpenGL Core"
+ },
  "simple-particles-forward-20.png": {
   "mean": 0,
   "worst": 0,

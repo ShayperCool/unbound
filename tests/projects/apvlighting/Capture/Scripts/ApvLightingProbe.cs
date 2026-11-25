@@ -26,6 +26,8 @@ public sealed class ApvLightingProbe : MonoBehaviour
     const int k_SimpleParticlesLayer = 11;
     /// <summary>The volume layer of the options stage's volume.</summary>
     const int k_OptionsVolumeLayer = 12;
+    /// <summary>The volume layer of the shaders options stage's volume.</summary>
+    const int k_MoreOptionsVolumeLayer = 13;
     static readonly int[] k_Frames = { 4, 20 };
 
     readonly StringBuilder m_Out = new StringBuilder();
@@ -100,6 +102,18 @@ public sealed class ApvLightingProbe : MonoBehaviour
         return camera;
     }
 
+    /// <summary>A global volume on its own layer with a ProbeVolumesOptions override.</summary>
+    static ProbeVolumesOptions Options(string name, int layer)
+    {
+        var volume = new GameObject(name) { layer = layer }.AddComponent<Volume>();
+        volume.isGlobal = true;
+        volume.priority = 10f;
+        var profile = ScriptableObject.CreateInstance<VolumeProfile>();
+        var options = profile.Add<ProbeVolumesOptions>(true);
+        volume.sharedProfile = profile;
+        return options;
+    }
+
     ParticleSystem Particles(string name, Material material, int layer, IEnumerable<Vector3> positions)
     {
         var go = new GameObject(name) { layer = layer };
@@ -149,36 +163,45 @@ public sealed class ApvLightingProbe : MonoBehaviour
             Stage("grid forward", eye, at, 55f, k_GridLayer);
             Stage("grid forward plus", eye, at, 55f, k_GridLayer).GetUniversalAdditionalCameraData().SetRenderer(k_ForwardPlusRenderer);
 
-            // The grid again through a volume of its own that overrides every probe volume
-            // option the shaders read (no sampling noise, larger biases, no leak reduction,
-            // a lower intensity).
+            // The grid again through a volume of its own that overrides five probe volume
+            // options (no sampling noise, larger biases, no leak reduction, a lower intensity).
             var options = Stage("grid options", eye, at, 55f, k_GridLayer);
             options.GetUniversalAdditionalCameraData().volumeLayerMask = 1 << k_OptionsVolumeLayer;
-            var volume = new GameObject("options volume") { layer = k_OptionsVolumeLayer }.AddComponent<Volume>();
-            volume.isGlobal = true;
-            volume.priority = 10f;
-            var profile = ScriptableObject.CreateInstance<VolumeProfile>();
-            var overrides = profile.Add<ProbeVolumesOptions>(true);
+            var overrides = Options("options volume", k_OptionsVolumeLayer);
             overrides.normalBias.Override(0.4f);
             overrides.viewBias.Override(0.6f);
             overrides.samplingNoise.Override(0f);
             overrides.leakReductionMode.Override(APVLeakReductionMode.None);
             overrides.intensityMultiplier.Override(0.5f);
-            volume.sharedProfile = profile;
 
             // Other lit shaders in a row by the back wall, the room's own walls and floor
-            // behind them, and a Lit sphere that does not use probes (Unlit as control).
-            float x = -3f;
+            // behind them: a smooth Lit sphere (reflections), a Lit sphere that does not use
+            // probes, and Unlit as control. All six whole in the view.
+            float x = -2.75f;
             Sphere("simple lit", new Vector3(x, 1.2f, 2.5f), Mat("Universal Render Pipeline/Simple Lit", new Color(0.8f, 0.8f, 0.8f, 1f)), k_ShadersLayer);
-            Sphere("complex lit", new Vector3(x += 1.5f, 1.2f, 2.5f), Mat("Universal Render Pipeline/Complex Lit", new Color(0.8f, 0.8f, 0.8f, 1f)), k_ShadersLayer);
-            Sphere("baked lit", new Vector3(x += 1.5f, 1.2f, 2.5f), Mat("Universal Render Pipeline/Baked Lit", new Color(0.8f, 0.8f, 0.8f, 1f)), k_ShadersLayer);
-            var off = Sphere("lit probes off", new Vector3(x += 1.5f, 1.2f, 2.5f), lit, k_ShadersLayer);
+            Sphere("complex lit", new Vector3(x += 1.1f, 1.2f, 2.5f), Mat("Universal Render Pipeline/Complex Lit", new Color(0.8f, 0.8f, 0.8f, 1f)), k_ShadersLayer);
+            Sphere("baked lit", new Vector3(x += 1.1f, 1.2f, 2.5f), Mat("Universal Render Pipeline/Baked Lit", new Color(0.8f, 0.8f, 0.8f, 1f)), k_ShadersLayer);
+            var smooth = Mat("Universal Render Pipeline/Lit", new Color(0.8f, 0.8f, 0.8f, 1f));
+            smooth.SetFloat("_Smoothness", 0.9f);
+            Sphere("smooth lit", new Vector3(x += 1.1f, 1.2f, 2.5f), smooth, k_ShadersLayer);
+            var off = Sphere("lit probes off", new Vector3(x += 1.1f, 1.2f, 2.5f), lit, k_ShadersLayer);
             off.GetComponent<MeshRenderer>().lightProbeUsage = LightProbeUsage.Off;
-            Sphere("unlit", new Vector3(x += 1.5f, 1.2f, 2.5f), Mat("Universal Render Pipeline/Unlit", new Color(0.8f, 0.8f, 0.8f, 1f)), k_ShadersLayer);
-            var near = new Vector3(0f, 1.6f, -1.5f);
+            Sphere("unlit", new Vector3(x += 1.1f, 1.2f, 2.5f), Mat("Universal Render Pipeline/Unlit", new Color(0.8f, 0.8f, 0.8f, 1f)), k_ShadersLayer);
+            var near = new Vector3(0f, 1.6f, -2.5f);
             var row = new Vector3(0f, 1.2f, 2.5f);
             Stage("shaders forward", near, row, 70f, k_ShadersLayer);
             Stage("shaders forward plus", near, row, 70f, k_ShadersLayer).GetUniversalAdditionalCameraData().SetRenderer(k_ForwardPlusRenderer);
+
+            // The row through a volume that overrides the other options the shaders read: the
+            // sampling position offset, the biases scaled by the probe spacing, the reflection
+            // normalization's upper clamp, and no animated noise.
+            var shaderOptions = Stage("shaders options", near, row, 70f, k_ShadersLayer);
+            shaderOptions.GetUniversalAdditionalCameraData().volumeLayerMask = 1 << k_MoreOptionsVolumeLayer;
+            var more = Options("more options volume", k_MoreOptionsVolumeLayer);
+            more.worldOffset.Override(new Vector3(0.4f, 0f, 0.3f));
+            more.scaleBiasWithMinProbeDistance.Override(true);
+            more.occlusionOnlyReflectionNormalization.Override(false);
+            more.animateSamplingNoise.Override(false);
 
             // Lit and Simple Lit particles (billboards) where the grid's spheres are.
             Particles("lit particles", Mat("Universal Render Pipeline/Particles/Lit", Color.white), k_ParticlesLayer, Grid(-1f));
