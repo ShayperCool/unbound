@@ -476,6 +476,8 @@ namespace UnityEngine.Tests
             var editor = Editor.CreateEditor(target);
             var heights = new Dictionary<string, float>();
             var rects = new Dictionary<string, float>();
+            // (The default inspector's bools are Unity's toggles; the test host has no skin images.)
+            EditorStyles.SetToggleForTests(new GUIStyle { name = "toggle", fixedWidth = 14, fixedHeight = 14 });
             try
             {
                 // Before any GUI pass the interactive Editor's styles are there, so a header's height
@@ -524,6 +526,7 @@ namespace UnityEngine.Tests
             }
             finally
             {
+                EditorStyles.SetToggleForTests(null);
                 Object.DestroyImmediate(editor);
                 Object.DestroyImmediate(target);
             }
