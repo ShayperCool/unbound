@@ -107,7 +107,8 @@ namespace UnityEngine.Tests
         public void AClipGivesAnEventThatReplacesTheCurrentOneThePassesMousePosition()
         {
             // tests/projects/imguitreeview script/*: inside a clip the rows see the real cursor,
-            // not a scripted event's position.
+            // not a scripted event's position, and after the pops the scripted position is gone
+            // too (measured); that it is then exactly the pass's position is the model's.
             Vector2 inGroup = default, afterGroup = default;
             Pass(EventType.Repaint, () =>
             {
