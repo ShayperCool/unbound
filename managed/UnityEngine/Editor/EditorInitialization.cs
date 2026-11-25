@@ -83,7 +83,6 @@ namespace UnityEditor
         {
             // A new domain orders its OnPostprocessAllAssets callbacks anew, as Unity's does.
             AssetPostprocessing.ForgetOrder();
-            EditorBuildSettings.ResolveBuildIndices();
             MainView.Open();
             DomainLoading = true;
             try

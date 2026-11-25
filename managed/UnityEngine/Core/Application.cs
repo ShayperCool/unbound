@@ -272,9 +272,17 @@ namespace UnityEngine
         /// (measured: tests/projects/appfacts; <see cref="DesktopOpener"/>).</summary>
         public static void OpenURL(string url) => DesktopOpener.Open(url ?? "", "Application.OpenURL");
 
-        public static bool CanStreamedLevelBeLoaded(int levelIndex) => levelIndex >= 0 && levelIndex < ProjectInfo.BuildScenes.Count;
+        /// <summary>An index of the build list (in Edit mode the whole list; matches the Unity
+        /// 6000.0.71f1 Editor, tests/projects/scenesave build-index-edit and build-index-play
+        /// *.canLoad).</summary>
+        public static bool CanStreamedLevelBeLoaded(int levelIndex) =>
+            levelIndex >= 0 && levelIndex < SceneManagement.SceneManager.sceneCountInBuildSettings;
 
-        public static bool CanStreamedLevelBeLoaded(string levelName) => SceneManagement.SceneManagerInternal.FindBuildScene(levelName) >= 0;
+        /// <summary>A scene of Play mode's build list by a name LoadScene takes; in Edit mode none
+        /// (matches the Unity 6000.0.71f1 Editor, tests/projects/scenesave build-index-edit and
+        /// build-index-play *.canLoadName; after Play mode has ended unmeasured).</summary>
+        public static bool CanStreamedLevelBeLoaded(string levelName) =>
+            Unbound.Runtime.EditorSession.IsPlaying && SceneManagement.SceneManagerInternal.FindBuildScene(levelName) >= 0;
 
         [global::System.@ObsoleteAttribute("Streaming was a Unity Web Player feature, and is removed. This function is deprecated and always returns 1.0 for valid level indices.")] public static float GetStreamProgressForLevel(int levelIndex) => CanStreamedLevelBeLoaded(levelIndex) ? 1f : 0f;
 

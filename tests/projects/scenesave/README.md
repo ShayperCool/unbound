@@ -135,6 +135,17 @@ file the run added, changed or removed.
   an `EditorBuildSettings.asset` listing `Base.unity` under a stale path (`Assets/Old/Moved.unity`)
   and the test sets that list again (`stale.*`). Recorded in the macOS Editor (batch mode, no
   graphics: two identical captures; nothing depends on the OS).
+- `build-index-edit` (Edit Mode, `BuildIndexTests`) and `build-index-play` (Play Mode,
+  `BuildIndexPlayTests`): the build indices of a list `run.py` seeds (Second disabled, Base, a
+  missing scene, Second under a stale path, Base disabled, `Assets/Scenes/Deep/Third.unity`, a copy
+  of Second the run adds; Base again for Play mode): `sceneCountInBuildSettings`,
+  `GetScenePathByBuildIndex`, `GetBuildIndexByScenePath` and `CanStreamedLevelBeLoaded` with paths,
+  other spellings and names, `GetSceneByBuildIndex`, the build index of scenes the Editor opens, of
+  a new scene and, after the list is set to others, of the open scenes and of scenes opened again;
+  in Play mode, with the Test Framework's scene open as Play mode starts, the scenes `LoadScene`
+  loads by each index and by names, the index of a scene `LoadSceneInPlayMode` loads, and all of
+  it after `EditorBuildSettings.scenes` is set in Play mode. Recorded in the macOS Editor (batch
+  mode, no graphics: two identical captures; nothing depends on the OS).
 - `generic-refs` (Edit Mode, `GenericRefTests`): a scriptable object whose [SerializeReference] fields
   hold objects of generic classes (`Box<int>`, `Pair<string, Vector3>`, `Box<Box<float>>`,
   `Box<List<int>>`, a namespaced `Tagged<Circle>`, one shared, one added later) made an asset by
@@ -152,7 +163,16 @@ assertion and is not saved. A set scene list is copied, each scene's path taken 
 the project has that asset, null taken as empty, a null entry refused; `sceneListChanged` follows a
 change of the list only, not `globalScenes`; the getters return copies; a stale path read from the
 file answers its GUID's current path (also in the build indices), and the same list set again
-changes nothing, the file keeping the stale path; the file is written by `SaveAssets` and at exit. A scene's documents are ordered by file id (settings first, SceneRoots last); a
+changes nothing, the file keeping the stale path; the file is written by `SaveAssets` and at exit.
+In Edit mode the count, a build index's path, `CanStreamedLevelBeLoaded(int)` and the range
+`GetSceneByBuildIndex` accepts are the whole list's, disabled and missing scenes included, while a
+scene's build index (`GetBuildIndexByScenePath`, `Scene.buildIndex`) is its first place among the
+enabled entries, found by its path in any case only, and follows a new list at once, also for the
+open scenes; `CanStreamedLevelBeLoaded(string)` is false. Play mode's list is fixed as Play mode
+starts: the enabled entries whose scene exists (repeats kept), then the open scenes it lacks; a
+list set in Play mode does not change it. There a scene answers to its path, its file name and
+the path the build settings window shows (`Scenes/Deep/Third`), in any case, not to other parts of
+its path, and a scene `LoadSceneInPlayMode` loads has build index -1. A new untitled scene has -1. A scene's documents are ordered by file id (settings first, SceneRoots last); a
 prefab's by GameObject (GameObjects by file id, each followed by its components in component
 order). Numbers are written with their shortest digits, with an exponent once the decimal exponent
 reaches the type's precision (9 for floats, 17 for doubles) or falls below its negation; integer,

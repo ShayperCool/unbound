@@ -77,10 +77,9 @@ namespace UnityEditor
         /// from its GUID when the project has that asset (a stale path, or none), keeps a missing
         /// one's as given, treats null as an empty list and refuses a null entry
         /// (NullReferenceException, nothing changed); sceneListChanged follows only a change of
-        /// the list (build-scenes set.*, again.*, nullEntry.*, nullList.*, empty.*). The build
-        /// indices then follow its enabled scenes (unmeasured for Play mode; in Edit mode the Editor
-        /// answers the count and the paths from the whole list: queued in build-scenes *.build), and
-        /// a loaded scene keeps the build index it was loaded with (unmeasured).</summary>
+        /// the list (build-scenes set.*, again.*, nullEntry.*, nullList.*, empty.*). In Edit mode
+        /// the build indices follow the new list at once, those of the open scenes too; Play mode's
+        /// list stays as Play mode started (build-index-edit reordered.*, build-index-play set.*).</summary>
         public static EditorBuildSettingsScene[] scenes
         {
             get => Copies();
@@ -114,8 +113,89 @@ namespace UnityEditor
         static EditorBuildSettingsScene Resolved(EditorBuildSettingsScene s)
         {
             var scene = Copy(s);
-            if (!scene.guid.Empty() && AssetDatabase.GUIDToAssetPath(scene.guid) is string known && known.Length > 0) scene.m_Path = known;
+            scene.m_Path = ResolvedPath(s);
             return scene;
+        }
+
+        /// <summary>A scene's path: its GUID's asset's when the project has that asset, else its own.</summary>
+        static string ResolvedPath(EditorBuildSettingsScene s) =>
+            !s.guid.Empty() && AssetDatabase.GUIDToAssetPath(s.guid) is string known && known.Length > 0 ? known : s.m_Path;
+
+        /// <summary>Edit mode's build count: the whole list, disabled and missing scenes included
+        /// (matches the Unity 6000.0.71f1 Editor, tests/projects/scenesave build-index-edit *.count,
+        /// build-scenes *.build).</summary>
+        internal static int ListedCount
+        {
+            get
+            {
+                Read();
+                return s_Scenes.Length;
+            }
+        }
+
+        /// <summary>Edit mode's path of a build index: the list's entry, disabled ones included
+        /// (build-index-edit *.path).</summary>
+        internal static string ListedPath(int index)
+        {
+            Read();
+            return index >= 0 && index < s_Scenes.Length ? ResolvedPath(s_Scenes[index]) ?? "" : "";
+        }
+
+        /// <summary>Edit mode's build index of a scene: its first place among the enabled entries
+        /// (a missing scene's counted), by its path in any case and by nothing else (matches the
+        /// Unity 6000.0.71f1 Editor, tests/projects/scenesave build-index-edit *.index, *.open;
+        /// an enabled entry with neither a path nor a known GUID counted: unmeasured).</summary>
+        internal static int EnabledIndexOf(string path)
+        {
+            Read();
+            if (string.IsNullOrEmpty(path)) return -1;
+            int index = 0;
+            foreach (var scene in s_Scenes)
+            {
+                if (!scene.enabled) continue;
+                if (string.Equals(ResolvedPath(scene), path, StringComparison.OrdinalIgnoreCase)) return index;
+                index++;
+            }
+            return -1;
+        }
+
+        /// <summary>Play mode's build list, fixed as Play mode starts: the enabled entries whose
+        /// scene the project has (a missing one left out, a repeated one kept), then the scenes
+        /// open as Play mode starts that it does not hold, in their order (matches the Unity
+        /// 6000.0.71f1 Editor, tests/projects/scenesave build-index-play start.*; the Scripting API's
+        /// SceneManager.sceneCountInBuildSettings: "The Editor will contain Scenes that were open
+        /// before entering playmode"). An open scene listed but disabled is added too (unmeasured).</summary>
+        internal static void BeginPlayModeList(IEnumerable<string> openScenes)
+        {
+            Read();
+            var list = UnityEngine.ProjectInfo.BuildScenes;
+            list.Clear();
+            foreach (var scene in s_Scenes)
+            {
+                if (!scene.enabled) continue;
+                var path = ResolvedPath(scene);
+                var guid = string.IsNullOrEmpty(path) ? "" : AssetDatabase.AssetPathToGUID(path, AssetPathToGUIDOptions.OnlyExistingAssets);
+                if (guid.Length > 0) list.Add((path, guid));
+            }
+            // An untitled scene, or a path the project has no scene at, adds nothing.
+            foreach (var path in openScenes)
+            {
+                var guid = string.IsNullOrEmpty(path) ? "" : AssetDatabase.AssetPathToGUID(path, AssetPathToGUIDOptions.OnlyExistingAssets);
+                if (guid.Length == 0) continue;
+                bool listed = false;
+                foreach (var entry in list)
+                    if (string.Equals(entry.Path, path, StringComparison.OrdinalIgnoreCase)) { listed = true; break; }
+                if (!listed) list.Add((path, guid));
+            }
+        }
+
+        /// <summary>The open scenes' build indices as the list now answers them (a scene of an
+        /// AssetBundle or without a file keeps -1).</summary>
+        internal static void RefreshOpenSceneIndices()
+        {
+            foreach (var scene in SceneRegistry.Loaded)
+                if (scene.LoadKey == null && !string.IsNullOrEmpty(scene.Path))
+                    scene.BuildIndex = UnityEngine.SceneManagement.SceneUtility.GetBuildIndexByScenePath(scene.Path);
         }
 
         /// <summary>Takes a new list; whether it differs from the old one.</summary>
@@ -132,11 +212,7 @@ namespace UnityEditor
             // tests/projects/scenesave build-scenes stale.*).
             if (Same(next, ResolvedList())) return false;
             s_Scenes = next;
-            // The enabled scenes, as the host lists them at the start (that Play mode loads them by
-            // these indices is not measured).
-            UnityEngine.ProjectInfo.BuildScenes.Clear();
-            foreach (var scene in next)
-                if (scene.enabled) UnityEngine.ProjectInfo.BuildScenes.Add((scene.path ?? "", scene.guid.ToString()));
+            if (!EditorSession.IsPlaying) RefreshOpenSceneIndices();
             SettingsAssets.Edit("EditorBuildSettings", body =>
             {
                 var list = YText.Seq();
@@ -159,20 +235,6 @@ namespace UnityEditor
             var resolved = new EditorBuildSettingsScene[s_Scenes.Length];
             for (int i = 0; i < resolved.Length; i++) resolved[i] = Resolved(s_Scenes[i]);
             return resolved;
-        }
-
-        /// <summary>As the editor domain loads: the build indices name the scenes the list's GUIDs
-        /// name now (the Editor resolves a stale path as it reads the file; matches the Unity
-        /// 6000.0.71f1 Editor, tests/projects/scenesave build-scenes start.build).</summary>
-        internal static void ResolveBuildIndices()
-        {
-            if (!s_Read) return;
-            var enabled = new List<(string, string)>();
-            foreach (var scene in ResolvedList())
-                if (scene.enabled) enabled.Add((scene.path ?? "", scene.guid.ToString()));
-            if (enabled.Count != UnityEngine.ProjectInfo.BuildScenes.Count) return;
-            UnityEngine.ProjectInfo.BuildScenes.Clear();
-            UnityEngine.ProjectInfo.BuildScenes.AddRange(enabled);
         }
 
         static bool Same(EditorBuildSettingsScene[] a, EditorBuildSettingsScene[] b)

@@ -177,7 +177,12 @@ namespace UnityEngine.SceneManagement
             }
         }
 
-        public static int sceneCountInBuildSettings => ProjectInfo.BuildScenes.Count;
+        /// <summary>In Edit mode the build settings' whole list, disabled and missing scenes
+        /// included; in Play mode the list fixed as Play mode started (matches the Unity
+        /// 6000.0.71f1 Editor, tests/projects/scenesave build-index-edit and build-index-play
+        /// *.count; <see cref="UnityEditor.EditorBuildSettings.BeginPlayModeList"/>).</summary>
+        public static int sceneCountInBuildSettings =>
+            Unbound.Runtime.EditorSession.IsPlaying ? ProjectInfo.BuildScenes.Count : UnityEditor.EditorBuildSettings.ListedCount;
 
         [Obsolete("Use SceneManager.sceneCount and SceneManager.GetSceneAt(int index) to loop the all scenes instead.")]
         public static Scene[] GetAllScenes()
@@ -229,11 +234,13 @@ namespace UnityEngine.SceneManagement
             return default;
         }
 
-        /// <summary>The loaded scene of a build index; an index outside the build list throws
-        /// (tests/projects/apierrors `scene.by_build_index_*`).</summary>
+        /// <summary>The loaded scene of a build index; an index outside the build list (in Edit
+        /// mode the whole list, <see cref="sceneCountInBuildSettings"/>) throws
+        /// (tests/projects/apierrors `scene.by_build_index_*`, scenesave build-index-edit
+        /// *.sceneByIndex).</summary>
         public static Scene GetSceneByBuildIndex(int buildIndex)
         {
-            if (buildIndex < 0 || buildIndex >= ProjectInfo.BuildScenes.Count)
+            if (buildIndex < 0 || buildIndex >= sceneCountInBuildSettings)
                 throw new ArgumentException($"GetSceneByBuildIndex: Invalid build index: {buildIndex}\nTo add a scene to the build settings use the menu File->Build Settings...");
             return new Scene(LoadedByBuildIndex(buildIndex)?.Handle ?? default);
         }
@@ -419,15 +426,24 @@ namespace UnityEngine.SceneManagement
 
     public static partial class SceneUtility
     {
-        public static string GetScenePathByBuildIndex(int buildIndex) =>
-            buildIndex >= 0 && buildIndex < ProjectInfo.BuildScenes.Count ? ProjectInfo.BuildScenes[buildIndex].Path : "";
-
-        public static int GetBuildIndexByScenePath(string scenePath)
+        /// <summary>In Edit mode the path of the build settings' entry (its GUID's scene's when
+        /// the project has it), disabled entries included; in Play mode of Play mode's list; ""
+        /// outside (matches the Unity 6000.0.71f1 Editor, tests/projects/scenesave build-index-edit
+        /// and build-index-play *.path).</summary>
+        public static string GetScenePathByBuildIndex(int buildIndex)
         {
-            for (int i = 0; i < ProjectInfo.BuildScenes.Count; i++)
-                if (string.Equals(ProjectInfo.BuildScenes[i].Path, scenePath, StringComparison.OrdinalIgnoreCase)) return i;
-            return -1;
+            if (!Unbound.Runtime.EditorSession.IsPlaying) return UnityEditor.EditorBuildSettings.ListedPath(buildIndex);
+            return buildIndex >= 0 && buildIndex < ProjectInfo.BuildScenes.Count ? ProjectInfo.BuildScenes[buildIndex].Path : "";
         }
+
+        /// <summary>In Edit mode the scene's place among the enabled entries, found by its path
+        /// alone; in Play mode its index in Play mode's list, found also by the names LoadScene
+        /// takes (<see cref="SceneManagerInternal.FindBuildScene"/>; matches the Unity 6000.0.71f1
+        /// Editor, tests/projects/scenesave build-index-edit and build-index-play *.index).</summary>
+        public static int GetBuildIndexByScenePath(string scenePath) =>
+            Unbound.Runtime.EditorSession.IsPlaying
+                ? SceneManagerInternal.FindBuildScene(scenePath)
+                : UnityEditor.EditorBuildSettings.EnabledIndexOf(scenePath);
     }
 
     /// <summary>Scene loading. A load creates the scene, reads its objects through the native side
@@ -511,20 +527,34 @@ namespace UnityEngine.SceneManagement
             }
         }
 
-        /// <summary>Build index of a scene given by name or path, as LoadScene accepts it.</summary>
+        /// <summary>The first scene of Play mode's build list that answers to a name as LoadScene
+        /// takes it; -1 for none.</summary>
         internal static int FindBuildScene(string sceneName)
         {
             if (string.IsNullOrEmpty(sceneName)) return -1;
             for (int i = 0; i < ProjectInfo.BuildScenes.Count; i++)
-            {
-                var path = ProjectInfo.BuildScenes[i].Path;
-                if (string.Equals(path, sceneName, StringComparison.OrdinalIgnoreCase)) return i;
-                var withoutExtension = path.EndsWith(".unity", StringComparison.OrdinalIgnoreCase) ? path.Substring(0, path.Length - 6) : path;
-                if (string.Equals(withoutExtension, sceneName, StringComparison.OrdinalIgnoreCase)) return i;
-                if (string.Equals(Path.GetFileNameWithoutExtension(path), sceneName, StringComparison.OrdinalIgnoreCase)) return i;
-                if (withoutExtension.EndsWith("/" + sceneName, StringComparison.OrdinalIgnoreCase)) return i;
-            }
+                if (Answers(ProjectInfo.BuildScenes[i].Path, sceneName)) return i;
             return -1;
+        }
+
+        const string AssetsFolder = "Assets/";
+        const string SceneExtension = ".unity";
+
+        /// <summary>A build scene answers, in any case, to its path, to its file's name without the
+        /// extension and to the path the build settings window shows (without <c>Assets/</c> and
+        /// the extension: <c>Scenes/Deep/Third</c>), not to another part of its path or its path
+        /// without the extension (matches the Unity 6000.0.71f1 Editor, tests/projects/scenesave
+        /// build-index-play index.*, canLoadName.*, loadName.*). A scene outside Assets (a
+        /// package's) also answers to its path without the extension (unmeasured).</summary>
+        static bool Answers(string path, string name)
+        {
+            const StringComparison any = StringComparison.OrdinalIgnoreCase;
+            if (string.Equals(path, name, any)) return true;
+            int end = path.EndsWith(SceneExtension, any) ? path.Length - SceneExtension.Length : path.Length;
+            int file = path.LastIndexOf('/', Math.Max(end - 1, 0)) + 1;
+            if (end - file == name.Length && string.Compare(path, file, name, 0, name.Length, any) == 0) return true;
+            int shown = path.StartsWith(AssetsFolder, StringComparison.Ordinal) ? AssetsFolder.Length : 0;
+            return end - shown == name.Length && string.Compare(path, shown, name, 0, name.Length, any) == 0;
         }
 
         internal static LoadResult Load(int buildIndex, LoadSceneParameters parameters, bool async)
@@ -829,7 +859,10 @@ namespace UnityEngine.SceneManagement
         /// Play mode (EditorSceneManager.LoadSceneInPlayMode), which no bake follows.</summary>
         internal static Scene OpenPath(string path, bool additive, bool opened = true)
         {
-            int buildIndex = SceneUtility.GetBuildIndexByScenePath(path);
+            // A scene LoadSceneInPlayMode loads has no build index, also one in the build list
+            // (matches the Unity 6000.0.71f1 Editor, tests/projects/scenesave build-index-play
+            // byName.open).
+            int buildIndex = opened ? SceneUtility.GetBuildIndexByScenePath(path) : -1;
             var data = SceneRegistry.Create(Path.GetFileNameWithoutExtension(path), path, buildIndex);
             data.OpenedInEditor = opened;
             bool editor = opened && !Unbound.Runtime.EditorSession.IsPlaying;

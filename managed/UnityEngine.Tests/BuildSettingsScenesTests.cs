@@ -27,6 +27,15 @@ namespace UnityEngine.Tests
 
         static string Describe(EditorBuildSettingsScene s) => (s.enabled ? "1" : "0") + "|" + (s.path ?? "null") + "|" + s.guid;
 
+        /// <summary>As the probe writes its build rows: count, paths, then two scenes' indices.</summary>
+        static string BuildIndices()
+        {
+            int count = SceneManager.sceneCountInBuildSettings;
+            var paths = Enumerable.Range(0, count).Select(SceneUtility.GetScenePathByBuildIndex);
+            return count + ":" + string.Join(",", paths) + "|second=" + SceneUtility.GetBuildIndexByScenePath("Assets/Scenes/Second.unity")
+                + "|base=" + SceneUtility.GetBuildIndexByScenePath("Assets/Scenes/Base.unity");
+        }
+
         [Fact]
         public void AScenesPathAndComparisonAreUnitysOwn()
         {
@@ -133,9 +142,10 @@ namespace UnityEngine.Tests
                 EditorBuildSettings.scenes[0].path = "Assets/Changed.unity";
                 Assert.Equal(expected, EditorBuildSettings.scenes.Select(Describe));
                 Assert.NotSame(EditorBuildSettings.scenes[0], EditorBuildSettings.scenes[0]);
-                // The build indices after a set: the enabled scenes (Play mode unmeasured).
-                Assert.Equal(new[] { "Assets/Scenes/Base.unity", "Assets/Scenes/Missing.unity", "Assets/Scenes/Base.unity", "Assets/Scenes/Second.unity" },
-                    ProjectInfo.BuildScenes.Select(s => s.Path));
+                // Edit mode's build indices after a set: the count and the paths of the whole list, a
+                // scene's index among the enabled entries (measured: set.build).
+                Assert.Equal("5:Assets/Scenes/Base.unity,Assets/Scenes/Second.unity,Assets/Scenes/Missing.unity,Assets/Scenes/Base.unity,"
+                    + "Assets/Scenes/Second.unity|second=3|base=0", BuildIndices());
                 // Written by SaveAssets, not by the set, as the Editor's snapshot.
                 Assert.DoesNotContain("Missing", File.ReadAllText(Path.Combine(project, "ProjectSettings/EditorBuildSettings.asset")));
                 AssetDatabase.SaveAssets();
@@ -165,11 +175,8 @@ namespace UnityEngine.Tests
                 EditorBuildSettings.Configure(new[] { new EditorBuildSettingsScene { path = "Assets/Old/Moved.unity", guid = new GUID(BaseGuid), enabled = true } },
                     new System.Collections.Generic.Dictionary<string, (string, long)>());
                 Assert.Equal(new[] { "1|Assets/Scenes/Base.unity|" + BaseGuid }, EditorBuildSettings.scenes.Select(Describe));
-                // The host's build indices, as read, name the current path once the editor domain loads.
-                ProjectInfo.BuildScenes.Clear();
-                ProjectInfo.BuildScenes.Add(("Assets/Old/Moved.unity", BaseGuid));
-                EditorBuildSettings.ResolveBuildIndices();
-                Assert.Equal(new[] { "Assets/Scenes/Base.unity" }, ProjectInfo.BuildScenes.Select(b => b.Path));
+                // The build indices name the current path (measured: start.build).
+                Assert.Equal("1:Assets/Scenes/Base.unity|second=-1|base=0", BuildIndices());
                 AssetDatabase.SaveAssets();
                 var file = File.ReadAllText(Path.Combine(project, "ProjectSettings/EditorBuildSettings.asset"));
                 EditorBuildSettings.scenes = EditorBuildSettings.scenes;

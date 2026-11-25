@@ -415,11 +415,12 @@ namespace Unbound.Runtime
             UnityEngine.SendMouseEvents.Reset();
         }
 
-        /// <summary>Direct Play's startup scene (none without one), its build index from the build
-        /// list as the Editor reads it (a stale path answered by its GUID).</summary>
+        /// <summary>Direct Play's startup scene (none without one), its build index from Play mode's
+        /// list, which holds the scene the Editor has open as Play mode starts (a stale path
+        /// answered by its GUID).</summary>
         internal static SceneData PrepareStartupScene(string firstScene)
         {
-            UnityEditor.EditorBuildSettings.ResolveBuildIndices();
+            UnityEditor.EditorBuildSettings.BeginPlayModeList(string.IsNullOrEmpty(firstScene) ? Array.Empty<string>() : new[] { firstScene });
             return string.IsNullOrEmpty(firstScene) ? null : SceneManagerInternal.PreparePlayModeScene(firstScene);
         }
 

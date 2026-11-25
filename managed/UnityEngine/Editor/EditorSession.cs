@@ -114,7 +114,14 @@ namespace Unbound.Runtime
             Application.Internal_PlayModeStarting();
             LeaveEditModeForPlay();
             UnityEngine.U2D.SpriteAtlasPacking.PackV1ForPlayMode();
+            // Play mode's build list holds the open scenes; they take their indices in it
+            // (tests/projects/scenesave build-index-play start.open).
+            var open = new List<string>();
+            foreach (var scene in SceneManagerInternal.Listed())
+                if (scene.IsLoaded && scene.LoadKey == null) open.Add(scene.Path);
+            EditorBuildSettings.BeginPlayModeList(open);
             IsPlaying = true;
+            EditorBuildSettings.RefreshOpenSceneIndices();
             Time.ResetForPlayMode();
             EditorInitialization.EnterPlayModeMethods();
             RuntimeInitializers.Run(RuntimeInitializeLoadType.SubsystemRegistration);
