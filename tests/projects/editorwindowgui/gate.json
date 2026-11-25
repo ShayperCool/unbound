@@ -10,6 +10,7 @@
     "tests/projects/imguiskin/Assets/Scenes/",
     "tests/projects/imguiskin/Assets/Editor/",
     "tests/projects/imguiskin/Packages/",
-    "tests/projects/imguiskin/ProjectSettings/"
+    "tests/projects/imguiskin/ProjectSettings/",
+    "tests/projects/imguiskin/"
   ]
 }
