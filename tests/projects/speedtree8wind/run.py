@@ -65,7 +65,7 @@ def main():
             raise
         print(f'speedtree8wind: SKIPPED, nothing compared: {absent}')
         return 0
-    return value_probe.gate(PROBE, VARIABLE, label, 0, ['--frames', '400', '--size', '64x64'], configure=stage)
+    return value_probe.gate(PROBE, VARIABLE, label, 0, ['--frames', '1100', '--size', '64x64'], configure=stage)
 
 
 if __name__ == '__main__':

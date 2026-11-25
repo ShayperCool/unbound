@@ -165,6 +165,92 @@ namespace UnityEngine.Tests
             Assert.NotEqual(0f, Value(wind, 1).x);
         }
 
+        /// <summary>A calm after a wind keeps everything: its frames draw the last windy update's
+        /// constants and history; when a wind comes back, its first step is over the time since
+        /// the start (the calm's timers start over).</summary>
+        [Fact]
+        public void ACalmKeepsTheLastWindyConstantsAndTheReturningWindStepsFromTheStart()
+        {
+            var wind = new SpeedTree8WindState();
+            var config = Config();
+            int frame = 1;
+            wind.Update(frame * Dt, Vector3.right, 0.5f, config);
+            for (frame = 2; frame <= 4; frame++) wind.Update(frame * Dt, Vector3.right, 0.5f, config);
+            // The wind goes and eases to rest.
+            for (; wind.Blowing; frame++) wind.Update(frame * Dt, Vector3.zero, 0f, config);
+            // The first calm update.
+            wind.Update(frame++ * Dt, Vector3.zero, 0f, config);
+            var settled = Enumerable.Range(0, SpeedTree8WindState.ConstantCount).Select(i => Value(wind, i)).ToArray();
+            // The direction is kept.
+            Assert.True(settled[0].x > 0.999f, settled[0].ToString());
+            Assert.Equal(0f, settled[0].w);
+            // The history keeps the phases after the last step, the current ones those before it.
+            float lastStep = settled[SpeedTree8WindState.HistoryOffset + 14].x - settled[14].x;
+            Assert.Equal(10f * Dt, lastStep, 4);
+            for (int calm = 0; calm < 5; calm++, frame++)
+            {
+                wind.Update(frame * Dt, Vector3.zero, 0f, config);
+                for (int i = 0; i < settled.Length; i++) Assert.Equal(settled[i], Value(wind, i));
+            }
+            float time = frame * Dt;
+            wind.Update(time, Vector3.forward, 0.5f, config);
+            // The first windy update draws the kept phases and steps them over the whole time.
+            Assert.Equal(settled[SpeedTree8WindState.HistoryOffset + 14].x, Value(wind, 14).x);
+            Assert.Equal(settled[SpeedTree8WindState.HistoryOffset + 14].x + 10f * time,
+                Value(wind, SpeedTree8WindState.HistoryOffset + 14).x, 3);
+        }
+
+        /// <summary>A spherical zone that reaches a SpeedTree 8 tree gives it no local wind (it
+        /// draws its asset's wind), said once; one out of reach says nothing.</summary>
+        [Fact]
+        public void ASphericalZoneReachingASpeedTree8TreeSaysItIsNotSimulated()
+        {
+            var go = new GameObject("Tree8");
+            var asset = new SpeedTreeWindAsset(Config());
+            var zone = new GameObject("Sphere").AddComponent<WindZone>();
+            var previous = Debug.unityLogger.logHandler;
+            var warnings = new Warnings();
+            float time = (float)Time.s_Time;
+            try
+            {
+                Debug.unityLogger.logHandler = warnings;
+                SpeedTreeWindSystem.s_SpeedTree8LocalWindReported = false;
+                go.AddComponent<MeshFilter>().sharedMesh = new Mesh { vertices = new[] { Vector3.zero, Vector3.up, Vector3.right }, triangles = new[] { 0, 1, 2 } };
+                var renderer = go.AddComponent<MeshRenderer>();
+                go.AddComponent<Tree>().windAsset = asset;
+                zone.mode = WindZoneMode.Spherical;
+                zone.radius = 5f;
+                zone.windMain = 1f;
+                zone.transform.position = new Vector3(100f, 0f, 0f);
+                for (int frame = 1; frame <= 3; frame++)
+                {
+                    Time.s_Time = frame * Dt;
+                    SpeedTreeWindSystem.Update();
+                }
+                using (Unbound.Runtime.DrawPropertyPool.Begin())
+                {
+                    SpeedTreeWindSystem.Apply(renderer, new Dictionary<int, object>());
+                    Assert.DoesNotContain(warnings.Messages, m => m.Contains("SpeedTree 8 local wind"));
+                    zone.transform.position = new Vector3(-3f, 0.25f, 0f);
+                    Time.s_Time = 4 * Dt;
+                    SpeedTreeWindSystem.Update();
+                    var drawn = SpeedTreeWindSystem.Apply(renderer, new Dictionary<int, object>());
+                    SpeedTreeWindSystem.Apply(renderer, new Dictionary<int, object>());
+                    Assert.Equal(Value(asset.Wind8, 0), (Vector4)drawn[Shader.PropertyToID("_ST_WindVector")]);
+                }
+                Assert.Single(warnings.Messages, m => m.Contains("SpeedTree 8 local wind") && m.Contains("not simulated"));
+            }
+            finally
+            {
+                Time.s_Time = time;
+                Debug.unityLogger.logHandler = previous;
+                Object.DestroyImmediate(go);
+                Object.DestroyImmediate(zone.gameObject);
+                Object.DestroyImmediate(asset);
+                SpeedTreeWindSystem.Update();
+            }
+        }
+
         sealed class Warnings : ILogHandler
         {
             internal readonly List<string> Messages = new List<string>();

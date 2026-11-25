@@ -16,10 +16,12 @@ motion vectors (its current constants are recorded), `FieldB` (turned and scaled
 motion vectors (its history too). The scene has no wind at first; then a directional zone comes
 (frame 10), its main wind rises above 1 (50), it turns around (75), a second directional zone
 under a mirrored, turned parent comes (105), a spherical zone far from every tree comes (120), and
-all zones go (130); once the wind has settled a directional zone comes again (260), and a tree of
-the same asset first draws in it (`FieldLate`, 300, per-object motion vectors: until it draws its
-own wind it reads what an earlier draw left, so the probe records whether its wind vector is
-`FieldB`'s, and its constants only when it is). At 53 frames between 1 and 360 the probe records
+all zones go (130); the wind eases to rest (the tree's responses are 14 seconds: its strength
+reaches 0 by frame 400, its direction stops by frame 550) and stays calm; long after, a directional
+zone comes again (900), and a tree of the same asset first draws in it (`FieldLate`, 1000,
+per-object motion vectors: until it draws its own wind it reads what an earlier draw left, so the
+probe records whether its wind vector is `FieldB`'s, and its constants only when it is). At 68
+frames between 1 and 1060 the probe records
 Time.time and each tree's constants (floats as the hex of their bits; values compare exactly),
 and once `Tree.hasSpeedTreeWind` of the asset's first level.
 
@@ -30,14 +32,21 @@ on the asset's 10-sample curves, and ten phases (the global wind, two branch lev
 group's ripple, tumble and twitch, the fronds' ripple) advance by their oscillation curves times
 the time since the previous update. The constants hold each part's phase before this frame's
 step, its curves' values at the strength and the asset's settings; the branch anchor is the
-asset's anchor moved along the wind by the first branch level's length. The history constants are
-the previous frame's, with the phases after this frame's step. `_ST_WindAnimation` is never
-written.
+asset's anchor moved along the wind by the first branch level's length. The history constants
+take the previous frame's strength and direction with the phases after this frame's step. Once
+the wind is at rest nothing changes: the calm frames draw the last windy frame's constants and
+history. When a wind comes back the timers have started over: its first step is over the whole
+time since play started (a jump of every phase by its curve at strength 0 times that time).
+`_ST_WindAnimation` is never written.
 
     python3 tests/projects/speedtree8wind/run.py record --label A   # Editor capture (Linux, GPU)
     python3 tests/projects/speedtree8wind/run.py publish A B        # two identical captures
     python3 tests/projects/speedtree8wind/run.py gate               # the engine against Reference/
 
-Not measured: spherical zones reaching a SpeedTree 8 tree (Unbound keeps the asset's wind for it
+Not measured: the billboard level (the probe draws a copy of the first level), the file options
+that make a branch level's adherence directional (the sample sets neither; Unbound scales it by
+the first level's length), palm wind (its shader reads `_ST_WindAnimation`, which Unbound binds
+nothing to), a SpeedTree 8 wind still easing keeping SpeedTree 9 trees' world windy (Unbound has
+one world wind for both), spherical zones reaching a SpeedTree 8 tree (Unbound keeps the asset's wind for it
 and says so once), gusts (the release never turns them on), the GPU Resident Drawer's SpeedTree 8
 parameters (Unbound gives it the 15 constants in the SpeedTree 8 shaders' order and says so once).

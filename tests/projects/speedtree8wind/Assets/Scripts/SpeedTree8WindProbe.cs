@@ -34,9 +34,10 @@ public sealed class SpeedTree8WindProbe : MonoBehaviour
     {
         1, 2, 9, 10, 11, 12, 13, 15, 20, 30, 45, 50, 51, 52, 55, 70, 75, 76, 77, 80, 90, 100,
         105, 106, 107, 110, 115, 120, 121, 125, 130, 131, 132, 135, 140, 160, 200, 201, 220, 250,
-        260, 261, 262, 265, 270, 280, 300, 301, 302, 305, 320, 340, 360,
+        300, 350, 400, 450, 500, 550, 600, 650, 700, 750, 800, 850, 899, 900, 901, 902, 903, 905, 910,
+        930, 960, 1000, 1001, 1002, 1005, 1020, 1040, 1060,
     };
-    const int LastFrame = 360;
+    const int LastFrame = 1060;
 
     readonly StringBuilder m_Out = new StringBuilder();
     /// <summary>Each tree's camera, the constants it records (a renderer without per-object motion
@@ -150,9 +151,10 @@ public sealed class SpeedTree8WindProbe : MonoBehaviour
             m_B.gameObject.SetActive(false);
             m_Far.gameObject.SetActive(false);
         }
-        // Calm again; then a wind again, and a tree that first draws in it.
-        if (m_Frame == 260) m_Again = Zone("Again", null, WindZoneMode.Directional, 0.5f, Quaternion.Euler(0f, -45f, 0f), Vector3.zero);
-        if (m_Frame == 300)
+        // Calm again: the wind eases to rest (this tree's responses are 14 seconds); long after it
+        // has, a wind again, and a tree that first draws in it.
+        if (m_Frame == 900) m_Again = Zone("Again", null, WindZoneMode.Directional, 0.5f, Quaternion.Euler(0f, -45f, 0f), Vector3.zero);
+        if (m_Frame == 1000)
             Tree("FieldLate", "FieldB", 28, new Vector3(300f, 0f, 0f), Quaternion.identity, Vector3.one, MotionVectorGenerationMode.Object);
     }
 

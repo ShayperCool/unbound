@@ -12,7 +12,8 @@ namespace UnityEngine
     /// its oscillation curve at the strength times the time since the previous update. The shader
     /// constants hold, for each part, its phase before this update and its curves' values at the
     /// strength, beside the asset's settings; the history constants (for per-object motion
-    /// vectors) are those of the previous update with the phases after this update's step. Gusts take no part (the measured release never
+    /// vectors) take the previous update's strength and direction with the phases after this
+    /// update's step. A calm keeps them all: its frames draw the last windy update's constants. Gusts take no part (the measured release never
     /// turns them on, as for SpeedTree 9).
     /// </summary>
     internal sealed class SpeedTree8WindState : SpeedTreeWindMotion
@@ -28,7 +29,9 @@ namespace UnityEngine
         // The options of the asset's file that turn the branch levels' adherence directional.
         const int BranchDirectional1 = 3, BranchDirectional2 = 9;
 
-        readonly float[] m_Phase = new float[Phases];
+        /// <summary>The phases after the latest step, and before it (the ones the current
+        /// constants draw).</summary>
+        readonly float[] m_Phase = new float[Phases], m_DrawnPhase = new float[Phases];
 
         /// <summary>The 30 constants as boxed Vector4 values, updated in place each frame.</summary>
         internal readonly object[] Values = NewValues(ConstantCount);
@@ -37,77 +40,62 @@ namespace UnityEngine
         /// direction, or zero, and its strength) and updates <see cref="Values"/>.</summary>
         internal void Update(float time, Vector3 direction, float strength, SpeedTreeWindConfig8 config)
         {
-            // The previous update's constants are the history.
-            for (int i = 0; i < HistoryOffset; i++) Set(HistoryOffset + i, Get(i));
             if (!InTransition && Clamp01(m_Strength) <= 0f && strength == 0f)
             {
-                // Calm: the timers start over, as a SpeedTree 9 wind's do.
+                // Calm: the timers start over, as a SpeedTree 9 wind's do; the phases, the
+                // direction and the previous update's direction stay as they are.
                 m_Time = 0f;
                 m_PreviousTime = Unset;
                 m_PreviousStrength = 0f;
                 m_Strength = 0f;
-                Write(config, Clamp01(m_Strength));
-                WriteHistoryPhases();
-                return;
             }
-            SetDirection(time, direction, config.DirectionResponse);
-            SetStrength(time, strength, config.StrengthResponse);
-            Advance(time);
-            float s = Clamp01(m_Strength);
-            // The constants take the phases before this update's step.
-            Write(config, s);
-            Curve(CurveSamples, s, out int i0, out int i1, out float t);
-            float dt = m_Time - m_PreviousTime;
-            for (int k = 0; k < Phases; k++) m_Phase[k] += Sample(config.Oscillation[k], i0, i1, t) * dt;
-            WriteHistoryPhases();
+            else
+            {
+                SetDirection(time, direction, config.DirectionResponse);
+                SetStrength(time, strength, config.StrengthResponse);
+                Advance(time);
+                float s = Clamp01(m_Strength);
+                Curve(CurveSamples, s, out int i0, out int i1, out float t);
+                float dt = m_Time - m_PreviousTime;
+                for (int k = 0; k < Phases; k++)
+                {
+                    m_DrawnPhase[k] = m_Phase[k];
+                    m_Phase[k] += Sample(config.Oscillation[k], i0, i1, t) * dt;
+                }
+            }
+            // The current constants: this update's strength and direction, the phases before its
+            // step; the history: the previous update's strength and direction, the phases after it.
+            Write(0, config, Clamp01(m_Strength), m_Direction, m_DrawnPhase);
+            Write(HistoryOffset, config, m_PreviousStrength, m_PreviousDirection, m_Phase);
         }
 
-        /// <summary>The history's phases are the ones after this update's step (the rest of it is
-        /// the previous update's constants).</summary>
-        void WriteHistoryPhases()
-        {
-            const int h = HistoryOffset;
-            Phase(h + 1, 0, m_Phase[0]);
-            Phase(h + 2, 0, m_Phase[1]);
-            Phase(h + 2, 2, m_Phase[2]);
-            Phase(h + 8, 0, m_Phase[3]);
-            Phase(h + 9, 0, m_Phase[4]);
-            Phase(h + 10, 2, m_Phase[5]);
-            Phase(h + 11, 0, m_Phase[6]);
-            Phase(h + 12, 0, m_Phase[7]);
-            Phase(h + 13, 2, m_Phase[8]);
-            Phase(h + 14, 0, m_Phase[9]);
-        }
-
-        void Phase(int index, int component, float phase) => Unsafe.Unbox<Vector4>(Values[index])[component] = phase;
-
-        void Write(SpeedTreeWindConfig8 c, float s)
+        void Write(int at, SpeedTreeWindConfig8 c, float s, Vector3 d, float[] a)
         {
             Curve(CurveSamples, s, out int i0, out int i1, out float t);
             float C(float[] curve) => Sample(curve, i0, i1, t);
-            var d = m_Direction;
             var b1 = c.BranchLevels[0];
             var b2 = c.BranchLevels[1];
             var l1 = c.LeafGroups[0];
             var l2 = c.LeafGroups[1];
-            Set(0, new Vector4(d.x, d.y, d.z, s));
-            Set(1, new Vector4(m_Phase[0], C(c.GlobalDistance), c.GlobalHeight != 0f ? 1f / c.GlobalHeight : 1f, c.GlobalHeightExponent));
-            Set(2, new Vector4(m_Phase[1], C(b1.Distance), m_Phase[2], C(b2.Distance)));
-            Set(3, new Vector4(b1.Twitch, b1.TwitchFreqScale, b2.Twitch, b2.TwitchFreqScale));
-            Set(4, new Vector4(C(b1.Whip), C(b2.Whip), 0f, 0f));
-            Set(5, Anchor(c, d));
+            Set(at + 0, new Vector4(d.x, d.y, d.z, s));
+            Set(at + 1, new Vector4(a[0], C(c.GlobalDistance), c.GlobalHeight != 0f ? 1f / c.GlobalHeight : 1f, c.GlobalHeightExponent));
+            Set(at + 2, new Vector4(a[1], C(b1.Distance), a[2], C(b2.Distance)));
+            Set(at + 3, new Vector4(b1.Twitch, b1.TwitchFreqScale, b2.Twitch, b2.TwitchFreqScale));
+            Set(at + 4, new Vector4(C(b1.Whip), C(b2.Whip), 0f, 0f));
+            Set(at + 5, Anchor(c, d));
+            // Unmeasured: the sample sets neither option.
             float adherence1 = C(b1.DirectionAdherence), adherence2 = C(b2.DirectionAdherence);
             if (c.Options[BranchDirectional1]) adherence1 = c.MaxBranchLevel1Length * adherence1;
             if (c.Options[BranchDirectional2]) adherence2 = c.MaxBranchLevel1Length * adherence2;
-            Set(6, new Vector4(C(c.GlobalDirectionAdherence), adherence1, adherence2, 0f));
-            Set(7, new Vector4(b1.Turbulence, b2.Turbulence, 0f, 0f));
-            Set(8, new Vector4(m_Phase[3], C(l1.RippleDistance), l1.LeewardScalar, 0f));
-            Set(9, new Vector4(m_Phase[4], C(l1.TumbleFlip), C(l1.TumbleTwist), C(l1.TumbleDirectionAdherence)));
-            Set(10, new Vector4(C(l1.TwitchThrow), Twitch(C(c.Oscillation[5]), l1.TwitchSharpness), m_Phase[5], 0f));
-            Set(11, new Vector4(m_Phase[6], C(l2.RippleDistance), l2.LeewardScalar, 0f));
-            Set(12, new Vector4(m_Phase[7], C(l2.TumbleFlip), C(l2.TumbleTwist), C(l2.TumbleDirectionAdherence)));
-            Set(13, new Vector4(C(l2.TwitchThrow), Twitch(C(c.Oscillation[8]), l2.TwitchSharpness), m_Phase[8], 0f));
-            Set(14, new Vector4(m_Phase[9], C(c.FrondRippleDistance), c.FrondRippleTile, c.FrondRippleLightingScalar));
+            Set(at + 6, new Vector4(C(c.GlobalDirectionAdherence), adherence1, adherence2, 0f));
+            Set(at + 7, new Vector4(b1.Turbulence, b2.Turbulence, 0f, 0f));
+            Set(at + 8, new Vector4(a[3], C(l1.RippleDistance), l1.LeewardScalar, 0f));
+            Set(at + 9, new Vector4(a[4], C(l1.TumbleFlip), C(l1.TumbleTwist), C(l1.TumbleDirectionAdherence)));
+            Set(at + 10, new Vector4(C(l1.TwitchThrow), Twitch(C(c.Oscillation[5]), l1.TwitchSharpness), a[5], 0f));
+            Set(at + 11, new Vector4(a[6], C(l2.RippleDistance), l2.LeewardScalar, 0f));
+            Set(at + 12, new Vector4(a[7], C(l2.TumbleFlip), C(l2.TumbleTwist), C(l2.TumbleDirectionAdherence)));
+            Set(at + 13, new Vector4(C(l2.TwitchThrow), Twitch(C(c.Oscillation[8]), l2.TwitchSharpness), a[8], 0f));
+            Set(at + 14, new Vector4(a[9], C(c.FrondRippleDistance), c.FrondRippleTile, c.FrondRippleLightingScalar));
         }
 
         /// <summary>A leaf twitch's sharpness over its oscillation (none where the oscillation is
@@ -134,8 +122,6 @@ namespace UnityEngine
             float l = MathF.Sqrt((ax * ax + ay * ay) + az * az);
             return l != 0f ? new Vector4(ax / l, ay / l, az / l, l) : Vector4.zero;
         }
-
-        Vector4 Get(int index) => Unsafe.Unbox<Vector4>(Values[index]);
 
         void Set(int index, Vector4 value) => Unsafe.Unbox<Vector4>(Values[index]) = value;
     }
