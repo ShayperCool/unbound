@@ -107,8 +107,8 @@ namespace UnityEngine.Tests
         {
             using var release = TestRelease.Pin(TestRelease.Measured);
             // Not in the probe: the Linux Editor (6000.0.71f1, two identical batch captures of
-            // 2026-11-25, rows euler.OrderXYZ.9.0 and .9.3 of the zero rotation) answers this, the
-            // macOS Editor gives NaN angles.
+            // 2026-11-25 of a probe variant with the zero rotation in the list, not committed)
+            // answers this, the macOS Editor gives NaN angles.
             var zero = new Quaternion(0f, 0f, 0f, 0f);
             Assert.Equal("-83.75 0 -83.75", V(AnimationUtility.GetClosestEuler(zero, Vector3.zero, RotationOrder.OrderXYZ)));
             Assert.Equal("96.25 180 96.25", V(AnimationUtility.GetClosestEuler(zero, new Vector3(170f, 170f, 170f), RotationOrder.OrderXYZ)));
