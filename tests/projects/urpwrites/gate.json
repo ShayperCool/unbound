@@ -11,6 +11,7 @@
     "managed/UnityEngine/Graphics/Material.cs",
     "managed/UnityEngine/Graphics/DisabledPassList.cs",
     "tests/projects/materialvalidation/Assets/Resources/EmissionRealtimeNoKeyword.mat",
-    "tests/projects/urpwrites/"
+    "tests/projects/urpwrites/",
+    "tests/projects/materialvalidation/Assets/Resources/EmissionRealtimeNoKeyword.mat.meta"
   ]
 }
