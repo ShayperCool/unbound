@@ -238,8 +238,10 @@ namespace UnityEngine.Tests
                 var so = new SerializedObject(holder);
                 // A field without a type of its own shows the property's: "None (Transform)".
                 Assert.Equal("None (Transform)", EditorGUI.ObjectFieldContent(null, null, so.FindProperty("target")).text);
-                // (Dropped on the field, right of its label.)
+                // (Dropped on the field, right of its label: the label is 150 points wide, not a
+                // share of whatever screen width another test left.)
                 var at = new Rect(10, 300, 300, 18);
+                EditorGUIUtility.labelWidth = 150;
                 DragAndDrop.objectReferences = new Object[] { other };
                 Pass(Drop(new Vector2(250, 309)), () => { EditorGUI.PropertyField(at, so.FindProperty("target")); return 0; });
                 so.ApplyModifiedProperties();
@@ -249,7 +251,7 @@ namespace UnityEngine.Tests
                 so.ApplyModifiedProperties();
                 Assert.Same(go.transform, holder.target);
             }
-            finally { Object.DestroyImmediate(holder); Object.DestroyImmediate(go); Object.DestroyImmediate(other); Reset(); }
+            finally { EditorGUIUtility.labelWidth = 0; Object.DestroyImmediate(holder); Object.DestroyImmediate(go); Object.DestroyImmediate(other); Reset(); }
         }
 
         [Fact]
