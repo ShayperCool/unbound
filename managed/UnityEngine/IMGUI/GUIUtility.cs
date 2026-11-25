@@ -22,8 +22,10 @@ namespace UnityEngine
     {
         static int s_HotControl;
         static int s_KeyboardControl;
+        // One counter for every new control id of every GUI scope and for the permanent ids, as the
+        // Editor's (tests/projects/imguicontrolids). Where it starts is not modelled: in the Editor its
+        // other views take ids from it before a game's first OnGUI.
         static int s_NextControlId = 100;
-        static long s_LastPermanentControlId;
         static string s_CopyBuffer = "";
         static readonly Dictionary<int, object> s_StateObjects = new Dictionary<int, object>();
         static readonly Dictionary<int, ControlIdList> s_IdLists = new Dictionary<int, ControlIdList>();
@@ -124,7 +126,7 @@ namespace UnityEngine
 
         static int AllocateId()
         {
-            int id = unchecked(++s_NextControlId);
+            int id = Interlocked.Increment(ref s_NextControlId);
             if (id <= 0) id = s_NextControlId = 1;
             return id;
         }
@@ -412,14 +414,10 @@ namespace UnityEngine
 
         internal static void SetSearchIndexOfControlIDList(int index) => s_CurrentIdList.SetSearchIndex(index);
 
-        // Scoped controls use positive IDs. Permanent controls keep a distinct ID across
-        // GUI passes and do not advance the current pass's control sequence.
-        internal static int GetPermanentControlID()
-        {
-            long id = Interlocked.Decrement(ref s_LastPermanentControlId);
-            if (id < int.MinValue) throw new InvalidOperationException("Permanent IMGUI control IDs exhausted.");
-            return (int)id;
-        }
+        /// <summary>An id that stays the control's across GUI passes: the next number of the counter
+        /// new control ids come from (tests/projects/imguicontrolids: a permanent id taken between
+        /// two new controls sits between their ids); it is in no pass's list.</summary>
+        internal static int GetPermanentControlID() => AllocateId();
 
         public static object GetStateObject(Type t, int controlID)
         {
