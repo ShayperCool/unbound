@@ -1,0 +1,15 @@
+{
+  "commands": [
+    "python3 tests/projects/speedtree8/run.py gate --if-staged"
+  ],
+  "summary": "speedtree8: .*",
+  "engine_paths": [
+    "managed/UnityEngine/Editor/SpeedTree8/",
+    "managed/UnityEngine/Editor/SpeedTree9/SpeedTreeTables.cs",
+    "managed/UnityEngine/Terrain/SpeedTreeWind.cs",
+    "managed/UnityEngine/Graphics/LODGroup.cs",
+    "managed/UnityEngine/Graphics/Mesh.cs",
+    "managed/UnityEngine/Editor/ImportedPrefabDocuments.cs",
+    "crates/unbound-runtime/src/imported_prefabs.rs"
+  ]
+}

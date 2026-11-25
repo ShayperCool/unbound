@@ -41,3 +41,7 @@ imports every tree again) is not covered.
     python3 tests/projects/speedtree8/run.py record --label A     # Editor capture
     python3 tests/projects/speedtree8/run.py publish A B          # two identical captures
     python3 tests/projects/speedtree8/run.py gate                 # the engine against Reference/
+    python3 tests/projects/speedtree8/run.py gate --if-staged     # the landing gate's: SKIPPED without the samples
+
+The landing gate (`gate.json`) runs `gate --if-staged`, which compares where the samples are staged and,
+elsewhere, prints a SKIPPED line naming the missing directory and succeeds; plain `gate` stops with an error.

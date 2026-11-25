@@ -8,6 +8,10 @@ default), and stops when they are not there.
     python3 tests/projects/speedtree8/run.py record --label A   # Editor capture (macOS batch is fine)
     python3 tests/projects/speedtree8/run.py publish A B        # two identical captures
     python3 tests/projects/speedtree8/run.py gate               # the engine against Reference/
+    python3 tests/projects/speedtree8/run.py gate --if-staged   # the same, a SKIPPED line without the samples
+
+The landing gate (gate.json) runs `gate --if-staged`: where the samples are not staged it says so
+and stops with success instead of failing every landing; everywhere else `gate` stops with an error.
 """
 import argparse
 import os
@@ -115,6 +119,8 @@ def main():
     parser.add_argument('mode', choices=('record', 'publish', 'gate'))
     parser.add_argument('labels', nargs='*')
     parser.add_argument('--label', default=None)
+    parser.add_argument('--if-staged', action='store_true',
+                        help='gate only where the samples are staged; elsewhere print SKIPPED and succeed')
     args = parser.parse_args()
     label = args.label or time.strftime('check-%Y%m%d-%H%M%S-')+str(os.getpid())
     if args.mode == 'record':
@@ -122,7 +128,13 @@ def main():
         return value_probe.record(PROBE, 'ProbeRunner.Record', VARIABLE, label, True, macos_batch=True, configure=stage)
     if args.mode == 'publish':
         return value_probe.publish(PROBE, args.labels)
-    samples()
+    try:
+        samples()
+    except SystemExit as absent:
+        if not args.if_staged:
+            raise
+        print(f'speedtree8: SKIPPED, nothing compared: {absent}')
+        return 0
     return value_probe.gate(PROBE, VARIABLE, label, 0, ['--frames', '10', '--size', '64x64'], configure=stage)
 
 
