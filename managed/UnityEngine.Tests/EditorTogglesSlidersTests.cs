@@ -86,6 +86,14 @@ namespace UnityEngine.Tests
                 Pass(new Event { type = EventType.Repaint }, () => { EditorGUI.IntSlider(r, so.FindProperty("intValue"), 5, 10); return 0; });
                 so.ApplyModifiedProperties();
                 Assert.Equal((2f, 3), (holder.floatValue, holder.intValue));
+                // script/s1.*: a drag on the slider writes the property (and only then).
+                float x = r.x + EditorGUIUtility.labelWidth + 20;
+                Pass(Mouse(EventType.MouseDown, x, r.center.y), () => { EditorGUI.Slider(r, so.FindProperty("floatValue"), 0f, 10f); return 0; });
+                Pass(new Event { type = EventType.MouseDrag, mousePosition = new Vector2(x + 20, r.center.y), delta = new Vector2(20, 0) },
+                    () => { EditorGUI.Slider(r, so.FindProperty("floatValue"), 0f, 10f); return 0; });
+                so.ApplyModifiedProperties();
+                Assert.True(holder.floatValue > 2f, "dragged to " + holder.floatValue);
+                Assert.Equal(3, holder.intValue);
             }
             finally
             {
@@ -109,8 +117,8 @@ namespace UnityEngine.Tests
                              () => EditorGUI.Toggle(At, true, s_Toggle), () => EditorGUI.DropShadowLabel(At, "s"),
                              () => EditorGUI.DropShadowLabel(At, "s", s_Toggle) })
                     Assert.Equal("Object reference not set to an instance of an object", Assert.Throws<NullReferenceException>(call).Message);
-                // outside/editorGUI, logs: no "Unable to find style" warning outside OnGUI.
-                Assert.DoesNotContain(logs, l => l.Contains("Unable to find style"));
+                // outside/editorGUI, logs: nothing is logged (no style looked up by name) outside OnGUI.
+                Assert.Empty(logs);
             }
             finally
             {
@@ -128,8 +136,19 @@ namespace UnityEngine.Tests
             Assert.False(EditorGUI.Toggle(At, "x", false));
             Assert.True(EditorGUILayout.Toggle(true));
             Assert.False(EditorGUILayout.Toggle("x", false));
-            Assert.Equal(rect + 2, Hits("UnityEditor.EditorGUI.Toggle"));
-            Assert.Equal(layout + 2, Hits("UnityEditor.EditorGUILayout.Toggle"));
+            // The styled layout forms (their rect uses the skin's number field) and a mixed value
+            // (the skin's mixed style) report too.
+            var style = new GUIStyle();
+            Assert.True(EditorGUILayout.Toggle(true, style));
+            Assert.False(EditorGUILayout.Toggle("x", false, style));
+            EditorGUI.showMixedValue = true;
+            try
+            {
+                Assert.True(Pass(new Event { type = EventType.Repaint }, () => EditorGUI.Toggle(At, true, style)));
+            }
+            finally { EditorGUI.showMixedValue = false; }
+            Assert.Equal(rect + 3, Hits("UnityEditor.EditorGUI.Toggle"));
+            Assert.Equal(layout + 4, Hits("UnityEditor.EditorGUILayout.Toggle"));
         }
     }
 }
