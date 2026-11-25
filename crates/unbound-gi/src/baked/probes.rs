@@ -7,6 +7,7 @@ use super::grid::Grid;
 use super::light::{Light, Mode, Tables};
 use super::sampling::{self, Samples};
 use super::trace::{Ray, Scene};
+use rayon::prelude::*;
 
 /// The coefficients of a probe's light: nine, each red, green and blue.
 pub type Coefficients = [[f32; 3]; 9];
@@ -130,7 +131,7 @@ pub fn direct(
 ) -> Vec<Coefficients> {
     let tables = Tables::new();
     positions
-        .iter()
+        .par_iter()
         .enumerate()
         .map(|(probe, &p)| {
             let mut out = Coefficients::default();

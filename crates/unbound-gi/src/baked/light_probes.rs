@@ -8,6 +8,7 @@ use super::light::{Light, Mode, Tables};
 use super::probes::Coefficients;
 use super::spooky;
 use super::trace::{Ray, Scene};
+use rayon::prelude::*;
 
 /// The factor each of the nine coefficients of the bake's light takes in Unity's: the
 /// harmonic's constant times the cosine lobe's (1, 2/3, 1/4 by band).
@@ -407,7 +408,7 @@ pub fn occlusion(
     let tables = Tables::new();
     let listed = occluding_lights(lights, channels);
     positions
-        .iter()
+        .par_iter()
         .enumerate()
         .map(|(probe, &p)| {
             let mut entry = Occlusion {
@@ -643,5 +644,39 @@ mod tests {
             occlusion(&[[0.0, -1.0, 0.0]], &lights, &channels, &floor, None)[0].occlusion[0],
             0.0
         );
+    }
+
+    #[test]
+    fn a_soft_mixed_lights_occlusion_is_the_part_of_its_samples_that_see_the_probe() {
+        let samples =
+            super::super::sampling::Samples::new(&vec![
+                0;
+                super::super::sampling::BLUE_NOISE_BYTES
+            ])
+            .unwrap();
+        let sampling = super::super::probes::Sampling::new(&samples, 128, [3]);
+        // A soft mixed sun shining straight down, its disk 0.2 across one unit away.
+        let mut sun = spot(Mode::Mixed);
+        sun.kind = Kind::Directional;
+        sun.shadow_size = 0.2;
+        let lights = [sun];
+        let channels = [Some(0)];
+        // A roof over x < 0, one unit above the probes: the first probe under its edge, the
+        // others well inside and well outside its shadow.
+        let roof = Scene::new([
+            [[-5.0, 1.0, -5.0], [0.0, 1.0, -5.0], [0.0, 1.0, 5.0]],
+            [[-5.0, 1.0, -5.0], [0.0, 1.0, 5.0], [-5.0, 1.0, 5.0]],
+        ]);
+        let probes = [[0.0, 0.0, 0.0], [-1.0, 0.0, 0.0], [1.0, 0.0, 0.0]];
+        let soft = occlusion(&probes, &lights, &channels, &roof, Some(&sampling));
+        let edge = soft[0].occlusion[0];
+        // Some samples of 128 see the sun, in 128ths.
+        assert!(edge > 0.2 && edge < 0.8, "{edge}");
+        assert_eq!((edge * 128.0).fract(), 0.0);
+        assert_eq!(soft[1].occlusion[0], 0.0);
+        assert_eq!(soft[2].occlusion[0], 1.0);
+        // Without sampling, the light's centre alone: all or nothing.
+        let hard = occlusion(&probes[..1], &lights, &channels, &roof, None);
+        assert!(hard[0].occlusion[0] == 0.0 || hard[0].occlusion[0] == 1.0);
     }
 }
