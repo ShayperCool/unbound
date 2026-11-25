@@ -504,6 +504,16 @@ mod tests {
         // The parts the directional image weighs by: multiplied.
         let [d, i] = filtered.parts.unwrap();
         assert_eq!((d[0][0], i[0][0], i[1][0]), (1.0, 1.0, 0.5));
+        // With an Indirect Intensity of 2 as well: the indirect light twice, then multiplied.
+        let twice = Buffers {
+            indirect_scale: 2.0,
+            ..buffers
+        };
+        let scaled = composite(&twice, 0.9, 0, None, Some(ao), None).unwrap();
+        assert_eq!(
+            red(scaled.lightmap),
+            vec![1.0 + 4.0 * 0.5, 3.0 + 4.0 * 0.25]
+        );
         // Without its buffer: an error.
         let none = Buffers {
             ambient_occlusion: None,

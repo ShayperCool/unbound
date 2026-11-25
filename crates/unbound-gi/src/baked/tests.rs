@@ -1620,6 +1620,39 @@ mod bounced {
         }
     }
 
+    /// The floor's rays meet the ceiling 2 above it, or farther on a slant: the ambient
+    /// occlusion lets them through within a Max Distance of 1 (or 0: none occludes), not within
+    /// a far one; without it, 1. Without bounces and with ambient occlusion on the rays are
+    /// still sent: the back face they meet first counts (a ceiling facing up), no light comes.
+    #[test]
+    fn the_ambient_occlusion_counts_the_rays_that_meet_a_surface_within_max_distance() {
+        let ao = |distance: Option<f32>| {
+            let mut bake = Bake::new(ceiling(0), [1.0; 3], [0.0; 3]);
+            bake.settings.ao_max_distance = distance;
+            bake.bake().ambient_occlusion[0]
+        };
+        assert_eq!(ao(None), 1.0);
+        assert_eq!(ao(Some(1.0)), 1.0);
+        assert_eq!(ao(Some(0.0)), 1.0);
+        assert_eq!(ao(Some(1e6)), 0.0);
+        let mut up = ceiling(0);
+        up.corners = [
+            [-500.0, -500.0, 2.0],
+            [1000.0, -500.0, 2.0],
+            [-500.0, 1000.0, 2.0],
+        ];
+        up.normals = [[0.0, 0.0, 1.0]; 3];
+        let mut bake = Bake::new(up, [1.0; 3], [0.0; 3]);
+        bake.settings.max_bounces = 0;
+        bake.settings.ao_max_distance = Some(1e6);
+        let off = bake.bake();
+        assert_eq!((off.validity[0], off.ambient_occlusion[0]), (0.0, 0.0));
+        bake.settings.ambient_occlusion = true;
+        let on = bake.bake();
+        assert_eq!((on.validity[0], on.ambient_occlusion[0]), (1.0, 0.0));
+        assert_eq!(on.irradiance[0], [0.0, 0.0, 0.0, 1.0]);
+    }
+
     #[test]
     fn a_surface_sends_back_the_skys_light_while_the_path_may_go_on() {
         // The ceiling's front faces down, where nothing is between it and the sky.

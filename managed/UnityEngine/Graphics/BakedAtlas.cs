@@ -360,6 +360,10 @@ namespace UnityEngine
                     if (copy != null) Object.DestroyImmediate(copy);
             }
             var sky = SkyOf(settings);
+            // (Ambient occlusion without bounces: the texels' rays are sent, measured under a
+            // black sky; whether the sky's light then reaches the texels is not.)
+            if (settings.ao && settings.maxBounces == 0 && Array.Exists(sky, v => v != 0f))
+                Approximated("ao-nobounce-sky:" + path, $"{path}: ambient occlusion without bounces under a sky with light is not measured yet in Unbound's bake (Lightmapping.Bake).");
             var skyBytes = new byte[sky.Length * sizeof(float)];
             Buffer.BlockCopy(sky, 0, skyBytes, 0, skyBytes.Length);
             return new
