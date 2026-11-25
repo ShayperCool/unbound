@@ -1,0 +1,36 @@
+{"k":"outside/editorGUI","v":["throws NullReferenceException","throws NullReferenceException","throws NullReferenceException","throws NullReferenceException","throws ArgumentException","throws NullReferenceException"]}
+{"k":"outside/editorGUILayout","v":["throws NullReferenceException","throws NullReferenceException","throws NullReferenceException","throws NullReferenceException","throws ArgumentException","throws NullReferenceException"]}
+{"k":"rect/layout/foldout","v":[[false,1,false],[true,1,false],[false,1,false],[false,1,false],[true,1,false],[false,1,false],[true,1,false],[false,1,false]]}
+{"k":"rect/layout/intPopup","v":[[20,1,false],[25,1,false],[1,1,false],[30,1,false],[10,1,false],[20,1,false],[20,1,false]]}
+{"k":"rect/layout/minMax","v":[[["2","6"],1,false],[["8","3"],1,false],[["-5","20"],1,false],[["2","6"],1,false],[["2","6"],1,false]]}
+{"k":"rect/layout/selectable","v":[["ok",1,false],["ok",1,false]]}
+{"k":"layout/layout/fields","v":[[false,1,false],[true,1,false],[false,1,false],[20,1,false],[30,1,false],[10,1,false],[["2","6"],1,false],[["2","6"],1,false],["ok",1,false],["ok",1,false]]}
+{"k":"layout/layout/rects","v":[[0,0,1,1],[0,0,1,1],[0,0,1,1],[0,0,1,1],[0,0,1,1],[0,0,1,1],[0,0,1,1],[0,0,1,1],[0,0,1,1],[0,0,1,1]]}
+{"k":"rect/repaint/foldout","v":[[false,1,false],[true,1,false],[false,1,false],[false,1,false],[true,1,false],[false,1,false],[true,1,false],[false,1,false]]}
+{"k":"rect/repaint/intPopup","v":[[20,1,false],[25,1,false],[1,1,false],[30,1,false],[10,1,false],[20,1,false],[20,1,false]]}
+{"k":"rect/repaint/minMax","v":[[["2","6"],1,false],[["8","3"],1,false],[["-5","20"],1,false],[["2","6"],1,false],[["2","6"],1,false]]}
+{"k":"rect/repaint/selectable","v":[["ok",1,false],["ok",1,false]]}
+{"k":"layout/repaint/fields","v":[[false,1,false],[true,1,false],[false,1,false],[20,1,false],[30,1,false],[10,1,false],[["2","6"],1,false],[["2","6"],1,false],["ok",1,false],["ok",1,false]]}
+{"k":"layout/repaint/rects","v":[[0,0,299,18],[0,18,299,18],[0,36,299,18],[3,56,297,18],[3,76,297,18],[3,96,297,18],[4,118,295,18],[4,140,295,18],[3,162,297,36],[3,200,297,40]]}
+{"k":"script/start","v":[false,false,"2","6",20,[false,false,false,false],false,false]}
+{"k":"script/fold.arrow.down","v":[[false,false,"2","6",20,[false,false,false,false],true,true],12]}
+{"k":"script/fold.arrow.up","v":[[true,false,"2","6",20,[true,false,false,false],true,false],12]}
+{"k":"script/fold.left","v":[[false,false,"2","6",20,[true,false,false,false],true,false],12]}
+{"k":"script/fold.right","v":[[true,false,"2","6",20,[true,false,false,false],true,false],12]}
+{"k":"script/fold.right2","v":[[true,false,"2","6",20,[false,false,false,false],true,false],4]}
+{"k":"script/fold.label.down","v":[[true,false,"2","6",20,[false,false,false,false],true,false],0]}
+{"k":"script/fold.label.up","v":[[true,false,"2","6",20,[false,false,false,false],true,false],1]}
+{"k":"script/fold.away.down","v":[[true,false,"2","6",20,[false,false,false,false],true,true],12]}
+{"k":"script/fold.away.up","v":[[true,false,"2","6",20,[false,false,false,false],true,false],12]}
+{"k":"script/foldLabel.down","v":[[true,false,"2","6",20,[false,false,false,false],true,true],12]}
+{"k":"script/foldLabel.up","v":[[true,true,"2","6",20,[false,true,false,false],true,false],12]}
+{"k":"script/minMax.thumb.down","v":[[true,true,"2","6",20,[false,false,false,false],true,true],12]}
+{"k":"script/minMax.thumb.drag","v":[[true,true,"3.05263162","7.05263138",20,[false,false,true,false],true,true],12]}
+{"k":"script/minMax.thumb.up","v":[[true,true,"3.05263162","7.05263138",20,[false,false,false,false],true,false],12]}
+{"k":"script/minMax.end.down","v":[[true,true,"4.10526371","8.105264",20,[false,false,true,false],true,true],12]}
+{"k":"script/minMax.end.drag","v":[[true,true,"5.157895","9.157895",20,[false,false,true,false],true,true],12]}
+{"k":"script/minMax.end.up","v":[[true,true,"5.157895","9.157895",20,[false,false,false,false],true,false],12]}
+{"k":"script/minMax.track.down","v":[[true,true,"0","4",20,[false,false,true,false],true,true],12]}
+{"k":"script/minMax.track.up","v":[[true,true,"0","4",20,[false,false,false,false],true,false],12]}
+{"k":"script/popup.key","v":[[true,true,"0","4",20,[false,false,false,false],true,false],4]}
+{"k":"complete","v":true}

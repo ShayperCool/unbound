@@ -1,0 +1,12 @@
+{
+  "commands": [
+    "python3 tests/projects/editorfoldoutfields/run.py gate"
+  ],
+  "summary": "editorfoldoutfields: .*",
+  "engine_paths": [
+    "managed/UnityEngine/Editor/",
+    "managed/UnityEngine/IMGUI/",
+    "tests/projects/editorfoldoutfields/",
+    "tests/projects/imguiskin/"
+  ]
+}
