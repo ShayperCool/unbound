@@ -202,6 +202,13 @@ public sealed class EditorValueFieldsProbe : MonoBehaviour
         ("drag.move", () => Mouse(EventType.MouseDrag, new Vector2(DragRect.x + 30, DragRect.center.y), new Vector2(10, 0))),
         ("drag.move2", () => Mouse(EventType.MouseDrag, new Vector2(DragRect.x + 25, DragRect.center.y), new Vector2(-5, 0))),
         ("drag.up", () => Mouse(EventType.MouseUp, new Vector2(DragRect.x + 25, DragRect.center.y))),
+        // A delayed field left by clicking another field: does it commit, and when?
+        ("delayedAway.down", () => Mouse(EventType.MouseDown, DelayedRect.center)),
+        ("delayedAway.up", () => Mouse(EventType.MouseUp, DelayedRect.center)),
+        ("delayedAway.7", () => Char('7')),
+        ("delayedAway.otherDown", () => Mouse(EventType.MouseDown, IntRect.center)),
+        ("delayedAway.otherUp", () => Mouse(EventType.MouseUp, IntRect.center)),
+        ("delayedAway.escape", () => Key("escape")),
     };
 
     /// <summary>The scripted fields, in the same order in every event so they keep their ids.</summary>

@@ -54,4 +54,10 @@
 {"k":"script/drag.move","v":[["6",7,"4.5","z","0.398",7,"10","0.125",-6,[false,false,false,false,false,false,false,false,false],true,true,false],12]}
 {"k":"script/drag.move2","v":[["6",7,"4.5","z","0.398",7,"9.85","0.125",-6,[false,false,false,false,false,false,true,false,false],true,true,false],12]}
 {"k":"script/drag.up","v":[["6",7,"4.5","z","0.398",7,"9.85","0.125",-6,[false,false,false,false,false,false,false,false,false],true,false,false],12]}
+{"k":"script/delayedAway.down","v":[["6",7,"4.5","z","0.398",7,"9.85","0.125",-6,[false,false,false,false,false,false,false,false,false],true,true,true],12]}
+{"k":"script/delayedAway.up","v":[["6",7,"4.5","z","0.398",7,"9.85","0.125",-6,[false,false,false,false,false,false,false,false,false],true,false,true],12]}
+{"k":"script/delayedAway.7","v":[["6",7,"4.5","z","0.398",7,"9.85","0.125",-6,[false,false,false,false,false,false,false,false,false],true,false,true],12]}
+{"k":"script/delayedAway.otherDown","v":[["6",7,"4.5","z","0.398",7,"9.85","0.125",-6,[false,false,false,false,false,false,false,false,false],true,true,true],12]}
+{"k":"script/delayedAway.otherUp","v":[["6",7,"4.5","z","0.398",7,"9.85","0.125",-6,[false,false,false,false,false,false,false,false,false],true,false,true],12]}
+{"k":"script/delayedAway.escape","v":[["6",7,"4.5","z","0.398",7,"9.85","0.125",-6,[false,false,false,false,false,false,false,false,false],true,false,false],12]}
 {"k":"complete","v":true}

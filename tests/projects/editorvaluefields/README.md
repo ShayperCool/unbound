@@ -13,7 +13,8 @@ measures, in a game's `OnGUI`:
   `1/8`), a character a number field refuses, Escape, Return and Tab, a delayed field that commits
   only on Return, clicking away, clicking and dragging a slider, and dragging a labelled number
   field's label. Each step records every field's value, which field set `GUI.changed`, keyboard and
-  hot control, `EditorGUIUtility.editingTextField` and the event's type afterwards.
+  hot control, `EditorGUIUtility.editingTextField` and the event's type afterwards. A delayed field
+  left by clicking another field does not commit its text in a game's `OnGUI` (`delayedAway.*`).
 
 ```sh
 UNBOUND_PROBE_UNITY_VERSION=6000.0.71f1 python3 tests/projects/editorvaluefields/run.py record --label native-a
