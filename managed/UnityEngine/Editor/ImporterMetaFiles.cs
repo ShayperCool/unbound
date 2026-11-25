@@ -135,10 +135,16 @@ namespace Unbound.Runtime
                 FillTextureSection(plain, textureTemplate);
                 SetCommonScalars(plain, common);
                 FillTextureSection(section, textureTemplate);
+                var missing = new List<string>(unwritten);
                 unwritten.Clear();
                 Patch(section, settings, "", unwritten);
                 SetCommonScalars(section, common);
-                if (written == original && UnityYamlText.WriteTopLevel(root) == UnityYamlText.WriteTopLevel(defaults)) return null;
+                if (written == original && UnityYamlText.WriteTopLevel(root) == UnityYamlText.WriteTopLevel(defaults))
+                {
+                    // Still reported: whether the Editor writes the section then is not known.
+                    foreach (var key in missing) unwritten.Add(key + " (given the value its default reads)");
+                    return null;
+                }
             }
             // A texture's settings written again list every installed platform module (the
             // Editor adds the missing ones at their defaults: tests/projects/projectwrites 06.crlf).
@@ -196,8 +202,6 @@ namespace Unbound.Runtime
             s_TextureTemplate ??= System.Text.Json.JsonDocument.Parse(Native.Call("texture-meta-template", "{}")).RootElement.GetProperty("section").GetString() ?? "";
 
         /// <summary>Whether a texture's section is of the template's version (and the template known).</summary>
-        static bool TextureSectionFillable(YText section) => TextureSectionFillable(section, TextureTemplate());
-
         internal static bool TextureSectionFillable(YText section, string templateText)
         {
             if (string.IsNullOrEmpty(templateText)) return false;
@@ -209,8 +213,6 @@ namespace Unbound.Runtime
         /// defaults in the Editor's order, and the platforms it lacks (DefaultTexturePlatform,
         /// Standalone, then the installed modules) after its own. A section of another version, or none, is left
         /// as it is (its settings would take that version's values: unmeasured).</summary>
-        static void FillTextureSection(YText section) => FillTextureSection(section, TextureTemplate());
-
         /// <summary><paramref name="templateText"/>: the TextureImporter section at its defaults
         /// ("" for a release family whose files are not measured: nothing is added).</summary>
         internal static void FillTextureSection(YText section, string templateText)

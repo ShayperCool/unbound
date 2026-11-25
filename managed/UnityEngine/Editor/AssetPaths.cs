@@ -98,15 +98,16 @@ namespace Unbound.Runtime
         /// but labels (what tests/projects/scenesave label-metas measures).</summary>
         internal static bool HoldsGuidAlone(string meta)
         {
-            int lines = 0;
+            int versions = 0, guids = 0;
             foreach (var raw in s_LabelsBlock.Replace(meta.Replace("\r\n", "\n"), "", 1).Split('\n'))
             {
                 var line = raw.TrimEnd();
                 if (line.Length == 0) continue;
-                if (line != "fileFormatVersion: 2" && !s_GuidLine.IsMatch(line)) return false;
-                lines++;
+                if (line == "fileFormatVersion: 2") versions++;
+                else if (s_GuidLine.IsMatch(line)) guids++;
+                else return false;
             }
-            return lines == 2;
+            return versions == 1 && guids == 1;
         }
 
         /// <summary>A <c>.meta</c> text whose importer section (from its line to the end) is

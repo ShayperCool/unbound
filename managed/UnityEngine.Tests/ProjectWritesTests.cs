@@ -239,8 +239,11 @@ namespace UnityEngine.Tests
             var partial = File.ReadAllText(Path.Combine(LabelSnapshots(), "start.Partial.png.meta"));
             var unwritten = new List<string>();
             Assert.Null(Rewrite(partial, s => { }, unwritten));
-            Assert.Null(Rewrite(partial, s => MetaSettings.SetInt(s, "streamingMipmaps", 0), unwritten));
             Assert.Empty(unwritten);
+            // A missing setting given its default: nothing written, still reported (unmeasured).
+            Assert.Null(Rewrite(partial, s => MetaSettings.SetInt(s, "streamingMipmaps", 0), unwritten));
+            Assert.Equal(new[] { "streamingMipmaps (given the value its default reads)" }, unwritten);
+            unwritten.Clear();
             const string old = "fileFormatVersion: 2\nguid: 0123456789abcdef0123456789abcdef\nTextureImporter:\n  serializedVersion: 12\n  mipmaps:\n    enableMipMap: 1\n  platformSettings:\n  - serializedVersion: 3\n    buildTarget: DefaultTexturePlatform\n    maxTextureSize: 2048\n  userData: \n";
             Assert.Null(Rewrite(old, s => MetaSettings.SetInt(s, "streamingMipmaps", 1), unwritten));
             Assert.Equal(new[] { "streamingMipmaps" }, unwritten);
@@ -272,6 +275,9 @@ namespace UnityEngine.Tests
             Assert.False(AssetPaths.HoldsGuidAlone(guidOnly + "timeCreated: 1731677241"));
             Assert.False(AssetPaths.HoldsGuidAlone(guidOnly + section));
             Assert.False(AssetPaths.HoldsGuidAlone("fileFormatVersion: 2\n"));
+            var guidLine = guidOnly.Split('\n')[1] + "\n";
+            Assert.False(AssetPaths.HoldsGuidAlone(guidOnly + guidLine));
+            Assert.False(AssetPaths.HoldsGuidAlone("fileFormatVersion: 2\n" + guidOnly));
         }
 
         [Fact]
