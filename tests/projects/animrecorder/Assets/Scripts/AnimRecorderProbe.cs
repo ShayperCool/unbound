@@ -388,6 +388,17 @@ static class AnimRecorderProbe
                 }
                 PutJson("clampedAuto." + name, "[" + string.Join(",", curve.keys.Select(Key)) + "]");
             }
+            var weighted = new AnimationCurve(new Keyframe(0f, 0f), new Keyframe(1f, 0.5f, 0f, 0f, 0.2f, 0.7f) { weightedMode = WeightedMode.Both }, new Keyframe(2f, 2f, 0f, 0f, 0.1f, 0.9f) { weightedMode = WeightedMode.In });
+            for (int i = 0; i < weighted.length; i++)
+            {
+                AnimationUtility.SetKeyLeftTangentMode(weighted, i, AnimationUtility.TangentMode.ClampedAuto);
+                AnimationUtility.SetKeyRightTangentMode(weighted, i, AnimationUtility.TangentMode.ClampedAuto);
+            }
+            PutJson("clampedAuto.weighted", "[" + string.Join(",", weighted.keys.Select(Key)) + "]");
+            var single = new AnimationCurve(new Keyframe(1f, 2f, 0.5f, 0.5f, 0.2f, 0.7f));
+            AnimationUtility.SetKeyLeftTangentMode(single, 0, AnimationUtility.TangentMode.ClampedAuto);
+            AnimationUtility.SetKeyRightTangentMode(single, 0, AnimationUtility.TangentMode.ClampedAuto);
+            PutJson("clampedAuto.single", "[" + string.Join(",", single.keys.Select(Key)) + "]");
         }
 
         // ---- An Animator with a controller: what animation offers for it and the recorder binds.
@@ -400,12 +411,23 @@ static class AnimRecorderProbe
             controller.AddParameter("count", AnimatorControllerParameterType.Int);
             controller.AddParameter("on", AnimatorControllerParameterType.Bool);
             controller.AddParameter("hit", AnimatorControllerParameterType.Trigger);
+            controller.AddParameter("blend", AnimatorControllerParameterType.Float);
             animator.runtimeAnimatorController = controller;
             Put("animator.offered", Offered(go, go));
             var r = new GameObjectRecorder(go);
             r.BindComponent(animator);
             Put("animator.bound", Bindings(r));
-            UnityEngine.Object.DestroyImmediate(go);
+            // The same Animator below the recorder's root.
+            var top = new GameObject("top");
+            go.transform.SetParent(top.transform, false);
+            Put("animator.childOffered", Offered(go, top));
+            r = new GameObjectRecorder(top);
+            r.BindAll(top, true);
+            Put("animator.childBound", Bindings(r));
+            r = new GameObjectRecorder(top);
+            r.BindComponent(animator);
+            Put("animator.childComponent", Bindings(r));
+            UnityEngine.Object.DestroyImmediate(top);
         }
 
         // ---- A recording shorter than a frame: reduced all the same (the clip's length is one
