@@ -8,12 +8,11 @@ PROBE = Path(__file__).resolve().parent
 sys.path.insert(0, str(PROBE.parents[1]))
 import value_probe  # noqa: E402
 
-GAPS = PROBE.parent/'graphicsgaps'
 BASE = [(PROBE.parent/'rpglobalsettings', ['Packages', 'ProjectSettings', 'Assets/Scenes', 'Assets/Scenes.meta',
                                            'Assets/Settings.meta', 'Assets/UniversalRenderPipelineGlobalSettings.asset',
                                            'Assets/UniversalRenderPipelineGlobalSettings.asset.meta',
                                            'Assets/DefaultVolumeProfile.asset', 'Assets/DefaultVolumeProfile.asset.meta']),
-        (GAPS, ['ProjectSettings', 'Assets/Settings', 'Assets/Editor', 'Assets/Editor.meta'])]
+        (PROBE.parent/'graphicsgaps', ['ProjectSettings', 'Assets/Settings', 'Assets/Editor', 'Assets/Editor.meta'])]
 
 if __name__ == '__main__':
     sys.exit(value_probe.main(PROBE, 'ProbeRunner.Record', 'OBJECT_ID_SPACE_OUT', tolerance=0,

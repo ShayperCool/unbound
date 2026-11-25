@@ -116,7 +116,8 @@ namespace UnityEngine
                     s_IdMaterials[id - 1] = material = new Material(shader) { hideFlags = HideFlags.HideAndDontSave };
                 }
                 // The id's bytes as they are: a vector is not converted to linear, so an sRGB
-                // destination of a Linear project encodes them, as the Editor's does (id 4 reads 34).
+                // destination of a Linear project encodes them, as the Editor's does (id 4 reads 34;
+                // tests/projects/objectidspace).
                 material.SetVector("_SelectionID", new Vector4((byte)id, (byte)(id >> 8), (byte)(id >> 16), (byte)(id >> 24)) / 255f);
                 int submeshes = Math.Max(1, renderer.sharedMaterials.Length);
                 for (int submesh = 0; submesh < submeshes; submesh++) cmd.DrawRenderer(renderer, material, submesh, 0);

@@ -9,6 +9,7 @@
     "tests/projects/graphicsgaps/ProjectSettings/",
     "tests/projects/graphicsgaps/Assets/Settings/",
     "tests/projects/graphicsgaps/Assets/Editor/",
-    "tests/projects/rpglobalsettings/"
+    "tests/projects/rpglobalsettings/",
+    "tests/projects/graphicsgaps/Assets/Editor.meta"
   ]
 }
