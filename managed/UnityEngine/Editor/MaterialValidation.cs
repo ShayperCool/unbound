@@ -47,13 +47,20 @@ namespace Unbound.Runtime
                 if (Compat.DeferredBuiltinMaterialValidationMeasured && UsesBuiltinEditor(material.shader))
                     material.PendingEditorValidation = true;
                 else
-                    Validate(material);
+                    Validate(material, keepClean: true);
             }
         }
 
         /// <param name="editorsOfTheEditor">Whether the Editor's own shader editors (Unbound's
         /// UnityEditor) validate too, or only those of render pipelines and projects.</param>
-        internal static void Validate(Material material, bool editorsOfTheEditor = true)
+        /// <param name="keepClean">The validation of a material as it loads: its changes leave a
+        /// clean asset clean. The Unity 6000.0.71f1 Editor validates a URP Lit material only once it
+        /// is changed and saved, so a material nobody changes is never written
+        /// (tests/projects/urpwrites load.*.dirty and exit.*; that Unbound validates earlier is a
+        /// recorded residual there). A validation on first use (the Editor's own editors,
+        /// deferred) dirties the material (access.StandardStale.dirty), as do the changes that
+        /// cause one.</param>
+        internal static void Validate(Material material, bool editorsOfTheEditor = true, bool keepClean = false)
         {
             var type = SelectedEditor(material.shader);
             if (type == null || (!editorsOfTheEditor && type.Assembly == typeof(ShaderGUI).Assembly)) return;
@@ -67,6 +74,8 @@ namespace Unbound.Runtime
                     "is not implemented: materials of its shaders keep their saved keywords, render queue and tags when they load");
                 return;
             }
+            bool wasDirty = !keepClean || EditorUtility.IsDirty(material);
+            int dirtyCount = EditorUtility.GetDirtyCount(material);
             try
             {
                 var editor = (ShaderGUI)Activator.CreateInstance(type, nonPublic: true);
@@ -75,6 +84,10 @@ namespace Unbound.Runtime
             catch (Exception e)
             {
                 Debug.LogException(e is TargetInvocationException t ? t.InnerException ?? e : e);
+            }
+            finally
+            {
+                if (!wasDirty) EditorUtility.RestoreClean(material, dirtyCount);
             }
         }
 

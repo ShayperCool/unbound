@@ -462,6 +462,17 @@ namespace UnityEditor
             s_DirtyCounts.Remove(target.GetInstanceID());
         }
 
+        /// <summary>Makes an object clean again with the dirty count it had (changes the Editor
+        /// makes without dirtying the object).</summary>
+        internal static void RestoreClean(Object target, int dirtyCount)
+        {
+            if (target is null) return;
+            int id = target.GetInstanceID();
+            s_Dirty.Remove(id);
+            if (dirtyCount > 0) s_DirtyCounts[id] = dirtyCount;
+            else s_DirtyCounts.Remove(id);
+        }
+
         public static int GetDirtyCount(int instanceID) => s_DirtyCounts.TryGetValue(instanceID, out var n) ? n : 0;
 
         public static int GetDirtyCount(Object target) => target != null ? GetDirtyCount(target.GetInstanceID()) : 0;
