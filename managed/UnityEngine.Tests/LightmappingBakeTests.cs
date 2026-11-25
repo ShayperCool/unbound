@@ -375,8 +375,14 @@ namespace UnityEngine.Tests
                     environment.filteringMode = LightingSettings.FilterMode.None;
                     environment.indirectScale = 1f;
                     Assert.Null(Unwritten(environment, "Assets/Scenes/Lit", true, lightmaps: true));
+                    // Compressed lightmaps are written (tests/projects/bakedbuffers Compress*), their
+                    // images imported with the texture compression of the lightmap compression.
                     environment.lightmapCompression = LightmapCompression.NormalQuality;
-                    Assert.Contains("compression", Unwritten(environment, "Assets/Scenes/Lit", true, lightmaps: true));
+                    Assert.Null(Unwritten(environment, "Assets/Scenes/Lit", true, lightmaps: true));
+                    Assert.Equal(UnityEditor.TextureImporterCompression.CompressedLQ, RealtimeGI.TextureCompressionOf(LightmapCompression.LowQuality));
+                    Assert.Equal(UnityEditor.TextureImporterCompression.Compressed, RealtimeGI.TextureCompressionOf(LightmapCompression.NormalQuality));
+                    Assert.Equal(UnityEditor.TextureImporterCompression.CompressedHQ, RealtimeGI.TextureCompressionOf(LightmapCompression.HighQuality));
+                    Assert.Equal(UnityEditor.TextureImporterCompression.Uncompressed, RealtimeGI.TextureCompressionOf(LightmapCompression.None));
                     environment.bakedGI = false;
                     // An environment kept in part (several scenes, gamma, Custom sources, no device),
                     // an untitled scene, a scene of a package the project does not hold: not written.

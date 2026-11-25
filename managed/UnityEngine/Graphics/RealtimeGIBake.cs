@@ -296,7 +296,6 @@ namespace UnityEngine
             settings == null ? "a scene without Lighting Settings (the defaults') is not written yet"
             : settings.realtimeGI ? "Unbound writes it for a bake without realtime global illumination"
             : settings.bakedGI && probes != null ? probes
-            : settings.bakedGI && settings.lightmapCompression != LightmapCompression.None ? "lightmaps with compression are not measured"
             // (What the bake does not make yet, or makes only where measured:
             // tests/projects/bakedbuffers bakes with the filtering UnmadeFiltering allows, with the
             // ambient occlusion below and with any Indirect Intensity (non-directional, Baked
@@ -476,21 +475,21 @@ namespace UnityEngine
         /// its scene (those an earlier bake left beyond them are deleted), imported as lightmaps;
         /// their GUIDs, the lightmapped renderers and the lights as the lighting data keeps them
         /// (none for a bake of the environment alone).</summary>
-        static (object[] Lightmaps, object[] Renderers, object[] Lights) WriteLightmaps(string folder, BakeResult baked)
+        static (object[] Lightmaps, object[] Renderers, object[] Lights) WriteLightmaps(string folder, BakeResult baked, LightmapCompression compression)
         {
             var lightmaps = new List<object>();
             int count = baked?.Images.Length ?? 0;
             for (int i = 0; i < count; i++)
             {
-                // As the Editor imports a bake's images without lightmap compression
-                // (tests/projects/bakedbuffers written/*.meta): the light as a lightmap, the
-                // directions and the shadowmask linear.
-                string light = WriteLightmapImage(folder + "/" + LightmapImage(i, LightImage), baked.Images[i], UnityEditor.TextureImporterType.Lightmap);
+                // As the Editor imports a bake's images (tests/projects/bakedbuffers
+                // written/*.meta): the light as a lightmap, the directions and the shadowmask
+                // linear, each compressed as the Lighting Settings' lightmap compression says.
+                string light = WriteLightmapImage(folder + "/" + LightmapImage(i, LightImage), baked.Images[i], UnityEditor.TextureImporterType.Lightmap, compression);
                 string directions = i < baked.Directions.Length
-                    ? WriteLightmapImage(folder + "/" + LightmapImage(i, DirectionsImage), baked.Directions[i], UnityEditor.TextureImporterType.DirectionalLightmap)
+                    ? WriteLightmapImage(folder + "/" + LightmapImage(i, DirectionsImage), baked.Directions[i], UnityEditor.TextureImporterType.DirectionalLightmap, compression)
                     : null;
                 string shadowmask = i < baked.Shadowmasks.Length
-                    ? WriteLightmapImage(folder + "/" + LightmapImage(i, ShadowmaskImage), baked.Shadowmasks[i], UnityEditor.TextureImporterType.Shadowmask)
+                    ? WriteLightmapImage(folder + "/" + LightmapImage(i, ShadowmaskImage), baked.Shadowmasks[i], UnityEditor.TextureImporterType.Shadowmask, compression)
                     : null;
                 lightmaps.Add(new { light, directions, shadowmask });
             }
@@ -531,9 +530,11 @@ namespace UnityEngine
             index >= count || (kind == DirectionsImage && index >= directions) || (kind == ShadowmaskImage && index >= shadowmasks);
 
         /// <summary>Writes one of a lightmap's images and imports it as the Editor imports it:
-        /// mipmap streaming, aniso 3, no compression; the directions and the shadowmask linear
-        /// (the directions' alpha from the image). Its GUID.</summary>
-        static string WriteLightmapImage(string path, byte[] bytes, UnityEditor.TextureImporterType type)
+        /// mipmap streaming, aniso 3, the texture compression of the lightmap compression (none,
+        /// low, normal and high quality: Uncompressed, CompressedLQ, Compressed, CompressedHQ;
+        /// tests/projects/bakedbuffers Compress*); the directions and the shadowmask linear (the
+        /// directions' alpha from the image). Its GUID.</summary>
+        static string WriteLightmapImage(string path, byte[] bytes, UnityEditor.TextureImporterType type, LightmapCompression compression)
         {
             string guid = UnityEditor.AssetDatabase.WriteBakedFile(path, bytes);
             if (UnityEditor.AssetImporter.GetAtPath(path) is UnityEditor.TextureImporter importer)
@@ -541,7 +542,7 @@ namespace UnityEngine
                 importer.textureType = type;
                 importer.streamingMipmaps = true;
                 importer.anisoLevel = 3;
-                importer.textureCompression = UnityEditor.TextureImporterCompression.Uncompressed;
+                importer.textureCompression = TextureCompressionOf(compression);
                 if (type != UnityEditor.TextureImporterType.Lightmap)
                 {
                     importer.sRGBTexture = false;
@@ -552,6 +553,16 @@ namespace UnityEngine
             }
             return guid;
         }
+
+        /// <summary>The texture compression a lightmap image is imported with for the Lighting
+        /// Settings' lightmap compression.</summary>
+        internal static UnityEditor.TextureImporterCompression TextureCompressionOf(LightmapCompression compression) => compression switch
+        {
+            LightmapCompression.LowQuality => UnityEditor.TextureImporterCompression.CompressedLQ,
+            LightmapCompression.NormalQuality => UnityEditor.TextureImporterCompression.Compressed,
+            LightmapCompression.HighQuality => UnityEditor.TextureImporterCompression.CompressedHQ,
+            _ => UnityEditor.TextureImporterCompression.Uncompressed,
+        };
 
         /// <summary>What <see cref="BakeEnvironment"/> made: whether the whole environment
         /// lighting was made as measured (default: not made), and the skybox's faces its default
@@ -629,7 +640,7 @@ namespace UnityEngine
             }
             else if (UnityEditor.AssetDatabase.AssetPathToGUID(imagePath).Length > 0)
                 UnityEditor.AssetDatabase.DeleteAsset(imagePath);
-            var (lightmaps, renderers, lights) = WriteLightmaps(folder, baked);
+            var (lightmaps, renderers, lights) = WriteLightmaps(folder, baked, settings.lightmapCompression);
             var coefficients = new float[27];
             if (probe is { } sh)
                 for (int c = 0; c < 3; c++)
