@@ -480,6 +480,8 @@ namespace UnityEditor
             Int("generateCubemap", s => (int)s.generateCubemap, (s, v) => s.generateCubemap = (TextureImporterGenerateCubemap)v),
             Int("cubemapConvolution", s => (int)s.cubemapConvolution, (s, v) => s.cubemapConvolution = (TextureImporterCubemapConvolution)v),
             Int("seamlessCubemap", s => s.seamlessCubemap ? 1 : 0, (s, v) => s.seamlessCubemap = v != 0),
+            Int("flipbookRows", s => s.flipbookRows, (s, v) => s.flipbookRows = v),
+            Int("flipbookColumns", s => s.flipbookColumns, (s, v) => s.flipbookColumns = v),
             Float("spritePixelsToUnits", 100, s => s.spritePixelsPerUnit, (s, v) => s.spritePixelsPerUnit = v),
             Float("spritePivot.x", DefaultPivot, s => s.spritePivot.x, (s, v) => s.spritePivot = new Vector2(v, s.spritePivot.y)),
             Float("spritePivot.y", DefaultPivot, s => s.spritePivot.y, (s, v) => s.spritePivot = new Vector2(s.spritePivot.x, v)),
@@ -524,13 +526,14 @@ namespace UnityEditor
         /// <summary>What a missing or -1 setting means: Clamp wrapping for the UI types (Sprite,
         /// GUI, Cursor) and Repeat for the others; bilinear filtering, anisotropy 1, mip maps,
         /// sRGB, power-of-two scaling to the nearest, alpha from the input, the 2D shape and the
-        /// six-frame cubemap layout; 0 (off) for the rest.</summary>
+        /// six-frame cubemap layout, a flipbook of one cell (tests/projects/importermeta
+        /// change.Missing); 0 (off) for the rest.</summary>
         static int TypeDefault(YNode root, string path) => path switch
         {
             "textureSettings.wrapU" or "textureSettings.wrapV" or "textureSettings.wrapW" =>
                 MetaSettings.Int(root, "textureType") is 8 or 2 or 7 ? 1 : 0,
             "textureSettings.filterMode" or "textureSettings.aniso" or "mipmaps.enableMipMap" or "mipmaps.sRGBTexture"
-                or "nPOTScale" or "alphaUsage" or "textureShape" or "spriteMeshType" => 1,
+                or "nPOTScale" or "alphaUsage" or "textureShape" or "spriteMeshType" or "flipbookRows" or "flipbookColumns" => 1,
             "generateCubemap" => 6,
             _ => 0,
         };
