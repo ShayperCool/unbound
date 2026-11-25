@@ -135,6 +135,11 @@ file the run added, changed or removed.
   an `EditorBuildSettings.asset` listing `Base.unity` under a stale path (`Assets/Old/Moved.unity`)
   and the test sets that list again (`stale.*`). Recorded in the macOS Editor (batch mode, no
   graphics: two identical captures; nothing depends on the OS).
+- `generic-refs` (Edit Mode, `GenericRefTests`): a scriptable object whose [SerializeReference] fields
+  hold objects of generic classes (`Box<int>`, `Pair<string, Vector3>`, `Box<Box<float>>`,
+  `Box<List<int>>`, a namespaced `Tagged<Circle>`, one shared, one added later) made an asset by
+  `CreateAsset`, then changed and saved by `SaveAssets`. Recorded in the macOS Editor (batch mode, no
+  graphics: two captures that agree; nothing depends on the OS).
 - `play-nosave`, `play-save` (Play Mode, `SavePlayTests.NoSave` and `.Save`, each alone): assets
   edited in Play mode, left unsaved or saved by `AssetDatabase.SaveAssets` there; scene saves and
   `MarkSceneDirty` in Play mode.

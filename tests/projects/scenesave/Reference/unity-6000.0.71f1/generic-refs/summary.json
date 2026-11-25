@@ -1,0 +1,9 @@
+{
+  "case": "generic-refs",
+  "exit": 0,
+  "changed": [
+    "Assets/Data/GenericRefs.asset",
+    "Assets/Data/GenericRefs.asset.meta"
+  ],
+  "removed": []
+}
