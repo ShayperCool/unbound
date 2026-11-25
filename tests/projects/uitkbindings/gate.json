@@ -1,10 +1,14 @@
 {
-  "commands": ["python3 tests/projects/uitkbindings/run.py gate"],
+  "commands": [
+    "python3 tests/projects/uitkbindings/run.py gate"
+  ],
   "summary": "uitkbindings: .*",
   "engine_paths": [
     "managed/UnityEngine/UIElements/Binding/",
     "managed/UnityEngine/UIElements/Uxml/",
     "managed/UnityEngine/UIElements/Runtime/PanelSettings.cs",
-    "managed/UnityEngine/Properties/"
+    "managed/UnityEngine/Properties/",
+    "managed/UnityEngine/Editor/AssetDatabase.cs",
+    "managed/UnityEngine/Core/Debug.cs"
   ]
 }

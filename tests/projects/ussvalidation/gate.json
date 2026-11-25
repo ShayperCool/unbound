@@ -1,5 +1,7 @@
 {
-  "commands": ["python3 tests/projects/ussvalidation/run.py gate"],
+  "commands": [
+    "python3 tests/projects/ussvalidation/run.py gate"
+  ],
   "summary": "ussvalidation: .*",
   "engine_paths": [
     "managed/UnityEngine/UIElements/StyleSheets/UssParser.cs",
@@ -9,6 +11,8 @@
     "managed/UnityEngine/UIElements/StyleValues.cs",
     "managed/UnityEngine/Editor/EditorGUIState.cs",
     "managed/UnityEngine/Runtime/Compat.cs",
-    "managed/UnityEngine/UIElements/Uxml/VisualTreeAsset.cs"
+    "managed/UnityEngine/UIElements/Uxml/VisualTreeAsset.cs",
+    "managed/UnityEngine/Editor/AssetDatabase.cs",
+    "managed/UnityEngine/Core/Debug.cs"
   ]
 }

@@ -63,12 +63,26 @@ namespace UssValidationProbe
         static string Join(IEnumerable<string> parts) => "[" + string.Join(", ", parts) + "]";
         static string Image(Background b) => b.texture != null ? b.texture.name : b.sprite != null ? b.sprite.name : "none";
 
+        /// <summary>Imports the assets again in Play mode (both runtimes log a Play-mode import's messages
+        /// in the call: tests/projects/importlogs), with the importer's warnings and errors, one entry per
+        /// non-empty line of each message.</summary>
+        void Import(params string[] sheets)
+        {
+            Application.LogCallback capture = (message, stack, type) =>
+            {
+                if (type != LogType.Log) m_Logs.AddRange((type + ": " + message).Split(new[] { "\r\n", "\n", "\r" }, StringSplitOptions.None).Where(l => l.Length > 0));
+            };
+            Application.logMessageReceived += capture;
+            foreach (var sheet in sheets)
+                UnityEditor.AssetDatabase.ImportAsset("Assets/Resources/" + sheet + ".uss", UnityEditor.ImportAssetOptions.ForceUpdate | UnityEditor.ImportAssetOptions.ForceSynchronousImport);
+            Application.logMessageReceived -= capture;
+        }
+
         IEnumerator Start()
         {
             var dir = Environment.GetEnvironmentVariable("USS_VALIDATION_OUT");
-            var imported = Path.Combine(dir, "import-logs.txt");
-            if (File.Exists(imported)) m_Logs.AddRange(File.ReadAllLines(imported).Where(l => l.Length > 0));
-            // With what loading the sheets logs (an engine that imports them as they load).
+            Import("Invalid", "Broken", "Errors");
+            // With what loading the sheets logs (nothing after their import).
             Application.logMessageReceived += OnImportLog;
             var invalid = Resources.Load<StyleSheet>("Invalid");
             var broken = Resources.Load<StyleSheet>("Broken");

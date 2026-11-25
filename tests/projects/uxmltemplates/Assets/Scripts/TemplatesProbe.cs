@@ -76,8 +76,7 @@ namespace TemplatesProbe
         void Start()
         {
             var dir = Environment.GetEnvironmentVariable("UXML_TEMPLATES_OUT");
-            var imported = Path.Combine(dir, "import-logs.txt");
-            if (File.Exists(imported)) m_Logs.AddRange(File.ReadAllLines(imported).Where(l => l.Length > 0).Select(FirstLine));
+            Import();
             Application.logMessageReceived += OnLog;
             bool failed = false;
             try
@@ -93,6 +92,21 @@ namespace TemplatesProbe
             if (!failed) Put("complete", true);
             File.WriteAllText(Path.Combine(dir, "values.jsonl"), m_Out.ToString());
             EditorApplication.Exit(0);
+        }
+
+        /// <summary>Imports the assets again in Play mode (both runtimes log a Play-mode import's messages
+        /// in the call: tests/projects/importlogs), with the importer's warnings and errors, one entry per
+        /// non-empty line of each message.</summary>
+        void Import()
+        {
+            Application.LogCallback capture = (message, stack, type) =>
+            {
+                if (type != LogType.Log) m_Logs.AddRange((type + ": " + message).Split(new[] { "\r\n", "\n", "\r" }, StringSplitOptions.None).Where(l => l.Length > 0));
+            };
+            Application.logMessageReceived += capture;
+            foreach (var doc in s_Documents)
+                AssetDatabase.ImportAsset("Assets/Resources/" + doc + ".uxml", ImportAssetOptions.ForceUpdate | ImportAssetOptions.ForceSynchronousImport);
+            Application.logMessageReceived -= capture;
         }
 
         void OnLog(string message, string stack, LogType type)

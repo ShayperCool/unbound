@@ -1,32 +1,13 @@
-using System;
-using System.Collections.Generic;
-using System.IO;
 using UnityEditor;
 using UnityEditor.SceneManagement;
-using UnityEngine;
 
-/// <summary>Re-imports the probe documents (after the scripts compiled) while recording the import's
-/// warnings and errors into import-logs.txt, then enters Play mode, where TemplatesProbe records the
-/// cloned templates and exits the Editor.</summary>
+/// <summary>Opens the probe scene and enters Play mode, where TemplatesProbe imports the documents
+/// again (recording the importer's warnings and errors), records the cloned templates and exits the
+/// Editor.</summary>
 public static class UxmlTemplatesRunner
 {
     public static void Record()
     {
-        var output = Environment.GetEnvironmentVariable("UXML_TEMPLATES_OUT");
-        var logs = new List<string>();
-        Application.LogCallback capture = (message, stack, type) =>
-        {
-            if (type != LogType.Log) logs.Add(type + ": " + message);
-        };
-        Application.logMessageReceived += capture;
-        foreach (var doc in new[]
-            {
-                "Leaf", "Middle", "Outer", "Panel", "Host", "Slots", "DuplicateSlots", "OldTemplateDoc", "OldTemplateHost", "OldTemplateBare", "OldTemplateOther",
-                "Row", "Sub/Card", "AssetHost", "NestedOld", "FactoryOnly", "OldFactoryDoc", "OldFactoryHost", "SlotClash", "EarlySlot", "EarlyHost", "Odd",
-            })
-            AssetDatabase.ImportAsset("Assets/Resources/" + doc + ".uxml", ImportAssetOptions.ForceUpdate | ImportAssetOptions.ForceSynchronousImport);
-        Application.logMessageReceived -= capture;
-        File.WriteAllLines(Path.Combine(output, "import-logs.txt"), logs);
         EditorSceneManager.OpenScene("Assets/Scenes/Probe.unity");
         EditorApplication.EnterPlaymode();
     }
