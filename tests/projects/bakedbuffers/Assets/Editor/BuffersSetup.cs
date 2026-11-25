@@ -1158,6 +1158,66 @@ public static class BuffersSetup
         Moded("FilterDirectionalSubtractiveAuto", true, true, MixedLightingMode.Subtractive);
     }
 
+    /// <summary>The coloured scene under a sun with ambient occlusion: Max Distance 1 and the
+    /// exponents of a new Lighting Settings asset (indirect 1, direct 0); Max Distance 0.5 with
+    /// exponents 2.5 and 0.7; Max Distance 0 (the Manual: no maximum distance) with exponents 1
+    /// and 1; and with exponents 1 and 1 under Advanced Gaussian filters (direct 1, indirect 5,
+    /// ambient occlusion 2), under the Auto filtering and with directional lightmaps.</summary>
+    static void Occluded()
+    {
+        void Ao(string name, float distance, float indirect, float direct, Action<LightingSettings> tune = null)
+        {
+            var scene = Coloured(name, 64, 1);
+            var settings = Lightmapping.lightingSettings;
+            settings.ao = true;
+            settings.aoMaxDistance = distance;
+            settings.aoExponentIndirect = indirect;
+            settings.aoExponentDirect = direct;
+            tune?.Invoke(settings);
+            WhiteSun();
+            Save(scene, name);
+        }
+        Ao("AoOn", 1f, 1f, 0f);
+        Ao("AoExponents", 0.5f, 2.5f, 0.7f);
+        Ao("AoInfinite", 0f, 1f, 1f);
+        Ao("AoFiltered", 1f, 1f, 1f, s =>
+        {
+            s.filteringMode = LightingSettings.FilterMode.Advanced;
+            s.denoiserTypeDirect = s.denoiserTypeIndirect = s.denoiserTypeAO = LightingSettings.DenoiserType.None;
+            s.filterTypeDirect = s.filterTypeIndirect = s.filterTypeAO = LightingSettings.FilterType.Gaussian;
+            s.filteringGaussianRadiusDirect = 1f;
+            s.filteringGaussianRadiusIndirect = 5f;
+            s.filteringGaussianRadiusAO = 2f;
+        });
+        Ao("AoAuto", 1f, 1f, 1f, s => s.filteringMode = LightingSettings.FilterMode.Auto);
+        Ao("AoDirectional", 1f, 1f, 1f, s => s.directionalityMode = LightmapsMode.CombinedDirectional);
+        // Unequal exponents (2.5 and 0.7) under the Advanced Gaussian filters, also with the
+        // ambient occlusion target's filter None; directional lightmaps with the new asset's
+        // exponents (1 and 0) unfiltered and with 2.5 and 0.7 filtered; and no bounces.
+        void Advanced(LightingSettings s)
+        {
+            s.filteringMode = LightingSettings.FilterMode.Advanced;
+            s.denoiserTypeDirect = s.denoiserTypeIndirect = s.denoiserTypeAO = LightingSettings.DenoiserType.None;
+            s.filterTypeDirect = s.filterTypeIndirect = s.filterTypeAO = LightingSettings.FilterType.Gaussian;
+            s.filteringGaussianRadiusDirect = 1f;
+            s.filteringGaussianRadiusIndirect = 5f;
+            s.filteringGaussianRadiusAO = 2f;
+        }
+        Ao("AoFilteredExponents", 1f, 2.5f, 0.7f, Advanced);
+        Ao("AoTargetNone", 1f, 2.5f, 0.7f, s =>
+        {
+            Advanced(s);
+            s.filterTypeAO = LightingSettings.FilterType.None;
+        });
+        Ao("AoDirectionalDefault", 1f, 1f, 0f, s => s.directionalityMode = LightmapsMode.CombinedDirectional);
+        Ao("AoDirectionalFiltered", 1f, 2.5f, 0.7f, s =>
+        {
+            Advanced(s);
+            s.directionalityMode = LightmapsMode.CombinedDirectional;
+        });
+        Ao("AoNoBounce", 1f, 1f, 1f, s => s.maxBounces = 0);
+    }
+
     /// <summary>The coloured scene under a sun denoised: the Auto filtering, and the Advanced
     /// filtering with Open Image Denoise on every target, without a filter and with Gaussian
     /// filters of radius 1 (what the Manual says Auto adds to a denoiser); and Auto over other
@@ -1242,7 +1302,7 @@ public static class BuffersSetup
                 ("ModeSubtractive", () => Modes("ModeSubtractive", MixedLightingMode.Subtractive)),
                 ("ModeShadowmask", () => Modes("ModeShadowmask", MixedLightingMode.Shadowmask)),
                 ("Bounce", Bounces), ("Glow", Glow), ("Roof", Roof), ("Textured", Textured), ("Levels", Levels), ("Sky", Skies), ("Spare", Spare),
-                ("SkyRealtime", RealtimeSkies), ("SpareEmpty", SpareEmpty), ("Spread", Spread), ("Far", Far), ("Masks", Masks), ("MasksBright", MasksBright), ("MasksEdges", MasksEdges), ("Probes", Probes), ("ProbesGrid", ProbesGrid), ("ProbesReach", ProbesReach), ("ProbesSky", ProbesSky), ("Directional", Directional), ("Lod", Lod), ("Filter", Filtered), ("Denoise", Denoised), ("Intensity", Intensities),
+                ("SkyRealtime", RealtimeSkies), ("SpareEmpty", SpareEmpty), ("Spread", Spread), ("Far", Far), ("Masks", Masks), ("MasksBright", MasksBright), ("MasksEdges", MasksEdges), ("Probes", Probes), ("ProbesGrid", ProbesGrid), ("ProbesReach", ProbesReach), ("ProbesSky", ProbesSky), ("Directional", Directional), ("Lod", Lod), ("Filter", Filtered), ("Denoise", Denoised), ("Intensity", Intensities), ("Ao", Occluded),
             };
             var only = Environment.GetEnvironmentVariable("BAKED_BUFFERS_SCENES");
             var wanted = string.IsNullOrEmpty(only) ? null : new HashSet<string>(only.Split(','));
