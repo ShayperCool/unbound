@@ -196,8 +196,8 @@ namespace UnityEngine.Tests
                 Assert.True(RealtimeGI.ScriptBakedThisSession(data.Path));
                 Assert.True(data.BakedOnOpen);
                 Assert.Contains(logs.Messages, m => m.Type == LogType.Warning && m.Message.Contains("LightingData.asset"));
-                // (Why its lightmaps are not written is said with the lighting data, above; not that
-                // Unbound makes no baked lightmaps, which a script's bake does where measured.)
+                // (Its lightmaps are not made: the renderer added after the load says so, below,
+                // with that no lightmaps of the scene are written; no second note.)
                 Assert.DoesNotContain(logs.Messages, m => m.Message.Contains("would make baked lightmaps"));
                 Assert.Contains(logs.Messages, m => m.Type == LogType.Warning && m.Message.Contains("'Added'"));
                 Assert.DoesNotContain(logs.Messages, m => m.Message.Contains("'Preview'"));

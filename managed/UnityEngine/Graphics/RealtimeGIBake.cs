@@ -61,9 +61,9 @@ namespace UnityEngine
         /// realtime GI is Unbound's own precompute of the scene's renderers (<see cref="Bake"/>),
         /// cached under LibraryUnbound/RealtimeGI. The lighting data the Editor writes beside the
         /// scene, which the scene then names, is written for a bake of the environment alone
-        /// (<see cref="WriteLightingData"/>). Not made, each said once per scene: baked lightmaps
-        /// and the light probes' baked lighting where the scene's Lighting Settings have baked
-        /// global illumination on (Q677); baked reflection probes. The environment lighting is
+        /// (<see cref="WriteLightingData"/>). Baked lightmaps and the light probes' baked lighting
+        /// are made where measured (Q677) and otherwise said once per scene; baked reflection
+        /// probes are not made (said). The environment lighting is
         /// made (<see cref="BakeEnvironment"/>). Of the baked lightmaps Unbound lays out where each renderer would
         /// go (<see cref="BakedAtlas"/>, written to LibraryUnbound/BakedGI; renderers get
         /// nothing). Renderers, lights, LOD Groups, Terrains and
@@ -107,7 +107,6 @@ namespace UnityEngine
                             }
                     if (!string.IsNullOrEmpty(scene.Path)) s_ScriptBakedScenes.Add(scene.Path);
                     scene.BakedOnOpen = true;
-                    NoteBakeParts(file, settings, ScriptBake);
                     SceneLoaded(scene.Handle.Value, default, file, settings, first, bake: true, scriptBake: true);
                     var environment = BakeEnvironment(file);
                     // The lightmaps are made where their lighting data would be written (all else
@@ -116,6 +115,9 @@ namespace UnityEngine
                     bool lightmaps = settings != null && settings.bakedGI && Native.IsReady && !added
                         && Unwritten(settings, FolderOf(scene), environment.Made, Rendering.GraphicsSettings.currentRenderPipeline != null,
                             lightmapsMade: true, probes: null, probeGroups: HasProbeGroups(file)) == null;
+                    // (Its baked lightmaps and probes are said where they are not made; a renderer
+                    // added after the load is said above.)
+                    NoteBakeParts(file, settings, ScriptBake, bakedMade: lightmaps || added);
                     var baked = BakedAtlas.Lay(file, settings, images: lightmaps);
                     WriteLightingData(scene, file, settings, environment, lightmaps ? baked : null);
                     first = false;
@@ -721,16 +723,17 @@ namespace UnityEngine
 
         /// <summary>Says once what the Editor's bake of a scene (<paramref name="what"/>: when it
         /// opens it without lighting data, or a script's) would make and Unbound does not: baked
-        /// lightmaps and the light probes' baked lighting on open (baked global illumination on;
-        /// a scene without Lighting Settings has the defaults', which have it on; a script's bake
-        /// makes them where measured and says why where not, <see cref="WriteLightingData"/>),
+        /// lightmaps and the light probes' baked lighting (baked global illumination on; a scene
+        /// without Lighting Settings has the defaults', which have it on; a script's bake makes
+        /// them where measured, <paramref name="bakedMade"/>, and says why where not,
+        /// <see cref="WriteLightingData"/>),
         /// the environment lighting from a sky (the ambient probe and the default reflection; a
         /// script's bake makes it), baked reflection probes, Adaptive Probe Volumes. On open
         /// Unbound makes the realtime GI alone (<see cref="Bake"/>).</summary>
-        internal static void NoteBakeParts(LoadedFile file, LightingSettings settings, string what)
+        internal static void NoteBakeParts(LoadedFile file, LightingSettings settings, string what, bool bakedMade = false)
         {
             string path = file?.Path ?? "a scene";
-            if (what != ScriptBake && (settings == null || settings.bakedGI))
+            if (!bakedMade && (settings == null || settings.bakedGI))
                 Warn("bake-baked:" + what + path, $"{path}: {what} would make baked lightmaps and the light probes' baked lighting, which Unbound does not make (Q677).");
             // (A script's bake makes it, BakeEnvironment.)
             if (what != ScriptBake && (RenderSettings.skybox != null || RenderSettings.ambientMode == Rendering.AmbientMode.Skybox))
