@@ -200,8 +200,36 @@ public sealed class EditorWindowGuiProbe : MonoBehaviour
         before = window.Events.Count;
         window.Focus();
         var afterFocus = window.Events.Skip(before).ToArray();
-        window.Close();
         Put("window/laterFrame", ReferenceEquals(again, window), afterGetWindow, afterFocus);
+
+        // GetWindowWithRect on the open window, in both forms, with and without focus: what
+        // changes of its rect, size limits and title, and the events it gets.
+        var rect = new Rect(123, 145, 321, 234);
+        object[] WithRect(Func<EditorWindow> get)
+        {
+            var position = window.position;
+            var min = window.minSize;
+            var max = window.maxSize;
+            var title = window.titleContent.text;
+            int count = window.Events.Count;
+            var got = get();
+            return new object[]
+            {
+                ReferenceEquals(got, window), window.position == position, window.position == rect,
+                window.minSize == min, window.minSize == rect.size, window.maxSize == max, window.maxSize == rect.size,
+                window.titleContent.text == title, window.Events.Skip(count).ToArray(),
+            };
+        }
+        Put("window/withRectOpen", WithRect(() => EditorWindow.GetWindowWithRect<EditorWindowGuiProbeWindow>(rect, false, "WithRect", true)));
+        Put("window/withRectOpenNoFocus", WithRect(() => EditorWindow.GetWindowWithRect<EditorWindowGuiProbeWindow>(rect, false, "NoFocus", false)));
+        Put("window/withRectTypeOpen", WithRect(() => EditorWindow.GetWindowWithRect(typeof(EditorWindowGuiProbeWindow), rect, false, "WithRectType")));
+        window.Close();
+
+        // A new window: its size limits and size are the rect's.
+        var created = EditorWindow.GetWindowWithRect<EditorWindowGuiProbeWindow>(rect, false, "NewWithRect");
+        Put("window/withRectNew", created.minSize == rect.size, created.maxSize == rect.size, created.position.size == rect.size,
+            created.titleContent.text, created.Events.ToArray());
+        created.Close();
     }
 
     void RecordCursorRectOutsideGui()
