@@ -148,6 +148,19 @@ public sealed class EditorMultiFieldsProbe : MonoBehaviour
             L(() => EditorGUILayout.BoundsField("Label", new Bounds(Vector3.one, Vector3.one))), L(() => EditorGUILayout.BoundsIntField(new BoundsInt(1, 2, 3, 4, 5, 6))));
         GUILayout.EndArea();
         if (phase == "repaint") Put("layout/repaint/rects", rects.ToArray());
+
+        // Wide mode: the labelled forms' reserved heights.
+        rects.Clear();
+        bool wide = EditorGUIUtility.wideMode;
+        EditorGUIUtility.wideMode = true;
+        GUILayout.BeginArea(new Rect(320, 0, 300, 600));
+        Put($"layout/{phase}/wideFields",
+            L(() => EditorGUILayout.Vector2Field("Label", new Vector2(1, 2))), L(() => EditorGUILayout.Vector3Field("Label", new Vector3(1, 2, 3))),
+            L(() => EditorGUILayout.RectField("Label", new Rect(1, 2, 3, 4))), L(() => EditorGUILayout.BoundsField("Label", new Bounds(Vector3.one, Vector3.one))),
+            L(() => EditorGUILayout.BoundsIntField("Label", new BoundsInt(1, 2, 3, 4, 5, 6))), L(() => EditorGUILayout.BoundsField(new Bounds(Vector3.one, Vector3.one))));
+        GUILayout.EndArea();
+        EditorGUIUtility.wideMode = wide;
+        if (phase == "repaint") Put("layout/repaint/wideRects", rects.ToArray());
     }
 
     static Event Mouse(EventType type, Vector2 position, Vector2 delta = default) =>

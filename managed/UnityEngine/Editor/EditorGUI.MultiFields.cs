@@ -21,8 +21,9 @@ namespace UnityEditor
         internal const float kSpacingSubLabel = 4f;
         internal const float kIndentPerLevel = 15f;
         // The theme's --theme-multifield-vertical-spacing: 2 points between a multi-field's rows
-        // (editormultifields layout/repaint/rects: a labelled Vector2Field is 18 + 2 + 18 high).
-        const float kMultiFieldVerticalSpacing = 2f;
+        // (editormultifields layout/repaint/rects: a labelled Vector2Field is 18 + 2 + 18 high),
+        // shared with the property heights that reserve their space.
+        const float kMultiFieldVerticalSpacing = PropertyHeights.Spacing;
 
         static readonly GUIContent s_LargerChar = new GUIContent("W");
         static readonly float[] s_Vector2Floats = { 0, 0 };

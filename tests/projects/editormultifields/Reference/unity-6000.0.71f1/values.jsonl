@@ -6,6 +6,7 @@
 {"k":"rect/layout/wide","v":[["1 2",3,false],["1 2 3",4,false],["1 1 1 / 0.5 0.5 0.5",7,false]]}
 {"k":"rect/layout/wideMode","v":[false]}
 {"k":"layout/layout/fields","v":[["1 2",3,false],["1 2",3,false],["1 2 3",4,false],["1 2 3 4",5,false],["1 2",3,false],["1 2 3",4,false],["1 2 3 4",4,false],["1 2 3 4",5,false],["1 2 3 4",4,false],["1 1 1 / 0.5 0.5 0.5",6,false],["1 1 1 / 0.5 0.5 0.5",7,false],["1 2 3 / 4 5 6",6,false]]}
+{"k":"layout/layout/wideFields","v":[["1 2",3,false],["1 2 3",4,false],["1 2 3 4",5,false],["1 1 1 / 0.5 0.5 0.5",7,false],["1 2 3 / 4 5 6",7,false],["1 1 1 / 0.5 0.5 0.5",6,false]]}
 {"k":"rect/repaint/vectors","v":[["1 2",3,false],["1 2",3,false],["1 2 3",4,false],["1 2 3 4",5,false],["1 2",3,false],["1 2 3",4,false]]}
 {"k":"rect/repaint/rectsAndBounds","v":[["1 2 3 4",4,false],["1 2 3 4",5,false],["1 2 3 4",4,false],["1 2 3 4",5,false],["1 1 1 / 0.5 0.5 0.5",6,false],["1 1 1 / 0.5 0.5 0.5",7,false],["1 2 3 / 4 5 6",6,false],["1 2 3 / 4 5 6",7,false]]}
 {"k":"rect/repaint/multi","v":[["1 2",2,false],["1 2",3,false],["1 2",2,false]]}
@@ -13,6 +14,8 @@
 {"k":"rect/repaint/wideMode","v":[false]}
 {"k":"layout/repaint/fields","v":[["1 2",3,false],["1 2",3,false],["1 2 3",4,false],["1 2 3 4",5,false],["1 2",3,false],["1 2 3",4,false],["1 2 3 4",4,false],["1 2 3 4",5,false],["1 2 3 4",4,false],["1 1 1 / 0.5 0.5 0.5",6,false],["1 1 1 / 0.5 0.5 0.5",7,false],["1 2 3 / 4 5 6",6,false]]}
 {"k":"layout/repaint/rects","v":[[0,0,300,38],[0,40,300,18],[0,60,300,38],[0,100,300,38],[0,140,300,38],[0,180,300,38],[0,220,300,38],[0,260,300,58],[0,320,300,38],[0,360,300,38],[0,400,300,58],[0,460,300,38]]}
+{"k":"layout/repaint/wideFields","v":[["1 2",3,false],["1 2 3",4,false],["1 2 3 4",5,false],["1 1 1 / 0.5 0.5 0.5",7,false],["1 2 3 / 4 5 6",7,false],["1 1 1 / 0.5 0.5 0.5",6,false]]}
+{"k":"layout/repaint/wideRects","v":[[0,0,300,18],[0,20,300,18],[0,40,300,38],[0,80,300,58],[0,140,300,58],[0,200,300,38]]}
 {"k":"script/start","v":["1 2 3","4 5","1 2 3 4","1 2 3 / 1 2 3","7 8 9","10 20",[false,false,false,false,false,false],false,false,false]}
 {"k":"script/v3.y.down","v":[["1 2 3","4 5","1 2 3 4","1 2 3 / 1 2 3","7 8 9","10 20",[false,false,false,false,false,false],true,true,true],12]}
 {"k":"script/v3.y.up","v":[["1 2 3","4 5","1 2 3 4","1 2 3 / 1 2 3","7 8 9","10 20",[false,false,false,false,false,false],true,false,true],12]}

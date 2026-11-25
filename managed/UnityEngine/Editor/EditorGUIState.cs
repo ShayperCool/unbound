@@ -747,13 +747,18 @@ namespace UnityEditor
     internal static class PropertyHeights
     {
         const float Line = 18f;
-        const float Spacing = 2f;
+        // The theme's multi-field row spacing (EditorGUI's multi fields draw with it too).
+        internal const float Spacing = 2f;
 
         static bool HasContent(GUIContent label) => label == null || !string.IsNullOrEmpty(label.text) || label.image != null;
 
         internal static float OfType(SerializedPropertyType type, GUIContent label)
         {
             float labelLine = HasContent(label) && !EditorGUIUtility.wideMode ? Line + Spacing : 0f;
+            // A bounds field keeps its label on its own line in wide mode too (Unity's C#; measured:
+            // tests/projects/editormultifields layout/repaint/wideRects).
+            if (type == SerializedPropertyType.Bounds || type == SerializedPropertyType.BoundsInt)
+                return (HasContent(label) ? Line + Spacing : 0f) + Line * 2 + Spacing;
             switch (type)
             {
                 case SerializedPropertyType.Vector2:
@@ -765,8 +770,6 @@ namespace UnityEditor
                     return labelLine + Line;
                 case SerializedPropertyType.Rect:
                 case SerializedPropertyType.RectInt:
-                case SerializedPropertyType.Bounds:
-                case SerializedPropertyType.BoundsInt:
                     return labelLine + Line * 2 + Spacing;
                 default:
                     return Line;
