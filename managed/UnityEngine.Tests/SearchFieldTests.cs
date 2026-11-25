@@ -117,6 +117,62 @@ namespace UnityEngine.Tests
             finally { Event.current = previous; }
         }
 
+        sealed class Logs : ILogHandler, IDisposable
+        {
+            readonly ILogHandler m_Previous = Debug.unityLogger.logHandler;
+            internal readonly System.Collections.Generic.List<string> Lines = new System.Collections.Generic.List<string>();
+            internal Logs() => Debug.unityLogger.logHandler = this;
+            public void LogException(Exception exception, Object context) => Lines.Add(exception.Message);
+            public void LogFormat(LogType logType, Object context, string format, params object[] args) => Lines.Add(string.Format(format, args));
+            public void Dispose() => Debug.unityLogger.logHandler = m_Previous;
+        }
+
+        [Fact]
+        public void ATooLongSearchStringIsCutToTheLimitAsTheCancelledDialogDoes()
+        {
+            using var release = TestRelease.Pin(TestRelease.Measured);
+            Reset();
+            try
+            {
+                int id = 0;
+                string text = new string('x', 1024);
+                string Field(Event e) => Pass(e, () =>
+                {
+                    id = GUIUtility.GetControlID(FocusType.Keyboard, At);
+                    return EditorGUI.ToolbarSearchField(id, At, text, s_Field, s_Cancel);
+                });
+                text = Field(Mouse(EventType.MouseDown, At.x + 50, At.center.y));
+                text = Field(Mouse(EventType.MouseUp, At.x + 50, At.center.y));
+                Assert.Equal(id, GUIUtility.keyboardControl);
+                // (The click selects the whole text: End puts the cursor after it.)
+                text = Field(Event.KeyboardEvent("end"));
+                using var logs = new Logs();
+                // The 1025th character: Unity asks; Unbound's dialog is cancelled (said), so the text is cut.
+                text = Field(Event.KeyboardEvent("y"));
+                Assert.Equal(1024, text.Length);
+                Assert.Contains(logs.Lines, l => l.Contains("Search String Character Limit Exceeded"));
+            }
+            finally { Reset(); }
+        }
+
+        [Fact]
+        public void ASearchModesPressSaysTheMenuIsNotShownAndKeepsTheMode()
+        {
+            using var release = TestRelease.Pin(TestRelease.Measured);
+            Reset();
+            try
+            {
+                const string member = "EditorGUI.ToolbarSearchField's search mode menu";
+                int before = Hits(member);
+                int mode = 1;
+                var down = Mouse(EventType.MouseDown, At.x + 5, At.center.y);
+                Pass(down, () => EditorGUI.ToolbarSearchField(At, new[] { "All", "Name" }, ref mode, ""));
+                Assert.Equal(1, mode);
+                Assert.Equal(before + 1, Hits(member));
+            }
+            finally { Reset(); }
+        }
+
         [Fact]
         public void AnUnmeasuredFamilysSkinStyledSearchFieldsKeepTheirTextAndSaySo()
         {
