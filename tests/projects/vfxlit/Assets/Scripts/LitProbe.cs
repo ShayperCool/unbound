@@ -27,6 +27,8 @@ public sealed class LitProbe : MonoBehaviour
     /// pipeline's decal feature (its technique chosen for the device: screen space on OpenGL
     /// Core).</summary>
     const int k_DecalRenderer = 3;
+    /// <summary>The pipeline asset's fifth renderer: the forward one in Forward+ mode.</summary>
+    const int k_ForwardPlusRenderer = 4;
 
     readonly StringBuilder m_Out = new StringBuilder();
     readonly List<Stage> m_Stages = new List<Stage>();
@@ -208,6 +210,24 @@ public sealed class LitProbe : MonoBehaviour
             // Shader Graph, and a strip.
             foreach (var (key, graph) in new[] { ("moving alpha", "MovingAlpha"), ("moving cubes", "MovingCubes"), ("moving graph", "MovingGraph"), ("moving strip", "MovingStrip") })
                 Blurred(Lamp(Draw(key, graph, 9, 10), LightType.Point));
+            // Lit quads and meshes under six point lights of their own, more than the
+            // pipeline's limit per object (four): through the Forward+ renderer, which has no
+            // such limit, and through the forward one.
+            foreach (var (key, graph, renderer) in new[] { ("forward plus", "LitMatte", k_ForwardPlusRenderer), ("mesh forward plus", "MeshLit", k_ForwardPlusRenderer), ("many lamps", "LitMatte", -1), ("mesh many lamps", "MeshLit", -1) })
+            {
+                var lamps = Lamps(Draw(key, graph, 5));
+                if (renderer >= 0) lamps.Camera.GetUniversalAdditionalCameraData().SetRenderer(renderer);
+            }
+            // No effect: a lit sphere of the scene's under such lights through the Forward+
+            // renderer. What differs here differs without any effect.
+            var plainPlus = Lamps(Draw("forward plus plain", null, 5));
+            plainPlus.Camera.GetUniversalAdditionalCameraData().SetRenderer(k_ForwardPlusRenderer);
+            var ball = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+            ball.name = "ball";
+            Destroy(ball.GetComponent<Collider>());
+            ball.transform.position = plainPlus.Origin;
+            ball.transform.localScale = Vector3.one * 2f;
+            ball.GetComponent<MeshRenderer>().sharedMaterial = m_Lit;
             // What each effect's renderer is set to: an asset whose graph has an output that
             // casts shadows asks its renderer to.
             foreach (var stage in m_Stages)
@@ -374,6 +394,24 @@ public sealed class LitProbe : MonoBehaviour
         var data = stage.Camera.GetUniversalAdditionalCameraData();
         data.renderPostProcessing = true;
         data.volumeLayerMask = 1 << k_MotionLayer;
+        return stage;
+    }
+
+    /// <summary>Six point lights of colours of their own round the stage, in front of it,
+    /// each reaching part of it.</summary>
+    Stage Lamps(Stage stage)
+    {
+        for (int i = 0; i < 6; i++)
+        {
+            float turn = i * Mathf.PI / 3f;
+            var lamp = new GameObject("lamp " + stage.Key + " " + i).AddComponent<Light>();
+            lamp.type = LightType.Point;
+            lamp.color = Color.HSVToRGB(i / 6f, 0.8f, 1f);
+            lamp.intensity = 2f;
+            lamp.range = 2.5f;
+            lamp.shadows = LightShadows.None;
+            lamp.transform.position = stage.Origin + new Vector3(Mathf.Cos(turn), Mathf.Sin(turn), -1f);
+        }
         return stage;
     }
 

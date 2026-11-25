@@ -136,7 +136,7 @@ MonoBehaviour:
       m_Type:
         m_SerializableType: UnityEngine.Mesh, UnityEngine.CoreModule, Version=0.0.0.0,
           Culture=neutral, PublicKeyToken=null
-      m_SerializableObject: '{"obj":{"fileID":4300000,"guid":"75d317f12e8c1f2f18afa05cea6cec3f","type":2}}'
+      m_SerializableObject: '{"obj":{"fileID":4300000,"guid":"522e320333b97f51f8a9ed9c6bf7c743","type":2}}'
     m_Space: -1
   m_Property:
     name: mesh
@@ -1139,7 +1139,7 @@ MonoBehaviour:
       m_Type:
         m_SerializableType: UnityEngine.Mesh, UnityEngine.CoreModule, Version=0.0.0.0,
           Culture=neutral, PublicKeyToken=null
-      m_SerializableObject: '{"obj":{"fileID":4300000,"guid":"75d317f12e8c1f2f18afa05cea6cec3f","type":2}}'
+      m_SerializableObject: '{"obj":{"fileID":4300000,"guid":"522e320333b97f51f8a9ed9c6bf7c743","type":2}}'
     m_Space: -1
   m_Property:
     name: mesh
