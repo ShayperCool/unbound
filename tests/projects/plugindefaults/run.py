@@ -122,10 +122,10 @@ def entry(name, enabled, settings=None):
 
 
 EDITOR_OFF = entry('Editor', 0, {'DefaultValueInitialized': 'true'})
-# Managed plug-ins whose .meta was written by hand (as the Editor writes it), for what the
-# importer answers about "Any Platform", the Editor and exclusions, and which ones the Editor
-# compiles against; one with a section that has no platform settings, one that names another
-# importer.
+# Plug-ins whose .meta was written by hand (as the Editor writes it), for what the importer
+# answers about "Any Platform", the Editor and exclusions, and which ones the Editor compiles
+# against; one with a section that has no platform settings, one that names another importer, and
+# a shared object whose section lacks the Android entry.
 CONTROLS = {
     'Assets/Controls/AnyOnly.dll': entry('Any', 1) + EDITOR_OFF,
     'Assets/Controls/AnyExcluding.dll': entry('Any', 1, {'Exclude Android': 1, 'Exclude Editor': 1}) + EDITOR_OFF,
@@ -134,6 +134,7 @@ CONTROLS = {
     # The Editor's own settings: a CPU and an OS that are no Editor's here (on Linux or macOS).
     'Assets/Controls/EditorX86.dll': entry('Any', 0) + entry('Editor', 1, {'CPU': 'x86', 'DefaultValueInitialized': 'true'}),
     'Assets/Controls/EditorWindows.dll': entry('Any', 0) + entry('Editor', 1, {'DefaultValueInitialized': 'true', 'OS': 'Windows'}),
+    'Assets/Controls/libsection.so': entry('Any', 1) + EDITOR_OFF,
     'Assets/Controls/NoPlatforms.dll': None,
     'Assets/Controls/DefaultImporter.dll': 'DefaultImporter',
 }
@@ -177,7 +178,7 @@ def stage(project):
         name = path.rsplit('/', 1)[1]
         target = project/path
         target.parent.mkdir(parents=True, exist_ok=True)
-        what = 'managed' if path in CONTROLS else kind(name)
+        what = ('managed' if name.endswith('.dll') else 'file') if path in CONTROLS else kind(name)
         if what == 'managed':
             managed.append((path, target))
         elif what == 'folder':
