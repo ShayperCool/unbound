@@ -37,9 +37,18 @@ namespace UnityEngine.Tests
         public void DrawingAMaskKeepsItAndTakesOneId()
         {
             using var release = TestRelease.Pin(TestRelease.Measured);
-            // rect/repaint/masks: the mask comes back as given, also outside the defined layers.
+            // rect/repaint/masks: the mask comes back as given, also outside the defined layers,
+            // and the field takes one control id.
             foreach (uint mask in new[] { 1u, 3u, 0u, uint.MaxValue, 1u << 20 })
-                Assert.Equal(mask, Pass(new Event { type = EventType.Repaint }, () => (uint)EditorGUI.RenderingLayerMaskField(At, new GUIContent("L"), mask, s_Style)));
+            {
+                var (value, ids) = Pass(new Event { type = EventType.Repaint }, () =>
+                {
+                    int before = GUIUtility.GetControlID(FocusType.Passive);
+                    uint drawn = EditorGUI.RenderingLayerMaskField(At, new GUIContent("L"), mask, s_Style);
+                    return (drawn, GUIUtility.GetControlID(FocusType.Passive) - before - 1);
+                });
+                Assert.Equal((mask, 1), (value, ids));
+            }
         }
 
         [Fact]
