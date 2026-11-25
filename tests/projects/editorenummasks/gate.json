@@ -1,0 +1,13 @@
+{
+  "commands": [
+    "python3 tests/projects/editorenummasks/run.py gate"
+  ],
+  "summary": "editorenummasks: .*",
+  "engine_paths": [
+    "managed/UnityEngine/Editor/",
+    "managed/UnityEngine/IMGUI/",
+    "managed/UnityEngine/Core/EnumDataUtility.cs",
+    "tests/projects/editorenummasks/",
+    "tests/projects/imguiskin/"
+  ]
+}
