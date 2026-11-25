@@ -265,10 +265,27 @@ namespace UnityEngine.Tests
         public void OnlyAChangeOfItsDataDirtiesALoadedAsset()
         {
             using var release = TestRelease.Pin(TestRelease.Measured);
+            var made = new List<Material>();
+            try { DirtiesOnlyOnChange(made); }
+            finally
+            {
+                // No asset of this test stays dirty for a later save.
+                foreach (var m in made)
+                {
+                    EditorUtility.ClearDirty(m);
+                    m.IsPersistentAsset = false;
+                    Object.DestroyImmediate(m);
+                }
+            }
+        }
+
+        static void DirtiesOnlyOnChange(List<Material> made)
+        {
             // Saved as its editor leaves it (validated), or saved stale; then loaded.
             Material Asset(int mode, bool saved = true)
             {
                 var m = Standard();
+                made.Add(m);
                 m.SetFloat("_Mode", mode);
                 if (saved) MaterialValidation.Validate(m);
                 m.IsPersistentAsset = true;
@@ -291,6 +308,7 @@ namespace UnityEngine.Tests
 
             var parent = Asset(0);
             var variant = new Material(parent.shader) { parent = parent, IsPersistentAsset = true };
+            made.Insert(0, variant);
             variant.GetFloat("_Mode");
             EditorUtility.ClearDirty(variant);
             variant.SetFloat("_Mode", 0);
@@ -405,13 +423,14 @@ namespace UnityEngine.Tests
         }
 
         /// <summary>Entering Play mode from Edit mode validates the open scenes' drawn materials before
-        /// its first callback, as a direct start does (the Editor's views drew them in Edit mode).</summary>
+        /// its first callback, ExitingEditMode, as a direct start does (the Editor's views drew them
+        /// in Edit mode). The step Play mode entry starts with, without the rest of the entry.</summary>
         [Fact]
-        public void EnteringPlayModeFromEditModeValidatesTheOpenScenesDrawnMaterials()
+        public void LeavingEditModeForPlayValidatesTheOpenScenesDrawnMaterialsFirst()
         {
             using var release = TestRelease.Pin(TestRelease.Measured);
             using var scenes = new Unbound.Tests.LightProbesTests.Scenes();
-            bool playing = EditorSession.IsPlaying, startedInEdit = EditorSession.StartedInEditMode;
+            bool playing = EditorSession.IsPlaying;
             WithProjectEditors(() =>
             {
                 var scene = scenes.Loaded("Open");
@@ -426,30 +445,18 @@ namespace UnityEngine.Tests
                     if (state == PlayModeStateChange.ExitingEditMode) atExitingEditMode = Keywords(m);
                 };
                 EditorApplication.playModeStateChanged += seen;
-                // Leaving Play mode destroys the DontDestroyOnLoad roots and opens an untitled scene.
-                var persistent = SceneRegistry.DontDestroyOnLoad;
-                var persistentRoots = persistent.Roots.ToArray();
-                persistent.Roots.Clear();
                 try
                 {
                     EditorSession.IsPlaying = false;
-                    EditorSession.StartedInEditMode = true;
                     Assert.Equal("", Keywords(m));
-                    EditorSession.Request(true);
-                    EditorSession.ApplyRequest();
+                    EditorSession.LeaveEditModeForPlay();
                     Assert.Equal("PROJECT_VALIDATED", atExitingEditMode);
                 }
                 finally
                 {
                     EditorApplication.playModeStateChanged -= seen;
-                    EditorSession.Request(false);
-                    EditorSession.ApplyRequest();
-                    if (SceneRegistry.Active != null && SceneRegistry.Active != scene && SceneRegistry.Active.Path == "")
-                        SceneRegistry.Forget(SceneRegistry.Active);
-                    persistent.Roots.AddRange(persistentRoots);
                     EditorSession.IsPlaying = playing;
-                    EditorSession.StartedInEditMode = startedInEdit;
-                    foreach (var root in scene.Roots.ToArray()) if (root != null) Object.DestroyImmediate(root);
+                    Object.DestroyImmediate(go);
                 }
             });
         }

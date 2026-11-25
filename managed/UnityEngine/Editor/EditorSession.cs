@@ -82,11 +82,18 @@ namespace Unbound.Runtime
             else if (request < 0 && IsPlaying) ExitPlayMode();
         }
 
-        static void EnterPlayMode()
+        /// <summary>Edit mode's end as Play mode is entered: the open scenes as the Editor's views
+        /// drew them (their drawn materials validated, MaterialValidation.ValidateDrawnBeforePlay),
+        /// then ExitingEditMode.</summary>
+        internal static void LeaveEditModeForPlay()
         {
-            // The Editor's views drew the open scenes in Edit mode (MaterialValidation.ValidateDrawnBeforePlay).
             foreach (var scene in SceneRegistry.Loaded.ToArray()) MaterialValidation.ValidateDrawnBeforePlay(scene);
             EditorApplication.Internal_PlayModeStateChanged(PlayModeStateChange.ExitingEditMode);
+        }
+
+        static void EnterPlayMode()
+        {
+            LeaveEditModeForPlay();
             UnityEngine.U2D.SpriteAtlasPacking.PackV1ForPlayMode();
             IsPlaying = true;
             Time.ResetForPlayMode();
