@@ -82,6 +82,10 @@ namespace Unbound.Tests
                 Assert.Single(logs, l => l.Contains("baked lightmaps"));
                 Assert.Empty(Logged(() => RealtimeGI.NoteBakeParts(file, new LightingSettings { bakedGI = false, realtimeGI = true }, RealtimeGI.BakeOnLoad)));
                 Assert.Single(Logged(() => RealtimeGI.NoteBakeParts(file, null, RealtimeGI.BakeOnLoad)), l => l.Contains("baked lightmaps"));
+                // A script's bake makes them, or says why it does not when it writes its lighting
+                // data: nothing is said here.
+                Assert.DoesNotContain(Logged(() => RealtimeGI.NoteBakeParts(file, new LightingSettings { bakedGI = true, realtimeGI = true }, RealtimeGI.ScriptBake)),
+                    l => l.Contains("baked lightmaps"));
                 // A sky as the ambient source: its environment lighting is not made.
                 RenderSettings.ambientMode = AmbientMode.Skybox;
                 Assert.Contains(Logged(() => RealtimeGI.NoteBakeParts(file, new LightingSettings { bakedGI = false, realtimeGI = true }, RealtimeGI.BakeOnLoad)),

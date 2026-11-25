@@ -721,15 +721,16 @@ namespace UnityEngine
 
         /// <summary>Says once what the Editor's bake of a scene (<paramref name="what"/>: when it
         /// opens it without lighting data, or a script's) would make and Unbound does not: baked
-        /// lightmaps and the light probes' baked lighting (baked global illumination on; a scene
-        /// without Lighting Settings has the defaults', which have it on; Q677), the environment
-        /// lighting from a sky (the ambient probe and the default reflection; a script's bake
-        /// makes it), baked reflection probes, Adaptive Probe Volumes. Unbound makes the realtime
-        /// GI alone (<see cref="Bake"/>).</summary>
+        /// lightmaps and the light probes' baked lighting on open (baked global illumination on;
+        /// a scene without Lighting Settings has the defaults', which have it on; a script's bake
+        /// makes them where measured and says why where not, <see cref="WriteLightingData"/>),
+        /// the environment lighting from a sky (the ambient probe and the default reflection; a
+        /// script's bake makes it), baked reflection probes, Adaptive Probe Volumes. On open
+        /// Unbound makes the realtime GI alone (<see cref="Bake"/>).</summary>
         internal static void NoteBakeParts(LoadedFile file, LightingSettings settings, string what)
         {
             string path = file?.Path ?? "a scene";
-            if (settings == null || settings.bakedGI)
+            if (what != ScriptBake && (settings == null || settings.bakedGI))
                 Warn("bake-baked:" + what + path, $"{path}: {what} would make baked lightmaps and the light probes' baked lighting, which Unbound does not make (Q677).");
             // (A script's bake makes it, BakeEnvironment.)
             if (what != ScriptBake && (RenderSettings.skybox != null || RenderSettings.ambientMode == Rendering.AmbientMode.Skybox))
