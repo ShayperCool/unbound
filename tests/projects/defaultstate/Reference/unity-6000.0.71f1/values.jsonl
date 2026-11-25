@@ -846,6 +846,7 @@
 {"key":"UnityEditor.HyperLinkClickedEventArgs/@factory","status":"excluded","value":"no-public-parameterless-constructor"}
 {"key":"UnityEditor.IMGUI.Controls.MultiColumnHeader/@factory","status":"excluded","value":"no-public-parameterless-constructor"}
 {"key":"UnityEditor.IMGUI.Controls.MultiColumnHeader+DefaultGUI/@factory","status":"excluded","value":"static"}
+{"key":"UnityEditor.IMGUI.Controls.MultiColumnHeader+DefaultStyles/@factory","status":"excluded","value":"static"}
 {"key":"UnityEditor.IMGUI.Controls.MultiColumnHeaderState/@factory","status":"excluded","value":"no-public-parameterless-constructor"}
 {"key":"UnityEditor.IMGUI.Controls.MultiColumnHeaderState+Column/@factory","status":"value","value":"class"}
 {"key":"UnityEditor.IMGUI.Controls.MultiColumnHeaderState+Column/Field/UnityEditor.IMGUI.Controls.MultiColumnHeaderState+Column/allowToggleVisibility","status":"value","value":"true"}
@@ -861,6 +862,8 @@
 {"key":"UnityEditor.IMGUI.Controls.MultiColumnHeaderState+Column/Field/UnityEditor.IMGUI.Controls.MultiColumnHeaderState+Column/userData","status":"value","value":"0"}
 {"key":"UnityEditor.IMGUI.Controls.MultiColumnHeaderState+Column/Field/UnityEditor.IMGUI.Controls.MultiColumnHeaderState+Column/width","status":"value","value":"50"}
 {"key":"UnityEditor.IMGUI.Controls.TreeView/@factory","status":"excluded","value":"abstract"}
+{"key":"UnityEditor.IMGUI.Controls.TreeView+DefaultGUI/@factory","status":"excluded","value":"static"}
+{"key":"UnityEditor.IMGUI.Controls.TreeView+DefaultStyles/@factory","status":"excluded","value":"static"}
 {"key":"UnityEditor.IMGUI.Controls.TreeViewItem/@factory","status":"value","value":"class"}
 {"key":"UnityEditor.IMGUI.Controls.TreeViewItem/Property/UnityEditor.IMGUI.Controls.TreeViewItem/children","status":"value","value":"null"}
 {"key":"UnityEditor.IMGUI.Controls.TreeViewItem/Property/UnityEditor.IMGUI.Controls.TreeViewItem/depth","status":"value","value":"0"}
@@ -1394,6 +1397,9 @@
 {"key":"UnityEditor.SearchableEditorWindow/Property/UnityEngine.Object/hideFlags","status":"value","value":"enum:52"}
 {"key":"UnityEditor.SearchableEditorWindow/Property/UnityEngine.Object/name","status":"value","value":"string:"}
 {"key":"UnityEditor.Selection/@factory","status":"value","value":"class"}
+{"key":"UnityEditor.SerializableDelayedCallback/@factory","status":"value","value":"scriptable"}
+{"key":"UnityEditor.SerializableDelayedCallback/Property/UnityEngine.Object/hideFlags","status":"value","value":"enum:0"}
+{"key":"UnityEditor.SerializableDelayedCallback/Property/UnityEngine.Object/name","status":"value","value":"string:"}
 {"key":"UnityEditor.SerializedObject/@factory","status":"excluded","value":"no-public-parameterless-constructor"}
 {"key":"UnityEditor.SerializedProperty/@factory","status":"excluded","value":"no-public-parameterless-constructor"}
 {"key":"UnityEditor.SessionState/@factory","status":"value","value":"class"}

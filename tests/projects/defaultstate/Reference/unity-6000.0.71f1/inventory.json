@@ -1776,6 +1776,12 @@
     {
       "category": "class",
       "module": "UnityEditor.CoreModule",
+      "status": "static",
+      "type": "UnityEditor.IMGUI.Controls.MultiColumnHeader+DefaultStyles"
+    },
+    {
+      "category": "class",
+      "module": "UnityEditor.CoreModule",
       "status": "no-public-parameterless-constructor",
       "type": "UnityEditor.IMGUI.Controls.MultiColumnHeaderState"
     },
@@ -1790,6 +1796,18 @@
       "module": "UnityEditor.CoreModule",
       "status": "abstract",
       "type": "UnityEditor.IMGUI.Controls.TreeView"
+    },
+    {
+      "category": "class",
+      "module": "UnityEditor.CoreModule",
+      "status": "static",
+      "type": "UnityEditor.IMGUI.Controls.TreeView+DefaultGUI"
+    },
+    {
+      "category": "class",
+      "module": "UnityEditor.CoreModule",
+      "status": "static",
+      "type": "UnityEditor.IMGUI.Controls.TreeView+DefaultStyles"
     },
     {
       "category": "class",
@@ -2426,6 +2444,12 @@
       "module": "UnityEditor.CoreModule",
       "status": "candidate",
       "type": "UnityEditor.Selection"
+    },
+    {
+      "category": "scriptable",
+      "module": "UnityEditor.CoreModule",
+      "status": "candidate",
+      "type": "UnityEditor.SerializableDelayedCallback"
     },
     {
       "category": "class",
