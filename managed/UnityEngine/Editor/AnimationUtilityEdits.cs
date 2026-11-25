@@ -179,7 +179,7 @@ namespace UnityEditor
 
         /// <summary>A key's tangents from its modes: Linear sides point at the neighbour; either
         /// side ClampedAuto (else Auto) sets both to the smooth tangent, ClampedAuto also both
-        /// weights to a third; Constant sides are infinite. Free sides keep theirs. Measured,
+        /// weights to a third (a lone ClampedAuto key keeps both); Constant sides are infinite. Free sides keep theirs. Measured,
         /// tests/projects/animatorapi util.tangents.*, extra.tangents.*, tests/projects/animrecorder
         /// clampedAuto.*.</summary>
         static void UpdateTangents(AnimationCurve curve, int i)
@@ -192,10 +192,14 @@ namespace UnityEditor
             if (right == TangentMode.Linear && i + 1 < n) key.outTangent = Slope(key, curve[i + 1]);
             if (left == TangentMode.ClampedAuto || right == TangentMode.ClampedAuto)
             {
-                key.inTangent = key.outTangent = ClampedAutoTangent(curve, i);
-                // The default weights too, on a curve of two keys or more (animrecorder clampedAuto.*;
-                // whether Auto keys get them is not measured).
-                if (n >= 2) key.inWeight = key.outWeight = k_DefaultWeight;
+                // On a curve of two keys or more: the tangent and the default weights, a weighted
+                // key's too (its weighted mode stays); a lone key keeps its tangents and weights
+                // (animrecorder clampedAuto.*; whether Auto keys get the weights is not measured).
+                if (n >= 2)
+                {
+                    key.inTangent = key.outTangent = ClampedAutoTangent(curve, i);
+                    key.inWeight = key.outWeight = k_DefaultWeight;
+                }
             }
             else if (left == TangentMode.Auto || right == TangentMode.Auto)
                 key.inTangent = key.outTangent = AutoTangent(curve, i);
