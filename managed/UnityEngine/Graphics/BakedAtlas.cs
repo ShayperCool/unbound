@@ -853,6 +853,7 @@ namespace UnityEngine
                     lightmapImages = images && !layoutOnly,
                     shadowmaskStitching = images && !layoutOnly && UnityEditor.EditorSettings.shadowmaskStitching,
                     filtering = RealtimeGI.Filtering(settings),
+                    indirectScale = settings.indirectScale,
                 });
                 // The request, the bake (a renderer it refuses, named) and the reading of its
                 // answer all fail the scene's layout, said.

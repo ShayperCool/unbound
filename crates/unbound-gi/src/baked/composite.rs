@@ -33,6 +33,9 @@ pub struct Buffers<'a> {
     /// Per sample its world normal (`supersampling` × `supersampling` a texel, rows of `width ×
     /// supersampling`), and that number; read where the A-Trous filter filters the light.
     pub normals: Option<(&'a [[f32; 4]], usize)>,
+    /// The Lighting Settings' Indirect Intensity: the indirect and sky's light is multiplied by
+    /// it.
+    pub indirect_scale: f32,
 }
 
 /// A filter of the Lighting Settings' Advanced filtering.
@@ -145,8 +148,9 @@ pub fn composite(
         }
         for c in 0..3 {
             direct[k][c] = buffers.direct[k][c];
-            indirect[k][c] = buffers.indirect.map_or(0.0, |b| b[k][c])
-                + buffers.environment.map_or(0.0, |b| b[k][c]);
+            indirect[k][c] = (buffers.indirect.map_or(0.0, |b| b[k][c])
+                + buffers.environment.map_or(0.0, |b| b[k][c]))
+                * buffers.indirect_scale;
         }
         direct[k][3] = 1.0;
         indirect[k][3] = 1.0;
@@ -158,9 +162,13 @@ pub fn composite(
             continue;
         }
         for c in 0..3 {
-            texel[c] = buffers.direct[k][c]
-                + buffers.indirect.map_or(0.0, |b| b[k][c])
-                + buffers.environment.map_or(0.0, |b| b[k][c]);
+            texel[c] = if buffers.indirect_scale == 1.0 {
+                buffers.direct[k][c]
+                    + buffers.indirect.map_or(0.0, |b| b[k][c])
+                    + buffers.environment.map_or(0.0, |b| b[k][c])
+            } else {
+                direct[k][c] + indirect[k][c]
+            };
         }
         texel[3] = 1.0;
     }
@@ -237,6 +245,7 @@ mod tests {
                 validity: Some(&[0.0, 0.0]),
                 charts: &[],
                 normals: None,
+                indirect_scale: 1.0,
             },
             0.9,
             0,
@@ -266,6 +275,7 @@ mod tests {
                 validity: Some(&validity),
                 charts: &[],
                 normals: None,
+                indirect_scale: 1.0,
             },
             0.9,
             0,
@@ -298,6 +308,7 @@ mod tests {
                 validity: Some(&[1.0, 1.0, 0.0]),
                 charts: &[],
                 normals: None,
+                indirect_scale: 1.0,
             },
             0.9,
             2,
@@ -324,6 +335,7 @@ mod tests {
             validity: None,
             charts: &[],
             normals: None,
+            indirect_scale: 1.0,
         };
         let out = composite(&buffers, 0.9, 1, None, None).unwrap().lightmap;
         let alpha: Vec<f32> = out.iter().map(|t| t[3]).collect();
@@ -347,6 +359,7 @@ mod tests {
                 validity: None,
                 charts: &[],
                 normals: None,
+                indirect_scale: 1.0,
             },
             0.9,
             1,
@@ -374,6 +387,7 @@ mod tests {
             validity: None,
             charts: &[0, 0],
             normals: None,
+            indirect_scale: 1.0,
         };
         let filtering = Filtering {
             direct: PartFiltering::default(),
@@ -409,6 +423,7 @@ mod tests {
             validity: Some(&[0.0, 0.0, 0.0, 0.5]),
             charts: &charts,
             normals: None,
+            indirect_scale: 1.0,
         };
         let filtering = Filtering {
             direct: PartFiltering {

@@ -329,7 +329,12 @@ namespace UnityEngine.Tests
                     Assert.Contains("ambient occlusion", Unwritten(environment, "Assets/Scenes/Lit", true, lightmaps: true));
                     environment.ao = false;
                     environment.indirectScale = 2f;
+                    // An Indirect Intensity other than 1 is made (tests/projects/bakedbuffers
+                    // Intensity*), but not with directional lightmaps.
+                    Assert.Null(Unwritten(environment, "Assets/Scenes/Lit", true, lightmaps: true));
+                    environment.directionalityMode = LightmapsMode.CombinedDirectional;
                     Assert.Contains("Indirect Intensity", Unwritten(environment, "Assets/Scenes/Lit", true, lightmaps: true));
+                    environment.directionalityMode = LightmapsMode.NonDirectional;
                     environment.indirectScale = 1f;
                     Assert.Null(Unwritten(environment, "Assets/Scenes/Lit", true, lightmaps: true));
                     environment.lightmapCompression = LightmapCompression.NormalQuality;

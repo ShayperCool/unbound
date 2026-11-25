@@ -73,6 +73,15 @@ pub struct BakeRequest {
     /// managed side asks only for what is measured); without it they are unfiltered.
     #[serde(default)]
     filtering: Option<FilteringData>,
+    /// The Lighting Settings' Indirect Intensity (the lightmaps' and the light probes' indirect
+    /// light multiplied by it).
+    #[serde(default = "default_indirect_scale")]
+    indirect_scale: f32,
+}
+
+/// The Indirect Intensity of a new Lighting Settings asset.
+fn default_indirect_scale() -> f32 {
+    1.0
 }
 
 /// What becomes of the direct light and of the indirect and sky's light.
@@ -681,6 +690,7 @@ impl<'a> Buffers<'a> {
         stitched: &[(&[EdgePair], [f32; 4])],
         shadowmask: Option<bool>,
         filtering: Option<FilteringData>,
+        indirect_scale: f32,
     ) -> Result<()> {
         let index = self.lightmaps.len();
         self.write(format!("occupancy{index}.u8"), g.occupancy.clone())?;
@@ -808,6 +818,7 @@ impl<'a> Buffers<'a> {
                 validity: bounced.map(|b| b.validity.as_slice()),
                 charts: &g.charts,
                 normals: Some((&normals, g.supersampling)),
+                indirect_scale,
             },
             backface_tolerance,
             padding,
@@ -1349,6 +1360,7 @@ fn bake(request: BakeRequest, buffers: Option<&Path>) -> Result<Json> {
                 (mixed == MixedMode::Shadowmask && channels.iter().any(|c| c.is_some()))
                     .then_some(request.shadowmask_stitching),
                 request.filtering,
+                request.indirect_scale,
             )?;
         }
         let described = bounce.as_ref().map_or(Json::Null, |b| {
@@ -1447,6 +1459,7 @@ fn bake(request: BakeRequest, buffers: Option<&Path>) -> Result<Json> {
                         light_probes::occlusion(&points, &baked_lights, &channels, &scene)
                     }),
                     light_probes::occluding_lights(&baked_lights, &channels).len(),
+                    request.indirect_scale,
                 );
             }
             described_probes =
@@ -1526,6 +1539,7 @@ fn light_probes_data(
     bounced: &[probes::Coefficients],
     occlusion: Option<Vec<light_probes::Occlusion>>,
     occluding: usize,
+    indirect_scale: f32,
 ) -> Json {
     let mut sets = Vec::new();
     let mut coefficients = Vec::new();
@@ -1539,6 +1553,7 @@ fn light_probes_data(
             coefficients.extend(light_probes::coefficients(
                 &lit[p],
                 &bounced[p],
+                indirect_scale,
                 group.dering,
             ));
         }
@@ -2054,7 +2069,7 @@ mod tests {
         let (a, b) = (group(1, true), group(2, true));
         let points = vec![vec![[0.0f32; 3], [1.0, 0.0, 0.0]], vec![[0.0, 1.0, 0.0]]];
         let light = vec![probes::Coefficients::default(); 3];
-        let reply = light_probes_data(&points, &[&a, &b], &light, &light, None, 0);
+        let reply = light_probes_data(&points, &[&a, &b], &light, &light, None, 0, 1.0);
         assert_eq!(reply["sets"][1]["offset"], 2);
         assert_eq!(reply["sets"][1]["size"], 1);
         assert_eq!(
@@ -2066,24 +2081,24 @@ mod tests {
         assert!(reply["unmeasured"].is_null());
         // Probes within 5 cm, a group without Remove Ringing, two mixed lights' occlusion.
         let close = vec![vec![[0.0f32; 3], [0.01, 0.0, 0.0]], vec![[0.0, 1.0, 0.0]]];
-        let reply = light_probes_data(&close, &[&a, &b], &light, &light, None, 0);
+        let reply = light_probes_data(&close, &[&a, &b], &light, &light, None, 0, 1.0);
         assert_eq!(
             reply["unmeasured"],
             "light probes within 5 cm of each other"
         );
         let plain = group(2, false);
-        let reply = light_probes_data(&points, &[&a, &plain], &light, &light, None, 0);
+        let reply = light_probes_data(&points, &[&a, &plain], &light, &light, None, 0, 1.0);
         assert_eq!(
             reply["unmeasured"],
             "a Light Probe Group without Remove Ringing"
         );
-        let reply = light_probes_data(&points, &[&a, &b], &light, &light, Some(Vec::new()), 2);
+        let reply = light_probes_data(&points, &[&a, &b], &light, &light, Some(Vec::new()), 2, 1.0);
         assert_eq!(
             reply["unmeasured"],
             "the probes' occlusion of more than one mixed light"
         );
         // One mixed light's occlusion is measured.
-        let reply = light_probes_data(&points, &[&a, &b], &light, &light, Some(Vec::new()), 1);
+        let reply = light_probes_data(&points, &[&a, &b], &light, &light, Some(Vec::new()), 1, 1.0);
         assert!(reply["unmeasured"].is_null());
     }
 

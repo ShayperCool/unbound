@@ -29,10 +29,16 @@ const UNITY_ORDER: [usize; 9] = [0, 3, 1, 2, 4, 5, 6, 7, 8];
 const DIRECT_WINDOW: (f32, f32) = (0.922_065_97, 0.731_864);
 
 /// The coefficients of a probe as Unity keeps them (red's nine, green's, blue's; in Unity's
-/// order), of the bake's direct and indirect light: each times its factor, the direct light
+/// order), of the bake's direct and indirect light (the latter times `indirect_scale`, the
+/// Lighting Settings' Indirect Intensity): each times its factor, the direct light
 /// windowed with Remove Ringing (`dering`), the two summed, and with Remove Ringing the sum's
 /// bands scaled down until no direction's light is below zero.
-pub fn coefficients(direct: &Coefficients, indirect: &Coefficients, dering: bool) -> [f32; 27] {
+pub fn coefficients(
+    direct: &Coefficients,
+    indirect: &Coefficients,
+    indirect_scale: f32,
+    dering: bool,
+) -> [f32; 27] {
     let unity = |c: &Coefficients| -> [f32; 27] {
         let mut out = [0.0f32; 27];
         for (i, coefficient) in c.iter().enumerate() {
@@ -47,7 +53,8 @@ pub fn coefficients(direct: &Coefficients, indirect: &Coefficients, dering: bool
         scale_bands(&mut d, DIRECT_WINDOW.0, DIRECT_WINDOW.1);
     }
     let i = unity(indirect);
-    let mut sum: [f32; 27] = std::array::from_fn(|k| d[k] + i[k]);
+    // (The Lighting Settings' Indirect Intensity multiplies the indirect light.)
+    let mut sum: [f32; 27] = std::array::from_fn(|k| d[k] + i[k] * indirect_scale);
     if dering {
         let (first, second) = dering_window(&sum);
         scale_bands(&mut sum, first, second);
@@ -488,7 +495,7 @@ mod tests {
                 .clone();
             assert_eq!(expected.len(), direct.len(), "{scene}");
             for (p, want) in expected.iter().enumerate() {
-                let made = coefficients(&direct[p], &indirect[p], true);
+                let made = coefficients(&direct[p], &indirect[p], 1.0, true);
                 for (k, v) in made.iter().enumerate() {
                     let w = number(&want[format!("sh[{k:2}]")]);
                     assert!(
@@ -535,14 +542,14 @@ mod tests {
         direct[0] = [1.0, 2.0, 3.0];
         direct[1] = [4.0, 0.0, 0.0];
         indirect[3] = [0.0, 0.0, 2.0];
-        let made = coefficients(&direct, &indirect, false);
+        let made = coefficients(&direct, &indirect, 1.0, false);
         // L0 by its factor; raw x (index 1) is Unity's third, raw z (index 3) its second.
         assert_eq!(made[0], 1.0 * NORMALIZE[0]);
         assert_eq!(made[18], 3.0 * NORMALIZE[0]);
         assert_eq!(made[3], 4.0 * NORMALIZE[1]);
         assert_eq!(made[2 * 9 + 2], 2.0 * NORMALIZE[3]);
         // With it, a light that falls below zero somewhere has its bands scaled down.
-        let ringing = coefficients(&direct, &indirect, true);
+        let ringing = coefficients(&direct, &indirect, 1.0, true);
         assert_eq!(ringing[0], made[0]);
         assert!(ringing[3].abs() < made[3].abs());
     }
