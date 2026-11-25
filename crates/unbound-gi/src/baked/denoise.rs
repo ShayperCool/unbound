@@ -4,7 +4,7 @@
 //! red, green and blue from the image's texels of four numbers, each texel's fourth number kept.
 //! The library is loaded from the path the caller gives (`unbound_project::denoiser`).
 use anyhow::{Context, Result, bail};
-use libloading::{Library, Symbol};
+use libloading::Library;
 use std::{
     ffi::{CStr, c_char, c_int, c_void},
     path::Path,
@@ -62,10 +62,9 @@ fn load(path: &Path) -> Result<Api> {
         let library = Library::new(path).with_context(|| format!("{}", path.display()))?;
         macro_rules! entry {
             ($name:literal) => {{
-                let symbol: Symbol<_> = library
+                *library
                     .get(concat!($name, "\0").as_bytes())
-                    .with_context(|| format!("{} lacks {}", path.display(), $name))?;
-                *symbol
+                    .with_context(|| format!("{} lacks {}", path.display(), $name))?
             }};
         }
         Ok(Api {
@@ -134,8 +133,6 @@ pub fn denoise(
                 pixel,
                 width * pixel,
             );
-            // (The Editor also sets "hdr", which the lightmap filter of 1.4.2 does not have: it
-            // is high dynamic range unless directional.)
             (api.commit_filter)(filter);
             (api.execute_filter)(filter);
             let result = error(api, device);

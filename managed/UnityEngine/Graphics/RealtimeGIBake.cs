@@ -363,13 +363,16 @@ namespace UnityEngine
             settings.filteringMode == LightingSettings.FilterMode.None ? null
             : settings.filteringMode == LightingSettings.FilterMode.Advanced
                 && (Unmade(settings.denoiserTypeDirect) || Unmade(settings.denoiserTypeIndirect))
-                ? "lightmaps with the OptiX denoiser are not made"
+                ? $"lightmaps with the {DenoiserName(Unmade(settings.denoiserTypeDirect) ? settings.denoiserTypeDirect : settings.denoiserTypeIndirect)} denoiser are not made"
             : settings.directionalityMode == LightmapsMode.CombinedDirectional ? "directional lightmaps with filtering are not measured"
             : settings.mixedBakeMode != MixedLightingMode.IndirectOnly ? "filtered lightmaps in the Shadowmask or Subtractive Lighting Mode are not measured"
             : null;
 
         static bool Unmade(LightingSettings.DenoiserType denoiser) =>
             denoiser != LightingSettings.DenoiserType.None && denoiser != LightingSettings.DenoiserType.OpenImage;
+
+        static string DenoiserName(LightingSettings.DenoiserType denoiser) =>
+            denoiser == LightingSettings.DenoiserType.Optix ? "OptiX" : (int)denoiser == 3 ? "Radeon Pro" : denoiser.ToString();
 
         /// <summary>The folder a bake writes its files to beside the scene (null: untitled).</summary>
         static string FolderOf(Unbound.Runtime.SceneData scene) => string.IsNullOrEmpty(scene.Path) ? null

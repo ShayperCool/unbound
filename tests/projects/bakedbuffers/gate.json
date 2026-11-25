@@ -6,6 +6,7 @@
   "engine_paths": [
     "crates/unbound-gi/src/baked",
     "crates/unbound-runtime/src/baked_gi.rs",
+    "crates/unbound-project/src/denoiser.rs",
     "managed/UnityEngine/Graphics/BakedAtlas.cs",
     "managed/UnityEngine/Graphics/GIMaterialImages.cs",
     "managed/UnityEngine/Graphics/RealtimeGIBake.cs",

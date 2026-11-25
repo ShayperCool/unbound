@@ -29,7 +29,7 @@ const ARCHIVE_TOP: &str = "oidn-1.4.2.x86_64.linux";
 /// The archive's files that are kept, and their names in the cache (the libraries under the
 /// names they load each other by).
 const KEPT: [(&str, &str); 6] = [
-    ("lib/libOpenImageDenoise.so.1.4.2", LIBRARY),
+    ("lib/libOpenImageDenoise.so.1.4.2", RELEASE_LIBRARY),
     ("lib/libtbb.so.12.4", "libtbb.so.12"),
     ("doc/LICENSE.txt", "LICENSE.txt"),
     ("doc/third-party-programs.txt", "third-party-programs.txt"),
@@ -43,8 +43,15 @@ const KEPT: [(&str, &str); 6] = [
     ),
 ];
 
-/// The library a denoiser loads.
-pub const LIBRARY: &str = "libOpenImageDenoise.so.1";
+/// The library of the cached Linux release.
+const RELEASE_LIBRARY: &str = "libOpenImageDenoise.so.1";
+
+/// The library `UNBOUND_OIDN`'s directory holds, by the platform's name for it.
+pub const LIBRARY: &str = if cfg!(target_os = "macos") {
+    "libOpenImageDenoise.1.dylib"
+} else {
+    "libOpenImageDenoise.so.1"
+};
 
 /// The path of Open Image Denoise 1.4.2's library: `UNBOUND_OIDN`'s, else the cached release,
 /// downloaded when missing. The first resolution is shared by the process, failures included.
@@ -98,7 +105,7 @@ fn resolve() -> Result<PathBuf> {
 /// never removed, the archive `load` gives (when `offline` allows it) checked and unpacked
 /// beside `root` and moved into place.
 fn acquire(root: &Path, offline: bool, load: impl FnOnce() -> Result<Vec<u8>>) -> Result<PathBuf> {
-    let library = root.join(LIBRARY);
+    let library = root.join(RELEASE_LIBRARY);
     if root.join(".complete").is_file() {
         return Ok(library);
     }
@@ -209,7 +216,7 @@ mod tests {
             KEPT.iter().map(|(from, _)| (*from, &b"x"[..])).collect();
         files.push(("bin/oidnDenoise", b"not kept"));
         unpack(&archive(&files), &dir).unwrap();
-        assert!(dir.join(LIBRARY).is_file());
+        assert!(dir.join(RELEASE_LIBRARY).is_file());
         assert!(dir.join("libtbb.so.12").is_file());
         assert!(!dir.join("oidnDenoise").exists());
         // A kept file missing from the archive is an error.
