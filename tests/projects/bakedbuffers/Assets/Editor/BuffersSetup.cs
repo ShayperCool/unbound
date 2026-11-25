@@ -710,6 +710,18 @@ public static class BuffersSetup
             Lightmapping.lightingSettings.indirectSampleCount = 16;
             WhiteSun();
         });
+        // Directional lightmaps in the Shadowmask and Subtractive Lighting Modes: the coloured
+        // scene under a mixed sun, a mixed and a baked point light.
+        foreach (var (name, mixed) in new[] { ("DirectionalShadowmask", MixedLightingMode.Shadowmask), ("DirectionalSubtractive", MixedLightingMode.Subtractive) })
+        {
+            var scene = Coloured(name, 64, 1);
+            Directed();
+            Lightmapping.lightingSettings.mixedBakeMode = mixed;
+            NewLight("MixedSun", LightType.Directional, Vector3.zero, new Vector3(50f, -30f, 0f), Color.white, 2f, LightmapBakeType.Mixed);
+            NewLight("MixedBulb", LightType.Point, new Vector3(1.013f, 2.017f, -0.991f), Vector3.zero, new Color(1f, 0.9f, 0.7f), 2f, LightmapBakeType.Mixed).range = 6f;
+            NewLight("BakedBulb", LightType.Point, new Vector3(-1.21f, 1.53f, 1.07f), Vector3.zero, new Color(0.6f, 0.8f, 1f), 2f).range = 5f;
+            Save(scene, name);
+        }
     }
 
     /// <summary>Mixed lights for the shadowmask: two suns, five point lights in a row whose
@@ -1097,6 +1109,9 @@ public static class BuffersSetup
             s.denoiserTypeDirect = LightingSettings.DenoiserType.OpenImage;
             s.filterTypeDirect = LightingSettings.FilterType.None;
         });
+        // A new Lighting Settings asset's: directional lightmaps, the Shadowmask mode, Auto.
+        Moded("FilterDirectionalShadowmaskAuto", true, true, MixedLightingMode.Shadowmask);
+        Moded("FilterDirectionalSubtractiveAuto", true, true, MixedLightingMode.Subtractive);
     }
 
     /// <summary>The coloured scene under a sun denoised: the Auto filtering, and the Advanced
