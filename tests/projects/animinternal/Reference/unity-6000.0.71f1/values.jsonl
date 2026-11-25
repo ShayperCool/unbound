@@ -1,0 +1,60 @@
+{"k":"found","v":"True True True"}
+{"k":"key.0.left.Free","v":"0 0 0 0"}
+{"k":"key.0.right.Free","v":"0 0 0 0"}
+{"k":"key.0.left.Auto","v":"2 0 0 0"}
+{"k":"key.0.right.Auto","v":"32 0 0 0"}
+{"k":"key.0.left.Linear","v":"4 0 0 0"}
+{"k":"key.0.right.Linear","v":"64 0 0 0"}
+{"k":"key.0.left.Constant","v":"6 0 0 0"}
+{"k":"key.0.right.Constant","v":"96 0 0 0"}
+{"k":"key.0.left.ClampedAuto","v":"8 0 0 0"}
+{"k":"key.0.right.ClampedAuto","v":"128 0 0 0"}
+{"k":"key.0.broken.True","v":"1 0 0 0"}
+{"k":"key.0.broken.False","v":"0 0 0 0"}
+{"k":"key.1.left.Free","v":"481 0.5 -0.25 0"}
+{"k":"key.1.right.Free","v":"31 0.5 -0.25 0"}
+{"k":"key.1.left.Auto","v":"483 0.5 -0.25 0"}
+{"k":"key.1.right.Auto","v":"63 0.5 -0.25 0"}
+{"k":"key.1.left.Linear","v":"485 0.5 -0.25 0"}
+{"k":"key.1.right.Linear","v":"95 0.5 -0.25 0"}
+{"k":"key.1.left.Constant","v":"487 0.5 -0.25 0"}
+{"k":"key.1.right.Constant","v":"127 0.5 -0.25 0"}
+{"k":"key.1.left.ClampedAuto","v":"489 0.5 -0.25 0"}
+{"k":"key.1.right.ClampedAuto","v":"159 0.5 -0.25 0"}
+{"k":"key.1.broken.True","v":"511 0.5 -0.25 0"}
+{"k":"key.1.broken.False","v":"510 0.5 -0.25 0"}
+{"k":"key.2.left.Free","v":"1 3 4 0"}
+{"k":"key.2.right.Free","v":"1 3 4 0"}
+{"k":"key.2.left.Auto","v":"3 3 4 0"}
+{"k":"key.2.right.Auto","v":"33 3 4 0"}
+{"k":"key.2.left.Linear","v":"5 3 4 0"}
+{"k":"key.2.right.Linear","v":"65 3 4 0"}
+{"k":"key.2.left.Constant","v":"7 3 4 0"}
+{"k":"key.2.right.Constant","v":"97 3 4 0"}
+{"k":"key.2.left.ClampedAuto","v":"9 3 4 0"}
+{"k":"key.2.right.ClampedAuto","v":"129 3 4 0"}
+{"k":"key.2.broken.True","v":"1 3 4 0"}
+{"k":"key.2.broken.False","v":"0 3 4 0"}
+{"k":"key.3.left.Free","v":"0 3 4 3"}
+{"k":"key.3.right.Free","v":"4 3 4 3"}
+{"k":"key.3.left.Auto","v":"2 3 4 3"}
+{"k":"key.3.right.Auto","v":"36 3 4 3"}
+{"k":"key.3.left.Linear","v":"4 3 4 3"}
+{"k":"key.3.right.Linear","v":"68 3 4 3"}
+{"k":"key.3.left.Constant","v":"6 3 4 3"}
+{"k":"key.3.right.Constant","v":"100 3 4 3"}
+{"k":"key.3.left.ClampedAuto","v":"8 3 4 3"}
+{"k":"key.3.right.ClampedAuto","v":"132 3 4 3"}
+{"k":"key.3.broken.True","v":"5 3 4 3"}
+{"k":"key.3.broken.False","v":"4 3 4 3"}
+{"k":"key.left.31","v":"62 0 0 0"}
+{"k":"record.events","v":"added"}
+{"k":"record.initial","v":"False mode False"}
+{"k":"record.start","v":" True mode False events 1/0"}
+{"k":"record.startAgain","v":" True events 2/0"}
+{"k":"record.stop","v":" False events 2/1"}
+{"k":"record.stopAgain","v":" False events 2/2"}
+{"k":"record.inMode","v":" True mode True events 3/2"}
+{"k":"record.afterModeStop","v":"True mode False events 3/2"}
+{"k":"record.removed","v":"events 3/3"}
+{"k":"complete","v":true}
