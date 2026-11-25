@@ -149,26 +149,30 @@ namespace UnityEditor
         public static void SetEditorCurve(AnimationClip clip, EditorCurveBinding binding, AnimationCurve curve)
         {
             SetEditorCurveNoSync(clip, binding, curve);
+            clip.SyncLength();
         }
 
         /// <summary>Brings the clip up to its editor curves (the Timeline editor calls it after
-        /// curve edits). Unbound's curve edits take effect at once, so this compiles the clip; a
-        /// curve replaced without a sync shows its new length before it, where the Editor keeps the
-        /// synced length until then (tests/projects/animinternal <c>sync.length</c>, a residual).</summary>
+        /// curve edits). Unbound's curve edits take effect at once, so this compiles the clip and
+        /// ends the length held since a curve set without a sync
+        /// (<see cref="AnimationClip.m_LengthSynced"/>, tests/projects/animinternal <c>sync.length</c>).</summary>
         internal static void SyncEditorCurves(AnimationClip clip)
         {
             if (!Unbound.Runtime.Compat.TimelineEditorAnimationMeasured) { Unbound.Runtime.Stubs.NotImplemented("UnityEditor.AnimationUtility.SyncEditorCurves"); return; }
             if (clip == null) throw new ArgumentNullException(nameof(clip));
             clip.Compile();
+            clip.SyncLength();
         }
 
         internal static void SetEditorCurveNoSync(AnimationClip clip, EditorCurveBinding binding, AnimationCurve curve) =>
             SetEditorCurveNoSync(clip, binding, curve, notify: true);
 
-        /// <summary>Sets a binding's curve; <paramref name="notify"/>: calls <see cref="onCurveWasModified"/>.</summary>
+        /// <summary>Sets a binding's curve; <paramref name="notify"/>: calls <see cref="onCurveWasModified"/>.
+        /// A synced clip keeps its length until the next sync.</summary>
         internal static void SetEditorCurveNoSync(AnimationClip clip, EditorCurveBinding binding, AnimationCurve curve, bool notify)
         {
             if (clip == null) throw new ArgumentNullException(nameof(clip));
+            var held = clip.LengthToHold();
             clip.RestoreImportedCurves();
             clip.m_EditorCurves ??= SortedRuntimeCurves(clip);
             var path = binding.path ?? "";
@@ -214,6 +218,7 @@ namespace UnityEditor
             clip.Compile();
             clip.m_EditorCurvesSynced = true;
             clip.m_Version++;
+            clip.HoldLength(held);
             if (notify) CurveWasModified(clip, binding, curve != null ? CurveModifiedType.CurveModified : CurveModifiedType.CurveDeleted);
         }
 
@@ -225,6 +230,7 @@ namespace UnityEditor
             if (curves == null) throw new ArgumentNullException(nameof(curves), "curves must be non-null");
             if (bindings.Length != curves.Length) throw new InvalidOperationException("bindings and curves must be of equal length");
             for (int i = 0; i < bindings.Length; i++) SetEditorCurveNoSync(clip, bindings[i], curves[i]);
+            clip?.SyncLength();
             CurveWasModified(clip, default, CurveModifiedType.ClipModified);
         }
 

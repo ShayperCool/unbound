@@ -240,6 +240,7 @@ namespace UnityEditor.Animations
             }
             for (int i = 0; i < curves.Length; i++) AnimationUtility.SetEditorCurveNoSync(clip, m_FloatBindings[i], curves[i], notify: false);
             for (int i = 0; i < objects.Length; i++) AnimationUtility.SetObjectReferenceCurveNoSync(clip, m_ObjectBindings[i], objects[i].ToArray(), notify: false);
+            clip.SyncLength();
         }
 
         /// <summary>Each bound Euler angle triple (a Transform's, its x angle bound) made continuous:

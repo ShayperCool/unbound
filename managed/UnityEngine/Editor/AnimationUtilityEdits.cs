@@ -60,8 +60,11 @@ namespace UnityEditor
             return null;
         }
 
-        public static void SetObjectReferenceCurve(AnimationClip clip, EditorCurveBinding binding, ObjectReferenceKeyframe[] keyframes) =>
+        public static void SetObjectReferenceCurve(AnimationClip clip, EditorCurveBinding binding, ObjectReferenceKeyframe[] keyframes)
+        {
             SetObjectReferenceCurveNoSync(clip, binding, keyframes);
+            clip.SyncLength();
+        }
 
         public static void SetObjectReferenceCurves(AnimationClip clip, EditorCurveBinding[] bindings, ObjectReferenceKeyframe[][] keyframes)
         {
@@ -69,16 +72,19 @@ namespace UnityEditor
             if (keyframes == null) throw new ArgumentNullException(nameof(keyframes), "keyframes must be non-null");
             if (bindings.Length != keyframes.Length) throw new InvalidOperationException("bindings and keyframes must be of equal length");
             for (int i = 0; i < bindings.Length; i++) SetObjectReferenceCurveNoSync(clip, bindings[i], keyframes[i]);
+            clip?.SyncLength();
             CurveWasModified(clip, default, CurveModifiedType.ClipModified);
         }
 
         internal static void SetObjectReferenceCurveNoSync(AnimationClip clip, EditorCurveBinding binding, ObjectReferenceKeyframe[] keyframes) =>
             SetObjectReferenceCurveNoSync(clip, binding, keyframes, notify: true);
 
-        /// <summary>Sets a binding's object curve; <paramref name="notify"/>: calls <see cref="onCurveWasModified"/>.</summary>
+        /// <summary>Sets a binding's object curve; <paramref name="notify"/>: calls <see cref="onCurveWasModified"/>.
+        /// A synced clip keeps its length until the next sync.</summary>
         internal static void SetObjectReferenceCurveNoSync(AnimationClip clip, EditorCurveBinding binding, ObjectReferenceKeyframe[] keyframes, bool notify)
         {
             if (clip == null) throw new ArgumentNullException(nameof(clip));
+            var held = clip.LengthToHold();
             clip.m_ObjectCurves.RemoveAll(c => c.Binding.Path == (binding.path ?? "") && c.Binding.Attribute == binding.propertyName && c.Binding.Matches(binding.type));
             clip.m_BindingsBuilt = true;
             clip.Compile();
@@ -96,6 +102,7 @@ namespace UnityEditor
                 clip.m_ObjectCurves.Add(new ClipObjectCurve { Binding = CurveBinding.ForClipCurve(binding.path ?? "", binding.propertyName, binding.type), Times = times, Values = values });
             }
             clip.m_Version++;
+            clip.HoldLength(held);
             if (notify) CurveWasModified(clip, binding, keyframes != null ? CurveModifiedType.CurveModified : CurveModifiedType.CurveDeleted);
         }
 

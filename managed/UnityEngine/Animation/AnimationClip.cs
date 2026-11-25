@@ -80,6 +80,19 @@ namespace UnityEngine
         /// lists its float curves as editor curves too (matches the Unity 6000.0.71f1 Editor,
         /// tests/projects/scenesave clip-assets Editor.anim, Materials.anim).</summary>
         internal bool m_EditorCurvesSynced;
+        /// <summary>Whether the clip's curves have been synced (AnimationUtility.SyncEditorCurves,
+        /// SetEditorCurve, SetObjectReferenceCurve and their plural forms, GameObjectRecorder.SaveToClip).
+        /// Curves set without a sync after that (AnimationUtility.SetEditorCurveNoSync,
+        /// SetObjectReferenceCurveNoSync) leave <see cref="length"/> at the synced value until the
+        /// next sync; before the first sync the length follows the curves (matches the Unity
+        /// 6000.0.71f1 Editor, tests/projects/animinternal <c>sync.length</c>). Any other edit of the
+        /// curves (a new <see cref="m_Version"/>) ends the held length; that it does in the Editor too
+        /// is not measured.</summary>
+        internal bool m_LengthSynced;
+        /// <summary>The length held since the first unsynced edit, while <see cref="m_Version"/> is
+        /// <see cref="m_HeldLengthVersion"/>.</summary>
+        internal float m_HeldLength;
+        internal int m_HeldLengthVersion = -1;
         /// <summary>Whether an AnimationUtility edit (an editor or object reference curve, clip
         /// settings, events) has built the clip's binding table since it was made; SetCurve alone
         /// does not (matches the Unity 6000.0.71f1 Editor, tests/projects/scenesave clip-assets).</summary>
@@ -178,6 +191,7 @@ namespace UnityEngine
                 // A Humanoid model clip's length is known once its muscle curves are.
                 if (m_HumanAvatar != null && !m_HumanConverted) ConvertHumanCurves();
                 if (m_HasRange) return Math.Max(0f, m_StopTime - m_StartTime);
+                if (m_HeldLengthVersion == m_Version) return m_HeldLength;
                 if (!Compat.DefaultConstructorStateMeasured) return CurveEnd();
                 bool found = false;
                 float end = float.NegativeInfinity;
@@ -193,6 +207,25 @@ namespace UnityEngine
                 foreach (var e in m_Events) { end = Math.Max(end, e.m_Time); found = true; }
                 return found ? end : EmptyClipLength;
             }
+        }
+
+        /// <summary>The length to hold across an unsynced curve edit (<see cref="m_LengthSynced"/>),
+        /// null when the clip has not been synced.</summary>
+        internal float? LengthToHold() => m_LengthSynced && Compat.TimelineEditorAnimationMeasured ? length : null;
+
+        /// <summary>After an unsynced curve edit: keeps <paramref name="held"/> as the length.</summary>
+        internal void HoldLength(float? held)
+        {
+            if (held is not float value) return;
+            m_HeldLength = value;
+            m_HeldLengthVersion = m_Version;
+        }
+
+        /// <summary>The clip's curves synced: its length follows them again.</summary>
+        internal void SyncLength()
+        {
+            m_HeldLengthVersion = -1;
+            m_LengthSynced = true;
         }
 
         /// <summary>Where the clip's time 0 is on its curves.</summary>

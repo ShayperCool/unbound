@@ -25,8 +25,8 @@ What internal editor animation helpers packages call answer in Unity 6000.0.71f1
   keys throws `IndexOutOfRangeException`, a null curve `ArgumentNullException`;
   `UpdateTangentsFromMode` updates every key.
 - `sync.*`: `AnimationUtility.SyncEditorCurves`: null throws; a curve replaced through
-  `SetEditorCurveNoSync` keeps the clip's synced length until the sync (a residual: Unbound shows the
-  new length at once).
+  `SetEditorCurveNoSync` keeps the clip's synced length until the sync; before a clip's first sync
+  its length follows its curves.
 - `init.*`: `AnimationMode.InitializePropertyModificationForGameObject` (the Timeline editor's
   preview) throws outside Animation mode; inside it, it records every property the clip animates
   below the object (children, components, a Transform's whole vector, object references), and
