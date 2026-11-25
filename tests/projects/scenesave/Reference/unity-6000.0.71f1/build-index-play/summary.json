@@ -1,0 +1,11 @@
+{
+  "case": "build-index-play",
+  "exit": 0,
+  "changed": [
+    "Assets/Scenes/Deep/Third.unity",
+    "Assets/Scenes/Deep/Third.unity.meta",
+    "Assets/Scenes/Deep.meta",
+    "ProjectSettings/EditorBuildSettings.asset"
+  ],
+  "removed": []
+}

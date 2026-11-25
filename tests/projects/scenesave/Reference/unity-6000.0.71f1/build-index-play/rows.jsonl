@@ -1,0 +1,147 @@
+{"key": "log", "value": "Log: \nIgnoreFailingMessages:true"}
+{"key": "runner.named", "value": true}
+{"key": "start.scenes", "value": "0|Assets/Scenes/Second.unity; 1|Assets/Scenes/Base.unity; 1|Assets/Scenes/Missing.unity; 1|Assets/Scenes/Second.unity; 0|Assets/Scenes/Base.unity; 1|Assets/Scenes/Deep/Third.unity; 1|Assets/Scenes/Base.unity"}
+{"key": "start.open[0]", "value": "<runner>|4|True"}
+{"key": "start.count", "value": 5}
+{"key": "start.path[-1]", "value": ""}
+{"key": "start.path[0]", "value": "Assets/Scenes/Base.unity"}
+{"key": "start.path[1]", "value": "Assets/Scenes/Second.unity"}
+{"key": "start.path[2]", "value": "Assets/Scenes/Deep/Third.unity"}
+{"key": "start.path[3]", "value": "Assets/Scenes/Base.unity"}
+{"key": "start.path[4]", "value": "<runner>"}
+{"key": "start.path[5]", "value": ""}
+{"key": "start.index[Assets/Scenes/Base.unity]", "value": 0}
+{"key": "start.index[Assets/Scenes/Second.unity]", "value": 1}
+{"key": "start.index[Assets/Scenes/Missing.unity]", "value": -1}
+{"key": "start.index[Assets/Old/Moved.unity]", "value": -1}
+{"key": "start.index[assets/scenes/base.unity]", "value": 0}
+{"key": "start.index[Base]", "value": 0}
+{"key": "start.index[Scenes/Base]", "value": 0}
+{"key": "start.index[Assets/Scenes/Base]", "value": -1}
+{"key": "start.index[Assets\\Scenes\\Base.unity]", "value": -1}
+{"key": "start.index[]", "value": -1}
+{"key": "start.index[null]", "value": -1}
+{"key": "start.index[Assets/Scenes/Deep/Third.unity]", "value": 2}
+{"key": "start.index[Third]", "value": 2}
+{"key": "start.index[Deep/Third]", "value": -1}
+{"key": "start.index[Scenes/Deep/Third]", "value": 2}
+{"key": "start.index[Deep/Third.unity]", "value": -1}
+{"key": "start.index[Scenes/Deep/Third.unity]", "value": -1}
+{"key": "start.index[<runner>]", "value": 4}
+{"key": "start.canLoad[-1]", "value": false}
+{"key": "start.sceneByIndex[-1]", "value": "throws ArgumentException: GetSceneByBuildIndex: Invalid build index: -1\nTo add a scene to the build settings use the menu File->Build Settings..."}
+{"key": "start.canLoad[0]", "value": true}
+{"key": "start.sceneByIndex[0]", "value": "invalid"}
+{"key": "start.canLoad[1]", "value": true}
+{"key": "start.sceneByIndex[1]", "value": "invalid"}
+{"key": "start.canLoad[2]", "value": true}
+{"key": "start.sceneByIndex[2]", "value": "invalid"}
+{"key": "start.canLoad[3]", "value": true}
+{"key": "start.sceneByIndex[3]", "value": "invalid"}
+{"key": "start.canLoad[4]", "value": true}
+{"key": "start.sceneByIndex[4]", "value": "<runner>|4|True"}
+{"key": "start.canLoad[5]", "value": false}
+{"key": "start.sceneByIndex[5]", "value": "throws ArgumentException: GetSceneByBuildIndex: Invalid build index: 5\nTo add a scene to the build settings use the menu File->Build Settings..."}
+{"key": "start.canLoadName[Base]", "value": true}
+{"key": "start.canLoadName[Second]", "value": true}
+{"key": "start.canLoadName[Missing]", "value": false}
+{"key": "start.canLoadName[Assets/Scenes/Second.unity]", "value": true}
+{"key": "start.canLoadName[Scenes/Second]", "value": true}
+{"key": "start.canLoadName[Assets/Scenes/Second]", "value": false}
+{"key": "start.canLoadName[second]", "value": true}
+{"key": "start.canLoadName[]", "value": false}
+{"key": "start.canLoadName[Third]", "value": true}
+{"key": "start.canLoadName[Deep/Third]", "value": false}
+{"key": "start.canLoadName[Scenes/Deep/Third]", "value": true}
+{"key": "start.canLoadName[Deep/Third.unity]", "value": false}
+{"key": "byIndex[0].load", "value": "done"}
+{"key": "log", "value": "Log: AudioListener component deleted: Component belongs to a disabled built-in package."}
+{"key": "byIndex[0].loaded", "value": "Assets/Scenes/Base.unity|0|True"}
+{"key": "byIndex[1].load", "value": "done"}
+{"key": "byIndex[1].loaded", "value": "Assets/Scenes/Second.unity|1|True"}
+{"key": "byIndex[2].load", "value": "done"}
+{"key": "byIndex[2].loaded", "value": "Assets/Scenes/Deep/Third.unity|2|True"}
+{"key": "byIndex[3].load", "value": "done"}
+{"key": "log", "value": "Log: AudioListener component deleted: Component belongs to a disabled built-in package."}
+{"key": "byIndex[3].loaded", "value": "Assets/Scenes/Base.unity|3|True"}
+{"key": "byIndex[4].load", "value": "done"}
+{"key": "byIndex[4].loaded", "value": "<runner>|4|True"}
+{"key": "log", "value": "Log: AudioListener component deleted: Component belongs to a disabled built-in package."}
+{"key": "byName.open[0]", "value": "<runner>|4|True"}
+{"key": "byName.open[1]", "value": "Assets/Scenes/Second.unity|1|True"}
+{"key": "byName.open[2]", "value": "Assets/Scenes/Base.unity|0|True"}
+{"key": "byName.open[3]", "value": "Assets/Scenes/Second.unity|-1|True"}
+{"key": "loadName[Scenes/Deep/Third]", "value": "done"}
+{"key": "loadName[Scenes/Deep/Third].loaded", "value": "Assets/Scenes/Deep/Third.unity|2|True"}
+{"key": "log", "value": "Error: Scene 'deep/third' couldn't be loaded because it has not been added to the active build profile or shared scene list or the AssetBundle has not been loaded.\nTo add a scene to the active build profile or shared scene list use the menu File->Build Profiles"}
+{"key": "loadName[deep/third]", "value": "done"}
+{"key": "log", "value": "Error: Scene 'Deep/Third' couldn't be loaded because it has not been added to the active build profile or shared scene list or the AssetBundle has not been loaded.\nTo add a scene to the active build profile or shared scene list use the menu File->Build Profiles"}
+{"key": "loadName[Deep/Third]", "value": "done"}
+{"key": "log", "value": "Error: Scene 'Assets/Scenes/Deep/Third' couldn't be loaded because it has not been added to the active build profile or shared scene list or the AssetBundle has not been loaded.\nTo add a scene to the active build profile or shared scene list use the menu File->Build Profiles"}
+{"key": "loadName[Assets/Scenes/Deep/Third]", "value": "done"}
+{"key": "loadName[Assets/Scenes/Deep/Third.unity]", "value": "done"}
+{"key": "loadName[Assets/Scenes/Deep/Third.unity].loaded", "value": "Assets/Scenes/Deep/Third.unity|2|True"}
+{"key": "log", "value": "Error: Scene 'scenes/deep/third.unity' couldn't be loaded because it has not been added to the active build profile or shared scene list or the AssetBundle has not been loaded.\nTo add a scene to the active build profile or shared scene list use the menu File->Build Profiles"}
+{"key": "loadName[scenes/deep/third.unity]", "value": "done"}
+{"key": "set.file", "value": "fdc6dbd31207c288cfbf439a71c5744bfee8e274472037700ea34c935d5f96fb"}
+{"key": "set.count", "value": 5}
+{"key": "set.path[-1]", "value": ""}
+{"key": "set.path[0]", "value": "Assets/Scenes/Base.unity"}
+{"key": "set.path[1]", "value": "Assets/Scenes/Second.unity"}
+{"key": "set.path[2]", "value": "Assets/Scenes/Deep/Third.unity"}
+{"key": "set.path[3]", "value": "Assets/Scenes/Base.unity"}
+{"key": "set.path[4]", "value": "<runner>"}
+{"key": "set.path[5]", "value": ""}
+{"key": "set.index[Assets/Scenes/Base.unity]", "value": 0}
+{"key": "set.index[Assets/Scenes/Second.unity]", "value": 1}
+{"key": "set.index[Assets/Scenes/Missing.unity]", "value": -1}
+{"key": "set.index[Assets/Old/Moved.unity]", "value": -1}
+{"key": "set.index[assets/scenes/base.unity]", "value": 0}
+{"key": "set.index[Base]", "value": 0}
+{"key": "set.index[Scenes/Base]", "value": 0}
+{"key": "set.index[Assets/Scenes/Base]", "value": -1}
+{"key": "set.index[Assets\\Scenes\\Base.unity]", "value": -1}
+{"key": "set.index[]", "value": -1}
+{"key": "set.index[null]", "value": -1}
+{"key": "set.index[Assets/Scenes/Deep/Third.unity]", "value": 2}
+{"key": "set.index[Third]", "value": 2}
+{"key": "set.index[Deep/Third]", "value": -1}
+{"key": "set.index[Scenes/Deep/Third]", "value": 2}
+{"key": "set.index[Deep/Third.unity]", "value": -1}
+{"key": "set.index[Scenes/Deep/Third.unity]", "value": -1}
+{"key": "set.index[<runner>]", "value": 4}
+{"key": "set.canLoad[-1]", "value": false}
+{"key": "set.sceneByIndex[-1]", "value": "throws ArgumentException: GetSceneByBuildIndex: Invalid build index: -1\nTo add a scene to the build settings use the menu File->Build Settings..."}
+{"key": "set.canLoad[0]", "value": true}
+{"key": "set.sceneByIndex[0]", "value": "invalid"}
+{"key": "set.canLoad[1]", "value": true}
+{"key": "set.sceneByIndex[1]", "value": "invalid"}
+{"key": "set.canLoad[2]", "value": true}
+{"key": "set.sceneByIndex[2]", "value": "invalid"}
+{"key": "set.canLoad[3]", "value": true}
+{"key": "set.sceneByIndex[3]", "value": "invalid"}
+{"key": "set.canLoad[4]", "value": true}
+{"key": "set.sceneByIndex[4]", "value": "<runner>|4|True"}
+{"key": "set.canLoad[5]", "value": false}
+{"key": "set.sceneByIndex[5]", "value": "throws ArgumentException: GetSceneByBuildIndex: Invalid build index: 5\nTo add a scene to the build settings use the menu File->Build Settings..."}
+{"key": "set.canLoadName[Base]", "value": true}
+{"key": "set.canLoadName[Second]", "value": true}
+{"key": "set.canLoadName[Missing]", "value": false}
+{"key": "set.canLoadName[Assets/Scenes/Second.unity]", "value": true}
+{"key": "set.canLoadName[Scenes/Second]", "value": true}
+{"key": "set.canLoadName[Assets/Scenes/Second]", "value": false}
+{"key": "set.canLoadName[second]", "value": true}
+{"key": "set.canLoadName[]", "value": false}
+{"key": "set.canLoadName[Third]", "value": true}
+{"key": "set.canLoadName[Deep/Third]", "value": false}
+{"key": "set.canLoadName[Scenes/Deep/Third]", "value": true}
+{"key": "set.canLoadName[Deep/Third.unity]", "value": false}
+{"key": "set.byIndex[0].load", "value": "done"}
+{"key": "log", "value": "Log: AudioListener component deleted: Component belongs to a disabled built-in package."}
+{"key": "set.byIndex[0].loaded", "value": "Assets/Scenes/Base.unity|0|True"}
+{"key": "set.byIndex[1].load", "value": "done"}
+{"key": "set.byIndex[1].loaded", "value": "Assets/Scenes/Second.unity|1|True"}
+{"key": "log", "value": "Log: AudioListener component deleted: Component belongs to a disabled built-in package."}
+{"key": "set.byName.open[0]", "value": "<runner>|4|True"}
+{"key": "set.byName.open[1]", "value": "Assets/Scenes/Base.unity|0|True"}
+{"key": "log", "value": "Log: \nIgnoreFailingMessages:false"}

@@ -15,7 +15,8 @@ SettingsWriteTests), `build-identity` and `build-identity-defaults` (Edit Mode B
 MeshBoundsTests), `native-saves` (Edit Mode NativeSaveTests), `clip-assets` (Edit Mode ClipAssetTests), `controller-assets` (Edit Mode
 ControllerAssetTests), `controller-additions` (Edit Mode ControllerAdditionTests), `modification-timing` (Edit Mode ModificationTimingTests), `scene-api-rest`
 (Edit Mode SceneApiRestTests), `build-scenes` (Edit Mode BuildSceneTests), `generic-refs` (Edit Mode GenericRefTests),
-`session-imports` (Edit Mode SessionImportTests).
+`session-imports` (Edit Mode SessionImportTests), `build-index-edit` (Edit Mode BuildIndexTests) and
+`build-index-play` (Play Mode BuildIndexPlayTests).
 """
 import argparse
 import json
@@ -55,6 +56,8 @@ CASES = {
     'build-scenes': ('EditMode', 'BuildSceneTests.BuildScenes'),
     'generic-refs': ('EditMode', 'GenericRefTests.GenericRefs'),
     'session-imports': ('EditMode', 'SessionImportTests.SessionImports'),
+    'build-index-edit': ('EditMode', 'BuildIndexTests.EditMode'),
+    'build-index-play': ('PlayMode', 'BuildIndexPlayTests.PlayMode'),
 }
 SKIPPED = {'Library', 'LibraryUnbound', 'Logs', 'Temp', 'UserSettings', 'obj', 'run.py', 'README.md', 'Reference',
            'gate.json', 'scenesave_compare.py', 'test_compare.py', '__pycache__'}
@@ -104,6 +107,33 @@ def seed_stale_build_scene(project):
                                            b'    guid: e0fd96c04ed5f4230bfb1fc1aa060f13\n'))
 
 
+def seed_build_index_list(project, play):
+    """An EditorBuildSettings.asset listing Second disabled, Base, a missing scene, Second under a
+    stale path, Base disabled and Assets/Scenes/Deep/Third.unity (a copy of Second added to the
+    project); for Play mode also Base enabled again."""
+    settings = project/'ProjectSettings/EditorBuildSettings.asset'
+    text = settings.read_bytes()
+    old = b'  m_Scenes: []\n'
+    if text.count(old) != 1:
+        raise ValueError(f'{settings}: expected an empty scene list')
+    entries = ((0, b'Assets/Scenes/Second.unity', b'6f748856d2f6b48bba33779b860ce87a'),
+               (1, b'Assets/Scenes/Base.unity', b'e0fd96c04ed5f4230bfb1fc1aa060f13'),
+               (1, b'Assets/Scenes/Missing.unity', b'0123456789abcdef0123456789abcdef'),
+               (1, b'Assets/Old/Moved.unity', b'6f748856d2f6b48bba33779b860ce87a'),
+               (0, b'Assets/Scenes/Base.unity', b'e0fd96c04ed5f4230bfb1fc1aa060f13'))
+    entries += ((1, b'Assets/Scenes/Deep/Third.unity', b'9a3e5c1d7b2f4e6a8c0d1e2f3a4b5c6d'),)
+    if play:
+        entries += ((1, b'Assets/Scenes/Base.unity', b'e0fd96c04ed5f4230bfb1fc1aa060f13'),)
+    deep = project/'Assets/Scenes/Deep'
+    deep.mkdir()
+    shutil.copyfile(project/'Assets/Scenes/Second.unity', deep/'Third.unity')
+    importer = b'DefaultImporter:\n  externalObjects: {}\n  userData: \n  assetBundleName: \n  assetBundleVariant: \n'
+    (deep.parent/'Deep.meta').write_bytes(b'fileFormatVersion: 2\nguid: 3b6f0e2a9c1d4f5e8a7b6c5d4e3f2a1b\nfolderAsset: yes\n' + importer)
+    (deep/'Third.unity.meta').write_bytes(b'fileFormatVersion: 2\nguid: 9a3e5c1d7b2f4e6a8c0d1e2f3a4b5c6d\n' + importer)
+    seeded = b'  m_Scenes:\n' + b''.join(b'  - enabled: %d\n    path: %s\n    guid: %s\n' % entry for entry in entries)
+    settings.write_bytes(text.replace(old, seeded))
+
+
 def run_case(kind, case, out, cli=None):
     platform, test_filter = CASES[case]
     scratch = run_root(PROBE, 'work')
@@ -115,6 +145,8 @@ def run_case(kind, case, out, cli=None):
         seed_identifier_defaults(project)
     if case == 'build-scenes':
         seed_stale_build_scene(project)
+    if case.startswith('build-index-'):
+        seed_build_index_list(project, play=case == 'build-index-play')
     rows = work/'rows.jsonl'
     env = dict(os.environ, SCENESAVE_LOG=str(rows))
     results = work/'results.xml'

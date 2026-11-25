@@ -1,0 +1,10 @@
+{
+  "case": "build-index-edit",
+  "exit": 0,
+  "changed": [
+    "Assets/Scenes/Deep/Third.unity",
+    "Assets/Scenes/Deep/Third.unity.meta",
+    "Assets/Scenes/Deep.meta"
+  ],
+  "removed": []
+}
