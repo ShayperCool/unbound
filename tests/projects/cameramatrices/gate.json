@@ -1,0 +1,12 @@
+{
+  "commands": [
+    "python3 tests/projects/cameramatrices/run.py gate"
+  ],
+  "summary": "cameramatrices: .*",
+  "engine_paths": [
+    "managed/UnityEngine/Graphics/Camera.cs",
+    "managed/UnityEngine/Math/Matrix4x4.cs",
+    "managed/UnityEngine/Core/Transform.cs",
+    "tests/projects/cameramatrices/"
+  ]
+}
