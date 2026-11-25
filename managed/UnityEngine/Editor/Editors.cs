@@ -489,10 +489,7 @@ namespace UnityEditor
 
         public static void DrawLine(Vector3 p1, Vector3 p2, float thickness) => RequireSceneGUI();
 
-        public static void Label(Vector3 position, string text)
-        {
-            if (Event.current == null) throw new ArgumentException("You can only call GUI functions from inside OnGUI.");
-        }
+        public static void Label(Vector3 position, string text) => DrawLabel();
 
         public static Vector3 PositionHandle(Vector3 position, Quaternion rotation)
         {
