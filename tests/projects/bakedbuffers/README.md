@@ -460,9 +460,9 @@ gamma-encoded values times the ambient intensity; a black sky where the realtime
 take the environment's light (`LightingSettings.realtimeEnvironmentLighting`).
 
 Not baked by Unbound: without a graphics device, the indirect light, the ambient occlusion,
-soft baked shadows and area lights (said). Not baked (said, each once per scene): light cookies, a colour
-temperature with linear intensity (GraphicsSettings.lightsUseLinearIntensity), light
-probes under area lights or soft baked shadows, a Baked Shadow Angle or Radius with hard
+soft baked shadows and area lights (said). Not baked (said, each once per scene, or once per light where it is
+the light's): light cookies, a colour temperature with linear intensity
+(GraphicsSettings.lightsUseLinearIntensity), light probes under area lights or soft baked shadows, a Baked Shadow Angle or Radius with hard
 shadows, a mixed area light, an area light among more point, spot or area lights than a
 surface of the indirect light tests (4 at a path's first surface, 1 fewer at each further one). Not done
 and not said: materials that let light through stop it.

@@ -343,8 +343,9 @@ namespace UnityEngine.Tests
 
                 // Point and spot lights whose intensity multiplies their linear colour are baked
                 // with that colour, unsaid (tests/projects/bakedbuffers LinearLamps: the Editor's
-                // bake input has a spot of colour (1, 0.6, 0.3) and intensity 2.5 as (2.5, 0.79637,
-                // 0.18310), its falloff as without linear intensity).
+                // bake input has its point light of colour (1, 0.6, 0.3) and intensity 2.5 as (2.5,
+                // 0.79637, 0.18310), its falloff as without linear intensity; the test's spot takes
+                // that colour, the rule the same for every kind).
                 capture.Logs.Clear();
                 var linearFile = new LoadedFile { Path = "Assets/LitLinear.unity", Guid = "30000000000000000000000000000000" };
                 linearFile.Objects[1] = spot;

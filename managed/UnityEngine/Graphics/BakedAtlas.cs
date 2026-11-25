@@ -716,7 +716,8 @@ namespace UnityEngine
         /// has registered a <see cref="UnityEngine.Experimental.GlobalIllumination.Lightmapping.RequestLightsDelegate"/>,
         /// converted through that delegate); rectangle and disc area lights with their size, soft baked
         /// shadows with their Baked Shadow Radius or Angle. Said once per scene and left out or
-        /// simplified: non-directional lights under linear intensity or non-Legacy falloff, spot
+        /// simplified: non-directional lights of a RequestLightsDelegate under linear intensity or
+        /// with non-Legacy falloff, spot
         /// lights with non-LUT angular falloff, color temperature under linear intensity, mixed
         /// lights under a render pipeline asset, cookies (ignored), a Baked Shadow Radius or Angle
         /// with hard shadows.</summary>
