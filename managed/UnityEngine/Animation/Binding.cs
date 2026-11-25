@@ -1397,17 +1397,16 @@ namespace Unbound.Runtime
             }
             var property = rest;
             int id = Shader.PropertyToID(property);
+            if (property.EndsWith("_TexelSize", StringComparison.Ordinal) || property.EndsWith("_HDR", StringComparison.Ordinal))
+                Stubs.Ignored("Material property binding texel size and HDR channels",
+                    "read as 0 (what the Editor reads for a texture's _TexelSize and _HDR is not measured)");
             // A material property binding names a property, not a slot: its value is the first
-            // material's that has it (the bindings list a name once, at its first material).
+            // material's that has it (the bindings list a name once, at its first material). The
+            // renderer's own array, without the copy sharedMaterials makes: this runs per frame.
             Material Holder()
             {
-                var first = renderer.sharedMaterial;
-                if (first != null && first.HasProperty(id)) return first;
-                foreach (var m in renderer.sharedMaterials)
+                foreach (var m in renderer.m_Materials)
                     if (m != null && m.HasProperty(id)) return m;
-                if (property.EndsWith("_TexelSize", StringComparison.Ordinal) || property.EndsWith("_HDR", StringComparison.Ordinal))
-                    Stubs.Ignored("Material property binding texel size and HDR channels",
-                        "read as 0 (what the Editor reads for a texture's _TexelSize and _HDR is not measured)");
                 return null;
             }
             // Each channel on its own, into the renderer's property block, as Unity animates
