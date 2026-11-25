@@ -58,9 +58,29 @@ namespace UnityEditor.Animations
         readonly List<EditorCurveBinding> m_FloatBindings = new List<EditorCurveBinding>();
         /// <summary>Each number binding's keys in time order.</summary>
         readonly List<List<Keyframe>> m_FloatKeys = new List<List<Keyframe>>();
-        /// <summary>The object each number binding reads, found at the first snapshot that needs it
-        /// and again once it is destroyed.</summary>
-        readonly List<Object> m_FloatTargets = new List<Object>();
+        /// <summary>What each number binding reads: its object, found at the first snapshot that
+        /// needs it and again once it is destroyed, and how its value is read.</summary>
+        readonly List<FloatSource> m_FloatSources = new List<FloatSource>();
+        /// <summary>One SerializedObject a bound object, updated once a snapshot.</summary>
+        readonly Dictionary<Object, ObjectState> m_Objects = new Dictionary<Object, ObjectState>(ReferenceEqualityComparer.Instance);
+        int m_Snapshot;
+
+        sealed class FloatSource
+        {
+            internal Object Target;
+            /// <summary>The animated group of a property the object's SerializedObject does not
+            /// hold, its member and a buffer it is read into; NoGroup: animation binds none.</summary>
+            internal PropertyGroup Group;
+            internal int Member;
+            internal float[] Values;
+            internal bool NoGroup;
+        }
+
+        sealed class ObjectState
+        {
+            internal SerializedObject Object;
+            internal int Snapshot;
+        }
         readonly List<EditorCurveBinding> m_ObjectBindings = new List<EditorCurveBinding>();
         readonly List<List<ObjectReferenceKeyframe>> m_ObjectCurves = new List<List<ObjectReferenceKeyframe>>();
         bool m_Idle = true;
@@ -128,7 +148,7 @@ namespace UnityEditor.Animations
             else
             {
                 m_FloatKeys.Add(new List<Keyframe>());
-                m_FloatTargets.Add(null);
+                m_FloatSources.Add(new FloatSource());
             }
         }
 
@@ -150,13 +170,18 @@ namespace UnityEditor.Animations
             }
             else
                 m_Time += dt;
+            m_Snapshot++;
             for (int i = 0; i < m_FloatBindings.Count; i++)
             {
                 var binding = m_FloatBindings[i];
-                var target = m_FloatTargets[i];
-                if (target == null) m_FloatTargets[i] = target = AnimationUtility.GetAnimatedObject(m_Root, binding);
+                var source = m_FloatSources[i];
+                if (source.Target == null)
+                {
+                    if (!ReferenceEquals(source.Target, null)) Forget(source.Target);
+                    m_FloatSources[i] = source = new FloatSource { Target = AnimationUtility.GetAnimatedObject(m_Root, binding) };
+                }
                 float value = 0f;
-                if (target == null || !AnimationUtility.ReadFloatValue(m_Root, target, binding, out value))
+                if (source.Target == null || !Read(source, binding, out value))
                     Stubs.Ignored("GameObjectRecorder.TakeSnapshot unreadable binding", "keys 0 for a bound property it cannot read (the Editor keys an undefined value)");
                 AddKey(m_FloatKeys[i], new Keyframe(m_Time, value) { inWeight = 1f / 3f, outWeight = 1f / 3f });
             }
@@ -165,6 +190,55 @@ namespace UnityEditor.Animations
                 AnimationUtility.GetObjectReferenceValue(m_Root, m_ObjectBindings[i], out Object value);
                 m_ObjectCurves[i].Add(new ObjectReferenceKeyframe { time = m_Time, value = value });
             }
+        }
+
+        /// <summary>A bound value as <see cref="AnimationUtility.GetFloatValue"/> reads it, through
+        /// the object's SerializedObject updated once a snapshot, or the property's animated group
+        /// found once.</summary>
+        bool Read(FloatSource source, EditorCurveBinding binding, out float value)
+        {
+            value = 0f;
+            var target = source.Target;
+            if (AnimationUtility.ReadsDirectly(target, binding.propertyName) || (binding.isDiscreteCurve && target is MonoBehaviour))
+                return AnimationUtility.ReadFloatValue(m_Root, target, binding, out value);
+            if (source.Group == null)
+            {
+                if (source.NoGroup) return false;
+                if (AnimationUtility.SerializedNumber(Updated(target), binding.propertyName, out float? number))
+                {
+                    value = number ?? 0f;
+                    return number != null;
+                }
+                source.Group = AnimationUtility.AnimatedGroup(target, binding.propertyName, out source.Member);
+                if (source.Group == null)
+                {
+                    source.NoGroup = true;
+                    return false;
+                }
+                source.Values = new float[source.Group.First + source.Group.Width];
+            }
+            source.Group.Read(source.Values, source.Group.First);
+            value = source.Values[source.Group.First + source.Member];
+            return true;
+        }
+
+        SerializedObject Updated(Object target)
+        {
+            if (!m_Objects.TryGetValue(target, out var state))
+                m_Objects.Add(target, state = new ObjectState { Object = new SerializedObject(target), Snapshot = m_Snapshot });
+            else if (state.Snapshot != m_Snapshot)
+            {
+                state.Object.Update();
+                state.Snapshot = m_Snapshot;
+            }
+            return state.Object;
+        }
+
+        /// <summary>Drops the SerializedObject of a destroyed bound object.</summary>
+        void Forget(Object target)
+        {
+            if (!m_Objects.Remove(target, out var state)) return;
+            state.Object.Dispose();
         }
 
         /// <summary>Adds a key in time order, as AnimationCurve.AddKey does (none at a time already
@@ -221,7 +295,9 @@ namespace UnityEditor.Animations
         {
             m_FloatBindings.Clear();
             m_FloatKeys.Clear();
-            m_FloatTargets.Clear();
+            m_FloatSources.Clear();
+            foreach (var state in m_Objects.Values) state.Object.Dispose();
+            m_Objects.Clear();
             m_ObjectBindings.Clear();
             m_ObjectCurves.Clear();
             m_Idle = true;

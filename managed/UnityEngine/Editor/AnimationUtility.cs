@@ -307,22 +307,36 @@ namespace UnityEditor
             }
             if (target is Renderer renderer && propertyName == "m_Enabled") return renderer.enabled ? 1f : 0f;
             using var so = new SerializedObject(target);
+            if (SerializedNumber(so, propertyName, out float? number)) return number;
+            return AnimatedGroup(target, propertyName, out int member) is PropertyGroup group ? ReadMember(group, member) : (float?)null;
+        }
+
+        /// <summary>Whether <paramref name="so"/> holds the property, and its number (null when it
+        /// is not one).</summary>
+        internal static bool SerializedNumber(SerializedObject so, string propertyName, out float? value)
+        {
+            value = null;
             var p = so.FindProperty(propertyName);
-            if (p == null) return AnimatedGroup(target, propertyName, out int member) is PropertyGroup group ? ReadMember(group, member) : (float?)null;
+            if (p == null) return false;
             switch (p.propertyType)
             {
-                case SerializedPropertyType.Float: return p.floatValue;
-                case SerializedPropertyType.Integer: case SerializedPropertyType.Enum: return p.intValue;
-                case SerializedPropertyType.Boolean: return p.boolValue ? 1f : 0f;
-                default: return null;
+                case SerializedPropertyType.Float: value = p.floatValue; break;
+                case SerializedPropertyType.Integer: case SerializedPropertyType.Enum: value = p.intValue; break;
+                case SerializedPropertyType.Boolean: value = p.boolValue ? 1f : 0f; break;
             }
+            return true;
         }
+
+        /// <summary>Whether <see cref="SerializedValue"/> reads the property without a
+        /// SerializedObject (a Transform's, a renderer's enabled state).</summary>
+        internal static bool ReadsDirectly(Object target, string propertyName) =>
+            target is Transform || (target is Renderer && propertyName == "m_Enabled");
 
         /// <summary>An engine component's number as animation binds it (a Light's
         /// <c>m_Color.r</c>), for the properties its SerializedObject does not hold here: the
         /// property's group and the member's place in it, or null (a script, or no such animated
         /// property, which the binder reports once).</summary>
-        static PropertyGroup AnimatedGroup(Object target, string propertyName, out int member)
+        internal static PropertyGroup AnimatedGroup(Object target, string propertyName, out int member)
         {
             member = 0;
             if (target is not Component component || target is MonoBehaviour || component.m_GameObject == null) return null;
@@ -452,10 +466,11 @@ namespace UnityEditor
             }
         }
 
-        /// <summary>An Animator's bindings ahead of its table's: its controller's float parameters
-        /// in the controller's order (not its integer, bool and trigger ones; matches the Unity
-        /// 6000.0.71f1 Editor, tests/projects/animrecorder <c>animator.*</c>). A human Animator's
-        /// muscle and root bindings are not listed and are reported.</summary>
+        /// <summary>An Animator's bindings ahead of its table's: on the root itself (an empty path),
+        /// its controller's float parameters in the controller's order (not its integer, bool and
+        /// trigger ones); an Animator below the root offers none (matches the Unity 6000.0.71f1
+        /// Editor, tests/projects/animrecorder <c>animator.*</c>). A human Animator's muscle and root
+        /// bindings are not listed and are reported.</summary>
         static void AddAnimatorParameterBindings(Animator animator, string path, List<EditorCurveBinding> list)
         {
             if (animator.m_Controller != null && animator.m_Controller.Graph is { } graph)
