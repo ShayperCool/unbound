@@ -121,18 +121,21 @@ namespace UnityEditor
             set { CheckImporterState("set_mainColor"); Unsupported("mainColor"); }
         }
 
+        // The deprecated specColor and shininess answer without the importer's native object: an
+        // uncreated importer reads clear and 0 where its other members throw (Unity 6000.0.71f1
+        // Editor, tests/projects/defaultstate); their setters do nothing.
         [Obsolete("specColor is no longer used and has been deprecated.", true)]
         public Color specColor
         {
-            get { CheckImporterState("get_specColor"); return new Color(0f, 0f, 0f, 0f); }
-            set { CheckImporterState("set_specColor"); }
+            get => new Color(0f, 0f, 0f, 0f);
+            set { }
         }
 
         [Obsolete("shininess is no longer used and has been deprecated.", true)]
         public float shininess
         {
-            get { CheckImporterState("get_shininess"); return 0f; }
-            set { CheckImporterState("set_shininess"); }
+            get => 0f;
+            set { }
         }
 
         public Color hueVariation

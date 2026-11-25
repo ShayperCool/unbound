@@ -1794,6 +1794,12 @@
     {
       "category": "class",
       "module": "UnityEditor.CoreModule",
+      "status": "candidate",
+      "type": "UnityEditor.IMGUI.Controls.SearchField"
+    },
+    {
+      "category": "class",
+      "module": "UnityEditor.CoreModule",
       "status": "abstract",
       "type": "UnityEditor.IMGUI.Controls.TreeView"
     },
@@ -2618,6 +2624,12 @@
       "module": "UnityEditor.CoreModule",
       "status": "candidate",
       "type": "UnityEditor.SpeedTree.Importer.SpeedTreeImporterOutputData"
+    },
+    {
+      "category": "class",
+      "module": "UnityEditor.CoreModule",
+      "status": "candidate",
+      "type": "UnityEditor.SpeedTreeImporter"
     },
     {
       "category": "scriptable",
