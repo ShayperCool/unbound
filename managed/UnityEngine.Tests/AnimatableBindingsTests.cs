@@ -28,11 +28,9 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
-        public void OtherMaterialCountsListTheFreshSlotAndSaySo()
+        public void EachMaterialSlotGetsItsBinding()
         {
             using var release = TestRelease.Pin(TestRelease.Measured);
-            const string slotsNotice = "AnimationUtility.GetAnimatableBindings material slots";
-            int before = Hits(slotsNotice);
             var go = new GameObject("renderer");
             try
             {
@@ -40,44 +38,92 @@ namespace UnityEngine.Tests
                 renderer.sharedMaterials = new Material[3];
                 var slots = AnimationUtility.GetAnimatableBindings(go, go)
                     .Where(b => b.type == typeof(MeshRenderer) && b.isPPtrCurve).Select(b => b.propertyName).ToArray();
-                // tests/projects/animbindings UnityEngine.MeshRenderer (a fresh renderer)
-                Assert.Equal(new[] { "m_Materials.Array.data[0]" }, slots);
+                // tests/projects/animmaterialbindings two/MeshRenderer: one binding per slot.
+                Assert.Equal(new[] { "m_Materials.Array.data[0]", "m_Materials.Array.data[1]", "m_Materials.Array.data[2]" }, slots);
             }
-            finally
-            {
-                Object.DestroyImmediate(go);
-            }
-            // Counted, not read from the log: a notice logs only its first use in the process.
-            Assert.Equal(before + 1, Hits(slotsNotice));
+            finally { Object.DestroyImmediate(go); }
         }
 
-        static int Hits(string member) => Unbound.Runtime.Stubs.HitReport().FirstOrDefault(h => h.Key == member).Value;
+        static Shader ProbeShader(string name, params (string Name, Rendering.ShaderPropertyType Type, Rendering.ShaderPropertyFlags Flags)[] properties)
+        {
+            var shader = Shader.Create(name, 2000);
+            shader.m_Properties.Clear();
+            foreach (var (n, type, flags) in properties)
+                shader.m_Properties.Add(new ShaderPropertyInfo { Name = n, Type = type, Flags = flags });
+            return shader;
+        }
 
-        /// <summary>Each unmeasured part of the listing reports under its own notice, so one does
-        /// not hide another: a renderer with a material and other than the fresh slot count
-        /// reports both its material properties and its slots.</summary>
+        static string[] MaterialNames(GameObject go, System.Type type) =>
+            Names(go, type).Where(n => n.StartsWith("material.")).Select(n => n.Substring(9)).ToArray();
+
+        // tests/projects/animmaterialbindings: floats, then vectors, each by Unity's name ids; an
+        // engine name keeps its fixed id (_Color 177, _MainTex_ST 34), a new name is numbered as
+        // its shader declares it, a texture's _ST, _TexelSize and _HDR right after it.
         [Fact]
-        public void EachUnlistedPartReportsItsOwnNotice()
+        public void AMaterialsPropertiesAreFloatsThenVectorsInNameIdOrder()
         {
             using var release = TestRelease.Pin(TestRelease.Measured);
-            const string properties = "AnimationUtility.GetAnimatableBindings material properties";
-            const string slots = "AnimationUtility.GetAnimatableBindings material slots";
-            int propertiesBefore = Hits(properties), slotsBefore = Hits(slots);
+            var shader = ProbeShader("Q758 test/order",
+                ("_L4TexB", Rendering.ShaderPropertyType.Texture, 0),
+                ("_L4FloatB", Rendering.ShaderPropertyType.Float, 0),
+                ("_Color", Rendering.ShaderPropertyType.Color, 0),
+                ("_L4Int", Rendering.ShaderPropertyType.Int, 0),
+                ("_L4Hdr", Rendering.ShaderPropertyType.Color, Rendering.ShaderPropertyFlags.HDR),
+                ("_MainTex", Rendering.ShaderPropertyType.Texture, 0),
+                ("_L4FloatA", Rendering.ShaderPropertyType.Range, 0));
+            var material = new Material(shader);
             var go = new GameObject("renderer");
-            var material = new Material(Shader.Create("Unlit/Color", 2000));
             try
             {
-                var renderer = go.AddComponent<MeshRenderer>();
-                renderer.sharedMaterials = new[] { material, null, null };
-                AnimationUtility.GetAnimatableBindings(go, go);
+                go.AddComponent<MeshRenderer>().sharedMaterial = material;
+                material.SetFloat("_L4Extra", 1f);
+                Assert.Equal(new[]
+                {
+                    "_L4FloatB", "_L4FloatA", "_L4Extra",
+                    "_MainTex_ST.x", "_MainTex_ST.y", "_MainTex_ST.z", "_MainTex_ST.w",
+                    "_MainTex_TexelSize.x", "_MainTex_TexelSize.y", "_MainTex_TexelSize.z", "_MainTex_TexelSize.w",
+                    "_MainTex_HDR.x", "_MainTex_HDR.y", "_MainTex_HDR.z", "_MainTex_HDR.w",
+                    "_Color.r", "_Color.g", "_Color.b", "_Color.a",
+                    "_L4TexB_ST.x", "_L4TexB_ST.y", "_L4TexB_ST.z", "_L4TexB_ST.w",
+                    "_L4TexB_TexelSize.x", "_L4TexB_TexelSize.y", "_L4TexB_TexelSize.z", "_L4TexB_TexelSize.w",
+                    "_L4TexB_HDR.x", "_L4TexB_HDR.y", "_L4TexB_HDR.z", "_L4TexB_HDR.w",
+                    "_L4Hdr.x", "_L4Hdr.y", "_L4Hdr.z", "_L4Hdr.w",
+                }, MaterialNames(go, typeof(MeshRenderer)));
+                // A binding per name: a second material of the same shader adds none; the material
+                // bindings come before the renderer's own.
+                go.GetComponent<MeshRenderer>().sharedMaterials = new[] { material, new Material(shader) };
+                var names = Names(go, typeof(MeshRenderer));
+                Assert.Equal(35, names.Count(n => n.StartsWith("material.")));
+                Assert.Equal("m_ReceiveShadows", names[35]);
             }
             finally
             {
                 Object.DestroyImmediate(go);
                 Object.DestroyImmediate(material);
             }
-            Assert.Equal(propertiesBefore + 1, Hits(properties));
-            Assert.Equal(slotsBefore + 1, Hits(slots));
+        }
+
+        // tests/projects/animmaterialbindings swapped/MeshRenderer: after the shader is replaced,
+        // the earlier shader's values are not listed.
+        [Fact]
+        public void AReplacedShadersPropertiesAreNotListed()
+        {
+            using var release = TestRelease.Pin(TestRelease.Measured);
+            var first = ProbeShader("Q758 test/first", ("_L4First", Rendering.ShaderPropertyType.Float, 0));
+            var second = ProbeShader("Q758 test/second", ("_L4Second", Rendering.ShaderPropertyType.Float, 0));
+            var material = new Material(first);
+            var go = new GameObject("renderer");
+            try
+            {
+                material.shader = second;
+                go.AddComponent<MeshRenderer>().sharedMaterial = material;
+                Assert.Equal(new[] { "_L4Second" }, MaterialNames(go, typeof(MeshRenderer)));
+            }
+            finally
+            {
+                Object.DestroyImmediate(go);
+                Object.DestroyImmediate(material);
+            }
         }
 
         [Fact]
