@@ -93,24 +93,31 @@ namespace Unbound.Runtime
                 importer.ClearModifiedState();
                 return textChanged;
             }
-            // A texture's section that lacks settings of its version gets them first, as the
-            // Editor writes the whole section (tests/projects/scenesave label-metas kept.*,
-            // missingSetting.*, missingPlatform.*).
-            if (importer.m_SettingsType == "TextureImporter") FillTextureSection(section);
             var unwritten = new List<string>();
             Patch(section, importer.m_Settings, "", unwritten);
-            if (unwritten.Count > 0)
-                Debug.LogWarning($"Unbound does not write these {importer.m_SettingsType} settings of '{path}' into its .meta yet (their place in it is not measured): {string.Join(", ", unwritten)}");
             SetScalar(section, "userData", importer.userData);
             SetScalar(section, "assetBundleName", importer.assetBundleName?.ToLowerInvariant());
             SetScalar(section, "assetBundleVariant", importer.assetBundleVariant?.ToLowerInvariant());
+            var original = text.Replace("\r\n", "\n");
             var written = UnityYamlText.WriteTopLevel(root);
             importer.m_ImportedSettings = MetaSettings.ToJson(importer.m_Settings);
-            if (written == text.Replace("\r\n", "\n")) return false;
-            // A texture's settings written again list every installed platform module (the
-            // Editor adds the missing ones at their defaults: tests/projects/projectwrites 06.crlf).
-            if (importer.m_SettingsType == "TextureImporter" && AddInstalledPlatforms(section))
+            // Settings that did not change write nothing (tests/projects/projectwrites 06.crlf unchanged).
+            if (written == original && unwritten.Count == 0) return false;
+            if (importer.m_SettingsType == "TextureImporter")
+            {
+                // A texture's section that lacks settings of its version is written whole, as the
+                // Editor writes it (tests/projects/scenesave label-metas kept.*, missingSetting.*),
+                // and lists every installed platform module (the Editor adds the missing ones at
+                // their defaults: tests/projects/projectwrites 06.crlf).
+                FillTextureSection(section);
+                unwritten.Clear();
+                Patch(section, importer.m_Settings, "", unwritten);
+                AddInstalledPlatforms(section);
                 written = UnityYamlText.WriteTopLevel(root);
+            }
+            if (unwritten.Count > 0)
+                Debug.LogWarning($"Unbound does not write these {importer.m_SettingsType} settings of '{path}' into its .meta yet (their place in it is not measured): {string.Join(", ", unwritten)}");
+            if (written == original) return false;
             File.WriteAllText(meta, written);
             UnityEditor.ProjectImports.Wrote(meta);
             return true;

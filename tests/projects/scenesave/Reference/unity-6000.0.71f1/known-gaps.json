@@ -194,5 +194,123 @@
     "reference": "written",
     "actual": "after line 7: reference [], actual ['  - enabled: 0', '    path: Assets/Scenes/Second.unity', '    guid: 6f748856d2f6b48bba33779b860ce87a']; lines 9-9: reference ['    path: Assets/Scenes/Second.unity'], actual ['    path: Assets/Scenes/Base.unity', '    guid: e0fd96c04ed5f4230bfb1fc1aa060f13', '  - enabled: 1', '    path: Assets/Scenes/Missing.unity', '    guid: 0123456789abcdef0123456789abcdef', '  - enabled: 1', '    path: Assets/Old/Moved.unity']; after line 13: reference [], actual ['  - enabled: 1', '    path: Assets/Scenes/Deep/Third.unity', '    guid: 9a3e5c1d7b2f4e6a8c0d1e2f3a4b5c6d', '  - enabled: 1', '    path: Assets/Scenes/Base.unity', '    guid: e0fd96c04ed5f4230bfb1fc1aa060f13']",
     "reason": "A build list set by EditorBuildSettings.scenes in Play mode: the Editor writes it into the file by the time it quits after Play mode has ended (no SaveAssets ran in Play mode); Unbound keeps changes of settings made in Play mode unsaved, as tests/projects/projectwrites measured when SaveAssets runs in Play mode and the Editor quits from Play mode. Which of the two decides is unmeasured: follow-up"
+  },
+  {
+    "case": "label-metas",
+    "key": "Style.uss.importer",
+    "reference": [
+      "StyleSheetImporter"
+    ],
+    "actual": [
+      "AssetImporter"
+    ],
+    "reason": "Unbound picks a ScriptedImporter (and so the importer of a file no native importer claims) from the .meta's section, not from the extensions the importers declare: a .meta holding the GUID alone of a style sheet answers AssetImporter where the Editor answers StyleSheetImporter, and of an unclaimed extension gets only its labels written where the Editor writes the DefaultImporter's section (Unbound cannot tell that no package's ScriptedImporter claims it): follow-up"
+  },
+  {
+    "case": "label-metas",
+    "key": "Tex.png.type",
+    "reference": [
+      "Cubemap"
+    ],
+    "actual": [
+      "Texture2D"
+    ],
+    "reason": "A texture's or sound's .meta holding the GUID alone, written again by SetLabels/ClearLabels: the Editor writes the importer's section with its oldest version's values, and a texture imports as a cube map (Tex.png.type); Unbound writes the labels alone, with its warning, and imports the texture as a 2D texture (those versions' values are not measured beyond these two assets: follow-up)"
+  },
+  {
+    "case": "label-metas",
+    "key": "cleared.Beep.wav.meta",
+    "reference": [
+      "same as cleared.Beep.wav.meta"
+    ],
+    "actual": [
+      "same as start.Beep.wav.meta"
+    ],
+    "reason": "A texture's or sound's .meta holding the GUID alone, written again by SetLabels/ClearLabels: the Editor writes the importer's section with its oldest version's values, and a texture imports as a cube map (Tex.png.type); Unbound writes the labels alone, with its warning, and imports the texture as a 2D texture (those versions' values are not measured beyond these two assets: follow-up)"
+  },
+  {
+    "case": "label-metas",
+    "key": "cleared.Other.xyz.meta",
+    "reference": [
+      "same as cleared.Other.xyz.meta"
+    ],
+    "actual": [
+      "same as start.Other.xyz.meta"
+    ],
+    "reason": "Unbound picks a ScriptedImporter (and so the importer of a file no native importer claims) from the .meta's section, not from the extensions the importers declare: a .meta holding the GUID alone of a style sheet answers AssetImporter where the Editor answers StyleSheetImporter, and of an unclaimed extension gets only its labels written where the Editor writes the DefaultImporter's section (Unbound cannot tell that no package's ScriptedImporter claims it): follow-up"
+  },
+  {
+    "case": "label-metas",
+    "key": "cleared.Tex.png.meta",
+    "reference": [
+      "same as cleared.Tex.png.meta"
+    ],
+    "actual": [
+      "same as start.Tex.png.meta"
+    ],
+    "reason": "A texture's or sound's .meta holding the GUID alone, written again by SetLabels/ClearLabels: the Editor writes the importer's section with its oldest version's values, and a texture imports as a cube map (Tex.png.type); Unbound writes the labels alone, with its warning, and imports the texture as a 2D texture (those versions' values are not measured beyond these two assets: follow-up)"
+  },
+  {
+    "case": "label-metas",
+    "key": "file:Assets/Labels/Beep.wav.meta",
+    "reference": "written",
+    "actual": "differs",
+    "reason": "A texture's or sound's .meta holding the GUID alone, written again by SetLabels/ClearLabels: the Editor writes the importer's section with its oldest version's values, and a texture imports as a cube map (Tex.png.type); Unbound writes the labels alone, with its warning, and imports the texture as a 2D texture (those versions' values are not measured beyond these two assets: follow-up)"
+  },
+  {
+    "case": "label-metas",
+    "key": "file:Assets/Labels/Other.xyz.meta",
+    "reference": "written",
+    "actual": "differs",
+    "reason": "Unbound picks a ScriptedImporter (and so the importer of a file no native importer claims) from the .meta's section, not from the extensions the importers declare: a .meta holding the GUID alone of a style sheet answers AssetImporter where the Editor answers StyleSheetImporter, and of an unclaimed extension gets only its labels written where the Editor writes the DefaultImporter's section (Unbound cannot tell that no package's ScriptedImporter claims it): follow-up"
+  },
+  {
+    "case": "label-metas",
+    "key": "file:Assets/Labels/Tex.png.meta",
+    "reference": "written",
+    "actual": "differs",
+    "reason": "A texture's or sound's .meta holding the GUID alone, written again by SetLabels/ClearLabels: the Editor writes the importer's section with its oldest version's values, and a texture imports as a cube map (Tex.png.type); Unbound writes the labels alone, with its warning, and imports the texture as a 2D texture (those versions' values are not measured beyond these two assets: follow-up)"
+  },
+  {
+    "case": "label-metas",
+    "key": "file:snapshot:cleared.Beep.wav.meta",
+    "reference": "written",
+    "actual": "differs",
+    "reason": "A texture's or sound's .meta holding the GUID alone, written again by SetLabels/ClearLabels: the Editor writes the importer's section with its oldest version's values, and a texture imports as a cube map (Tex.png.type); Unbound writes the labels alone, with its warning, and imports the texture as a 2D texture (those versions' values are not measured beyond these two assets: follow-up)"
+  },
+  {
+    "case": "label-metas",
+    "key": "file:snapshot:cleared.Other.xyz.meta",
+    "reference": "written",
+    "actual": "differs",
+    "reason": "Unbound picks a ScriptedImporter (and so the importer of a file no native importer claims) from the .meta's section, not from the extensions the importers declare: a .meta holding the GUID alone of a style sheet answers AssetImporter where the Editor answers StyleSheetImporter, and of an unclaimed extension gets only its labels written where the Editor writes the DefaultImporter's section (Unbound cannot tell that no package's ScriptedImporter claims it): follow-up"
+  },
+  {
+    "case": "label-metas",
+    "key": "file:snapshot:cleared.Tex.png.meta",
+    "reference": "written",
+    "actual": "differs",
+    "reason": "A texture's or sound's .meta holding the GUID alone, written again by SetLabels/ClearLabels: the Editor writes the importer's section with its oldest version's values, and a texture imports as a cube map (Tex.png.type); Unbound writes the labels alone, with its warning, and imports the texture as a 2D texture (those versions' values are not measured beyond these two assets: follow-up)"
+  },
+  {
+    "case": "label-metas",
+    "key": "file:snapshot:labelled.Beep.wav.meta",
+    "reference": "written",
+    "actual": "differs",
+    "reason": "A texture's or sound's .meta holding the GUID alone, written again by SetLabels/ClearLabels: the Editor writes the importer's section with its oldest version's values, and a texture imports as a cube map (Tex.png.type); Unbound writes the labels alone, with its warning, and imports the texture as a 2D texture (those versions' values are not measured beyond these two assets: follow-up)"
+  },
+  {
+    "case": "label-metas",
+    "key": "file:snapshot:labelled.Other.xyz.meta",
+    "reference": "written",
+    "actual": "differs",
+    "reason": "Unbound picks a ScriptedImporter (and so the importer of a file no native importer claims) from the .meta's section, not from the extensions the importers declare: a .meta holding the GUID alone of a style sheet answers AssetImporter where the Editor answers StyleSheetImporter, and of an unclaimed extension gets only its labels written where the Editor writes the DefaultImporter's section (Unbound cannot tell that no package's ScriptedImporter claims it): follow-up"
+  },
+  {
+    "case": "label-metas",
+    "key": "file:snapshot:labelled.Tex.png.meta",
+    "reference": "written",
+    "actual": "differs",
+    "reason": "A texture's or sound's .meta holding the GUID alone, written again by SetLabels/ClearLabels: the Editor writes the importer's section with its oldest version's values, and a texture imports as a cube map (Tex.png.type); Unbound writes the labels alone, with its warning, and imports the texture as a 2D texture (those versions' values are not measured beyond these two assets: follow-up)"
   }
 ]

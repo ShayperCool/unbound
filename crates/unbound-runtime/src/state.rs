@@ -2062,10 +2062,10 @@ fn meta_section(
 }
 
 /// The section a `.meta` holding its asset's GUID alone gets when the Editor writes it again: the
-/// one a new asset of its kind gets, for the importers without a serialized version (matches the
+/// one a new asset of its kind gets, for the importers measured (matches the
 /// Unity 6000.0.71f1 Editor, tests/projects/scenesave label-metas `labelled.*`, `cleared.*`). The
-/// texture, model and audio importers write the values of their oldest version there instead, and
-/// the other importers are not measured: "" for those.
+/// texture and audio importers write the values of their oldest version there instead, and the
+/// other importers are not measured: "" for those.
 fn label_meta_section(request: &str) -> Result<String> {
     #[derive(serde::Deserialize)]
     struct Request {
@@ -2086,7 +2086,8 @@ fn label_meta_section(request: &str) -> Result<String> {
 }
 
 /// The importer whose new-asset section a GUID-only `.meta` of `file` gets when it is written
-/// again, for the measured importers without a serialized version.
+/// again: the measured importers that write a new asset's section there (a style sheet measured
+/// for UI Toolkit's ScriptedImporters).
 fn label_meta_importer(
     file: &Path,
     is_folder: bool,
@@ -2095,7 +2096,7 @@ fn label_meta_importer(
     let is_asset = file
         .extension()
         .is_some_and(|e| e.eq_ignore_ascii_case("asset"));
-    // A YAML asset found on disk names its main object 0 (label-metas `labelled.Data.asset`).
+    // A YAML asset found on disk names its main object 0 (label-metas `labelled.DataSaved.asset`).
     let importer = if !is_folder && is_asset {
         Some(NewImporter::NativeFormat { main: 0 })
     } else {
@@ -3041,7 +3042,7 @@ mod tests {
         for name in [
             "Notes.txt",
             "Data.json",
-            "Mat.mat",
+            "MatEdit.mat",
             "Thing.prefab",
             "Level.unity",
             "Folder",
@@ -3050,7 +3051,7 @@ mod tests {
             "Bouncy.physicMaterial",
             "Move.anim",
             "Basic.controller",
-            "Data.asset",
+            "DataSaved.asset",
         ] {
             let file = std::path::Path::new("Assets/Labels").join(name);
             let kind = super::label_meta_importer(&file, name == "Folder")
