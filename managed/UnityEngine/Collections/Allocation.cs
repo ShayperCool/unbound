@@ -29,14 +29,23 @@ namespace Unbound.Runtime
             if (size < 0) throw new ArgumentOutOfRangeException(nameof(size));
             nuint align = (nuint)Math.Max(alignment, 1);
             if ((align & (align - 1)) != 0) align = (nuint)System.Numerics.BitOperations.RoundUpToPowerOf2((uint)align);
-            var memory = NativeMemory.AlignedAlloc((nuint)Math.Max(size, 1), Math.Max(align, (nuint)sizeof(void*)));
+            nuint bytes = (nuint)Math.Max(size, 1);
+            align = Math.Max(align, (nuint)sizeof(void*));
+            void* memory;
             if (allocator == Allocator.Temp)
             {
+                // From the scope's stack block (freeing it early does nothing, see Free); what the
+                // block cannot hold comes from the heap and is freed when the scope ends.
                 var scope = Safety.CurrentScope;
+                memory = scope.Stack(bytes, align);
+                if (memory != null) return memory;
+                memory = NativeMemory.AlignedAlloc(bytes, align);
                 scope.AddAllocation((IntPtr)memory);
                 s_TempOwners[(IntPtr)memory] = scope;
+                return memory;
             }
-            else if (tracked && LeakDetectionMode != NativeLeakDetectionMode.Disabled)
+            memory = NativeMemory.AlignedAlloc(bytes, align);
+            if (tracked && LeakDetectionMode != NativeLeakDetectionMode.Disabled)
             {
                 var stack = LeakDetectionMode == NativeLeakDetectionMode.EnabledWithStackTrace ? new StackTrace(callstacksToSkip + 2, true) : null;
                 lock (s_LeakLock) s_Tracked[(IntPtr)memory] = (allocator, stack);
@@ -56,7 +65,7 @@ namespace Unbound.Runtime
             // pipeline disposed them. Another thread's scope never ends: freed now.
             if (allocator == Allocator.Temp)
             {
-                // Temp memory of an ended scope is gone already.
+                // Temp memory of a scope's stack block, or of an ended scope (gone already).
                 if (!s_TempOwners.TryGetValue((IntPtr)memory, out var scope) || scope.Ends) return;
                 if (!s_TempOwners.TryRemove((IntPtr)memory, out _)) return;
                 scope.RemoveAllocation((IntPtr)memory);

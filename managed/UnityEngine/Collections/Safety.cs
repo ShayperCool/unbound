@@ -287,18 +287,77 @@ namespace Unbound.Runtime
 
         // ------------------------------------------------------------------ temp memory scopes
 
-        /// <summary>The temp memory handles of a scope (the main thread's frame, a job's execution),
-        /// all released when it ends.</summary>
+        /// <summary>The block of the main thread's temp allocator: 16 MiB, the size the Editor's
+        /// Profiler.GetTempAllocatorSize reports (measured: tests/projects/appfacts).</summary>
+        internal const int MainTempBlockSize = 16 << 20;
+
+        /// <summary>The block of a job worker's temp allocator: 256 KiB, the default job worker
+        /// temp allocator block size of Unity's memory settings (the Manual's "Memory allocator
+        /// customization"; not measured).</summary>
+        internal const int JobTempBlockSize = 256 << 10;
+
+        /// <summary>
+        /// The temp memory handles of a scope (the main thread's frame, a job's execution), all
+        /// released when it ends, and its temp memory. A scope that ends allocates as Unity's temp
+        /// allocator does, from a stack: one block, each allocation after the previous one, the
+        /// whole block free again when the scope ends; what does not fit in the block comes from
+        /// the heap (Unity falls back the same way). So writing a little past the newest allocation
+        /// lands in the block's free part, as it does in Unity: a package's development-build
+        /// clear of a grown Temp buffer reaches past it (com.unity.multiplayer.tools
+        /// FastBufferWriter.Grow clears sizeof(WriterHandle) bytes more than it allocates).
+        /// </summary>
         internal sealed class TempScope
         {
             readonly List<AtomicSafetyHandle> m_Handles = new List<AtomicSafetyHandle>();
             readonly HashSet<IntPtr> m_Allocations = new HashSet<IntPtr>();
+            /// <summary>The stack block (allocated at the first use), its size, and how much of it
+            /// the scope uses.</summary>
+            IntPtr m_Block;
+            readonly nuint m_BlockSize;
+            long m_Used;
 
             /// <summary>Whether the scope ends (the main thread's frame, a job): its memory waits
             /// for that; another thread's never ends, so its memory is freed when disposed.</summary>
             internal readonly bool Ends;
 
-            internal TempScope(bool ends = true) => Ends = ends;
+            internal TempScope(bool ends = true, int blockSize = 0)
+            {
+                Ends = ends;
+                m_BlockSize = ends ? (nuint)blockSize : 0;
+            }
+
+            /// <summary>The next <paramref name="size"/> bytes of the stack at <paramref name="alignment"/>
+            /// (a power of two), or null when the block cannot hold them. Its owner thread is the
+            /// only caller; taking the bytes is atomic all the same.</summary>
+            internal void* Stack(nuint size, nuint alignment)
+            {
+                if (m_BlockSize == 0 || size > m_BlockSize) return null;
+                var block = Volatile.Read(ref m_Block);
+                if (block == IntPtr.Zero)
+                {
+                    var made = (IntPtr)NativeMemory.AlignedAlloc(m_BlockSize, (nuint)sizeof(void*));
+                    block = Interlocked.CompareExchange(ref m_Block, made, IntPtr.Zero);
+                    if (block == IntPtr.Zero) block = made;
+                    else NativeMemory.AlignedFree((void*)made);
+                }
+                while (true)
+                {
+                    long used = Volatile.Read(ref m_Used);
+                    nuint start = (((nuint)block + (nuint)used + alignment - 1) & ~(alignment - 1)) - (nuint)block;
+                    if (start > m_BlockSize || m_BlockSize - start < size) return null;
+                    if (Interlocked.CompareExchange(ref m_Used, (long)(start + size), used) == used) return (byte*)block + start;
+                }
+            }
+
+            /// <summary>Whether <paramref name="length"/> bytes from <paramref name="memory"/> lie in the
+            /// scope's stack block.</summary>
+            internal bool InBlock(void* memory, nuint length)
+            {
+                var block = (byte*)Volatile.Read(ref m_Block);
+                if (block == null || memory < block) return false;
+                nuint offset = (nuint)((byte*)memory - block);
+                return offset <= m_BlockSize && m_BlockSize - offset >= length;
+            }
 
             public void RemoveAllocation(IntPtr memory)
             {
@@ -336,6 +395,7 @@ namespace Unbound.Runtime
                         m_Handles.Clear();
                     }
                 }
+                Volatile.Write(ref m_Used, 0);
                 List<IntPtr> allocations;
                 lock (m_Allocations)
                 {
@@ -348,7 +408,10 @@ namespace Unbound.Runtime
         }
 
         [ThreadStatic] static TempScope t_ThreadScope;
-        static readonly TempScope s_MainScope = new TempScope();
+        static readonly TempScope s_MainScope = new TempScope(blockSize: MainTempBlockSize);
+        /// <summary>The main thread's scope before a game has booted (tools, tests), when every
+        /// thread counts as the main thread: its memory comes from the heap.</summary>
+        static readonly TempScope s_UnbootedScope = new TempScope();
 
         /// <summary>The scope temp memory allocated now belongs to: the executing job's, else the
         /// main thread's frame, else the thread's own.</summary>
@@ -358,13 +421,17 @@ namespace Unbound.Runtime
             {
                 var job = Jobs.JobSystem.CurrentTempScope;
                 if (job != null) return job;
-                if (PlayerLoopDriver.IsMainThread) return s_MainScope;
+                if (PlayerLoopDriver.IsMainThread) return PlayerLoopDriver.MainThreadId < 0 ? s_UnbootedScope : s_MainScope;
                 return t_ThreadScope ??= new TempScope(ends: false);
             }
         }
 
         /// <summary>The end of the frame: Allocator.Temp memory of the main thread is gone.</summary>
-        internal static void EndFrame() => s_MainScope.End();
+        internal static void EndFrame()
+        {
+            s_MainScope.End();
+            s_UnbootedScope.End();
+        }
 
         // ------------------------------------------------------------------ jobs
 
