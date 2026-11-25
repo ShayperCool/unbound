@@ -1000,6 +1000,29 @@ public static class BuffersSetup
             area.areaSize = type == LightType.Rectangle ? new Vector2(1.5f, 0.75f) : new Vector2(0.6f, 0.6f);
             Save(scene, name);
         }
+        // Light probes under soft shadows (a point light of radius 0.25, a mixed sun of angle 3
+        // in the Shadowmask mode: its probe occlusion) and under a rectangle and a disc area light.
+        void ProbeGroup() => new GameObject("ProbeGroup").AddComponent<LightProbeGroup>().probePositions = new[]
+        {
+            new Vector3(0.1f, 0.5f, -1.2f), new Vector3(1.5f, 1.2f, 0.3f), new Vector3(-1.1f, 2.0f, 1.1f),
+            new Vector3(0.3f, 0.2f, 2.2f), new Vector3(-2.2f, 0.7f, -0.4f), new Vector3(2.02f, 0.49f, 1.03f),
+        };
+        {
+            var scene = Lit("SoftProbes", MixedLightingMode.Shadowmask);
+            Lightmapping.lightingSettings.directSampleCount = 32;
+            Soft(NewLight("Bulb", LightType.Point, new Vector3(1.03f, 2.01f, -1.02f), Vector3.zero, new Color(1f, 0.8f, 0.6f), 3f), 0.25f).range = 6f;
+            Soft(NewLight("MixedSun", LightType.Directional, Vector3.zero, new Vector3(50f, -30f, 0f), Color.white, 2f, LightmapBakeType.Mixed), 3f);
+            ProbeGroup();
+            Save(scene, "SoftProbes");
+        }
+        {
+            var scene = Lit("SoftProbesArea");
+            Lightmapping.lightingSettings.directSampleCount = 32;
+            NewLight("Rect", LightType.Rectangle, new Vector3(0.4f, 2.2f, -0.3f), new Vector3(90f, 0f, 0f), new Color(1f, 0.9f, 0.8f), 3f).areaSize = new Vector2(1.5f, 0.75f);
+            NewLight("Disc", LightType.Disc, new Vector3(-1.4f, 1.8f, 0.9f), new Vector3(70f, 30f, 0f), new Color(0.7f, 0.8f, 1f), 3f).areaSize = new Vector2(0.6f, 0.6f);
+            ProbeGroup();
+            Save(scene, "SoftProbesArea");
+        }
     }
 
     /// <summary>Lights whose intensity multiplies their linear colour
