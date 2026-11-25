@@ -1,4 +1,4 @@
-<img src="assets/icon.svg" width="64" height="64" alt="">
+<p align="center"><img src="assets/icon.svg" width="160" height="160" alt="Unbound"></p>
 
 # Unbound
 
@@ -24,6 +24,114 @@ references. See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for the design.
 > are still missing or stubbed, and some content isn't supported yet. `unbound doctor` and
 > `unbound api-gaps` show what your project uses that Unbound lacks.
 > [docs/COMPATIBILITY_GAPS.md](docs/COMPATIBILITY_GAPS.md) lists the known gaps.
+
+## Feature parity
+
+Each feature is checked against the Unity 6000.0.71f1 Editor by probe projects in
+`tests/projects/`. **[x]** means parity: the probe matches the Editor's reference, apart from small
+residuals the gap map lists. **[ ] 🚧** means it works in part, and some measured or listed cases
+are still open. **[ ]** means it has not started or is only a stub. The open details are in
+[docs/COMPATIBILITY_GAPS.md](docs/COMPATIBILITY_GAPS.md) and the work order in
+[docs/ROADMAP.md](docs/ROADMAP.md).
+
+- [ ] 🚧 **Pipeline**
+  - [x] Script assembly graph and compilation (188 package assemblies match the Editor's)
+  - [x] IL post-processors (`*.CodeGen`) in Edit/Play mode
+  - [x] Registry packages without `Library/PackageCache`
+  - [x] No Unity installation needed (release files from Unity's downloads)
+  - [x] Hot reload, source generators, ScriptedImporters
+  - [ ] 🚧 Unity API coverage: 5322 of 5974 referenced members implemented, 652 still stubs
+- [ ] 🚧 **Core runtime**
+  - [x] Objects, components, player loop and messages
+  - [x] Scenes, prefabs and Unity serialization
+  - [x] Jobs, Collections, Burst (runs managed)
+  - [x] Profiling API
+  - [x] Unity.Properties
+  - [x] Android, iOS and platform APIs, answered as the Linux Editor answers them
+  - [ ] 🚧 Playables and Timeline (generic animation done; experimental playables left)
+  - [ ] 🚧 Destroy timing, batch activation order, `LazyLoadReference`
+- [ ] 🚧 **Input**
+  - [x] Legacy Input Manager
+  - [x] Input System: keyboard, mouse, PlayerInput, uGUI module
+  - [x] Gamepads through SDL
+  - [ ] 🚧 Joysticks SDL does not map, rumble, IME, pen
+- [ ] 🚧 **Rendering: built-in pipeline**
+  - [x] Forward lighting: pixel, vertex and SH lights, cookies, shadows
+  - [x] CommandBuffer, Graphics.Draw*, GL, RenderTexture, compute
+  - [x] Camera depth, normal and motion-vector textures
+  - [x] LODGroup (no cross-fades)
+  - [x] Projectors, replacement shaders, reflection probes, Deferred and Vertex Lit, halos, flares
+  - [x] Baked lighting: lightmaps, light probes, skybox ambient
+  - [ ] 🚧 Shadowmask mixing, mipmap limit, skinned motion vectors, a few shadow edges
+  - [ ] 🚧 Precomputed realtime GI (Enlighten), see [docs/REALTIME_GI.md](docs/REALTIME_GI.md)
+  - [ ] Mipmap streaming
+- [ ] 🚧 **Rendering: scriptable pipelines**
+  - [x] SRP core: contexts, culling, renderer lists, render passes
+  - [x] URP 17 forward and Forward+, shadows, post-processing, camera stacking
+  - [x] URP 2D renderer: 2D lights and shadows
+  - [x] Shader Graph
+  - [ ] 🚧 BatchRendererGroup / GPU Resident Drawer
+  - [ ] 🚧 Adaptive Probe Volumes (no Editor comparison yet)
+  - [ ] 🚧 VFX Graph: simulation, quad, mesh and strip outputs done; points, lines, cubes and some operators left
+  - [ ] HDRP
+- [ ] 🚧 **Textures and shaders**
+  - [x] Shaders compiled from Unity's own sources
+  - [x] Texture2D, RenderTexture and bundle mip chains
+  - [ ] 🚧 Block-compressed imports (BC, ETC, ASTC, Crunch) with residuals
+  - [ ] DDS, KTX and ASTC source files
+- [ ] 🚧 **Physics**
+  - [x] 3D physics on PhysX 4.1.2: bodies, shapes, queries, events, joints
+  - [x] CharacterController
+  - [x] WheelCollider
+  - [x] Cloth on NvCloth
+  - [x] 2D physics (Box2D)
+  - [ ] 🚧 Joint projection, 2D contact features, 2D force layers
+  - [ ] ArticulationBody, `Physics.BakeMesh`
+- [ ] 🚧 **Animation**
+  - [x] Legacy Animation and Animator (generic)
+  - [x] Blend shapes
+  - [x] Animation Rigging, Cinemachine track
+  - [ ] 🚧 Humanoid and root motion (measured, residuals open)
+- [ ] 🚧 **Particles and effects**
+  - [x] Particle System modules, collisions, triggers, trails, lights
+  - [x] Wind zones on particles
+  - [ ] 🚧 Noise module, ribbon trails, sub-emitter timing, Particle System jobs
+- [ ] 🚧 **Navigation**
+  - [x] NavMesh data, queries and runtime builds
+  - [x] NavMeshAgent and local avoidance
+  - [ ] 🚧 Off-mesh link edge cases, obstacle shapes, crowded scenes
+- [ ] 🚧 **Terrain and trees**
+  - [x] TerrainData, TerrainCollider, terrain shaders, heightmap LOD
+  - [x] Details and grass, tree billboards, URP terrains
+  - [x] SpeedTree 8 and 9 import
+  - [ ] SpeedTree wind, SpeedTree 7 (`.spm`), TerrainCallbacks
+- [ ] 🚧 **UI and text**
+  - [x] uGUI
+  - [x] TextMeshPro
+  - [x] IMGUI
+  - [x] UI Toolkit runtime: UXML, USS, layout, events, controls
+  - [ ] 🚧 UI Toolkit controls still stubbed (EnumField, MinMaxSlider, context menus)
+- [ ] 🚧 **Audio and video**
+  - [x] AudioSource, mixers, effects, 3D sound, surround output
+  - [x] VideoPlayer (through the system's ffmpeg)
+  - [ ] 🚧 Video audio output, URL sources, transparency
+  - [ ] Tracker modules, microphone recording, spatializer plugins
+- [ ] 🚧 **Assets**
+  - [x] Model, texture, audio and font import
+  - [x] AssetBundles (UnityFS), Addressables in Play mode
+  - [x] Sprite atlases, Tilemap, SpriteShape, 2D Animation
+  - [ ] 🚧 `AssetDatabase.Refresh` / `ImportAsset` re-imports, importer settings changes
+  - [ ] `.dae`, `.3ds`, `.blend`, `.max` models
+- [ ] 🚧 **Networking and services**
+  - [x] UnityWebRequest, Localization, XR without a device
+  - [ ] Unity Transport TLS
+- [ ] 🚧 **Editor API in Play mode**
+  - [x] Undo, Selection, EditorSceneManager, compilation queries, ShaderUtil
+  - [x] Editor UI API in batch mode: IMGUI editors, property drawers, TreeView
+  - [x] ProjectSettings assets as the Editor's objects, saved as it saves them
+  - [x] Test Framework (`unbound test`)
+  - [x] Project files (`.meta`, package lock) written as the Editor writes them
+  - [ ] 🚧 `ExecuteMenuItem` for built-in menus, `RequestScriptReload`, UI Toolkit inspectors
 
 ## Install
 
@@ -122,5 +230,3 @@ the licenses of everything they ship.
 
 Unbound is not affiliated with or endorsed by Unity Technologies. Unity is a trademark of Unity
 Technologies.
-
-Created in [T3 Code](https://t3.codes).

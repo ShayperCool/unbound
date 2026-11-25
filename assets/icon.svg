@@ -1,4 +1,35 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
-  <rect width="64" height="64" rx="14" fill="#059669"/>
-  <text x="32" y="32" dy="0.35em" text-anchor="middle" font-family="ui-sans-serif, system-ui, -apple-system, sans-serif" font-size="32" font-weight="600" fill="#ffffff">U</text>
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024" role="img" aria-labelledby="title">
+  <title id="title">Unbound Engine — monochrome</title>
+  <defs>
+    <linearGradient id="outer" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0" stop-color="#eeeeee"/><stop offset="1" stop-color="#9a9a9a"/>
+    </linearGradient>
+    <linearGradient id="inner" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0" stop-color="#9b9b9b"/><stop offset="1" stop-color="#666666"/>
+    </linearGradient>
+    <linearGradient id="top" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0" stop-color="#d6d6d6"/><stop offset="1" stop-color="#fafafa"/>
+    </linearGradient>
+  </defs>
+  <rect width="1024" height="1024" fill="#000"/>
+  <!-- Cube: exact isometric projection, with 30-degree diagonals. -->
+  <g fill="none" stroke-linejoin="miter">
+    <path d="M162 310.0726 L512 512.1452 L862 310.0726 M512 512.1452 V916.2904" stroke="#777" stroke-width="7"/>
+    <path d="M512 108 L862 310.0726 L862 714.2178 L512 916.2904 L162 714.2178 L162 310.0726Z" stroke="#f2f2f2" stroke-width="13"/>
+  </g>
+  <!-- Identical mirrored solid faces. No raster, glow, blur, or shadow. -->
+  <g>
+    <g>
+      <path d="M218 333 L331 398.2406 L331 672 L512 776.5004 L512 855.741 L218 686Z" fill="url(#outer)"/>
+      <path d="M331 398.2406 L404 356.094 L404 629.8534 L331 672Z" fill="url(#inner)"/>
+      <path d="M218 333 L291 290.8534 L404 356.094 L331 398.2406Z" fill="url(#top)"/>
+    </g>
+    <g transform="translate(1024 0) scale(-1 1)">
+      <path d="M218 333 L331 398.2406 L331 672 L512 776.5004 L512 855.741 L218 686Z" fill="url(#outer)"/>
+      <path d="M331 398.2406 L404 356.094 L404 629.8534 L331 672Z" fill="url(#inner)"/>
+      <path d="M218 333 L291 290.8534 L404 356.094 L331 398.2406Z" fill="url(#top)"/>
+    </g>
+    <path d="M331 672 L404 629.8534 L512 692.2073 L620 629.8534 L693 672 L512 776.5004Z" fill="url(#top)"/>
+    <path d="M512 776.5004 L512 855.741" stroke="#d8d8d8" stroke-width="1.6" fill="none"/>
+  </g>
 </svg>
