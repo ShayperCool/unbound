@@ -114,16 +114,7 @@ pub fn importer_for(path: &Path, is_dir: bool) -> Option<NewImporter> {
     })
 }
 
-/// The files the PluginImporter imports, by extension (lowercase): managed and native libraries,
-/// archives and native sources (tests/projects/projectwrites `exit.Assets/Startup/Plugins/*`).
-pub const PLUGIN_FILE_EXTENSIONS: [&str; 17] = [
-    "dll", "so", "dylib", "a", "jar", "aar", "c", "cc", "cpp", "h", "m", "mm", "java", "kt",
-    "swift", "jslib", "jspre",
-];
-
-/// The folders the PluginImporter imports as one plug-in each, by extension (lowercase).
-pub const FOLDER_PLUGIN_EXTENSIONS: [&str; 5] =
-    ["bundle", "framework", "xcframework", "plugin", "androidlib"];
+pub use unbound_project::plugin_defaults::{FOLDER_PLUGIN_EXTENSIONS, PLUGIN_FILE_EXTENSIONS};
 
 /// A directory the Editor imports as one plug-in asset, whose contents are no assets.
 pub fn is_folder_plugin(path: &Path) -> bool {

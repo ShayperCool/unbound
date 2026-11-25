@@ -35,6 +35,8 @@ pub struct RuntimeState {
     new_meta: unbound_assets::new_meta::MetaContext,
     /// The project's release family's new `.meta` files are measured (6000.0).
     new_meta_measured: bool,
+    /// The project's release (for what is measured in another one).
+    release: String,
     /// TextCore's COLR layers select native hinting in the measured release family.
     pub(crate) font_colr_native_hinting: bool,
     backend: RwLock<Arc<dyn RenderBackend>>,
@@ -399,6 +401,7 @@ pub fn initialize(project: &Project) -> Result<&'static RuntimeState> {
             .map(Path::to_path_buf)
             .collect(),
         new_meta_measured: unbound_compat::MeasuredFamily::of(project.version).is_some(),
+        release: project.version.to_string(),
         font_colr_native_hinting: project.version.measured_family()
             == Some(unbound_compat::MeasuredFamily::Unity6000_0),
         new_meta: unbound_assets::new_meta::MetaContext::for_install(
@@ -1810,6 +1813,9 @@ pub fn dispatch(method: &str, request: &str) -> Result<String> {
                 r.delta_time,
             )?)?)
         }
+        // The PluginImporter section the Editor writes into a plug-in's `.meta` that has no
+        // platform settings when it writes the file again; "" when the `.meta` has them.
+        "plugin-meta-section" => plugin_default_section(request),
         // The system clipboard's text (`GUIUtility.systemCopyBuffer`).
         "clipboard-get" => crate::clipboard::get(request),
         "clipboard-set" => crate::clipboard::set(request),
@@ -1931,9 +1937,31 @@ fn load_importer_settings(guid: &str) -> Result<Vec<u8>> {
     if let Some(applied) = tree_textures.apply(&asset.file, &meta) {
         meta = applied;
     }
+    // A plug-in whose .meta has no platform settings gets the ones the Editor gives it.
+    if let Some(defaults) = plugin_defaults(asset, &meta) {
+        let mut body = meta.get("PluginImporter").cloned().unwrap_or_default();
+        let defaults = defaults.importer();
+        if let (Some(map), Some(defaults)) = (body.as_map_mut(), defaults.as_map()) {
+            for (key, value) in defaults.iter() {
+                if key == "platformData" || map.get(key).is_none() {
+                    map.insert(key, value.clone());
+                }
+            }
+        } else {
+            body = defaults;
+        }
+        let doc = unbound_yaml::Document {
+            class_id: 0,
+            file_id: 0,
+            stripped: false,
+            type_name: "PluginImporter".into(),
+            body,
+        };
+        return Ok(unbound_scene::encode_documents(&[doc]));
+    }
     // A .meta that names no importer (hand-written ones, such as Firebase's manifests) gets the
     // one the Editor picks for the file's extension, with default settings.
-    let (type_name, body) = meta
+    let (type_name, mut body) = meta
         .as_map()
         .and_then(|m| {
             m.iter()
@@ -1946,6 +1974,14 @@ fn load_importer_settings(guid: &str) -> Result<Vec<u8>> {
                 unbound_yaml::Value::Map(Default::default()),
             )
         });
+    if type_name == "PluginImporter" {
+        unbound_project::plugin_defaults::read_settings(
+            &mut body,
+            &asset.path,
+            unbound_project::plugins::is_managed_assembly(&asset.file),
+            s.new_meta.platforms.iter().any(|p| p == "Android"),
+        );
+    }
     let doc = unbound_yaml::Document {
         class_id: 0,
         file_id: 0,
@@ -1954,6 +1990,58 @@ fn load_importer_settings(guid: &str) -> Result<Vec<u8>> {
         body,
     };
     Ok(unbound_scene::encode_documents(&[doc]))
+}
+
+/// The settings the Editor gives a plug-in whose `.meta` has no platform settings (its GUID alone,
+/// a section without them, another importer's section: Unity imports every plug-in with the
+/// PluginImporter); None for another asset or a `.meta` that has them.
+fn plugin_defaults(
+    asset: &unbound_project::assetdb::Asset,
+    meta: &unbound_yaml::Value,
+) -> Option<unbound_project::plugin_defaults::Defaults> {
+    if asset.is_root()
+        || importer_of_path(&asset.path) != Some("PluginImporter")
+        || unbound_project::plugin_defaults::has_platform_settings(meta)
+    {
+        return None;
+    }
+    let s = state();
+    if !s.new_meta_measured {
+        unbound_project::plugins::warn_unmeasured_defaults(&s.release);
+    }
+    let managed = unbound_project::plugins::is_managed_assembly(&asset.file);
+    let android = s.new_meta.platforms.iter().any(|p| p == "Android");
+    unbound_project::plugin_defaults::defaults(&asset.path, managed, android)
+}
+
+/// The `plugin-meta-section` answer (`{"section": ...}`) for the asset at the request's `path`: ""
+/// for a `.meta` with platform settings, and in a release family whose files are not measured.
+fn plugin_default_section(request: &str) -> Result<String> {
+    #[derive(serde::Deserialize)]
+    struct Request {
+        path: String,
+    }
+    let Request { path } = serde_json::from_str(request)?;
+    let s = state();
+    let db = s.db();
+    let asset = db
+        .by_path(&path)
+        .with_context(|| format!("no asset {path}"))?;
+    let text = std::fs::read_to_string(format!("{}.meta", asset.file.display()))?;
+    let meta = unbound_yaml::parse_value(&text)?;
+    let defaults = match plugin_defaults(asset, &meta) {
+        Some(defaults) if s.new_meta_measured => defaults,
+        _ => return Ok(json!({ "section": "" }).to_string()),
+    };
+    if !s.new_meta.platforms.iter().any(|p| p == "Android")
+        && unbound_project::plugin_defaults::kind(&path, false)
+            == Some(unbound_project::plugin_defaults::Kind::SharedObject)
+    {
+        tracing::warn!(
+            "Unbound: {path}.meta is written without the settings the Android module gives a shared object: what the Editor writes without the module installed is not known"
+        );
+    }
+    Ok(json!({ "section": defaults.section() }).to_string())
 }
 
 /// The importer the Editor uses for a file or folder by its path and extension, what a .meta that

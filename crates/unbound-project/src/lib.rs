@@ -13,6 +13,7 @@ pub mod md4;
 pub mod modules;
 pub mod net;
 pub mod packages;
+pub mod plugin_defaults;
 pub mod plugins;
 pub mod releases;
 pub mod response_files;
@@ -557,6 +558,10 @@ impl Project {
             .filter_map(|(file, path, mutable)| plugins::read_plugin(&file, path, mutable))
             .collect();
         plugins.sort_by(|a, b| a.path.cmp(&b.path));
+        if self.version.measured_family().is_none() && plugins.iter().any(|p| p.settings_defaulted)
+        {
+            plugins::warn_unmeasured_defaults(&self.version);
+        }
         let mut guids = BTreeMap::<_, Vec<_>>::new();
         if plugins.iter().any(|plugin| plugin.guid.is_some()) {
             let authored: Vec<_> = metas
@@ -604,7 +609,15 @@ impl Project {
                     // A bundle directory is one plugin, never searched inside.
                     walker.skip_current_dir();
                 }
-                if plugins::native_editor_plugin(path)
+                let relative = path.strip_prefix(root.dir).unwrap_or(path);
+                let project_path = format!("{}/{}", root.virtual_path, relative.to_string_lossy());
+                let Some(plugin) = plugins::native_plugin(path, &project_path) else {
+                    continue;
+                };
+                if plugin.settings_defaulted && self.version.measured_family().is_none() {
+                    plugins::warn_unmeasured_defaults(&self.version);
+                }
+                if plugin.loads_in_editor()
                     && let Some(library) = plugins::native_library_file(path)
                 {
                     out.push((library, plugins::native_plugin_preloaded(path)));

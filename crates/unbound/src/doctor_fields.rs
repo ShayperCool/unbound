@@ -442,8 +442,12 @@ pub(super) fn settings_report(
                 .and_then(|ext| ext.to_str())
                 .is_some_and(|ext| unbound_project::plugins::NATIVE_EXTENSIONS.contains(&ext))
             {
-                let _ =
-                    unbound_project::plugins::native_editor_plugin_from_meta(&asset.file, &body);
+                let _ = unbound_project::plugins::native_plugin_from_meta(
+                    &asset.file,
+                    &asset.path,
+                    &body,
+                )
+                .loads_in_editor();
             }
         }
         let consumed = reads.paths();

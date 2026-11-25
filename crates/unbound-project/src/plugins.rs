@@ -20,6 +20,9 @@ pub struct Plugin {
     pub analyzer: bool,
     /// The assembly name and version the DLL declares (`None` where they cannot be read).
     pub identity: Option<crate::assembly_identity::AssemblyIdentity>,
+    /// Its `.meta` has no platform settings: it has those the Editor gives it by its kind and
+    /// folders ([`crate::plugin_defaults`]).
+    pub settings_defaulted: bool,
     importer: Value,
 }
 
@@ -32,23 +35,26 @@ impl Plugin {
     }
 
     /// Whether the plugin is enabled for a platform (`Editor`, `Android`, `Linux64`, ...):
-    /// with "Any Platform" on, unless that platform is excluded; otherwise when it is enabled.
+    /// with "Any Platform" on, unless that platform is excluded from it (the `Exclude <platform>`
+    /// setting of `Any`), or when it is enabled for the platform (tests/projects/plugindefaults
+    /// `importers.*`, `precompiled`).
     pub fn compatible_with(&self, platform: &str) -> bool {
         let any = self.platform_enabled("Any").unwrap_or(false);
-        if any {
-            !self
-                .platform_enabled(&format!("Exclude {platform}"))
-                .unwrap_or(false)
-        } else {
-            self.platform_enabled(platform).unwrap_or(false)
-        }
+        let excluded = self
+            .platform_setting("Any", &format!("Exclude {platform}"))
+            .is_some_and(|value| value == "1" || value == "true");
+        (any && !excluded) || self.platform_enabled(platform).unwrap_or(false)
     }
 
     fn platform_enabled(&self, key: &str) -> Option<bool> {
-        let data = self.importer.get("platformData")?;
-        match data {
+        self.platform_entry(key)?.get("enabled")?.as_bool()
+    }
+
+    /// A platform's entry of `platformData` (its `enabled` and `settings`).
+    fn platform_entry(&self, key: &str) -> Option<&Value> {
+        match self.importer.get("platformData")? {
             // `platformData: {Any: {enabled: 1}, Editor: {...}}`
-            Value::Map(map) => map.get(key)?.get("enabled")?.as_bool(),
+            Value::Map(map) => map.get(key),
             // `- first: {Any: }  second: {enabled: 1}` and `- first: {Editor: Editor} ...`
             Value::Seq(items) => items.iter().find_map(|item| {
                 let first = item.get("first")?.as_map()?;
@@ -57,14 +63,16 @@ impl Plugin {
                         || name.as_str() == Some(key)
                         || format!("{group} {}", name.as_str().unwrap_or("")) == key
                 });
-                if matched {
-                    item.get("second")?.get("enabled")?.as_bool()
-                } else {
-                    None
-                }
+                if matched { item.get("second") } else { None }
             }),
             _ => None,
         }
+    }
+
+    /// A setting of a platform's entry (`Any`, `Editor`, a build target), as text.
+    fn platform_setting(&self, platform: &str, key: &str) -> Option<String> {
+        let settings = self.platform_entry(platform)?.get("settings")?;
+        settings.get(key)?.as_str().map(String::from)
     }
 }
 
@@ -87,16 +95,13 @@ const EDITOR_OS: &str = if cfg!(target_os = "macos") {
     "Linux"
 };
 
-/// A native library the Editor loads on this machine: enabled for the Editor, for this OS and CPU
-/// (`PluginImporter` Editor settings `OS: Linux|OSX|AnyOS`, `CPU: x86_64|ARM64|AnyCPU`).
-pub fn native_editor_plugin(file: &Path) -> bool {
-    let Ok(meta) = std::fs::read_to_string(format!("{}.meta", file.display())) else {
-        return false;
-    };
-    let Ok(meta) = unbound_yaml::parse_value(&meta) else {
-        return false;
-    };
-    native_editor_plugin_from_meta(file, &meta)
+/// A native library and its importer settings, read from its `.meta`; None without a readable one.
+/// `path` is its project path (`Assets/...`, `Packages/<name>/...`), whose folders give the settings
+/// of a `.meta` without any.
+pub fn native_plugin(file: &Path, path: &str) -> Option<Plugin> {
+    let meta = std::fs::read_to_string(format!("{}.meta", file.display())).ok()?;
+    let meta = unbound_yaml::parse_value(&meta).ok()?;
+    Some(native_plugin_from_meta(file, path, &meta))
 }
 
 /// Whether a native plugin's importer loads it on startup ("Load on startup", `isPreloaded`):
@@ -114,31 +119,31 @@ pub fn native_plugin_preloaded(file: &Path) -> bool {
         .is_some_and(|value| value != 0)
 }
 
-/// The native plugin's actual platform reader, without opening the metadata again.
-pub fn native_editor_plugin_from_meta(file: &Path, meta: &Value) -> bool {
-    let importer = meta.get("PluginImporter").cloned().unwrap_or_default();
-    let plugin = Plugin {
+/// [`native_plugin`] from a `.meta` already read.
+pub fn native_plugin_from_meta(file: &Path, path: &str, meta: &Value) -> Plugin {
+    let (importer, settings_defaulted) = importer_settings(meta, path, false);
+    Plugin {
         file: file.to_path_buf(),
-        path: String::new(),
+        path: path.to_string(),
         guid: None,
         explicitly_referenced: false,
         define_constraints: Vec::new(),
         analyzer: false,
         identity: None,
+        settings_defaulted,
         importer,
-    };
-    if !plugin.compatible_with("Editor") {
-        return false;
     }
-    let os = plugin.editor_setting("OS").unwrap_or_default();
-    let cpu = plugin.editor_setting("CPU").unwrap_or_default();
-    let os_ok = os.is_empty() || os == "AnyOS" || os == EDITOR_OS;
-    let cpu_ok = match std::env::consts::ARCH {
-        "x86_64" => matches!(cpu.as_str(), "" | "AnyCPU" | "x86_64"),
-        "aarch64" => matches!(cpu.as_str(), "" | "AnyCPU" | "ARM64"),
-        _ => cpu.is_empty() || cpu == "AnyCPU",
-    };
-    os_ok && cpu_ok
+}
+
+/// Says once that plug-ins whose `.meta` has no platform settings get those of Unity 6000.0 in a
+/// project of a release whose Editor was not measured.
+pub fn warn_unmeasured_defaults(release: &dyn std::fmt::Display) {
+    static WARNED: std::sync::Once = std::sync::Once::new();
+    WARNED.call_once(|| {
+        tracing::warn!(
+            "Unbound: plug-ins whose .meta has no platform settings get the ones the Unity 6000.0 Editor gives them; what the {release} Editor gives them is not known"
+        )
+    });
 }
 
 /// The loadable file of a native plugin: the file itself, or a macOS bundle directory's
@@ -162,22 +167,31 @@ pub fn native_library_file(plugin: &Path) -> Option<PathBuf> {
 }
 
 impl Plugin {
+    /// A native library the Editor loads on this machine: enabled for the Editor, for this OS and
+    /// CPU.
+    pub fn loads_in_editor(&self) -> bool {
+        self.compatible_with("Editor") && self.editor_machine_allowed()
+    }
+
+    /// Whether the plugin's Editor settings allow this machine: its OS (`OS: Linux|OSX|AnyOS`) and
+    /// CPU (`CPU: x86_64|ARM64|AnyCPU`). The Editor neither loads a native library nor compiles
+    /// against a managed one on another (tests/projects/plugindefaults `precompiled`: a managed
+    /// plug-in for x86).
+    pub fn editor_machine_allowed(&self) -> bool {
+        let os = self.editor_setting("OS").unwrap_or_default();
+        let cpu = self.editor_setting("CPU").unwrap_or_default();
+        let os_ok = os.is_empty() || os == "AnyOS" || os == EDITOR_OS;
+        let cpu_ok = match std::env::consts::ARCH {
+            "x86_64" => matches!(cpu.as_str(), "" | "AnyCPU" | "x86_64"),
+            "aarch64" => matches!(cpu.as_str(), "" | "AnyCPU" | "ARM64"),
+            _ => cpu.is_empty() || cpu == "AnyCPU",
+        };
+        os_ok && cpu_ok
+    }
+
     /// A setting of the Editor platform (`OS`, `CPU`).
     fn editor_setting(&self, key: &str) -> Option<String> {
-        let data = self.importer.get("platformData")?;
-        let settings = match data {
-            Value::Map(map) => map.get("Editor")?.get("settings")?,
-            Value::Seq(items) => items.iter().find_map(|item| {
-                let first = item.get("first")?.as_map()?;
-                first
-                    .iter()
-                    .any(|(group, _)| group == "Editor")
-                    .then(|| item.get("second")?.get("settings"))
-                    .flatten()
-            })?,
-            _ => return None,
-        };
-        settings.get(key)?.as_str().map(String::from)
+        self.platform_setting("Editor", key)
     }
 }
 
@@ -217,7 +231,7 @@ pub fn read_plugin(file: &Path, path: String, mutable: bool) -> Option<Plugin> {
 
 pub fn plugin_from_meta(file: &Path, path: String, meta: &Value) -> Plugin {
     let (guid, labels) = crate::assetdb::meta_header(meta);
-    let importer = managed_importer(&meta);
+    let (importer, settings_defaulted) = importer_settings(meta, &path, true);
     let explicitly_referenced = importer
         .get("isExplicitlyReferenced")
         .and_then(Value::as_bool)
@@ -240,17 +254,28 @@ pub fn plugin_from_meta(file: &Path, path: String, meta: &Value) -> Plugin {
         define_constraints,
         analyzer: labels.iter().any(|label| label == "RoslynAnalyzer"),
         identity: None,
+        settings_defaulted,
         importer,
     }
 }
 
-/// A managed DLL's importer settings. Unity imports every `.dll` with the PluginImporter whatever
-/// importer its `.meta` names; one without `PluginImporter` settings (Google's Version Handler
-/// writes `DefaultImporter`) gets the defaults: compatible with any platform.
-fn managed_importer(meta: &Value) -> Value {
-    meta.get("PluginImporter").cloned().unwrap_or_else(|| {
-        unbound_yaml::parse_value("platformData:\n  Any:\n    enabled: 1\n").unwrap_or_default()
-    })
+/// A plug-in's importer settings. Unity imports every plug-in with the PluginImporter whatever
+/// importer its `.meta` names; one without platform settings (its GUID alone, Google's Version
+/// Handler's `DefaultImporter`) gets the ones the Editor gives it by its kind and folders
+/// ([`crate::plugin_defaults`]). `path` is the plug-in's project path; `managed` whether it is a
+/// .NET assembly. Only platform flags and Editor settings are read from it here, so the Android
+/// module's setting is left out. Also says whether they are the defaults.
+fn importer_settings(meta: &Value, path: &str, managed: bool) -> (Value, bool) {
+    if crate::plugin_defaults::has_platform_settings(meta) {
+        return (
+            meta.get("PluginImporter").cloned().unwrap_or_default(),
+            false,
+        );
+    }
+    let defaults = crate::plugin_defaults::defaults(path, managed, false)
+        .map(|defaults| defaults.importer())
+        .unwrap_or_default();
+    (defaults, true)
 }
 
 /// A PE file with a CLI header (data directory 14).
@@ -292,7 +317,7 @@ mod tests {
 
     fn plugin(meta: &str) -> Plugin {
         let meta = unbound_yaml::parse_value(meta).unwrap();
-        plugin_from_meta(Path::new("A.dll"), String::new(), &meta)
+        plugin_from_meta(Path::new("A.dll"), "Assets/A.dll".into(), &meta)
     }
 
     #[test]
@@ -331,6 +356,82 @@ mod tests {
         );
         assert!(p.compatible_with("Editor"));
         assert!(!p.compatible_with("Android"));
+    }
+
+    /// tests/projects/plugindefaults: a `.meta` with the GUID alone gives the plug-in the
+    /// platforms of its kind and folders.
+    #[test]
+    fn a_guid_only_meta_gets_the_editors_defaults_by_folder() {
+        let guid_only = "fileFormatVersion: 2\nguid: 0123456789abcdef0123456789abcdef";
+        let managed = |path: &str| {
+            plugin_from_meta(
+                Path::new("A.dll"),
+                path.to_string(),
+                &unbound_yaml::parse_value(guid_only).unwrap(),
+            )
+        };
+        let any = managed("Assets/Plugins/Managed.dll");
+        assert!(any.settings_defaulted);
+        assert!(any.compatible_with("Editor") && any.compatible_with("Android"));
+        let editor = managed("Assets/Tools/Editor/Managed.dll");
+        assert!(editor.compatible_with("Editor") && !editor.compatible_with("Android"));
+        let android = managed("Assets/Plugins/Android/Managed.dll");
+        assert!(!android.compatible_with("Editor") && android.compatible_with("Android"));
+        // In Plugins/x86 the Editor's CPU is x86: no Editor's.
+        let x86 = managed("Assets/Plugins/x86/Managed.dll");
+        assert!(x86.compatible_with("Editor") && !x86.editor_machine_allowed());
+        // A section with platform settings is read as it is.
+        let section = plugin("PluginImporter:\n  platformData:\n    Any:\n      enabled: 0\n");
+        assert!(!section.settings_defaulted && !section.compatible_with("Editor"));
+    }
+
+    #[test]
+    fn a_guid_only_native_library_loads_where_its_defaults_enable_the_editor() {
+        let guid_only = unbound_yaml::parse_value(
+            "fileFormatVersion: 2\nguid: 0123456789abcdef0123456789abcdef",
+        )
+        .unwrap();
+        let loads = |path: &str| {
+            native_plugin_from_meta(Path::new(path), path, &guid_only).loads_in_editor()
+        };
+        // A macOS library and a shared object are on for the Editor in any folder but the
+        // platform and architecture folders of other machines.
+        assert!(loads("Assets/Plugins/libmac.dylib"));
+        assert!(loads("Assets/Plugins/Kit.bundle"));
+        assert!(loads("Assets/Plugins/libnative.so"));
+        assert!(loads("Assets/Other/Editor/libnative.so"));
+        assert!(!loads("Assets/Plugins/Android/libnative.so"));
+        assert!(!loads("Assets/Plugins/iOS/libmac.dylib"));
+        assert!(!loads("Assets/Plugins/x86/libnative.so"));
+        let here = if cfg!(target_arch = "aarch64") {
+            "ARM64"
+        } else {
+            "x86_64"
+        };
+        let other = if cfg!(target_arch = "aarch64") {
+            "x86_64"
+        } else {
+            "ARM64"
+        };
+        assert!(loads(&format!("Assets/Plugins/{here}/libnative.so")));
+        assert!(!loads(&format!("Assets/Plugins/{other}/libnative.so")));
+    }
+
+    /// tests/projects/plugindefaults `Assets/Controls/AnyExcluding.dll`: "Any Platform" with the
+    /// Editor excluded is no Editor plug-in.
+    #[test]
+    fn an_exclusion_is_a_setting_of_any_platform() {
+        let excluded = plugin(
+            "PluginImporter:\n  platformData:\n    Any:\n      enabled: 1\n      settings:\n        Exclude Editor: 1\n        Exclude Android: 1\n    Editor:\n      enabled: 0\n",
+        );
+        assert!(!excluded.compatible_with("Editor"));
+        assert!(!excluded.compatible_with("Android"));
+        assert!(excluded.compatible_with("Win64"));
+        // The old layout: `- first: {: Any}`.
+        let old = plugin(
+            "PluginImporter:\n  platformData:\n  - first:\n      : Any\n    second:\n      enabled: 1\n      settings:\n        Exclude Editor: 1\n",
+        );
+        assert!(!old.compatible_with("Editor") && old.compatible_with("Android"));
     }
 
     #[test]

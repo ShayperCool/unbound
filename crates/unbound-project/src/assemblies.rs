@@ -425,12 +425,14 @@ pub fn build(input: &GraphInput<'_>) -> Result<Graph> {
     // An assembly whose references are missing still builds (Unity warns); drop only references.
 
     let plugin_ok = |plugin: &Plugin, defines: &[String]| {
-        let platform = if input.mode == CompileMode::EditorPlayMode {
+        let editor = input.mode == CompileMode::EditorPlayMode;
+        let platform = if editor {
             "Editor"
         } else {
             player_platform(input.target_group)
         };
         plugin.compatible_with(platform)
+            && (!editor || plugin.editor_machine_allowed())
             && !input.bcl_names.contains(plugin.file_name())
             && plugin
                 .define_constraints
