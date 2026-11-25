@@ -1075,10 +1075,9 @@ namespace UnityEngine
             var settings = body.Get("m_TextureSettings");
             if (settings != null)
             {
-                filterMode = (FilterMode)settings.Int("m_FilterMode", 1);
-                anisoLevel = settings.Int("m_Aniso", 1);
-                wrapModeU = (TextureWrapMode)settings.Int("m_WrapU");
-                wrapModeV = (TextureWrapMode)settings.Int("m_WrapV");
+                // Every setting the Editor writes, as the file holds it.
+                ReadSamplerSettings((FilterMode)settings.Int("m_FilterMode", 1), settings.Int("m_Aniso", 1), settings.Float("m_MipBias"),
+                    (TextureWrapMode)settings.Int("m_WrapU"), (TextureWrapMode)settings.Int("m_WrapV"), (TextureWrapMode)settings.Int("m_WrapW"));
             }
             // The YAML form's pixels, else a binary asset's (`image data`, every mip level).
             var hex = body.Str("_typelessdata");

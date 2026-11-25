@@ -46,6 +46,8 @@ namespace UnityEngine.Tests
         static void Read(Object o, string documentText)
         {
             var body = TestYaml.DocumentBody(documentText);
+            // As a load reads every asset document: its name, then its type's fields.
+            ObjectGraphBuilder.ReadName(o, body);
             switch (o)
             {
                 case Mesh m: m.ReadSerialized(body, new NullResolver()); break;

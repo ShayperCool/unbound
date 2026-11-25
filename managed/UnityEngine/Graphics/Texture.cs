@@ -63,6 +63,19 @@ namespace UnityEngine
         public int anisoLevel { get => m_AnisoLevel; set { SamplerEdited(m_AnisoLevel != value); m_AnisoLevel = value; OnSamplerChanged(); } }
         public float mipMapBias { get => m_MipMapBias; set { SamplerEdited(m_MipMapBias != value); m_MipMapBias = value; EmitSamplerMetadata(); } }
 
+        /// <summary>The sampler settings as an asset file holds them (no edit of the asset).</summary>
+        internal void ReadSamplerSettings(FilterMode filter, int aniso, float mipBias, TextureWrapMode u, TextureWrapMode v, TextureWrapMode w)
+        {
+            m_FilterMode = filter;
+            m_AnisoLevel = aniso;
+            m_MipMapBias = mipBias;
+            m_WrapModeU = u;
+            m_WrapModeV = v;
+            m_WrapModeW = w;
+            OnSamplerChanged();
+            EmitSamplerMetadata();
+        }
+
         /// <summary>A sampler setting changed by script dirties a texture asset (matches the Unity
         /// 6000.0.71f1 Editor, tests/projects/tmpatlas op.Filter, op.Wrap, op.Aniso, op.MipBias; a
         /// setting set to the value it has is unmeasured: left clean).</summary>
