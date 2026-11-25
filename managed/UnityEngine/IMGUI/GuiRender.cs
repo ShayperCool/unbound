@@ -28,11 +28,19 @@ namespace UnityEngine
         // (matches the Unity 6000.0.71f1 Editor, tests/projects/imguitreeview script/*).
         static Vector2 s_WindowMouse;
 
+        // A game OnGUI's root clip: GUIClip.visibleRect and topmostRect are (-10000, -10000,
+        // 40000, 40000) there, so a group beyond the screen keeps its whole visible rect
+        // (measured: tests/projects/imguitreeview clip/*); Unity's C# takes a top rect 40000 wide
+        // for that root (EditorGUIUtility.CalcContextWidth). Drawing stays within s_DrawBounds.
+        static readonly Rect k_RootClip = new Rect(-10000f, -10000f, 40000f, 40000f);
+        static Rect s_DrawBounds;
+
         /// <summary>Starts a GUI pass over the whole screen.</summary>
         internal static void Begin(Rect screen)
         {
             s_Stack.Clear();
-            s_Stack.Add(new Entry { Rect = screen, Visible = screen, Offset = Vector2.zero });
+            s_Stack.Add(new Entry { Rect = k_RootClip, Visible = k_RootClip, Offset = Vector2.zero });
+            s_DrawBounds = screen;
             s_Matrix = Matrix4x4.identity;
             s_Inverse = Matrix4x4.identity;
             s_WindowMouse = Event.current != null ? Event.current.mousePosition : default;
@@ -45,6 +53,7 @@ namespace UnityEngine
         {
             s_Stack.Clear();
             s_Stack.Add(new Entry { Rect = clip, Visible = clip, Offset = origin });
+            s_DrawBounds = clip;
             s_Matrix = Matrix4x4.identity;
             s_Inverse = Matrix4x4.identity;
             s_WindowMouse = Event.current != null ? Event.current.mousePosition + origin : default;
@@ -56,9 +65,10 @@ namespace UnityEngine
             internal object Stack;
             internal Matrix4x4 Matrix, Inverse;
             internal Vector2 WindowMouse;
+            internal Rect DrawBounds;
         }
 
-        internal static State Save() => new State { Stack = s_Stack.ToArray(), Matrix = s_Matrix, Inverse = s_Inverse, WindowMouse = s_WindowMouse };
+        internal static State Save() => new State { Stack = s_Stack.ToArray(), Matrix = s_Matrix, Inverse = s_Inverse, WindowMouse = s_WindowMouse, DrawBounds = s_DrawBounds };
 
         internal static void Restore(State state)
         {
@@ -67,6 +77,7 @@ namespace UnityEngine
             s_Matrix = state.Matrix;
             s_Inverse = state.Inverse;
             s_WindowMouse = state.WindowMouse;
+            s_DrawBounds = state.DrawBounds;
         }
 
         internal static int Depth => s_Stack.Count;
@@ -114,23 +125,28 @@ namespace UnityEngine
             return new Rect(x0, y0, Math.Max(0f, x1 - x0), Math.Max(0f, y1 - y0));
         }
 
-        /// <summary>The visible part of the innermost group, in its coordinates.</summary>
+        /// <summary>The visible part of the innermost group, in its coordinates; all zero when
+        /// nothing of it is visible (measured: tests/projects/imguitreeview clip/*).</summary>
         internal static Rect visibleRect
         {
             get
             {
                 var top = Top;
+                if (top.Visible.width <= 0f || top.Visible.height <= 0f) return Rect.zero;
                 return new Rect(top.Visible.position - top.Offset, top.Visible.size);
             }
         }
 
-        internal static Rect topmostRect => visibleRect;
+        /// <summary>The visible part of the innermost group, absolute (measured:
+        /// tests/projects/imguitreeview clip/*).</summary>
+        internal static Rect topmostRect => Top.Visible;
 
         /// <summary>The innermost group's rect in absolute coordinates.</summary>
         internal static Rect GetTopRect() => Top.Rect;
 
-        /// <summary>The visible part of the innermost group, absolute.</summary>
-        internal static Rect AbsoluteVisible => Top.Visible;
+        /// <summary>The part of the innermost group that draws: its visible part within the
+        /// screen (or the container) the pass began over.</summary>
+        internal static Rect AbsoluteDrawn => Intersect(Top.Visible, s_DrawBounds);
 
         internal static Vector2 Offset => Top.Offset;
 
@@ -306,7 +322,7 @@ namespace Unbound.Runtime
         /// <summary>The clip rect on the screen (top-left pixels).</summary>
         static Rect CurrentClip()
         {
-            var clip = GUIClip.ToScreen(GUIClip.AbsoluteVisible);
+            var clip = GUIClip.ToScreen(GUIClip.AbsoluteDrawn);
             foreach (var extra in s_ExtraClips)
             {
                 float x0 = Math.Max(clip.xMin, extra.xMin), y0 = Math.Max(clip.yMin, extra.yMin);

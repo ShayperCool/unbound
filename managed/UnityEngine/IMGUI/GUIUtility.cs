@@ -495,6 +495,9 @@ namespace UnityEngine
             s_CurrentIdList = IdListFor(instanceID);
             s_CurrentIdList.BeginOnGUI();
             GUIClip.Begin(new Rect(0, 0, Screen.width, Screen.height));
+            // The Game view's GUI starts without an overridden view width (its host view resets
+            // the editor GUI state): the root clip is 40000 wide, so the context width is the view's.
+            UnityEditor.EditorGUIUtility.s_CurrentViewWidth = 0f;
             if (useGUILayout != 0) GUILayoutUtility.Begin(instanceID);
         }
 

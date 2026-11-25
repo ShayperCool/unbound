@@ -297,6 +297,8 @@ namespace UnityEditor.UIElements
             inspector.onGUIHandler = () =>
             {
                 if (targetEditor.target == null || !targetEditor.serializedObject.isValid) return;
+                // As Unity's: the view width the inspector sets is undone after its GUI.
+                float viewWidth = EditorGUIUtility.s_CurrentViewWidth;
                 bool hierarchyMode = EditorGUIUtility.hierarchyMode;
                 EditorGUIUtility.hierarchyMode = true;
                 bool wideMode = SetWideModeForWidth(inspector);
@@ -318,6 +320,7 @@ namespace UnityEditor.UIElements
                 {
                     EditorGUIUtility.wideMode = wideMode;
                     EditorGUIUtility.hierarchyMode = hierarchyMode;
+                    EditorGUIUtility.s_CurrentViewWidth = viewWidth;
                 }
             };
             inspector.style.overflow = Overflow.Visible;

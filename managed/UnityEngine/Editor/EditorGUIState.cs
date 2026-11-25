@@ -1292,7 +1292,9 @@ namespace UnityEditor
             internal set => s_CurrentViewWidth = value;
         }
 
-        static float s_CurrentViewWidth;
+        // Unity's override of the view width (InspectorElement and PropertyField set it); a view's
+        // GUI starts without one (Unity's HostView.OldOnGUI resets the GUI state).
+        internal static float s_CurrentViewWidth;
 
         public static GUIContent IconContent(string name) => IconContent(name, (string)null);
 
