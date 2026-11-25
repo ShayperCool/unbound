@@ -1199,9 +1199,11 @@ namespace Unbound.Runtime
                 {
                     file.Guid = guid;
                     file.Path = info.Path;
+                    bool native = info.Kind == "yaml" || info.Kind == "prefab";
                     foreach (var pair in file.Objects)
                     {
                         RegisterObject(guid, pair.Key, pair.Value);
+                        pair.Value.m_InNativeFile = native;
                         // A DefaultAsset is named by its importer (a managed plug-in's has no name).
                         if (string.IsNullOrEmpty(pair.Value.m_Name) && pair.Value == file.MainObject && !(pair.Value is UnityEditor.DefaultAsset))
                             pair.Value.m_Name = System.IO.Path.GetFileNameWithoutExtension(info.Path);

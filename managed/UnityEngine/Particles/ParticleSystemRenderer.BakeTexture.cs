@@ -155,7 +155,7 @@ namespace UnityEngine
             var raw = texture.GetRawTextureData<byte>();
             if (raw.Length < bytes)
             {
-                texture.Reinitialize(width, height, texture.format, false);
+                texture.ReinitializeForEngine(width, height, texture.format, false);
                 raw = texture.GetRawTextureData<byte>();
             }
             int size = raw.Length;

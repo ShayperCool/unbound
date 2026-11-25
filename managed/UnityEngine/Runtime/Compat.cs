@@ -52,6 +52,16 @@ namespace Unbound.Runtime
         // native-saves). Elsewhere only assets made this session are dirtied and written.
         internal static bool ReadAssetSavesMeasured => Family == ReleaseFamily.Unity6000_0;
 
+        // A rename of an asset, a texture's sampler settings and Texture2D.Reinitialize are edits
+        // that dirty it, measured on 6000.0.71f1 (tests/projects/tmpatlas op.*). Elsewhere they
+        // leave it clean, as before.
+        internal static bool AssetEditsMeasured => Family == ReleaseFamily.Unity6000_0;
+
+        // Texture2D.Reinitialize with a TextureFormat makes the texture linear (the format's linear
+        // variant), measured on 6000.0.71f1 (tests/projects/tmpatlas op.Reinit*.isDataSRGB).
+        // Elsewhere the texture keeps its colour space.
+        internal static bool ReinitializeFormatLinearMeasured => Family == ReleaseFamily.Unity6000_0;
+
         /// <summary>The build facts InternalEditorUtility reports (GetUnityBuildBranch,
         /// GetUnityRevision, GetUnityVersionDate, GetUnityDisplayVersionVerbose, GetUnityProductName,
         /// GetUnityCopyright), measured on 6000.0.71f1 and answered by every release of its family

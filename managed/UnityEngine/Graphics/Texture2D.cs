@@ -425,8 +425,7 @@ namespace UnityEngine
             // texture.dirtySetPixel, texture.dirty).
             // The engine's own applies (font atlases, terrain alphamaps, imports) mark nothing; a script's,
             // LoadImage's among them, mark the asset.
-            if (IsPersistentAsset && !m_QuietApply && (Compat.ReadAssetSavesMeasured || UnityEditor.AssetDatabase.CreatedThisSession(this)))
-                UnityEditor.EditorUtility.SetDirty(this);
+            if (!m_QuietApply) MarkAssetEdited();
             if (makeNoLongerReadable)
             {
                 RetireStore();
@@ -464,9 +463,12 @@ namespace UnityEngine
         {
             MainThreadCheck.Check("Reinitialize");
             if (RejectUnreadableResize) throw new UnityException(UnreadableTextureMessage);
-            return ReinitializeImage(width, height, format, MipmapCount() > 1, m_Linear);
+            return Reinitialized(ReinitializeImage(width, height, format, MipmapCount() > 1, m_Linear));
         }
 
+        /// <summary>The format's linear variant (matches the Unity 6000.0.71f1 Editor,
+        /// tests/projects/tmpatlas op.ReinitRGB24 and the others: an sRGB texture reinitialized as
+        /// RGB24 or Alpha8 is linear); elsewhere the texture keeps its colour space.</summary>
         public bool Reinitialize(int width, int height, TextureFormat format, bool hasMipMap)
         {
             MainThreadCheck.Check("Reinitialize");
@@ -475,14 +477,37 @@ namespace UnityEngine
                 Log.Engine(LogType.Error, "Texture is not readable.", this);
                 return false;
             }
-            return ReinitializeImage(width, height, format, hasMipMap, m_Linear);
+            return Reinitialized(ReinitializeImage(width, height, format, hasMipMap, Compat.ReinitializeFormatLinearMeasured || m_Linear));
         }
 
         public bool Reinitialize(int width, int height, GraphicsFormat format, bool hasMipMap)
         {
             MainThreadCheck.Check("Reinitialize");
             if (RejectUnreadableResize) throw new UnityException(UnreadableTextureMessage);
-            return ReinitializeImage(width, height, TextureFormatOf(format), hasMipMap, !GraphicsFormatUtility.IsSRGBFormat(format));
+            return Reinitialized(ReinitializeImage(width, height, TextureFormatOf(format), hasMipMap, !GraphicsFormatUtility.IsSRGBFormat(format)));
+        }
+
+        /// <summary>A script's Reinitialize is an edit that dirties a texture asset, also to its own
+        /// size (matches the Unity 6000.0.71f1 Editor, tests/projects/tmpatlas op.Reinit*: TextMeshPro's
+        /// dynamic atlas as its first character is added, font.Dynamic.after).</summary>
+        bool Reinitialized(bool done)
+        {
+            if (done && Compat.AssetEditsMeasured) MarkAssetEdited();
+            return done;
+        }
+
+        /// <summary>The engine's own reinitialization of a texture it was given
+        /// (ParticleSystemRenderer.BakeTexture): the texture keeps its colour space and is not dirtied
+        /// (unmeasured for the engine's own calls).</summary>
+        internal bool ReinitializeForEngine(int width, int height, TextureFormat format, bool hasMipMap)
+        {
+            MainThreadCheck.Check("Reinitialize");
+            if (RejectUnreadableResize)
+            {
+                Log.Engine(LogType.Error, "Texture is not readable.", this);
+                return false;
+            }
+            return ReinitializeImage(width, height, format, hasMipMap, m_Linear);
         }
 
         /// <summary>Replaces the engine's image storage even if its previous pixels are unreadable.</summary>

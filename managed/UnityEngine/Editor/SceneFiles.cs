@@ -1479,8 +1479,9 @@ namespace Unbound.Runtime
 
         /// <summary>The keys of a native asset read from its file that SaveAssets writes from the
         /// object, the rest of its document kept as the file has it: a mesh's geometry, a texture's
-        /// size, format and data, a physics material's values (matches the Unity 6000.0.71f1 Editor,
-        /// tests/projects/scenesave native-saves; the keys are those its API changes and Unbound
+        /// name, size, format, sampler settings, colour space and data, a physics material's values
+        /// (matches the Unity 6000.0.71f1 Editor, tests/projects/scenesave native-saves,
+        /// tests/projects/tmpatlas exit.Assets/Tex/*; the keys are those its API changes and Unbound
         /// reads back whole). Null for other types.</summary>
         static string[] ReadNativeKeys(Object o) => o switch
         {
@@ -1498,7 +1499,8 @@ namespace Unbound.Runtime
 
         static readonly string[] s_Texture2DKeys =
         {
-            "m_Width", "m_Height", "m_CompleteImageSize", "m_TextureFormat", "m_MipCount", "image data", "_typelessdata",
+            "m_Name", "m_Width", "m_Height", "m_CompleteImageSize", "m_TextureFormat", "m_MipCount", "m_TextureSettings",
+            "m_ColorSpace", "image data", "_typelessdata",
         };
 
         static readonly string[] s_PhysicsMaterialKeys =

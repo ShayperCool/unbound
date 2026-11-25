@@ -51,13 +51,25 @@ namespace UnityEngine
             set => throw new NotImplementedException("Setting height is not supported for this texture type.");
         }
 
-        public FilterMode filterMode { get => m_FilterMode; set { m_FilterMode = value; OnSamplerChanged(); } }
-        public TextureWrapMode wrapMode { get => m_WrapModeU; set { m_WrapModeU = m_WrapModeV = m_WrapModeW = value; OnSamplerChanged(); } }
-        public TextureWrapMode wrapModeU { get => m_WrapModeU; set { m_WrapModeU = value; OnSamplerChanged(); } }
-        public TextureWrapMode wrapModeV { get => m_WrapModeV; set { m_WrapModeV = value; OnSamplerChanged(); } }
-        public TextureWrapMode wrapModeW { get => m_WrapModeW; set { m_WrapModeW = value; OnSamplerChanged(); } }
-        public int anisoLevel { get => m_AnisoLevel; set { m_AnisoLevel = value; OnSamplerChanged(); } }
-        public float mipMapBias { get => m_MipMapBias; set { m_MipMapBias = value; EmitSamplerMetadata(); } }
+        public FilterMode filterMode { get => m_FilterMode; set { SamplerEdited(m_FilterMode != value); m_FilterMode = value; OnSamplerChanged(); } }
+        public TextureWrapMode wrapMode
+        {
+            get => m_WrapModeU;
+            set { SamplerEdited(m_WrapModeU != value || m_WrapModeV != value || m_WrapModeW != value); m_WrapModeU = m_WrapModeV = m_WrapModeW = value; OnSamplerChanged(); }
+        }
+        public TextureWrapMode wrapModeU { get => m_WrapModeU; set { SamplerEdited(m_WrapModeU != value); m_WrapModeU = value; OnSamplerChanged(); } }
+        public TextureWrapMode wrapModeV { get => m_WrapModeV; set { SamplerEdited(m_WrapModeV != value); m_WrapModeV = value; OnSamplerChanged(); } }
+        public TextureWrapMode wrapModeW { get => m_WrapModeW; set { SamplerEdited(m_WrapModeW != value); m_WrapModeW = value; OnSamplerChanged(); } }
+        public int anisoLevel { get => m_AnisoLevel; set { SamplerEdited(m_AnisoLevel != value); m_AnisoLevel = value; OnSamplerChanged(); } }
+        public float mipMapBias { get => m_MipMapBias; set { SamplerEdited(m_MipMapBias != value); m_MipMapBias = value; EmitSamplerMetadata(); } }
+
+        /// <summary>A sampler setting changed by script dirties a texture asset (matches the Unity
+        /// 6000.0.71f1 Editor, tests/projects/tmpatlas op.Filter, op.Wrap, op.Aniso, op.MipBias; a
+        /// setting set to the value it has is unmeasured: left clean).</summary>
+        void SamplerEdited(bool changed)
+        {
+            if (changed && Compat.AssetEditsMeasured && IsNativeAsset) MarkAssetEdited();
+        }
         public Vector2 texelSize => new Vector2(m_Width > 0 ? 1f / m_Width : 0f, m_Height > 0 ? 1f / m_Height : 0f);
         [Unbound.EditorFaithful("the base answer, as Unity's: render and webcam textures are not CPU-readable; the readable texture classes override it")]
         public virtual bool isReadable => false;

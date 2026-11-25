@@ -91,7 +91,11 @@ namespace UnityEngine
                 ThrowIfUncreated();
                 MainThreadCheck.Check("SetName");
                 ThrowIfDestroyed();
+                bool renamed = Compat.AssetEditsMeasured && IsNativeAsset && !string.Equals(GetName(), value ?? "", StringComparison.Ordinal);
                 SetName(value ?? "");
+                // A renamed asset is dirty (matches the Unity 6000.0.71f1 Editor, tests/projects/tmpatlas
+                // op.Rename, op.RenamedMaterial; a rename to the same name is unmeasured: left clean).
+                if (renamed) MarkAssetEdited();
             }
         }
 
@@ -325,6 +329,24 @@ namespace UnityEngine
 
         /// <summary>Loaded from an asset file (not a scene or runtime object).</summary>
         internal bool IsPersistentAsset;
+
+        /// <summary>An edit of the object, when it is an asset, is an Editor change that
+        /// AssetDatabase.SaveAssets and the Editor's exit save (tests/projects/scenesave: assets
+        /// read from their files and made this session; an imported asset stays dirty, unwritten).</summary>
+        /// <summary>Read from a native asset file (.asset, .mat, a prefab: text or binary serialized
+        /// objects), not imported from a source file.</summary>
+        internal bool m_InNativeFile;
+
+        /// <summary>An asset of a native asset file, read or made this session: what a rename or a
+        /// texture's sampler setting dirties (measured on such files: tests/projects/tmpatlas; an
+        /// imported asset's, which engine code also sets as it imports, is unmeasured: left clean).</summary>
+        internal bool IsNativeAsset => IsPersistentAsset && (m_InNativeFile || UnityEditor.AssetDatabase.CreatedThisSession(this));
+
+        internal void MarkAssetEdited()
+        {
+            if (IsPersistentAsset && (Compat.ReadAssetSavesMeasured || UnityEditor.AssetDatabase.CreatedThisSession(this)))
+                UnityEditor.EditorUtility.SetDirty(this);
+        }
 
         internal static bool IsPersistent(Object obj) => obj != null && obj.IsPersistentAsset;
 
