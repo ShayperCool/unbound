@@ -100,7 +100,7 @@ namespace UnityEngine.Tests
                 EditorBuildSettings.scenes[0].path = "Assets/Changed.unity";
                 Assert.Equal(expected, EditorBuildSettings.scenes.Select(Describe));
                 Assert.NotSame(EditorBuildSettings.scenes[0], EditorBuildSettings.scenes[0]);
-                // Play mode's build indices: the enabled scenes.
+                // The build indices after a set: the enabled scenes (Play mode unmeasured).
                 Assert.Equal(new[] { "Assets/Scenes/Base.unity", "Assets/Scenes/Missing.unity", "Assets/Scenes/Base.unity", "Assets/Scenes/Second.unity" },
                     ProjectInfo.BuildScenes.Select(s => s.Path));
                 // Written by SaveAssets, not by the set, as the Editor's snapshot.
@@ -127,10 +127,16 @@ namespace UnityEngine.Tests
                 EditorBuildSettings.globalScenes = new[] { new EditorBuildSettingsScene("Assets/Scenes/Second.unity", true) };
                 Assert.Equal(new[] { "1|Assets/Scenes/Second.unity|" + SecondGuid }, EditorBuildSettings.scenes.Select(Describe));
                 Assert.Equal(3, changed);
-                // A list read with a stale path, set again as it is: no change.
+                // A list read with a stale path, set again as it is: the corrected path is taken,
+                // with no event (the same list as resolved); the build index follows it.
                 EditorBuildSettings.Configure(new[] { new EditorBuildSettingsScene { path = "Assets/Old/Moved.unity", guid = new GUID(BaseGuid), enabled = true } },
                     new System.Collections.Generic.Dictionary<string, (string, long)>());
                 EditorBuildSettings.scenes = EditorBuildSettings.scenes;
+                Assert.Equal(3, changed);
+                Assert.Equal(new[] { "1|Assets/Scenes/Base.unity|" + BaseGuid }, EditorBuildSettings.scenes.Select(Describe));
+                Assert.Equal(new[] { "Assets/Scenes/Base.unity" }, ProjectInfo.BuildScenes.Select(b => b.Path));
+                // The same once more: nothing to take.
+                EditorBuildSettings.scenes = new[] { new EditorBuildSettingsScene("Assets/Scenes/Base.unity", true) };
                 Assert.Equal(3, changed);
             }
             finally

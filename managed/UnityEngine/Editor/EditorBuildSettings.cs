@@ -113,7 +113,7 @@ namespace UnityEditor
         static EditorBuildSettingsScene Resolved(EditorBuildSettingsScene s)
         {
             var scene = Copy(s);
-            if (!scene.guid.Empty() && AssetDatabase.GUIDToAssetPath(scene.guid) is string known && known.Length > 0) scene.m_PathField = known;
+            if (!scene.guid.Empty() && AssetDatabase.GUIDToAssetPath(scene.guid) is string known && known.Length > 0) scene.m_Path = known;
             return scene;
         }
 
@@ -126,15 +126,13 @@ namespace UnityEditor
                 if (scene == null) throw new NullReferenceException("(null)");
             var next = new EditorBuildSettingsScene[value.Length];
             for (int i = 0; i < value.Length; i++) next[i] = Resolved(value[i]);
-            // A change of the list as resolved: a list read from the file with a stale path set again
-            // as it is changes nothing.
-            bool changed = next.Length != s_Scenes.Length;
-            for (int i = 0; !changed && i < next.Length; i++)
-            {
-                var old = Resolved(s_Scenes[i]);
-                changed = next[i].enabled != old.enabled || next[i].path != old.path || !next[i].guid.Equals(old.guid);
-            }
-            if (!changed) return false;
+            // The list is taken when it differs from the one kept (a list read with a stale path takes
+            // the corrected one); sceneListChanged only when it differs from the kept one as
+            // resolved (whether the Editor resolves a path as it reads the file is unmeasured).
+            if (Same(next, s_Scenes)) return false;
+            var announced = new EditorBuildSettingsScene[s_Scenes.Length];
+            for (int i = 0; i < announced.Length; i++) announced[i] = Resolved(s_Scenes[i]);
+            bool changed = !Same(next, announced);
             s_Scenes = next;
             // The enabled scenes, as the host lists them at the start (that Play mode loads them by
             // these indices is not measured).
@@ -155,6 +153,14 @@ namespace UnityEditor
                 list.Flow = list.Items.Count == 0;
                 body.Set("m_Scenes", list);
             });
+            return changed;
+        }
+
+        static bool Same(EditorBuildSettingsScene[] a, EditorBuildSettingsScene[] b)
+        {
+            if (a.Length != b.Length) return false;
+            for (int i = 0; i < a.Length; i++)
+                if (a[i].enabled != b[i].enabled || a[i].path != b[i].path || !a[i].guid.Equals(b[i].guid)) return false;
             return true;
         }
 
@@ -251,10 +257,8 @@ namespace UnityEditor
     /// (null throws), the GUID of the asset at that path, the path of the asset of a GUID.</summary>
     public partial class EditorBuildSettingsScene : IComparable
     {
-        string m_Path;
-
-        /// <summary>The path as kept, set without Unity's setter (which refuses null).</summary>
-        internal string m_PathField { get => m_Path; set => m_Path = value; }
+        /// <summary>The path as kept (set here without Unity's setter, which refuses null).</summary>
+        internal string m_Path;
 
         internal static EditorBuildSettingsScene Copy(EditorBuildSettingsScene s) =>
             new EditorBuildSettingsScene { enabled = s.enabled, m_Path = s.m_Path, guid = s.guid };
