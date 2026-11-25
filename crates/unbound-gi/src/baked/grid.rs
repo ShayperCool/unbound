@@ -89,6 +89,9 @@ fn order(lights: &[Light]) -> Vec<usize> {
         Kind::Spot => 0,
         Kind::Directional => 1,
         Kind::Point => 2,
+        // (Area lights' place among the others: not measured.)
+        Kind::Rectangle => 3,
+        Kind::Disc => 4,
     };
     let cone = |l: &Light| match l.kind {
         Kind::Spot => (l.cone_angle * 0.5).cos(),
@@ -117,6 +120,8 @@ fn power(light: &Light) -> f32 {
         Kind::Spot => luminance * ((light.cone_angle * 0.5).cos().acos() * 4.0),
         Kind::Point => luminance * (4.0 * std::f32::consts::PI),
         Kind::Directional => 0.0,
+        // (Not measured: an area light picked among others.)
+        Kind::Rectangle | Kind::Disc => luminance * (2.0 * std::f32::consts::PI),
     }
 }
 
@@ -354,6 +359,8 @@ mod tests {
             cone_angle: 0.0,
             casts_shadows: true,
             shadow_size: 0.0,
+            up: [0.0, 1.0, 0.0],
+            size: [0.0; 2],
         }
     }
 

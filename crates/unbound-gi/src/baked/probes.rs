@@ -132,6 +132,8 @@ mod tests {
             cone_angle: 0.0,
             casts_shadows: true,
             shadow_size: 0.0,
+            up: [0.0, 1.0, 0.0],
+            size: [0.0; 2],
         }
     }
 

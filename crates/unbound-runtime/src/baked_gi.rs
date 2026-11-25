@@ -369,6 +369,9 @@ pub(crate) struct LightData {
     /// shadows are soft, else 0.
     #[serde(default)]
     pub(crate) shadow_size: f32,
+    /// An area light's width and height (a disc's radius first).
+    #[serde(default)]
+    pub(crate) size: [f32; 2],
 }
 
 impl LightData {
@@ -379,6 +382,8 @@ impl LightData {
                 0 => Kind::Directional,
                 1 => Kind::Point,
                 2 => Kind::Spot,
+                3 => Kind::Rectangle,
+                4 => Kind::Disc,
                 other => anyhow::bail!("'{}': a light of kind {other}", self.name),
             },
             mode: match self.mode {
@@ -405,6 +410,13 @@ impl LightData {
             cone_angle: self.spot_angle.to_radians(),
             casts_shadows: self.casts_shadows,
             shadow_size: self.shadow_size,
+            // And its up axis.
+            up: [
+                2.0 * (x * y - w * z),
+                1.0 - 2.0 * (x * x + z * z),
+                2.0 * (y * z + w * x),
+            ],
+            size: self.size,
         })
     }
 }
@@ -1568,7 +1580,7 @@ fn bake(request: BakeRequest, buffers: Option<&Path>) -> Result<Json> {
                     "range": if light.kind == Kind::Directional { 0.0 } else { light.range },
                     "coneAngle": match light.kind {
                         Kind::Directional => 1.0,
-                        Kind::Point => 0.0,
+                        Kind::Point | Kind::Rectangle | Kind::Disc => 0.0,
                         Kind::Spot => light.cone_angle,
                     },
                     "castsShadows": light.casts_shadows,

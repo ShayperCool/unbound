@@ -295,15 +295,16 @@ impl Path<'_> {
             // light grid, picked where they are more than the bounce tests.
             let mut lit = |pick: Pick| {
                 let light = &world.lights[pick.light];
+                let u = [numbers[0], numbers[1]];
                 let Some(arriving) =
-                    light.arriving(self.tables, light.indirect_color, origin, smooth)
+                    light.sampled(self.tables, light.indirect_color, origin, smooth, u)
                 else {
                     return;
                 };
                 // (A light with soft shadows aims its shadow ray at a point of its disk, by the
                 // bounce's first two numbers.)
-                let direction = if light.shadow_size > 0.0 {
-                    light.jittered(&arriving, origin, [numbers[0], numbers[1]])
+                let direction = if light.shadow_size > 0.0 && !light.kind.is_area() {
+                    light.jittered(&arriving, origin, u)
                 } else {
                     arriving.direction
                 };

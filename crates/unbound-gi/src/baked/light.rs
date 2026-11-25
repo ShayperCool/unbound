@@ -8,6 +8,17 @@ pub enum Kind {
     Directional,
     Point,
     Spot,
+    /// A rectangle area light (baked only): `size` its width and height.
+    Rectangle,
+    /// A disc area light (baked only): `size[0]` its radius.
+    Disc,
+}
+
+impl Kind {
+    /// An area light: its light is sampled over its surface.
+    pub fn is_area(self) -> bool {
+        matches!(self, Kind::Rectangle | Kind::Disc)
+    }
 }
 
 /// How a light takes part in the bake (Light Mode).
@@ -38,6 +49,10 @@ pub struct Light {
     /// Where its baked shadows are soft: its Baked Shadow Radius (a point or spot light) or
     /// Angle in radians (a directional light); 0 where they are hard.
     pub shadow_size: f32,
+    /// Its transform's up axis, of unit length (an area light's height runs along it).
+    pub up: [f32; 3],
+    /// An area light's width and height (a disc's radius first).
+    pub size: [f32; 2],
 }
 
 /// The samples of the distance falloff table.
@@ -179,6 +194,93 @@ impl Light {
         v.map(|x| x / length)
     }
 }
+/// The Editor's pi and smallest distance of a light sample.
+const PI: f32 = 3.141_592_7;
+const EPSILON: f32 = 1e-19;
+
+fn unit(v: [f32; 3]) -> [f32; 3] {
+    let l = dot(v, v).sqrt();
+    v.map(|x| x / l)
+}
+
+fn cross(a: [f32; 3], b: [f32; 3]) -> [f32; 3] {
+    [
+        a[1] * b[2] - a[2] * b[1],
+        a[2] * b[0] - a[0] * b[2],
+        a[0] * b[1] - a[1] * b[0],
+    ]
+}
+
+fn unit_cross(a: [f32; 3], b: [f32; 3]) -> [f32; 3] {
+    cross(a, b)
+}
+
+/// A point of a rectangle (its corner `s` and its sides `ex`, `ey`) sampled uniformly over the
+/// solid angle it covers seen from `o`, for a point `uv` of the unit square, and that solid
+/// angle (Urena, Fajardo and King's spherical rectangle sampling).
+fn spherical_rectangle(
+    s: [f32; 3],
+    ex: [f32; 3],
+    ey: [f32; 3],
+    o: [f32; 3],
+    uv: [f32; 2],
+) -> ([f32; 3], f32) {
+    let (u, v) = (uv[0], uv[1]);
+    let exl = dot(ex, ex).sqrt();
+    let eyl = dot(ey, ey).sqrt();
+    let x = ex.map(|c| c / exl);
+    let y = ey.map(|c| c / eyl);
+    let mut z = cross(x, y);
+    let d: [f32; 3] = std::array::from_fn(|k| s[k] - o[k]);
+    let mut z0 = dot(d, z);
+    if z0 > 0.0 {
+        z = z.map(|c| -c);
+        z0 = -z0;
+    }
+    let z0sq = z0 * z0;
+    let x0 = dot(d, x);
+    let y0 = dot(d, y);
+    let x1 = x0 + exl;
+    let y1 = y0 + eyl;
+    let y0sq = y0 * y0;
+    let y1sq = y1 * y1;
+    let v00 = [x0, y0, z0];
+    let v01 = [x0, y1, z0];
+    let v10 = [x1, y0, z0];
+    let v11 = [x1, y1, z0];
+    let n0 = unit(cross(v00, v10));
+    let n1 = unit(cross(v10, v11));
+    let n2 = unit(cross(v11, v01));
+    let n3 = unit(cross(v01, v00));
+    let g0 = (-dot(n0, n1)).acos();
+    let g1 = (-dot(n1, n2)).acos();
+    let g2 = (-dot(n2, n3)).acos();
+    let g3 = (-dot(n3, n0)).acos();
+    let b0 = n0[2];
+    let b1 = n2[2];
+    let b0sq = b0 * b0;
+    let k = 2.0 * PI - g2 - g3;
+    let solid_angle = g0 + g1 - k;
+    let au = u * solid_angle + k;
+    let fu = (au.cos() * b0 - b1) / au.sin();
+    let cu = (1.0 / (fu * fu + b0sq).sqrt() * if fu > 0.0 { 1.0 } else { -1.0 }).clamp(-1.0, 1.0);
+    let xu = (-(cu * z0) / (1.0 - cu * cu).sqrt()).clamp(x0, x1);
+    let d_ = (xu * xu + z0sq).sqrt();
+    let h0 = y0 / (d_ * d_ + y0sq).sqrt();
+    let h1 = y1 / (d_ * d_ + y1sq).sqrt();
+    let hv = h0 + v * (h1 - h0);
+    let hv2 = hv * hv;
+    let yv = if hv2 < 1.0 - 0.0001 {
+        (hv * d_) / (1.0 - hv2).sqrt()
+    } else {
+        y1
+    };
+    (
+        std::array::from_fn(|c| o[c] + xu * x[c] + yv * y[c] + z0 * z[c]),
+        solid_angle,
+    )
+}
+
 /// A point this near a light takes its full colour whatever it faces.
 const AT_THE_LIGHT: f32 = 1e-19;
 
@@ -211,6 +313,99 @@ impl Light {
         self.arriving_facing(tables, color, position, None)
     }
 
+    /// What the light sends to a point of a surface for a sample of `rnd` (a point of the
+    /// unit square): an area light's from the point of its surface the sample picks
+    /// ([`Light::area_arriving`]), any other light's as [`Light::arriving`].
+    pub fn sampled(
+        &self,
+        tables: &Tables,
+        color: [f32; 3],
+        position: [f32; 3],
+        normal: [f32; 3],
+        rnd: [f32; 2],
+    ) -> Option<Arriving> {
+        if self.kind.is_area() {
+            self.area_arriving(color, position, normal, rnd)
+        } else {
+            self.arriving(tables, color, position, normal)
+        }
+    }
+
+    /// What an area light sends to a point of a surface from the point of its own surface a
+    /// sample picks: a rectangle's by its solid angle as seen from the point (sampled
+    /// uniformly over that solid angle: [`spherical_rectangle`]) times the facing over pi; a
+    /// disc's from a point sampled uniformly over its area, by the facing, the disc's own
+    /// facing, its area over pi and the squared distance. Nothing behind the light, beyond its
+    /// range, or where the sample fails. (The light emits along its forward axis; its height
+    /// runs along its up axis.)
+    pub fn area_arriving(
+        &self,
+        color: [f32; 3],
+        position: [f32; 3],
+        normal: [f32; 3],
+        rnd: [f32; 2],
+    ) -> Option<Arriving> {
+        let to_point: [f32; 3] = std::array::from_fn(|k| position[k] - self.position[k]);
+        // (The light faces where its forward axis points.)
+        if dot(self.forward, to_point) < 0.0 {
+            return None;
+        }
+        if dot(to_point, to_point) > self.range * self.range {
+            return None;
+        }
+        let tangent = unit(self.up);
+        let (direction, distance, factor) = if self.kind == Kind::Rectangle {
+            let back = self.forward.map(|v| -v);
+            let bitangent = unit_cross(back, tangent);
+            let [width, height] = self.size;
+            let corner: [f32; 3] = std::array::from_fn(|k| {
+                self.position[k] - 0.5 * width * bitangent[k] - 0.5 * height * tangent[k]
+            });
+            let (point, solid_angle) = spherical_rectangle(
+                corner,
+                tangent.map(|v| v * height),
+                bitangent.map(|v| v * width),
+                position,
+                rnd,
+            );
+            let v: [f32; 3] = std::array::from_fn(|k| point[k] - position[k]);
+            let distance = dot(v, v).sqrt();
+            if solid_angle.is_nan() || !(solid_angle > 0.0) || !(distance >= EPSILON) {
+                return None;
+            }
+            let direction = v.map(|x| x / distance);
+            let facing = dot(direction, normal).max(0.0);
+            (direction, distance, solid_angle * facing / PI)
+        } else {
+            let radius = self.size[0];
+            let across = unit_cross(self.forward, tangent);
+            let r = rnd[0].sqrt();
+            let theta = 2.0 * PI * rnd[1];
+            let local = [theta.cos() * r * radius, theta.sin() * r * radius];
+            let point: [f32; 3] = std::array::from_fn(|k| {
+                self.position[k] + local[0] * tangent[k] + local[1] * across[k]
+            });
+            let v: [f32; 3] = std::array::from_fn(|k| point[k] - position[k]);
+            let distance = dot(v, v).sqrt();
+            if !(distance >= EPSILON) {
+                return None;
+            }
+            let direction = v.map(|x| x / distance);
+            let facing = dot(direction, normal).max(0.0);
+            let towards = -dot(self.forward, direction);
+            (
+                direction,
+                distance,
+                facing * radius * radius * towards / (distance * distance),
+            )
+        };
+        Some(Arriving {
+            color: color.map(|c| c * factor),
+            direction,
+            distance,
+        })
+    }
+
     fn arriving_facing(
         &self,
         tables: &Tables,
@@ -218,6 +413,10 @@ impl Light {
         position: [f32; 3],
         normal: Option<[f32; 3]>,
     ) -> Option<Arriving> {
+        if self.kind.is_area() {
+            // (An area light is sampled: [`Light::sampled`].)
+            return None;
+        }
         if self.kind == Kind::Directional {
             let direction = self.forward.map(|v| -v);
             let facing = normal.map_or(1.0, |n| dot(n, direction));

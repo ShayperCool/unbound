@@ -154,6 +154,8 @@ fn main() {
                 cone_angle: r.f32(),
                 casts_shadows: r.u32() != 0,
                 shadow_size: 0.0,
+                up: [0.0, 1.0, 0.0],
+                size: [0.0; 2],
             }
         })
         .collect();

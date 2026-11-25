@@ -299,6 +299,8 @@ mod tests {
             cone_angle: 30f32.to_radians(),
             casts_shadows: true,
             shadow_size: 0.0,
+            up: [0.0, 1.0, 0.0],
+            size: [0.0; 2],
         }
     }
 

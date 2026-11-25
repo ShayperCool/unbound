@@ -620,7 +620,15 @@ namespace UnityEngine
             }
             foreach (var (fileId, light) in active)
             {
-                int kind = light.type == LightType.Directional ? 0 : light.type == LightType.Point ? 1 : light.type == LightType.Spot ? 2 : -1;
+                int kind = light.type switch
+                {
+                    LightType.Directional => 0,
+                    LightType.Point => 1,
+                    LightType.Spot => 2,
+                    LightType.Rectangle => 3,
+                    LightType.Disc => 4,
+                    _ => -1,
+                };
                 if (kind < 0)
                 {
                     warn("light-type:" + path + fileId, $"{path}: '{light.name}' is a {light.type} light, which Unbound's bake (Lightmapping.Bake) does not bake yet.");
@@ -666,10 +674,13 @@ namespace UnityEngine
                     indirectColor = new[] { indirect.r, indirect.g, indirect.b },
                     position = new[] { position.x, position.y, position.z },
                     rotation = new[] { rotation.x, rotation.y, rotation.z, rotation.w },
-                    range = light.range,
+                    // (An area light's dilated range, as its bake input has it: tests/projects/bakedbuffers
+                    // SoftRect, SoftDisc.)
+                    range = light.dilatedRange,
                     spotAngle = light.spotAngle,
                     castsShadows = light.shadows != LightShadows.None,
-                    shadowSize = light.shadows == LightShadows.Soft ? shadowSize : 0f,
+                    shadowSize = kind < 3 && light.shadows == LightShadows.Soft ? shadowSize : 0f,
+                    size = new[] { light.areaSize.x, light.areaSize.y },
                 };
                 lights.Add(new ExtractedLight(json, kind, mode, position, t.forward, light.range, light.spotAngle));
             }
@@ -685,6 +696,18 @@ namespace UnityEngine
         /// with non-LUT angular falloff, color temperature under linear intensity, mixed lights under
         /// a render pipeline asset, cookies (ignored), and soft baked shadows (a Baked Shadow Angle
         /// or Radius: baked hard).</summary>
+        /// <summary>Whether a scene's light probes would take the light of a light Unbound's
+        /// probes do not sample yet: an area light, or one with soft baked shadows.</summary>
+        internal static bool ProbesMissLights(LoadedFile file)
+        {
+            foreach (var obj in file.Objects.Values)
+                if (obj is Light light && light != null && light.enabled && light.gameObject.activeInHierarchy && light.lightmapBakeType != LightmapBakeType.Realtime
+                    && (light.type == LightType.Rectangle || light.type == LightType.Disc
+                        || (light.shadows == LightShadows.Soft && (light.type == LightType.Directional ? light.shadowAngle : light.shadowRadius) > 0f)))
+                    return true;
+            return false;
+        }
+
         internal static List<object> Lights(LoadedFile file, string path)
         {
             var active = new List<(long FileId, Light Light)>();
@@ -848,6 +871,8 @@ namespace UnityEngine
             {
                 var lights = Lights(file, path);
                 var probes = Probes(file);
+                if (probes.Count > 0 && ProbesMissLights(file))
+                    Approximated("probes-soft:" + path, $"{path}: its light probes would take the light of area lights or lights with soft baked shadows, which Unbound's bake (Lightmapping.Bake) does not sample for light probes yet.");
                 string Request(bool layoutOnly, object indirect) => JsonSerializer.Serialize(new
                 {
                     maxSize = settings.lightmapMaxSize,

@@ -130,7 +130,10 @@ pub fn direct(
         "a shadowmask channel per light, or none"
     );
     let tables = Tables::new();
-    let soft = |l: &Light| l.casts_shadows && l.shadow_size > 0.0 && samples_of.is_some();
+    // (Lights sampled sample by sample: those with soft shadows, and area lights.)
+    let soft = |l: &Light| {
+        samples_of.is_some() && (l.kind.is_area() || (l.casts_shadows && l.shadow_size > 0.0))
+    };
     let masked_all: Vec<(&Light, usize)> = lights
         .iter()
         .zip(channels)
@@ -284,8 +287,14 @@ pub fn direct(
                             viewer,
                             u: [f32; 2]|
                  -> ([f32; 3], bool) {
-                    let direction = light.jittered(arriving, origin, u);
-                    let shadowed = receives
+                    // (An area light's sample already lies on its surface.)
+                    let direction = if light.kind.is_area() {
+                        arriving.direction
+                    } else {
+                        light.jittered(arriving, origin, u)
+                    };
+                    let shadowed = light.casts_shadows
+                        && receives
                         && scene.occluded_for(
                             &Ray { origin, direction },
                             arriving.distance,
@@ -301,12 +310,13 @@ pub fn direct(
                             continue;
                         };
                         counted += 1;
-                        let Some(arriving) = light.arriving(&tables, light.color, origin, smooth)
+                        let u = rnd(i);
+                        let Some(arriving) = light.sampled(&tables, light.color, origin, smooth, u)
                         else {
                             continue;
                         };
                         let (direction, seen_here) =
-                            sees(light, &arriving, origin, receives, viewer, rnd(i));
+                            sees(light, &arriving, origin, receives, viewer, u);
                         if seen_here {
                             for c in 0..3 {
                                 acc[c] += arriving.color[c];
@@ -329,12 +339,13 @@ pub fn direct(
                         let Some((origin, smooth, receives, viewer)) = at_sample(i) else {
                             continue;
                         };
-                        let Some(arriving) = light.arriving(&tables, light.color, origin, smooth)
+                        let u = rnd(i);
+                        let Some(arriving) = light.sampled(&tables, light.color, origin, smooth, u)
                         else {
                             continue;
                         };
                         soft_reached[channel] += 1;
-                        if sees(light, &arriving, origin, receives, viewer, rnd(i)).1 {
+                        if sees(light, &arriving, origin, receives, viewer, u).1 {
                             soft_seen[channel] += 1;
                         }
                     }

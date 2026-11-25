@@ -821,6 +821,8 @@ mod lighting {
             cone_angle: 60f32.to_radians(),
             casts_shadows: true,
             shadow_size: 0.0,
+            up: [0.0, 1.0, 0.0],
+            size: [0.0; 2],
         }
     }
 
@@ -1492,6 +1494,8 @@ mod bounced {
             cone_angle: 1.0,
             casts_shadows: true,
             shadow_size: 0.0,
+            up: [0.0, 1.0, 0.0],
+            size: [0.0; 2],
         }
     }
 
@@ -2132,6 +2136,8 @@ mod bounced {
             cone_angle: 0.0,
             casts_shadows: true,
             shadow_size: 0.0,
+            up: [0.0, 1.0, 0.0],
+            size: [0.0; 2],
         };
         let grid = Grid::new(
             &[sun],
@@ -2196,6 +2202,8 @@ mod bounced {
             cone_angle: 60f32.to_radians(),
             casts_shadows: false,
             shadow_size: 0.0,
+            up: [0.0, 1.0, 0.0],
+            size: [0.0; 2],
         };
         assert!(
             base_spot
