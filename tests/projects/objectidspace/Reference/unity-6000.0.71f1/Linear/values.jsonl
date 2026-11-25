@@ -1,0 +1,18 @@
+{"k":"colorSpace","v":"Linear"}
+{"k":"srgb.sRGB","v":"True"}
+{"k":"srgb.mapping","v":"null,idA,idB,idC,idD"}
+{"k":"srgb.pixel.a","v":"13,0,0,0 id 13"}
+{"k":"srgb.pixel.b","v":"22,0,0,0 id 22"}
+{"k":"srgb.pixel.c","v":"28,0,0,0 id 28"}
+{"k":"srgb.pixel.d","v":"34,0,0,0 id 34"}
+{"k":"srgb.pixel.background","v":"0,0,0,0 id 0"}
+{"k":"srgb.colors","v":"0,0,0,0:3840;13,0,0,0:64;22,0,0,0:64;28,0,0,0:64;34,0,0,0:64"}
+{"k":"linear.sRGB","v":"False"}
+{"k":"linear.mapping","v":"null,idA,idB,idC,idD"}
+{"k":"linear.pixel.a","v":"1,0,0,0 id 1"}
+{"k":"linear.pixel.b","v":"2,0,0,0 id 2"}
+{"k":"linear.pixel.c","v":"3,0,0,0 id 3"}
+{"k":"linear.pixel.d","v":"4,0,0,0 id 4"}
+{"k":"linear.pixel.background","v":"0,0,0,0 id 0"}
+{"k":"linear.colors","v":"0,0,0,0:3840;1,0,0,0:64;2,0,0,0:64;3,0,0,0:64;4,0,0,0:64"}
+{"k":"complete","v":true}

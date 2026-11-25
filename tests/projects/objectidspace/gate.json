@@ -1,0 +1,14 @@
+{
+  "commands": [
+    "python3 tests/projects/objectidspace/run.py gate"
+  ],
+  "summary": "objectidspace (Gamma|Linear): .*",
+  "engine_paths": [
+    "managed/UnityEngine/Graphics/ObjectIdRequests.cs",
+    "tests/projects/objectidspace/",
+    "tests/projects/graphicsgaps/ProjectSettings/",
+    "tests/projects/graphicsgaps/Assets/Settings/",
+    "tests/projects/graphicsgaps/Assets/Editor/",
+    "tests/projects/rpglobalsettings/"
+  ]
+}
