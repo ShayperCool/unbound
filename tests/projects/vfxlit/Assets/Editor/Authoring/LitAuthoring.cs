@@ -221,22 +221,26 @@ public static class LitAuthoring
 
     /// <summary>Particles moving sideways fast like <see cref="MovingVectors"/>'s, writing motion
     /// vectors through other outputs: half transparent unlit quads (alpha blended), opaque
-    /// unlit cubes, opaque quads of the probe's lit Shader Graph, and a strip of sixteen
-    /// particles (opaque, unlit).</summary>
+    /// unlit cubes, opaque quads of the probe's lit Shader Graph, a strip of sixteen
+    /// particles (opaque, unlit, and lit by the render pipeline), points, lines to an offset
+    /// target, meshes lit by the render pipeline, and unlit quads that also turn (two turns a
+    /// second) and grow (a tenth at each update).</summary>
     static void MovingOthers()
     {
-        foreach (var name in new[] { "MovingAlpha", "MovingCubes", "MovingGraph", "MovingStrip" })
+        foreach (var name in new[] { "MovingAlpha", "MovingCubes", "MovingGraph", "MovingStrip", "MovingPoints", "MovingLines", "MovingTurning", "MovingLitMesh", "MovingLitStrip" })
         {
             var graph = NewGraph(name);
             VFXBasicSpawner spawn;
             VFXBasicInitialize init;
+            VFXBasicUpdate update;
             VFXContext output;
-            if (name == "MovingStrip")
+            bool strip = name == "MovingStrip" || name == "MovingLitStrip";
+            if (strip)
             {
                 spawn = Make<VFXBasicSpawner>();
                 init = Make<VFXBasicInitialize>();
-                var update = Make<VFXBasicUpdate>();
-                output = Make<VFXQuadStripOutput>();
+                update = Make<VFXBasicUpdate>();
+                output = name == "MovingLitStrip" ? Make<VFXURPLitQuadStripOutput>() : Make<VFXQuadStripOutput>();
                 graph.AddChild(spawn);
                 graph.AddChild(init);
                 graph.AddChild(update);
@@ -253,22 +257,36 @@ public static class LitAuthoring
                 orient.SetSettingValue("mode", Orient.Mode.FaceCameraPosition);
                 output.AddChild(orient);
             }
-            else if (name == "MovingCubes") (spawn, init, _, output) = System<VFXBasicCubeOutput>(graph, 64);
+            else if (name == "MovingCubes") (spawn, init, update, output) = System<VFXBasicCubeOutput>(graph, 64);
+            else if (name == "MovingPoints") (spawn, init, update, output) = System<VFXPointOutput>(graph, 64);
+            else if (name == "MovingLines")
+            {
+                (spawn, init, update, output) = System<VFXLineOutput>(graph, 64);
+                output.SetSettingValue("useTargetOffset", true);
+            }
+            else if (name == "MovingLitMesh") (spawn, init, update, output) = System<VFXURPLitMeshOutput>(graph, 64);
             else if (name == "MovingGraph")
             {
-                (spawn, init, _, output) = System<VFXComposedParticleOutput>(graph, 64);
+                (spawn, init, update, output) = System<VFXComposedParticleOutput>(graph, 64);
                 output.SetSettingValue("m_Topology", new ParticleTopologyPlanarPrimitive(VFXPrimitiveType.Quad));
                 output.SetSettingValue("shaderGraph", ShaderGraph(LitGraph));
                 ((IVFXSlotContainer)output).inputSlots.First(s => s.property.type == typeof(Texture2D)).value = Quarters;
             }
-            else (spawn, init, _, output) = System<VFXPlanarPrimitiveOutput>(graph, 64);
+            else (spawn, init, update, output) = System<VFXPlanarPrimitiveOutput>(graph, 64);
+            if (name == "MovingLitStrip") output.SetSettingValue("useBaseColorMap", VFXAbstractParticleURPLitOutput.BaseColorMapMode.None);
             output.SetSettingValue("blendMode", name == "MovingAlpha" ? VFXAbstractRenderedOutput.BlendMode.Alpha : VFXAbstractRenderedOutput.BlendMode.Opaque);
             output.SetSettingValue("generateMotionVector", true);
-            Burst(spawn, name == "MovingStrip" ? 16f : 20f);
+            Burst(spawn, strip ? 16f : 20f);
             SetRandom(init, "position", new Vector3(-1.4f, -1f, 0f), new Vector3(-0.8f, 1f, 0f));
             SetVector(init, "velocity", new Vector3(6f, 0f, 0f));
             Set(init, "size", 0.25f);
-            if (name == "MovingCubes") SetRandom(init, "angle", new Vector3(0f, 0f, 0f), new Vector3(90f, 90f, 90f));
+            if (name == "MovingCubes" || name == "MovingLitMesh") SetRandom(init, "angle", new Vector3(0f, 0f, 0f), new Vector3(90f, 90f, 90f));
+            if (name == "MovingTurning")
+            {
+                SetVector(init, "angularVelocity", new Vector3(0f, 0f, 720f));
+                var grow = Set(update, "size", 1.1f);
+                grow.SetSettingValue("Composition", AttributeCompositionMode.Multiply);
+            }
             if (name == "MovingAlpha") Set(init, "alpha", 0.6f);
             SetRandom(init, "color", new Vector3(0.3f, 0.3f, 0.3f), new Vector3(1f, 1f, 1f));
             Save(graph);

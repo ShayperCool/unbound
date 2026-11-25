@@ -730,7 +730,7 @@ MonoBehaviour:
   raytracedScaleMode: 0
   needsOwnSort: 0
   needsOwnAabbBuffer: 0
-  shaderGraph: {fileID: -5475051401550479605, guid: 337d1d93a698031e192206634ae97e29, type: 3}
+  shaderGraph: {fileID: -5475051401550479605, guid: d185a19541b6bf705a947c8a5eeaada2, type: 3}
   materialSettings:
     m_PropertyNames: []
     m_PropertyValues: []
@@ -780,7 +780,7 @@ MonoBehaviour:
       m_Type:
         m_SerializableType: UnityEngine.Texture2D, UnityEngine.CoreModule, Version=0.0.0.0,
           Culture=neutral, PublicKeyToken=null
-      m_SerializableObject: '{"obj":{"fileID":2800000,"guid":"65bf28922fd1bec8b824ebd89ddf69ac","type":3}}'
+      m_SerializableObject: '{"obj":{"fileID":2800000,"guid":"c5a3798786939ff50ad153754051f122","type":3}}'
     m_Space: -1
   m_Property:
     name: _Image

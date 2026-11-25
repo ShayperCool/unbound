@@ -228,6 +228,11 @@ public sealed class LitProbe : MonoBehaviour
             ball.transform.position = plainPlus.Origin;
             ball.transform.localScale = Vector3.one * 2f;
             ball.GetComponent<MeshRenderer>().sharedMaterial = m_Lit;
+            // Particles moving sideways under the camera's object motion blur through still
+            // other outputs: points, lines, lit meshes and a lit strip, and quads that turn and
+            // grow as they move.
+            foreach (var (key, graph) in new[] { ("moving points", "MovingPoints"), ("moving lines", "MovingLines"), ("moving turning", "MovingTurning"), ("moving lit mesh", "MovingLitMesh"), ("moving lit strip", "MovingLitStrip") })
+                Blurred(Lamp(Draw(key, graph, 9, 10), LightType.Point));
             // What each effect's renderer is set to: an asset whose graph has an output that
             // casts shadows asks its renderer to.
             foreach (var stage in m_Stages)
