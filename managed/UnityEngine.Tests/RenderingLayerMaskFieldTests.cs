@@ -90,6 +90,10 @@ namespace UnityEngine.Tests
                 Assert.Equal(5u, EditorGUILayout.RenderingLayerMaskField(new GUIContent("L"), m, s_Style).value);
                 EditorGUILayout.RenderingLayerMaskField(new GUIContent("L"), so.FindProperty("mask"));
                 Assert.Equal(rect + 4, Hits("UnityEditor.EditorGUI.RenderingLayerMaskField"));
+                // The default property field of the mask reports too (before it draws anything).
+                int field = Hits("UnityEditor.EditorGUI.PropertyField of a RenderingLayerMask property");
+                Pass(new Event { type = EventType.Repaint }, () => EditorGUI.PropertyField(At, so.FindProperty("mask")));
+                Assert.Equal(field + 1, Hits("UnityEditor.EditorGUI.PropertyField of a RenderingLayerMask property"));
                 Assert.Equal(layout + 9, Hits("UnityEditor.EditorGUILayout.RenderingLayerMaskField"));
                 Assert.Equal(3u, holder.mask.value);
             }

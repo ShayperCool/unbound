@@ -5,10 +5,11 @@ using UnityEngine;
 namespace UnityEditor
 {
     /// <summary>
-    /// PropertyField's controls for colour, object reference, curve, gradient, layer mask, enum,
-    /// character and the vector, rect and bounds property types, and MultiPropertyField, as Unity
-    /// 6000.0's DefaultPropertyField draws them (measured: tests/projects/editorobjectfields sp/*,
-    /// values, control ids, heights and layout rects and scripted edits of a property). Other
+    /// PropertyField's controls for colour, object reference, curve, gradient, layer mask, rendering
+    /// layer mask, enum, character and the vector, rect and bounds property types, and
+    /// MultiPropertyField, as Unity 6000.0's DefaultPropertyField draws them (measured:
+    /// tests/projects/editorobjectfields sp/*, values, control ids, heights and layout rects and
+    /// scripted edits of a property; tests/projects/editorrenderinglayers rect/*/propertyField). Other
     /// families keep the label in place of these controls and report them not implemented.
     /// </summary>
     public sealed partial class EditorGUI
@@ -52,7 +53,6 @@ namespace UnityEditor
                 case SerializedPropertyType.RectInt:
                 case SerializedPropertyType.Bounds:
                 case SerializedPropertyType.BoundsInt:
-                case SerializedPropertyType.RenderingLayerMask:
                     break;
                 default:
                     if (property.hasVisibleChildren) return false;
