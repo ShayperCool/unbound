@@ -17,6 +17,12 @@ namespace UnityEngine
     {
         internal static readonly List<ReflectionProbe> s_Enabled = new List<ReflectionProbe>();
 
+        /// <summary>The enabled probes in the order a render pipeline's culling lists them before
+        /// sorting: by enabling, a disabled probe's place taken by the last one (measured:
+        /// tests/projects/reflprobecull sort.None.reenabled). Which order the renderers' own probe
+        /// choice follows after a probe is disabled is unmeasured: it keeps <see cref="s_Enabled"/>.</summary>
+        internal static readonly List<ReflectionProbe> s_CullOrder = new List<ReflectionProbe>();
+
         ReflectionProbeType m_Type;
         ReflectionProbeMode m_Mode = ReflectionProbeMode.Baked;
         ReflectionProbeRefreshMode m_RefreshMode;
@@ -89,6 +95,7 @@ namespace UnityEngine
         internal struct Placement
         {
             internal Vector3 Position, Offset, Size;
+            internal Quaternion Rotation;
             internal int Importance;
             internal float BlendDistance;
             internal bool BoxProjection;
@@ -102,6 +109,7 @@ namespace UnityEngine
         Placement Live => new Placement
         {
             Position = transform.position,
+            Rotation = transform.rotation,
             Offset = m_BoxOffset,
             Size = m_BoxSize,
             Importance = m_Importance,
@@ -507,6 +515,7 @@ namespace UnityEngine
         internal override void OnEngineEnable()
         {
             if (!s_Enabled.Contains(this)) s_Enabled.Add(this);
+            if (!s_CullOrder.Contains(this)) s_CullOrder.Add(this);
             if (m_Mode == ReflectionProbeMode.Realtime && m_RefreshMode == ReflectionProbeRefreshMode.OnAwake && !m_Awoken)
             {
                 m_Awoken = true;
@@ -517,6 +526,13 @@ namespace UnityEngine
         internal override void OnEngineDisable()
         {
             s_Enabled.Remove(this);
+            int index = s_CullOrder.IndexOf(this);
+            if (index >= 0)
+            {
+                int last = s_CullOrder.Count - 1;
+                s_CullOrder[index] = s_CullOrder[last];
+                s_CullOrder.RemoveAt(last);
+            }
             m_HasDrawn = false;
         }
 

@@ -742,7 +742,8 @@ namespace UnityEngine
             cullingParameters.shadowDistance = QualitySettings.shadowDistance;
             cullingParameters.cullingOptions = CullingOptions.NeedsLighting | CullingOptions.NeedsReflectionProbes | CullingOptions.ShadowCasters
                 | (useOcclusionCulling ? CullingOptions.OcclusionCull : CullingOptions.None);
-            cullingParameters.reflectionProbeSortingCriteria = ReflectionProbeSortingCriteria.ImportanceThenSize;
+            // Measured: tests/projects/reflprobecull sort.defaultCriteria.
+            cullingParameters.reflectionProbeSortingCriteria = ReflectionProbeSortingCriteria.None;
             cullingParameters.accurateOcclusionThreshold = -1f;
             cullingParameters.maximumPortalCullingJobs = 16;
             cullingParameters.maximumVisibleLights = -1;

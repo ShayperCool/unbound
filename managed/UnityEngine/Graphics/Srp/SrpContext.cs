@@ -1228,12 +1228,17 @@ namespace Unbound.Runtime
             bool hasCamera = camera != null;
             var lodParams = hasCamera ? LODGroup.CameraLodParams.For(camera) : default;
             int lodPass = hasCamera ? LODGroup.NextCullPass() : 0;
+            var anchored = s_AnchoredProbes;
+            anchored.Clear();
             foreach (var renderer in RenderRegistry.Renderers)
             {
                 // A live renderer's state read directly (the culling runs on the main thread).
                 if (!renderer || renderer.forceRenderingOff || !renderer.m_Enabled) continue;
                 var go = renderer.m_GameObject;
                 if (!go.ActiveInHierarchyNoThrow) continue;
+                // The reflection probe a renderer is anchored to is listed whether or not the
+                // renderer is seen (measured: tests/projects/reflprobecull anchor.*).
+                if (renderer.probeAnchor is { } anchor && anchor && anchor.TryGetComponent<ReflectionProbe>(out var anchorProbe)) anchored.Add(anchorProbe);
                 if (renderer.m_GpuDriven)
                 {
                     // GPU-driven rendering draws it and decides what is seen: every culling marks
@@ -1290,23 +1295,17 @@ namespace Unbound.Runtime
                 data.Lights[i] = new VisibleLight(lights[i], rect, linear, lights[i].type != LightType.Directional, false);
             }
             data.OffscreenVertexLights = new NativeArray<VisibleLight>(0, Allocator.Persistent);
-            // The reflection probes with a cubemap whose boxes touch the view, by the parameters'
-            // sorting (importance first: the more important first; size: the smaller first).
-            var probes = new List<ReflectionProbe>();
-            foreach (var probe in ReflectionProbe.s_Enabled)
-                if (probe && probe.isActiveAndEnabled && probe.texture != null && InsidePlanes(planes, absNormals, probe.Drawn.Bounds)) probes.Add(probe);
-            var criteria = parameters.reflectionProbeSortingCriteria;
-            // The probes' placement as the frame began (ReflectionProbe.Drawn).
-            float Volume(ReflectionProbe p) { var s = p.Drawn.Size; return s.x * s.y * s.z; }
-            probes.Sort((a, b) =>
-            {
-                int c = 0;
-                if (criteria is ReflectionProbeSortingCriteria.Importance or ReflectionProbeSortingCriteria.ImportanceThenSize)
-                    c = b.Drawn.Importance.CompareTo(a.Drawn.Importance);
-                if (c == 0 && criteria is ReflectionProbeSortingCriteria.Size or ReflectionProbeSortingCriteria.ImportanceThenSize)
-                    c = Volume(a).CompareTo(Volume(b));
-                return c;
-            });
+            // The enabled reflection probes whose boxes, rotated with the probe, touch the view, and
+            // those a renderer is anchored to, with or without a texture, whatever the camera's
+            // culling mask, in the probes' order (ReflectionProbe.s_CullOrder) and then by the
+            // parameters' sorting (measured: tests/projects/reflprobecull grid.*, anchor.*,
+            // notexture, layer.maskedOut, sort.*).
+            var probes = s_Probes;
+            probes.Clear();
+            foreach (var probe in ReflectionProbe.s_CullOrder)
+                if (probe && probe.isActiveAndEnabled && (anchored.Contains(probe) || ProbeInsidePlanes(planes, probe.Drawn))) probes.Add(probe);
+            anchored.Clear();
+            SortProbes(probes, parameters.reflectionProbeSortingCriteria);
             data.Probes = new NativeArray<VisibleReflectionProbe>(probes.Count, Allocator.Persistent);
             for (int i = 0; i < probes.Count; i++)
             {
@@ -1401,6 +1400,60 @@ namespace Unbound.Runtime
         static readonly Comparison<Light> s_BrightestFirst = (a, b) => (b.intensity * b.color.grayscale).CompareTo(a.intensity * a.color.grayscale);
 
         /// <summary>Whether bounds touch the inside of every culling plane (planes face inwards).</summary>
+        static readonly HashSet<ReflectionProbe> s_AnchoredProbes = new HashSet<ReflectionProbe>();
+        static readonly List<ReflectionProbe> s_Probes = new List<ReflectionProbe>();
+
+        /// <summary>Whether a probe's box, placed and rotated as the probe (its center offset
+        /// rotated too, its scale ignored), is on the inner side of every plane, tested plane by
+        /// plane as the renderers' boxes are (measured: tests/projects/reflprobecull grid.*, 2793
+        /// placements of seven boxes and rotations).</summary>
+        static bool ProbeInsidePlanes(ReadOnlySpan<Plane> planes, in ReflectionProbe.Placement placement)
+        {
+            var rotation = placement.Rotation;
+            var center = placement.Position + rotation * placement.Offset;
+            var half = placement.Size * 0.5f;
+            var x = rotation * Vector3.right;
+            var y = rotation * Vector3.up;
+            var z = rotation * Vector3.forward;
+            for (int i = 0; i < planes.Length; i++)
+            {
+                var n = planes[i].normal;
+                float radius = Mathf.Abs(Vector3.Dot(n, x)) * half.x + Mathf.Abs(Vector3.Dot(n, y)) * half.y + Mathf.Abs(Vector3.Dot(n, z)) * half.z;
+                if (Vector3.Dot(n, center) + planes[i].distance < -radius) return false;
+            }
+            return true;
+        }
+
+        /// <summary>Sorts culled probes stably by the criteria: importance from the least
+        /// important, size from the largest box (by its extents' squared length), both
+        /// importance then size, or none (measured: tests/projects/reflprobecull sort.*,
+        /// sort.Size.metric, anchor.order.*).</summary>
+        static void SortProbes(List<ReflectionProbe> probes, ReflectionProbeSortingCriteria criteria)
+        {
+            bool importance = criteria is ReflectionProbeSortingCriteria.Importance or ReflectionProbeSortingCriteria.ImportanceThenSize;
+            bool size = criteria is ReflectionProbeSortingCriteria.Size or ReflectionProbeSortingCriteria.ImportanceThenSize;
+            if (!importance && !size) return;
+            // Insertion sort: stable, and the lists are short.
+            for (int i = 1; i < probes.Count; i++)
+            {
+                var probe = probes[i];
+                var placement = probe.Drawn;
+                int j = i - 1;
+                while (j >= 0 && After(probes[j].Drawn, placement))
+                {
+                    probes[j + 1] = probes[j];
+                    j--;
+                }
+                probes[j + 1] = probe;
+            }
+
+            bool After(in ReflectionProbe.Placement a, in ReflectionProbe.Placement b)
+            {
+                if (importance && a.Importance != b.Importance) return a.Importance > b.Importance;
+                return size && (a.Size * 0.5f).sqrMagnitude < (b.Size * 0.5f).sqrMagnitude;
+            }
+        }
+
         static bool InsidePlanes(ReadOnlySpan<Plane> planes, ReadOnlySpan<Vector3> absNormals, Bounds bounds)
         {
             var c = bounds.center;
