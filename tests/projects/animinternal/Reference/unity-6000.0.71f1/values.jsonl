@@ -1182,4 +1182,32 @@
 {"k":"record.inMode","v":" True mode True events 3/2"}
 {"k":"record.afterModeStop","v":"True mode False events 3/2"}
 {"k":"record.removed","v":"events 3/3"}
+{"k":"tangents.found","v":"True True"}
+{"k":"tangents.start","v":"9 9 | 9 9 | 9 9 | 9 9 | 9 9"}
+{"k":"tangents.surrounding.0","v":"0 0 | 0.5 0.5 | 9 9 | 9 9 | 9 9"}
+{"k":"tangents.surrounding.1","v":"0 0 | 0.5 0.5 | -1 Infinity | 9 9 | 9 9"}
+{"k":"tangents.surrounding.2","v":"9 9 | 0.5 0.5 | -1 Infinity | 0 0 | 9 9"}
+{"k":"tangents.surrounding.3","v":"9 9 | 9 9 | -1 Infinity | 0 0 | 0 0"}
+{"k":"tangents.surrounding.4","v":"9 9 | 9 9 | 9 9 | 0 0 | 0 0"}
+{"k":"tangents.surrounding.-1","v":"throws IndexOutOfRangeException"}
+{"k":"tangents.surrounding.5","v":"throws IndexOutOfRangeException"}
+{"k":"tangents.surrounding.7","v":"throws IndexOutOfRangeException"}
+{"k":"tangents.surrounding.null","v":"throws ArgumentNullException"}
+{"k":"tangents.all","v":"0 0 | 0.5 0.5 | -1 Infinity | 0 0 | 0 0"}
+{"k":"tangents.all.null","v":"throws ArgumentNullException"}
+{"k":"tangents.surrounding.empty","v":"throws IndexOutOfRangeException"}
+{"k":"sync.found","v":"True True"}
+{"k":"sync.null","v":"throws ArgumentNullException"}
+{"k":"sync.length","v":"2 2 2 3"}
+{"k":"init.found","v":"True True"}
+{"k":"init.outside","v":"throws InvalidOperationException False False False False False False 1 2 3 / 1 1 1 / 2"}
+{"k":"init.gameObject","v":"void True True True True True False 1 2 3 / 1 1 1 / 2"}
+{"k":"init.gameObject.stopped","v":"False False False False False False 1 2 3 / 1 1 1 / 2"}
+{"k":"init.gameObject.null","v":"throws ArgumentNullException throws ArgumentNullException"}
+{"k":"init.object","v":"void True False 2"}
+{"k":"init.objectRootClip","v":"void False False False False True False 1 2 3 / 1 1 1 / 2"}
+{"k":"init.object.stopped","v":"2 5 6 7 / 1 1 1 / 2"}
+{"k":"init.object.null","v":"throws ArgumentNullException throws ArgumentNullException"}
+{"k":"init.objectCurve","v":"void True"}
+{"k":"init.objectCurve.stopped","v":"first"}
 {"k":"complete","v":true}

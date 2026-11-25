@@ -13,7 +13,9 @@ using UnityEngine;
 /// AnimationUtility's key overloads taking a Keyframe by reference (SetKeyLeftTangentMode,
 /// SetKeyRightTangentMode, SetKeyBroken: the VFX Graph editor calls them on import),
 /// AnimationUtility.GetClosestEuler for rotations, hints and every rotation order (the Timeline
-/// editor), and AnimationMode's recording state and events.
+/// editor), AnimationMode's recording state and events, and what the Timeline editor's preview and
+/// curve edits call: UpdateTangentsFromModeSurrounding / UpdateTangentsFromMode, SyncEditorCurves,
+/// AnimationMode.InitializePropertyModificationForGameObject / ForObject.
 /// </summary>
 static class AnimInternalProbe
 {
@@ -172,6 +174,128 @@ static class AnimInternalProbe
         Put("record.afterModeStop", Call("InAnimationRecording") + " mode " + AnimationMode.InAnimationMode() + " events " + starts2 + "/" + stops);
         Call("StopAnimationRecording");
         Put("record.removed", Try(() => { startEvent.RemoveMethod.Invoke(null, new object[] { onStart }); stopEvent.RemoveMethod.Invoke(null, new object[] { onStop }); Call("StartAnimationRecording"); Call("StopAnimationRecording"); return "events " + starts2 + "/" + stops; }));
+
+        // UpdateTangentsFromModeSurrounding / UpdateTangentsFromMode: which keys take the tangents
+        // their modes give, on a curve whose tangents are all 9 (modes set without an update).
+        string Keys(AnimationCurve c) => string.Join(" | ", c.keys.Select(k => F(k.inTangent) + " " + F(k.outTangent)));
+        AnimationCurve Moded()
+        {
+            var keys = new Keyframe[5];
+            float[] values = { 0f, 2f, 1f, 3f, 3f };
+            var left = new[] { AnimationUtility.TangentMode.ClampedAuto, AnimationUtility.TangentMode.Auto, AnimationUtility.TangentMode.Linear, AnimationUtility.TangentMode.ClampedAuto, AnimationUtility.TangentMode.Free };
+            var right = new[] { AnimationUtility.TangentMode.ClampedAuto, AnimationUtility.TangentMode.Auto, AnimationUtility.TangentMode.Constant, AnimationUtility.TangentMode.Linear, AnimationUtility.TangentMode.Auto };
+            for (int i = 0; i < 5; i++)
+            {
+                var key = new Keyframe(i, values[i], 9f, 9f);
+                var args = new object[] { key, left[i] };
+                setLeft.Invoke(null, args);
+                key = (Keyframe)args[0];
+                args = new object[] { key, right[i] };
+                setRight.Invoke(null, args);
+                keys[i] = (Keyframe)args[0];
+            }
+            return new AnimationCurve(keys);
+        }
+        var surrounding = util.GetMethod("UpdateTangentsFromModeSurrounding", Internal, null, new[] { typeof(AnimationCurve), typeof(int) }, null);
+        var fromMode = util.GetMethod("UpdateTangentsFromMode", Internal, null, new[] { typeof(AnimationCurve) }, null);
+        Put("tangents.found", (surrounding != null) + " " + (fromMode != null));
+        Put("tangents.start", Keys(Moded()));
+        foreach (int index in new[] { 0, 1, 2, 3, 4, -1, 5, 7 })
+            Put("tangents.surrounding." + index, Try(() => { var c = Moded(); surrounding.Invoke(null, new object[] { c, index }); return Keys(c); }));
+        Put("tangents.surrounding.null", Try(() => { surrounding.Invoke(null, new object[] { null, 0 }); return "void"; }));
+        Put("tangents.all", Try(() => { var c = Moded(); fromMode.Invoke(null, new object[] { c }); return Keys(c); }));
+        Put("tangents.all.null", Try(() => { fromMode.Invoke(null, new object[] { null }); return "void"; }));
+        Put("tangents.surrounding.empty", Try(() => { var c = new AnimationCurve(); surrounding.Invoke(null, new object[] { c, 0 }); return c.length.ToString(Inv); }));
+
+        // SyncEditorCurves after curves set without a sync: the clip's length before and after.
+        var sync = util.GetMethod("SyncEditorCurves", Internal, null, new[] { typeof(AnimationClip) }, null);
+        var noSync = util.GetMethod("SetEditorCurveNoSync", Internal, null, new[] { typeof(AnimationClip), typeof(EditorCurveBinding), typeof(AnimationCurve) }, null);
+        Put("sync.found", (sync != null) + " " + (noSync != null));
+        Put("sync.null", Try(() => { sync.Invoke(null, new object[] { null }); return "void"; }));
+        Put("sync.length", Try(() =>
+        {
+            var clip = new AnimationClip();
+            var binding = EditorCurveBinding.FloatCurve("", typeof(Transform), "m_LocalPosition.x");
+            noSync.Invoke(null, new object[] { clip, binding, AnimationCurve.Linear(0f, 0f, 2f, 1f) });
+            string before = F(clip.length);
+            sync.Invoke(null, new object[] { clip });
+            string after = F(clip.length);
+            noSync.Invoke(null, new object[] { clip, binding, AnimationCurve.Linear(0f, 0f, 3f, 1f) });
+            string grown = F(clip.length);
+            sync.Invoke(null, new object[] { clip });
+            return before + " " + after + " " + grown + " " + F(clip.length);
+        }));
+
+        // InitializePropertyModificationForGameObject / ForObject: what animation mode then counts
+        // as animated and what stopping it writes back.
+        var initGo = modeType.GetMethod("InitializePropertyModificationForGameObject", Internal, null, new[] { typeof(GameObject), typeof(AnimationClip) }, null);
+        var initObject = modeType.GetMethod("InitializePropertyModificationForObject", Internal, null, new[] { typeof(UnityEngine.Object), typeof(AnimationClip) }, null);
+        Put("init.found", (initGo != null) + " " + (initObject != null));
+        var root = new GameObject("initRoot");
+        var child = new GameObject("c");
+        child.transform.SetParent(root.transform, false);
+        var light = root.AddComponent<Light>();
+        var rootClip = new AnimationClip();
+        AnimationUtility.SetEditorCurve(rootClip, EditorCurveBinding.FloatCurve("", typeof(Transform), "m_LocalPosition.x"), AnimationCurve.Constant(0f, 1f, 4f));
+        AnimationUtility.SetEditorCurve(rootClip, EditorCurveBinding.FloatCurve("c", typeof(Transform), "m_LocalScale.y"), AnimationCurve.Constant(0f, 1f, 4f));
+        AnimationUtility.SetEditorCurve(rootClip, EditorCurveBinding.FloatCurve("", typeof(Light), "m_Intensity"), AnimationCurve.Constant(0f, 1f, 4f));
+        string State() => V(root.transform.localPosition) + " / " + V(child.transform.localScale) + " / " + F(light.intensity);
+        string Animated() => AnimationMode.IsPropertyAnimated(root.transform, "m_LocalPosition.x") + " " + AnimationMode.IsPropertyAnimated(root.transform, "m_LocalPosition.y")
+            + " " + AnimationMode.IsPropertyAnimated(root.transform, "m_LocalPosition") + " " + AnimationMode.IsPropertyAnimated(child.transform, "m_LocalScale.y")
+            + " " + AnimationMode.IsPropertyAnimated(light, "m_Intensity") + " " + AnimationMode.IsPropertyAnimated(root.transform, "m_LocalScale.x");
+        void Reset()
+        {
+            root.transform.localPosition = new Vector3(1f, 2f, 3f);
+            child.transform.localScale = new Vector3(1f, 1f, 1f);
+            light.intensity = 2f;
+        }
+        Reset();
+        Put("init.outside", Try(() => { initGo.Invoke(null, new object[] { root, rootClip }); return "void"; }) + " " + Animated() + " " + State());
+        AnimationMode.StartAnimationMode();
+        Reset();
+        Put("init.gameObject", Try(() => { initGo.Invoke(null, new object[] { root, rootClip }); return "void"; }) + " " + Animated() + " " + State());
+        root.transform.localPosition = new Vector3(5f, 6f, 7f);
+        child.transform.localScale = new Vector3(8f, 8f, 8f);
+        light.intensity = 9f;
+        AnimationMode.StopAnimationMode();
+        Put("init.gameObject.stopped", Animated() + " " + State());
+        Put("init.gameObject.null", Try(() => { initGo.Invoke(null, new object[] { null, rootClip }); return "void"; }) + " " + Try(() => { initGo.Invoke(null, new object[] { root, null }); return "void"; }));
+
+        var asset = ScriptableObject.CreateInstance<AnimInternalAsset>();
+        var assetClip = new AnimationClip();
+        AnimationUtility.SetEditorCurve(assetClip, EditorCurveBinding.FloatCurve("", typeof(AnimInternalAsset), "speed"), AnimationCurve.Constant(0f, 1f, 4f));
+        AnimationUtility.SetEditorCurve(assetClip, EditorCurveBinding.FloatCurve("", typeof(AnimInternalAsset), "missing"), AnimationCurve.Constant(0f, 1f, 4f));
+        AnimationMode.StartAnimationMode();
+        Reset();
+        asset.speed = 2f;
+        Put("init.object", Try(() => { initObject.Invoke(null, new object[] { asset, assetClip }); return "void"; }) + " " + AnimationMode.IsPropertyAnimated(asset, "speed") + " " + AnimationMode.IsPropertyAnimated(asset, "missing") + " " + F(asset.speed));
+        Put("init.objectRootClip", Try(() => { initObject.Invoke(null, new object[] { light, rootClip }); return "void"; }) + " " + Animated() + " " + State());
+        asset.speed = 7f;
+        light.intensity = 9f;
+        root.transform.localPosition = new Vector3(5f, 6f, 7f);
+        AnimationMode.StopAnimationMode();
+        Put("init.object.stopped", F(asset.speed) + " " + State());
+        Put("init.object.null", Try(() => { initObject.Invoke(null, new object[] { null, assetClip }); return "void"; }) + " " + Try(() => { initObject.Invoke(null, new object[] { asset, null }); return "void"; }));
+        UnityEngine.Object.DestroyImmediate(root);
+        UnityEngine.Object.DestroyImmediate(asset);
+        // An object curve: the sprite a SpriteRenderer had when initialized comes back.
+        var spriteHolder = new GameObject("initSprite");
+        var spriteRenderer = spriteHolder.AddComponent<SpriteRenderer>();
+        var texture = new Texture2D(2, 2);
+        var first = Sprite.Create(texture, new Rect(0, 0, 2, 2), Vector2.zero);
+        first.name = "first";
+        var second = Sprite.Create(texture, new Rect(0, 0, 1, 1), Vector2.zero);
+        second.name = "second";
+        var spriteClip = new AnimationClip();
+        AnimationUtility.SetObjectReferenceCurve(spriteClip, EditorCurveBinding.PPtrCurve("", typeof(SpriteRenderer), "m_Sprite"),
+            new[] { new ObjectReferenceKeyframe { time = 0f, value = second } });
+        spriteRenderer.sprite = first;
+        AnimationMode.StartAnimationMode();
+        Put("init.objectCurve", Try(() => { initGo.Invoke(null, new object[] { spriteHolder, spriteClip }); return "void"; }) + " " + AnimationMode.IsPropertyAnimated(spriteRenderer, "m_Sprite"));
+        spriteRenderer.sprite = second;
+        AnimationMode.StopAnimationMode();
+        Put("init.objectCurve.stopped", spriteRenderer.sprite == null ? "null" : spriteRenderer.sprite.name);
+        UnityEngine.Object.DestroyImmediate(spriteHolder);
 
         output.Append("{\"k\":\"complete\",\"v\":true}\n");
         Directory.CreateDirectory(directory);

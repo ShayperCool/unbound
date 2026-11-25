@@ -1,0 +1,5 @@
+{
+  "A clip's curve replaced through SetEditorCurveNoSync: the Editor keeps the synced length (2) until SyncEditorCurves, Unbound shows the new length (3) at once": [
+    "sync.length"
+  ]
+}
