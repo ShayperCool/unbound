@@ -1246,6 +1246,10 @@ namespace Unbound.Runtime.Playables
             animator.m_DeltaPosition = animator.m_MotionRootRotation * Vector3.Scale(scale, delta);
             if (human != null)
             {
+                // No humanoid clip plays: the feet memory takes an idle update (the pivot weight back
+                // to 0.5; tests/projects/humanoid genericCut.toGenericOn after the cut), the pivot the
+                // moved root.
+                human.IdleMotion(deltaTime);
                 var moved = animator.m_MotionRootPosition + animator.m_DeltaPosition;
                 human.PivotPosition = new Unbound.Runtime.Humanoid.F4(moved.x, moved.y, moved.z, 0f);
             }
