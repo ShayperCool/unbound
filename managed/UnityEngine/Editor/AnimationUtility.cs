@@ -473,7 +473,7 @@ namespace UnityEditor
         /// bindings are not listed and are reported.</summary>
         static void AddAnimatorParameterBindings(Animator animator, string path, List<EditorCurveBinding> list)
         {
-            if (animator.m_Controller != null && animator.m_Controller.Graph is { } graph)
+            if (path.Length == 0 && animator.m_Controller != null && animator.m_Controller.Graph is { } graph)
                 foreach (var parameter in graph.Parameters)
                     if (parameter.Type == AnimatorControllerParameterType.Float)
                         list.Add(EditorCurveBinding.FloatCurve(path, typeof(Animator), parameter.Name));
