@@ -41,7 +41,8 @@ namespace UnityEditor
             AssetDatabaseRuntime.AssetInfo info;
             try { info = AssetDatabaseRuntime.Info(guid); }
             catch (Exception) { return PrefabAssetType.NotAPrefab; }
-            if (info?.Kind == "model") kind = PrefabAssetType.Model;
+            // A SpeedTree 8 tree is a model too (tests/projects/speedtree8 prefabType).
+            if (info?.Kind == "model" || info?.Kind == Unbound.SpeedTree.SpeedTree8Imports.Kind) kind = PrefabAssetType.Model;
             else
             {
                 var go = GameObjectOf(assetObject);

@@ -230,6 +230,7 @@ namespace UnityEditor
                     return AssetImporter.GetAtPath(path) is TextureImporter t && t.GetType() == typeof(TextureImporter)
                         && t.textureShape == TextureImporterShape.Texture2D ? typeof(Texture2D) : null;
                 case "prefab": return typeof(GameObject);
+                case Unbound.SpeedTree.SpeedTree8Imports.Kind: return typeof(GameObject);
                 case "scene": return typeof(SceneAsset);
                 case "script": return AssetImporter.GetAtPath(path)?.GetType() == typeof(MonoImporter) ? typeof(MonoScript) : null;
                 case "shader":
@@ -411,7 +412,8 @@ namespace UnityEditor
             switch (type.ToLowerInvariant())
             {
                 case "prefab": return ext == ".prefab";
-                case "gameobject": return ext == ".prefab" || e.Kind == "model";
+                // SpeedTree 8 trees are GameObjects (tests/projects/speedtree8 find/GameObject).
+                case "gameobject": return ext == ".prefab" || e.Kind == "model" || e.Kind == Unbound.SpeedTree.SpeedTree8Imports.Kind;
                 case "scene": case "sceneasset": return ext == ".unity";
                 case "texture": case "texture2d": return e.Kind == "texture";
                 case "sprite": return e.Kind == "texture";

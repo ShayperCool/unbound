@@ -99,6 +99,48 @@ namespace UnityEngine.Tests
             Assert.Equal(ReflectionProbeUsage.BlendProbes, levels[0].ReflectionProbes);
         }
 
+        /// <summary>The import scale is the unit conversion's (the Editor's scaleFactor answers it:
+        /// tests/projects/speedtree8 Card_Units0 1, Card_Inches 0.0254, Card_Custom the .meta's);
+        /// an older .meta without one has its scaleFactor.</summary>
+        [Theory]
+        [InlineData("  unitConversionEnumValue: 0\n  scaleFactor: 0.3048\n", 1f)]
+        [InlineData("  unitConversionEnumValue: 1\n  scaleFactor: 2\n", 0.3048f)]
+        [InlineData("  unitConversionEnumValue: 2\n  scaleFactor: 0.3048\n", 0.01f)]
+        [InlineData("  unitConversionEnumValue: 3\n  scaleFactor: 0.3048\n", 0.0254f)]
+        [InlineData("  unitConversionEnumValue: 4\n  scaleFactor: 2\n", 2f)]
+        [InlineData("  scaleFactor: 0.5\n", 0.5f)]
+        public void TheScaleIsTheUnitConversions(string settings, float scale)
+        {
+            var importer = Importer("  serializedVersion: 7\n" + settings);
+            Assert.Equal(scale, importer.scaleFactor);
+            Assert.Equal(scale, importer.ImportScale);
+        }
+
+        /// <summary>A SpeedTree 8 tree is a GameObject to a search and to its main type, which needs
+        /// no import (tests/projects/speedtree8 find/GameObject, mainType).</summary>
+        [Fact]
+        public void ATreeIsAGameObjectAsset()
+        {
+            AssetDatabase.List("""
+                [
+                  {"guid":"00000000000000001000000000000000","path":"Assets","kind":"folder","importer":"DefaultImporter","labels":[]},
+                  {"guid":"21111111111111111111111111111111","path":"Assets/Oak.st","kind":"speedtree","importer":"SpeedTreeImporter","labels":[]},
+                  {"guid":"31111111111111111111111111111111","path":"Assets/Box.prefab","kind":"prefab","importer":"PrefabImporter","labels":[]},
+                  {"guid":"41111111111111111111111111111111","path":"Assets/Bark.png","kind":"texture","importer":"TextureImporter","labels":[]}
+                ]
+                """);
+            try
+            {
+                Assert.Equal(new[] { "Assets/Box.prefab", "Assets/Oak.st" },
+                    AssetDatabase.FindAssets("t:GameObject").Select(AssetDatabase.GUIDToAssetPath).OrderBy(p => p, StringComparer.Ordinal));
+                Assert.Equal(typeof(GameObject), AssetDatabase.GetMainAssetTypeAtPath("Assets/Oak.st"));
+            }
+            finally
+            {
+                AssetDatabase.Invalidate();
+            }
+        }
+
         static SpeedTree8File.Wind NumberedWind()
         {
             float n = 0f;
