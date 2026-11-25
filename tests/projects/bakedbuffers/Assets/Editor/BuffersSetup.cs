@@ -1025,8 +1025,8 @@ public static class BuffersSetup
         }
         // The same soft lights with 8 probe samples per lightmap sample (Light Probe Sample
         // Multiplier), Direct Samples set to 20 (the Editor keeps 16, a power of two, also when
-        // the serialized value is set), and a second group whose probes cross the two edges of
-        // the cube's shadow under the soft sun (its penumbra).
+        // the serialized value is set), and a second group whose probes (7 cm or more apart) cross
+        // the edge of the cube's shadow under the soft sun (its penumbra).
         {
             var scene = Lit("SoftProbesMore", MixedLightingMode.Shadowmask);
             Lightmapping.lightingSettings.directSampleCount = 20;
@@ -1036,8 +1036,8 @@ public static class BuffersSetup
             ProbeGroup();
             new GameObject("PenumbraGroup").AddComponent<LightProbeGroup>().probePositions = new[]
             {
-                new Vector3(-0.70f, 0.3f, 0.9f), new Vector3(-0.685f, 0.3f, 0.9f), new Vector3(-0.67f, 0.3f, 0.9f), new Vector3(-0.655f, 0.3f, 0.9f),
-                new Vector3(0.085f, 0.3f, 0.9f), new Vector3(0.1f, 0.3f, 0.9f), new Vector3(0.115f, 0.3f, 0.9f),
+                new Vector3(-0.45f, 0.05f, 1.2f), new Vector3(-0.38f, 0.05f, 1.2f), new Vector3(-0.31f, 0.05f, 1.2f), new Vector3(-0.24f, 0.05f, 1.2f),
+                new Vector3(-0.06f, 0.15f, 1f), new Vector3(0.02f, 0.15f, 1f), new Vector3(0.1f, 0.15f, 1f),
             };
             Save(scene, "SoftProbesMore");
         }
