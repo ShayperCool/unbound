@@ -1,0 +1,11 @@
+{
+  "commands": [
+    "python3 tests/projects/imguicontrolids/run.py gate"
+  ],
+  "summary": "imguicontrolids: .*",
+  "engine_paths": [
+    "managed/UnityEngine/IMGUI/",
+    "tests/projects/imguicontrolids/",
+    "tests/projects/imguiskin/"
+  ]
+}
