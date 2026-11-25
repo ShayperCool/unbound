@@ -1376,13 +1376,14 @@ fn bake(request: BakeRequest, buffers: Option<&Path>) -> Result<Json> {
                 parameters.supersampling as usize,
                 &placed,
             );
-            // (Soft shadows are sampled with the sequences the indirect light brings.)
+            // (Soft shadows and area lights are sampled with the sequences the indirect light
+            // brings.)
             anyhow::ensure!(
                 bounce.is_some()
                     || !baked_lights
                         .iter()
-                        .any(|l| l.casts_shadows && l.shadow_size > 0.0),
-                "soft baked shadows are sampled with the bake's blue noise, which comes with its indirect light (a session with a graphics device)"
+                        .any(|l| l.kind.is_area() || (l.casts_shadows && l.shadow_size > 0.0)),
+                "soft baked shadows and area lights are sampled with the bake's blue noise, which comes with its indirect light (a session with a graphics device)"
             );
             let lit = direct::direct(
                 &g,
