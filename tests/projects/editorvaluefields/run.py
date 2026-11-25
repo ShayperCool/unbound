@@ -12,5 +12,5 @@ BASE = ('Assets/Scenes', 'Assets/Editor', 'Packages', 'ProjectSettings')
 
 if __name__ == '__main__':
     sys.exit(value_probe.main(PROBE, 'ImguiSkinRunner.Record', 'EDITOR_VALUE_FIELDS_OUT', tolerance=0,
-                              engine_args=['--frames', '240', '--size', '640x520'], batch=False, record_timeout=180,
+                              engine_args=['--frames', '240', '--size', '640x520', '--focus', '1:on'], batch=False, record_timeout=180,
                               base=(PROBE.parent/'imguiskin', BASE)))

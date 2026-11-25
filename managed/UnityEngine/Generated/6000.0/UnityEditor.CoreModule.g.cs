@@ -7536,7 +7536,6 @@ namespace UnityEditor
         [global::Unbound.Stub] internal static void EndHandleMixedValueContentColor() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUI.EndHandleMixedValueContentColor"); }
         [global::Unbound.Stub] internal static bool IsEditingTextField() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUI.IsEditingTextField"); return default; }
         [global::Unbound.Stub] internal static void EndEditingActiveTextField() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUI.EndEditingActiveTextField"); }
-        [global::Unbound.Stub] public static void FocusTextInControl(string name) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUI.FocusTextInControl"); }
         [global::Unbound.Stub] internal static void ClearStacks() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUI.ClearStacks"); }
         [global::Unbound.Stub] internal static void BeginDisabled(bool disabled) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUI.BeginDisabled"); }
         [global::Unbound.Stub] internal static void EndDisabled() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUI.EndDisabled"); }

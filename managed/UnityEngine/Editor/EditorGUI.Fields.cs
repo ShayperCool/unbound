@@ -72,6 +72,8 @@ namespace UnityEditor
             internal static bool s_EditingWasCompleted = false;
             internal static bool s_AllowContextCutOrPaste = true;
 
+            IMECompositionMode m_IMECompositionModeBackup;
+
             // Unity asks the view being drawn whether it has focus; a game's OnGUI draws in the
             // Game view, which has it while the application has.
             internal bool IsEditingControl(int id) =>
@@ -91,6 +93,9 @@ namespace UnityEditor
                 s_ActuallyEditing = true;
                 scrollOffset = Vector2.zero;
                 UnityEditor.Undo.IncrementCurrentGroup();
+                // Composition (an input method) is on while a field is edited.
+                m_IMECompositionModeBackup = GUIUtility.imeCompositionMode;
+                GUIUtility.imeCompositionMode = IMECompositionMode.On;
             }
 
             public virtual void EndEditing()
@@ -102,16 +107,19 @@ namespace UnityEditor
                 s_EditingWasCompleted = false;
                 s_AllowContextCutOrPaste = true;
                 UnityEditor.Undo.IncrementCurrentGroup();
+                GUIUtility.imeCompositionMode = m_IMECompositionModeBackup;
             }
         }
 
-        /// <summary>A delayed field's editor: when the field loses keyboard focus, the Editor sends
-        /// its view a commit command that hands the field its text. Unbound has no view to send it
-        /// to, so the field reads the commit in the next event it is drawn in.</summary>
+        /// <summary>A delayed field's editor: when the field loses keyboard focus, the Editor's view
+        /// sends itself a commit command that hands the field its text. A game's OnGUI gets none
+        /// (tests/projects/editorvaluefields delayedAway.*: a field left by a click keeps its value),
+        /// and Unbound has no editor view that would send it, so only the command commits.</summary>
         internal sealed partial class DelayedTextEditor : RecycledTextEditor
         {
             int controlThatHadFocus = 0, messageControl = 0;
             internal string controlThatHadFocusValue = "";
+            const string CommitCommand = "DelayedControlShouldCommit";
 
             public void BeginGUI()
             {
@@ -132,31 +140,30 @@ namespace UnityEditor
                 }
             }
 
-            /// <summary>Editing that ends outside any event (another window took focus) commits the
-            /// field: the Editor sends the commit command at once; here the field reads it when it is
-            /// next drawn.</summary>
-            public override void EndEditing()
-            {
-                if (Event.current == null)
-                {
-                    messageControl = controlID;
-                    controlThatHadFocusValue = text;
-                }
-                base.EndEditing();
-            }
+            /// <summary>The Editor commits a field whose editing ends outside any event through the
+            /// view that had focus; there is none here.</summary>
+            public override void EndEditing() => base.EndEditing();
 
             public string OnGUI(int id, string value, out bool changed)
             {
-                if (id == messageControl && messageControl != 0)
+                Event evt = Event.current;
+                if (evt.type == EventType.ExecuteCommand && evt.commandName == CommitCommand && id == messageControl)
                 {
                     changed = !showMixedValue || controlThatHadFocusValue != k_MultiEditValueString
                         ? value != controlThatHadFocusValue : false;
+                    evt.Use();
                     messageControl = 0;
                     return controlThatHadFocusValue;
                 }
                 changed = false;
                 return value;
             }
+        }
+
+        public static void FocusTextInControl(string name)
+        {
+            GUI.FocusControl(name);
+            EditorGUIUtility.editingTextField = true;
         }
 
         internal static bool LabelHasContent(GUIContent label) =>
@@ -498,7 +505,7 @@ namespace UnityEditor
                     else drawText = passwordField ? "".PadRight(text.Length, '*') : text;
 
                     if (!editor.IsEditingControl(id))
-                        style.Draw(position, new GUIContent(drawText), id, false, position.Contains(Event.current.mousePosition));
+                        style.Draw(position, EditorGUIUtility.TempContent(drawText), id, false, position.Contains(Event.current.mousePosition));
                     else
                         editor.DrawCursor(drawText);
 
@@ -509,6 +516,9 @@ namespace UnityEditor
                     editor.UpdateScrollOffset();
                     break;
             }
+
+            if (GUIUtility.keyboardControl == id)
+                Stubs.Ignored("UnityEngine.GUIUtility.textFieldInput", "a focused editor text field does not tell the GUI that text is being input");
 
             changed = false;
             if (mayHaveChanged)
@@ -606,6 +616,7 @@ namespace UnityEditor
                         s_DragStartPos = evt.mousePosition;
                         s_DragSensitivity = dragSensitivity;
                         evt.Use();
+                        Stubs.Ignored("UnityEditor.EditorGUIUtility.SetWantsMouseJumping", "the cursor does not wrap at the screen's edges while a number is dragged");
                     }
                     break;
                 case EventType.MouseUp:
@@ -1377,8 +1388,15 @@ namespace UnityEditor
         public static string DelayedTextField(GUIContent label, string text, GUIStyle style, params GUILayoutOption[] options) => EditorGUI.DelayedTextField(NumberRect(true, style, options), label, text, style);
 
         public static string TextArea(string text, params GUILayoutOption[] options) => TextArea(text, EditorGUI.TextStyle, options);
-        public static string TextArea(string text, GUIStyle style, params GUILayoutOption[] options) =>
-            EditorGUI.TextArea(GUILayoutUtility.GetRect(EditorGUIUtility.TempContent(text), style, options), text, style);
+        public static string TextArea(string text, GUIStyle style, params GUILayoutOption[] options)
+        {
+            if (!Compat.EditorValueFieldsMeasured)
+            {
+                Stubs.NotImplemented("UnityEditor.EditorGUILayout.TextArea");
+                return text;
+            }
+            return EditorGUI.TextArea(GUILayoutUtility.GetRect(EditorGUIUtility.TempContent(text), style, options), text, style);
+        }
 
         public static string PasswordField(string password, params GUILayoutOption[] options) => PasswordField(password, EditorGUI.TextStyle, options);
         public static string PasswordField(string password, GUIStyle style, params GUILayoutOption[] options) => EditorGUI.PasswordField(NumberRect(false, style, options), password, style);

@@ -81,8 +81,10 @@ namespace UnityEngine.Tests
             Assert.True(EditorGUIUtility.editingTextField);
             value = Pass(Char('3'), () => EditorGUI.FloatField(r, value));
             Assert.Equal(6f, value);
+            Assert.Equal(IMECompositionMode.On, Input.imeCompositionMode);
             Pass(Event.KeyboardEvent("return"), () => EditorGUI.FloatField(r, value));
             Assert.False(EditorGUIUtility.editingTextField);
+            Assert.Equal(IMECompositionMode.Auto, Input.imeCompositionMode);
             Reset();
         }
 
@@ -130,10 +132,12 @@ namespace UnityEngine.Tests
                 var r = new Rect(0, 0, 100, 18);
                 Assert.Equal(1.5f, Pass(new Event { type = EventType.Repaint }, () => EditorGUI.FloatField(r, 1.5f)));
                 Assert.Equal(4, Pass(new Event { type = EventType.Repaint }, () => EditorGUI.IntSlider(r, 4, 0, 10)));
+                Assert.Equal("a", Pass(new Event { type = EventType.Layout }, () => EditorGUILayout.TextArea("a"), 4));
             }
             finally { Debug.unityLogger.logHandler = previous; }
             Assert.Contains(capture.Lines, line => line.Contains("EditorGUI.FloatField is not implemented"));
             Assert.Contains(capture.Lines, line => line.Contains("EditorGUI.IntSlider is not implemented"));
+            Assert.Contains(capture.Lines, line => line.Contains("EditorGUILayout.TextArea is not implemented"));
         }
     }
 }
