@@ -65,6 +65,19 @@ pub struct BakeRequest {
     /// The scene's light probe groups.
     #[serde(default)]
     probes: Vec<ProbeGroupData>,
+    /// The Gaussian filters of the Lighting Settings' Advanced filtering, when its lightmaps are
+    /// filtered (the managed side asks only for what is measured).
+    #[serde(default)]
+    filtering: Option<FilteringData>,
+}
+
+/// The radii of the Gaussian filters of the direct light and of the indirect and sky's light,
+/// in texels (0: none).
+#[derive(serde::Deserialize, Clone, Copy)]
+#[serde(rename_all = "camelCase")]
+struct FilteringData {
+    direct: f32,
+    indirect: f32,
 }
 
 /// A light probe group: its file ID in the scene and its probes' points in world space, three
@@ -626,6 +639,7 @@ impl<'a> Buffers<'a> {
         padding: u32,
         stitched: &[(&[EdgePair], [f32; 4])],
         shadowmask: Option<bool>,
+        filtering: Option<FilteringData>,
     ) -> Result<()> {
         let index = self.lightmaps.len();
         self.write(format!("occupancy{index}.u8"), g.occupancy.clone())?;
@@ -728,9 +742,14 @@ impl<'a> Buffers<'a> {
                 indirect: bounced.map(|b| b.irradiance.as_slice()),
                 environment: bounced.map(|b| b.environment.as_slice()),
                 validity: bounced.map(|b| b.validity.as_slice()),
+                charts: &g.charts,
             },
             backface_tolerance,
             padding,
+            filtering.map(|f| composite::Filtering {
+                direct: f.direct,
+                indirect: f.indirect,
+            }),
         );
         // Then the seams of the renderers that stitch them: red, green and blue, as high as
         // they go.
@@ -1251,6 +1270,7 @@ fn bake(request: BakeRequest, buffers: Option<&Path>) -> Result<Json> {
                 // (The Shadowmask Lighting Mode with a light on a shadowmask channel.)
                 (mixed == MixedMode::Shadowmask && channels.iter().any(|c| c.is_some()))
                     .then_some(request.shadowmask_stitching),
+                request.filtering,
             )?;
         }
         let described = bounce.as_ref().map_or(Json::Null, |b| {

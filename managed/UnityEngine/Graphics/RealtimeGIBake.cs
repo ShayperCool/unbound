@@ -300,7 +300,7 @@ namespace UnityEngine
             // (What the bake does not make yet, or makes only where measured:
             // tests/projects/bakedbuffers bakes without filtering, ambient occlusion and with an
             // Indirect Intensity of 1, its directional lightmaps in the Baked Indirect mode.)
-            : settings.bakedGI && settings.filteringMode != LightingSettings.FilterMode.None ? "lightmaps with filtering are not made yet"
+            : settings.bakedGI && UnmadeFiltering(settings) is { } filtering ? filtering
             : settings.bakedGI && settings.ao ? "lightmaps with ambient occlusion are not made yet"
             : settings.bakedGI && settings.indirectScale != 1f ? "an Indirect Intensity other than 1 is not measured"
             : settings.bakedGI && settings.directionalityMode == LightmapsMode.CombinedDirectional && settings.mixedBakeMode != MixedLightingMode.IndirectOnly
@@ -314,6 +314,39 @@ namespace UnityEngine
             : !(editable ?? UnityEditor.AssetDatabase.Editable)(folder) ? "the scene is not in the project's own assets"
             : settings.bakedGI && !lightmapsMade ? "this bake did not make all of its lightmaps' light (said)"
             : settings.bakedGI && !shadowmaskMade ? "a bake in the Shadowmask Lighting Mode without a light on a shadowmask channel is not measured"
+            : null;
+
+        /// <summary>The Gaussian filters a bake applies to its lightmaps (radii in texels, 0: none):
+        /// with the Advanced filtering and no denoiser, the direct light's and the indirect and
+        /// sky's light's (matches the Unity 6000.0.71f1 Editor, tests/projects/bakedbuffers
+        /// `Filter*`); null without filtering or where it is not made (<see
+        /// cref="UnmadeFiltering"/>).</summary>
+        internal static object GaussianFiltering(LightingSettings settings)
+        {
+            if (settings == null || settings.filteringMode != LightingSettings.FilterMode.Advanced || UnmadeFiltering(settings) != null)
+                return null;
+            static float Radius(LightingSettings.FilterType type, float radius) => type == LightingSettings.FilterType.Gaussian ? radius : 0f;
+            return new
+            {
+                direct = Radius(settings.filterTypeDirect, settings.filteringGaussianRadiusDirect),
+                indirect = Radius(settings.filterTypeIndirect, settings.filteringGaussianRadiusIndirect),
+            };
+        }
+
+        /// <summary>Why a bake's lightmaps with the Lighting Settings' filtering are not made
+        /// (null: they are, or nothing is filtered). Measured: the Advanced filtering with
+        /// Gaussian filters (or none) of the direct and indirect light and no denoiser, in the
+        /// Baked Indirect Lighting Mode without directional lightmaps (the ambient occlusion
+        /// target's settings matter only with ambient occlusion, which is not made).</summary>
+        internal static string UnmadeFiltering(LightingSettings settings) =>
+            settings.filteringMode == LightingSettings.FilterMode.None ? null
+            : settings.filteringMode == LightingSettings.FilterMode.Auto ? "lightmaps with the Auto filtering (a denoiser) are not made yet"
+            : settings.denoiserTypeDirect != LightingSettings.DenoiserType.None || settings.denoiserTypeIndirect != LightingSettings.DenoiserType.None
+                ? "lightmaps with a denoiser are not made yet"
+            : settings.filterTypeDirect == LightingSettings.FilterType.ATrous || settings.filterTypeIndirect == LightingSettings.FilterType.ATrous
+                ? "lightmaps with the A-Trous filter are not made yet"
+            : settings.directionalityMode == LightmapsMode.CombinedDirectional ? "directional lightmaps with filtering are not measured"
+            : settings.mixedBakeMode != MixedLightingMode.IndirectOnly ? "filtered lightmaps in the Shadowmask or Subtractive Lighting Mode are not measured"
             : null;
 
         /// <summary>The folder a bake writes its files to beside the scene (null: untitled).</summary>

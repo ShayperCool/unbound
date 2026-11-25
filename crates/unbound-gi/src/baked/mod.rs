@@ -9,6 +9,7 @@ pub mod composite;
 pub mod dilate;
 pub mod direct;
 pub mod directional;
+pub mod filter;
 pub mod gbuffer;
 pub mod grid;
 pub mod images;
