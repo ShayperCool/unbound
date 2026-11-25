@@ -162,37 +162,96 @@ namespace UnityEngine.Tests
         public void AnUnmeasuredReleaseLeavesTheTangents()
         {
             using var release = TestRelease.Pin(TestRelease.Unmeasured);
-            const string member = "UnityEditor.AnimationUtility.UpdateTangentsFromMode";
-            int before = Hits(member);
+            var members = new[]
+            {
+                "UnityEditor.AnimationUtility.UpdateTangentsFromMode", "UnityEditor.AnimationUtility.UpdateTangentsFromModeSurrounding",
+                "UnityEditor.AnimationUtility.SyncEditorCurves", "UnityEditor.AnimationMode.InitializePropertyModificationForGameObject",
+                "UnityEditor.AnimationMode.InitializePropertyModificationForObject",
+            };
+            var before = System.Linq.Enumerable.ToArray(System.Linq.Enumerable.Select(members, Hits));
             var curve = Moded();
             AnimationUtility.UpdateTangentsFromMode(curve);
             AnimationUtility.UpdateTangentsFromModeSurrounding(curve, 2);
             Assert.Equal("9 9 | 9 9 | 9 9 | 9 9 | 9 9", Tangents(curve)); // tangents.start
-            Assert.Equal(before + 1, Hits(member));
+            var go = new GameObject("unmeasured");
+            var clip = new AnimationClip();
+            AnimationUtility.SyncEditorCurves(clip);
+            // Outside animation mode the measured members throw; these only report.
+            AnimationMode.InitializePropertyModificationForGameObject(go, clip);
+            AnimationMode.InitializePropertyModificationForObject(go.transform, clip);
+            Object.DestroyImmediate(go);
+            for (int i = 0; i < members.Length; i++) Assert.Equal(before[i] + 1, Hits(members[i]));
         }
 
         static int Hits(string member) => System.Linq.Enumerable.FirstOrDefault(Unbound.Runtime.Stubs.HitReport(), h => h.Key == member).Value;
 
-        /// <summary>A property Unbound cannot read to record (an Animator's curve here) is reported,
-        /// not skipped in silence; a field a script lacks is not (measured: init.object).</summary>
+        const string KindNotice = "AnimationMode.InitializePropertyModification Animator, material and blend shape curves";
+        const string UnreadNotice = "AnimationMode.InitializePropertyModification unread properties";
+
+        /// <summary>An Animator's curves and material curves are reported and not recorded (their
+        /// recording is unmeasured; Unbound's read of them is not the object's value).</summary>
         [Fact]
-        public void UnreadPropertiesAreReported()
+        public void AnimatorAndMaterialCurvesAreReportedNotRecorded()
         {
             using var release = TestRelease.Pin(TestRelease.Measured);
-            const string member = "AnimationMode.InitializePropertyModification unread properties";
             var go = new GameObject("animated");
-            go.AddComponent<Animator>();
+            var animator = go.AddComponent<Animator>();
+            var renderer = go.AddComponent<MeshRenderer>();
             var clip = new AnimationClip();
-            AnimationUtility.SetEditorCurve(clip, EditorCurveBinding.FloatCurve("", typeof(Animator), "RootT.x"), AnimationCurve.Constant(0f, 1f, 1f));
-            int before = Hits(member);
+            AnimationUtility.SetEditorCurve(clip, EditorCurveBinding.FloatCurve("", typeof(Animator), "Speed"), AnimationCurve.Constant(0f, 1f, 1f));
+            AnimationUtility.SetEditorCurve(clip, EditorCurveBinding.FloatCurve("", typeof(MeshRenderer), "material._Color.r"), AnimationCurve.Constant(0f, 1f, 1f));
+            int before = Hits(KindNotice);
             AnimationMode.StartAnimationMode();
-            try { AnimationMode.InitializePropertyModificationForGameObject(go, clip); }
+            try
+            {
+                AnimationMode.InitializePropertyModificationForGameObject(go, clip);
+                Assert.False(AnimationMode.IsPropertyAnimated(animator, "Speed"));
+                Assert.False(AnimationMode.IsPropertyAnimated(renderer, "material._Color.r"));
+                Assert.Equal(before + 2, Hits(KindNotice));
+                AnimationMode.InitializePropertyModificationForObject(renderer, clip);
+                Assert.False(AnimationMode.IsPropertyAnimated(renderer, "material._Color.r"));
+                Assert.Equal(before + 3, Hits(KindNotice));
+            }
             finally
             {
                 AnimationMode.StopAnimationMode();
                 Object.DestroyImmediate(go);
             }
-            Assert.Equal(before + 1, Hits(member));
+        }
+
+        /// <summary>A property Unbound cannot read is reported, on both paths; a rotation authored as
+        /// Euler angles records its rotation and is not reported for its hint.</summary>
+        [Fact]
+        public void UnreadPropertiesAreReported()
+        {
+            using var release = TestRelease.Pin(TestRelease.Measured);
+            var go = new GameObject("animated");
+            var light = go.AddComponent<Light>();
+            var unread = new AnimationClip();
+            AnimationUtility.SetEditorCurve(unread, EditorCurveBinding.FloatCurve("", typeof(Light), "m_Shadows.m_Type"), AnimationCurve.Constant(0f, 1f, 1f));
+            var euler = new AnimationClip();
+            AnimationUtility.SetEditorCurve(euler, EditorCurveBinding.FloatCurve("", typeof(Transform), "localEulerAnglesRaw.y"), AnimationCurve.Constant(0f, 1f, 30f));
+            go.transform.localRotation = Quaternion.Euler(0f, 10f, 0f);
+            var rotation = go.transform.localRotation;
+            AnimationMode.StartAnimationMode();
+            try
+            {
+                int before = Hits(UnreadNotice);
+                AnimationMode.InitializePropertyModificationForGameObject(go, euler);
+                Assert.Equal(before, Hits(UnreadNotice));
+                Assert.True(AnimationMode.IsPropertyAnimated(go.transform, "m_LocalRotation.y"));
+                AnimationMode.InitializePropertyModificationForGameObject(go, unread);
+                Assert.Equal(before + 1, Hits(UnreadNotice));
+                AnimationMode.InitializePropertyModificationForObject(light, unread);
+                Assert.Equal(before + 2, Hits(UnreadNotice));
+                go.transform.localRotation = Quaternion.Euler(0f, 50f, 0f);
+            }
+            finally
+            {
+                AnimationMode.StopAnimationMode();
+            }
+            Assert.Equal(rotation, go.transform.localRotation);
+            Object.DestroyImmediate(go);
         }
     }
 }

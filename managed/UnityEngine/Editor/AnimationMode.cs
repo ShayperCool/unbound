@@ -149,6 +149,7 @@ namespace UnityEditor
             RequireAnimationMode("InitializePropertyModificationForGameObject");
             foreach (var binding in GetCurveBindings(clip))
             {
+                if (UnmeasuredKind(binding)) continue;
                 var target = AnimationUtility.GetAnimatedObject(gameObject, binding);
                 RecordBinding(target, binding, gameObject);
                 ReportUnrecorded(target, binding);
@@ -169,7 +170,7 @@ namespace UnityEditor
                 if (!string.IsNullOrEmpty(binding.path) || binding.type == null || !binding.type.IsInstanceOfType(target)) continue;
                 if (binding.isPPtrCurve)
                     Unbound.Runtime.Stubs.Ignored("AnimationMode.InitializePropertyModificationForObject object references", "records no object reference properties of the object (unmeasured)");
-                else
+                else if (!UnmeasuredKind(binding))
                 {
                     Record(target, binding.propertyName);
                     ReportUnrecorded(target, binding);
@@ -177,18 +178,35 @@ namespace UnityEditor
             }
         }
 
-        /// <summary>Reports a found target's property that Unbound could not read to record
-        /// (an Animator's muscle and parameter curves, material and blend shape curves, an engine
-        /// component's unread field), whose revert is then lost: what the Editor records for them
-        /// is unmeasured. A script's field Unbound reads in full, so an unread one is a field the
-        /// script lacks, which the Editor does not record either (tests/projects/animinternal
-        /// <c>init.object</c>).</summary>
+        /// <summary>An Animator's curves (humanoid muscles, float parameters), material and blend
+        /// shape curves: what the Editor records for them is unmeasured, and the value Unbound reads
+        /// for them is not the object's own (a muscle reads its default), so they are reported and
+        /// not recorded.</summary>
+        static bool UnmeasuredKind(EditorCurveBinding binding)
+        {
+            var name = binding.propertyName ?? "";
+            if (binding.type != typeof(Animator) && !name.StartsWith("material.", StringComparison.Ordinal)
+                && !name.StartsWith("blendShape.", StringComparison.Ordinal)) return false;
+            Unbound.Runtime.Stubs.Ignored("AnimationMode.InitializePropertyModification Animator, material and blend shape curves",
+                "records no Animator, material or blend shape curves for the revert (unmeasured)");
+            return true;
+        }
+
+        /// <summary>Reports a found target's property that Unbound could not read to record, whose
+        /// revert is then lost. Not reported: the Euler hint of a rotation (the rotation itself is
+        /// recorded and written back) and a field a script lacks, which the Editor does not record
+        /// either (tests/projects/animinternal <c>init.object</c>).</summary>
         static void ReportUnrecorded(Object target, EditorCurveBinding binding)
         {
             if (target == null || IsRecorded(target, binding.propertyName)) return;
-            if (target is MonoBehaviour || target is ScriptableObject) return;
+            if (target is Transform && binding.propertyName.StartsWith("m_LocalEulerAnglesHint.", StringComparison.Ordinal)) return;
+            if (target is MonoBehaviour || target is ScriptableObject)
+            {
+                using var so = new SerializedObject(target);
+                if (so.FindProperty(binding.propertyName) == null) return;
+            }
             Unbound.Runtime.Stubs.Ignored("AnimationMode.InitializePropertyModification unread properties",
-                "records no " + target.GetType().Name + "." + binding.propertyName + " for the revert (the Editor's recording of it is unmeasured)");
+                "records no value of a property Unbound cannot read for the revert (the Editor's recording of it is unmeasured)");
         }
 
         static void RequireAnimationMode(string member)
