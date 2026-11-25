@@ -16,6 +16,13 @@ booleans, camera-facing leaves); `.meta` files of serializedVersion 7 (InPrefab 
 `externalObjects`, `fileIDType` 2) and 6 (External materials in `<name> Materials/LOD<i>/`, `fileIDType` 1,
 every level overriding the settings, one with shadows, light probes and the effects off).
 
+`run.py` also stages copies of two samples beside them (`VARIANTS`) with their `.meta` edited for what the
+samples do not combine: `Card_Units0` (units left as they are, embedded materials, cross-fading not animated
+with a fade-out width of its own, a selected wind quality the levels do not have), `Card_Inches` (inches,
+no smooth transitions), `Card_Custom` (a custom scale), `Card_Dangling` (a material remap to no asset),
+`Card_Spheres` (its collision objects' ends moved: one meeting, one 0.001 apart) and `Field_Embedded`
+(the leaves, bark and billboard materials embedded, cross-fading not animated with both widths set).
+
 `Assets/Scripts/SpeedTree8Probe.cs` records, in Play mode, for each tree the importer's public settings,
 every object of the asset (class, name, local file id, hide flags), the main object's hierarchy with its
 components (transforms, LODGroup levels, renderers' materials and lighting, Tree wind assets, colliders,

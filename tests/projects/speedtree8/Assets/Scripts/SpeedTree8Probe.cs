@@ -68,6 +68,9 @@ public sealed class SpeedTree8Probe : MonoBehaviour
                          .OrderBy(p => p, StringComparer.Ordinal))
                 DumpTexture(path);
             DumpCallbacks(dir, trees);
+            // The trees a GameObject search finds.
+            Rec("find/GameObject", string.Join(",", AssetDatabase.FindAssets("t:GameObject", new[] { "Assets/Trees" })
+                .Select(AssetDatabase.GUIDToAssetPath).OrderBy(p => p, StringComparer.Ordinal)));
             DumpScene();
             m_Out.Append("{\"k\":\"complete\",\"v\":true}\n");
             if (string.IsNullOrEmpty(dir)) Debug.Log(m_Out.ToString());
@@ -130,6 +133,7 @@ public sealed class SpeedTree8Probe : MonoBehaviour
             }
         Rec(t + "/main", main == null ? "null" : main.GetType().Name + " " + main.name);
         Rec(t + "/mainType", Value(AssetDatabase.GetMainAssetTypeAtPath(path)));
+        Rec(t + "/prefabType", main == null ? "null" : PrefabUtility.GetPrefabAssetType(main).ToString());
         var all = AssetDatabase.LoadAllAssetsAtPath(path);
         var rows = new SortedDictionary<string, string>(StringComparer.Ordinal);
         var meshes = new List<Mesh>();

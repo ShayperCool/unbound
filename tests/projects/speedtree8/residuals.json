@@ -25,17 +25,48 @@
   "v8/Broadleaf_Desktop_Field_OptionsOn.st/go/Broadleaf_Desktop_Field_OptionsOn/Broadleaf_Desktop_Field_OptionsOn_LOD2/transform",
   "v8/Broadleaf_Desktop_Field_OptionsOn.st/go/Broadleaf_Desktop_Field_OptionsOn/Broadleaf_Desktop_Field_OptionsOn_LOD3/transform",
   "v8/Broadleaf_Desktop_Field_OptionsOn.st/go/Broadleaf_Desktop_Field_OptionsOn/CollisionObject0/transform",
+  "v8/Card_Tree_Sample/Card_Custom.st/go/Card_Custom/Card_Custom_LOD0/transform",
+  "v8/Card_Tree_Sample/Card_Custom.st/go/Card_Custom/Card_Custom_LOD1/transform",
+  "v8/Card_Tree_Sample/Card_Custom.st/go/Card_Custom/Card_Custom_LOD2/transform",
+  "v8/Card_Tree_Sample/Card_Custom.st/go/Card_Custom/CollisionObject1/transform",
+  "v8/Card_Tree_Sample/Card_Dangling.st/go/Card_Dangling/Card_Dangling_LOD0/transform",
+  "v8/Card_Tree_Sample/Card_Dangling.st/go/Card_Dangling/Card_Dangling_LOD1/transform",
+  "v8/Card_Tree_Sample/Card_Dangling.st/go/Card_Dangling/Card_Dangling_LOD2/transform",
+  "v8/Card_Tree_Sample/Card_Dangling.st/go/Card_Dangling/CollisionObject0/transform",
+  "v8/Card_Tree_Sample/Card_Dangling.st/go/Card_Dangling/CollisionObject1/transform",
+  "v8/Card_Tree_Sample/Card_Inches.st/go/Card_Inches/Card_Inches_LOD0/transform",
+  "v8/Card_Tree_Sample/Card_Inches.st/go/Card_Inches/Card_Inches_LOD1/transform",
+  "v8/Card_Tree_Sample/Card_Inches.st/go/Card_Inches/Card_Inches_LOD2/transform",
+  "v8/Card_Tree_Sample/Card_Inches.st/go/Card_Inches/CollisionObject0/transform",
+  "v8/Card_Tree_Sample/Card_Inches.st/go/Card_Inches/CollisionObject1/transform",
+  "v8/Card_Tree_Sample/Card_Spheres.st/go/Card_Spheres/Card_Spheres_LOD0/transform",
+  "v8/Card_Tree_Sample/Card_Spheres.st/go/Card_Spheres/Card_Spheres_LOD1/transform",
+  "v8/Card_Tree_Sample/Card_Spheres.st/go/Card_Spheres/Card_Spheres_LOD2/transform",
+  "v8/Card_Tree_Sample/Card_Spheres.st/go/Card_Spheres/CollisionObject0/transform",
+  "v8/Card_Tree_Sample/Card_Spheres.st/go/Card_Spheres/CollisionObject1/transform",
+  "v8/Card_Tree_Sample/Card_Units0.st/go/Card_Units0/Card_Units0_LOD0/transform",
+  "v8/Card_Tree_Sample/Card_Units0.st/go/Card_Units0/Card_Units0_LOD1/transform",
+  "v8/Card_Tree_Sample/Card_Units0.st/go/Card_Units0/Card_Units0_LOD2/transform",
+  "v8/Card_Tree_Sample/Card_Units0.st/go/Card_Units0/CollisionObject1/transform",
   "v8/Card_Tree_Sample/card-tree-sample.st/go/card-tree-sample/CollisionObject0/transform",
   "v8/Card_Tree_Sample/card-tree-sample.st/go/card-tree-sample/CollisionObject1/transform",
   "v8/Card_Tree_Sample/card-tree-sample.st/go/card-tree-sample/card-tree-sample_LOD0/transform",
   "v8/Card_Tree_Sample/card-tree-sample.st/go/card-tree-sample/card-tree-sample_LOD1/transform",
-  "v8/Card_Tree_Sample/card-tree-sample.st/go/card-tree-sample/card-tree-sample_LOD2/transform"
+  "v8/Card_Tree_Sample/card-tree-sample.st/go/card-tree-sample/card-tree-sample_LOD2/transform",
+  "v8/Field_Embedded.st/go/Field_Embedded/CollisionObject0/transform",
+  "v8/Field_Embedded.st/go/Field_Embedded/Field_Embedded_LOD0/transform",
+  "v8/Field_Embedded.st/go/Field_Embedded/Field_Embedded_LOD1/transform",
+  "v8/Field_Embedded.st/go/Field_Embedded/Field_Embedded_LOD2/transform",
+  "v8/Field_Embedded.st/go/Field_Embedded/Field_Embedded_LOD3/transform"
  ],
  "A collision capsule rotation from Quaternion.FromToRotation is 1 ulp off in w and keeps a +0 x (Quaternion arithmetic follow-up)": [
   "scene/go/OptionsOnInScene/CollisionObject1/transform",
   "v8/Broadleaf_Desktop_Field.st/go/Broadleaf_Desktop_Field/CollisionObject1/transform",
   "v8/Broadleaf_Desktop_Field_OptionsOff.st/go/Broadleaf_Desktop_Field_OptionsOff/CollisionObject1/transform",
-  "v8/Broadleaf_Desktop_Field_OptionsOn.st/go/Broadleaf_Desktop_Field_OptionsOn/CollisionObject1/transform"
+  "v8/Broadleaf_Desktop_Field_OptionsOn.st/go/Broadleaf_Desktop_Field_OptionsOn/CollisionObject1/transform",
+  "v8/Card_Tree_Sample/Card_Custom.st/go/Card_Custom/CollisionObject0/transform",
+  "v8/Card_Tree_Sample/Card_Units0.st/go/Card_Units0/CollisionObject0/transform",
+  "v8/Field_Embedded.st/go/Field_Embedded/CollisionObject1/transform"
  ],
  "A material file whose shader is not in the project (URP shaders in a built-in project) reports no shader where the Editor reports Hidden/InternalErrorShader (Material loading follow-up)": [
   "v8/Broadleaf_Desktop_Field.st/material/v8/Materials/Broadleaf_Desktop_Field.mat",
@@ -59,6 +90,8 @@
  ],
  "LODGroup.RecalculateBounds unions the corners of the renderers bounds; the Editor reference point matches a union of the bounds themselves, 4 ulps off in x here (LODGroup follow-up)": [
   "scene/go/CardInScene/LODGroup",
+  "v8/Card_Tree_Sample/Card_Dangling.st/go/Card_Dangling/LODGroup",
+  "v8/Card_Tree_Sample/Card_Spheres.st/go/Card_Spheres/LODGroup",
   "v8/Card_Tree_Sample/card-tree-sample.st/go/card-tree-sample/LODGroup"
  ]
 }

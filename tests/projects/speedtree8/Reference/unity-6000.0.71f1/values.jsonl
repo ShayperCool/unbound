@@ -38,6 +38,7 @@
 {"k":"v8/Broadleaf_Desktop_Field.st/importer/windQualities","v":"[4,4,4,1]"}
 {"k":"v8/Broadleaf_Desktop_Field.st/main","v":"GameObject Broadleaf_Desktop_Field"}
 {"k":"v8/Broadleaf_Desktop_Field.st/mainType","v":"UnityEngine.GameObject"}
+{"k":"v8/Broadleaf_Desktop_Field.st/prefabType","v":"Model"}
 {"k":"v8/Broadleaf_Desktop_Field.st/object/CapsuleCollider/Broadleaf_Desktop_Field/CollisionObject0:CapsuleCollider","v":"136297279999738247 hide HideInHierarchy, NotEditable"}
 {"k":"v8/Broadleaf_Desktop_Field.st/object/CapsuleCollider/Broadleaf_Desktop_Field/CollisionObject1:CapsuleCollider","v":"-8221809898812911413 hide HideInHierarchy, NotEditable"}
 {"k":"v8/Broadleaf_Desktop_Field.st/object/GameObject/Broadleaf_Desktop_Field","v":"919132149155446097 hide NotEditable"}
@@ -211,6 +212,7 @@
 {"k":"v8/Broadleaf_Desktop_Field_OptionsOff.st/importer/windQualities","v":"[4,4,4,1]"}
 {"k":"v8/Broadleaf_Desktop_Field_OptionsOff.st/main","v":"GameObject Broadleaf_Desktop_Field_OptionsOff"}
 {"k":"v8/Broadleaf_Desktop_Field_OptionsOff.st/mainType","v":"UnityEngine.GameObject"}
+{"k":"v8/Broadleaf_Desktop_Field_OptionsOff.st/prefabType","v":"Model"}
 {"k":"v8/Broadleaf_Desktop_Field_OptionsOff.st/object/CapsuleCollider/Broadleaf_Desktop_Field_OptionsOff/CollisionObject0:CapsuleCollider","v":"-3539448721011047105 hide HideInHierarchy, NotEditable"}
 {"k":"v8/Broadleaf_Desktop_Field_OptionsOff.st/object/CapsuleCollider/Broadleaf_Desktop_Field_OptionsOff/CollisionObject1:CapsuleCollider","v":"-6498106231221781332 hide HideInHierarchy, NotEditable"}
 {"k":"v8/Broadleaf_Desktop_Field_OptionsOff.st/object/GameObject/Broadleaf_Desktop_Field_OptionsOff","v":"-927199367670048503 hide NotEditable"}
@@ -392,6 +394,7 @@
 {"k":"v8/Broadleaf_Desktop_Field_OptionsOn.st/importer/windQualities","v":"[4,4,4,1]"}
 {"k":"v8/Broadleaf_Desktop_Field_OptionsOn.st/main","v":"GameObject Broadleaf_Desktop_Field_OptionsOn"}
 {"k":"v8/Broadleaf_Desktop_Field_OptionsOn.st/mainType","v":"UnityEngine.GameObject"}
+{"k":"v8/Broadleaf_Desktop_Field_OptionsOn.st/prefabType","v":"Model"}
 {"k":"v8/Broadleaf_Desktop_Field_OptionsOn.st/object/CapsuleCollider/Broadleaf_Desktop_Field_OptionsOn/CollisionObject0:CapsuleCollider","v":"-3539448721011047105 hide HideInHierarchy, NotEditable"}
 {"k":"v8/Broadleaf_Desktop_Field_OptionsOn.st/object/CapsuleCollider/Broadleaf_Desktop_Field_OptionsOn/CollisionObject1:CapsuleCollider","v":"-6498106231221781332 hide HideInHierarchy, NotEditable"}
 {"k":"v8/Broadleaf_Desktop_Field_OptionsOn.st/object/GameObject/Broadleaf_Desktop_Field_OptionsOn","v":"-927199367670048503 hide NotEditable"}
@@ -534,6 +537,786 @@
 {"k":"v8/Broadleaf_Desktop_Field_OptionsOn.st/material/v8/Broadleaf_Desktop_Field_OptionsOn Materials/LOD2/Main_Bark.mat/keywords","v":"BACKFACE_NORMAL_MODE_MIRROR _WINDQUALITY_BEST"}
 {"k":"v8/Broadleaf_Desktop_Field_OptionsOn.st/material/v8/Broadleaf_Desktop_Field_OptionsOn Materials/LOD3/Broadleaf_Desktop_Field_Billboard.mat","v":"Hidden/InternalErrorShader queue 2000 instancing True doubleSidedGI True flags EmissiveIsBlack path Assets/Trees/v8/Broadleaf_Desktop_Field_OptionsOn Materials/LOD3/Broadleaf_Desktop_Field_Billboard.mat hide None"}
 {"k":"v8/Broadleaf_Desktop_Field_OptionsOn.st/material/v8/Broadleaf_Desktop_Field_OptionsOn Materials/LOD3/Broadleaf_Desktop_Field_Billboard.mat/keywords","v":"BACKFACE_NORMAL_MODE_MIRROR EFFECT_BILLBOARD _WINDQUALITY_FASTEST"}
+{"k":"v8/Card_Tree_Sample/Card_Custom.st/importer","v":"UnityEditor.SpeedTreeImporter"}
+{"k":"v8/Card_Tree_Sample/Card_Custom.st/importer/LODHeights","v":"[3f000000,3e800000,3c23d70a]"}
+{"k":"v8/Card_Tree_Sample/Card_Custom.st/importer/alphaTestRef","v":"3ea8f5c3"}
+{"k":"v8/Card_Tree_Sample/Card_Custom.st/importer/animateCrossFading","v":"True"}
+{"k":"v8/Card_Tree_Sample/Card_Custom.st/importer/bestWindQuality","v":"4"}
+{"k":"v8/Card_Tree_Sample/Card_Custom.st/importer/billboardTransitionCrossFadeWidth","v":"3e800000"}
+{"k":"v8/Card_Tree_Sample/Card_Custom.st/importer/castShadows","v":"[True,True,True]"}
+{"k":"v8/Card_Tree_Sample/Card_Custom.st/importer/castShadowsByDefault","v":"True"}
+{"k":"v8/Card_Tree_Sample/Card_Custom.st/importer/defaultBillboardShader","v":"null"}
+{"k":"v8/Card_Tree_Sample/Card_Custom.st/importer/defaultShader","v":"Shader Nature/SpeedTree8"}
+{"k":"v8/Card_Tree_Sample/Card_Custom.st/importer/enableBump","v":"[True,True,True]"}
+{"k":"v8/Card_Tree_Sample/Card_Custom.st/importer/enableBumpByDefault","v":"True"}
+{"k":"v8/Card_Tree_Sample/Card_Custom.st/importer/enableHue","v":"[False,False,False]"}
+{"k":"v8/Card_Tree_Sample/Card_Custom.st/importer/enableHueByDefault","v":"False"}
+{"k":"v8/Card_Tree_Sample/Card_Custom.st/importer/enableSettingOverride","v":"[False,False,False]"}
+{"k":"v8/Card_Tree_Sample/Card_Custom.st/importer/enableSmoothLODTransition","v":"True"}
+{"k":"v8/Card_Tree_Sample/Card_Custom.st/importer/enableSubsurface","v":"[True,True,True]"}
+{"k":"v8/Card_Tree_Sample/Card_Custom.st/importer/enableSubsurfaceByDefault","v":"True"}
+{"k":"v8/Card_Tree_Sample/Card_Custom.st/importer/fadeOutWidth","v":"3e800000"}
+{"k":"v8/Card_Tree_Sample/Card_Custom.st/importer/generateColliders","v":"True"}
+{"k":"v8/Card_Tree_Sample/Card_Custom.st/importer/generateRigidbody","v":"True"}
+{"k":"v8/Card_Tree_Sample/Card_Custom.st/importer/hasBillboard","v":"False"}
+{"k":"v8/Card_Tree_Sample/Card_Custom.st/importer/hasImported","v":"True"}
+{"k":"v8/Card_Tree_Sample/Card_Custom.st/importer/hueVariation","v":"3f800000 3f000000 00000000 3dcccccd"}
+{"k":"v8/Card_Tree_Sample/Card_Custom.st/importer/isV8","v":"True"}
+{"k":"v8/Card_Tree_Sample/Card_Custom.st/importer/mainColor","v":"3f800000 3f800000 3f800000 3f800000"}
+{"k":"v8/Card_Tree_Sample/Card_Custom.st/importer/materialFolderPath","v":"Assets/Trees/v8/Card_Tree_Sample/Card_Custom Materials"}
+{"k":"v8/Card_Tree_Sample/Card_Custom.st/importer/materialLocation","v":"InPrefab"}
+{"k":"v8/Card_Tree_Sample/Card_Custom.st/importer/receiveShadows","v":"[True,True,True]"}
+{"k":"v8/Card_Tree_Sample/Card_Custom.st/importer/receiveShadowsByDefault","v":"True"}
+{"k":"v8/Card_Tree_Sample/Card_Custom.st/importer/reflectionProbeUsages","v":"[BlendProbes,BlendProbes,BlendProbes]"}
+{"k":"v8/Card_Tree_Sample/Card_Custom.st/importer/reflectionProbeUsagesByDefault","v":"1"}
+{"k":"v8/Card_Tree_Sample/Card_Custom.st/importer/scaleFactor","v":"40000000"}
+{"k":"v8/Card_Tree_Sample/Card_Custom.st/importer/selectedWindQuality","v":"4"}
+{"k":"v8/Card_Tree_Sample/Card_Custom.st/importer/useLightProbes","v":"[True,True,True]"}
+{"k":"v8/Card_Tree_Sample/Card_Custom.st/importer/useLightProbesByDefault","v":"True"}
+{"k":"v8/Card_Tree_Sample/Card_Custom.st/importer/windQualities","v":"[4,4,4]"}
+{"k":"v8/Card_Tree_Sample/Card_Custom.st/main","v":"GameObject Card_Custom"}
+{"k":"v8/Card_Tree_Sample/Card_Custom.st/mainType","v":"UnityEngine.GameObject"}
+{"k":"v8/Card_Tree_Sample/Card_Custom.st/prefabType","v":"Model"}
+{"k":"v8/Card_Tree_Sample/Card_Custom.st/object/CapsuleCollider/Card_Custom/CollisionObject0:CapsuleCollider","v":"136297279999738247 hide HideInHierarchy, NotEditable"}
+{"k":"v8/Card_Tree_Sample/Card_Custom.st/object/CapsuleCollider/Card_Custom/CollisionObject1:CapsuleCollider","v":"-8221809898812911413 hide HideInHierarchy, NotEditable"}
+{"k":"v8/Card_Tree_Sample/Card_Custom.st/object/GameObject/Card_Custom","v":"919132149155446097 hide NotEditable"}
+{"k":"v8/Card_Tree_Sample/Card_Custom.st/object/GameObject/Card_Custom/Card_Custom_LOD0","v":"-7807736175480847412 hide NotEditable"}
+{"k":"v8/Card_Tree_Sample/Card_Custom.st/object/GameObject/Card_Custom/Card_Custom_LOD1","v":"-9097762578097806950 hide NotEditable"}
+{"k":"v8/Card_Tree_Sample/Card_Custom.st/object/GameObject/Card_Custom/Card_Custom_LOD2","v":"-1171454483952786504 hide NotEditable"}
+{"k":"v8/Card_Tree_Sample/Card_Custom.st/object/GameObject/Card_Custom/CollisionObject0","v":"1218912716677395249 hide NotEditable"}
+{"k":"v8/Card_Tree_Sample/Card_Custom.st/object/GameObject/Card_Custom/CollisionObject1","v":"1400086564404443856 hide NotEditable"}
+{"k":"v8/Card_Tree_Sample/Card_Custom.st/object/LODGroup/Card_Custom:LODGroup","v":"4742473837712756890 hide HideInHierarchy, NotEditable"}
+{"k":"v8/Card_Tree_Sample/Card_Custom.st/object/Material/card-tree-sample","v":"-2844405123538240487 hide NotEditable"}
+{"k":"v8/Card_Tree_Sample/Card_Custom.st/object/Mesh/Card_Custom_LOD0","v":"4300000 hide NotEditable"}
+{"k":"v8/Card_Tree_Sample/Card_Custom.st/object/Mesh/Card_Custom_LOD1","v":"4300002 hide NotEditable"}
+{"k":"v8/Card_Tree_Sample/Card_Custom.st/object/Mesh/Card_Custom_LOD2","v":"4300004 hide NotEditable"}
+{"k":"v8/Card_Tree_Sample/Card_Custom.st/object/MeshFilter/Card_Custom/Card_Custom_LOD0:MeshFilter","v":"433816390130903088 hide HideInHierarchy, NotEditable"}
+{"k":"v8/Card_Tree_Sample/Card_Custom.st/object/MeshFilter/Card_Custom/Card_Custom_LOD1:MeshFilter","v":"-6391808723843863412 hide HideInHierarchy, NotEditable"}
+{"k":"v8/Card_Tree_Sample/Card_Custom.st/object/MeshFilter/Card_Custom/Card_Custom_LOD2:MeshFilter","v":"-3934162400384009508 hide HideInHierarchy, NotEditable"}
+{"k":"v8/Card_Tree_Sample/Card_Custom.st/object/MeshRenderer/Card_Custom/Card_Custom_LOD0:MeshRenderer","v":"8867795961157021127 hide HideInHierarchy, NotEditable"}
+{"k":"v8/Card_Tree_Sample/Card_Custom.st/object/MeshRenderer/Card_Custom/Card_Custom_LOD1:MeshRenderer","v":"-1936532858145012702 hide HideInHierarchy, NotEditable"}
+{"k":"v8/Card_Tree_Sample/Card_Custom.st/object/MeshRenderer/Card_Custom/Card_Custom_LOD2:MeshRenderer","v":"-5425549384683972457 hide HideInHierarchy, NotEditable"}
+{"k":"v8/Card_Tree_Sample/Card_Custom.st/object/Rigidbody/Card_Custom:Rigidbody","v":"6367646867474405593 hide HideInHierarchy, NotEditable"}
+{"k":"v8/Card_Tree_Sample/Card_Custom.st/object/SpeedTreeWindAsset/","v":"22800000 hide HideInHierarchy, HideInInspector"}
+{"k":"v8/Card_Tree_Sample/Card_Custom.st/object/Transform/Card_Custom/Card_Custom_LOD0:Transform","v":"-3448097267811193221 hide HideInHierarchy, NotEditable"}
+{"k":"v8/Card_Tree_Sample/Card_Custom.st/object/Transform/Card_Custom/Card_Custom_LOD1:Transform","v":"6283479249921132157 hide HideInHierarchy, NotEditable"}
+{"k":"v8/Card_Tree_Sample/Card_Custom.st/object/Transform/Card_Custom/Card_Custom_LOD2:Transform","v":"4466360358999988485 hide HideInHierarchy, NotEditable"}
+{"k":"v8/Card_Tree_Sample/Card_Custom.st/object/Transform/Card_Custom/CollisionObject0:Transform","v":"7013799120591977417 hide HideInHierarchy, NotEditable"}
+{"k":"v8/Card_Tree_Sample/Card_Custom.st/object/Transform/Card_Custom/CollisionObject1:Transform","v":"-6300383311887934288 hide HideInHierarchy, NotEditable"}
+{"k":"v8/Card_Tree_Sample/Card_Custom.st/object/Transform/Card_Custom:Transform","v":"-8679921383154817045 hide HideInHierarchy, NotEditable"}
+{"k":"v8/Card_Tree_Sample/Card_Custom.st/object/Tree/Card_Custom/Card_Custom_LOD0:Tree","v":"8919560420280316351 hide HideInHierarchy, NotEditable"}
+{"k":"v8/Card_Tree_Sample/Card_Custom.st/object/Tree/Card_Custom/Card_Custom_LOD1:Tree","v":"6373023443178008813 hide HideInHierarchy, NotEditable"}
+{"k":"v8/Card_Tree_Sample/Card_Custom.st/object/Tree/Card_Custom/Card_Custom_LOD2:Tree","v":"2342312361383052456 hide HideInHierarchy, NotEditable"}
+{"k":"v8/Card_Tree_Sample/Card_Custom.st/objects","v":"30"}
+{"k":"v8/Card_Tree_Sample/Card_Custom.st/go/Card_Custom","v":"active layer 0 tag Untagged static False hide NotEditable"}
+{"k":"v8/Card_Tree_Sample/Card_Custom.st/go/Card_Custom/transform","v":"00000000 00000000 00000000 00000000 00000000 00000000 3f800000 3f800000 3f800000 3f800000"}
+{"k":"v8/Card_Tree_Sample/Card_Custom.st/go/Card_Custom/components","v":"Transform LODGroup Rigidbody"}
+{"k":"v8/Card_Tree_Sample/Card_Custom.st/go/Card_Custom/LODGroup","v":"SpeedTree animate True billboard False size 432c3c9e ref 408de298 42a85932 bf4f6740 count 3 enabled True"}
+{"k":"v8/Card_Tree_Sample/Card_Custom.st/go/Card_Custom/LODGroup/lod0","v":"3f000000 fade 00000000 renderers Card_Custom_LOD0"}
+{"k":"v8/Card_Tree_Sample/Card_Custom.st/go/Card_Custom/LODGroup/lod1","v":"3e800000 fade 00000000 renderers Card_Custom_LOD1"}
+{"k":"v8/Card_Tree_Sample/Card_Custom.st/go/Card_Custom/LODGroup/lod2","v":"3c23d70a fade 00000000 renderers Card_Custom_LOD2"}
+{"k":"v8/Card_Tree_Sample/Card_Custom.st/go/Card_Custom/Rigidbody","v":"gravity False kinematic True mass 3f800000 interpolation None detection Discrete constraints None"}
+{"k":"v8/Card_Tree_Sample/Card_Custom.st/go/Card_Custom/Card_Custom_LOD0","v":"active layer 0 tag Untagged static False hide NotEditable"}
+{"k":"v8/Card_Tree_Sample/Card_Custom.st/go/Card_Custom/Card_Custom_LOD0/transform","v":"00000000 00000000 00000000 80000000 80000000 80000000 3f800000 3f800000 3f800000 3f800000"}
+{"k":"v8/Card_Tree_Sample/Card_Custom.st/go/Card_Custom/Card_Custom_LOD0/components","v":"Transform MeshFilter MeshRenderer Tree"}
+{"k":"v8/Card_Tree_Sample/Card_Custom.st/go/Card_Custom/Card_Custom_LOD0/MeshFilter","v":"Card_Custom_LOD0"}
+{"k":"v8/Card_Tree_Sample/Card_Custom.st/go/Card_Custom/Card_Custom_LOD0/MeshRenderer","v":"card-tree-sample cast On receive True probes BlendProbes reflection BlendProbes motion Object layerMask 1 enabled True bounds 407e3658 42a85932 bf53fc50 41d51bd7 42ac3c9e 41cb1458"}
+{"k":"v8/Card_Tree_Sample/Card_Custom.st/go/Card_Custom/Card_Custom_LOD0/Tree","v":"wind SpeedTreeWindAsset  hasSpeedTreeWind True"}
+{"k":"v8/Card_Tree_Sample/Card_Custom.st/go/Card_Custom/Card_Custom_LOD1","v":"active layer 0 tag Untagged static False hide NotEditable"}
+{"k":"v8/Card_Tree_Sample/Card_Custom.st/go/Card_Custom/Card_Custom_LOD1/transform","v":"00000000 00000000 00000000 80000000 80000000 80000000 3f800000 3f800000 3f800000 3f800000"}
+{"k":"v8/Card_Tree_Sample/Card_Custom.st/go/Card_Custom/Card_Custom_LOD1/components","v":"Transform MeshFilter MeshRenderer Tree"}
+{"k":"v8/Card_Tree_Sample/Card_Custom.st/go/Card_Custom/Card_Custom_LOD1/MeshFilter","v":"Card_Custom_LOD1"}
+{"k":"v8/Card_Tree_Sample/Card_Custom.st/go/Card_Custom/Card_Custom_LOD1/MeshRenderer","v":"card-tree-sample cast On receive True probes BlendProbes reflection BlendProbes motion Object layerMask 1 enabled True bounds 40867ee2 42a84d6d bf51b1e0 41d6f4c4 42ac30d9 41cdc704"}
+{"k":"v8/Card_Tree_Sample/Card_Custom.st/go/Card_Custom/Card_Custom_LOD1/Tree","v":"wind SpeedTreeWindAsset  hasSpeedTreeWind True"}
+{"k":"v8/Card_Tree_Sample/Card_Custom.st/go/Card_Custom/Card_Custom_LOD2","v":"active layer 0 tag Untagged static False hide NotEditable"}
+{"k":"v8/Card_Tree_Sample/Card_Custom.st/go/Card_Custom/Card_Custom_LOD2/transform","v":"00000000 00000000 00000000 80000000 80000000 80000000 3f800000 3f800000 3f800000 3f800000"}
+{"k":"v8/Card_Tree_Sample/Card_Custom.st/go/Card_Custom/Card_Custom_LOD2/components","v":"Transform MeshFilter MeshRenderer Tree"}
+{"k":"v8/Card_Tree_Sample/Card_Custom.st/go/Card_Custom/Card_Custom_LOD2/MeshFilter","v":"Card_Custom_LOD2"}
+{"k":"v8/Card_Tree_Sample/Card_Custom.st/go/Card_Custom/Card_Custom_LOD2/MeshRenderer","v":"card-tree-sample cast On receive True probes BlendProbes reflection BlendProbes motion Object layerMask 1 enabled True bounds 40b1d860 42a84d6e bf4f6750 41cfd040 42ac30da 41d079b0"}
+{"k":"v8/Card_Tree_Sample/Card_Custom.st/go/Card_Custom/Card_Custom_LOD2/Tree","v":"wind SpeedTreeWindAsset  hasSpeedTreeWind True"}
+{"k":"v8/Card_Tree_Sample/Card_Custom.st/go/Card_Custom/CollisionObject0","v":"active layer 0 tag Untagged static False hide NotEditable"}
+{"k":"v8/Card_Tree_Sample/Card_Custom.st/go/Card_Custom/CollisionObject0/transform","v":"3f8d5d52 41c7c07b 3eb9ef65 80000000 bc824f3a 3f30edce 3f38f97a 3f800000 3f800000 3f800000"}
+{"k":"v8/Card_Tree_Sample/Card_Custom.st/go/Card_Custom/CollisionObject0/components","v":"Transform CapsuleCollider"}
+{"k":"v8/Card_Tree_Sample/Card_Custom.st/go/Card_Custom/CollisionObject0/CapsuleCollider","v":"4007ae14 height 4258f5c4 direction 0 center 00000000 00000000 00000000 trigger False enabled True"}
+{"k":"v8/Card_Tree_Sample/Card_Custom.st/go/Card_Custom/CollisionObject1","v":"active layer 0 tag Untagged static False hide NotEditable"}
+{"k":"v8/Card_Tree_Sample/Card_Custom.st/go/Card_Custom/CollisionObject1/transform","v":"bf3a9762 42c7d806 3f6ecc1e 80000000 330557ed 3f36fa24 3f330a49 3f800000 3f800000 3f800000"}
+{"k":"v8/Card_Tree_Sample/Card_Custom.st/go/Card_Custom/CollisionObject1/components","v":"Transform CapsuleCollider"}
+{"k":"v8/Card_Tree_Sample/Card_Custom.st/go/Card_Custom/CollisionObject1/CapsuleCollider","v":"4177adeb height 42c9eb7a direction 0 center 00000000 00000000 00000000 trigger False enabled True"}
+{"k":"v8/Card_Tree_Sample/Card_Custom.st/mesh/Card_Custom_LOD0","v":"vertices 8141 submeshes 1 index UInt16 readable True bounds 407e3658 42a85932 bf53fc50 41d51bd7 42ac3c9e 41cb1458 streams 1"}
+{"k":"v8/Card_Tree_Sample/Card_Custom.st/mesh/Card_Custom_LOD0/layout","v":"Position:Float32x3@0 Normal:Float32x3@0 Tangent:Float32x4@0 Color:UNorm8x4@0 TexCoord0:Float32x4@0 TexCoord1:Float32x4@0 TexCoord2:Float32x4@0 TexCoord3:Float32x4@0"}
+{"k":"v8/Card_Tree_Sample/Card_Custom.st/mesh/Card_Custom_LOD0/submesh0","v":"Triangles start 0 count 27135 base 0 first 0 vcount 8141 bounds 407e3658 42a85932 bf53fc50 41d51bd7 42ac3c9e 41cb1458"}
+{"k":"v8/Card_Tree_Sample/Card_Custom.st/mesh/Card_Custom_LOD0/submesh0/indices","v":"1c91aca6e27c7d64"}
+{"k":"v8/Card_Tree_Sample/Card_Custom.st/mesh/Card_Custom_LOD0/positions","v":"57cb2148686083e0"}
+{"k":"v8/Card_Tree_Sample/Card_Custom.st/mesh/Card_Custom_LOD0/normals","v":"f5cc069f00a7c297"}
+{"k":"v8/Card_Tree_Sample/Card_Custom.st/mesh/Card_Custom_LOD0/tangents","v":"eafcfe5dee32ad0c"}
+{"k":"v8/Card_Tree_Sample/Card_Custom.st/mesh/Card_Custom_LOD0/colors32","v":"b344384329a0f22d"}
+{"k":"v8/Card_Tree_Sample/Card_Custom.st/mesh/Card_Custom_LOD0/uv0","v":"11ad3c683955374a"}
+{"k":"v8/Card_Tree_Sample/Card_Custom.st/mesh/Card_Custom_LOD0/uv1","v":"d6babd94dd876fa3"}
+{"k":"v8/Card_Tree_Sample/Card_Custom.st/mesh/Card_Custom_LOD0/uv2","v":"3c7527be6419ff4b"}
+{"k":"v8/Card_Tree_Sample/Card_Custom.st/mesh/Card_Custom_LOD0/uv3","v":"67baf130d33ca4b5"}
+{"k":"v8/Card_Tree_Sample/Card_Custom.st/mesh/Card_Custom_LOD1","v":"vertices 5293 submeshes 1 index UInt16 readable True bounds 40867ee2 42a84d6d bf51b1e0 41d6f4c4 42ac30d9 41cdc704 streams 1"}
+{"k":"v8/Card_Tree_Sample/Card_Custom.st/mesh/Card_Custom_LOD1/layout","v":"Position:Float32x3@0 Normal:Float32x3@0 Tangent:Float32x4@0 Color:UNorm8x4@0 TexCoord0:Float32x4@0 TexCoord1:Float32x4@0 TexCoord2:Float32x4@0 TexCoord3:Float32x4@0"}
+{"k":"v8/Card_Tree_Sample/Card_Custom.st/mesh/Card_Custom_LOD1/submesh0","v":"Triangles start 0 count 19167 base 0 first 0 vcount 5293 bounds 40867ee2 42a84d6d bf51b1e0 41d6f4c4 42ac30d9 41cdc704"}
+{"k":"v8/Card_Tree_Sample/Card_Custom.st/mesh/Card_Custom_LOD1/submesh0/indices","v":"6ce29a9c3c7299bb"}
+{"k":"v8/Card_Tree_Sample/Card_Custom.st/mesh/Card_Custom_LOD1/positions","v":"614f92d1e2121fbd"}
+{"k":"v8/Card_Tree_Sample/Card_Custom.st/mesh/Card_Custom_LOD1/normals","v":"307f5d1389b24f70"}
+{"k":"v8/Card_Tree_Sample/Card_Custom.st/mesh/Card_Custom_LOD1/tangents","v":"a66537c91f673209"}
+{"k":"v8/Card_Tree_Sample/Card_Custom.st/mesh/Card_Custom_LOD1/colors32","v":"de98964b8d5959df"}
+{"k":"v8/Card_Tree_Sample/Card_Custom.st/mesh/Card_Custom_LOD1/uv0","v":"798176b50fb3c6da"}
+{"k":"v8/Card_Tree_Sample/Card_Custom.st/mesh/Card_Custom_LOD1/uv1","v":"04487af5201f0e95"}
+{"k":"v8/Card_Tree_Sample/Card_Custom.st/mesh/Card_Custom_LOD1/uv2","v":"94f643bae6f8d1b2"}
+{"k":"v8/Card_Tree_Sample/Card_Custom.st/mesh/Card_Custom_LOD1/uv3","v":"81d08e361aaad5d5"}
+{"k":"v8/Card_Tree_Sample/Card_Custom.st/mesh/Card_Custom_LOD2","v":"vertices 3428 submeshes 1 index UInt16 readable True bounds 40b1d860 42a84d6e bf4f6750 41cfd040 42ac30da 41d079b0 streams 1"}
+{"k":"v8/Card_Tree_Sample/Card_Custom.st/mesh/Card_Custom_LOD2/layout","v":"Position:Float32x3@0 Normal:Float32x3@0 Tangent:Float32x4@0 Color:UNorm8x4@0 TexCoord0:Float32x4@0 TexCoord1:Float32x4@0 TexCoord2:Float32x4@0 TexCoord3:Float32x4@0"}
+{"k":"v8/Card_Tree_Sample/Card_Custom.st/mesh/Card_Custom_LOD2/submesh0","v":"Triangles start 0 count 13326 base 0 first 0 vcount 3428 bounds 40b1d860 42a84d6e bf4f6750 41cfd040 42ac30da 41d079b0"}
+{"k":"v8/Card_Tree_Sample/Card_Custom.st/mesh/Card_Custom_LOD2/submesh0/indices","v":"5e7ca21fde5c40d5"}
+{"k":"v8/Card_Tree_Sample/Card_Custom.st/mesh/Card_Custom_LOD2/positions","v":"2d6854213dd56ef4"}
+{"k":"v8/Card_Tree_Sample/Card_Custom.st/mesh/Card_Custom_LOD2/normals","v":"194733c6e0d4fdde"}
+{"k":"v8/Card_Tree_Sample/Card_Custom.st/mesh/Card_Custom_LOD2/tangents","v":"fb5114140ff1d23e"}
+{"k":"v8/Card_Tree_Sample/Card_Custom.st/mesh/Card_Custom_LOD2/colors32","v":"ce500a87f497a6e1"}
+{"k":"v8/Card_Tree_Sample/Card_Custom.st/mesh/Card_Custom_LOD2/uv0","v":"c6086049b244439d"}
+{"k":"v8/Card_Tree_Sample/Card_Custom.st/mesh/Card_Custom_LOD2/uv1","v":"150d885ed86e942a"}
+{"k":"v8/Card_Tree_Sample/Card_Custom.st/mesh/Card_Custom_LOD2/uv2","v":"0c561b4232c41867"}
+{"k":"v8/Card_Tree_Sample/Card_Custom.st/mesh/Card_Custom_LOD2/uv3","v":"bbd3c2fa8ab92a05"}
+{"k":"v8/Card_Tree_Sample/Card_Custom.st/material/card-tree-sample","v":"Nature/SpeedTree8 queue 2450 instancing True doubleSidedGI True flags EmissiveIsBlack path Assets/Trees/v8/Card_Tree_Sample/Card_Custom.st hide NotEditable"}
+{"k":"v8/Card_Tree_Sample/Card_Custom.st/material/card-tree-sample/keywords","v":"EFFECT_BUMP EFFECT_EXTRA_TEX _WINDQUALITY_BEST"}
+{"k":"v8/Card_Tree_Sample/Card_Custom.st/material/card-tree-sample/prop/_MainTex","v":"card-tree-sample_Color Assets/Trees/v8/Card_Tree_Sample/card-tree-sample_Color.png 3f800000 3f800000 00000000 00000000 00000000 00000000"}
+{"k":"v8/Card_Tree_Sample/Card_Custom.st/material/card-tree-sample/prop/_Color","v":"3f800000 3f800000 3f800000 3f800000"}
+{"k":"v8/Card_Tree_Sample/Card_Custom.st/material/card-tree-sample/prop/_HueVariationKwToggle","v":"00000000"}
+{"k":"v8/Card_Tree_Sample/Card_Custom.st/material/card-tree-sample/prop/_HueVariationColor","v":"3f800000 3f000000 00000000 3dcccccd"}
+{"k":"v8/Card_Tree_Sample/Card_Custom.st/material/card-tree-sample/prop/_NormalMapKwToggle","v":"3f800000"}
+{"k":"v8/Card_Tree_Sample/Card_Custom.st/material/card-tree-sample/prop/_BumpMap","v":"null 3f800000 3f800000 00000000 00000000 00000000 00000000"}
+{"k":"v8/Card_Tree_Sample/Card_Custom.st/material/card-tree-sample/prop/_ExtraTex","v":"card-tree-sample_Extra Assets/Trees/v8/Card_Tree_Sample/card-tree-sample_Extra.png 3f800000 3f800000 00000000 00000000 00000000 00000000"}
+{"k":"v8/Card_Tree_Sample/Card_Custom.st/material/card-tree-sample/prop/_Glossiness","v":"3f800000"}
+{"k":"v8/Card_Tree_Sample/Card_Custom.st/material/card-tree-sample/prop/_Metallic","v":"3f800000"}
+{"k":"v8/Card_Tree_Sample/Card_Custom.st/material/card-tree-sample/prop/_SubsurfaceKwToggle","v":"00000000"}
+{"k":"v8/Card_Tree_Sample/Card_Custom.st/material/card-tree-sample/prop/_SubsurfaceTex","v":"null 3f800000 3f800000 00000000 00000000 00000000 00000000"}
+{"k":"v8/Card_Tree_Sample/Card_Custom.st/material/card-tree-sample/prop/_SubsurfaceColor","v":"3f800000 3f800000 3f800000 3f800000"}
+{"k":"v8/Card_Tree_Sample/Card_Custom.st/material/card-tree-sample/prop/_SubsurfaceIndirect","v":"3e800000"}
+{"k":"v8/Card_Tree_Sample/Card_Custom.st/material/card-tree-sample/prop/_BillboardKwToggle","v":"00000000"}
+{"k":"v8/Card_Tree_Sample/Card_Custom.st/material/card-tree-sample/prop/_BillboardShadowFade","v":"3f000000"}
+{"k":"v8/Card_Tree_Sample/Card_Custom.st/material/card-tree-sample/prop/_TwoSided","v":"00000000"}
+{"k":"v8/Card_Tree_Sample/Card_Custom.st/material/card-tree-sample/prop/_WindQuality","v":"40800000"}
+{"k":"v8/Card_Tree_Sample/Card_Dangling.st/importer","v":"UnityEditor.SpeedTreeImporter"}
+{"k":"v8/Card_Tree_Sample/Card_Dangling.st/importer/LODHeights","v":"[3f000000,3e800000,3c23d70a]"}
+{"k":"v8/Card_Tree_Sample/Card_Dangling.st/importer/alphaTestRef","v":"3ea8f5c3"}
+{"k":"v8/Card_Tree_Sample/Card_Dangling.st/importer/animateCrossFading","v":"True"}
+{"k":"v8/Card_Tree_Sample/Card_Dangling.st/importer/bestWindQuality","v":"4"}
+{"k":"v8/Card_Tree_Sample/Card_Dangling.st/importer/billboardTransitionCrossFadeWidth","v":"3e800000"}
+{"k":"v8/Card_Tree_Sample/Card_Dangling.st/importer/castShadows","v":"[True,True,True]"}
+{"k":"v8/Card_Tree_Sample/Card_Dangling.st/importer/castShadowsByDefault","v":"True"}
+{"k":"v8/Card_Tree_Sample/Card_Dangling.st/importer/defaultBillboardShader","v":"null"}
+{"k":"v8/Card_Tree_Sample/Card_Dangling.st/importer/defaultShader","v":"Shader Nature/SpeedTree8"}
+{"k":"v8/Card_Tree_Sample/Card_Dangling.st/importer/enableBump","v":"[True,True,True]"}
+{"k":"v8/Card_Tree_Sample/Card_Dangling.st/importer/enableBumpByDefault","v":"True"}
+{"k":"v8/Card_Tree_Sample/Card_Dangling.st/importer/enableHue","v":"[False,False,False]"}
+{"k":"v8/Card_Tree_Sample/Card_Dangling.st/importer/enableHueByDefault","v":"False"}
+{"k":"v8/Card_Tree_Sample/Card_Dangling.st/importer/enableSettingOverride","v":"[False,False,False]"}
+{"k":"v8/Card_Tree_Sample/Card_Dangling.st/importer/enableSmoothLODTransition","v":"True"}
+{"k":"v8/Card_Tree_Sample/Card_Dangling.st/importer/enableSubsurface","v":"[True,True,True]"}
+{"k":"v8/Card_Tree_Sample/Card_Dangling.st/importer/enableSubsurfaceByDefault","v":"True"}
+{"k":"v8/Card_Tree_Sample/Card_Dangling.st/importer/fadeOutWidth","v":"3e800000"}
+{"k":"v8/Card_Tree_Sample/Card_Dangling.st/importer/generateColliders","v":"True"}
+{"k":"v8/Card_Tree_Sample/Card_Dangling.st/importer/generateRigidbody","v":"True"}
+{"k":"v8/Card_Tree_Sample/Card_Dangling.st/importer/hasBillboard","v":"False"}
+{"k":"v8/Card_Tree_Sample/Card_Dangling.st/importer/hasImported","v":"True"}
+{"k":"v8/Card_Tree_Sample/Card_Dangling.st/importer/hueVariation","v":"3f800000 3f000000 00000000 3dcccccd"}
+{"k":"v8/Card_Tree_Sample/Card_Dangling.st/importer/isV8","v":"True"}
+{"k":"v8/Card_Tree_Sample/Card_Dangling.st/importer/mainColor","v":"3f800000 3f800000 3f800000 3f800000"}
+{"k":"v8/Card_Tree_Sample/Card_Dangling.st/importer/materialFolderPath","v":"Assets/Trees/v8/Card_Tree_Sample/Card_Dangling Materials"}
+{"k":"v8/Card_Tree_Sample/Card_Dangling.st/importer/materialLocation","v":"InPrefab"}
+{"k":"v8/Card_Tree_Sample/Card_Dangling.st/importer/receiveShadows","v":"[True,True,True]"}
+{"k":"v8/Card_Tree_Sample/Card_Dangling.st/importer/receiveShadowsByDefault","v":"True"}
+{"k":"v8/Card_Tree_Sample/Card_Dangling.st/importer/reflectionProbeUsages","v":"[BlendProbes,BlendProbes,BlendProbes]"}
+{"k":"v8/Card_Tree_Sample/Card_Dangling.st/importer/reflectionProbeUsagesByDefault","v":"1"}
+{"k":"v8/Card_Tree_Sample/Card_Dangling.st/importer/scaleFactor","v":"3e9c0ebf"}
+{"k":"v8/Card_Tree_Sample/Card_Dangling.st/importer/selectedWindQuality","v":"4"}
+{"k":"v8/Card_Tree_Sample/Card_Dangling.st/importer/useLightProbes","v":"[True,True,True]"}
+{"k":"v8/Card_Tree_Sample/Card_Dangling.st/importer/useLightProbesByDefault","v":"True"}
+{"k":"v8/Card_Tree_Sample/Card_Dangling.st/importer/windQualities","v":"[4,4,4]"}
+{"k":"v8/Card_Tree_Sample/Card_Dangling.st/main","v":"GameObject Card_Dangling"}
+{"k":"v8/Card_Tree_Sample/Card_Dangling.st/mainType","v":"UnityEngine.GameObject"}
+{"k":"v8/Card_Tree_Sample/Card_Dangling.st/prefabType","v":"Model"}
+{"k":"v8/Card_Tree_Sample/Card_Dangling.st/object/CapsuleCollider/Card_Dangling/CollisionObject0:CapsuleCollider","v":"136297279999738247 hide HideInHierarchy, NotEditable"}
+{"k":"v8/Card_Tree_Sample/Card_Dangling.st/object/CapsuleCollider/Card_Dangling/CollisionObject1:CapsuleCollider","v":"-8221809898812911413 hide HideInHierarchy, NotEditable"}
+{"k":"v8/Card_Tree_Sample/Card_Dangling.st/object/GameObject/Card_Dangling","v":"919132149155446097 hide NotEditable"}
+{"k":"v8/Card_Tree_Sample/Card_Dangling.st/object/GameObject/Card_Dangling/Card_Dangling_LOD0","v":"-3645776124690710407 hide NotEditable"}
+{"k":"v8/Card_Tree_Sample/Card_Dangling.st/object/GameObject/Card_Dangling/Card_Dangling_LOD1","v":"-8012684371884456883 hide NotEditable"}
+{"k":"v8/Card_Tree_Sample/Card_Dangling.st/object/GameObject/Card_Dangling/Card_Dangling_LOD2","v":"6739091124846831413 hide NotEditable"}
+{"k":"v8/Card_Tree_Sample/Card_Dangling.st/object/GameObject/Card_Dangling/CollisionObject0","v":"1218912716677395249 hide NotEditable"}
+{"k":"v8/Card_Tree_Sample/Card_Dangling.st/object/GameObject/Card_Dangling/CollisionObject1","v":"1400086564404443856 hide NotEditable"}
+{"k":"v8/Card_Tree_Sample/Card_Dangling.st/object/LODGroup/Card_Dangling:LODGroup","v":"4742473837712756890 hide HideInHierarchy, NotEditable"}
+{"k":"v8/Card_Tree_Sample/Card_Dangling.st/object/Mesh/Card_Dangling_LOD0","v":"4300000 hide NotEditable"}
+{"k":"v8/Card_Tree_Sample/Card_Dangling.st/object/Mesh/Card_Dangling_LOD1","v":"4300002 hide NotEditable"}
+{"k":"v8/Card_Tree_Sample/Card_Dangling.st/object/Mesh/Card_Dangling_LOD2","v":"4300004 hide NotEditable"}
+{"k":"v8/Card_Tree_Sample/Card_Dangling.st/object/MeshFilter/Card_Dangling/Card_Dangling_LOD0:MeshFilter","v":"-3083246991197809343 hide HideInHierarchy, NotEditable"}
+{"k":"v8/Card_Tree_Sample/Card_Dangling.st/object/MeshFilter/Card_Dangling/Card_Dangling_LOD1:MeshFilter","v":"-5619530893719259786 hide HideInHierarchy, NotEditable"}
+{"k":"v8/Card_Tree_Sample/Card_Dangling.st/object/MeshFilter/Card_Dangling/Card_Dangling_LOD2:MeshFilter","v":"7856584634473663889 hide HideInHierarchy, NotEditable"}
+{"k":"v8/Card_Tree_Sample/Card_Dangling.st/object/MeshRenderer/Card_Dangling/Card_Dangling_LOD0:MeshRenderer","v":"1945977933826314005 hide HideInHierarchy, NotEditable"}
+{"k":"v8/Card_Tree_Sample/Card_Dangling.st/object/MeshRenderer/Card_Dangling/Card_Dangling_LOD1:MeshRenderer","v":"4862824921663477196 hide HideInHierarchy, NotEditable"}
+{"k":"v8/Card_Tree_Sample/Card_Dangling.st/object/MeshRenderer/Card_Dangling/Card_Dangling_LOD2:MeshRenderer","v":"9212506459142183390 hide HideInHierarchy, NotEditable"}
+{"k":"v8/Card_Tree_Sample/Card_Dangling.st/object/Rigidbody/Card_Dangling:Rigidbody","v":"6367646867474405593 hide HideInHierarchy, NotEditable"}
+{"k":"v8/Card_Tree_Sample/Card_Dangling.st/object/SpeedTreeWindAsset/","v":"22800000 hide HideInHierarchy, HideInInspector"}
+{"k":"v8/Card_Tree_Sample/Card_Dangling.st/object/Transform/Card_Dangling/Card_Dangling_LOD0:Transform","v":"4503265199856514862 hide HideInHierarchy, NotEditable"}
+{"k":"v8/Card_Tree_Sample/Card_Dangling.st/object/Transform/Card_Dangling/Card_Dangling_LOD1:Transform","v":"8807857612143348651 hide HideInHierarchy, NotEditable"}
+{"k":"v8/Card_Tree_Sample/Card_Dangling.st/object/Transform/Card_Dangling/Card_Dangling_LOD2:Transform","v":"1741033766082232055 hide HideInHierarchy, NotEditable"}
+{"k":"v8/Card_Tree_Sample/Card_Dangling.st/object/Transform/Card_Dangling/CollisionObject0:Transform","v":"7013799120591977417 hide HideInHierarchy, NotEditable"}
+{"k":"v8/Card_Tree_Sample/Card_Dangling.st/object/Transform/Card_Dangling/CollisionObject1:Transform","v":"-6300383311887934288 hide HideInHierarchy, NotEditable"}
+{"k":"v8/Card_Tree_Sample/Card_Dangling.st/object/Transform/Card_Dangling:Transform","v":"-8679921383154817045 hide HideInHierarchy, NotEditable"}
+{"k":"v8/Card_Tree_Sample/Card_Dangling.st/object/Tree/Card_Dangling/Card_Dangling_LOD0:Tree","v":"9177611595193679868 hide HideInHierarchy, NotEditable"}
+{"k":"v8/Card_Tree_Sample/Card_Dangling.st/object/Tree/Card_Dangling/Card_Dangling_LOD1:Tree","v":"3609831566682969071 hide HideInHierarchy, NotEditable"}
+{"k":"v8/Card_Tree_Sample/Card_Dangling.st/object/Tree/Card_Dangling/Card_Dangling_LOD2:Tree","v":"-3267863147762487990 hide HideInHierarchy, NotEditable"}
+{"k":"v8/Card_Tree_Sample/Card_Dangling.st/objects","v":"29"}
+{"k":"v8/Card_Tree_Sample/Card_Dangling.st/go/Card_Dangling","v":"active layer 0 tag Untagged static False hide NotEditable"}
+{"k":"v8/Card_Tree_Sample/Card_Dangling.st/go/Card_Dangling/transform","v":"00000000 00000000 00000000 00000000 00000000 00000000 3f800000 3f800000 3f800000 3f800000"}
+{"k":"v8/Card_Tree_Sample/Card_Dangling.st/go/Card_Dangling/components","v":"Transform LODGroup Rigidbody"}
+{"k":"v8/Card_Tree_Sample/Card_Dangling.st/go/Card_Dangling/LODGroup","v":"SpeedTree animate True billboard False size 41d1fdb9 ref 3f2cfc80 414d4019 bdfcddc0 count 3 enabled True"}
+{"k":"v8/Card_Tree_Sample/Card_Dangling.st/go/Card_Dangling/LODGroup/lod0","v":"3f000000 fade 00000000 renderers Card_Dangling_LOD0"}
+{"k":"v8/Card_Tree_Sample/Card_Dangling.st/go/Card_Dangling/LODGroup/lod1","v":"3e800000 fade 00000000 renderers Card_Dangling_LOD1"}
+{"k":"v8/Card_Tree_Sample/Card_Dangling.st/go/Card_Dangling/LODGroup/lod2","v":"3c23d70a fade 00000000 renderers Card_Dangling_LOD2"}
+{"k":"v8/Card_Tree_Sample/Card_Dangling.st/go/Card_Dangling/Rigidbody","v":"gravity False kinematic True mass 3f800000 interpolation None detection Discrete constraints None"}
+{"k":"v8/Card_Tree_Sample/Card_Dangling.st/go/Card_Dangling/Card_Dangling_LOD0","v":"active layer 0 tag Untagged static False hide NotEditable"}
+{"k":"v8/Card_Tree_Sample/Card_Dangling.st/go/Card_Dangling/Card_Dangling_LOD0/transform","v":"00000000 00000000 00000000 80000000 80000000 80000000 3f800000 3f800000 3f800000 3f800000"}
+{"k":"v8/Card_Tree_Sample/Card_Dangling.st/go/Card_Dangling/Card_Dangling_LOD0/components","v":"Transform MeshFilter MeshRenderer Tree"}
+{"k":"v8/Card_Tree_Sample/Card_Dangling.st/go/Card_Dangling/Card_Dangling_LOD0/MeshFilter","v":"Card_Dangling_LOD0"}
+{"k":"v8/Card_Tree_Sample/Card_Dangling.st/go/Card_Dangling/Card_Dangling_LOD0/MeshRenderer","v":"null cast On receive True probes BlendProbes reflection BlendProbes motion Object layerMask 1 enabled True bounds 3f1af7c4 414d4019 be0139f0 4081e93e 4151fdb9 40779831"}
+{"k":"v8/Card_Tree_Sample/Card_Dangling.st/go/Card_Dangling/Card_Dangling_LOD0/Tree","v":"wind SpeedTreeWindAsset  hasSpeedTreeWind True"}
+{"k":"v8/Card_Tree_Sample/Card_Dangling.st/go/Card_Dangling/Card_Dangling_LOD1","v":"active layer 0 tag Untagged static False hide NotEditable"}
+{"k":"v8/Card_Tree_Sample/Card_Dangling.st/go/Card_Dangling/Card_Dangling_LOD1/transform","v":"00000000 00000000 00000000 80000000 80000000 80000000 3f800000 3f800000 3f800000 3f800000"}
+{"k":"v8/Card_Tree_Sample/Card_Dangling.st/go/Card_Dangling/Card_Dangling_LOD1/components","v":"Transform MeshFilter MeshRenderer Tree"}
+{"k":"v8/Card_Tree_Sample/Card_Dangling.st/go/Card_Dangling/Card_Dangling_LOD1/MeshFilter","v":"Card_Dangling_LOD1"}
+{"k":"v8/Card_Tree_Sample/Card_Dangling.st/go/Card_Dangling/Card_Dangling_LOD1/MeshRenderer","v":"null cast On receive True probes BlendProbes reflection BlendProbes motion Object layerMask 1 enabled True bounds 3f23fa24 414d31c0 bdffa8e0 4083098a 4151ef60 407ae241"}
+{"k":"v8/Card_Tree_Sample/Card_Dangling.st/go/Card_Dangling/Card_Dangling_LOD1/Tree","v":"wind SpeedTreeWindAsset  hasSpeedTreeWind True"}
+{"k":"v8/Card_Tree_Sample/Card_Dangling.st/go/Card_Dangling/Card_Dangling_LOD2","v":"active layer 0 tag Untagged static False hide NotEditable"}
+{"k":"v8/Card_Tree_Sample/Card_Dangling.st/go/Card_Dangling/Card_Dangling_LOD2/transform","v":"00000000 00000000 00000000 80000000 80000000 80000000 3f800000 3f800000 3f800000 3f800000"}
+{"k":"v8/Card_Tree_Sample/Card_Dangling.st/go/Card_Dangling/Card_Dangling_LOD2/components","v":"Transform MeshFilter MeshRenderer Tree"}
+{"k":"v8/Card_Tree_Sample/Card_Dangling.st/go/Card_Dangling/Card_Dangling_LOD2/MeshFilter","v":"Card_Dangling_LOD2"}
+{"k":"v8/Card_Tree_Sample/Card_Dangling.st/go/Card_Dangling/Card_Dangling_LOD2/MeshRenderer","v":"null cast On receive True probes BlendProbes reflection BlendProbes motion Object layerMask 1 enabled True bounds 3f58d436 414d31c1 bdfcddc0 407d5dbe 4151ef61 407e2c52"}
+{"k":"v8/Card_Tree_Sample/Card_Dangling.st/go/Card_Dangling/Card_Dangling_LOD2/Tree","v":"wind SpeedTreeWindAsset  hasSpeedTreeWind True"}
+{"k":"v8/Card_Tree_Sample/Card_Dangling.st/go/Card_Dangling/CollisionObject0","v":"active layer 0 tag Untagged static False hide NotEditable"}
+{"k":"v8/Card_Tree_Sample/Card_Dangling.st/go/Card_Dangling/CollisionObject0/transform","v":"3e2c5a05 40738999 3d62b12f 80000000 bc824f39 3f30edcf 3f38f97a 3f800000 3f800000 3f800000"}
+{"k":"v8/Card_Tree_Sample/Card_Dangling.st/go/Card_Dangling/CollisionObject0/components","v":"Transform CapsuleCollider"}
+{"k":"v8/Card_Tree_Sample/Card_Dangling.st/go/Card_Dangling/CollisionObject0/CapsuleCollider","v":"3ea56bca height 41044243 direction 0 center 00000000 00000000 00000000 trigger False enabled True"}
+{"k":"v8/Card_Tree_Sample/Card_Dangling.st/go/Card_Dangling/CollisionObject1","v":"active layer 0 tag Untagged static False hide NotEditable"}
+{"k":"v8/Card_Tree_Sample/Card_Dangling.st/go/Card_Dangling/CollisionObject1/transform","v":"bde37dfe 4173a64d 3e119224 80000000 3304f58b 3f36fa24 3f330a48 3f800000 3f800000 3f800000"}
+{"k":"v8/Card_Tree_Sample/Card_Dangling.st/go/Card_Dangling/CollisionObject1/components","v":"Transform CapsuleCollider"}
+{"k":"v8/Card_Tree_Sample/Card_Dangling.st/go/Card_Dangling/CollisionObject1/CapsuleCollider","v":"4016fc40 height 41762e3f direction 0 center 00000000 00000000 00000000 trigger False enabled True"}
+{"k":"v8/Card_Tree_Sample/Card_Dangling.st/mesh/Card_Dangling_LOD0","v":"vertices 8141 submeshes 1 index UInt16 readable True bounds 3f1af7c4 414d4019 be0139f0 4081e93e 4151fdb9 40779831 streams 1"}
+{"k":"v8/Card_Tree_Sample/Card_Dangling.st/mesh/Card_Dangling_LOD0/layout","v":"Position:Float32x3@0 Normal:Float32x3@0 Tangent:Float32x4@0 Color:UNorm8x4@0 TexCoord0:Float32x4@0 TexCoord1:Float32x4@0 TexCoord2:Float32x4@0 TexCoord3:Float32x4@0"}
+{"k":"v8/Card_Tree_Sample/Card_Dangling.st/mesh/Card_Dangling_LOD0/submesh0","v":"Triangles start 0 count 27135 base 0 first 0 vcount 8141 bounds 3f1af7c4 414d4019 be0139f0 4081e93e 4151fdb9 40779831"}
+{"k":"v8/Card_Tree_Sample/Card_Dangling.st/mesh/Card_Dangling_LOD0/submesh0/indices","v":"1c91aca6e27c7d64"}
+{"k":"v8/Card_Tree_Sample/Card_Dangling.st/mesh/Card_Dangling_LOD0/positions","v":"ea2bb8b988953efd"}
+{"k":"v8/Card_Tree_Sample/Card_Dangling.st/mesh/Card_Dangling_LOD0/normals","v":"f5cc069f00a7c297"}
+{"k":"v8/Card_Tree_Sample/Card_Dangling.st/mesh/Card_Dangling_LOD0/tangents","v":"eafcfe5dee32ad0c"}
+{"k":"v8/Card_Tree_Sample/Card_Dangling.st/mesh/Card_Dangling_LOD0/colors32","v":"b344384329a0f22d"}
+{"k":"v8/Card_Tree_Sample/Card_Dangling.st/mesh/Card_Dangling_LOD0/uv0","v":"11ad3c683955374a"}
+{"k":"v8/Card_Tree_Sample/Card_Dangling.st/mesh/Card_Dangling_LOD0/uv1","v":"cc331b967e5ebeb9"}
+{"k":"v8/Card_Tree_Sample/Card_Dangling.st/mesh/Card_Dangling_LOD0/uv2","v":"3a0228642d277e40"}
+{"k":"v8/Card_Tree_Sample/Card_Dangling.st/mesh/Card_Dangling_LOD0/uv3","v":"67baf130d33ca4b5"}
+{"k":"v8/Card_Tree_Sample/Card_Dangling.st/mesh/Card_Dangling_LOD1","v":"vertices 5293 submeshes 1 index UInt16 readable True bounds 3f23fa24 414d31c0 bdffa8e0 4083098a 4151ef60 407ae241 streams 1"}
+{"k":"v8/Card_Tree_Sample/Card_Dangling.st/mesh/Card_Dangling_LOD1/layout","v":"Position:Float32x3@0 Normal:Float32x3@0 Tangent:Float32x4@0 Color:UNorm8x4@0 TexCoord0:Float32x4@0 TexCoord1:Float32x4@0 TexCoord2:Float32x4@0 TexCoord3:Float32x4@0"}
+{"k":"v8/Card_Tree_Sample/Card_Dangling.st/mesh/Card_Dangling_LOD1/submesh0","v":"Triangles start 0 count 19167 base 0 first 0 vcount 5293 bounds 3f23fa24 414d31c0 bdffa8e0 4083098a 4151ef60 407ae241"}
+{"k":"v8/Card_Tree_Sample/Card_Dangling.st/mesh/Card_Dangling_LOD1/submesh0/indices","v":"6ce29a9c3c7299bb"}
+{"k":"v8/Card_Tree_Sample/Card_Dangling.st/mesh/Card_Dangling_LOD1/positions","v":"fc79760b4ab4bd1c"}
+{"k":"v8/Card_Tree_Sample/Card_Dangling.st/mesh/Card_Dangling_LOD1/normals","v":"307f5d1389b24f70"}
+{"k":"v8/Card_Tree_Sample/Card_Dangling.st/mesh/Card_Dangling_LOD1/tangents","v":"a66537c91f673209"}
+{"k":"v8/Card_Tree_Sample/Card_Dangling.st/mesh/Card_Dangling_LOD1/colors32","v":"de98964b8d5959df"}
+{"k":"v8/Card_Tree_Sample/Card_Dangling.st/mesh/Card_Dangling_LOD1/uv0","v":"798176b50fb3c6da"}
+{"k":"v8/Card_Tree_Sample/Card_Dangling.st/mesh/Card_Dangling_LOD1/uv1","v":"c5327df810e466ef"}
+{"k":"v8/Card_Tree_Sample/Card_Dangling.st/mesh/Card_Dangling_LOD1/uv2","v":"d2a1e8f67d7380b0"}
+{"k":"v8/Card_Tree_Sample/Card_Dangling.st/mesh/Card_Dangling_LOD1/uv3","v":"81d08e361aaad5d5"}
+{"k":"v8/Card_Tree_Sample/Card_Dangling.st/mesh/Card_Dangling_LOD2","v":"vertices 3428 submeshes 1 index UInt16 readable True bounds 3f58d436 414d31c1 bdfcddc0 407d5dbe 4151ef61 407e2c52 streams 1"}
+{"k":"v8/Card_Tree_Sample/Card_Dangling.st/mesh/Card_Dangling_LOD2/layout","v":"Position:Float32x3@0 Normal:Float32x3@0 Tangent:Float32x4@0 Color:UNorm8x4@0 TexCoord0:Float32x4@0 TexCoord1:Float32x4@0 TexCoord2:Float32x4@0 TexCoord3:Float32x4@0"}
+{"k":"v8/Card_Tree_Sample/Card_Dangling.st/mesh/Card_Dangling_LOD2/submesh0","v":"Triangles start 0 count 13326 base 0 first 0 vcount 3428 bounds 3f58d436 414d31c1 bdfcddc0 407d5dbe 4151ef61 407e2c52"}
+{"k":"v8/Card_Tree_Sample/Card_Dangling.st/mesh/Card_Dangling_LOD2/submesh0/indices","v":"5e7ca21fde5c40d5"}
+{"k":"v8/Card_Tree_Sample/Card_Dangling.st/mesh/Card_Dangling_LOD2/positions","v":"8908169150c41674"}
+{"k":"v8/Card_Tree_Sample/Card_Dangling.st/mesh/Card_Dangling_LOD2/normals","v":"194733c6e0d4fdde"}
+{"k":"v8/Card_Tree_Sample/Card_Dangling.st/mesh/Card_Dangling_LOD2/tangents","v":"fb5114140ff1d23e"}
+{"k":"v8/Card_Tree_Sample/Card_Dangling.st/mesh/Card_Dangling_LOD2/colors32","v":"ce500a87f497a6e1"}
+{"k":"v8/Card_Tree_Sample/Card_Dangling.st/mesh/Card_Dangling_LOD2/uv0","v":"c6086049b244439d"}
+{"k":"v8/Card_Tree_Sample/Card_Dangling.st/mesh/Card_Dangling_LOD2/uv1","v":"3f8b2ab9618a2d88"}
+{"k":"v8/Card_Tree_Sample/Card_Dangling.st/mesh/Card_Dangling_LOD2/uv2","v":"3cb4eb15490f72ba"}
+{"k":"v8/Card_Tree_Sample/Card_Dangling.st/mesh/Card_Dangling_LOD2/uv3","v":"bbd3c2fa8ab92a05"}
+{"k":"v8/Card_Tree_Sample/Card_Inches.st/importer","v":"UnityEditor.SpeedTreeImporter"}
+{"k":"v8/Card_Tree_Sample/Card_Inches.st/importer/LODHeights","v":"[3f000000,3e800000,3c23d70a]"}
+{"k":"v8/Card_Tree_Sample/Card_Inches.st/importer/alphaTestRef","v":"3ea8f5c3"}
+{"k":"v8/Card_Tree_Sample/Card_Inches.st/importer/animateCrossFading","v":"True"}
+{"k":"v8/Card_Tree_Sample/Card_Inches.st/importer/bestWindQuality","v":"4"}
+{"k":"v8/Card_Tree_Sample/Card_Inches.st/importer/billboardTransitionCrossFadeWidth","v":"3e800000"}
+{"k":"v8/Card_Tree_Sample/Card_Inches.st/importer/castShadows","v":"[True,True,True]"}
+{"k":"v8/Card_Tree_Sample/Card_Inches.st/importer/castShadowsByDefault","v":"True"}
+{"k":"v8/Card_Tree_Sample/Card_Inches.st/importer/defaultBillboardShader","v":"null"}
+{"k":"v8/Card_Tree_Sample/Card_Inches.st/importer/defaultShader","v":"Shader Nature/SpeedTree8"}
+{"k":"v8/Card_Tree_Sample/Card_Inches.st/importer/enableBump","v":"[True,True,True]"}
+{"k":"v8/Card_Tree_Sample/Card_Inches.st/importer/enableBumpByDefault","v":"True"}
+{"k":"v8/Card_Tree_Sample/Card_Inches.st/importer/enableHue","v":"[False,False,False]"}
+{"k":"v8/Card_Tree_Sample/Card_Inches.st/importer/enableHueByDefault","v":"False"}
+{"k":"v8/Card_Tree_Sample/Card_Inches.st/importer/enableSettingOverride","v":"[False,False,False]"}
+{"k":"v8/Card_Tree_Sample/Card_Inches.st/importer/enableSmoothLODTransition","v":"False"}
+{"k":"v8/Card_Tree_Sample/Card_Inches.st/importer/enableSubsurface","v":"[True,True,True]"}
+{"k":"v8/Card_Tree_Sample/Card_Inches.st/importer/enableSubsurfaceByDefault","v":"True"}
+{"k":"v8/Card_Tree_Sample/Card_Inches.st/importer/fadeOutWidth","v":"3e800000"}
+{"k":"v8/Card_Tree_Sample/Card_Inches.st/importer/generateColliders","v":"True"}
+{"k":"v8/Card_Tree_Sample/Card_Inches.st/importer/generateRigidbody","v":"True"}
+{"k":"v8/Card_Tree_Sample/Card_Inches.st/importer/hasBillboard","v":"False"}
+{"k":"v8/Card_Tree_Sample/Card_Inches.st/importer/hasImported","v":"True"}
+{"k":"v8/Card_Tree_Sample/Card_Inches.st/importer/hueVariation","v":"3f800000 3f000000 00000000 3dcccccd"}
+{"k":"v8/Card_Tree_Sample/Card_Inches.st/importer/isV8","v":"True"}
+{"k":"v8/Card_Tree_Sample/Card_Inches.st/importer/mainColor","v":"3f800000 3f800000 3f800000 3f800000"}
+{"k":"v8/Card_Tree_Sample/Card_Inches.st/importer/materialFolderPath","v":"Assets/Trees/v8/Card_Tree_Sample/Card_Inches Materials"}
+{"k":"v8/Card_Tree_Sample/Card_Inches.st/importer/materialLocation","v":"InPrefab"}
+{"k":"v8/Card_Tree_Sample/Card_Inches.st/importer/receiveShadows","v":"[True,True,True]"}
+{"k":"v8/Card_Tree_Sample/Card_Inches.st/importer/receiveShadowsByDefault","v":"True"}
+{"k":"v8/Card_Tree_Sample/Card_Inches.st/importer/reflectionProbeUsages","v":"[BlendProbes,BlendProbes,BlendProbes]"}
+{"k":"v8/Card_Tree_Sample/Card_Inches.st/importer/reflectionProbeUsagesByDefault","v":"1"}
+{"k":"v8/Card_Tree_Sample/Card_Inches.st/importer/scaleFactor","v":"3cd013a9"}
+{"k":"v8/Card_Tree_Sample/Card_Inches.st/importer/selectedWindQuality","v":"4"}
+{"k":"v8/Card_Tree_Sample/Card_Inches.st/importer/useLightProbes","v":"[True,True,True]"}
+{"k":"v8/Card_Tree_Sample/Card_Inches.st/importer/useLightProbesByDefault","v":"True"}
+{"k":"v8/Card_Tree_Sample/Card_Inches.st/importer/windQualities","v":"[4,4,4]"}
+{"k":"v8/Card_Tree_Sample/Card_Inches.st/main","v":"GameObject Card_Inches"}
+{"k":"v8/Card_Tree_Sample/Card_Inches.st/mainType","v":"UnityEngine.GameObject"}
+{"k":"v8/Card_Tree_Sample/Card_Inches.st/prefabType","v":"Model"}
+{"k":"v8/Card_Tree_Sample/Card_Inches.st/object/CapsuleCollider/Card_Inches/CollisionObject0:CapsuleCollider","v":"136297279999738247 hide HideInHierarchy, NotEditable"}
+{"k":"v8/Card_Tree_Sample/Card_Inches.st/object/CapsuleCollider/Card_Inches/CollisionObject1:CapsuleCollider","v":"-8221809898812911413 hide HideInHierarchy, NotEditable"}
+{"k":"v8/Card_Tree_Sample/Card_Inches.st/object/GameObject/Card_Inches","v":"919132149155446097 hide NotEditable"}
+{"k":"v8/Card_Tree_Sample/Card_Inches.st/object/GameObject/Card_Inches/Card_Inches_LOD0","v":"4165378409446563688 hide NotEditable"}
+{"k":"v8/Card_Tree_Sample/Card_Inches.st/object/GameObject/Card_Inches/Card_Inches_LOD1","v":"-5326811206698640273 hide NotEditable"}
+{"k":"v8/Card_Tree_Sample/Card_Inches.st/object/GameObject/Card_Inches/Card_Inches_LOD2","v":"-5022164487526704549 hide NotEditable"}
+{"k":"v8/Card_Tree_Sample/Card_Inches.st/object/GameObject/Card_Inches/CollisionObject0","v":"1218912716677395249 hide NotEditable"}
+{"k":"v8/Card_Tree_Sample/Card_Inches.st/object/GameObject/Card_Inches/CollisionObject1","v":"1400086564404443856 hide NotEditable"}
+{"k":"v8/Card_Tree_Sample/Card_Inches.st/object/LODGroup/Card_Inches:LODGroup","v":"4742473837712756890 hide HideInHierarchy, NotEditable"}
+{"k":"v8/Card_Tree_Sample/Card_Inches.st/object/Material/card-tree-sample","v":"-2844405123538240487 hide NotEditable"}
+{"k":"v8/Card_Tree_Sample/Card_Inches.st/object/Mesh/Card_Inches_LOD0","v":"4300000 hide NotEditable"}
+{"k":"v8/Card_Tree_Sample/Card_Inches.st/object/Mesh/Card_Inches_LOD1","v":"4300002 hide NotEditable"}
+{"k":"v8/Card_Tree_Sample/Card_Inches.st/object/Mesh/Card_Inches_LOD2","v":"4300004 hide NotEditable"}
+{"k":"v8/Card_Tree_Sample/Card_Inches.st/object/MeshFilter/Card_Inches/Card_Inches_LOD0:MeshFilter","v":"1785234153028641091 hide HideInHierarchy, NotEditable"}
+{"k":"v8/Card_Tree_Sample/Card_Inches.st/object/MeshFilter/Card_Inches/Card_Inches_LOD1:MeshFilter","v":"7824936507535985128 hide HideInHierarchy, NotEditable"}
+{"k":"v8/Card_Tree_Sample/Card_Inches.st/object/MeshFilter/Card_Inches/Card_Inches_LOD2:MeshFilter","v":"-3559351984632493944 hide HideInHierarchy, NotEditable"}
+{"k":"v8/Card_Tree_Sample/Card_Inches.st/object/MeshRenderer/Card_Inches/Card_Inches_LOD0:MeshRenderer","v":"763163095363193445 hide HideInHierarchy, NotEditable"}
+{"k":"v8/Card_Tree_Sample/Card_Inches.st/object/MeshRenderer/Card_Inches/Card_Inches_LOD1:MeshRenderer","v":"4909245997845579793 hide HideInHierarchy, NotEditable"}
+{"k":"v8/Card_Tree_Sample/Card_Inches.st/object/MeshRenderer/Card_Inches/Card_Inches_LOD2:MeshRenderer","v":"6842677245437011694 hide HideInHierarchy, NotEditable"}
+{"k":"v8/Card_Tree_Sample/Card_Inches.st/object/Rigidbody/Card_Inches:Rigidbody","v":"6367646867474405593 hide HideInHierarchy, NotEditable"}
+{"k":"v8/Card_Tree_Sample/Card_Inches.st/object/SpeedTreeWindAsset/","v":"22800000 hide HideInHierarchy, HideInInspector"}
+{"k":"v8/Card_Tree_Sample/Card_Inches.st/object/Transform/Card_Inches/Card_Inches_LOD0:Transform","v":"-8032467107628147253 hide HideInHierarchy, NotEditable"}
+{"k":"v8/Card_Tree_Sample/Card_Inches.st/object/Transform/Card_Inches/Card_Inches_LOD1:Transform","v":"-5597937655014344647 hide HideInHierarchy, NotEditable"}
+{"k":"v8/Card_Tree_Sample/Card_Inches.st/object/Transform/Card_Inches/Card_Inches_LOD2:Transform","v":"-2069373424839784049 hide HideInHierarchy, NotEditable"}
+{"k":"v8/Card_Tree_Sample/Card_Inches.st/object/Transform/Card_Inches/CollisionObject0:Transform","v":"7013799120591977417 hide HideInHierarchy, NotEditable"}
+{"k":"v8/Card_Tree_Sample/Card_Inches.st/object/Transform/Card_Inches/CollisionObject1:Transform","v":"-6300383311887934288 hide HideInHierarchy, NotEditable"}
+{"k":"v8/Card_Tree_Sample/Card_Inches.st/object/Transform/Card_Inches:Transform","v":"-8679921383154817045 hide HideInHierarchy, NotEditable"}
+{"k":"v8/Card_Tree_Sample/Card_Inches.st/object/Tree/Card_Inches/Card_Inches_LOD0:Tree","v":"-5197873592948562807 hide HideInHierarchy, NotEditable"}
+{"k":"v8/Card_Tree_Sample/Card_Inches.st/object/Tree/Card_Inches/Card_Inches_LOD1:Tree","v":"7815833162300423189 hide HideInHierarchy, NotEditable"}
+{"k":"v8/Card_Tree_Sample/Card_Inches.st/object/Tree/Card_Inches/Card_Inches_LOD2:Tree","v":"-7991611283475561590 hide HideInHierarchy, NotEditable"}
+{"k":"v8/Card_Tree_Sample/Card_Inches.st/objects","v":"30"}
+{"k":"v8/Card_Tree_Sample/Card_Inches.st/go/Card_Inches","v":"active layer 0 tag Untagged static False hide NotEditable"}
+{"k":"v8/Card_Tree_Sample/Card_Inches.st/go/Card_Inches/transform","v":"00000000 00000000 00000000 00000000 00000000 00000000 3f800000 3f800000 3f800000 3f800000"}
+{"k":"v8/Card_Tree_Sample/Card_Inches.st/go/Card_Inches/components","v":"Transform LODGroup Rigidbody"}
+{"k":"v8/Card_Tree_Sample/Card_Inches.st/go/Card_Inches/LODGroup","v":"None animate False billboard False size 400bfe7b ref 3d66a600 3f88d567 bc2893c0 count 3 enabled True"}
+{"k":"v8/Card_Tree_Sample/Card_Inches.st/go/Card_Inches/LODGroup/lod0","v":"3f000000 fade 00000000 renderers Card_Inches_LOD0"}
+{"k":"v8/Card_Tree_Sample/Card_Inches.st/go/Card_Inches/LODGroup/lod1","v":"3e800000 fade 00000000 renderers Card_Inches_LOD1"}
+{"k":"v8/Card_Tree_Sample/Card_Inches.st/go/Card_Inches/LODGroup/lod2","v":"3c23d70a fade 00000000 renderers Card_Inches_LOD2"}
+{"k":"v8/Card_Tree_Sample/Card_Inches.st/go/Card_Inches/Rigidbody","v":"gravity False kinematic True mass 3f800000 interpolation None detection Discrete constraints None"}
+{"k":"v8/Card_Tree_Sample/Card_Inches.st/go/Card_Inches/Card_Inches_LOD0","v":"active layer 0 tag Untagged static False hide NotEditable"}
+{"k":"v8/Card_Tree_Sample/Card_Inches.st/go/Card_Inches/Card_Inches_LOD0/transform","v":"00000000 00000000 00000000 80000000 80000000 80000000 3f800000 3f800000 3f800000 3f800000"}
+{"k":"v8/Card_Tree_Sample/Card_Inches.st/go/Card_Inches/Card_Inches_LOD0/components","v":"Transform MeshFilter MeshRenderer Tree"}
+{"k":"v8/Card_Tree_Sample/Card_Inches.st/go/Card_Inches/Card_Inches_LOD0/MeshFilter","v":"Card_Inches_LOD0"}
+{"k":"v8/Card_Tree_Sample/Card_Inches.st/go/Card_Inches/Card_Inches_LOD0/MeshRenderer","v":"card-tree-sample cast On receive True probes BlendProbes reflection BlendProbes motion Object layerMask 1 enabled True bounds 3d4e9fac 3f88d567 bc2c4d40 3ead36fc 3f8bfe7b 3ea51021"}
+{"k":"v8/Card_Tree_Sample/Card_Inches.st/go/Card_Inches/Card_Inches_LOD0/Tree","v":"wind SpeedTreeWindAsset  hasSpeedTreeWind True"}
+{"k":"v8/Card_Tree_Sample/Card_Inches.st/go/Card_Inches/Card_Inches_LOD1","v":"active layer 0 tag Untagged static False hide NotEditable"}
+{"k":"v8/Card_Tree_Sample/Card_Inches.st/go/Card_Inches/Card_Inches_LOD1/transform","v":"00000000 00000000 00000000 80000000 80000000 80000000 3f800000 3f800000 3f800000 3f800000"}
+{"k":"v8/Card_Tree_Sample/Card_Inches.st/go/Card_Inches/Card_Inches_LOD1/components","v":"Transform MeshFilter MeshRenderer Tree"}
+{"k":"v8/Card_Tree_Sample/Card_Inches.st/go/Card_Inches/Card_Inches_LOD1/MeshFilter","v":"Card_Inches_LOD1"}
+{"k":"v8/Card_Tree_Sample/Card_Inches.st/go/Card_Inches/Card_Inches_LOD1/MeshRenderer","v":"card-tree-sample cast On receive True probes BlendProbes reflection BlendProbes motion Object layerMask 1 enabled True bounds 3d5aa2d8 3f88cbd6 bc2a70a0 3eaeb762 3f8bf4ea 3ea74181"}
+{"k":"v8/Card_Tree_Sample/Card_Inches.st/go/Card_Inches/Card_Inches_LOD1/Tree","v":"wind SpeedTreeWindAsset  hasSpeedTreeWind True"}
+{"k":"v8/Card_Tree_Sample/Card_Inches.st/go/Card_Inches/Card_Inches_LOD2","v":"active layer 0 tag Untagged static False hide NotEditable"}
+{"k":"v8/Card_Tree_Sample/Card_Inches.st/go/Card_Inches/Card_Inches_LOD2/transform","v":"00000000 00000000 00000000 80000000 80000000 80000000 3f800000 3f800000 3f800000 3f800000"}
+{"k":"v8/Card_Tree_Sample/Card_Inches.st/go/Card_Inches/Card_Inches_LOD2/components","v":"Transform MeshFilter MeshRenderer Tree"}
+{"k":"v8/Card_Tree_Sample/Card_Inches.st/go/Card_Inches/Card_Inches_LOD2/MeshFilter","v":"Card_Inches_LOD2"}
+{"k":"v8/Card_Tree_Sample/Card_Inches.st/go/Card_Inches/Card_Inches_LOD2/MeshRenderer","v":"card-tree-sample cast On receive True probes BlendProbes reflection BlendProbes motion Object layerMask 1 enabled True bounds 3d908d78 3f88cbd7 bc2893d0 3ea8e929 3f8bf4eb 3ea972e2"}
+{"k":"v8/Card_Tree_Sample/Card_Inches.st/go/Card_Inches/Card_Inches_LOD2/Tree","v":"wind SpeedTreeWindAsset  hasSpeedTreeWind True"}
+{"k":"v8/Card_Tree_Sample/Card_Inches.st/go/Card_Inches/CollisionObject0","v":"active layer 0 tag Untagged static False hide NotEditable"}
+{"k":"v8/Card_Tree_Sample/Card_Inches.st/go/Card_Inches/CollisionObject0/transform","v":"3c65cd5c 3ea25bbb 3b9720ca 80000000 bc824f3a 3f30edcf 3f38f97a 3f800000 3f800000 3f800000"}
+{"k":"v8/Card_Tree_Sample/Card_Inches.st/go/Card_Inches/CollisionObject0/components","v":"Transform CapsuleCollider"}
+{"k":"v8/Card_Tree_Sample/Card_Inches.st/go/Card_Inches/CollisionObject0/CapsuleCollider","v":"3cdc8fb7 height 3f305858 direction 0 center 00000000 00000000 00000000 trigger False enabled True"}
+{"k":"v8/Card_Tree_Sample/Card_Inches.st/go/Card_Inches/CollisionObject1","v":"active layer 0 tag Untagged static False hide NotEditable"}
+{"k":"v8/Card_Tree_Sample/Card_Inches.st/go/Card_Inches/CollisionObject1/transform","v":"bc17a954 3fa26edd 3c421830 80000000 3303e30c 3f36fa24 3f330a48 3f800000 3f800000 3f800000"}
+{"k":"v8/Card_Tree_Sample/Card_Inches.st/go/Card_Inches/CollisionObject1/components","v":"Transform CapsuleCollider"}
+{"k":"v8/Card_Tree_Sample/Card_Inches.st/go/Card_Inches/CollisionObject1/CapsuleCollider","v":"3e495054 height 3fa41ed4 direction 0 center 00000000 00000000 00000000 trigger False enabled True"}
+{"k":"v8/Card_Tree_Sample/Card_Inches.st/mesh/Card_Inches_LOD0","v":"vertices 8141 submeshes 1 index UInt16 readable True bounds 3d4e9fac 3f88d567 bc2c4d40 3ead36fc 3f8bfe7b 3ea51021 streams 1"}
+{"k":"v8/Card_Tree_Sample/Card_Inches.st/mesh/Card_Inches_LOD0/layout","v":"Position:Float32x3@0 Normal:Float32x3@0 Tangent:Float32x4@0 Color:UNorm8x4@0 TexCoord0:Float32x4@0 TexCoord1:Float32x4@0 TexCoord2:Float32x4@0 TexCoord3:Float32x4@0"}
+{"k":"v8/Card_Tree_Sample/Card_Inches.st/mesh/Card_Inches_LOD0/submesh0","v":"Triangles start 0 count 27135 base 0 first 0 vcount 8141 bounds 3d4e9fac 3f88d567 bc2c4d40 3ead36fc 3f8bfe7b 3ea51021"}
+{"k":"v8/Card_Tree_Sample/Card_Inches.st/mesh/Card_Inches_LOD0/submesh0/indices","v":"1c91aca6e27c7d64"}
+{"k":"v8/Card_Tree_Sample/Card_Inches.st/mesh/Card_Inches_LOD0/positions","v":"fb1d14c036065dc5"}
+{"k":"v8/Card_Tree_Sample/Card_Inches.st/mesh/Card_Inches_LOD0/normals","v":"f5cc069f00a7c297"}
+{"k":"v8/Card_Tree_Sample/Card_Inches.st/mesh/Card_Inches_LOD0/tangents","v":"eafcfe5dee32ad0c"}
+{"k":"v8/Card_Tree_Sample/Card_Inches.st/mesh/Card_Inches_LOD0/colors32","v":"b344384329a0f22d"}
+{"k":"v8/Card_Tree_Sample/Card_Inches.st/mesh/Card_Inches_LOD0/uv0","v":"11ad3c683955374a"}
+{"k":"v8/Card_Tree_Sample/Card_Inches.st/mesh/Card_Inches_LOD0/uv1","v":"5fb165d7222afdad"}
+{"k":"v8/Card_Tree_Sample/Card_Inches.st/mesh/Card_Inches_LOD0/uv2","v":"3d4dc3d4fe35dca1"}
+{"k":"v8/Card_Tree_Sample/Card_Inches.st/mesh/Card_Inches_LOD0/uv3","v":"67baf130d33ca4b5"}
+{"k":"v8/Card_Tree_Sample/Card_Inches.st/mesh/Card_Inches_LOD1","v":"vertices 5293 submeshes 1 index UInt16 readable True bounds 3d5aa2d8 3f88cbd6 bc2a70a0 3eaeb762 3f8bf4ea 3ea74181 streams 1"}
+{"k":"v8/Card_Tree_Sample/Card_Inches.st/mesh/Card_Inches_LOD1/layout","v":"Position:Float32x3@0 Normal:Float32x3@0 Tangent:Float32x4@0 Color:UNorm8x4@0 TexCoord0:Float32x4@0 TexCoord1:Float32x4@0 TexCoord2:Float32x4@0 TexCoord3:Float32x4@0"}
+{"k":"v8/Card_Tree_Sample/Card_Inches.st/mesh/Card_Inches_LOD1/submesh0","v":"Triangles start 0 count 19167 base 0 first 0 vcount 5293 bounds 3d5aa2d8 3f88cbd6 bc2a70a0 3eaeb762 3f8bf4ea 3ea74181"}
+{"k":"v8/Card_Tree_Sample/Card_Inches.st/mesh/Card_Inches_LOD1/submesh0/indices","v":"6ce29a9c3c7299bb"}
+{"k":"v8/Card_Tree_Sample/Card_Inches.st/mesh/Card_Inches_LOD1/positions","v":"c58f1038c169b67b"}
+{"k":"v8/Card_Tree_Sample/Card_Inches.st/mesh/Card_Inches_LOD1/normals","v":"307f5d1389b24f70"}
+{"k":"v8/Card_Tree_Sample/Card_Inches.st/mesh/Card_Inches_LOD1/tangents","v":"a66537c91f673209"}
+{"k":"v8/Card_Tree_Sample/Card_Inches.st/mesh/Card_Inches_LOD1/colors32","v":"de98964b8d5959df"}
+{"k":"v8/Card_Tree_Sample/Card_Inches.st/mesh/Card_Inches_LOD1/uv0","v":"798176b50fb3c6da"}
+{"k":"v8/Card_Tree_Sample/Card_Inches.st/mesh/Card_Inches_LOD1/uv1","v":"45ba6247a50b547f"}
+{"k":"v8/Card_Tree_Sample/Card_Inches.st/mesh/Card_Inches_LOD1/uv2","v":"7a7210c8626e914b"}
+{"k":"v8/Card_Tree_Sample/Card_Inches.st/mesh/Card_Inches_LOD1/uv3","v":"81d08e361aaad5d5"}
+{"k":"v8/Card_Tree_Sample/Card_Inches.st/mesh/Card_Inches_LOD2","v":"vertices 3428 submeshes 1 index UInt16 readable True bounds 3d908d78 3f88cbd7 bc2893d0 3ea8e929 3f8bf4eb 3ea972e2 streams 1"}
+{"k":"v8/Card_Tree_Sample/Card_Inches.st/mesh/Card_Inches_LOD2/layout","v":"Position:Float32x3@0 Normal:Float32x3@0 Tangent:Float32x4@0 Color:UNorm8x4@0 TexCoord0:Float32x4@0 TexCoord1:Float32x4@0 TexCoord2:Float32x4@0 TexCoord3:Float32x4@0"}
+{"k":"v8/Card_Tree_Sample/Card_Inches.st/mesh/Card_Inches_LOD2/submesh0","v":"Triangles start 0 count 13326 base 0 first 0 vcount 3428 bounds 3d908d78 3f88cbd7 bc2893d0 3ea8e929 3f8bf4eb 3ea972e2"}
+{"k":"v8/Card_Tree_Sample/Card_Inches.st/mesh/Card_Inches_LOD2/submesh0/indices","v":"5e7ca21fde5c40d5"}
+{"k":"v8/Card_Tree_Sample/Card_Inches.st/mesh/Card_Inches_LOD2/positions","v":"14bb3780d5a53409"}
+{"k":"v8/Card_Tree_Sample/Card_Inches.st/mesh/Card_Inches_LOD2/normals","v":"194733c6e0d4fdde"}
+{"k":"v8/Card_Tree_Sample/Card_Inches.st/mesh/Card_Inches_LOD2/tangents","v":"fb5114140ff1d23e"}
+{"k":"v8/Card_Tree_Sample/Card_Inches.st/mesh/Card_Inches_LOD2/colors32","v":"ce500a87f497a6e1"}
+{"k":"v8/Card_Tree_Sample/Card_Inches.st/mesh/Card_Inches_LOD2/uv0","v":"c6086049b244439d"}
+{"k":"v8/Card_Tree_Sample/Card_Inches.st/mesh/Card_Inches_LOD2/uv1","v":"96930d1e9843f354"}
+{"k":"v8/Card_Tree_Sample/Card_Inches.st/mesh/Card_Inches_LOD2/uv2","v":"f621a5867975f759"}
+{"k":"v8/Card_Tree_Sample/Card_Inches.st/mesh/Card_Inches_LOD2/uv3","v":"bbd3c2fa8ab92a05"}
+{"k":"v8/Card_Tree_Sample/Card_Inches.st/material/card-tree-sample","v":"Nature/SpeedTree8 queue 2450 instancing True doubleSidedGI True flags EmissiveIsBlack path Assets/Trees/v8/Card_Tree_Sample/Card_Inches.st hide NotEditable"}
+{"k":"v8/Card_Tree_Sample/Card_Inches.st/material/card-tree-sample/keywords","v":"EFFECT_BUMP EFFECT_EXTRA_TEX _WINDQUALITY_BEST"}
+{"k":"v8/Card_Tree_Sample/Card_Inches.st/material/card-tree-sample/prop/_MainTex","v":"card-tree-sample_Color Assets/Trees/v8/Card_Tree_Sample/card-tree-sample_Color.png 3f800000 3f800000 00000000 00000000 00000000 00000000"}
+{"k":"v8/Card_Tree_Sample/Card_Inches.st/material/card-tree-sample/prop/_Color","v":"3f800000 3f800000 3f800000 3f800000"}
+{"k":"v8/Card_Tree_Sample/Card_Inches.st/material/card-tree-sample/prop/_HueVariationKwToggle","v":"00000000"}
+{"k":"v8/Card_Tree_Sample/Card_Inches.st/material/card-tree-sample/prop/_HueVariationColor","v":"3f800000 3f000000 00000000 3dcccccd"}
+{"k":"v8/Card_Tree_Sample/Card_Inches.st/material/card-tree-sample/prop/_NormalMapKwToggle","v":"3f800000"}
+{"k":"v8/Card_Tree_Sample/Card_Inches.st/material/card-tree-sample/prop/_BumpMap","v":"null 3f800000 3f800000 00000000 00000000 00000000 00000000"}
+{"k":"v8/Card_Tree_Sample/Card_Inches.st/material/card-tree-sample/prop/_ExtraTex","v":"card-tree-sample_Extra Assets/Trees/v8/Card_Tree_Sample/card-tree-sample_Extra.png 3f800000 3f800000 00000000 00000000 00000000 00000000"}
+{"k":"v8/Card_Tree_Sample/Card_Inches.st/material/card-tree-sample/prop/_Glossiness","v":"3f800000"}
+{"k":"v8/Card_Tree_Sample/Card_Inches.st/material/card-tree-sample/prop/_Metallic","v":"3f800000"}
+{"k":"v8/Card_Tree_Sample/Card_Inches.st/material/card-tree-sample/prop/_SubsurfaceKwToggle","v":"00000000"}
+{"k":"v8/Card_Tree_Sample/Card_Inches.st/material/card-tree-sample/prop/_SubsurfaceTex","v":"null 3f800000 3f800000 00000000 00000000 00000000 00000000"}
+{"k":"v8/Card_Tree_Sample/Card_Inches.st/material/card-tree-sample/prop/_SubsurfaceColor","v":"3f800000 3f800000 3f800000 3f800000"}
+{"k":"v8/Card_Tree_Sample/Card_Inches.st/material/card-tree-sample/prop/_SubsurfaceIndirect","v":"3e800000"}
+{"k":"v8/Card_Tree_Sample/Card_Inches.st/material/card-tree-sample/prop/_BillboardKwToggle","v":"00000000"}
+{"k":"v8/Card_Tree_Sample/Card_Inches.st/material/card-tree-sample/prop/_BillboardShadowFade","v":"3f000000"}
+{"k":"v8/Card_Tree_Sample/Card_Inches.st/material/card-tree-sample/prop/_TwoSided","v":"00000000"}
+{"k":"v8/Card_Tree_Sample/Card_Inches.st/material/card-tree-sample/prop/_WindQuality","v":"40800000"}
+{"k":"v8/Card_Tree_Sample/Card_Spheres.st/importer","v":"UnityEditor.SpeedTreeImporter"}
+{"k":"v8/Card_Tree_Sample/Card_Spheres.st/importer/LODHeights","v":"[3f000000,3e800000,3c23d70a]"}
+{"k":"v8/Card_Tree_Sample/Card_Spheres.st/importer/alphaTestRef","v":"3ea8f5c3"}
+{"k":"v8/Card_Tree_Sample/Card_Spheres.st/importer/animateCrossFading","v":"True"}
+{"k":"v8/Card_Tree_Sample/Card_Spheres.st/importer/bestWindQuality","v":"4"}
+{"k":"v8/Card_Tree_Sample/Card_Spheres.st/importer/billboardTransitionCrossFadeWidth","v":"3e800000"}
+{"k":"v8/Card_Tree_Sample/Card_Spheres.st/importer/castShadows","v":"[True,True,True]"}
+{"k":"v8/Card_Tree_Sample/Card_Spheres.st/importer/castShadowsByDefault","v":"True"}
+{"k":"v8/Card_Tree_Sample/Card_Spheres.st/importer/defaultBillboardShader","v":"null"}
+{"k":"v8/Card_Tree_Sample/Card_Spheres.st/importer/defaultShader","v":"Shader Nature/SpeedTree8"}
+{"k":"v8/Card_Tree_Sample/Card_Spheres.st/importer/enableBump","v":"[True,True,True]"}
+{"k":"v8/Card_Tree_Sample/Card_Spheres.st/importer/enableBumpByDefault","v":"True"}
+{"k":"v8/Card_Tree_Sample/Card_Spheres.st/importer/enableHue","v":"[False,False,False]"}
+{"k":"v8/Card_Tree_Sample/Card_Spheres.st/importer/enableHueByDefault","v":"False"}
+{"k":"v8/Card_Tree_Sample/Card_Spheres.st/importer/enableSettingOverride","v":"[False,False,False]"}
+{"k":"v8/Card_Tree_Sample/Card_Spheres.st/importer/enableSmoothLODTransition","v":"True"}
+{"k":"v8/Card_Tree_Sample/Card_Spheres.st/importer/enableSubsurface","v":"[True,True,True]"}
+{"k":"v8/Card_Tree_Sample/Card_Spheres.st/importer/enableSubsurfaceByDefault","v":"True"}
+{"k":"v8/Card_Tree_Sample/Card_Spheres.st/importer/fadeOutWidth","v":"3e800000"}
+{"k":"v8/Card_Tree_Sample/Card_Spheres.st/importer/generateColliders","v":"True"}
+{"k":"v8/Card_Tree_Sample/Card_Spheres.st/importer/generateRigidbody","v":"True"}
+{"k":"v8/Card_Tree_Sample/Card_Spheres.st/importer/hasBillboard","v":"False"}
+{"k":"v8/Card_Tree_Sample/Card_Spheres.st/importer/hasImported","v":"True"}
+{"k":"v8/Card_Tree_Sample/Card_Spheres.st/importer/hueVariation","v":"3f800000 3f000000 00000000 3dcccccd"}
+{"k":"v8/Card_Tree_Sample/Card_Spheres.st/importer/isV8","v":"True"}
+{"k":"v8/Card_Tree_Sample/Card_Spheres.st/importer/mainColor","v":"3f800000 3f800000 3f800000 3f800000"}
+{"k":"v8/Card_Tree_Sample/Card_Spheres.st/importer/materialFolderPath","v":"Assets/Trees/v8/Card_Tree_Sample/Card_Spheres Materials"}
+{"k":"v8/Card_Tree_Sample/Card_Spheres.st/importer/materialLocation","v":"InPrefab"}
+{"k":"v8/Card_Tree_Sample/Card_Spheres.st/importer/receiveShadows","v":"[True,True,True]"}
+{"k":"v8/Card_Tree_Sample/Card_Spheres.st/importer/receiveShadowsByDefault","v":"True"}
+{"k":"v8/Card_Tree_Sample/Card_Spheres.st/importer/reflectionProbeUsages","v":"[BlendProbes,BlendProbes,BlendProbes]"}
+{"k":"v8/Card_Tree_Sample/Card_Spheres.st/importer/reflectionProbeUsagesByDefault","v":"1"}
+{"k":"v8/Card_Tree_Sample/Card_Spheres.st/importer/scaleFactor","v":"3e9c0ebf"}
+{"k":"v8/Card_Tree_Sample/Card_Spheres.st/importer/selectedWindQuality","v":"4"}
+{"k":"v8/Card_Tree_Sample/Card_Spheres.st/importer/useLightProbes","v":"[True,True,True]"}
+{"k":"v8/Card_Tree_Sample/Card_Spheres.st/importer/useLightProbesByDefault","v":"True"}
+{"k":"v8/Card_Tree_Sample/Card_Spheres.st/importer/windQualities","v":"[4,4,4]"}
+{"k":"v8/Card_Tree_Sample/Card_Spheres.st/main","v":"GameObject Card_Spheres"}
+{"k":"v8/Card_Tree_Sample/Card_Spheres.st/mainType","v":"UnityEngine.GameObject"}
+{"k":"v8/Card_Tree_Sample/Card_Spheres.st/prefabType","v":"Model"}
+{"k":"v8/Card_Tree_Sample/Card_Spheres.st/object/CapsuleCollider/Card_Spheres/CollisionObject1:CapsuleCollider","v":"-8221809898812911413 hide HideInHierarchy, NotEditable"}
+{"k":"v8/Card_Tree_Sample/Card_Spheres.st/object/GameObject/Card_Spheres","v":"919132149155446097 hide NotEditable"}
+{"k":"v8/Card_Tree_Sample/Card_Spheres.st/object/GameObject/Card_Spheres/Card_Spheres_LOD0","v":"-7676257538648867567 hide NotEditable"}
+{"k":"v8/Card_Tree_Sample/Card_Spheres.st/object/GameObject/Card_Spheres/Card_Spheres_LOD1","v":"-8966088464227488938 hide NotEditable"}
+{"k":"v8/Card_Tree_Sample/Card_Spheres.st/object/GameObject/Card_Spheres/Card_Spheres_LOD2","v":"-2923056216006946608 hide NotEditable"}
+{"k":"v8/Card_Tree_Sample/Card_Spheres.st/object/GameObject/Card_Spheres/CollisionObject0","v":"1218912716677395249 hide NotEditable"}
+{"k":"v8/Card_Tree_Sample/Card_Spheres.st/object/GameObject/Card_Spheres/CollisionObject1","v":"1400086564404443856 hide NotEditable"}
+{"k":"v8/Card_Tree_Sample/Card_Spheres.st/object/LODGroup/Card_Spheres:LODGroup","v":"4742473837712756890 hide HideInHierarchy, NotEditable"}
+{"k":"v8/Card_Tree_Sample/Card_Spheres.st/object/Material/card-tree-sample","v":"-2844405123538240487 hide NotEditable"}
+{"k":"v8/Card_Tree_Sample/Card_Spheres.st/object/Mesh/Card_Spheres_LOD0","v":"4300000 hide NotEditable"}
+{"k":"v8/Card_Tree_Sample/Card_Spheres.st/object/Mesh/Card_Spheres_LOD1","v":"4300002 hide NotEditable"}
+{"k":"v8/Card_Tree_Sample/Card_Spheres.st/object/Mesh/Card_Spheres_LOD2","v":"4300004 hide NotEditable"}
+{"k":"v8/Card_Tree_Sample/Card_Spheres.st/object/MeshFilter/Card_Spheres/Card_Spheres_LOD0:MeshFilter","v":"-3908547585883087069 hide HideInHierarchy, NotEditable"}
+{"k":"v8/Card_Tree_Sample/Card_Spheres.st/object/MeshFilter/Card_Spheres/Card_Spheres_LOD1:MeshFilter","v":"-7590279664383517376 hide HideInHierarchy, NotEditable"}
+{"k":"v8/Card_Tree_Sample/Card_Spheres.st/object/MeshFilter/Card_Spheres/Card_Spheres_LOD2:MeshFilter","v":"-4028576299997821415 hide HideInHierarchy, NotEditable"}
+{"k":"v8/Card_Tree_Sample/Card_Spheres.st/object/MeshRenderer/Card_Spheres/Card_Spheres_LOD0:MeshRenderer","v":"7078359563738208150 hide HideInHierarchy, NotEditable"}
+{"k":"v8/Card_Tree_Sample/Card_Spheres.st/object/MeshRenderer/Card_Spheres/Card_Spheres_LOD1:MeshRenderer","v":"-8330995837974908995 hide HideInHierarchy, NotEditable"}
+{"k":"v8/Card_Tree_Sample/Card_Spheres.st/object/MeshRenderer/Card_Spheres/Card_Spheres_LOD2:MeshRenderer","v":"2321581345434742825 hide HideInHierarchy, NotEditable"}
+{"k":"v8/Card_Tree_Sample/Card_Spheres.st/object/Rigidbody/Card_Spheres:Rigidbody","v":"6367646867474405593 hide HideInHierarchy, NotEditable"}
+{"k":"v8/Card_Tree_Sample/Card_Spheres.st/object/SpeedTreeWindAsset/","v":"22800000 hide HideInHierarchy, HideInInspector"}
+{"k":"v8/Card_Tree_Sample/Card_Spheres.st/object/SphereCollider/Card_Spheres/CollisionObject0:SphereCollider","v":"4456729511151407263 hide HideInHierarchy, NotEditable"}
+{"k":"v8/Card_Tree_Sample/Card_Spheres.st/object/Transform/Card_Spheres/Card_Spheres_LOD0:Transform","v":"1106364845483290977 hide HideInHierarchy, NotEditable"}
+{"k":"v8/Card_Tree_Sample/Card_Spheres.st/object/Transform/Card_Spheres/Card_Spheres_LOD1:Transform","v":"-6663910257933879055 hide HideInHierarchy, NotEditable"}
+{"k":"v8/Card_Tree_Sample/Card_Spheres.st/object/Transform/Card_Spheres/Card_Spheres_LOD2:Transform","v":"-3775467507832912930 hide HideInHierarchy, NotEditable"}
+{"k":"v8/Card_Tree_Sample/Card_Spheres.st/object/Transform/Card_Spheres/CollisionObject0:Transform","v":"7013799120591977417 hide HideInHierarchy, NotEditable"}
+{"k":"v8/Card_Tree_Sample/Card_Spheres.st/object/Transform/Card_Spheres/CollisionObject1:Transform","v":"-6300383311887934288 hide HideInHierarchy, NotEditable"}
+{"k":"v8/Card_Tree_Sample/Card_Spheres.st/object/Transform/Card_Spheres:Transform","v":"-8679921383154817045 hide HideInHierarchy, NotEditable"}
+{"k":"v8/Card_Tree_Sample/Card_Spheres.st/object/Tree/Card_Spheres/Card_Spheres_LOD0:Tree","v":"-4533338191494865353 hide HideInHierarchy, NotEditable"}
+{"k":"v8/Card_Tree_Sample/Card_Spheres.st/object/Tree/Card_Spheres/Card_Spheres_LOD1:Tree","v":"-6347718485130548693 hide HideInHierarchy, NotEditable"}
+{"k":"v8/Card_Tree_Sample/Card_Spheres.st/object/Tree/Card_Spheres/Card_Spheres_LOD2:Tree","v":"-2308274566099472359 hide HideInHierarchy, NotEditable"}
+{"k":"v8/Card_Tree_Sample/Card_Spheres.st/objects","v":"30"}
+{"k":"v8/Card_Tree_Sample/Card_Spheres.st/go/Card_Spheres","v":"active layer 0 tag Untagged static False hide NotEditable"}
+{"k":"v8/Card_Tree_Sample/Card_Spheres.st/go/Card_Spheres/transform","v":"00000000 00000000 00000000 00000000 00000000 00000000 3f800000 3f800000 3f800000 3f800000"}
+{"k":"v8/Card_Tree_Sample/Card_Spheres.st/go/Card_Spheres/components","v":"Transform LODGroup Rigidbody"}
+{"k":"v8/Card_Tree_Sample/Card_Spheres.st/go/Card_Spheres/LODGroup","v":"SpeedTree animate True billboard False size 41d1fdb9 ref 3f2cfc80 414d4019 bdfcddc0 count 3 enabled True"}
+{"k":"v8/Card_Tree_Sample/Card_Spheres.st/go/Card_Spheres/LODGroup/lod0","v":"3f000000 fade 00000000 renderers Card_Spheres_LOD0"}
+{"k":"v8/Card_Tree_Sample/Card_Spheres.st/go/Card_Spheres/LODGroup/lod1","v":"3e800000 fade 00000000 renderers Card_Spheres_LOD1"}
+{"k":"v8/Card_Tree_Sample/Card_Spheres.st/go/Card_Spheres/LODGroup/lod2","v":"3c23d70a fade 00000000 renderers Card_Spheres_LOD2"}
+{"k":"v8/Card_Tree_Sample/Card_Spheres.st/go/Card_Spheres/Rigidbody","v":"gravity False kinematic True mass 3f800000 interpolation None detection Discrete constraints None"}
+{"k":"v8/Card_Tree_Sample/Card_Spheres.st/go/Card_Spheres/Card_Spheres_LOD0","v":"active layer 0 tag Untagged static False hide NotEditable"}
+{"k":"v8/Card_Tree_Sample/Card_Spheres.st/go/Card_Spheres/Card_Spheres_LOD0/transform","v":"00000000 00000000 00000000 80000000 80000000 80000000 3f800000 3f800000 3f800000 3f800000"}
+{"k":"v8/Card_Tree_Sample/Card_Spheres.st/go/Card_Spheres/Card_Spheres_LOD0/components","v":"Transform MeshFilter MeshRenderer Tree"}
+{"k":"v8/Card_Tree_Sample/Card_Spheres.st/go/Card_Spheres/Card_Spheres_LOD0/MeshFilter","v":"Card_Spheres_LOD0"}
+{"k":"v8/Card_Tree_Sample/Card_Spheres.st/go/Card_Spheres/Card_Spheres_LOD0/MeshRenderer","v":"card-tree-sample cast On receive True probes BlendProbes reflection BlendProbes motion Object layerMask 1 enabled True bounds 3f1af7c4 414d4019 be0139f0 4081e93e 4151fdb9 40779831"}
+{"k":"v8/Card_Tree_Sample/Card_Spheres.st/go/Card_Spheres/Card_Spheres_LOD0/Tree","v":"wind SpeedTreeWindAsset  hasSpeedTreeWind True"}
+{"k":"v8/Card_Tree_Sample/Card_Spheres.st/go/Card_Spheres/Card_Spheres_LOD1","v":"active layer 0 tag Untagged static False hide NotEditable"}
+{"k":"v8/Card_Tree_Sample/Card_Spheres.st/go/Card_Spheres/Card_Spheres_LOD1/transform","v":"00000000 00000000 00000000 80000000 80000000 80000000 3f800000 3f800000 3f800000 3f800000"}
+{"k":"v8/Card_Tree_Sample/Card_Spheres.st/go/Card_Spheres/Card_Spheres_LOD1/components","v":"Transform MeshFilter MeshRenderer Tree"}
+{"k":"v8/Card_Tree_Sample/Card_Spheres.st/go/Card_Spheres/Card_Spheres_LOD1/MeshFilter","v":"Card_Spheres_LOD1"}
+{"k":"v8/Card_Tree_Sample/Card_Spheres.st/go/Card_Spheres/Card_Spheres_LOD1/MeshRenderer","v":"card-tree-sample cast On receive True probes BlendProbes reflection BlendProbes motion Object layerMask 1 enabled True bounds 3f23fa24 414d31c0 bdffa8e0 4083098a 4151ef60 407ae241"}
+{"k":"v8/Card_Tree_Sample/Card_Spheres.st/go/Card_Spheres/Card_Spheres_LOD1/Tree","v":"wind SpeedTreeWindAsset  hasSpeedTreeWind True"}
+{"k":"v8/Card_Tree_Sample/Card_Spheres.st/go/Card_Spheres/Card_Spheres_LOD2","v":"active layer 0 tag Untagged static False hide NotEditable"}
+{"k":"v8/Card_Tree_Sample/Card_Spheres.st/go/Card_Spheres/Card_Spheres_LOD2/transform","v":"00000000 00000000 00000000 80000000 80000000 80000000 3f800000 3f800000 3f800000 3f800000"}
+{"k":"v8/Card_Tree_Sample/Card_Spheres.st/go/Card_Spheres/Card_Spheres_LOD2/components","v":"Transform MeshFilter MeshRenderer Tree"}
+{"k":"v8/Card_Tree_Sample/Card_Spheres.st/go/Card_Spheres/Card_Spheres_LOD2/MeshFilter","v":"Card_Spheres_LOD2"}
+{"k":"v8/Card_Tree_Sample/Card_Spheres.st/go/Card_Spheres/Card_Spheres_LOD2/MeshRenderer","v":"card-tree-sample cast On receive True probes BlendProbes reflection BlendProbes motion Object layerMask 1 enabled True bounds 3f58d436 414d31c1 bdfcddc0 407d5dbe 4151ef61 407e2c52"}
+{"k":"v8/Card_Tree_Sample/Card_Spheres.st/go/Card_Spheres/Card_Spheres_LOD2/Tree","v":"wind SpeedTreeWindAsset  hasSpeedTreeWind True"}
+{"k":"v8/Card_Tree_Sample/Card_Spheres.st/go/Card_Spheres/CollisionObject0","v":"active layer 0 tag Untagged static False hide NotEditable"}
+{"k":"v8/Card_Tree_Sample/Card_Spheres.st/go/Card_Spheres/CollisionObject0/transform","v":"2cb82200 b0b63e43 bd040ace 80000000 80000000 80000000 3f800000 3f800000 3f800000 3f800000"}
+{"k":"v8/Card_Tree_Sample/Card_Spheres.st/go/Card_Spheres/CollisionObject0/components","v":"Transform SphereCollider"}
+{"k":"v8/Card_Tree_Sample/Card_Spheres.st/go/Card_Spheres/CollisionObject0/SphereCollider","v":"3ea56bca center 00000000 00000000 00000000 trigger False enabled True"}
+{"k":"v8/Card_Tree_Sample/Card_Spheres.st/go/Card_Spheres/CollisionObject1","v":"active layer 0 tag Untagged static False hide NotEditable"}
+{"k":"v8/Card_Tree_Sample/Card_Spheres.st/go/Card_Spheres/CollisionObject1/transform","v":"3ba13f11 411e5408 3e119233 80000000 80000000 3f3504f4 3f3504f4 3f800000 3f800000 3f800000"}
+{"k":"v8/Card_Tree_Sample/Card_Spheres.st/go/Card_Spheres/CollisionObject1/components","v":"Transform CapsuleCollider"}
+{"k":"v8/Card_Tree_Sample/Card_Spheres.st/go/Card_Spheres/CollisionObject1/CapsuleCollider","v":"4016fc40 height 4096febe direction 0 center 00000000 00000000 00000000 trigger False enabled True"}
+{"k":"v8/Card_Tree_Sample/Card_Spheres.st/mesh/Card_Spheres_LOD0","v":"vertices 8141 submeshes 1 index UInt16 readable True bounds 3f1af7c4 414d4019 be0139f0 4081e93e 4151fdb9 40779831 streams 1"}
+{"k":"v8/Card_Tree_Sample/Card_Spheres.st/mesh/Card_Spheres_LOD0/layout","v":"Position:Float32x3@0 Normal:Float32x3@0 Tangent:Float32x4@0 Color:UNorm8x4@0 TexCoord0:Float32x4@0 TexCoord1:Float32x4@0 TexCoord2:Float32x4@0 TexCoord3:Float32x4@0"}
+{"k":"v8/Card_Tree_Sample/Card_Spheres.st/mesh/Card_Spheres_LOD0/submesh0","v":"Triangles start 0 count 27135 base 0 first 0 vcount 8141 bounds 3f1af7c4 414d4019 be0139f0 4081e93e 4151fdb9 40779831"}
+{"k":"v8/Card_Tree_Sample/Card_Spheres.st/mesh/Card_Spheres_LOD0/submesh0/indices","v":"1c91aca6e27c7d64"}
+{"k":"v8/Card_Tree_Sample/Card_Spheres.st/mesh/Card_Spheres_LOD0/positions","v":"ea2bb8b988953efd"}
+{"k":"v8/Card_Tree_Sample/Card_Spheres.st/mesh/Card_Spheres_LOD0/normals","v":"f5cc069f00a7c297"}
+{"k":"v8/Card_Tree_Sample/Card_Spheres.st/mesh/Card_Spheres_LOD0/tangents","v":"eafcfe5dee32ad0c"}
+{"k":"v8/Card_Tree_Sample/Card_Spheres.st/mesh/Card_Spheres_LOD0/colors32","v":"b344384329a0f22d"}
+{"k":"v8/Card_Tree_Sample/Card_Spheres.st/mesh/Card_Spheres_LOD0/uv0","v":"11ad3c683955374a"}
+{"k":"v8/Card_Tree_Sample/Card_Spheres.st/mesh/Card_Spheres_LOD0/uv1","v":"cc331b967e5ebeb9"}
+{"k":"v8/Card_Tree_Sample/Card_Spheres.st/mesh/Card_Spheres_LOD0/uv2","v":"3a0228642d277e40"}
+{"k":"v8/Card_Tree_Sample/Card_Spheres.st/mesh/Card_Spheres_LOD0/uv3","v":"67baf130d33ca4b5"}
+{"k":"v8/Card_Tree_Sample/Card_Spheres.st/mesh/Card_Spheres_LOD1","v":"vertices 5293 submeshes 1 index UInt16 readable True bounds 3f23fa24 414d31c0 bdffa8e0 4083098a 4151ef60 407ae241 streams 1"}
+{"k":"v8/Card_Tree_Sample/Card_Spheres.st/mesh/Card_Spheres_LOD1/layout","v":"Position:Float32x3@0 Normal:Float32x3@0 Tangent:Float32x4@0 Color:UNorm8x4@0 TexCoord0:Float32x4@0 TexCoord1:Float32x4@0 TexCoord2:Float32x4@0 TexCoord3:Float32x4@0"}
+{"k":"v8/Card_Tree_Sample/Card_Spheres.st/mesh/Card_Spheres_LOD1/submesh0","v":"Triangles start 0 count 19167 base 0 first 0 vcount 5293 bounds 3f23fa24 414d31c0 bdffa8e0 4083098a 4151ef60 407ae241"}
+{"k":"v8/Card_Tree_Sample/Card_Spheres.st/mesh/Card_Spheres_LOD1/submesh0/indices","v":"6ce29a9c3c7299bb"}
+{"k":"v8/Card_Tree_Sample/Card_Spheres.st/mesh/Card_Spheres_LOD1/positions","v":"fc79760b4ab4bd1c"}
+{"k":"v8/Card_Tree_Sample/Card_Spheres.st/mesh/Card_Spheres_LOD1/normals","v":"307f5d1389b24f70"}
+{"k":"v8/Card_Tree_Sample/Card_Spheres.st/mesh/Card_Spheres_LOD1/tangents","v":"a66537c91f673209"}
+{"k":"v8/Card_Tree_Sample/Card_Spheres.st/mesh/Card_Spheres_LOD1/colors32","v":"de98964b8d5959df"}
+{"k":"v8/Card_Tree_Sample/Card_Spheres.st/mesh/Card_Spheres_LOD1/uv0","v":"798176b50fb3c6da"}
+{"k":"v8/Card_Tree_Sample/Card_Spheres.st/mesh/Card_Spheres_LOD1/uv1","v":"c5327df810e466ef"}
+{"k":"v8/Card_Tree_Sample/Card_Spheres.st/mesh/Card_Spheres_LOD1/uv2","v":"d2a1e8f67d7380b0"}
+{"k":"v8/Card_Tree_Sample/Card_Spheres.st/mesh/Card_Spheres_LOD1/uv3","v":"81d08e361aaad5d5"}
+{"k":"v8/Card_Tree_Sample/Card_Spheres.st/mesh/Card_Spheres_LOD2","v":"vertices 3428 submeshes 1 index UInt16 readable True bounds 3f58d436 414d31c1 bdfcddc0 407d5dbe 4151ef61 407e2c52 streams 1"}
+{"k":"v8/Card_Tree_Sample/Card_Spheres.st/mesh/Card_Spheres_LOD2/layout","v":"Position:Float32x3@0 Normal:Float32x3@0 Tangent:Float32x4@0 Color:UNorm8x4@0 TexCoord0:Float32x4@0 TexCoord1:Float32x4@0 TexCoord2:Float32x4@0 TexCoord3:Float32x4@0"}
+{"k":"v8/Card_Tree_Sample/Card_Spheres.st/mesh/Card_Spheres_LOD2/submesh0","v":"Triangles start 0 count 13326 base 0 first 0 vcount 3428 bounds 3f58d436 414d31c1 bdfcddc0 407d5dbe 4151ef61 407e2c52"}
+{"k":"v8/Card_Tree_Sample/Card_Spheres.st/mesh/Card_Spheres_LOD2/submesh0/indices","v":"5e7ca21fde5c40d5"}
+{"k":"v8/Card_Tree_Sample/Card_Spheres.st/mesh/Card_Spheres_LOD2/positions","v":"8908169150c41674"}
+{"k":"v8/Card_Tree_Sample/Card_Spheres.st/mesh/Card_Spheres_LOD2/normals","v":"194733c6e0d4fdde"}
+{"k":"v8/Card_Tree_Sample/Card_Spheres.st/mesh/Card_Spheres_LOD2/tangents","v":"fb5114140ff1d23e"}
+{"k":"v8/Card_Tree_Sample/Card_Spheres.st/mesh/Card_Spheres_LOD2/colors32","v":"ce500a87f497a6e1"}
+{"k":"v8/Card_Tree_Sample/Card_Spheres.st/mesh/Card_Spheres_LOD2/uv0","v":"c6086049b244439d"}
+{"k":"v8/Card_Tree_Sample/Card_Spheres.st/mesh/Card_Spheres_LOD2/uv1","v":"3f8b2ab9618a2d88"}
+{"k":"v8/Card_Tree_Sample/Card_Spheres.st/mesh/Card_Spheres_LOD2/uv2","v":"3cb4eb15490f72ba"}
+{"k":"v8/Card_Tree_Sample/Card_Spheres.st/mesh/Card_Spheres_LOD2/uv3","v":"bbd3c2fa8ab92a05"}
+{"k":"v8/Card_Tree_Sample/Card_Spheres.st/material/card-tree-sample","v":"Nature/SpeedTree8 queue 2450 instancing True doubleSidedGI True flags EmissiveIsBlack path Assets/Trees/v8/Card_Tree_Sample/Card_Spheres.st hide NotEditable"}
+{"k":"v8/Card_Tree_Sample/Card_Spheres.st/material/card-tree-sample/keywords","v":"EFFECT_BUMP EFFECT_EXTRA_TEX _WINDQUALITY_BEST"}
+{"k":"v8/Card_Tree_Sample/Card_Spheres.st/material/card-tree-sample/prop/_MainTex","v":"card-tree-sample_Color Assets/Trees/v8/Card_Tree_Sample/card-tree-sample_Color.png 3f800000 3f800000 00000000 00000000 00000000 00000000"}
+{"k":"v8/Card_Tree_Sample/Card_Spheres.st/material/card-tree-sample/prop/_Color","v":"3f800000 3f800000 3f800000 3f800000"}
+{"k":"v8/Card_Tree_Sample/Card_Spheres.st/material/card-tree-sample/prop/_HueVariationKwToggle","v":"00000000"}
+{"k":"v8/Card_Tree_Sample/Card_Spheres.st/material/card-tree-sample/prop/_HueVariationColor","v":"3f800000 3f000000 00000000 3dcccccd"}
+{"k":"v8/Card_Tree_Sample/Card_Spheres.st/material/card-tree-sample/prop/_NormalMapKwToggle","v":"3f800000"}
+{"k":"v8/Card_Tree_Sample/Card_Spheres.st/material/card-tree-sample/prop/_BumpMap","v":"null 3f800000 3f800000 00000000 00000000 00000000 00000000"}
+{"k":"v8/Card_Tree_Sample/Card_Spheres.st/material/card-tree-sample/prop/_ExtraTex","v":"card-tree-sample_Extra Assets/Trees/v8/Card_Tree_Sample/card-tree-sample_Extra.png 3f800000 3f800000 00000000 00000000 00000000 00000000"}
+{"k":"v8/Card_Tree_Sample/Card_Spheres.st/material/card-tree-sample/prop/_Glossiness","v":"3f800000"}
+{"k":"v8/Card_Tree_Sample/Card_Spheres.st/material/card-tree-sample/prop/_Metallic","v":"3f800000"}
+{"k":"v8/Card_Tree_Sample/Card_Spheres.st/material/card-tree-sample/prop/_SubsurfaceKwToggle","v":"00000000"}
+{"k":"v8/Card_Tree_Sample/Card_Spheres.st/material/card-tree-sample/prop/_SubsurfaceTex","v":"null 3f800000 3f800000 00000000 00000000 00000000 00000000"}
+{"k":"v8/Card_Tree_Sample/Card_Spheres.st/material/card-tree-sample/prop/_SubsurfaceColor","v":"3f800000 3f800000 3f800000 3f800000"}
+{"k":"v8/Card_Tree_Sample/Card_Spheres.st/material/card-tree-sample/prop/_SubsurfaceIndirect","v":"3e800000"}
+{"k":"v8/Card_Tree_Sample/Card_Spheres.st/material/card-tree-sample/prop/_BillboardKwToggle","v":"00000000"}
+{"k":"v8/Card_Tree_Sample/Card_Spheres.st/material/card-tree-sample/prop/_BillboardShadowFade","v":"3f000000"}
+{"k":"v8/Card_Tree_Sample/Card_Spheres.st/material/card-tree-sample/prop/_TwoSided","v":"00000000"}
+{"k":"v8/Card_Tree_Sample/Card_Spheres.st/material/card-tree-sample/prop/_WindQuality","v":"40800000"}
+{"k":"v8/Card_Tree_Sample/Card_Units0.st/importer","v":"UnityEditor.SpeedTreeImporter"}
+{"k":"v8/Card_Tree_Sample/Card_Units0.st/importer/LODHeights","v":"[3f000000,3e800000,3c23d70a]"}
+{"k":"v8/Card_Tree_Sample/Card_Units0.st/importer/alphaTestRef","v":"3ea8f5c3"}
+{"k":"v8/Card_Tree_Sample/Card_Units0.st/importer/animateCrossFading","v":"False"}
+{"k":"v8/Card_Tree_Sample/Card_Units0.st/importer/bestWindQuality","v":"4"}
+{"k":"v8/Card_Tree_Sample/Card_Units0.st/importer/billboardTransitionCrossFadeWidth","v":"3e800000"}
+{"k":"v8/Card_Tree_Sample/Card_Units0.st/importer/castShadows","v":"[True,True,True]"}
+{"k":"v8/Card_Tree_Sample/Card_Units0.st/importer/castShadowsByDefault","v":"True"}
+{"k":"v8/Card_Tree_Sample/Card_Units0.st/importer/defaultBillboardShader","v":"null"}
+{"k":"v8/Card_Tree_Sample/Card_Units0.st/importer/defaultShader","v":"Shader Nature/SpeedTree8"}
+{"k":"v8/Card_Tree_Sample/Card_Units0.st/importer/enableBump","v":"[True,True,True]"}
+{"k":"v8/Card_Tree_Sample/Card_Units0.st/importer/enableBumpByDefault","v":"True"}
+{"k":"v8/Card_Tree_Sample/Card_Units0.st/importer/enableHue","v":"[False,False,False]"}
+{"k":"v8/Card_Tree_Sample/Card_Units0.st/importer/enableHueByDefault","v":"False"}
+{"k":"v8/Card_Tree_Sample/Card_Units0.st/importer/enableSettingOverride","v":"[False,False,False]"}
+{"k":"v8/Card_Tree_Sample/Card_Units0.st/importer/enableSmoothLODTransition","v":"True"}
+{"k":"v8/Card_Tree_Sample/Card_Units0.st/importer/enableSubsurface","v":"[True,True,True]"}
+{"k":"v8/Card_Tree_Sample/Card_Units0.st/importer/enableSubsurfaceByDefault","v":"True"}
+{"k":"v8/Card_Tree_Sample/Card_Units0.st/importer/fadeOutWidth","v":"3ecccccd"}
+{"k":"v8/Card_Tree_Sample/Card_Units0.st/importer/generateColliders","v":"True"}
+{"k":"v8/Card_Tree_Sample/Card_Units0.st/importer/generateRigidbody","v":"True"}
+{"k":"v8/Card_Tree_Sample/Card_Units0.st/importer/hasBillboard","v":"False"}
+{"k":"v8/Card_Tree_Sample/Card_Units0.st/importer/hasImported","v":"True"}
+{"k":"v8/Card_Tree_Sample/Card_Units0.st/importer/hueVariation","v":"3f800000 3f000000 00000000 3dcccccd"}
+{"k":"v8/Card_Tree_Sample/Card_Units0.st/importer/isV8","v":"True"}
+{"k":"v8/Card_Tree_Sample/Card_Units0.st/importer/mainColor","v":"3f800000 3f800000 3f800000 3f800000"}
+{"k":"v8/Card_Tree_Sample/Card_Units0.st/importer/materialFolderPath","v":"Assets/Trees/v8/Card_Tree_Sample/Card_Units0 Materials"}
+{"k":"v8/Card_Tree_Sample/Card_Units0.st/importer/materialLocation","v":"InPrefab"}
+{"k":"v8/Card_Tree_Sample/Card_Units0.st/importer/receiveShadows","v":"[True,True,True]"}
+{"k":"v8/Card_Tree_Sample/Card_Units0.st/importer/receiveShadowsByDefault","v":"True"}
+{"k":"v8/Card_Tree_Sample/Card_Units0.st/importer/reflectionProbeUsages","v":"[BlendProbes,BlendProbes,BlendProbes]"}
+{"k":"v8/Card_Tree_Sample/Card_Units0.st/importer/reflectionProbeUsagesByDefault","v":"1"}
+{"k":"v8/Card_Tree_Sample/Card_Units0.st/importer/scaleFactor","v":"3f800000"}
+{"k":"v8/Card_Tree_Sample/Card_Units0.st/importer/selectedWindQuality","v":"2"}
+{"k":"v8/Card_Tree_Sample/Card_Units0.st/importer/useLightProbes","v":"[True,True,True]"}
+{"k":"v8/Card_Tree_Sample/Card_Units0.st/importer/useLightProbesByDefault","v":"True"}
+{"k":"v8/Card_Tree_Sample/Card_Units0.st/importer/windQualities","v":"[4,4,4]"}
+{"k":"v8/Card_Tree_Sample/Card_Units0.st/main","v":"GameObject Card_Units0"}
+{"k":"v8/Card_Tree_Sample/Card_Units0.st/mainType","v":"UnityEngine.GameObject"}
+{"k":"v8/Card_Tree_Sample/Card_Units0.st/prefabType","v":"Model"}
+{"k":"v8/Card_Tree_Sample/Card_Units0.st/object/CapsuleCollider/Card_Units0/CollisionObject0:CapsuleCollider","v":"136297279999738247 hide HideInHierarchy, NotEditable"}
+{"k":"v8/Card_Tree_Sample/Card_Units0.st/object/CapsuleCollider/Card_Units0/CollisionObject1:CapsuleCollider","v":"-8221809898812911413 hide HideInHierarchy, NotEditable"}
+{"k":"v8/Card_Tree_Sample/Card_Units0.st/object/GameObject/Card_Units0","v":"919132149155446097 hide NotEditable"}
+{"k":"v8/Card_Tree_Sample/Card_Units0.st/object/GameObject/Card_Units0/Card_Units0_LOD0","v":"-7293346137407862322 hide NotEditable"}
+{"k":"v8/Card_Tree_Sample/Card_Units0.st/object/GameObject/Card_Units0/Card_Units0_LOD1","v":"-4314746090905008457 hide NotEditable"}
+{"k":"v8/Card_Tree_Sample/Card_Units0.st/object/GameObject/Card_Units0/Card_Units0_LOD2","v":"-3152677749659655362 hide NotEditable"}
+{"k":"v8/Card_Tree_Sample/Card_Units0.st/object/GameObject/Card_Units0/CollisionObject0","v":"1218912716677395249 hide NotEditable"}
+{"k":"v8/Card_Tree_Sample/Card_Units0.st/object/GameObject/Card_Units0/CollisionObject1","v":"1400086564404443856 hide NotEditable"}
+{"k":"v8/Card_Tree_Sample/Card_Units0.st/object/LODGroup/Card_Units0:LODGroup","v":"4742473837712756890 hide HideInHierarchy, NotEditable"}
+{"k":"v8/Card_Tree_Sample/Card_Units0.st/object/Material/card-tree-sample","v":"-2844405123538240487 hide NotEditable"}
+{"k":"v8/Card_Tree_Sample/Card_Units0.st/object/Mesh/Card_Units0_LOD0","v":"4300000 hide NotEditable"}
+{"k":"v8/Card_Tree_Sample/Card_Units0.st/object/Mesh/Card_Units0_LOD1","v":"4300002 hide NotEditable"}
+{"k":"v8/Card_Tree_Sample/Card_Units0.st/object/Mesh/Card_Units0_LOD2","v":"4300004 hide NotEditable"}
+{"k":"v8/Card_Tree_Sample/Card_Units0.st/object/MeshFilter/Card_Units0/Card_Units0_LOD0:MeshFilter","v":"-6187969601136234600 hide HideInHierarchy, NotEditable"}
+{"k":"v8/Card_Tree_Sample/Card_Units0.st/object/MeshFilter/Card_Units0/Card_Units0_LOD1:MeshFilter","v":"-1644990554977643802 hide HideInHierarchy, NotEditable"}
+{"k":"v8/Card_Tree_Sample/Card_Units0.st/object/MeshFilter/Card_Units0/Card_Units0_LOD2:MeshFilter","v":"1152851113612922489 hide HideInHierarchy, NotEditable"}
+{"k":"v8/Card_Tree_Sample/Card_Units0.st/object/MeshRenderer/Card_Units0/Card_Units0_LOD0:MeshRenderer","v":"-8160333978976688069 hide HideInHierarchy, NotEditable"}
+{"k":"v8/Card_Tree_Sample/Card_Units0.st/object/MeshRenderer/Card_Units0/Card_Units0_LOD1:MeshRenderer","v":"4818417835961560156 hide HideInHierarchy, NotEditable"}
+{"k":"v8/Card_Tree_Sample/Card_Units0.st/object/MeshRenderer/Card_Units0/Card_Units0_LOD2:MeshRenderer","v":"5245649319843240016 hide HideInHierarchy, NotEditable"}
+{"k":"v8/Card_Tree_Sample/Card_Units0.st/object/Rigidbody/Card_Units0:Rigidbody","v":"6367646867474405593 hide HideInHierarchy, NotEditable"}
+{"k":"v8/Card_Tree_Sample/Card_Units0.st/object/SpeedTreeWindAsset/","v":"22800000 hide HideInHierarchy, HideInInspector"}
+{"k":"v8/Card_Tree_Sample/Card_Units0.st/object/Transform/Card_Units0/Card_Units0_LOD0:Transform","v":"512794291216881352 hide HideInHierarchy, NotEditable"}
+{"k":"v8/Card_Tree_Sample/Card_Units0.st/object/Transform/Card_Units0/Card_Units0_LOD1:Transform","v":"8816811836996789841 hide HideInHierarchy, NotEditable"}
+{"k":"v8/Card_Tree_Sample/Card_Units0.st/object/Transform/Card_Units0/Card_Units0_LOD2:Transform","v":"5181967758231996032 hide HideInHierarchy, NotEditable"}
+{"k":"v8/Card_Tree_Sample/Card_Units0.st/object/Transform/Card_Units0/CollisionObject0:Transform","v":"7013799120591977417 hide HideInHierarchy, NotEditable"}
+{"k":"v8/Card_Tree_Sample/Card_Units0.st/object/Transform/Card_Units0/CollisionObject1:Transform","v":"-6300383311887934288 hide HideInHierarchy, NotEditable"}
+{"k":"v8/Card_Tree_Sample/Card_Units0.st/object/Transform/Card_Units0:Transform","v":"-8679921383154817045 hide HideInHierarchy, NotEditable"}
+{"k":"v8/Card_Tree_Sample/Card_Units0.st/object/Tree/Card_Units0/Card_Units0_LOD0:Tree","v":"4467241394696389812 hide HideInHierarchy, NotEditable"}
+{"k":"v8/Card_Tree_Sample/Card_Units0.st/object/Tree/Card_Units0/Card_Units0_LOD1:Tree","v":"-1165312884488008381 hide HideInHierarchy, NotEditable"}
+{"k":"v8/Card_Tree_Sample/Card_Units0.st/object/Tree/Card_Units0/Card_Units0_LOD2:Tree","v":"7300755390637797563 hide HideInHierarchy, NotEditable"}
+{"k":"v8/Card_Tree_Sample/Card_Units0.st/objects","v":"30"}
+{"k":"v8/Card_Tree_Sample/Card_Units0.st/go/Card_Units0","v":"active layer 0 tag Untagged static False hide NotEditable"}
+{"k":"v8/Card_Tree_Sample/Card_Units0.st/go/Card_Units0/transform","v":"00000000 00000000 00000000 00000000 00000000 00000000 3f800000 3f800000 3f800000 3f800000"}
+{"k":"v8/Card_Tree_Sample/Card_Units0.st/go/Card_Units0/components","v":"Transform LODGroup Rigidbody"}
+{"k":"v8/Card_Tree_Sample/Card_Units0.st/go/Card_Units0/LODGroup","v":"SpeedTree animate False billboard False size 42ac3c9e ref 400de298 42285932 becf6740 count 3 enabled True"}
+{"k":"v8/Card_Tree_Sample/Card_Units0.st/go/Card_Units0/LODGroup/lod0","v":"3f000000 fade 00000000 renderers Card_Units0_LOD0"}
+{"k":"v8/Card_Tree_Sample/Card_Units0.st/go/Card_Units0/LODGroup/lod1","v":"3e800000 fade 00000000 renderers Card_Units0_LOD1"}
+{"k":"v8/Card_Tree_Sample/Card_Units0.st/go/Card_Units0/LODGroup/lod2","v":"3c23d70a fade 3ecccccd renderers Card_Units0_LOD2"}
+{"k":"v8/Card_Tree_Sample/Card_Units0.st/go/Card_Units0/Rigidbody","v":"gravity False kinematic True mass 3f800000 interpolation None detection Discrete constraints None"}
+{"k":"v8/Card_Tree_Sample/Card_Units0.st/go/Card_Units0/Card_Units0_LOD0","v":"active layer 0 tag Untagged static False hide NotEditable"}
+{"k":"v8/Card_Tree_Sample/Card_Units0.st/go/Card_Units0/Card_Units0_LOD0/transform","v":"00000000 00000000 00000000 80000000 80000000 80000000 3f800000 3f800000 3f800000 3f800000"}
+{"k":"v8/Card_Tree_Sample/Card_Units0.st/go/Card_Units0/Card_Units0_LOD0/components","v":"Transform MeshFilter MeshRenderer Tree"}
+{"k":"v8/Card_Tree_Sample/Card_Units0.st/go/Card_Units0/Card_Units0_LOD0/MeshFilter","v":"Card_Units0_LOD0"}
+{"k":"v8/Card_Tree_Sample/Card_Units0.st/go/Card_Units0/Card_Units0_LOD0/MeshRenderer","v":"card-tree-sample cast On receive True probes BlendProbes reflection BlendProbes motion Object layerMask 1 enabled True bounds 3ffe3658 42285932 bed3fc50 41551bd7 422c3c9e 414b1458"}
+{"k":"v8/Card_Tree_Sample/Card_Units0.st/go/Card_Units0/Card_Units0_LOD0/Tree","v":"wind SpeedTreeWindAsset  hasSpeedTreeWind True"}
+{"k":"v8/Card_Tree_Sample/Card_Units0.st/go/Card_Units0/Card_Units0_LOD1","v":"active layer 0 tag Untagged static False hide NotEditable"}
+{"k":"v8/Card_Tree_Sample/Card_Units0.st/go/Card_Units0/Card_Units0_LOD1/transform","v":"00000000 00000000 00000000 80000000 80000000 80000000 3f800000 3f800000 3f800000 3f800000"}
+{"k":"v8/Card_Tree_Sample/Card_Units0.st/go/Card_Units0/Card_Units0_LOD1/components","v":"Transform MeshFilter MeshRenderer Tree"}
+{"k":"v8/Card_Tree_Sample/Card_Units0.st/go/Card_Units0/Card_Units0_LOD1/MeshFilter","v":"Card_Units0_LOD1"}
+{"k":"v8/Card_Tree_Sample/Card_Units0.st/go/Card_Units0/Card_Units0_LOD1/MeshRenderer","v":"card-tree-sample cast On receive True probes BlendProbes reflection BlendProbes motion Object layerMask 1 enabled True bounds 40067ee2 42284d6d bed1b1e0 4156f4c4 422c30d9 414dc704"}
+{"k":"v8/Card_Tree_Sample/Card_Units0.st/go/Card_Units0/Card_Units0_LOD1/Tree","v":"wind SpeedTreeWindAsset  hasSpeedTreeWind True"}
+{"k":"v8/Card_Tree_Sample/Card_Units0.st/go/Card_Units0/Card_Units0_LOD2","v":"active layer 0 tag Untagged static False hide NotEditable"}
+{"k":"v8/Card_Tree_Sample/Card_Units0.st/go/Card_Units0/Card_Units0_LOD2/transform","v":"00000000 00000000 00000000 80000000 80000000 80000000 3f800000 3f800000 3f800000 3f800000"}
+{"k":"v8/Card_Tree_Sample/Card_Units0.st/go/Card_Units0/Card_Units0_LOD2/components","v":"Transform MeshFilter MeshRenderer Tree"}
+{"k":"v8/Card_Tree_Sample/Card_Units0.st/go/Card_Units0/Card_Units0_LOD2/MeshFilter","v":"Card_Units0_LOD2"}
+{"k":"v8/Card_Tree_Sample/Card_Units0.st/go/Card_Units0/Card_Units0_LOD2/MeshRenderer","v":"card-tree-sample cast On receive True probes BlendProbes reflection BlendProbes motion Object layerMask 1 enabled True bounds 4031d860 42284d6e becf6750 414fd040 422c30da 415079b0"}
+{"k":"v8/Card_Tree_Sample/Card_Units0.st/go/Card_Units0/Card_Units0_LOD2/Tree","v":"wind SpeedTreeWindAsset  hasSpeedTreeWind True"}
+{"k":"v8/Card_Tree_Sample/Card_Units0.st/go/Card_Units0/CollisionObject0","v":"active layer 0 tag Untagged static False hide NotEditable"}
+{"k":"v8/Card_Tree_Sample/Card_Units0.st/go/Card_Units0/CollisionObject0/transform","v":"3f0d5d52 4147c07b 3e39ef65 80000000 bc824f3a 3f30edce 3f38f97a 3f800000 3f800000 3f800000"}
+{"k":"v8/Card_Tree_Sample/Card_Units0.st/go/Card_Units0/CollisionObject0/components","v":"Transform CapsuleCollider"}
+{"k":"v8/Card_Tree_Sample/Card_Units0.st/go/Card_Units0/CollisionObject0/CapsuleCollider","v":"3f87ae14 height 41d8f5c4 direction 0 center 00000000 00000000 00000000 trigger False enabled True"}
+{"k":"v8/Card_Tree_Sample/Card_Units0.st/go/Card_Units0/CollisionObject1","v":"active layer 0 tag Untagged static False hide NotEditable"}
+{"k":"v8/Card_Tree_Sample/Card_Units0.st/go/Card_Units0/CollisionObject1/transform","v":"beba9762 4247d806 3eeecc1e 80000000 330557ed 3f36fa24 3f330a49 3f800000 3f800000 3f800000"}
+{"k":"v8/Card_Tree_Sample/Card_Units0.st/go/Card_Units0/CollisionObject1/components","v":"Transform CapsuleCollider"}
+{"k":"v8/Card_Tree_Sample/Card_Units0.st/go/Card_Units0/CollisionObject1/CapsuleCollider","v":"40f7adeb height 4249eb7a direction 0 center 00000000 00000000 00000000 trigger False enabled True"}
+{"k":"v8/Card_Tree_Sample/Card_Units0.st/mesh/Card_Units0_LOD0","v":"vertices 8141 submeshes 1 index UInt16 readable True bounds 3ffe3658 42285932 bed3fc50 41551bd7 422c3c9e 414b1458 streams 1"}
+{"k":"v8/Card_Tree_Sample/Card_Units0.st/mesh/Card_Units0_LOD0/layout","v":"Position:Float32x3@0 Normal:Float32x3@0 Tangent:Float32x4@0 Color:UNorm8x4@0 TexCoord0:Float32x4@0 TexCoord1:Float32x4@0 TexCoord2:Float32x4@0 TexCoord3:Float32x4@0"}
+{"k":"v8/Card_Tree_Sample/Card_Units0.st/mesh/Card_Units0_LOD0/submesh0","v":"Triangles start 0 count 27135 base 0 first 0 vcount 8141 bounds 3ffe3658 42285932 bed3fc50 41551bd7 422c3c9e 414b1458"}
+{"k":"v8/Card_Tree_Sample/Card_Units0.st/mesh/Card_Units0_LOD0/submesh0/indices","v":"1c91aca6e27c7d64"}
+{"k":"v8/Card_Tree_Sample/Card_Units0.st/mesh/Card_Units0_LOD0/positions","v":"e53c0831e2d611a5"}
+{"k":"v8/Card_Tree_Sample/Card_Units0.st/mesh/Card_Units0_LOD0/normals","v":"f5cc069f00a7c297"}
+{"k":"v8/Card_Tree_Sample/Card_Units0.st/mesh/Card_Units0_LOD0/tangents","v":"eafcfe5dee32ad0c"}
+{"k":"v8/Card_Tree_Sample/Card_Units0.st/mesh/Card_Units0_LOD0/colors32","v":"b344384329a0f22d"}
+{"k":"v8/Card_Tree_Sample/Card_Units0.st/mesh/Card_Units0_LOD0/uv0","v":"11ad3c683955374a"}
+{"k":"v8/Card_Tree_Sample/Card_Units0.st/mesh/Card_Units0_LOD0/uv1","v":"a5eca418cb829364"}
+{"k":"v8/Card_Tree_Sample/Card_Units0.st/mesh/Card_Units0_LOD0/uv2","v":"6c8a4b584b800c35"}
+{"k":"v8/Card_Tree_Sample/Card_Units0.st/mesh/Card_Units0_LOD0/uv3","v":"67baf130d33ca4b5"}
+{"k":"v8/Card_Tree_Sample/Card_Units0.st/mesh/Card_Units0_LOD1","v":"vertices 5293 submeshes 1 index UInt16 readable True bounds 40067ee2 42284d6d bed1b1e0 4156f4c4 422c30d9 414dc704 streams 1"}
+{"k":"v8/Card_Tree_Sample/Card_Units0.st/mesh/Card_Units0_LOD1/layout","v":"Position:Float32x3@0 Normal:Float32x3@0 Tangent:Float32x4@0 Color:UNorm8x4@0 TexCoord0:Float32x4@0 TexCoord1:Float32x4@0 TexCoord2:Float32x4@0 TexCoord3:Float32x4@0"}
+{"k":"v8/Card_Tree_Sample/Card_Units0.st/mesh/Card_Units0_LOD1/submesh0","v":"Triangles start 0 count 19167 base 0 first 0 vcount 5293 bounds 40067ee2 42284d6d bed1b1e0 4156f4c4 422c30d9 414dc704"}
+{"k":"v8/Card_Tree_Sample/Card_Units0.st/mesh/Card_Units0_LOD1/submesh0/indices","v":"6ce29a9c3c7299bb"}
+{"k":"v8/Card_Tree_Sample/Card_Units0.st/mesh/Card_Units0_LOD1/positions","v":"7281c3b75477a613"}
+{"k":"v8/Card_Tree_Sample/Card_Units0.st/mesh/Card_Units0_LOD1/normals","v":"307f5d1389b24f70"}
+{"k":"v8/Card_Tree_Sample/Card_Units0.st/mesh/Card_Units0_LOD1/tangents","v":"a66537c91f673209"}
+{"k":"v8/Card_Tree_Sample/Card_Units0.st/mesh/Card_Units0_LOD1/colors32","v":"de98964b8d5959df"}
+{"k":"v8/Card_Tree_Sample/Card_Units0.st/mesh/Card_Units0_LOD1/uv0","v":"798176b50fb3c6da"}
+{"k":"v8/Card_Tree_Sample/Card_Units0.st/mesh/Card_Units0_LOD1/uv1","v":"3ac96de3704e6832"}
+{"k":"v8/Card_Tree_Sample/Card_Units0.st/mesh/Card_Units0_LOD1/uv2","v":"412ac6447893bf75"}
+{"k":"v8/Card_Tree_Sample/Card_Units0.st/mesh/Card_Units0_LOD1/uv3","v":"81d08e361aaad5d5"}
+{"k":"v8/Card_Tree_Sample/Card_Units0.st/mesh/Card_Units0_LOD2","v":"vertices 3428 submeshes 1 index UInt16 readable True bounds 4031d860 42284d6e becf6750 414fd040 422c30da 415079b0 streams 1"}
+{"k":"v8/Card_Tree_Sample/Card_Units0.st/mesh/Card_Units0_LOD2/layout","v":"Position:Float32x3@0 Normal:Float32x3@0 Tangent:Float32x4@0 Color:UNorm8x4@0 TexCoord0:Float32x4@0 TexCoord1:Float32x4@0 TexCoord2:Float32x4@0 TexCoord3:Float32x4@0"}
+{"k":"v8/Card_Tree_Sample/Card_Units0.st/mesh/Card_Units0_LOD2/submesh0","v":"Triangles start 0 count 13326 base 0 first 0 vcount 3428 bounds 4031d860 42284d6e becf6750 414fd040 422c30da 415079b0"}
+{"k":"v8/Card_Tree_Sample/Card_Units0.st/mesh/Card_Units0_LOD2/submesh0/indices","v":"5e7ca21fde5c40d5"}
+{"k":"v8/Card_Tree_Sample/Card_Units0.st/mesh/Card_Units0_LOD2/positions","v":"5a7f07906d11117f"}
+{"k":"v8/Card_Tree_Sample/Card_Units0.st/mesh/Card_Units0_LOD2/normals","v":"194733c6e0d4fdde"}
+{"k":"v8/Card_Tree_Sample/Card_Units0.st/mesh/Card_Units0_LOD2/tangents","v":"fb5114140ff1d23e"}
+{"k":"v8/Card_Tree_Sample/Card_Units0.st/mesh/Card_Units0_LOD2/colors32","v":"ce500a87f497a6e1"}
+{"k":"v8/Card_Tree_Sample/Card_Units0.st/mesh/Card_Units0_LOD2/uv0","v":"c6086049b244439d"}
+{"k":"v8/Card_Tree_Sample/Card_Units0.st/mesh/Card_Units0_LOD2/uv1","v":"29ffe0835e27d345"}
+{"k":"v8/Card_Tree_Sample/Card_Units0.st/mesh/Card_Units0_LOD2/uv2","v":"73dc718cd02b546f"}
+{"k":"v8/Card_Tree_Sample/Card_Units0.st/mesh/Card_Units0_LOD2/uv3","v":"bbd3c2fa8ab92a05"}
+{"k":"v8/Card_Tree_Sample/Card_Units0.st/material/card-tree-sample","v":"Nature/SpeedTree8 queue 2450 instancing True doubleSidedGI True flags EmissiveIsBlack path Assets/Trees/v8/Card_Tree_Sample/Card_Units0.st hide NotEditable"}
+{"k":"v8/Card_Tree_Sample/Card_Units0.st/material/card-tree-sample/keywords","v":"EFFECT_BUMP EFFECT_EXTRA_TEX _WINDQUALITY_FAST"}
+{"k":"v8/Card_Tree_Sample/Card_Units0.st/material/card-tree-sample/prop/_MainTex","v":"card-tree-sample_Color Assets/Trees/v8/Card_Tree_Sample/card-tree-sample_Color.png 3f800000 3f800000 00000000 00000000 00000000 00000000"}
+{"k":"v8/Card_Tree_Sample/Card_Units0.st/material/card-tree-sample/prop/_Color","v":"3f800000 3f800000 3f800000 3f800000"}
+{"k":"v8/Card_Tree_Sample/Card_Units0.st/material/card-tree-sample/prop/_HueVariationKwToggle","v":"00000000"}
+{"k":"v8/Card_Tree_Sample/Card_Units0.st/material/card-tree-sample/prop/_HueVariationColor","v":"3f800000 3f000000 00000000 3dcccccd"}
+{"k":"v8/Card_Tree_Sample/Card_Units0.st/material/card-tree-sample/prop/_NormalMapKwToggle","v":"3f800000"}
+{"k":"v8/Card_Tree_Sample/Card_Units0.st/material/card-tree-sample/prop/_BumpMap","v":"null 3f800000 3f800000 00000000 00000000 00000000 00000000"}
+{"k":"v8/Card_Tree_Sample/Card_Units0.st/material/card-tree-sample/prop/_ExtraTex","v":"card-tree-sample_Extra Assets/Trees/v8/Card_Tree_Sample/card-tree-sample_Extra.png 3f800000 3f800000 00000000 00000000 00000000 00000000"}
+{"k":"v8/Card_Tree_Sample/Card_Units0.st/material/card-tree-sample/prop/_Glossiness","v":"3f800000"}
+{"k":"v8/Card_Tree_Sample/Card_Units0.st/material/card-tree-sample/prop/_Metallic","v":"3f800000"}
+{"k":"v8/Card_Tree_Sample/Card_Units0.st/material/card-tree-sample/prop/_SubsurfaceKwToggle","v":"00000000"}
+{"k":"v8/Card_Tree_Sample/Card_Units0.st/material/card-tree-sample/prop/_SubsurfaceTex","v":"null 3f800000 3f800000 00000000 00000000 00000000 00000000"}
+{"k":"v8/Card_Tree_Sample/Card_Units0.st/material/card-tree-sample/prop/_SubsurfaceColor","v":"3f800000 3f800000 3f800000 3f800000"}
+{"k":"v8/Card_Tree_Sample/Card_Units0.st/material/card-tree-sample/prop/_SubsurfaceIndirect","v":"3e800000"}
+{"k":"v8/Card_Tree_Sample/Card_Units0.st/material/card-tree-sample/prop/_BillboardKwToggle","v":"00000000"}
+{"k":"v8/Card_Tree_Sample/Card_Units0.st/material/card-tree-sample/prop/_BillboardShadowFade","v":"3f000000"}
+{"k":"v8/Card_Tree_Sample/Card_Units0.st/material/card-tree-sample/prop/_TwoSided","v":"00000000"}
+{"k":"v8/Card_Tree_Sample/Card_Units0.st/material/card-tree-sample/prop/_WindQuality","v":"40000000"}
 {"k":"v8/Card_Tree_Sample/card-tree-sample.st/importer","v":"UnityEditor.SpeedTreeImporter"}
 {"k":"v8/Card_Tree_Sample/card-tree-sample.st/importer/LODHeights","v":"[3f000000,3e800000,3c23d70a]"}
 {"k":"v8/Card_Tree_Sample/card-tree-sample.st/importer/alphaTestRef","v":"3ea8f5c3"}
@@ -573,6 +1356,7 @@
 {"k":"v8/Card_Tree_Sample/card-tree-sample.st/importer/windQualities","v":"[4,4,4]"}
 {"k":"v8/Card_Tree_Sample/card-tree-sample.st/main","v":"GameObject card-tree-sample"}
 {"k":"v8/Card_Tree_Sample/card-tree-sample.st/mainType","v":"UnityEngine.GameObject"}
+{"k":"v8/Card_Tree_Sample/card-tree-sample.st/prefabType","v":"Model"}
 {"k":"v8/Card_Tree_Sample/card-tree-sample.st/object/CapsuleCollider/card-tree-sample/CollisionObject0:CapsuleCollider","v":"136297279999738247 hide HideInHierarchy, NotEditable"}
 {"k":"v8/Card_Tree_Sample/card-tree-sample.st/object/CapsuleCollider/card-tree-sample/CollisionObject1:CapsuleCollider","v":"-8221809898812911413 hide HideInHierarchy, NotEditable"}
 {"k":"v8/Card_Tree_Sample/card-tree-sample.st/object/GameObject/card-tree-sample","v":"919132149155446097 hide NotEditable"}
@@ -675,6 +1459,234 @@
 {"k":"v8/Card_Tree_Sample/card-tree-sample.st/mesh/card-tree-sample_LOD2/uv3","v":"bbd3c2fa8ab92a05"}
 {"k":"v8/Card_Tree_Sample/card-tree-sample.st/material/v8/Card_Tree_Sample/card-tree-sample.mat","v":"Hidden/InternalErrorShader queue 2000 instancing True doubleSidedGI True flags 10 path Assets/Trees/v8/Card_Tree_Sample/card-tree-sample.mat hide None"}
 {"k":"v8/Card_Tree_Sample/card-tree-sample.st/material/v8/Card_Tree_Sample/card-tree-sample.mat/keywords","v":"BACKFACE_NORMAL_MODE_MIRROR _EMISSION _WINDQUALITY_BEST"}
+{"k":"v8/Field_Embedded.st/importer","v":"UnityEditor.SpeedTreeImporter"}
+{"k":"v8/Field_Embedded.st/importer/LODHeights","v":"[3f000000,3e800000,3e000000,3c23d70a]"}
+{"k":"v8/Field_Embedded.st/importer/alphaTestRef","v":"3ea8f5c3"}
+{"k":"v8/Field_Embedded.st/importer/animateCrossFading","v":"False"}
+{"k":"v8/Field_Embedded.st/importer/bestWindQuality","v":"4"}
+{"k":"v8/Field_Embedded.st/importer/billboardTransitionCrossFadeWidth","v":"3e99999a"}
+{"k":"v8/Field_Embedded.st/importer/castShadows","v":"[True,True,True,True]"}
+{"k":"v8/Field_Embedded.st/importer/castShadowsByDefault","v":"True"}
+{"k":"v8/Field_Embedded.st/importer/defaultBillboardShader","v":"null"}
+{"k":"v8/Field_Embedded.st/importer/defaultShader","v":"Shader Nature/SpeedTree8"}
+{"k":"v8/Field_Embedded.st/importer/enableBump","v":"[True,True,True,True]"}
+{"k":"v8/Field_Embedded.st/importer/enableBumpByDefault","v":"True"}
+{"k":"v8/Field_Embedded.st/importer/enableHue","v":"[False,False,False,False]"}
+{"k":"v8/Field_Embedded.st/importer/enableHueByDefault","v":"False"}
+{"k":"v8/Field_Embedded.st/importer/enableSettingOverride","v":"[False,False,False,True]"}
+{"k":"v8/Field_Embedded.st/importer/enableSmoothLODTransition","v":"True"}
+{"k":"v8/Field_Embedded.st/importer/enableSubsurface","v":"[True,True,True,True]"}
+{"k":"v8/Field_Embedded.st/importer/enableSubsurfaceByDefault","v":"True"}
+{"k":"v8/Field_Embedded.st/importer/fadeOutWidth","v":"3ecccccd"}
+{"k":"v8/Field_Embedded.st/importer/generateColliders","v":"True"}
+{"k":"v8/Field_Embedded.st/importer/generateRigidbody","v":"True"}
+{"k":"v8/Field_Embedded.st/importer/hasBillboard","v":"True"}
+{"k":"v8/Field_Embedded.st/importer/hasImported","v":"True"}
+{"k":"v8/Field_Embedded.st/importer/hueVariation","v":"3f800000 3f000000 00000000 3dcccccd"}
+{"k":"v8/Field_Embedded.st/importer/isV8","v":"True"}
+{"k":"v8/Field_Embedded.st/importer/mainColor","v":"3f800000 3f800000 3f800000 3f800000"}
+{"k":"v8/Field_Embedded.st/importer/materialFolderPath","v":"Assets/Trees/v8/Field_Embedded Materials"}
+{"k":"v8/Field_Embedded.st/importer/materialLocation","v":"InPrefab"}
+{"k":"v8/Field_Embedded.st/importer/receiveShadows","v":"[True,True,True,True]"}
+{"k":"v8/Field_Embedded.st/importer/receiveShadowsByDefault","v":"True"}
+{"k":"v8/Field_Embedded.st/importer/reflectionProbeUsages","v":"[BlendProbes,BlendProbes,BlendProbes,Off]"}
+{"k":"v8/Field_Embedded.st/importer/reflectionProbeUsagesByDefault","v":"1"}
+{"k":"v8/Field_Embedded.st/importer/scaleFactor","v":"3e9c0ebf"}
+{"k":"v8/Field_Embedded.st/importer/selectedWindQuality","v":"4"}
+{"k":"v8/Field_Embedded.st/importer/useLightProbes","v":"[True,True,True,False]"}
+{"k":"v8/Field_Embedded.st/importer/useLightProbesByDefault","v":"True"}
+{"k":"v8/Field_Embedded.st/importer/windQualities","v":"[4,4,4,1]"}
+{"k":"v8/Field_Embedded.st/main","v":"GameObject Field_Embedded"}
+{"k":"v8/Field_Embedded.st/mainType","v":"UnityEngine.GameObject"}
+{"k":"v8/Field_Embedded.st/prefabType","v":"Model"}
+{"k":"v8/Field_Embedded.st/object/CapsuleCollider/Field_Embedded/CollisionObject0:CapsuleCollider","v":"136297279999738247 hide HideInHierarchy, NotEditable"}
+{"k":"v8/Field_Embedded.st/object/CapsuleCollider/Field_Embedded/CollisionObject1:CapsuleCollider","v":"-8221809898812911413 hide HideInHierarchy, NotEditable"}
+{"k":"v8/Field_Embedded.st/object/GameObject/Field_Embedded","v":"919132149155446097 hide NotEditable"}
+{"k":"v8/Field_Embedded.st/object/GameObject/Field_Embedded/CollisionObject0","v":"1218912716677395249 hide NotEditable"}
+{"k":"v8/Field_Embedded.st/object/GameObject/Field_Embedded/CollisionObject1","v":"1400086564404443856 hide NotEditable"}
+{"k":"v8/Field_Embedded.st/object/GameObject/Field_Embedded/Field_Embedded_LOD0","v":"2543892051776759490 hide NotEditable"}
+{"k":"v8/Field_Embedded.st/object/GameObject/Field_Embedded/Field_Embedded_LOD1","v":"-8932361975206119576 hide NotEditable"}
+{"k":"v8/Field_Embedded.st/object/GameObject/Field_Embedded/Field_Embedded_LOD2","v":"-553208247089043799 hide NotEditable"}
+{"k":"v8/Field_Embedded.st/object/GameObject/Field_Embedded/Field_Embedded_LOD3","v":"-8805303987130667767 hide NotEditable"}
+{"k":"v8/Field_Embedded.st/object/LODGroup/Field_Embedded:LODGroup","v":"4742473837712756890 hide HideInHierarchy, NotEditable"}
+{"k":"v8/Field_Embedded.st/object/Material/Broadleaf_Desktop_Field","v":"-5460337258188076492 hide NotEditable"}
+{"k":"v8/Field_Embedded.st/object/Material/Broadleaf_Desktop_Field_Billboard_LOD3","v":"1523040058621823354 hide NotEditable"}
+{"k":"v8/Field_Embedded.st/object/Material/Main_Bark","v":"6265331633700271752 hide NotEditable"}
+{"k":"v8/Field_Embedded.st/object/Mesh/Field_Embedded_LOD0","v":"4300000 hide NotEditable"}
+{"k":"v8/Field_Embedded.st/object/Mesh/Field_Embedded_LOD1","v":"4300002 hide NotEditable"}
+{"k":"v8/Field_Embedded.st/object/Mesh/Field_Embedded_LOD2","v":"4300004 hide NotEditable"}
+{"k":"v8/Field_Embedded.st/object/Mesh/Field_Embedded_LOD3","v":"4300006 hide NotEditable"}
+{"k":"v8/Field_Embedded.st/object/MeshFilter/Field_Embedded/Field_Embedded_LOD0:MeshFilter","v":"-7395151249295244795 hide HideInHierarchy, NotEditable"}
+{"k":"v8/Field_Embedded.st/object/MeshFilter/Field_Embedded/Field_Embedded_LOD1:MeshFilter","v":"-383036453291079384 hide HideInHierarchy, NotEditable"}
+{"k":"v8/Field_Embedded.st/object/MeshFilter/Field_Embedded/Field_Embedded_LOD2:MeshFilter","v":"-3366632886515285945 hide HideInHierarchy, NotEditable"}
+{"k":"v8/Field_Embedded.st/object/MeshFilter/Field_Embedded/Field_Embedded_LOD3:MeshFilter","v":"-8540238248270416751 hide HideInHierarchy, NotEditable"}
+{"k":"v8/Field_Embedded.st/object/MeshRenderer/Field_Embedded/Field_Embedded_LOD0:MeshRenderer","v":"3742488348333707455 hide HideInHierarchy, NotEditable"}
+{"k":"v8/Field_Embedded.st/object/MeshRenderer/Field_Embedded/Field_Embedded_LOD1:MeshRenderer","v":"-5511600629911536095 hide HideInHierarchy, NotEditable"}
+{"k":"v8/Field_Embedded.st/object/MeshRenderer/Field_Embedded/Field_Embedded_LOD2:MeshRenderer","v":"4061404571336613385 hide HideInHierarchy, NotEditable"}
+{"k":"v8/Field_Embedded.st/object/MeshRenderer/Field_Embedded/Field_Embedded_LOD3:MeshRenderer","v":"-2341124196705150304 hide HideInHierarchy, NotEditable"}
+{"k":"v8/Field_Embedded.st/object/Rigidbody/Field_Embedded:Rigidbody","v":"6367646867474405593 hide HideInHierarchy, NotEditable"}
+{"k":"v8/Field_Embedded.st/object/SpeedTreeWindAsset/","v":"22800000 hide HideInHierarchy, HideInInspector"}
+{"k":"v8/Field_Embedded.st/object/Transform/Field_Embedded/CollisionObject0:Transform","v":"7013799120591977417 hide HideInHierarchy, NotEditable"}
+{"k":"v8/Field_Embedded.st/object/Transform/Field_Embedded/CollisionObject1:Transform","v":"-6300383311887934288 hide HideInHierarchy, NotEditable"}
+{"k":"v8/Field_Embedded.st/object/Transform/Field_Embedded/Field_Embedded_LOD0:Transform","v":"-8871847422981075120 hide HideInHierarchy, NotEditable"}
+{"k":"v8/Field_Embedded.st/object/Transform/Field_Embedded/Field_Embedded_LOD1:Transform","v":"-4382575028699340232 hide HideInHierarchy, NotEditable"}
+{"k":"v8/Field_Embedded.st/object/Transform/Field_Embedded/Field_Embedded_LOD2:Transform","v":"7757722402387981330 hide HideInHierarchy, NotEditable"}
+{"k":"v8/Field_Embedded.st/object/Transform/Field_Embedded/Field_Embedded_LOD3:Transform","v":"-2460929413327577219 hide HideInHierarchy, NotEditable"}
+{"k":"v8/Field_Embedded.st/object/Transform/Field_Embedded:Transform","v":"-8679921383154817045 hide HideInHierarchy, NotEditable"}
+{"k":"v8/Field_Embedded.st/object/Tree/Field_Embedded/Field_Embedded_LOD0:Tree","v":"4314405009849165404 hide HideInHierarchy, NotEditable"}
+{"k":"v8/Field_Embedded.st/object/Tree/Field_Embedded/Field_Embedded_LOD1:Tree","v":"-4210183642122815966 hide HideInHierarchy, NotEditable"}
+{"k":"v8/Field_Embedded.st/object/Tree/Field_Embedded/Field_Embedded_LOD2:Tree","v":"-1444887725126210768 hide HideInHierarchy, NotEditable"}
+{"k":"v8/Field_Embedded.st/object/Tree/Field_Embedded/Field_Embedded_LOD3:Tree","v":"3676196488917113179 hide HideInHierarchy, NotEditable"}
+{"k":"v8/Field_Embedded.st/objects","v":"38"}
+{"k":"v8/Field_Embedded.st/go/Field_Embedded","v":"active layer 0 tag Untagged static False hide NotEditable"}
+{"k":"v8/Field_Embedded.st/go/Field_Embedded/transform","v":"00000000 00000000 00000000 00000000 00000000 00000000 3f800000 3f800000 3f800000 3f800000"}
+{"k":"v8/Field_Embedded.st/go/Field_Embedded/components","v":"Transform LODGroup Rigidbody"}
+{"k":"v8/Field_Embedded.st/go/Field_Embedded/LODGroup","v":"SpeedTree animate False billboard True size 4197114f ref 3f4e7810 410e5323 be8918f0 count 4 enabled True"}
+{"k":"v8/Field_Embedded.st/go/Field_Embedded/LODGroup/lod0","v":"3f000000 fade 00000000 renderers Field_Embedded_LOD0"}
+{"k":"v8/Field_Embedded.st/go/Field_Embedded/LODGroup/lod1","v":"3e800000 fade 00000000 renderers Field_Embedded_LOD1"}
+{"k":"v8/Field_Embedded.st/go/Field_Embedded/LODGroup/lod2","v":"3e000000 fade 3e99999a renderers Field_Embedded_LOD2"}
+{"k":"v8/Field_Embedded.st/go/Field_Embedded/LODGroup/lod3","v":"3c23d70a fade 3ecccccd renderers Field_Embedded_LOD3"}
+{"k":"v8/Field_Embedded.st/go/Field_Embedded/Rigidbody","v":"gravity False kinematic True mass 3f800000 interpolation None detection Discrete constraints None"}
+{"k":"v8/Field_Embedded.st/go/Field_Embedded/CollisionObject0","v":"active layer 0 tag Untagged static False hide NotEditable"}
+{"k":"v8/Field_Embedded.st/go/Field_Embedded/CollisionObject0/transform","v":"be63a328 412490ca bf77f591 80000000 80000000 3f376f6b 3f32921e 3f800000 3f800000 3f800000"}
+{"k":"v8/Field_Embedded.st/go/Field_Embedded/CollisionObject0/components","v":"Transform CapsuleCollider"}
+{"k":"v8/Field_Embedded.st/go/Field_Embedded/CollisionObject0/CapsuleCollider","v":"409d8549 height 411e0222 direction 0 center 00000000 00000000 00000000 trigger False enabled True"}
+{"k":"v8/Field_Embedded.st/go/Field_Embedded/CollisionObject1","v":"active layer 0 tag Untagged static False hide NotEditable"}
+{"k":"v8/Field_Embedded.st/go/Field_Embedded/CollisionObject1/transform","v":"3d70176f 40429347 bc0051b8 80000000 3b1dde3a 3f35a2cf 3f34664a 3f800000 3f800000 3f800000"}
+{"k":"v8/Field_Embedded.st/go/Field_Embedded/CollisionObject1/components","v":"Transform CapsuleCollider"}
+{"k":"v8/Field_Embedded.st/go/Field_Embedded/CollisionObject1/CapsuleCollider","v":"3e44a205 height 40cd9b22 direction 0 center 00000000 00000000 00000000 trigger False enabled True"}
+{"k":"v8/Field_Embedded.st/go/Field_Embedded/Field_Embedded_LOD0","v":"active layer 0 tag Untagged static False hide NotEditable"}
+{"k":"v8/Field_Embedded.st/go/Field_Embedded/Field_Embedded_LOD0/transform","v":"00000000 00000000 00000000 80000000 80000000 80000000 3f800000 3f800000 3f800000 3f800000"}
+{"k":"v8/Field_Embedded.st/go/Field_Embedded/Field_Embedded_LOD0/components","v":"Transform MeshFilter MeshRenderer Tree"}
+{"k":"v8/Field_Embedded.st/go/Field_Embedded/Field_Embedded_LOD0/MeshFilter","v":"Field_Embedded_LOD0"}
+{"k":"v8/Field_Embedded.st/go/Field_Embedded/Field_Embedded_LOD0/MeshRenderer","v":"Main_Bark,Broadleaf_Desktop_Field cast On receive True probes BlendProbes reflection BlendProbes motion Object layerMask 1 enabled True bounds 3f573290 410d0250 bebf2a48 40c65f4c 4115c038 40b7a8e0"}
+{"k":"v8/Field_Embedded.st/go/Field_Embedded/Field_Embedded_LOD0/Tree","v":"wind SpeedTreeWindAsset  hasSpeedTreeWind True"}
+{"k":"v8/Field_Embedded.st/go/Field_Embedded/Field_Embedded_LOD1","v":"active layer 0 tag Untagged static False hide NotEditable"}
+{"k":"v8/Field_Embedded.st/go/Field_Embedded/Field_Embedded_LOD1/transform","v":"00000000 00000000 00000000 80000000 80000000 80000000 3f800000 3f800000 3f800000 3f800000"}
+{"k":"v8/Field_Embedded.st/go/Field_Embedded/Field_Embedded_LOD1/components","v":"Transform MeshFilter MeshRenderer Tree"}
+{"k":"v8/Field_Embedded.st/go/Field_Embedded/Field_Embedded_LOD1/MeshFilter","v":"Field_Embedded_LOD1"}
+{"k":"v8/Field_Embedded.st/go/Field_Embedded/Field_Embedded_LOD1/MeshRenderer","v":"Main_Bark,Broadleaf_Desktop_Field cast On receive True probes BlendProbes reflection BlendProbes motion Object layerMask 1 enabled True bounds 3f51cf08 410d9211 be905090 40cab16b 4116503d 40bc3a3d"}
+{"k":"v8/Field_Embedded.st/go/Field_Embedded/Field_Embedded_LOD1/Tree","v":"wind SpeedTreeWindAsset  hasSpeedTreeWind True"}
+{"k":"v8/Field_Embedded.st/go/Field_Embedded/Field_Embedded_LOD2","v":"active layer 0 tag Untagged static False hide NotEditable"}
+{"k":"v8/Field_Embedded.st/go/Field_Embedded/Field_Embedded_LOD2/transform","v":"00000000 00000000 00000000 80000000 80000000 80000000 3f800000 3f800000 3f800000 3f800000"}
+{"k":"v8/Field_Embedded.st/go/Field_Embedded/Field_Embedded_LOD2/components","v":"Transform MeshFilter MeshRenderer Tree"}
+{"k":"v8/Field_Embedded.st/go/Field_Embedded/Field_Embedded_LOD2/MeshFilter","v":"Field_Embedded_LOD2"}
+{"k":"v8/Field_Embedded.st/go/Field_Embedded/Field_Embedded_LOD2/MeshRenderer","v":"Main_Bark,Broadleaf_Desktop_Field cast On receive True probes BlendProbes reflection BlendProbes motion Object layerMask 1 enabled True bounds 3f4e7814 4110bec7 be8918f0 40cf451a 4114a5ab 40c10e9a"}
+{"k":"v8/Field_Embedded.st/go/Field_Embedded/Field_Embedded_LOD2/Tree","v":"wind SpeedTreeWindAsset  hasSpeedTreeWind True"}
+{"k":"v8/Field_Embedded.st/go/Field_Embedded/Field_Embedded_LOD3","v":"active layer 0 tag Untagged static False hide NotEditable"}
+{"k":"v8/Field_Embedded.st/go/Field_Embedded/Field_Embedded_LOD3/transform","v":"00000000 00000000 00000000 80000000 80000000 80000000 3f800000 3f800000 3f800000 3f800000"}
+{"k":"v8/Field_Embedded.st/go/Field_Embedded/Field_Embedded_LOD3/components","v":"Transform MeshFilter MeshRenderer Tree"}
+{"k":"v8/Field_Embedded.st/go/Field_Embedded/Field_Embedded_LOD3/MeshFilter","v":"Field_Embedded_LOD3"}
+{"k":"v8/Field_Embedded.st/go/Field_Embedded/Field_Embedded_LOD3/MeshRenderer","v":"Broadleaf_Desktop_Field_Billboard_LOD3 cast On receive True probes Off reflection Off motion Object layerMask 1 enabled True bounds 3f4e780c 410e5323 bea7fc88 40cf451a 41140bd7 40b7677a"}
+{"k":"v8/Field_Embedded.st/go/Field_Embedded/Field_Embedded_LOD3/Tree","v":"wind SpeedTreeWindAsset  hasSpeedTreeWind True"}
+{"k":"v8/Field_Embedded.st/mesh/Field_Embedded_LOD0","v":"vertices 13888 submeshes 2 index UInt16 readable True bounds 3f573290 410d0250 bebf2a48 40c65f4c 4115c038 40b7a8e0 streams 1"}
+{"k":"v8/Field_Embedded.st/mesh/Field_Embedded_LOD0/layout","v":"Position:Float32x3@0 Normal:Float32x3@0 Tangent:Float32x4@0 Color:UNorm8x4@0 TexCoord0:Float32x4@0 TexCoord1:Float32x4@0 TexCoord2:Float32x4@0 TexCoord3:Float32x4@0"}
+{"k":"v8/Field_Embedded.st/mesh/Field_Embedded_LOD0/submesh0","v":"Triangles start 0 count 25968 base 0 first 0 vcount 7102 bounds 3f7c5b60 41032ad3 bed0dbb8 4098717a 410be8bb 4091c4a4"}
+{"k":"v8/Field_Embedded.st/mesh/Field_Embedded_LOD0/submesh0/indices","v":"c90680839d5c5946"}
+{"k":"v8/Field_Embedded.st/mesh/Field_Embedded_LOD0/submesh1","v":"Triangles start 25968 count 15426 base 0 first 651 vcount 13237 bounds 3f573290 411e770c bebf2a48 40c65f4c 41044b7c 40b7a8e0"}
+{"k":"v8/Field_Embedded.st/mesh/Field_Embedded_LOD0/submesh1/indices","v":"eb9c56cb40afee3c"}
+{"k":"v8/Field_Embedded.st/mesh/Field_Embedded_LOD0/positions","v":"8361ab6cd815e2da"}
+{"k":"v8/Field_Embedded.st/mesh/Field_Embedded_LOD0/normals","v":"8e0248aac8dbf425"}
+{"k":"v8/Field_Embedded.st/mesh/Field_Embedded_LOD0/tangents","v":"0398523618517cf7"}
+{"k":"v8/Field_Embedded.st/mesh/Field_Embedded_LOD0/colors32","v":"6eb16738ffc9b646"}
+{"k":"v8/Field_Embedded.st/mesh/Field_Embedded_LOD0/uv0","v":"9a98599b00035813"}
+{"k":"v8/Field_Embedded.st/mesh/Field_Embedded_LOD0/uv1","v":"b3a7dd9acd336bed"}
+{"k":"v8/Field_Embedded.st/mesh/Field_Embedded_LOD0/uv2","v":"958a69775a875956"}
+{"k":"v8/Field_Embedded.st/mesh/Field_Embedded_LOD0/uv3","v":"ae58410ff9e9754b"}
+{"k":"v8/Field_Embedded.st/mesh/Field_Embedded_LOD1","v":"vertices 6873 submeshes 2 index UInt16 readable True bounds 3f51cf08 410d9211 be905090 40cab16b 4116503d 40bc3a3d streams 1"}
+{"k":"v8/Field_Embedded.st/mesh/Field_Embedded_LOD1/layout","v":"Position:Float32x3@0 Normal:Float32x3@0 Tangent:Float32x4@0 Color:UNorm8x4@0 TexCoord0:Float32x4@0 TexCoord1:Float32x4@0 TexCoord2:Float32x4@0 TexCoord3:Float32x4@0"}
+{"k":"v8/Field_Embedded.st/mesh/Field_Embedded_LOD1/submesh0","v":"Triangles start 0 count 10506 base 0 first 0 vcount 2716 bounds 3f79d520 40fd336d be787b60 40982486 410757e2 407c8bf8"}
+{"k":"v8/Field_Embedded.st/mesh/Field_Embedded_LOD1/submesh0/indices","v":"48872af620740f5c"}
+{"k":"v8/Field_Embedded.st/mesh/Field_Embedded_LOD1/submesh1","v":"Triangles start 10506 count 8067 base 0 first 350 vcount 6523 bounds 3f51cf08 411f2f63 be905090 40cab16b 4104b2eb 40bc3a3d"}
+{"k":"v8/Field_Embedded.st/mesh/Field_Embedded_LOD1/submesh1/indices","v":"da4825d895b7db8c"}
+{"k":"v8/Field_Embedded.st/mesh/Field_Embedded_LOD1/positions","v":"b862334b69ce8be0"}
+{"k":"v8/Field_Embedded.st/mesh/Field_Embedded_LOD1/normals","v":"9c54122b3f0055cd"}
+{"k":"v8/Field_Embedded.st/mesh/Field_Embedded_LOD1/tangents","v":"938e8ce246b55a88"}
+{"k":"v8/Field_Embedded.st/mesh/Field_Embedded_LOD1/colors32","v":"39b6fe8672962824"}
+{"k":"v8/Field_Embedded.st/mesh/Field_Embedded_LOD1/uv0","v":"9cc4d5a4c066c923"}
+{"k":"v8/Field_Embedded.st/mesh/Field_Embedded_LOD1/uv1","v":"715b74e8467444c9"}
+{"k":"v8/Field_Embedded.st/mesh/Field_Embedded_LOD1/uv2","v":"0936870efe623af4"}
+{"k":"v8/Field_Embedded.st/mesh/Field_Embedded_LOD1/uv3","v":"1b9ad345219e5252"}
+{"k":"v8/Field_Embedded.st/mesh/Field_Embedded_LOD2","v":"vertices 3401 submeshes 2 index UInt16 readable True bounds 3f4e7814 4110bec7 be8918f0 40cf451a 4114a5ab 40c10e9a streams 1"}
+{"k":"v8/Field_Embedded.st/mesh/Field_Embedded_LOD2/layout","v":"Position:Float32x3@0 Normal:Float32x3@0 Tangent:Float32x4@0 Color:UNorm8x4@0 TexCoord0:Float32x4@0 TexCoord1:Float32x4@0 TexCoord2:Float32x4@0 TexCoord3:Float32x4@0"}
+{"k":"v8/Field_Embedded.st/mesh/Field_Embedded_LOD2/submesh0","v":"Triangles start 0 count 3648 base 0 first 0 vcount 881 bounds 3f584ed0 40f1aff6 be5494f0 4065ccac 40f97dbe 40404bf9"}
+{"k":"v8/Field_Embedded.st/mesh/Field_Embedded_LOD2/submesh0/indices","v":"81ed0e8fc99227d6"}
+{"k":"v8/Field_Embedded.st/mesh/Field_Embedded_LOD2/submesh1","v":"Triangles start 3648 count 4536 base 0 first 881 vcount 2520 bounds 3f4e7814 412ce8ce be8918f0 40cf451a 40f0f747 40c10e9a"}
+{"k":"v8/Field_Embedded.st/mesh/Field_Embedded_LOD2/submesh1/indices","v":"df86493b4189198e"}
+{"k":"v8/Field_Embedded.st/mesh/Field_Embedded_LOD2/positions","v":"5012fdf18274cf8d"}
+{"k":"v8/Field_Embedded.st/mesh/Field_Embedded_LOD2/normals","v":"fbf0cd307bc95c3e"}
+{"k":"v8/Field_Embedded.st/mesh/Field_Embedded_LOD2/tangents","v":"5ff4c292f1382b1b"}
+{"k":"v8/Field_Embedded.st/mesh/Field_Embedded_LOD2/colors32","v":"61eb5d6f00e8370f"}
+{"k":"v8/Field_Embedded.st/mesh/Field_Embedded_LOD2/uv0","v":"b9fbde511032a1cb"}
+{"k":"v8/Field_Embedded.st/mesh/Field_Embedded_LOD2/uv1","v":"d0541ffa1b476187"}
+{"k":"v8/Field_Embedded.st/mesh/Field_Embedded_LOD2/uv2","v":"e6f6c767b0847001"}
+{"k":"v8/Field_Embedded.st/mesh/Field_Embedded_LOD2/uv3","v":"8e78eab8e4bcf336"}
+{"k":"v8/Field_Embedded.st/mesh/Field_Embedded_LOD3","v":"vertices 54 submeshes 1 index UInt16 readable True bounds 3f4e780c 410e5323 bea7fc88 40cf451a 41140bd7 40b7677a streams 1"}
+{"k":"v8/Field_Embedded.st/mesh/Field_Embedded_LOD3/layout","v":"Position:Float32x3@0 Normal:Float32x3@0 Tangent:Float32x4@0 Color:UNorm8x4@0 TexCoord0:Float32x3@0"}
+{"k":"v8/Field_Embedded.st/mesh/Field_Embedded_LOD3/submesh0","v":"Triangles start 0 count 108 base 0 first 0 vcount 54 bounds 3f4e780c 410e5323 bea7fc88 40cf451a 41140bd7 40b7677a"}
+{"k":"v8/Field_Embedded.st/mesh/Field_Embedded_LOD3/submesh0/indices","v":"1881907301be38f5"}
+{"k":"v8/Field_Embedded.st/mesh/Field_Embedded_LOD3/positions","v":"bfd70d07aabee8cc"}
+{"k":"v8/Field_Embedded.st/mesh/Field_Embedded_LOD3/normals","v":"d75664546ebbfdad"}
+{"k":"v8/Field_Embedded.st/mesh/Field_Embedded_LOD3/tangents","v":"e38ad4f781316aad"}
+{"k":"v8/Field_Embedded.st/mesh/Field_Embedded_LOD3/colors32","v":"3cb0bef6117161ad"}
+{"k":"v8/Field_Embedded.st/mesh/Field_Embedded_LOD3/uv0","v":"df85a4b42245e3ac"}
+{"k":"v8/Field_Embedded.st/material/Broadleaf_Desktop_Field","v":"Nature/SpeedTree8 queue 2450 instancing True doubleSidedGI True flags EmissiveIsBlack path Assets/Trees/v8/Field_Embedded.st hide NotEditable"}
+{"k":"v8/Field_Embedded.st/material/Broadleaf_Desktop_Field/keywords","v":"EFFECT_BUMP EFFECT_EXTRA_TEX EFFECT_SUBSURFACE _WINDQUALITY_BEST"}
+{"k":"v8/Field_Embedded.st/material/Broadleaf_Desktop_Field/prop/_MainTex","v":"Broadleaf_Desktop_Field_Color Assets/Trees/v8/Broadleaf_Desktop_Field_Color.png 3f800000 3f800000 00000000 00000000 00000000 00000000"}
+{"k":"v8/Field_Embedded.st/material/Broadleaf_Desktop_Field/prop/_Color","v":"3f800000 3f800000 3f800000 3f800000"}
+{"k":"v8/Field_Embedded.st/material/Broadleaf_Desktop_Field/prop/_HueVariationKwToggle","v":"00000000"}
+{"k":"v8/Field_Embedded.st/material/Broadleaf_Desktop_Field/prop/_HueVariationColor","v":"3f800000 3f000000 00000000 3dcccccd"}
+{"k":"v8/Field_Embedded.st/material/Broadleaf_Desktop_Field/prop/_NormalMapKwToggle","v":"3f800000"}
+{"k":"v8/Field_Embedded.st/material/Broadleaf_Desktop_Field/prop/_BumpMap","v":"Broadleaf_Desktop_Field_Normal Assets/Trees/v8/Broadleaf_Desktop_Field_Normal.png 3f800000 3f800000 00000000 00000000 00000000 00000000"}
+{"k":"v8/Field_Embedded.st/material/Broadleaf_Desktop_Field/prop/_ExtraTex","v":"Broadleaf_Desktop_Field_Extra Assets/Trees/v8/Broadleaf_Desktop_Field_Extra.png 3f800000 3f800000 00000000 00000000 00000000 00000000"}
+{"k":"v8/Field_Embedded.st/material/Broadleaf_Desktop_Field/prop/_Glossiness","v":"3f800000"}
+{"k":"v8/Field_Embedded.st/material/Broadleaf_Desktop_Field/prop/_Metallic","v":"3f800000"}
+{"k":"v8/Field_Embedded.st/material/Broadleaf_Desktop_Field/prop/_SubsurfaceKwToggle","v":"3f800000"}
+{"k":"v8/Field_Embedded.st/material/Broadleaf_Desktop_Field/prop/_SubsurfaceTex","v":"Broadleaf_Desktop_Field_Subsurface Assets/Trees/v8/Broadleaf_Desktop_Field_Subsurface.png 3f800000 3f800000 00000000 00000000 00000000 00000000"}
+{"k":"v8/Field_Embedded.st/material/Broadleaf_Desktop_Field/prop/_SubsurfaceColor","v":"3f800000 3f800000 3f800000 3f800000"}
+{"k":"v8/Field_Embedded.st/material/Broadleaf_Desktop_Field/prop/_SubsurfaceIndirect","v":"3e800000"}
+{"k":"v8/Field_Embedded.st/material/Broadleaf_Desktop_Field/prop/_BillboardKwToggle","v":"00000000"}
+{"k":"v8/Field_Embedded.st/material/Broadleaf_Desktop_Field/prop/_BillboardShadowFade","v":"3f000000"}
+{"k":"v8/Field_Embedded.st/material/Broadleaf_Desktop_Field/prop/_TwoSided","v":"00000000"}
+{"k":"v8/Field_Embedded.st/material/Broadleaf_Desktop_Field/prop/_WindQuality","v":"40800000"}
+{"k":"v8/Field_Embedded.st/material/Broadleaf_Desktop_Field_Billboard_LOD3","v":"Nature/SpeedTree8 queue 2450 instancing True doubleSidedGI False flags EmissiveIsBlack path Assets/Trees/v8/Field_Embedded.st hide NotEditable"}
+{"k":"v8/Field_Embedded.st/material/Broadleaf_Desktop_Field_Billboard_LOD3/keywords","v":"EFFECT_BILLBOARD EFFECT_BUMP EFFECT_EXTRA_TEX EFFECT_SUBSURFACE _WINDQUALITY_FASTEST"}
+{"k":"v8/Field_Embedded.st/material/Broadleaf_Desktop_Field_Billboard_LOD3/prop/_MainTex","v":"Broadleaf_Desktop_Field_Billboard_Color Assets/Trees/v8/Broadleaf_Desktop_Field_Billboard_Color.png 3f800000 3f800000 00000000 00000000 00000000 00000000"}
+{"k":"v8/Field_Embedded.st/material/Broadleaf_Desktop_Field_Billboard_LOD3/prop/_Color","v":"3f800000 3f800000 3f800000 3f800000"}
+{"k":"v8/Field_Embedded.st/material/Broadleaf_Desktop_Field_Billboard_LOD3/prop/_HueVariationKwToggle","v":"00000000"}
+{"k":"v8/Field_Embedded.st/material/Broadleaf_Desktop_Field_Billboard_LOD3/prop/_HueVariationColor","v":"3f800000 3f000000 00000000 3dcccccd"}
+{"k":"v8/Field_Embedded.st/material/Broadleaf_Desktop_Field_Billboard_LOD3/prop/_NormalMapKwToggle","v":"3f800000"}
+{"k":"v8/Field_Embedded.st/material/Broadleaf_Desktop_Field_Billboard_LOD3/prop/_BumpMap","v":"Broadleaf_Desktop_Field_Billboard_Normal Assets/Trees/v8/Broadleaf_Desktop_Field_Billboard_Normal.png 3f800000 3f800000 00000000 00000000 00000000 00000000"}
+{"k":"v8/Field_Embedded.st/material/Broadleaf_Desktop_Field_Billboard_LOD3/prop/_ExtraTex","v":"Broadleaf_Desktop_Field_Billboard_Extra Assets/Trees/v8/Broadleaf_Desktop_Field_Billboard_Extra.png 3f800000 3f800000 00000000 00000000 00000000 00000000"}
+{"k":"v8/Field_Embedded.st/material/Broadleaf_Desktop_Field_Billboard_LOD3/prop/_Glossiness","v":"3f800000"}
+{"k":"v8/Field_Embedded.st/material/Broadleaf_Desktop_Field_Billboard_LOD3/prop/_Metallic","v":"3f800000"}
+{"k":"v8/Field_Embedded.st/material/Broadleaf_Desktop_Field_Billboard_LOD3/prop/_SubsurfaceKwToggle","v":"3f800000"}
+{"k":"v8/Field_Embedded.st/material/Broadleaf_Desktop_Field_Billboard_LOD3/prop/_SubsurfaceTex","v":"Broadleaf_Desktop_Field_Billboard_Subsurface Assets/Trees/v8/Broadleaf_Desktop_Field_Billboard_Subsurface.png 3f800000 3f800000 00000000 00000000 00000000 00000000"}
+{"k":"v8/Field_Embedded.st/material/Broadleaf_Desktop_Field_Billboard_LOD3/prop/_SubsurfaceColor","v":"3f800000 3f800000 3f800000 3f800000"}
+{"k":"v8/Field_Embedded.st/material/Broadleaf_Desktop_Field_Billboard_LOD3/prop/_SubsurfaceIndirect","v":"3e800000"}
+{"k":"v8/Field_Embedded.st/material/Broadleaf_Desktop_Field_Billboard_LOD3/prop/_BillboardKwToggle","v":"3f800000"}
+{"k":"v8/Field_Embedded.st/material/Broadleaf_Desktop_Field_Billboard_LOD3/prop/_BillboardShadowFade","v":"3f000000"}
+{"k":"v8/Field_Embedded.st/material/Broadleaf_Desktop_Field_Billboard_LOD3/prop/_TwoSided","v":"40000000"}
+{"k":"v8/Field_Embedded.st/material/Broadleaf_Desktop_Field_Billboard_LOD3/prop/_WindQuality","v":"3f800000"}
+{"k":"v8/Field_Embedded.st/material/Main_Bark","v":"Nature/SpeedTree8 queue 2450 instancing True doubleSidedGI False flags EmissiveIsBlack path Assets/Trees/v8/Field_Embedded.st hide NotEditable"}
+{"k":"v8/Field_Embedded.st/material/Main_Bark/keywords","v":"EFFECT_BUMP EFFECT_EXTRA_TEX _WINDQUALITY_BEST"}
+{"k":"v8/Field_Embedded.st/material/Main_Bark/prop/_MainTex","v":"Main_Bark_Color Assets/Trees/v8/Main_Bark_Color.png 3f800000 3f800000 00000000 00000000 00000000 00000000"}
+{"k":"v8/Field_Embedded.st/material/Main_Bark/prop/_Color","v":"3f800000 3f800000 3f800000 3f800000"}
+{"k":"v8/Field_Embedded.st/material/Main_Bark/prop/_HueVariationKwToggle","v":"00000000"}
+{"k":"v8/Field_Embedded.st/material/Main_Bark/prop/_HueVariationColor","v":"3f800000 3f000000 00000000 3dcccccd"}
+{"k":"v8/Field_Embedded.st/material/Main_Bark/prop/_NormalMapKwToggle","v":"3f800000"}
+{"k":"v8/Field_Embedded.st/material/Main_Bark/prop/_BumpMap","v":"Main_Bark_Normal Assets/Trees/v8/Main_Bark_Normal.png 3f800000 3f800000 00000000 00000000 00000000 00000000"}
+{"k":"v8/Field_Embedded.st/material/Main_Bark/prop/_ExtraTex","v":"Main_Bark_Extra Assets/Trees/v8/Main_Bark_Extra.png 3f800000 3f800000 00000000 00000000 00000000 00000000"}
+{"k":"v8/Field_Embedded.st/material/Main_Bark/prop/_Glossiness","v":"3f800000"}
+{"k":"v8/Field_Embedded.st/material/Main_Bark/prop/_Metallic","v":"3f800000"}
+{"k":"v8/Field_Embedded.st/material/Main_Bark/prop/_SubsurfaceKwToggle","v":"00000000"}
+{"k":"v8/Field_Embedded.st/material/Main_Bark/prop/_SubsurfaceTex","v":"null 3f800000 3f800000 00000000 00000000 00000000 00000000"}
+{"k":"v8/Field_Embedded.st/material/Main_Bark/prop/_SubsurfaceColor","v":"3f800000 3f800000 3f800000 3f800000"}
+{"k":"v8/Field_Embedded.st/material/Main_Bark/prop/_SubsurfaceIndirect","v":"3e800000"}
+{"k":"v8/Field_Embedded.st/material/Main_Bark/prop/_BillboardKwToggle","v":"00000000"}
+{"k":"v8/Field_Embedded.st/material/Main_Bark/prop/_BillboardShadowFade","v":"3f000000"}
+{"k":"v8/Field_Embedded.st/material/Main_Bark/prop/_TwoSided","v":"40000000"}
+{"k":"v8/Field_Embedded.st/material/Main_Bark/prop/_WindQuality","v":"40800000"}
 {"k":"texture/v8/Broadleaf_Desktop_Field_Billboard_Color.png","v":"Default srgb True alpha FromInput transparency True mips True wrap Repeat filter Bilinear max 2048 readable False"}
 {"k":"texture/v8/Broadleaf_Desktop_Field_Billboard_Extra.png","v":"Default srgb False alpha FromInput transparency False mips True wrap Repeat filter Bilinear max 2048 readable False"}
 {"k":"texture/v8/Broadleaf_Desktop_Field_Billboard_Normal.png","v":"NormalMap srgb False alpha FromInput transparency False mips True wrap Repeat filter Bilinear max 2048 readable False"}
@@ -700,10 +1712,35 @@
 {"k":"v8/Broadleaf_Desktop_Field_OptionsOn.st/callbacks/0","v":"OnPreprocessAsset SpeedTreeImporter"}
 {"k":"v8/Broadleaf_Desktop_Field_OptionsOn.st/callbacks/1","v":"OnPreprocessSpeedTree SpeedTreeImporter materialLocation External hasImported False isV8 True"}
 {"k":"v8/Broadleaf_Desktop_Field_OptionsOn.st/callbacks/2","v":"OnPostprocessSpeedTree SpeedTreeImporter hasImported False Broadleaf_Desktop_Field_OptionsOn[Transform,LODGroup,Rigidbody] Broadleaf_Desktop_Field_OptionsOn_LOD0[Transform,MeshFilter,MeshRenderer,Tree] Broadleaf_Desktop_Field_OptionsOn_LOD1[Transform,MeshFilter,MeshRenderer,Tree] Broadleaf_Desktop_Field_OptionsOn_LOD2[Transform,MeshFilter,MeshRenderer,Tree] Broadleaf_Desktop_Field_OptionsOn_LOD3[Transform,MeshFilter,MeshRenderer,Tree] CollisionObject0[Transform,CapsuleCollider] CollisionObject1[Transform,CapsuleCollider]"}
+{"k":"v8/Card_Tree_Sample/Card_Custom.st/callbacks","v":"OnPreprocessAsset,OnPreprocessSpeedTree,OnPostprocessSpeedTree"}
+{"k":"v8/Card_Tree_Sample/Card_Custom.st/callbacks/0","v":"OnPreprocessAsset SpeedTreeImporter"}
+{"k":"v8/Card_Tree_Sample/Card_Custom.st/callbacks/1","v":"OnPreprocessSpeedTree SpeedTreeImporter materialLocation InPrefab hasImported False isV8 True"}
+{"k":"v8/Card_Tree_Sample/Card_Custom.st/callbacks/2","v":"OnPostprocessSpeedTree SpeedTreeImporter hasImported False Card_Custom[Transform,LODGroup,Rigidbody] Card_Custom_LOD0[Transform,MeshFilter,MeshRenderer,Tree] Card_Custom_LOD1[Transform,MeshFilter,MeshRenderer,Tree] Card_Custom_LOD2[Transform,MeshFilter,MeshRenderer,Tree] CollisionObject0[Transform,CapsuleCollider] CollisionObject1[Transform,CapsuleCollider]"}
+{"k":"v8/Card_Tree_Sample/Card_Dangling.st/callbacks","v":"OnPreprocessAsset,OnPreprocessSpeedTree,OnPostprocessSpeedTree"}
+{"k":"v8/Card_Tree_Sample/Card_Dangling.st/callbacks/0","v":"OnPreprocessAsset SpeedTreeImporter"}
+{"k":"v8/Card_Tree_Sample/Card_Dangling.st/callbacks/1","v":"OnPreprocessSpeedTree SpeedTreeImporter materialLocation InPrefab hasImported False isV8 True"}
+{"k":"v8/Card_Tree_Sample/Card_Dangling.st/callbacks/2","v":"OnPostprocessSpeedTree SpeedTreeImporter hasImported False Card_Dangling[Transform,LODGroup,Rigidbody] Card_Dangling_LOD0[Transform,MeshFilter,MeshRenderer,Tree] Card_Dangling_LOD1[Transform,MeshFilter,MeshRenderer,Tree] Card_Dangling_LOD2[Transform,MeshFilter,MeshRenderer,Tree] CollisionObject0[Transform,CapsuleCollider] CollisionObject1[Transform,CapsuleCollider]"}
+{"k":"v8/Card_Tree_Sample/Card_Inches.st/callbacks","v":"OnPreprocessAsset,OnPreprocessSpeedTree,OnPostprocessSpeedTree"}
+{"k":"v8/Card_Tree_Sample/Card_Inches.st/callbacks/0","v":"OnPreprocessAsset SpeedTreeImporter"}
+{"k":"v8/Card_Tree_Sample/Card_Inches.st/callbacks/1","v":"OnPreprocessSpeedTree SpeedTreeImporter materialLocation InPrefab hasImported False isV8 True"}
+{"k":"v8/Card_Tree_Sample/Card_Inches.st/callbacks/2","v":"OnPostprocessSpeedTree SpeedTreeImporter hasImported False Card_Inches[Transform,LODGroup,Rigidbody] Card_Inches_LOD0[Transform,MeshFilter,MeshRenderer,Tree] Card_Inches_LOD1[Transform,MeshFilter,MeshRenderer,Tree] Card_Inches_LOD2[Transform,MeshFilter,MeshRenderer,Tree] CollisionObject0[Transform,CapsuleCollider] CollisionObject1[Transform,CapsuleCollider]"}
+{"k":"v8/Card_Tree_Sample/Card_Spheres.st/callbacks","v":"OnPreprocessAsset,OnPreprocessSpeedTree,OnPostprocessSpeedTree"}
+{"k":"v8/Card_Tree_Sample/Card_Spheres.st/callbacks/0","v":"OnPreprocessAsset SpeedTreeImporter"}
+{"k":"v8/Card_Tree_Sample/Card_Spheres.st/callbacks/1","v":"OnPreprocessSpeedTree SpeedTreeImporter materialLocation InPrefab hasImported False isV8 True"}
+{"k":"v8/Card_Tree_Sample/Card_Spheres.st/callbacks/2","v":"OnPostprocessSpeedTree SpeedTreeImporter hasImported False Card_Spheres[Transform,LODGroup,Rigidbody] Card_Spheres_LOD0[Transform,MeshFilter,MeshRenderer,Tree] Card_Spheres_LOD1[Transform,MeshFilter,MeshRenderer,Tree] Card_Spheres_LOD2[Transform,MeshFilter,MeshRenderer,Tree] CollisionObject0[Transform,SphereCollider] CollisionObject1[Transform,CapsuleCollider]"}
+{"k":"v8/Card_Tree_Sample/Card_Units0.st/callbacks","v":"OnPreprocessAsset,OnPreprocessSpeedTree,OnPostprocessSpeedTree"}
+{"k":"v8/Card_Tree_Sample/Card_Units0.st/callbacks/0","v":"OnPreprocessAsset SpeedTreeImporter"}
+{"k":"v8/Card_Tree_Sample/Card_Units0.st/callbacks/1","v":"OnPreprocessSpeedTree SpeedTreeImporter materialLocation InPrefab hasImported False isV8 True"}
+{"k":"v8/Card_Tree_Sample/Card_Units0.st/callbacks/2","v":"OnPostprocessSpeedTree SpeedTreeImporter hasImported False Card_Units0[Transform,LODGroup,Rigidbody] Card_Units0_LOD0[Transform,MeshFilter,MeshRenderer,Tree] Card_Units0_LOD1[Transform,MeshFilter,MeshRenderer,Tree] Card_Units0_LOD2[Transform,MeshFilter,MeshRenderer,Tree] CollisionObject0[Transform,CapsuleCollider] CollisionObject1[Transform,CapsuleCollider]"}
 {"k":"v8/Card_Tree_Sample/card-tree-sample.st/callbacks","v":"OnPreprocessAsset,OnPreprocessSpeedTree,OnPostprocessSpeedTree"}
 {"k":"v8/Card_Tree_Sample/card-tree-sample.st/callbacks/0","v":"OnPreprocessAsset SpeedTreeImporter"}
 {"k":"v8/Card_Tree_Sample/card-tree-sample.st/callbacks/1","v":"OnPreprocessSpeedTree SpeedTreeImporter materialLocation InPrefab hasImported False isV8 True"}
 {"k":"v8/Card_Tree_Sample/card-tree-sample.st/callbacks/2","v":"OnPostprocessSpeedTree SpeedTreeImporter hasImported False card-tree-sample[Transform,LODGroup,Rigidbody] card-tree-sample_LOD0[Transform,MeshFilter,MeshRenderer,Tree] card-tree-sample_LOD1[Transform,MeshFilter,MeshRenderer,Tree] card-tree-sample_LOD2[Transform,MeshFilter,MeshRenderer,Tree] CollisionObject0[Transform,CapsuleCollider] CollisionObject1[Transform,CapsuleCollider]"}
+{"k":"v8/Field_Embedded.st/callbacks","v":"OnPreprocessAsset,OnPreprocessSpeedTree,OnPostprocessSpeedTree"}
+{"k":"v8/Field_Embedded.st/callbacks/0","v":"OnPreprocessAsset SpeedTreeImporter"}
+{"k":"v8/Field_Embedded.st/callbacks/1","v":"OnPreprocessSpeedTree SpeedTreeImporter materialLocation InPrefab hasImported False isV8 True"}
+{"k":"v8/Field_Embedded.st/callbacks/2","v":"OnPostprocessSpeedTree SpeedTreeImporter hasImported False Field_Embedded[Transform,LODGroup,Rigidbody] Field_Embedded_LOD0[Transform,MeshFilter,MeshRenderer,Tree] Field_Embedded_LOD1[Transform,MeshFilter,MeshRenderer,Tree] Field_Embedded_LOD2[Transform,MeshFilter,MeshRenderer,Tree] Field_Embedded_LOD3[Transform,MeshFilter,MeshRenderer,Tree] CollisionObject0[Transform,CapsuleCollider] CollisionObject1[Transform,CapsuleCollider]"}
+{"k":"find/GameObject","v":"Assets/Trees/v8/Broadleaf_Desktop_Field.st,Assets/Trees/v8/Broadleaf_Desktop_Field_OptionsOff.st,Assets/Trees/v8/Broadleaf_Desktop_Field_OptionsOn.st,Assets/Trees/v8/Card_Tree_Sample/Card_Custom.st,Assets/Trees/v8/Card_Tree_Sample/Card_Dangling.st,Assets/Trees/v8/Card_Tree_Sample/Card_Inches.st,Assets/Trees/v8/Card_Tree_Sample/Card_Spheres.st,Assets/Trees/v8/Card_Tree_Sample/Card_Units0.st,Assets/Trees/v8/Card_Tree_Sample/card-tree-sample.st,Assets/Trees/v8/Field_Embedded.st"}
 {"k":"scene/roots","v":"CardInScene,OptionsOnInScene"}
 {"k":"scene/go/CardInScene","v":"active layer 0 tag Untagged static False hide None"}
 {"k":"scene/go/CardInScene/transform","v":"40800000 00000000 00000000 00000000 00000000 00000000 3f800000 3f800000 3f800000 3f800000"}
