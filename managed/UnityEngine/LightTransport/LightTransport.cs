@@ -523,8 +523,9 @@ namespace UnityEngine.LightTransport
                 if (light.lightmapBakeType == LightmapBakeType.Realtime) continue;
                 active.Add(((long)light.GetInstanceID(), light));
             }
+            // (Cookies are not measured in the probe integration: said, left out.)
             var extracted = BakedAtlas.ExtractLights(active, "LightTransport", Warn, skipUnmeasured: false,
-                renderPipeline: GraphicsSettings.currentRenderPipeline != null);
+                renderPipeline: GraphicsSettings.currentRenderPipeline != null, cookies: false);
             // (The direct and occlusion probe integrators do not sample area lights or soft
             // shadows yet: said.)
             foreach (var (_, light) in active)

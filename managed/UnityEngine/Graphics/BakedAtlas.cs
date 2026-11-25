@@ -528,7 +528,7 @@ namespace UnityEngine
         /// lights are converted through that delegate. Unsupported or unmeasured cases invoke
         /// <paramref name="warn"/> (and are skipped when <paramref name="skipUnmeasured"/> is true).</summary>
         internal static List<ExtractedLight> ExtractLights(IReadOnlyList<(long FileId, Light Light)> active, string path,
-            Action<string, string> warn, bool skipUnmeasured, bool renderPipeline)
+            Action<string, string> warn, bool skipUnmeasured, bool renderPipeline, bool cookies = true)
         {
             var lights = new List<ExtractedLight>();
             if (active == null || active.Count == 0) return lights;
@@ -618,6 +618,7 @@ namespace UnityEngine
                     converted.Dispose();
                 }
             }
+            long cookieTexels = 0;
             foreach (var (fileId, light) in active)
             {
                 int kind = light.type switch
@@ -647,7 +648,14 @@ namespace UnityEngine
                     warn("light-rp-mixed:" + path + fileId, $"{path}: '{light.name}' is a Mixed light with a render pipeline asset, which Unbound's bake (Lightmapping.Bake) has not measured yet.");
                     if (skipUnmeasured) continue;
                 }
-                object cookie = light.cookie != null ? Cookie(light, kind, path, fileId, warn) : null;
+                object cookie = null;
+                if (light.cookie != null && !cookies)
+                    warn("light-cookie:" + path + fileId, $"{path}: '{light.name}' has a cookie, which Unbound's integration does not apply: not measured.");
+                else if (light.cookie != null)
+                {
+                    cookie = Cookie(light, kind, path, fileId, warn);
+                    if (cookie != null) cookieTexels += (long)light.cookie.width * light.cookie.height * (kind == 1 ? 6 : 1);
+                }
                 // An area light is baked (the Editor offers no other mode); a mixed one is not
                 // measured.
                 if (kind >= 3 && light.lightmapBakeType != LightmapBakeType.Baked)
@@ -689,8 +697,14 @@ namespace UnityEngine
                 };
                 lights.Add(new ExtractedLight(json, kind, mode, position, t.forward, light.range, light.spotAngle));
             }
+            if (cookieTexels > MeasuredCookieTexels)
+                warn("light-cookies-many:" + path, $"{path}: its lights' cookies hold {cookieTexels} texels in all, more than Unbound's bake (Lightmapping.Bake) has measured ({MeasuredCookieTexels}): each is applied at its own size.");
             return lights;
         }
+
+        /// <summary>The texels of a scene's cookies in all that the bake is measured with, each at its
+        /// own size (tests/projects/bakedbuffers CookieMany: one of 1024 a side and three of 256).</summary>
+        const long MeasuredCookieTexels = 1024L * 1024 + 3 * 256 * 256;
 
         /// <summary>A light's cookie as the bake takes it (tests/projects/bakedbuffers Cookie*): its
         /// alpha, one byte a texel, rows from the bottom; a point light's cube cookie face after
@@ -730,12 +744,14 @@ namespace UnityEngine
                 return null;
             }
             var texture = light.cookie;
-            if (texture.wrapModeU != texture.wrapModeV)
+            // (Only a directional light's cookie repeats; the others are clamped to their square
+            // or face whatever their wrap mode.)
+            if (kind == 0 && (texture.wrapModeU != texture.wrapModeV || (texture.wrapModeU != TextureWrapMode.Repeat && texture.wrapModeU != TextureWrapMode.Clamp)))
             {
-                warn("light-cookie:" + path + fileId, $"{path}: '{light.name}' has a cookie whose wrap modes differ along its two axes, which Unbound's bake (Lightmapping.Bake) has not measured: it is not applied.");
+                warn("light-cookie:" + path + fileId, $"{path}: '{light.name}' has a cookie wrapped {texture.wrapModeU} and {texture.wrapModeV}, which Unbound's bake (Lightmapping.Bake) has not measured (Repeat or Clamp along both axes): it is not applied.");
                 return null;
             }
-            repeat = texture.wrapModeU == TextureWrapMode.Repeat;
+            repeat = kind == 0 && texture.wrapModeU == TextureWrapMode.Repeat;
             // Its first level, sampled bilinearly whatever its filter, at its own size (mipmaps,
             // Point and Trilinear filters, RGBA32 and Alpha8 up to 1024 a side: tests/projects/
             // bakedbuffers CookieLarge, CookieSunPoint, CookieHuge); a larger or compressed cookie is

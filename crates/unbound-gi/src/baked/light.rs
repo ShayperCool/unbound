@@ -494,7 +494,8 @@ impl Light {
             dot(projected, across.map(|v| v * scale)),
             dot(projected, self.up.map(|v| v * scale)),
         ];
-        if uv[0].abs() > 1.0 || uv[1].abs() > 1.0 || !(along >= 0.0) {
+        // (At right angles to the axis, or not a number: none.)
+        if !(uv[0].abs() <= 1.0 && uv[1].abs() <= 1.0 && along > 0.0) {
             return None;
         }
         Some(cookie.sample(0, uv.map(|v| v * 0.5 + 0.5)))
@@ -743,6 +744,8 @@ mod tests {
         let lit = spot.arriving_around(&tables, [1.0; 3], corner).unwrap();
         let at = spot.arriving_around(&tables, [1.0; 3], below).unwrap();
         assert!(lit.color[0] > 0.0 && at.color[0] > 0.0);
+        // At right angles to its axis (level with it): no light, not a number.
+        assert!(spot.arriving_around(&tables, [1.0; 3], [2.0, 2.0, 0.0]).is_none());
         // Beyond the square: dark.
         assert!(
             spot.arriving_around(&tables, [1.0; 3], [2.5, 0.0, 0.0])

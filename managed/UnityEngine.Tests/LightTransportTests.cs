@@ -395,6 +395,16 @@ namespace UnityEngine.Tests
                 Assert.Single(InputExtraction.CollectSceneLights(new[] { point }).LightsJson);
                 Assert.DoesNotContain(capture.Logs, l => l.Contains("lightsUseLinearIntensity"));
 
+                // Its cookie is said and left out: the integration's cookies are not measured.
+                capture.Logs.Clear();
+                InputExtraction.s_Warned.Clear();
+                point.cookie = new Cubemap(1, TextureFormat.RGBA32, false);
+                var withCookie = InputExtraction.CollectSceneLights(new[] { point }).LightsJson;
+                var sentPoint = System.Text.Json.JsonDocument.Parse(System.Text.Json.JsonSerializer.Serialize(withCookie)).RootElement[0];
+                Assert.Equal(System.Text.Json.JsonValueKind.Null, sentPoint.GetProperty("cookie").ValueKind);
+                Assert.Contains(capture.Logs, l => l.Contains("has a cookie"));
+                point.cookie = null;
+
                 // Custom RequestLightsDelegate is invoked by CollectSceneLights identically to BakedAtlas.Lights:
                 // custom color/orientation is extracted, InitNoBake skips, throwing/non-Legacy falloff warns.
                 dir.useColorTemperature = false;

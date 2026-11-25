@@ -18,9 +18,21 @@ namespace UnityEngine
         TextureFormat m_Format = TextureFormat.RGBA32;
         int m_MipCount = 1;
         bool m_Readable = true;
-        /// <summary>A serialized cubemap's RGBA32 data (six faces, each with its mip chain), kept for
+        /// <summary>A serialized cubemap's RGBA32 faces' first levels, one after the other, kept for
         /// the engine's own reading (<see cref="EngineFaces"/>).</summary>
         byte[] m_SerializedData;
+
+        /// <summary>The six faces' first levels of RGBA32 data holding each face's mip chain in turn;
+        /// null when the data is shorter.</summary>
+        static byte[] FirstLevels(byte[] data, int size, int mips)
+        {
+            int level = size * size * 4, chain = 0;
+            for (int mip = 0; mip < mips; mip++) chain += Math.Max(1, size >> mip) * Math.Max(1, size >> mip) * 4;
+            if (data.Length < chain * 6) return null;
+            var first = new byte[level * 6];
+            for (int f = 0; f < 6; f++) Buffer.BlockCopy(data, f * chain, first, f * level, level);
+            return first;
+        }
         internal bool m_Linear;
         /// <summary>Per face, per mip level: the pixels (readable cubemaps).</summary>
         Color[][][] m_Pixels;
@@ -633,7 +645,7 @@ namespace UnityEngine
             var hex = body.Str("_typelessdata");
             if (hex.Length == 0) hex = body.Str("image data");
             var data = hex.Length >= 2 ? Convert.FromHexString(hex.Length % 2 == 0 ? hex : hex.Substring(0, hex.Length - 1)) : Array.Empty<byte>();
-            m_SerializedData = data;
+            m_SerializedData = FirstLevels(data, m_Width, m_MipCount);
             if (m_NativeHandle == 0) m_NativeHandle = RenderHandles.Next();
             fixed (byte* p = data)
             {
@@ -666,16 +678,13 @@ namespace UnityEngine
             int s = m_Width;
             if (m_SerializedData != null)
             {
-                int chain = 0;
-                for (int mip = 0; mip < m_MipCount; mip++) chain += Math.Max(1, s >> mip) * Math.Max(1, s >> mip) * 4;
-                if (m_SerializedData.Length < chain * 6) return null;
                 var read = new Color32[6][];
                 for (int f = 0; f < 6; f++)
                 {
                     read[f] = new Color32[s * s];
                     for (int i = 0; i < s * s; i++)
                     {
-                        int at = f * chain + i * 4;
+                        int at = (f * s * s + i) * 4;
                         read[f][i] = new Color32(m_SerializedData[at], m_SerializedData[at + 1], m_SerializedData[at + 2], m_SerializedData[at + 3]);
                     }
                 }
