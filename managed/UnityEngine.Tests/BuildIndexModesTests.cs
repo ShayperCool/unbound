@@ -48,7 +48,9 @@ namespace UnityEngine.Tests
 
         /// <summary>Runs a step on a scratch project with the probe's scenes listed, Edit mode or
         /// Play mode as asked, the seeded list configured; everything restored after.</summary>
-        static void WithList(bool play, Action step)
+        static void WithList(bool play, Action step) => WithList(play, Seeded(play), step);
+
+        static void WithList(bool play, List<EditorBuildSettingsScene> scenes, Action step)
         {
             var project = Path.Combine(Path.GetTempPath(), "unbound-build-index-" + Guid.NewGuid().ToString("N"));
             Directory.CreateDirectory(Path.Combine(project, "ProjectSettings"));
@@ -64,7 +66,7 @@ namespace UnityEngine.Tests
                 + "{\"guid\":\"" + SecondGuid + "\",\"path\":\"" + Second + "\",\"kind\":\"scene\"},"
                 + "{\"guid\":\"" + ThirdGuid + "\",\"path\":\"" + Third + "\",\"kind\":\"scene\"},"
                 + "{\"guid\":\"" + RunnerGuid + "\",\"path\":\"" + Runner + "\",\"kind\":\"scene\"}]");
-            EditorBuildSettings.Configure(Seeded(play), new Dictionary<string, (string, long)>());
+            EditorBuildSettings.Configure(scenes, new Dictionary<string, (string, long)>());
             EditorSession.IsPlaying = play;
             try { step(); }
             finally
@@ -201,15 +203,42 @@ namespace UnityEngine.Tests
             {
                 Assert.Equal(-1, runner.BuildIndex);
                 Assert.Equal(3, third.BuildIndex);
-                // As EditorSession.EnterPlayMode: the list, then the open scenes' indices in it.
-                EditorBuildSettings.BeginPlayModeList(new[] { Runner, Third });
+                // As EditorSession.EnterPlayMode, once Edit mode has ended.
                 EditorSession.IsPlaying = true;
-                EditorBuildSettings.RefreshOpenSceneIndices();
+                EditorSession.FixPlayModeBuildList();
                 // Base, Second (its stale entry), Third, then the runner's scene.
                 Assert.Equal(3, runner.BuildIndex);
                 Assert.Equal(2, third.BuildIndex);
             }
             finally { Close(runner, third); }
         });
+
+        [Fact]
+        public void DirectPlaysListIsTheOneTheStartsEditorCodeLeaves() =>
+            WithList(true, new List<EditorBuildSettingsScene> { Entry(Base, BaseGuid, true) }, () =>
+            {
+                // The file lists Base; editor code of the start lists Second before it.
+                var scene = PlayerLoopDriver.PrepareStartupScene(Base);
+                Action<PlayModeStateChange> set = change =>
+                {
+                    if (change == PlayModeStateChange.ExitingEditMode)
+                        EditorBuildSettings.scenes = new[] { new EditorBuildSettingsScene(Second, true), new EditorBuildSettingsScene(Base, true) };
+                };
+                EditorApplication.playModeStateChanged += set;
+                try
+                {
+                    Assert.Equal(0, scene.BuildIndex);
+                    EditorInitialization.BeforePlayMode();
+                    Assert.True(EditorSession.IsPlaying);
+                    Assert.Equal("," + Second + "," + Base + ",", Paths());
+                    Assert.Equal(1, scene.BuildIndex);
+                    Assert.Equal(0, SceneUtility.GetBuildIndexByScenePath("Second"));
+                }
+                finally
+                {
+                    EditorApplication.playModeStateChanged -= set;
+                    Close(scene);
+                }
+            });
     }
 }

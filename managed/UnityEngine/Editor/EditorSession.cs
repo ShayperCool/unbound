@@ -65,6 +65,18 @@ namespace Unbound.Runtime
             }
         }
 
+        /// <summary>Play mode's build list, fixed as Play mode starts after Edit mode's editor code
+        /// has run (a list it set counts): the build settings' scenes and the open ones, which take
+        /// their indices in it (tests/projects/scenesave build-index-play start.*).</summary>
+        internal static void FixPlayModeBuildList()
+        {
+            var open = new List<string>();
+            foreach (var scene in SceneManagerInternal.Listed())
+                if (scene.IsLoaded && scene.LoadKey == null) open.Add(scene.Path);
+            EditorBuildSettings.BeginPlayModeList(open);
+            EditorBuildSettings.RefreshOpenSceneIndices();
+        }
+
         internal static void EndEnteringPlayMode()
         {
             s_EnteringPlayMode = false;
@@ -114,14 +126,8 @@ namespace Unbound.Runtime
             Application.Internal_PlayModeStarting();
             LeaveEditModeForPlay();
             UnityEngine.U2D.SpriteAtlasPacking.PackV1ForPlayMode();
-            // Play mode's build list holds the open scenes; they take their indices in it
-            // (tests/projects/scenesave build-index-play start.open).
-            var open = new List<string>();
-            foreach (var scene in SceneManagerInternal.Listed())
-                if (scene.IsLoaded && scene.LoadKey == null) open.Add(scene.Path);
-            EditorBuildSettings.BeginPlayModeList(open);
             IsPlaying = true;
-            EditorBuildSettings.RefreshOpenSceneIndices();
+            FixPlayModeBuildList();
             Time.ResetForPlayMode();
             EditorInitialization.EnterPlayModeMethods();
             RuntimeInitializers.Run(RuntimeInitializeLoadType.SubsystemRegistration);

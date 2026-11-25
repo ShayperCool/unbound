@@ -43,7 +43,15 @@ namespace UnityEditor
             return s_ContinuesScriptReload.Value;
         }
 
+        /// <summary>Direct Play's editor load, as the Editor's start in Edit mode and its entry into
+        /// Play mode; Play mode's build list is fixed after it.</summary>
         internal static void BeforePlayMode()
+        {
+            try { LoadForPlayMode(); }
+            finally { EditorSession.FixPlayModeBuildList(); }
+        }
+
+        static void LoadForPlayMode()
         {
             // Enter Play Mode Options that keep the domain: the Editor's domain is the one it loaded
             // at its start, in Edit mode; entering Play mode then reloads nothing (matches the Unity

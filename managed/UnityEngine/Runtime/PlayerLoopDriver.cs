@@ -416,8 +416,9 @@ namespace Unbound.Runtime
         }
 
         /// <summary>Direct Play's startup scene (none without one), its build index from Play mode's
-        /// list, which holds the scene the Editor has open as Play mode starts (a stale path
-        /// answered by its GUID).</summary>
+        /// list as the file has it, which holds the scene the Editor has open as Play mode starts (a
+        /// stale path answered by its GUID); EditorInitialization.BeforePlayMode fixes the list
+        /// again after the editor code of the start has run.</summary>
         internal static SceneData PrepareStartupScene(string firstScene)
         {
             UnityEditor.EditorBuildSettings.BeginPlayModeList(string.IsNullOrEmpty(firstScene) ? Array.Empty<string>() : new[] { firstScene });
