@@ -174,8 +174,8 @@ namespace UnityEngine.Tests
         static T Command<T>(string name, string typeName, string field, int value, Func<T> draw) =>
             Pass(new Event { type = EventType.ExecuteCommand, commandName = name }, () =>
             {
-                // (A field drawn first: the pass's first labelled control takes a further id in
-                // the tests, which have no Editor resources.)
+                // (Drawn once first in the pass, as the probe's fields are, so that the field's
+                // control id follows the passive one taken just before it.)
                 draw();
                 int before = GUIUtility.GetControlID(FocusType.Passive);
                 Arm(typeName, field, before + 1, value);
@@ -216,6 +216,21 @@ namespace UnityEngine.Tests
                 Assert.NotEqual(Ids("nested"), Ids("v3"));
             }
             finally { Object.DestroyImmediate(holder); }
+        }
+
+        [Fact]
+        public void PrepareStartDragResetsTheVisualModeButNotTheActiveControl()
+        {
+            DragAndDrop.visualMode = DragAndDropVisualMode.Copy;
+            DragAndDrop.activeControlID = 5;
+            DragAndDrop.objectReferences = new Object[0];
+            DragAndDrop.paths = new[] { "Assets/x.mat" };
+            Assert.Equal(DragAndDropVisualMode.Copy, DragAndDrop.visualMode);
+            DragAndDrop.PrepareStartDrag();
+            Assert.Equal(DragAndDropVisualMode.None, DragAndDrop.visualMode);
+            Assert.Equal(5, DragAndDrop.activeControlID);
+            Assert.Empty(DragAndDrop.paths);
+            DragAndDrop.activeControlID = 0;
         }
 
         [Fact]

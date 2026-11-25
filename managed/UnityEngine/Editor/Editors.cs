@@ -354,11 +354,15 @@ namespace UnityEditor
 
         public static int activeControlID { get; set; }
 
+        /// <summary>Clears the drag's objects, paths and data, and its visual mode (the active
+        /// control stays; matches the Unity 6000.0.71f1 Editor, tests/projects/editorobjectfields
+        /// dragAndDrop/reset: setting the objects or paths changes neither).</summary>
         public static void PrepareStartDrag()
         {
             s_Objects = Array.Empty<Object>();
             s_Paths = Array.Empty<string>();
             s_Data.Clear();
+            visualMode = DragAndDropVisualMode.None;
         }
 
         /// <summary>A drag starts from an editor view's event: there is none outside one.</summary>
