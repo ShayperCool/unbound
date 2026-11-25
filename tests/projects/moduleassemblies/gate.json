@@ -1,0 +1,11 @@
+{
+  "commands": [
+    "python3 tests/projects/moduleassemblies/run.py gate"
+  ],
+  "summary": "moduleassemblies: [0-9]+/[0-9]+ values match.*",
+  "engine_paths": [
+    "managed/UnityEngine/Runtime/GameDomain.cs",
+    "managed/Unbound.ApiTools/FacadeGenerator.cs",
+    "tests/projects/moduleassemblies/"
+  ]
+}

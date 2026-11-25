@@ -1,0 +1,11 @@
+{"k":"loaded.UnityEngine.CoreModule","v":"true"}
+{"k":"loaded.UnityEngine.PhysicsModule","v":"true"}
+{"k":"loaded.UnityEngine.UIElementsModule","v":"true"}
+{"k":"loaded.UnityEngine.TextRenderingModule","v":"true"}
+{"k":"loaded.UnityEditor.CoreModule","v":"true"}
+{"k":"loaded.UnityEditor.UIElementsModule","v":"true"}
+{"k":"loaded.UnityEditor.GraphViewModule","v":"true"}
+{"k":"type.DefaultWindowBackend","v":"UnityEditor.UIElements.DefaultWindowBackend"}
+{"k":"property.visualTree","v":"System.Object"}
+{"k":"type.Rigidbody","v":"the Rigidbody type"}
+{"k":"complete","v":true}
