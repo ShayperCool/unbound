@@ -371,8 +371,11 @@ namespace UnityEngine
         static bool Unmade(LightingSettings.DenoiserType denoiser) =>
             denoiser != LightingSettings.DenoiserType.None && denoiser != LightingSettings.DenoiserType.OpenImage;
 
+        /// <summary>DenoiserType.RadeonPro's value (the member is obsolete as an error).</summary>
+        const int RadeonPro = 3;
+
         static string DenoiserName(LightingSettings.DenoiserType denoiser) =>
-            denoiser == LightingSettings.DenoiserType.Optix ? "OptiX" : (int)denoiser == 3 ? "Radeon Pro" : denoiser.ToString();
+            denoiser == LightingSettings.DenoiserType.Optix ? "OptiX" : (int)denoiser == RadeonPro ? "Radeon Pro" : denoiser.ToString();
 
         /// <summary>The folder a bake writes its files to beside the scene (null: untitled).</summary>
         static string FolderOf(Unbound.Runtime.SceneData scene) => string.IsNullOrEmpty(scene.Path) ? null

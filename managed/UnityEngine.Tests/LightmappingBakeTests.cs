@@ -301,6 +301,8 @@ namespace UnityEngine.Tests
                     Assert.Equal("{\"direct\":{\"denoise\":false,\"filter\":{\"gaussian\":2.5}},\"indirect\":{\"denoise\":true,\"filter\":null}}", Json(RealtimeGI.Filtering(environment)));
                     environment.denoiserTypeDirect = LightingSettings.DenoiserType.Optix;
                     Assert.Contains("OptiX", Unwritten(environment, "Assets/Scenes/Lit", true, lightmaps: true));
+                    environment.denoiserTypeDirect = (LightingSettings.DenoiserType)3;
+                    Assert.Contains("Radeon Pro", Unwritten(environment, "Assets/Scenes/Lit", true, lightmaps: true));
                     environment.denoiserTypeDirect = environment.denoiserTypeIndirect = LightingSettings.DenoiserType.None;
                     // The A-Trous filter is made too (tests/projects/bakedbuffers FilterAtrous).
                     environment.filterTypeIndirect = LightingSettings.FilterType.ATrous;
