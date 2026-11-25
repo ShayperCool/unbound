@@ -148,7 +148,11 @@ namespace UnityEditor
             if (clip == null) throw new ArgumentNullException(nameof(clip));
             RequireAnimationMode("InitializePropertyModificationForGameObject");
             foreach (var binding in GetCurveBindings(clip))
-                RecordBinding(AnimationUtility.GetAnimatedObject(gameObject, binding), binding, gameObject);
+            {
+                var target = AnimationUtility.GetAnimatedObject(gameObject, binding);
+                RecordBinding(target, binding, gameObject);
+                ReportUnrecorded(target, binding);
+            }
         }
 
         /// <summary>Records the clip's properties of the object itself (its bindings without a path
@@ -165,8 +169,26 @@ namespace UnityEditor
                 if (!string.IsNullOrEmpty(binding.path) || binding.type == null || !binding.type.IsInstanceOfType(target)) continue;
                 if (binding.isPPtrCurve)
                     Unbound.Runtime.Stubs.Ignored("AnimationMode.InitializePropertyModificationForObject object references", "records no object reference properties of the object (unmeasured)");
-                else Record(target, binding.propertyName);
+                else
+                {
+                    Record(target, binding.propertyName);
+                    ReportUnrecorded(target, binding);
+                }
             }
+        }
+
+        /// <summary>Reports a found target's property that Unbound could not read to record
+        /// (an Animator's muscle and parameter curves, material and blend shape curves, an engine
+        /// component's unread field), whose revert is then lost: what the Editor records for them
+        /// is unmeasured. A script's field Unbound reads in full, so an unread one is a field the
+        /// script lacks, which the Editor does not record either (tests/projects/animinternal
+        /// <c>init.object</c>).</summary>
+        static void ReportUnrecorded(Object target, EditorCurveBinding binding)
+        {
+            if (target == null || IsRecorded(target, binding.propertyName)) return;
+            if (target is MonoBehaviour || target is ScriptableObject) return;
+            Unbound.Runtime.Stubs.Ignored("AnimationMode.InitializePropertyModification unread properties",
+                "records no " + target.GetType().Name + "." + binding.propertyName + " for the revert (the Editor's recording of it is unmeasured)");
         }
 
         static void RequireAnimationMode(string member)

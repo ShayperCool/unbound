@@ -162,10 +162,37 @@ namespace UnityEngine.Tests
         public void AnUnmeasuredReleaseLeavesTheTangents()
         {
             using var release = TestRelease.Pin(TestRelease.Unmeasured);
+            const string member = "UnityEditor.AnimationUtility.UpdateTangentsFromMode";
+            int before = Hits(member);
             var curve = Moded();
             AnimationUtility.UpdateTangentsFromMode(curve);
             AnimationUtility.UpdateTangentsFromModeSurrounding(curve, 2);
             Assert.Equal("9 9 | 9 9 | 9 9 | 9 9 | 9 9", Tangents(curve)); // tangents.start
+            Assert.Equal(before + 1, Hits(member));
+        }
+
+        static int Hits(string member) => System.Linq.Enumerable.FirstOrDefault(Unbound.Runtime.Stubs.HitReport(), h => h.Key == member).Value;
+
+        /// <summary>A property Unbound cannot read to record (an Animator's curve here) is reported,
+        /// not skipped in silence; a field a script lacks is not (measured: init.object).</summary>
+        [Fact]
+        public void UnreadPropertiesAreReported()
+        {
+            using var release = TestRelease.Pin(TestRelease.Measured);
+            const string member = "AnimationMode.InitializePropertyModification unread properties";
+            var go = new GameObject("animated");
+            go.AddComponent<Animator>();
+            var clip = new AnimationClip();
+            AnimationUtility.SetEditorCurve(clip, EditorCurveBinding.FloatCurve("", typeof(Animator), "RootT.x"), AnimationCurve.Constant(0f, 1f, 1f));
+            int before = Hits(member);
+            AnimationMode.StartAnimationMode();
+            try { AnimationMode.InitializePropertyModificationForGameObject(go, clip); }
+            finally
+            {
+                AnimationMode.StopAnimationMode();
+                Object.DestroyImmediate(go);
+            }
+            Assert.Equal(before + 1, Hits(member));
         }
     }
 }
