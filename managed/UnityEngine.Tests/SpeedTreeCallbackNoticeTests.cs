@@ -60,19 +60,27 @@ namespace UnityEngine.Tests
         [Fact]
         public void SpeedTreeCallbacksAreReportedOnlyWhereASpeedTreeAssetCanCallThem()
         {
-            int notices = Hits(AssetNotice);
+            // Counted as increments: other tests' editor domain loads report these classes too.
+            string[] keys =
+            {
+                AssetNotice, Key<TreeCallbacks>("OnPostprocessSpeedTree"), Key<TreeCallbacks>("OnPreprocessSpeedTree"),
+                Key<TreeCallbacks>("OnPostprocessTexture3D"), Key<OtherTreeCallbacks>("OnPostprocessSpeedTree"),
+                Key<OtherTreeCallbacks>("OnPreprocessSpeedTree"),
+            };
+            var before = keys.ToDictionary(k => k, Hits);
+            int Added(string key) => Hits(key) - before[key];
             // No SpeedTree 7 or 8 asset: the SpeedTree callbacks are left out, the others reported,
             // and no asset is reported.
             AssetPostprocessing.ReportUnsupported(new[] { typeof(TreeCallbacks) }, Array.Empty<string>());
-            Assert.Equal(0, Hits(Key<TreeCallbacks>("OnPostprocessSpeedTree")));
-            Assert.Equal(0, Hits(Key<TreeCallbacks>("OnPreprocessSpeedTree")));
-            Assert.Equal(1, Hits(Key<TreeCallbacks>("OnPostprocessTexture3D")));
-            Assert.Equal(notices, Hits(AssetNotice));
+            Assert.Equal(0, Added(Key<TreeCallbacks>("OnPostprocessSpeedTree")));
+            Assert.Equal(0, Added(Key<TreeCallbacks>("OnPreprocessSpeedTree")));
+            Assert.Equal(1, Added(Key<TreeCallbacks>("OnPostprocessTexture3D")));
+            Assert.Equal(0, Added(AssetNotice));
             // With one: the asset is reported, and both SpeedTree callbacks.
             AssetPostprocessing.ReportUnsupported(new[] { typeof(OtherTreeCallbacks) }, new[] { "Assets/Trees/Oak.st" });
-            Assert.Equal(notices + 1, Hits(AssetNotice));
-            Assert.Equal(1, Hits(Key<OtherTreeCallbacks>("OnPostprocessSpeedTree")));
-            Assert.Equal(1, Hits(Key<OtherTreeCallbacks>("OnPreprocessSpeedTree")));
+            Assert.Equal(1, Added(AssetNotice));
+            Assert.Equal(1, Added(Key<OtherTreeCallbacks>("OnPostprocessSpeedTree")));
+            Assert.Equal(1, Added(Key<OtherTreeCallbacks>("OnPreprocessSpeedTree")));
         }
     }
 }
