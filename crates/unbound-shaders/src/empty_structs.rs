@@ -2,9 +2,12 @@
 //! for a graph without properties). FXC takes them, and a zero cast of a struct holding one
 //! (`(MotionVectorPassOutput)0`, the render pipeline's motion vector pass of a Visual Effect
 //! Graph output) zeroes the other members; glslang rejects such a cast ("wrong number of
-//! structure members"), so the pass did not compile. Each such struct gets one member of its
-//! own: nothing reads it, and a struct without members can be neither a buffer's element nor
-//! a stage's input or output, so no layout changes.
+//! structure members"), so the pass did not compile. In a program compiled through the
+//! rewrites (one that does not compile as it is, or one sent there at once: `fxc_compatible`),
+//! each such struct gets one member of its own, which nothing reads. Not handled: an empty
+//! struct inside a cbuffer or as a buffer's element (the filler moves the members after it,
+//! which a writer of the buffer's bytes would not expect), or as a stage's input or output
+//! (such a program did not compile before and still does not).
 
 /// The member given to a struct declared without one.
 const FILLER: &str = "uint unbound_empty_struct_filler;";
