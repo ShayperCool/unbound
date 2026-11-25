@@ -333,15 +333,15 @@ namespace UnityEditor
             foreach (var component in targetObject.GetComponents<Component>())
             {
                 // The Transform's bindings are listed above; a RectTransform's come from the table.
-                if (component == null || component.GetType() == typeof(Transform)) continue;
+                if (component == null || (Unbound.Runtime.Compat.AnimatableBindingsMeasured ? component.GetType() == typeof(Transform) : component is Transform)) continue;
                 var type = component.GetType();
                 if (Unbound.Runtime.Compat.AnimatableBindingsMeasured && type.FullName != null && s_EngineBindings.TryGetValue(type.FullName, out var engine))
                 {
                     // An engine component: the Editor's bindings of its type, measured on a fresh
                     // component. Bindings that depend on its contents are not listed yet: material
-                    // properties, a skinned mesh's blend shapes, constraint sources; material slots
-                    // follow the renderer's material count.
-                    if (engine.Materials || component is Renderer { sharedMaterial: not null })
+                    // properties, a skinned mesh's blend shapes, constraint sources, and material slots
+                    // other than the fresh component's.
+                    if (engine.Materials || component is Renderer withMaterials && Array.Exists(withMaterials.sharedMaterials, m => m != null))
                         Unbound.Runtime.Stubs.Ignored("AnimationUtility.GetAnimatableBindings", "lists no material property bindings of a renderer's materials");
                     if (component is SkinnedMeshRenderer { sharedMesh: { blendShapeCount: > 0 } })
                         Unbound.Runtime.Stubs.Ignored("AnimationUtility.GetAnimatableBindings", "lists no blend shape bindings");
@@ -354,9 +354,8 @@ namespace UnityEditor
                         list.Add(EditorCurveBinding.PPtrCurve(path, type, name));
                         if (name.StartsWith("m_Materials.Array.data[", StringComparison.Ordinal)) slots++;
                     }
-                    if (slots > 0 && component is Renderer renderer)
-                        for (int i = slots; i < renderer.sharedMaterials.Length; i++)
-                            list.Add(EditorCurveBinding.PPtrCurve(path, type, "m_Materials.Array.data[" + i + "]"));
+                    if (slots > 0 && component is Renderer renderer && renderer.sharedMaterials.Length != slots)
+                        Unbound.Runtime.Stubs.Ignored("AnimationUtility.GetAnimatableBindings", "lists the material slots of a fresh renderer only (other material counts are unmeasured)");
                     continue;
                 }
                 if (component is not MonoBehaviour)

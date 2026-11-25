@@ -1208,7 +1208,8 @@ namespace Unbound.Runtime
             if (offeredOnly && Unbound.Runtime.Compat.AnimatableBindingsMeasured && component is not MonoBehaviour && component is not Animator
                 && !attribute.Contains("Array.", StringComparison.Ordinal)
                 && UnityEditor.AnimationUtility.OffersEngineFloat(component.GetType(), attribute) == false
-                && FieldChain(component.GetType(), attribute, false) != null)
+                && FieldChain(component.GetType(), attribute, false) is { } offeredChain
+                && !typeof(Object).IsAssignableFrom(offeredChain[offeredChain.Length - 1].FieldType))
                 return spec;
             // Scripts (and engine objects whose fields carry the serialized names): by reflection.
             var chain = FieldChain(component.GetType(), attribute, component is MonoBehaviour);
