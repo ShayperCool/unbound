@@ -206,6 +206,7 @@ mod tests {
 
     fn sun(forward: [f32; 3]) -> Light {
         Light {
+            cookie: None,
             kind: Kind::Directional,
             mode: Mode::Baked,
             color: [2.0, 1.0, 0.5],

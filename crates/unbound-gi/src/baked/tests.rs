@@ -810,6 +810,7 @@ mod lighting {
 
     fn light(kind: Kind) -> Light {
         Light {
+            cookie: None,
             kind,
             mode: Mode::Baked,
             color: [2.0, 1.0, 0.5],
@@ -1018,7 +1019,7 @@ mod lighting {
             direct::direct(
                 &g,
                 &receivers,
-                &[sun],
+                std::slice::from_ref(&sun),
                 &[channel],
                 mixed,
                 &roof,
@@ -1090,7 +1091,7 @@ mod lighting {
             [[0.0, -2.0, 1.0], [0.5, 4.0, 1.0], [0.0, 4.0, 1.0]],
         ]);
         let lit = |receives: bool, casts: bool, mode: Mode, mixed: MixedMode, scene: &Scene| {
-            let mut sun = sun;
+            let mut sun = sun.clone();
             sun.casts_shadows = casts;
             sun.mode = mode;
             let receivers = [Receiver {
@@ -1098,7 +1099,18 @@ mod lighting {
                 receives_shadows: receives,
                 viewer: crate::baked::trace::Viewer::Lod0,
             }];
-            direct::direct(&g, &receivers, &[sun], &[], mixed, scene, 0.0001, 32, None).irradiance
+            direct::direct(
+                &g,
+                &receivers,
+                std::slice::from_ref(&sun),
+                &[],
+                mixed,
+                scene,
+                0.0001,
+                32,
+                None,
+            )
+            .irradiance
         };
         let open = lit(
             true,
@@ -1165,7 +1177,7 @@ mod lighting {
         let above = direct::direct(
             &g,
             &receivers,
-            &[sun],
+            std::slice::from_ref(&sun),
             &[],
             MixedMode::IndirectOnly,
             &film,
@@ -1177,7 +1189,7 @@ mod lighting {
         let below = direct::direct(
             &g,
             &receivers,
-            &[sun],
+            std::slice::from_ref(&sun),
             &[],
             MixedMode::IndirectOnly,
             &film,
@@ -1202,7 +1214,7 @@ mod lighting {
         let values = direct::direct(
             &partial,
             &receivers,
-            &[sun],
+            std::slice::from_ref(&sun),
             &[],
             MixedMode::IndirectOnly,
             &Scene::new([]),
@@ -1239,7 +1251,7 @@ mod lighting {
         let lit = direct::direct(
             &g,
             &receivers,
-            &[along_x, light(Kind::Directional)],
+            &[along_x.clone(), light(Kind::Directional)],
             &[],
             MixedMode::IndirectOnly,
             &Scene::new([]),
@@ -1254,7 +1266,7 @@ mod lighting {
         let shadowed = direct::direct(
             &g,
             &receivers,
-            &[along_x],
+            std::slice::from_ref(&along_x),
             &[],
             MixedMode::IndirectOnly,
             &wall,
@@ -1483,6 +1495,7 @@ mod bounced {
 
     fn sun_from_below() -> Light {
         Light {
+            cookie: None,
             kind: Kind::Directional,
             mode: Mode::Baked,
             color: [9.0, 9.0, 9.0],
@@ -2035,7 +2048,7 @@ mod bounced {
             crate::baked::direct::direct(
                 &g,
                 &receivers,
-                &[sun],
+                std::slice::from_ref(&sun),
                 &[],
                 crate::baked::direct::MixedMode::IndirectOnly,
                 casters,
@@ -2125,6 +2138,7 @@ mod bounced {
         ];
         let floor_scene = Scene::new(floor_tris);
         let sun = Light {
+            cookie: None,
             kind: Kind::Directional,
             mode: Mode::Baked,
             color: [2.0, 2.0, 2.0],
@@ -2140,13 +2154,19 @@ mod bounced {
             size: [0.0; 2],
         };
         let grid = Grid::new(
-            &[sun],
+            std::slice::from_ref(&sun),
             Bounds {
                 min: [-5.0, -1.0, -5.0],
                 max: [5.0, 1.0, 5.0],
             },
         );
-        let coplanar_direct = probes::direct(&[[0.0, 0.0, 0.0]], &[sun], &grid, &floor_scene, None);
+        let coplanar_direct = probes::direct(
+            &[[0.0, 0.0, 0.0]],
+            std::slice::from_ref(&sun),
+            &grid,
+            &floor_scene,
+            None,
+        );
         assert_eq!(
             coplanar_direct[0],
             probes::Coefficients::default(),
@@ -2172,7 +2192,7 @@ mod bounced {
             casters: &floor_scene,
             surfaces: &surfaces,
             materials: &materials,
-            lights: &[sun],
+            lights: std::slice::from_ref(&sun),
             grid: &grid,
             sky: None,
         };
@@ -2191,6 +2211,7 @@ mod bounced {
 
         let tables = Tables::new();
         let base_spot = Light {
+            cookie: None,
             kind: Kind::Spot,
             mode: Mode::Mixed,
             color: [1.0; 3],
@@ -2210,21 +2231,21 @@ mod bounced {
                 .arriving_around(&tables, base_spot.color, [0.0, 0.0, 0.0])
                 .is_some()
         );
-        let mut nan_range = base_spot;
+        let mut nan_range = base_spot.clone();
         nan_range.range = f32::NAN;
         assert!(
             nan_range
                 .arriving_around(&tables, nan_range.color, [0.0, 0.0, 0.0])
                 .is_none()
         );
-        let mut nan_cone = base_spot;
+        let mut nan_cone = base_spot.clone();
         nan_cone.cone_angle = f32::NAN;
         assert!(
             nan_cone
                 .arriving_around(&tables, nan_cone.color, [0.0, 0.0, 0.0])
                 .is_none()
         );
-        let mut nan_forward = base_spot;
+        let mut nan_forward = base_spot.clone();
         nan_forward.forward = [f32::NAN, -1.0, 0.0];
         assert!(
             nan_forward

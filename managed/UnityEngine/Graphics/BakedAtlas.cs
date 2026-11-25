@@ -647,8 +647,7 @@ namespace UnityEngine
                     warn("light-rp-mixed:" + path + fileId, $"{path}: '{light.name}' is a Mixed light with a render pipeline asset, which Unbound's bake (Lightmapping.Bake) has not measured yet.");
                     if (skipUnmeasured) continue;
                 }
-                if (light.cookie != null)
-                    warn("light-cookie:" + path + fileId, $"{path}: '{light.name}' has a cookie, which Unbound's bake (Lightmapping.Bake) does not apply yet.");
+                object cookie = light.cookie != null ? Cookie(light, kind, path, fileId, warn) : null;
                 // An area light is baked (the Editor offers no other mode); a mixed one is not
                 // measured.
                 if (kind >= 3 && light.lightmapBakeType != LightmapBakeType.Baked)
@@ -686,10 +685,69 @@ namespace UnityEngine
                     castsShadows = light.shadows != LightShadows.None,
                     shadowSize = kind < 3 && light.shadows == LightShadows.Soft ? shadowSize : 0f,
                     size = new[] { light.areaSize.x, light.areaSize.y },
+                    cookie,
                 };
                 lights.Add(new ExtractedLight(json, kind, mode, position, t.forward, light.range, light.spotAngle));
             }
             return lights;
+        }
+
+        /// <summary>A light's cookie as the bake takes it (tests/projects/bakedbuffers Cookie*): its
+        /// alpha, one byte a texel, rows from the bottom; a point light's cube cookie face after
+        /// face; a directional light's Cookie Size; whether it repeats (its wrap mode). Null,
+        /// said, where the bake does not apply it here: a cookie of an area light, a texture of
+        /// another kind than the light takes (a 2D cookie for a spot or directional light, a cube
+        /// for a point light), wrap modes that differ along its two axes.</summary>
+        static object Cookie(Light light, int kind, string path, long fileId, Action<string, string> warn)
+        {
+            byte[] alpha;
+            int width, height, slices;
+            bool repeat;
+            if ((kind == 0 || kind == 2) && light.cookie is Texture2D flat)
+            {
+                (width, height, slices) = (flat.width, flat.height, 1);
+                var texels = flat.EnginePixels32();
+                alpha = new byte[texels.Length];
+                for (int i = 0; i < texels.Length; i++) alpha[i] = texels[i].a;
+            }
+            else if (kind == 1 && light.cookie is Cubemap cube)
+            {
+                (width, height, slices) = (cube.width, cube.height, 6);
+                var faces = cube.EngineFaces();
+                if (faces == null)
+                {
+                    warn("light-cookie:" + path + fileId, $"{path}: '{light.name}' has a cube cookie whose texels Unbound cannot read, which its bake (Lightmapping.Bake) does not apply.");
+                    return null;
+                }
+                alpha = new byte[width * height * 6];
+                for (int face = 0; face < 6; face++)
+                    for (int i = 0; i < width * height; i++)
+                        alpha[face * width * height + i] = faces[face][i].a;
+            }
+            else
+            {
+                warn("light-cookie:" + path + fileId, $"{path}: '{light.name}' has a cookie ({light.cookie.GetType().Name} on a {light.type} light), which Unbound's bake (Lightmapping.Bake) does not apply.");
+                return null;
+            }
+            var texture = light.cookie;
+            if (texture.wrapModeU != texture.wrapModeV)
+            {
+                warn("light-cookie:" + path + fileId, $"{path}: '{light.name}' has a cookie whose wrap modes differ along its two axes, which Unbound's bake (Lightmapping.Bake) has not measured: it is not applied.");
+                return null;
+            }
+            repeat = texture.wrapModeU == TextureWrapMode.Repeat;
+            // What is not measured is said, the cookie applied.
+            if (texture.mipmapCount > 1 || texture.filterMode != FilterMode.Bilinear || width > 16 || height > 16)
+                warn("light-cookie-unmeasured:" + path + fileId, $"{path}: '{light.name}' has a cookie with mipmaps, a filter other than Bilinear or more than 16 texels a side, which Unbound's bake (Lightmapping.Bake) has not measured: its first level is applied, sampled bilinearly.");
+            return new
+            {
+                width,
+                height,
+                slices,
+                repeat,
+                alpha = Convert.ToBase64String(alpha),
+                size = light.cookieSize,
+            };
         }
 
         /// <summary>Whether the bake samples a light sample by sample: an area light, or one with

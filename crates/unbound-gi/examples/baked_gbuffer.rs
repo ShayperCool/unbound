@@ -143,6 +143,7 @@ fn main() {
             };
             let color = r.floats();
             Light {
+                cookie: None,
                 kind,
                 mode,
                 color,

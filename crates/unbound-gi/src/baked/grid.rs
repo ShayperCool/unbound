@@ -348,6 +348,7 @@ mod tests {
 
     fn point(position: [f32; 3], range: f32, color: [f32; 3]) -> Light {
         Light {
+            cookie: None,
             kind: Kind::Point,
             mode: Mode::Baked,
             color,

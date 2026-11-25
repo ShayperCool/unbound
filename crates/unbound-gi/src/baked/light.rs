@@ -28,8 +28,47 @@ pub enum Mode {
     Baked,
 }
 
+/// A light's cookie as the bake takes it: its alpha, one byte a texel, rows from its bottom,
+/// slice after slice (a point light's six cube faces: +x, -x, +y, -y, +z, -z).
+#[derive(Debug)]
+pub struct Cookie {
+    pub width: usize,
+    pub height: usize,
+    pub slices: usize,
+    /// Whether it repeats (its texture's wrap mode; a directional light's cookie tiles).
+    pub repeat: bool,
+    pub alpha: Vec<u8>,
+    /// A directional light's Cookie Size: the world width of one tile.
+    pub size: f32,
+}
+
+impl Cookie {
+    /// The cookie at `uv` of a slice, between its four nearest texels (bilinear), the
+    /// coordinates kept half a texel inside its edges.
+    pub fn sample(&self, slice: usize, uv: [f32; 2]) -> f32 {
+        let (w, h) = (self.width as f32, self.height as f32);
+        let u = uv[0].clamp(0.5 / w, 1.0 - 0.5 / w);
+        let v = uv[1].clamp(0.5 / h, 1.0 - 0.5 / h);
+        let (x, y) = (u * w - 0.5, v * h - 0.5);
+        let (x0, y0) = (x.floor(), y.floor());
+        let (fx, fy) = (x - x0, y - y0);
+        let (x0, y0) = (x0.max(0.0) as usize, y0.max(0.0) as usize);
+        let (x1, y1) = ((x0 + 1).min(self.width - 1), (y0 + 1).min(self.height - 1));
+        let texel = |i: usize, j: usize| {
+            self.alpha[(slice * self.height + j) * self.width + i] as f32 / 255.0
+        };
+        let low = texel(x0, y0) + (texel(x1, y0) - texel(x0, y0)) * fx;
+        let high = texel(x0, y1) + (texel(x1, y1) - texel(x0, y1)) * fx;
+        low + (high - low) * fy
+    }
+}
+
+/// A directional light's cookie coordinates per unit of the light's plane, of its Cookie
+/// Size's reciprocal (tests/projects/bakedbuffers `CookieSun`).
+const DIRECTIONAL_COOKIE_SCALE: f32 = 2.0;
+
 /// A light of the bake.
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Debug)]
 pub struct Light {
     pub kind: Kind,
     pub mode: Mode,
@@ -53,6 +92,8 @@ pub struct Light {
     pub up: [f32; 3],
     /// An area light's width and height (a disc's radius first).
     pub size: [f32; 2],
+    /// Its cookie, if the bake applies one.
+    pub cookie: Option<std::sync::Arc<Cookie>>,
 }
 
 /// The samples of the distance falloff table.
@@ -412,6 +453,75 @@ impl Light {
         })
     }
 
+    /// A directional light's cookie at a point: the point's place on the light's plane through
+    /// its position (right and up axes) over the Cookie Size, tiled where it repeats, nothing
+    /// cut off outside one tile where it does not.
+    fn directional_cookie(&self, cookie: &Cookie, position: [f32; 3]) -> f32 {
+        let toward = self.forward.map(|v| -v);
+        let offset: [f32; 3] = std::array::from_fn(|k| position[k] - self.position[k]);
+        let along = dot(toward, offset);
+        let projected: [f32; 3] = std::array::from_fn(|k| offset[k] + along * toward[k]);
+        let across = cross(toward, self.up);
+        let scale = DIRECTIONAL_COOKIE_SCALE / cookie.size;
+        let mut uv = [
+            dot(projected, across.map(|v| v * scale)) * 0.5 + 0.5,
+            dot(projected, self.up.map(|v| v * scale)) * 0.5 + 0.5,
+        ];
+        if cookie.repeat {
+            uv = uv.map(|v| v - v.floor());
+        }
+        if uv.iter().all(|v| (0.0..=1.0).contains(v)) {
+            cookie.sample(0, uv)
+        } else {
+            1.0
+        }
+    }
+
+    /// A spot light's cookie along `direction` (toward the light): its square spans the cone
+    /// (the tangent of half its angle); none outside the square or behind the light.
+    fn spot_cookie(
+        &self,
+        cookie: &Cookie,
+        direction: [f32; 3],
+        along: f32,
+        cone: f32,
+    ) -> Option<f32> {
+        let toward = self.forward.map(|v| -v);
+        let projected: [f32; 3] = std::array::from_fn(|k| toward[k] - direction[k] / along);
+        let across = cross(toward, self.up);
+        let scale = cone / (1.0 - cone * cone).sqrt();
+        let uv = [
+            dot(projected, across.map(|v| v * scale)),
+            dot(projected, self.up.map(|v| v * scale)),
+        ];
+        if uv[0].abs() > 1.0 || uv[1].abs() > 1.0 || !(along >= 0.0) {
+            return None;
+        }
+        Some(cookie.sample(0, uv.map(|v| v * 0.5 + 0.5)))
+    }
+
+    /// A point light's cube cookie along `outward` (from the light): the face its largest
+    /// component in the light's frame (right, up, forward) picks.
+    fn point_cookie(&self, cookie: &Cookie, outward: [f32; 3]) -> f32 {
+        let d = [
+            dot(outward, cross(self.up, self.forward)),
+            dot(outward, self.up),
+            dot(outward, self.forward),
+        ];
+        let a = d.map(f32::abs);
+        let (slice, uv) = if a[0] >= a[1] && a[0] >= a[2] {
+            (
+                if d[0] >= 0.0 { 0 } else { 1 },
+                [-d[2] / d[0], -d[1] / a[0]],
+            )
+        } else if a[1] >= a[2] {
+            (if d[1] >= 0.0 { 2 } else { 3 }, [d[0] / a[1], d[2] / d[1]])
+        } else {
+            (if d[2] >= 0.0 { 4 } else { 5 }, [d[0] / d[2], -d[1] / a[2]])
+        };
+        cookie.sample(slice, uv.map(|v| v * 0.5 + 0.5))
+    }
+
     fn arriving_facing(
         &self,
         tables: &Tables,
@@ -427,8 +537,15 @@ impl Light {
             let direction = self.forward.map(|v| -v);
             let facing = normal.map_or(1.0, |n| dot(n, direction));
             // (Not a number is not above zero.)
-            return (facing > 0.0).then(|| Arriving {
-                color: color.map(|c| c * facing),
+            if !(facing > 0.0) {
+                return None;
+            }
+            let through = self
+                .cookie
+                .as_ref()
+                .map_or(1.0, |c| self.directional_cookie(c, position));
+            return Some(Arriving {
+                color: color.map(|c| c * facing * through),
                 direction,
                 distance: FAR,
             });
@@ -459,10 +576,17 @@ impl Light {
         if self.kind == Kind::Spot {
             let cone = (self.cone_angle * 0.5).cos();
             let along = dot(direction, self.forward.map(|v| -v));
-            if !(along >= cone) {
-                return None;
+            if let Some(cookie) = &self.cookie {
+                // A cookie takes the cone's falloff's place: its square spans the cone.
+                scale *= self.spot_cookie(cookie, direction, along, cone)?;
+            } else {
+                if !(along >= cone) {
+                    return None;
+                }
+                scale *= tables.cone((along - cone) / (1.0 - cone));
             }
-            scale *= tables.cone((along - cone) / (1.0 - cone));
+        } else if let Some(cookie) = &self.cookie {
+            scale *= self.point_cookie(cookie, to_light.map(|v| -v));
         }
         Some(Arriving {
             color: color.map(|c| c * scale),
@@ -478,6 +602,7 @@ mod tests {
 
     fn light(kind: Kind) -> Light {
         Light {
+            cookie: None,
             kind,
             mode: Mode::Baked,
             color: [1.0; 3],

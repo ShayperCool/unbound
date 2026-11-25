@@ -284,6 +284,7 @@ mod tests {
 
     fn light(kind: Kind, position: [f32; 3], forward: [f32; 3], range: f32) -> Light {
         Light {
+            cookie: None,
             kind,
             mode: Mode::Mixed,
             color: [1.0; 3],
@@ -341,7 +342,7 @@ mod tests {
         let mut baked = point(0.0);
         baked.mode = Mode::Baked;
         assert_eq!(
-            channels(&[quiet, baked, point(0.0)]),
+            channels(&[quiet.clone(), baked.clone(), point(0.0)]),
             vec![None, None, Some(0)]
         );
         assert!(!falls_back(&quiet, None) && !falls_back(&baked, None));

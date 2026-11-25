@@ -15,7 +15,7 @@ use unbound_gi::baked::directional;
 use unbound_gi::baked::grid::{Bounds, Grid};
 use unbound_gi::baked::images;
 use unbound_gi::baked::indirect::{self, Material, Surface, Texture, World};
-use unbound_gi::baked::light::{Kind, Light, Mode};
+use unbound_gi::baked::light::{Cookie, Kind, Light, Mode};
 use unbound_gi::baked::light_probes;
 use unbound_gi::baked::probes;
 use unbound_gi::baked::sampling::{self, Samples};
@@ -378,6 +378,24 @@ pub(crate) struct LightData {
     /// An area light's width and height (a disc's radius first).
     #[serde(default)]
     pub(crate) size: [f32; 2],
+    /// Its cookie, where the bake applies one.
+    #[serde(default)]
+    pub(crate) cookie: Option<CookieData>,
+}
+
+/// A light's cookie: its alpha, one byte a texel, rows from the bottom, slice after slice (a
+/// cube cookie's six faces), base64.
+#[derive(serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub(crate) struct CookieData {
+    width: usize,
+    height: usize,
+    slices: usize,
+    repeat: bool,
+    alpha: String,
+    /// A directional light's Cookie Size.
+    #[serde(default)]
+    size: f32,
 }
 
 impl LightData {
@@ -423,6 +441,41 @@ impl LightData {
                 2.0 * (y * z + w * x),
             ],
             size: self.size,
+            cookie: self
+                .cookie
+                .as_ref()
+                .map(|c| -> Result<std::sync::Arc<Cookie>> {
+                    let alpha = base64::engine::general_purpose::STANDARD
+                        .decode(&c.alpha)
+                        .with_context(|| format!("'{}': its cookie", self.name))?;
+                    anyhow::ensure!(
+                        c.width > 0
+                            && c.height > 0
+                            && alpha.len() == c.width * c.height * c.slices.max(1),
+                        "'{}': a cookie of {}x{}x{} with {} texels",
+                        self.name,
+                        c.width,
+                        c.height,
+                        c.slices,
+                        alpha.len()
+                    );
+                    anyhow::ensure!(
+                        (self.kind == 1) == (c.slices == 6) && (self.kind == 1 || c.slices == 1),
+                        "'{}': a light of kind {} with a cookie of {} slices",
+                        self.name,
+                        self.kind,
+                        c.slices
+                    );
+                    Ok(std::sync::Arc::new(Cookie {
+                        width: c.width,
+                        height: c.height,
+                        slices: c.slices,
+                        repeat: c.repeat,
+                        alpha,
+                        size: c.size,
+                    }))
+                })
+                .transpose()?,
         })
     }
 }
@@ -1611,10 +1664,11 @@ fn bake(request: BakeRequest, buffers: Option<&Path>) -> Result<Json> {
                     "position": light.position,
                     "orientation": data.rotation,
                     // As a bake input's lights are described (the probe's lights.json): no range
-                    // and a cone of 1 for a directional light, no cone for a point light.
+                    // and a cone of 1 for a directional light (its Cookie Size where it has a
+                    // cookie: `CookieSun`), no cone for a point light.
                     "range": if light.kind == Kind::Directional { 0.0 } else { light.range },
                     "coneAngle": match light.kind {
-                        Kind::Directional => 1.0,
+                        Kind::Directional => light.cookie.as_ref().map_or(1.0, |c| c.size),
                         Kind::Point | Kind::Rectangle | Kind::Disc => 0.0,
                         Kind::Spot => light.cone_angle,
                     },

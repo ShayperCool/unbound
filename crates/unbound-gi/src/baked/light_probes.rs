@@ -594,6 +594,7 @@ mod tests {
     fn spot(mode: Mode) -> Light {
         // At the origin, shining along -y, 10 m range, a 60° cone.
         Light {
+            cookie: None,
             kind: Kind::Spot,
             mode,
             color: [1.0; 3],
