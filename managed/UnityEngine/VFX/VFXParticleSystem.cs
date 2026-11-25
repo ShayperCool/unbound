@@ -442,8 +442,10 @@ namespace Unbound.Runtime
             }
         }
 
-        /// <summary>Whether every kernel of the system compiles (checked once, before its
-        /// first step): a system with one that does not is stopped, and says so. Without a
+        /// <summary>Whether the kernels of the system compile (checked once, before its first
+        /// step): a system with an initialize, update or strip kernel that does not is stopped,
+        /// and says so; a per-camera kernel or a global sort's keys kernel that does not is
+        /// only left out, and says so. Without a
         /// renderer (a headless run, a test) no kernel runs, nothing is read back and nothing
         /// is said: the system goes on with what it counts itself. Whether there is a renderer
         /// is asked then too, and that answer is final for the system.</summary>
@@ -457,7 +459,14 @@ namespace Unbound.Runtime
             if (m_Initialize != null) m_KernelsUsable = m_Initialize.Usable();
             m_KernelsUsable &= StripKernelUsable();
             foreach (var update in m_Updates) m_KernelsUsable &= update.Usable();
-            foreach (var kernel in m_PerCamera) m_KernelsUsable &= kernel.Usable();
+            // A per-camera kernel (an output's update made for each camera) that does not
+            // compile leaves the system simulating, and is not run: what it makes for each
+            // camera is not made (Unity 6000.0.71f1: the Editor says the kernel does not
+            // compile, counts the particles and draws the output, without motion; vfxlit
+            // `moving lines`, whose package kernel of a line output's motion vectors reads a
+            // value of the output it does not declare). Measured for that kernel alone: the
+            // other kernels of a system still stop it.
+            foreach (var kernel in m_PerCamera) kernel.Usable("it is not run: what it makes for each camera is not made");
             // A global sort whose keys kernel does not compile leaves the system simulating: the
             // sort, given no keys, leaves its list empty (Unity 6000.0.71f1: the Editor says the
             // kernel does not compile, counts the particles and draws none of the outputs that
