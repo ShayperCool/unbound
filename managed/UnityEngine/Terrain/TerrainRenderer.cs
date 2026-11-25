@@ -314,7 +314,9 @@ namespace UnityEngine
             var materials = new Material[passes];
             for (int p = 0; p < passes; p++)
             {
-                var material = p == 0 ? new Material(template) : new Material(addShader);
+                // Every value of the template, the names set from script that its shader lacks too
+                // (as CopyPropertiesFromMaterial gives the add passes; unlike new Material(source)).
+                var material = p == 0 ? new Material(template, measureProfilerAllocation: true) : new Material(addShader);
                 if (p > 0) material.CopyPropertiesFromMaterial(template);
                 material.name = p == 0 ? template.name + " (Terrain)" : addShader.name + " (Terrain)";
                 material.hideFlags = HideFlags.HideAndDontSave;
