@@ -109,9 +109,10 @@ def seed_stale_build_scene(project):
                                            b'    guid: e0fd96c04ed5f4230bfb1fc1aa060f13\n'))
 
 
-# A TextureImporter section as the Editor writes it (DefaultTexturePlatform and Android listed),
-# without ignorePngGamma, swizzle, streamingMipmaps and the Standalone platform (as a .meta of
-# an older release may lack them).
+# A TextureImporter section as the Editor writes it, DefaultTexturePlatform, Android and iOS listed
+# (the modules the recording and the gating installations may have: only a missing Standalone is
+# added by either), without ignorePngGamma, swizzle, streamingMipmaps and the Standalone platform
+# (as a .meta of an older release may lack them).
 PARTIAL_TEXTURE_META = '''fileFormatVersion: 2
 guid: GUIDHERE
 TextureImporter:
@@ -193,6 +194,19 @@ TextureImporter:
     forceMaximumCompressionQuality_BC6H_BC7: 0
   - serializedVersion: 4
     buildTarget: Android
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: iOS
     maxTextureSize: 2048
     resizeAlgorithm: 0
     textureFormat: -1
