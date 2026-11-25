@@ -1073,6 +1073,18 @@ namespace Unbound.Runtime
     {
         const int Width = UnityYamlText.Width;
 
+        /// <summary>A scalar inside a flow mapping: one holding a flow indicator (<c>,[]{}</c>)
+        /// single-quoted (a generic class name, matches the Unity 6000.0.71f1 Editor,
+        /// tests/projects/scenesave generic-refs).</summary>
+        internal static string FlowText(string s)
+        {
+            if (!string.IsNullOrEmpty(s) && s.IndexOfAny(s_FlowIndicators) >= 0 && Text(s, 0, 0, false) is var text && text == s)
+                return SingleQuoted(s, 0, 0, false);
+            return Text(s, 0, 0, false);
+        }
+
+        static readonly char[] s_FlowIndicators = { ',', '[', ']', '{', '}' };
+
         internal static string Text(string s, int column, int indent, bool breaks)
         {
             if (string.IsNullOrEmpty(s)) return "";
@@ -1215,12 +1227,64 @@ namespace Unbound.Runtime
         /// namespace and its assembly's name.</summary>
         internal static string TypeText(Type type)
         {
-            if (type.IsGenericType)
-                throw new NotSupportedException($"Unbound does not write [SerializeReference] objects of generic types yet ({type.FullName}).");
             var name = type.Name;
+            if (type.IsGenericType)
+            {
+                // A generic class: its name with its type arguments, each by full name and assembly
+                // (matches the Unity 6000.0.71f1 Editor, tests/projects/scenesave generic-refs).
+                if (type.DeclaringType != null || type.ContainsGenericParameters)
+                    throw new NotSupportedException($"Unbound does not write [SerializeReference] objects of nested or open generic types yet ({type.FullName}).");
+                name += Arguments(type);
+            }
             for (var outer = type.DeclaringType; outer != null; outer = outer.DeclaringType) name = outer.Name + "/" + name;
             var ns = type.Namespace ?? "";
-            return $"{{class: {UnityYamlWriter.Scalar(name)}, ns: {UnityYamlWriter.Scalar(ns)}, asm: {UnityYamlWriter.Scalar(type.Assembly.GetName().Name)}}}";
+            return $"{{class: {YamlScalars.FlowText(name)}, ns: {YamlScalars.FlowText(ns)}, asm: {YamlScalars.FlowText(type.Assembly.GetName().Name)}}}";
+        }
+
+        /// <summary>A generic type's arguments as Unity writes them: <c>[[Full.Name, Assembly],...]</c>,
+        /// a generic argument with its own arguments.</summary>
+        static string Arguments(Type type)
+        {
+            var sb = new StringBuilder("[");
+            var arguments = type.GetGenericArguments();
+            for (int i = 0; i < arguments.Length; i++)
+            {
+                if (i > 0) sb.Append(',');
+                var argument = arguments[i];
+                sb.Append('[').Append(FullName(argument)).Append(", ").Append(AssemblyName(argument)).Append(']');
+            }
+            return sb.Append(']').ToString();
+        }
+
+        static string FullName(Type type)
+        {
+            if (!type.IsGenericType) return type.FullName;
+            var definition = type.GetGenericTypeDefinition().FullName;
+            return definition + Arguments(type);
+        }
+
+        /// <summary>The class library types Mono keeps in mscorlib, as .NET's core library holds
+        /// them too: the primitive types, string and List (the Editor writes mscorlib for them,
+        /// tests/projects/scenesave generic-refs). .NET's core library holds others Mono keeps
+        /// elsewhere (HashSet in System.Core, for one): those are not written.</summary>
+        static readonly HashSet<string> s_MonoCoreLibrary = new HashSet<string>(StringComparer.Ordinal)
+        {
+            "System.Boolean", "System.Byte", "System.SByte", "System.Int16", "System.UInt16", "System.Int32", "System.UInt32",
+            "System.Int64", "System.UInt64", "System.Single", "System.Double", "System.Char", "System.String",
+            "System.Collections.Generic.List`1",
+        };
+
+        /// <summary>The assembly the Editor's Mono names a type argument's; a class library type
+        /// whose Mono assembly is not known throws.</summary>
+        static string AssemblyName(Type type)
+        {
+            var assembly = type.Assembly;
+            var name = assembly.GetName().Name;
+            bool library = assembly == typeof(object).Assembly || name.StartsWith("System.", StringComparison.Ordinal) || name == "System" || name == "netstandard";
+            if (!library) return name;
+            var key = type.IsGenericType ? type.GetGenericTypeDefinition().FullName : type.FullName;
+            if (assembly == typeof(object).Assembly && s_MonoCoreLibrary.Contains(key)) return "mscorlib";
+            throw new NotSupportedException($"Unbound does not write [SerializeReference] type arguments of the class library's {key} yet (its assembly under the Editor's Mono is not known).");
         }
     }
 }
