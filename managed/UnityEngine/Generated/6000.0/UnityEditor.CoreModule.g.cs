@@ -32436,12 +32436,6 @@ namespace UnityEditor.MPE
         public global::UnityEditor.MPE.ChannelClient client { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.MPE.ChannelClientScope.client"); return default; } }
     }
     [global::Unbound.Stub]
-    public unsafe partial struct ChannelScope : global::System.IDisposable
-    {
-        [global::Unbound.Stub] public ChannelScope(string channelName, global::System.Action<int, byte[]> handler, bool closeChannelOnExit = true) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.MPE.ChannelScope.ctor"); }
-        [global::Unbound.Stub] public void Dispose() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.MPE.ChannelScope.Dispose"); }
-    }
-    [global::Unbound.Stub]
     internal unsafe static partial class DataService
     {
         [global::Unbound.Stub] internal static bool s_ImportRefreshEnabled;

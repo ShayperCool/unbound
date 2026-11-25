@@ -908,6 +908,7 @@
 {"key":"UnityEditor.MPE.ChannelInfo/@factory","status":"value","value":"struct"}
 {"key":"UnityEditor.MPE.ChannelInfo/Property/UnityEditor.MPE.ChannelInfo/id","status":"value","value":"0"}
 {"key":"UnityEditor.MPE.ChannelInfo/Property/UnityEditor.MPE.ChannelInfo/name","status":"value","value":"null"}
+{"key":"UnityEditor.MPE.ChannelScope/@factory","status":"value","value":"struct"}
 {"key":"UnityEditor.MPE.ChannelService/@factory","status":"excluded","value":"static"}
 {"key":"UnityEditor.MPE.ProcessService/@factory","status":"value","value":"class"}
 {"key":"UnityEditor.MainView/@factory","status":"value","value":"scriptable"}

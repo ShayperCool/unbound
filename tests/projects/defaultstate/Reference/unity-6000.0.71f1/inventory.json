@@ -1846,6 +1846,12 @@
       "type": "UnityEditor.MPE.ChannelInfo"
     },
     {
+      "category": "struct",
+      "module": "UnityEditor.CoreModule",
+      "status": "candidate",
+      "type": "UnityEditor.MPE.ChannelScope"
+    },
+    {
       "category": "class",
       "module": "UnityEditor.CoreModule",
       "status": "static",

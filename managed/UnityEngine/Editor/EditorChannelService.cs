@@ -82,8 +82,18 @@ namespace UnityEditor.MPE
         static readonly List<string> s_Open = new List<string>();
         static bool s_Running;
 
+        /// <summary>Whether the Editor's answers of this family are measured; otherwise the member
+        /// reports itself not implemented.</summary>
+        static bool Measured(string member)
+        {
+            if (Compat.EditorChannelServiceMeasured) return true;
+            Stubs.NotImplemented("UnityEditor.MPE.ChannelService." + member);
+            return false;
+        }
+
         public static Action GetOrCreateChannel(string channelName, Action<int, byte[]> handler)
         {
+            if (!Measured(nameof(GetOrCreateChannel))) return null;
             if (Internal_GetOrCreateChannel(channelName) == -1)
                 throw new Exception("Cannot create channel: " + channelName);
             return RegisterMessageHandler(channelName, handler);
@@ -91,6 +101,7 @@ namespace UnityEditor.MPE
 
         public static Action RegisterMessageHandler(string channelName, Action<int, byte[]> handler)
         {
+            if (!Measured(nameof(RegisterMessageHandler))) return null;
             var channel = GetChannelFromName(channelName);
             if (ChannelInfo.invalidChannel == channel)
                 throw new Exception("Channel doesn't exists or is not open.");
@@ -134,7 +145,7 @@ namespace UnityEditor.MPE
         }
 
         [Unbound.EditorFaithful("the service's local address (measured: tests/projects/editorchannels mpe.address)")]
-        public static string GetAddress() => "127.0.0.1";
+        public static string GetAddress() => Measured(nameof(GetAddress)) ? "127.0.0.1" : null;
 
         public static int GetPort()
         {
@@ -148,18 +159,22 @@ namespace UnityEditor.MPE
 
         public static void Start()
         {
-            if (s_Running) return;
+            if (!Measured(nameof(Start)) || s_Running) return;
             s_Running = true;
             foreach (var own in s_OwnChannels)
                 if (!s_Open.Contains(own)) s_Open.Add(own);
         }
 
-        public static void Stop() => s_Running = false;
+        public static void Stop()
+        {
+            if (Measured(nameof(Stop))) s_Running = false;
+        }
 
-        public static bool IsRunning() => s_Running;
+        public static bool IsRunning() => Measured(nameof(IsRunning)) && s_Running;
 
         public static ChannelInfo[] GetChannelList()
         {
+            if (!Measured(nameof(GetChannelList))) return Array.Empty<ChannelInfo>();
             var list = new ChannelInfo[s_Open.Count];
             for (int i = 0; i < list.Length; i++) list[i] = ChannelInfo.Of(s_Open[i], ChannelNameToId(s_Open[i]));
             return list;
@@ -184,8 +199,9 @@ namespace UnityEditor.MPE
         [Unbound.EditorFaithful("no client connects to Unbound's channel service, as none does in the Editor's capture (tests/projects/editorchannels mpe.clients)")]
         internal static void SendBinary(int connectionId, byte[] data) { }
 
-        public static int ChannelNameToId(string channelName) =>
-            unchecked((int)XxHash32.Hash(Encoding.UTF8.GetBytes(channelName ?? ""), ChannelIdSeed));
+        public static int ChannelNameToId(string channelName) => Measured(nameof(ChannelNameToId))
+            ? unchecked((int)XxHash32.Hash(Encoding.UTF8.GetBytes(channelName ?? ""), ChannelIdSeed))
+            : 0;
 
         internal static int Internal_GetOrCreateChannel(string channelName)
         {
@@ -195,6 +211,29 @@ namespace UnityEditor.MPE
         }
 
         internal static void Internal_CloseChannel(string channelName) => s_Open.Remove(channelName);
+    }
+
+    /// <summary>Opens a channel with a handler for a scope (Unity's C#).</summary>
+    public partial struct ChannelScope : IDisposable
+    {
+        bool m_CloseChannelOnExit;
+        string m_ChannelName;
+        Action m_Off;
+
+        public ChannelScope(string channelName, Action<int, byte[]> handler, bool closeChannelOnExit = true)
+        {
+            m_CloseChannelOnExit = closeChannelOnExit;
+            m_ChannelName = channelName;
+            m_Off = ChannelService.GetOrCreateChannel(channelName, handler);
+        }
+
+        public void Dispose()
+        {
+            // Null only where the service's answers are unmeasured (no channel was opened).
+            m_Off?.Invoke();
+            if (m_CloseChannelOnExit)
+                ChannelService.CloseChannel(m_ChannelName);
+        }
     }
 }
 
@@ -209,9 +248,24 @@ namespace UnityEditor
         static SystemLanguage s_EditorLanguage = SystemLanguage.English;
         static bool s_EnableEditorLocalization = OperatingSystem.IsMacOS();
 
-        public static SystemLanguage currentEditorLanguage { get => s_EditorLanguage; set => s_EditorLanguage = value; }
+        static bool Measured(string member)
+        {
+            if (Unbound.Runtime.Compat.EditorChannelServiceMeasured) return true;
+            Unbound.Runtime.Stubs.NotImplemented("UnityEditor.LocalizationDatabase." + member);
+            return false;
+        }
 
-        public static bool enableEditorLocalization { get => s_EnableEditorLocalization; set => s_EnableEditorLocalization = value; }
+        public static SystemLanguage currentEditorLanguage
+        {
+            get => Measured(nameof(currentEditorLanguage)) ? s_EditorLanguage : default;
+            set { if (Measured(nameof(currentEditorLanguage))) s_EditorLanguage = value; }
+        }
+
+        public static bool enableEditorLocalization
+        {
+            get => Measured(nameof(enableEditorLocalization)) && s_EnableEditorLocalization;
+            set { if (Measured(nameof(enableEditorLocalization))) s_EnableEditorLocalization = value; }
+        }
     }
 }
 
@@ -225,7 +279,15 @@ namespace UnityEditor.Collaboration
 
         Collab() { }
 
-        public static Collab instance => s_Instance;
+        public static Collab instance
+        {
+            get
+            {
+                if (Unbound.Runtime.Compat.EditorChannelServiceMeasured) return s_Instance;
+                Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Collaboration.Collab.instance");
+                return null;
+            }
+        }
     }
 }
 
@@ -251,6 +313,10 @@ namespace UnityEditor.Toolbars
     [EditorToolbarElement("Editor Utility/Play Mode")]
     internal sealed partial class PlayModeButtons : UnityEngine.UIElements.VisualElement
     {
+        /// <summary>Unity's constructor builds the Play, Pause and Step buttons and raises
+        /// <see cref="onPlayModeButtonsCreated"/>; Unbound has no toolbar buttons.</summary>
+        public PlayModeButtons() { Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Toolbars.PlayModeButtons.ctor"); }
+
 #pragma warning disable CS0067 // never raised: no toolbar
         internal static event Action<UnityEngine.UIElements.VisualElement> onPlayModeButtonsCreated;
 #pragma warning restore CS0067
