@@ -187,6 +187,34 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
+        public void AForcedImportOfAV2SpriteAtlasIsTheSessionsImport()
+        {
+            Write("Assets/M/S.spriteatlasv2", "s");
+            Write("Assets/M/S.spriteatlasv2.meta", "guid: s1\n");
+            var assets = Initial();
+            assets.AddRange(Assets(("Assets/M/S.spriteatlasv2", "f1a5c0de0000000000000000000000c7")));
+            ProjectImports.Scan(assets, Record, out var start);
+            ProjectImports.ResetForTests();
+            ProjectImports.BaseForTests(start);
+            var previous = Debug.unityLogger.logHandler;
+            Debug.unityLogger.logHandler = new LogCapture();
+            try
+            {
+                AssetDatabase.List("[{\"guid\":\"f1a5c0de0000000000000000000000c7\",\"path\":\"Assets/M/S.spriteatlasv2\",\"kind\":\"yaml\"}]");
+                Write("Assets/M/S.spriteatlasv2", "s changed outside");
+                AssetDatabase.ImportAsset("assets/m/s.spriteatlasv2", ImportAssetOptions.ForceUpdate);
+                ProjectImports.Settle(assets, Record);
+                Assert.Empty(ProjectImports.Scan(assets, Record, out _).Imported);
+            }
+            finally
+            {
+                Debug.unityLogger.logHandler = previous;
+                ProjectImports.ResetForTests();
+                AssetDatabase.Invalidate();
+            }
+        }
+
+        [Fact]
         public void ARecordOfAnotherFormatIsAFirstOpen()
         {
             Scan(Initial());
