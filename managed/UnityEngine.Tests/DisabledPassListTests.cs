@@ -50,6 +50,12 @@ namespace UnityEngine.Tests
             Assert.Equal(new[] { "SHADOWCASTER", "DepthOnly", "MOTIONVECTORS" }, Names(list));
             Assert.False(list.Remove("Universal2D"));
 
+            // The engine's own names read in upper case (toolapis matx.partial: a saved ShadowCaster).
+            var saved = new DisabledPassList();
+            saved.AddAsRead("ShadowCaster");
+            saved.AddAsRead("DepthOnly");
+            Assert.Equal(new[] { "SHADOWCASTER", "DepthOnly" }, Names(saved));
+
             var added = new DisabledPassList();
             foreach (var name in new[] { "DepthOnly", "ShadowCaster", "MotionVectors" }) added.Add(name);
             Assert.Equal(new[] { "DepthOnly", "SHADOWCASTER", "MOTIONVECTORS" }, Names(added));

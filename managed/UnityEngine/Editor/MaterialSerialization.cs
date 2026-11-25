@@ -14,10 +14,10 @@ namespace Unbound.Runtime
     /// applied changes read back as a loaded material's data is (<see cref="Material.ApplySerialized"/>).
     /// The tree, the saved property sheet's lists (sorted by name, see <see cref="Material.SavedSheet"/>),
     /// the keyword lists (the shader's declared keywords that are on, then the others, each sorted)
-    /// and the upper-case disabled passes match the Unity 6000.0.71f1 Editor
-    /// (tests/projects/toolapis matx.*). References are the objects' instance IDs, as the Editor's
-    /// in-memory references read. Not measured: the order of tags, disabled passes and locked
-    /// properties (sorted here), a variant's sheet (its overrides as loaded), the elements of
+    /// and the disabled passes (in <see cref="DisabledPassList"/>'s order and spelling) match the
+    /// Unity 6000.0.71f1 Editor (tests/projects/toolapis matx.*, tests/projects/urpwrites).
+    /// References are the objects' instance IDs, as the Editor's in-memory references read. Not
+    /// measured: the order of tags and locked properties (sorted here), a variant's sheet (its overrides as loaded), the elements of
     /// m_BuildTextureStacks.
     /// </summary>
     internal sealed class MaterialTypeTree : ITypeTreeTarget

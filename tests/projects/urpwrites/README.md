@@ -31,8 +31,8 @@ Measured: the Editor leaves a URP Lit material as saved when it loads it (`load.
 `load.*.passes`) and validates it only once it is changed and saved, so a material nobody changes
 is not written (`LitStale`); the deferred validation of the Editor's own Standard editor on a property
 read dirties the material, which is then written with the keyword it set. A material written keeps
-its disabled passes in the saved order and spelling, matched case-insensitively; a pass disabled
-is added at the end (the engine's own pass names in upper case: `ALWAYS`, `FORWARDBASE`,
+its disabled passes in the saved order, matched case-insensitively; a pass disabled is added at
+the end (the engine's own pass names in upper case, also saved ones, tests/projects/toolapis: `ALWAYS`, `FORWARDBASE`,
 `FORWARDADD`, `DEFERRED`, `SHADOWCASTER`, `MOTIONVECTORS`, `META`, `GRABPASS`, `SRPDEFAULTUNLIT`;
 `Vertex`, the pipeline's and other names as given), and a pass enabled again leaves its place to
 the last entry. `ProjectSettings/URPProjectSettings.asset` is created in Play mode.

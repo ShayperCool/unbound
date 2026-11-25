@@ -6,10 +6,11 @@ namespace UnityEngine
     /// <summary>
     /// A material's disabled passes (<c>disabledShaderPasses</c>), by LightMode tag, compared
     /// case-insensitively (measured: tests/projects/builtinrp passes.*). Kept as the Editor keeps
-    /// them (matches the Unity 6000.0.71f1 Editor, tests/projects/urpwrites exit.*): the saved
-    /// entries in their order and spelling; a pass disabled is added at the end, spelled in upper
-    /// case when it is one of the engine's own pass names, else as given; a pass enabled again
-    /// leaves its place to the last entry. A list nothing changed is written as it was read.
+    /// them (matches the Unity 6000.0.71f1 Editor, tests/projects/urpwrites exit.*,
+    /// tests/projects/toolapis matx.partial): the saved entries in their order; a pass disabled is
+    /// added at the end; the engine's own pass names are spelled in upper case, saved or added,
+    /// other names as the file or the caller spells them; a pass enabled again leaves its place to
+    /// the last entry.
     /// </summary>
     internal sealed class DisabledPassList
     {
@@ -36,23 +37,24 @@ namespace UnityEngine
             return -1;
         }
 
-        /// <summary>A saved entry, as the file spells it.</summary>
+        /// <summary>A saved entry.</summary>
         internal void AddAsRead(string name)
         {
-            if (!Contains(name)) m_Names.Add(name);
+            if (!Contains(name)) m_Names.Add(Spelled(name));
+        }
+
+        static string Spelled(string name)
+        {
+            foreach (var upper in s_UpperCaseNames)
+                if (string.Equals(upper, name, StringComparison.OrdinalIgnoreCase)) return name.ToUpperInvariant();
+            return name;
         }
 
         /// <summary>Disables a pass: false when it was disabled already.</summary>
         internal bool Add(string name)
         {
             if (Contains(name)) return false;
-            foreach (var upper in s_UpperCaseNames)
-                if (string.Equals(upper, name, StringComparison.OrdinalIgnoreCase))
-                {
-                    name = name.ToUpperInvariant();
-                    break;
-                }
-            m_Names.Add(name);
+            m_Names.Add(Spelled(name));
             return true;
         }
 
