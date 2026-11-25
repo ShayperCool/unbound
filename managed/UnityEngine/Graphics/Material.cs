@@ -152,7 +152,8 @@ namespace UnityEngine
             internal Shader m_Shader;
             /// <summary>The shader reference the material's data holds when it names no shader that
             /// loads (no shader, an asset or object that is not there): the material then has the
-            /// error shader, and its data keeps the reference as it was (see <see cref="UnresolvedShaderReference"/>).</summary>
+            /// error shader, and its data keeps the reference as it was
+            /// (see <see cref="UnresolvedShaderReference"/>).</summary>
             internal ObjectRef? m_UnresolvedShader;
             internal PendingValidation m_PendingEditorValidation;
             /// <summary>Floats whose write caused the material's validation: the value written, which
@@ -550,8 +551,8 @@ namespace UnityEngine
         /// the shader's queue read afterwards (Shader.renderQueue answers that; not decided here).
         /// Assigning the shader it has is no change and keeps it; a change to and from the error
         /// shader resets as well, no shader included (tests/projects/missingshader assign.unlit,
-        /// assign.null_queue, assign.error_queue). Not documented, so the override stays, with a warning: a variant that
-        /// takes its parent's queue (the parent's state, taken again later).
+        /// assign.null_queue, assign.error_queue). Not documented, so the override stays, with a
+        /// warning: a variant that takes its parent's queue (the parent's state, taken again later).
         /// </summary>
         void ResetRenderQueue(Shader next)
         {
