@@ -298,8 +298,9 @@ namespace UnityEngine
             : settings.bakedGI && probes != null ? probes
             : settings.bakedGI && settings.lightmapCompression != LightmapCompression.None ? "lightmaps with compression are not measured"
             // (What the bake does not make yet, or makes only where measured:
-            // tests/projects/bakedbuffers bakes without filtering, ambient occlusion and with an
-            // Indirect Intensity of 1, its directional lightmaps in the Baked Indirect mode.)
+            // tests/projects/bakedbuffers bakes with the filtering UnmadeFiltering allows, without
+            // ambient occlusion and with an Indirect Intensity of 1, its directional lightmaps in
+            // the Baked Indirect mode.)
             : settings.bakedGI && UnmadeFiltering(settings) is { } filtering ? filtering
             : settings.bakedGI && settings.ao ? "lightmaps with ambient occlusion are not made yet"
             : settings.bakedGI && settings.indirectScale != 1f ? "an Indirect Intensity other than 1 is not measured"
