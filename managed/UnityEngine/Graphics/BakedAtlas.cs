@@ -736,9 +736,13 @@ namespace UnityEngine
                 return null;
             }
             repeat = texture.wrapModeU == TextureWrapMode.Repeat;
-            // What is not measured is said, the cookie applied.
-            if (texture.mipmapCount > 1 || texture.filterMode != FilterMode.Bilinear || width > 16 || height > 16)
-                warn("light-cookie-unmeasured:" + path + fileId, $"{path}: '{light.name}' has a cookie with mipmaps, a filter other than Bilinear or more than 16 texels a side, which Unbound's bake (Lightmapping.Bake) has not measured: its first level is applied, sampled bilinearly.");
+            // Its first level, sampled bilinearly whatever its filter, at its own size (mipmaps,
+            // Point and Trilinear filters, RGBA32 and Alpha8 up to 1024 a side: tests/projects/
+            // bakedbuffers CookieLarge, CookieSunPoint, CookieHuge); a larger or compressed cookie is
+            // not measured, said and applied so.
+            var format = light.cookie is Texture2D flatTexture ? flatTexture.format : ((Cubemap)light.cookie).format;
+            if (width > 1024 || height > 1024 || UnityEngine.Experimental.Rendering.GraphicsFormatUtility.IsCompressedFormat(format))
+                warn("light-cookie-unmeasured:" + path + fileId, $"{path}: '{light.name}' has a cookie of {width}x{height} {format}, which Unbound's bake (Lightmapping.Bake) has not measured (more than 1024 texels a side, or compressed): its first level is applied as it decodes, sampled bilinearly.");
             return new
             {
                 width,
