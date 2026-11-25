@@ -1258,6 +1258,8 @@ namespace Unbound.Runtime
 
         static string FullName(Type type)
         {
+            if (type.IsArray)
+                throw new NotSupportedException($"Unbound does not write [SerializeReference] type arguments that are arrays yet ({type.FullName}).");
             if (!type.IsGenericType) return type.FullName;
             var definition = type.GetGenericTypeDefinition().FullName;
             return definition + Arguments(type);
@@ -1274,11 +1276,21 @@ namespace Unbound.Runtime
             "System.Collections.Generic.List`1",
         };
 
-        /// <summary>The assembly the Editor's Mono names a type argument's; a class library type
-        /// whose Mono assembly is not known throws.</summary>
+        /// <summary>The engine types whose Unity module is measured as a type argument (Unbound
+        /// builds every module's types into one assembly; Unity's modules are many).</summary>
+        static readonly Dictionary<Type, string> s_EngineModules = new Dictionary<Type, string>
+        {
+            [typeof(Vector3)] = "UnityEngine.CoreModule",
+        };
+
+        /// <summary>The assembly the Editor's Mono names a type argument's; a class library or
+        /// engine type whose assembly there is not known throws.</summary>
         static string AssemblyName(Type type)
         {
             var assembly = type.Assembly;
+            if (assembly == typeof(Vector3).Assembly)
+                return s_EngineModules.TryGetValue(type, out var module) ? module
+                    : throw new NotSupportedException($"Unbound does not write [SerializeReference] type arguments of the engine's {type.FullName} yet (its Unity module is not known).");
             var name = assembly.GetName().Name;
             bool library = assembly == typeof(object).Assembly || name.StartsWith("System.", StringComparison.Ordinal) || name == "System" || name == "netstandard";
             if (!library) return name;

@@ -20,8 +20,7 @@ namespace UnityEngine.Tests
                 ManagedReferenceIds.TypeText(typeof(TypeTextBox<int>)));
             Assert.Equal("{class: 'TypeTextBox`1[[System.Collections.Generic.List`1[[System.String, mscorlib]], mscorlib]]', ns: UnityEngine.Tests, asm: " + Assembly + "}",
                 ManagedReferenceIds.TypeText(typeof(TypeTextBox<List<string>>)));
-            Assert.Equal("{class: 'TypeTextBox`1[[UnityEngine.Vector3, UnityEngine.CoreModule]]', ns: UnityEngine.Tests, asm: " + Assembly + "}"
-                .Replace("UnityEngine.CoreModule", typeof(Vector3).Assembly.GetName().Name),
+            Assert.Equal("{class: 'TypeTextBox`1[[UnityEngine.Vector3, UnityEngine.CoreModule]]', ns: UnityEngine.Tests, asm: " + Assembly + "}",
                 ManagedReferenceIds.TypeText(typeof(TypeTextBox<Vector3>)));
             Assert.Equal(typeof(TypeTextBox<int>), TypeResolver.Find("TypeTextBox`1[[System.Int32, mscorlib]]", "UnityEngine.Tests", Assembly));
             Assert.Equal(typeof(TypeTextBox<List<string>>),
@@ -34,6 +33,10 @@ namespace UnityEngine.Tests
             var e = Assert.Throws<NotSupportedException>(() => ManagedReferenceIds.TypeText(typeof(TypeTextBox<HashSet<int>>)));
             Assert.Contains("class library", e.Message);
             Assert.Throws<NotSupportedException>(() => ManagedReferenceIds.TypeText(typeof(TypeTextBox<Guid>)));
+            // An engine type of another Unity module (AudioClip: UnityEngine.AudioModule) and arrays.
+            Assert.Contains("module", Assert.Throws<NotSupportedException>(() => ManagedReferenceIds.TypeText(typeof(TypeTextBox<AudioClip>))).Message);
+            Assert.Throws<NotSupportedException>(() => ManagedReferenceIds.TypeText(typeof(TypeTextBox<int[]>)));
+            Assert.Throws<NotSupportedException>(() => ManagedReferenceIds.TypeText(typeof(TypeTextBox<TypeTextBox<int>[]>)));
             // A plain class is written as before.
             Assert.Equal("{class: ManagedReferenceTypeTextTests, ns: UnityEngine.Tests, asm: " + Assembly + "}",
                 ManagedReferenceIds.TypeText(typeof(ManagedReferenceTypeTextTests)));
