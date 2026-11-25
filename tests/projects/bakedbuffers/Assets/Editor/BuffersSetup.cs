@@ -1023,6 +1023,24 @@ public static class BuffersSetup
             ProbeGroup();
             Save(scene, "SoftProbesArea");
         }
+        // The same soft lights with 8 probe samples per lightmap sample (Light Probe Sample
+        // Multiplier), Direct Samples set to 20 (the Editor keeps 16, a power of two, also when
+        // the serialized value is set), and a second group whose probes cross the two edges of
+        // the cube's shadow under the soft sun (its penumbra).
+        {
+            var scene = Lit("SoftProbesMore", MixedLightingMode.Shadowmask);
+            Lightmapping.lightingSettings.directSampleCount = 20;
+            Lightmapping.lightingSettings.lightProbeSampleCountMultiplier = 8f;
+            Soft(NewLight("Bulb", LightType.Point, new Vector3(1.03f, 2.01f, -1.02f), Vector3.zero, new Color(1f, 0.8f, 0.6f), 3f), 0.25f).range = 6f;
+            Soft(NewLight("MixedSun", LightType.Directional, Vector3.zero, new Vector3(50f, -30f, 0f), Color.white, 2f, LightmapBakeType.Mixed), 3f);
+            ProbeGroup();
+            new GameObject("PenumbraGroup").AddComponent<LightProbeGroup>().probePositions = new[]
+            {
+                new Vector3(-0.70f, 0.3f, 0.9f), new Vector3(-0.685f, 0.3f, 0.9f), new Vector3(-0.67f, 0.3f, 0.9f), new Vector3(-0.655f, 0.3f, 0.9f),
+                new Vector3(0.085f, 0.3f, 0.9f), new Vector3(0.1f, 0.3f, 0.9f), new Vector3(0.115f, 0.3f, 0.9f),
+            };
+            Save(scene, "SoftProbesMore");
+        }
     }
 
     /// <summary>Lights whose intensity multiplies their linear colour
