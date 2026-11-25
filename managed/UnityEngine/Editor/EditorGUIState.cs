@@ -194,9 +194,6 @@ namespace UnityEditor
             if (Event.current == null) throw new NullReferenceException("Object reference not set to an instance of an object");
         }
 
-        public static bool Toggle(Rect position, bool value) { RequireGUI(); return EditorGUIControls.Toggle(position, GUIContent.none, value); }
-        public static bool Toggle(Rect position, string label, bool value) { RequireGUI(); return EditorGUIControls.Toggle(position, new GUIContent(label), value); }
-        public static bool Toggle(Rect position, GUIContent label, bool value) { RequireGUI(); return EditorGUIControls.Toggle(position, label, value); }
         public static bool ToggleLeft(Rect position, string label, bool value) =>
             ToggleLeft(position, GUIContent.Temp(label), value, null);
 
@@ -368,9 +365,6 @@ namespace UnityEditor
             return GUILayoutUtility.GetRect(0, EditorGUIUtility.singleLineHeight, options);
         }
 
-        public static bool Toggle(bool value, params GUILayoutOption[] options) => EditorGUIControls.Toggle(Line(options), GUIContent.none, value);
-        public static bool Toggle(string label, bool value, params GUILayoutOption[] options) => EditorGUIControls.Toggle(Line(options), new GUIContent(label), value);
-        public static bool Toggle(GUIContent label, bool value, params GUILayoutOption[] options) => EditorGUIControls.Toggle(Line(options), label, value);
         public static bool PropertyField(SerializedProperty property, params GUILayoutOption[] options) => PropertyField(property, null, false, options);
         public static bool PropertyField(SerializedProperty property, GUIContent label, params GUILayoutOption[] options) => PropertyField(property, label, false, options);
         public static bool PropertyField(SerializedProperty property, bool includeChildren, params GUILayoutOption[] options) => PropertyField(property, null, includeChildren, options);
@@ -578,12 +572,6 @@ namespace UnityEditor
         static Color s_PendingPrefixColor;
         static bool s_HasPendingPrefix;
 
-        static Rect Field(Rect position, GUIContent label)
-        {
-            if (!HasLabelContent(label)) return EditorGUI.IndentedRect(position);
-            return PrefixLabel(position, label);
-        }
-
         internal static bool HasLabelContent(GUIContent label) =>
             label == null || label.text != string.Empty || label.image != null;
 
@@ -661,8 +649,6 @@ namespace UnityEditor
 
         internal static void Label(Rect position, GUIContent label) => GUI.Label(EditorGUI.IndentedRect(position), label);
 
-        internal static bool Toggle(Rect position, GUIContent label, bool value) => GUI.Toggle(Field(position, label), value, GUIContent.none);
-
         internal static bool LeftToggle(Rect position, GUIContent label, bool value, GUIStyle labelStyle)
         {
             var current = Event.current;
@@ -716,7 +702,14 @@ namespace UnityEditor
                 {
                     case SerializedPropertyType.Integer: property.intValue = EditorGUI.IntField(position, label, property.intValue); break;
                     case SerializedPropertyType.Float: property.floatValue = EditorGUI.FloatField(position, label, property.floatValue); break;
-                    case SerializedPropertyType.Boolean: property.boolValue = Toggle(position, label, property.boolValue); break;
+                    case SerializedPropertyType.Boolean:
+                    {
+                        // Unity's DefaultPropertyField.
+                        EditorGUI.BeginChangeCheck();
+                        bool newValue = EditorGUI.Toggle(position, label, property.boolValue);
+                        if (EditorGUI.EndChangeCheck()) property.boolValue = newValue;
+                        break;
+                    }
                     case SerializedPropertyType.String: property.stringValue = EditorGUI.TextField(position, label, property.stringValue); break;
                     default:
                         if (EditorGUI.DefaultPickerPropertyField(position, property, label)) break;
@@ -1091,6 +1084,9 @@ namespace UnityEditor
                     : s_LightToggle ??= CreateToggle(dark: false);
             }
         }
+        /// <summary>For tests, whose host has no skin images: the toggle style both themes give
+        /// (null restores the skin's).</summary>
+        internal static void SetToggleForTests(GUIStyle style) => s_DarkToggle = s_LightToggle = style;
         public static GUIStyle radioButton => SkinStyle("Radio");
         internal static GUIStyle minMaxHorizontalSliderThumb => SkinStyle("MinMaxHorizontalSliderThumb");
         public static GUIStyle foldout => SkinStyle("Foldout");
