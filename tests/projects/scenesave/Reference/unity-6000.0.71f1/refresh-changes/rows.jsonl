@@ -1,0 +1,28 @@
+{"key": "start", "value": "notes|1|4|Bilinear"}
+{"key": "touch", "value": ""}
+{"key": "touch.later", "value": ""}
+{"key": "text.before", "value": "notes"}
+{"key": "text.after", "value": "changed notes"}
+{"key": "text.object", "value": "alive|equal|same id"}
+{"key": "text", "value": "reload=False imported=[Assets/Refresh/Notes.txt] deleted=[] moved=[] from=[]"}
+{"key": "text.later", "value": ""}
+{"key": "yaml.after", "value": "7"}
+{"key": "yaml.object", "value": "alive|equal|same id"}
+{"key": "yaml", "value": "reload=False imported=[Assets/Refresh/Data.asset] deleted=[] moved=[] from=[]"}
+{"key": "yaml.later", "value": ""}
+{"key": "image.after", "value": "8"}
+{"key": "image.object", "value": "alive|equal|same id"}
+{"key": "image", "value": "reload=False imported=[Assets/Refresh/Pic.png] deleted=[] moved=[] from=[]"}
+{"key": "image.later", "value": ""}
+{"key": "meta.after", "value": "Point"}
+{"key": "meta.importer", "value": "Point"}
+{"key": "meta", "value": "reload=False imported=[Assets/Refresh/Pic.png] deleted=[] moved=[] from=[]"}
+{"key": "meta.later", "value": ""}
+{"key": "unrefreshed", "value": ""}
+{"key": "unrefreshed.later", "value": ""}
+{"key": "unrefreshed.text", "value": "changed notes"}
+{"key": "import.after", "value": "imported notes"}
+{"key": "import", "value": "reload=False imported=[Assets/Refresh/Notes.txt] deleted=[] moved=[] from=[]"}
+{"key": "import.later", "value": ""}
+{"key": "refresh-after-import", "value": ""}
+{"key": "refresh-after-import.later", "value": ""}

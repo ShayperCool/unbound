@@ -16,7 +16,8 @@ MeshBoundsTests), `native-saves` (Edit Mode NativeSaveTests), `clip-assets` (Edi
 ControllerAssetTests), `controller-additions` (Edit Mode ControllerAdditionTests), `modification-timing` (Edit Mode ModificationTimingTests), `scene-api-rest`
 (Edit Mode SceneApiRestTests), `build-scenes` (Edit Mode BuildSceneTests), `generic-refs` (Edit Mode GenericRefTests),
 `session-imports` (Edit Mode SessionImportTests), `build-index-edit` (Edit Mode BuildIndexTests) and
-`build-index-play` (Play Mode BuildIndexPlayTests), `label-metas` (Edit Mode LabelMetaTests).
+`build-index-play` (Play Mode BuildIndexPlayTests), `label-metas` (Edit Mode LabelMetaTests),
+`refresh-changes` (Edit Mode RefreshChangeTests).
 """
 import argparse
 import json
@@ -60,6 +61,7 @@ CASES = {
     'build-index-edit': ('EditMode', 'BuildIndexTests.EditMode'),
     'build-index-play': ('PlayMode', 'BuildIndexPlayTests.PlayMode'),
     'label-metas': ('EditMode', 'LabelMetaTests.LabelMetas'),
+    'refresh-changes': ('EditMode', 'RefreshChangeTests.RefreshChanges'),
 }
 SKIPPED = {'Library', 'LibraryUnbound', 'Logs', 'Temp', 'UserSettings', 'obj', 'run.py', 'README.md', 'Reference',
            'gate.json', 'scenesave_compare.py', 'test_compare.py', '__pycache__'}

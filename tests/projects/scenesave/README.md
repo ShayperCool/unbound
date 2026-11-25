@@ -154,6 +154,12 @@ file the run added, changed or removed.
   platform: each `.meta` as the project opens, after `SetLabels` and after `ClearLabels`, and the
   textures' after `SaveAndReimport` of a setting the section has and of one it lacks. Recorded in
   the macOS Editor (batch mode, no graphics, the Android module installed: two identical captures).
+- `refresh-changes` (Edit Mode, `RefreshChangeTests`): files of imported assets changed on disk
+  during the session, then `AssetDatabase.Refresh`: a file only touched, a text file, a YAML asset,
+  an image and an importer setting in the image's `.meta`; a change left without Refresh; a changed
+  file imported by `ImportAsset`. Each step logs the `OnPostprocessAllAssets` calls and what the
+  objects loaded before answer (content, alive, equal to a new load, instance id). Recorded in the
+  macOS Editor (batch mode, no graphics: two identical captures).
 - `generic-refs` (Edit Mode, `GenericRefTests`): a scriptable object whose [SerializeReference] fields
   hold objects of generic classes (`Box<int>`, `Pair<string, Vector3>`, `Box<Box<float>>`,
   `Box<List<int>>`, a namespaced `Tagged<Circle>`, one shared, one added later) made an asset by
