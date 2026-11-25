@@ -35,11 +35,12 @@ namespace UnityEngine.Tests
             try
             {
                 var renderer = go.AddComponent<MeshRenderer>();
-                renderer.sharedMaterials = new Material[3];
+                var shader = ProbeShader("Q758 test/slots");
+                renderer.sharedMaterials = new[] { new Material(shader), new Material(shader) };
                 var slots = AnimationUtility.GetAnimatableBindings(go, go)
                     .Where(b => b.type == typeof(MeshRenderer) && b.isPPtrCurve).Select(b => b.propertyName).ToArray();
                 // tests/projects/animmaterialbindings two/MeshRenderer: one binding per slot.
-                Assert.Equal(new[] { "m_Materials.Array.data[0]", "m_Materials.Array.data[1]", "m_Materials.Array.data[2]" }, slots);
+                Assert.Equal(new[] { "m_Materials.Array.data[0]", "m_Materials.Array.data[1]" }, slots);
             }
             finally { Object.DestroyImmediate(go); }
         }
@@ -100,6 +101,58 @@ namespace UnityEngine.Tests
             {
                 Object.DestroyImmediate(go);
                 Object.DestroyImmediate(material);
+            }
+        }
+
+        // Names the Editor's built-in shaders register at startup keep their ids (ids.txt: _ZWrite
+        // 413, _Glossiness 414, _MetallicGlossMap 418, _Mode 455, _SpecColor 456); a texture's _ST,
+        // _TexelSize and _HDR follow it.
+        [Fact]
+        public void BuiltInShaderNamesKeepTheirStartupIds()
+        {
+            using var release = TestRelease.Pin(TestRelease.Measured);
+            var shader = ProbeShader("Q758 test/startup",
+                ("_Mode", Rendering.ShaderPropertyType.Float, 0),
+                ("_SpecColor", Rendering.ShaderPropertyType.Color, 0),
+                ("_Glossiness", Rendering.ShaderPropertyType.Range, 0),
+                ("_MetallicGlossMap", Rendering.ShaderPropertyType.Texture, 0),
+                ("_ZWrite", Rendering.ShaderPropertyType.Float, 0));
+            var material = new Material(shader);
+            var go = new GameObject("renderer");
+            try
+            {
+                go.AddComponent<MeshRenderer>().sharedMaterial = material;
+                var names = MaterialNames(go, typeof(MeshRenderer));
+                Assert.Equal(new[] { "_ZWrite", "_Glossiness", "_Mode", "_MetallicGlossMap_ST.x" }, names.Take(4).ToArray());
+                Assert.Equal("_SpecColor.r", names[15]);
+            }
+            finally
+            {
+                Object.DestroyImmediate(go);
+                Object.DestroyImmediate(material);
+            }
+        }
+
+        // A binding names a property: its value is the first material's that has it.
+        [Fact]
+        public void AMaterialBindingReadsTheMaterialThatHasTheProperty()
+        {
+            using var release = TestRelease.Pin(TestRelease.Measured);
+            var plain = new Material(ProbeShader("Q758 test/plain", ("_L4Plain", Rendering.ShaderPropertyType.Float, 0)));
+            var second = new Material(ProbeShader("Q758 test/second slot", ("_L4Later", Rendering.ShaderPropertyType.Float, 0)));
+            second.SetFloat("_L4Later", 0.5f);
+            var go = new GameObject("renderer");
+            try
+            {
+                go.AddComponent<MeshRenderer>().sharedMaterials = new[] { plain, second };
+                Assert.True(AnimationUtility.GetFloatValue(go, EditorCurveBinding.FloatCurve("", typeof(MeshRenderer), "material._L4Later"), out var value));
+                Assert.Equal(0.5f, value);
+            }
+            finally
+            {
+                Object.DestroyImmediate(go);
+                Object.DestroyImmediate(plain);
+                Object.DestroyImmediate(second);
             }
         }
 
