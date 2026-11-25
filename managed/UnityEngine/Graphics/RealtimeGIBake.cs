@@ -323,6 +323,8 @@ namespace UnityEngine
             : renderPipeline && (!settings.bakedGI || settings.directionalityMode != LightmapsMode.NonDirectional || settings.mixedBakeMode != MixedLightingMode.IndirectOnly)
                 ? "with a render pipeline asset only non-directional Baked Indirect baked GI is measured"
             : renderPipeline && probeGroups ? "with a render pipeline asset LightProbeGroups are not measured"
+            : renderPipeline && settings.bakedGI && settings.lightmapCompression != LightmapCompression.None
+                ? "with a render pipeline asset compressed lightmaps are not measured"
             : !environmentMade ? "this bake did not make all of the environment lighting (said)"
             : !(editable ?? UnityEditor.AssetDatabase.Editable)(folder) ? "the scene is not in the project's own assets"
             : settings.bakedGI && !lightmapsMade ? "this bake did not make all of its lightmaps' light (said)"

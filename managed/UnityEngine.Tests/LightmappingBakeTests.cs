@@ -395,6 +395,11 @@ namespace UnityEngine.Tests
                     environment.directionalityMode = LightmapsMode.NonDirectional;
                     environment.mixedBakeMode = MixedLightingMode.IndirectOnly;
                     Assert.Null(Unwritten(environment, "Assets/Scenes/Lit", true, pipeline: true, lightmaps: true));
+                    // (Compressed lightmaps are measured in the built-in pipeline only.)
+                    environment.lightmapCompression = LightmapCompression.HighQuality;
+                    Assert.Contains("compressed lightmaps", Unwritten(environment, "Assets/Scenes/Lit", true, pipeline: true, lightmaps: true));
+                    Assert.Null(Unwritten(environment, "Assets/Scenes/Lit", true, lightmaps: true));
+                    environment.lightmapCompression = LightmapCompression.None;
                     Assert.Contains("LightProbeGroups", Unwritten(environment, "Assets/Scenes/Lit", true, pipeline: true, lightmaps: true, probeGroups: true));
                     environment.directionalityMode = LightmapsMode.CombinedDirectional;
                     Assert.Contains("render pipeline", Unwritten(environment, "Assets/Scenes/Lit", true, pipeline: true, lightmaps: true));
