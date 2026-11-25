@@ -132,6 +132,7 @@ public sealed class SpeedTree8Probe : MonoBehaviour
                 Rec(t + "/importer/" + name, value);
             }
         Rec(t + "/main", main == null ? "null" : main.GetType().Name + " " + main.name);
+        if (s_Fresh) Rec(t + "/meta", MetaText(path));
         Rec(t + "/mainType", Value(AssetDatabase.GetMainAssetTypeAtPath(path)));
         Rec(t + "/prefabType", main == null ? "null" : PrefabUtility.GetPrefabAssetType(main).ToString());
         var all = AssetDatabase.LoadAllAssetsAtPath(path);
@@ -294,6 +295,16 @@ public sealed class SpeedTree8Probe : MonoBehaviour
         }
     }
 
+    /// <summary>Whether the run imports the samples without .meta files (the fresh profile), whose
+    /// written .meta files it records.</summary>
+    static readonly bool s_Fresh = File.Exists("SpeedTree8Profile.txt");
+
+    /// <summary>An asset's .meta as written, its random GUID left out.</summary>
+    static string MetaText(string path) =>
+        File.Exists(path + ".meta")
+            ? string.Join("\n", File.ReadAllLines(path + ".meta").Select(l => l.StartsWith("guid: ", StringComparison.Ordinal) ? "guid: (new)" : l))
+            : "none";
+
     void DumpTexture(string path)
     {
         var importer = AssetImporter.GetAtPath(path) as TextureImporter;
@@ -302,6 +313,10 @@ public sealed class SpeedTree8Probe : MonoBehaviour
         Rec(t, importer.textureType + " srgb " + importer.sRGBTexture + " alpha " + importer.alphaSource
             + " transparency " + importer.alphaIsTransparency + " mips " + importer.mipmapEnabled + " wrap " + importer.wrapMode
             + " filter " + importer.filterMode + " max " + importer.maxTextureSize + " readable " + importer.isReadable);
+        // What the .meta file says of the settings the trees' import changes.
+        if (s_Fresh)
+            Rec(t + "/metafile", string.Join(" ", File.ReadAllLines(path + ".meta").Select(l => l.Trim())
+                .Where(l => l.StartsWith("alphaIsTransparency:", StringComparison.Ordinal) || l.StartsWith("sRGBTexture:", StringComparison.Ordinal))));
     }
 
     /// <summary>Each tree's SpeedTree callbacks in the order its import made them.</summary>

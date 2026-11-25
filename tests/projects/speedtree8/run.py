@@ -89,7 +89,7 @@ def collision_ends(data, edits):
 def variant_meta(text, guid, settings, remaps):
     text = re.sub(r'(?m)^guid: \w+$', 'guid: '+guid, text)
     for key, value in settings.items():
-        text, n = re.subn(rf'(?m)^  {key}: .*$', f'  {key}: {value}', text)
+        text, n = re.subn(rf'(?m)^( +){key}: .*$', rf'\g<1>{key}: {value}', text)
         if n != 1:
             raise SystemExit(f'speedtree8: the sample .meta has no single {key}')
     if remaps is True:
@@ -99,6 +99,64 @@ def variant_meta(text, guid, settings, remaps):
         if n == 0:
             raise SystemExit('speedtree8: the sample .meta has no material remap')
     return text
+
+
+PROFILE_MARKER = 'SpeedTree8Profile.txt'
+# The fresh profile's own copies (beside the samples, which it stages without any .meta or
+# material file): (sample, copy, its .meta as (guid, settings set, remaps dropped) or None,
+# wind's leading word to set or None).
+FRESH_VARIANTS = [
+    # Without .meta: the wind's leading word 2 instead of the samples' 4.
+    ('Card_Tree_Sample/card-tree-sample.st', 'Card_Tree_Sample/Card_Wind2.st', None, 2),
+    # A tree with its .meta whose maps' .meta files lack what the import sets (below).
+    ('Card_Tree_Sample/card-tree-sample.st', 'AlphaCheck/Card_Alpha.st', ('a2b2c3d4e5f60718293a4b5c6d7e8f90', {}, True), None),
+]
+# The maps of AlphaCheck/Card_Alpha.st, with the samples' .meta files edited: (sample, copy, guid,
+# settings set).
+FRESH_MAPS = [
+    ('Card_Tree_Sample/card-tree-sample_Color.png', 'AlphaCheck/card-tree-sample_Color.png', 'a3b2c3d4e5f60718293a4b5c6d7e8f90',
+     {'alphaIsTransparency': '0'}),
+    ('Card_Tree_Sample/card-tree-sample_Extra.png', 'AlphaCheck/card-tree-sample_Extra.png', 'a4b2c3d4e5f60718293a4b5c6d7e8f90',
+     {'sRGBTexture': '1'}),
+]
+
+
+def wind_leading(data, value):
+    """The tree's bytes with the first word of its wind (root entry 7) set."""
+    data = bytearray(data)
+    u = lambda at: struct.unpack_from('<I', data, at)[0]
+    root = len(b'SpeedTree___')
+    struct.pack_into('<I', data, root + u(root + 4 + 4*7), value)
+    return bytes(data)
+
+
+def stage_fresh(project):
+    """The samples without any .meta or material file (as a project first sees them), and the
+    fresh profile's copies."""
+    source = samples()
+    target = project/'Assets'/'Trees'/SAMPLE_SET
+    for f in sorted(source.rglob('*')):
+        rel = f.relative_to(source)
+        if not f.is_file() or f.suffix in ('.meta', '.mat') or any(p == 'Materials' or p.endswith(' Materials') for p in rel.parts[:-1]):
+            continue
+        (target/rel).parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(f, target/rel)
+    for tree, copy, meta, leading in FRESH_VARIANTS:
+        data = (source/tree).read_bytes()
+        (target/copy).parent.mkdir(parents=True, exist_ok=True)
+        (target/copy).write_bytes(wind_leading(data, leading) if leading is not None else data)
+        if meta:
+            guid, settings, remaps = meta
+            (target/(copy+'.meta')).write_text(variant_meta((source/(tree+'.meta')).read_text(), guid, settings, remaps))
+    for texture, copy, guid, settings in FRESH_MAPS:
+        shutil.copyfile(source/texture, target/copy)
+        (target/(copy+'.meta')).write_text(variant_meta((source/(texture+'.meta')).read_text(), guid, settings, False))
+    # Tells the recorder to record the .meta files the import writes (outside the assets).
+    (project/PROFILE_MARKER).write_text('fresh\n')
+    print(f'staged {sum(1 for p in target.rglob("*") if p.is_file())} files of the fresh profile from {source}')
+
+
+PROFILES = {None: None, 'fresh': stage_fresh}
 
 
 def stage(project):
@@ -119,15 +177,18 @@ def main():
     parser.add_argument('mode', choices=('record', 'publish', 'gate'))
     parser.add_argument('labels', nargs='*')
     parser.add_argument('--label', default=None)
+    parser.add_argument('--profile', choices=[p for p in PROFILES if p], default=None,
+                        help='fresh: the samples without .meta files (what a first import writes)')
     parser.add_argument('--if-staged', action='store_true',
                         help='gate only where the samples are staged; elsewhere print SKIPPED and succeed')
     args = parser.parse_args()
     label = args.label or time.strftime('check-%Y%m%d-%H%M%S-')+str(os.getpid())
+    configure = PROFILES[args.profile] or stage
     if args.mode == 'record':
         samples()
-        return value_probe.record(PROBE, 'ProbeRunner.Record', VARIABLE, label, True, macos_batch=True, configure=stage)
+        return value_probe.record(PROBE, 'ProbeRunner.Record', VARIABLE, label, True, macos_batch=True, configure=configure)
     if args.mode == 'publish':
-        return value_probe.publish(PROBE, args.labels)
+        return value_probe.publish(PROBE, args.labels, profile=args.profile)
     try:
         samples()
     except SystemExit as absent:
@@ -135,7 +196,8 @@ def main():
             raise
         print(f'speedtree8: SKIPPED, nothing compared: {absent}')
         return 0
-    return value_probe.gate(PROBE, VARIABLE, label, 0, ['--frames', '10', '--size', '64x64'], configure=stage)
+    return value_probe.gate(PROBE, VARIABLE, label, 0, ['--frames', '10', '--size', '64x64'], configure=configure,
+                            profile=args.profile, residuals_file=f'residuals-{args.profile}.json' if args.profile else 'residuals.json')
 
 
 if __name__ == '__main__':

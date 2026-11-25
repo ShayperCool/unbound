@@ -33,13 +33,18 @@ settings, and the scene's instances of two trees (`Assets/Scenes/Probe.unity`: t
 `OptionsOn`, moved). Floats are the hex of their bits; values compare exactly. The project uses the
 built-in pipeline (`Nature/SpeedTree8`; the samples' URP material files have no shader there).
 
-Import behaviour does not depend on the OS or the graphics device, so the probe records with the macOS
-Editor in batch mode. `residuals.json` lists the values Unbound does not reproduce yet with their causes.
-The trees' first import without `.meta` files (the Editor writes them and its maps' texture settings, then
-imports every tree again) is not covered.
+The `fresh` profile (`--profile fresh`) stages the samples without any `.meta` or material file, as a
+project first sees them, and records what the import writes: each tree's new `.meta` (its GUID left out)
+and the maps' `alphaIsTransparency` and `sRGBTexture` in their `.meta` files, with the callbacks of each
+tree's passes. It adds `Card_Wind2` (the card tree with its wind's leading word 2) and `AlphaCheck/`
+(the card tree with its `.meta` and copies of its maps whose `.meta` files lack those settings).
 
-    python3 tests/projects/speedtree8/run.py record --label A     # Editor capture
-    python3 tests/projects/speedtree8/run.py publish A B          # two identical captures
+Import behaviour does not depend on the OS or the graphics device, so the probe records with the macOS
+Editor in batch mode. `residuals.json` and `residuals-fresh.json` list the values Unbound does not
+reproduce yet with their causes.
+
+    python3 tests/projects/speedtree8/run.py record --label A     # Editor capture (--profile fresh too)
+    python3 tests/projects/speedtree8/run.py publish A B          # two identical captures (A B --profile fresh)
     python3 tests/projects/speedtree8/run.py gate                 # the engine against Reference/
     python3 tests/projects/speedtree8/run.py gate --if-staged     # the landing gate's: SKIPPED without the samples
 

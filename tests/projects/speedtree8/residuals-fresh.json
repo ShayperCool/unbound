@@ -1,0 +1,58 @@
+{
+ "Reparenting a child with Transform.parent keeps a local rotation of (0, 0, 0, 1) where the Editor gives (-0, -0, -0, 1) under an unrotated parent, and a collision capsule rotated under it keeps a +0 x where the Editor has -0 (signed zeros only; Transform arithmetic follow-up, as in tests/projects/speedtree9)": [
+  "v8/AlphaCheck/Card_Alpha.st/go/Card_Alpha/Card_Alpha_LOD0/transform",
+  "v8/AlphaCheck/Card_Alpha.st/go/Card_Alpha/Card_Alpha_LOD1/transform",
+  "v8/AlphaCheck/Card_Alpha.st/go/Card_Alpha/Card_Alpha_LOD2/transform",
+  "v8/AlphaCheck/Card_Alpha.st/go/Card_Alpha/CollisionObject0/transform",
+  "v8/AlphaCheck/Card_Alpha.st/go/Card_Alpha/CollisionObject1/transform",
+  "v8/Broadleaf_Desktop_Field.st/go/Broadleaf_Desktop_Field/Broadleaf_Desktop_Field_LOD0/transform",
+  "v8/Broadleaf_Desktop_Field.st/go/Broadleaf_Desktop_Field/Broadleaf_Desktop_Field_LOD1/transform",
+  "v8/Broadleaf_Desktop_Field.st/go/Broadleaf_Desktop_Field/Broadleaf_Desktop_Field_LOD2/transform",
+  "v8/Broadleaf_Desktop_Field.st/go/Broadleaf_Desktop_Field/Broadleaf_Desktop_Field_LOD3/transform",
+  "v8/Broadleaf_Desktop_Field.st/go/Broadleaf_Desktop_Field/CollisionObject0/transform",
+  "v8/Broadleaf_Desktop_Field_OptionsOff.st/go/Broadleaf_Desktop_Field_OptionsOff/Broadleaf_Desktop_Field_OptionsOff_LOD0/transform",
+  "v8/Broadleaf_Desktop_Field_OptionsOff.st/go/Broadleaf_Desktop_Field_OptionsOff/Broadleaf_Desktop_Field_OptionsOff_LOD1/transform",
+  "v8/Broadleaf_Desktop_Field_OptionsOff.st/go/Broadleaf_Desktop_Field_OptionsOff/Broadleaf_Desktop_Field_OptionsOff_LOD2/transform",
+  "v8/Broadleaf_Desktop_Field_OptionsOff.st/go/Broadleaf_Desktop_Field_OptionsOff/Broadleaf_Desktop_Field_OptionsOff_LOD3/transform",
+  "v8/Broadleaf_Desktop_Field_OptionsOff.st/go/Broadleaf_Desktop_Field_OptionsOff/CollisionObject0/transform",
+  "v8/Broadleaf_Desktop_Field_OptionsOn.st/go/Broadleaf_Desktop_Field_OptionsOn/Broadleaf_Desktop_Field_OptionsOn_LOD0/transform",
+  "v8/Broadleaf_Desktop_Field_OptionsOn.st/go/Broadleaf_Desktop_Field_OptionsOn/Broadleaf_Desktop_Field_OptionsOn_LOD1/transform",
+  "v8/Broadleaf_Desktop_Field_OptionsOn.st/go/Broadleaf_Desktop_Field_OptionsOn/Broadleaf_Desktop_Field_OptionsOn_LOD2/transform",
+  "v8/Broadleaf_Desktop_Field_OptionsOn.st/go/Broadleaf_Desktop_Field_OptionsOn/Broadleaf_Desktop_Field_OptionsOn_LOD3/transform",
+  "v8/Broadleaf_Desktop_Field_OptionsOn.st/go/Broadleaf_Desktop_Field_OptionsOn/CollisionObject0/transform",
+  "v8/Card_Tree_Sample/Card_Wind2.st/go/Card_Wind2/Card_Wind2_LOD0/transform",
+  "v8/Card_Tree_Sample/Card_Wind2.st/go/Card_Wind2/Card_Wind2_LOD1/transform",
+  "v8/Card_Tree_Sample/Card_Wind2.st/go/Card_Wind2/Card_Wind2_LOD2/transform",
+  "v8/Card_Tree_Sample/Card_Wind2.st/go/Card_Wind2/CollisionObject0/transform",
+  "v8/Card_Tree_Sample/Card_Wind2.st/go/Card_Wind2/CollisionObject1/transform",
+  "v8/Card_Tree_Sample/card-tree-sample.st/go/card-tree-sample/CollisionObject0/transform",
+  "v8/Card_Tree_Sample/card-tree-sample.st/go/card-tree-sample/CollisionObject1/transform",
+  "v8/Card_Tree_Sample/card-tree-sample.st/go/card-tree-sample/card-tree-sample_LOD0/transform",
+  "v8/Card_Tree_Sample/card-tree-sample.st/go/card-tree-sample/card-tree-sample_LOD1/transform",
+  "v8/Card_Tree_Sample/card-tree-sample.st/go/card-tree-sample/card-tree-sample_LOD2/transform"
+ ],
+ "A collision capsule rotation from Quaternion.FromToRotation is 1 ulp off in w and keeps a +0 x (Quaternion arithmetic follow-up)": [
+  "v8/Broadleaf_Desktop_Field.st/go/Broadleaf_Desktop_Field/CollisionObject1/transform",
+  "v8/Broadleaf_Desktop_Field_OptionsOff.st/go/Broadleaf_Desktop_Field_OptionsOff/CollisionObject1/transform",
+  "v8/Broadleaf_Desktop_Field_OptionsOn.st/go/Broadleaf_Desktop_Field_OptionsOn/CollisionObject1/transform"
+ ],
+ "LODGroup.RecalculateBounds unions the corners of the renderers bounds; the Editor reference point matches a union of the bounds themselves, 4 ulps off in x here (LODGroup follow-up)": [
+  "v8/AlphaCheck/Card_Alpha.st/go/Card_Alpha/LODGroup",
+  "v8/Card_Tree_Sample/Card_Wind2.st/go/Card_Wind2/LODGroup",
+  "v8/Card_Tree_Sample/card-tree-sample.st/go/card-tree-sample/LODGroup"
+ ],
+ "The Editor imports every new tree of a refresh before any of their maps change, so a tree whose maps an earlier tree import made transparent imports a second time there; Unbound imports a tree when it loads, and one whose maps another tree has already changed imports once": [
+  "v8/Broadleaf_Desktop_Field_OptionsOff.st/callbacks",
+  "v8/Broadleaf_Desktop_Field_OptionsOff.st/callbacks/3",
+  "v8/Broadleaf_Desktop_Field_OptionsOff.st/callbacks/4",
+  "v8/Broadleaf_Desktop_Field_OptionsOff.st/callbacks/5",
+  "v8/Broadleaf_Desktop_Field_OptionsOn.st/callbacks",
+  "v8/Broadleaf_Desktop_Field_OptionsOn.st/callbacks/3",
+  "v8/Broadleaf_Desktop_Field_OptionsOn.st/callbacks/4",
+  "v8/Broadleaf_Desktop_Field_OptionsOn.st/callbacks/5",
+  "v8/Card_Tree_Sample/card-tree-sample.st/callbacks",
+  "v8/Card_Tree_Sample/card-tree-sample.st/callbacks/3",
+  "v8/Card_Tree_Sample/card-tree-sample.st/callbacks/4",
+  "v8/Card_Tree_Sample/card-tree-sample.st/callbacks/5"
+ ]
+}

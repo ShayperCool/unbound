@@ -1,15 +1,20 @@
 {
   "commands": [
-    "python3 tests/projects/speedtree8/run.py gate --if-staged"
+    "python3 tests/projects/speedtree8/run.py gate --if-staged",
+    "python3 tests/projects/speedtree8/run.py gate --if-staged --profile fresh"
   ],
   "summary": "speedtree8: .*",
   "engine_paths": [
+    "crates/unbound-assets/src/new_meta.rs",
+    "crates/unbound-assets/src/speedtree8_meta.rs",
+    "crates/unbound-assets/src/speedtree_tables.rs",
+    "crates/unbound-runtime/src/imported_prefabs.rs",
+    "managed/UnityEngine/Editor/ImportedPrefabDocuments.cs",
+    "managed/UnityEngine/Editor/ImporterMetaFiles.cs",
     "managed/UnityEngine/Editor/SpeedTree8/",
     "managed/UnityEngine/Editor/SpeedTree9/SpeedTreeTables.cs",
-    "managed/UnityEngine/Terrain/SpeedTreeWind.cs",
     "managed/UnityEngine/Graphics/LODGroup.cs",
     "managed/UnityEngine/Graphics/Mesh.cs",
-    "managed/UnityEngine/Editor/ImportedPrefabDocuments.cs",
-    "crates/unbound-runtime/src/imported_prefabs.rs"
+    "managed/UnityEngine/Terrain/SpeedTreeWind.cs"
   ]
 }
