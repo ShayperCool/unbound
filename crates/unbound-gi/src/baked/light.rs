@@ -696,4 +696,121 @@ mod tests {
                 .is_none()
         );
     }
+
+    fn cookie(
+        width: usize,
+        height: usize,
+        slices: usize,
+        repeat: bool,
+        alpha: Vec<u8>,
+    ) -> Option<std::sync::Arc<Cookie>> {
+        Some(std::sync::Arc::new(Cookie {
+            width,
+            height,
+            slices,
+            repeat,
+            alpha,
+            size: 2.0,
+        }))
+    }
+
+    #[test]
+    fn a_cookie_is_read_between_its_texels_and_half_a_texel_inside_its_edges() {
+        let c = cookie(2, 1, 1, false, vec![0, 255]).unwrap();
+        assert!(near(c.sample(0, [0.5, 0.5]), 0.5));
+        // Up to the texels' middles, no further.
+        assert_eq!(c.sample(0, [0.0, 0.5]), 0.0);
+        assert_eq!(c.sample(0, [1.0, 0.5]), 1.0);
+        assert!(near(c.sample(0, [0.375, 0.5]), 0.25));
+    }
+
+    #[test]
+    fn a_spot_lights_cookie_takes_its_cones_place() {
+        let tables = Tables::new();
+        let mut spot = light(Kind::Spot);
+        // A cone of 90 degrees: the cookie's square reaches one unit aside at two below.
+        spot.cone_angle = std::f32::consts::FRAC_PI_2;
+        spot.cookie = cookie(2, 2, 1, false, vec![255, 255, 255, 255]);
+        let below = [0.0, 0.0, 0.0];
+        // Outside the cone, inside the square's corner: lit through the cookie.
+        let corner = [1.6, 0.0, 1.6];
+        let plain = {
+            let mut p = spot.clone();
+            p.cookie = None;
+            p
+        };
+        assert!(plain.arriving_around(&tables, [1.0; 3], corner).is_none());
+        let lit = spot.arriving_around(&tables, [1.0; 3], corner).unwrap();
+        let at = spot.arriving_around(&tables, [1.0; 3], below).unwrap();
+        assert!(lit.color[0] > 0.0 && at.color[0] > 0.0);
+        // Beyond the square: dark.
+        assert!(
+            spot.arriving_around(&tables, [1.0; 3], [2.5, 0.0, 0.0])
+                .is_none()
+        );
+        // A cookie of half alpha halves the light, the cone's falloff not taken.
+        spot.cookie = cookie(1, 1, 1, false, vec![51]);
+        let dimmed = spot.arriving_around(&tables, [1.0; 3], below).unwrap();
+        assert!(near(dimmed.color[0], at.color[0] * 0.2));
+    }
+
+    #[test]
+    fn a_directional_cookie_repeats_by_its_size_or_ends_at_its_tile() {
+        let tables = Tables::new();
+        let mut sun = light(Kind::Directional);
+        sun.position = [0.0; 3];
+        // A cookie of two columns, dark on the left: the right axis is +x for a sun pointing down
+        // with up +z.
+        sun.cookie = cookie(2, 1, 1, true, vec![0, 255]);
+        let at = |sun: &Light, x: f32| {
+            sun.arriving_around(&tables, [1.0; 3], [x, 0.0, 0.0])
+                .unwrap()
+                .color[0]
+        };
+        // One tile is the Cookie Size (2) wide, centred on the light.
+        assert_eq!(at(&sun, -0.9), 0.0);
+        assert_eq!(at(&sun, 0.9), 1.0);
+        assert_eq!(at(&sun, 0.9 + 2.0), at(&sun, 0.9));
+        // Clamped: outside the tile the light is not cut.
+        sun.cookie = cookie(2, 1, 1, false, vec![0, 0]);
+        assert_eq!(at(&sun, 0.5), 0.0);
+        assert_eq!(at(&sun, 1.5), 1.0);
+    }
+
+    #[test]
+    fn a_point_lights_cube_cookie_takes_the_face_its_direction_picks() {
+        let tables = Tables::new();
+        let mut bulb = light(Kind::Point);
+        // Faces +x, -x, +y, -y, +z, -z of the light's frame (right, up, forward), each its own
+        // alpha.
+        let alpha: Vec<u8> = (0..6u8).map(|f| 40 * (f + 1)).collect();
+        bulb.cookie = cookie(1, 1, 6, false, alpha);
+        let plain = {
+            let mut p = bulb.clone();
+            p.cookie = None;
+            p
+        };
+        // The light at (0, 2, 0) points down (forward -y), up +z, right +x.
+        for (point, face) in [
+            ([1.5, 2.0, 0.0], 0usize),
+            ([-1.5, 2.0, 0.0], 1),
+            ([0.0, 2.0, 1.5], 2),
+            ([0.0, 2.0, -1.5], 3),
+            ([0.0, 0.5, 0.0], 4),
+            ([0.0, 3.5, 0.0], 5),
+        ] {
+            let lit = bulb
+                .arriving_around(&tables, [1.0; 3], point)
+                .unwrap()
+                .color[0];
+            let full = plain
+                .arriving_around(&tables, [1.0; 3], point)
+                .unwrap()
+                .color[0];
+            assert!(
+                near(lit, full * (40 * (face + 1)) as f32 / 255.0),
+                "{point:?}"
+            );
+        }
+    }
 }
