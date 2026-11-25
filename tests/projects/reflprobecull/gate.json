@@ -1,0 +1,15 @@
+{
+  "commands": [
+    "python3 tests/projects/reflprobecull/run.py gate"
+  ],
+  "summary": "reflprobecull: .*",
+  "engine_paths": [
+    "managed/UnityEngine/Graphics/Srp/SrpContext.cs",
+    "managed/UnityEngine/Graphics/Srp/SrpData.cs",
+    "managed/UnityEngine/Graphics/ReflectionProbe.cs",
+    "tests/projects/reflprobecull/",
+    "tests/projects/analyticssession/ProjectSettings/",
+    "tests/projects/imguiskin/Assets/Editor/",
+    "tests/projects/imguiskin/Assets/Scenes/"
+  ]
+}
