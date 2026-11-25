@@ -129,8 +129,11 @@ namespace UnityEngine.Tests
             Debug.unityLogger.logHandler = capture;
             try
             {
+                var iconSize = EditorGUIUtility.GetIconSize();
                 Assert.Throws<ExitGUIException>(() => Pass(Down(new Vector2(10 + 300 - 8, 309)), () => EditorGUI.ObjectField(Field, null, typeof(Texture2D), true)));
                 Assert.NotEqual(0, GUIUtility.keyboardControl);
+                // The field's icon size does not outlive its exit.
+                Assert.Equal(iconSize, EditorGUIUtility.GetIconSize());
             }
             finally { Debug.unityLogger.logHandler = previous; Reset(); }
             Assert.Contains(capture.Lines, line => line.Contains("object picker is not shown"));

@@ -318,166 +318,174 @@ namespace UnityEditor
             else if (visualType == ObjectFieldVisualType.LargePreview)
                 EditorGUIUtility.SetIconSize(new Vector2(64, 64));
 
-            if (eventType == EventType.ContextClick && visualType == ObjectFieldVisualType.IconAndText && position.Contains(evt.mousePosition))
+            // The icon size is restored also when the field exits the GUI (the Editor resets it
+            // for the next GUI pass).
+            try
             {
-                Stubs.Ignored("UnityEditor.EditorGUI.ObjectField's context menu", "is not shown: Unbound shows no editor menus");
-                evt.Use();
-            }
+                if (eventType == EventType.ContextClick && visualType == ObjectFieldVisualType.IconAndText && position.Contains(evt.mousePosition))
+                {
+                    Stubs.Ignored("UnityEditor.EditorGUI.ObjectField's context menu", "is not shown: Unbound shows no editor menus");
+                    evt.Use();
+                }
 
-            switch (eventType)
-            {
-                case EventType.DragExited:
-                    break;
-                case EventType.DragUpdated:
-                case EventType.DragPerform:
-                    if (eventType == EventType.DragPerform && !ValidDroppedObject(DragAndDrop.objectReferences, out string errorString))
-                    {
-                        EditorUtility.DisplayDialog("Can't assign script", errorString, "OK");
+                switch (eventType)
+                {
+                    case EventType.DragExited:
                         break;
-                    }
-                    if (dropRect.Contains(evt.mousePosition) && GUI.enabled)
-                    {
-                        Object validatedObject = validator(DragAndDrop.objectReferences, objType, property, ObjectFieldValidatorOptions.None);
-                        // Scene objects are cleared where they are not allowed.
-                        if (validatedObject != null && !allowSceneObjects && !EditorUtility.IsPersistent(validatedObject))
-                            validatedObject = null;
-
-                        if (validatedObject != null)
+                    case EventType.DragUpdated:
+                    case EventType.DragPerform:
+                        if (eventType == EventType.DragPerform && !ValidDroppedObject(DragAndDrop.objectReferences, out string errorString))
                         {
-                            if (DragAndDrop.visualMode == DragAndDropVisualMode.None)
-                                DragAndDrop.visualMode = DragAndDropVisualMode.Generic;
+                            EditorUtility.DisplayDialog("Can't assign script", errorString, "OK");
+                            break;
+                        }
+                        if (dropRect.Contains(evt.mousePosition) && GUI.enabled)
+                        {
+                            Object validatedObject = validator(DragAndDrop.objectReferences, objType, property, ObjectFieldValidatorOptions.None);
+                            // Scene objects are cleared where they are not allowed.
+                            if (validatedObject != null && !allowSceneObjects && !EditorUtility.IsPersistent(validatedObject))
+                                validatedObject = null;
 
-                            if (eventType == EventType.DragPerform)
+                            if (validatedObject != null)
                             {
-                                if (property != null) property.objectReferenceValue = PropertyReference(property, validatedObject);
-                                else obj = validatedObject;
-                                GUI.changed = true;
-                                DragAndDrop.AcceptDrag();
-                                DragAndDrop.activeControlID = 0;
+                                if (DragAndDrop.visualMode == DragAndDropVisualMode.None)
+                                    DragAndDrop.visualMode = DragAndDropVisualMode.Generic;
+
+                                if (eventType == EventType.DragPerform)
+                                {
+                                    if (property != null) property.objectReferenceValue = PropertyReference(property, validatedObject);
+                                    else obj = validatedObject;
+                                    GUI.changed = true;
+                                    DragAndDrop.AcceptDrag();
+                                    DragAndDrop.activeControlID = 0;
+                                }
+                                else
+                                {
+                                    DragAndDrop.activeControlID = id;
+                                }
+                                evt.Use();
+                            }
+                        }
+                        break;
+                    case EventType.MouseDown:
+                        if (position.Contains(evt.mousePosition) && evt.button == 0)
+                        {
+                            Rect buttonRect = GetButtonRect(visualType, position);
+                            EditorGUIUtility.editingTextField = false;
+
+                            if (buttonRect.Contains(evt.mousePosition))
+                            {
+                                if (GUI.enabled)
+                                {
+                                    GUIUtility.keyboardControl = id;
+                                    ShowObjectSelector();
+                                    evt.Use();
+                                    GUIUtility.ExitGUI();
+                                }
                             }
                             else
                             {
-                                DragAndDrop.activeControlID = id;
+                                Object actualTargetObject = property != null ? property.objectReferenceValue : obj;
+                                if (actualTargetObject is Component com) actualTargetObject = com.gameObject;
+                                if (showMixedValue) actualTargetObject = null;
+
+                                if (evt.clickCount == 1)
+                                {
+                                    GUIUtility.keyboardControl = id;
+                                    PingObjectOrShowPreviewOnClick(actualTargetObject, position);
+                                    evt.Use();
+                                }
+                                else if (evt.clickCount == 2)
+                                {
+                                    if (actualTargetObject)
+                                    {
+                                        AssetDatabase.OpenAsset(actualTargetObject);
+                                        evt.Use();
+                                        GUIUtility.ExitGUI();
+                                    }
+                                }
                             }
+                        }
+                        break;
+                    case EventType.ExecuteCommand:
+                        if ((evt.commandName == EventCommandNames.Delete || evt.commandName == EventCommandNames.SoftDelete) && GUIUtility.keyboardControl == id)
+                        {
+                            if (property != null) property.objectReferenceValue = null;
+                            else obj = null;
+                            GUI.changed = true;
                             evt.Use();
                         }
-                    }
-                    break;
-                case EventType.MouseDown:
-                    if (position.Contains(evt.mousePosition) && evt.button == 0)
-                    {
-                        Rect buttonRect = GetButtonRect(visualType, position);
-                        EditorGUIUtility.editingTextField = false;
-
-                        if (buttonRect.Contains(evt.mousePosition))
+                        break;
+                    case EventType.ValidateCommand:
+                        if ((evt.commandName == EventCommandNames.Delete || evt.commandName == EventCommandNames.SoftDelete) && GUIUtility.keyboardControl == id)
+                            evt.Use();
+                        break;
+                    case EventType.KeyDown:
+                        if (GUIUtility.keyboardControl == id)
                         {
-                            if (GUI.enabled)
+                            if (evt.keyCode == KeyCode.Backspace || (evt.keyCode == KeyCode.Delete && (evt.modifiers & EventModifiers.Shift) == 0))
                             {
-                                GUIUtility.keyboardControl = id;
+                                if (property != null)
+                                {
+                                    if (property.propertyPath.EndsWith("]"))
+                                        Stubs.Ignored("UnityEditor.EditorGUI.ObjectField on an array element", "Delete clears the element's reference; an element of a list drawn without a reorderable list is not removed");
+                                    property.objectReferenceValue = null;
+                                }
+                                else obj = null;
+                                GUI.changed = true;
+                                evt.Use();
+                            }
+
+                            if (MainActionKeyForControl(evt, id))
+                            {
                                 ShowObjectSelector();
                                 evt.Use();
                                 GUIUtility.ExitGUI();
                             }
                         }
-                        else
+                        break;
+                    case EventType.Repaint:
+                        GUIContent temp = showMixedValue ? s_MixedValueContent : ObjectFieldContent(obj, objType, property);
+                        var contentColor = GUI.contentColor;
+                        var oldAlpha = contentColor.a;
+                        try
                         {
-                            Object actualTargetObject = property != null ? property.objectReferenceValue : obj;
-                            if (actualTargetObject is Component com) actualTargetObject = com.gameObject;
-                            if (showMixedValue) actualTargetObject = null;
-
-                            if (evt.clickCount == 1)
+                            // A null reference's label at 70 % opacity.
+                            if (obj == null)
                             {
-                                GUIUtility.keyboardControl = id;
-                                PingObjectOrShowPreviewOnClick(actualTargetObject, position);
-                                evt.Use();
+                                contentColor.a = k_NullObjectReferenceOpacity;
+                                GUI.contentColor = contentColor;
                             }
-                            else if (evt.clickCount == 2)
+                            switch (visualType)
                             {
-                                if (actualTargetObject)
-                                {
-                                    AssetDatabase.OpenAsset(actualTargetObject);
-                                    evt.Use();
-                                    GUIUtility.ExitGUI();
-                                }
+                                case ObjectFieldVisualType.IconAndText:
+                                    BeginHandleMixedValueContentColor();
+                                    style.Draw(position, temp, id, DragAndDrop.activeControlID == id, position.Contains(evt.mousePosition));
+                                    Rect buttonRect = buttonStyle.margin.Remove(GetButtonRect(visualType, position));
+                                    buttonStyle.Draw(buttonRect, GUIContent.none, id, DragAndDrop.activeControlID == id, buttonRect.Contains(evt.mousePosition));
+                                    EndHandleMixedValueContentColor();
+                                    break;
+                                case ObjectFieldVisualType.LargePreview:
+                                    DrawObjectFieldLargeThumb(position, id, obj, temp);
+                                    break;
+                                case ObjectFieldVisualType.MiniPreview:
+                                    DrawObjectFieldMiniThumb(position, id, obj, temp);
+                                    break;
                             }
                         }
-                    }
-                    break;
-                case EventType.ExecuteCommand:
-                    if ((evt.commandName == EventCommandNames.Delete || evt.commandName == EventCommandNames.SoftDelete) && GUIUtility.keyboardControl == id)
-                    {
-                        if (property != null) property.objectReferenceValue = null;
-                        else obj = null;
-                        GUI.changed = true;
-                        evt.Use();
-                    }
-                    break;
-                case EventType.ValidateCommand:
-                    if ((evt.commandName == EventCommandNames.Delete || evt.commandName == EventCommandNames.SoftDelete) && GUIUtility.keyboardControl == id)
-                        evt.Use();
-                    break;
-                case EventType.KeyDown:
-                    if (GUIUtility.keyboardControl == id)
-                    {
-                        if (evt.keyCode == KeyCode.Backspace || (evt.keyCode == KeyCode.Delete && (evt.modifiers & EventModifiers.Shift) == 0))
+                        finally
                         {
-                            if (property != null)
-                            {
-                                if (property.propertyPath.EndsWith("]"))
-                                    Stubs.Ignored("UnityEditor.EditorGUI.ObjectField on an array element", "Delete clears the element's reference; an element of a list drawn without a reorderable list is not removed");
-                                property.objectReferenceValue = null;
-                            }
-                            else obj = null;
-                            GUI.changed = true;
-                            evt.Use();
-                        }
-
-                        if (MainActionKeyForControl(evt, id))
-                        {
-                            ShowObjectSelector();
-                            evt.Use();
-                            GUIUtility.ExitGUI();
-                        }
-                    }
-                    break;
-                case EventType.Repaint:
-                    GUIContent temp = showMixedValue ? s_MixedValueContent : ObjectFieldContent(obj, objType, property);
-                    var contentColor = GUI.contentColor;
-                    var oldAlpha = contentColor.a;
-                    try
-                    {
-                        // A null reference's label at 70 % opacity.
-                        if (obj == null)
-                        {
-                            contentColor.a = k_NullObjectReferenceOpacity;
+                            contentColor.a = oldAlpha;
                             GUI.contentColor = contentColor;
                         }
-                        switch (visualType)
-                        {
-                            case ObjectFieldVisualType.IconAndText:
-                                BeginHandleMixedValueContentColor();
-                                style.Draw(position, temp, id, DragAndDrop.activeControlID == id, position.Contains(evt.mousePosition));
-                                Rect buttonRect = buttonStyle.margin.Remove(GetButtonRect(visualType, position));
-                                buttonStyle.Draw(buttonRect, GUIContent.none, id, DragAndDrop.activeControlID == id, buttonRect.Contains(evt.mousePosition));
-                                EndHandleMixedValueContentColor();
-                                break;
-                            case ObjectFieldVisualType.LargePreview:
-                                DrawObjectFieldLargeThumb(position, id, obj, temp);
-                                break;
-                            case ObjectFieldVisualType.MiniPreview:
-                                DrawObjectFieldMiniThumb(position, id, obj, temp);
-                                break;
-                        }
-                    }
-                    finally
-                    {
-                        contentColor.a = oldAlpha;
-                        GUI.contentColor = contentColor;
-                    }
-                    break;
-            }
+                        break;
+                }
 
-            EditorGUIUtility.SetIconSize(oldIconSize);
+            }
+            finally
+            {
+                EditorGUIUtility.SetIconSize(oldIconSize);
+            }
             return obj;
         }
 
