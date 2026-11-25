@@ -146,9 +146,16 @@ namespace UnityEngine
             set => m_Character = value;
         }
 
+        /// <summary>As Unity's Event.keyCode: a mouse event's key is its button's
+        /// (<c>Mouse0 + button</c>), a wheel event's the wheel's direction, whatever was set.</summary>
         public KeyCode keyCode
         {
-            get => m_KeyCode;
+            get
+            {
+                var key = isMouse ? KeyCode.Mouse0 + m_Button : m_KeyCode;
+                if (isScrollWheel) key = m_Delta.y < 0 ? KeyCode.WheelUp : KeyCode.WheelDown;
+                return key;
+            }
             set => m_KeyCode = value;
         }
 
@@ -176,12 +183,12 @@ namespace UnityEngine
         public bool numeric { get => Has(EventModifiers.Numeric); set => Set(EventModifiers.Numeric, value); }
         public bool functionKey => Has(EventModifiers.FunctionKey);
 
-        public bool isKey => m_Type == EventType.KeyDown || m_Type == EventType.KeyUp;
+        public bool isKey => type is EventType.KeyDown or EventType.KeyUp;
 
         public bool isMouse => type is EventType.MouseMove or EventType.MouseDown or EventType.MouseUp or
             EventType.MouseDrag or EventType.ContextClick or EventType.MouseEnterWindow or EventType.MouseLeaveWindow;
 
-        public bool isScrollWheel => m_Type == EventType.ScrollWheel;
+        public bool isScrollWheel => type == EventType.ScrollWheel;
 
         internal bool isDirectManipulationDevice => m_PointerType == PointerType.Pen || m_PointerType == PointerType.Touch;
 
