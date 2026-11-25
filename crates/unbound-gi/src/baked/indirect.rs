@@ -110,6 +110,14 @@ pub struct Settings {
     pub pushoff: f32,
     /// Environment Samples as asked for.
     pub environment_samples: u32,
+    /// The ambient occlusion's Max Distance: how near a surface a texel's ray meets occludes
+    /// it (0: none does, not the Manual's "infinitely long ray": tests/projects/bakedbuffers
+    /// `AoInfinite`); none: no ambient occlusion
+    /// is made.
+    pub ao_max_distance: Option<f32>,
+    /// The Lighting Settings' ambient occlusion is on: without bounces the texel's rays are
+    /// still sent (for the ambient occlusion and the back faces they meet), bringing no light.
+    pub ambient_occlusion: bool,
 }
 
 /// The indirect light of a lightmap.
@@ -123,6 +131,10 @@ pub struct Indirect {
     /// Where the indirect and the sky's light come from (see [`Toward::encode`]): a path's
     /// light from the direction it left the texel in.
     pub directionality: Vec<[f32; 4]>,
+    /// Per texel the part of its rays that leave above its sample's triangle and meet no
+    /// surface within the ambient occlusion's Max Distance (0 for a texel without rays, 1
+    /// where none is made).
+    pub ambient_occlusion: Vec<f32>,
 }
 
 fn dot(a: [f32; 3], b: [f32; 3]) -> f32 {
@@ -188,6 +200,27 @@ impl Path<'_> {
                 sampling::fraction(self.samples.sobol(index, dimension + k) + rotation[k])
             })
         }
+    }
+
+    /// Whether `ray`'s first surface is a back face (of a renderer that is not double sided), as
+    /// [`Self::follow`]'s first segment counts it.
+    fn meets_back_face(&self, ray: Ray, viewer: Viewer) -> bool {
+        let world = self.world;
+        let found = if self.inclusive_origin {
+            world
+                .scene
+                .closest_from_inclusive(&ray, ray.origin, f32::INFINITY, viewer)
+        } else {
+            world
+                .scene
+                .closest_from(&ray, ray.origin, f32::INFINITY, viewer)
+        };
+        let Some((hit, _, _)) = found else {
+            return false;
+        };
+        let surface = &world.surfaces[hit.triangle as usize];
+        let front = hit.front != surface.mirrored;
+        !(front || surface.double_sided)
     }
 
     /// Follows a path from a texel's sample: adds the light it brings to `sum` and answers
@@ -357,7 +390,7 @@ pub fn indirect(
         .collect();
     let s = g.supersampling;
     let unlit = |used: &u8| [0.0, 0.0, 0.0, if *used == 0 { 0.0 } else { 1.0 }];
-    if settings.max_bounces == 0 {
+    if settings.max_bounces == 0 && !settings.ambient_occlusion {
         // No bounce: no ray is sent, to a surface or to the sky, and none counts against a
         // texel.
         return Indirect {
@@ -365,17 +398,18 @@ pub fn indirect(
             validity: vec![0.0; g.width * g.height],
             environment: g.occupancy.iter().map(unlit).collect(),
             directionality: vec![NONE; g.width * g.height],
+            ambient_occlusion: vec![0.0; g.width * g.height],
         };
     }
     let count = sampling::sample_count(settings.samples, s as u32);
     let distribution = sampling::distribution(count);
     let sky_count = sampling::sample_count(settings.environment_samples, s as u32);
     let sky_distribution = sampling::distribution(sky_count);
-    let texels: Vec<([f32; 4], f32, [f32; 4], [f32; 4])> = (0..g.width * g.height)
+    let texels: Vec<([f32; 4], f32, [f32; 4], [f32; 4], f32)> = (0..g.width * g.height)
         .into_par_iter()
         .map(|texel| {
             if g.occupancy[texel] == 0 {
-                return ([0.0; 4], 0.0, [0.0; 4], NONE);
+                return ([0.0; 4], 0.0, [0.0; 4], NONE, 0.0);
             }
             let (tx, ty) = (texel % g.width, texel / g.width);
             let path = Path {
@@ -409,7 +443,7 @@ pub fn indirect(
                 Some((origin, smooth, plane, receivers[receiver].viewer))
             };
             let mut sum = [0f32; 3];
-            let (mut rays, mut behind) = (0u32, 0u32);
+            let (mut rays, mut behind, mut occluded) = (0u32, 0u32, 0u32);
             let mut toward = Toward::default();
             for index in 0..count {
                 let Some((origin, smooth, plane, viewer)) = start(index) else {
@@ -420,10 +454,26 @@ pub fn indirect(
                 rays += 1;
                 let facing = dot(direction, plane);
                 if facing <= 0.0 || facing.is_nan() {
+                    // A ray that leaves below the sample's triangle occludes it.
+                    occluded += 1;
                     continue;
                 }
+                if let Some(distance) = settings.ao_max_distance
+                    && world
+                        .scene
+                        .closest_from(&Ray { origin, direction }, origin, distance, viewer)
+                        .is_some()
+                {
+                    occluded += 1;
+                }
                 let mut light = [0f32; 3];
-                if path.follow(
+                if settings.max_bounces == 0 {
+                    // (No bounce, ambient occlusion on: the ray brings no light, and counts the
+                    // back face it meets first.)
+                    if path.meets_back_face(Ray { origin, direction }, viewer) {
+                        behind += 1;
+                    }
+                } else if path.follow(
                     index,
                     Ray { origin, direction },
                     viewer,
@@ -437,7 +487,7 @@ pub fn indirect(
             // The sky's light straight on the texel's samples.
             let mut sky_sum = [0f32; 3];
             let mut sky_rays = 0u32;
-            if let Some(sky) = world.sky {
+            if let Some(sky) = world.sky.filter(|_| settings.max_bounces > 0) {
                 for index in 0..sky_count {
                     let Some((origin, smooth, plane, viewer)) = start(index) else {
                         break;
@@ -490,6 +540,13 @@ pub fn indirect(
                 validity,
                 mean(sky_sum, sky_rays),
                 toward.encode(facing, faced, 1.0),
+                if settings.ao_max_distance.is_none() {
+                    1.0
+                } else if rays == 0 {
+                    0.0
+                } else {
+                    (rays - occluded) as f32 * (1.0 / rays as f32)
+                },
             )
         })
         .collect();
@@ -498,6 +555,7 @@ pub fn indirect(
         validity: texels.iter().map(|t| t.1).collect(),
         environment: texels.iter().map(|t| t.2).collect(),
         directionality: texels.iter().map(|t| t.3).collect(),
+        ambient_occlusion: texels.iter().map(|t| t.4).collect(),
     }
 }
 

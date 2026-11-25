@@ -82,7 +82,9 @@ const DIRECTIONAL_RADIUS: f32 = 5.0;
 /// every other texel from halved images. Where the lightmap is filtered, `filtered` is its
 /// direct light and indirect and sky's light as processed ([`composite::Composed::parts`])
 /// and how its images are processed: the light weighs the directions as processed, and the
-/// image is filtered before it is filled. 32-bit floats, before stitching and rounding.
+/// image is filtered before it is filled; where it is not filtered and has ambient occlusion,
+/// `occlusion` is each texel's factor of its direct and of its indirect light, which the
+/// directions are weighed by. 32-bit floats, before stitching and rounding.
 pub fn directional(
     b: &Buffers,
     toward_direct: &[[f32; 4]],
@@ -90,6 +92,7 @@ pub fn directional(
     backface_tolerance: f32,
     padding: u32,
     filtered: Option<(&[Vec<[f32; 4]>; 2], &Post)>,
+    occlusion: Option<&[Vec<f32>; 2]>,
 ) -> Result<Vec<[f32; 4]>> {
     let texels = b.width * b.height;
     let none = vec![[0.0f32; 4]; texels];
@@ -111,6 +114,16 @@ pub fn directional(
                     t
                 })
                 .collect();
+            // With ambient occlusion, the light as multiplied by it.
+            let (mut d, mut i) = (d, i);
+            if let Some([direct_ao, indirect_ao]) = occlusion {
+                for k in 0..texels {
+                    for c in 0..3 {
+                        d[k][c] *= direct_ao[k];
+                        i[k][c] *= indirect_ao[k];
+                    }
+                }
+            }
             (d, i)
         }
     };
@@ -305,12 +318,41 @@ mod tests {
         // Directions of equal lengths.
         let dd = [1.0, 0.5, 0.5, 1.0];
         let di = [0.5, 1.0, 0.5, 0.0];
-        let out = directional(&b, &[dd; 4], Some(&[di; 4]), 0.9, 0, None).unwrap();
+        let out = directional(&b, &[dd; 4], Some(&[di; 4]), 0.9, 0, None, None).unwrap();
         assert_eq!(out[0], dd);
         // (No light either way: the indirect direction.)
         assert_eq!(out[1], di);
         assert_eq!(out[2], [0.75, 0.75, 0.5, 0.5]);
         assert_eq!(out[3], di);
+    }
+
+    /// Unfiltered with ambient occlusion, the directions are weighed by the light multiplied by
+    /// its factors: as much direct and indirect light, the indirect light's factor 0.5 and the
+    /// direct light's 1 give the direct direction two thirds of the blend.
+    #[test]
+    fn ambient_occlusion_weighs_the_unfiltered_directions() {
+        let used = [true; 4];
+        let light = [1.0, 1.0, 1.0, 1.0];
+        let b = Buffers {
+            width: 4,
+            height: 1,
+            used: &used,
+            validity: None,
+            direct: &[light; 4],
+            indirect: Some(&[light; 4]),
+            environment: None,
+        };
+        let dd = [1.0, 0.5, 0.5, 1.0];
+        let di = [0.5, 1.0, 0.5, 0.0];
+        let factors = [vec![1.0; 4], vec![0.5; 4]];
+        let out = directional(&b, &[dd; 4], Some(&[di; 4]), 0.9, 0, None, Some(&factors)).unwrap();
+        let t = 2.0 / 3.0;
+        let want = [0.5 * t + 0.5, 1.0 - 0.5 * t, 0.5, t];
+        assert!(
+            out[0].iter().zip(&want).all(|(a, b)| (a - b).abs() < 1e-6),
+            "{:?}",
+            out[0]
+        );
     }
 
     /// Where the lightmap is filtered, the directions are weighed by the light as processed,
@@ -341,10 +383,19 @@ mod tests {
         };
         let dd = [1.0, 0.5, 0.5, 1.0];
         let di = [0.5, 1.0, 0.5, 0.0];
-        let raw = directional(&b, &[dd; 4], Some(&[di; 4]), 0.9, 0, None).unwrap();
+        let raw = directional(&b, &[dd; 4], Some(&[di; 4]), 0.9, 0, None, None).unwrap();
         assert!(raw.iter().all(|t| *t == dd), "{raw:?}");
         let parts = [vec![dark; 4], vec![light; 4]];
-        let out = directional(&b, &[dd; 4], Some(&[di; 4]), 0.9, 0, Some((&parts, &post))).unwrap();
+        let out = directional(
+            &b,
+            &[dd; 4],
+            Some(&[di; 4]),
+            0.9,
+            0,
+            Some((&parts, &post)),
+            None,
+        )
+        .unwrap();
         let near = |a: &[f32; 4]| a.iter().zip(&di).all(|(x, y)| (x - y).abs() < 1e-6);
         assert!(out.iter().all(near), "{out:?}");
     }
@@ -368,7 +419,7 @@ mod tests {
         };
         let dd = [1.0, 0.5, 0.5, 1.0];
         let di = [0.5, 1.0, 0.5, 0.0];
-        let out = directional(&b, &[dd; 4], Some(&[di; 4]), 0.9, 0, None).unwrap();
+        let out = directional(&b, &[dd; 4], Some(&[di; 4]), 0.9, 0, None, None).unwrap();
         assert_eq!(out[0], [0.75, 0.75, 0.5, 0.5]);
         assert_eq!(out[1], dd);
     }

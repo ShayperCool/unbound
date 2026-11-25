@@ -298,11 +298,18 @@ namespace UnityEngine
             : settings.bakedGI && probes != null ? probes
             : settings.bakedGI && settings.lightmapCompression != LightmapCompression.None ? "lightmaps with compression are not measured"
             // (What the bake does not make yet, or makes only where measured:
-            // tests/projects/bakedbuffers bakes with the filtering UnmadeFiltering allows, without
-            // ambient occlusion and with any Indirect Intensity (non-directional, Baked Indirect), its directional
-            // lightmaps in every Lighting Mode.)
+            // tests/projects/bakedbuffers bakes with the filtering UnmadeFiltering allows, with the
+            // ambient occlusion below and with any Indirect Intensity (non-directional, Baked
+            // Indirect), its directional lightmaps in every Lighting Mode.)
             : settings.bakedGI && UnmadeFiltering(settings) is { } filtering ? filtering
-            : settings.bakedGI && settings.ao ? "lightmaps with ambient occlusion are not made yet"
+            : settings.bakedGI && settings.ao && settings.extractAO ? "the ambient occlusion extracted to a texture of its own (Extract Ambient Occlusion) is not made"
+            // (Ambient occlusion: measured without filtering, with the Auto filtering and with
+            // the ambient occlusion target's Gaussian filter or none, in the Baked Indirect mode.)
+            : settings.bakedGI && settings.ao && settings.filteringMode == LightingSettings.FilterMode.Advanced
+                && (settings.filterTypeAO == LightingSettings.FilterType.ATrous || settings.denoiserTypeAO != LightingSettings.DenoiserType.None)
+                ? "ambient occlusion with its target's A-Trous filter or a denoiser is not measured"
+            : settings.bakedGI && settings.ao && settings.mixedBakeMode != MixedLightingMode.IndirectOnly
+                ? "ambient occlusion in the Shadowmask or Subtractive Lighting Mode is not measured"
             : settings.bakedGI && settings.indirectScale != 1f && settings.directionalityMode == LightmapsMode.CombinedDirectional
                 ? "directional lightmaps with an Indirect Intensity other than 1 are not measured"
             : settings.bakedGI && settings.indirectScale != 1f && settings.mixedBakeMode != MixedLightingMode.IndirectOnly
@@ -342,16 +349,6 @@ namespace UnityEngine
                 var preset = new { denoise = true, filter = (object)new { gaussian = 1f } };
                 return new { direct = preset, indirect = preset };
             }
-            static object Part(LightingSettings.DenoiserType denoiser, LightingSettings.FilterType type, float radius, float sigma) => new
-            {
-                denoise = denoiser == LightingSettings.DenoiserType.OpenImage,
-                filter = type switch
-                {
-                    LightingSettings.FilterType.Gaussian => new { gaussian = radius },
-                    LightingSettings.FilterType.ATrous => (object)new { aTrous = sigma },
-                    _ => null,
-                },
-            };
             return new
             {
                 direct = Part(settings.denoiserTypeDirect, settings.filterTypeDirect, settings.filteringGaussianRadiusDirect, settings.filteringAtrousPositionSigmaDirect),
@@ -359,12 +356,37 @@ namespace UnityEngine
             };
         }
 
+        static object Part(LightingSettings.DenoiserType denoiser, LightingSettings.FilterType type, float radius, float sigma) => new
+        {
+            denoise = denoiser == LightingSettings.DenoiserType.OpenImage,
+            filter = type switch
+            {
+                LightingSettings.FilterType.Gaussian => new { gaussian = radius },
+                LightingSettings.FilterType.ATrous => (object)new { aTrous = sigma },
+                _ => null,
+            },
+        };
+
+        /// <summary>The bake's ambient occlusion where the Lighting Settings have it on (null:
+        /// off): the indirect and direct light's exponents, and where the lightmaps are filtered
+        /// how the ambient occlusion target is denoised and filtered (with the Auto filtering as
+        /// both parts are).</summary>
+        internal static object AmbientOcclusion(LightingSettings settings) =>
+            settings == null || !settings.ao ? null : new
+            {
+                indirectExponent = settings.aoExponentIndirect,
+                directExponent = settings.aoExponentDirect,
+                filtering = Filtering(settings) == null ? null
+                    : settings.filteringMode == LightingSettings.FilterMode.Auto ? new { denoise = true, filter = (object)new { gaussian = 1f } }
+                    : Part(settings.denoiserTypeAO, settings.filterTypeAO, settings.filteringGaussianRadiusAO, settings.filteringAtrousPositionSigmaAO),
+            };
+
         /// <summary>Why a bake's lightmaps with the Lighting Settings' filtering are not made
         /// (null: they are, or nothing is filtered). Measured: the Auto filtering, and the
         /// Advanced filtering with Open Image Denoise or no denoiser and Gaussian or A-Trous
         /// filters (or none) of the direct and indirect light, with directional lightmaps or
         /// without, in each Lighting Mode (the ambient occlusion target's settings matter only
-        /// with ambient occlusion, which is not made). The OptiX denoiser, which the Editor runs
+        /// with ambient occlusion, whose cases Unwritten names). The OptiX denoiser, which the Editor runs
         /// only on Windows (elsewhere it does not start such a bake), is not made.</summary>
         internal static string UnmadeFiltering(LightingSettings settings) =>
             settings.filteringMode == LightingSettings.FilterMode.None ? null

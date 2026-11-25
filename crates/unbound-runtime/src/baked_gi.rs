@@ -77,11 +77,25 @@ pub struct BakeRequest {
     /// light multiplied by it).
     #[serde(default = "default_indirect_scale")]
     indirect_scale: f32,
+    /// The Lighting Settings' ambient occlusion, where it is on.
+    #[serde(default)]
+    ambient_occlusion: Option<AmbientOcclusionData>,
 }
 
 /// The Indirect Intensity of a new Lighting Settings asset.
 fn default_indirect_scale() -> f32 {
     1.0
+}
+
+/// The ambient occlusion: the indirect and the direct light's exponents, and how the ambient
+/// occlusion target is denoised and filtered (read where the lightmaps are filtered).
+#[derive(serde::Deserialize, Clone, Copy)]
+#[serde(rename_all = "camelCase")]
+struct AmbientOcclusionData {
+    indirect_exponent: f32,
+    direct_exponent: f32,
+    #[serde(default)]
+    filtering: Option<PartFilteringData>,
 }
 
 /// What becomes of the direct light and of the indirect and sky's light.
@@ -188,6 +202,15 @@ struct IndirectData {
     /// The sky, if the bake takes light from it.
     #[serde(default)]
     environment: Option<EnvironmentData>,
+    /// The Lighting Settings' ambient occlusion Max Distance (its buffer is made whether the
+    /// ambient occlusion is on or not).
+    #[serde(default = "default_ao_max_distance")]
+    ao_max_distance: f32,
+}
+
+/// The ambient occlusion's Max Distance of a new Lighting Settings asset.
+fn default_ao_max_distance() -> f32 {
+    1.0
 }
 
 /// The sky of the bake: Environment Samples, whether directions are picked where it is bright
@@ -608,7 +631,7 @@ impl<'a> Buffers<'a> {
         "probesIndirect.f32",
         "probesValidity.f32",
     ];
-    const PER_LIGHTMAP: [(&'static str, &'static str); 11] = [
+    const PER_LIGHTMAP: [(&'static str, &'static str); 12] = [
         ("occupancy", ".u8"),
         ("chartIndex", ".i32"),
         ("normal", ".f32"),
@@ -616,6 +639,7 @@ impl<'a> Buffers<'a> {
         ("irradianceIndirect", ".f32"),
         ("irradianceEnvironment", ".f32"),
         ("validity", ".f32"),
+        ("ambientOcclusion", ".f32"),
         ("directionalityDirect", ".f32"),
         ("directionalityIndirect", ".f32"),
         ("shadowmask", ".f32"),
@@ -691,6 +715,7 @@ impl<'a> Buffers<'a> {
         shadowmask: Option<bool>,
         filtering: Option<FilteringData>,
         indirect_scale: f32,
+        ambient_occlusion: Option<AmbientOcclusionData>,
     ) -> Result<()> {
         // (The managed side asks for neither: the directions would weigh the light unscaled
         // where it is not filtered, and the combination is not measured.)
@@ -796,6 +821,14 @@ impl<'a> Buffers<'a> {
                     .flat_map(|v| v.to_le_bytes())
                     .collect(),
             )?;
+            self.write(
+                format!("ambientOcclusion{index}.f32"),
+                bounced
+                    .ambient_occlusion
+                    .iter()
+                    .flat_map(|v| v.to_le_bytes())
+                    .collect(),
+            )?;
         }
         // The lightmap the bake makes of them.
         let used: Vec<bool> = g.occupancy.iter().map(|&o| o > 0).collect();
@@ -803,8 +836,21 @@ impl<'a> Buffers<'a> {
             direct: f.direct.part(),
             indirect: f.indirect.part(),
         });
+        // (Ambient occlusion only where the indirect light, which holds its buffer, is baked.)
+        let ambient_occlusion =
+            ambient_occlusion
+                .filter(|_| bounced.is_some())
+                .map(|ao| composite::AmbientOcclusion {
+                    indirect_exponent: ao.indirect_exponent,
+                    direct_exponent: ao.direct_exponent,
+                    with: filtering
+                        .and(ao.filtering)
+                        .map_or(Default::default(), PartFilteringData::part),
+                });
+        let denoises = filtering.is_some_and(|f| f.denoises())
+            || ambient_occlusion.is_some_and(|ao| ao.with.denoise);
         let denoiser =
-            match filtering.filter(composite::Filtering::denoises) {
+            match denoises.then_some(()) {
                 Some(_) => Some(unbound_project::denoiser::library().context(
                     "the Lighting Settings denoise the lightmaps with Open Image Denoise",
                 )?),
@@ -813,6 +859,7 @@ impl<'a> Buffers<'a> {
         let composite::Composed {
             mut lightmap,
             parts,
+            occlusion,
         } = composite::composite(
             &composite::Buffers {
                 width: g.width,
@@ -825,10 +872,12 @@ impl<'a> Buffers<'a> {
                 charts: &g.charts,
                 normals: Some((&normals, g.supersampling)),
                 indirect_scale,
+                ambient_occlusion: bounced.map(|b| b.ambient_occlusion.as_slice()),
             },
             backface_tolerance,
             padding,
             filtering,
+            ambient_occlusion,
             denoiser.as_deref(),
         )?;
         // Then the seams of the renderers that stitch them: red, green and blue, as high as
@@ -883,6 +932,7 @@ impl<'a> Buffers<'a> {
                     backface_tolerance,
                     padding,
                     parts.as_ref().map(|parts| (parts, &post)),
+                    occlusion.as_ref(),
                 )?;
                 for (pairs, scale_offset) in stitched {
                     seams::stitch(&mut image, g.width, g.height, pairs, *scale_offset, 4, 1.0);
@@ -959,6 +1009,8 @@ struct Bounce {
     settings: (u32, u32, u32),
     /// The sky and Environment Samples.
     sky: Option<(Sky, u32)>,
+    /// The ambient occlusion's Max Distance.
+    ao_max_distance: f32,
 }
 
 /// An image for the buffers' description: its size and its texels' four numbers, rows from the
@@ -1269,6 +1321,7 @@ fn bake(request: BakeRequest, buffers: Option<&Path>) -> Result<Json> {
                         .as_ref()
                         .map(|e| e.sky().map(|sky| (sky, e.samples)))
                         .transpose()?,
+                    ao_max_distance: data.ao_max_distance,
                 })
             })
             .transpose()?;
@@ -1336,6 +1389,10 @@ fn bake(request: BakeRequest, buffers: Option<&Path>) -> Result<Json> {
                         min_bounces: b.settings.2,
                         pushoff: parameters.pushoff,
                         environment_samples: b.sky.as_ref().map_or(0, |s| s.1),
+                        // (Made where the lightmaps take it or its buffer is written.)
+                        ao_max_distance: (request.ambient_occlusion.is_some() || buffers.is_some())
+                            .then_some(b.ao_max_distance),
+                        ambient_occlusion: request.ambient_occlusion.is_some(),
                     },
                 )
             });
@@ -1367,6 +1424,7 @@ fn bake(request: BakeRequest, buffers: Option<&Path>) -> Result<Json> {
                     .then_some(request.shadowmask_stitching),
                 request.filtering,
                 request.indirect_scale,
+                request.ambient_occlusion,
             )?;
         }
         let described = bounce.as_ref().map_or(Json::Null, |b| {
@@ -1430,6 +1488,8 @@ fn bake(request: BakeRequest, buffers: Option<&Path>) -> Result<Json> {
                     min_bounces: b.settings.2,
                     pushoff: PROBE_PUSHOFF,
                     environment_samples: probe_samples(b.sky.as_ref().map_or(0, |s| s.1)),
+                    ao_max_distance: None,
+                    ambient_occlusion: false,
                 };
                 let world = World {
                     scene: &b.scene,

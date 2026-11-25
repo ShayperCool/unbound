@@ -1502,6 +1502,8 @@ mod bounced {
                     min_bounces: 1,
                     pushoff: 0.0001,
                     environment_samples: 0,
+                    ao_max_distance: None,
+                    ambient_occlusion: false,
                 },
             }
         }

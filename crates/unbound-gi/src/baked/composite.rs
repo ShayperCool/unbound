@@ -36,6 +36,18 @@ pub struct Buffers<'a> {
     /// The Lighting Settings' Indirect Intensity: the indirect and sky's light is multiplied by
     /// it.
     pub indirect_scale: f32,
+    /// Per texel the part of its rays the ambient occlusion lets through, where it was baked.
+    pub ambient_occlusion: Option<&'a [f32]>,
+}
+
+/// The ambient occlusion of the Lighting Settings: each part of the light is multiplied by the
+/// texels' ambient occlusion raised to the part's exponent, where the lightmap is filtered as
+/// processed as `with` says (the ambient occlusion target's denoiser and filter).
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
+pub struct AmbientOcclusion {
+    pub indirect_exponent: f32,
+    pub direct_exponent: f32,
+    pub with: PartFiltering,
 }
 
 /// A filter of the Lighting Settings' Advanced filtering.
@@ -67,6 +79,32 @@ impl Filtering {
     pub fn denoises(&self) -> bool {
         self.direct.denoise || self.indirect.denoise
     }
+}
+
+/// The ambient occlusion `x` (0 to 1) raised to `exponent` as the bake raises it: not exactly,
+/// but by 2 to the exponent times an approximate base-2 logarithm (a cubic of the mantissa less
+/// one, plus the exponent of two; no less than -127), itself approximated (two to the whole part,
+/// times a quadratic of the fraction), in 32-bit floats in this order (tests/projects/bakedbuffers
+/// `Ao*`: up to about 0.5% above the exact power between powers of two, exact at them).
+pub fn ao_power(x: f32, exponent: f32) -> f32 {
+    // The polynomials' coefficients, as 32-bit floats.
+    let (c1, c2, c3) = (
+        f32::from_bits(0x3fb8_0d57),
+        f32::from_bits(0xbf21_dda4),
+        f32::from_bits(0x3e47_0bd9),
+    );
+    let (d1, d2) = (f32::from_bits(0x3f2e_a941), f32::from_bits(0x3ea2_ad7f));
+    let bits = x.to_bits();
+    let t = f32::from_bits((bits & 0x807f_ffff) | 0x3f80_0000) + -1.0;
+    let e = ((bits as i32) >> 23) as f32 + -127.0;
+    let cubic = (t * c3 + c2) * (t * t);
+    let log = ((t * c1 + e) + cubic) * exponent;
+    let log = log.max(-127.0);
+    let whole = log.round_ties_even();
+    let whole = if log < whole { whole - 1.0 } else { whole };
+    let f = log - whole;
+    let fraction = (f * d1 + 1.0) + (f * f) * d2;
+    f32::from_bits(((whole as i32) << 23).wrapping_add(0x3f80_0000) as u32) * fraction
 }
 
 /// What processing a part reads besides the part: its lightmap's size, charts and samples'
@@ -122,6 +160,10 @@ pub fn process(part: &mut [[f32; 4]], with: PartFiltering, post: &Post) -> Resul
 pub struct Composed {
     pub lightmap: Vec<[f32; 4]>,
     pub parts: Option<[Vec<[f32; 4]>; 2]>,
+    /// Where the lightmap is not filtered and has ambient occlusion, each texel's factor of its
+    /// direct light and of its indirect and sky's light (the directional image weighs the
+    /// directions by the light so multiplied).
+    pub occlusion: Option<[Vec<f32>; 2]>,
 }
 
 /// The lightmap's texels: red, green, blue, and 1 for a texel that holds light (a used one whose
@@ -135,10 +177,38 @@ pub fn composite(
     backface_tolerance: f32,
     padding: u32,
     filtering: Option<Filtering>,
+    ambient_occlusion: Option<AmbientOcclusion>,
     denoiser: Option<&Path>,
 ) -> Result<Composed> {
     let (width, height) = (buffers.width, buffers.height);
     let texels = width * height;
+    // The ambient occlusion each part is multiplied by: the texel's raised to the part's
+    // exponent (its fourth value the texel's weight, set below where it is processed).
+    let occlusion = match ambient_occlusion {
+        Some(ao) => {
+            let Some(values) = buffers.ambient_occlusion else {
+                anyhow::bail!("ambient occlusion without its buffer");
+            };
+            let image = |exponent: f32| -> Vec<[f32; 4]> {
+                (0..texels)
+                    .map(|k| {
+                        if buffers.used[k] {
+                            let a = ao_power(values[k], exponent);
+                            [a, a, a, 1.0]
+                        } else {
+                            [0.0; 4]
+                        }
+                    })
+                    .collect()
+            };
+            Some((
+                image(ao.indirect_exponent),
+                image(ao.direct_exponent),
+                ao.with,
+            ))
+        }
+        None => None,
+    };
     // The direct light, and the indirect and sky's light, of each used texel.
     let mut direct = vec![[0.0f32; 4]; texels];
     let mut indirect = vec![[0.0f32; 4]; texels];
@@ -155,19 +225,24 @@ pub fn composite(
         direct[k][3] = 1.0;
         indirect[k][3] = 1.0;
     }
-    // (Summed in the order of the measured unfiltered lightmaps.)
+    // (Summed in the order of the measured unfiltered lightmaps; with ambient occlusion each
+    // part multiplied by its own first.)
     let mut out = vec![[0.0f32; 4]; texels];
     for (k, texel) in out.iter_mut().enumerate() {
         if !buffers.used[k] {
             continue;
         }
         for c in 0..3 {
-            texel[c] = if buffers.indirect_scale == 1.0 {
-                buffers.direct[k][c]
-                    + buffers.indirect.map_or(0.0, |b| b[k][c])
-                    + buffers.environment.map_or(0.0, |b| b[k][c])
-            } else {
-                direct[k][c] + indirect[k][c]
+            texel[c] = match &occlusion {
+                None if buffers.indirect_scale == 1.0 => {
+                    buffers.direct[k][c]
+                        + buffers.indirect.map_or(0.0, |b| b[k][c])
+                        + buffers.environment.map_or(0.0, |b| b[k][c])
+                }
+                None => direct[k][c] + indirect[k][c],
+                Some((indirect_ao, direct_ao, _)) => {
+                    direct[k][c] * direct_ao[k][c] + indirect[k][c] * indirect_ao[k][c]
+                }
             };
         }
         texel[3] = 1.0;
@@ -184,6 +259,14 @@ pub fn composite(
         normals: buffers.normals,
         denoiser,
     };
+    // (Unfiltered, the factors the directional image weighs the light by.)
+    let factors = match (&occlusion, filtering) {
+        (Some((indirect_ao, direct_ao, _)), None) => Some([
+            direct_ao.iter().map(|t| t[0]).collect(),
+            indirect_ao.iter().map(|t| t[0]).collect(),
+        ]),
+        _ => None,
+    };
     let mut parts = None;
     if let Some(filtering) = filtering {
         for (part, with) in [
@@ -194,6 +277,21 @@ pub fn composite(
                 texel[3] = *mark;
             }
             process(part, with, &post)?;
+        }
+        // Each part multiplied by its ambient occlusion, processed as the ambient occlusion
+        // target is (weighed by the same marks).
+        if let Some((indirect_ao, direct_ao, with)) = occlusion {
+            for (part, mut ao) in [(&mut indirect, indirect_ao), (&mut direct, direct_ao)] {
+                for (texel, mark) in ao.iter_mut().zip(&marks) {
+                    texel[3] = *mark;
+                }
+                process(&mut ao, with, &post)?;
+                for (texel, a) in part.iter_mut().zip(&ao) {
+                    for c in 0..3 {
+                        texel[c] *= a[c];
+                    }
+                }
+            }
         }
         for (k, texel) in out.iter_mut().enumerate() {
             for c in 0..3 {
@@ -217,12 +315,28 @@ pub fn composite(
             texel[3] = 1.0;
         }
     }
-    Ok(Composed { lightmap, parts })
+    Ok(Composed {
+        lightmap,
+        parts,
+        occlusion: factors,
+    })
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn the_ambient_occlusions_power_is_the_bakes_approximation() {
+        // Exact at powers of two (and 0 to any positive exponent, 1 to the exponent 0); between
+        // them above the exact power (the values the Editor's lightmaps show for 45/64, 11/64).
+        assert_eq!(ao_power(1.0, 1.0), 1.0);
+        assert_eq!(ao_power(0.5, 1.0), 0.5);
+        assert_eq!(ao_power(0.0, 1.0), 0.0);
+        assert_eq!(ao_power(0.3, 0.0), 1.0);
+        assert!((ao_power(45.0 / 64.0, 1.0) - 0.706_71).abs() < 1e-5);
+        assert!((ao_power(11.0 / 64.0, 1.0) - 0.172_70).abs() < 1e-5);
+    }
 
     fn lit(values: &[f32]) -> Vec<[f32; 4]> {
         values.iter().map(|&v| [v, v, v, 1.0]).collect()
@@ -246,9 +360,11 @@ mod tests {
                 charts: &[],
                 normals: None,
                 indirect_scale: 1.0,
+                ambient_occlusion: None,
             },
             0.9,
             0,
+            None,
             None,
             None,
         )
@@ -304,9 +420,11 @@ mod tests {
                 charts: &[],
                 normals: None,
                 indirect_scale: 1.0,
+                ambient_occlusion: None,
             },
             0.9,
             0,
+            None,
             None,
             None,
         )
@@ -337,15 +455,59 @@ mod tests {
                 charts: &[],
                 normals: None,
                 indirect_scale: 1.0,
+                ambient_occlusion: None,
             },
             0.9,
             2,
+            None,
             None,
             None,
         )
         .unwrap()
         .lightmap;
         assert_eq!(out, vec![[0.0; 4]; 3]);
+    }
+
+    /// Each part multiplied by its own ambient occlusion: the indirect light by the texel's
+    /// raised to 1, the direct light by it raised to 0 (unchanged); filtered, the parts are
+    /// processed first (here: no filter) and multiplied after.
+    #[test]
+    fn each_part_is_multiplied_by_its_ambient_occlusion() {
+        let used = [true, true];
+        let direct = lit(&[1.0, 3.0]);
+        let indirect = lit(&[2.0, 2.0]);
+        let buffers = Buffers {
+            width: 2,
+            height: 1,
+            used: &used,
+            direct: &direct,
+            indirect: Some(&indirect),
+            environment: None,
+            validity: None,
+            charts: &[0, 1],
+            normals: None,
+            ambient_occlusion: Some(&[0.5, 0.25]),
+        };
+        let ao = AmbientOcclusion {
+            indirect_exponent: 1.0,
+            direct_exponent: 0.0,
+            with: PartFiltering::default(),
+        };
+        let red = |out: Vec<[f32; 4]>| out.iter().map(|t| t[0]).collect::<Vec<_>>();
+        let plain = composite(&buffers, 0.9, 0, None, Some(ao), None).unwrap();
+        assert_eq!(red(plain.lightmap), vec![1.0 + 2.0 * 0.5, 3.0 + 2.0 * 0.25]);
+        let filtered =
+            composite(&buffers, 0.9, 0, Some(Filtering::default()), Some(ao), None).unwrap();
+        assert_eq!(red(filtered.lightmap), vec![2.0, 3.5]);
+        // The parts the directional image weighs by: multiplied.
+        let [d, i] = filtered.parts.unwrap();
+        assert_eq!((d[0][0], i[0][0], i[1][0]), (1.0, 1.0, 0.5));
+        // Without its buffer: an error.
+        let none = Buffers {
+            ambient_occlusion: None,
+            ..buffers
+        };
+        assert!(composite(&none, 0.9, 0, None, Some(ao), None).is_err());
     }
 
     #[test]
@@ -364,14 +526,19 @@ mod tests {
             charts: &[],
             normals: None,
             indirect_scale: 1.0,
+            ambient_occlusion: None,
         };
-        let out = composite(&buffers, 0.9, 1, None, None).unwrap().lightmap;
+        let out = composite(&buffers, 0.9, 1, None, None, None)
+            .unwrap()
+            .lightmap;
         let alpha: Vec<f32> = out.iter().map(|t| t[3]).collect();
         assert_eq!(alpha, vec![0.0, 1.0, 1.0, 1.0, 0.0]);
         let near = |a: f32, b: f32| (a - b).abs() < 1e-5;
         assert!(near(out[1][0], 3.0));
         // Two rings: the mean of the neighbours that hold light, ring by ring.
-        let out = composite(&buffers, 0.9, 2, None, None).unwrap().lightmap;
+        let out = composite(&buffers, 0.9, 2, None, None, None)
+            .unwrap()
+            .lightmap;
         assert!(out.iter().all(|t| near(t[0], 3.0)), "{out:?}");
         // A texel between two charts takes the mean of both.
         let used = [true, false, true];
@@ -388,9 +555,11 @@ mod tests {
                 charts: &[],
                 normals: None,
                 indirect_scale: 1.0,
+                ambient_occlusion: None,
             },
             0.9,
             1,
+            None,
             None,
             None,
         )
@@ -416,6 +585,7 @@ mod tests {
             charts: &[0, 0],
             normals: None,
             indirect_scale: 1.0,
+            ambient_occlusion: None,
         };
         let filtering = Filtering {
             direct: PartFiltering::default(),
@@ -425,7 +595,7 @@ mod tests {
             },
         };
         assert!(filtering.denoises());
-        let error = composite(&buffers, 0.9, 0, Some(filtering), None).unwrap_err();
+        let error = composite(&buffers, 0.9, 0, Some(filtering), None, None).unwrap_err();
         assert!(
             format!("{error:#}").contains("Open Image Denoise"),
             "{error:#}"
@@ -452,6 +622,7 @@ mod tests {
             charts: &charts,
             normals: None,
             indirect_scale: 1.0,
+            ambient_occlusion: None,
         };
         let filtering = Filtering {
             direct: PartFiltering {
@@ -460,7 +631,7 @@ mod tests {
             },
             indirect: PartFiltering::default(),
         };
-        let out = composite(&buffers, 0.9, 0, Some(filtering), None)
+        let out = composite(&buffers, 0.9, 0, Some(filtering), None, None)
             .unwrap()
             .lightmap;
         let k = filter::kernel(1.0);
@@ -473,7 +644,9 @@ mod tests {
         // The fourth's light does not stand: its neighbour's, as before filtering.
         assert!(near(out[3][0], out[2][0]) && out[3][3] == 1.0, "{out:?}");
         // Without filtering the sum stays as it was.
-        let plain = composite(&buffers, 0.9, 0, None, None).unwrap().lightmap;
+        let plain = composite(&buffers, 0.9, 0, None, None, None)
+            .unwrap()
+            .lightmap;
         assert!(
             near(plain[0][0], 4.0) && near(plain[1][0], 2.0),
             "{plain:?}"

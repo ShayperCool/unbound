@@ -228,6 +228,24 @@ from their first surface on whatever the Min Bounces.
   scenes cannot tell before the denoiser and Gaussian filters from after: both commute with the
   factor), and the light probes' indirect light before the direct and indirect light are summed
   and Remove Ringing takes the sum (`lightingData.json`).
+- `AoOn`, `AoExponents`, `AoInfinite`, `AoFiltered`, `AoAuto`, `AoDirectional` (4, 128): the
+  coloured scene under the sun with ambient occlusion: Max Distance 1 and the new Lighting
+  Settings' exponents (indirect 1, direct 0); Max Distance 0.5 with exponents 2.5 and 0.7; Max
+  Distance 0 (the Manual calls it an infinitely long ray: in the Editor no surface occludes, only
+  rays below the sample's triangle do) with exponents 1 and 1; and with exponents 1 and 1 under
+  Advanced Gaussian filters (direct 1, indirect 5, ambient occlusion 2), the Auto filtering and
+  directional lightmaps. Each part of the light is multiplied by the texel's ambient occlusion
+  raised to the part's exponent (where the lightmap is filtered after the part is processed, the
+  ambient occlusion first processed as the ambient occlusion target is); the bake raises it not
+  exactly but by an approximate power (2 to the exponent times an approximate base-2 logarithm:
+  up to about 0.5% above the exact power between powers of two). `AoFilteredExponents`,
+  `AoTargetNone`: exponents 2.5 and 0.7 under the Advanced Gaussian filters, the ambient
+  occlusion target's filter Gaussian (radius 2) and None (the image is raised first, then
+  processed); `AoDirectionalDefault`, `AoDirectionalFiltered`: directional lightmaps with
+  exponents 1 and 0 unfiltered and 2.5 and 0.7 filtered (the directions are weighed by the light
+  ambient occlusion multiplied, filtered or not); `AoNoBounce`: Max Bounces 0 (with ambient
+  occlusion on, the texels' rays are still sent: the ambient occlusion and the back faces they
+  meet are as with bounces, the indirect light none).
 
 The scenes above them have the default sky (`Bare`, `Charts`, `Samples`, `Shapes`: the default
 skybox, with the default Lighting Settings' picked directions) or none (a black sky: one picked
@@ -261,7 +279,10 @@ bakes them in the Editor's process and writes each lightmap's buffers unprocesse
   and the indirect and sky's light, come from: the mean of their directions weighed by the
   light's luminance, and the mean of the texel's samples' cosines with it, each mapped from
   -1..1 to 0..1; 0.5 without light or without directional lightmaps) and `shadowmask<N>.r2d` (per channel the part of the texel's samples the channel's mixed light
-  reaches that see it, in the Shadowmask Lighting Mode; zeros otherwise) as the Editor wrote them;
+  reaches that see it, in the Shadowmask Lighting Mode; zeros otherwise) and
+  `ambientOcclusion<N>.r2d` (made whether ambient occlusion is on or not: per texel the part of
+  its indirect rays that leave above its sample's triangle and meet no surface within Max
+  Distance, three times, and 1 for a used texel; 0 without bounces) as the Editor wrote them;
 - `sky.json`, the bake input's sky: the side of its six faces, their colour when all texels
   are the same, else the faces in `sky.f32.z` (zlib of 32-bit float RGB, faces towards +x, -x,
   +y, -y, +z, -z, rows as a cube map stores them); the number of directions picked by its
@@ -381,8 +402,10 @@ and the Shadowmask and Subtractive modes with an Indirect Intensity other than 1
 indirect light's A-Trous filter with one (said, not written), the OptiX denoiser (the Editor runs
 it only on Windows), the Editor's denoiser on macOS (another build of the library, on another
 processor), the texels beyond the padding; of the filters: the A-Trous filter with 4 x 4 samples a texel (only 2 x
-2 measured; it reads each texel's first sample's normal), the ambient occlusion target, charts
-reaching the lightmap's border, filter radii and sigmas other than those above.
+2 measured; it reads each texel's first sample's normal), charts reaching the lightmap's border, filter radii
+and sigmas other than those above; of ambient occlusion (each said and not written): its
+target's A-Trous filter or a denoiser under the Advanced filtering, the Shadowmask and
+Subtractive modes, Extract Ambient Occlusion; and said: its buffer of lower-LOD renderers.
 
 `residuals.json` names the known differences, each with the exact text the comparison gives it
 (another text, or none, fails the run); the lightmap made of a buffer with a residual differs
@@ -415,7 +438,8 @@ horizon: the procedural sky computes its colours per vertex, so the mesh shows),
 gamma-encoded values times the ambient intensity; a black sky where the realtime lightmaps
 take the environment's light (`LightingSettings.realtimeEnvironmentLighting`).
 
-Not baked by Unbound yet: ambient occlusion; without a graphics device, the indirect light (said). Not baked (said, each once per
+Not baked by Unbound: without a graphics device, the indirect light and the ambient occlusion
+(said). Not baked (said, each once per
 scene): area lights, light cookies, soft baked
 shadows (a Baked Shadow Angle or Radius: baked hard), lights whose intensity multiplies their
 linear colour (GraphicsSettings.lightsUseLinearIntensity). Not done

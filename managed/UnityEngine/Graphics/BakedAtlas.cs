@@ -367,6 +367,7 @@ namespace UnityEngine
                 samples = settings.indirectSampleCount,
                 maxBounces = settings.maxBounces,
                 minBounces = Math.Min(settings.minBounces, settings.maxBounces),
+                aoMaxDistance = settings.aoMaxDistance,
                 blueNoise,
                 materials,
                 environment = new
@@ -794,6 +795,8 @@ namespace UnityEngine
                         Approximated("lod:" + path, $"{path}: '{renderer.name}' is in a LOD Group; LOD Group baked lightmapping is measured only for Unity 6000.0.");
                     if (inLod && lodMeasured && (lod.Mask & 1) == 0 && settings.maxBounces > 2)
                         Approximated("lod-bounces:" + path, $"{path}: lower-LOD renderers with maxBounces={settings.maxBounces} (> 2) are not measured yet in Unbound's bake (Lightmapping.Bake).");
+                    if (inLod && (lod.Mask & 1) == 0 && settings.ao)
+                        Approximated("lod-ao:" + path, $"{path}: the ambient occlusion of lower-LOD renderers is not measured yet in Unbound's bake (Lightmapping.Bake).");
                     int? lodLevel = inLod ? System.Numerics.BitOperations.TrailingZeroCount(lod.Mask) : (int?)null;
                     var (lodGroup, lodMask) = LodBakeFields(inLod, lod);
                     renderers.Add(new
@@ -854,6 +857,7 @@ namespace UnityEngine
                     shadowmaskStitching = images && !layoutOnly && UnityEditor.EditorSettings.shadowmaskStitching,
                     filtering = RealtimeGI.Filtering(settings),
                     indirectScale = settings.indirectScale,
+                    ambientOcclusion = RealtimeGI.AmbientOcclusion(settings),
                 });
                 // The request, the bake (a renderer it refuses, named) and the reading of its
                 // answer all fail the scene's layout, said.

@@ -365,6 +365,8 @@ pub fn integrate(request: IntegrateRequest) -> Result<Json> {
                 } else {
                     0
                 },
+                ao_max_distance: None,
+                ambient_occlusion: false,
             };
             let w = World {
                 scene: &world.scene,

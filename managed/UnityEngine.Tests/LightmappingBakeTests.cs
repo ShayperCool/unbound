@@ -325,9 +325,37 @@ namespace UnityEngine.Tests
                     Assert.Null(Unwritten(environment, "Assets/Scenes/Lit", true, lightmaps: true));
                     environment.filteringMode = LightingSettings.FilterMode.None;
                     Assert.Null(RealtimeGI.Filtering(environment));
+                    // Ambient occlusion is made (tests/projects/bakedbuffers Ao*): its exponents,
+                    // and its target's filtering only where the lightmaps are filtered; extracted
+                    // to a texture of its own it is not.
                     environment.ao = true;
-                    Assert.Contains("ambient occlusion", Unwritten(environment, "Assets/Scenes/Lit", true, lightmaps: true));
+                    environment.aoExponentIndirect = 2.5f;
+                    environment.aoExponentDirect = 0.7f;
+                    Assert.Null(Unwritten(environment, "Assets/Scenes/Lit", true, lightmaps: true));
+                    Assert.Equal("{\"indirectExponent\":2.5,\"directExponent\":0.7,\"filtering\":null}", Json(RealtimeGI.AmbientOcclusion(environment)));
+                    environment.filteringMode = LightingSettings.FilterMode.Auto;
+                    Assert.Equal("{\"indirectExponent\":2.5,\"directExponent\":0.7,\"filtering\":{\"denoise\":true,\"filter\":{\"gaussian\":1}}}", Json(RealtimeGI.AmbientOcclusion(environment)));
+                    environment.filteringMode = LightingSettings.FilterMode.Advanced;
+                    environment.denoiserTypeDirect = environment.denoiserTypeIndirect = LightingSettings.DenoiserType.None;
+                    environment.denoiserTypeAO = LightingSettings.DenoiserType.None;
+                    environment.filterTypeAO = LightingSettings.FilterType.Gaussian;
+                    Assert.Null(Unwritten(environment, "Assets/Scenes/Lit", true, lightmaps: true));
+                    environment.filterTypeAO = LightingSettings.FilterType.ATrous;
+                    Assert.Contains("A-Trous filter or a denoiser", Unwritten(environment, "Assets/Scenes/Lit", true, lightmaps: true));
+                    environment.filterTypeAO = LightingSettings.FilterType.Gaussian;
+                    environment.denoiserTypeAO = LightingSettings.DenoiserType.OpenImage;
+                    Assert.Contains("A-Trous filter or a denoiser", Unwritten(environment, "Assets/Scenes/Lit", true, lightmaps: true));
+                    environment.denoiserTypeAO = LightingSettings.DenoiserType.None;
+                    environment.filteringMode = LightingSettings.FilterMode.None;
+                    environment.mixedBakeMode = MixedLightingMode.Shadowmask;
+                    Assert.Contains("ambient occlusion in the Shadowmask", Unwritten(environment, "Assets/Scenes/Lit", true, lightmaps: true));
+                    environment.mixedBakeMode = MixedLightingMode.IndirectOnly;
+                    environment.extractAO = true;
+                    Assert.Contains("Extract Ambient Occlusion", Unwritten(environment, "Assets/Scenes/Lit", true, lightmaps: true));
                     environment.ao = false;
+                    Assert.Null(Unwritten(environment, "Assets/Scenes/Lit", true, lightmaps: true));
+                    environment.extractAO = false;
+                    Assert.Null(RealtimeGI.AmbientOcclusion(environment));
                     environment.indirectScale = 2f;
                     // An Indirect Intensity other than 1 is made (tests/projects/bakedbuffers
                     // Intensity*), but not with directional lightmaps.

@@ -234,6 +234,8 @@ fn main() {
         min_bounces: r.u32(),
         pushoff,
         environment_samples: 0,
+        ao_max_distance: None,
+        ambient_occlusion: false,
     };
     let lights: Vec<Light> = lights
         .into_iter()
@@ -370,6 +372,8 @@ fn main() {
             Settings {
                 samples: counts[0],
                 environment_samples: counts[1],
+                ao_max_distance: None,
+                ambient_occlusion: false,
                 ..settings
             },
         );
