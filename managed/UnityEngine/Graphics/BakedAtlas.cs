@@ -652,10 +652,7 @@ namespace UnityEngine
                 if (light.cookie != null && !cookies)
                     warn("light-cookie:" + path + fileId, $"{path}: '{light.name}' has a cookie, which Unbound's integration does not apply: not measured.");
                 else if (light.cookie != null)
-                {
                     cookie = Cookie(light, kind, path, fileId, warn);
-                    if (cookie != null) cookieTexels += (long)light.cookie.width * light.cookie.height * (kind == 1 ? 6 : 1);
-                }
                 // An area light is baked (the Editor offers no other mode); a mixed one is not
                 // measured.
                 if (kind >= 3 && light.lightmapBakeType != LightmapBakeType.Baked)
@@ -695,6 +692,8 @@ namespace UnityEngine
                     size = new[] { light.areaSize.x, light.areaSize.y },
                     cookie,
                 };
+                // (Counted for the lights that are baked.)
+                if (cookie != null) cookieTexels += (long)light.cookie.width * light.cookie.height * (kind == 1 ? 6 : 1);
                 lights.Add(new ExtractedLight(json, kind, mode, position, t.forward, light.range, light.spotAngle));
             }
             if (cookieTexels > MeasuredCookieTexels)

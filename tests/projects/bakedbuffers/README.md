@@ -250,7 +250,8 @@ from their first surface on whatever the Min Bounces.
   its four nearest texels and half a texel inside its edges whatever its filter; a spot
   light's cookie spans the square of its cone (in the place of the cone's falloff), a sun's
   one tile of its Cookie Size on the light's plane (repeated where it wraps, the light uncut
-  outside it where it clamps), a point light's the cube face its direction picks.
+  outside it where it clamps), a point light's the cube face its direction picks (every face
+  but +y, which no receiver reaches, measured).
 - `LinearSun`, `LinearLamps`, `LinearArea`: lights whose intensity multiplies their linear
   colour (GraphicsSettings.lightsUseLinearIntensity, which the capture turns on for the scenes
   named `Linear*`): a coloured sun, a point and a spot light over a light probe group, and a

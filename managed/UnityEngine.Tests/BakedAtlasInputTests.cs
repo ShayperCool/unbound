@@ -361,6 +361,45 @@ namespace UnityEngine.Tests
                 Assert.Equal(System.Text.Json.JsonValueKind.Null, cubeLights[0].GetProperty("cookie").ValueKind);
                 Assert.Contains(capture.Logs, l => l.StartsWith("Warning: ") && l.Contains("'Spot' has a cookie (Cubemap on a Spot light)"));
                 spot.cookie = null;
+                // A sun's cookie wrapped Mirror is not measured: said, the sun baked without it. A
+                // spot light's cookie never repeats, whatever its wrap modes: sent clamped, unsaid.
+                capture.Logs.Clear();
+                var mirrorFile = new LoadedFile { Path = "Assets/LitMirrorCookie.unity", Guid = "23000000000000000000000000000000" };
+                sunCookie.wrapMode = TextureWrapMode.Mirror;
+                mirrorFile.Objects[1] = sun;
+                var mirrored = System.Text.Json.JsonDocument.Parse(System.Text.Json.JsonSerializer.Serialize(BakedAtlas.Lights(mirrorFile, mirrorFile.Path))).RootElement;
+                Assert.Equal(System.Text.Json.JsonValueKind.Null, mirrored[0].GetProperty("cookie").ValueKind);
+                Assert.Contains(capture.Logs, l => l.StartsWith("Warning: ") && l.Contains("'Sun' has a cookie wrapped Mirror"));
+                capture.Logs.Clear();
+                var spotCookie = new Texture2D(2, 2, TextureFormat.RGBA32, false) { wrapModeU = TextureWrapMode.Repeat, wrapModeV = TextureWrapMode.Clamp };
+                var spotFile = new LoadedFile { Path = "Assets/LitSpotCookie.unity", Guid = "24000000000000000000000000000000" };
+                spot.cookie = spotCookie;
+                spotFile.Objects[1] = spot;
+                var spotSent = System.Text.Json.JsonDocument.Parse(System.Text.Json.JsonSerializer.Serialize(BakedAtlas.Lights(spotFile, spotFile.Path))).RootElement[0].GetProperty("cookie");
+                Assert.False(spotSent.GetProperty("repeat").GetBoolean());
+                Assert.DoesNotContain(capture.Logs, l => l.Contains("cookie"));
+                // More cookie texels in a scene than measured (one cookie of 1024 a side and three
+                // of 256: bakedbuffers CookieMany) are said; that many are not.
+                capture.Logs.Clear();
+                Light CookieSpot(string name, int size)
+                {
+                    var light = Make(name, LightType.Spot, LightmapBakeType.Baked);
+                    light.cookie = new Texture2D(size, size, TextureFormat.Alpha8, false) { wrapMode = TextureWrapMode.Clamp };
+                    return light;
+                }
+                var measuredFile = new LoadedFile { Path = "Assets/LitManyMeasured.unity", Guid = "25000000000000000000000000000000" };
+                measuredFile.Objects[1] = CookieSpot("Huge", 1024);
+                for (int k = 0; k < 3; k++) measuredFile.Objects[2 + k] = CookieSpot("Small" + k, 256);
+                Assert.Equal(4, BakedAtlas.Lights(measuredFile, measuredFile.Path).Count);
+                Assert.DoesNotContain(capture.Logs, l => l.Contains("cookies hold"));
+                var manyFile = new LoadedFile { Path = "Assets/LitMany.unity", Guid = "26000000000000000000000000000000" };
+                manyFile.Objects[1] = CookieSpot("One", 1024);
+                manyFile.Objects[2] = CookieSpot("Two", 1024);
+                Assert.Equal(2, BakedAtlas.Lights(manyFile, manyFile.Path).Count);
+                Assert.Contains(capture.Logs, l => l.StartsWith("Warning: ") && l.Contains("cookies hold 2097152 texels"));
+                sunCookie.wrapMode = TextureWrapMode.Repeat;
+                spot.cookie = null;
+
                 // A point light's cube cookie, its six faces one after the other, also once it is no
                 // longer readable (the bake reads it as the Editor's does).
                 capture.Logs.Clear();
