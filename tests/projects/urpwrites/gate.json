@@ -10,6 +10,7 @@
     "managed/UnityEngine/Editor/EditorState.cs",
     "managed/UnityEngine/Graphics/Material.cs",
     "managed/UnityEngine/Graphics/DisabledPassList.cs",
+    "tests/file_writes.py",
     "tests/projects/materialvalidation/Assets/Resources/EmissionRealtimeNoKeyword.mat",
     "tests/projects/urpwrites/",
     "tests/projects/materialvalidation/Assets/Resources/EmissionRealtimeNoKeyword.mat.meta"

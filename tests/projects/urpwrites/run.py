@@ -15,7 +15,6 @@ import argparse
 import json
 import os
 from pathlib import Path
-import re
 import shutil
 import subprocess
 import sys
@@ -24,6 +23,7 @@ import time
 ROOT = Path(__file__).resolve().parent
 REPO = ROOT.parents[2]
 sys.path.insert(0, str(REPO/'tests'))
+from file_writes import PARTS, exit_rows, files  # noqa: E402
 from probe_paths import reference_file, run_root  # noqa: E402
 
 WORK = run_root(ROOT, 'runs')
@@ -31,10 +31,6 @@ HEAVY = Path.home()/'.cache/compat/with-heavy-job'
 OUT = 'values.jsonl'
 RAW = 'probe.jsonl'
 VARIABLE = 'URP_WRITES_OUT'
-PARTS = ('Assets', 'Packages', 'ProjectSettings')
-GUID = re.compile(r'\b[0-9a-f]{32}\b')
-FILE_ID = re.compile(r'(&|fileID: )(-?[0-9]{5,})')
-KEPT_IDS = {'2100000', '11400000', '11500000', '4800000', '2800000'}
 COMPLETE = {'key': 'complete', 'value': '1'}
 
 
@@ -45,67 +41,6 @@ def project_at(out):
     for folder in PARTS:
         shutil.copytree(ROOT/folder, project/folder)
     return project
-
-
-def files(project):
-    return {p.relative_to(project).as_posix(): p.read_bytes()
-            for part in PARTS for p in sorted((project/part).rglob('*')) if p.is_file()}
-
-
-def guids(project):
-    found = {}
-    for meta in (project/'Assets').rglob('*.meta'):
-        match = re.search(r'^guid: ([0-9a-f]{32})', meta.read_text(errors='replace'), re.M)
-        if match:
-            found[match.group(1)] = meta.relative_to(project).as_posix()[:-len('.meta')]
-    return found
-
-
-def normalize(text, known):
-    text = GUID.sub(lambda m: f'<guid:{known[m.group(0)]}>' if m.group(0) in known else m.group(0), text)
-    ids = {}
-
-    def local(m):
-        if m.group(2) in KEPT_IDS:
-            return m.group(0)
-        return m.group(1) + ids.setdefault(m.group(2), f'<id{len(ids) + 1}>')
-    return FILE_ID.sub(local, text)
-
-
-DOCUMENT_ID = re.compile(r'(?m)^--- !u![0-9]+ &(-?[0-9]+)')
-
-
-def main_document_first(text):
-    """A file's documents with the material's first: the others' file ids are random and the
-    Editor writes documents by ascending file id (`.idsAscending` records that order)."""
-    ends = text.endswith('\n')
-    parts = (text[:-1] if ends else text).split('\n--- ')
-    if len(parts) < 3:
-        return text
-    documents = parts[1:]
-    main = next((i for i, d in enumerate(documents) if d.startswith('!u!21 &2100000\n')), 0)
-    documents.insert(0, documents.pop(main))
-    return parts[0] + ''.join('\n--- ' + d for d in documents) + ('\n' if ends else '')
-
-
-def exit_rows(project, initial):
-    now = files(project)
-    known = guids(project)
-    rows = []
-    for path in sorted(initial.keys() | now.keys()):
-        before, after = initial.get(path), now.get(path)
-        if after == before:
-            value = 'unchanged'
-        elif after is None:
-            value = '<removed>'
-        else:
-            text = after.decode('utf-8', 'replace')
-            value = normalize(main_document_first(text), known)
-            ids = [int(i) for i in DOCUMENT_ID.findall(text)]
-            if len(ids) > 1:
-                rows.append({'key': f'exit.{path}.idsAscending', 'value': 'true' if ids == sorted(ids) else 'false'})
-        rows.append({'key': 'exit.' + path, 'value': value})
-    return rows
 
 
 def finish(out, project, initial):
