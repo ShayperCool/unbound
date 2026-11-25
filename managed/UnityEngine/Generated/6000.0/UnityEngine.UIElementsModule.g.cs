@@ -4556,10 +4556,8 @@ namespace UnityEngine.UIElements
     {
         [global::Unbound.Stub] internal void Swap(global::UnityEngine.UIElements.StyleSheet old, global::UnityEngine.UIElements.StyleSheet @new) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElementStyleSheetSet.Swap"); }
     }
-    [global::Unbound.Stub]
-    internal unsafe static partial class VisualElementUtils
+    unsafe static partial class VisualElementUtils
     {
-        [global::Unbound.Stub] public static string GetUniqueName(string nameBase) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElementUtils.GetUniqueName"); return default; }
         [global::Unbound.Stub] internal static int GetFoldoutDepth(this global::UnityEngine.UIElements.VisualElement element) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElementUtils.GetFoldoutDepth"); return default; }
         [global::Unbound.Stub] internal static void AssignInspectorStyleIfNecessary(this global::UnityEngine.UIElements.VisualElement element, string classNameToEnable) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.VisualElementUtils.AssignInspectorStyleIfNecessary"); }
     }

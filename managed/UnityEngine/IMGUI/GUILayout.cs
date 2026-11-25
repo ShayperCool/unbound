@@ -1036,7 +1036,9 @@ namespace UnityEngine
         internal static GUILayoutGroup BeginLayoutGroup(GUIStyle style, GUILayoutOption[] options, Type layoutType)
         {
             GUILayoutGroup g;
-            var eventType = Event.current?.type;
+            // Unity's C# reads the current event: outside OnGUI this throws NullReferenceException
+            // (measured: tests/projects/editorwindowgui reorderable.outsideGui, DoLayoutList).
+            var eventType = Event.current.type;
             if (eventType == EventType.Layout || (eventType == EventType.Used && Compat.UsedGUILayoutMeasured))
             {
                 g = CreateGroup(layoutType);
@@ -1075,7 +1077,7 @@ namespace UnityEngine
         internal static GUILayoutGroup BeginLayoutArea(GUIStyle style, Type layoutType)
         {
             GUILayoutGroup g;
-            var eventType = Event.current?.type;
+            var eventType = Event.current.type;
             if (eventType == EventType.Layout || (eventType == EventType.Used && Compat.UsedGUILayoutMeasured))
             {
                 g = CreateGroup(layoutType);
@@ -1106,8 +1108,9 @@ namespace UnityEngine
         /// <summary>An entry sized for the content; a wrapping style's height follows its width.</summary>
         static Rect DoGetRect(GUIContent content, GUIStyle style, GUILayoutOption[] options)
         {
-            GUIUtility.CheckOnGUI();
-            var eventType = Event.current?.type;
+            // Outside OnGUI: ArgumentException, as Unity's check gives there.
+            GUIUtility.CheckOnGUI(requireCurrentEvent: true);
+            var eventType = Event.current.type;
             if (eventType == EventType.Layout)
             {
                 if (style.isHeightDependantOnWidth)
@@ -1149,7 +1152,7 @@ namespace UnityEngine
         static Rect DoGetRect(float minWidth, float maxWidth, float minHeight, float maxHeight, GUIStyle style, GUILayoutOption[] options)
         {
             GUIUtility.CheckOnGUI();
-            var eventType = Event.current?.type;
+            var eventType = Event.current.type;
             if (eventType == EventType.Layout)
             {
                 current.groups.Peek().Add(new GUILayoutEntry(minWidth, maxWidth, minHeight, maxHeight, style, options));
@@ -1162,7 +1165,7 @@ namespace UnityEngine
         public static Rect GetLastRect()
         {
             GUIUtility.CheckOnGUI();
-            var eventType = Event.current?.type;
+            var eventType = Event.current.type;
             if (eventType == EventType.Layout || (eventType == EventType.Used && Compat.UsedGUILayoutMeasured))
                 return kDummyRect;
             return current.groups.Peek().GetLast();
@@ -1176,7 +1179,7 @@ namespace UnityEngine
         static Rect DoGetAspectRect(float aspect, GUILayoutOption[] options)
         {
             GUIUtility.CheckOnGUI();
-            var eventType = Event.current?.type;
+            var eventType = Event.current.type;
             if (eventType == EventType.Layout)
             {
                 current.groups.Peek().Add(new GUIAspectSizer(aspect, options));

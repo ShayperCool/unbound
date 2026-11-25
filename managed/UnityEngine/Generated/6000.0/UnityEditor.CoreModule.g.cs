@@ -8490,7 +8490,6 @@ namespace UnityEditor
         [global::Unbound.Stub] public static void QueueGameViewInputEvent(global::UnityEngine.Event evt) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUIUtility.QueueGameViewInputEvent"); }
         [global::System.Obsolete("RenderGameViewCameras is no longer supported.Consider rendering cameras manually.")] [global::Unbound.Stub] public static void RenderGameViewCameras(global::UnityEngine.RenderTexture target, int targetDisplay, global::UnityEngine.Rect screenRect, global::UnityEngine.Vector2 mousePosition, bool gizmos) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUIUtility.RenderGameViewCameras"); }
         [global::Unbound.Stub] internal static global::UnityEngine.Object GetScript(string scriptClass) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUIUtility.GetScript"); return default; }
-        [global::Unbound.Stub] public static void SetIconForObject(global::UnityEngine.Object obj, global::UnityEngine.Texture2D icon) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUIUtility.SetIconForObject"); }
         [global::Unbound.Stub] internal static global::UnityEditor.BuiltinResource[] GetBuiltinResourceList(int classID) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUIUtility.GetBuiltinResourceList"); return global::System.Array.Empty<global::UnityEditor.BuiltinResource>(); }
         [global::Unbound.Stub] internal static global::UnityEngine.AssetBundle GetEditorAssetBundle() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUIUtility.GetEditorAssetBundle"); return default; }
         [global::Unbound.Stub] internal static global::UnityEngine.AssetBundle ReloadEditorAssetBundle() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUIUtility.ReloadEditorAssetBundle"); return default; }
@@ -8502,7 +8501,6 @@ namespace UnityEditor
         [global::Unbound.Stub] internal static void ClearCurrentViewCursor() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUIUtility.ClearCurrentViewCursor"); }
         [global::Unbound.Stub] internal static void CleanCache(string text) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUIUtility.CleanCache"); }
         [global::Unbound.Stub] internal static void SetDefaultFont(global::UnityEngine.Font font) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUIUtility.SetDefaultFont"); }
-        [global::Unbound.Stub] public static global::UnityEngine.Texture2D GetIconForObject(global::UnityEngine.Object obj) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUIUtility.GetIconForObject"); return default; }
         [global::Unbound.Stub] internal static void RenderPlayModeViewCamerasInternal(global::UnityEngine.RenderTexture target, int targetDisplay, global::UnityEngine.Vector2 mousePosition, bool gizmos, bool renderIMGUI) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUIUtility.RenderPlayModeViewCamerasInternal"); }
         [global::Unbound.Stub] internal static void SetupWindowSpaceAndVSyncInternal(global::UnityEngine.Rect screenRect) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUIUtility.SetupWindowSpaceAndVSyncInternal"); }
         [global::Unbound.Stub] internal static void PerformTonemappingForGameView() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUIUtility.PerformTonemappingForGameView"); }
@@ -8576,8 +8574,6 @@ namespace UnityEditor
         [global::System.Obsolete("EditorGUIUtility.RGBToHSV is obsolete. Use Color.RGBToHSV instead (UnityUpgradable) -> [UnityEngine] UnityEngine.Color.RGBToHSV(*)")] [global::Unbound.Stub] public static void RGBToHSV(global::UnityEngine.Color rgbColor, out float H, out float S, out float V) { H = default; S = default; V = default; global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUIUtility.RGBToHSV"); }
         [global::System.Obsolete("EditorGUIUtility.HSVToRGB is obsolete. Use Color.HSVToRGB instead (UnityUpgradable) -> [UnityEngine] UnityEngine.Color.HSVToRGB(*)")] [global::Unbound.Stub] public static global::UnityEngine.Color HSVToRGB(float H, float S, float V) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUIUtility.HSVToRGB"); return default; }
         [global::System.Obsolete("EditorGUIUtility.HSVToRGB is obsolete. Use Color.HSVToRGB instead (UnityUpgradable) -> [UnityEngine] UnityEngine.Color.HSVToRGB(*)")] [global::Unbound.Stub] public static global::UnityEngine.Color HSVToRGB(float H, float S, float V, bool hdr) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUIUtility.HSVToRGB"); return default; }
-        [global::Unbound.Stub] public static void AddCursorRect(global::UnityEngine.Rect position, global::UnityEditor.MouseCursor mouse) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUIUtility.AddCursorRect"); }
-        [global::Unbound.Stub] public static void AddCursorRect(global::UnityEngine.Rect position, global::UnityEditor.MouseCursor mouse, int controlID) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUIUtility.AddCursorRect"); }
         [global::Unbound.Stub] internal static global::UnityEngine.Rect HandleHorizontalSplitter(global::UnityEngine.Rect dragRect, float width, float minLeftSide, float minRightSide) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUIUtility.HandleHorizontalSplitter"); return default; }
         [global::Unbound.Stub] internal static void DrawHorizontalSplitter(global::UnityEngine.Rect dragRect) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUIUtility.DrawHorizontalSplitter"); }
         [global::Unbound.Stub] public static void ShowObjectPicker<T>(global::UnityEngine.Object obj, bool allowSceneObjects, string searchFilter, int controlID) where T : global::UnityEngine.Object { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUIUtility.ShowObjectPicker"); }
@@ -9294,7 +9290,6 @@ namespace UnityEditor
         [global::Unbound.Stub] protected virtual void OnBackingScaleFactorChanged() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorWindow.OnBackingScaleFactorChanged"); }
         public global::UnityEditor.IDataModeController dataModeController { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorWindow.dataModeController"); return default; } }
         internal global::UnityEngine.UIElements.VisualElement baseRootVisualElement { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorWindow.baseRootVisualElement"); return default; } }
-        public global::UnityEngine.UIElements.VisualElement rootVisualElement { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorWindow.rootVisualElement"); return default; } }
         internal virtual bool liveReloadPreferenceDefault { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorWindow.liveReloadPreferenceDefault"); return default; } }
         internal virtual global::UnityEngine.UIElements.BindingLogLevel defaultBindingLogLevel { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorWindow.defaultBindingLogLevel"); return default; } }
         internal bool isUIToolkitWindow { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorWindow.isUIToolkitWindow"); return default; } }
@@ -11019,7 +11014,6 @@ namespace UnityEditor
         [global::Unbound.Stub] public static bool PlaceObject(global::UnityEngine.Vector2 guiPosition, out global::UnityEngine.Vector3 position, out global::UnityEngine.Vector3 normal) { position = default; normal = default; global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.HandleUtility.PlaceObject"); return default; }
         [global::Unbound.Stub] internal static void FilterRendererIDs(global::UnityEngine.Renderer[] renderers, out int[] parentRendererIDs, out int[] childRendererIDs) { parentRendererIDs = default; childRendererIDs = default; global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.HandleUtility.FilterRendererIDs"); }
         [global::Unbound.Stub] internal static void FilterInstanceIDs(global::System.Collections.Generic.IEnumerable<global::UnityEngine.GameObject> gameObjects, out int[] parentInstanceIDs, out int[] childInstanceIDs, out global::System.Collections.Generic.HashSet<int> childInstanceIDsHashSet) { parentInstanceIDs = default; childInstanceIDs = default; childInstanceIDsHashSet = default; global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.HandleUtility.FilterInstanceIDs"); }
-        [global::Unbound.Stub] public static void Repaint() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.HandleUtility.Repaint"); }
         [global::Unbound.Stub] public static bool RegisterRenderPickingCallback(global::UnityEditor.HandleUtility.RenderPickingCallback renderPickingCallback) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.HandleUtility.RegisterRenderPickingCallback"); return default; }
         [global::Unbound.Stub] public static bool UnregisterRenderPickingCallback(global::UnityEditor.HandleUtility.RenderPickingCallback renderPickingCallback) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.HandleUtility.UnregisterRenderPickingCallback"); return default; }
         [global::Unbound.Stub] public static global::UnityEngine.Vector4 EncodeSelectionId(int pickingIndex) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.HandleUtility.EncodeSelectionId"); return default; }
@@ -11126,14 +11120,7 @@ namespace UnityEditor
         [global::Unbound.Stub] internal static global::UnityEngine.Color ToActiveColorSpace(global::UnityEngine.Color color) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Handles.ToActiveColorSpace"); return default; }
         [global::Unbound.Stub] internal static bool IsHovering(int controlID, global::UnityEngine.Event evt) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Handles.IsHovering"); return default; }
         [global::Unbound.Stub] internal static void SetupHandleColor(int controlID, global::UnityEngine.Event evt, out global::UnityEngine.Color prevColor, out float thickness) { prevColor = default; thickness = default; global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Handles.SetupHandleColor"); }
-        [global::Unbound.Stub] public static void DrawPolyLine(params global::UnityEngine.Vector3[] points) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Handles.DrawPolyLine"); }
         [global::Unbound.Stub] internal static void DrawLine(global::UnityEngine.Vector3 p1, global::UnityEngine.Vector3 p2, bool dottedLine) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Handles.DrawLine"); }
-        [global::Unbound.Stub] public static void DrawLines(global::UnityEngine.Vector3[] lineSegments) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Handles.DrawLines"); }
-        [global::Unbound.Stub] public static void DrawLines(global::UnityEngine.Vector3[] points, int[] segmentIndices) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Handles.DrawLines"); }
-        [global::Unbound.Stub] public static void DrawDottedLine(global::UnityEngine.Vector3 p1, global::UnityEngine.Vector3 p2, float screenSpaceSize) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Handles.DrawDottedLine"); }
-        [global::Unbound.Stub] public static void DrawDottedLines(global::UnityEngine.Vector3[] lineSegments, float screenSpaceSize) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Handles.DrawDottedLines"); }
-        [global::Unbound.Stub] public static void DrawDottedLines(global::UnityEngine.Vector3[] points, int[] segmentIndices, float screenSpaceSize) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Handles.DrawDottedLines"); }
-        [global::Unbound.Stub] public static void DrawWireCube(global::UnityEngine.Vector3 center, global::UnityEngine.Vector3 size) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Handles.DrawWireCube"); }
         [global::Unbound.Stub] public static void DrawGizmos(global::UnityEngine.Camera camera) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Handles.DrawGizmos"); }
         [global::Unbound.Stub] public static global::UnityEngine.Vector3 Slider(global::UnityEngine.Vector3 position, global::UnityEngine.Vector3 direction) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Handles.Slider"); return default; }
         [global::Unbound.Stub] public static global::UnityEngine.Vector3 Slider(global::UnityEngine.Vector3 position, global::UnityEngine.Vector3 direction, float size, global::UnityEditor.Handles.CapFunction capFunction, float snap) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Handles.Slider"); return default; }
@@ -11197,28 +11184,7 @@ namespace UnityEditor
         [global::Unbound.Stub] internal static global::UnityEngine.Matrix4x4 StartCapDraw(global::UnityEngine.Vector3 position, global::UnityEngine.Quaternion rotation, float size) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Handles.StartCapDraw"); return default; }
         [global::Unbound.Stub] internal static void RectangleCap(int controlID, global::UnityEngine.Vector3 position, global::UnityEngine.Quaternion rotation, global::UnityEngine.Vector2 size) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Handles.RectangleCap"); }
         [global::Unbound.Stub] public static void SelectionFrame(int controlID, global::UnityEngine.Vector3 position, global::UnityEngine.Quaternion rotation, float size) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Handles.SelectionFrame"); }
-        [global::Unbound.Stub] public static void DrawAAPolyLine(global::UnityEngine.Color[] colors, global::UnityEngine.Vector3[] points) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Handles.DrawAAPolyLine"); }
-        [global::Unbound.Stub] public static void DrawAAPolyLine(float width, global::UnityEngine.Color[] colors, global::UnityEngine.Vector3[] points) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Handles.DrawAAPolyLine"); }
-        [global::Unbound.Stub] public static void DrawAAPolyLine(params global::UnityEngine.Vector3[] points) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Handles.DrawAAPolyLine"); }
-        [global::Unbound.Stub] public static void DrawAAPolyLine(float width, params global::UnityEngine.Vector3[] points) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Handles.DrawAAPolyLine"); }
-        [global::Unbound.Stub] public static void DrawAAPolyLine(global::UnityEngine.Texture2D lineTex, params global::UnityEngine.Vector3[] points) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Handles.DrawAAPolyLine"); }
-        [global::Unbound.Stub] public static void DrawAAPolyLine(float width, int actualNumberOfPoints, params global::UnityEngine.Vector3[] points) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Handles.DrawAAPolyLine"); }
-        [global::Unbound.Stub] public static void DrawAAPolyLine(global::UnityEngine.Texture2D lineTex, float width, params global::UnityEngine.Vector3[] points) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Handles.DrawAAPolyLine"); }
-        [global::Unbound.Stub] public static void DrawAAConvexPolygon(params global::UnityEngine.Vector3[] points) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Handles.DrawAAConvexPolygon"); }
-        [global::Unbound.Stub] public static void DrawBezier(global::UnityEngine.Vector3 startPosition, global::UnityEngine.Vector3 endPosition, global::UnityEngine.Vector3 startTangent, global::UnityEngine.Vector3 endTangent, global::UnityEngine.Color color, global::UnityEngine.Texture2D texture, float width) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Handles.DrawBezier"); }
-        [global::Unbound.Stub] public static void DrawWireDisc(global::UnityEngine.Vector3 center, global::UnityEngine.Vector3 normal, float radius) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Handles.DrawWireDisc"); }
-        [global::Unbound.Stub] public static void DrawWireDisc(global::UnityEngine.Vector3 center, global::UnityEngine.Vector3 normal, float radius, float thickness) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Handles.DrawWireDisc"); }
-        [global::Unbound.Stub] public static void DrawWireArc(global::UnityEngine.Vector3 center, global::UnityEngine.Vector3 normal, global::UnityEngine.Vector3 from, float angle, float radius) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Handles.DrawWireArc"); }
-        [global::Unbound.Stub] public static void DrawWireArc(global::UnityEngine.Vector3 center, global::UnityEngine.Vector3 normal, global::UnityEngine.Vector3 from, float angle, float radius, float thickness) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Handles.DrawWireArc"); }
-        [global::Unbound.Stub] public static void DrawSolidRectangleWithOutline(global::UnityEngine.Rect rectangle, global::UnityEngine.Color faceColor, global::UnityEngine.Color outlineColor) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Handles.DrawSolidRectangleWithOutline"); }
-        [global::Unbound.Stub] public static void DrawSolidRectangleWithOutline(global::UnityEngine.Vector3[] verts, global::UnityEngine.Color faceColor, global::UnityEngine.Color outlineColor) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Handles.DrawSolidRectangleWithOutline"); }
-        [global::Unbound.Stub] public static void DrawSolidDisc(global::UnityEngine.Vector3 center, global::UnityEngine.Vector3 normal, float radius) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Handles.DrawSolidDisc"); }
-        [global::Unbound.Stub] public static void DrawSolidArc(global::UnityEngine.Vector3 center, global::UnityEngine.Vector3 normal, global::UnityEngine.Vector3 from, float angle, float radius) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Handles.DrawSolidArc"); }
         [global::Unbound.Stub] internal static void Init() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Handles.Init"); }
-        [global::Unbound.Stub] public static void Label(global::UnityEngine.Vector3 position, global::UnityEngine.Texture image) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Handles.Label"); }
-        [global::Unbound.Stub] public static void Label(global::UnityEngine.Vector3 position, global::UnityEngine.GUIContent content) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Handles.Label"); }
-        [global::Unbound.Stub] public static void Label(global::UnityEngine.Vector3 position, string text, global::UnityEngine.GUIStyle style) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Handles.Label"); }
-        [global::Unbound.Stub] public static void Label(global::UnityEngine.Vector3 position, global::UnityEngine.GUIContent content, global::UnityEngine.GUIStyle style) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Handles.Label"); }
         [global::Unbound.Stub] internal static global::UnityEngine.Rect GetCameraRect(global::UnityEngine.Rect position) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Handles.GetCameraRect"); return default; }
         [global::Unbound.Stub] public static global::UnityEngine.Vector2 GetMainGameViewSize() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Handles.GetMainGameViewSize"); return default; }
         [global::Unbound.Stub] public static void DrawOutline(int[] parentRenderers, int[] childRenderers, global::UnityEngine.Color parentNodeColor, global::UnityEngine.Color childNodeColor, float fillOpacity = 0f) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Handles.DrawOutline"); }
@@ -15752,30 +15718,6 @@ namespace UnityEditor
     {
         [global::Unbound.Stub] public override void OnInspectorGUI() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.MonoScriptInspector.OnInspectorGUI"); }
         [global::Unbound.Stub] public MonoScriptInspector() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.MonoScriptInspector.ctor"); }
-    }
-    public enum MouseCursor
-    {
-        Arrow = 0,
-        Text = 1,
-        ResizeVertical = 2,
-        ResizeHorizontal = 3,
-        Link = 4,
-        SlideArrow = 5,
-        ResizeUpRight = 6,
-        ResizeUpLeft = 7,
-        MoveArrow = 8,
-        RotateArrow = 9,
-        ScaleArrow = 10,
-        ArrowPlus = 11,
-        ArrowMinus = 12,
-        Pan = 13,
-        Orbit = 14,
-        Zoom = 15,
-        FPS = 16,
-        CustomCursor = 17,
-        SplitResizeUpDown = 18,
-        SplitResizeLeftRight = 19,
-        NotAllowed = 20,
     }
     [global::Unbound.Stub]
     internal unsafe partial class MoveTool : global::UnityEditor.ManipulationTool<global::UnityEditor.MoveTool>
@@ -50111,11 +50053,6 @@ namespace UnityEditorInternal
     }
     unsafe partial class ReorderableList
     {
-        [global::Unbound.Stub] public global::UnityEditorInternal.ReorderableList.HeaderCallbackDelegate drawHeaderCallback;
-        [global::Unbound.Stub] public global::UnityEditorInternal.ReorderableList.FooterCallbackDelegate drawFooterCallback;
-        [global::Unbound.Stub] public global::UnityEditorInternal.ReorderableList.ElementCallbackDelegate drawElementCallback;
-        [global::Unbound.Stub] public global::UnityEditorInternal.ReorderableList.ElementCallbackDelegate drawElementBackgroundCallback;
-        [global::Unbound.Stub] public global::UnityEditorInternal.ReorderableList.DrawNoneElementCallback drawNoneElementCallback;
         [global::Unbound.Stub] public global::UnityEditorInternal.ReorderableList.ReorderCallbackDelegateWithDetails onReorderCallbackWithDetails;
         [global::Unbound.Stub] public global::UnityEditorInternal.ReorderableList.ReorderCallbackDelegate onReorderCallback;
         [global::Unbound.Stub] public global::UnityEditorInternal.ReorderableList.SelectCallbackDelegate onSelectCallback;
@@ -50128,8 +50065,6 @@ namespace UnityEditorInternal
         [global::Unbound.Stub] public global::UnityEditorInternal.ReorderableList.CanAddCallbackDelegate onCanAddCallback;
         [global::Unbound.Stub] public global::UnityEditorInternal.ReorderableList.ChangedCallbackDelegate onChangedCallback;
         [global::Unbound.Stub] public global::UnityEditorInternal.ReorderableList.DeleteArrayElementCallbackDelegate onDeleteArrayElementCallback;
-        [global::Unbound.Stub] internal bool m_IsEditable;
-        [global::Unbound.Stub] internal bool m_HasPropertyDrawer;
         [global::Unbound.Stub] internal int m_CacheCount;
         [global::Unbound.Stub] internal static void InvalidateParentCaches(string propertyPath) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditorInternal.ReorderableList.InvalidateParentCaches"); }
         [global::Unbound.Stub] internal void InvalidateForGUI() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditorInternal.ReorderableList.InvalidateForGUI"); }
@@ -50137,14 +50072,6 @@ namespace UnityEditorInternal
         [global::Unbound.Stub] public static global::UnityEditorInternal.ReorderableList GetReorderableListFromSerializedProperty(global::UnityEditor.SerializedProperty prop) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditorInternal.ReorderableList.GetReorderableListFromSerializedProperty"); return default; }
         [global::Unbound.Stub] internal void CacheIfNeeded() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditorInternal.ReorderableList.CacheIfNeeded"); }
         [global::Unbound.Stub] internal void InvalidateCacheRecursive() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditorInternal.ReorderableList.InvalidateCacheRecursive"); }
-        [global::Unbound.Stub] public void DoLayoutList() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditorInternal.ReorderableList.DoLayoutList"); }
-        [global::Unbound.Stub] public void DoList(global::UnityEngine.Rect rect) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditorInternal.ReorderableList.DoList"); }
-        [global::Unbound.Stub] public void DoList(global::UnityEngine.Rect rect, global::UnityEngine.Rect visibleRect) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditorInternal.ReorderableList.DoList"); }
-        public static global::UnityEditorInternal.ReorderableList.Defaults defaultBehaviours { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditorInternal.ReorderableList.defaultBehaviours"); return default; } }
-        public unsafe delegate void HeaderCallbackDelegate(global::UnityEngine.Rect rect);
-        public unsafe delegate void FooterCallbackDelegate(global::UnityEngine.Rect rect);
-        public unsafe delegate void ElementCallbackDelegate(global::UnityEngine.Rect rect, int index, bool isActive, bool isFocused);
-        public unsafe delegate void DrawNoneElementCallback(global::UnityEngine.Rect rect);
         public unsafe delegate void ReorderCallbackDelegateWithDetails(global::UnityEditorInternal.ReorderableList list, int oldIndex, int newIndex);
         public unsafe delegate void ReorderCallbackDelegate(global::UnityEditorInternal.ReorderableList list);
         public unsafe delegate void SelectCallbackDelegate(global::UnityEditorInternal.ReorderableList list);
@@ -50165,42 +50092,11 @@ namespace UnityEditorInternal
             [global::Unbound.Stub] public int controlCount;
             [global::Unbound.Stub] public bool Set(global::UnityEditor.SerializedProperty property, float height, float offset) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditorInternal.ReorderableList.PropertyCacheEntry.Set"); return default; }
         }
-        [global::Unbound.Stub]
-        public unsafe partial class Defaults
+        unsafe partial class Defaults
         {
-            [global::Unbound.Stub] public global::UnityEngine.GUIContent iconToolbarPlus;
-            [global::Unbound.Stub] public global::UnityEngine.GUIContent iconToolbarPlusMore;
-            [global::Unbound.Stub] public global::UnityEngine.GUIContent iconToolbarMinus;
-            [global::Unbound.Stub] public readonly global::UnityEngine.GUIStyle draggingHandle;
-            [global::Unbound.Stub] public readonly global::UnityEngine.GUIStyle headerBackground;
-            [global::Unbound.Stub] public readonly global::UnityEngine.GUIStyle emptyHeaderBackground;
-            [global::Unbound.Stub] public readonly global::UnityEngine.GUIStyle footerBackground;
-            [global::Unbound.Stub] public readonly global::UnityEngine.GUIStyle boxBackground;
-            [global::Unbound.Stub] public readonly global::UnityEngine.GUIStyle preButton;
-            [global::Unbound.Stub] public readonly global::UnityEngine.GUIStyle elementBackground;
-            [global::Unbound.Stub] internal readonly global::UnityEngine.GUIStyle defaultLabel;
-            public const int padding = 6;
-            public const int dragHandleWidth = 20;
-            internal const int propertyDrawerPadding = 8;
-            internal const int minHeaderHeight = 2;
-            [global::Unbound.Stub] internal static readonly string undoAdd;
-            [global::Unbound.Stub] internal static readonly string undoRemove;
-            [global::Unbound.Stub] internal static readonly string undoMove;
-            [global::Unbound.Stub] internal static readonly global::UnityEngine.Rect infinityRect;
-            [global::Unbound.Stub] internal static float ElementPadding(float height) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditorInternal.ReorderableList.Defaults.ElementPadding"); return default; }
-            [global::Unbound.Stub] public Defaults() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditorInternal.ReorderableList.Defaults.ctor"); }
-            [global::Unbound.Stub] public void DrawFooter(global::UnityEngine.Rect rect, global::UnityEditorInternal.ReorderableList list) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditorInternal.ReorderableList.Defaults.DrawFooter"); }
             [global::Unbound.Stub] internal void DoAddButton(global::UnityEditorInternal.ReorderableList list, global::UnityEngine.Object value) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditorInternal.ReorderableList.Defaults.DoAddButton"); }
             [global::Unbound.Stub] public void DoAddButton(global::UnityEditorInternal.ReorderableList list) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditorInternal.ReorderableList.Defaults.DoAddButton"); }
             [global::Unbound.Stub] public void DoRemoveButton(global::UnityEditorInternal.ReorderableList list) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditorInternal.ReorderableList.Defaults.DoRemoveButton"); }
-            [global::Unbound.Stub] public void DrawHeaderBackground(global::UnityEngine.Rect headerRect) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditorInternal.ReorderableList.Defaults.DrawHeaderBackground"); }
-            [global::Unbound.Stub] public void DrawHeader(global::UnityEngine.Rect headerRect, global::UnityEditor.SerializedObject serializedObject, global::UnityEditor.SerializedProperty element, global::System.Collections.IList elementList) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditorInternal.ReorderableList.Defaults.DrawHeader"); }
-            [global::Unbound.Stub] public void DrawElementBackground(global::UnityEngine.Rect rect, int index, bool selected, bool focused, bool draggable) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditorInternal.ReorderableList.Defaults.DrawElementBackground"); }
-            [global::Unbound.Stub] public void DrawElementDraggingHandle(global::UnityEngine.Rect rect, int index, bool selected, bool focused, bool draggable) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditorInternal.ReorderableList.Defaults.DrawElementDraggingHandle"); }
-            [global::Unbound.Stub] public void DrawElement(global::UnityEngine.Rect rect, global::UnityEditor.SerializedProperty element, object listItem, bool selected, bool focused, bool draggable) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditorInternal.ReorderableList.Defaults.DrawElement"); }
-            [global::Unbound.Stub] public void DrawElement(global::UnityEngine.Rect rect, global::UnityEditor.SerializedProperty element, object listItem, bool selected, bool focused, bool draggable, bool editable) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditorInternal.ReorderableList.Defaults.DrawElement"); }
-            [global::Unbound.Stub] public void DrawNoneElement(global::UnityEngine.Rect rect, bool draggable) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditorInternal.ReorderableList.Defaults.DrawNoneElement"); }
-            [global::Unbound.Stub] public void DrawOverMaxMultiEditElement(global::UnityEngine.Rect rect, int maxMultiEditElementCount, bool draggable) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditorInternal.ReorderableList.Defaults.DrawOverMaxMultiEditElement"); }
         }
     }
     [global::Unbound.Stub]
