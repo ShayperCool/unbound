@@ -122,7 +122,20 @@ namespace UnityEngine
         internal static void Internal_PlayModeQuitting()
         {
             try { s_ExitCancellation.Cancel(); } catch (Exception e) { Debug.LogException(e); }
-            quitting?.Invoke();
+            RaiseQuitting();
+        }
+
+        /// <summary>Application.quitting: a handler that throws is logged and the others still run,
+        /// and leaving Play mode goes on.</summary>
+        static void RaiseQuitting()
+        {
+            var handlers = quitting;
+            if (handlers == null) return;
+            foreach (Action handler in handlers.GetInvocationList())
+            {
+                try { handler(); }
+                catch (Exception e) { Debug.LogException(e); }
+            }
         }
 
         /// <summary>Play mode starts again: a new exit token.</summary>
@@ -134,7 +147,7 @@ namespace UnityEngine
         internal static void Internal_Quitting()
         {
             try { s_ExitCancellation.Cancel(); } catch (Exception e) { Debug.LogException(e); }
-            quitting?.Invoke();
+            RaiseQuitting();
             unloading?.Invoke();
         }
 

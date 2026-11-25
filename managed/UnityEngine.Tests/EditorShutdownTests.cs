@@ -121,6 +121,61 @@ namespace UnityEngine.Tests
             }
         }
 
+        /// <summary>A quitting handler that throws is logged, the others run, and Play mode still ends.</summary>
+        [Fact]
+        public void AThrowingQuittingHandlerDoesNotStopLeavingPlayMode()
+        {
+            using var release = TestRelease.Pin(TestRelease.Measured);
+            using var scenes = new Unbound.Tests.LightProbesTests.Scenes();
+            scenes.Loaded("Played");
+            var persistent = SceneRegistry.DontDestroyOnLoad;
+            var previousRoots = persistent.Roots.ToArray();
+            persistent.Roots.Clear();
+            bool playing = EditorSession.IsPlaying, startedInEdit = EditorSession.StartedInEditMode;
+            var calls = new List<string>();
+            Action<UnityEditor.PlayModeStateChange> state = s => calls.Add(s.ToString());
+            Action throws = () => throw new InvalidOperationException("quitting control");
+            Action after = () => calls.Add("after");
+            var logs = new List<string>();
+            var handler = Debug.unityLogger.logHandler;
+            UnityEditor.EditorApplication.playModeStateChanged += state;
+            Application.quitting += throws;
+            Application.quitting += after;
+            try
+            {
+                Debug.unityLogger.logHandler = new CapturingLog(logs);
+                EditorSession.StartedInEditMode = true;
+                EditorSession.IsPlaying = true;
+                EditorSession.Request(false);
+                EditorSession.ApplyRequest();
+                Assert.Equal(new[] { "ExitingPlayMode", "after", "EnteredEditMode" }, calls);
+                Assert.False(EditorSession.IsPlaying);
+                Assert.Contains(logs, l => l.Contains("quitting control"));
+            }
+            finally
+            {
+                Debug.unityLogger.logHandler = handler;
+                UnityEditor.EditorApplication.playModeStateChanged -= state;
+                Application.quitting -= throws;
+                Application.quitting -= after;
+                Application.Internal_PlayModeStarting();
+                if (SceneRegistry.Active != null && SceneRegistry.Active.Path == "") SceneRegistry.Forget(SceneRegistry.Active);
+                EditorSession.IsPlaying = playing;
+                EditorSession.StartedInEditMode = startedInEdit;
+                persistent.Roots.Clear();
+                persistent.Roots.AddRange(previousRoots);
+            }
+        }
+
+        sealed class CapturingLog : ILogHandler
+        {
+            readonly List<string> m_Logs;
+            internal CapturingLog(List<string> logs) => m_Logs = logs;
+            public void LogFormat(LogType logType, Object context, string format, params object[] args) =>
+                m_Logs.Add(args.Length == 0 ? format : string.Format(format, args));
+            public void LogException(Exception exception, Object context) => m_Logs.Add(exception.Message);
+        }
+
         /// <summary>Leaving Play mode within a session raises Application.quitting between
         /// ExitingPlayMode and EnteredEditMode and cancels the exit token, which the next Play mode
         /// gets anew (tests/projects/tmpatlas quit.*).</summary>

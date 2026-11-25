@@ -278,10 +278,10 @@ namespace UnityEditor
         [Unbound.EditorFaithful("Unbound's Editor has no main window title (as the batch-mode Editor)")]
         public static void UpdateMainWindowTitle() { }
 
-        /// <summary>Each handler runs on its own: one that throws is logged and the others still run.</summary>
         /// <summary>The Editor's exit, in Edit mode, before the dirty assets are saved
         /// (<see cref="Unbound.Runtime.Compat.QuitCallbacksMeasured"/>): TextMeshPro, for one, clears
-        /// its dynamic font assets' data here.</summary>
+        /// its dynamic font assets' data here. Each handler runs on its own: one that throws is
+        /// logged and the others still run.</summary>
         internal static void Internal_Quitting()
         {
             var handlers = quitting;
@@ -293,6 +293,7 @@ namespace UnityEditor
             }
         }
 
+        /// <summary>Each handler runs on its own: one that throws is logged and the others still run.</summary>
         internal static void Internal_PlayModeStateChanged(PlayModeStateChange state)
         {
             var handlers = playModeStateChanged;

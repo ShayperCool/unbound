@@ -63,16 +63,11 @@ namespace UnityEngine
         public int anisoLevel { get => m_AnisoLevel; set { SamplerEdited(m_AnisoLevel != value); m_AnisoLevel = value; OnSamplerChanged(); } }
         public float mipMapBias { get => m_MipMapBias; set { SamplerEdited(m_MipMapBias != value); m_MipMapBias = value; EmitSamplerMetadata(); } }
 
-        /// <summary>The sampler settings as an asset file holds them (no edit of the asset).</summary>
-        internal void ReadSamplerSettings(FilterMode filter, int aniso, float mipBias, TextureWrapMode u, TextureWrapMode v, TextureWrapMode w)
+        /// <summary>The engine's own change of the mip bias (a supersampled screen capture's), no
+        /// edit of an asset.</summary>
+        internal void SetMipMapBiasQuietly(float bias)
         {
-            m_FilterMode = filter;
-            m_AnisoLevel = aniso;
-            m_MipMapBias = mipBias;
-            m_WrapModeU = u;
-            m_WrapModeV = v;
-            m_WrapModeW = w;
-            OnSamplerChanged();
+            m_MipMapBias = bias;
             EmitSamplerMetadata();
         }
 

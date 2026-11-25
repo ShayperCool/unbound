@@ -3,7 +3,9 @@
 Which project files a Play mode session writes when a script changes texture assets and when
 TextMeshPro's dynamic font assets fill, and the order of the callbacks as Play mode ends and the
 Editor quits. Recorded with the Unity 6000.0.71f1 macOS Editor in batch mode (two identical
-captures): none of this depends on the OS or the graphics device.
+captures of each profile): none of this depends on the OS or the graphics device. The profiles are
+the project as committed (Gamma colour space, `Reference/unity-6000.0.71f1/Gamma.jsonl`) and with
+the Linear colour space (`Linear.jsonl`, the driver sets it in the run's copy).
 
 Each run's copy of the project gets TextMeshPro's Essential Resources (its shaders and settings)
 from the ugui package of the Unity installation, as the Editor's importer window adds them;
@@ -29,14 +31,15 @@ whether Play mode was on). `run.py` adds `exit.<path>` for every file after the 
 
 Measured: a script's `Apply`, `Reinitialize` (also to the texture's own size), a sampler setting
 and a rename dirty an asset, a material's rename too, and they are written at the Editor's exit;
-`SetPixel` alone and `LoadRawTextureData` do not. `Reinitialize` with a TextureFormat makes the
-texture the format's linear variant (`RGB24` is not sRGB afterwards); with a GraphicsFormat it
-takes that format's colour space; with only a size it keeps its own. TextMeshPro's first character
+`SetPixel` alone and `LoadRawTextureData` do not. `Reinitialize` with a TextureFormat keeps an sRGB
+texture sRGB only in a Linear project, whatever the format (also `Alpha8` and `RFloat`), and makes
+it linear in a Gamma one (`RGB24` too); a linear texture stays linear (`LinearReinitRGBA32`); with
+a GraphicsFormat it takes that format's colour space; with only a size it keeps its own. TextMeshPro's first character
 of an empty dynamic atlas reinitializes it, so the atlas is dirty (`font.Dynamic.after`). Leaving
 Play mode raises ExitingPlayMode, `Application.quitting` (Play mode still on), EnteredEditMode;
 the Editor's exit then raises `EditorApplication.quitting` and saves the dirty assets:
 TextMeshPro's quit handler clears every dynamic font asset that clears its data and has a used
-atlas, which reinitializes the atlas as a 1x1 linear Alpha8 texture, so `Dynamic SDF` and
+atlas, which reinitializes the atlas as a 1x1 Alpha8 texture (linear in Gamma, sRGB in Linear), so `Dynamic SDF` and
 `Filled SDF` are written with empty tables and that atlas, and `Kept SDF` is left as it is.
 `EditorApplication.Exit` raises no `wantsToQuit`.
 
@@ -47,7 +50,7 @@ Unmeasured: a sampler setting or a rename to the value it has (Unbound leaves th
 imported asset's (Unbound leaves it clean), other texture classes, the Editor quitting while Play
 mode is on.
 
-Create (once), record (macOS, holding the machine's heavy-job lock), publish and check:
+Create (once), record both profiles (macOS, holding the machine's heavy-job lock), publish and check:
 
     python3 tests/projects/tmpatlas/run.py create
     python3 tests/projects/tmpatlas/run.py native --label a

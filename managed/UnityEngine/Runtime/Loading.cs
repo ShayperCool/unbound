@@ -1199,7 +1199,7 @@ namespace Unbound.Runtime
                 {
                     file.Guid = guid;
                     file.Path = info.Path;
-                    bool native = info.Kind == "yaml" || info.Kind == "prefab";
+                    bool native = info.Kind == "yaml";
                     foreach (var pair in file.Objects)
                     {
                         RegisterObject(guid, pair.Key, pair.Value);

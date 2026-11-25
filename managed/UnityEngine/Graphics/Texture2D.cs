@@ -466,9 +466,10 @@ namespace UnityEngine
             return Reinitialized(ReinitializeImage(width, height, format, MipmapCount() > 1, m_Linear));
         }
 
-        /// <summary>The format's linear variant (matches the Unity 6000.0.71f1 Editor,
-        /// tests/projects/tmpatlas op.ReinitRGB24 and the others: an sRGB texture reinitialized as
-        /// RGB24 or Alpha8 is linear); elsewhere the texture keeps its colour space.</summary>
+        /// <summary>The format resolves as a new texture's does: an sRGB texture stays sRGB in a Linear
+        /// project and becomes linear in a Gamma one, whatever the format; a linear texture stays
+        /// linear (matches the Unity 6000.0.71f1 Editor, tests/projects/tmpatlas Gamma and Linear
+        /// op.Reinit*, op.LinearReinitRGBA32); elsewhere the texture keeps its colour space.</summary>
         public bool Reinitialize(int width, int height, TextureFormat format, bool hasMipMap)
         {
             MainThreadCheck.Check("Reinitialize");
@@ -477,7 +478,8 @@ namespace UnityEngine
                 Log.Engine(LogType.Error, "Texture is not readable.", this);
                 return false;
             }
-            return Reinitialized(ReinitializeImage(width, height, format, hasMipMap, Compat.ReinitializeFormatLinearMeasured || m_Linear));
+            bool linear = m_Linear || (Compat.ReinitializeFormatColorSpaceMeasured && QualitySettings.activeColorSpace != ColorSpace.Linear);
+            return Reinitialized(ReinitializeImage(width, height, format, hasMipMap, linear));
         }
 
         public bool Reinitialize(int width, int height, GraphicsFormat format, bool hasMipMap)
@@ -1075,9 +1077,11 @@ namespace UnityEngine
             var settings = body.Get("m_TextureSettings");
             if (settings != null)
             {
-                // Every setting the Editor writes, as the file holds it.
-                ReadSamplerSettings((FilterMode)settings.Int("m_FilterMode", 1), settings.Int("m_Aniso", 1), settings.Float("m_MipBias"),
-                    (TextureWrapMode)settings.Int("m_WrapU"), (TextureWrapMode)settings.Int("m_WrapV"), (TextureWrapMode)settings.Int("m_WrapW"));
+                // Every setting the Editor writes, as the file holds it (no edit of the asset).
+                SetSamplerQuietly((FilterMode)settings.Int("m_FilterMode", 1), (TextureWrapMode)settings.Int("m_WrapU"), (TextureWrapMode)settings.Int("m_WrapV"),
+                    (TextureWrapMode)settings.Int("m_WrapW"), settings.Int("m_Aniso", 1), settings.Float("m_MipBias"));
+                OnSamplerChanged();
+                EmitSamplerMetadata();
             }
             // The YAML form's pixels, else a binary asset's (`image data`, every mip level).
             var hex = body.Str("_typelessdata");

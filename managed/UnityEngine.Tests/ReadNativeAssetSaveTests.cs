@@ -94,6 +94,21 @@ namespace UnityEngine.Tests
 
         static string Reference(string path) => File.ReadAllText(Path.Combine(Repo(), "tests", "projects", "scenesave", path));
 
+        /// <summary>A rename of a mesh, a texture and a physics material read from their files is
+        /// written with them (a rename is an edit: tests/projects/tmpatlas op.Rename,
+        /// op.RenamedMaterial).</summary>
+        [Fact]
+        public void ARenamedReadAssetIsWrittenWithItsNewName()
+        {
+            using var release = TestRelease.Pin(TestRelease.Measured);
+            foreach (var path in new[] { "Assets/Native/Tri.asset", "Assets/Native/Alpha.asset" })
+            {
+                var written = Rewrite(Reference(path), o => { o.name = "Renamed"; return o; });
+                Assert.NotNull(written);
+                Assert.Contains("\n  m_Name: Renamed\n", written);
+            }
+        }
+
         /// <summary>The probe's edits of a mesh, a texture and a physics material read from their
         /// files give the files the Editor saved (tests/projects/scenesave native-saves).</summary>
         [Fact]

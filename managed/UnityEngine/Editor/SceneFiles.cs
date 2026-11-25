@@ -1478,8 +1478,9 @@ namespace Unbound.Runtime
         }
 
         /// <summary>The keys of a native asset read from its file that SaveAssets writes from the
-        /// object, the rest of its document kept as the file has it: a mesh's geometry, a texture's
-        /// name, size, format, sampler settings, colour space and data, a physics material's values
+        /// object, the rest of its document kept as the file has it: its name (a rename is an edit,
+        /// tests/projects/tmpatlas op.Rename), a mesh's geometry, a texture's size, format, sampler
+        /// settings, colour space and data, a physics material's values
         /// (matches the Unity 6000.0.71f1 Editor, tests/projects/scenesave native-saves,
         /// tests/projects/tmpatlas exit.Assets/Tex/*; the keys are those its API changes and Unbound
         /// reads back whole). Null for other types.</summary>
@@ -1493,7 +1494,7 @@ namespace Unbound.Runtime
 
         static readonly string[] s_MeshKeys =
         {
-            "m_SubMeshes", "m_Shapes", "m_BindPose", "m_BoneNameHashes", "m_RootBoneNameHash", "m_BonesAABB",
+            "m_Name", "m_SubMeshes", "m_Shapes", "m_BindPose", "m_BoneNameHashes", "m_RootBoneNameHash", "m_BonesAABB",
             "m_IndexFormat", "m_IndexBuffer", "m_VertexData", "m_LocalAABB",
         };
 
@@ -1505,7 +1506,7 @@ namespace Unbound.Runtime
 
         static readonly string[] s_PhysicsMaterialKeys =
         {
-            "m_DynamicFriction", "m_StaticFriction", "m_Bounciness", "m_FrictionCombine", "m_BounceCombine",
+            "m_Name", "m_DynamicFriction", "m_StaticFriction", "m_Bounciness", "m_FrictionCombine", "m_BounceCombine",
         };
 
         /// <summary>The keys of a V1 sprite atlas document in the order the Editor writes them.</summary>

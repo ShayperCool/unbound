@@ -57,10 +57,11 @@ namespace Unbound.Runtime
         // leave it clean, as before.
         internal static bool AssetEditsMeasured => Family == ReleaseFamily.Unity6000_0;
 
-        // Texture2D.Reinitialize with a TextureFormat makes the texture linear (the format's linear
-        // variant), measured on 6000.0.71f1 (tests/projects/tmpatlas op.Reinit*.isDataSRGB).
-        // Elsewhere the texture keeps its colour space.
-        internal static bool ReinitializeFormatLinearMeasured => Family == ReleaseFamily.Unity6000_0;
+        // Texture2D.Reinitialize with a TextureFormat: an sRGB texture stays sRGB only in a Linear
+        // project (linear in a Gamma one), a linear one stays linear, measured on 6000.0.71f1
+        // (tests/projects/tmpatlas Gamma and Linear op.Reinit*.isDataSRGB). Elsewhere the texture
+        // keeps its colour space.
+        internal static bool ReinitializeFormatColorSpaceMeasured => Family == ReleaseFamily.Unity6000_0;
 
         // The Editor's quit callbacks, measured on 6000.0.71f1 (tests/projects/tmpatlas quit.*): leaving
         // Play mode raises Application.quitting between ExitingPlayMode and EnteredEditMode; the

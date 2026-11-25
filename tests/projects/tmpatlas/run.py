@@ -3,11 +3,12 @@
 README.md).
 
     run.py create              # once, with the macOS Editor: makes Assets/Tex and Assets/Fonts
-    run.py native --label L    # a capture with the macOS Editor in batch mode (the caller holds
-                               # the machine's heavy-job lock)
-    run.py publish L1 L2       # two byte-identical captures -> Reference/
-    run.py check               # Unbound on a fresh copy against the reference
+    run.py native --label L    # a capture of each profile with the macOS Editor in batch mode
+                               # (the caller holds the machine's heavy-job lock)
+    run.py publish L1 L2       # two byte-identical captures -> Reference/unity-<release>/<profile>.jsonl
+    run.py check               # Unbound on fresh copies against the references
 
+The profiles are the project as it is (Gamma colour space) and with the Linear colour space.
 Every run works on a fresh copy of the probe's project with TextMeshPro's Essential Resources
 (its shaders and settings) added from the Unity installation's ugui package, as the Editor's
 importer window adds them. The probe's rows say which assets are dirty after each change and the
@@ -28,7 +29,7 @@ ROOT = Path(__file__).resolve().parent
 REPO = ROOT.parents[2]
 sys.path.insert(0, str(REPO/'tests'))
 from file_writes import PARTS, exit_rows, files  # noqa: E402
-from probe_paths import editor_path, reference_file, run_root  # noqa: E402
+from probe_paths import editor_path, reference_root, run_root  # noqa: E402
 
 WORK = run_root(ROOT, 'runs')
 HEAVY = Path.home()/'.cache/compat/with-heavy-job'
@@ -38,6 +39,8 @@ VARIABLE = 'TMP_ATLAS_OUT'
 COMPLETE = {'key': 'complete', 'value': '1'}
 ESSENTIALS = 'Assets/TextMesh Pro/'
 FILLED = 'Assets/Fonts/Filled SDF.asset'
+# The project's colour space in each profile (ProjectSettings m_ActiveColorSpace).
+PROFILES = {'Gamma': 0, 'Linear': 1}
 
 
 def essentials_package():
@@ -71,12 +74,16 @@ def add_essentials(project):
             Path(str(target) + '.meta').write_bytes(entry['asset.meta'])
 
 
-def project_at(out):
+def project_at(out, profile='Gamma'):
     project = out/'project'
     if out.exists():
         raise SystemExit(f'refusing to overwrite {out}')
     for folder in PARTS:
         shutil.copytree(ROOT/folder, project/folder)
+    settings = project/'ProjectSettings/ProjectSettings.asset'
+    text = settings.read_text()
+    assert '  m_ActiveColorSpace: 0\n' in text
+    settings.write_text(text.replace('  m_ActiveColorSpace: 0\n', f'  m_ActiveColorSpace: {PROFILES[profile]}\n', 1))
     add_essentials(project)
     return project
 
@@ -133,18 +140,21 @@ def finish(out, project, initial):
 def native(label):
     if sys.platform != 'darwin':
         raise SystemExit('tmpatlas records with the macOS Editor in batch mode')
-    out = WORK/label
-    project = project_at(out)
-    initial = files(project)
-    code = run_editor(project, out, 'TmpAtlasProbe.Record', {VARIABLE: str(out/RAW)})
-    complete = finish(out, project, initial)
-    print(label, 'Editor exit', code, 'complete', complete)
-    return int(code != 0 or not complete)
+    failed = 0
+    for profile in PROFILES:
+        out = WORK/label/profile
+        project = project_at(out, profile)
+        initial = files(project)
+        code = run_editor(project, out, 'TmpAtlasProbe.Record', {VARIABLE: str(out/RAW)})
+        complete = finish(out, project, initial)
+        print(label, profile, 'Editor exit', code, 'complete', complete)
+        failed |= int(code != 0 or not complete)
+    return failed
 
 
-def engine(label):
-    out = WORK/label
-    project = project_at(out)
+def engine(label, profile):
+    out = WORK/label/profile
+    project = project_at(out, profile)
     initial = files(project)
     cli = os.environ.get('UNBOUND_CLI') or os.environ.get('UNBOUND') or str(REPO/'target/release/unbound')
     env = dict(os.environ, **{VARIABLE: str(out/RAW)})
@@ -172,17 +182,19 @@ def rows(path):
 def publish(labels):
     if len(labels) < 2:
         sys.exit('publishing needs two independent repeats')
-    captures = [(WORK/label/OUT).read_bytes() for label in labels]
-    for label in labels:
-        rows(WORK/label/OUT)
-    if any(capture != captures[0] for capture in captures):
-        sys.exit('the repeats differ; not publishing')
-    target = reference_file(ROOT, 'jsonl')
-    if target.exists():
-        sys.exit(f'refusing to overwrite reference: {target}')
-    target.parent.mkdir(parents=True, exist_ok=True)
-    target.write_bytes(captures[0])
-    print('published', target)
+    for profile in PROFILES:
+        captures = [(WORK/label/profile/OUT).read_bytes() for label in labels]
+        for label in labels:
+            rows(WORK/label/profile/OUT)
+        if any(capture != captures[0] for capture in captures):
+            sys.exit(f'the {profile} repeats differ; not publishing')
+    for profile in PROFILES:
+        target = reference_root(ROOT)/(profile + '.jsonl')
+        if target.exists():
+            sys.exit(f'refusing to overwrite reference: {target}')
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_bytes((WORK/labels[0]/profile/OUT).read_bytes())
+        print('published', target)
     return 0
 
 
@@ -191,24 +203,27 @@ def residuals():
     return {key: reason for reason, keys in json.loads(path.read_text()).items() for key in keys} if path.is_file() else {}
 
 
-def compare(candidate):
-    """Every row exactly; rows residuals.json names are printed with their cause and do not fail."""
-    expected, actual = rows(reference_file(ROOT, 'jsonl')), rows(candidate)
+def compare(candidates):
+    """Every row of each profile exactly; rows residuals.json names (in every profile) are printed
+    with their cause and do not fail. `candidates`: {profile: values.jsonl}."""
     known = residuals()
-    failed = residual = 0
-    for key in sorted(expected.keys() | actual.keys()):
-        if key in expected and key in actual and expected[key] == actual[key]:
+    total = matched = failed = residual = 0
+    for profile, candidate in candidates.items():
+        expected, actual = rows(reference_root(ROOT)/(profile + '.jsonl')), rows(candidate)
+        for key in sorted(expected.keys() | actual.keys()):
+            if key in expected and key in actual and expected[key] == actual[key]:
+                if key in known:
+                    print('residual resolved (remove it from residuals.json):', profile, key)
+                continue
             if key in known:
-                print('residual resolved (remove it from residuals.json):', key)
-            continue
-        if key in known:
-            residual += 1
-            print('RESIDUAL', key, '-', known[key])
-            continue
-        failed += 1
-        print('FAIL', key, 'expected', json.dumps(expected.get(key)), 'actual', json.dumps(actual.get(key)))
-    matched = sum(key in actual and actual[key] == value for key, value in expected.items())
-    print(f'tmpatlas: {matched}/{len(expected)} rows match; {failed} differ; {residual} known residuals')
+                residual += 1
+                print('RESIDUAL', profile, key, '-', known[key])
+                continue
+            failed += 1
+            print('FAIL', profile, key, 'expected', json.dumps(expected.get(key)), 'actual', json.dumps(actual.get(key)))
+        total += len(expected)
+        matched += sum(key in actual and actual[key] == value for key, value in expected.items())
+    print(f'tmpatlas: {matched}/{total} rows match; {failed} differ; {residual} known residuals')
     return int(failed != 0)
 
 
@@ -217,7 +232,7 @@ def main():
     parser.add_argument('mode', choices=['create', 'native', 'engine', 'publish', 'compare', 'check'])
     parser.add_argument('labels', nargs='*')
     parser.add_argument('--label')
-    parser.add_argument('--candidate', type=Path)
+    parser.add_argument('--candidate', type=Path, help='a run directory holding <profile>/values.jsonl')
     args = parser.parse_args()
     labels = args.labels + ([args.label] if args.label else [])
     if any(Path(label).name != label or label in ('.', '..') for label in labels):
@@ -229,13 +244,14 @@ def main():
     if args.mode == 'native':
         return native(args.label)
     if args.mode == 'engine':
-        return engine(args.label)
+        return max(engine(args.label, profile) for profile in PROFILES)
     if args.mode == 'publish':
         return publish(args.labels)
     if args.mode == 'compare':
-        return compare(args.candidate)
+        return compare({profile: args.candidate/profile/OUT for profile in PROFILES})
     label = time.strftime('check-%Y%m%d-%H%M%S-') + str(os.getpid())
-    return engine(label) or compare(WORK/label/OUT)
+    code = max(engine(label, profile) for profile in PROFILES)
+    return code or compare({profile: WORK/label/profile/OUT for profile in PROFILES})
 
 
 if __name__ == '__main__':

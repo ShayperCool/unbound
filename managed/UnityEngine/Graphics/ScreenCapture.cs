@@ -397,7 +397,7 @@ namespace UnityEngine
                 // and ends this for the remaining tiles (not measured in the Editor).
                 GfxStream.Anisotropy((int)AnisotropicFiltering.ForceEnable, CaptureAnisotropy, CaptureAnisotropy);
                 float shift = -1f - MathF.Log2(superSize);
-                for (int k = 0; k < m_Textures.Length; k++) m_Textures[k].mipMapBias = m_Biases[k] + shift;
+                for (int k = 0; k < m_Textures.Length; k++) m_Textures[k].SetMipMapBiasQuietly(m_Biases[k] + shift);
             }
 
             /// <summary>Puts back what <see cref="Capture"/> recorded (nothing for a default value).</summary>
@@ -405,7 +405,7 @@ namespace UnityEngine
             {
                 if (m_Textures == null) return;
                 for (int k = 0; k < m_Textures.Length; k++)
-                    if (m_Textures[k] != null) m_Textures[k].mipMapBias = m_Biases[k];
+                    if (m_Textures[k] != null) m_Textures[k].SetMipMapBiasQuietly(m_Biases[k]);
                 Texture.EmitAnisotropicFiltering();
             }
         }

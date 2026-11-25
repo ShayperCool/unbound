@@ -330,11 +330,8 @@ namespace UnityEngine
         /// <summary>Loaded from an asset file (not a scene or runtime object).</summary>
         internal bool IsPersistentAsset;
 
-        /// <summary>An edit of the object, when it is an asset, is an Editor change that
-        /// AssetDatabase.SaveAssets and the Editor's exit save (tests/projects/scenesave: assets
-        /// read from their files and made this session; an imported asset stays dirty, unwritten).</summary>
-        /// <summary>Read from a native asset file (.asset, .mat, a prefab: text or binary serialized
-        /// objects), not imported from a source file.</summary>
+        /// <summary>Read from a native asset file (.asset, .mat: text or binary serialized objects;
+        /// not a prefab), not imported from a source file.</summary>
         internal bool m_InNativeFile;
 
         /// <summary>An asset of a native asset file, read or made this session: what a rename or a
@@ -342,6 +339,9 @@ namespace UnityEngine
         /// imported asset's, which engine code also sets as it imports, is unmeasured: left clean).</summary>
         internal bool IsNativeAsset => IsPersistentAsset && (m_InNativeFile || UnityEditor.AssetDatabase.CreatedThisSession(this));
 
+        /// <summary>An edit of the object, when it is an asset, is an Editor change that
+        /// AssetDatabase.SaveAssets and the Editor's exit save (tests/projects/scenesave: assets
+        /// read from their files and made this session; an imported asset stays dirty, unwritten).</summary>
         internal void MarkAssetEdited()
         {
             if (IsPersistentAsset && (Compat.ReadAssetSavesMeasured || UnityEditor.AssetDatabase.CreatedThisSession(this)))

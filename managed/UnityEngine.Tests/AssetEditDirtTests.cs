@@ -56,30 +56,49 @@ namespace UnityEngine.Tests
             Assert.False(EditorUtility.IsDirty(engine));
         }
 
-        [Fact]
-        public void ReinitializeWithATextureFormatIsLinearAndWithAGraphicsFormatFollowsIt()
+        /// <summary>With a TextureFormat an sRGB texture stays sRGB only in a Linear project and a
+        /// linear one stays linear, with a GraphicsFormat it takes that format's colour space, with a
+        /// size alone it keeps its own (tests/projects/tmpatlas Gamma and Linear op.Reinit*).</summary>
+        [Theory]
+        [InlineData(ColorSpace.Gamma)]
+        [InlineData(ColorSpace.Linear)]
+        public void ReinitializeWithATextureFormatTakesTheProjectsColorSpace(ColorSpace space)
         {
             using var release = TestRelease.Pin(TestRelease.Measured);
-            var rgb = Rgba();
-            m_Made.Add(rgb);
-            Assert.True(rgb.isDataSRGB);
-            rgb.Reinitialize(2, 2, TextureFormat.RGB24, false);
-            Assert.False(rgb.isDataSRGB);
-            var kept = Rgba();
-            m_Made.Add(kept);
-            kept.Reinitialize(8, 8);
-            Assert.True(kept.isDataSRGB);
-            var srgb = Rgba(linear: true);
-            m_Made.Add(srgb);
-            srgb.Reinitialize(2, 2, GraphicsFormat.R8G8B8A8_SRGB, false);
-            Assert.True(srgb.isDataSRGB);
-            using (TestRelease.Pin(TestRelease.Unmeasured))
+            var before = QualitySettings.activeColorSpace;
+            try
             {
-                var unmeasured = Rgba();
-                m_Made.Add(unmeasured);
-                unmeasured.Reinitialize(2, 2, TextureFormat.RGB24, false);
-                Assert.True(unmeasured.isDataSRGB);
+                QualitySettings.s_ColorSpace = space;
+                bool srgb = space == ColorSpace.Linear;
+                var fromSrgb = Rgba();
+                m_Made.Add(fromSrgb);
+                fromSrgb.Reinitialize(2, 2, TextureFormat.RGB24, false);
+                Assert.Equal(srgb, fromSrgb.isDataSRGB);
+                var alpha = Rgba();
+                m_Made.Add(alpha);
+                alpha.Reinitialize(2, 2, TextureFormat.Alpha8, false);
+                Assert.Equal(srgb, alpha.isDataSRGB);
+                var fromLinear = Rgba(linear: true);
+                m_Made.Add(fromLinear);
+                fromLinear.Reinitialize(2, 2, TextureFormat.RGBA32, false);
+                Assert.False(fromLinear.isDataSRGB);
+                var kept = Rgba(linear: true);
+                m_Made.Add(kept);
+                kept.Reinitialize(8, 8);
+                Assert.False(kept.isDataSRGB);
+                var graphics = Rgba(linear: true);
+                m_Made.Add(graphics);
+                graphics.Reinitialize(2, 2, GraphicsFormat.R8G8B8A8_SRGB, false);
+                Assert.True(graphics.isDataSRGB);
+                using (TestRelease.Pin(TestRelease.Unmeasured))
+                {
+                    var unmeasured = Rgba();
+                    m_Made.Add(unmeasured);
+                    unmeasured.Reinitialize(2, 2, TextureFormat.RGB24, false);
+                    Assert.True(unmeasured.isDataSRGB);
+                }
             }
+            finally { QualitySettings.s_ColorSpace = before; }
         }
 
         [Fact]
@@ -106,6 +125,11 @@ namespace UnityEngine.Tests
             m_Made.Add(runtime);
             runtime.filterMode = FilterMode.Point;
             Assert.False(EditorUtility.IsDirty(runtime));
+            // The engine's own change of the bias (a supersampled screen capture's).
+            var captured = Asset(Rgba());
+            captured.SetMipMapBiasQuietly(-1f);
+            Assert.Equal(-1f, captured.mipMapBias);
+            Assert.False(EditorUtility.IsDirty(captured));
         }
 
         [Fact]
