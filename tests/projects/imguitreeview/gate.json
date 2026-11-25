@@ -1,0 +1,12 @@
+{
+  "commands": [
+    "python3 tests/projects/imguitreeview/run.py gate"
+  ],
+  "summary": "imguitreeview: .*",
+  "engine_paths": [
+    "managed/UnityEngine/Editor/",
+    "managed/UnityEngine/IMGUI/",
+    "tests/projects/imguitreeview/",
+    "tests/projects/imguiskin/"
+  ]
+}
