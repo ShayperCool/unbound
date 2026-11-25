@@ -114,6 +114,55 @@
      "lightmapIndex": "0",
      "lightmapIndexDynamic": "65535",
      "lightmapST": {
+      "w": "0.0",
+      "x": "0.124999955",
+      "y": "0.124999955",
+      "z": "0.875"
+     },
+     "lightmapSTDynamic": {
+      "w": "0.0",
+      "x": "1.0",
+      "y": "1.0",
+      "z": "0.0"
+     },
+     "terrainChunkDynamicUVST": {
+      "w": "0.0",
+      "x": "1.0",
+      "y": "1.0",
+      "z": "0.0"
+     },
+     "terrainDynamicUVST": {
+      "w": "0.0",
+      "x": "1.0",
+      "y": "1.0",
+      "z": "0.0"
+     },
+     "uvMesh": {
+      "fileID": "0"
+     }
+    },
+    {
+     "explicitProbeSetHash": {
+      "bytes[0]": "0",
+      "bytes[10]": "0",
+      "bytes[11]": "0",
+      "bytes[12]": "0",
+      "bytes[13]": "0",
+      "bytes[14]": "0",
+      "bytes[15]": "0",
+      "bytes[1]": "0",
+      "bytes[2]": "0",
+      "bytes[3]": "0",
+      "bytes[4]": "0",
+      "bytes[5]": "0",
+      "bytes[6]": "0",
+      "bytes[7]": "0",
+      "bytes[8]": "0",
+      "bytes[9]": "0"
+     },
+     "lightmapIndex": "0",
+     "lightmapIndexDynamic": "65535",
+     "lightmapST": {
       "w": "-0.0007661237",
       "x": "0.1888974",
       "y": "0.1888974",
@@ -189,68 +238,19 @@
      "uvMesh": {
       "fileID": "0"
      }
-    },
-    {
-     "explicitProbeSetHash": {
-      "bytes[0]": "0",
-      "bytes[10]": "0",
-      "bytes[11]": "0",
-      "bytes[12]": "0",
-      "bytes[13]": "0",
-      "bytes[14]": "0",
-      "bytes[15]": "0",
-      "bytes[1]": "0",
-      "bytes[2]": "0",
-      "bytes[3]": "0",
-      "bytes[4]": "0",
-      "bytes[5]": "0",
-      "bytes[6]": "0",
-      "bytes[7]": "0",
-      "bytes[8]": "0",
-      "bytes[9]": "0"
-     },
-     "lightmapIndex": "0",
-     "lightmapIndexDynamic": "65535",
-     "lightmapST": {
-      "w": "0.0",
-      "x": "0.124999955",
-      "y": "0.124999955",
-      "z": "0.875"
-     },
-     "lightmapSTDynamic": {
-      "w": "0.0",
-      "x": "1.0",
-      "y": "1.0",
-      "z": "0.0"
-     },
-     "terrainChunkDynamicUVST": {
-      "w": "0.0",
-      "x": "1.0",
-      "y": "1.0",
-      "z": "0.0"
-     },
-     "terrainDynamicUVST": {
-      "w": "0.0",
-      "x": "1.0",
-      "y": "1.0",
-      "z": "0.0"
-     },
-     "uvMesh": {
-      "fileID": "0"
-     }
     }
    ],
    "m_LightmappedRendererDataIDs": [
     {
-     "targetObject": "84243234",
+     "targetObject": "20915590",
      "targetPrefab": "0"
     },
     {
-     "targetObject": "341372541",
+     "targetObject": "1259518429",
      "targetPrefab": "0"
     },
     {
-     "targetObject": "1039012776",
+     "targetObject": "1177808053",
      "targetPrefab": "0"
     }
    ],
@@ -272,7 +272,7 @@
    "m_LightmapsMode": "0",
    "m_Lights": [
     {
-     "targetObject": "1083727790",
+     "targetObject": "749743497",
      "targetPrefab": "0"
     }
    ],
@@ -286,7 +286,7 @@
    },
    "m_Scene": {
     "fileID": "102900000",
-    "guid": "cee233660450e7126b1c446b70bf3461",
+    "guid": "553af207dd4fb3e3b9cd84139b30622d",
     "type": "2"
    }
   },

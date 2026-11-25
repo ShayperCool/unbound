@@ -2,9 +2,9 @@
  "bake": "bake Result type: 'Success'",
  "messages": [],
  "instances": [
-  "Cube",
   "Ground",
-  "Sphere"
+  "Sphere",
+  "Cube"
  ],
  "lightmaps": [
   {
