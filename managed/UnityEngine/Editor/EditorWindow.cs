@@ -225,6 +225,8 @@ namespace UnityEditor
             var type = GetType();
             if (s_Reported.Add(type))
                 Native.Log((int)LogType.Log, $"[Unbound] editor window {type.FullName} (\"{m_TitleContent.text}\") opened; Unbound has no editor UI, so it is not shown");
+            // Other families keep the earlier unmeasured answer: nothing happens at the show.
+            if (!Compat.EditorWindowGuiMeasured) return;
             m_Panel = new Panel(this, ContextType.Editor, EventDispatcher.CreateDefault());
             m_Panel.visualTree.Add(rootVisualElement);
             Message(this, "CreateGUI");
@@ -253,6 +255,7 @@ namespace UnityEditor
         /// focus).</summary>
         public void Focus()
         {
+            if (s_Focused == this && !Compat.EditorWindowGuiMeasured) return;
             var previous = s_Focused;
             s_Focused = this;
             if (previous != this && previous != null) Message(previous, "OnLostFocus");

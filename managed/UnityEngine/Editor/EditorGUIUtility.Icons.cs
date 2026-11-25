@@ -44,6 +44,11 @@ namespace UnityEditor
         /// </summary>
         public static void SetIconForObject(Object obj, Texture2D icon)
         {
+            if (!Compat.EditorWindowGuiMeasured)
+            {
+                Stubs.NotImplemented("UnityEditor.EditorGUIUtility.SetIconForObject");
+                return;
+            }
             if (!obj) throw ObjectErrors.Argument(obj, "obj");
             if (obj is Component) return;
             if (obj is not GameObject && obj is not ScriptableObject)
@@ -59,6 +64,11 @@ namespace UnityEditor
         /// null), else none.</summary>
         public static Texture2D GetIconForObject(Object obj)
         {
+            if (!Compat.EditorWindowGuiMeasured)
+            {
+                Stubs.NotImplemented("UnityEditor.EditorGUIUtility.GetIconForObject");
+                return null;
+            }
             if (!obj) throw ObjectErrors.Argument(obj, "obj");
             return s_ObjectIcons.TryGetValue(obj.GetInstanceID(), out var icon) && icon ? icon : null;
         }

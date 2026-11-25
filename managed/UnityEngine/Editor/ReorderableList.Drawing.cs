@@ -60,6 +60,11 @@ namespace UnityEditorInternal
 
         public void DoLayoutList()
         {
+            if (!Compat.EditorReorderableListLayoutMeasured)
+            {
+                Stubs.NotImplemented("UnityEditorInternal.ReorderableList.DoLayoutList");
+                return;
+            }
             GUILayout.BeginVertical();
             Rect headerRect = GUILayoutUtility.GetRect(0, HeaderHeight, GUILayout.ExpandWidth(true));
             Rect listRect = GUILayoutUtility.GetRect(10, GetElementAreaHeight(), GUILayout.ExpandWidth(true));
@@ -74,6 +79,11 @@ namespace UnityEditorInternal
 
         public void DoList(Rect rect, Rect visibleRect)
         {
+            if (!Compat.EditorReorderableListLayoutMeasured)
+            {
+                Stubs.NotImplemented("UnityEditorInternal.ReorderableList.DoList");
+                return;
+            }
             Rect headerRect = new Rect(rect.x, rect.y, rect.width, HeaderHeight);
             Rect listRect = new Rect(rect.x, headerRect.y + headerRect.height, rect.width, GetElementAreaHeight());
             Rect footerRect = new Rect(rect.x, listRect.y + listRect.height, rect.width, footerHeight);
