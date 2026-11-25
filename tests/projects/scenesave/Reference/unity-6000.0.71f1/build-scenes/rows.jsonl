@@ -1,0 +1,83 @@
+{"key": "log", "value": "Log: \nIgnoreFailingMessages:true"}
+{"key": "ctor.default", "value": "0|null|00000000000000000000000000000000"}
+{"key": "ctor.path", "value": "1|Assets/Scenes/Base.unity|e0fd96c04ed5f4230bfb1fc1aa060f13"}
+{"key": "ctor.backslash", "value": "0|Assets/Scenes/Second.unity|6f748856d2f6b48bba33779b860ce87a"}
+{"key": "ctor.missing", "value": "1|Assets/Scenes/Missing.unity|00000000000000000000000000000000"}
+{"key": "ctor.guid", "value": "1|Assets/Scenes/Second.unity|6f748856d2f6b48bba33779b860ce87a"}
+{"key": "ctor.guidUnknown", "value": "1||0123456789abcdef0123456789abcdef"}
+{"key": "ctor.nullPath", "value": "throws NullReferenceException: Object reference not set to an instance of an object"}
+{"key": "ctor.setPath", "value": "1|Assets/Other/Path.unity|e0fd96c04ed5f4230bfb1fc1aa060f13"}
+{"key": "ctor.setNullPath", "value": "throws NullReferenceException: Object reference not set to an instance of an object"}
+{"key": "active", "value": "Assets/Scenes/Base.unity,Assets/Scenes/Missing.unity"}
+{"key": "active.null", "value": "throws ArgumentNullException: Value cannot be null.\nParameter name: source"}
+{"key": "active.nullEntry", "value": "throws NullReferenceException: Object reference not set to an instance of an object"}
+{"key": "compare.ab", "value": 1}
+{"key": "compare.ba", "value": -1}
+{"key": "compare.same", "value": 0}
+{"key": "compare.case", "value": 1}
+{"key": "compare.other", "value": "throws ArgumentException: object is not a EditorBuildSettingsScene"}
+{"key": "compare.null", "value": "throws ArgumentException: object is not a EditorBuildSettingsScene"}
+{"key": "start.changed", "value": 0}
+{"key": "start.file", "value": "41bc588f6ecc03944687d496f024917cabb061e21c148a6471b74581df14f908"}
+{"key": "start.scenes", "value": "[]"}
+{"key": "start.global", "value": "[]"}
+{"key": "start.build", "value": "0:|second=-1|base=-1"}
+{"key": "parallel.start", "value": false}
+{"key": "set.changed", "value": 1}
+{"key": "set.file", "value": "41bc588f6ecc03944687d496f024917cabb061e21c148a6471b74581df14f908"}
+{"key": "set.scenes", "value": "[1|Assets/Scenes/Base.unity|e0fd96c04ed5f4230bfb1fc1aa060f13; 0|Assets/Scenes/Second.unity|6f748856d2f6b48bba33779b860ce87a; 1|Assets/Scenes/Missing.unity|00000000000000000000000000000000; 1|Assets/Scenes/Base.unity|e0fd96c04ed5f4230bfb1fc1aa060f13; 1|Assets/Scenes/Second.unity|6f748856d2f6b48bba33779b860ce87a]"}
+{"key": "set.global", "value": "[1|Assets/Scenes/Base.unity|e0fd96c04ed5f4230bfb1fc1aa060f13; 0|Assets/Scenes/Second.unity|6f748856d2f6b48bba33779b860ce87a; 1|Assets/Scenes/Missing.unity|00000000000000000000000000000000; 1|Assets/Scenes/Base.unity|e0fd96c04ed5f4230bfb1fc1aa060f13; 1|Assets/Scenes/Second.unity|6f748856d2f6b48bba33779b860ce87a]"}
+{"key": "set.build", "value": "5:Assets/Scenes/Base.unity,Assets/Scenes/Second.unity,Assets/Scenes/Missing.unity,Assets/Scenes/Base.unity,Assets/Scenes/Second.unity|second=3|base=0"}
+{"key": "set.afterInputChange", "value": "[1|Assets/Scenes/Base.unity|e0fd96c04ed5f4230bfb1fc1aa060f13; 0|Assets/Scenes/Second.unity|6f748856d2f6b48bba33779b860ce87a; 1|Assets/Scenes/Missing.unity|00000000000000000000000000000000; 1|Assets/Scenes/Base.unity|e0fd96c04ed5f4230bfb1fc1aa060f13; 1|Assets/Scenes/Second.unity|6f748856d2f6b48bba33779b860ce87a]"}
+{"key": "set.afterOutputChange", "value": "[1|Assets/Scenes/Base.unity|e0fd96c04ed5f4230bfb1fc1aa060f13; 0|Assets/Scenes/Second.unity|6f748856d2f6b48bba33779b860ce87a; 1|Assets/Scenes/Missing.unity|00000000000000000000000000000000; 1|Assets/Scenes/Base.unity|e0fd96c04ed5f4230bfb1fc1aa060f13; 1|Assets/Scenes/Second.unity|6f748856d2f6b48bba33779b860ce87a]"}
+{"key": "set.sameInstance", "value": false}
+{"key": "set.beforeSave.file", "value": "41bc588f6ecc03944687d496f024917cabb061e21c148a6471b74581df14f908"}
+{"key": "set.saved.file", "value": "75bd67fc744edb895ebbeb2bc6174885c6e75adc4a63bf8b5a8c9507375fe31a"}
+{"key": "again.changed", "value": 1}
+{"key": "again.file", "value": "75bd67fc744edb895ebbeb2bc6174885c6e75adc4a63bf8b5a8c9507375fe31a"}
+{"key": "again.scenes", "value": "[1|Assets/Scenes/Base.unity|e0fd96c04ed5f4230bfb1fc1aa060f13; 0|Assets/Scenes/Second.unity|6f748856d2f6b48bba33779b860ce87a; 1|Assets/Scenes/Missing.unity|00000000000000000000000000000000; 1|Assets/Scenes/Base.unity|e0fd96c04ed5f4230bfb1fc1aa060f13; 1|Assets/Scenes/Second.unity|6f748856d2f6b48bba33779b860ce87a]"}
+{"key": "again.global", "value": "[1|Assets/Scenes/Base.unity|e0fd96c04ed5f4230bfb1fc1aa060f13; 0|Assets/Scenes/Second.unity|6f748856d2f6b48bba33779b860ce87a; 1|Assets/Scenes/Missing.unity|00000000000000000000000000000000; 1|Assets/Scenes/Base.unity|e0fd96c04ed5f4230bfb1fc1aa060f13; 1|Assets/Scenes/Second.unity|6f748856d2f6b48bba33779b860ce87a]"}
+{"key": "again.build", "value": "5:Assets/Scenes/Base.unity,Assets/Scenes/Second.unity,Assets/Scenes/Missing.unity,Assets/Scenes/Base.unity,Assets/Scenes/Second.unity|second=3|base=0"}
+{"key": "nullEntry", "value": "throws NullReferenceException: (null)"}
+{"key": "nullEntry.changed", "value": 1}
+{"key": "nullEntry.file", "value": "75bd67fc744edb895ebbeb2bc6174885c6e75adc4a63bf8b5a8c9507375fe31a"}
+{"key": "nullEntry.scenes", "value": "[1|Assets/Scenes/Base.unity|e0fd96c04ed5f4230bfb1fc1aa060f13; 0|Assets/Scenes/Second.unity|6f748856d2f6b48bba33779b860ce87a; 1|Assets/Scenes/Missing.unity|00000000000000000000000000000000; 1|Assets/Scenes/Base.unity|e0fd96c04ed5f4230bfb1fc1aa060f13; 1|Assets/Scenes/Second.unity|6f748856d2f6b48bba33779b860ce87a]"}
+{"key": "nullEntry.global", "value": "[1|Assets/Scenes/Base.unity|e0fd96c04ed5f4230bfb1fc1aa060f13; 0|Assets/Scenes/Second.unity|6f748856d2f6b48bba33779b860ce87a; 1|Assets/Scenes/Missing.unity|00000000000000000000000000000000; 1|Assets/Scenes/Base.unity|e0fd96c04ed5f4230bfb1fc1aa060f13; 1|Assets/Scenes/Second.unity|6f748856d2f6b48bba33779b860ce87a]"}
+{"key": "nullEntry.build", "value": "5:Assets/Scenes/Base.unity,Assets/Scenes/Second.unity,Assets/Scenes/Missing.unity,Assets/Scenes/Base.unity,Assets/Scenes/Second.unity|second=3|base=0"}
+{"key": "nullList", "value": "done"}
+{"key": "nullList.changed", "value": 2}
+{"key": "nullList.file", "value": "75bd67fc744edb895ebbeb2bc6174885c6e75adc4a63bf8b5a8c9507375fe31a"}
+{"key": "nullList.scenes", "value": "[]"}
+{"key": "nullList.global", "value": "[]"}
+{"key": "nullList.build", "value": "0:|second=-1|base=-1"}
+{"key": "empty.changed", "value": 2}
+{"key": "empty.file", "value": "75bd67fc744edb895ebbeb2bc6174885c6e75adc4a63bf8b5a8c9507375fe31a"}
+{"key": "empty.scenes", "value": "[]"}
+{"key": "empty.global", "value": "[]"}
+{"key": "empty.build", "value": "0:|second=-1|base=-1"}
+{"key": "empty.saved.file", "value": "41bc588f6ecc03944687d496f024917cabb061e21c148a6471b74581df14f908"}
+{"key": "global.changed", "value": 2}
+{"key": "global.file", "value": "41bc588f6ecc03944687d496f024917cabb061e21c148a6471b74581df14f908"}
+{"key": "global.scenes", "value": "[1|Assets/Scenes/Second.unity|6f748856d2f6b48bba33779b860ce87a]"}
+{"key": "global.global", "value": "[1|Assets/Scenes/Second.unity|6f748856d2f6b48bba33779b860ce87a]"}
+{"key": "global.build", "value": "1:Assets/Scenes/Second.unity|second=0|base=-1"}
+{"key": "parallel.set", "value": true}
+{"key": "parallel.set.file", "value": "41bc588f6ecc03944687d496f024917cabb061e21c148a6471b74581df14f908"}
+{"key": "global.saved.file", "value": "c930b17d64d68a2acc70a832a4a1169f3579350596ae475fec025bff63cc8e23"}
+{"key": "exit.changed", "value": 3}
+{"key": "exit.file", "value": "c930b17d64d68a2acc70a832a4a1169f3579350596ae475fec025bff63cc8e23"}
+{"key": "exit.scenes", "value": "[1|Assets/Scenes/Second.unity|6f748856d2f6b48bba33779b860ce87a; 0|Assets/Scenes/Base.unity|e0fd96c04ed5f4230bfb1fc1aa060f13]"}
+{"key": "exit.global", "value": "[1|Assets/Scenes/Second.unity|6f748856d2f6b48bba33779b860ce87a; 0|Assets/Scenes/Base.unity|e0fd96c04ed5f4230bfb1fc1aa060f13]"}
+{"key": "exit.build", "value": "2:Assets/Scenes/Second.unity,Assets/Scenes/Base.unity|second=0|base=-1"}
+{"key": "untitled.dirty", "value": false}
+{"key": "log", "value": "Assert: Cancelling FileDialog: Save Scene \nThis should not be called in batch mode."}
+{"key": "untitled.save", "value": false}
+{"key": "log", "value": "Assert: Cancelling FileDialog: Save Scene \nThis should not be called in batch mode."}
+{"key": "untitled.saveEmpty", "value": false}
+{"key": "untitled.afterSave", "value": "|False"}
+{"key": "log", "value": "Assert: Cancelling FileDialog: Save Scene \nThis should not be called in batch mode."}
+{"key": "untitled.saveScenes", "value": false}
+{"key": "log", "value": "Assert: Cancelling FileDialog: Save Scene \nThis should not be called in batch mode."}
+{"key": "untitled.saveOpen", "value": false}
+{"key": "untitled.afterSaveOpen", "value": "|True"}
+{"key": "log", "value": "Log: \nIgnoreFailingMessages:false"}

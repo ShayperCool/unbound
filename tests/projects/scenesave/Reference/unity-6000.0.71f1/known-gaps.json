@@ -143,5 +143,82 @@
     "reference": "written",
     "actual": "lines 30-31: reference ['        inSlope: {x: 0, y: 0, z: 0, w: -0.13397467}', '        outSlope: {x: 0.6666667, y: 0, z: 0, w: -0.13397467}'], actual ['        inSlope: {x: 0, y: 0, z: 0, w: -0.13397461}', '        outSlope: {x: 0.6666667, y: 0, z: 0, w: -0.13397461}']",
     "reason": "The slope of the key a rotation's w component gets at another component's time (0.25 s on a linear segment of slope -0.13397461): the Editor writes -0.13397467 (4 float steps away), Unbound the segment's slope; position keys added the same way match. How the Editor derives an added rotation key's slope is not reproduced; recorded, not chased."
+  },
+  {
+    "case": "build-scenes",
+    "key": "active.nullEntry",
+    "reference": [
+      "throws NullReferenceException: Object reference not set to an instance of an object"
+    ],
+    "actual": [
+      "throws NullReferenceException: Object reference not set to an instance of an object."
+    ],
+    "reason": "The runtime's own exception message: Unity's Mono writes NullReferenceException's without the final period CoreCLR writes"
+  },
+  {
+    "case": "build-scenes",
+    "key": "again.build",
+    "reference": [
+      "5:Assets/Scenes/Base.unity,Assets/Scenes/Second.unity,Assets/Scenes/Missing.unity,Assets/Scenes/Base.unity,Assets/Scenes/Second.unity|second=3|base=0"
+    ],
+    "actual": [
+      "4:Assets/Scenes/Base.unity,Assets/Scenes/Missing.unity,Assets/Scenes/Base.unity,Assets/Scenes/Second.unity|second=3|base=0"
+    ],
+    "reason": "In Edit mode the Editor answers SceneManager.sceneCountInBuildSettings and SceneUtility.GetScenePathByBuildIndex from the whole EditorBuildSettings list, disabled scenes included, and GetBuildIndexByScenePath from its enabled scenes; Unbound answers all three from the enabled scenes (the list Play mode loads by build index): follow-up"
+  },
+  {
+    "case": "build-scenes",
+    "key": "ctor.nullPath",
+    "reference": [
+      "throws NullReferenceException: Object reference not set to an instance of an object"
+    ],
+    "actual": [
+      "throws NullReferenceException: Object reference not set to an instance of an object."
+    ],
+    "reason": "The runtime's own exception message: Unity's Mono writes NullReferenceException's without the final period CoreCLR writes"
+  },
+  {
+    "case": "build-scenes",
+    "key": "ctor.setNullPath",
+    "reference": [
+      "throws NullReferenceException: Object reference not set to an instance of an object"
+    ],
+    "actual": [
+      "throws NullReferenceException: Object reference not set to an instance of an object."
+    ],
+    "reason": "The runtime's own exception message: Unity's Mono writes NullReferenceException's without the final period CoreCLR writes"
+  },
+  {
+    "case": "build-scenes",
+    "key": "exit.build",
+    "reference": [
+      "2:Assets/Scenes/Second.unity,Assets/Scenes/Base.unity|second=0|base=-1"
+    ],
+    "actual": [
+      "1:Assets/Scenes/Second.unity|second=0|base=-1"
+    ],
+    "reason": "In Edit mode the Editor answers SceneManager.sceneCountInBuildSettings and SceneUtility.GetScenePathByBuildIndex from the whole EditorBuildSettings list, disabled scenes included, and GetBuildIndexByScenePath from its enabled scenes; Unbound answers all three from the enabled scenes (the list Play mode loads by build index): follow-up"
+  },
+  {
+    "case": "build-scenes",
+    "key": "nullEntry.build",
+    "reference": [
+      "5:Assets/Scenes/Base.unity,Assets/Scenes/Second.unity,Assets/Scenes/Missing.unity,Assets/Scenes/Base.unity,Assets/Scenes/Second.unity|second=3|base=0"
+    ],
+    "actual": [
+      "4:Assets/Scenes/Base.unity,Assets/Scenes/Missing.unity,Assets/Scenes/Base.unity,Assets/Scenes/Second.unity|second=3|base=0"
+    ],
+    "reason": "In Edit mode the Editor answers SceneManager.sceneCountInBuildSettings and SceneUtility.GetScenePathByBuildIndex from the whole EditorBuildSettings list, disabled scenes included, and GetBuildIndexByScenePath from its enabled scenes; Unbound answers all three from the enabled scenes (the list Play mode loads by build index): follow-up"
+  },
+  {
+    "case": "build-scenes",
+    "key": "set.build",
+    "reference": [
+      "5:Assets/Scenes/Base.unity,Assets/Scenes/Second.unity,Assets/Scenes/Missing.unity,Assets/Scenes/Base.unity,Assets/Scenes/Second.unity|second=3|base=0"
+    ],
+    "actual": [
+      "4:Assets/Scenes/Base.unity,Assets/Scenes/Missing.unity,Assets/Scenes/Base.unity,Assets/Scenes/Second.unity|second=3|base=0"
+    ],
+    "reason": "In Edit mode the Editor answers SceneManager.sceneCountInBuildSettings and SceneUtility.GetScenePathByBuildIndex from the whole EditorBuildSettings list, disabled scenes included, and GetBuildIndexByScenePath from its enabled scenes; Unbound answers all three from the enabled scenes (the list Play mode loads by build index): follow-up"
   }
 ]

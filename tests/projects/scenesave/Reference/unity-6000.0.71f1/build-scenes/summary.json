@@ -1,0 +1,8 @@
+{
+  "case": "build-scenes",
+  "exit": 0,
+  "changed": [
+    "ProjectSettings/EditorBuildSettings.asset"
+  ],
+  "removed": []
+}

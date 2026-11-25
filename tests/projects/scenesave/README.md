@@ -123,6 +123,16 @@ file the run added, changed or removed.
   `PrefabStage.prefabSaving` and `PrefabUtility.allowRecordingPrefabPropertyOverridesFor` events
   subscribed (when they are raised is not measured). Recorded in the Linux Editor (batch mode, no
   graphics: two captures that agree).
+- `build-scenes` (Edit Mode, `BuildSceneTests`): `EditorBuildSettingsScene`'s constructors (a path
+  with back slashes, a missing path, a GUID, an unknown GUID, null), its `path` setter,
+  `GetActiveSceneList` and `CompareTo`; `EditorBuildSettings.scenes` set to scenes made from a path, a
+  missing path, a stale path with a known GUID and a GUID alone, then the same list again, a list
+  with a null entry, null, an empty list, `globalScenes` set and `UseParallelAssetBundleBuilding`
+  set: after each, `sceneListChanged`'s count, the file's hash, both getters, the build indices
+  `SceneManager`/`SceneUtility` answer, and the file after `SaveAssets`; the scenes given and the
+  scenes returned changed afterwards; a list left for the Editor's exit; an untitled scene saved
+  without a path by `SaveScene`, `SaveScenes` and `SaveOpenScenes`. Recorded in the macOS Editor
+  (batch mode, no graphics: two identical captures; nothing depends on the OS).
 - `play-nosave`, `play-save` (Play Mode, `SavePlayTests.NoSave` and `.Save`, each alone): assets
   edited in Play mode, left unsaved or saved by `AssetDatabase.SaveAssets` there; scene saves and
   `MarkSceneDirty` in Play mode.
@@ -130,7 +140,11 @@ file the run added, changed or removed.
 Measured: `SaveScene` writes whether or not the scene is dirty, `SaveScenes` and
 `SaveOpenScenes` only dirty scenes; script edits dirty no scene; in Play mode scene saves and
 `MarkSceneDirty` throw; the modified-scenes dialog is cancelled with the batch-mode assertion and
-answers false. A scene's documents are ordered by file id (settings first, SceneRoots last); a
+answers false; an untitled scene saved without a path cancels the save panel with the batch-mode
+assertion and is not saved. A set scene list is copied, each scene's path taken from its GUID when
+the project has that asset, null taken as empty, a null entry refused; `sceneListChanged` follows a
+change of the list only, not `globalScenes`; the getters return copies; the file is written by
+`SaveAssets` and at exit. A scene's documents are ordered by file id (settings first, SceneRoots last); a
 prefab's by GameObject (GameObjects by file id, each followed by its components in component
 order). Numbers are written with their shortest digits, with an exponent once the decimal exponent
 reaches the type's precision (9 for floats, 17 for doubles) or falls below its negation; integer,
