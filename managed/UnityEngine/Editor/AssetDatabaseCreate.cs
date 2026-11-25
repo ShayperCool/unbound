@@ -105,7 +105,7 @@ namespace UnityEditor
             var guid = AssetPathToGUID(GetAssetPath(assetObject));
             if (!s_Created.TryGetValue(guid, out var created) && (created = Adopt(guid)) == null)
             {
-                Debug.LogError($"Unbound adds objects only to assets it created in this session or animator controllers it can write whole: '{GetAssetPath(assetObject)}' is left as it is.");
+                Debug.LogError($"Unbound adds objects only to assets it created in this session, or animator controllers and materials it can write whole: '{GetAssetPath(assetObject)}' is left as it is.");
                 return;
             }
             if (!UnityYamlWriter.WritesNew(objectToAdd))
@@ -126,16 +126,18 @@ namespace UnityEditor
             created.Unsaved = true;
         }
 
-        /// <summary>An animator controller read from its file that objects are added to: written whole
-        /// from its objects from then on, as one CreateAsset made (matches the Unity 6000.0.71f1 Editor,
-        /// tests/projects/scenesave controller-additions); null when that would lose anything of the
-        /// file (see <see cref="AdoptionRefusal"/>), or for another kind of asset (unmeasured).</summary>
+        /// <summary>An animator controller or a material read from its file that objects are added to:
+        /// written whole from its objects from then on, as one CreateAsset made, its documents by
+        /// file id (matches the Unity 6000.0.71f1 Editor, tests/projects/scenesave
+        /// controller-additions, and a pipeline's version object added to a material,
+        /// tests/projects/firstimport); null when that would lose anything of the file (see
+        /// <see cref="AdoptionRefusal"/>), or for another kind of asset (unmeasured).</summary>
         static CreatedAsset Adopt(string guid)
         {
             var info = AssetDatabaseRuntime.Info(guid);
             var loaded = AssetDatabaseRuntime.LoadFile(guid);
             if (info == null || loaded == null || info.Kind != "yaml" || string.IsNullOrEmpty(info.File)) return null;
-            if (loaded.MainObject is not UnityEditor.Animations.AnimatorController) return null;
+            if (loaded.MainObject is not UnityEditor.Animations.AnimatorController && loaded.MainObject is not Material) return null;
             if (!Editable(info.Path) || IsImmutablePackagePath(info.Path) || !File.Exists(info.File)) return null;
             var stamp = (File.GetLastWriteTimeUtc(info.File), new FileInfo(info.File).Length);
             if (s_Refused.TryGetValue(guid, out var refused) && refused == stamp) return null;
