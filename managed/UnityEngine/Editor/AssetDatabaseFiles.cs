@@ -289,6 +289,9 @@ namespace UnityEditor
         /// back: imported again at the last StopAssetEditing.</summary>
         static readonly List<string> s_PendingReimports = new List<string>();
 
+        /// <summary>How many changed assets wait for the last StopAssetEditing (tests).</summary>
+        internal static int PendingReimportCount => s_PendingReimports.Count;
+
         static bool CompilesScripts(string path) =>
             path.EndsWith(".cs", StringComparison.OrdinalIgnoreCase) || path.EndsWith(".asmdef", StringComparison.OrdinalIgnoreCase)
             || path.EndsWith(".asmref", StringComparison.OrdinalIgnoreCase);

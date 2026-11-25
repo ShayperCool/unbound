@@ -855,6 +855,9 @@ namespace UnityEngine
 
         public bool IsPropertyLocked(int nameID) => m_Locked != null && m_Locked.Contains(nameID);
 
+        /// <summary>Whether the material locks any of its properties for its variants.</summary>
+        internal bool HasLockedProperties => m_Locked is { Count: > 0 };
+
         public bool IsPropertyLocked(string name) => IsPropertyLocked(Shader.PropertyToID(name));
 
         /// <summary>Whether a parent, or its parent, locks the property.</summary>

@@ -1561,15 +1561,16 @@ namespace Unbound.Runtime
         /// the kept ones), a text asset the new bytes, a material its file's values (as when it is
         /// unloaded), an imported 2D texture the new import under
         /// its renderer handle (so materials that bind it draw the new texels). An asset with
-        /// objects of other kinds, or whose new import has other objects, keeps its loaded objects
+        /// objects of other kinds (a material variant among them), or whose new import has other
+        /// objects, keeps its loaded objects
         /// as they are, with a warning: not measured. Nothing loaded: the next load reads the file.
-        /// Whether the loaded objects took the new content.</summary>
-        internal static bool ReimportInPlace(string guid)
+        /// </summary>
+        internal static void ReimportInPlace(string guid)
         {
             if (!s_Files.TryGetValue(guid, out var loaded) || loaded == null)
             {
                 Invalidate(guid);
-                return true;
+                return;
             }
             ImportedInSession(guid);
             var (fresh, registered) = ReadFileAgain(guid);
@@ -1581,10 +1582,8 @@ namespace Unbound.Runtime
                 {
                     var old = pair.Value;
                     if (old == null || old.m_Destroyed) continue;
-                    if (!fresh.Objects.TryGetValue(pair.Key, out var copy) || copy == null || copy.GetType() != old.GetType())
-                        refused ??= $"its {old.GetType().Name} '{old.name}' is not in its new import";
-                    else if (!TakesContentInPlace(old))
-                        refused ??= $"Unbound takes a new import into loaded objects only for text assets, materials, imported 2D textures and game scripts' objects, not a {old.GetType().Name}";
+                    fresh.Objects.TryGetValue(pair.Key, out var copy);
+                    if (InPlaceRefusal(old, copy) is string why) refused ??= why;
                     else kept[copy] = old;
                 }
                 foreach (var key in fresh.Objects.Keys)
@@ -1594,10 +1593,9 @@ namespace Unbound.Runtime
             {
                 Debug.LogWarning($"Unbound: {loaded.Path} changed on disk; its loaded objects keep their old content: {refused}");
                 if (fresh != null) DestroyFresh(fresh, registered);
-                return false;
+                return;
             }
             var copier = new SerializedCopier(o => o != null && kept.TryGetValue(o, out var mine) ? mine : o);
-            bool all = true;
             foreach (var pair in kept)
             {
                 if (pair.Value is ScriptableObject) copier.CopyScriptObject(pair.Key, pair.Value);
@@ -1608,15 +1606,25 @@ namespace Unbound.Runtime
                     // Counted as updated once, then the import's count is the one it now has.
                     texture.IncrementUpdateCount();
                     if (!texture.ReloadImported())
-                    {
                         Debug.LogWarning($"Unbound: {loaded.Path} changed on disk; its texture '{texture.name}' keeps its old content (its file no longer imports as a 2D texture)");
-                        all = false;
-                    }
                 }
                 else SwapContent(pair.Key, pair.Value);
             }
             DestroyFresh(fresh, registered);
-            return all;
+        }
+
+        /// <summary>Why a loaded object cannot take its new import's copy in place, or null: not
+        /// in the new import (or of another type), a kind not measured, or a material variant or a
+        /// material with locked properties, whose variant state the file sets (unmeasured: the
+        /// value copy would keep the old parent and overrides).</summary>
+        internal static string InPlaceRefusal(Object old, Object copy)
+        {
+            if (copy == null || copy.GetType() != old.GetType()) return $"its {old.GetType().Name} '{old.name}' is not in its new import";
+            if (!TakesContentInPlace(old))
+                return $"Unbound takes a new import into loaded objects only for text assets, materials, imported 2D textures and game scripts' objects, not a {old.GetType().Name}";
+            if (old is Material a && copy is Material b && (a.isVariant || b.isVariant || a.HasLockedProperties || b.HasLockedProperties))
+                return $"its material '{old.name}' is a material variant or has locked properties";
+            return null;
         }
 
         /// <summary>Whether a loaded object takes a new import's content in place (measured kinds:

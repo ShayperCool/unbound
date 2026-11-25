@@ -243,6 +243,70 @@ namespace UnityEngine.Tests
             }
         }
 
+        /// <summary>A material variant, or one with locked properties, is not taken in place (the
+        /// value copy would keep its old parent and overrides); a plain material is; an object the
+        /// new import lacks or has as another type is not.</summary>
+        [Fact]
+        public void AMaterialVariantIsNotTakenInPlace()
+        {
+            var shader = Shader.Find("Hidden/InternalErrorShader");
+            var plain = new Material(shader);
+            var copy = new Material(shader);
+            var parent = new Material(shader);
+            var variant = new Material(shader) { parent = parent };
+            var text = new TextAsset("notes");
+            try
+            {
+                Assert.Null(AssetDatabaseRuntime.InPlaceRefusal(plain, copy));
+                Assert.NotNull(AssetDatabaseRuntime.InPlaceRefusal(plain, variant));
+                Assert.NotNull(AssetDatabaseRuntime.InPlaceRefusal(variant, copy));
+                Assert.NotNull(AssetDatabaseRuntime.InPlaceRefusal(plain, null));
+                Assert.NotNull(AssetDatabaseRuntime.InPlaceRefusal(plain, text));
+            }
+            finally
+            {
+                foreach (var o in new Object[] { plain, copy, parent, variant, text }) Object.DestroyImmediate(o);
+            }
+        }
+
+        /// <summary>ImportAsset of an asset changed on disk between StartAssetEditing and
+        /// StopAssetEditing imports and reports it at the last StopAssetEditing, not before
+        /// (Scripting API 6000.0, AssetDatabase.StartAssetEditing).</summary>
+        [Fact]
+        public void AChangedAssetImportedWhileEditingIsImportedAtTheLastStop()
+        {
+            ProjectImports.Scan(Initial(), Record, out var start);
+            var before = ProjectInfo.ProjectPath;
+            ProjectImports.ResetForTests();
+            ProjectImports.SessionForTests(start);
+            ProjectInfo.ProjectPath = m_Root;
+            AssetDatabase.List("[{\"guid\":\"c1\",\"path\":\"Assets/M/C.mat\",\"kind\":\"yaml\"}]");
+            var reports = new List<string>();
+            using var capture = SessionImports.ReportsForTests((imported, deleted, moved, from) => reports.Add(string.Join(",", imported)));
+            try
+            {
+                AssetDatabase.StartAssetEditing();
+                AssetDatabase.StartAssetEditing();
+                Write("Assets/M/C.mat", "c changed outside");
+                AssetDatabase.ImportAsset("Assets/M/C.mat");
+                AssetDatabase.StopAssetEditing();
+                Assert.Empty(reports);
+                Assert.Equal(1, AssetDatabase.PendingReimportCount);
+                AssetDatabase.StopAssetEditing();
+                Assert.Equal(0, AssetDatabase.PendingReimportCount);
+                Assert.Equal(new[] { "Assets/M/C.mat" }, reports);
+                // Seen now: a Refresh finds nothing more.
+                Assert.Empty(ProjectImports.ChangedSinceSeen());
+            }
+            finally
+            {
+                while (AssetDatabase.Editing) AssetDatabase.StopAssetEditing();
+                ProjectInfo.ProjectPath = before;
+                ProjectImports.ResetForTests();
+                AssetDatabase.Invalidate();
+            }
+        }
+
         [Fact]
         public void AForcedImportOfAnUnloadedAssetIsTheSessionsImport()
         {
