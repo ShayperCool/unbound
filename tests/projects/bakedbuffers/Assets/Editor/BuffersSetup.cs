@@ -722,6 +722,16 @@ public static class BuffersSetup
             NewLight("BakedBulb", LightType.Point, new Vector3(-1.21f, 1.53f, 1.07f), Vector3.zero, new Color(0.6f, 0.8f, 1f), 2f).range = 5f;
             Save(scene, name);
         }
+        // Directional lightmaps under a faint sun, where a texel's light is so little that its
+        // direction's length is cut: 16 rays a texel under a sun of 0.0001, 64 under one of
+        // 0.00001.
+        foreach (var (name, samples, intensity) in new[] { ("DirectionalFaint", 16, 1e-4f), ("DirectionalFainter", 64, 1e-5f) })
+        {
+            var scene = Coloured(name, samples, 1);
+            Directed();
+            NewLight("Sun", LightType.Directional, Vector3.zero, new Vector3(50f, -30f, 0f), Color.white, intensity);
+            Save(scene, name);
+        }
     }
 
     /// <summary>Mixed lights for the shadowmask: two suns, five point lights in a row whose
