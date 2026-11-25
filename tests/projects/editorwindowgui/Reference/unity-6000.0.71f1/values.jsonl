@@ -16,6 +16,7 @@
 {"k":"handles/outsideGui/shapes","v":["NullReferenceException","NullReferenceException","NullReferenceException","NullReferenceException","NullReferenceException","NullReferenceException","NullReferenceException","NullReferenceException","NullReferenceException","NullReferenceException","NullReferenceException","NullReferenceException","NullReferenceException","NullReferenceException","NullReferenceException","NullReferenceException","NullReferenceException"]}
 {"k":"handles/outsideGui/labelAndRepaint","v":["ArgumentException","ArgumentException","ArgumentException","ArgumentException",null]}
 {"k":"reorderable/outsideGui","v":["NullReferenceException","NullReferenceException","NullReferenceException"]}
+{"k":"window/laterFrame","v":[true,[],[]]}
 {"k":"cursor/layout","v":[null,0,null,0,false]}
 {"k":"handles/layout/aaPoly","v":[null,null,null,null,null,null,null]}
 {"k":"handles/layout/aaPolyEdges","v":[null,null,null,null,null,null,null]}

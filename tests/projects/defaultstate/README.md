@@ -893,3 +893,9 @@ The Editor service and UXML data slice enters eight hand-written types into the 
 public parameterless constructor) and the `UxmlSerializedData` classes of `Label`, `TabView` and
 `TwoPaneSplitView` (factory `class`). Two Unity 6000.0.71f1 GPU Editor captures on Linux agree on
 their 13 rows (twice: before and after `ChannelScope`); every earlier row is unchanged.
+
+The editor GUI slice enters `UnityEditorInternal.ReorderableList+Defaults` (now hand-written) into the
+inventory: two Unity 6000.0.71f1 GPU Editor captures on Linux agree on its one row (made outside
+OnGUI, its constructor throws NullReferenceException); every earlier row is unchanged. The ten
+queued `EditorWindow.rootVisualElement` rows keep their Editor values and now hold Unbound's root
+(made as Unity's, without the default editor style sheet, named `rootVisualContainer2`).

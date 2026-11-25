@@ -529,7 +529,8 @@ namespace Unbound.Runtime
         internal static bool UnstyledHorizontalHeightUsesChildMaximum => Family == ReleaseFamily.Unity6000_0;
 
         /// <summary>ReorderableList geometry defaults and height calculation measured in Play mode
-        /// by tests/projects/reorderablelist on Unity 6000.0.71f1. Other families are unmeasured.</summary>
+        /// by tests/projects/reorderablelist, and its drawing (DoList, DoLayoutList) by
+        /// tests/projects/editorwindowgui, on Unity 6000.0.71f1. Other families are unmeasured.</summary>
         internal static bool EditorReorderableListLayoutMeasured => Family == ReleaseFamily.Unity6000_0;
 
         /// <summary>Querying the owning editor control's focus outside OnGUI throws on

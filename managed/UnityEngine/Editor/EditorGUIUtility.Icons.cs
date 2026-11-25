@@ -37,7 +37,7 @@ namespace UnityEditor
         /// <summary>
         /// An object's custom icon as the Unity 6000.0.71f1 Editor keeps it in Play mode
         /// (tests/projects/editorwindowgui icons.*): a GameObject's and a ScriptableObject's are
-        /// kept, a component's is not (setting one leaves it without an icon), a null icon clears
+        /// kept, a Transform's is not (setting one leaves it without an icon), a null icon clears
         /// it; a null object throws ArgumentNullException and a destroyed one
         /// MissingReferenceException, as a [NotNull] binding argument does. Other object kinds
         /// (assets, MonoScripts) are unmeasured and report themselves ignored.
@@ -50,10 +50,10 @@ namespace UnityEditor
                 return;
             }
             if (!obj) throw ObjectErrors.Argument(obj, "obj");
-            if (obj is Component) return;
+            if (obj is Transform) return;
             if (obj is not GameObject && obj is not ScriptableObject)
             {
-                Stubs.Ignored("EditorGUIUtility.SetIconForObject", "keeps icons of GameObjects and ScriptableObjects only (other objects are unmeasured)");
+                Stubs.Ignored("EditorGUIUtility.SetIconForObject", "keeps icons of GameObjects and ScriptableObjects only (other objects, scripts' components among them, are unmeasured)");
                 return;
             }
             if (icon == null) s_ObjectIcons.Remove(obj.GetInstanceID());
@@ -70,7 +70,10 @@ namespace UnityEditor
                 return null;
             }
             if (!obj) throw ObjectErrors.Argument(obj, "obj");
-            return s_ObjectIcons.TryGetValue(obj.GetInstanceID(), out var icon) && icon ? icon : null;
+            if (!s_ObjectIcons.TryGetValue(obj.GetInstanceID(), out var icon)) return null;
+            if (icon) return icon;
+            s_ObjectIcons.Remove(obj.GetInstanceID());
+            return null;
         }
 
         public static void AddCursorRect(Rect position, MouseCursor mouse) => AddCursorRect(position, mouse, 0);

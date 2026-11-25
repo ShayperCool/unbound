@@ -30,8 +30,8 @@ namespace UnityEngine.Tests
             Assert.False(EditorWindow.HasOpenInstances<ProbeWindow>());
             Assert.Null(EditorWindow.focusedWindow);
             // The first GetWindow shows the window (OnFocus) and focuses it (OnFocus again: measured,
-            // tests/projects/editorwindowgui window.getWindow); the second focuses it once more.
-            Assert.Equal(new[] { "OnEnable", "OnFocus", "OnFocus", "OnFocus", "OnDestroy" }, ProbeWindow.Calls);
+            // tests/projects/editorwindowgui window.getWindow); the second finds it focused.
+            Assert.Equal(new[] { "OnEnable", "OnFocus", "OnFocus", "OnDestroy" }, ProbeWindow.Calls);
         }
 
         [Fact]

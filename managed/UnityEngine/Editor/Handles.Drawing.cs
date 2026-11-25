@@ -20,7 +20,12 @@ namespace UnityEditor
 
         public static void DrawAAPolyLine(params Vector3[] points) => Draw(nameof(DrawAAPolyLine));
         public static void DrawAAPolyLine(float width, params Vector3[] points) => Draw(nameof(DrawAAPolyLine));
-        public static void DrawAAPolyLine(Texture2D lineTex, params Vector3[] points) => Draw(nameof(DrawAAPolyLine));
+        // Unity's reads the texture's height for the width first, in every event.
+        public static void DrawAAPolyLine(Texture2D lineTex, params Vector3[] points)
+        {
+            _ = lineTex.height / 2;
+            Draw(nameof(DrawAAPolyLine));
+        }
         public static void DrawAAPolyLine(float width, int actualNumberOfPoints, params Vector3[] points) => Draw(nameof(DrawAAPolyLine));
         public static void DrawAAPolyLine(Texture2D lineTex, float width, params Vector3[] points) => Draw(nameof(DrawAAPolyLine));
         public static void DrawAAPolyLine(Color[] colors, Vector3[] points) => Draw(nameof(DrawAAPolyLine));

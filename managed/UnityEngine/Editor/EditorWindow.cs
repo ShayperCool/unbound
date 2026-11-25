@@ -24,6 +24,7 @@ namespace UnityEditor
         bool m_Shown;
         VisualElement m_UIRootElement;
         Panel m_Panel;
+        int m_ShowFocusFrame = -1;
 
         // Creation-time values recorded by defaultstate on 6000.0.71f1.
         const float DefaultWindowWidth = 320f, DefaultWindowHeight = 550f, DefaultMinimumSize = 50f;
@@ -231,6 +232,7 @@ namespace UnityEditor
             m_Panel.visualTree.Add(rootVisualElement);
             Message(this, "CreateGUI");
             Focus();
+            m_ShowFocusFrame = Time.frameCount;
         }
 
         public void Show() => Open();
@@ -238,7 +240,12 @@ namespace UnityEditor
         public void ShowUtility() => Open();
         public void ShowPopup() => Open();
         public void ShowTab() => Open();
-        public void ShowAuxWindow() => Open();
+        /// <summary>Unity's C#: shown, then focused.</summary>
+        public void ShowAuxWindow()
+        {
+            Open();
+            Focus();
+        }
         public void ShowModalUtility() => Open();
 
         /// <summary>Unity blocks until a modal window closes; with nothing shown it returns at once.</summary>
@@ -250,12 +257,17 @@ namespace UnityEditor
             Open();
         }
 
-        /// <summary>Focuses the window; a focused window gets OnFocus again (measured:
-        /// tests/projects/editorwindowgui window.getWindow, OnFocus at the show and at GetWindow's
-        /// focus).</summary>
+        /// <summary>Focuses the window. A window focused already gets no OnFocus, except once from
+        /// the first Focus after it was shown in the same frame (measured: tests/projects/
+        /// editorwindowgui window.getWindow, OnFocus at the show and at GetWindow's focus, and
+        /// window.laterFrame, none for GetWindow or Focus in a later frame).</summary>
         public void Focus()
         {
-            if (s_Focused == this && !Compat.EditorWindowGuiMeasured) return;
+            if (s_Focused == this)
+            {
+                if (m_ShowFocusFrame != Time.frameCount) return;
+                m_ShowFocusFrame = -1;
+            }
             var previous = s_Focused;
             s_Focused = this;
             if (previous != this && previous != null) Message(previous, "OnLostFocus");

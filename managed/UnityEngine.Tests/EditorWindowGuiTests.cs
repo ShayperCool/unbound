@@ -43,6 +43,9 @@ namespace UnityEngine.Tests
             Assert.Equal(ContextType.Editor, root.panel.contextType);
             window.Focus();
             Assert.Equal(new[] { "OnEnable", "CreateGUI:True", "OnFocus", "OnFocus" }, GuiProbeWindow.Calls);
+            // Only the first Focus after the show sends it again.
+            window.Focus();
+            Assert.Equal(new[] { "OnEnable", "CreateGUI:True", "OnFocus", "OnFocus" }, GuiProbeWindow.Calls);
             window.Close();
             Assert.Null(root.panel);
             Assert.Null(root.parent);

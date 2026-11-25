@@ -3233,6 +3233,12 @@
     },
     {
       "category": "class",
+      "module": "UnityEditor.CoreModule",
+      "status": "candidate",
+      "type": "UnityEditorInternal.ReorderableList+Defaults"
+    },
+    {
+      "category": "class",
       "module": "UnityEngine.AIModule",
       "status": "static",
       "type": "UnityEngine.AI.NavMesh"

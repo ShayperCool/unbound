@@ -16,6 +16,7 @@ public sealed class EditorWindowGuiProbe : MonoBehaviour
     string m_Directory;
     bool m_Done;
     bool m_RecordedLayout;
+    EditorWindowGuiProbeWindow m_Opened;
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
     static void StartProbe()
@@ -183,7 +184,24 @@ public sealed class EditorWindowGuiProbe : MonoBehaviour
             ro?.panel != null,
             ro?.panel?.contextType.ToString(),
             opened.Events.ToArray());
-        opened.Close();
+        // Kept open: OnGUI, in a later frame, focuses it again.
+        m_Opened = opened;
+    }
+
+    /// <summary>A window focused in an earlier frame: GetWindow and Focus again, then Close.</summary>
+    void RecordLaterFocus()
+    {
+        if (m_Opened == null) return;
+        var window = m_Opened;
+        m_Opened = null;
+        int before = window.Events.Count;
+        var again = EditorWindow.GetWindow<EditorWindowGuiProbeWindow>();
+        var afterGetWindow = window.Events.Skip(before).ToArray();
+        before = window.Events.Count;
+        window.Focus();
+        var afterFocus = window.Events.Skip(before).ToArray();
+        window.Close();
+        Put("window/laterFrame", ReferenceEquals(again, window), afterGetWindow, afterFocus);
     }
 
     void RecordCursorRectOutsideGui()
@@ -256,6 +274,8 @@ public sealed class EditorWindowGuiProbe : MonoBehaviour
         string phase = evt == EventType.Layout ? "layout" : "repaint";
         if (evt == EventType.Layout && m_RecordedLayout) return;
         if (evt == EventType.Layout) m_RecordedLayout = true;
+
+        if (evt == EventType.Layout) Section("window", RecordLaterFocus);
 
         // 1. AddCursorRect inside OnGUI
         bool prevChanged = GUI.changed;
