@@ -241,12 +241,12 @@ from their first surface on whatever the Min Bounces.
   sample count 8 times a texel's) and Direct Samples set to 20, which the Editor keeps as 16;
   a second group's four probes in the penumbra of the cube's shadow under the soft mixed sun,
   their occlusion of it the part of their samples that see it (in 128ths).
-- `CookieSpot`, `CookieSun`, `CookiePoint`, `CookieLarge`, `CookieSunPoint`, `CookieHuge`: baked
+- `CookieSpot`, `CookieSun`, `CookiePoint`, `CookieLarge`, `CookieSunPoint`, `CookieHuge`, `CookieMany`: baked
   lights with cookies whose red, green, blue and alpha differ: a spot light's 16 by 16 clamped
   cookie over a light probe group, a sun's 8 by 8 repeating cookie of size 2.5, a point light's
-  cube cookie of 8 a side (each face its own), a spot light's 128 by 128 cookie with mipmaps, a
-  sun's clamped cookie of Point filter, and a spot light's Alpha8 cookie of 1024 a side of
-  Trilinear filter. The bake takes a cookie's alpha (its first level, at its own size), between
+  cube cookie of 8 a side (each face its own alpha), a spot light's 128 by 128 cookie with
+  mipmaps, a sun's clamped cookie of Point filter, a spot light's Alpha8 cookie of 1024 a side of
+  Trilinear filter, and four cookies at once (that one and three of 256 a side). The bake takes a cookie's alpha (its first level, at its own size), between
   its four nearest texels and half a texel inside its edges whatever its filter; a spot
   light's cookie spans the square of its cone (in the place of the cone's falloff), a sun's
   one tile of its Cookie Size on the light's plane (repeated where it wraps, the light uncut
