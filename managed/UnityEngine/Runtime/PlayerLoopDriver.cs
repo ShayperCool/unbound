@@ -421,6 +421,8 @@ namespace Unbound.Runtime
             s_DeferFirstEndOfFrame = !string.IsNullOrEmpty(firstScene);
             AnimationSystem.BeginPlayMode();
             CustomRenderTextureManager.BeginPlayMode();
+            // The startup scene's build index comes from the build list as the Editor reads it.
+            UnityEditor.EditorBuildSettings.ResolveBuildIndices();
             var initialScene = string.IsNullOrEmpty(firstScene) ? null : SceneManagerInternal.PreparePlayModeScene(firstScene);
             s_MainThreadId = Thread.CurrentThread.ManagedThreadId;
             Unbound.Runtime.NativePlugins.Boot();
