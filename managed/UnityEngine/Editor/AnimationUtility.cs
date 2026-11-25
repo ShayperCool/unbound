@@ -444,9 +444,15 @@ namespace UnityEditor
                     // One binding per material slot beyond the fresh renderer's one (two slots
                     // measured: tests/projects/animmaterialbindings two/MeshRenderer).
                     if (name == "m_Materials.Array.data[0]" && component is Renderer renderer)
-                        for (int slot = 1; slot < renderer.sharedMaterials.Length; slot++)
+                    {
+                        var materials = renderer.sharedMaterials;
+                        if (materials.Length > 2 || Array.Exists(materials, m => m == null) && materials.Length > 1)
+                            Unbound.Runtime.Stubs.Ignored("AnimationUtility.GetAnimatableBindings material slots",
+                                "lists one binding per slot also for empty slots and more than two (two filled slots are measured)");
+                        for (int slot = 1; slot < materials.Length; slot++)
                             if (Array.IndexOf(engine.Objects, "m_Materials.Array.data[" + slot + "]") < 0)
                                 list.Add(EditorCurveBinding.PPtrCurve(path, type, "m_Materials.Array.data[" + slot + "]"));
+                    }
                 }
                 return;
             }
