@@ -20,9 +20,10 @@ all zones go (130); the wind eases to rest (the tree's responses are 14 seconds:
 reaches 0 by frame 400, its direction stops by frame 550) and stays calm; long after, a directional
 zone comes again (900), and a tree of the same asset first draws in it (`FieldLate`, 1000,
 per-object motion vectors: until it draws its own wind it reads what an earlier draw left, so the
-probe records whether its wind vector is `FieldB`'s, and its constants only when it is). At 68
-frames between 1 and 1060 the probe records
-Time.time and each tree's constants (floats as the hex of their bits; values compare exactly),
+probe records whether its wind vector is `FieldB`'s, and its constants only when it is). That
+zone goes once its direction and strength have arrived (1250): the strength comes to rest last,
+at frame 1565, so the frames around it show the last windy frame and the first calm one. At 94
+frames between 1 and 1650 the probe records Time.time and each tree's constants (floats as the hex of their bits; values compare exactly),
 and once `Tree.hasSpeedTreeWind` of the asset's first level.
 
 Measured in the Unity 6000.0.71f1 Editor (two identical captures, OpenGL Core, NVIDIA driver):
@@ -34,8 +35,8 @@ the time since the previous update. The constants hold each part's phase before 
 step, its curves' values at the strength and the asset's settings; the branch anchor is the
 asset's anchor moved along the wind by the first branch level's length. The history constants
 take the previous frame's strength and direction with the phases after this frame's step. Once
-the wind is at rest nothing changes: the calm frames draw the last windy frame's constants and
-history. When a wind comes back the timers have started over: its first step is over the whole
+the wind is at rest its state stays as it is: the calm frames draw the last windy frame's
+constants, and a history at strength 0 (the strength is reset with the timers). When a wind comes back the timers have started over: its first step is over the whole
 time since play started (a jump of every phase by its curve at strength 0 times that time).
 `_ST_WindAnimation` is never written.
 
@@ -43,7 +44,7 @@ time since play started (a jump of every phase by its curve at strength 0 times 
     python3 tests/projects/speedtree8wind/run.py publish A B        # two identical captures
     python3 tests/projects/speedtree8wind/run.py gate               # the engine against Reference/
 
-Not measured: the billboard level (the probe draws a copy of the first level), the file options
+Not measured: a wind from the first frame (the first frame's history), the billboard level (the probe draws a copy of the first level), the file options
 that make a branch level's adherence directional (the sample sets neither; Unbound scales it by
 the first level's length), palm wind (its shader reads `_ST_WindAnimation`, which Unbound binds
 nothing to), a SpeedTree 8 wind still easing keeping SpeedTree 9 trees' world windy (Unbound has

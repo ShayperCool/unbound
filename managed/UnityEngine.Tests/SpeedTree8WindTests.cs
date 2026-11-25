@@ -165,9 +165,10 @@ namespace UnityEngine.Tests
             Assert.NotEqual(0f, Value(wind, 1).x);
         }
 
-        /// <summary>A calm after a wind keeps everything: its frames draw the last windy update's
-        /// constants and history; when a wind comes back, its first step is over the time since
-        /// the start (the calm's timers start over).</summary>
+        /// <summary>A calm after a wind keeps its state: its frames draw the last windy update's
+        /// constants, and a history at strength 0 (the last windy update's history had the
+        /// strength before it); when a wind comes back, its first step is over the time since the
+        /// start (the calm's timers start over).</summary>
         [Fact]
         public void ACalmKeepsTheLastWindyConstantsAndTheReturningWindStepsFromTheStart()
         {
@@ -176,11 +177,17 @@ namespace UnityEngine.Tests
             int frame = 1;
             wind.Update(frame * Dt, Vector3.right, 0.5f, config);
             for (frame = 2; frame <= 4; frame++) wind.Update(frame * Dt, Vector3.right, 0.5f, config);
-            // The wind goes and eases to rest.
+            // The wind goes; its direction has arrived, so its strength comes to rest last.
             for (; wind.Blowing; frame++) wind.Update(frame * Dt, Vector3.zero, 0f, config);
-            // The first calm update.
+            var lastWindy = Enumerable.Range(0, SpeedTree8WindState.ConstantCount).Select(i => Value(wind, i)).ToArray();
+            Assert.Equal(0f, lastWindy[0].w);
+            Assert.True(lastWindy[SpeedTree8WindState.HistoryOffset].w > 0f);
+            // The first calm update: the same current constants and phases, the history at strength 0.
             wind.Update(frame++ * Dt, Vector3.zero, 0f, config);
             var settled = Enumerable.Range(0, SpeedTree8WindState.ConstantCount).Select(i => Value(wind, i)).ToArray();
+            for (int i = 0; i < SpeedTree8WindState.HistoryOffset; i++) Assert.Equal(lastWindy[i], settled[i]);
+            Assert.Equal(0f, settled[SpeedTree8WindState.HistoryOffset].w);
+            Assert.Equal(lastWindy[SpeedTree8WindState.HistoryOffset + 14].x, settled[SpeedTree8WindState.HistoryOffset + 14].x);
             // The direction is kept.
             Assert.True(settled[0].x > 0.999f, settled[0].ToString());
             Assert.Equal(0f, settled[0].w);
@@ -215,6 +222,7 @@ namespace UnityEngine.Tests
             {
                 Debug.unityLogger.logHandler = warnings;
                 SpeedTreeWindSystem.s_SpeedTree8LocalWindReported = false;
+                Unbound.Runtime.Stubs.Forget("SpeedTree 8 local wind");
                 go.AddComponent<MeshFilter>().sharedMesh = new Mesh { vertices = new[] { Vector3.zero, Vector3.up, Vector3.right }, triangles = new[] { 0, 1, 2 } };
                 var renderer = go.AddComponent<MeshRenderer>();
                 go.AddComponent<Tree>().windAsset = asset;
@@ -287,6 +295,7 @@ namespace UnityEngine.Tests
                 {
                     Debug.unityLogger.logHandler = warnings;
                     SpeedTreeWindSystem.s_SpeedTree8DrawerReported = false;
+                    Unbound.Runtime.Stubs.Forget("SpeedTree 8 wind in the GPU Resident Drawer");
                     var ids = new int[2];
                     for (int i = 0; i < 2; i++)
                     {

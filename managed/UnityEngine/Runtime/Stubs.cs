@@ -66,6 +66,9 @@ namespace Unbound.Runtime
             }
         }
 
+        /// <summary>Forgets a member's uses, so that its next use logs again (tests).</summary>
+        internal static void Forget(string member) => Hits.TryRemove(member, out _);
+
         /// <summary>The stubs called so far and how often, most called first.</summary>
         public static IReadOnlyList<KeyValuePair<string, int>> HitReport() =>
             Hits.OrderByDescending(h => h.Value).ThenBy(h => h.Key, StringComparer.Ordinal).ToList();

@@ -13,7 +13,8 @@ namespace UnityEngine
     /// constants hold, for each part, its phase before this update and its curves' values at the
     /// strength, beside the asset's settings; the history constants (for per-object motion
     /// vectors) take the previous update's strength and direction with the phases after this
-    /// update's step. A calm keeps them all: its frames draw the last windy update's constants. Gusts take no part (the measured release never
+    /// update's step. A calm keeps the state: its frames draw the last windy update's constants, and a
+    /// history at strength 0 (the strength is reset with the timers). Gusts take no part (the measured release never
     /// turns them on, as for SpeedTree 9).
     /// </summary>
     internal sealed class SpeedTree8WindState : SpeedTreeWindMotion
@@ -42,8 +43,9 @@ namespace UnityEngine
         {
             if (!InTransition && Clamp01(m_Strength) <= 0f && strength == 0f)
             {
-                // Calm: the timers start over, as a SpeedTree 9 wind's do; the phases, the
-                // direction and the previous update's direction stay as they are.
+                // Calm: the timers and the strengths start over, as a SpeedTree 9 wind's do (the
+                // history is drawn at strength 0, tests/projects/speedtree8wind f1566); the
+                // phases, the direction and the previous update's direction stay as they are.
                 m_Time = 0f;
                 m_PreviousTime = Unset;
                 m_PreviousStrength = 0f;
