@@ -593,12 +593,19 @@ namespace UnityEditor
 
     public partial class SerializedProperty
     {
+        /// <summary>The C# type of the property's node.</summary>
+        internal Type UnboundClrType => N.ClrType;
+
+        /// <summary>The type a reference is validated against: the referenced type, else (a native
+        /// type with no C# class of that name, PPtr&lt;MonoBehaviour&gt;) the node's type.</summary>
+        Type ValidationType => ObjectReferenceFieldType ?? N.ClrType;
+
         /// <summary>Whether an object reference property can reference the object: one of its
         /// referenced type, or a GameObject with a component of it (the object fields take the
         /// component; tests/projects/editorobjectfields script/sp.target.*).</summary>
         internal bool ValidateObjectReferenceValue(Object obj)
         {
-            var type = ObjectReferenceFieldType;
+            var type = ValidationType;
             if (obj == null || type == null) return false;
             if (type.IsInstanceOfType(obj)) return true;
             return obj is GameObject go && typeof(Component).IsAssignableFrom(type) && go.GetComponent(type) != null;
@@ -608,7 +615,7 @@ namespace UnityEditor
         /// component of exactly that type).</summary>
         internal bool ValidateObjectReferenceValueExact(Object obj)
         {
-            var type = ObjectReferenceFieldType;
+            var type = ValidationType;
             if (obj == null || type == null) return false;
             if (obj.GetType() == type) return true;
             return obj is GameObject go && typeof(Component).IsAssignableFrom(type) && go.GetComponent(type)?.GetType() == type;

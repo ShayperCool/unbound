@@ -13,6 +13,7 @@ namespace UnityEngine.Tests
     {
         public Texture2D texture;
         public Transform target;
+        public KeyCode key = KeyCode.A;
         public ObjectFieldsNested nested = new ObjectFieldsNested();
         public Vector4 v4 = new Vector4(1, 2, 3, 4);
         public Vector3 v3 = new Vector3(1, 2, 3);
@@ -258,6 +259,47 @@ namespace UnityEngine.Tests
                 Assert.Same(skin, Pass(Drop(Body), () => EditorGUI.ObjectField(Field, null, typeof(GUISkin), true)));
             }
             finally { Object.DestroyImmediate(skin); Reset(); }
+        }
+
+        static string Repo([System.Runtime.CompilerServices.CallerFilePath] string source = "") =>
+            System.IO.Path.GetFullPath(System.IO.Path.Combine(System.IO.Path.GetDirectoryName(source), "..", ".."));
+
+        /// <summary>Settings assets of tests/projects/settings: their nodes come from the type
+        /// trees (a native PPtr&lt;MonoBehaviour&gt;, a native enum).</summary>
+        [Fact]
+        public void NativePropertiesKeepTheirOldReferenceCheckAndNoEnumNames()
+        {
+            using var release = TestRelease.Pin(TestRelease.Measured);
+            var probe = System.IO.Path.Combine(Repo(), "tests", "projects", "settings");
+            var project = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "unbound-objectfields-" + System.Guid.NewGuid().ToString("N"));
+            System.IO.Directory.CreateDirectory(System.IO.Path.Combine(project, "ProjectSettings"));
+            foreach (var f in System.IO.Directory.GetFiles(System.IO.Path.Combine(probe, "ProjectSettings")))
+                System.IO.File.Copy(f, System.IO.Path.Combine(project, "ProjectSettings", System.IO.Path.GetFileName(f)));
+            var before = ProjectInfo.ProjectPath;
+            ProjectInfo.ProjectPath = project;
+            Unbound.Runtime.SettingsAssets.Reset();
+            var asset = ScriptableObject.CreateInstance<ObjectFieldsHolder>();
+            try
+            {
+                var graphics = new SerializedObject(AssetDatabase.LoadAllAssetsAtPath("ProjectSettings/GraphicsSettings.asset")[0]);
+                // A PPtr<MonoBehaviour> takes a script asset, as before (no C# class of that name).
+                Assert.True(graphics.FindProperty("m_CustomRenderPipeline").ValidateObjectReferenceValue(asset));
+                var audio = new SerializedObject(AssetDatabase.LoadAllAssetsAtPath("ProjectSettings/AudioManager.asset")[0]);
+                // A native enum has no C# type to name its values.
+                Assert.Null(EditorGUI.EnumPropertyOptions(audio.FindProperty("Default Speaker Mode")));
+                // A node of a C# enum type has its names, made once.
+                var key = new SerializedObject(asset).FindProperty("key");
+                Assert.Equal(SerializedPropertyType.Enum, key.propertyType);
+                Assert.NotNull(EditorGUI.EnumPropertyOptions(key));
+                Assert.Same(EditorGUI.EnumPropertyOptions(key), EditorGUI.EnumPropertyOptions(key));
+            }
+            finally
+            {
+                ProjectInfo.ProjectPath = before;
+                Unbound.Runtime.SettingsAssets.Reset();
+                Object.DestroyImmediate(asset);
+                System.IO.Directory.Delete(project, true);
+            }
         }
 
         [Fact]

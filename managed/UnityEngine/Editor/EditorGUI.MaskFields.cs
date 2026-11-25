@@ -379,20 +379,35 @@ namespace UnityEditor
                         property.intValue = value;
                 }
             }
+            else if (EnumPropertyOptions(property) is GUIContent[] options)
+            {
+                // An engine component's enum, without a script field: its value's names.
+                BeginChangeCheck();
+                int idx = Popup(position, label, property.enumValueIndex, options);
+                if (EndChangeCheck()) property.enumValueIndex = idx;
+            }
             else
             {
-                // An enum without a script field (an engine object's): its value's names.
-                BeginChangeCheck();
-                int idx = Popup(position, label, property.enumValueIndex, EnumPropertyOptions(property));
-                if (EndChangeCheck()) property.enumValueIndex = idx;
+                // A native enum (a settings or material property) has no C# type to name its values.
+                Stubs.Ignored("UnityEditor.EditorGUI.EnumPopup of a native enum property", "an enum property without a C# enum type is drawn without its names");
+                int id = GUIUtility.GetControlID(s_PopupHash, FocusType.Keyboard, position);
+                PrefixLabel(position, id, label);
             }
         }
 
-        static GUIContent[] EnumPropertyOptions(SerializedProperty property)
+        static readonly Dictionary<Type, GUIContent[]> s_EnumPropertyOptions = new Dictionary<Type, GUIContent[]>();
+
+        /// <summary>The value names of an enum property of an engine object (null when its node has
+        /// no C# enum type), made once per enum type.</summary>
+        internal static GUIContent[] EnumPropertyOptions(SerializedProperty property)
         {
+            var type = property.UnboundClrType;
+            if (type == null || !type.IsEnum) return null;
+            if (s_EnumPropertyOptions.TryGetValue(type, out var options)) return options;
             var names = property.enumDisplayNames;
-            var options = new GUIContent[names.Length];
+            options = new GUIContent[names.Length];
             for (int i = 0; i < names.Length; i++) options[i] = new GUIContent(names[i]);
+            s_EnumPropertyOptions[type] = options;
             return options;
         }
 
