@@ -246,9 +246,9 @@ namespace UnityEngine
         /// <summary>
         /// The size and reference point of the levels' renderers (matches the Unity 6000.0.71f1
         /// Editor, tests/projects/lodbounds): each renderer's local bounds carried into the group's
-        /// space (its corners through the group's world-to-local matrix times the matrix of the
-        /// renderer's bounds, its local-to-world one) as a box, the boxes joined one after another (each union's center
-        /// and extents the halves of its corners' sum and difference); the reference point the
+        /// space (its corners through the group's world-to-local matrix times the matrix its
+        /// bounds are in: its local-to-world one, a static batch's at its combining) as a box,
+        /// the boxes joined one after another (each union's center and extents the halves of its corners' sum and difference); the reference point the
         /// box's center, the size its largest side. Disabled renderers and those of inactive
         /// objects count, missing ones do not; without any the point is zero and the size 1.
         /// Not measured: renderers other than mesh renderers (their world bounds are boxed, with a
