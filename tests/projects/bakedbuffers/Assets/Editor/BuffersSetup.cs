@@ -955,6 +955,53 @@ public static class BuffersSetup
         }
     }
 
+    /// <summary>Soft baked shadows and area lights over the lit scene: a sun of Baked Shadow
+    /// Angle 5 (16 direct samples), a point light of Baked Shadow Radius 0.25 (16), a spot light
+    /// of 0.15 (64), a mixed sun of angle 3 in the Shadowmask mode (32); a rectangle area light
+    /// of 1.5 by 0.75 and a disc of radius 0.6 (32 each).</summary>
+    static void SoftLights()
+    {
+        Light Soft(Light light, float size)
+        {
+            light.shadows = LightShadows.Soft;
+            if (light.type == LightType.Directional) light.shadowAngle = size;
+            else light.shadowRadius = size;
+            return light;
+        }
+        {
+            var scene = Lit("SoftSun");
+            Soft(NewLight("Sun", LightType.Directional, Vector3.zero, new Vector3(50f, -30f, 0f), Color.white, 2f), 5f);
+            Save(scene, "SoftSun");
+        }
+        {
+            var scene = Lit("SoftPoint");
+            Soft(NewLight("Bulb", LightType.Point, new Vector3(1.03f, 2.01f, -1.02f), Vector3.zero, new Color(1f, 0.8f, 0.6f), 3f), 0.25f).range = 6f;
+            Save(scene, "SoftPoint");
+        }
+        {
+            var scene = Lit("SoftSpot");
+            Lightmapping.lightingSettings.directSampleCount = 64;
+            var spot = Soft(NewLight("Spot", LightType.Spot, new Vector3(-1.97f, 3.02f, 0.03f), new Vector3(60f, 90f, 0f), new Color(0.6f, 0.8f, 1f), 4f), 0.15f);
+            spot.range = 10f;
+            spot.spotAngle = 60f;
+            Save(scene, "SoftSpot");
+        }
+        {
+            var scene = Lit("SoftMixed", MixedLightingMode.Shadowmask);
+            Lightmapping.lightingSettings.directSampleCount = 32;
+            Soft(NewLight("MixedSun", LightType.Directional, Vector3.zero, new Vector3(50f, -30f, 0f), Color.white, 2f, LightmapBakeType.Mixed), 3f);
+            Save(scene, "SoftMixed");
+        }
+        foreach (var (name, type) in new[] { ("SoftRect", LightType.Rectangle), ("SoftDisc", LightType.Disc) })
+        {
+            var scene = Lit(name);
+            Lightmapping.lightingSettings.directSampleCount = 32;
+            var area = NewLight(name, type, new Vector3(0.4f, 2.2f, -0.3f), new Vector3(90f, 0f, 0f), new Color(1f, 0.9f, 0.8f), 3f);
+            area.areaSize = type == LightType.Rectangle ? new Vector2(1.5f, 0.75f) : new Vector2(0.6f, 0.6f);
+            Save(scene, name);
+        }
+    }
+
     /// <summary>Light probes under a sky of three colours (the gradient), with directions picked
     /// by its brightness and without, in the Shadowmask Lighting Mode with a probe in a mixed
     /// spot light's cone; beside the probes' group, a disabled group and a group of an inactive
@@ -1325,7 +1372,7 @@ public static class BuffersSetup
                 ("ModeSubtractive", () => Modes("ModeSubtractive", MixedLightingMode.Subtractive)),
                 ("ModeShadowmask", () => Modes("ModeShadowmask", MixedLightingMode.Shadowmask)),
                 ("Bounce", Bounces), ("Glow", Glow), ("Roof", Roof), ("Textured", Textured), ("Levels", Levels), ("Sky", Skies), ("Spare", Spare),
-                ("SkyRealtime", RealtimeSkies), ("SpareEmpty", SpareEmpty), ("Spread", Spread), ("Far", Far), ("Masks", Masks), ("MasksBright", MasksBright), ("MasksEdges", MasksEdges), ("Probes", Probes), ("ProbesGrid", ProbesGrid), ("ProbesReach", ProbesReach), ("ProbesSky", ProbesSky), ("Directional", Directional), ("Lod", Lod), ("Filter", Filtered), ("Denoise", Denoised), ("Intensity", Intensities), ("Ao", Occluded), ("Compress", Compressed),
+                ("SkyRealtime", RealtimeSkies), ("SpareEmpty", SpareEmpty), ("Spread", Spread), ("Far", Far), ("Masks", Masks), ("MasksBright", MasksBright), ("MasksEdges", MasksEdges), ("Probes", Probes), ("ProbesGrid", ProbesGrid), ("ProbesReach", ProbesReach), ("ProbesSky", ProbesSky), ("Directional", Directional), ("Lod", Lod), ("Filter", Filtered), ("Denoise", Denoised), ("Intensity", Intensities), ("Ao", Occluded), ("Compress", Compressed), ("Soft", SoftLights),
             };
             var only = Environment.GetEnvironmentVariable("BAKED_BUFFERS_SCENES");
             var wanted = string.IsNullOrEmpty(only) ? null : new HashSet<string>(only.Split(','));
