@@ -194,6 +194,12 @@ from their first surface on whatever the Min Bounces.
 - `FilterGauss`, `FilterGaussHalf`, `FilterAtrous` (4, 128): the coloured scene of `Bounce`
   under the sun with the Advanced filtering, no denoisers, Gaussian filters of radius 1 (direct)
   and 5 (indirect), and 2.5 and 0.5, and A-Trous filters of position sigma 0.5 and 1.5.
+- `DenoiseAuto`, `DenoiseAutoOver`, `DenoiseOidn`, `DenoiseOidnGauss` (4, 128): the same scene
+  denoised: the Auto filtering (over the new Lighting Settings' Advanced settings, and over
+  Advanced settings of no denoisers and A-Trous filters), and the Advanced filtering with Open
+  Image Denoise on every target, without filters and with Gaussian filters of radius 1. The
+  recorder's Editor loads its denoiser (the runner puts the Editor's `Data/Tools` on its library
+  path), so its Auto filtering is Open Image Denoise's.
 
 The scenes above them have the default sky (`Bare`, `Charts`, `Samples`, `Shapes`: the default
 skybox, with the default Lighting Settings' picked directions) or none (a black sky: one picked
@@ -253,7 +259,15 @@ bakes them in the Editor's process and writes each lightmap's buffers unprocesse
   chart's texels whose light stands (the rules' model is the comparator's
   `gaussian_filter`). With A-Trous filters (`FilterAtrous`), four passes over a 5 x 5 grid of
   taps 1, 2, 4 and 8 texels apart, weighed by terms of how alike the taps' light, first sample's
-  normal and place are (the comparator's `atrous_filter` says how).
+  normal and place are (the comparator's `atrous_filter` says how). Denoised (`Denoise*`), a
+  part is first given one ring of its own light (each texel whose light does not stand takes the
+  weighed mean of its eight neighbours' and their weights' sum up to 1 as its weight), then
+  denoised by Open Image Denoise 1.4.2's lightmap filter over the whole image (the same library
+  as the Editor's: the comparator's `denoise` runs the one the engine downloaded), then filtered;
+  the parts are summed where both hold light, so the denoised lightmaps hold light one ring
+  further out than the padding. The Auto filtering denoises both parts and filters them by
+  Gaussian filters of radius 1, whatever its Advanced settings (as the Manual says of the
+  denoiser and its filter, and as `DenoiseAutoOver` measures).
 - `lightingData.json`, the lighting data the whole bake writes beside the scene
   (`LightingData.asset`) as its fields (`unbound dump`), normalized as `tests/baked_files.py`
   says (the GUIDs of the assets the bake made, new with every bake): its bytes change from bake
@@ -328,9 +342,11 @@ whole bake of a scene still failed is not published. Not measured: back-face tex
 texel holding its own light reaches (a chart all of whose texels met back faces: Unbound keeps
 their light and spreads none from them), Backface Tolerances other than 0.9 and padding other
 than 2 (the runner refuses another Backface Tolerance), the Lighting Settings' Indirect
-Intensity other than 1 (Unbound's lightmap leaves it out), the Auto filtering, denoising,
-filtering of directional lightmaps and in the Shadowmask and Subtractive Lighting Modes, the
-texels beyond the padding; of the filters: the A-Trous filter with 4 x 4 samples a texel (only 2 x
+Intensity other than 1 (Unbound's lightmap leaves it out), the OptiX denoiser (the Editor runs
+it only on Windows), denoising of one part without the other, denoising with A-Trous filters,
+the Editor's denoiser on macOS (another build of the library, on another processor), filtering
+of directional lightmaps and in the Shadowmask and Subtractive Lighting Modes, the texels
+beyond the padding; of the filters: the A-Trous filter with 4 x 4 samples a texel (only 2 x
 2 measured; it reads each texel's first sample's normal), the ambient occlusion target, charts
 reaching the lightmap's border, filter radii and sigmas other than those above.
 

@@ -32,6 +32,7 @@ while the bake's input is made is compared too (the Editor's messages while it e
 input; of Unbound's during Lightmapping.Bake, those that are not its own notes of what its bake
 does not make yet)."""
 import argparse
+import ctypes
 import difflib
 from array import array
 import json
@@ -757,10 +758,12 @@ def lighting_padding(scene):
 
 
 def lighting_filtering(scene):
-    """The filters of a scene's Lighting Settings (its .lighting file) as (direct, indirect), each
-    ('gaussian', radius), ('atrous', position sigma) or None, where its filtering is Advanced
-    without denoisers; None without filtering. Other filtering is not made by the bake (and has
-    no scene here)."""
+    """What becomes of a scene's light under its Lighting Settings (its .lighting file), as
+    (direct, indirect), each (denoised, filter) with the filter ('gaussian', radius), ('atrous',
+    position sigma) or None: with the Auto filtering both (True, ('gaussian', 1.0)); with the
+    Advanced filtering each part denoised where its denoiser is Open Image Denoise (2); None
+    without filtering. Other filtering (the OptiX denoiser) is not made by the bake (and has no
+    scene here)."""
     text = (PROBE/'Assets/Scenes'/f'{scene}.lighting').read_text()
 
     def value(key):
@@ -771,16 +774,82 @@ def lighting_filtering(scene):
     mode = value('m_PVRFilteringMode')
     if mode == 0:
         return None
-    if mode != 2 or value('m_PVRDenoiserTypeDirect') or value('m_PVRDenoiserTypeIndirect'):
-        raise ValueError(f'{scene}.lighting: filtering the rules here do not make')
+    if mode == 1:
+        return ((True, ('gaussian', 1.0)), (True, ('gaussian', 1.0)))
+    if mode != 2:
+        raise ValueError(f'{scene}.lighting: filtering mode {mode} is not known')
     parts = []
     for part in ('Direct', 'Indirect'):
+        denoiser = value(f'm_PVRDenoiserType{part}')
+        if denoiser not in (0, 2):
+            raise ValueError(f'{scene}.lighting: the {part.lower()} denoiser {denoiser} is not made by the bake')
         kind = value(f'm_PVRFilterType{part}')
         if kind not in (0, 1, 2):
             raise ValueError(f'{scene}.lighting: the {part.lower()} filter type {kind} is not known')
-        parts.append(('gaussian', value(f'm_PVRFilteringGaussRadius{part}')) if kind == 0
-                     else ('atrous', value(f'm_PVRFilteringAtrousPositionSigma{part}')) if kind == 1 else None)
+        parts.append((denoiser == 2,
+                      ('gaussian', value(f'm_PVRFilteringGaussRadius{part}')) if kind == 0
+                      else ('atrous', value(f'm_PVRFilteringAtrousPositionSigma{part}')) if kind == 1 else None))
     return tuple(parts)
+
+
+def oidn_library():
+    """Open Image Denoise 1.4.2's library as the engine has it: UNBOUND_OIDN's, else the global
+    cache's entry, which a denoising bake of the engine downloads (the check runs the engine first)."""
+    if os.environ.get('UNBOUND_OIDN'):
+        return Path(os.environ['UNBOUND_OIDN'])/'libOpenImageDenoise.so.1'
+    cache = Path(os.environ.get('UNBOUND_CACHE') or Path(os.environ.get('XDG_CACHE_HOME') or Path.home()/'.cache')/'unbound')
+    entry = cache/'dependencies/oidn-1.4.2-x86_64-linux'
+    if not (entry/'.complete').is_file():
+        raise RuntimeError(f'Open Image Denoise 1.4.2 is not in {entry}: run the engine on a denoised scene first '
+                           '(bake_buffers.py engine), or set UNBOUND_OIDN')
+    return entry/'libOpenImageDenoise.so.1'
+
+
+def denoise(values, weights, width, height):
+    """`values` (three per texel, with `weights`) denoised as the Editor denoises a part: one pass
+    of the fill (a texel whose weight is not above 0 takes the weighed mean of its eight
+    neighbours' light, and their weights' sum up to 1 as its weight), then Open Image Denoise's
+    lightmap filter over the whole image; the filled weights are kept. (values, weights)"""
+    texels = width * height
+    filled, filled_weights = list(values), list(weights)
+    for k in range(texels):
+        if weights[k] > 0:
+            continue
+        x, y = k % width, k // width
+        total, sums = 0.0, [0.0, 0.0, 0.0]
+        for dx, dy in ((-1, -1), (0, -1), (1, -1), (-1, 1), (0, 1), (1, 1), (-1, 0), (1, 0)):
+            if 0 <= x + dx < width and 0 <= y + dy < height:
+                q = (y + dy) * width + x + dx
+                total += weights[q]
+                for c in range(3):
+                    sums[c] += values[3 * q + c] * weights[q]
+        filled[3 * k:3 * k + 3] = [v / max(total, 1.0) for v in sums]
+        filled_weights[k] = min(total, 1.0)
+    library = ctypes.CDLL(str(oidn_library()))
+    library.oidnNewDevice.restype = ctypes.c_void_p
+    library.oidnCommitDevice.argtypes = [ctypes.c_void_p]
+    library.oidnNewFilter.restype = ctypes.c_void_p
+    library.oidnNewFilter.argtypes = [ctypes.c_void_p, ctypes.c_char_p]
+    library.oidnSetSharedFilterImage.argtypes = [ctypes.c_void_p, ctypes.c_char_p, ctypes.c_void_p, ctypes.c_int] + [ctypes.c_size_t] * 5
+    library.oidnCommitFilter.argtypes = library.oidnExecuteFilter.argtypes = [ctypes.c_void_p]
+    library.oidnReleaseFilter.argtypes = library.oidnReleaseDevice.argtypes = [ctypes.c_void_p]
+    library.oidnGetDeviceError.argtypes = [ctypes.c_void_p, ctypes.POINTER(ctypes.c_char_p)]
+    image = (ctypes.c_float * (3 * texels))(*filled)
+    output = (ctypes.c_float * (3 * texels))()
+    device = library.oidnNewDevice(0)
+    library.oidnCommitDevice(device)
+    filter_ = library.oidnNewFilter(device, b'RTLightmap')
+    for name, buffer in ((b'color', image), (b'output', output)):
+        library.oidnSetSharedFilterImage(filter_, name, ctypes.addressof(buffer), 3, width, height, 0, 12, 12 * width)
+    library.oidnCommitFilter(filter_)
+    library.oidnExecuteFilter(filter_)
+    message = ctypes.c_char_p()
+    failed = library.oidnGetDeviceError(device, ctypes.byref(message))
+    library.oidnReleaseFilter(filter_)
+    library.oidnReleaseDevice(device)
+    if failed:
+        raise RuntimeError(f'Open Image Denoise failed ({failed}): {message.value}')
+    return list(output), filled_weights
 
 
 def gaussian_kernel(radius):
@@ -893,14 +962,18 @@ def atrous_filter(values, weights, charts, normals, width, height, supersampling
 
 
 def part_filter(values, weights, lightmap, with_):
-    """A part's light filtered as `with_` says (see lighting_filtering)."""
-    if with_ is None:
-        return values
-    kind, amount = with_
+    """A part's light denoised and filtered as `with_` says (see lighting_filtering). (values,
+    weights)"""
+    denoised, filter_ = with_
     width, height, charts = lightmap['width'], lightmap['height'], lightmap['charts']
+    if denoised:
+        values, weights = denoise(values, weights, width, height)
+    if filter_ is None:
+        return values, weights
+    kind, amount = filter_
     if kind == 'gaussian':
-        return gaussian_filter(values, weights, charts, width, height, amount)
-    return atrous_filter(values, weights, charts, lightmap['normals'], width, height, lightmap['supersampling'], amount)
+        return gaussian_filter(values, weights, charts, width, height, amount), weights
+    return atrous_filter(values, weights, charts, lightmap['normals'], width, height, lightmap['supersampling'], amount), weights
 
 
 def composite(lightmap, padding, filtering=None):
@@ -921,17 +994,19 @@ def composite(lightmap, padding, filtering=None):
             out[4 * k + 3] = 1.0
             holds[k] = not lightmap['validity'][k] > BACKFACE_LIMIT
     if filtering is not None:
-        # The direct light, and the indirect and sky's light, each filtered on its own (weighed
-        # by whether a texel's light stands), then summed.
+        # The direct light, and the indirect and sky's light, each denoised and filtered on its
+        # own (weighed by whether a texel's light stands), then summed where both hold light
+        # (denoising gives the texels beside those that hold light their light).
         weights = [1.0 if h else 0.0 for h in holds]
         direct = [lightmap['direct'][4 * k + c] if used[k] else 0.0 for k in range(width * height) for c in range(3)]
         indirect = [lightmap['indirect'][4 * k + c] + lightmap['environment'][4 * k + c] if used[k] else 0.0
                     for k in range(width * height) for c in range(3)]
-        direct = part_filter(direct, weights, lightmap, filtering[0])
-        indirect = part_filter(indirect, weights, lightmap, filtering[1])
+        direct, direct_weights = part_filter(direct, weights, lightmap, filtering[0])
+        indirect, indirect_weights = part_filter(indirect, weights, lightmap, filtering[1])
         for k in range(width * height):
-            if used[k]:
-                out[4 * k:4 * k + 3] = [direct[3 * k + c] + indirect[3 * k + c] for c in range(3)]
+            holds[k] = direct_weights[k] * indirect_weights[k] > 0
+            if holds[k]:
+                out[4 * k:4 * k + 4] = [direct[3 * k + c] + indirect[3 * k + c] for c in range(3)] + [1.0]
 
     def spread(waiting, rings):
         for _ in range(rings):
@@ -951,7 +1026,7 @@ def composite(lightmap, padding, filtering=None):
                 holds[k] = True
 
     spread([k for k in range(width * height) if used[k] and not holds[k]], width * height)
-    spread([k for k in range(width * height) if not used[k]], padding)
+    spread([k for k in range(width * height) if not used[k] and not holds[k]], padding)
     return out
 
 
