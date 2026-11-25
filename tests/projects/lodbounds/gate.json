@@ -1,0 +1,9 @@
+{
+  "commands": [
+    "python3 tests/projects/lodbounds/run.py gate"
+  ],
+  "summary": "lodbounds: .*",
+  "engine_paths": [
+    "managed/UnityEngine/Graphics/LODGroup.cs"
+  ]
+}
