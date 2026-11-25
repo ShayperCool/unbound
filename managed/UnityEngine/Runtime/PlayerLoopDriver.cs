@@ -415,15 +415,21 @@ namespace Unbound.Runtime
             UnityEngine.SendMouseEvents.Reset();
         }
 
+        /// <summary>Direct Play's startup scene (none without one), its build index from the build
+        /// list as the Editor reads it (a stale path answered by its GUID).</summary>
+        internal static SceneData PrepareStartupScene(string firstScene)
+        {
+            UnityEditor.EditorBuildSettings.ResolveBuildIndices();
+            return string.IsNullOrEmpty(firstScene) ? null : SceneManagerInternal.PreparePlayModeScene(firstScene);
+        }
+
         static void Boot(string firstScene, bool unused)
         {
             // Direct Play opens its startup scene and starts it in the same setup.
             s_DeferFirstEndOfFrame = !string.IsNullOrEmpty(firstScene);
             AnimationSystem.BeginPlayMode();
             CustomRenderTextureManager.BeginPlayMode();
-            // The startup scene's build index comes from the build list as the Editor reads it.
-            UnityEditor.EditorBuildSettings.ResolveBuildIndices();
-            var initialScene = string.IsNullOrEmpty(firstScene) ? null : SceneManagerInternal.PreparePlayModeScene(firstScene);
+            var initialScene = PrepareStartupScene(firstScene);
             s_MainThreadId = Thread.CurrentThread.ManagedThreadId;
             Unbound.Runtime.NativePlugins.Boot();
             // The Editor loads them before entering Play mode.

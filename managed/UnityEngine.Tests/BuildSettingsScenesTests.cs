@@ -3,6 +3,7 @@ using System.IO;
 using System.Linq;
 using Unbound.Runtime;
 using UnityEditor;
+using UnityEngine.SceneManagement;
 using Xunit;
 
 namespace UnityEngine.Tests
@@ -52,6 +53,38 @@ namespace UnityEngine.Tests
             Assert.Equal(new[] { "Assets/Scenes/Base.unity" }, EditorBuildSettingsScene.GetActiveSceneList(new[]
                 { on, b, new EditorBuildSettingsScene { enabled = true }, new EditorBuildSettingsScene { path = "", enabled = true } }));
             Assert.Throws<ArgumentNullException>(() => EditorBuildSettingsScene.GetActiveSceneList(null));
+        }
+
+        [Fact]
+        public void DirectPlaysStartupSceneTakesItsBuildIndexFromTheResolvedList()
+        {
+            var buildScenes = ProjectInfo.BuildScenes.ToList();
+            AssetDatabase.List("[{\"guid\":\"" + BaseGuid + "\",\"path\":\"Assets/Scenes/Base.unity\",\"kind\":\"scene\"}]");
+            SceneData scene = null;
+            try
+            {
+                // The host's list as the file has it: Base.unity under a stale path.
+                EditorBuildSettings.Configure(new[] { new EditorBuildSettingsScene { path = "Assets/Old/Moved.unity", guid = new GUID(BaseGuid), enabled = true } },
+                    new System.Collections.Generic.Dictionary<string, (string, long)>());
+                ProjectInfo.BuildScenes.Clear();
+                ProjectInfo.BuildScenes.Add(("Assets/Old/Moved.unity", BaseGuid));
+                scene = PlayerLoopDriver.PrepareStartupScene("Assets/Scenes/Base.unity");
+                Assert.Equal(0, scene.BuildIndex);
+                Assert.Equal(0, SceneUtility.GetBuildIndexByScenePath("Assets/Scenes/Base.unity"));
+            }
+            finally
+            {
+                if (scene != null)
+                {
+                    SceneRegistry.Loaded.Remove(scene);
+                    SceneRegistry.Forget(scene);
+                    SceneRegistry.ResetToUntitled();
+                }
+                ProjectInfo.BuildScenes.Clear();
+                ProjectInfo.BuildScenes.AddRange(buildScenes);
+                SettingsAssets.Reset();
+                AssetDatabase.Invalidate();
+            }
         }
 
         [Fact]
