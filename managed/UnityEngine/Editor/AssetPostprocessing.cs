@@ -36,7 +36,8 @@ namespace UnityEditor
         /// which <c>unbound doctor</c> lists too): animated user properties and the camera and light
         /// descriptions of models (Unbound imports neither), the 2D array and 3D texture
         /// postprocessors, the SpeedTree 7/8 ones and asset bundle name changes. Each postprocessor
-        /// declaring one is reported once as the editor domain loads.</summary>
+        /// declaring one is reported once as the editor domain loads (the SpeedTree ones only in a
+        /// project that holds a SpeedTree 7 or 8 asset, <see cref="SpeedTreeCallbacks"/>).</summary>
         internal static readonly string[] Unsupported =
         {
             "OnPostprocessGameObjectWithAnimatedUserProperties", "OnPreprocessCameraDescription", "OnPreprocessLightDescription",
@@ -44,8 +45,35 @@ namespace UnityEditor
             "OnPostprocessAssetbundleNameChanged",
         };
 
+        /// <summary>The callbacks of a SpeedTree 7 (<c>.spm</c>) or 8 (<c>.st</c>) asset's import, which
+        /// the Editor makes only as such an asset imports (Unity 6000.0 Scripting API,
+        /// AssetPostprocessor.OnPreprocessSpeedTree and OnPostprocessSpeedTree; a SpeedTree 9 tree's
+        /// import calls its importer's MaterialSettingsCallback methods instead, Unity's own
+        /// SpeedTree9Importer C#, which Unbound runs).</summary>
+        internal static readonly string[] SpeedTreeCallbacks = { "OnPreprocessSpeedTree", "OnPostprocessSpeedTree" };
+
+        /// <summary>The SpeedTree 7 and 8 assets among <paramref name="paths"/>, which the Editor's
+        /// SpeedTreeImporter imports and Unbound does not.</summary>
+        internal static List<string> SpeedTreeAssets(IEnumerable<string> paths)
+        {
+            var trees = new List<string>();
+            foreach (var path in paths)
+            {
+                var extension = System.IO.Path.GetExtension(path);
+                if (string.Equals(extension, ".spm", StringComparison.OrdinalIgnoreCase) || string.Equals(extension, ".st", StringComparison.OrdinalIgnoreCase))
+                    trees.Add(path);
+            }
+            return trees;
+        }
+
         static void ReportUnsupported()
         {
+            // A project without SpeedTree 7 or 8 assets gets no SpeedTree callback in the Editor
+            // either: those are not reported (render pipelines' postprocessors declare them).
+            var trees = SpeedTreeAssets(AssetDatabase.GetAllAssetPaths());
+            if (trees.Count > 0)
+                Stubs.Ignored("SpeedTree 7 and 8 assets", $"are not imported ({trees[0]}{(trees.Count > 1 ? $" and {trees.Count - 1} more" : "")}): their trees are missing and their postprocessors' {string.Join(" and ", SpeedTreeCallbacks)} are not called");
+            var skipped = trees.Count == 0 ? SpeedTreeCallbacks : null;
             foreach (var assembly in GameDomain.Assemblies())
             {
                 Type[] types;
@@ -53,7 +81,7 @@ namespace UnityEditor
                 catch (ReflectionTypeLoadException e) { types = e.Types; }
                 foreach (var type in types)
                     if (type != null && !type.IsAbstract && typeof(AssetPostprocessor).IsAssignableFrom(type) && !type.IsDefined(typeof(Unbound.StubAttribute), false))
-                        ScriptMessages.WarnNotSent(type);
+                        ScriptMessages.WarnNotSent(type, skipped);
             }
         }
 

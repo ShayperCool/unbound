@@ -153,12 +153,14 @@ namespace Unbound.Runtime
 
         /// <summary>Warns once per declaring script class and message (Stubs semantics) for each
         /// not-sent message <paramref name="type"/> declares or inherits from a script base class.
-        /// Called once per type when its messages are first looked up, never per frame.</summary>
-        internal static void WarnNotSent(Type type)
+        /// Called once per type when its messages are first looked up, never per frame.
+        /// <paramref name="skipped"/>: messages the caller knows nothing would get.</summary>
+        internal static void WarnNotSent(Type type, string[] skipped = null)
         {
             foreach (var (host, name) in s_NotSent)
             {
                 if (type == null || !host.IsAssignableFrom(type)) continue;
+                if (skipped != null && Array.IndexOf(skipped, name) >= 0) continue;
                 // Script classes only: the walk stops at the engine class that documents the
                 // message (whose own virtual, as StateMachineBehaviour.OnStateIK, is no script's).
                 for (var t = type; t != null && t != host && t != typeof(Behaviour); t = t.BaseType)

@@ -142,6 +142,42 @@ fn message_coverage(
     Ok(coverage)
 }
 
+/// The extensions of SpeedTree 7 (`.spm`) and 8 (`.st`) assets, which the Editor's
+/// SpeedTreeImporter imports and Unbound does not (the managed engine reports them as the editor
+/// domain loads, `AssetPostprocessing.SpeedTreeAssets`).
+const SPEEDTREE_EXTENSIONS: &[&str] = &["spm", "st"];
+
+/// The postprocessor callbacks of those assets' imports, which the Editor makes only as one
+/// imports (Unity 6000.0 Scripting API; `AssetPostprocessing.SpeedTreeCallbacks`).
+const SPEEDTREE_CALLBACKS: &[&str] = &["OnPreprocessSpeedTree", "OnPostprocessSpeedTree"];
+
+/// The SpeedTree 7 and 8 assets among `paths`.
+fn speedtree_assets<'a>(paths: impl Iterator<Item = &'a str>) -> Vec<String> {
+    paths
+        .filter(|path| {
+            std::path::Path::new(path)
+                .extension()
+                .and_then(|e| e.to_str())
+                .is_some_and(|e| {
+                    SPEEDTREE_EXTENSIONS
+                        .iter()
+                        .any(|x| e.eq_ignore_ascii_case(x))
+                })
+        })
+        .map(str::to_owned)
+        .collect()
+}
+
+/// A project without SpeedTree 7 or 8 assets gets no SpeedTree callback in the Editor either:
+/// scripts declaring one (render pipelines' postprocessors do) miss nothing.
+fn drop_unreachable_messages(coverage: &mut MessageCoverage, speedtrees: &[String]) {
+    if speedtrees.is_empty() {
+        coverage
+            .messages
+            .retain(|m| !SPEEDTREE_CALLBACKS.contains(&m.message.as_str()));
+    }
+}
+
 fn message_line(message: &UnsupportedMessage) -> String {
     format!(
         "{}:{}: {}.{}",
@@ -308,7 +344,13 @@ pub fn doctor(args: &ProjectArgs, all: bool, as_json: bool) -> Result<()> {
             &json!({ "release": release, "classes": request }),
         )
         .context("classifying the project's classes")?;
-    let messages = message_coverage(&project, args, &runtime)?;
+    let mut messages = message_coverage(&project, args, &runtime)?;
+    let speedtrees = speedtree_assets(
+        db.iter()
+            .filter(|asset| !asset.is_folder)
+            .map(|asset| asset.path.as_str()),
+    );
+    drop_unreachable_messages(&mut messages, &speedtrees);
     let message_seconds = message_start.elapsed().as_secs_f64();
     let fields_start = Instant::now();
     let field_coverage = fields::report(
@@ -359,6 +401,7 @@ pub fn doctor(args: &ProjectArgs, all: bool, as_json: bool) -> Result<()> {
             "playModeSpriteAtlases": play_mode_atlases.as_ref().map(|a| json!({"mode": a.mode, "atlases": a.paths})),
             "unsupportedMessages": messages.messages,
             "messageAnalysisFailedAssemblies": messages.failed_assemblies,
+            "unimportedSpeedTrees": speedtrees,
         });
         println!("{}", serde_json::to_string_pretty(&report)?);
         return Ok(());
@@ -431,6 +474,13 @@ pub fn doctor(args: &ProjectArgs, all: bool, as_json: bool) -> Result<()> {
         println!(
             "  incomplete analysis: assemblies failed to compile: {}",
             messages.failed_assemblies.join(", ")
+        );
+    }
+    if !speedtrees.is_empty() {
+        println!(
+            "\n{} SpeedTree 7 and 8 assets Unbound does not import (their trees are missing): {}",
+            speedtrees.len(),
+            some_files(&speedtrees.iter().cloned().collect(), 3)
         );
     }
     println!("\nRendering limitations:");
@@ -588,6 +638,46 @@ mod tests {
         assert!(consumed.contains(&json!("m_LocalPosition.x")));
         assert!(!consumed.contains(&json!("m_LocalPosition.extra")));
         assert!(!consumed.contains(&json!("notRead")));
+    }
+
+    /// The SpeedTree 7/8 callbacks are listed only for a project that holds such an asset; other
+    /// messages always.
+    #[test]
+    fn speedtree_callbacks_are_listed_only_with_speedtree_assets() {
+        let paths = [
+            "Assets/Trees/Oak.st",
+            "Assets/Trees/Old.SPM",
+            "Assets/Trees/Calm.st9",
+            "Assets/st",
+            "Assets/Trees/Oak.st.txt",
+        ];
+        let trees = speedtree_assets(paths.iter().copied());
+        assert_eq!(trees, ["Assets/Trees/Oak.st", "Assets/Trees/Old.SPM"]);
+        assert!(speedtree_assets(paths[2..].iter().copied()).is_empty());
+        let coverage = || -> MessageCoverage {
+            serde_json::from_value(json!({
+                "messages": [
+                    {"file": "Packages/urp/Tree.cs", "line": 9, "type": "Urp.Tree", "message": "OnPostprocessSpeedTree"},
+                    {"file": "Assets/Pre.cs", "line": 4, "type": "Game.Pre", "message": "OnPreprocessSpeedTree"},
+                    {"file": "Assets/Tex.cs", "line": 7, "type": "Game.Tex", "message": "OnPostprocessTexture3D"}
+                ],
+                "failedAssemblies": []
+            }))
+            .unwrap()
+        };
+        let mut without = coverage();
+        drop_unreachable_messages(&mut without, &[]);
+        assert_eq!(
+            without
+                .messages
+                .iter()
+                .map(message_line)
+                .collect::<Vec<_>>(),
+            ["Assets/Tex.cs:7: Game.Tex.OnPostprocessTexture3D"]
+        );
+        let mut with = coverage();
+        drop_unreachable_messages(&mut with, &trees);
+        assert_eq!(with.messages.len(), 3);
     }
 
     #[test]
