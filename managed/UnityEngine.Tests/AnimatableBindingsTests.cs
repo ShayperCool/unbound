@@ -59,6 +59,35 @@ namespace UnityEngine.Tests
             Assert.Contains(capture.Lines, line => line.Contains("material slots of a fresh renderer only"));
         }
 
+        static int Hits(string member) => Unbound.Runtime.Stubs.HitReport().FirstOrDefault(h => h.Key == member).Value;
+
+        /// <summary>Each unmeasured part of the listing reports under its own notice, so one does
+        /// not hide another: a renderer with a material and other than the fresh slot count
+        /// reports both its material properties and its slots.</summary>
+        [Fact]
+        public void EachUnlistedPartReportsItsOwnNotice()
+        {
+            using var release = TestRelease.Pin(TestRelease.Measured);
+            const string properties = "AnimationUtility.GetAnimatableBindings material properties";
+            const string slots = "AnimationUtility.GetAnimatableBindings material slots";
+            int propertiesBefore = Hits(properties), slotsBefore = Hits(slots);
+            var go = new GameObject("renderer");
+            var material = new Material(Shader.Create("Unlit/Color", 2000));
+            try
+            {
+                var renderer = go.AddComponent<MeshRenderer>();
+                renderer.sharedMaterials = new[] { material, null, null };
+                AnimationUtility.GetAnimatableBindings(go, go);
+            }
+            finally
+            {
+                Object.DestroyImmediate(go);
+                Object.DestroyImmediate(material);
+            }
+            Assert.Equal(propertiesBefore + 1, Hits(properties));
+            Assert.Equal(slotsBefore + 1, Hits(slots));
+        }
+
         [Fact]
         public void OtherFamiliesKeepTheSerializedListing()
         {
