@@ -349,6 +349,65 @@ static class AnimRecorderProbe
             Put("read." + b.propertyName, Try(() => { var type = AnimationUtility.GetEditorCurveValueType(root, b); bool got = AnimationUtility.GetFloatValue(root, b, out float v); return (type == null ? "null" : type.Name) + " " + got + " " + F(v); }));
         }
 
+        // ---- Long regular recordings: the last frame of a time summed snapshot by snapshot.
+        {
+            var range = EditorCurveBinding.FloatCurve("", typeof(Light), "m_Range");
+            foreach (var (count, perSecond, fps) in new[] { (64, 30, 30f), (81, 30, 30f), (301, 30, 30f), (301, 30, 60f), (601, 60, 60f), (1201, 60, 30f), (101, 10, 10f) })
+            {
+                var r = new GameObjectRecorder(root);
+                r.Bind(range);
+                for (int i = 0; i < count; i++)
+                {
+                    light.range = 1f + 0.01f * i;
+                    r.TakeSnapshot(1f / perSecond);
+                }
+                var clip = new AnimationClip();
+                r.SaveToClip(clip, fps, Options(false));
+                var curve = AnimationUtility.GetEditorCurve(clip, range);
+                PutJson("long." + count + "at" + perSecond + ".fps" + fps.ToString(Inv),
+                    "[" + N(r.currentTime) + "," + curve.length + "," + N(curve[0].time) + "," + N(curve[curve.length - 1].time) + "," + N(clip.length) + "]");
+            }
+        }
+
+        // ---- ClampedAuto tangents (the recorder's) of keys a tiny interval or rise apart.
+        {
+            var cases = new (string Name, Vector2[] Keys)[]
+            {
+                ("tinyInterval", new[] { new Vector2(0f, 0f), new Vector2(5e-6f, 1f), new Vector2(1f, 2f) }),
+                ("tinyRise", new[] { new Vector2(0f, 1f), new Vector2(1f, 1.000005f), new Vector2(2f, 1.000039f) }),
+                ("tinyRise2", new[] { new Vector2(0f, 1f), new Vector2(1f, 1.00003f), new Vector2(2f, 1.000039f) }),
+                ("uneven", new[] { new Vector2(0f, 0f), new Vector2(0.1f, 0.8f), new Vector2(2f, 1f) }),
+            };
+            foreach (var (name, points) in cases)
+            {
+                var curve = new AnimationCurve(points.Select(v => new Keyframe(v.x, v.y)).ToArray());
+                for (int i = 0; i < curve.length; i++)
+                {
+                    AnimationUtility.SetKeyLeftTangentMode(curve, i, AnimationUtility.TangentMode.ClampedAuto);
+                    AnimationUtility.SetKeyRightTangentMode(curve, i, AnimationUtility.TangentMode.ClampedAuto);
+                }
+                PutJson("clampedAuto." + name, "[" + string.Join(",", curve.keys.Select(Key)) + "]");
+            }
+        }
+
+        // ---- An Animator with a controller: what animation offers for it and the recorder binds.
+        {
+            var go = new GameObject("animated");
+            var animator = go.AddComponent<Animator>();
+            var controller = new UnityEditor.Animations.AnimatorController();
+            controller.AddLayer("Base");
+            controller.AddParameter("speed", AnimatorControllerParameterType.Float);
+            controller.AddParameter("count", AnimatorControllerParameterType.Int);
+            controller.AddParameter("on", AnimatorControllerParameterType.Bool);
+            controller.AddParameter("hit", AnimatorControllerParameterType.Trigger);
+            animator.runtimeAnimatorController = controller;
+            Put("animator.offered", Offered(go, go));
+            var r = new GameObjectRecorder(go);
+            r.BindComponent(animator);
+            Put("animator.bound", Bindings(r));
+            UnityEngine.Object.DestroyImmediate(go);
+        }
+
         // ---- A recording shorter than a frame: reduced all the same (the clip's length is one
         // second while its curves are not synced).
         {

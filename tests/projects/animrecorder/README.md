@@ -24,6 +24,13 @@ Run it with `python3 tests/projects/animrecorder/run.py gate`; the macOS Editor 
   recorder reads.
 - `objectLength.*`: a clip's length with an object reference curve: its last key lasts a frame of
   the clip's frame rate.
+- `long.*`: regular recordings of up to 1201 snapshots saved at their rate and others: the current
+  time, summed snapshot by snapshot in single precision, and the frames saved (64 snapshots of
+  1/30 s end at 2.0999994 s and save 63 frames).
+- `clampedAuto.*`: ClampedAuto tangents of keys a tiny interval or rise apart, and of uneven ones.
+- `animator.*`: an Animator with a controller of float, int, bool and trigger parameters: what
+  `GetAnimatableBindings` offers (its float parameters, before its enabled state) and what
+  `BindComponent` binds.
 
 Keys are written as JSON numbers and compare within 2e-4 (`run.py`): the recorded inputs and curve
 evaluation differ from the Editor's in the last bits of single precision, which slopes over a short

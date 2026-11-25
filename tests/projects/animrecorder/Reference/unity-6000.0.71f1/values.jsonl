@@ -497,6 +497,19 @@
 {"k":"read.m_IsActive","v":"Boolean True 1"}
 {"k":"read.localEulerAnglesRaw.y","v":"Single True -160"}
 {"k":"read.m_LocalRotation.w","v":"Single True -0.169078857"}
+{"k":"long.64at30.fps30","v":[2.09999943,63,0,2.06666684,2.06666684]}
+{"k":"long.81at30.fps30","v":[2.66666555,80,0,2.63333344,2.63333344]}
+{"k":"long.301at30.fps30","v":[10.00002,301,0,10.000001,10.000001]}
+{"k":"long.301at30.fps60","v":[10.00002,601,0,10.000001,10.000001]}
+{"k":"long.601at60.fps60","v":[10.0000191,601,0,10.000001,10.000001]}
+{"k":"long.1201at60.fps30","v":[19.9998665,600,0,19.9666672,19.9666672]}
+{"k":"long.101at10.fps10","v":[10.0000019,101,0,10,10]}
+{"k":"clampedAuto.tinyInterval","v":[[0,0,0,0,137,0,0.333333343,0.333333343],[5E-06,1,0,0,137,0,0.333333343,0.333333343],[1,2,0,0,137,0,0.333333343,0.333333343]]}
+{"k":"clampedAuto.tinyRise","v":[[0,1,0,0,137,0,0.333333343,0.333333343],[1,1.000005,0,0,137,0,0.333333343,0.333333343],[2,1.000039,0,0,137,0,0.333333343,0.333333343]]}
+{"k":"clampedAuto.tinyRise2","v":[[0,1,0,0,137,0,0.333333343,0.333333343],[1,1.00003,1.94907188E-05,1.94907188E-05,137,0,0.333333343,0.333333343],[2,1.000039,0,0,137,0,0.333333343,0.333333343]]}
+{"k":"clampedAuto.uneven","v":[[0,0,0,0,137,0,0.333333343,0.333333343],[0.1,0.8,0.399999976,0.399999976,137,0,0.333333343,0.333333343],[2,1,0,0,137,0,0.333333343,0.333333343]]}
+{"k":"animator.offered","v":"|Transform|m_LocalRotation.x|float,|Transform|m_LocalRotation.y|float,|Transform|m_LocalRotation.z|float,|Transform|m_LocalRotation.w|float,|Transform|m_LocalPosition.x|float,|Transform|m_LocalPosition.y|float,|Transform|m_LocalPosition.z|float,|Transform|m_LocalScale.x|float,|Transform|m_LocalScale.y|float,|Transform|m_LocalScale.z|float,|Animator|speed|float,|Animator|m_Enabled|float"}
+{"k":"animator.bound","v":"1:|Animator|speed|float"}
 {"k":"short.fps10.save","v":"void events 1"}
 {"k":"short.fps10.frameRate","v":10}
 {"k":"short.fps10.length","v":0}
