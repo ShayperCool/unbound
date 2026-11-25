@@ -292,7 +292,10 @@ mod tests {
         let mut soft = sun([0.0, -1.0, 0.0]);
         soft.shadow_size = 0.2;
         let open = Scene::new([]);
-        let (s, h) = (at(&[soft], &open), at(&[sun([0.0, -1.0, 0.0])], &open));
+        let (s, h) = (
+            at(std::slice::from_ref(&soft), &open),
+            at(&[sun([0.0, -1.0, 0.0])], &open),
+        );
         assert!((s[0][0] - h[0][0]).abs() < 1e-5, "{s:?} {h:?}");
         assert!(s[2][0] < h[2][0] && s[2][0] > 0.9 * h[2][0], "{s:?} {h:?}");
         // A roof over half the sky above the probe shadows some of its samples, not all.
@@ -309,7 +312,10 @@ mod tests {
         rect.up = [0.0, 0.0, 1.0];
         rect.size = [1.0, 1.0];
         rect.range = 10.0;
-        assert_eq!(bake(&[rect], &open), Coefficients::default());
+        assert_eq!(
+            bake(std::slice::from_ref(&rect), &open),
+            Coefficients::default()
+        );
         assert!(at(&[rect], &open)[0][0] > 0.0);
     }
 }
