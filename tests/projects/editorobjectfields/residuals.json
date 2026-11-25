@@ -1,0 +1,3 @@
+{
+  "Unbound shows no editor windows: a click on a colour, curve or gradient field or on an object field's picker button opens no colour picker, curve editor, gradient editor or object selector (said once; the GUI exits as the Editor's does), so no window is listed, and the colour picker's own text field does not start editing.": ["window/color.body.down", "window/curve.down", "window/gradient.down", "window/obj.button.down"]
+}
