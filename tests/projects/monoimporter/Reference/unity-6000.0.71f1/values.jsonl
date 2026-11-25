@@ -1,7 +1,11 @@
 {"k":"order.MetaOrdered","v":"50"}
+{"k":"getScript.MetaOrdered","v":"MetaOrdered (the loaded script)"}
 {"k":"order.AttributeOrdered","v":"0"}
+{"k":"getScript.AttributeOrdered","v":"AttributeOrdered (the loaded script)"}
 {"k":"order.BothOrdered","v":"-20"}
+{"k":"getScript.BothOrdered","v":"BothOrdered (the loaded script)"}
 {"k":"order.Unordered","v":"0"}
+{"k":"getScript.Unordered","v":"Unordered (the loaded script)"}
 {"k":"order.null","v":"throws ArgumentNullException"}
 {"k":"order.fromBehaviour","v":"50"}
 {"k":"complete","v":true}

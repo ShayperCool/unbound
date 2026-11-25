@@ -7,7 +7,7 @@ using UnityEngine;
 /// <summary>
 /// Records, in Play mode, what MonoImporter.GetExecutionOrder answers for scripts ordered by their
 /// .meta file, by DefaultExecutionOrder, by both and by neither, for a behaviour's script and for
-/// null.
+/// null, and the script each script's importer gives (MonoImporter.GetScript).
 /// </summary>
 static class MonoImporterProbe
 {
@@ -22,6 +22,12 @@ static class MonoImporterProbe
         {
             var script = AssetDatabase.LoadAssetAtPath<MonoScript>("Assets/Scripts/" + name + ".cs");
             Put("order." + name, Try(() => MonoImporter.GetExecutionOrder(script).ToString()));
+            // The script its importer imports.
+            Put("getScript." + name, Try(() =>
+            {
+                var imported = ((MonoImporter)AssetImporter.GetAtPath("Assets/Scripts/" + name + ".cs")).GetScript();
+                return imported == null ? "null" : imported.name + (ReferenceEquals(imported, script) ? " (the loaded script)" : " (another object)");
+            }));
         }
         Put("order.null", Try(() => MonoImporter.GetExecutionOrder(null).ToString()));
         var go = new GameObject("Probe");

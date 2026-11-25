@@ -661,6 +661,20 @@ public static class ProjectWritesProbe
         model.importNormals = ModelImporterNormals.Calculate;
         model.SaveAndReimport();
         Snap("08.importer.model", "Assets/New/Model.obj.meta");
+        // A sprite's pivot and border (the single-sprite settings) as read, set and saved.
+        WritePng("Assets/New/Pivot.png");
+        AssetDatabase.ImportAsset("Assets/New/Pivot.png");
+        var pivot = (TextureImporter)AssetImporter.GetAtPath("Assets/New/Pivot.png");
+        Put("08.importer.pivot.read", Vectors(pivot.spritePivot, pivot.spriteBorder));
+        pivot.spritePivot = new Vector2(0.25f, 0.75f);
+        pivot.spriteBorder = new Vector4(1, 2, 3, 4);
+        Put("08.importer.pivot.set", Vectors(pivot.spritePivot, pivot.spriteBorder));
+        var pivotSettings = new TextureImporterSettings();
+        pivot.ReadTextureSettings(pivotSettings);
+        Put("08.importer.pivot.settings", Vectors(pivotSettings.spritePivot, pivotSettings.spriteBorder));
+        Snap("08.importer.pivot.unsaved", "Assets/New/Pivot.png.meta");
+        pivot.SaveAndReimport();
+        Snap("08.importer.pivot.saved", "Assets/New/Pivot.png.meta");
         var other = AssetImporter.GetAtPath("Assets/Two/Other.png");
         other.userData = "user data";
         other.assetBundleName = "Bundle";
@@ -668,6 +682,9 @@ public static class ProjectWritesProbe
         AssetDatabase.WriteImportSettingsIfDirty("Assets/Two/Other.png");
         Snap("08.importer.written", "Assets/Two/Other.png.meta");
     }
+
+    static string Vectors(Vector2 pivot, Vector4 border) => string.Join(",", new[] { pivot.x, pivot.y, border.x, border.y, border.z, border.w }
+        .Select(v => v.ToString("R", CultureInfo.InvariantCulture)));
 
     static void Labels()
     {
