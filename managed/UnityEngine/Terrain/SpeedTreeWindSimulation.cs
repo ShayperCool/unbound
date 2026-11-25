@@ -756,6 +756,12 @@ namespace UnityEngine
                     ClearParams(data, buffer, at);
                     continue;
                 }
+                if (tree.windAsset.IsSpeedTree8)
+                {
+                    SpeedTree8WindNotSimulated();
+                    ClearParams(data, buffer, at);
+                    continue;
+                }
                 var values = WindOf(tree, renderer, tree.windAsset).Values;
                 if (history && renderer.m_MotionVectorGenerationMode != MotionVectorGenerationMode.Object)
                 {
@@ -768,6 +774,19 @@ namespace UnityEngine
                 ClearParams(data, buffer, at, SpeedTreeWindState.HistoryOffset);
             }
         }
+
+        /// <summary>A SpeedTree 8 tree draws without wind: its wind asset (the file's wind) is not
+        /// simulated, so it binds no wind constants and gets zero resident-drawer parameters.</summary>
+        static void SpeedTree8WindNotSimulated()
+        {
+            // Once per session, without a lookup per draw.
+            if (s_SpeedTree8WindReported) return;
+            s_SpeedTree8WindReported = true;
+            Stubs.Ignored("SpeedTree 8 wind", "is not simulated: SpeedTree 8 trees draw without wind");
+        }
+
+        /// <summary>Whether the session has reported it (tests clear it).</summary>
+        internal static bool s_SpeedTree8WindReported;
 
         /// <summary>Zeros an instance's parameters from <paramref name="first"/> on.</summary>
         static unsafe void ClearParams(uint* data, in SpeedTreeWindParamsBufferIterator buffer, int at, int first = 0)
@@ -788,6 +807,11 @@ namespace UnityEngine
             // none. A destroyed asset's wind is no longer advanced, and its tree draws the same
             // way (unmeasured).
             if (asset == null) return properties;
+            if (asset.IsSpeedTree8)
+            {
+                SpeedTree8WindNotSimulated();
+                return properties;
+            }
             if (s_AnyWind) tree.m_DrawnWithWind = true;
             var wind = WindOf(tree, renderer, asset);
             var values = tree.m_DrawnWithWind ? wind.Values : s_Zero;

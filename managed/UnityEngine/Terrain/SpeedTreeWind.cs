@@ -2,15 +2,18 @@ using Unbound.Runtime;
 
 namespace UnityEngine
 {
-    /// <summary>The wind configuration of a SpeedTree 9 tree (its importer makes one). Each wind
-    /// asset keeps one wind its trees draw with, from its creation until it is destroyed
-    /// (<see cref="SpeedTreeWindSystem"/>).</summary>
+    /// <summary>The wind configuration of a SpeedTree tree (its importer makes one). Each SpeedTree 9
+    /// wind asset keeps one wind its trees draw with, from its creation until it is destroyed
+    /// (<see cref="SpeedTreeWindSystem"/>). A SpeedTree 8 tree's asset (version 0, the
+    /// <see cref="Config8"/> of its file) is not simulated: its trees draw without wind.</summary>
     [ClassId(228)]
     [ExcludeFromPreset]
     public partial class SpeedTreeWindAsset : Object
     {
         int m_Version;
         internal SpeedTreeWindConfig9 Config;
+        /// <summary>A SpeedTree 8 tree's wind (null for SpeedTree 9).</summary>
+        internal readonly SpeedTreeWindConfig8 Config8;
         internal readonly SpeedTreeWindState Wind = new SpeedTreeWindState();
 
         internal SpeedTreeWindAsset(int version, SpeedTreeWindConfig9 config)
@@ -19,6 +22,17 @@ namespace UnityEngine
             Config = config;
             SpeedTreeWindSystem.Register(this);
         }
+
+        /// <summary>A SpeedTree 8 tree's wind asset: version 0 (the Unity 6000.0.71f1 Editor's
+        /// for a .st file, SpeedTree8ImportTests), not registered with the SpeedTree 9 wind.</summary>
+        internal SpeedTreeWindAsset(SpeedTreeWindConfig8 config)
+        {
+            m_Version = 0;
+            Config8 = config;
+        }
+
+        /// <summary>Whether the asset holds a SpeedTree 8 tree's wind, which nothing simulates yet.</summary>
+        internal bool IsSpeedTree8 => Config8 != null;
 
         internal override void OnEngineDestroy()
         {
