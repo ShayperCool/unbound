@@ -433,13 +433,17 @@ def tree(root):
 
 
 def repeats(name, first, other):
-    """Whether two captures' file is the same result: byte for byte, but for a buffer of light
+    """Whether two captures' file is the same result: byte for byte (a deflated file by its
+    content), but for a buffer of light
     or of where it comes from, which the Editor sums in an order that varies from bake to bake
     (the same used texels, and values within REPEAT_TOLERANCE, or INDIRECT_REPEAT_TOLERANCE for
     the indirect light, times the value where that is above 1). A light probe file is compared
     by its coefficients the same way."""
     if first == other:
         return True
+    if first and other and name.endswith('.z'):
+        # Deflated: the same content (what deflates it, and so its bytes, may differ).
+        return zlib.decompress(first) == zlib.decompress(other)
     if first and other and name.endswith('.png'):
         return image_difference(first, other, IMAGE_REPEAT_TOLERANCE) is None
     if first and other and Path(name).name == 'lightingData.json':
