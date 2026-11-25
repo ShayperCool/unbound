@@ -210,30 +210,37 @@ namespace UnityEngine.Tests
             Assert.False(ProjectImports.ChangedSinceSeen("Assets/M/A.mat"));
         }
 
-        /// <summary>A loaded text asset and 2D texture take a new import's content (the copy, destroyed
-        /// next, the old one), a texture counting as updated; other engine kinds are not kept in place.</summary>
+        sealed class GameData : ScriptableObject { }
+
+        /// <summary>A loaded text asset takes a new import's content (the copy, destroyed next, the
+        /// old one); what is kept in place: text assets, imported textures (not one a script made)
+        /// materials and game scripts' objects, not the engine's own script objects or meshes.</summary>
         [Fact]
-        public void ALoadedTextAssetAndTextureTakeTheNewContent()
+        public void WhatTakesANewImportInPlace()
         {
             var kept = new TextAsset("notes");
             var copy = new TextAsset("changed notes");
             AssetDatabaseRuntime.SwapContent(copy, kept);
             Assert.Equal("changed notes", kept.text);
             Assert.Equal("notes", copy.text);
-            var texture = new Texture2D(4, 4);
-            var fresh = new Texture2D(8, 8);
-            uint updates = texture.updateCount;
-            AssetDatabaseRuntime.SwapContent(fresh, texture);
-            Assert.Equal(8, texture.width);
-            Assert.Equal(4, fresh.width);
-            Assert.True(texture.updateCount != updates);
-            Assert.True(AssetDatabaseRuntime.TakesContentInPlace(texture));
             Assert.True(AssetDatabaseRuntime.TakesContentInPlace(kept));
-            Assert.True(AssetDatabaseRuntime.TakesContentInPlace(ScriptableObject.CreateInstance<ScriptableObject>()));
-            Assert.False(AssetDatabaseRuntime.TakesContentInPlace(new Material(Shader.Find("Hidden/InternalErrorShader"))));
-            Assert.False(AssetDatabaseRuntime.TakesContentInPlace(new Mesh()));
-            Object.DestroyImmediate(texture);
-            Object.DestroyImmediate(fresh);
+            var game = ScriptableObject.CreateInstance<GameData>();
+            var engine = ScriptableObject.CreateInstance<UnityEngine.UIElements.VisualTreeAsset>();
+            var texture = new Texture2D(4, 4);
+            var material = new Material(Shader.Find("Hidden/InternalErrorShader"));
+            var mesh = new Mesh();
+            try
+            {
+                Assert.True(AssetDatabaseRuntime.TakesContentInPlace(game));
+                Assert.False(AssetDatabaseRuntime.TakesContentInPlace(engine));
+                Assert.False(AssetDatabaseRuntime.TakesContentInPlace(texture));
+                Assert.True(AssetDatabaseRuntime.TakesContentInPlace(material));
+                Assert.False(AssetDatabaseRuntime.TakesContentInPlace(mesh));
+            }
+            finally
+            {
+                foreach (var o in new Object[] { game, engine, texture, material, mesh }) Object.DestroyImmediate(o);
+            }
         }
 
         [Fact]

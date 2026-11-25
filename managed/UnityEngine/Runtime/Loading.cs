@@ -1554,26 +1554,29 @@ namespace Unbound.Runtime
 
         /// <summary>An asset whose file changed imported again with its loaded objects kept, as the
         /// Editor reimports it (matches the Unity 6000.0.71f1 Editor, tests/projects/scenesave
-        /// refresh-changes: a text file, a YAML asset and an image changed on disk, an image's
-        /// importer setting changed in its .meta; each object loaded before is alive with the new
-        /// content and the asset loads as it, of the same instance id). A script object takes
-        /// the new serialized values (its references to the file's other objects pointing at the
-        /// kept ones), a text asset and a 2D texture the new content. An asset with objects of
-        /// other kinds, or whose objects the new import no longer has, has its objects replaced
-        /// instead (the next load makes new ones), with a warning: not measured. Nothing loaded:
-        /// the next load reads the file.</summary>
-        internal static void ReimportInPlace(string guid)
+        /// refresh-changes: a text file, a YAML asset, an image and a material a scene object uses
+        /// changed on disk, an image's importer setting changed in its .meta; each object loaded before is alive with the new
+        /// content and the asset loads as it, of the same instance id). A game script's object
+        /// takes the new serialized values (its references to the file's other objects pointing at
+        /// the kept ones), a text asset the new bytes, a material its file's values (as when it is
+        /// unloaded), an imported 2D texture the new import under
+        /// its renderer handle (so materials that bind it draw the new texels). An asset with
+        /// objects of other kinds, or whose new import has other objects, keeps its loaded objects
+        /// as they are, with a warning: not measured. Nothing loaded: the next load reads the file.
+        /// Whether the loaded objects took the new content.</summary>
+        internal static bool ReimportInPlace(string guid)
         {
             if (!s_Files.TryGetValue(guid, out var loaded) || loaded == null)
             {
                 Invalidate(guid);
-                return;
+                return true;
             }
             ImportedInSession(guid);
             var (fresh, registered) = ReadFileAgain(guid);
             var kept = new Dictionary<Object, Object>(ReferenceEqualityComparer.Instance);
             string refused = fresh == null ? "its file no longer imports" : null;
             if (fresh != null)
+            {
                 foreach (var pair in loaded.Objects)
                 {
                     var old = pair.Value;
@@ -1581,33 +1584,55 @@ namespace Unbound.Runtime
                     if (!fresh.Objects.TryGetValue(pair.Key, out var copy) || copy == null || copy.GetType() != old.GetType())
                         refused ??= $"its {old.GetType().Name} '{old.name}' is not in its new import";
                     else if (!TakesContentInPlace(old))
-                        refused ??= $"Unbound keeps the loaded objects of a {old.GetType().Name} only for text assets, 2D textures and script objects";
+                        refused ??= $"Unbound takes a new import into loaded objects only for text assets, materials, imported 2D textures and game scripts' objects, not a {old.GetType().Name}";
                     else kept[copy] = old;
                 }
+                foreach (var key in fresh.Objects.Keys)
+                    if (!loaded.Objects.ContainsKey(key)) refused ??= "its new import has objects the loaded one has not";
+            }
             if (refused != null)
             {
-                Debug.LogWarning($"Unbound: {loaded.Path} is imported again with new objects (the ones loaded before keep their old content): {refused}");
+                Debug.LogWarning($"Unbound: {loaded.Path} changed on disk; its loaded objects keep their old content: {refused}");
                 if (fresh != null) DestroyFresh(fresh, registered);
-                Invalidate(guid);
-                return;
+                return false;
             }
             var copier = new SerializedCopier(o => o != null && kept.TryGetValue(o, out var mine) ? mine : o);
+            bool all = true;
             foreach (var pair in kept)
             {
                 if (pair.Value is ScriptableObject) copier.CopyScriptObject(pair.Key, pair.Value);
+                // As a material unloaded reads its file again (it draws the new values).
+                else if (pair.Value is Material material) material.RevertTo((Material)pair.Key);
+                else if (pair.Value is Texture2D texture)
+                {
+                    // Counted as updated once, then the import's count is the one it now has.
+                    texture.IncrementUpdateCount();
+                    if (!texture.ReloadImported())
+                    {
+                        Debug.LogWarning($"Unbound: {loaded.Path} changed on disk; its texture '{texture.name}' keeps its old content (its file no longer imports as a 2D texture)");
+                        all = false;
+                    }
+                }
                 else SwapContent(pair.Key, pair.Value);
             }
             DestroyFresh(fresh, registered);
+            return all;
         }
 
-        /// <summary>Whether a loaded object takes a new import's content in place (measured kinds).</summary>
+        /// <summary>Whether a loaded object takes a new import's content in place (measured kinds:
+        /// a game script's object as a YAML asset holds it, a text asset, a material, an imported 2D
+        /// texture).
+        /// The engine's own script objects (UI Toolkit's documents and style sheets, ...) build
+        /// state the serialized values do not hold: not kept.</summary>
         internal static bool TakesContentInPlace(Object o) =>
-            o is ScriptableObject || (o is TextAsset && o is not UnityEditor.MonoScript) || o.GetType() == typeof(Texture2D);
+            (o is ScriptableObject && o.GetType().Assembly != typeof(Object).Assembly)
+            || (o is TextAsset && o is not UnityEditor.MonoScript)
+            || o.GetType() == typeof(Material)
+            || (o.GetType() == typeof(Texture2D) && ((Texture2D)o).IsImported);
 
-        /// <summary>The fields an engine object's own classes declare (everything below Object)
+        /// <summary>The fields a text asset's own classes declare (everything below Object)
         /// traded between a new import's copy and the loaded object, which then holds the new
-        /// content; the copy, destroyed next, takes the old one (its GPU resources among it). A
-        /// texture counts as updated (Texture.updateCount).</summary>
+        /// content; the copy, destroyed next, takes the old one.</summary>
         internal static void SwapContent(Object copy, Object kept)
         {
             for (var type = kept.GetType(); type != null && type != typeof(Object); type = type.BaseType)
@@ -1619,7 +1644,6 @@ namespace Unbound.Runtime
                     field.SetValue(kept, field.GetValue(copy));
                     field.SetValue(copy, value);
                 }
-            if (kept is Texture texture) texture.IncrementUpdateCount();
         }
 
         /// <summary>The new import's own objects destroyed (not the asset's registered ones).</summary>

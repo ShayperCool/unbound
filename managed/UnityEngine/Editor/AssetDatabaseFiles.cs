@@ -276,12 +276,18 @@ namespace UnityEditor
             foreach (var path in paths)
             {
                 var guid = AssetPathToGUID(path);
-                if (string.IsNullOrEmpty(guid) || IsValidFolder(path) || CompilesScripts(path)) continue;
-                AssetDatabaseRuntime.ReimportInPlace(guid);
+                if (string.IsNullOrEmpty(guid)) continue;
+                // A folder has nothing to import again; scripts go to the compilation (and are not
+                // reported: SessionImports).
+                if (!IsValidFolder(path) && !CompilesScripts(path)) AssetDatabaseRuntime.ReimportInPlace(guid);
                 ProjectImports.Wrote(path);
                 SessionImports.Imported(path);
             }
         }
+
+        /// <summary>Changed assets ImportAsset was asked for while StartAssetEditing held imports
+        /// back: imported again at the last StopAssetEditing.</summary>
+        static readonly List<string> s_PendingReimports = new List<string>();
 
         static bool CompilesScripts(string path) =>
             path.EndsWith(".cs", StringComparison.OrdinalIgnoreCase) || path.EndsWith(".asmdef", StringComparison.OrdinalIgnoreCase)
@@ -340,6 +346,9 @@ namespace UnityEditor
                 var pending = s_PendingImports.Distinct(StringComparer.OrdinalIgnoreCase).ToList();
                 s_PendingImports.Clear();
                 if (pending.Count > 0) ImportNew(pending);
+                var reimports = s_PendingReimports.Distinct(StringComparer.Ordinal).ToList();
+                s_PendingReimports.Clear();
+                if (reimports.Count > 0) ReimportChanged(reimports);
                 if (s_PendingRefresh)
                 {
                     s_PendingRefresh = false;

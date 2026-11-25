@@ -18,6 +18,16 @@
 {"key": "meta.importer", "value": "Point"}
 {"key": "meta", "value": "reload=False imported=[Assets/Refresh/Pic.png] deleted=[] moved=[] from=[]"}
 {"key": "meta.later", "value": ""}
+{"key": "material.after", "value": "RGBA(0.000, 1.000, 0.000, 1.000)"}
+{"key": "material.object", "value": "alive|equal|same id"}
+{"key": "material.user", "value": true}
+{"key": "material", "value": "reload=False imported=[Assets/Refresh/Mat.mat] deleted=[] moved=[] from=[]"}
+{"key": "material.later", "value": ""}
+{"key": "material.scene", "value": "references it"}
+{"key": "document.after", "value": "second"}
+{"key": "document.object", "value": "alive|equal|same id"}
+{"key": "document", "value": "reload=False imported=[Assets/Refresh/Doc.uxml] deleted=[] moved=[] from=[]"}
+{"key": "document.later", "value": ""}
 {"key": "unrefreshed", "value": ""}
 {"key": "unrefreshed.later", "value": ""}
 {"key": "unrefreshed.text", "value": "changed notes"}

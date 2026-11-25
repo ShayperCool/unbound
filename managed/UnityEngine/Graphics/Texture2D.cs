@@ -977,6 +977,9 @@ namespace UnityEngine
         /// it stays when a script reinitializes the texture: unloading reads the file again.</summary>
         string m_ImportedFrom;
 
+        /// <summary>Whether a texture file made this texture (it can be imported again in place).</summary>
+        internal bool IsImported => m_ImportedFrom != null;
+
         /// <summary>Imports a texture file again under a renderer handle (tests replace it).</summary>
         internal static Func<ulong, string, (bool Ok, ImportedTextureInfo Info)> Reimport =
             (handle, guid) => (Native.ImportTexture(handle, guid, out var info), info);

@@ -301,5 +301,16 @@
     "reference": "written",
     "actual": "differs",
     "reason": "A texture's or sound's .meta holding the GUID alone, written again by SetLabels/ClearLabels: the Editor writes the importer's section with its oldest version's values, and a texture imports as a cube map (Tex.png.type); Unbound writes the labels alone, with its warning, and imports the texture as a 2D texture (those versions' values are not measured beyond these two assets: follow-up)"
+  },
+  {
+    "case": "refresh-changes",
+    "key": "document.after",
+    "reference": [
+      "second"
+    ],
+    "actual": [
+      "first"
+    ],
+    "reason": "A UI Toolkit document (VisualTreeAsset) loaded before its file changed: the Editor reimports it in place and a clone shows the new content; Unbound builds a document's tree in state its serialized values do not hold and takes no new import into the engine's own script objects, so the loaded document keeps its old content, with a warning (follow-up)"
   }
 ]

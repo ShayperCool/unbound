@@ -4,11 +4,13 @@ using NUnit.Framework;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.TestTools;
+using UnityEngine.UIElements;
 
 /// <summary>
 /// Edit mode: files of imported assets changed on disk during the session (as a script or another
 /// program changes them), then AssetDatabase.Refresh: a file only touched, a text file, a YAML
-/// asset, an image and an image's .meta (an importer setting) changed; a change left without
+/// asset, an image and an image's .meta (an importer setting) changed; a material a scene object
+/// uses changed (and the scene saved after); a UI Toolkit document changed; a change left without
 /// Refresh for an editor update; a changed file imported by ImportAsset. Each step logs the
 /// OnPostprocessAllAssets calls (SessionImportRecorder) and what the objects loaded before the
 /// change answer after it: their content, whether they are still alive and whether loading the
@@ -20,6 +22,8 @@ public class RefreshChangeTests
     const string Notes = Root + "/Notes.txt";
     const string Data = Root + "/Data.asset";
     const string Pic = Root + "/Pic.png";
+    const string Mat = Root + "/Mat.mat";
+    const string Doc = Root + "/Doc.uxml";
 
     static IEnumerator Step(string key, System.Action action)
     {
@@ -99,6 +103,36 @@ public class RefreshChangeTests
             AssetDatabase.Refresh();
             ProbeLog.Row("meta.after", texture != null ? texture.filterMode.ToString() : "dead");
             ProbeLog.Row("meta.importer", ((TextureImporter)AssetImporter.GetAtPath(Pic)).filterMode.ToString());
+        });
+
+        // A material a scene object uses, changed on disk: its content, and the scene saved after.
+        var material = new Material(Shader.Find("Unlit/Color")) { color = Color.red };
+        AssetDatabase.CreateAsset(material, Mat);
+        material = AssetDatabase.LoadAssetAtPath<Material>(Mat);
+        var user = GameObject.CreatePrimitive(PrimitiveType.Quad);
+        user.GetComponent<MeshRenderer>().sharedMaterial = material;
+        yield return Step("material", () =>
+        {
+            File.WriteAllText(Mat, File.ReadAllText(Mat).Replace("{r: 1, g: 0, b: 0, a: 1}", "{r: 0, g: 1, b: 0, a: 1}"));
+            AssetDatabase.Refresh();
+            ProbeLog.Row("material.after", material != null ? material.color.ToString() : "dead");
+            Same("material.object", material, AssetDatabase.LoadAssetAtPath<Material>(Mat));
+            ProbeLog.Row("material.user", user.GetComponent<MeshRenderer>().sharedMaterial == material);
+        });
+        UnityEditor.SceneManagement.EditorSceneManager.SaveScene(user.scene, Root + "/Scene.unity", true);
+        ProbeLog.Row("material.scene", File.ReadAllText(Root + "/Scene.unity").Contains(AssetDatabase.AssetPathToGUID(Mat)) ? "references it" : "lost");
+        Object.DestroyImmediate(user);
+
+        // A UI Toolkit document changed on disk.
+        File.WriteAllText(Doc, "<ui:UXML xmlns:ui=\"UnityEngine.UIElements\"><ui:Label text=\"first\" /></ui:UXML>\n");
+        AssetDatabase.Refresh();
+        var document = AssetDatabase.LoadAssetAtPath<VisualTreeAsset>(Doc);
+        yield return Step("document", () =>
+        {
+            File.WriteAllText(Doc, "<ui:UXML xmlns:ui=\"UnityEngine.UIElements\"><ui:Label text=\"second\" /></ui:UXML>\n");
+            AssetDatabase.Refresh();
+            ProbeLog.Row("document.after", document != null ? document.CloneTree().Q<Label>().text : "dead");
+            Same("document.object", document, AssetDatabase.LoadAssetAtPath<VisualTreeAsset>(Doc));
         });
 
         yield return Step("unrefreshed", () => File.WriteAllText(Notes, "unrefreshed notes"));

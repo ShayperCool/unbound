@@ -569,7 +569,13 @@ namespace UnityEditor
             // import).
             var existing = path?.Replace('\\', '/').TrimEnd('/');
             if (string.IsNullOrEmpty(existing) || string.IsNullOrEmpty(AssetPathToGUID(existing))) return;
-            if (ProjectImports.ChangedSinceSeen(existing)) ReimportChanged(new[] { existing });
+            if (ProjectImports.ChangedSinceSeen(existing))
+            {
+                // Held back by StartAssetEditing like the other imports (Scripting API 6000.0,
+                // AssetDatabase.StartAssetEditing: no imports until StopAssetEditing).
+                if (Editing) s_PendingReimports.Add(existing);
+                else ReimportChanged(new[] { existing });
+            }
             else
             {
                 SessionImports.Imported(existing);
