@@ -1,0 +1,3 @@
+{
+  "Outside OnGUI, before any Editor GUI pass, Unbound's EditorStyles throw NullReferenceException (the model of tests/projects/imguicontainer builtin.outsideGUI); the windowed Editor has drawn its windows, so EditorStyles.numberField/textField answer and the sliders and the layout TextArea then reach GUI.skin, which throws ArgumentException. The other fields throw NullReferenceException in both.": ["outside/editorGUI", "outside/editorGUILayout"]
+}
