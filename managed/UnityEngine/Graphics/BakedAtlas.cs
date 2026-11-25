@@ -651,6 +651,13 @@ namespace UnityEngine
                 }
                 if (light.cookie != null)
                     warn("light-cookie:" + path + fileId, $"{path}: '{light.name}' has a cookie, which Unbound's bake (Lightmapping.Bake) does not apply yet.");
+                // An area light is baked (the Editor offers no other mode); a mixed one is not
+                // measured.
+                if (kind >= 3 && light.lightmapBakeType != LightmapBakeType.Baked)
+                {
+                    warn("light-area-mode:" + path + fileId, $"{path}: '{light.name}' is a {light.lightmapBakeType} area light, which Unbound's bake (Lightmapping.Bake) has not measured yet.");
+                    if (skipUnmeasured) continue;
+                }
                 // Soft baked shadows: its Baked Shadow Angle (in radians) or Radius
                 // (tests/projects/bakedbuffers Soft*); with hard shadows a size is not measured.
                 float shadowSize = kind == 0 ? light.shadowAngle * Mathf.Deg2Rad : light.shadowRadius;
@@ -693,11 +700,16 @@ namespace UnityEngine
         {
             foreach (var obj in file.Objects.Values)
                 if (obj is Light light && light != null && light.enabled && light.gameObject.activeInHierarchy && light.lightmapBakeType != LightmapBakeType.Realtime
-                    && (light.type == LightType.Rectangle || light.type == LightType.Disc
-                        || (light.shadows == LightShadows.Soft && (light.type == LightType.Directional ? light.shadowAngle : light.shadowRadius) > 0f)))
+                    && IsSampled(light))
                     return true;
             return false;
         }
+
+        /// <summary>Whether the bake samples a light sample by sample: an area light, or one with
+        /// soft baked shadows (a Baked Shadow Radius or Angle).</summary>
+        internal static bool IsSampled(Light light) =>
+            light.type == LightType.Rectangle || light.type == LightType.Disc
+            || (light.shadows == LightShadows.Soft && (light.type == LightType.Directional ? light.shadowAngle : light.shadowRadius) > 0f);
 
         /// <summary>The scene's lights that take part in a bake: enabled mixed and baked lights of
         /// active GameObjects, made from its file, each with its colour as the bake takes it
@@ -722,6 +734,18 @@ namespace UnityEngine
                 renderPipeline: UnityEngine.Rendering.GraphicsSettings.currentRenderPipeline != null);
             var lights = new List<object>(extracted.Count);
             for (int i = 0; i < extracted.Count; i++) lights.Add(extracted[i].Json);
+            // An area light among more point, spot and area lights than a surface of the
+            // indirect light tests (4): which of them a bounce picks, by their power and their
+            // place among them, is not measured for area lights.
+            int nonDirectional = 0;
+            bool area = false;
+            foreach (var light in extracted)
+            {
+                if (light.Kind != 0) nonDirectional++;
+                if (light.Kind >= 3) area = true;
+            }
+            if (area && nonDirectional > 4)
+                Approximated("light-area-picked:" + path, $"{path}: an area light among more than four point, spot or area lights is picked by Unbound's bake (Lightmapping.Bake) as not measured yet.");
             return lights;
         }
 

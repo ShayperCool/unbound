@@ -1383,7 +1383,7 @@ fn bake(request: BakeRequest, buffers: Option<&Path>) -> Result<Json> {
                     || !baked_lights
                         .iter()
                         .any(|l| l.kind.is_area() || (l.casts_shadows && l.shadow_size > 0.0)),
-                "soft baked shadows and area lights are sampled with the bake's blue noise, which comes with its indirect light (a session with a graphics device)"
+                "soft baked shadows and area lights are sampled with the bake's blue noise, which comes with the request for its indirect light (none here)"
             );
             let lit = direct::direct(
                 &g,

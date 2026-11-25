@@ -525,6 +525,10 @@ namespace UnityEngine.LightTransport
             }
             var extracted = BakedAtlas.ExtractLights(active, "LightTransport", Warn, skipUnmeasured: false,
                 renderPipeline: GraphicsSettings.currentRenderPipeline != null);
+            // (The probe integrators do not sample area lights or soft shadows yet: said.)
+            foreach (var (_, light) in active)
+                if (BakedAtlas.IsSampled(light))
+                    Warn("lighttransport-sampled:" + light.GetInstanceID(), $"LightTransport: '{light.name}' is an area light or has soft baked shadows, which Unbound's light probe integration does not sample yet (an area light adds no direct light, soft shadows are taken hard).");
             foreach (var item in extracted)
             {
                 lightsJson.Add(item.Json);

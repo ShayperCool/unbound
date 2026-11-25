@@ -258,6 +258,9 @@ namespace UnityEngine.Tests
                 Make("Inactive", LightType.Point, LightmapBakeType.Baked).gameObject.SetActive(false);
                 var area = Make("Area", LightType.Rectangle, LightmapBakeType.Baked);
                 area.areaSize = new Vector2(1.5f, 0.75f);
+                var softSun = Make("SoftSun", LightType.Directional, LightmapBakeType.Baked);
+                softSun.shadows = LightShadows.Soft;
+                softSun.shadowAngle = 5f;
                 var hardRadius = Make("HardRadius", LightType.Point, LightmapBakeType.Baked);
                 hardRadius.shadows = LightShadows.Hard;
                 hardRadius.shadowRadius = 0.5f;
@@ -268,7 +271,7 @@ namespace UnityEngine.Tests
                 // Realtime, disabled and inactive lights are not of the bake; an area light is,
                 // with its size and its dilated range; a Baked Shadow Radius with hard shadows
                 // (not measured) is said and left out.
-                Assert.Equal(4, lights.GetArrayLength());
+                Assert.Equal(5, lights.GetArrayLength());
                 var first = lights[0];
                 Assert.Equal("Sun", first.GetProperty("name").GetString());
                 Assert.Equal(100, first.GetProperty("fileId").GetInt64());
@@ -295,9 +298,32 @@ namespace UnityEngine.Tests
                 Assert.Equal(("Area", 3), (areaLight.GetProperty("name").GetString(), areaLight.GetProperty("kind").GetInt32()));
                 Assert.Equal((1.5f, 0.75f), (Channel(areaLight, "size", 0), Channel(areaLight, "size", 1)));
                 Assert.Equal(area.dilatedRange, areaLight.GetProperty("range").GetSingle());
+                // A directional light's Baked Shadow Angle in radians.
+                Assert.Equal(0.0872665f, lights[4].GetProperty("shadowSize").GetSingle(), 6);
                 Assert.DoesNotContain(capture.Logs, l => l.Contains("'Area'") || l.Contains("'Soft'"));
                 Assert.Contains(capture.Logs, l => l.StartsWith("Warning: ") && l.Contains("'HardRadius' has hard shadows with a Baked Shadow Radius"));
                 Assert.DoesNotContain(capture.Logs, l => l.Contains("'Sun'") || l.Contains("'Spot'") || l.Contains("'Realtime'"));
+
+                // A mixed area light (not measured) is said and left out; an area light among
+                // more than four point, spot or area lights is said (its pick is not measured).
+                capture.Logs.Clear();
+                var mixedArea = Make("MixedArea", LightType.Disc, LightmapBakeType.Mixed);
+                var crowdFile = new LoadedFile { Path = "Assets/LitCrowd.unity", Guid = "30000000000000000000000000000000" };
+                crowdFile.Objects[1] = mixedArea;
+                Assert.Empty(BakedAtlas.Lights(crowdFile, crowdFile.Path));
+                Assert.Contains(capture.Logs, l => l.Contains("'MixedArea' is a Mixed area light"));
+                crowdFile.Objects.Clear();
+                crowdFile.Objects[1] = area;
+                for (int k = 0; k < 4; k++) crowdFile.Objects[2 + k] = Make("Crowd" + k, LightType.Point, LightmapBakeType.Baked);
+                Assert.Equal(5, BakedAtlas.Lights(crowdFile, crowdFile.Path).Count);
+                Assert.Contains(capture.Logs, l => l.Contains("an area light among more than four point, spot or area lights"));
+                crowdFile.Objects.Remove(5);
+                capture.Logs.Clear();
+                RealtimeGI.s_Warned.Clear();
+                var fewFile = new LoadedFile { Path = "Assets/LitFew.unity", Guid = "40000000000000000000000000000000" };
+                foreach (var pair in crowdFile.Objects) fewFile.Objects[pair.Key] = pair.Value;
+                BakedAtlas.Lights(fewFile, fewFile.Path);
+                Assert.DoesNotContain(capture.Logs, l => l.Contains("an area light among"));
 
                 // A cookie is said and not applied: the light is still of the bake.
                 capture.Logs.Clear();

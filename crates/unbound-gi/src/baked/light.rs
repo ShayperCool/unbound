@@ -162,13 +162,6 @@ pub struct Arriving {
 pub const FAR: f32 = 1e27;
 
 impl Light {
-    /// The radius of the disk a soft shadow's rays aim at, at the light (a directional
-    /// light's one unit away: its angle in radians, tests/projects/bakedbuffers `SoftSun`,
-    /// `SoftMixed`); 0 for hard shadows.
-    pub fn shadow_radius(&self) -> f32 {
-        self.shadow_size
-    }
-
     /// The direction a soft shadow's ray of the sample at `position` takes towards the light
     /// (`arriving`'s), aimed at a point of a disk around it facing the sample: the direction
     /// times the light's distance (1 for a directional light) plus the disk point of `rnd` (a
@@ -184,7 +177,9 @@ impl Light {
             }
             _ => arriving.distance,
         };
-        let radius = self.shadow_radius();
+        // (The disk's radius: a directional light's one unit away is its angle in radians,
+        // tests/projects/bakedbuffers `SoftSun`, `SoftMixed`.)
+        let radius = self.shadow_size;
         let [dx, dy] = super::sampling::disk(rnd);
         let (b1, b2) = super::sampling::basis(l);
         let v: [f32; 3] = std::array::from_fn(|k| {
@@ -194,9 +189,9 @@ impl Light {
         v.map(|x| x / length)
     }
 }
-/// The Editor's pi and smallest distance of a light sample.
-const PI: f32 = 3.141_592_7;
+/// The smallest distance of a light sample (as the Editor's area lights have it).
 const EPSILON: f32 = 1e-19;
+use std::f32::consts::PI;
 
 fn unit(v: [f32; 3]) -> [f32; 3] {
     let l = dot(v, v).sqrt();
@@ -209,10 +204,6 @@ fn cross(a: [f32; 3], b: [f32; 3]) -> [f32; 3] {
         a[2] * b[0] - a[0] * b[2],
         a[0] * b[1] - a[1] * b[0],
     ]
-}
-
-fn unit_cross(a: [f32; 3], b: [f32; 3]) -> [f32; 3] {
-    cross(a, b)
 }
 
 /// A point of a rectangle (its corner `s` and its sides `ex`, `ey`) sampled uniformly over the
@@ -356,7 +347,7 @@ impl Light {
         let tangent = unit(self.up);
         let (direction, distance, factor) = if self.kind == Kind::Rectangle {
             let back = self.forward.map(|v| -v);
-            let bitangent = unit_cross(back, tangent);
+            let bitangent = cross(back, tangent);
             let [width, height] = self.size;
             let corner: [f32; 3] = std::array::from_fn(|k| {
                 self.position[k] - 0.5 * width * bitangent[k] - 0.5 * height * tangent[k]
@@ -378,7 +369,7 @@ impl Light {
             (direction, distance, solid_angle * facing / PI)
         } else {
             let radius = self.size[0];
-            let across = unit_cross(self.forward, tangent);
+            let across = cross(self.forward, tangent);
             let r = rnd[0].sqrt();
             let theta = 2.0 * PI * rnd[1];
             let local = [theta.cos() * r * radius, theta.sin() * r * radius];

@@ -320,6 +320,45 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
+        public void CollectSceneLightsSaysTheLightsItsProbesDoNotSample()
+        {
+            var prevHandler = Debug.unityLogger.logHandler;
+            var capture = new LogCapture();
+            var areaGo = new GameObject("LTArea");
+            var softGo = new GameObject("LTSoft");
+            var hardGo = new GameObject("LTHard");
+            try
+            {
+                Debug.unityLogger.logHandler = capture;
+                InputExtraction.s_Warned.Clear();
+                var area = areaGo.AddComponent<Light>();
+                area.type = LightType.Rectangle;
+                area.lightmapBakeType = LightmapBakeType.Baked;
+                var soft = softGo.AddComponent<Light>();
+                soft.type = LightType.Point;
+                soft.lightmapBakeType = LightmapBakeType.Baked;
+                soft.shadows = LightShadows.Soft;
+                soft.shadowRadius = 0.25f;
+                var hard = hardGo.AddComponent<Light>();
+                hard.type = LightType.Point;
+                hard.lightmapBakeType = LightmapBakeType.Baked;
+                hard.shadows = LightShadows.Hard;
+                InputExtraction.CollectSceneLights(new[] { area, soft, hard });
+                // Area lights and soft shadows are not sampled by the probe integrators: said.
+                Assert.Contains(capture.Logs, l => l.Contains("'LTArea' is an area light or has soft baked shadows"));
+                Assert.Contains(capture.Logs, l => l.Contains("'LTSoft' is an area light or has soft baked shadows"));
+                Assert.DoesNotContain(capture.Logs, l => l.Contains("'LTHard'"));
+            }
+            finally
+            {
+                Debug.unityLogger.logHandler = prevHandler;
+                Object.DestroyImmediate(areaGo);
+                Object.DestroyImmediate(softGo);
+                Object.DestroyImmediate(hardGo);
+            }
+        }
+
+        [Fact]
         public void CollectSceneLightsWarnsLinearIntensityOnlyForNonDirectionalOrColorTemperature()
         {
             var prevHandler = Debug.unityLogger.logHandler;
