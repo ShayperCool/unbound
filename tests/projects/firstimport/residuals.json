@@ -1,0 +1,25 @@
+{
+  "The Editor's first import also lists two files of its own Library/ (BuildInstructions, BuildPlayer.prefs); Unbound keeps nothing in Library/ and lists none": [
+    "open1.start.imported.other"
+  ],
+  "The Editor imports the files saved during a session again and calls OnPostprocessAllAssets for them (didDomainReload false): after the first open's save of the changed materials, and after the pipeline's save in Play mode; Unbound does not import the files it saves": [
+    "open1.session.0.calls",
+    "open1.session.0.imported.assets",
+    "open1.session.0.imported.settings",
+    "open1.session.0.imported.packages",
+    "open1.session.0.imported.other",
+    "open1.session.0.imported.distinct",
+    "open1.session.0.counts",
+    "open1.session.0.deleted",
+    "open1.session.0.moved",
+    "open3.session.0.calls",
+    "open3.session.0.imported.assets",
+    "open3.session.0.imported.settings",
+    "open3.session.0.imported.packages",
+    "open3.session.0.imported.other",
+    "open3.session.0.imported.distinct",
+    "open3.session.0.counts",
+    "open3.session.0.deleted",
+    "open3.session.0.moved"
+  ]
+}

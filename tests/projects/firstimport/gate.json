@@ -1,0 +1,20 @@
+{
+  "commands": [
+    "python3 tests/projects/firstimport/run.py check"
+  ],
+  "summary": "firstimport: \\d+/\\d+ rows match; \\d+ differ; \\d+ known residuals",
+  "engine_paths": [
+    "managed/UnityEngine/Editor/ProjectImports.cs",
+    "managed/UnityEngine/Editor/AssetPostprocessing.cs",
+    "managed/UnityEngine/Editor/EditorInitialization.cs",
+    "managed/UnityEngine/Editor/EditorSession.cs",
+    "managed/UnityEngine/Editor/AssetDatabase.cs",
+    "managed/UnityEngine/Editor/AssetDatabaseCreate.cs",
+    "managed/UnityEngine/Editor/AssetFiles.cs",
+    "managed/UnityEngine/Editor/MaterialSerialization.cs",
+    "managed/UnityEngine/Editor/SettingsAssets.cs",
+    "managed/UnityEngine/Runtime/PlayerLoopDriver.cs",
+    "tests/file_writes.py",
+    "tests/projects/firstimport/"
+  ]
+}
