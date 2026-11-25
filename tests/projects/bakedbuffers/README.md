@@ -241,6 +241,16 @@ from their first surface on whatever the Min Bounces.
   sample count 8 times a texel's) and Direct Samples set to 20, which the Editor keeps as 16;
   a second group's four probes in the penumbra of the cube's shadow under the soft mixed sun,
   their occlusion of it the part of their samples that see it (in 128ths).
+- `CookieSpot`, `CookieSun`, `CookiePoint`, `CookieLarge`, `CookieSunPoint`, `CookieHuge`: baked
+  lights with cookies whose red, green, blue and alpha differ: a spot light's 16 by 16 clamped
+  cookie over a light probe group, a sun's 8 by 8 repeating cookie of size 2.5, a point light's
+  cube cookie of 8 a side (each face its own), a spot light's 128 by 128 cookie with mipmaps, a
+  sun's clamped cookie of Point filter, and a spot light's Alpha8 cookie of 1024 a side of
+  Trilinear filter. The bake takes a cookie's alpha (its first level, at its own size), between
+  its four nearest texels and half a texel inside its edges whatever its filter; a spot
+  light's cookie spans the square of its cone (in the place of the cone's falloff), a sun's
+  one tile of its Cookie Size on the light's plane (repeated where it wraps, the light uncut
+  outside it where it clamps), a point light's the cube face its direction picks.
 - `LinearSun`, `LinearLamps`, `LinearArea`: lights whose intensity multiplies their linear
   colour (GraphicsSettings.lightsUseLinearIntensity, which the capture turns on for the scenes
   named `Linear*`): a coloured sun, a point and a spot light over a light probe group, and a
@@ -470,7 +480,7 @@ take the environment's light (`LightingSettings.realtimeEnvironmentLighting`).
 
 Not baked by Unbound: without a graphics device, the indirect light, the ambient occlusion,
 soft baked shadows and area lights (said). Not baked (said, each once per scene, or once per light where it is
-the light's): light cookies, a colour temperature with linear intensity
+the light's): a cookie of an area light or of another kind than its light takes, a colour temperature with linear intensity
 (GraphicsSettings.lightsUseLinearIntensity), a Baked Shadow Angle or Radius with hard
 shadows, a mixed area light, an area light among more point, spot or area lights than a
 surface of the indirect light tests (4 at a path's first surface, 1 fewer at each further one). Not done
