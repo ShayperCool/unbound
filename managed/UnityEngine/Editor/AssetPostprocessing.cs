@@ -198,7 +198,23 @@ namespace UnityEditor
         /// Editor/Mono/AssetPostprocessor.cs PostprocessAllAssets): the callbacks in calling order,
         /// those with <c>didDomainReload</c> always, the four-argument ones only when some list
         /// holds an asset; an exception is logged and the next callback runs.</summary>
+        static int s_Rounds;
+
+        /// <summary>Whether an OnPostprocessAllAssets round is running: what its callbacks write is
+        /// reported once it has ended (<see cref="SessionImports.RoundEnded"/>).</summary>
+        internal static bool InRound => s_Rounds > 0;
+
         static void PostprocessAll(List<MethodInfo> callbacks, string[] imported, string[] deleted, string[] moved, string[] movedFrom, bool didDomainReload)
+        {
+            s_Rounds++;
+            try { PostprocessRound(callbacks, imported, deleted, moved, movedFrom, didDomainReload); }
+            finally
+            {
+                if (--s_Rounds == 0) SessionImports.RoundEnded();
+            }
+        }
+
+        static void PostprocessRound(List<MethodInfo> callbacks, string[] imported, string[] deleted, string[] moved, string[] movedFrom, bool didDomainReload)
         {
             bool containsNoAssets = imported.Length == 0 && deleted.Length == 0 && moved.Length == 0 && movedFrom.Length == 0;
             object[] arguments = { imported, deleted, moved, movedFrom };

@@ -124,5 +124,39 @@ namespace Unbound.Tests
                 Assert.Empty(calls);
             });
         }
+
+        static readonly List<string> s_Round = new List<string>();
+
+        sealed class Writing : AssetPostprocessor
+        {
+            static void OnPostprocessAllAssets(string[] imported, string[] deleted, string[] moved, string[] movedFrom, bool didDomainReload)
+            {
+                s_Round.Add("callback " + didDomainReload);
+                // A callback's write in a domain load's round: reported once the round has ended.
+                if (didDomainReload) SessionImports.Imported("Assets/FromLoad.asset");
+                s_Round.Add("callback end");
+            }
+        }
+
+        [Fact]
+        public void WhatADomainLoadsCallbacksWriteIsReportedAfterItsRoundAndScriptMovesAreNot()
+        {
+            s_Round.Clear();
+            using (SessionImports.ReportsForTests((imported, deleted, moved, from) =>
+                s_Round.Add("reported " + string.Join(",", imported) + string.Join(",", moved))))
+            Unbound.Runtime.EditorSession.AsEditMode(() =>
+            {
+                var callbacks = new List<System.Reflection.MethodInfo>
+                {
+                    typeof(Writing).GetMethod("OnPostprocessAllAssets", System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.NonPublic),
+                };
+                AssetPostprocessing.Dispatch(callbacks, new ProjectImports.Changes(), null);
+                Assert.Equal(new[] { "callback True", "callback end", "reported Assets/FromLoad.asset" }, s_Round);
+                s_Round.Clear();
+                SessionImports.Moved("Assets/A.cs", "Assets/B/A.cs");
+                SessionImports.Deleted("Assets/C.asmdef");
+                Assert.Empty(s_Round);
+            });
+        }
     }
 }

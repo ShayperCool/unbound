@@ -143,6 +143,7 @@ namespace UnityEditor.SceneManagement
         {
             var path = SceneFiles.ProjectRelative(scenePath);
             AssetModificationProcessorInternal.OnWillCreateAsset(path);
+            using var write = SessionImports.Write();
             var previous = SceneRegistry.Active;
             var scene = NewPreviewScene();
             scene.Data.IsNewSceneAsset = true;
