@@ -361,12 +361,24 @@ mod tests {
             [7.0, 0.0, 0.0, 1.0],
         ];
         let charts = [0, 0, 0, 1, 1, -1];
+        // The same texels with texel 1 in no chart at all: what chart 0 makes of texels 0 and 2.
+        let mut apart = buffer.clone();
+        atrous(&mut apart, &[0, -1, 0, 1, 1, -1], &normals, w, h, 1, 1.5);
         atrous(&mut buffer, &charts, &normals, w, h, 1, 1.5);
         assert_eq!(buffer[1], [9.0, 0.0, 0.0, 0.0]);
         assert_eq!(buffer[5], [7.0, 0.0, 0.0, 1.0]);
-        // Neither the non-standing 9 nor chart 1's light reaches chart 0: within its own range.
+        // Neither the non-standing 9 nor chart 1's light reaches chart 0: within its own range,
+        // and as if texel 1 were in no chart (the 9 as a tap would move them by about 1e-4).
         assert!(buffer[0][0] > 1.0 && buffer[0][0] < 1.05, "{buffer:?}");
         assert!(buffer[2][0] > 1.0 && buffer[2][0] < 1.05, "{buffer:?}");
+        assert!(
+            (buffer[0][0] - apart[0][0]).abs() < 1e-6,
+            "{buffer:?} {apart:?}"
+        );
+        assert!(
+            (buffer[2][0] - apart[2][0]).abs() < 1e-6,
+            "{buffer:?} {apart:?}"
+        );
         assert!(buffer[3][0] > 4.0 && buffer[3][0] < 4.02, "{buffer:?}");
         let mut same = buffer.clone();
         atrous(&mut same, &charts, &normals, w, h, 1, 0.0);
