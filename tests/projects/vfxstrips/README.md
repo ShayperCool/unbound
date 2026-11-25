@@ -137,8 +137,7 @@ Unbound does. What decides which of the two the Editor shows there is not measur
 
 - Drawn but not measured: alpha blended strips with their sort off through a list (where
   overlapping segments show the order), a quad output of a strip system's particles sorted on
-  its own,
-  `Compute Culling` on a strip output itself, several cameras.
+  its own, `Compute Culling` on a strip output itself, several cameras.
 - Lit strips blended over what is behind them or drawn from lists, through the deferred
   renderer or Forward+, with maps, the specular workflow, the six-way smoke material, both
   sides drawn, receiving the main light's shadows or not; Shader Graph strip outputs (drawn,
@@ -149,8 +148,9 @@ Unbound does. What decides which of the two the Editor shows there is not measur
   frustum-culled list or from the list the system's update makes, several meshes of an output,
   shadows cast by them, a Shader Graph mesh output: drawn, not measured (meshes chosen by their
   size on screen are not drawn, as for any system).
-- Additive strips; a sorted strip under a perspective camera or with another sort criterion
-  than distance or age; a global sort of a strip system with several cameras; two strips of one sorted output that cross.
+- Additive strips; a sorted strip under a perspective camera or with another sort criterion than
+  distance or age; a global sort of a strip system with several cameras; two strips of one
+  sorted output that cross.
 - A batch in which an effect wakes in every frame for longer than three frames (as measured,
   its counts would not be asked while that lasts).
 - `stripAlive` with several strip systems spawned from one system (the graph compiler reads
