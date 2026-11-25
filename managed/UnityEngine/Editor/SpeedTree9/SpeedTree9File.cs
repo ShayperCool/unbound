@@ -1,15 +1,11 @@
 using System;
-using System.Buffers.Binary;
-using System.Text;
 
 namespace Unbound.SpeedTree
 {
     /// <summary>
     /// A SpeedTree 9 (<c>.st9</c>) file as Unity 6000.0's importer reads it: the signature
-    /// <c>SpeedTree9______</c>, then tables. A table is a uint32 count and that many uint32 offsets,
-    /// relative to the table's start, to its entries. An entry is a scalar, a packed struct, a string
-    /// (uint32 length counting a terminating zero, then the bytes), an array (uint32 count, then the
-    /// items) or another table. Little-endian. Only the entries the importer uses are read.
+    /// <c>SpeedTree9______</c>, then tables (<see cref="SpeedTreeTables"/>). Only the entries the
+    /// importer uses are read.
     /// </summary>
     internal sealed class SpeedTree9File
     {
@@ -24,18 +20,16 @@ namespace Unbound.SpeedTree
         const int DrawCallSize = 16;
 
         internal uint VersionMajor, VersionMinor;
-        internal Vector3f BoundsMin, BoundsMax;
+        internal SpeedTreeVector3 BoundsMin, BoundsMax;
         internal Lod[] Lods;
         internal bool LastLodIsBillboard;
         internal Collision[] Collisions;
         internal Material[] Materials;
         internal Wind WindConfig;
 
-        internal struct Vector3f { internal float X, Y, Z; }
-
         internal struct Vertex
         {
-            internal Vector3f Anchor, Offset, Normal, Tangent, Binormal, Color, BranchWind1, BranchWind2;
+            internal SpeedTreeVector3 Anchor, Offset, Normal, Tangent, Binormal, Color, BranchWind1, BranchWind2;
             internal float U, V, LightmapU, LightmapV, AmbientOcclusion, BlendWeight, RippleWeight;
             internal bool CameraFacing;
         }
@@ -55,7 +49,7 @@ namespace Unbound.SpeedTree
 
         internal sealed class Collision
         {
-            internal Vector3f Position, Position2;
+            internal SpeedTreeVector3 Position, Position2;
             internal float Radius;
         }
 
@@ -95,33 +89,23 @@ namespace Unbound.SpeedTree
             internal bool DoShared, DoBranch1, DoBranch2, DoRipple, DoShimmer;
         }
 
-        readonly byte[] m_Data;
+        readonly SpeedTreeTables m_Tables;
 
-        SpeedTree9File(byte[] data) => m_Data = data;
+        SpeedTree9File(byte[] data) => m_Tables = new SpeedTreeTables(data);
 
         /// <summary>Whether the bytes start with the SpeedTree 9 signature.</summary>
-        internal static bool HasSignature(byte[] data)
-        {
-            if (data.Length < Signature.Length) return false;
-            for (int i = 0; i < Signature.Length; i++)
-                if (data[i] != Signature[i]) return false;
-            return true;
-        }
+        internal static bool HasSignature(byte[] data) => SpeedTreeTables.HasSignature(data, Signature);
 
         /// <summary>Reads a file whose signature <see cref="HasSignature"/> accepted; a table or entry
         /// outside the file throws <see cref="FormatException"/>.</summary>
         internal static SpeedTree9File Read(byte[] data)
         {
             var file = new SpeedTree9File(data);
-            try
+            return SpeedTreeTables.Guard("SpeedTree 9 file", () =>
             {
                 file.ReadRoot(Signature.Length);
-            }
-            catch (Exception e) when (e is ArgumentOutOfRangeException || e is IndexOutOfRangeException || e is OverflowException)
-            {
-                throw new FormatException("the SpeedTree 9 file is truncated or damaged", e);
-            }
-            return file;
+                return file;
+            });
         }
 
         void ReadRoot(int root)
@@ -161,7 +145,7 @@ namespace Unbound.SpeedTree
                 {
                     MaterialIndex = UInt(d),
                     // A one-byte boolean padded to four bytes.
-                    ContainsFacingGeometry = m_Data[d + 4] != 0,
+                    ContainsFacingGeometry = m_Tables.Byte(d + 4) != 0,
                     IndexStart = UInt(d + 8),
                     IndexCount = UInt(d + 12),
                 };
@@ -187,7 +171,7 @@ namespace Unbound.SpeedTree
             BranchWind1 = Vec3(at + 108),
             BranchWind2 = Vec3(at + 120),
             RippleWeight = Float(at + 132),
-            CameraFacing = m_Data[at + 136] != 0,
+            CameraFacing = m_Tables.Byte(at + 136) != 0,
         };
 
         Material ReadMaterial(int at) => new Material
@@ -257,40 +241,13 @@ namespace Unbound.SpeedTree
             Independence = Float(Entry(at, 5)),
         };
 
-        /// <summary>The absolute offset of entry <paramref name="index"/> of the table at <paramref name="table"/>.</summary>
-        int Entry(int table, int index) => table + (int)UInt(table + (index + 1) * 4);
-
-        /// <summary>The count at <paramref name="at"/> of items of <paramref name="itemSize"/> bytes
-        /// (offsets for a table) that follow it, which must fit in the file.</summary>
-        int Count(int at, int itemSize = 4)
-        {
-            long count = UInt(at);
-            if (at + 4 + count * itemSize > m_Data.Length) throw new OverflowException();
-            return (int)count;
-        }
-
-        T[] Tables<T>(int table, Func<int, T> read)
-        {
-            var items = new T[Count(table)];
-            for (int i = 0; i < items.Length; i++) items[i] = read(Entry(table, i));
-            return items;
-        }
-
-        float[] Floats(int at)
-        {
-            var values = new float[Count(at)];
-            for (int i = 0; i < values.Length; i++) values[i] = Float(at + 4 + i * 4);
-            return values;
-        }
-
-        uint UInt(int at) => BinaryPrimitives.ReadUInt32LittleEndian(m_Data.AsSpan(at, 4));
-        float Float(int at) => BinaryPrimitives.ReadSingleLittleEndian(m_Data.AsSpan(at, 4));
-        Vector3f Vec3(int at) => new Vector3f { X = Float(at), Y = Float(at + 4), Z = Float(at + 8) };
-
-        string String(int at)
-        {
-            int length = Count(at, 1);
-            return length <= 1 ? "" : Encoding.UTF8.GetString(m_Data, at + 4, length - 1);
-        }
+        int Entry(int table, int index) => m_Tables.Entry(table, index);
+        int Count(int at, int itemSize = 4) => m_Tables.Count(at, itemSize);
+        T[] Tables<T>(int table, Func<int, T> read) => m_Tables.Tables(table, read);
+        float[] Floats(int at) => m_Tables.Floats(at);
+        uint UInt(int at) => m_Tables.UInt(at);
+        float Float(int at) => m_Tables.Float(at);
+        SpeedTreeVector3 Vec3(int at) => m_Tables.Vec3(at);
+        string String(int at) => m_Tables.String(at);
     }
 }
