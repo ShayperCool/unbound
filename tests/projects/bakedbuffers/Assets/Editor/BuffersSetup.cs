@@ -1060,6 +1060,44 @@ public static class BuffersSetup
         Denoise("DenoiseAutoOver", LightingSettings.FilterMode.Auto, LightingSettings.FilterType.ATrous);
         Denoise("DenoiseOidn", LightingSettings.FilterMode.Advanced, LightingSettings.FilterType.None);
         Denoise("DenoiseOidnGauss", LightingSettings.FilterMode.Advanced, LightingSettings.FilterType.Gaussian);
+        // Controls: Auto over stored Gaussian radii other than 1; Open Image Denoise on the
+        // indirect light alone; with A-Trous filters; and on direct and indirect light with the
+        // ambient occlusion target's OptiX (ambient occlusion off).
+        void Then(string name, LightingSettings.FilterMode mode, Action<LightingSettings> more)
+        {
+            var scene = Coloured(name, 64, 1);
+            var settings = Lightmapping.lightingSettings;
+            settings.filteringMode = mode;
+            more(settings);
+            WhiteSun();
+            Save(scene, name);
+        }
+        Then("DenoiseAutoRadii", LightingSettings.FilterMode.Auto, settings =>
+        {
+            settings.denoiserTypeDirect = settings.denoiserTypeIndirect = settings.denoiserTypeAO = LightingSettings.DenoiserType.None;
+            settings.filterTypeDirect = settings.filterTypeIndirect = settings.filterTypeAO = LightingSettings.FilterType.Gaussian;
+            settings.filteringGaussianRadiusDirect = 3f;
+            settings.filteringGaussianRadiusIndirect = 5f;
+        });
+        Then("DenoiseOidnIndirect", LightingSettings.FilterMode.Advanced, settings =>
+        {
+            settings.denoiserTypeDirect = LightingSettings.DenoiserType.None;
+            settings.denoiserTypeIndirect = settings.denoiserTypeAO = LightingSettings.DenoiserType.OpenImage;
+            settings.filterTypeDirect = settings.filterTypeIndirect = settings.filterTypeAO = LightingSettings.FilterType.None;
+        });
+        Then("DenoiseOidnAtrous", LightingSettings.FilterMode.Advanced, settings =>
+        {
+            settings.denoiserTypeDirect = settings.denoiserTypeIndirect = settings.denoiserTypeAO = LightingSettings.DenoiserType.OpenImage;
+            settings.filterTypeDirect = settings.filterTypeIndirect = settings.filterTypeAO = LightingSettings.FilterType.ATrous;
+            settings.filteringAtrousPositionSigmaDirect = 0.5f;
+            settings.filteringAtrousPositionSigmaIndirect = 1.5f;
+        });
+        Then("DenoiseOidnAoOptix", LightingSettings.FilterMode.Advanced, settings =>
+        {
+            settings.denoiserTypeDirect = settings.denoiserTypeIndirect = LightingSettings.DenoiserType.OpenImage;
+            settings.denoiserTypeAO = LightingSettings.DenoiserType.Optix;
+            settings.filterTypeDirect = settings.filterTypeIndirect = settings.filterTypeAO = LightingSettings.FilterType.None;
+        });
     }
 
     /// <summary>Makes the scenes <c>BAKED_BUFFERS_SCENES</c> names (comma-separated), else all.</summary>
