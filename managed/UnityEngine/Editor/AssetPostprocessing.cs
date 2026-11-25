@@ -72,7 +72,9 @@ namespace UnityEditor
         internal static string[] Unreachable(IReadOnlyCollection<string> speedTrees) =>
             speedTrees.Count == 0 ? SpeedTreeCallbacks : null;
 
-        static void ReportUnsupported() => ReportUnsupported(PostprocessorTypes(), ProjectSpeedTreeAssets());
+        // Without the native side (unit tests' domain loads) there is no project whose assets to read.
+        static void ReportUnsupported() =>
+            ReportUnsupported(PostprocessorTypes(), Native.IsReady ? ProjectSpeedTreeAssets() : new List<string>());
 
         /// <summary>The project's SpeedTree 7 and 8 assets (its packages' too; folders are not).</summary>
         internal static List<string> ProjectSpeedTreeAssets()
