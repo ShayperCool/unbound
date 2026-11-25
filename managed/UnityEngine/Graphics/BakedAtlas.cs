@@ -887,6 +887,12 @@ namespace UnityEngine
             {
                 var lights = Lights(file, path, settings.maxBounces);
                 var probes = Probes(file);
+                // A probe's samples are the Light Probe Sample Multiplier times a texel's
+                // (tests/projects/bakedbuffers SoftProbesMore: 8); a product that is not a whole
+                // number is not measured.
+                float multiplier = settings.lightProbeSampleCountMultiplier;
+                if (probes.Count > 0 && multiplier != MathF.Floor(multiplier))
+                    Approximated("probe-multiplier:" + path, $"{path}: a Light Probe Sample Multiplier of {multiplier} (not a whole number) is not measured: Unbound's bake (Lightmapping.Bake) rounds the light probes' sample counts to the nearest whole number.");
                 string Request(bool layoutOnly, object indirect) => JsonSerializer.Serialize(new
                 {
                     maxSize = settings.lightmapMaxSize,
@@ -900,6 +906,7 @@ namespace UnityEngine
                     mixedMode = (int)settings.mixedBakeMode,
                     directional = settings.directionalityMode == LightmapsMode.CombinedDirectional,
                     directSamples = settings.directSampleCount,
+                    probeSampleMultiplier = multiplier,
                     probes,
                     layoutOnly,
                     indirect,

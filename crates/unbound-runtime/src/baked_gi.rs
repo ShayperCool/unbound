@@ -63,6 +63,10 @@ pub struct BakeRequest {
     /// weighed over).
     #[serde(default = "default_direct_samples")]
     direct_samples: u32,
+    /// The Lighting Settings' Light Probe Sample Multiplier: a light probe's samples per
+    /// texel's sample.
+    #[serde(default = "default_probe_sample_multiplier")]
+    probe_sample_multiplier: f32,
     /// What the indirect light is baked with; without it only the direct light is.
     #[serde(default)]
     indirect: Option<IndirectData>,
@@ -181,10 +185,12 @@ fn probe_groups(groups: &[ProbeGroupData]) -> Vec<&ProbeGroupData> {
 /// probes; tests/projects/bakedbuffers `Probes*`).
 const PROBE_PUSHOFF: f32 = 0.0001;
 
-/// A light probe's samples for a texel's count asked for: four times the count a texel takes
-/// before its supersampling (tests/projects/bakedbuffers `Probes*`, the bake inputs' counts).
-fn probe_samples(asked: u32) -> u32 {
-    4 * sampling::sample_count(asked, 1)
+/// A light probe's samples for a texel's count asked for: the Light Probe Sample Multiplier
+/// times the count a texel takes before its supersampling (tests/projects/bakedbuffers
+/// `Probes*` with 4, `SoftProbesMore` with 8: the bake inputs' counts; a multiplier that is not
+/// a whole number is said by the managed side, its rounding not measured).
+fn probe_samples(asked: u32, multiplier: f32) -> u32 {
+    ((multiplier * sampling::sample_count(asked, 1) as f32).round() as u32).max(1)
 }
 
 /// The settings and materials of the bake's indirect light.
@@ -520,6 +526,11 @@ fn yes() -> bool {
 /// Direct Samples of a new Lighting Settings asset.
 fn default_direct_samples() -> u32 {
     32
+}
+
+/// Light Probe Sample Multiplier of a new Lighting Settings asset.
+fn default_probe_sample_multiplier() -> f32 {
+    4.0
 }
 
 #[derive(serde::Deserialize)]
@@ -1342,13 +1353,15 @@ fn bake(request: BakeRequest, buffers: Option<&Path>) -> Result<Json> {
                 })
             })
             .transpose()?;
-        // One lightmap at a time: its texels are written and let go before the next.
         // Soft shadows and area lights, of lightmaps and light probes, are sampled with the
         // sequences the indirect light brings.
         anyhow::ensure!(
-            bounce.is_some() || !baked_lights.iter().any(probes::is_sampled),
+            bounce.is_some()
+                || (layout.lightmaps.is_empty() && points.is_empty())
+                || !baked_lights.iter().any(probes::is_sampled),
             "soft baked shadows and area lights are sampled with the bake's blue noise, which comes with the request for its indirect light (none here)"
         );
+        // One lightmap at a time: its texels are written and let go before the next.
         let folder = buffers.map(|f| f.join(&request.scene));
         let mut written = Buffers::start(folder.as_deref(), request.lightmap_images)?;
         for (index, size) in layout.lightmaps.iter().enumerate() {
@@ -1507,7 +1520,7 @@ fn bake(request: BakeRequest, buffers: Option<&Path>) -> Result<Json> {
             let probe_sampling = bounce.as_ref().map(|b| {
                 probes::Sampling::new(
                     &b.samples,
-                    probe_samples(request.direct_samples),
+                    probe_samples(request.direct_samples, request.probe_sample_multiplier),
                     groups.iter().map(|g| g.len()),
                 )
             });
@@ -1522,11 +1535,14 @@ fn bake(request: BakeRequest, buffers: Option<&Path>) -> Result<Json> {
             let mut counts = Json::Null;
             if let Some(b) = &bounce {
                 let settings = indirect::Settings {
-                    samples: probe_samples(b.settings.0),
+                    samples: probe_samples(b.settings.0, request.probe_sample_multiplier),
                     max_bounces: b.settings.1,
                     min_bounces: b.settings.2,
                     pushoff: PROBE_PUSHOFF,
-                    environment_samples: probe_samples(b.sky.as_ref().map_or(0, |s| s.1)),
+                    environment_samples: probe_samples(
+                        b.sky.as_ref().map_or(0, |s| s.1),
+                        request.probe_sample_multiplier,
+                    ),
                     ao_max_distance: None,
                     ambient_occlusion: false,
                 };
@@ -2373,6 +2389,20 @@ mod tests {
     }
 
     #[test]
+    fn a_light_probes_samples_are_the_multiplier_times_a_texels() {
+        // The bake inputs' counts (tests/projects/bakedbuffers): Direct, Indirect and
+        // Environment Samples of 16, 1 and 8 take 128, 8 and 64 at a probe with a Light Probe
+        // Sample Multiplier of 8 (SoftProbesMore), 64, 4 and 32 with the default 4.
+        assert_eq!([16, 1, 8].map(|n| probe_samples(n, 8.0)), [128, 8, 64]);
+        assert_eq!(
+            [16, 1, 8].map(|n| probe_samples(n, default_probe_sample_multiplier())),
+            [64, 4, 32]
+        );
+        // Direct Samples of 20 are taken as 16 (the Editor keeps a power of two).
+        assert_eq!(probe_samples(20, 8.0), 128);
+    }
+
+    #[test]
     fn soft_and_area_lights_without_the_indirect_lights_samples_are_refused_also_for_probes() {
         let light = |kind: u8, shadow_size: f32| -> LightData {
             serde_json::from_value(json!({
@@ -2392,12 +2422,21 @@ mod tests {
         };
         // A soft point light and a rectangle light refuse a bake of light probes alone (no
         // lightmap, its probes' direct light still written among the buffers) as one of
-        // lightmaps; a hard point light is baked.
-        for (kind, shadow_size, refused) in [(2u8, 0.25, true), (3, 0.0, true), (2, 0.0, false)] {
+        // lightmaps; a hard point light is baked, and so is a rectangle light that nothing
+        // samples.
+        for (kind, shadow_size, with_probes, refused) in [
+            (1u8, 0.25, true, true),
+            (3, 0.0, true, true),
+            (1, 0.0, true, false),
+            // Nothing to sample it: neither a lightmap nor a probe.
+            (3, 0.0, false, false),
+        ] {
             let mut r = request(Vec::new(), Vec::new());
             r.lightmap_images = true;
             r.lights = vec![light(kind, shadow_size)];
-            r.probes = probes();
+            if with_probes {
+                r.probes = probes();
+            }
             let reply = bake(r, None);
             match reply {
                 Err(e) if refused => {
