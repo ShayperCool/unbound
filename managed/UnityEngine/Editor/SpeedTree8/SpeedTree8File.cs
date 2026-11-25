@@ -48,7 +48,8 @@ namespace Unbound.SpeedTree
         }
 
         /// <summary>The kind of geometry of a draw call. Branches, leaves, camera-facing leaves and
-        /// billboards are measured; the others are the numbers the SpeedTree 8 shaders give them.</summary>
+        /// billboards are measured; fronds take the number the Nature/SpeedTree8 shader gives them
+        /// (GEOM_TYPE_FROND). Other values are kept as they are.</summary>
         internal enum GeometryType : uint
         {
             Branch = 0,
