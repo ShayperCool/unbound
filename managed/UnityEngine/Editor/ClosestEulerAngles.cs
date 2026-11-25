@@ -41,11 +41,23 @@ namespace UnityEditor
             if (order < RotationOrder.OrderXYZ || order > RotationOrder.OrderZYX) throw new ArgumentOutOfRangeException(nameof(order));
             var (i, j, k) = Transform.RotationAxes(order);
             var radians = Angles(q, order);
-            Span<float> angles = stackalloc float[3], other = stackalloc float[3];
+            var angles = new Vector3();
             for (int a = 0; a < 3; a++)
                 angles[a] = RoundHalfEven(radians[a] * ToDegrees * 1000f) / 1000f;
-            for (int a = 0; a < 3; a++)
-                other[a] = angles[a] + 180f;
+            var nearest = Nearest(angles, hint, order);
+            if (AngleToHint(q, hint, i, j, k) < SameRotationDegrees) return hint;
+            return nearest;
+        }
+
+        /// <summary>Of the two sets of angles that make the rotation <paramref name="euler"/> makes
+        /// (the other: first and last a half turn on, middle mirrored), each angle moved by whole
+        /// turns next to the hint's, the set with the smaller squared distance to the hint, the
+        /// first on a tie (GameObjectRecorder unrolls Euler angles key by key with it:
+        /// tests/projects/animrecorder <c>euler.*</c>).</summary>
+        internal static Vector3 Nearest(Vector3 euler, Vector3 hint, RotationOrder order)
+        {
+            int j = Transform.RotationAxes(order).Middle;
+            Vector3 angles = euler, other = new Vector3(euler.x + 180f, euler.y + 180f, euler.z + 180f);
             other[j] = -other[j];
             float distance = 0f, otherDistance = 0f;
             for (int a = 0; a < 3; a++)
@@ -56,9 +68,7 @@ namespace UnityEditor
                 distance += d * d;
                 otherDistance += e * e;
             }
-            if (AngleToHint(q, hint, i, j, k) < SameRotationDegrees) return hint;
-            var nearest = otherDistance >= distance ? angles : other;
-            return new Vector3(nearest[0], nearest[1], nearest[2]);
+            return otherDistance >= distance ? angles : other;
 
             static float Near(float degrees, float hint) => degrees + RoundHalfEven((hint - degrees) / 360f) * 360f;
         }
