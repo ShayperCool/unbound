@@ -66,9 +66,11 @@ EMPTY = -1.0e6
 UNBOUND_NOTE = 'Unbound'
 BUFFERS = ('occupancy{}.r2d', 'chartIndex{}.int', 'normal{}.r2d', 'irradianceDirect{}.r2d', 'irradianceIndirect{}.r2d',
            'irradianceEnvironment{}.r2d', 'validity{}.r2d', 'directionalityDirect{}.r2d', 'directionalityIndirect{}.r2d',
-           'shadowmask{}.r2d')
+           'shadowmask{}.r2d', 'ambientOcclusion{}.r2d')
 # The part of a texel's samples a shadowmask channel's light reaches that see it: counts.
 SHADOWMASK_TOLERANCE = 1e-6
+# The part of a texel's rays the ambient occlusion lets through: counts.
+AMBIENT_OCCLUSION_TOLERANCE = 1e-6
 # Where a texel's light comes from (directional lightmaps): its mean direction and how much its
 # samples face it, each mapped to 0..1. The direct light's follows its light within its last
 # bits (the worst seen is 4.2e-7), the indirect light's its paths, as the indirect light does.
@@ -521,6 +523,15 @@ def expected(root):
                 lightmap[part] = values
             # The first of a texel's four validity numbers is the part of its rays.
             lightmap['validity'] = lightmap['validity'][0::4]
+            # The ambient occlusion (made whether it is on or not): the part of the texel's rays
+            # it lets through, three times, and 1 for a used texel; the first of the four.
+            # (None in a reference published before it was kept.)
+            lightmap['ambientOcclusion'] = None
+            if (folder/f'ambientOcclusion{index}.r2d').is_file():
+                width, height, channels, values = editor_bake.read_r2d(folder/f'ambientOcclusion{index}.r2d')
+                if (width, height, channels) != (lightmap['width'], lightmap['height'], 4):
+                    raise ValueError(f'{folder}: ambientOcclusion{index} of {width}x{height}')
+                lightmap['ambientOcclusion'] = values[0::4]
             # The lightmap the whole bake made: red, green, blue and alpha, rows from the first
             # (the image's rows run from its top).
             lightmap['lightmap'] = None
@@ -604,7 +615,8 @@ def actual(out):
                 lightmap['direct'] = numbers(dump/f'irradianceDirect{index}.f32', 'f')
                 for part, name in (('indirect', 'irradianceIndirect'), ('environment', 'irradianceEnvironment'), ('validity', 'validity'),
                                    ('towardDirect', 'directionalityDirect'), ('towardIndirect', 'directionalityIndirect'),
-                                   ('shadowmask', 'shadowmask'), ('lightmap', 'lightmap')):
+                                   ('shadowmask', 'shadowmask'), ('lightmap', 'lightmap'),
+                                   ('ambientOcclusion', 'ambientOcclusion')):
                     lightmap[part] = numbers(dump/f'{name}{index}.f32', 'f') if (dump/f'{name}{index}.f32').is_file() else None
                 entry['lightmaps'].append(lightmap)
         result[scene] = entry
@@ -800,6 +812,26 @@ def lighting_indirect_scale(scene):
     return float(found.group(1))
 
 
+def lighting_ao(scene):
+    """A scene's ambient occlusion under its Lighting Settings: None when it is off, else (the
+    indirect light's exponent, the direct light's, how the ambient occlusion target is denoised
+    and filtered (as lighting_filtering's parts; None without filtering))."""
+    text = (PROBE/'Assets/Scenes'/f'{scene}.lighting').read_text()
+
+    def value(key):
+        found = re.search(rf'{key}: ([0-9.]+)', text)
+        if not found:
+            raise ValueError(f'{scene}.lighting: no {key}')
+        return float(found.group(1))
+    if value('m_AO') == 0:
+        return None
+    mode = value('m_PVRFilteringMode')
+    with_ = None if mode == 0 else (True, ('gaussian', 1.0)) if mode == 1 else (
+        value('m_PVRDenoiserTypeAO') == 2,
+        {0: ('gaussian', value('m_PVRFilteringGaussRadiusAO')), 1: ('atrous', value('m_PVRFilteringAtrousPositionSigmaAO'))}.get(int(value('m_PVRFilterTypeAO'))))
+    return value('m_CompAOExponent'), value('m_CompAOExponentDirect'), with_
+
+
 def oidn_library():
     """Open Image Denoise 1.4.2's library as the engine has it: UNBOUND_OIDN's, else the global
     cache's entry, which a denoising bake of the engine downloads (the check runs the engine first)."""
@@ -984,7 +1016,42 @@ def part_filter(values, weights, lightmap, with_):
     return atrous_filter(values, weights, charts, lightmap['normals'], width, height, lightmap['supersampling'], amount), weights
 
 
-def composite(lightmap, padding, filtering=None, indirect_scale=1.0):
+def ao_power(x, exponent):
+    """The ambient occlusion x raised to exponent as the bake raises it: 2 to the exponent times
+    an approximate base-2 logarithm (a cubic of the mantissa less one plus the exponent of two, no
+    less than -127), itself approximated (two to the whole part times a quadratic of the
+    fraction), in 32-bit floats in this order: up to about 0.5% above the exact power between
+    powers of two."""
+    f32 = lambda v: struct.unpack('<f', struct.pack('<f', v))[0]  # noqa: E731
+    bits = struct.unpack('<I', struct.pack('<f', x))[0]
+    t = f32(struct.unpack('<f', struct.pack('<I', (bits & 0x807fffff) | 0x3f800000))[0] + -1.0)
+    signed = bits - (1 << 32) if bits >= 1 << 31 else bits
+    e = f32(float(signed >> 23) + -127.0)
+    cubic = f32(f32(f32(t * f32(0.19438113272190094)) + f32(-0.6322882175445557)) * f32(t * t))
+    log = f32(f32(f32(f32(t * f32(1.437907099723816)) + e) + cubic) * f32(exponent))
+    log = max(log, -127.0)
+    whole = float(round(log))
+    if log < whole:
+        whole -= 1.0
+    f = f32(log - whole)
+    fraction = f32(f32(f32(f * f32(0.6822701096534729)) + 1.0) + f32(f32(f * f) * f32(0.3177299201488495)))
+    scale = struct.unpack('<f', struct.pack('<I', ((int(whole) << 23) + 0x3f800000) & 0xffffffff))[0]
+    return f32(scale * fraction)
+
+
+def ao_image(lightmap, exponent, weights, with_):
+    """The ambient occlusion a part of the light is multiplied by: each used texel's raised to
+    the part's exponent, then denoised and filtered as the ambient occlusion target is (with_,
+    None without filtering). (Three values a texel.)"""
+    width, height, used = lightmap['width'], lightmap['height'], lightmap['occupancy']
+    values = [ao_power(lightmap['ambientOcclusion'][k], exponent) if used[k] else 0.0
+              for k in range(width * height) for _ in range(3)]
+    if with_ is not None:
+        values, _ = part_filter(values, weights, lightmap, with_)
+    return values
+
+
+def composite(lightmap, padding, filtering=None, ao=None, indirect_scale=1.0):
     """The lightmap the bake makes of a capture's buffers by the measured rules (red, green, blue,
     alpha per texel): each used texel's direct, indirect and sky's light summed; a texel more of
     whose rays met back faces than the Backface Tolerance allows takes the mean of the light of its
@@ -997,12 +1064,24 @@ def composite(lightmap, padding, filtering=None, indirect_scale=1.0):
     holds = [False] * (width * height)
     for k in range(width * height):
         if used[k]:
-            for c in range(3):
-                out[4 * k + c] = sum(lightmap[part][4 * k + c] for part in ('direct', 'indirect', 'environment')) \
-                    if indirect_scale == 1.0 else lightmap['direct'][4 * k + c] + (
-                        lightmap['indirect'][4 * k + c] + lightmap['environment'][4 * k + c]) * indirect_scale
-            out[4 * k + 3] = 1.0
             holds[k] = not lightmap['validity'][k] > BACKFACE_LIMIT
+    # With ambient occlusion each part is multiplied by its own image of it.
+    ones = [1.0] * (3 * width * height)
+    occluded_indirect, occluded_direct = ones, ones
+    if ao is not None:
+        ao_weights = [1.0 if h else 0.0 for h in holds]
+        occluded_indirect = ao_image(lightmap, ao[0], ao_weights, ao[2])
+        occluded_direct = ao_image(lightmap, ao[1], ao_weights, ao[2])
+    for k in range(width * height):
+        if used[k]:
+            for c in range(3):
+                if ao is None and indirect_scale == 1.0:
+                    out[4 * k + c] = sum(lightmap[part][4 * k + c] for part in ('direct', 'indirect', 'environment'))
+                else:
+                    out[4 * k + c] = (lightmap['direct'][4 * k + c] * occluded_direct[3 * k + c]
+                                      + (lightmap['indirect'][4 * k + c] + lightmap['environment'][4 * k + c])
+                                      * indirect_scale * occluded_indirect[3 * k + c])
+            out[4 * k + 3] = 1.0
     if filtering is not None:
         # The direct light, and the indirect and sky's light, each denoised and filtered on its
         # own (weighed by whether a texel's light stands), then summed where both hold light
@@ -1013,6 +1092,8 @@ def composite(lightmap, padding, filtering=None, indirect_scale=1.0):
                     for k in range(width * height) for c in range(3)]
         direct, direct_weights = part_filter(direct, weights, lightmap, filtering[0])
         indirect, indirect_weights = part_filter(indirect, weights, lightmap, filtering[1])
+        direct = [v * a for v, a in zip(direct, occluded_direct)]
+        indirect = [v * a for v, a in zip(indirect, occluded_indirect)]
         for k in range(width * height):
             holds[k] = direct_weights[k] * indirect_weights[k] > 0
             if holds[k]:
@@ -1040,7 +1121,7 @@ def composite(lightmap, padding, filtering=None, indirect_scale=1.0):
     return out
 
 
-def lightmap_difference(got, want, padding, filtering=None, indirect_scale=1.0):
+def lightmap_difference(got, want, padding, filtering=None, ao=None, indirect_scale=1.0):
     """The lightmap the bake makes (red, green, blue, alpha per texel) against the Editor's: which
     texels hold light (alpha) exactly, and the light of those within LIGHTMAP_TOLERANCE (times the
     value above 1), the stitched texels too. The texels whose light in the Editor's lightmap is not
@@ -1052,7 +1133,7 @@ def lightmap_difference(got, want, padding, filtering=None, indirect_scale=1.0):
     width, height = want['width'], want['height']
     if len(got) != len(want['lightmap']):
         return f'{len(got) // 4} texels, expected {width * height}', 0
-    theirs, rules = want['lightmap'], composite(want, padding, filtering, indirect_scale)
+    theirs, rules = want['lightmap'], composite(want, padding, filtering, ao, indirect_scale)
     charts, used = want['charts'], want['occupancy']
 
     def owner(x, y):
@@ -1102,6 +1183,15 @@ def validity_difference(got, want):
     if len(got) != len(want):
         return f'{len(got)} texels, expected {len(want)}'
     off = [k for k in range(len(want)) if not abs(got[k] - want[k]) <= VALIDITY_TOLERANCE]
+    return f'{len(off)} of {len(want)} texels differ, first at {off[:6]}' if off else None
+
+
+def ambient_occlusion_difference(got, want):
+    if got is None:
+        return 'not baked'
+    if len(got) != len(want):
+        return f'{len(got)} texels, expected {len(want)}'
+    off = [k for k in range(len(want)) if not abs(got[k] - want[k]) <= AMBIENT_OCCLUSION_TOLERANCE]
     return f'{len(off)} of {len(want)} texels differ, first at {off[:6]}' if off else None
 
 
@@ -1191,7 +1281,7 @@ def compare(label):
             mine = a['lightmaps'][index] if index < len(a['lightmaps']) else None
             if mine is None or (mine['width'], mine['height'], mine['supersampling']) != (lightmap['width'], lightmap['height'], lightmap['supersampling']):
                 for part in ('instances', 'occupancy', 'charts', 'normals', 'direct', 'indirect', 'environment', 'validity',
-                             'towardDirect', 'towardIndirect', 'shadowmask', 'lightmap'):
+                             'towardDirect', 'towardIndirect', 'shadowmask', 'lightmap', 'ambientOcclusion'):
                     record(key + part, 'no such lightmap of that size')
                 continue
             names = lambda entry, m: [entry['instances'][i] for i in m['instances']]  # noqa: E731
@@ -1206,9 +1296,11 @@ def compare(label):
             record(key + 'towardDirect', toward_difference(mine['towardDirect'], lightmap['towardDirect'], DIRECTIONALITY_TOLERANCE))
             record(key + 'towardIndirect', toward_difference(mine['towardIndirect'], lightmap['towardIndirect'], INDIRECT_TOLERANCE))
             record(key + 'shadowmask', toward_difference(mine['shadowmask'], lightmap['shadowmask'], SHADOWMASK_TOLERANCE))
+            if lightmap['ambientOcclusion'] is not None:
+                record(key + 'ambientOcclusion', ambient_occlusion_difference(mine['ambientOcclusion'], lightmap['ambientOcclusion']))
             if lightmap['lightmap'] is not None:
                 problem, seams = lightmap_difference(mine['lightmap'], lightmap, lighting_padding(scene), lighting_filtering(scene),
-                                                     lighting_indirect_scale(scene))
+                                                     lighting_ao(scene), lighting_indirect_scale(scene))
                 record(key + 'lightmap', problem)
                 stitched[0] += seams
         record(scene + '.materials', material_difference(a['materials'], e['materials']))
