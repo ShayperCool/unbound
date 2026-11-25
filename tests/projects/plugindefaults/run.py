@@ -34,12 +34,14 @@ KINDS = {
 
 # Plug-ins with a .meta of their GUID alone: every kind in Assets/Plugins, then kinds in the
 # folders whose names the Editor reads (and some it does not), in a package, in Editor folders.
+# No managed plug-in is in a folder of a 64-bit CPU: whether the Editor compiles against it depends
+# on the machine's CPU (x86 is no Editor's).
 FOLDERS = {
     'Assets/Plugins': list(KINDS),
     'Assets/Other': ['ManagedOther.dll', 'native.dll', 'libnative.so', 'libmac.dylib', 'Kit.bundle', 'Source.cpp',
                      'library.aar', 'libstatic.a', 'bridge.jslib', 'Bridge.mm', 'Kit.framework'],
     'Assets/Plugins/x86': ['native.dll', 'libnative.so', 'ManagedX86.dll', 'libmac.dylib', 'Kit.bundle'],
-    'Assets/Plugins/x86_64': ['native.dll', 'libnative.so', 'ManagedX64.dll', 'libmac.dylib', 'Kit.bundle', 'Source.cpp',
+    'Assets/Plugins/x86_64': ['native.dll', 'libnative.so', 'libmac.dylib', 'Kit.bundle', 'Source.cpp',
                               'library.jar', 'Bridge.mm', 'bridge.jslib'],
     'Assets/Plugins/ARM64': ['native.dll', 'libnative.so', 'libmac.dylib'],
     'Assets/Plugins/Android': ['libnative.so', 'ManagedAndroid.dll', 'native.dll', 'Source.cpp', 'library.jar', 'libmac.dylib',
