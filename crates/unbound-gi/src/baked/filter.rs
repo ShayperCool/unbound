@@ -360,7 +360,6 @@ mod tests {
             [4.02, 0.0, 0.0, 1.0],
             [7.0, 0.0, 0.0, 1.0],
         ];
-        let charts = [0, 0, 0, 1, 1, -1];
         // The same texels with texel 1 in no chart at all: what chart 0 makes of texels 0 and 2.
         let mut apart = buffer.clone();
         atrous(&mut apart, &[0, -1, 0, 1, 1, -1], &normals, w, h, 1, 1.5);

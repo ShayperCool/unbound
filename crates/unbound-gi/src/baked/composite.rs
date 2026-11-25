@@ -66,9 +66,9 @@ impl Filtering {
     }
 }
 
-/// The lightmap's texels: red, green, blue, and above 0 for a texel that holds light (a used one
-/// whose light stands or that its neighbours' reaches, or one within `padding` texels of those),
-/// 0 for the others (which hold none).
+/// The lightmap's texels: red, green, blue, and 1 for a texel that holds light (a used one whose
+/// light stands or that its neighbours' reaches, or one within `padding` texels of those; where a
+/// part is denoised, also one beside those), 0 for the others (which hold none).
 /// `backface_tolerance` is the part of a texel's rays that must meet front faces for its own
 /// light to stand. `denoiser` is the path of Open Image Denoise 1.4.2's library, needed where
 /// `filtering` denoises (an error otherwise, as is the library's failure).
@@ -165,8 +165,15 @@ pub fn composite(
     }
     // The texels without light given their neighbours' light, then `padding` rings around the
     // charts ([`dilate`]; a group of them no texel holding its own light reaches holds none: not
-    // measured).
-    Ok(dilate::fill(out, buffers.used, width, height, padding))
+    // measured). The weight of a texel that holds light is 1 (as in the Editor's lightmaps; a
+    // filtered weight is 1 within the reciprocal's last bit).
+    let mut out = dilate::fill(out, buffers.used, width, height, padding);
+    for texel in &mut out {
+        if texel[3] > 0.0 {
+            texel[3] = 1.0;
+        }
+    }
+    Ok(out)
 }
 
 #[cfg(test)]
@@ -311,6 +318,38 @@ mod tests {
         assert!(near(out[1][0], 2.0) && out[1][3] == 1.0, "{:?}", out[1]);
     }
 
+    /// A part to be denoised needs Open Image Denoise's library: without it the lightmap is not
+    /// made (said), rather than made undenoised.
+    #[test]
+    fn denoising_without_the_library_is_an_error() {
+        let used = [true; 2];
+        let direct = lit(&[1.0, 2.0]);
+        let buffers = Buffers {
+            width: 2,
+            height: 1,
+            used: &used,
+            direct: &direct,
+            indirect: None,
+            environment: None,
+            validity: None,
+            charts: &[0, 0],
+            normals: None,
+        };
+        let filtering = Filtering {
+            direct: PartFiltering::default(),
+            indirect: PartFiltering {
+                denoise: true,
+                filter: None,
+            },
+        };
+        assert!(filtering.denoises());
+        let error = composite(&buffers, 0.9, 0, Some(filtering), None).unwrap_err();
+        assert!(
+            format!("{error:#}").contains("Open Image Denoise"),
+            "{error:#}"
+        );
+    }
+
     /// Filtered: the direct light and the indirect and sky's light each by its own radius, a
     /// texel whose light does not stand weighed 0 (and then filled by its neighbours), summed.
     #[test]
@@ -346,9 +385,8 @@ mod tests {
         let near = |a: f32, b: f32| (a - b).abs() < 1e-5;
         assert!(near(out[0][0], d0) && near(out[1][0], d1 + 2.0), "{out:?}");
         assert!(near(out[2][0], 1.0), "{out:?}");
-        // The fourth's light does not stand: its neighbour's, as before filtering. (A filtered
-        // texel's weight is its filtered weights' mean, 1 within the reciprocal's last bit.)
-        assert!(near(out[3][0], out[2][0]) && near(out[3][3], 1.0), "{out:?}");
+        // The fourth's light does not stand: its neighbour's, as before filtering.
+        assert!(near(out[3][0], out[2][0]) && out[3][3] == 1.0, "{out:?}");
         // Without filtering the sum stays as it was.
         let plain = composite(&buffers, 0.9, 0, None, None).unwrap();
         assert!(
