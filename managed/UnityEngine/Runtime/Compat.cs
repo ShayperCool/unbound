@@ -548,6 +548,9 @@ namespace Unbound.Runtime
         /// 6000.0.71f1. Other families are unmeasured.</summary>
         internal static bool AnimatableBindingsMeasured => Family == ReleaseFamily.Unity6000_0;
 
+        // EditorGUI's text, number and delayed fields and sliders (tests/projects/editorvaluefields).
+        internal static bool EditorValueFieldsMeasured => Family == ReleaseFamily.Unity6000_0;
+
         /// <summary>Popup content defaults and window lifecycle measured by tests/projects/popupcontent
         /// on Unity 6000.0.71f1. Other families retain their unmeasured answers.</summary>
         internal static bool EditorPopupWindowMeasured => Family == ReleaseFamily.Unity6000_0;

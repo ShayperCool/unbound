@@ -824,6 +824,10 @@ namespace UnityEngine
                 ? new Rect(track.x + pos, position.y, thumbLength, position.height)
                 : new Rect(position.x, track.y + pos, position.width, thumbLength);
             float Along(Vector2 p) => horiz ? p.x - track.x : p.y - track.y;
+            // Unity's SliderHandler maps the mouse to a value from the slider's own edge, not from its
+            // padded track (tests/projects/editorvaluefields script/slider.*: the game skin's slider
+            // padding of -1 moves a click one pixel).
+            float Mouse(Vector2 p) => horiz ? p.x - position.x : p.y - position.y;
             float ValueAt(float along) => travel > 0f ? start + along / travel * span : start;
             var state = (SliderDragState)GUIUtility.GetStateObject(typeof(SliderDragState), id);
             switch (e.GetTypeForControl(id))
@@ -835,13 +839,13 @@ namespace UnityEngine
                     var thumbRect = ThumbRect();
                     if (thumbRect.Contains(e.mousePosition))
                     {
-                        state.grabOffset = Along(e.mousePosition) - pos;
+                        state.grabOffset = Mouse(e.mousePosition) - pos;
                     }
                     else if (size <= 0f)
                     {
                         // A slider jumps to the click.
                         state.grabOffset = thumbLength / 2f;
-                        float v = Clamp(ValueAt(Along(e.mousePosition) - state.grabOffset));
+                        float v = Clamp(ValueAt(Mouse(e.mousePosition) - state.grabOffset));
                         if (v != value)
                         {
                             value = v;
@@ -866,7 +870,7 @@ namespace UnityEngine
                     e.Use();
                     if (float.IsNaN(state.grabOffset)) break;
                     {
-                        float v = Clamp(ValueAt(Along(e.mousePosition) - state.grabOffset));
+                        float v = Clamp(ValueAt(Mouse(e.mousePosition) - state.grabOffset));
                         if (v != value)
                         {
                             value = v;

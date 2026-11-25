@@ -194,12 +194,6 @@ namespace UnityEditor
             if (Event.current == null) throw new NullReferenceException("Object reference not set to an instance of an object");
         }
 
-        public static int IntField(Rect position, int value) { RequireGUI(); return EditorGUIControls.IntField(position, GUIContent.none, value); }
-        public static int IntField(Rect position, string label, int value) { RequireGUI(); return EditorGUIControls.IntField(position, new GUIContent(label), value); }
-        public static int IntField(Rect position, GUIContent label, int value) { RequireGUI(); return EditorGUIControls.IntField(position, label, value); }
-        public static string TextField(Rect position, string text) { RequireGUI(); return EditorGUIControls.TextField(position, GUIContent.none, text); }
-        public static string TextField(Rect position, string label, string text) { RequireGUI(); return EditorGUIControls.TextField(position, new GUIContent(label), text); }
-        public static string TextField(Rect position, GUIContent label, string text) { RequireGUI(); return EditorGUIControls.TextField(position, label, text); }
         public static bool Toggle(Rect position, bool value) { RequireGUI(); return EditorGUIControls.Toggle(position, GUIContent.none, value); }
         public static bool Toggle(Rect position, string label, bool value) { RequireGUI(); return EditorGUIControls.Toggle(position, new GUIContent(label), value); }
         public static bool Toggle(Rect position, GUIContent label, bool value) { RequireGUI(); return EditorGUIControls.Toggle(position, label, value); }
@@ -374,15 +368,6 @@ namespace UnityEditor
             return GUILayoutUtility.GetRect(0, EditorGUIUtility.singleLineHeight, options);
         }
 
-        public static int IntField(int value, params GUILayoutOption[] options) => EditorGUIControls.IntField(Line(options), GUIContent.none, value);
-        public static int IntField(string label, int value, params GUILayoutOption[] options) => EditorGUIControls.IntField(Line(options), new GUIContent(label), value);
-        public static int IntField(GUIContent label, int value, params GUILayoutOption[] options) => EditorGUIControls.IntField(Line(options), label, value);
-        public static float FloatField(float value, params GUILayoutOption[] options) => EditorGUIControls.FloatField(Line(options), GUIContent.none, value);
-        public static float FloatField(string label, float value, params GUILayoutOption[] options) => EditorGUIControls.FloatField(Line(options), new GUIContent(label), value);
-        public static float FloatField(GUIContent label, float value, params GUILayoutOption[] options) => EditorGUIControls.FloatField(Line(options), label, value);
-        public static string TextField(string text, params GUILayoutOption[] options) => EditorGUIControls.TextField(Line(options), GUIContent.none, text);
-        public static string TextField(string label, string text, params GUILayoutOption[] options) => EditorGUIControls.TextField(Line(options), new GUIContent(label), text);
-        public static string TextField(GUIContent label, string text, params GUILayoutOption[] options) => EditorGUIControls.TextField(Line(options), label, text);
         public static bool Toggle(bool value, params GUILayoutOption[] options) => EditorGUIControls.Toggle(Line(options), GUIContent.none, value);
         public static bool Toggle(string label, bool value, params GUILayoutOption[] options) => EditorGUIControls.Toggle(Line(options), new GUIContent(label), value);
         public static bool Toggle(GUIContent label, bool value, params GUILayoutOption[] options) => EditorGUIControls.Toggle(Line(options), label, value);
@@ -587,16 +572,6 @@ namespace UnityEditor
             protected override void CloseScope() => EndVertical();
         }
 
-        /// <summary>A slider: an IMGUI control, outside OnGUI refused as GUI's are.</summary>
-        public static float Slider(float value, float leftValue, float rightValue, params GUILayoutOption[] options)
-        {
-            if (Event.current == null) throw new ArgumentException("You can only call GUI functions from inside OnGUI.");
-            return GUILayout.HorizontalSlider(value, leftValue, rightValue, options);
-        }
-
-        public static float Slider(string label, float value, float leftValue, float rightValue, params GUILayoutOption[] options) => Slider(value, leftValue, rightValue, options);
-
-        public static float Slider(GUIContent label, float value, float leftValue, float rightValue, params GUILayoutOption[] options) => Slider(value, leftValue, rightValue, options);
     }
 
     /// <summary>What the editor controls do inside an OnGUI (a game's, under UNITY_EDITOR): IMGUI's
@@ -686,20 +661,6 @@ namespace UnityEditor
 
         internal static void Label(Rect position, GUIContent label) => GUI.Label(EditorGUI.IndentedRect(position), label);
 
-        internal static int IntField(Rect position, GUIContent label, int value)
-        {
-            var text = GUI.TextField(Field(position, label), value.ToString(System.Globalization.CultureInfo.InvariantCulture));
-            return int.TryParse(text, System.Globalization.NumberStyles.Integer, System.Globalization.CultureInfo.InvariantCulture, out var v) ? v : value;
-        }
-
-        internal static float FloatField(Rect position, GUIContent label, float value)
-        {
-            var text = GUI.TextField(Field(position, label), value.ToString(System.Globalization.CultureInfo.InvariantCulture));
-            return float.TryParse(text, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var v) ? v : value;
-        }
-
-        internal static string TextField(Rect position, GUIContent label, string text) => GUI.TextField(Field(position, label), text ?? "");
-
         internal static bool Toggle(Rect position, GUIContent label, bool value) => GUI.Toggle(Field(position, label), value, GUIContent.none);
 
         internal static bool LeftToggle(Rect position, GUIContent label, bool value, GUIStyle labelStyle)
@@ -767,10 +728,10 @@ namespace UnityEditor
                 label ??= new GUIContent(property.displayName);
                 switch (property.propertyType)
                 {
-                    case SerializedPropertyType.Integer: property.intValue = IntField(position, label, property.intValue); break;
-                    case SerializedPropertyType.Float: property.floatValue = FloatField(position, label, property.floatValue); break;
+                    case SerializedPropertyType.Integer: property.intValue = EditorGUI.IntField(position, label, property.intValue); break;
+                    case SerializedPropertyType.Float: property.floatValue = EditorGUI.FloatField(position, label, property.floatValue); break;
                     case SerializedPropertyType.Boolean: property.boolValue = Toggle(position, label, property.boolValue); break;
-                    case SerializedPropertyType.String: property.stringValue = TextField(position, label, property.stringValue); break;
+                    case SerializedPropertyType.String: property.stringValue = EditorGUI.TextField(position, label, property.stringValue); break;
                     default:
                         if (property.hasVisibleChildren) property.isExpanded = Foldout(position, property.isExpanded, label);
                         else Label(position, label);
@@ -1298,7 +1259,11 @@ namespace UnityEditor
 
         public static bool wideMode { get; set; }
 
-        public static bool editingTextField { get; set; }
+        public static bool editingTextField
+        {
+            get => EditorGUI.RecycledTextEditor.s_ActuallyEditing;
+            set => EditorGUI.RecycledTextEditor.s_ActuallyEditing = value;
+        }
 
         /// <summary>The width of the editor view being drawn: only an OnGUI has one.</summary>
         public static float currentViewWidth
