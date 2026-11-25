@@ -1,5 +1,7 @@
 {
-  "commands": ["python3 tests/projects/uitkcursors/run.py gate"],
+  "commands": [
+    "python3 tests/projects/uitkcursors/run.py gate"
+  ],
   "summary": "uitkcursors: .*",
   "engine_paths": [
     "managed/UnityEngine/UIElements/Core/CursorManager.cs",
@@ -7,6 +9,10 @@
     "managed/UnityEngine/UIElements/Style/StyleReader.cs",
     "managed/UnityEngine/UIElements/Style/StyleResolver.cs",
     "managed/UnityEngine/Core/Input.cs",
-    "crates/unbound-app/src/lib.rs"
+    "crates/unbound-app/src/lib.rs",
+    "managed/UnityEngine/Editor/AssetDatabase.cs",
+    "managed/UnityEngine/Editor/AssetDatabaseFiles.cs",
+    "managed/UnityEngine/Core/Debug.cs",
+    "managed/UnityEngine/Runtime/Loading.cs"
   ]
 }

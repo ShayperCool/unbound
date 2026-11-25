@@ -13,6 +13,8 @@
     "managed/UnityEngine/Runtime/Compat.cs",
     "managed/UnityEngine/UIElements/Uxml/VisualTreeAsset.cs",
     "managed/UnityEngine/Editor/AssetDatabase.cs",
-    "managed/UnityEngine/Core/Debug.cs"
+    "managed/UnityEngine/Core/Debug.cs",
+    "managed/UnityEngine/Editor/AssetDatabaseFiles.cs",
+    "managed/UnityEngine/Runtime/Loading.cs"
   ]
 }

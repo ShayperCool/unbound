@@ -5,10 +5,10 @@ properties on a runtime panel (a UIDocument made in Play mode, drawing into an 8
 layout does not depend on the screen). The Editor runner enters Play mode, where
 `Assets/Scripts/BindingsProbe.cs` imports the documents again (`AssetDatabase.ImportAsset`, forced:
 both runtimes log a Play-mode import's messages in the call, tests/projects/importlogs), recording
-the importer's warnings and errors, clones the documents and steps through source and field changes; each step runs two frames (a
-panel update, then a repaint, when bindings update) and records every probe element's text or
-value, its binding ids (in the order GetBindingInfos lists them) and last results, the style values
-and resolved style of the styled elements, and the sources.
+the importer's warnings and errors, clones the documents and steps through source and field changes;
+each step runs two frames (a panel update, then a repaint, when bindings update) and records every
+probe element's text or value, its binding ids (in the order GetBindingInfos lists them) and last
+results, the style values and resolved style of the styled elements, and the sources.
 
 - `Assets/Resources/Bindings.uxml`: a box whose `data-source` is `BindData.asset` (with
   `data-source-type`), and labels and fields with `<Bindings>`: DataBinding with each binding mode,
@@ -56,7 +56,3 @@ python3 tests/projects/uitkbindings/run.py record --label native-b
 python3 tests/projects/uitkbindings/run.py publish native-a native-b
 python3 tests/projects/uitkbindings/run.py gate
 ```
-
-The import runs in Play mode on both runtimes since 2026-11-25 (it ran in Edit mode in the Editor
-runner, which the engine has no step for): two Unity 6000.0.71f1 Linux batch Editor captures of
-that flow are byte-identical to the reference.

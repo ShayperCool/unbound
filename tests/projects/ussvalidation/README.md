@@ -13,8 +13,9 @@ valid controls (`flex`, whose syntax names other properties').
 importer reports as errors. `Assets/Editor/UssValidationRunner.cs` enters Play mode, where
 `Assets/Scripts/UssValidationProbe.cs` imports the sheets again (`AssetDatabase.ImportAsset`, forced:
 both runtimes log a Play-mode import's messages in the call, tests/projects/importlogs) and records
-the importer's logs (with what loading the sheets then logs) as `import.logs`, then adds one element per rule to the panel, one at a time, and
-records the rule's property as resolved and what the style pass logged (`style.<class>[.logs]`).
+the importer's logs (with what loading the sheets then logs) as `import.logs`, then adds one element
+per rule to the panel, one at a time, and records the rule's property as resolved and what the style
+pass logged (`style.<class>[.logs]`).
 
 What the Editor does:
 
@@ -30,7 +31,3 @@ What the Editor does:
   no property; a dimension for `background-image` the Editor's warning icon with a warning.
 
 Other releases are unmeasured.
-
-The import runs in Play mode on both runtimes since 2026-11-25 (it ran in Edit mode in the Editor
-runner, which the engine has no step for): two Unity 6000.0.71f1 Linux batch Editor captures of
-that flow are byte-identical to the reference.

@@ -9,6 +9,8 @@
     "managed/UnityEngine/UIElements/Runtime/PanelSettings.cs",
     "managed/UnityEngine/Properties/",
     "managed/UnityEngine/Editor/AssetDatabase.cs",
-    "managed/UnityEngine/Core/Debug.cs"
+    "managed/UnityEngine/Core/Debug.cs",
+    "managed/UnityEngine/Editor/AssetDatabaseFiles.cs",
+    "managed/UnityEngine/Runtime/Loading.cs"
   ]
 }

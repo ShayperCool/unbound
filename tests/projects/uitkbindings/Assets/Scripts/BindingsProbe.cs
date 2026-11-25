@@ -128,8 +128,10 @@ public class BindingsProbe : MonoBehaviour
             if (type != LogType.Log) m_Logs.AddRange((type + ": " + message).Split(new[] { "\r\n", "\n", "\r" }, StringSplitOptions.None).Where(l => l.Length > 0));
         };
         Application.logMessageReceived += capture;
+#if UNITY_EDITOR
         foreach (var doc in documents)
             UnityEditor.AssetDatabase.ImportAsset("Assets/Resources/" + doc + ".uxml", UnityEditor.ImportAssetOptions.ForceUpdate | UnityEditor.ImportAssetOptions.ForceSynchronousImport);
+#endif
         Application.logMessageReceived -= capture;
     }
 

@@ -1,13 +1,13 @@
 # UXML template instances: attribute overrides and slots
 
-Unity 6000.0.71f1, recorded with the macOS Editor in batch mode (managed element state and log
-text; independent of the OS and the graphics device). The gate compares every value exactly
-(tolerance 0). The Editor runner enters Play mode, where `Assets/Scripts/TemplatesProbe.cs` imports
-every document again (`AssetDatabase.ImportAsset`, forced, each after the documents it instances:
-both runtimes log a Play-mode import's messages in the call, tests/projects/importlogs), records the
-importer's warnings and errors and what loading the documents then logs, clones the documents and
-records every element (type, classes, tooltip, focus, inline width and the values the overrides
-touch) under its path of names, with the logs of each clone.
+Unity 6000.0.71f1, recorded with the macOS Editor in batch mode (managed element state and log text;
+independent of the OS and the graphics device). The gate compares every value exactly (tolerance 0).
+The Editor runner enters Play mode, where `Assets/Scripts/TemplatesProbe.cs` imports every document
+again (`AssetDatabase.ImportAsset`, forced, each after the documents it instances: both runtimes log
+a Play-mode import's messages in the call, tests/projects/importlogs), records the importer's
+warnings and errors and what loading the documents then logs, clones the documents and records every
+element (type, classes, tooltip, focus, inline width and the values the overrides touch) under its
+path of names, with the logs of each clone.
 
 - `Leaf.uxml`: named built-in elements (two labels of one name, a toggle, a box), an unnamed label, a
   `[UxmlElement]` game element (`NewElement`, two `[UxmlAttribute]` members), a game element of the
@@ -44,7 +44,3 @@ The importer's id of an element in its messages (`(Type)(id)`) is an internal nu
 as `#`.
 
 Other releases are unmeasured.
-
-The import runs in Play mode on both runtimes since 2026-11-25 (it ran in Edit mode in the Editor
-runner, which the engine has no step for): two Unity 6000.0.71f1 Linux batch Editor captures of
-that flow are byte-identical to the reference.

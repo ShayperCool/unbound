@@ -20,7 +20,8 @@ manager has a texture cursor set (internal state, read by reflection) and the lo
   the style pass sets its cursor, also while another element holds the capture (`restyle.*`,
   `pseudo.*`, `captureRestyle.*`); an inline cursor set on it applies at once, its removal waits for
   the next entering (`inline.*`).
-- `custom-cursor` and an unknown keyword are refused by the importer (`import.logs`, a known residual:
-  Unbound's importer does not validate property values).
+- `custom-cursor` and an unknown keyword are refused by the importer (`import.logs`: the probe imports
+  the sheet again in Play mode, `AssetDatabase.ImportAsset` forced, which both runtimes log in the
+  call: tests/projects/importlogs).
 
 Other releases are unmeasured.
