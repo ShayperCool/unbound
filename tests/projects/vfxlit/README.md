@@ -205,8 +205,10 @@ effect's alive count, whether it is culled and awake, its renderer's state).
   each particle into the list of its mesh, and each mesh's task draws its own list. `mesh lod`:
   its renderer's row alone; which mesh the Editor draws differs from one run to the next (two
   captures differed), so no image of it is kept, and Unbound does not draw such an output.
-- `graph legacy`: the older target's graph, through the forward renderer. `graph legacy mesh`:
-  the older target's graph of a default texture on meshes.
+- `graph legacy`: the older target's graph, through the forward renderer; the Editor's image of
+  it varied between captures (four of six on 2026-11-25 drew fewer quads or none, cause not
+  resolved), so publishing needs two captures that agree on it. `graph legacy mesh`: the older
+  target's graph of a default texture on meshes.
 - `graph lit`: `GraphLit` under a point light through the forward renderer: the output is drawn
   as its lit graph has it; its lightmapper pass is drawn by no camera. Six pixels where two
   quads or two quarters of the image meet differ by at most 3 levels (`image_limits.json`).
