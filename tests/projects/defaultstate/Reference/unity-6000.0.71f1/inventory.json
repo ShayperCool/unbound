@@ -1834,6 +1834,24 @@
       "type": "UnityEditor.Lightmapping"
     },
     {
+      "category": "struct",
+      "module": "UnityEditor.CoreModule",
+      "status": "candidate",
+      "type": "UnityEditor.MPE.ChannelClientInfo"
+    },
+    {
+      "category": "struct",
+      "module": "UnityEditor.CoreModule",
+      "status": "candidate",
+      "type": "UnityEditor.MPE.ChannelInfo"
+    },
+    {
+      "category": "class",
+      "module": "UnityEditor.CoreModule",
+      "status": "static",
+      "type": "UnityEditor.MPE.ChannelService"
+    },
+    {
       "category": "class",
       "module": "UnityEditor.CoreModule",
       "status": "candidate",
@@ -2594,6 +2612,12 @@
       "module": "UnityEditor.CoreModule",
       "status": "candidate",
       "type": "UnityEditor.Toolbar"
+    },
+    {
+      "category": "class",
+      "module": "UnityEditor.CoreModule",
+      "status": "no-public-parameterless-constructor",
+      "type": "UnityEditor.Toolbars.EditorToolbarElementAttribute"
     },
     {
       "category": "scriptable",
@@ -9787,6 +9811,12 @@
       "category": "class",
       "module": "UnityEngine.UIElementsModule",
       "status": "candidate",
+      "type": "UnityEngine.UIElements.Label+UxmlSerializedData"
+    },
+    {
+      "category": "class",
+      "module": "UnityEngine.UIElementsModule",
+      "status": "candidate",
       "type": "UnityEngine.UIElements.Label+UxmlTraits"
     },
     {
@@ -10585,6 +10615,12 @@
       "category": "class",
       "module": "UnityEngine.UIElementsModule",
       "status": "candidate",
+      "type": "UnityEngine.UIElements.TabView+UxmlSerializedData"
+    },
+    {
+      "category": "class",
+      "module": "UnityEngine.UIElementsModule",
+      "status": "candidate",
       "type": "UnityEngine.UIElements.TabView+UxmlTraits"
     },
     {
@@ -10844,6 +10880,12 @@
       "module": "UnityEngine.UIElementsModule",
       "status": "candidate",
       "type": "UnityEngine.UIElements.TwoPaneSplitView+UxmlFactory"
+    },
+    {
+      "category": "class",
+      "module": "UnityEngine.UIElementsModule",
+      "status": "candidate",
+      "type": "UnityEngine.UIElements.TwoPaneSplitView+UxmlSerializedData"
     },
     {
       "category": "class",

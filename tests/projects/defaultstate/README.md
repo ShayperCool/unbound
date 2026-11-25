@@ -886,3 +886,10 @@ The CPU `UnityEngine.LightTransport` probe baking types (13 types: `BakeProgress
 `RadeonRaysContext`, `RadeonRaysProbeIntegrator`, `RadeonRaysWorld`, `ReferenceContext`) and the
 hand-written `UnityEngine.BoneWeight1` enter the inventory; two identical Unity 6000.0.71f1 GPU Editor
 captures on Linux write their 20 rows. Every earlier row is unchanged.
+
+The Editor service and UXML data slice enters seven hand-written types into the inventory:
+`UnityEditor.MPE.ChannelInfo` and `ChannelClientInfo` (structs: zero ids, null names),
+`UnityEditor.MPE.ChannelService` (static), `UnityEditor.Toolbars.EditorToolbarElementAttribute` (no
+public parameterless constructor) and the `UxmlSerializedData` classes of `Label`, `TabView` and
+`TwoPaneSplitView` (factory `class`). Two Unity 6000.0.71f1 GPU Editor captures on Linux agree on
+their 12 rows; every earlier row is unchanged.
