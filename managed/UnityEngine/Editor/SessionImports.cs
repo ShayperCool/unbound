@@ -12,11 +12,15 @@ namespace UnityEditor
     /// there. A write is the outermost <see cref="Write"/> scope: the public AssetDatabase call
     /// and what it does inside; in Edit mode and in Play mode alike (tests/projects/firstimport
     /// open3: a render pipeline's save in Play mode). Not reported: the writes the editor domain's
-    /// load makes (its imports are the load's own call).
+    /// load makes and the imports it put off (the load's own call reports them), scripts and
+    /// assembly definitions (their domain reload's call), and what is not measured: the save as the
+    /// Editor exits, a sprite atlas pack's saves, a bake's files, a package's import, SetLabels.
     /// </summary>
     internal static class SessionImports
     {
         static readonly List<string> s_Imported = new List<string>();
+        static readonly HashSet<string> s_ImportedSet = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        static readonly HashSet<string> s_DeletedSet = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         static readonly List<string> s_Deleted = new List<string>();
         static readonly List<string> s_Moved = new List<string>();
         static readonly List<string> s_MovedFrom = new List<string>();
@@ -60,10 +64,16 @@ namespace UnityEditor
 
         internal static void Imported(string path)
         {
-            if (!Reported || string.IsNullOrEmpty(path)) return;
-            if (!s_Imported.Contains(path)) s_Imported.Add(path);
+            if (!Reported || string.IsNullOrEmpty(path) || IsScript(path)) return;
+            if (s_ImportedSet.Add(path)) s_Imported.Add(path);
             Ended();
         }
+
+        /// <summary>A script or assembly definition: its import compiles the scripts and reloads the
+        /// domain, whose own call reports it (not reported here: not measured).</summary>
+        static bool IsScript(string path) =>
+            path.EndsWith(".cs", StringComparison.OrdinalIgnoreCase) || path.EndsWith(".asmdef", StringComparison.OrdinalIgnoreCase)
+            || path.EndsWith(".asmref", StringComparison.OrdinalIgnoreCase);
 
         /// <summary>A file of the project written (a .meta for its asset): its asset imported.
         /// Only assets (Assets/, Packages/) are reported.</summary>
@@ -77,7 +87,7 @@ namespace UnityEditor
         internal static void Deleted(string path)
         {
             if (!Reported || string.IsNullOrEmpty(path)) return;
-            if (!s_Deleted.Contains(path)) s_Deleted.Add(path);
+            if (s_DeletedSet.Add(path)) s_Deleted.Add(path);
             Ended();
         }
 
@@ -100,10 +110,11 @@ namespace UnityEditor
         internal static void ReportFirst(string path)
         {
             // (Only a folder's own copy, outside asset editing, which reports its writes together.)
-            if (AssetDatabase.Editing || s_Imported.Count < 2 || !s_Imported.Contains(path)) return;
+            if (AssetDatabase.Editing || s_Dispatching || s_Imported.Count < 2 || !s_ImportedSet.Contains(path)) return;
             foreach (var other in s_Imported)
                 if (other != path && !other.StartsWith(path + "/", StringComparison.Ordinal)) return;
             s_Imported.Remove(path);
+            s_ImportedSet.Remove(path);
             Report(new[] { path }, Array.Empty<string>(), Array.Empty<string>(), Array.Empty<string>());
         }
 
@@ -129,18 +140,31 @@ namespace UnityEditor
         }
 
         /// <summary>Reports what was gathered (one call) and starts afresh; nothing when nothing was.</summary>
+        static bool s_Dispatching;
+
+        /// <summary>Reports what was gathered (one call) and starts afresh; nothing when nothing was.
+        /// What the callbacks themselves write is reported in a call of its own once they have all
+        /// run (Scripting API 6000.0, AssetPostprocessor.OnPostprocessAllAssets: imports a callback
+        /// causes call it again once they are complete).</summary>
         internal static void Flush()
         {
-            if (s_Imported.Count == 0 && s_Deleted.Count == 0 && s_Moved.Count == 0) return;
-            var imported = s_Imported.ToArray();
-            var deleted = s_Deleted.ToArray();
-            var moved = s_Moved.ToArray();
-            var movedFrom = s_MovedFrom.ToArray();
-            s_Imported.Clear();
-            s_Deleted.Clear();
-            s_Moved.Clear();
-            s_MovedFrom.Clear();
-            Report(imported, deleted, moved, movedFrom);
+            if (s_Dispatching) return;
+            while (s_Imported.Count > 0 || s_Deleted.Count > 0 || s_Moved.Count > 0)
+            {
+                var imported = s_Imported.ToArray();
+                var deleted = s_Deleted.ToArray();
+                var moved = s_Moved.ToArray();
+                var movedFrom = s_MovedFrom.ToArray();
+                s_Imported.Clear();
+                s_ImportedSet.Clear();
+                s_Deleted.Clear();
+                s_DeletedSet.Clear();
+                s_Moved.Clear();
+                s_MovedFrom.Clear();
+                s_Dispatching = true;
+                try { Report(imported, deleted, moved, movedFrom); }
+                finally { s_Dispatching = false; }
+            }
         }
     }
 }

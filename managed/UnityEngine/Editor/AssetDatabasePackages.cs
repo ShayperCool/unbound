@@ -34,7 +34,11 @@ namespace UnityEditor
 
         /// <summary>The database brought up to date with the files an import wrote: new and
         /// changed assets, and a path whose .meta names another GUID now.</summary>
-        internal static void RefreshWritten() => ApplyRefresh(Native.Call("asset-refresh", "{}"));
+        /// <summary>A package's files listed (not reported to OnPostprocessAllAssets: not measured).</summary>
+        internal static void RefreshWritten()
+        {
+            using (SessionImports.Muted()) ApplyRefresh(Native.Call("asset-refresh", "{}"));
+        }
     }
 
     /// <summary>

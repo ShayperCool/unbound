@@ -97,5 +97,32 @@ namespace Unbound.Tests
                 Assert.Equal(new[] { "Assets/Moved |  | Assets/Moved,Assets/Moved/Held.asset <- Assets/Folder,Assets/Folder/Held.asset" }, calls);
             });
         }
+
+        [Fact]
+        public void WhatACallbackWritesIsItsOwnCallAfterTheRoundAndScriptsAreNotReported()
+        {
+            var calls = new List<string>();
+            bool wrote = false;
+            using (SessionImports.ReportsForTests((imported, deleted, moved, from) =>
+            {
+                calls.Add("start " + string.Join(",", imported));
+                // A callback's own write: reported after this round, not inside it.
+                if (!wrote)
+                {
+                    wrote = true;
+                    SessionImports.Imported("Assets/Written.asset");
+                }
+                calls.Add("end " + string.Join(",", imported));
+            }))
+            Unbound.Runtime.EditorSession.AsEditMode(() =>
+            {
+                SessionImports.Imported("Assets/First.asset");
+                Assert.Equal(new[] { "start Assets/First.asset", "end Assets/First.asset", "start Assets/Written.asset", "end Assets/Written.asset" }, calls);
+                calls.Clear();
+                SessionImports.Imported("Assets/Code.cs");
+                SessionImports.Imported("Assets/Code.asmdef");
+                Assert.Empty(calls);
+            });
+        }
     }
 }

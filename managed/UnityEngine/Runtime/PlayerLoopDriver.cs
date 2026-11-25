@@ -756,7 +756,7 @@ namespace Unbound.Runtime
                 if (!Compat.QuitCallbacksMeasured || EditorSession.IsPlaying) Application.Internal_Quitting();
                 else Application.Internal_Unloading();
             }
-            finally { FinishQuit(s_EditorExit, PlayerPrefs.SaveOnQuit, NativePlugins.Shutdown, () => AssetFiles.SaveDirty(), leavesPlayMode); }
+            finally { FinishQuit(s_EditorExit, PlayerPrefs.SaveOnQuit, NativePlugins.Shutdown, () => { using (UnityEditor.SessionImports.Muted()) AssetFiles.SaveDirty(); }, leavesPlayMode); }
         }
 
         /// <param name="saveAssets">The Editor's exit writes the assets still dirty (measured:

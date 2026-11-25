@@ -258,11 +258,13 @@ namespace UnityEditor
             var work = s_Deferred.ToArray();
             s_Deferred.Clear();
             s_DeferredImported.Clear();
-            foreach (var action in work)
-            {
-                try { action(); }
-                catch (Exception e) { Debug.LogException(e); }
-            }
+            // (The domain load's own call reports what they import.)
+            using (SessionImports.Muted())
+                foreach (var action in work)
+                {
+                    try { action(); }
+                    catch (Exception e) { Debug.LogException(e); }
+                }
             var imported = s_DeferredImported.ToArray();
             s_DeferredImported.Clear();
             return imported;

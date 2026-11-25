@@ -527,7 +527,7 @@ namespace UnityEngine.U2D
             // their updated packables and settings.
             foreach (var entry in entriesByGuid.Values)
                 if (entry.WasDirty)
-                    AssetFiles.SaveDirty(entry.Atlas);
+                    using (UnityEditor.SessionImports.Muted()) AssetFiles.SaveDirty(entry.Atlas);
 
             var payload = JsonSerializer.Serialize(new { paths = uniquePaths }, s_Options);
             var json = JsonSerializer.Deserialize<Json>(Native.Call("sprite-atlases-pack", payload), s_Options);
@@ -552,7 +552,7 @@ namespace UnityEngine.U2D
                 if (needWrite)
                 {
                     UnityEditor.EditorUtility.SetDirty(entry.Atlas);
-                    AssetFiles.SaveDirty(entry.Atlas);
+                    using (UnityEditor.SessionImports.Muted()) AssetFiles.SaveDirty(entry.Atlas);
                 }
                 else
                 {
@@ -648,7 +648,7 @@ namespace UnityEngine.U2D
                 var (_, refs, names) = PackedSpriteLists(packed);
                 atlas.ApplyPackedSprites(refs, names, markModified: true);
                 UnityEditor.EditorUtility.SetDirty(atlas);
-                AssetFiles.SaveDirty(atlas, unchangedStays: true);
+                using (UnityEditor.SessionImports.Muted()) AssetFiles.SaveDirty(atlas, unchangedStays: true);
                 UnityEditor.EditorUtility.ClearDirty(atlas);
                 atlas.InvalidateCachedSprites();
             }

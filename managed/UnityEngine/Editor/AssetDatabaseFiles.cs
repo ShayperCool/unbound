@@ -149,7 +149,8 @@ namespace UnityEditor
             }
             File.WriteAllBytes(FileOf(path), bytes);
             ProjectImports.Wrote(path);
-            return ImportOne(path, main);
+            // (A bake's files are not reported to OnPostprocessAllAssets: not measured.)
+            using (SessionImports.Muted()) return ImportOne(path, main);
         }
 
         internal static string ImportOne(string path, long? main = null) =>
@@ -670,7 +671,8 @@ namespace UnityEditor
                 Debug.LogError($"AssetDatabase.SetLabels: writing {path}.meta: {e.Message}");
                 return;
             }
-            ImportOne(path);
+            // (Not reported to OnPostprocessAllAssets: not measured.)
+            using (SessionImports.Muted()) ImportOne(path);
         }
 
         public static void ClearLabels(Object obj) => SetLabels(obj, Array.Empty<string>());
