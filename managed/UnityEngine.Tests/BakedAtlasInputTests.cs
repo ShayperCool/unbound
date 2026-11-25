@@ -333,13 +333,51 @@ namespace UnityEngine.Tests
                 BakedAtlas.Lights(pairFile, pairFile.Path, maxBounces: 4);
                 Assert.Contains(capture.Logs, l => l.Contains("an area light among more"));
 
-                // A cookie is said and not applied: the light is still of the bake.
+                // A sun's cookie goes with it (tests/projects/bakedbuffers Cookie*): its alpha a byte a
+                // texel, rows from the bottom, its Cookie Size and whether it repeats; unsaid.
                 capture.Logs.Clear();
                 var cookieFile = new LoadedFile { Path = "Assets/LitCookie.unity", Guid = "20000000000000000000000000000000" };
-                sun.cookie = Texture2D.whiteTexture;
+                var sunCookie = new Texture2D(2, 2, TextureFormat.RGBA32, false) { wrapMode = TextureWrapMode.Repeat };
+                sunCookie.SetPixels32(new[] { new Color32(255, 0, 0, 10), new Color32(0, 255, 0, 20), new Color32(0, 0, 255, 30), new Color32(9, 9, 9, 40) });
+                sunCookie.Apply();
+                sun.cookie = sunCookie;
+                sun.cookieSize = 2.5f;
                 cookieFile.Objects[1] = sun;
-                Assert.Single(BakedAtlas.Lights(cookieFile, cookieFile.Path));
-                Assert.Contains(capture.Logs, l => l.StartsWith("Warning: ") && l.Contains("'Sun' has a cookie"));
+                var cookieLights = System.Text.Json.JsonDocument.Parse(System.Text.Json.JsonSerializer.Serialize(BakedAtlas.Lights(cookieFile, cookieFile.Path))).RootElement;
+                Assert.Equal(1, cookieLights.GetArrayLength());
+                var sent = cookieLights[0].GetProperty("cookie");
+                Assert.Equal(new byte[] { 10, 20, 30, 40 }, System.Convert.FromBase64String(sent.GetProperty("alpha").GetString()));
+                Assert.Equal(1, sent.GetProperty("slices").GetInt32());
+                Assert.True(sent.GetProperty("repeat").GetBoolean());
+                Assert.Equal(2.5f, sent.GetProperty("size").GetSingle());
+                Assert.DoesNotContain(capture.Logs, l => l.Contains("cookie"));
+                // A cube on a spot light is not a cookie the bake takes: said, the light baked
+                // without it.
+                capture.Logs.Clear();
+                var cubeFile = new LoadedFile { Path = "Assets/LitCubeCookie.unity", Guid = "21000000000000000000000000000000" };
+                spot.cookie = new Cubemap(2, TextureFormat.RGBA32, false);
+                cubeFile.Objects[1] = spot;
+                var cubeLights = System.Text.Json.JsonDocument.Parse(System.Text.Json.JsonSerializer.Serialize(BakedAtlas.Lights(cubeFile, cubeFile.Path))).RootElement;
+                Assert.Equal(System.Text.Json.JsonValueKind.Null, cubeLights[0].GetProperty("cookie").ValueKind);
+                Assert.Contains(capture.Logs, l => l.StartsWith("Warning: ") && l.Contains("'Spot' has a cookie (Cubemap on a Spot light)"));
+                spot.cookie = null;
+                // A point light's cube cookie, its six faces one after the other, also once it is no
+                // longer readable (the bake reads it as the Editor's does).
+                capture.Logs.Clear();
+                var cube = new Cubemap(1, TextureFormat.RGBA32, false);
+                for (int face = 0; face < 6; face++)
+                    cube.SetPixels(new[] { (Color)new Color32(1, 2, 3, (byte)(50 + face)) }, (CubemapFace)face);
+                cube.Apply(false, true);
+                Assert.False(cube.isReadable);
+                var pointFile = new LoadedFile { Path = "Assets/LitPointCookie.unity", Guid = "22000000000000000000000000000000" };
+                soft.cookie = cube;
+                pointFile.Objects[1] = soft;
+                var pointLights = System.Text.Json.JsonDocument.Parse(System.Text.Json.JsonSerializer.Serialize(BakedAtlas.Lights(pointFile, pointFile.Path))).RootElement;
+                var faces = pointLights[0].GetProperty("cookie");
+                Assert.Equal(6, faces.GetProperty("slices").GetInt32());
+                Assert.Equal(new byte[] { 50, 51, 52, 53, 54, 55 }, System.Convert.FromBase64String(faces.GetProperty("alpha").GetString()));
+                Assert.DoesNotContain(capture.Logs, l => l.Contains("cookie"));
+                soft.cookie = null;
 
                 // Point and spot lights whose intensity multiplies their linear colour are baked
                 // with that colour, unsaid (tests/projects/bakedbuffers LinearLamps: the Editor's
