@@ -1,0 +1,189 @@
+{"k":"load/Present","v":"material 'Present'"}
+{"k":"material/Present/shader","v":"Probe/Transparent error False passes 1 properties 3 queue 3000"}
+{"k":"material/Present/queue","v":"3000 raw -1"}
+{"k":"material/Present/passes","v":"1"}
+{"k":"material/Present/keywords","v":"_KWA _KWB"}
+{"k":"material/Present/enabled_keywords","v":""}
+{"k":"material/Present/has","v":"_Color=True _MainTex=True _Glossiness=True _Probe=False"}
+{"k":"material/Present/color","v":"0.5 0.25 0.75 1"}
+{"k":"material/Present/main_color","v":"0.5 0.25 0.75 1"}
+{"k":"material/Present/glossiness","v":"0.25"}
+{"k":"material/Present/probe_float","v":"0"}
+{"k":"material/Present/probe_float.logs","v":"Error: Material 'Present' with Shader 'Probe/Transparent' doesn't have a float or range property '_Probe'"}
+{"k":"material/Present/main_tex_scale","v":"2 3 offset 0.5 0.25"}
+{"k":"material/Present/texture_names","v":"_MainTex"}
+{"k":"material/Present/float_names","v":"_Glossiness"}
+{"k":"material/Present/tag","v":"RenderType=Opaque fallback Opaque"}
+{"k":"material/Present/flags","v":"instancing True gi EmissiveIsBlack doubleSidedGI False"}
+{"k":"load/NoProperties","v":"material 'NoProperties'"}
+{"k":"material/NoProperties/shader","v":"Probe/NoProperties error False passes 1 properties 0 queue 2000"}
+{"k":"material/NoProperties/queue","v":"2000 raw -1"}
+{"k":"material/NoProperties/passes","v":"1"}
+{"k":"material/NoProperties/keywords","v":"_KWA _KWB"}
+{"k":"material/NoProperties/enabled_keywords","v":""}
+{"k":"material/NoProperties/has","v":"_Color=False _MainTex=False _Glossiness=False _Probe=False"}
+{"k":"material/NoProperties/color","v":"0 0 0 0"}
+{"k":"material/NoProperties/color.logs","v":"Error: Material 'NoProperties' with Shader 'Probe/NoProperties' doesn't have a color property '_Color'"}
+{"k":"material/NoProperties/main_color","v":"0 0 0 0"}
+{"k":"material/NoProperties/main_color.logs","v":"Error: Material 'NoProperties' with Shader 'Probe/NoProperties' doesn't have a color property '_Color'"}
+{"k":"material/NoProperties/glossiness","v":"0"}
+{"k":"material/NoProperties/glossiness.logs","v":"Error: Material 'NoProperties' with Shader 'Probe/NoProperties' doesn't have a float or range property '_Glossiness'"}
+{"k":"material/NoProperties/probe_float","v":"0"}
+{"k":"material/NoProperties/probe_float.logs","v":"Error: Material 'NoProperties' with Shader 'Probe/NoProperties' doesn't have a float or range property '_Probe'"}
+{"k":"material/NoProperties/main_tex_scale","v":"2 3 offset 0.5 0.25"}
+{"k":"material/NoProperties/texture_names","v":"_MainTex"}
+{"k":"material/NoProperties/float_names","v":""}
+{"k":"material/NoProperties/tag","v":"RenderType=Opaque fallback Opaque"}
+{"k":"material/NoProperties/flags","v":"instancing True gi EmissiveIsBlack doubleSidedGI False"}
+{"k":"load/DanglingGuid","v":"material 'DanglingGuid'"}
+{"k":"material/DanglingGuid/shader","v":"Hidden/InternalErrorShader error True passes 3 properties 0 queue 2000"}
+{"k":"material/DanglingGuid/queue","v":"2000 raw -1"}
+{"k":"material/DanglingGuid/passes","v":"3"}
+{"k":"material/DanglingGuid/keywords","v":"_KWA _KWB"}
+{"k":"material/DanglingGuid/enabled_keywords","v":""}
+{"k":"material/DanglingGuid/has","v":"_Color=False _MainTex=False _Glossiness=False _Probe=False"}
+{"k":"material/DanglingGuid/color","v":"0 0 0 0"}
+{"k":"material/DanglingGuid/main_color","v":"0 0 0 0"}
+{"k":"material/DanglingGuid/glossiness","v":"0"}
+{"k":"material/DanglingGuid/probe_float","v":"0"}
+{"k":"material/DanglingGuid/main_tex_scale","v":"2 3 offset 0.5 0.25"}
+{"k":"material/DanglingGuid/texture_names","v":"_MainTex"}
+{"k":"material/DanglingGuid/float_names","v":""}
+{"k":"material/DanglingGuid/tag","v":"RenderType=Opaque fallback Opaque"}
+{"k":"material/DanglingGuid/flags","v":"instancing True gi EmissiveIsBlack doubleSidedGI False"}
+{"k":"load/DanglingGraph","v":"material 'DanglingGraph'"}
+{"k":"material/DanglingGraph/shader","v":"Hidden/InternalErrorShader error True passes 3 properties 0 queue 2000"}
+{"k":"material/DanglingGraph/queue","v":"2000 raw -1"}
+{"k":"material/DanglingGraph/passes","v":"3"}
+{"k":"material/DanglingGraph/keywords","v":"_KWA _KWB"}
+{"k":"material/DanglingGraph/enabled_keywords","v":""}
+{"k":"material/DanglingGraph/has","v":"_Color=False _MainTex=False _Glossiness=False _Probe=False"}
+{"k":"material/DanglingGraph/color","v":"0 0 0 0"}
+{"k":"material/DanglingGraph/main_color","v":"0 0 0 0"}
+{"k":"material/DanglingGraph/glossiness","v":"0"}
+{"k":"material/DanglingGraph/probe_float","v":"0"}
+{"k":"material/DanglingGraph/main_tex_scale","v":"2 3 offset 0.5 0.25"}
+{"k":"material/DanglingGraph/texture_names","v":"_MainTex"}
+{"k":"material/DanglingGraph/float_names","v":""}
+{"k":"material/DanglingGraph/tag","v":"RenderType=Opaque fallback Opaque"}
+{"k":"material/DanglingGraph/flags","v":"instancing True gi EmissiveIsBlack doubleSidedGI False"}
+{"k":"load/DanglingQueue","v":"material 'DanglingQueue'"}
+{"k":"material/DanglingQueue/shader","v":"Hidden/InternalErrorShader error True passes 3 properties 0 queue 2000"}
+{"k":"material/DanglingQueue/queue","v":"2450 raw 2450"}
+{"k":"material/DanglingQueue/passes","v":"3"}
+{"k":"material/DanglingQueue/keywords","v":"_KWA _KWB"}
+{"k":"material/DanglingQueue/enabled_keywords","v":""}
+{"k":"material/DanglingQueue/has","v":"_Color=False _MainTex=False _Glossiness=False _Probe=False"}
+{"k":"material/DanglingQueue/color","v":"0 0 0 0"}
+{"k":"material/DanglingQueue/main_color","v":"0 0 0 0"}
+{"k":"material/DanglingQueue/glossiness","v":"0"}
+{"k":"material/DanglingQueue/probe_float","v":"0"}
+{"k":"material/DanglingQueue/main_tex_scale","v":"2 3 offset 0.5 0.25"}
+{"k":"material/DanglingQueue/texture_names","v":"_MainTex"}
+{"k":"material/DanglingQueue/float_names","v":""}
+{"k":"material/DanglingQueue/tag","v":"RenderType=Opaque fallback Opaque"}
+{"k":"material/DanglingQueue/flags","v":"instancing True gi EmissiveIsBlack doubleSidedGI False"}
+{"k":"load/NullShader","v":"material 'NullShader'"}
+{"k":"material/NullShader/shader","v":"Hidden/InternalErrorShader error True passes 3 properties 0 queue 2000"}
+{"k":"material/NullShader/queue","v":"2000 raw -1"}
+{"k":"material/NullShader/passes","v":"3"}
+{"k":"material/NullShader/keywords","v":"_KWA _KWB"}
+{"k":"material/NullShader/enabled_keywords","v":""}
+{"k":"material/NullShader/has","v":"_Color=False _MainTex=False _Glossiness=False _Probe=False"}
+{"k":"material/NullShader/color","v":"0 0 0 0"}
+{"k":"material/NullShader/main_color","v":"0 0 0 0"}
+{"k":"material/NullShader/glossiness","v":"0"}
+{"k":"material/NullShader/probe_float","v":"0"}
+{"k":"material/NullShader/main_tex_scale","v":"2 3 offset 0.5 0.25"}
+{"k":"material/NullShader/texture_names","v":"_MainTex"}
+{"k":"material/NullShader/float_names","v":""}
+{"k":"material/NullShader/tag","v":"RenderType=Opaque fallback Opaque"}
+{"k":"material/NullShader/flags","v":"instancing True gi EmissiveIsBlack doubleSidedGI False"}
+{"k":"load/WrongFileId","v":"material 'WrongFileId'"}
+{"k":"material/WrongFileId/shader","v":"Hidden/InternalErrorShader error True passes 3 properties 0 queue 2000"}
+{"k":"material/WrongFileId/queue","v":"2000 raw -1"}
+{"k":"material/WrongFileId/passes","v":"3"}
+{"k":"material/WrongFileId/keywords","v":"_KWA _KWB"}
+{"k":"material/WrongFileId/enabled_keywords","v":""}
+{"k":"material/WrongFileId/has","v":"_Color=False _MainTex=False _Glossiness=False _Probe=False"}
+{"k":"material/WrongFileId/color","v":"0 0 0 0"}
+{"k":"material/WrongFileId/main_color","v":"0 0 0 0"}
+{"k":"material/WrongFileId/glossiness","v":"0"}
+{"k":"material/WrongFileId/probe_float","v":"0"}
+{"k":"material/WrongFileId/main_tex_scale","v":"2 3 offset 0.5 0.25"}
+{"k":"material/WrongFileId/texture_names","v":"_MainTex"}
+{"k":"material/WrongFileId/float_names","v":""}
+{"k":"material/WrongFileId/tag","v":"RenderType=Opaque fallback Opaque"}
+{"k":"material/WrongFileId/flags","v":"instancing True gi EmissiveIsBlack doubleSidedGI False"}
+{"k":"load/BuiltinUnknown","v":"material 'BuiltinUnknown'"}
+{"k":"material/BuiltinUnknown/shader","v":"Hidden/InternalErrorShader error True passes 3 properties 0 queue 2000"}
+{"k":"material/BuiltinUnknown/queue","v":"2000 raw -1"}
+{"k":"material/BuiltinUnknown/passes","v":"3"}
+{"k":"material/BuiltinUnknown/keywords","v":"_KWA _KWB"}
+{"k":"material/BuiltinUnknown/enabled_keywords","v":""}
+{"k":"material/BuiltinUnknown/has","v":"_Color=False _MainTex=False _Glossiness=False _Probe=False"}
+{"k":"material/BuiltinUnknown/color","v":"0 0 0 0"}
+{"k":"material/BuiltinUnknown/main_color","v":"0 0 0 0"}
+{"k":"material/BuiltinUnknown/glossiness","v":"0"}
+{"k":"material/BuiltinUnknown/probe_float","v":"0"}
+{"k":"material/BuiltinUnknown/main_tex_scale","v":"2 3 offset 0.5 0.25"}
+{"k":"material/BuiltinUnknown/texture_names","v":"_MainTex"}
+{"k":"material/BuiltinUnknown/float_names","v":""}
+{"k":"material/BuiltinUnknown/tag","v":"RenderType=Opaque fallback Opaque"}
+{"k":"material/BuiltinUnknown/flags","v":"instancing True gi EmissiveIsBlack doubleSidedGI False"}
+{"k":"error_shader/find_same","v":"True"}
+{"k":"copy/DanglingGuid/shader","v":"Hidden/InternalErrorShader error True passes 3 properties 0 queue 2000"}
+{"k":"copy/DanglingGuid/queue","v":"2000 raw -1"}
+{"k":"copy/DanglingGuid/passes","v":"3"}
+{"k":"copy/DanglingGuid/keywords","v":"_KWA _KWB"}
+{"k":"copy/DanglingGuid/enabled_keywords","v":""}
+{"k":"copy/DanglingGuid/has","v":"_Color=False _MainTex=False _Glossiness=False _Probe=False"}
+{"k":"copy/DanglingGuid/color","v":"0 0 0 0"}
+{"k":"copy/DanglingGuid/main_color","v":"0 0 0 0"}
+{"k":"copy/DanglingGuid/glossiness","v":"0"}
+{"k":"copy/DanglingGuid/probe_float","v":"0"}
+{"k":"copy/DanglingGuid/main_tex_scale","v":"2 3 offset 0.5 0.25"}
+{"k":"copy/DanglingGuid/texture_names","v":"_MainTex"}
+{"k":"copy/DanglingGuid/float_names","v":""}
+{"k":"copy/DanglingGuid/tag","v":"RenderType=Opaque fallback Opaque"}
+{"k":"copy/DanglingGuid/flags","v":"instancing True gi EmissiveIsBlack doubleSidedGI False"}
+{"k":"copy/NullShader/shader","v":"Hidden/InternalErrorShader error True passes 3 properties 0 queue 2000"}
+{"k":"copy/NullShader/queue","v":"2000 raw -1"}
+{"k":"copy/NullShader/passes","v":"3"}
+{"k":"copy/NullShader/keywords","v":"_KWA _KWB"}
+{"k":"copy/NullShader/enabled_keywords","v":""}
+{"k":"copy/NullShader/has","v":"_Color=False _MainTex=False _Glossiness=False _Probe=False"}
+{"k":"copy/NullShader/color","v":"0 0 0 0"}
+{"k":"copy/NullShader/main_color","v":"0 0 0 0"}
+{"k":"copy/NullShader/glossiness","v":"0"}
+{"k":"copy/NullShader/probe_float","v":"0"}
+{"k":"copy/NullShader/main_tex_scale","v":"2 3 offset 0.5 0.25"}
+{"k":"copy/NullShader/texture_names","v":"_MainTex"}
+{"k":"copy/NullShader/float_names","v":""}
+{"k":"copy/NullShader/tag","v":"RenderType=Opaque fallback Opaque"}
+{"k":"copy/NullShader/flags","v":"instancing True gi EmissiveIsBlack doubleSidedGI False"}
+{"k":"assign/null","v":"Hidden/InternalErrorShader error True passes 3 properties 0 queue 2000 queue 2000"}
+{"k":"scripted/Hidden/InternalErrorShader/before","v":"0 has False"}
+{"k":"scripted/Hidden/InternalErrorShader/after","v":"5 has True True color 0.25 0.5 0.75 1 names _New"}
+{"k":"scripted/Probe/NoProperties/before","v":"0 has False"}
+{"k":"scripted/Probe/NoProperties/before.logs","v":"Error: Material 'Probe/NoProperties' with Shader 'Probe/NoProperties' doesn't have a float or range property '_New'"}
+{"k":"scripted/Probe/NoProperties/after","v":"5 has True True color 0.25 0.5 0.75 1 names _New"}
+{"k":"scripted/Probe/Transparent/before","v":"0 has False"}
+{"k":"scripted/Probe/Transparent/before.logs","v":"Error: Material 'Probe/Transparent' with Shader 'Probe/Transparent' doesn't have a float or range property '_New'"}
+{"k":"scripted/Probe/Transparent/after","v":"5 has True True color 0.25 0.5 0.75 1 names _Glossiness _New"}
+{"k":"assign/unlit","v":"Unlit/Color error False passes 1 properties 1 queue 2000 queue 2000 raw -1"}
+{"k":"assign/error","v":"Hidden/InternalErrorShader error True passes 3 properties 0 queue 2000 queue 2000 raw -1"}
+{"k":"save/Present","v":"Probe/Transparent error False passes 1 properties 3 queue 3000 set probe 2 has True color 0.125 0.5 1 0.5 names _Glossiness _Probe saved probe 0 has False color 0.125 0.5 1 0.5 names _Glossiness"}
+{"k":"save/Present.logs","v":"Error: Material 'Present' with Shader 'Probe/Transparent' doesn't have a float or range property '_Probe'"}
+{"k":"save/Present/file","v":"%YAML 1.1\n%TAG !u! tag:unity3d.com,2011:\n--- !u!21 &2100000\nMaterial:\n  serializedVersion: 8\n  m_ObjectHideFlags: 0\n  m_CorrespondingSourceObject: {fileID: 0}\n  m_PrefabInstance: {fileID: 0}\n  m_PrefabAsset: {fileID: 0}\n  m_Name: Present\n  m_Shader: {fileID: 4800000, guid: 7f5de6405d194228910e9e3fb2ae6155, type: 3}\n  m_Parent: {fileID: 0}\n  m_ModifiedSerializedProperties: 0\n  m_ValidKeywords: []\n  m_InvalidKeywords:\n  - _KWA\n  - _KWB\n  m_LightmapFlags: 4\n  m_EnableInstancingVariants: 1\n  m_DoubleSidedGI: 0\n  m_CustomRenderQueue: -1\n  stringTagMap:\n    RenderType: Opaque\n  disabledShaderPasses: []\n  m_LockedProperties: \n  m_SavedProperties:\n    serializedVersion: 3\n    m_TexEnvs:\n    - _MainTex:\n        m_Texture: {fileID: 0}\n        m_Scale: {x: 2, y: 3}\n        m_Offset: {x: 0.5, y: 0.25}\n    m_Ints: []\n    m_Floats:\n    - _Glossiness: 0.25\n    - _Probe: 2\n    m_Colors:\n    - _Color: {r: 0.125, g: 0.5, b: 1, a: 0.5}\n  m_BuildTextureStacks: []\n  m_AllowLocking: 1\n"}
+{"k":"save/DanglingGuid","v":"Hidden/InternalErrorShader error True passes 3 properties 0 queue 2000 set probe 2 has True color 0.125 0.5 1 0.5 names _Probe saved probe 0 has False color 0 0 0 0 names "}
+{"k":"save/DanglingGuid/file","v":"%YAML 1.1\n%TAG !u! tag:unity3d.com,2011:\n--- !u!21 &2100000\nMaterial:\n  serializedVersion: 8\n  m_ObjectHideFlags: 0\n  m_CorrespondingSourceObject: {fileID: 0}\n  m_PrefabInstance: {fileID: 0}\n  m_PrefabAsset: {fileID: 0}\n  m_Name: DanglingGuid\n  m_Shader: {fileID: 4800000, guid: 712917cf4b9b4b8990cae4eca6d842b7, type: 3}\n  m_Parent: {fileID: 0}\n  m_ModifiedSerializedProperties: 0\n  m_ValidKeywords: []\n  m_InvalidKeywords:\n  - _KWA\n  - _KWB\n  m_LightmapFlags: 4\n  m_EnableInstancingVariants: 1\n  m_DoubleSidedGI: 0\n  m_CustomRenderQueue: -1\n  stringTagMap:\n    RenderType: Opaque\n  disabledShaderPasses: []\n  m_LockedProperties: \n  m_SavedProperties:\n    serializedVersion: 3\n    m_TexEnvs:\n    - _MainTex:\n        m_Texture: {fileID: 0}\n        m_Scale: {x: 2, y: 3}\n        m_Offset: {x: 0.5, y: 0.25}\n    m_Ints: []\n    m_Floats:\n    - _Glossiness: 0.25\n    - _Probe: 2\n    m_Colors:\n    - _Color: {r: 0.125, g: 0.5, b: 1, a: 0.5}\n  m_BuildTextureStacks: []\n  m_AllowLocking: 1\n"}
+{"k":"save/DanglingGraph","v":"Hidden/InternalErrorShader error True passes 3 properties 0 queue 2000 set probe 2 has True color 0.125 0.5 1 0.5 names _Probe saved probe 0 has False color 0 0 0 0 names "}
+{"k":"save/DanglingGraph/file","v":"%YAML 1.1\n%TAG !u! tag:unity3d.com,2011:\n--- !u!21 &2100000\nMaterial:\n  serializedVersion: 8\n  m_ObjectHideFlags: 0\n  m_CorrespondingSourceObject: {fileID: 0}\n  m_PrefabInstance: {fileID: 0}\n  m_PrefabAsset: {fileID: 0}\n  m_Name: DanglingGraph\n  m_Shader: {fileID: -6465566751694194690, guid: 79098b94e1f648dd83a619730018e2af, type: 3}\n  m_Parent: {fileID: 0}\n  m_ModifiedSerializedProperties: 0\n  m_ValidKeywords: []\n  m_InvalidKeywords:\n  - _KWA\n  - _KWB\n  m_LightmapFlags: 4\n  m_EnableInstancingVariants: 1\n  m_DoubleSidedGI: 0\n  m_CustomRenderQueue: -1\n  stringTagMap:\n    RenderType: Opaque\n  disabledShaderPasses: []\n  m_LockedProperties: \n  m_SavedProperties:\n    serializedVersion: 3\n    m_TexEnvs:\n    - _MainTex:\n        m_Texture: {fileID: 0}\n        m_Scale: {x: 2, y: 3}\n        m_Offset: {x: 0.5, y: 0.25}\n    m_Ints: []\n    m_Floats:\n    - _Glossiness: 0.25\n    - _Probe: 2\n    m_Colors:\n    - _Color: {r: 0.125, g: 0.5, b: 1, a: 0.5}\n  m_BuildTextureStacks: []\n  m_AllowLocking: 1\n"}
+{"k":"save/NullShader","v":"Hidden/InternalErrorShader error True passes 3 properties 0 queue 2000 set probe 2 has True color 0.125 0.5 1 0.5 names _Probe saved probe 0 has False color 0 0 0 0 names "}
+{"k":"save/NullShader/file","v":"%YAML 1.1\n%TAG !u! tag:unity3d.com,2011:\n--- !u!21 &2100000\nMaterial:\n  serializedVersion: 8\n  m_ObjectHideFlags: 0\n  m_CorrespondingSourceObject: {fileID: 0}\n  m_PrefabInstance: {fileID: 0}\n  m_PrefabAsset: {fileID: 0}\n  m_Name: NullShader\n  m_Shader: {fileID: 0}\n  m_Parent: {fileID: 0}\n  m_ModifiedSerializedProperties: 0\n  m_ValidKeywords: []\n  m_InvalidKeywords:\n  - _KWA\n  - _KWB\n  m_LightmapFlags: 4\n  m_EnableInstancingVariants: 1\n  m_DoubleSidedGI: 0\n  m_CustomRenderQueue: -1\n  stringTagMap:\n    RenderType: Opaque\n  disabledShaderPasses: []\n  m_LockedProperties: \n  m_SavedProperties:\n    serializedVersion: 3\n    m_TexEnvs:\n    - _MainTex:\n        m_Texture: {fileID: 0}\n        m_Scale: {x: 2, y: 3}\n        m_Offset: {x: 0.5, y: 0.25}\n    m_Ints: []\n    m_Floats:\n    - _Glossiness: 0.25\n    - _Probe: 2\n    m_Colors:\n    - _Color: {r: 0.125, g: 0.5, b: 1, a: 0.5}\n  m_BuildTextureStacks: []\n  m_AllowLocking: 1\n"}
+{"k":"save/WrongFileId","v":"Hidden/InternalErrorShader error True passes 3 properties 0 queue 2000 set probe 2 has True color 0.125 0.5 1 0.5 names _Probe saved probe 0 has False color 0 0 0 0 names "}
+{"k":"save/WrongFileId/file","v":"%YAML 1.1\n%TAG !u! tag:unity3d.com,2011:\n--- !u!21 &2100000\nMaterial:\n  serializedVersion: 8\n  m_ObjectHideFlags: 0\n  m_CorrespondingSourceObject: {fileID: 0}\n  m_PrefabInstance: {fileID: 0}\n  m_PrefabAsset: {fileID: 0}\n  m_Name: WrongFileId\n  m_Shader: {fileID: 4800001, guid: 7f5de6405d194228910e9e3fb2ae6155, type: 3}\n  m_Parent: {fileID: 0}\n  m_ModifiedSerializedProperties: 0\n  m_ValidKeywords: []\n  m_InvalidKeywords:\n  - _KWA\n  - _KWB\n  m_LightmapFlags: 4\n  m_EnableInstancingVariants: 1\n  m_DoubleSidedGI: 0\n  m_CustomRenderQueue: -1\n  stringTagMap:\n    RenderType: Opaque\n  disabledShaderPasses: []\n  m_LockedProperties: \n  m_SavedProperties:\n    serializedVersion: 3\n    m_TexEnvs:\n    - _MainTex:\n        m_Texture: {fileID: 0}\n        m_Scale: {x: 2, y: 3}\n        m_Offset: {x: 0.5, y: 0.25}\n    m_Ints: []\n    m_Floats:\n    - _Glossiness: 0.25\n    - _Probe: 2\n    m_Colors:\n    - _Color: {r: 0.125, g: 0.5, b: 1, a: 0.5}\n  m_BuildTextureStacks: []\n  m_AllowLocking: 1\n"}
+{"k":"save/BuiltinUnknown","v":"Hidden/InternalErrorShader error True passes 3 properties 0 queue 2000 set probe 2 has True color 0.125 0.5 1 0.5 names _Probe saved probe 0 has False color 0 0 0 0 names "}
+{"k":"save/BuiltinUnknown/file","v":"%YAML 1.1\n%TAG !u! tag:unity3d.com,2011:\n--- !u!21 &2100000\nMaterial:\n  serializedVersion: 8\n  m_ObjectHideFlags: 0\n  m_CorrespondingSourceObject: {fileID: 0}\n  m_PrefabInstance: {fileID: 0}\n  m_PrefabAsset: {fileID: 0}\n  m_Name: BuiltinUnknown\n  m_Shader: {fileID: 99999, guid: 0000000000000000f000000000000000, type: 0}\n  m_Parent: {fileID: 0}\n  m_ModifiedSerializedProperties: 0\n  m_ValidKeywords: []\n  m_InvalidKeywords:\n  - _KWA\n  - _KWB\n  m_LightmapFlags: 4\n  m_EnableInstancingVariants: 1\n  m_DoubleSidedGI: 0\n  m_CustomRenderQueue: -1\n  stringTagMap:\n    RenderType: Opaque\n  disabledShaderPasses: []\n  m_LockedProperties: \n  m_SavedProperties:\n    serializedVersion: 3\n    m_TexEnvs:\n    - _MainTex:\n        m_Texture: {fileID: 0}\n        m_Scale: {x: 2, y: 3}\n        m_Offset: {x: 0.5, y: 0.25}\n    m_Ints: []\n    m_Floats:\n    - _Glossiness: 0.25\n    - _Probe: 2\n    m_Colors:\n    - _Color: {r: 0.125, g: 0.5, b: 1, a: 0.5}\n  m_BuildTextureStacks: []\n  m_AllowLocking: 1\n"}
+{"k":"complete","v":true}

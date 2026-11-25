@@ -1,0 +1,10 @@
+{
+  "commands": [
+    "python3 tests/projects/missingshader/run.py gate"
+  ],
+  "summary": "missingshader: .*",
+  "engine_paths": [
+    "managed/UnityEngine/Graphics/Material.cs",
+    "managed/UnityEngine/Editor/MaterialSerialization.cs"
+  ]
+}

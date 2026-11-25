@@ -1,0 +1,16 @@
+{
+ "GetPropertyNames lists only the shader's properties; the Editor also lists a name set from script, after the shader's (Material property names follow-up)": [
+  "scripted/Hidden/InternalErrorShader/after",
+  "scripted/Probe/NoProperties/after",
+  "scripted/Probe/Transparent/after"
+ ],
+ "After AssetDatabase.SaveAssetIfDirty the Editor's material no longer has the names set from script for which its shader has no property (GetFloat 0 and a log, HasProperty false; the saved file keeps the values), and GetPropertyNames lists a name set from script before the save; Unbound's keeps them and lists the shader's alone (Material save and property names follow-up)": [
+  "save/BuiltinUnknown",
+  "save/DanglingGraph",
+  "save/DanglingGuid",
+  "save/NullShader",
+  "save/Present",
+  "save/Present.logs",
+  "save/WrongFileId"
+ ]
+}
