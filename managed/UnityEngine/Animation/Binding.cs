@@ -1397,6 +1397,19 @@ namespace Unbound.Runtime
             }
             var property = rest;
             int id = Shader.PropertyToID(property);
+            // A material property binding names a property, not a slot: its value is the first
+            // material's that has it (the bindings list a name once, at its first material).
+            Material Holder()
+            {
+                var first = renderer.sharedMaterial;
+                if (first != null && first.HasProperty(id)) return first;
+                foreach (var m in renderer.sharedMaterials)
+                    if (m != null && m.HasProperty(id)) return m;
+                if (property.EndsWith("_TexelSize", StringComparison.Ordinal) || property.EndsWith("_HDR", StringComparison.Ordinal))
+                    Stubs.Ignored("Material property binding texel size and HDR channels",
+                        "read as 0 (what the Editor reads for a texture's _TexelSize and _HDR is not measured)");
+                return null;
+            }
             // Each channel on its own, into the renderer's property block, as Unity animates
             // materials: a channel's default is the material's value, the block gets only the
             // channels curves drive (the others read as the block has them: 0 when unset; measured).
@@ -1404,7 +1417,7 @@ namespace Unbound.Runtime
             if (c < 0)
             {
                 factory = () => new AccessorGroup(renderer, 1,
-                    () => new Vector4(renderer.sharedMaterial != null && renderer.sharedMaterial.HasProperty(id) ? renderer.sharedMaterial.GetFloat(id) : 0f, 0),
+                    () => new Vector4(Holder() is Material m ? m.GetFloat(id) : 0f, 0),
                     v =>
                     {
                         var block = Block(renderer);
@@ -1415,7 +1428,7 @@ namespace Unbound.Runtime
             }
             int channel = c;
             factory = () => new AccessorGroup(renderer, 1,
-                () => new Vector4(renderer.sharedMaterial != null && renderer.sharedMaterial.HasProperty(id) ? renderer.sharedMaterial.GetVector(id)[channel] : 0f, 0),
+                () => new Vector4(Holder() is Material m ? m.GetVector(id)[channel] : 0f, 0),
                 v =>
                 {
                     var block = Block(renderer);
