@@ -6,6 +6,9 @@
   "engine_paths": [
     "managed/UnityEngine/Runtime/GameDomain.cs",
     "managed/Unbound.ApiTools/FacadeGenerator.cs",
-    "tests/projects/moduleassemblies/"
+    "tests/projects/moduleassemblies/",
+    "tests/projects/analyticssession/ProjectSettings/",
+    "tests/projects/imguiskin/Assets/Editor/",
+    "tests/projects/imguiskin/Assets/Scenes/"
   ]
 }
