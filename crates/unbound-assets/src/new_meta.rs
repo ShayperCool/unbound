@@ -44,6 +44,8 @@ pub enum NewImporter {
     Audio,
     Font,
     SpriteAtlas,
+    /// A SpeedTree 8 tree, with what its `.meta` takes from the file.
+    SpeedTree8(crate::speedtree8_meta::TreeShape),
     /// A ScriptedImporter of the Editor's own (UI Toolkit's style sheets, documents, themes):
     /// the importer script's file id in the built-in extra resources, and whether its settings
     /// have `disableValidation`.
@@ -94,6 +96,12 @@ pub fn importer_for(path: &Path, is_dir: bool) -> Option<NewImporter> {
             NewImporter::Audio
         }
         "ttf" | "otf" | "ttc" | "dfont" => NewImporter::Font,
+        // A SpeedTree 8 tree of a measured version (another is left without a .meta, reported).
+        "st" => NewImporter::SpeedTree8(
+            std::fs::read(path)
+                .ok()
+                .and_then(|bytes| crate::speedtree8_meta::shape(&bytes))?,
+        ),
         "spriteatlasv2" => NewImporter::SpriteAtlas,
         "uss" => NewImporter::Scripted {
             script: STYLE_SHEET_IMPORTER,
@@ -246,6 +254,7 @@ pub fn text(importer: NewImporter, guid: Guid, asset: &Path, context: &MetaConte
         NewImporter::SpriteAtlas => {
             out.push_str(include_str!("new_meta/sprite_atlas_importer.yaml"))
         }
+        NewImporter::SpeedTree8(shape) => out.push_str(&crate::speedtree8_meta::section(&shape)),
         NewImporter::Scripted { script, validation } => {
             out.push_str(&format!(
                 "ScriptedImporter:\n  internalIDToNameTable: []\n  externalObjects: {{}}\n  serializedVersion: 2\n{TRAILER}  script: {{fileID: {script}, guid: 0000000000000000e000000000000000, type: 0}}\n"
@@ -372,6 +381,30 @@ mod tests {
                 .all(|c| c.is_ascii_hexdigit() && !c.is_ascii_uppercase())
         );
         assert_ne!(a, b);
+    }
+
+    #[test]
+    fn a_speedtree8_tree_gets_its_measured_meta() {
+        let dir = std::env::temp_dir().join(format!("unbound-st8-meta-{}", new_guid()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let tree = dir.join("Oak.st");
+        std::fs::write(&tree, crate::speedtree8_meta::tests::tree(8, 2, true, 4)).unwrap();
+        let importer = importer_for(&tree, false).unwrap();
+        let guid = new_guid();
+        let text = text(importer, guid, &tree, &MetaContext::default());
+        assert!(text.starts_with(&format!(
+            "fileFormatVersion: 2\nguid: {guid}\nSpeedTreeImporter:\n  externalObjects: {{}}\n"
+        )));
+        assert!(text.ends_with(
+            "  fileIDType: 2\n  userData: \n  assetBundleName: \n  assetBundleVariant: \n"
+        ));
+        // A file of an unmeasured version, or no tree at all, gets none.
+        let other = dir.join("Other.st");
+        std::fs::write(&other, crate::speedtree8_meta::tests::tree(9, 2, true, 4)).unwrap();
+        assert_eq!(importer_for(&other, false), None);
+        std::fs::write(&other, b"not a tree").unwrap();
+        assert_eq!(importer_for(&other, false), None);
+        std::fs::remove_dir_all(&dir).unwrap();
     }
 
     #[test]
