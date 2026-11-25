@@ -1,0 +1,17 @@
+{
+  "commands": [
+    "python3 tests/projects/plugindefaults/run.py gate"
+  ],
+  "summary": "plugindefaults: [0-9]+/[0-9]+ values match.*",
+  "engine_paths": [
+    "crates/unbound-project/src/plugins.rs",
+    "crates/unbound-project/src/plugin_defaults.rs",
+    "managed/UnityEngine/Editor/AssetImporterLookup.cs",
+    "managed/UnityEngine/Editor/AssetDatabaseFiles.cs",
+    "tests/projects/plugindefaults/",
+    "tests/projects/analyticssession/ProjectSettings/",
+    "tests/projects/compilesetup/",
+    "tests/projects/imguiskin/Assets/Editor/",
+    "tests/projects/imguiskin/Assets/Scenes/"
+  ]
+}
