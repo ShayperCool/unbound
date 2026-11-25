@@ -11,11 +11,12 @@ What internal editor animation helpers packages call answer in Unity 6000.0.71f1
 - `record.*`: `AnimationMode.StartAnimationRecording`, `StopAnimationRecording` and
   `InAnimationRecording` (the Timeline editor): a flag, each call raising its event
   (`onAnimationRecordingStart`/`Stop`) again, independent of Animation mode.
-- `euler.*`: `AnimationUtility.GetClosestEuler` (the Timeline editor) for 21 rotations given as exact
+- `euler.*`: `AnimationUtility.GetClosestEuler` (the Timeline editor) for 36 rotations given as exact
   components (identity, Euler angles of edge and gimbal-lock cases, a non-unit rotation, pseudo-random
-  ones; `euler.q.*`), five hints and every rotation order; `euler.near.*`: hints 0.0004 and 0.002
-  degrees from the rotation itself, in gimbal lock exactly at and 0.1 degree from it, and the same
-  angles in another order. It is not the Transform's Euler rule: the rotation is not normalized, the
+  ones, twelve whose angles lie near a thousandth's half, and middle angles of 89.8, 89.88 and 89.9
+  degrees; `euler.q.*`), five hints and every rotation order; `euler.near.*`: hints 0.0004, 0.0008,
+  0.0012 and 0.002 degrees from the rotation itself, in gimbal lock exactly at and 0.1 degree from it,
+  and the same angles in another order. It is not the Transform's Euler rule: the rotation is not normalized, the
   angles are rounded to a thousandth of a degree before they are moved next to the hint, and a
   rotation within 0.001 degree of the hint's gives the hint itself (see
   `managed/UnityEngine/Editor/ClosestEulerAngles.cs`).

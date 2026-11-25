@@ -99,6 +99,24 @@ static class AnimInternalProbe
             new Quaternion(0.0893039f, 0.17536059f, -0.9650367f, -0.1731406f),
             new Quaternion(-0.303511679f, 0.08976113f, -0.6971715f, 0.643253863f),
             new Quaternion(-0.778239548f, 0.05234967f, 0.229577258f, -0.5821486f),
+            // Rotations whose angles lie near a thousandth's half, where an arctangent's last bit
+            // shows.
+            new Quaternion(0.3075224f, 0.30193585f, -0.8854647f, 0.17383023f),
+            new Quaternion(0.3049056f, 0.08317623f, 0.8655372f, -0.3885352f),
+            new Quaternion(-0.5240452f, -0.35156822f, 0.75772625f, 0.16621462f),
+            new Quaternion(-0.8252361f, -0.5242575f, 0.20936403f, -0.017498497f),
+            new Quaternion(-0.6025253f, 0.47398466f, 0.62217283f, -0.15875377f),
+            new Quaternion(-0.20402883f, -0.032547478f, 0.54919827f, -0.8097494f),
+            new Quaternion(0.36556977f, -0.73564744f, 0.5324037f, -0.20427409f),
+            new Quaternion(-0.988881f, 0.13455237f, 0.012223249f, 0.062134173f),
+            new Quaternion(0.39514688f, -0.06854841f, -0.6218201f, 0.6726811f),
+            new Quaternion(-0.6741339f, 0.7216502f, 0.030170722f, -0.15444821f),
+            new Quaternion(-0.83793324f, -0.25894827f, 0.09062809f, -0.4718053f),
+            new Quaternion(-0.9019102f, -0.04156772f, 0.39662582f, -0.16588597f),
+            // Euler angles (89.8, 30, 20), (89.88, 30, 20) and (89.9, 30, 20): either side of gimbal lock.
+            new Quaternion(0.7032964f, 0.06214989f, -0.061106756f, 0.70553344f),
+            new Quaternion(0.70374453f, 0.061941322f, -0.061315443f, 0.70508677f),
+            new Quaternion(0.7038565f, 0.061889175f, -0.06136761f, 0.704975f),
         };
         for (int r = 0; r < list.Count; r++)
             Put($"euler.q.{r}", F(list[r].x) + " " + F(list[r].y) + " " + F(list[r].z) + " " + F(list[r].w));
@@ -113,7 +131,7 @@ static class AnimInternalProbe
                 }
         // Hints that are (or nearly are) the rotation itself (Euler angles 10 20 30, 90 30 20 and
         // 170 170 170), in gimbal lock too: 0.0004 and 0.002 degrees off, a tenth of a degree
-        // off, and the same angles in another order.
+        // off, the same angles in another order, then 0.0008 and 0.0012 degrees off.
         var near = new (Quaternion Rotation, Vector3 Hint, string Order)[]
         {
             (new Quaternion(0.127679437f, 0.144878134f, 0.239298329f, 0.9515485f), new Vector3(370f, -340f, 30.0004f), "OrderZXY"),
@@ -122,6 +140,8 @@ static class AnimInternalProbe
             (new Quaternion(0.704416f, 0.06162841f, -0.06162841f, 0.704416f), new Vector3(90f, 30f, 20f), "OrderZXY"),
             (new Quaternion(0.704416f, 0.06162841f, -0.06162841f, 0.704416f), new Vector3(90f, 30.1f, 20f), "OrderZXY"),
             (new Quaternion(0.09406099f, -0.07892653f, -0.07892653f, 0.9892896f), new Vector3(170f, 170f, 170f), "OrderZXY"),
+            (new Quaternion(0.127679437f, 0.144878134f, 0.239298329f, 0.9515485f), new Vector3(370f, -340f, 30.0008f), "OrderZXY"),
+            (new Quaternion(0.127679437f, 0.144878134f, 0.239298329f, 0.9515485f), new Vector3(370f, -340f, 30.0012f), "OrderZXY"),
         };
         for (int n = 0; n < near.Length; n++)
         {
