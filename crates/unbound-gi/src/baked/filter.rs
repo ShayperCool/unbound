@@ -316,4 +316,60 @@ mod tests {
         gaussian(&mut same, &[0; 4], 2, 2, 0.0);
         assert_eq!(same, [[3.0, 0.0, 0.0, 1.0]; 4]);
     }
+
+    /// The A-Trous spread factor is 1 / (2σ²) from a σ of 1 on and the Editor's blend below it;
+    /// a term is exp(-k d) for a factor of 1 and above, blended with 1 - min(d, 1) below.
+    #[test]
+    fn atrous_factors_and_terms_follow_the_editor() {
+        assert!((atrous_factor(1.5) - 1.0 / 4.5).abs() < 1e-6);
+        assert!(
+            (atrous_factor(0.1) - 0.1 / 0.902).abs() < 1e-5,
+            "{}",
+            atrous_factor(0.1)
+        );
+        assert!((atrous_factor(0.5) - 0.5 / 0.75).abs() < 1e-5);
+        assert_eq!(atrous_factor(0.0), 0.0);
+        assert!((atrous_term(2.0, 0.3) - (-0.6f32).exp()).abs() < 1e-6);
+        let k = 0.25f32;
+        let expected = ((-k * 0.5f32).exp() - 0.5) * k + 0.5;
+        assert!((atrous_term(k, 0.5) - expected).abs() < 1e-6);
+        // A factor of 0 keeps only equal values.
+        assert_eq!(atrous_term(0.0, 0.0), 1.0);
+        assert_eq!(atrous_term(0.0, 2.0), 0.0);
+    }
+
+    /// The A-Trous filter keeps uniform light, keeps to charts and standing light, and leaves
+    /// texels of no chart or no weight; a spread of 0 leaves the buffer.
+    #[test]
+    fn the_atrous_filter_keeps_to_charts_and_standing_light() {
+        let (w, h) = (6, 1);
+        let normals = vec![[0.0, 1.0, 0.0, 0.0]; w * h];
+        let charts = [0, 0, 0, 1, 1, -1];
+        let mut uniform = vec![[2.0, 2.0, 2.0, 1.0]; w * h];
+        atrous(&mut uniform, &[0; 6], &normals, w, h, 1, 1.5);
+        assert!(
+            uniform.iter().all(|t| (t[0] - 2.0).abs() < 1e-5),
+            "{uniform:?}"
+        );
+        let mut buffer = vec![
+            [1.0, 0.0, 0.0, 1.0],
+            [1.05, 0.0, 0.0, 1.0],
+            [9.0, 0.0, 0.0, 0.0],
+            [4.0, 0.0, 0.0, 1.0],
+            [4.02, 0.0, 0.0, 1.0],
+            [7.0, 0.0, 0.0, 1.0],
+        ];
+        atrous(&mut buffer, &charts, &normals, w, h, 1, 1.5);
+        assert_eq!(buffer[2], [9.0, 0.0, 0.0, 0.0]);
+        assert_eq!(buffer[5], [7.0, 0.0, 0.0, 1.0]);
+        // Chart 0 mixes its two standing texels only, chart 1 its own.
+        assert!(
+            buffer[0][0] > 1.0 && buffer[0][0] < 1.05 && buffer[1][0] > 1.0 && buffer[1][0] < 1.05,
+            "{buffer:?}"
+        );
+        assert!(buffer[3][0] > 4.0 && buffer[3][0] < 4.02, "{buffer:?}");
+        let mut same = buffer.clone();
+        atrous(&mut same, &charts, &normals, w, h, 1, 0.0);
+        assert_eq!(same, buffer);
+    }
 }
