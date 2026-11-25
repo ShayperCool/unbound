@@ -199,7 +199,11 @@ from their first surface on whatever the Min Bounces.
   Advanced settings of no denoisers and A-Trous filters), and the Advanced filtering with Open
   Image Denoise on every target, without filters and with Gaussian filters of radius 1. The
   recorder's Editor loads its denoiser (the runner puts the Editor's `Data/Tools` on its library
-  path), so its Auto filtering is Open Image Denoise's.
+  path), so its Auto filtering is Open Image Denoise's. Controls: `DenoiseAutoRadii` (Auto over
+  stored Gaussian radii 3 and 5 and no denoisers), `DenoiseOidnIndirect` (the indirect light
+  alone denoised), `DenoiseOidnAtrous` (denoised, then A-Trous filters of position sigma 0.5 and
+  1.5) and `DenoiseOidnAoOptix` (the ambient occlusion target's denoiser OptiX, ambient
+  occlusion off: the Editor bakes it).
 
 The scenes above them have the default sky (`Bare`, `Charts`, `Samples`, `Shapes`: the default
 skybox, with the default Lighting Settings' picked directions) or none (a black sky: one picked
@@ -343,8 +347,7 @@ texel holding its own light reaches (a chart all of whose texels met back faces:
 their light and spreads none from them), Backface Tolerances other than 0.9 and padding other
 than 2 (the runner refuses another Backface Tolerance), the Lighting Settings' Indirect
 Intensity other than 1 (Unbound's lightmap leaves it out), the OptiX denoiser (the Editor runs
-it only on Windows), denoising of one part without the other, denoising with A-Trous filters,
-the Editor's denoiser on macOS (another build of the library, on another processor), filtering
+it only on Windows), the Editor's denoiser on macOS (another build of the library, on another processor), filtering
 of directional lightmaps and in the Shadowmask and Subtractive Lighting Modes, the texels
 beyond the padding; of the filters: the A-Trous filter with 4 x 4 samples a texel (only 2 x
 2 measured; it reads each texel's first sample's normal), the ambient occlusion target, charts
