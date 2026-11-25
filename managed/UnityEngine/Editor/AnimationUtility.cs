@@ -427,11 +427,10 @@ namespace UnityEditor
             if (Unbound.Runtime.Compat.AnimatableBindingsMeasured && type.FullName != null && s_EngineBindings.TryGetValue(type.FullName, out var engine))
             {
                 // An engine component: the Editor's bindings of its type, measured on a fresh
-                // component. Bindings that depend on its contents are not listed yet: material
-                // properties, a skinned mesh's blend shapes, constraint sources, and material slots
-                // other than the fresh component's.
-                if (engine.Materials || component is Renderer withMaterials && Array.Exists(withMaterials.sharedMaterials, m => m != null))
-                    Unbound.Runtime.Stubs.Ignored("AnimationUtility.GetAnimatableBindings material properties", "lists no material property bindings of a renderer's materials");
+                // component, after a renderer's material property bindings. Bindings that depend on
+                // its contents are not listed yet: a skinned mesh's blend shapes and constraint
+                // sources.
+                if (component is Renderer withMaterials) AddMaterialBindings(withMaterials, path, type, list);
                 if (component is SkinnedMeshRenderer { sharedMesh: { blendShapeCount: > 0 } })
                     Unbound.Runtime.Stubs.Ignored("AnimationUtility.GetAnimatableBindings blend shapes", "lists no blend shape bindings");
                 if (component is UnityEngine.Animations.IConstraint { sourceCount: > 0 })
@@ -439,14 +438,16 @@ namespace UnityEditor
                 if (Unbound.Runtime.Compat.GameObjectRecorderMeasured && component is Animator animator)
                     AddAnimatorParameterBindings(animator, path, list);
                 foreach (var name in engine.Floats) list.Add(EditorCurveBinding.FloatCurve(path, type, name));
-                int slots = 0;
                 foreach (var name in engine.Objects)
                 {
                     list.Add(EditorCurveBinding.PPtrCurve(path, type, name));
-                    if (name.StartsWith("m_Materials.Array.data[", StringComparison.Ordinal)) slots++;
+                    // One binding per material slot beyond the fresh renderer's one (two slots
+                    // measured: tests/projects/animmaterialbindings two/MeshRenderer).
+                    if (name == "m_Materials.Array.data[0]" && component is Renderer renderer)
+                        for (int slot = 1; slot < renderer.sharedMaterials.Length; slot++)
+                            if (Array.IndexOf(engine.Objects, "m_Materials.Array.data[" + slot + "]") < 0)
+                                list.Add(EditorCurveBinding.PPtrCurve(path, type, "m_Materials.Array.data[" + slot + "]"));
                 }
-                if (slots > 0 && component is Renderer renderer && renderer.sharedMaterials.Length != slots)
-                    Unbound.Runtime.Stubs.Ignored("AnimationUtility.GetAnimatableBindings material slots", "lists the material slots of a fresh renderer only (other material counts are unmeasured)");
                 return;
             }
             bool script = component is MonoBehaviour;
