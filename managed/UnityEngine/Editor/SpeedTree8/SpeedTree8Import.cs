@@ -26,10 +26,15 @@ namespace Unbound.SpeedTree
     /// </list>
     /// File ids follow the .meta's <c>fileIDType</c> as a model's do: 2 hierarchy paths under
     /// <c>//RootNode/root</c>, 1 names (the root <c>//RootNode</c>), 0 class number counters; meshes
-    /// are <c>4300000 + 2i</c> and the wind asset <c>22800000</c> whatever the kind. The import calls
-    /// OnPreprocessAsset, OnPreprocessSpeedTree and OnPostprocessSpeedTree once; the second pass the
-    /// Editor makes when the import changes its textures' settings (a tree imported without .meta)
-    /// and the texture .meta writes are not made.
+    /// are <c>4300000 + 2i</c> and the wind asset <c>22800000</c> whatever the kind. Each pass of the
+    /// import calls OnPreprocessAsset, OnPreprocessSpeedTree and OnPostprocessSpeedTree. The import
+    /// makes the colour maps of the file's materials import with alpha as transparency: when that
+    /// changes a map, its .meta is written, it imports again and so does the tree (a second pass);
+    /// then, as Unity's own SpeedTree postprocessor does for every imported .st (Unity's C#
+    /// SpeedTreePostProcessor), the extra maps of its materials import without sRGB, which needs no
+    /// other pass (tests/projects/speedtree8 profile fresh). (The Editor imports every new tree of a
+    /// refresh before any of their maps change, so a tree whose maps another tree's import changed
+    /// first imports twice there; here it imports once.)
     /// </summary>
     internal static class SpeedTree8Imports
     {
@@ -44,8 +49,22 @@ namespace Unbound.SpeedTree
             if (!(AssetImporter.GetAtPath(info.Path) is SpeedTreeImporter importer))
                 throw new InvalidOperationException($"{info.Path}: its .meta names no SpeedTreeImporter");
             var tree = Read(info.Path);
-            var ctx = new AssetImportContext(info.Path);
-            var session = new ImportSession(info.Path, ctx, importer);
+            var import = Pass(info, importer, tree);
+            if (ColourMapsTransparent(import.ColourMapPaths()))
+            {
+                import.Discard();
+                import = Pass(info, importer, tree);
+            }
+            importer.m_HasImported = true;
+            var file = import.File();
+            ExtraMapsLinear(import.MaterialsUsed());
+            return file;
+        }
+
+        /// <summary>One pass of the import, with its own postprocessors.</summary>
+        static Builder Pass(AssetDatabaseRuntime.AssetInfo info, SpeedTreeImporter importer, SpeedTree8File tree)
+        {
+            var session = new ImportSession(info.Path, new AssetImportContext(info.Path), importer);
             var import = new Builder(importer, tree, info.Path);
             using (ScriptedImports.Scope())
             using (AssetImporter.Importing(info.Path, importer))
@@ -60,9 +79,47 @@ namespace Unbound.SpeedTree
                 using (AssetDatabaseRuntime.ImportCallbacks(info.Guid))
                     AssetPostprocessorHooks.Run(AssetPostprocessing.Hooks("OnPostprocessSpeedTree", typeof(GameObject)), session, new object[] { import.Root });
             }
-            importer.m_HasImported = true;
-            return import.File();
+            return import;
         }
+
+        /// <summary>Makes the colour maps import with alpha as transparency, writing the .meta of
+        /// each that did not (a map of a read-only package keeps it for the session); whether any
+        /// changed.</summary>
+        static bool ColourMapsTransparent(IEnumerable<string> maps)
+        {
+            bool changed = false;
+            foreach (var path in maps)
+            {
+                if (!(AssetImporter.GetAtPath(path) is TextureImporter texture) || texture.alphaIsTransparency) continue;
+                texture.alphaIsTransparency = true;
+                texture.SaveAndReimport();
+                changed = true;
+            }
+            return changed;
+        }
+
+        /// <summary>Unity's SpeedTreePostProcessor (its C#, run for every imported .st): the
+        /// <c>_ExtraTex</c> of each material holds no colour, so its texture imports without sRGB.</summary>
+        static void ExtraMapsLinear(IEnumerable<Material> materials)
+        {
+            var reimported = new Dictionary<string, Texture>(StringComparer.Ordinal);
+            foreach (var material in materials)
+            {
+                var texture = material != null && material.HasProperty(ExtraTex) ? material.GetTexture(ExtraTex) : null;
+                if (texture == null) continue;
+                string path = AssetDatabase.GetAssetPath(texture);
+                if (!reimported.ContainsKey(path) && AssetImporter.GetAtPath(path) is TextureImporter importer && importer.sRGBTexture)
+                {
+                    importer.sRGBTexture = false;
+                    importer.SaveAndReimport();
+                    reimported[path] = AssetDatabase.LoadAssetAtPath<Texture2D>(path);
+                }
+                // A material refers to the asset, which is now the texture imported again.
+                if (reimported.TryGetValue(path, out var fresh)) material.SetTexture(ExtraTex, fresh);
+            }
+        }
+
+        const string ExtraTex = "_ExtraTex";
 
         static SpeedTree8File Read(string path)
         {
@@ -306,8 +363,6 @@ namespace Unbound.SpeedTree
                 else if (extraUsed)
                     Stubs.Ignored("SpeedTree 8 extra maps without a texture", "keep the shader's smoothness and metallic: what the Editor sets for them is unmeasured");
                 if (extraUsed) material.EnableKeyword("EFFECT_EXTRA_TEX");
-                if (extra != null && AssetImporter.GetAtPath(AssetDatabase.GetAssetPath(extra)) is TextureImporter { sRGBTexture: true })
-                    Stubs.Ignored("SpeedTree 8 extra maps in sRGB", "stay sRGB: the Editor's SpeedTree postprocessor turns it off and imports them again (" + AssetDatabase.GetAssetPath(extra) + ")");
                 if (source.TwoSided || source.Billboard)
                 {
                     var subsurface = Map(source, 3, out bool subsurfaceUsed);
@@ -397,6 +452,35 @@ namespace Unbound.SpeedTree
                     capsule.radius = radius;
                     capsule.height = along.magnitude + 2f * radius;
                 }
+            }
+
+            /// <summary>The colour maps of the file's materials: a used map 0 next to the tree.</summary>
+            internal IEnumerable<string> ColourMapPaths()
+            {
+                var seen = new HashSet<string>(StringComparer.Ordinal);
+                foreach (var material in m_Tree.Materials)
+                {
+                    if (material.Maps.Length == 0 || !material.Maps[0].Used || string.IsNullOrEmpty(material.Maps[0].Path)) continue;
+                    string path = m_Folder + material.Maps[0].Path;
+                    if (seen.Add(path)) yield return path;
+                }
+            }
+
+            /// <summary>The materials the import made and those its remaps name.</summary>
+            internal IEnumerable<Material> MaterialsUsed()
+            {
+                foreach (var target in m_External.Values)
+                    if (target is Material remapped) yield return remapped;
+                foreach (var (_, material) in m_Materials) yield return material;
+            }
+
+            /// <summary>Destroys what a pass made (the import makes them again).</summary>
+            internal void Discard()
+            {
+                Object.DestroyImmediate(Root, true);
+                foreach (var mesh in m_Meshes) Object.DestroyImmediate(mesh, true);
+                foreach (var (_, material) in m_Materials) Object.DestroyImmediate(material, true);
+                Object.DestroyImmediate(m_Wind, true);
             }
 
             /// <summary>The imported objects by file id, flagged as the Editor flags them.</summary>
