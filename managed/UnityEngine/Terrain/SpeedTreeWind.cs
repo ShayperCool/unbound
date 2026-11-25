@@ -12,7 +12,7 @@ namespace UnityEngine
     {
         int m_Version;
         internal SpeedTreeWindConfig9 Config;
-        /// <summary>A SpeedTree 8 tree's wind (null for SpeedTree 9).</summary>
+        /// <summary>A SpeedTree 8 tree's wind configuration (null for SpeedTree 9).</summary>
         internal readonly SpeedTreeWindConfig8 Config8;
         internal readonly SpeedTreeWindState Wind = new SpeedTreeWindState();
         /// <summary>A SpeedTree 8 tree's wind (null for SpeedTree 9).</summary>
