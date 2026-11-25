@@ -10,8 +10,9 @@ namespace UnityEditor
     /// <c>didDomainReload</c> false; nothing for a write that changed no file (a clean
     /// SaveAssets); the writes between StartAssetEditing and the last StopAssetEditing in one call
     /// there. A write is the outermost <see cref="Write"/> scope: the public AssetDatabase call
-    /// and what it does inside. Not measured, and so not reported: Play mode's writes, and those
-    /// the editor domain's load makes (its imports are the load's own call).
+    /// and what it does inside; in Edit mode and in Play mode alike (tests/projects/firstimport
+    /// open3: a render pipeline's save in Play mode). Not reported: the writes the editor domain's
+    /// load makes (its imports are the load's own call).
     /// </summary>
     internal static class SessionImports
     {
@@ -55,7 +56,7 @@ namespace UnityEditor
             return MuteScope.Instance;
         }
 
-        static bool Reported => s_Muted == 0 && !EditorInitialization.DomainLoading && !UnityEngine.Application.isPlaying;
+        static bool Reported => s_Muted == 0 && !EditorInitialization.DomainLoading;
 
         internal static void Imported(string path)
         {

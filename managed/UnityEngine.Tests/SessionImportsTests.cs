@@ -7,7 +7,7 @@ namespace Unbound.Tests
     /// <summary>How a session's writes are reported to OnPostprocessAllAssets
     /// (tests/projects/scenesave session-imports): one call per write, nothing for a write that
     /// changed nothing, one call for what asset editing held back, a copied folder before what it
-    /// holds. (Edit mode: Play mode's writes are not measured.)</summary>
+    /// holds.</summary>
     [Collection("EditorState")]
     public class SessionImportsTests
     {

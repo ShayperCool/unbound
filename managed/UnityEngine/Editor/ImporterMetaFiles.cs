@@ -88,7 +88,7 @@ namespace Unbound.Runtime
                 var customWritten = UnityYamlText.WriteTopLevel(root);
                 bool textChanged = customWritten != text.Replace("\r\n", "\n");
                 if (!textChanged && !wasDirty) return false;
-                if (textChanged) { File.WriteAllText(meta, customWritten); UnityEditor.ProjectImports.Wrote(meta); UnityEditor.SessionImports.ImportedFile(meta); }
+                if (textChanged) { File.WriteAllText(meta, customWritten); UnityEditor.ProjectImports.Wrote(meta); }
                 importer.ClearModifiedState();
                 return textChanged;
             }
@@ -108,8 +108,6 @@ namespace Unbound.Runtime
                 written = UnityYamlText.WriteTopLevel(root);
             File.WriteAllText(meta, written);
             UnityEditor.ProjectImports.Wrote(meta);
-            // The asset is imported again with its new settings.
-            UnityEditor.SessionImports.ImportedFile(meta);
             return true;
         }
 

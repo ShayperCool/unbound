@@ -56,9 +56,10 @@ imports them again (`session.0`); at a later open the changed assets stay dirty 
 (the pipeline saves `New.mat` in Play mode, `open3.session.0`). `GetMainAssetTypeAtPath` answers
 the types without loading the assets.
 
-Residuals (`residuals.json`): the two `Library/` files the Editor lists; the Editor's imports of
-the files saved during a session (`session.*`), which Unbound does not make; assets the Editor has
+Residuals (`residuals.json`): the two `Library/` files the Editor lists; assets the Editor has
 loaded already when asked for their type (the script's MonoScript, the atlas at the third open).
+Unbound reports the saves of a session as the Editor imports them (`session.*`, also in Play mode:
+tests/projects/scenesave `session-imports`).
 
 Record (macOS, holding the machine's heavy-job lock), publish and check:
 

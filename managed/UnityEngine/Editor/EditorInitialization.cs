@@ -180,7 +180,9 @@ namespace UnityEditor
                 }
                 var files = ChangedDuring(() => AssetPostprocessing.ProjectOpened(start, deferred), o =>
                     o.IsPersistentAsset && AssetDatabaseRuntime.TryGetLocation(o, out var guid, out _) ? guid : null);
-                if (files.Count > 0) AssetFiles.SaveDirty(onlyFiles: files);
+                // The saves are one import of those files (tests/projects/firstimport session.0).
+                if (files.Count > 0)
+                    using (SessionImports.Write()) AssetFiles.SaveDirty(onlyFiles: files);
             }
             finally { ProjectImports.CommitStart(); }
         }
