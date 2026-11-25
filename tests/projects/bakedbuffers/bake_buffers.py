@@ -35,6 +35,7 @@ import argparse
 import difflib
 from array import array
 import json
+import math
 import os
 from pathlib import Path
 import re
@@ -751,7 +752,81 @@ def lighting_padding(scene):
     return int(found.group(1))
 
 
-def composite(lightmap, padding):
+def lighting_filtering(scene):
+    """The Gaussian filters of a scene's Lighting Settings (its .lighting file) as (direct radius,
+    indirect radius), 0 for none, where its filtering is Advanced without denoisers; None without
+    filtering. Other filtering is not made by the bake (and has no scene here)."""
+    text = (PROBE/'Assets/Scenes'/f'{scene}.lighting').read_text()
+
+    def value(key):
+        found = re.search(rf'{key}: ([0-9.]+)', text)
+        if not found:
+            raise ValueError(f'{scene}.lighting: no {key}')
+        return float(found.group(1))
+    mode = value('m_PVRFilteringMode')
+    if mode == 0:
+        return None
+    if mode != 2 or value('m_PVRDenoiserTypeDirect') or value('m_PVRDenoiserTypeIndirect'):
+        raise ValueError(f'{scene}.lighting: filtering the rules here do not make')
+    radius = {}
+    for part in ('Direct', 'Indirect'):
+        kind = value(f'm_PVRFilterType{part}')
+        if kind not in (0, 2):
+            raise ValueError(f'{scene}.lighting: the {part.lower()} filter is not Gaussian or none')
+        radius[part] = value(f'm_PVRFilteringGaussRadius{part}') if kind == 0 else 0.0
+    return radius['Direct'], radius['Indirect']
+
+
+def gaussian_kernel(radius):
+    """The Editor's Gaussian kernel of `radius` texels: 2 ceil(radius) + 1 taps, each the
+    Gaussian's integral over its texel by an approximation of the error function, summing to 1."""
+    count = 2 * math.ceil(radius) + 1
+    scale = count / (2 * radius + 1)
+
+    def erf(x):
+        ax2 = 0.14001239836215973 * x * x
+        return math.copysign(math.sqrt(max(0.0, 1 - math.exp(-(ax2 + 1.2732394933700562) * x * x / (ax2 + 1)))), x)
+
+    def boundary(j):
+        return (2 * j / count - 1) * scale / 0.4949747323989868
+    taps = [(erf(boundary(i + 1)) - erf(boundary(i))) / 2 for i in range(count)]
+    total = sum(taps)
+    return [t / total for t in taps]
+
+
+def gaussian_filter(values, weights, charts, width, height, radius):
+    """`values` (three per texel) filtered by rows then columns: a texel of a chart whose weight is
+    above 0 takes the weighed mean of the texels of its own chart in the kernel's reach whose
+    weight is above 0; the others keep theirs."""
+    if radius == 0:
+        return values
+    taps = gaussian_kernel(radius)
+    half = len(taps) // 2
+    for rows in (True, False):
+        out = list(values)
+        for y in range(height):
+            for x in range(width):
+                k = y * width + x
+                if charts[k] == -1 or not weights[k] > 0:
+                    continue
+                total, sums = 0.0, [0.0, 0.0, 0.0]
+                for j, tap in enumerate(taps):
+                    nx, ny = (x + j - half, y) if rows else (x, y + j - half)
+                    if not (0 <= nx < width and 0 <= ny < height):
+                        continue
+                    q = ny * width + nx
+                    if charts[q] != charts[k]:
+                        continue
+                    w = tap * weights[q]
+                    total += w
+                    for c in range(3):
+                        sums[c] += values[3 * q + c] * w
+                out[3 * k:3 * k + 3] = [v / total for v in sums]
+        values = out
+    return values
+
+
+def composite(lightmap, padding, filtering=None):
     """The lightmap the bake makes of a capture's buffers by the measured rules (red, green, blue,
     alpha per texel): each used texel's direct, indirect and sky's light summed; a texel more of
     whose rays met back faces than the Backface Tolerance allows takes the mean of the light of its
@@ -768,6 +843,18 @@ def composite(lightmap, padding):
                 out[4 * k + c] = sum(lightmap[part][4 * k + c] for part in ('direct', 'indirect', 'environment'))
             out[4 * k + 3] = 1.0
             holds[k] = not lightmap['validity'][k] > BACKFACE_LIMIT
+    if filtering is not None:
+        # The direct light, and the indirect and sky's light, each filtered on its own (weighed
+        # by whether a texel's light stands), then summed.
+        weights = [1.0 if h else 0.0 for h in holds]
+        direct = [lightmap['direct'][4 * k + c] if used[k] else 0.0 for k in range(width * height) for c in range(3)]
+        indirect = [lightmap['indirect'][4 * k + c] + lightmap['environment'][4 * k + c] if used[k] else 0.0
+                    for k in range(width * height) for c in range(3)]
+        direct = gaussian_filter(direct, weights, lightmap['charts'], width, height, filtering[0])
+        indirect = gaussian_filter(indirect, weights, lightmap['charts'], width, height, filtering[1])
+        for k in range(width * height):
+            if used[k]:
+                out[4 * k:4 * k + 3] = [direct[3 * k + c] + indirect[3 * k + c] for c in range(3)]
 
     def spread(waiting, rings):
         for _ in range(rings):
@@ -791,7 +878,7 @@ def composite(lightmap, padding):
     return out
 
 
-def lightmap_difference(got, want, padding):
+def lightmap_difference(got, want, padding, filtering=None):
     """The lightmap the bake makes (red, green, blue, alpha per texel) against the Editor's: which
     texels hold light (alpha) exactly, and the light of those within LIGHTMAP_TOLERANCE (times the
     value above 1), the stitched texels too. The texels whose light in the Editor's lightmap is not
@@ -803,7 +890,7 @@ def lightmap_difference(got, want, padding):
     width, height = want['width'], want['height']
     if len(got) != len(want['lightmap']):
         return f'{len(got) // 4} texels, expected {width * height}', 0
-    theirs, rules = want['lightmap'], composite(want, padding)
+    theirs, rules = want['lightmap'], composite(want, padding, filtering)
     charts, used = want['charts'], want['occupancy']
 
     def owner(x, y):
@@ -958,7 +1045,7 @@ def compare(label):
             record(key + 'towardIndirect', toward_difference(mine['towardIndirect'], lightmap['towardIndirect'], INDIRECT_TOLERANCE))
             record(key + 'shadowmask', toward_difference(mine['shadowmask'], lightmap['shadowmask'], SHADOWMASK_TOLERANCE))
             if lightmap['lightmap'] is not None:
-                problem, seams = lightmap_difference(mine['lightmap'], lightmap, lighting_padding(scene))
+                problem, seams = lightmap_difference(mine['lightmap'], lightmap, lighting_padding(scene), lighting_filtering(scene))
                 record(key + 'lightmap', problem)
                 stitched[0] += seams
         record(scene + '.materials', material_difference(a['materials'], e['materials']))

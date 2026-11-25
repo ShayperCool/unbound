@@ -994,6 +994,31 @@ public static class BuffersSetup
         Save(scene, "Lod");
     }
 
+    /// <summary>The coloured scene under a sun with the Advanced filtering of its lightmaps, no
+    /// denoiser: Gaussian filters of whole radii (direct 1, indirect 5) and of fractional ones
+    /// (2.5 and 0.5).</summary>
+    static void Filtered()
+    {
+        void Filter(string name, float direct, float indirect)
+        {
+            var scene = Coloured(name, 64, 1);
+            var settings = Lightmapping.lightingSettings;
+            settings.filteringMode = LightingSettings.FilterMode.Advanced;
+            settings.denoiserTypeDirect = LightingSettings.DenoiserType.None;
+            settings.denoiserTypeIndirect = LightingSettings.DenoiserType.None;
+            settings.denoiserTypeAO = LightingSettings.DenoiserType.None;
+            settings.filterTypeDirect = LightingSettings.FilterType.Gaussian;
+            settings.filterTypeIndirect = LightingSettings.FilterType.Gaussian;
+            settings.filterTypeAO = LightingSettings.FilterType.Gaussian;
+            settings.filteringGaussianRadiusDirect = direct;
+            settings.filteringGaussianRadiusIndirect = indirect;
+            WhiteSun();
+            Save(scene, name);
+        }
+        Filter("FilterGauss", 1f, 5f);
+        Filter("FilterGaussHalf", 2.5f, 0.5f);
+    }
+
     /// <summary>Makes the scenes <c>BAKED_BUFFERS_SCENES</c> names (comma-separated), else all.</summary>
     public static void Create()
     {
@@ -1006,7 +1031,7 @@ public static class BuffersSetup
                 ("ModeSubtractive", () => Modes("ModeSubtractive", MixedLightingMode.Subtractive)),
                 ("ModeShadowmask", () => Modes("ModeShadowmask", MixedLightingMode.Shadowmask)),
                 ("Bounce", Bounces), ("Glow", Glow), ("Roof", Roof), ("Textured", Textured), ("Levels", Levels), ("Sky", Skies), ("Spare", Spare),
-                ("SkyRealtime", RealtimeSkies), ("SpareEmpty", SpareEmpty), ("Spread", Spread), ("Far", Far), ("Masks", Masks), ("MasksBright", MasksBright), ("MasksEdges", MasksEdges), ("Probes", Probes), ("ProbesGrid", ProbesGrid), ("ProbesReach", ProbesReach), ("ProbesSky", ProbesSky), ("Directional", Directional), ("Lod", Lod),
+                ("SkyRealtime", RealtimeSkies), ("SpareEmpty", SpareEmpty), ("Spread", Spread), ("Far", Far), ("Masks", Masks), ("MasksBright", MasksBright), ("MasksEdges", MasksEdges), ("Probes", Probes), ("ProbesGrid", ProbesGrid), ("ProbesReach", ProbesReach), ("ProbesSky", ProbesSky), ("Directional", Directional), ("Lod", Lod), ("Filter", Filtered),
             };
             var only = Environment.GetEnvironmentVariable("BAKED_BUFFERS_SCENES");
             var wanted = string.IsNullOrEmpty(only) ? null : new HashSet<string>(only.Split(','));
