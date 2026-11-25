@@ -36,14 +36,16 @@ impl Plugin {
 
     /// Whether the plugin is enabled for a platform (`Editor`, `Android`, `Linux64`, ...):
     /// with "Any Platform" on, unless that platform is excluded from it (the `Exclude <platform>`
-    /// setting of `Any`), or when it is enabled for the platform (tests/projects/plugindefaults
-    /// `importers.*`, `precompiled`).
+    /// setting of `Any`); otherwise when it is enabled for the platform
+    /// (tests/projects/plugindefaults `importers.*`, `precompiled`).
     pub fn compatible_with(&self, platform: &str) -> bool {
-        let any = self.platform_enabled("Any").unwrap_or(false);
-        let excluded = self
-            .platform_setting("Any", &format!("Exclude {platform}"))
-            .is_some_and(|value| value == "1" || value == "true");
-        (any && !excluded) || self.platform_enabled(platform).unwrap_or(false)
+        if self.platform_enabled("Any").unwrap_or(false) {
+            !self
+                .platform_setting("Any", &format!("Exclude {platform}"))
+                .is_some_and(|value| value == "1" || value == "true")
+        } else {
+            self.platform_enabled(platform).unwrap_or(false)
+        }
     }
 
     fn platform_enabled(&self, key: &str) -> Option<bool> {

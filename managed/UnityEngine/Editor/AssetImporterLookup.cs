@@ -382,9 +382,10 @@ namespace UnityEditor
         }
 
         /// <summary>With "Any Platform" on, unless excluded from it; otherwise when enabled for it
-        /// (tests/projects/plugindefaults `importers.*`).</summary>
+        /// (tests/projects/plugindefaults `importers.*`; crates/unbound-project/src/plugins.rs
+        /// `compatible_with` is the same rule).</summary>
         internal bool GetCompatibleWithPlatformOrAnyPlatformBuildTarget(string buildTarget) =>
-            GetCompatibleWithAnyPlatform() ? !GetExcludeFromAnyPlatform(buildTarget) || Enabled(buildTarget) : Enabled(buildTarget);
+            GetCompatibleWithAnyPlatform() ? !GetExcludeFromAnyPlatform(buildTarget) : Enabled(buildTarget);
 
         public static PluginImporter[] GetImporters(string platformName) =>
             Array.FindAll(GetAllImporters(), i => i.GetCompatibleWithPlatformOrAnyPlatformBuildTarget(platformName));
