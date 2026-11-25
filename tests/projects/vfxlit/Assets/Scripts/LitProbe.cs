@@ -203,6 +203,11 @@ public sealed class LitProbe : MonoBehaviour
             // quads.
             foreach (var (key, graph) in new[] { ("points", "PointStill"), ("points listed", "PointList"), ("lines", "LineStill"), ("lines listed", "LineList"), ("lines soft", "LineSoft"), ("points dying", "PointDying"), ("lines dying", "LineDying"), ("lines offset", "LineOffset") })
                 Draw(key, graph, 5);
+            // Particles moving sideways under the camera's object motion blur, writing motion
+            // vectors through other outputs: half transparent quads, cubes, quads of a lit
+            // Shader Graph, and a strip.
+            foreach (var (key, graph) in new[] { ("moving alpha", "MovingAlpha"), ("moving cubes", "MovingCubes"), ("moving graph", "MovingGraph"), ("moving strip", "MovingStrip") })
+                Blurred(Lamp(Draw(key, graph, 9, 10), LightType.Point));
             // What each effect's renderer is set to: an asset whose graph has an output that
             // casts shadows asks its renderer to.
             foreach (var stage in m_Stages)

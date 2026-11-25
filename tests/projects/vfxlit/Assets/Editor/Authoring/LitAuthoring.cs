@@ -43,6 +43,7 @@ public static class LitAuthoring
         SingleMeshes();
         MovingVectors();
         PointsAndLines();
+        MovingOthers();
         AssetDatabase.SaveAssets();
         AssetDatabase.Refresh();
         BuildScene();
@@ -213,6 +214,62 @@ public static class LitAuthoring
             SetVector(init, "velocity", new Vector3(6f, 0f, 0f));
             Set(init, "size", 0.25f);
             if (name == "MovingMeshes") SetRandom(init, "angle", new Vector3(0f, 0f, 0f), new Vector3(90f, 90f, 90f));
+            SetRandom(init, "color", new Vector3(0.3f, 0.3f, 0.3f), new Vector3(1f, 1f, 1f));
+            Save(graph);
+        }
+    }
+
+    /// <summary>Particles moving sideways fast like <see cref="MovingVectors"/>'s, writing motion
+    /// vectors through other outputs: half transparent unlit quads (alpha blended), opaque
+    /// unlit cubes, opaque quads of the probe's lit Shader Graph, and a strip of sixteen
+    /// particles (opaque, unlit).</summary>
+    static void MovingOthers()
+    {
+        foreach (var name in new[] { "MovingAlpha", "MovingCubes", "MovingGraph", "MovingStrip" })
+        {
+            var graph = NewGraph(name);
+            VFXBasicSpawner spawn;
+            VFXBasicInitialize init;
+            VFXContext output;
+            if (name == "MovingStrip")
+            {
+                spawn = Make<VFXBasicSpawner>();
+                init = Make<VFXBasicInitialize>();
+                var update = Make<VFXBasicUpdate>();
+                output = Make<VFXQuadStripOutput>();
+                graph.AddChild(spawn);
+                graph.AddChild(init);
+                graph.AddChild(update);
+                graph.AddChild(output);
+                spawn.LinkTo(init);
+                init.LinkTo(update);
+                // Strips first: an update of particles takes no strip output.
+                var data = init.GetData();
+                data.SetSettingValue("dataType", VFXDataParticle.DataType.ParticleStrip);
+                data.SetSettingValue("stripCapacity", 1u);
+                data.SetSettingValue("particlePerStripCount", 16u);
+                update.LinkTo(output);
+                var orient = Make<Orient>();
+                orient.SetSettingValue("mode", Orient.Mode.FaceCameraPosition);
+                output.AddChild(orient);
+            }
+            else if (name == "MovingCubes") (spawn, init, _, output) = System<VFXBasicCubeOutput>(graph, 64);
+            else if (name == "MovingGraph")
+            {
+                (spawn, init, _, output) = System<VFXComposedParticleOutput>(graph, 64);
+                output.SetSettingValue("m_Topology", new ParticleTopologyPlanarPrimitive(VFXPrimitiveType.Quad));
+                output.SetSettingValue("shaderGraph", ShaderGraph(LitGraph));
+                ((IVFXSlotContainer)output).inputSlots.First(s => s.property.type == typeof(Texture2D)).value = Quarters;
+            }
+            else (spawn, init, _, output) = System<VFXPlanarPrimitiveOutput>(graph, 64);
+            output.SetSettingValue("blendMode", name == "MovingAlpha" ? VFXAbstractRenderedOutput.BlendMode.Alpha : VFXAbstractRenderedOutput.BlendMode.Opaque);
+            output.SetSettingValue("generateMotionVector", true);
+            Burst(spawn, name == "MovingStrip" ? 16f : 20f);
+            SetRandom(init, "position", new Vector3(-1.4f, -1f, 0f), new Vector3(-0.8f, 1f, 0f));
+            SetVector(init, "velocity", new Vector3(6f, 0f, 0f));
+            Set(init, "size", 0.25f);
+            if (name == "MovingCubes") SetRandom(init, "angle", new Vector3(0f, 0f, 0f), new Vector3(90f, 90f, 90f));
+            if (name == "MovingAlpha") Set(init, "alpha", 0.6f);
             SetRandom(init, "color", new Vector3(0.3f, 0.3f, 0.3f), new Vector3(1f, 1f, 1f));
             Save(graph);
         }

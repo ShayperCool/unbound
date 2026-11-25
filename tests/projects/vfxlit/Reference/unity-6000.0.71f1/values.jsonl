@@ -53,6 +53,10 @@
 {"k":"renderer/points dying","v":"cast=Off receive=0 motion=Camera probes=Off reflections=Off materials=Hidden/VFX/PointDying/System (1)/Output Particle Point"}
 {"k":"renderer/lines dying","v":"cast=Off receive=0 motion=Camera probes=Off reflections=Off materials=Hidden/VFX/LineDying/System (1)/Output Particle Line"}
 {"k":"renderer/lines offset","v":"cast=Off receive=0 motion=Camera probes=Off reflections=Off materials=Hidden/VFX/LineOffset/System (1)/Output Particle Line"}
+{"k":"renderer/moving alpha","v":"cast=Off receive=0 motion=Camera probes=Off reflections=Off materials=Hidden/VFX/MovingAlpha/System (1)/Output Particle|Unlit Quad"}
+{"k":"renderer/moving cubes","v":"cast=Off receive=0 motion=Object probes=Off reflections=Off materials=Hidden/VFX/MovingCubes/System (1)/Output Particle Cube"}
+{"k":"renderer/moving graph","v":"cast=On receive=0 motion=Object probes=Off reflections=Off materials=Hidden/VFX/MovingGraph/System (1)/Output Particle|Shader Graph Quad - Lit"}
+{"k":"renderer/moving strip","v":"cast=Off receive=0 motion=Object probes=Off reflections=Off materials=Hidden/VFX/MovingStrip/System (1)/Output ParticleStrip|Unlit Quad"}
 {"k":"renderer/no asset","v":"cast=Off receive=0 motion=Camera materials=0"}
 {"k":"renderer/asset given","v":"cast=On receive=0 motion=Camera materials=1"}
 {"k":"renderer/asset taken","v":"cast=Off receive=0 motion=Camera materials=0"}
@@ -127,11 +131,19 @@
 {"k":"act/mesh exposed/f009","v":"Mask=2 -> Shape=Wedge Mask=2"}
 {"k":"draw/moving lit/f009","v":"alive=20 culled=0 awake=1 renderer enabled=1 visible=1"}
 {"k":"draw/moving meshes/f009","v":"alive=20 culled=0 awake=1 renderer enabled=1 visible=1"}
+{"k":"draw/moving alpha/f009","v":"alive=20 culled=0 awake=1 renderer enabled=1 visible=1"}
+{"k":"draw/moving cubes/f009","v":"alive=20 culled=0 awake=1 renderer enabled=1 visible=1"}
+{"k":"draw/moving graph/f009","v":"alive=20 culled=0 awake=1 renderer enabled=1 visible=1"}
+{"k":"draw/moving strip/f009","v":"alive=16 culled=0 awake=1 renderer enabled=1 visible=1"}
 {"k":"draw/sprite sorting/f010","v":"alive=9 culled=0 awake=1 renderer enabled=1 visible=1"}
 {"k":"draw/mesh sorted/f010","v":"alive=9 culled=0 awake=1 renderer enabled=1 visible=1"}
 {"k":"draw/mesh paused/f010","v":"alive=9 culled=0 awake=1 renderer enabled=1 visible=1"}
 {"k":"draw/moving lit/f010","v":"alive=20 culled=0 awake=1 renderer enabled=1 visible=1"}
 {"k":"draw/moving meshes/f010","v":"alive=20 culled=0 awake=1 renderer enabled=1 visible=1"}
+{"k":"draw/moving alpha/f010","v":"alive=20 culled=0 awake=1 renderer enabled=1 visible=1"}
+{"k":"draw/moving cubes/f010","v":"alive=20 culled=0 awake=1 renderer enabled=1 visible=1"}
+{"k":"draw/moving graph/f010","v":"alive=20 culled=0 awake=1 renderer enabled=1 visible=1"}
+{"k":"draw/moving strip/f010","v":"alive=16 culled=0 awake=1 renderer enabled=1 visible=1"}
 {"k":"draw/mesh exposed/f011","v":"alive=9 culled=0 awake=1 renderer enabled=1 visible=1"}
 {"k":"act/mesh exposed/f012","v":"Mask=0xfffffffe -> Shape=Wedge Mask=4294967294"}
 {"k":"draw/offscreen caster/f012","v":"alive=9 culled=0 awake=1 renderer enabled=1 visible=1"}
