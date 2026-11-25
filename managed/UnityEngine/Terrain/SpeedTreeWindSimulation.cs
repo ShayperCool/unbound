@@ -777,10 +777,11 @@ namespace UnityEngine
         /// tests/projects/residentdrawer speedtree). While the world has no wind (see
         /// <see cref="Update"/>) every listed instance gets zeros; so does it outside Play mode
         /// (unmeasured: the probe records Play mode only). Otherwise a tree with a wind asset gets
-        /// its wind's 11 constants, the previous frame's with <paramref name="history"/> (the
+        /// its wind's 11 constants (a SpeedTree 8 tree its 15, in the order of the SpeedTree 8
+        /// shaders' DOTS_ST_WindParam0..14; unmeasured), the previous frame's with <paramref name="history"/> (the
         /// drawer asks for those first for a tree that has just become visible, then copies them
         /// into its history parameters); a renderer without per-object motion vectors gets zeros
-        /// for the history. The parameters the SpeedTree 9 layout does not use, and those of an
+        /// for the history. The parameters the layout does not use, and those of an
         /// instance that is no longer a tree with a live wind asset (its Tree or asset was
         /// removed after the drawer took it), get zeros: the drawer uploads every parameter of
         /// every listed instance from a buffer it does not clear (what the Editor uploads for
@@ -841,7 +842,7 @@ namespace UnityEngine
                 if (spherical.x != 0f || spherical.y != 0f || spherical.z != 0f)
                 {
                     s_SpeedTree8LocalWindReported = true;
-                    Stubs.Ignored("SpeedTree 8 local wind", "is not simulated: a SpeedTree 8 tree spherical wind zones reach draws with its asset's wind");
+                    Stubs.Ignored("SpeedTree 8 local wind", "is not simulated: a SpeedTree 8 tree that spherical wind zones reach keeps its asset's wind");
                 }
             }
             return tree.windAsset.Wind8;
