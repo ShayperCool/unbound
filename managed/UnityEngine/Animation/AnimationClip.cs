@@ -85,9 +85,10 @@ namespace UnityEngine
         /// Curves set without a sync after that (AnimationUtility.SetEditorCurveNoSync,
         /// SetObjectReferenceCurveNoSync) leave <see cref="length"/> at the synced value until the
         /// next sync; before the first sync the length follows the curves (matches the Unity
-        /// 6000.0.71f1 Editor, tests/projects/animinternal <c>sync.length</c>). Any other edit of the
-        /// curves (a new <see cref="m_Version"/>) ends the held length; that it does in the Editor too
-        /// is not measured.</summary>
+        /// 6000.0.71f1 Editor for SetEditorCurveNoSync, tests/projects/animinternal <c>sync.length</c>;
+        /// that Unity's setters sync and its NoSync variants do not is its C#). Not measured: the
+        /// object reference variant's held length, and that any other edit of the curves (a new
+        /// <see cref="m_Version"/>, which ends the held length here) ends it in the Editor.</summary>
         internal bool m_LengthSynced;
         /// <summary>The length held since the first unsynced edit, while <see cref="m_Version"/> is
         /// <see cref="m_HeldLengthVersion"/>.</summary>
