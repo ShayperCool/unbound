@@ -90,10 +90,15 @@ public static unsafe class Entry
                     ?? throw new ArgumentException("empty gen-stubs request");
                 return JsonSerializer.Serialize(StubGenerator.Generate(stubs.UnityManagedEngineDir, stubs.ImplAssembly, stubs.OutputDir, stubs.ImplSourceDir, stubs.PlatformModules, releaseFamily: stubs.ReleaseFamily), Json);
             case "message-coverage":
-                var scripts = JsonSerializer.Deserialize<CompileRequest>(body, Json)
+                var scripts = JsonSerializer.Deserialize<MessageCoverageRequest>(body, Json)
                     ?? throw new ArgumentException("empty message-coverage request");
-                return JsonSerializer.Serialize(Compiler.FindUnsupportedMessages(scripts,
-                    Unbound.Runtime.ScriptMessages.NotSent.Select(m => (m.Host.FullName!, m.Name))), Json);
+                // The project's SpeedTree 7 and 8 assets decide which callbacks it could get, as the
+                // editor domain load reports them.
+                var speedTrees = UnityEditor.AssetPostprocessing.SpeedTreeAssets(scripts.AssetFiles);
+                var unreachable = UnityEditor.AssetPostprocessing.Unreachable(speedTrees) ?? Array.Empty<string>();
+                var messages = Compiler.FindUnsupportedMessages(scripts.Compilation,
+                    Unbound.Runtime.ScriptMessages.NotSent.Where(m => Array.IndexOf(unreachable, m.Name) < 0).Select(m => (m.Host.FullName!, m.Name)));
+                return JsonSerializer.Serialize(new { messages.Messages, messages.FailedAssemblies, UnimportedSpeedTrees = speedTrees }, Json);
             case "prepare-field-coverage":
                 var setup = JsonSerializer.Deserialize<FieldCoverageSetup>(body, Json)
                     ?? throw new ArgumentException("empty prepare-field-coverage request");
@@ -121,4 +126,11 @@ internal sealed class ClassCoverageRequest
 {
     public string? Release { get; set; }
     public List<Unbound.Runtime.ClassCoverage.Found> Classes { get; set; } = new();
+}
+
+/// <summary><c>message-coverage</c>: the project's scripts and its asset files (no folders).</summary>
+internal sealed class MessageCoverageRequest
+{
+    public CompileRequest Compilation { get; set; } = new();
+    public List<string> AssetFiles { get; set; } = new();
 }

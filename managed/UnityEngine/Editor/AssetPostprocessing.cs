@@ -52,12 +52,12 @@ namespace UnityEditor
         /// SpeedTree9Importer C#, which Unbound runs).</summary>
         internal static readonly string[] SpeedTreeCallbacks = { "OnPreprocessSpeedTree", "OnPostprocessSpeedTree" };
 
-        /// <summary>The SpeedTree 7 and 8 assets among <paramref name="paths"/>, which the Editor's
-        /// SpeedTreeImporter imports and Unbound does not.</summary>
-        internal static List<string> SpeedTreeAssets(IEnumerable<string> paths)
+        /// <summary>The SpeedTree 7 and 8 assets among the asset files <paramref name="files"/> (no
+        /// folders), which the Editor's SpeedTreeImporter imports and Unbound does not.</summary>
+        internal static List<string> SpeedTreeAssets(IEnumerable<string> files)
         {
             var trees = new List<string>();
-            foreach (var path in paths)
+            foreach (var path in files)
             {
                 var extension = System.IO.Path.GetExtension(path);
                 if (string.Equals(extension, ".spm", StringComparison.OrdinalIgnoreCase) || string.Equals(extension, ".st", StringComparison.OrdinalIgnoreCase))
@@ -66,14 +66,36 @@ namespace UnityEditor
             return trees;
         }
 
-        static void ReportUnsupported()
+        /// <summary>The not-sent callbacks (<see cref="Unsupported"/>) nothing in the project could
+        /// get in the Editor either, given its SpeedTree 7 and 8 assets: without one, the SpeedTree
+        /// callbacks; else none (null). <c>unbound doctor</c> lists by the same rule.</summary>
+        internal static string[] Unreachable(IReadOnlyCollection<string> speedTrees) =>
+            speedTrees.Count == 0 ? SpeedTreeCallbacks : null;
+
+        static void ReportUnsupported() => ReportUnsupported(PostprocessorTypes(), ProjectSpeedTreeAssets());
+
+        /// <summary>The project's SpeedTree 7 and 8 assets (its packages' too; folders are not).</summary>
+        internal static List<string> ProjectSpeedTreeAssets()
         {
-            // A project without SpeedTree 7 or 8 assets gets no SpeedTree callback in the Editor
-            // either: those are not reported (render pipelines' postprocessors declare them).
-            var trees = SpeedTreeAssets(AssetDatabase.GetAllAssetPaths());
-            if (trees.Count > 0)
-                Stubs.Ignored("SpeedTree 7 and 8 assets", $"are not imported ({trees[0]}{(trees.Count > 1 ? $" and {trees.Count - 1} more" : "")}): their trees are missing and their postprocessors' {string.Join(" and ", SpeedTreeCallbacks)} are not called");
-            var skipped = trees.Count == 0 ? SpeedTreeCallbacks : null;
+            var files = new List<string>();
+            foreach (var path in AssetDatabase.GetAllAssetPaths())
+                if (AssetDatabase.Kind(path) != "folder") files.Add(path);
+            return SpeedTreeAssets(files);
+        }
+
+        /// <summary>Reports, once each, the SpeedTree 7 and 8 assets Unbound does not import and the
+        /// not-sent callbacks the postprocessors declare that something in the project could
+        /// get.</summary>
+        internal static void ReportUnsupported(IEnumerable<Type> postprocessors, IReadOnlyList<string> speedTrees)
+        {
+            if (speedTrees.Count > 0)
+                Stubs.Ignored("SpeedTree 7 and 8 assets", $"are not imported ({speedTrees[0]}{(speedTrees.Count > 1 ? $" and {speedTrees.Count - 1} more" : "")}): Unbound makes no tree of them and their postprocessors' {string.Join(" and ", SpeedTreeCallbacks)} are not called");
+            var skipped = Unreachable(speedTrees);
+            foreach (var type in postprocessors) ScriptMessages.WarnNotSent(type, skipped);
+        }
+
+        static IEnumerable<Type> PostprocessorTypes()
+        {
             foreach (var assembly in GameDomain.Assemblies())
             {
                 Type[] types;
@@ -81,7 +103,7 @@ namespace UnityEditor
                 catch (ReflectionTypeLoadException e) { types = e.Types; }
                 foreach (var type in types)
                     if (type != null && !type.IsAbstract && typeof(AssetPostprocessor).IsAssignableFrom(type) && !type.IsDefined(typeof(Unbound.StubAttribute), false))
-                        ScriptMessages.WarnNotSent(type, skipped);
+                        yield return type;
             }
         }
 
