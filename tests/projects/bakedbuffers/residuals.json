@@ -11,9 +11,13 @@
     "Spread.lightmap0.indirect": "0 texels differ in being used, 22 values in their light (worst 0.0176, tolerance 0.001)",
     "Spread.lightmap0.lightmap": "6 texels differ in their light (worst 0.0176, tolerance 0.00308), first at [3487, 3613, 3616, 3737, 4125, 4882]"
   },
-  "One texel of the ground under the probes' scene: its indirect light differs by about what one of its 64 paths brings (1.9% of it). Replaying the Editor's own bake input gives the same single difference. Not traced: no rule of the bake is known to differ. The lightmap made of the buffer differs where it does (and at the texels its light is spread to).": {
+  "One texel of the ground under the probes' scene (also with the Indirect Intensities 2 and 0.5, `IntensityTwice`, `IntensityHalf`): its indirect light differs by about what one of its 64 paths brings (1.9% of it). Replaying the Editor's own bake input gives the same single difference. Not traced: no rule of the bake is known to differ. The lightmap made of the buffer differs where it does (and at the texels its light is spread to).": {
     "Probes.lightmap0.indirect": "0 texels differ in being used, 3 values in their light (worst 0.015, tolerance 0.001)",
-    "Probes.lightmap0.lightmap": "1 texels differ in their light (worst 0.00676, tolerance 0.00308), first at [1296]"
+    "Probes.lightmap0.lightmap": "1 texels differ in their light (worst 0.00676, tolerance 0.00308), first at [1296]",
+    "IntensityHalf.lightmap0.indirect": "0 texels differ in being used, 3 values in their light (worst 0.015, tolerance 0.001)",
+    "IntensityHalf.lightmap0.lightmap": "1 texels differ in their light (worst 0.00437, tolerance 0.00308), first at [1296]",
+    "IntensityTwice.lightmap0.indirect": "0 texels differ in being used, 3 values in their light (worst 0.015, tolerance 0.001)",
+    "IntensityTwice.lightmap0.lightmap": "1 texels differ in their light (worst 0.0093, tolerance 0.00308), first at [1296]"
   },
   "A probe inside the cube, which stands on the ground: the rays it sends down meet the cube's bottom (from behind) and the ground (from the front) in one plane at the same distance. The Editor counts all 64 rays as meeting a back face; Unbound counts 5 of the downward rays as meeting the ground first. Not chased: which of two surfaces at the same distance a ray meets is not measured.": {
     "ProbesGrid.probes": "validity: 1 values differ (worst 0.0781, tolerance 1e-06)"
@@ -24,6 +28,8 @@
     "ProbesGrid.lightProbes.cellOrder": "16 of 16 cells in another place or corner order, first at [0, 1, 2, 3, 4, 5]",
     "ProbesMore.lightProbes.cellOrder": "8 of 8 cells in another place or corner order, first at [0, 1, 2, 3, 4, 5]",
     "ProbesSky.lightProbes.cellOrder": "5 of 5 cells in another place or corner order, first at [0, 1, 2, 3, 4]",
-    "ProbesSkyEven.lightProbes.cellOrder": "5 of 5 cells in another place or corner order, first at [0, 1, 2, 3, 4]"
+    "ProbesSkyEven.lightProbes.cellOrder": "5 of 5 cells in another place or corner order, first at [0, 1, 2, 3, 4]",
+    "IntensityHalf.lightProbes.cellOrder": "12 of 12 cells in another place or corner order, first at [0, 1, 2, 3, 4, 5]",
+    "IntensityTwice.lightProbes.cellOrder": "12 of 12 cells in another place or corner order, first at [0, 1, 2, 3, 4, 5]"
   }
 }

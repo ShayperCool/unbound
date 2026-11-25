@@ -792,6 +792,14 @@ def lighting_filtering(scene):
     return tuple(parts)
 
 
+def lighting_indirect_scale(scene):
+    """A scene's Indirect Intensity (its .lighting file): the factor of its indirect and sky's light."""
+    found = re.search(r'm_IndirectOutputScale: ([0-9.]+)', (PROBE/'Assets/Scenes'/f'{scene}.lighting').read_text())
+    if not found:
+        raise ValueError(f'{scene}.lighting: no m_IndirectOutputScale')
+    return float(found.group(1))
+
+
 def oidn_library():
     """Open Image Denoise 1.4.2's library as the engine has it: UNBOUND_OIDN's, else the global
     cache's entry, which a denoising bake of the engine downloads (the check runs the engine first)."""
@@ -976,7 +984,7 @@ def part_filter(values, weights, lightmap, with_):
     return atrous_filter(values, weights, charts, lightmap['normals'], width, height, lightmap['supersampling'], amount), weights
 
 
-def composite(lightmap, padding, filtering=None):
+def composite(lightmap, padding, filtering=None, indirect_scale=1.0):
     """The lightmap the bake makes of a capture's buffers by the measured rules (red, green, blue,
     alpha per texel): each used texel's direct, indirect and sky's light summed; a texel more of
     whose rays met back faces than the Backface Tolerance allows takes the mean of the light of its
@@ -990,7 +998,9 @@ def composite(lightmap, padding, filtering=None):
     for k in range(width * height):
         if used[k]:
             for c in range(3):
-                out[4 * k + c] = sum(lightmap[part][4 * k + c] for part in ('direct', 'indirect', 'environment'))
+                out[4 * k + c] = sum(lightmap[part][4 * k + c] for part in ('direct', 'indirect', 'environment')) \
+                    if indirect_scale == 1.0 else lightmap['direct'][4 * k + c] + (
+                        lightmap['indirect'][4 * k + c] + lightmap['environment'][4 * k + c]) * indirect_scale
             out[4 * k + 3] = 1.0
             holds[k] = not lightmap['validity'][k] > BACKFACE_LIMIT
     if filtering is not None:
@@ -999,7 +1009,7 @@ def composite(lightmap, padding, filtering=None):
         # (denoising gives the texels beside those that hold light their light).
         weights = [1.0 if h else 0.0 for h in holds]
         direct = [lightmap['direct'][4 * k + c] if used[k] else 0.0 for k in range(width * height) for c in range(3)]
-        indirect = [lightmap['indirect'][4 * k + c] + lightmap['environment'][4 * k + c] if used[k] else 0.0
+        indirect = [(lightmap['indirect'][4 * k + c] + lightmap['environment'][4 * k + c]) * indirect_scale if used[k] else 0.0
                     for k in range(width * height) for c in range(3)]
         direct, direct_weights = part_filter(direct, weights, lightmap, filtering[0])
         indirect, indirect_weights = part_filter(indirect, weights, lightmap, filtering[1])
@@ -1030,7 +1040,7 @@ def composite(lightmap, padding, filtering=None):
     return out
 
 
-def lightmap_difference(got, want, padding, filtering=None):
+def lightmap_difference(got, want, padding, filtering=None, indirect_scale=1.0):
     """The lightmap the bake makes (red, green, blue, alpha per texel) against the Editor's: which
     texels hold light (alpha) exactly, and the light of those within LIGHTMAP_TOLERANCE (times the
     value above 1), the stitched texels too. The texels whose light in the Editor's lightmap is not
@@ -1042,7 +1052,7 @@ def lightmap_difference(got, want, padding, filtering=None):
     width, height = want['width'], want['height']
     if len(got) != len(want['lightmap']):
         return f'{len(got) // 4} texels, expected {width * height}', 0
-    theirs, rules = want['lightmap'], composite(want, padding, filtering)
+    theirs, rules = want['lightmap'], composite(want, padding, filtering, indirect_scale)
     charts, used = want['charts'], want['occupancy']
 
     def owner(x, y):
@@ -1197,7 +1207,8 @@ def compare(label):
             record(key + 'towardIndirect', toward_difference(mine['towardIndirect'], lightmap['towardIndirect'], INDIRECT_TOLERANCE))
             record(key + 'shadowmask', toward_difference(mine['shadowmask'], lightmap['shadowmask'], SHADOWMASK_TOLERANCE))
             if lightmap['lightmap'] is not None:
-                problem, seams = lightmap_difference(mine['lightmap'], lightmap, lighting_padding(scene), lighting_filtering(scene))
+                problem, seams = lightmap_difference(mine['lightmap'], lightmap, lighting_padding(scene), lighting_filtering(scene),
+                                                     lighting_indirect_scale(scene))
                 record(key + 'lightmap', problem)
                 stitched[0] += seams
         record(scene + '.materials', material_difference(a['materials'], e['materials']))
