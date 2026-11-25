@@ -1,10 +1,11 @@
-//! The Gaussian filter a bake applies to a lightmap's direct light and to its indirect and sky's
-//! light before they are summed, where the Lighting Settings' Filtering is Advanced with the
-//! Gaussian filter (matches the Unity 6000.0.71f1 Editor's Progressive CPU lightmapper,
-//! tests/projects/bakedbuffers `Filter*`): a separable kernel of the Gaussian's integral over each
-//! texel, rows then columns, that mixes a texel's light only with that of texels of its own chart
-//! whose light stands (weight above 0), weighed by their weight, and leaves the others as they
-//! are.
+//! The filters a bake applies to a lightmap's direct light and to its indirect and sky's light
+//! before they are summed, where the Lighting Settings' Filtering is Advanced (matches the Unity
+//! 6000.0.71f1 Editor's Progressive CPU lightmapper, tests/projects/bakedbuffers `Filter*`). Both
+//! mix a texel's light only with that of texels of its own chart whose light stands (weight
+//! above 0) and leave the others as they are: the Gaussian filter, a separable kernel of the
+//! Gaussian's integral over each texel, rows then columns, weighed by the texels' weights; the
+//! A-Trous filter, four passes over a 5 × 5 grid of taps spread twice as far each pass, weighed by
+//! how alike the taps' light, surface normals and places are.
 
 /// The scale the kernel's texel boundaries are divided by (the Gaussian's spread, 0.7 × √2, in
 /// units of the kernel's width over the radius's).
@@ -129,6 +130,128 @@ pub fn gaussian(buffer: &mut [[f32; 4]], charts: &[i32], width: usize, height: u
     let mut rows = vec![[0.0f32; 4]; buffer.len()];
     pass(buffer, &mut rows, charts, width, height, &kernel, true);
     pass(&rows, buffer, charts, width, height, &kernel, false);
+}
+
+/// The A-Trous filter's taps, as (x, y) offsets on its 5 × 5 grid, in the order they are summed.
+/// The Editor's grid has (0, -2) twice and no (0, -1); so has this one.
+const ATROUS_TAPS: [(i32, i32); 25] = [
+    (-2, -2),
+    (-1, -2),
+    (0, -2),
+    (1, -2),
+    (2, -2),
+    (-2, -1),
+    (-1, -1),
+    (0, -2),
+    (1, -1),
+    (2, -1),
+    (-2, 0),
+    (-1, 0),
+    (0, 0),
+    (1, 0),
+    (2, 0),
+    (-2, 1),
+    (-1, 1),
+    (0, 1),
+    (1, 1),
+    (2, 1),
+    (-2, 2),
+    (-1, 2),
+    (0, 2),
+    (1, 2),
+    (2, 2),
+];
+/// The A-Trous passes; the taps of pass `i` (from 0) lie `2^i` texels apart.
+const ATROUS_PASSES: u32 = 4;
+/// The spread of the light term in the first pass (halved each pass) and of the normal term.
+const ATROUS_LIGHT_SPREAD: f32 = 0.1;
+const ATROUS_NORMAL_SPREAD: f32 = 0.01;
+
+/// The factor of a squared distance in the exponent of an A-Trous term of `spread` σ: what
+/// `1 / (2σ²)` is for a σ of 1 and above; the Editor blends towards 1 below, by σ.
+fn atrous_factor(spread: f32) -> f32 {
+    let m = spread.clamp(0.0, 1.0);
+    m * reciprocal(1.0 + m * (2.0 * spread * spread - 1.0))
+}
+
+/// An A-Trous term of a squared distance: `exp(-factor · distance)`, which the Editor blends, by
+/// a factor below 1, with 1 for a distance of 0 (and less for those up to 1).
+fn atrous_term(factor: f32, distance: f32) -> f32 {
+    let base = 1.0 - distance.clamp(0.0, 1.0);
+    ((-(factor * distance)).exp() - base) * factor.clamp(0.0, 1.0) + base
+}
+
+/// Filters `buffer` (per texel red, green, blue and its weight) with the A-Trous filter of
+/// `spread` (the Lighting Settings' position sigma, in texels): `normals` are the lightmap's
+/// samples' normals (`supersampling` × `supersampling` a texel, rows of `width × supersampling`),
+/// of which a texel's first is its own. A spread of 0 leaves it as it is.
+pub fn atrous(
+    buffer: &mut [[f32; 4]],
+    charts: &[i32],
+    normals: &[[f32; 4]],
+    width: usize,
+    height: usize,
+    supersampling: usize,
+    spread: f32,
+) {
+    if spread == 0.0 {
+        return;
+    }
+    let normal = |x: usize, y: usize| {
+        normals[(y * supersampling) * (width * supersampling) + x * supersampling]
+    };
+    let place_factor = atrous_factor(spread);
+    let normal_factor = atrous_factor(ATROUS_NORMAL_SPREAD);
+    let mut src = buffer.to_vec();
+    let mut dst = vec![[0.0f32; 4]; buffer.len()];
+    for pass in 0..ATROUS_PASSES {
+        let step = 1i32 << pass;
+        let light_factor = atrous_factor(ATROUS_LIGHT_SPREAD / step as f32);
+        for y in 0..height {
+            for x in 0..width {
+                let k = y * width + x;
+                let chart = charts[k];
+                let p = src[k];
+                if chart < 0 || !(p[3] > 0.0) {
+                    dst[k] = p;
+                    continue;
+                }
+                let np = normal(x, y);
+                let mut sum = [0.0f32; 4];
+                let mut weights = 0.0f32;
+                for &(dx, dy) in &ATROUS_TAPS {
+                    let (qx, qy) = (x as i32 + dx * step, y as i32 + dy * step);
+                    if qx < 0 || qy < 0 || qx >= width as i32 || qy >= height as i32 {
+                        continue;
+                    }
+                    let (qx, qy) = (qx as usize, qy as usize);
+                    let q = qy * width + qx;
+                    let v = src[q];
+                    if charts[q] != chart || !(v[3] > 0.0) {
+                        continue;
+                    }
+                    let d: [f32; 4] = std::array::from_fn(|c| (v[c] - p[c]) * (v[c] - p[c]));
+                    let light = (d[0] + d[1]) + (d[2] + d[3]);
+                    let nq = normal(qx, qy);
+                    let n: [f32; 3] = std::array::from_fn(|c| (nq[c] - np[c]) * (nq[c] - np[c]));
+                    let surface = (n[0] + n[1]) + n[2];
+                    let (ox, oy) = (x as f32 - qx as f32, y as f32 - qy as f32);
+                    let place = ox * ox + oy * oy;
+                    let w = atrous_term(normal_factor, surface)
+                        * atrous_term(light_factor, light)
+                        * atrous_term(place_factor, place);
+                    for c in 0..4 {
+                        sum[c] += v[c] * w;
+                    }
+                    weights += w;
+                }
+                let r = reciprocal(weights);
+                dst[k] = [sum[0] * r, sum[1] * r, sum[2] * r, sum[3] * r];
+            }
+        }
+        std::mem::swap(&mut src, &mut dst);
+    }
+    buffer.copy_from_slice(&src);
 }
 
 #[cfg(test)]

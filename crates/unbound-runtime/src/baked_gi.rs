@@ -71,13 +71,31 @@ pub struct BakeRequest {
     filtering: Option<FilteringData>,
 }
 
-/// The radii of the Gaussian filters of the direct light and of the indirect and sky's light,
-/// in texels (0: none).
+/// The filters of the direct light and of the indirect and sky's light (none: unfiltered).
 #[derive(serde::Deserialize, Clone, Copy)]
 #[serde(rename_all = "camelCase")]
 struct FilteringData {
-    direct: f32,
-    indirect: f32,
+    #[serde(default)]
+    direct: Option<PartFilterData>,
+    #[serde(default)]
+    indirect: Option<PartFilterData>,
+}
+
+/// A filter: `{"gaussian": radius}` or `{"aTrous": position sigma}`, in texels.
+#[derive(serde::Deserialize, Clone, Copy)]
+#[serde(rename_all = "camelCase")]
+enum PartFilterData {
+    Gaussian(f32),
+    ATrous(f32),
+}
+
+impl PartFilterData {
+    fn filter(self) -> composite::PartFilter {
+        match self {
+            Self::Gaussian(radius) => composite::PartFilter::Gaussian(radius),
+            Self::ATrous(spread) => composite::PartFilter::ATrous(spread),
+        }
+    }
 }
 
 /// A light probe group: its file ID in the scene and its probes' points in world space, three
@@ -651,18 +669,27 @@ impl<'a> Buffers<'a> {
             .iter()
             .map(|&k| direct::normal_matrix(&renderers[k].local_to_world))
             .collect();
-        let normals = g.normals.iter().zip(&g.positions).flat_map(|(n, p)| {
-            let local = [n[0], n[1], n[2]];
-            let world = if p[3] < 0.0 {
-                local
-            } else {
-                direct::world_normal(&matrices[p[3] as usize], local)
-            };
-            [world[0], world[1], world[2], n[3]]
-        });
+        let normals: Vec<[f32; 4]> = g
+            .normals
+            .iter()
+            .zip(&g.positions)
+            .map(|(n, p)| {
+                let local = [n[0], n[1], n[2]];
+                let world = if p[3] < 0.0 {
+                    local
+                } else {
+                    direct::world_normal(&matrices[p[3] as usize], local)
+                };
+                [world[0], world[1], world[2], n[3]]
+            })
+            .collect();
         self.write(
             format!("normal{index}.f32"),
-            normals.flat_map(|v| v.to_le_bytes()).collect(),
+            normals
+                .iter()
+                .flatten()
+                .flat_map(|v| v.to_le_bytes())
+                .collect(),
         )?;
         self.write(
             format!("irradianceDirect{index}.f32"),
@@ -743,12 +770,13 @@ impl<'a> Buffers<'a> {
                 environment: bounced.map(|b| b.environment.as_slice()),
                 validity: bounced.map(|b| b.validity.as_slice()),
                 charts: &g.charts,
+                normals: Some((&normals, g.supersampling)),
             },
             backface_tolerance,
             padding,
             filtering.map(|f| composite::Filtering {
-                direct: f.direct,
-                indirect: f.indirect,
+                direct: f.direct.map(PartFilterData::filter),
+                indirect: f.indirect.map(PartFilterData::filter),
             }),
         );
         // Then the seams of the renderers that stitch them: red, green and blue, as high as

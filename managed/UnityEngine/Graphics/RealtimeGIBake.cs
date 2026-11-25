@@ -316,35 +316,40 @@ namespace UnityEngine
             : settings.bakedGI && !shadowmaskMade ? "a bake in the Shadowmask Lighting Mode without a light on a shadowmask channel is not measured"
             : null;
 
-        /// <summary>The Gaussian filters a bake applies to its lightmaps (radii in texels, 0: none):
-        /// with the Advanced filtering and no denoiser, the direct light's and the indirect and
-        /// sky's light's (matches the Unity 6000.0.71f1 Editor, tests/projects/bakedbuffers
-        /// `Filter*`); null without filtering or where it is not made (<see
+        /// <summary>The filters a bake applies to its lightmaps' direct light and indirect and
+        /// sky's light: with the Advanced filtering and no denoiser, each part's Gaussian filter
+        /// (<c>{"gaussian": radius}</c>), A-Trous filter (<c>{"aTrous": position sigma}</c>) or
+        /// none (null) (matches the Unity 6000.0.71f1 Editor, tests/projects/bakedbuffers
+        /// <c>Filter*</c>); null without filtering or where it is not made (<see
         /// cref="UnmadeFiltering"/>).</summary>
-        internal static object GaussianFiltering(LightingSettings settings)
+        internal static object Filtering(LightingSettings settings)
         {
             if (settings == null || settings.filteringMode != LightingSettings.FilterMode.Advanced || UnmadeFiltering(settings) != null)
                 return null;
-            static float Radius(LightingSettings.FilterType type, float radius) => type == LightingSettings.FilterType.Gaussian ? radius : 0f;
+            static object Part(LightingSettings.FilterType type, float radius, float sigma) => type switch
+            {
+                LightingSettings.FilterType.Gaussian => new { gaussian = radius },
+                LightingSettings.FilterType.ATrous => new { aTrous = sigma },
+                _ => null,
+            };
             return new
             {
-                direct = Radius(settings.filterTypeDirect, settings.filteringGaussianRadiusDirect),
-                indirect = Radius(settings.filterTypeIndirect, settings.filteringGaussianRadiusIndirect),
+                direct = Part(settings.filterTypeDirect, settings.filteringGaussianRadiusDirect, settings.filteringAtrousPositionSigmaDirect),
+                indirect = Part(settings.filterTypeIndirect, settings.filteringGaussianRadiusIndirect, settings.filteringAtrousPositionSigmaIndirect),
             };
         }
 
         /// <summary>Why a bake's lightmaps with the Lighting Settings' filtering are not made
         /// (null: they are, or nothing is filtered). Measured: the Advanced filtering with
-        /// Gaussian filters (or none) of the direct and indirect light and no denoiser, in the
-        /// Baked Indirect Lighting Mode without directional lightmaps (the ambient occlusion
-        /// target's settings matter only with ambient occlusion, which is not made).</summary>
+        /// Gaussian or A-Trous filters (or none) of the direct and indirect light and no
+        /// denoiser, in the Baked Indirect Lighting Mode without directional lightmaps (the
+        /// ambient occlusion target's settings matter only with ambient occlusion, which is not
+        /// made).</summary>
         internal static string UnmadeFiltering(LightingSettings settings) =>
             settings.filteringMode == LightingSettings.FilterMode.None ? null
             : settings.filteringMode == LightingSettings.FilterMode.Auto ? "lightmaps with the Auto filtering (a denoiser) are not made yet"
             : settings.denoiserTypeDirect != LightingSettings.DenoiserType.None || settings.denoiserTypeIndirect != LightingSettings.DenoiserType.None
                 ? "lightmaps with a denoiser are not made yet"
-            : settings.filterTypeDirect == LightingSettings.FilterType.ATrous || settings.filterTypeIndirect == LightingSettings.FilterType.ATrous
-                ? "lightmaps with the A-Trous filter are not made yet"
             : settings.directionalityMode == LightmapsMode.CombinedDirectional ? "directional lightmaps with filtering are not measured"
             : settings.mixedBakeMode != MixedLightingMode.IndirectOnly ? "filtered lightmaps in the Shadowmask or Subtractive Lighting Mode are not measured"
             : null;

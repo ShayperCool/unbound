@@ -4,9 +4,9 @@
 //! back face (Lightmap Parameters' Backface Tolerance) given their neighbours' light instead;
 //! and the texels around the charts given their neighbours' light, as many texels out as the
 //! Lighting Settings' padding, so that filtering at a chart's edge reads the chart's light. The
-//! seams are stitched afterwards ([`super::seams`]). Where the Lighting Settings filter with
-//! Gaussians, the direct light and the indirect and sky's light are filtered each on its own
-//! before they are summed ([`super::filter`]). Not made: the texels further out.
+//! seams are stitched afterwards ([`super::seams`]). Where the Lighting Settings filter (Advanced,
+//! Gaussian or A-Trous filters), the direct light and the indirect and sky's light are filtered
+//! each on its own before they are summed ([`super::filter`]). Not made: the texels further out.
 
 use super::{dilate, filter};
 
@@ -26,14 +26,25 @@ pub struct Buffers<'a> {
     pub validity: Option<&'a [f32]>,
     /// Per texel its chart (-1: none); read where the light is filtered.
     pub charts: &'a [i32],
+    /// Per sample its world normal (`supersampling` × `supersampling` a texel, rows of `width ×
+    /// supersampling`), and that number; read where the A-Trous filter filters the light.
+    pub normals: Option<(&'a [[f32; 4]], usize)>,
 }
 
-/// The Gaussian filters of the Lighting Settings' Advanced filtering, their radii in texels
-/// (0: none), of the direct light and of the indirect and sky's light.
+/// A filter of the Lighting Settings' Advanced filtering.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub enum PartFilter {
+    /// The Gaussian filter of this radius, in texels ([`filter::gaussian`]).
+    Gaussian(f32),
+    /// The A-Trous filter of this position sigma, in texels ([`filter::atrous`]).
+    ATrous(f32),
+}
+
+/// The filters of the direct light and of the indirect and sky's light (None: unfiltered).
 #[derive(Clone, Copy, Debug, Default, PartialEq)]
 pub struct Filtering {
-    pub direct: f32,
-    pub indirect: f32,
+    pub direct: Option<PartFilter>,
+    pub indirect: Option<PartFilter>,
 }
 
 /// The lightmap's texels: red, green, blue, and 1 for a texel that holds light (a used one whose
@@ -82,14 +93,33 @@ pub fn composite(
     let marks = dilate::markers(buffers.used, buffers.validity, backface_tolerance, &out);
     // Filtered: each part on its own, weighed by those marks, then summed.
     if let Some(filtering) = filtering {
-        for (part, radius) in [
+        for (part, with) in [
             (&mut indirect, filtering.indirect),
             (&mut direct, filtering.direct),
         ] {
             for (texel, mark) in part.iter_mut().zip(&marks) {
                 texel[3] = *mark;
             }
-            filter::gaussian(part, buffers.charts, width, height, radius);
+            match with {
+                Some(PartFilter::Gaussian(radius)) => {
+                    filter::gaussian(part, buffers.charts, width, height, radius)
+                }
+                Some(PartFilter::ATrous(spread)) => {
+                    let (normals, supersampling) = buffers
+                        .normals
+                        .expect("the A-Trous filter reads the samples' normals");
+                    filter::atrous(
+                        part,
+                        buffers.charts,
+                        normals,
+                        width,
+                        height,
+                        supersampling,
+                        spread,
+                    )
+                }
+                None => {}
+            }
         }
         for (k, texel) in out.iter_mut().enumerate() {
             if buffers.used[k] {
@@ -132,6 +162,7 @@ mod tests {
                 environment: Some(&environment),
                 validity: Some(&[0.0, 0.0]),
                 charts: &[],
+                normals: None,
             },
             0.9,
             0,
@@ -157,6 +188,7 @@ mod tests {
                 environment: None,
                 validity: Some(&validity),
                 charts: &[],
+                normals: None,
             },
             0.9,
             0,
@@ -185,6 +217,7 @@ mod tests {
                 environment: None,
                 validity: Some(&[1.0, 1.0, 0.0]),
                 charts: &[],
+                normals: None,
             },
             0.9,
             2,
@@ -207,6 +240,7 @@ mod tests {
             environment: None,
             validity: None,
             charts: &[],
+            normals: None,
         };
         let out = composite(&buffers, 0.9, 1, None);
         let alpha: Vec<f32> = out.iter().map(|t| t[3]).collect();
@@ -229,6 +263,7 @@ mod tests {
                 environment: None,
                 validity: None,
                 charts: &[],
+                normals: None,
             },
             0.9,
             1,
@@ -255,10 +290,11 @@ mod tests {
             environment: Some(&environment),
             validity: Some(&[0.0, 0.0, 0.0, 0.5]),
             charts: &charts,
+            normals: None,
         };
         let filtering = Filtering {
-            direct: 1.0,
-            indirect: 0.0,
+            direct: Some(PartFilter::Gaussian(1.0)),
+            indirect: None,
         };
         let out = composite(&buffers, 0.9, 0, Some(filtering));
         let k = filter::kernel(1.0);
