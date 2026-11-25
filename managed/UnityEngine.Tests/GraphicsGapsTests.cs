@@ -272,6 +272,52 @@ namespace Unbound.Tests
             UnityEngine.Object.DestroyImmediate(camera.gameObject);
         }
 
+        sealed class IdLog : ILogHandler
+        {
+            internal readonly List<string> Lines = new List<string>();
+            public void LogException(Exception exception, UnityEngine.Object context) => Lines.Add(exception.Message);
+            public void LogFormat(LogType logType, UnityEngine.Object context, string format, params object[] args) => Lines.Add(string.Format(format, args));
+        }
+
+        /// <summary>The id pass draws mesh renderers with the picking shader; a renderer that builds
+        /// its geometry for a camera (a sprite) keeps its id but is reported drawn without one, and
+        /// an id material destroyed between requests is made again.</summary>
+        [Fact]
+        public void TheObjectIdPassDrawsMeshesAndReportsOtherRenderers()
+        {
+            var camera = new GameObject("idCamera").AddComponent<Camera>();
+            camera.targetTexture = new RenderTexture(8, 8, 24);
+            var cube = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            cube.transform.position = new Vector3(0, 0, 5);
+            var sprite = new GameObject("idSprite").AddComponent<SpriteRenderer>();
+            sprite.sprite = Sprite.Create(new Texture2D(4, 4), new Rect(0, 0, 4, 4), Vector2.zero);
+            sprite.transform.position = new Vector3(0, 0, 3);
+            var log = new IdLog();
+            var previous = Debug.unityLogger.logHandler;
+            Debug.unityLogger.logHandler = log;
+            try
+            {
+                Assert.NotNull(Shader.Find("Hidden/OpaqueSelection"));
+                var first = new ObjectIdRequest(new RenderTexture(8, 8, 24));
+                camera.SubmitRenderRequest(first);
+                Assert.Contains(cube.GetComponent<MeshRenderer>(), first.result.idToObjectMapping);
+                Assert.Contains(sprite, first.result.idToObjectMapping);
+                Assert.Contains(log.Lines, line => line.Contains("Camera.SubmitRenderRequest.SpriteRenderer") && line.Contains("draws no object id for a SpriteRenderer"));
+                foreach (var material in Resources.FindObjectsOfTypeAll<Material>().Where(m => m.shader != null && m.shader.name == "Hidden/OpaqueSelection").ToArray())
+                    UnityEngine.Object.DestroyImmediate(material);
+                var second = new ObjectIdRequest(new RenderTexture(8, 8, 24));
+                camera.SubmitRenderRequest(second);
+                Assert.Equal(first.result.idToObjectMapping, second.result.idToObjectMapping);
+            }
+            finally
+            {
+                Debug.unityLogger.logHandler = previous;
+                UnityEngine.Object.DestroyImmediate(sprite.gameObject);
+                UnityEngine.Object.DestroyImmediate(cube);
+                UnityEngine.Object.DestroyImmediate(camera.gameObject);
+            }
+        }
+
         const string PropsSource = @"Shader ""Tests/GapsProps"" { Properties {
             _Color (""Color"", Color) = (1, 0.5, 0.25, 1)
             [HDR] _Emis (""Emission"", Color) = (0, 0, 0, 0)

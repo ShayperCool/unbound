@@ -72,13 +72,6 @@ namespace UnityEngine
         }
 
         static readonly List<(float Depth, int Order, Renderer Renderer)> s_ObjectIds = new List<(float, int, Renderer)>();
-
-        /// <summary>
-        /// The objects of the Editor's object id pass for the camera: none (id 0), then the
-        /// renderers the camera sees (enabled, on a layer of its culling mask, bounds in its
-        /// frustum), farthest first by depth along the view (Unity 6000.0.71f1 Editor,
-        /// tests/projects/graphicsgaps objectId.*.mapping).
-        /// </summary>
         static readonly List<Material> s_IdMaterials = new List<Material>();
 
         /// <summary>
@@ -92,11 +85,12 @@ namespace UnityEngine
         {
             var destination = request.destination;
             if (destination == null) return;
-            // A shader that writes its color as it is, alpha included (Unlit/Color writes alpha 1).
-            var shader = Shader.Find("Hidden/Internal-Colored");
+            // The Editor's scene picking shader: _SelectionID as it is (no vertex color, alpha
+            // kept), opaque, depth tested and written, back faces culled.
+            var shader = Shader.Find("Hidden/OpaqueSelection");
             if (shader == null)
             {
-                Unbound.Runtime.Stubs.Ignored("Camera.SubmitRenderRequest", "draws no object ids (the Hidden/Internal-Colored shader is missing)");
+                Unbound.Runtime.Stubs.Ignored("Camera.SubmitRenderRequest", "draws no object ids (the Hidden/OpaqueSelection shader is missing)");
                 return;
             }
             var cmd = new CommandBuffer { name = "ObjectId" };
@@ -107,18 +101,20 @@ namespace UnityEngine
             for (int id = 1; id < mapping.Length; id++)
             {
                 if (mapping[id] is not Renderer renderer) continue;
-                while (s_IdMaterials.Count < id)
+                if (renderer is not MeshRenderer && renderer is not SkinnedMeshRenderer)
                 {
-                    var made = new Material(shader) { hideFlags = HideFlags.HideAndDontSave };
-                    made.SetInt("_SrcBlend", (int)BlendMode.One);
-                    made.SetInt("_DstBlend", (int)BlendMode.Zero);
-                    made.SetInt("_ZWrite", 1);
-                    made.SetInt("_ZTest", (int)CompareFunction.LessEqual);
-                    made.SetInt("_Cull", (int)CullMode.Back);
-                    s_IdMaterials.Add(made);
+                    // Sprites, particles, lines and trails build their geometry for a camera and
+                    // carry their own colors: not measured.
+                    Unbound.Runtime.Stubs.Ignored("Camera.SubmitRenderRequest." + renderer.GetType().Name, "draws no object id for a " + renderer.GetType().Name + " (only mesh renderers are drawn)");
+                    continue;
                 }
+                while (s_IdMaterials.Count < id) s_IdMaterials.Add(null);
                 var material = s_IdMaterials[id - 1];
-                material.color = new Color32((byte)id, (byte)(id >> 8), (byte)(id >> 16), (byte)(id >> 24));
+                if (material == null || material.shader != shader)
+                    s_IdMaterials[id - 1] = material = new Material(shader) { hideFlags = HideFlags.HideAndDontSave };
+                // The id's bytes as they are: a vector is not converted to linear, so an sRGB
+                // destination of a Linear project encodes them, as the Editor's does (id 4 reads 34).
+                material.SetVector("_SelectionID", new Vector4((byte)id, (byte)(id >> 8), (byte)(id >> 16), (byte)(id >> 24)) / 255f);
                 int submeshes = Math.Max(1, renderer.sharedMaterials.Length);
                 for (int submesh = 0; submesh < submeshes; submesh++) cmd.DrawRenderer(renderer, material, submesh, 0);
             }
@@ -126,6 +122,12 @@ namespace UnityEngine
             cmd.Release();
         }
 
+        /// <summary>
+        /// The objects of the Editor's object id pass for the camera: none (id 0), then the
+        /// renderers the camera sees (enabled, on a layer of its culling mask, bounds in its
+        /// frustum), farthest first by depth along the view (Unity 6000.0.71f1 Editor,
+        /// tests/projects/graphicsgaps objectId.*.mapping).
+        /// </summary>
         Object[] ObjectIds()
         {
             var planes = GeometryUtility.CalculateFrustumPlanes(this);
