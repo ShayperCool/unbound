@@ -28,8 +28,9 @@ namespace Unbound.SpeedTree
     /// <c>//RootNode/root</c>, 1 names (the root <c>//RootNode</c>), 0 class number counters; meshes
     /// are <c>4300000 + 2i</c> and the wind asset <c>22800000</c> whatever the kind. Each pass of the
     /// import calls OnPreprocessAsset, OnPreprocessSpeedTree and OnPostprocessSpeedTree. The import
-    /// makes the colour maps of the file's materials import with alpha as transparency: when that
-    /// changes a map, its .meta is written, it imports again and so does the tree (a second pass);
+    /// makes the colour maps of the file's materials import with alpha as transparency and mip maps
+    /// preserving alpha-test coverage: when that changes a map, its .meta is written, it imports
+    /// again and so does the tree (a second pass);
     /// then, as Unity's own SpeedTree postprocessor does for every imported .st (Unity's C#
     /// SpeedTreePostProcessor), the extra maps of its materials import without sRGB, which needs no
     /// other pass (tests/projects/speedtree8 profile fresh). (The Editor imports every new tree of a
@@ -50,14 +51,19 @@ namespace Unbound.SpeedTree
                 throw new InvalidOperationException($"{info.Path}: its .meta names no SpeedTreeImporter");
             var tree = Read(info.Path);
             var import = Pass(info, importer, tree);
-            if (ColourMapsTransparent(import.ColourMapPaths()))
+            var replaced = new Dictionary<Texture, Texture>(ReferenceEqualityComparer.Instance);
+            if (ColourMapsTransparent(import.ColourMapPaths(), replaced))
             {
+                // The remapped materials stay; the made ones are made again.
+                Repoint(import.MaterialsUsed(), replaced);
                 import.Discard();
                 import = Pass(info, importer, tree);
             }
             importer.m_HasImported = true;
             var file = import.File();
-            ExtraMapsLinear(import.MaterialsUsed());
+            replaced.Clear();
+            ExtraMapsLinear(import.MaterialsUsed(), replaced);
+            Repoint(import.MaterialsUsed(), replaced);
             return file;
         }
 
@@ -82,40 +88,63 @@ namespace Unbound.SpeedTree
             return import;
         }
 
-        /// <summary>Makes the colour maps import with alpha as transparency, writing the .meta of
-        /// each that did not (a map of a read-only package keeps it for the session); whether any
-        /// changed.</summary>
-        static bool ColourMapsTransparent(IEnumerable<string> maps)
+        /// <summary>Makes the colour maps import with alpha as transparency and coverage-preserving
+        /// mip maps (a map with either off gets both: tests/projects/speedtree8 AlphaCheck,
+        /// AlphaCheck2), writing the .meta of each that changed (a map of a read-only package keeps
+        /// the settings for the session); whether any changed.</summary>
+        static bool ColourMapsTransparent(IEnumerable<string> maps, Dictionary<Texture, Texture> replaced)
         {
             bool changed = false;
             foreach (var path in maps)
             {
-                if (!(AssetImporter.GetAtPath(path) is TextureImporter texture) || texture.alphaIsTransparency) continue;
+                if (!(AssetImporter.GetAtPath(path) is TextureImporter texture) || texture.alphaIsTransparency && texture.mipMapsPreserveCoverage)
+                    continue;
                 texture.alphaIsTransparency = true;
-                texture.SaveAndReimport();
+                texture.mipMapsPreserveCoverage = true;
+                SaveAndReimport(texture, path, replaced);
                 changed = true;
             }
             return changed;
         }
 
+        /// <summary>Writes a map's settings and imports it again, noting the loaded texture it
+        /// replaces.</summary>
+        static void SaveAndReimport(TextureImporter importer, string path, Dictionary<Texture, Texture> replaced)
+        {
+            string guid = AssetDatabase.AssetPathToGUID(path);
+            var before = !string.IsNullOrEmpty(guid) && AssetDatabaseRuntime.IsMainLoaded(guid) ? AssetDatabase.LoadAssetAtPath<Texture>(path) : null;
+            importer.SaveAndReimport();
+            if (before is not null) replaced[before] = AssetDatabase.LoadAssetAtPath<Texture>(path);
+        }
+
+        /// <summary>The materials' textures that an import replaced now refer to the textures
+        /// imported again: a material refers to the asset (the Editor's references follow it).</summary>
+        internal static void Repoint(IEnumerable<Material> materials, Dictionary<Texture, Texture> replaced)
+        {
+            if (replaced.Count == 0) return;
+            foreach (var material in materials)
+            {
+                if (material is null) continue;
+                foreach (int id in material.GetTexturePropertyNameIDs())
+                    if (material.GetTexture(id) is Texture texture && replaced.TryGetValue(texture, out var fresh))
+                        material.SetTexture(id, fresh);
+            }
+        }
+
         /// <summary>Unity's SpeedTreePostProcessor (its C#, run for every imported .st): the
         /// <c>_ExtraTex</c> of each material holds no colour, so its texture imports without sRGB.</summary>
-        static void ExtraMapsLinear(IEnumerable<Material> materials)
+        static void ExtraMapsLinear(IEnumerable<Material> materials, Dictionary<Texture, Texture> replaced)
         {
-            var reimported = new Dictionary<string, Texture>(StringComparer.Ordinal);
             foreach (var material in materials)
             {
                 var texture = material != null && material.HasProperty(ExtraTex) ? material.GetTexture(ExtraTex) : null;
-                if (texture == null) continue;
+                if (texture == null || replaced.ContainsKey(texture)) continue;
                 string path = AssetDatabase.GetAssetPath(texture);
-                if (!reimported.ContainsKey(path) && AssetImporter.GetAtPath(path) is TextureImporter importer && importer.sRGBTexture)
+                if (AssetImporter.GetAtPath(path) is TextureImporter importer && importer.sRGBTexture)
                 {
                     importer.sRGBTexture = false;
-                    importer.SaveAndReimport();
-                    reimported[path] = AssetDatabase.LoadAssetAtPath<Texture2D>(path);
+                    SaveAndReimport(importer, path, replaced);
                 }
-                // A material refers to the asset, which is now the texture imported again.
-                if (reimported.TryGetValue(path, out var fresh)) material.SetTexture(ExtraTex, fresh);
             }
         }
 

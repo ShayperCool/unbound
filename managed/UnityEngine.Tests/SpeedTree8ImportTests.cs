@@ -141,6 +141,38 @@ namespace UnityEngine.Tests
             }
         }
 
+        /// <summary>A material refers to a texture asset: once the import has imported a map again,
+        /// every slot of the tree's materials that held the replaced texture holds the new one,
+        /// whatever its name (a remapped material's included); other slots keep theirs.</summary>
+        [Fact]
+        public void MaterialsFollowAMapImportedAgain()
+        {
+            var shader = ShaderUtil.CreateShaderAsset("Shader \"Test/Repoint\" { Properties { _MainTex (\"Main\", 2D) = \"white\" {} _ExtraTex (\"Extra\", 2D) = \"white\" {} } SubShader { Pass { } } }");
+            var old = new Texture2D(2, 2) { name = "Old" };
+            var fresh = new Texture2D(2, 2) { name = "Fresh" };
+            var other = new Texture2D(2, 2) { name = "Other" };
+            var made = new Material(shader);
+            var remapped = new Material(shader);
+            try
+            {
+                made.SetTexture("_MainTex", old);
+                made.SetTexture("_ExtraTex", other);
+                remapped.SetTexture("_ExtraTex", old);
+                var replaced = new Dictionary<Texture, Texture>(ReferenceEqualityComparer.Instance) { [old] = fresh };
+                SpeedTree8Imports.Repoint(new[] { made, remapped, null }, replaced);
+                Assert.Same(fresh, made.GetTexture("_MainTex"));
+                Assert.Same(other, made.GetTexture("_ExtraTex"));
+                Assert.Same(fresh, remapped.GetTexture("_ExtraTex"));
+                // Nothing replaced: nothing changes.
+                SpeedTree8Imports.Repoint(new[] { made }, new Dictionary<Texture, Texture>(ReferenceEqualityComparer.Instance));
+                Assert.Same(fresh, made.GetTexture("_MainTex"));
+            }
+            finally
+            {
+                foreach (var o in new Object[] { made, remapped, old, fresh, other, shader }) Object.DestroyImmediate(o);
+            }
+        }
+
         static SpeedTree8File.Wind NumberedWind()
         {
             float n = 0f;
