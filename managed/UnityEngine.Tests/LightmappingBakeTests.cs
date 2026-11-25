@@ -268,8 +268,20 @@ namespace UnityEngine.Tests
                     environment.mixedBakeMode = MixedLightingMode.IndirectOnly;
                     // Filtering, ambient occlusion and another Indirect Intensity: not made or not
                     // measured (each control by itself).
+                    string Json(object value) => System.Text.Json.JsonSerializer.Serialize(value);
+                    // The Auto filtering: both parts denoised by Open Image Denoise and filtered by a
+                    // Gaussian filter of radius 1, whatever the Advanced settings say
+                    // (tests/projects/bakedbuffers DenoiseAuto, DenoiseAutoOver).
                     environment.filteringMode = LightingSettings.FilterMode.Auto;
-                    Assert.Contains("filtering", Unwritten(environment, "Assets/Scenes/Lit", true, lightmaps: true));
+                    environment.denoiserTypeDirect = environment.denoiserTypeIndirect = LightingSettings.DenoiserType.Optix;
+                    environment.filterTypeDirect = environment.filterTypeIndirect = LightingSettings.FilterType.ATrous;
+                    Assert.Null(Unwritten(environment, "Assets/Scenes/Lit", true, lightmaps: true));
+                    const string auto = "{\"denoise\":true,\"filter\":{\"gaussian\":1}}";
+                    Assert.Equal($"{{\"direct\":{auto},\"indirect\":{auto}}}", Json(RealtimeGI.Filtering(environment)));
+                    // The Advanced filtering with the OptiX denoiser, which the Editor runs only on
+                    // Windows: not made.
+                    environment.filteringMode = LightingSettings.FilterMode.Advanced;
+                    Assert.Contains("OptiX", Unwritten(environment, "Assets/Scenes/Lit", true, lightmaps: true));
                     Assert.Null(RealtimeGI.Filtering(environment));
                     // The Advanced filtering with Gaussian or A-Trous filters and no denoiser is made
                     // (tests/projects/bakedbuffers Filter*): the radii go to the bake.
@@ -282,16 +294,19 @@ namespace UnityEngine.Tests
                     environment.filteringGaussianRadiusDirect = 2.5f;
                     environment.filteringGaussianRadiusIndirect = 5f;
                     Assert.Null(Unwritten(environment, "Assets/Scenes/Lit", true, lightmaps: true));
-                    Assert.Equal("{\"direct\":{\"gaussian\":2.5},\"indirect\":null}", System.Text.Json.JsonSerializer.Serialize(RealtimeGI.Filtering(environment)));
+                    Assert.Equal("{\"direct\":{\"denoise\":false,\"filter\":{\"gaussian\":2.5}},\"indirect\":{\"denoise\":false,\"filter\":null}}", Json(RealtimeGI.Filtering(environment)));
+                    // Open Image Denoise as a part's denoiser is made too (DenoiseOidn).
                     environment.denoiserTypeIndirect = LightingSettings.DenoiserType.OpenImage;
-                    Assert.Contains("denoiser", Unwritten(environment, "Assets/Scenes/Lit", true, lightmaps: true));
-                    Assert.Null(RealtimeGI.Filtering(environment));
-                    environment.denoiserTypeIndirect = LightingSettings.DenoiserType.None;
+                    Assert.Null(Unwritten(environment, "Assets/Scenes/Lit", true, lightmaps: true));
+                    Assert.Equal("{\"direct\":{\"denoise\":false,\"filter\":{\"gaussian\":2.5}},\"indirect\":{\"denoise\":true,\"filter\":null}}", Json(RealtimeGI.Filtering(environment)));
+                    environment.denoiserTypeDirect = LightingSettings.DenoiserType.Optix;
+                    Assert.Contains("OptiX", Unwritten(environment, "Assets/Scenes/Lit", true, lightmaps: true));
+                    environment.denoiserTypeDirect = environment.denoiserTypeIndirect = LightingSettings.DenoiserType.None;
                     // The A-Trous filter is made too (tests/projects/bakedbuffers FilterAtrous).
                     environment.filterTypeIndirect = LightingSettings.FilterType.ATrous;
                     environment.filteringAtrousPositionSigmaIndirect = 1.5f;
                     Assert.Null(Unwritten(environment, "Assets/Scenes/Lit", true, lightmaps: true));
-                    Assert.Equal("{\"direct\":{\"gaussian\":2.5},\"indirect\":{\"aTrous\":1.5}}", System.Text.Json.JsonSerializer.Serialize(RealtimeGI.Filtering(environment)));
+                    Assert.Equal("{\"direct\":{\"denoise\":false,\"filter\":{\"gaussian\":2.5}},\"indirect\":{\"denoise\":false,\"filter\":{\"aTrous\":1.5}}}", Json(RealtimeGI.Filtering(environment)));
                     environment.filterTypeIndirect = LightingSettings.FilterType.Gaussian;
                     environment.mixedBakeMode = MixedLightingMode.Shadowmask;
                     Assert.Contains("filtered lightmaps in the Shadowmask", Unwritten(environment, "Assets/Scenes/Lit", true, lightmaps: true));

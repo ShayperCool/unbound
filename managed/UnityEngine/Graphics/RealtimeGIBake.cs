@@ -316,43 +316,60 @@ namespace UnityEngine
             : settings.bakedGI && !shadowmaskMade ? "a bake in the Shadowmask Lighting Mode without a light on a shadowmask channel is not measured"
             : null;
 
-        /// <summary>The filters a bake applies to its lightmaps' direct light and indirect and
-        /// sky's light: with the Advanced filtering and no denoiser, each part's Gaussian filter
+        /// <summary>What a bake does to its lightmaps' direct light and indirect and sky's light,
+        /// each part as <c>{"denoise": bool, "filter": filter}</c>: with the Auto filtering both
+        /// denoised by Open Image Denoise and filtered by a Gaussian filter of radius 1, whatever
+        /// the Advanced settings say (the Manual: OptiX where it runs, which it does only on
+        /// Windows, else Open Image Denoise, with that filter); with the Advanced filtering each
+        /// part denoised where its denoiser is Open Image Denoise, then its Gaussian filter
         /// (<c>{"gaussian": radius}</c>), A-Trous filter (<c>{"aTrous": position sigma}</c>) or
-        /// none (null) (matches the Unity 6000.0.71f1 Editor, tests/projects/bakedbuffers
-        /// <c>Filter*</c>); null without filtering or where it is not made (<see
+        /// none (null) (matches the Unity 6000.0.71f1 Editor on Linux, tests/projects/bakedbuffers
+        /// <c>Filter*</c>, <c>Denoise*</c>); null without filtering or where it is not made (<see
         /// cref="UnmadeFiltering"/>).</summary>
         internal static object Filtering(LightingSettings settings)
         {
-            if (settings == null || settings.filteringMode != LightingSettings.FilterMode.Advanced || UnmadeFiltering(settings) != null)
+            if (settings == null || settings.filteringMode == LightingSettings.FilterMode.None || UnmadeFiltering(settings) != null)
                 return null;
-            static object Part(LightingSettings.FilterType type, float radius, float sigma) => type switch
+            if (settings.filteringMode == LightingSettings.FilterMode.Auto)
             {
-                LightingSettings.FilterType.Gaussian => new { gaussian = radius },
-                LightingSettings.FilterType.ATrous => new { aTrous = sigma },
-                _ => null,
+                var preset = new { denoise = true, filter = (object)new { gaussian = 1f } };
+                return new { direct = preset, indirect = preset };
+            }
+            static object Part(LightingSettings.DenoiserType denoiser, LightingSettings.FilterType type, float radius, float sigma) => new
+            {
+                denoise = denoiser == LightingSettings.DenoiserType.OpenImage,
+                filter = type switch
+                {
+                    LightingSettings.FilterType.Gaussian => new { gaussian = radius },
+                    LightingSettings.FilterType.ATrous => (object)new { aTrous = sigma },
+                    _ => null,
+                },
             };
             return new
             {
-                direct = Part(settings.filterTypeDirect, settings.filteringGaussianRadiusDirect, settings.filteringAtrousPositionSigmaDirect),
-                indirect = Part(settings.filterTypeIndirect, settings.filteringGaussianRadiusIndirect, settings.filteringAtrousPositionSigmaIndirect),
+                direct = Part(settings.denoiserTypeDirect, settings.filterTypeDirect, settings.filteringGaussianRadiusDirect, settings.filteringAtrousPositionSigmaDirect),
+                indirect = Part(settings.denoiserTypeIndirect, settings.filterTypeIndirect, settings.filteringGaussianRadiusIndirect, settings.filteringAtrousPositionSigmaIndirect),
             };
         }
 
         /// <summary>Why a bake's lightmaps with the Lighting Settings' filtering are not made
-        /// (null: they are, or nothing is filtered). Measured: the Advanced filtering with
-        /// Gaussian or A-Trous filters (or none) of the direct and indirect light and no
-        /// denoiser, in the Baked Indirect Lighting Mode without directional lightmaps (the
-        /// ambient occlusion target's settings matter only with ambient occlusion, which is not
-        /// made).</summary>
+        /// (null: they are, or nothing is filtered). Measured: the Auto filtering, and the
+        /// Advanced filtering with Open Image Denoise or no denoiser and Gaussian or A-Trous
+        /// filters (or none) of the direct and indirect light, in the Baked Indirect Lighting
+        /// Mode without directional lightmaps (the ambient occlusion target's settings matter only
+        /// with ambient occlusion, which is not made). The OptiX denoiser, which the Editor runs
+        /// only on Windows (elsewhere it does not start such a bake), is not made.</summary>
         internal static string UnmadeFiltering(LightingSettings settings) =>
             settings.filteringMode == LightingSettings.FilterMode.None ? null
-            : settings.filteringMode == LightingSettings.FilterMode.Auto ? "lightmaps with the Auto filtering (a denoiser) are not made yet"
-            : settings.denoiserTypeDirect != LightingSettings.DenoiserType.None || settings.denoiserTypeIndirect != LightingSettings.DenoiserType.None
-                ? "lightmaps with a denoiser are not made yet"
+            : settings.filteringMode == LightingSettings.FilterMode.Advanced
+                && (Unmade(settings.denoiserTypeDirect) || Unmade(settings.denoiserTypeIndirect))
+                ? "lightmaps with the OptiX denoiser are not made"
             : settings.directionalityMode == LightmapsMode.CombinedDirectional ? "directional lightmaps with filtering are not measured"
             : settings.mixedBakeMode != MixedLightingMode.IndirectOnly ? "filtered lightmaps in the Shadowmask or Subtractive Lighting Mode are not measured"
             : null;
+
+        static bool Unmade(LightingSettings.DenoiserType denoiser) =>
+            denoiser != LightingSettings.DenoiserType.None && denoiser != LightingSettings.DenoiserType.OpenImage;
 
         /// <summary>The folder a bake writes its files to beside the scene (null: untitled).</summary>
         static string FolderOf(Unbound.Runtime.SceneData scene) => string.IsNullOrEmpty(scene.Path) ? null
