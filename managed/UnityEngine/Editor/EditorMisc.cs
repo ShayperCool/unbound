@@ -416,6 +416,9 @@ namespace UnityEditor
     {
         public MonoImporter() { }
 
+        /// <summary>The script asset this importer imports (Scripting API 6000.0, MonoImporter.GetScript).</summary>
+        public MonoScript GetScript() => AssetDatabase.LoadAssetAtPath<MonoScript>(assetPath);
+
         /// <summary>The order the script's .meta file gives it (the Script Execution Order
         /// settings), 0 without one; a [DefaultExecutionOrder] attribute does not count, and a
         /// null script throws (matches the Unity 6000.0.71f1 Editor, tests/projects/monoimporter).</summary>

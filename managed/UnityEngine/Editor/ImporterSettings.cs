@@ -345,6 +345,45 @@ namespace UnityEditor
             set { CheckImporterState("set_spritePixelsPerUnit"); MetaSettings.SetFloat(m_Settings, "spritePixelsToUnits", value); Changed(); }
         }
 
+        /// <summary>A single sprite's pivot (<c>spritePivot</c> in the .meta; matches the Unity
+        /// 6000.0.71f1 Editor, tests/projects/projectwrites 08.importer.pivot).</summary>
+        public Vector2 spritePivot
+        {
+            get { CheckImporterState("get_spritePivot"); return new Vector2(MetaSettings.Float(m_Settings, "spritePivot.x", DefaultPivot), MetaSettings.Float(m_Settings, "spritePivot.y", DefaultPivot)); }
+            set
+            {
+                CheckImporterState("set_spritePivot");
+                MetaSettings.SetFloat(m_Settings, "spritePivot.x", value.x);
+                MetaSettings.SetFloat(m_Settings, "spritePivot.y", value.y);
+                Changed();
+            }
+        }
+
+        /// <summary>A single sprite's border, left, bottom, right, top (<c>spriteBorder</c> in the
+        /// .meta; tests/projects/projectwrites 08.importer.pivot).</summary>
+        public Vector4 spriteBorder
+        {
+            get
+            {
+                CheckImporterState("get_spriteBorder");
+                return new Vector4(MetaSettings.Float(m_Settings, "spriteBorder.x"), MetaSettings.Float(m_Settings, "spriteBorder.y"),
+                    MetaSettings.Float(m_Settings, "spriteBorder.z"), MetaSettings.Float(m_Settings, "spriteBorder.w"));
+            }
+            set
+            {
+                CheckImporterState("set_spriteBorder");
+                MetaSettings.SetFloat(m_Settings, "spriteBorder.x", value.x);
+                MetaSettings.SetFloat(m_Settings, "spriteBorder.y", value.y);
+                MetaSettings.SetFloat(m_Settings, "spriteBorder.z", value.z);
+                MetaSettings.SetFloat(m_Settings, "spriteBorder.w", value.w);
+                Changed();
+            }
+        }
+
+        /// <summary>The pivot of a .meta without one: the sprite's centre, as a new texture's
+        /// .meta has it (crates/unbound-assets/src/new_meta/texture_importer.yaml).</summary>
+        const float DefaultPivot = 0.5f;
+
         public bool convertToNormalmap
         {
             get { CheckImporterState("get_convertToNormalmap"); return Read(m_Settings, "bumpmap.convertToNormalMap") != 0; }
@@ -442,6 +481,12 @@ namespace UnityEditor
             Int("cubemapConvolution", s => (int)s.cubemapConvolution, (s, v) => s.cubemapConvolution = (TextureImporterCubemapConvolution)v),
             Int("seamlessCubemap", s => s.seamlessCubemap ? 1 : 0, (s, v) => s.seamlessCubemap = v != 0),
             Float("spritePixelsToUnits", 100, s => s.spritePixelsPerUnit, (s, v) => s.spritePixelsPerUnit = v),
+            Float("spritePivot.x", DefaultPivot, s => s.spritePivot.x, (s, v) => s.spritePivot = new Vector2(v, s.spritePivot.y)),
+            Float("spritePivot.y", DefaultPivot, s => s.spritePivot.y, (s, v) => s.spritePivot = new Vector2(s.spritePivot.x, v)),
+            Float("spriteBorder.x", 0, s => s.spriteBorder.x, (s, v) => s.spriteBorder = new Vector4(v, s.spriteBorder.y, s.spriteBorder.z, s.spriteBorder.w)),
+            Float("spriteBorder.y", 0, s => s.spriteBorder.y, (s, v) => s.spriteBorder = new Vector4(s.spriteBorder.x, v, s.spriteBorder.z, s.spriteBorder.w)),
+            Float("spriteBorder.z", 0, s => s.spriteBorder.z, (s, v) => s.spriteBorder = new Vector4(s.spriteBorder.x, s.spriteBorder.y, v, s.spriteBorder.w)),
+            Float("spriteBorder.w", 0, s => s.spriteBorder.w, (s, v) => s.spriteBorder = new Vector4(s.spriteBorder.x, s.spriteBorder.y, s.spriteBorder.z, v)),
         };
 
         /// <summary>The <c>alphaTestReferenceValue</c> of a .meta without one.</summary>

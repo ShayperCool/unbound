@@ -30,7 +30,8 @@ folder in a read-only (built-in) package and copying out of it; labels on a scri
 would read as something else; a file no importer claims imported in a batch beside an ordinary one;
 `Refresh` after files were deleted, copied with their `.meta` (also one repeating the original's
 GUID) and a `.meta` edited outside the AssetDatabase; imports and `CreateAsset` between `StartAssetEditing` and `StopAssetEditing`;
-`TextureImporter`, `ModelImporter` and `AssetImporter` settings, `SaveAndReimport` and
+`TextureImporter`, `ModelImporter` and `AssetImporter` settings (a texture's `spritePivot` and
+`spriteBorder` read, set and read through `ReadTextureSettings`), `SaveAndReimport` and
 `WriteImportSettingsIfDirty`; `SetLabels`/`ClearLabels`; a texture imported with an
 `AssetPostprocessor` that changes its settings; `PlayerSettings.SetScriptingDefineSymbols`
 (Edit mode; in Play mode after the values are written), `EditorBuildSettings.scenes`,
@@ -88,7 +89,7 @@ changes during an import are written too. Settings changed through the API are w
 `SaveAssets` and when the Editor quits in Edit mode, never in Play mode. In Edit mode the lock
 follows a resolved manifest change by the time the Editor quits.
 
-Unbound on macOS, 2026-11-25: 1343/1375 values, 0 failures and 34 recorded residuals
+Unbound on macOS, 2026-11-25: 1361/1393 values, 0 failures and 34 recorded residuals
 (`residuals.json`): the lock not written again after an Edit-mode `Client.Resolve`, no
 `.meta` for a file of an extension no importer claims (when the project opens, Unbound cannot tell
 which extensions packages' ScriptedImporters claim), copies and folders refused in a read-only
