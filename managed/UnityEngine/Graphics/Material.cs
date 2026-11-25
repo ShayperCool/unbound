@@ -175,7 +175,7 @@ namespace UnityEngine
             internal HashSet<int> m_Locked;
             internal int m_InheritedVersion = -1;
             internal bool m_Inheriting;
-            internal HashSet<string> m_DisabledPasses;
+            internal DisabledPassList m_DisabledPasses;
             internal int m_LodEpoch;
             internal int m_DestroyedTextureEpoch;
             internal string m_SentShader;
@@ -376,12 +376,7 @@ namespace UnityEngine
             foreach (var k in source.m_Keywords) m_Keywords.Add(k);
             m_KeywordExtras.AddRange(source.m_KeywordExtras);
             if (source.m_DisabledPasses == null) m_DisabledPasses = null;
-            else if (m_DisabledPasses == null) m_DisabledPasses = new HashSet<string>(source.m_DisabledPasses, StringComparer.OrdinalIgnoreCase);
-            else
-            {
-                m_DisabledPasses.Clear();
-                AddAll(m_DisabledPasses, source.m_DisabledPasses);
-            }
+            else (m_DisabledPasses ??= new DisabledPassList()).CopyFrom(source.m_DisabledPasses);
             AddAll(m_ScriptSet, source.m_ScriptSet);
             AddAll(m_RawBindings, source.m_RawBindings);
             AddAll(m_TextureNames, source.m_TextureNames);
@@ -634,11 +629,11 @@ namespace UnityEngine
             return (valid, invalid);
         }
 
-        /// <summary>The disabled passes as stored: upper case (measured).</summary>
+        /// <summary>The disabled passes as stored (<see cref="DisabledPassList"/>).</summary>
         internal IEnumerable<string> DisabledPassNames()
         {
             if (m_DisabledPasses == null) yield break;
-            foreach (var pass in m_DisabledPasses) yield return pass.ToUpperInvariant();
+            for (int i = 0; i < m_DisabledPasses.Count; i++) yield return m_DisabledPasses[i];
         }
 
         /// <summary>The names of the properties locked for variants.</summary>
@@ -938,7 +933,7 @@ namespace UnityEngine
         /// <summary>The LightMode tags of passes disabled on this material, compared
         /// case-insensitively (measured: tests/projects/builtinrp passes.*): the renderer skips
         /// them (built-in forward, shadow caster and depth passes, renderer lists).</summary>
-        HashSet<string> m_DisabledPasses { get => m_State.m_DisabledPasses; set => m_State.m_DisabledPasses = value; }
+        DisabledPassList m_DisabledPasses { get => m_State.m_DisabledPasses; set => m_State.m_DisabledPasses = value; }
 
         internal bool HasDisabledPasses => m_DisabledPasses != null && m_DisabledPasses.Count > 0;
 
@@ -950,7 +945,7 @@ namespace UnityEngine
             if (passName == null) return;
             bool changed = enabled
                 ? m_DisabledPasses != null && m_DisabledPasses.Remove(passName)
-                : (m_DisabledPasses ??= new HashSet<string>(StringComparer.OrdinalIgnoreCase)).Add(passName);
+                : (m_DisabledPasses ??= new DisabledPassList()).Add(passName);
             // GPU-driven rendering keeps whether the motion vectors pass is enabled.
             if (changed)
             {
@@ -1796,7 +1791,7 @@ namespace UnityEngine
                 }
             foreach (var pass in body.Get("disabledShaderPasses")?.Seq() ?? Array.Empty<YNode>())
                 if (pass.Kind == YKind.Scalar && pass.Scalar.Length > 0)
-                    (m_DisabledPasses ??= new HashSet<string>(StringComparer.OrdinalIgnoreCase)).Add(pass.Scalar);
+                    (m_DisabledPasses ??= new DisabledPassList()).AddAsRead(pass.Scalar);
             var tags = body.Get("stringTagMap");
             if (tags != null && tags.Kind == YKind.Map)
                 for (int i = 0; i < tags.Keys.Length; i++) m_Tags[tags.Keys[i]] = tags.Values[i].AsString();

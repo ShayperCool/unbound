@@ -196,7 +196,7 @@ namespace Unbound.Runtime
             foreach (var key in Sorted(m.m_Tags.Keys)) tags.Add(UnityYamlWriter.Scalar(key), Text(m.m_Tags[key]));
             if (tags.Keys.Count == 0) tags.Flow = true;
             body.Add("stringTagMap", tags);
-            body.Add("disabledShaderPasses", Strings(Sorted(m.DisabledPassNames())));
+            body.Add("disabledShaderPasses", Strings(m.DisabledPassNames()));
             body.Add("m_LockedProperties", Text(string.Join(" ", Sorted(m.LockedPropertyNames()))));
             var saved = YText.Map();
             var textures = YText.Map();
