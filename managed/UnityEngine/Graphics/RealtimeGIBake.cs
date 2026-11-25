@@ -103,7 +103,7 @@ namespace UnityEngine
                             if (component != null && !made.Contains(component) && BakedAtlas.TakenByBake(component))
                             {
                                 added = true;
-                                Warn("script-bake-added:" + scene.Path + component.GetInstanceID(), $"{scene.Path}: '{component.name}' ({component.GetType().Name}) was added after the scene loaded; Unbound's bake (Lightmapping.Bake) does not take it, and writes no lightmaps of the scene.");
+                                Warn("script-bake-added:" + scene.Path + component.GetInstanceID(), $"{scene.Path}: '{component.name}' ({component.GetType().Name}) was added after the scene loaded; Unbound's bake (Lightmapping.Bake) does not take it, and writes neither the scene's lightmaps nor its light probes' baked lighting.");
                             }
                     if (!string.IsNullOrEmpty(scene.Path)) s_ScriptBakedScenes.Add(scene.Path);
                     scene.BakedOnOpen = true;

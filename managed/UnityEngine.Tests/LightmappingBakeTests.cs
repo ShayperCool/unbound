@@ -208,6 +208,11 @@ namespace UnityEngine.Tests
                 // Said once: a second bake says nothing again.
                 var again = Run(Phase.Edit, () => Assert.True(Lightmapping.Bake()));
                 Assert.DoesNotContain(again.Logs.Messages, m => m.Message.Contains("LightingData.asset") || m.Message.Contains("Q677"));
+                // Without the added renderer the bake still makes no lightmaps here (without the
+                // native side): now that is said, once.
+                Object.DestroyImmediate(added);
+                var plain = Run(Phase.Edit, () => Assert.True(Lightmapping.Bake()));
+                Assert.Single(plain.Logs.Messages, m => m.Type == LogType.Warning && m.Message.Contains("would make baked lightmaps"));
             }
             finally
             {
