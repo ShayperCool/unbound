@@ -105,7 +105,10 @@ public class BuildSceneTests
 
     static void Lists()
     {
+        // run.py seeds the file with Base.unity under a stale path: what is read, and the same list
+        // set again.
         State("start");
+        ProjectLogStale();
         ProbeLog.Row("parallel.start", EditorBuildSettings.UseParallelAssetBundleBuilding);
 
         var base_ = new EditorBuildSettingsScene("Assets/Scenes/Base.unity", true);
@@ -166,6 +169,17 @@ public class BuildSceneTests
         };
         EditorBuildSettings.UseParallelAssetBundleBuilding = false;
         State("exit");
+    }
+
+    static void ProjectLogStale()
+    {
+        EditorBuildSettings.scenes = EditorBuildSettings.scenes;
+        State("stale");
+        AssetDatabase.SaveAssets();
+        ProbeLog.Snapshot("stale.saved.file", File);
+        EditorBuildSettings.scenes = new EditorBuildSettingsScene[0];
+        State("staleCleared");
+        AssetDatabase.SaveAssets();
     }
 
     static void UntitledSave()

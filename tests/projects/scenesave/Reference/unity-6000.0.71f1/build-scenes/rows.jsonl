@@ -18,12 +18,23 @@
 {"key": "compare.other", "value": "throws ArgumentException: object is not a EditorBuildSettingsScene"}
 {"key": "compare.null", "value": "throws ArgumentException: object is not a EditorBuildSettingsScene"}
 {"key": "start.changed", "value": 0}
-{"key": "start.file", "value": "41bc588f6ecc03944687d496f024917cabb061e21c148a6471b74581df14f908"}
-{"key": "start.scenes", "value": "[]"}
-{"key": "start.global", "value": "[]"}
-{"key": "start.build", "value": "0:|second=-1|base=-1"}
+{"key": "start.file", "value": "1dd7956fffccb8013713447b6f38326ab20b99696ed1a09c6c57171eda2ebbf1"}
+{"key": "start.scenes", "value": "[1|Assets/Scenes/Base.unity|e0fd96c04ed5f4230bfb1fc1aa060f13]"}
+{"key": "start.global", "value": "[1|Assets/Scenes/Base.unity|e0fd96c04ed5f4230bfb1fc1aa060f13]"}
+{"key": "start.build", "value": "1:Assets/Scenes/Base.unity|second=-1|base=0"}
+{"key": "stale.changed", "value": 0}
+{"key": "stale.file", "value": "1dd7956fffccb8013713447b6f38326ab20b99696ed1a09c6c57171eda2ebbf1"}
+{"key": "stale.scenes", "value": "[1|Assets/Scenes/Base.unity|e0fd96c04ed5f4230bfb1fc1aa060f13]"}
+{"key": "stale.global", "value": "[1|Assets/Scenes/Base.unity|e0fd96c04ed5f4230bfb1fc1aa060f13]"}
+{"key": "stale.build", "value": "1:Assets/Scenes/Base.unity|second=-1|base=0"}
+{"key": "stale.saved.file", "value": "1dd7956fffccb8013713447b6f38326ab20b99696ed1a09c6c57171eda2ebbf1"}
+{"key": "staleCleared.changed", "value": 1}
+{"key": "staleCleared.file", "value": "1dd7956fffccb8013713447b6f38326ab20b99696ed1a09c6c57171eda2ebbf1"}
+{"key": "staleCleared.scenes", "value": "[]"}
+{"key": "staleCleared.global", "value": "[]"}
+{"key": "staleCleared.build", "value": "0:|second=-1|base=-1"}
 {"key": "parallel.start", "value": false}
-{"key": "set.changed", "value": 1}
+{"key": "set.changed", "value": 2}
 {"key": "set.file", "value": "41bc588f6ecc03944687d496f024917cabb061e21c148a6471b74581df14f908"}
 {"key": "set.scenes", "value": "[1|Assets/Scenes/Base.unity|e0fd96c04ed5f4230bfb1fc1aa060f13; 0|Assets/Scenes/Second.unity|6f748856d2f6b48bba33779b860ce87a; 1|Assets/Scenes/Missing.unity|00000000000000000000000000000000; 1|Assets/Scenes/Base.unity|e0fd96c04ed5f4230bfb1fc1aa060f13; 1|Assets/Scenes/Second.unity|6f748856d2f6b48bba33779b860ce87a]"}
 {"key": "set.global", "value": "[1|Assets/Scenes/Base.unity|e0fd96c04ed5f4230bfb1fc1aa060f13; 0|Assets/Scenes/Second.unity|6f748856d2f6b48bba33779b860ce87a; 1|Assets/Scenes/Missing.unity|00000000000000000000000000000000; 1|Assets/Scenes/Base.unity|e0fd96c04ed5f4230bfb1fc1aa060f13; 1|Assets/Scenes/Second.unity|6f748856d2f6b48bba33779b860ce87a]"}
@@ -33,30 +44,30 @@
 {"key": "set.sameInstance", "value": false}
 {"key": "set.beforeSave.file", "value": "41bc588f6ecc03944687d496f024917cabb061e21c148a6471b74581df14f908"}
 {"key": "set.saved.file", "value": "75bd67fc744edb895ebbeb2bc6174885c6e75adc4a63bf8b5a8c9507375fe31a"}
-{"key": "again.changed", "value": 1}
+{"key": "again.changed", "value": 2}
 {"key": "again.file", "value": "75bd67fc744edb895ebbeb2bc6174885c6e75adc4a63bf8b5a8c9507375fe31a"}
 {"key": "again.scenes", "value": "[1|Assets/Scenes/Base.unity|e0fd96c04ed5f4230bfb1fc1aa060f13; 0|Assets/Scenes/Second.unity|6f748856d2f6b48bba33779b860ce87a; 1|Assets/Scenes/Missing.unity|00000000000000000000000000000000; 1|Assets/Scenes/Base.unity|e0fd96c04ed5f4230bfb1fc1aa060f13; 1|Assets/Scenes/Second.unity|6f748856d2f6b48bba33779b860ce87a]"}
 {"key": "again.global", "value": "[1|Assets/Scenes/Base.unity|e0fd96c04ed5f4230bfb1fc1aa060f13; 0|Assets/Scenes/Second.unity|6f748856d2f6b48bba33779b860ce87a; 1|Assets/Scenes/Missing.unity|00000000000000000000000000000000; 1|Assets/Scenes/Base.unity|e0fd96c04ed5f4230bfb1fc1aa060f13; 1|Assets/Scenes/Second.unity|6f748856d2f6b48bba33779b860ce87a]"}
 {"key": "again.build", "value": "5:Assets/Scenes/Base.unity,Assets/Scenes/Second.unity,Assets/Scenes/Missing.unity,Assets/Scenes/Base.unity,Assets/Scenes/Second.unity|second=3|base=0"}
 {"key": "nullEntry", "value": "throws NullReferenceException: (null)"}
-{"key": "nullEntry.changed", "value": 1}
+{"key": "nullEntry.changed", "value": 2}
 {"key": "nullEntry.file", "value": "75bd67fc744edb895ebbeb2bc6174885c6e75adc4a63bf8b5a8c9507375fe31a"}
 {"key": "nullEntry.scenes", "value": "[1|Assets/Scenes/Base.unity|e0fd96c04ed5f4230bfb1fc1aa060f13; 0|Assets/Scenes/Second.unity|6f748856d2f6b48bba33779b860ce87a; 1|Assets/Scenes/Missing.unity|00000000000000000000000000000000; 1|Assets/Scenes/Base.unity|e0fd96c04ed5f4230bfb1fc1aa060f13; 1|Assets/Scenes/Second.unity|6f748856d2f6b48bba33779b860ce87a]"}
 {"key": "nullEntry.global", "value": "[1|Assets/Scenes/Base.unity|e0fd96c04ed5f4230bfb1fc1aa060f13; 0|Assets/Scenes/Second.unity|6f748856d2f6b48bba33779b860ce87a; 1|Assets/Scenes/Missing.unity|00000000000000000000000000000000; 1|Assets/Scenes/Base.unity|e0fd96c04ed5f4230bfb1fc1aa060f13; 1|Assets/Scenes/Second.unity|6f748856d2f6b48bba33779b860ce87a]"}
 {"key": "nullEntry.build", "value": "5:Assets/Scenes/Base.unity,Assets/Scenes/Second.unity,Assets/Scenes/Missing.unity,Assets/Scenes/Base.unity,Assets/Scenes/Second.unity|second=3|base=0"}
 {"key": "nullList", "value": "done"}
-{"key": "nullList.changed", "value": 2}
+{"key": "nullList.changed", "value": 3}
 {"key": "nullList.file", "value": "75bd67fc744edb895ebbeb2bc6174885c6e75adc4a63bf8b5a8c9507375fe31a"}
 {"key": "nullList.scenes", "value": "[]"}
 {"key": "nullList.global", "value": "[]"}
 {"key": "nullList.build", "value": "0:|second=-1|base=-1"}
-{"key": "empty.changed", "value": 2}
+{"key": "empty.changed", "value": 3}
 {"key": "empty.file", "value": "75bd67fc744edb895ebbeb2bc6174885c6e75adc4a63bf8b5a8c9507375fe31a"}
 {"key": "empty.scenes", "value": "[]"}
 {"key": "empty.global", "value": "[]"}
 {"key": "empty.build", "value": "0:|second=-1|base=-1"}
 {"key": "empty.saved.file", "value": "41bc588f6ecc03944687d496f024917cabb061e21c148a6471b74581df14f908"}
-{"key": "global.changed", "value": 2}
+{"key": "global.changed", "value": 3}
 {"key": "global.file", "value": "41bc588f6ecc03944687d496f024917cabb061e21c148a6471b74581df14f908"}
 {"key": "global.scenes", "value": "[1|Assets/Scenes/Second.unity|6f748856d2f6b48bba33779b860ce87a]"}
 {"key": "global.global", "value": "[1|Assets/Scenes/Second.unity|6f748856d2f6b48bba33779b860ce87a]"}
@@ -64,7 +75,7 @@
 {"key": "parallel.set", "value": true}
 {"key": "parallel.set.file", "value": "41bc588f6ecc03944687d496f024917cabb061e21c148a6471b74581df14f908"}
 {"key": "global.saved.file", "value": "c930b17d64d68a2acc70a832a4a1169f3579350596ae475fec025bff63cc8e23"}
-{"key": "exit.changed", "value": 3}
+{"key": "exit.changed", "value": 4}
 {"key": "exit.file", "value": "c930b17d64d68a2acc70a832a4a1169f3579350596ae475fec025bff63cc8e23"}
 {"key": "exit.scenes", "value": "[1|Assets/Scenes/Second.unity|6f748856d2f6b48bba33779b860ce87a; 0|Assets/Scenes/Base.unity|e0fd96c04ed5f4230bfb1fc1aa060f13]"}
 {"key": "exit.global", "value": "[1|Assets/Scenes/Second.unity|6f748856d2f6b48bba33779b860ce87a; 0|Assets/Scenes/Base.unity|e0fd96c04ed5f4230bfb1fc1aa060f13]"}

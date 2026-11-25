@@ -99,12 +99,13 @@ namespace UnityEditor
             set => SetScenes(value);
         }
 
+        /// <summary>Copies of the list, each scene's path its GUID's asset's when the project has
+        /// that asset (a stale path read from the file answers the current one; build-scenes
+        /// start.scenes).</summary>
         static EditorBuildSettingsScene[] Copies()
         {
             Read();
-            var copies = new EditorBuildSettingsScene[s_Scenes.Length];
-            for (int i = 0; i < copies.Length; i++) copies[i] = Copy(s_Scenes[i]);
-            return copies;
+            return ResolvedList();
         }
 
         static EditorBuildSettingsScene Copy(EditorBuildSettingsScene s) => EditorBuildSettingsScene.Copy(s);
@@ -126,13 +127,10 @@ namespace UnityEditor
                 if (scene == null) throw new NullReferenceException("(null)");
             var next = new EditorBuildSettingsScene[value.Length];
             for (int i = 0; i < value.Length; i++) next[i] = Resolved(value[i]);
-            // The list is taken when it differs from the one kept (a list read with a stale path takes
-            // the corrected one); sceneListChanged only when it differs from the kept one as
-            // resolved (whether the Editor resolves a path as it reads the file is unmeasured).
-            if (Same(next, s_Scenes)) return false;
-            var announced = new EditorBuildSettingsScene[s_Scenes.Length];
-            for (int i = 0; i < announced.Length; i++) announced[i] = Resolved(s_Scenes[i]);
-            bool changed = !Same(next, announced);
+            // A list the same as the one kept, as resolved, changes nothing: no event, the file as
+            // it is (a stale path read from it included; matches the Unity 6000.0.71f1 Editor,
+            // tests/projects/scenesave build-scenes stale.*).
+            if (Same(next, ResolvedList())) return false;
             s_Scenes = next;
             // The enabled scenes, as the host lists them at the start (that Play mode loads them by
             // these indices is not measured).
@@ -153,7 +151,28 @@ namespace UnityEditor
                 list.Flow = list.Items.Count == 0;
                 body.Set("m_Scenes", list);
             });
-            return changed;
+            return true;
+        }
+
+        static EditorBuildSettingsScene[] ResolvedList()
+        {
+            var resolved = new EditorBuildSettingsScene[s_Scenes.Length];
+            for (int i = 0; i < resolved.Length; i++) resolved[i] = Resolved(s_Scenes[i]);
+            return resolved;
+        }
+
+        /// <summary>As the editor domain loads: the build indices name the scenes the list's GUIDs
+        /// name now (the Editor resolves a stale path as it reads the file; matches the Unity
+        /// 6000.0.71f1 Editor, tests/projects/scenesave build-scenes start.build).</summary>
+        internal static void ResolveBuildIndices()
+        {
+            if (!s_Read) return;
+            var enabled = new List<(string, string)>();
+            foreach (var scene in ResolvedList())
+                if (scene.enabled) enabled.Add((scene.path ?? "", scene.guid.ToString()));
+            if (enabled.Count != UnityEngine.ProjectInfo.BuildScenes.Count) return;
+            UnityEngine.ProjectInfo.BuildScenes.Clear();
+            UnityEngine.ProjectInfo.BuildScenes.AddRange(enabled);
         }
 
         static bool Same(EditorBuildSettingsScene[] a, EditorBuildSettingsScene[] b)

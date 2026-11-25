@@ -89,6 +89,18 @@ def seed_identifier_defaults(project):
     settings.write_bytes(text)
 
 
+def seed_stale_build_scene(project):
+    """An EditorBuildSettings.asset listing Base.unity under a path it no longer has (a scene moved
+    outside the Editor)."""
+    settings = project/'ProjectSettings/EditorBuildSettings.asset'
+    text = settings.read_bytes()
+    old = b'  m_Scenes: []\n'
+    if text.count(old) != 1:
+        raise ValueError(f'{settings}: expected an empty scene list')
+    settings.write_bytes(text.replace(old, b'  m_Scenes:\n  - enabled: 1\n    path: Assets/Old/Moved.unity\n'
+                                           b'    guid: e0fd96c04ed5f4230bfb1fc1aa060f13\n'))
+
+
 def run_case(kind, case, out, cli=None):
     platform, test_filter = CASES[case]
     scratch = run_root(PROBE, 'work')
@@ -98,6 +110,8 @@ def run_case(kind, case, out, cli=None):
     copy_project(project)
     if case == 'build-identity-defaults':
         seed_identifier_defaults(project)
+    if case == 'build-scenes':
+        seed_stale_build_scene(project)
     rows = work/'rows.jsonl'
     env = dict(os.environ, SCENESAVE_LOG=str(rows))
     results = work/'results.xml'

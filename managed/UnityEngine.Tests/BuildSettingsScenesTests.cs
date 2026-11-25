@@ -127,16 +127,21 @@ namespace UnityEngine.Tests
                 EditorBuildSettings.globalScenes = new[] { new EditorBuildSettingsScene("Assets/Scenes/Second.unity", true) };
                 Assert.Equal(new[] { "1|Assets/Scenes/Second.unity|" + SecondGuid }, EditorBuildSettings.scenes.Select(Describe));
                 Assert.Equal(3, changed);
-                // A list read with a stale path, set again as it is: the corrected path is taken,
-                // with no event (the same list as resolved); the build index follows it.
+                // A list read with a stale path answers the current one; set again as it is, it
+                // changes nothing (no event, the file as read).
                 EditorBuildSettings.Configure(new[] { new EditorBuildSettingsScene { path = "Assets/Old/Moved.unity", guid = new GUID(BaseGuid), enabled = true } },
                     new System.Collections.Generic.Dictionary<string, (string, long)>());
-                EditorBuildSettings.scenes = EditorBuildSettings.scenes;
-                Assert.Equal(3, changed);
                 Assert.Equal(new[] { "1|Assets/Scenes/Base.unity|" + BaseGuid }, EditorBuildSettings.scenes.Select(Describe));
+                // The host's build indices, as read, name the current path once the editor domain loads.
+                ProjectInfo.BuildScenes.Clear();
+                ProjectInfo.BuildScenes.Add(("Assets/Old/Moved.unity", BaseGuid));
+                EditorBuildSettings.ResolveBuildIndices();
                 Assert.Equal(new[] { "Assets/Scenes/Base.unity" }, ProjectInfo.BuildScenes.Select(b => b.Path));
-                // The same once more: nothing to take.
-                EditorBuildSettings.scenes = new[] { new EditorBuildSettingsScene("Assets/Scenes/Base.unity", true) };
+                AssetDatabase.SaveAssets();
+                var file = File.ReadAllText(Path.Combine(project, "ProjectSettings/EditorBuildSettings.asset"));
+                EditorBuildSettings.scenes = EditorBuildSettings.scenes;
+                AssetDatabase.SaveAssets();
+                Assert.Equal(file, File.ReadAllText(Path.Combine(project, "ProjectSettings/EditorBuildSettings.asset")));
                 Assert.Equal(3, changed);
             }
             finally

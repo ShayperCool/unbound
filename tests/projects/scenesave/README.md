@@ -131,8 +131,10 @@ file the run added, changed or removed.
   set: after each, `sceneListChanged`'s count, the file's hash, both getters, the build indices
   `SceneManager`/`SceneUtility` answer, and the file after `SaveAssets`; the scenes given and the
   scenes returned changed afterwards; a list left for the Editor's exit; an untitled scene saved
-  without a path by `SaveScene`, `SaveScenes` and `SaveOpenScenes`. Recorded in the macOS Editor
-  (batch mode, no graphics: two identical captures; nothing depends on the OS).
+  without a path by `SaveScene`, `SaveScenes` and `SaveOpenScenes`. `run.py` starts this case from
+  an `EditorBuildSettings.asset` listing `Base.unity` under a stale path (`Assets/Old/Moved.unity`)
+  and the test sets that list again (`stale.*`). Recorded in the macOS Editor (batch mode, no
+  graphics: two identical captures; nothing depends on the OS).
 - `play-nosave`, `play-save` (Play Mode, `SavePlayTests.NoSave` and `.Save`, each alone): assets
   edited in Play mode, left unsaved or saved by `AssetDatabase.SaveAssets` there; scene saves and
   `MarkSceneDirty` in Play mode.
@@ -143,8 +145,9 @@ Measured: `SaveScene` writes whether or not the scene is dirty, `SaveScenes` and
 answers false; an untitled scene saved without a path cancels the save panel with the batch-mode
 assertion and is not saved. A set scene list is copied, each scene's path taken from its GUID when
 the project has that asset, null taken as empty, a null entry refused; `sceneListChanged` follows a
-change of the list only, not `globalScenes`; the getters return copies; the file is written by
-`SaveAssets` and at exit. A scene's documents are ordered by file id (settings first, SceneRoots last); a
+change of the list only, not `globalScenes`; the getters return copies; a stale path read from the
+file answers its GUID's current path (also in the build indices), and the same list set again
+changes nothing, the file keeping the stale path; the file is written by `SaveAssets` and at exit. A scene's documents are ordered by file id (settings first, SceneRoots last); a
 prefab's by GameObject (GameObjects by file id, each followed by its components in component
 order). Numbers are written with their shortest digits, with an exponent once the decimal exponent
 reaches the type's precision (9 for floats, 17 for doubles) or falls below its negation; integer,
