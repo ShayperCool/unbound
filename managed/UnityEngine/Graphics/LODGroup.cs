@@ -202,6 +202,15 @@ namespace UnityEngine
         public void SetLODs(LOD[] lods)
         {
             if (lods == null) throw new ArgumentNullException(nameof(lods));
+            AssignLODs(lods);
+            // The group's bounds follow its new renderers (tests/projects/lodbounds counted.setlods).
+            RecalculateBounds();
+        }
+
+        /// <summary>The levels, the group's bounds left as they are (a loaded or copied group keeps
+        /// its own).</summary>
+        void AssignLODs(LOD[] lods)
+        {
             foreach (var lod in m_LODs) Attach(lod.renderers, null);
             m_LODs = new LOD[lods.Length];
             for (int i = 0; i < lods.Length; i++)
@@ -234,30 +243,50 @@ namespace UnityEngine
             ObjectDispatch.Changed(this);
         }
 
-        /// <summary>The size and reference point of the levels' renderers: their bounds in the
-        /// group's space, the size their largest side.</summary>
+        /// <summary>
+        /// The size and reference point of the levels' renderers (matches the Unity 6000.0.71f1
+        /// Editor, tests/projects/lodbounds): each renderer's local bounds carried into the group's
+        /// space (its corners through the group's world-to-local matrix times the renderer's
+        /// local-to-world one) as a box, the boxes joined one after another (each union's center
+        /// and extents the halves of its corners' sum and difference); the reference point the
+        /// box's center, the size its largest side. Disabled renderers and those of inactive
+        /// objects count, missing ones do not; without any the point is zero and the size 1.
+        /// Not measured: renderers other than mesh renderers.
+        /// </summary>
         public void RecalculateBounds()
         {
             bool any = false;
-            var bounds = new Bounds();
+            Vector3 center = default, extents = default;
             var toLocal = transform.worldToLocalMatrix;
             foreach (var lod in m_LODs)
                 foreach (var r in lod.renderers ?? Array.Empty<Renderer>())
                 {
                     if (!r) continue;
-                    var world = r.bounds;
-                    var e = world.extents;
+                    var local = r.localBounds;
+                    var toGroup = toLocal * r.transform.localToWorldMatrix;
+                    Vector3 c = local.center, e = local.extents, min = default, max = default;
                     for (int i = 0; i < 8; i++)
                     {
-                        var p = toLocal.MultiplyPoint3x4(world.center + new Vector3((i & 1) != 0 ? e.x : -e.x, (i & 2) != 0 ? e.y : -e.y, (i & 4) != 0 ? e.z : -e.z));
-                        if (!any) bounds = new Bounds(p, Vector3.zero);
-                        else bounds.Encapsulate(p);
-                        any = true;
+                        var p = toGroup.MultiplyPoint3x4(c + new Vector3((i & 1) != 0 ? e.x : -e.x, (i & 2) != 0 ? e.y : -e.y, (i & 4) != 0 ? e.z : -e.z));
+                        min = i == 0 ? p : Vector3.Min(min, p);
+                        max = i == 0 ? p : Vector3.Max(max, p);
                     }
+                    // The renderer's box, then its union with the boxes before it.
+                    var boxCenter = (min + max) * 0.5f;
+                    var boxExtents = (max - min) * 0.5f;
+                    if (any)
+                    {
+                        min = Vector3.Min(center - extents, boxCenter - boxExtents);
+                        max = Vector3.Max(center + extents, boxCenter + boxExtents);
+                        boxCenter = (min + max) * 0.5f;
+                        boxExtents = (max - min) * 0.5f;
+                    }
+                    center = boxCenter;
+                    extents = boxExtents;
+                    any = true;
                 }
-            if (!any) return;
-            m_LocalReferencePoint = bounds.center;
-            m_Size = Mathf.Max(bounds.size.x, Mathf.Max(bounds.size.y, bounds.size.z));
+            m_LocalReferencePoint = any ? center : Vector3.zero;
+            m_Size = any ? 2f * Mathf.Max(extents.x, Mathf.Max(extents.y, extents.z)) : 1f;
             ObjectDispatch.Changed(this);
         }
 
@@ -368,7 +397,7 @@ namespace UnityEngine
                     renderers = renderers.ToArray(),
                 });
             }
-            SetLODs(lods.ToArray());
+            AssignLODs(lods.ToArray());
         }
 
         internal override void WriteSerialized(UnityYamlWriter.Writer w)
@@ -413,7 +442,7 @@ namespace UnityEngine
                 var renderers = lods[i].renderers;
                 for (int k = 0; k < renderers.Length; k++) renderers[k] = remap(renderers[k]) as Renderer;
             }
-            SetLODs(lods);
+            AssignLODs(lods);
         }
 
         internal override void OnAttached()

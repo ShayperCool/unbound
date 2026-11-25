@@ -67,11 +67,5 @@
   "v8/Card_Tree_Sample/Card_Custom.st/go/Card_Custom/CollisionObject0/transform",
   "v8/Card_Tree_Sample/Card_Units0.st/go/Card_Units0/CollisionObject0/transform",
   "v8/Field_Embedded.st/go/Field_Embedded/CollisionObject1/transform"
- ],
- "LODGroup.RecalculateBounds unions the corners of the renderers bounds; the Editor reference point matches a union of the bounds themselves, 4 ulps off in x here (LODGroup follow-up)": [
-  "scene/go/CardInScene/LODGroup",
-  "v8/Card_Tree_Sample/Card_Dangling.st/go/Card_Dangling/LODGroup",
-  "v8/Card_Tree_Sample/Card_Spheres.st/go/Card_Spheres/LODGroup",
-  "v8/Card_Tree_Sample/card-tree-sample.st/go/card-tree-sample/LODGroup"
  ]
 }

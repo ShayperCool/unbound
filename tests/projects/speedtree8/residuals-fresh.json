@@ -41,12 +41,6 @@
   "v8/Broadleaf_Desktop_Field_OptionsOff.st/go/Broadleaf_Desktop_Field_OptionsOff/CollisionObject1/transform",
   "v8/Broadleaf_Desktop_Field_OptionsOn.st/go/Broadleaf_Desktop_Field_OptionsOn/CollisionObject1/transform"
  ],
- "LODGroup.RecalculateBounds unions the corners of the renderers bounds; the Editor reference point matches a union of the bounds themselves, 4 ulps off in x here (LODGroup follow-up)": [
-  "v8/AlphaCheck/Card_Alpha.st/go/Card_Alpha/LODGroup",
-  "v8/AlphaCheck2/Card_Alpha2.st/go/Card_Alpha2/LODGroup",
-  "v8/Card_Tree_Sample/Card_Wind2.st/go/Card_Wind2/LODGroup",
-  "v8/Card_Tree_Sample/card-tree-sample.st/go/card-tree-sample/LODGroup"
- ],
  "The Editor imports every new tree of a refresh before any of their maps change, so a tree whose maps an earlier tree import made transparent imports a second time there; Unbound imports a tree when it loads, and one whose maps another tree has already changed imports once": [
   "v8/Broadleaf_Desktop_Field_OptionsOff.st/callbacks",
   "v8/Broadleaf_Desktop_Field_OptionsOff.st/callbacks/3",
