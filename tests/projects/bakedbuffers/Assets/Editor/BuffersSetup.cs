@@ -1044,11 +1044,11 @@ public static class BuffersSetup
     }
 
     /// <summary>Baked lights with cookies, each cookie's red, green, blue and alpha different (what
-    /// the bake takes of them): a spot light's 16 by 16 clamped cookie over a light probe group,
+    /// the bake takes of them), its alpha telling rows from columns and each way along them: a spot light's 16 by 16 clamped cookie over a light probe group,
     /// a sun's 8 by 8 repeating cookie of size 2.5, and a point light's cube cookie of 8 a side.</summary>
     static void Cookies()
     {
-        Color32 Texel(int x, int y, int n) => new Color32((byte)(x * 255 / (n - 1)), (byte)(y * 255 / (n - 1)), (byte)(((x ^ y) & 1) == 0 ? 230 : 40), (byte)(((x / 2 + y / 2) & 1) == 0 ? 255 : 60));
+        Color32 Texel(int x, int y, int n) => new Color32((byte)(x * 255 / (n - 1)), (byte)(y * 255 / (n - 1)), (byte)(((x ^ y) & 1) == 0 ? 230 : 40), (byte)(20 + ((x * 5 + y * 3) % 8) * 33));
         {
             var scene = Lit("CookieSpot");
             var cookie = Tex("CookieSpotCookie", 16, 16, FilterMode.Bilinear, (x, y) => Texel(x, y, 16));
