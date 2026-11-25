@@ -24,8 +24,10 @@ Unmeasured, and left binding as before: the legacy Animation component and
 `AnimationClip.SampleAnimation` (which treat discrete curves otherwise), the Animator's own curves,
 and a player (bundle) clip's discrete curves (its bindings' `isIntCurve` flag is not read).
 
-Unbound lists an engine component's bindings as the Editor measures them (tests/projects/animbindings)
-and binds a float curve only to a property its type offers.
+Unbound lists an engine component's bindings as the Editor measures them (tests/projects/animbindings),
+and on the Animator and playables binds a float curve on an engine component's field only when its
+type offers it (the measured path; the legacy Animation component and `SampleAnimation` keep binding
+as before).
 
 The scene is the uitkpanelutils probe's, the settings the modelroot probe's. Other releases are
 unmeasured.

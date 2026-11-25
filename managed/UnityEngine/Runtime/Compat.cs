@@ -543,6 +543,11 @@ namespace Unbound.Runtime
         /// families are unmeasured.</summary>
         internal static bool EditorWindowGuiMeasured => Family == ReleaseFamily.Unity6000_0;
 
+        /// <summary>The animatable bindings of engine components (tests/projects/animbindings) and the
+        /// float curves an Animator binds to them (tests/projects/enginediscrete), measured on Unity
+        /// 6000.0.71f1. Other families are unmeasured.</summary>
+        internal static bool AnimatableBindingsMeasured => Family == ReleaseFamily.Unity6000_0;
+
         /// <summary>Popup content defaults and window lifecycle measured by tests/projects/popupcontent
         /// on Unity 6000.0.71f1. Other families retain their unmeasured answers.</summary>
         internal static bool EditorPopupWindowMeasured => Family == ReleaseFamily.Unity6000_0;

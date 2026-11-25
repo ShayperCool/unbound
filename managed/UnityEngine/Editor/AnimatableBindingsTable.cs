@@ -16,7 +16,7 @@ namespace UnityEditor
             return System.Array.IndexOf(engine.Floats, propertyName) >= 0;
         }
 
-        static readonly Dictionary<string, (string[] Floats, string[] Objects, bool Materials)> s_EngineBindings = new Dictionary<string, (string[], string[], bool)>
+        internal static readonly Dictionary<string, (string[] Floats, string[] Objects, bool Materials)> s_EngineBindings = new Dictionary<string, (string[], string[], bool)>
         {
             ["UnityEngine.AI.NavMeshAgent"] = (new[] { "m_Enabled", "m_Radius", "m_Speed", "m_Acceleration", "avoidancePriority", "m_AngularSpeed", "m_StoppingDistance", "m_AutoTraverseOffMeshLink", "m_AutoBraking", "m_AutoRepath", "m_Height", "m_BaseOffset" }, System.Array.Empty<string>(), false),
             ["UnityEngine.AI.NavMeshObstacle"] = (new[] { "m_Enabled", "m_Extents.x", "m_Extents.y", "m_Extents.z", "m_MoveThreshold", "m_Carve", "m_CarveOnlyStationary", "m_Center.x", "m_Center.y", "m_Center.z", "m_TimeToStationary" }, System.Array.Empty<string>(), false),

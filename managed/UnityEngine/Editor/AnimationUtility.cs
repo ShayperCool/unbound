@@ -335,14 +335,28 @@ namespace UnityEditor
                 // The Transform's bindings are listed above; a RectTransform's come from the table.
                 if (component == null || component.GetType() == typeof(Transform)) continue;
                 var type = component.GetType();
-                if (type.FullName != null && s_EngineBindings.TryGetValue(type.FullName, out var engine))
+                if (Unbound.Runtime.Compat.AnimatableBindingsMeasured && type.FullName != null && s_EngineBindings.TryGetValue(type.FullName, out var engine))
                 {
-                    // An engine component: the Editor's bindings of its type (measured table). The
-                    // material property bindings some renderers list first are not listed yet.
-                    if (engine.Materials)
+                    // An engine component: the Editor's bindings of its type, measured on a fresh
+                    // component. Bindings that depend on its contents are not listed yet: material
+                    // properties, a skinned mesh's blend shapes, constraint sources; material slots
+                    // follow the renderer's material count.
+                    if (engine.Materials || component is Renderer { sharedMaterial: not null })
                         Unbound.Runtime.Stubs.Ignored("AnimationUtility.GetAnimatableBindings", "lists no material property bindings of a renderer's materials");
+                    if (component is SkinnedMeshRenderer { sharedMesh: { blendShapeCount: > 0 } })
+                        Unbound.Runtime.Stubs.Ignored("AnimationUtility.GetAnimatableBindings", "lists no blend shape bindings");
+                    if (component is UnityEngine.Animations.IConstraint { sourceCount: > 0 })
+                        Unbound.Runtime.Stubs.Ignored("AnimationUtility.GetAnimatableBindings", "lists no constraint source bindings");
                     foreach (var name in engine.Floats) list.Add(EditorCurveBinding.FloatCurve(path, type, name));
-                    foreach (var name in engine.Objects) list.Add(EditorCurveBinding.PPtrCurve(path, type, name));
+                    int slots = 0;
+                    foreach (var name in engine.Objects)
+                    {
+                        list.Add(EditorCurveBinding.PPtrCurve(path, type, name));
+                        if (name.StartsWith("m_Materials.Array.data[", StringComparison.Ordinal)) slots++;
+                    }
+                    if (slots > 0 && component is Renderer renderer)
+                        for (int i = slots; i < renderer.sharedMaterials.Length; i++)
+                            list.Add(EditorCurveBinding.PPtrCurve(path, type, "m_Materials.Array.data[" + i + "]"));
                     continue;
                 }
                 if (component is not MonoBehaviour)

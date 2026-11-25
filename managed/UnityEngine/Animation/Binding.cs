@@ -786,7 +786,8 @@ namespace Unbound.Runtime
         {
             try
             {
-                var spec = PropertyBinder.Resolve(Root, PathRoot(), binding, objectValued, clip);
+                // Only the Animator and playables bind by the Editor's offered properties (measured there).
+                var spec = PropertyBinder.Resolve(Root, PathRoot(), binding, objectValued, clip, offeredOnly: !CurvesOnly);
                 if (spec.Factory == null)
                 {
                     // An Animator curve no controller here claims yet (see NowOwned).
@@ -1037,7 +1038,7 @@ namespace Unbound.Runtime
 
         static readonly HashSet<string> s_Warned = new HashSet<string>();
 
-        internal static Spec Resolve(GameObject root, Transform pathRoot, CurveBinding binding, bool objectValued, AnimationClip clip)
+        internal static Spec Resolve(GameObject root, Transform pathRoot, CurveBinding binding, bool objectValued, AnimationClip clip, bool offeredOnly = false)
         {
             var spec = default(Spec);
             if (root == null) return spec;
@@ -1046,15 +1047,15 @@ namespace Unbound.Runtime
                 var s = ResolveSkeleton(skeleton, node, binding.Attribute);
                 if (s.Factory != null) return s;
             }
-            if (binding.Hashed) return ResolveHashed(root, pathRoot, binding, objectValued, clip);
+            if (binding.Hashed) return ResolveHashed(root, pathRoot, binding, objectValued, clip, offeredOnly);
             var t = binding.Path.Length == 0 ? root.transform : pathRoot.Find(binding.Path);
             if (t == null) return spec; // a missing path is not animated (Unity shows it as missing)
-            return Resolve(root, t, binding, binding.Attribute, objectValued, clip);
+            return Resolve(root, t, binding, binding.Attribute, objectValued, clip, offeredOnly);
         }
 
         /// <summary>A player clip's binding: the path by its hash below the root, then the
         /// attribute by its hash among the target's properties (Transforms' are named already).</summary>
-        static Spec ResolveHashed(GameObject root, Transform pathRoot, CurveBinding binding, bool objectValued, AnimationClip clip)
+        static Spec ResolveHashed(GameObject root, Transform pathRoot, CurveBinding binding, bool objectValued, AnimationClip clip, bool offeredOnly)
         {
             var t = binding.PathHash == 0 ? root.transform : HashedBindings.Find(pathRoot, binding.PathHash);
             if (t == null) return default;
@@ -1072,14 +1073,14 @@ namespace Unbound.Runtime
                 {
                     // The matching component's own type (a script found by its fields).
                     var named = CurveBinding.ForType("", attribute, component.GetType());
-                    return Resolve(root, t, named, attribute, objectValued, clip);
+                    return Resolve(root, t, named, attribute, objectValued, clip, offeredOnly);
                 }
-                return Resolve(root, t, CurveBinding.ForType("", attribute, typeof(GameObject)), attribute, objectValued, clip);
+                return Resolve(root, t, CurveBinding.ForType("", attribute, typeof(GameObject)), attribute, objectValued, clip, offeredOnly);
             }
-            return Resolve(root, t, binding, attribute, objectValued, clip);
+            return Resolve(root, t, binding, attribute, objectValued, clip, offeredOnly);
         }
 
-        static Spec Resolve(GameObject root, Transform t, CurveBinding binding, string attribute, bool objectValued, AnimationClip clip)
+        static Spec Resolve(GameObject root, Transform t, CurveBinding binding, string attribute, bool objectValued, AnimationClip clip, bool offeredOnly)
         {
             var spec = default(Spec);
             Animator missedAnimator = null;
@@ -1199,11 +1200,15 @@ namespace Unbound.Runtime
             if (component is Renderer r2 && attribute == "m_SortingOrder")
                 return Make(r2, "sortingOrder", 0, () => new AccessorGroup(r2, 1, () => new Vector4(r2.sortingOrder, 0), v => r2.sortingOrder = (int)Math.Floor(v.x + 0.5f)));
 
-            // An engine component's property the Editor does not offer as a float binding animates
-            // nothing (measured: tests/projects/enginediscrete play.*.float, with the offered bindings
-            // of tests/projects/animbindings); unmeasured engine types keep the reflection below. An
-            // Animator's float curves are its parameters, handled above and below.
-            if (component is not MonoBehaviour && component is not Animator && UnityEditor.AnimationUtility.OffersEngineFloat(component.GetType(), attribute) == false)
+            // On the Animator and playables, an engine component's scalar field the Editor does not
+            // offer as a float binding animates nothing (measured on 6000.0.71f1: tests/projects/
+            // enginediscrete play.*.float, with the offered bindings of tests/projects/animbindings).
+            // Array elements, names the type has no field of, unmeasured types and families, the
+            // legacy Animation component and SampleAnimation keep the path below.
+            if (offeredOnly && Unbound.Runtime.Compat.AnimatableBindingsMeasured && component is not MonoBehaviour && component is not Animator
+                && !attribute.Contains("Array.", StringComparison.Ordinal)
+                && UnityEditor.AnimationUtility.OffersEngineFloat(component.GetType(), attribute) == false
+                && FieldChain(component.GetType(), attribute, false) != null)
                 return spec;
             // Scripts (and engine objects whose fields carry the serialized names): by reflection.
             var chain = FieldChain(component.GetType(), attribute, component is MonoBehaviour);
