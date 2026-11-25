@@ -744,6 +744,9 @@ mod tests {
                 false,
                 "Android=0{Is16KbAligned=false} Any=1 Editor=0 overridable",
             ),
+            ("Assets/Plugins/libstatic.a", false, "Any=1 Editor=0"),
+            ("Assets/Plugins/Kit.xcframework", false, "Any=1 Editor=0"),
+            ("Assets/Plugins/Editor/library.jar", false, "Any=0 Editor=1"),
             // Folder names in another case than the Editor's own spelling.
             (
                 "Assets/Plugins/metro/native16.dll",

@@ -10,7 +10,7 @@ imports in `Assets/Plugins` (managed and Windows `.dll`, `.so`, `.dylib`, `.a`, 
 C/C++ sources and headers, `.m`, `.mm`, `.swift`, `.java`, `.kt`, `.jslib`, `.jspre`, and the
 folder plug-ins `.bundle`, `.plugin`, `.framework`, `.xcframework`, `.androidlib`), then kinds in the
 folders whose names set platforms (`Editor` at any depth, `Plugins/x86`, `x86_64`, `x64`, `ARM64`,
-`Plugins/Android` with its ABI folders, `iOS`, `visionOS`, `WebGL`, `WSA`, `Metro`) and in
+`Plugins/Android` with its ABI folders, `iOS`, `visionOS`, `WebGL`, `WSA`, `metro`) and in
 folders that do not (`tvOS`, `OSX`, `Win64`, `Linux64`, `Switch`, a platform folder below another
 folder or in a package), and in an embedded package. Managed plug-ins are compiled each under its own
 name and file name (the Editor compiles against one precompiled assembly per file name), native
@@ -53,7 +53,9 @@ answers after the Editor has written a plug-in's `.meta` with its defaults (an `
 read with the Editor off), the Editor's log line for an Android shared object without an ABI folder.
 
 Folder names are read ignoring case (`Assets/Bar/editor`, `Assets/Baz/EDITOR/x64`,
-`Assets/Bar/plugins/x86_64`, `Assets/Foo/Plugins/arm64`, `Assets/Plugins/metro`). No folder of the probe
+`Assets/Bar/plugins/x86_64`, `Assets/Foo/Plugins/arm64`, `Assets/Plugins/metro`); Android ABI folders
+are compared exactly (unmeasured in another case). The project's own `Assets/Plugins` in another case
+is read ignoring case too, unmeasured: on the macOS Editor's file system it is the same folder. No folder of the probe
 differs from another only in case: on the macOS Editor's file system the two would be one folder.
 
 ```sh
