@@ -807,6 +807,12 @@ namespace UnityEngine
                 }
                 if (tree.windAsset.IsSpeedTree8)
                 {
+                    if (!s_SpeedTree8DrawerReported)
+                    {
+                        s_SpeedTree8DrawerReported = true;
+                        Stubs.Ignored("SpeedTree 8 wind in the GPU Resident Drawer",
+                            "gets the 15 constants in the SpeedTree 8 shaders' parameter order (unmeasured)");
+                    }
                     if (history && renderer.m_MotionVectorGenerationMode != MotionVectorGenerationMode.Object)
                     {
                         ClearParams(data, buffer, at);
@@ -850,6 +856,10 @@ namespace UnityEngine
 
         /// <summary>Whether the session has reported it (tests clear it).</summary>
         internal static bool s_SpeedTree8LocalWindReported;
+
+        /// <summary>Whether the session has reported a SpeedTree 8 tree's drawer parameters (tests
+        /// clear it).</summary>
+        internal static bool s_SpeedTree8DrawerReported;
 
         /// <summary>Zeros an instance's parameters from <paramref name="first"/> on.</summary>
         static unsafe void ClearParams(uint* data, in SpeedTreeWindParamsBufferIterator buffer, int at, int first = 0)

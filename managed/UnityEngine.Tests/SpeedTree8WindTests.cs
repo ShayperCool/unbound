@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Linq;
 using Xunit;
 
@@ -162,6 +163,83 @@ namespace UnityEngine.Tests
             }
             Assert.True(wind.Blowing);
             Assert.NotEqual(0f, Value(wind, 1).x);
+        }
+
+        sealed class Warnings : ILogHandler
+        {
+            internal readonly List<string> Messages = new List<string>();
+            public void LogException(System.Exception exception, Object context) => Messages.Add(exception.Message);
+            public void LogFormat(LogType logType, Object context, string format, params object[] args) =>
+                Messages.Add(logType + ": " + string.Format(format, args));
+        }
+
+        const int Stride = 80;
+
+        static unsafe Vector4 Param(uint* buffer, int instance, int p) => *(Vector4*)(buffer + Stride * instance + 4 * (p + 2));
+
+        /// <summary>The GPU Resident Drawer's parameters of a SpeedTree 8 tree: its wind's 15
+        /// constants (the history for a renderer with per-object motion vectors, zeros for one
+        /// without), a zero 16th; unmeasured, said once.</summary>
+        [Fact]
+        public unsafe void TheDrawerBufferGetsASpeedTree8TreesWindAndSaysItIsUnmeasured()
+        {
+            var objects = new[] { new GameObject("ObjectMotion"), new GameObject("CameraMotion") };
+            var asset = new SpeedTreeWindAsset(Config());
+            var zone = new GameObject("Wind").AddComponent<WindZone>();
+            var previous = Debug.unityLogger.logHandler;
+            var warnings = new Warnings();
+            float time = (float)Time.s_Time;
+            var data = new uint[Stride * 2];
+            fixed (uint* buffer = data)
+            {
+                var iterator = new UnityEngine.Rendering.SpeedTreeWindParamsBufferIterator
+                {
+                    bufferPtr = (System.IntPtr)buffer, uintStride = Stride, elementsCount = 2,
+                };
+                for (int p = 0; p < 16; p++) iterator.uintParamOffsets[p] = 4 * (p + 2);
+                try
+                {
+                    Debug.unityLogger.logHandler = warnings;
+                    SpeedTreeWindSystem.s_SpeedTree8DrawerReported = false;
+                    var ids = new int[2];
+                    for (int i = 0; i < 2; i++)
+                    {
+                        var renderer = objects[i].AddComponent<MeshRenderer>();
+                        renderer.motionVectorGenerationMode = i == 0 ? MotionVectorGenerationMode.Object : MotionVectorGenerationMode.Camera;
+                        objects[i].AddComponent<Tree>().windAsset = asset;
+                        ids[i] = renderer.GetInstanceID();
+                    }
+                    for (int frame = 1; frame <= 3; frame++)
+                    {
+                        Time.s_Time = frame * Dt;
+                        SpeedTreeWindSystem.Update();
+                    }
+                    for (int i = 0; i < data.Length; i++) data[i] = 7;
+                    SpeedTreeWindSystem.WriteBuffer(ids, in iterator, false);
+                    for (int i = 0; i < 2; i++)
+                    {
+                        for (int p = 0; p < SpeedTree8WindState.HistoryOffset; p++) Assert.Equal(Value(asset.Wind8, p), Param(buffer, i, p));
+                        Assert.Equal(Vector4.zero, Param(buffer, i, 15));
+                    }
+                    Assert.NotEqual(Vector4.zero, Param(buffer, 0, 0));
+                    SpeedTreeWindSystem.WriteBuffer(ids, in iterator, true);
+                    for (int p = 0; p < SpeedTree8WindState.HistoryOffset; p++)
+                    {
+                        Assert.Equal(Value(asset.Wind8, SpeedTree8WindState.HistoryOffset + p), Param(buffer, 0, p));
+                        Assert.Equal(Vector4.zero, Param(buffer, 1, p));
+                    }
+                    Assert.Single(warnings.Messages, m => m.Contains("SpeedTree 8 wind in the GPU Resident Drawer") && m.Contains("unmeasured"));
+                }
+                finally
+                {
+                    Time.s_Time = time;
+                    Debug.unityLogger.logHandler = previous;
+                    foreach (var o in objects) Object.DestroyImmediate(o);
+                    Object.DestroyImmediate(zone.gameObject);
+                    Object.DestroyImmediate(asset);
+                    SpeedTreeWindSystem.Update();
+                }
+            }
         }
     }
 }

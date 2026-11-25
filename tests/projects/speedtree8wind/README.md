@@ -40,4 +40,4 @@ written.
 
 Not measured: spherical zones reaching a SpeedTree 8 tree (Unbound keeps the asset's wind for it
 and says so once), gusts (the release never turns them on), the GPU Resident Drawer's SpeedTree 8
-parameters.
+parameters (Unbound gives it the 15 constants in the SpeedTree 8 shaders' order and says so once).
