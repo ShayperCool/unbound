@@ -113,10 +113,46 @@ public static class ApvLightingSetup
             // As tests/projects/apvbake: the GPU bake may fail to start on a first attempt.
             for (int attempt = 0; attempt < 3 && !baked; attempt++)
                 baked = Lightmapping.Bake();
+            if (!baked)
+            {
+                Debug.LogError("apvlighting probe: Lightmapping.Bake failed");
+                EditorApplication.Exit(1);
+                return;
+            }
+            // The probe volume's cell files are written and referenced by the baking set after
+            // Bake returns; an Editor that quits at once saves the set without those references
+            // (nothing then loads the cells). Let it run a while, then save and check.
+            s_Updates = 0;
+            EditorApplication.update += SaveOnceSettled;
+        }
+        catch (Exception e)
+        {
+            Debug.LogException(e);
+            EditorApplication.Exit(1);
+        }
+    }
+
+    const int SettleUpdates = 30;
+    static int s_Updates;
+
+    static void SaveOnceSettled()
+    {
+        if (++s_Updates < SettleUpdates) return;
+        EditorApplication.update -= SaveOnceSettled;
+        try
+        {
             AssetDatabase.SaveAssets();
             EditorSceneManager.SaveOpenScenes();
-            if (!baked) Debug.LogError("apvlighting probe: Lightmapping.Bake failed");
-            EditorApplication.Exit(baked ? 0 : 1);
+            var set = System.IO.File.ReadAllText($"{Folder}/Lighting Baking Set.asset");
+            // Five cell files: data, optional (L2) data, shared data, bricks and support data
+            // (no probe occlusion file: the bake has no shadowmask lights).
+            if (System.Text.RegularExpressions.Regex.Matches(set, "m_AssetGUID: [0-9a-f]{32}").Count != 5)
+            {
+                Debug.LogError("apvlighting probe: the baking set does not reference its cell files");
+                EditorApplication.Exit(1);
+                return;
+            }
+            EditorApplication.Exit(0);
         }
         catch (Exception e)
         {

@@ -38,7 +38,7 @@ Play mode the probe adds dynamic objects (none takes part in the bake) and camer
 - `room`: the room alone from a corner.
 
 Rows (`values.jsonl`): the probe volume's state at frame 4 (initialized, data loaded, SH bands,
-minimum brick size, maximum subdivision).
+video memory cost).
 
 Unmeasured here: L2 (`ProbeVolumeSHBands.SphericalHarmonicsL2`), per-vertex and mixed SH
 evaluation (`ShEvalMode`; Auto is per pixel on this desktop target), sky occlusion, rendering

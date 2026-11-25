@@ -224,8 +224,7 @@ public sealed class ApvLightingProbe : MonoBehaviour
             Rec("probe volume initialized", volume.isInitialized.ToString());
             Rec("probe volume data loaded", volume.DataHasBeenLoaded().ToString());
             Rec("probe volume sh bands", volume.shBands.ToString());
-            Rec("probe volume min brick size", volume.MinBrickSize().ToString("R"));
-            Rec("probe volume max subdivision", volume.GetMaxSubdivision().ToString());
+            Rec("probe volume video memory", volume.GetVideoMemoryCost().ToString());
         }
         // The textures hold what the cameras rendered in the frame before this one.
         if (Array.IndexOf(k_Frames, m_Frame) >= 0) Shoot(m_Frame);
