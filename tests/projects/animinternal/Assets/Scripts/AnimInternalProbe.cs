@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Linq;
@@ -10,8 +11,9 @@ using UnityEngine;
 /// <summary>
 /// Records, in Play mode, what internal editor animation helpers that packages call answer:
 /// AnimationUtility's key overloads taking a Keyframe by reference (SetKeyLeftTangentMode,
-/// SetKeyRightTangentMode, SetKeyBroken: the VFX Graph editor calls them on import), and
-/// AnimationMode's recording state and events (the Timeline editor).
+/// SetKeyRightTangentMode, SetKeyBroken: the VFX Graph editor calls them on import),
+/// AnimationUtility.GetClosestEuler for rotations, hints and every rotation order (the Timeline
+/// editor), and AnimationMode's recording state and events.
 /// </summary>
 static class AnimInternalProbe
 {
@@ -67,6 +69,68 @@ static class AnimInternalProbe
         // An out-of-range mode value.
         object[] odd = { new Keyframe(0f, 0f), (AnimationUtility.TangentMode)31 };
         Put("key.left.31", Try(() => { setLeft.Invoke(null, odd); return Key((Keyframe)odd[0]); }));
+
+        // GetClosestEuler(Quaternion, Vector3 hint, RotationOrder) for every order.
+        var orderType = typeof(Transform).Assembly.GetType("UnityEngine.RotationOrder");
+        var closest = orderType == null ? null : util.GetMethod("GetClosestEuler", Internal, null, new[] { typeof(Quaternion), typeof(Vector3), orderType }, null);
+        Put("euler.found", (closest != null).ToString());
+        // Rotations as exact components (identity, Euler angles of edge cases, a non-unit one,
+        // pseudo-random ones), so no platform's trigonometry changes the inputs.
+        var list = new List<Quaternion>
+        {
+            new Quaternion(0f, 0f, 0f, 1f),
+            new Quaternion(0.127679437f, 0.144878134f, 0.239298329f, 0.9515485f),
+            new Quaternion(0.6560304f, 0.646379352f, 0.316920042f, -0.226670682f),
+            new Quaternion(0.683012664f, 0.1830127f, -0.1830127f, 0.683012664f),
+            new Quaternion(-0.65328145f, 0.270598054f, 0.270598054f, 0.65328145f),
+            new Quaternion(0f, 0.707106769f, 0f, 0.707106769f),
+            new Quaternion(0f, 0f, 0.707106769f, 0.707106769f),
+            new Quaternion(0.958072f, -0.286525071f, 0.00108612224f, 0.00058605813f),
+            new Quaternion(0.1f, 0.2f, 0.3f, 0.4f),
+            new Quaternion(0.7007737f, -0.106495023f, -0.177249968f, -0.682757139f),
+            new Quaternion(0.5335311f, 0.5078304f, -0.672893941f, -0.06831254f),
+            new Quaternion(-0.368966371f, -0.0574904531f, 0.7277148f, -0.575317264f),
+            new Quaternion(-0.6036935f, -0.485209584f, -0.466605663f, 0.427088857f),
+            new Quaternion(-0.6007122f, 0.2706782f, -0.324937224f, 0.67844975f),
+            new Quaternion(-0.560747862f, 0.5603556f, 0.514917254f, 0.326226383f),
+            new Quaternion(0.0909436345f, 0.735790253f, 0.662983537f, -0.10389775f),
+            new Quaternion(-0.06749598f, -0.833851039f, 0.409778774f, -0.363618016f),
+            new Quaternion(-0.657098651f, -0.061826095f, -0.106742159f, 0.743643045f),
+            new Quaternion(0.0893039f, 0.17536059f, -0.9650367f, -0.1731406f),
+            new Quaternion(-0.303511679f, 0.08976113f, -0.6971715f, 0.643253863f),
+            new Quaternion(-0.778239548f, 0.05234967f, 0.229577258f, -0.5821486f),
+        };
+        for (int r = 0; r < list.Count; r++)
+            Put($"euler.q.{r}", F(list[r].x) + " " + F(list[r].y) + " " + F(list[r].z) + " " + F(list[r].w));
+        var hints = new[] { Vector3.zero, new Vector3(360f, 0f, 0f), new Vector3(-720f, 400f, 10f), new Vector3(170f, 170f, 170f), new Vector3(1000f, -1000f, 0.5f) };
+        foreach (var order in Enum.GetValues(orderType))
+            for (int r = 0; r < list.Count; r++)
+                for (int h = 0; h < hints.Length; h++)
+                {
+                    var q = list[r];
+                    var hint = hints[h];
+                    Put($"euler.{order}.{r}.{h}", Try(() => V((Vector3)closest.Invoke(null, new object[] { q, hint, order }))));
+                }
+        // Hints that are (or nearly are) the rotation itself (Euler angles 10 20 30, 90 30 20 and
+        // 170 170 170), in gimbal lock too: 0.0004 and 0.002 degrees off, a tenth of a degree
+        // off, and the same angles in another order.
+        var near = new (Quaternion Rotation, Vector3 Hint, string Order)[]
+        {
+            (new Quaternion(0.127679437f, 0.144878134f, 0.239298329f, 0.9515485f), new Vector3(370f, -340f, 30.0004f), "OrderZXY"),
+            (new Quaternion(0.127679437f, 0.144878134f, 0.239298329f, 0.9515485f), new Vector3(370f, -340f, 30.002f), "OrderZXY"),
+            (new Quaternion(0.127679437f, 0.144878134f, 0.239298329f, 0.9515485f), new Vector3(10f, 20f, 30f), "OrderXYZ"),
+            (new Quaternion(0.704416f, 0.06162841f, -0.06162841f, 0.704416f), new Vector3(90f, 30f, 20f), "OrderZXY"),
+            (new Quaternion(0.704416f, 0.06162841f, -0.06162841f, 0.704416f), new Vector3(90f, 30.1f, 20f), "OrderZXY"),
+            (new Quaternion(0.09406099f, -0.07892653f, -0.07892653f, 0.9892896f), new Vector3(170f, 170f, 170f), "OrderZXY"),
+        };
+        for (int n = 0; n < near.Length; n++)
+        {
+            var c = near[n];
+            var q = c.Rotation;
+            var order = Enum.Parse(orderType, c.Order);
+            Put($"euler.near.{n}", F(q.x) + " " + F(q.y) + " " + F(q.z) + " " + F(q.w) + " -> "
+                + Try(() => V((Vector3)closest.Invoke(null, new object[] { q, c.Hint, order }))));
+        }
 
         // AnimationMode's recording state and its events.
         var modeType = typeof(AnimationMode);
