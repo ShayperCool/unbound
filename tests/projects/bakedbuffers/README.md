@@ -197,7 +197,14 @@ from their first surface on whatever the Min Bounces.
   `FilterDirectional`, `FilterShadowmask`, `FilterSubtractive` and their `*Auto`: the same
   filtered (Gaussian filters of radius 1 and 5, or the Auto filtering) with directional
   lightmaps, and in the Shadowmask and Subtractive Lighting Modes under a mixed sun and a mixed
-  and a baked point light.
+  and a baked point light. `FilterDirectionalRadius`, `FilterDirectionalAtrous`,
+  `FilterDirectionalNone`, `FilterDirectionalOidn`: directional lightmaps under an indirect
+  Gaussian filter of radius 2, an indirect A-Trous filter (1.5), no filters, and Open Image
+  Denoise without filters on both parts; `FilterShadowmaskAo`, `FilterShadowmaskAtrous`,
+  `FilterShadowmaskOidn`: the Shadowmask mode with direct settings unlike the ambient occlusion
+  target's (a direct Gaussian of 2.5 without a denoiser; the ambient occlusion's Open Image
+  Denoise without a filter), a direct A-Trous filter (0.5), and Open Image Denoise alone on the
+  direct light.
 - `DenoiseAuto`, `DenoiseAutoOver`, `DenoiseOidn`, `DenoiseOidnGauss` (4, 128): the same scene
   denoised: the Auto filtering (over the new Lighting Settings' Advanced settings, and over
   Advanced settings of no denoisers and A-Trous filters), and the Advanced filtering with Open
@@ -278,8 +285,11 @@ bakes them in the Editor's process and writes each lightmap's buffers unprocesse
   denoiser and its filter, and as `DenoiseAutoOver` measures).
   Where a lightmap is filtered, so are its images (compared as written): the directional
   image weighs the directions by the light as denoised and filtered, and is filtered by a
-  Gaussian filter of radius 5 before it is filled; the shadowmask is denoised and filtered as the
-  direct light is (`FilterDirectional*`, `FilterShadowmask*`).
+  Gaussian filter of radius 5 before it is filled, whatever the parts' filters and denoisers (an
+  indirect Gaussian of radius 2, A-Trous, none, Open Image Denoise; also with no filter at all);
+  the shadowmask is denoised and filtered as the direct light is, not as the ambient occlusion
+  target (`FilterDirectional*`, `FilterShadowmask*`). Not measured: the directional image of
+  charts that reach the lightmap's border, ambient occlusion with these images.
 - `lightingData.json`, the lighting data the whole bake writes beside the scene
   (`LightingData.asset`) as its fields (`unbound dump`), normalized as `tests/baked_files.py`
   says (the GUIDs of the assets the bake made, new with every bake): its bytes change from bake
