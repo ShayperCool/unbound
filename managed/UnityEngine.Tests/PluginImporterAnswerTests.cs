@@ -195,6 +195,46 @@ PluginImporter:
             }
         }
 
+        /// <summary>Android's final path is known only for a static library without a CPU
+        /// (tests/projects/plugindefaults `importers.Android`): any other Android plug-in is compared
+        /// with no other, and an overridable one, which the Android module might leave out, is
+        /// reported.</summary>
+        [Fact]
+        public void OnlyAnAndroidStaticLibraryWithoutCpuGoesByItsName()
+        {
+            using var engine = Unbound.Runtime.MainThreadCheck.Engine();
+            const string notice = "PluginImporter.GetImporters(Android)";
+            int Notices()
+            {
+                foreach (var hit in Unbound.Runtime.Stubs.HitReport())
+                    if (hit.Key == notice) return hit.Value;
+                return 0;
+            }
+            var cases = new (PluginImporter Importer, string Expected)[]
+            {
+                (At("Assets/Plugins/libstatic.a"), "libstatic.a"),
+                (At("Assets/Plugins/Android/libs/arm64-v8a/libstatic.a", "Android", "ARM64"), ""),
+                (At("Assets/Plugins/Android/libs/arm64-v8a/libnative.so", "Android", "ARM64"), ""),
+                (At("Assets/Plugins/Android/library.aar"), ""),
+                (At("Assets/Plugins/Android/Native.java"), ""),
+            };
+            var overridable = At("Packages/p/Plugins/Android/libs/arm64-v8a/libnative.so", "Android", "ARM64", overridable: true);
+            try
+            {
+                var before = Notices();
+                foreach (var (importer, expected) in cases)
+                    Assert.True(expected == PluginImporter.AndroidFinalPath(importer, "Android"), importer.assetPath + ": " + PluginImporter.AndroidFinalPath(importer, "Android"));
+                Assert.Equal(before, Notices());
+                Assert.Equal("", PluginImporter.AndroidFinalPath(overridable, "Android"));
+                Assert.Equal(before + 1, Notices());
+            }
+            finally
+            {
+                foreach (var c in cases) Object.DestroyImmediate(c.Importer);
+                Object.DestroyImmediate(overridable);
+            }
+        }
+
         /// <summary>Unity's own loop (PluginImporter.GetImporters): of two plug-ins going to one
         /// place an overridable one is left out, in either order; two that are not overridable both
         /// stay, and so does one without a final path (tests/projects/plugindefaults

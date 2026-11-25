@@ -430,8 +430,9 @@ namespace UnityEditor
 
         /// <summary>Where a platform's importer extension puts a plug-in in a build (its final path),
         /// or null when the platform has none here: the Editor, a platform whose module is not
-        /// installed, one Unbound does not know (those leave out nothing, as Unity's C# without an
-        /// extension). The standalone players' rule is Unity's own C#
+        /// installed (Unity's C# leaves out nothing without an extension), one Unbound does not know
+        /// (tvOS, visionOS, Windows Store and others, whose modules may leave plug-ins out: Unbound
+        /// leaves out nothing, unmeasured). The standalone players' rule is Unity's own C#
         /// (DesktopPluginImporterExtension); Android's is the base rule for a static library without
         /// a CPU (its file name; tests/projects/plugindefaults `importers.Android`). Where the rule is
         /// not known (Android's other plug-ins, which its module may place by kind, folder or CPU;
@@ -460,13 +461,19 @@ namespace UnityEditor
                 case BuildTarget.StandaloneLinux64:
                     return importer => DesktopFinalPath(importer, platformName, target);
                 case BuildTarget.Android:
-                    return importer => IsStaticLibrary(importer.assetPath) && string.IsNullOrEmpty(importer.GetPlatformData(platformName, "CPU"))
-                        ? Path.GetFileName(importer.assetPath)
-                        : UnknownFinalPath(importer, platformName);
+                    return importer => AndroidFinalPath(importer, platformName);
                 default:
                     return importer => UnknownFinalPath(importer, platformName);
             }
         }
+
+        /// <summary>Android's final path where it is measured: a static library without a CPU by its
+        /// file name (tests/projects/plugindefaults `importers.Android`); any other plug-in has none
+        /// known.</summary>
+        internal static string AndroidFinalPath(PluginImporter importer, string platformName) =>
+            IsStaticLibrary(importer.assetPath) && string.IsNullOrEmpty(importer.GetPlatformData(platformName, "CPU"))
+                ? Path.GetFileName(importer.assetPath)
+                : UnknownFinalPath(importer, platformName);
 
         static string UnknownFinalPath(PluginImporter importer, string platformName)
         {
