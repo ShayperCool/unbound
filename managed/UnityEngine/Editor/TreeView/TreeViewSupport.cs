@@ -6,7 +6,7 @@ namespace UnityEditor
 {
     /// <summary>
     /// The view whose GUI runs: in Unbound the Game view, while a GUI pass runs (a tree view keeps
-    /// it to ask for focus and repaints). It has focus while the application has; it repaints every
+    /// it to ask for focus and repaints). It repaints every
     /// frame, so asking for a repaint does nothing.
     /// </summary>
     internal partial class GUIView
@@ -32,7 +32,9 @@ namespace UnityEditor
 
         public static GUIView mouseOverView => Application.isFocused ? GameView : null;
 
-        public bool hasFocus => Application.isFocused;
+        /// <summary>The Game view has the focus while the application has; another view, as one
+        /// made fresh, has it (tests/projects/defaultstate GUIView, Toolbar hasFocus).</summary>
+        public bool hasFocus => !ReferenceEquals(this, s_GameView) || Application.isFocused;
 
         [Unbound.EditorFaithful("Unbound's one view, the Game view, has the focus while the application has")]
         public void Focus() { }
@@ -51,7 +53,7 @@ namespace UnityEditor
     /// in Unity's C#.</summary>
     internal static class TreeViewEditorStyles
     {
-        internal static GUIStyle Get(string name) => Unbound.Runtime.EditorGuiSkins.Current.FindStyle(name) ?? GUI.skin.GetStyle(name);
+        internal static GUIStyle Get(string name) => Unbound.Runtime.EditorGuiSkins.Current.FindStyle(name) ?? GUI.CurrentSkin.GetStyle(name);
     }
 
     /// <summary>A drag that starts once the mouse has moved 6 points from where it went down.</summary>

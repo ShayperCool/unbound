@@ -46,6 +46,15 @@ namespace UnityEngine
             s_WindowMouse = Event.current != null ? Event.current.mousePosition : default;
         }
 
+        /// <summary>The clips as before any GUI pass: none, so GUI functions throw as outside OnGUI
+        /// (Unbound keeps a screen root after a pass, so this state is the start's).</summary>
+        internal static void ClearForTests()
+        {
+            s_Stack.Clear();
+            s_Matrix = Matrix4x4.identity;
+            s_Inverse = Matrix4x4.identity;
+        }
+
         /// <summary>Starts the GUI of a UI Toolkit IMGUIContainer: its coordinates start at
         /// <paramref name="origin"/> and <paramref name="clip"/> (absolute) is all it shows. Not a
         /// group: an event already in the container's coordinates stays as it is.</summary>

@@ -1151,6 +1151,9 @@ namespace UnityEngine
 
         static Rect DoGetRect(float minWidth, float maxWidth, float minHeight, float maxHeight, GUIStyle style, GUILayoutOption[] options)
         {
+            // Unity's numeric overload has no OnGUI check: outside OnGUI it fails on the missing
+            // event (tests/projects/editorobjectfields outside/editorGUILayout GradientField).
+            if (Event.current == null) throw new NullReferenceException("Object reference not set to an instance of an object");
             GUIUtility.CheckOnGUI();
             var eventType = Event.current.type;
             if (eventType == EventType.Layout)

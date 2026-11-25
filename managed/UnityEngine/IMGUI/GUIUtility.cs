@@ -176,7 +176,7 @@ namespace UnityEngine
                 GUIClip.Restore(m_Clip);
                 GUILayoutUtility.RestoreOuter(m_Layout);
                 s_SkinMode = m_SkinMode;
-                GUI.skin = m_Skin;
+                GUI.DoSetSkin(m_Skin);
                 guiIsExiting = m_Exiting;
             }
         }
@@ -539,7 +539,7 @@ namespace UnityEngine
 
         internal static void ResetGlobalState()
         {
-            GUI.skin = null;
+            GUI.DoSetSkin(null);
             GUI.ResetState();
         }
 

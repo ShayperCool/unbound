@@ -105,14 +105,30 @@ namespace UnityEngine
         /// <summary>The skin a script set, null while the default one is used.</summary>
         internal static GUISkin UserSkin => s_Skin == GUIUtility.GetDefaultSkin() ? null : s_Skin;
 
+        /// <summary>As Unity's: only inside OnGUI (ArgumentException outside one: the windowed
+        /// Editor, tests/projects/editorvaluefields and editorui outside/sliders).</summary>
         public static GUISkin skin
+        {
+            get
+            {
+                GUIUtility.CheckOnGUI();
+                return CurrentSkin;
+            }
+            set
+            {
+                GUIUtility.CheckOnGUI();
+                DoSetSkin(value);
+            }
+        }
+
+        /// <summary>The skin, for Unbound's own code that also runs between GUI passes.</summary>
+        internal static GUISkin CurrentSkin
         {
             get
             {
                 if (s_Skin == null) DoSetSkin(null);
                 return s_Skin;
             }
-            set => DoSetSkin(value);
         }
 
         internal static void DoSetSkin(GUISkin newSkin)
