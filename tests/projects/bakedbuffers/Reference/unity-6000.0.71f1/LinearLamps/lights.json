@@ -1,0 +1,79 @@
+{
+ "mixedMode": 0,
+ "lights": [
+  {
+   "color": [
+    2.5,
+    0.7963670492172241,
+    0.18309742212295532
+   ],
+   "indirectColor": [
+    2.5,
+    0.7963670492172241,
+    0.18309742212295532
+   ],
+   "orientation": [
+    0.0,
+    0.0,
+    0.0,
+    1.0
+   ],
+   "position": [
+    1.0299999713897705,
+    2.009999990463257,
+    -1.0199999809265137
+   ],
+   "range": 6.0,
+   "cookie": 4294967295,
+   "cookieScale": 1.0,
+   "coneAngle": 0.0,
+   "innerConeAngle": 0.0,
+   "shape0": 0.0,
+   "shape1": 0.0,
+   "type": 1,
+   "mode": 2,
+   "falloff": 3,
+   "angularFalloff": 0,
+   "castsShadows": true,
+   "shadowMaskChannel": 4294967295,
+   "name": "Bulb"
+  },
+  {
+   "color": [
+    1.0702056884765625,
+    3.019137144088745,
+    5.0
+   ],
+   "indirectColor": [
+    1.0702056884765625,
+    3.019137144088745,
+    5.0
+   ],
+   "orientation": [
+    0.3535534143447876,
+    0.6123724579811096,
+    -0.3535534143447876,
+    0.6123724579811096
+   ],
+   "position": [
+    -1.9700000286102295,
+    3.0199999809265137,
+    0.029999999329447746
+   ],
+   "range": 10.0,
+   "cookie": 4294967295,
+   "cookieScale": 1.0,
+   "coneAngle": 0.8726646304130554,
+   "innerConeAngle": 0.6467848420143127,
+   "shape0": 0.0,
+   "shape1": 0.0,
+   "type": 2,
+   "mode": 2,
+   "falloff": 3,
+   "angularFalloff": 0,
+   "castsShadows": true,
+   "shadowMaskChannel": 4294967295,
+   "name": "Spot"
+  }
+ ]
+}
