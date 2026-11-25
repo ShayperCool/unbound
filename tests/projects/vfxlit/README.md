@@ -228,11 +228,11 @@ adds to that is not separated.
 
 ## Not covered
 
-- Motion vectors of lit mesh outputs, transparent outputs told to write them through the deferred
-  renderer, lit strips, unlit Shader Graphs and Shader Graph meshes, and of particles that turn
-  or change size between frames (lit quads, unlit meshes, half transparent quads, cubes, lit
-  Shader Graph quads and unlit strips moving sideways are measured here, `moving *`; unlit quads
-  in `tests/projects/vfxoutputs`).
+- Motion vectors of lit mesh outputs, lit strips, unlit Shader Graphs and Shader Graph meshes,
+  and of particles that turn or change size between frames (lit quads, unlit meshes, lit Shader
+  Graph quads and unlit strips moving sideways are measured here, `moving *`, and half
+  transparent quads and cubes, which compile with no motion vector pass; unlit quads in
+  `tests/projects/vfxoutputs`).
   Strips lit by 2D lights and meshes chosen among several by
   their size on screen: not drawn; each says so once for its asset (strips lit by the
   pipeline's lights are drawn: `tests/projects/vfxstrips` `lit`). One mesh
