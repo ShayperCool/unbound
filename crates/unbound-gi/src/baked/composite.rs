@@ -392,9 +392,10 @@ mod tests {
             charts: &[0],
             normals: None,
             indirect_scale: 2.0,
+            ambient_occlusion: None,
         };
         for filtering in [None, Some(Filtering::default())] {
-            let out = composite(&buffers, 0.9, 0, filtering, None)
+            let out = composite(&buffers, 0.9, 0, filtering, None, None)
                 .unwrap()
                 .lightmap;
             assert_eq!(out, vec![[2.5, 2.5, 2.5, 1.0]], "{filtering:?}");
@@ -487,6 +488,7 @@ mod tests {
             charts: &[0, 1],
             normals: None,
             ambient_occlusion: Some(&[0.5, 0.25]),
+            indirect_scale: 1.0,
         };
         let ao = AmbientOcclusion {
             indirect_exponent: 1.0,
