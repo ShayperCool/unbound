@@ -89,6 +89,30 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
+        public void EditingRestoresTheInputMethodModeItFound()
+        {
+            using var release = TestRelease.Pin(TestRelease.Measured);
+            Reset();
+            var previous = Input.imeCompositionMode;
+            Input.imeCompositionMode = IMECompositionMode.Off;
+            try
+            {
+                var r = new Rect(10, 360, 100, 18);
+                string text = "ab";
+                foreach (var e in new[] { Down(r), Up(r) })
+                    text = Pass(e, () => EditorGUI.TextField(r, text));
+                Assert.Equal(IMECompositionMode.On, Input.imeCompositionMode);
+                Pass(Event.KeyboardEvent("return"), () => EditorGUI.TextField(r, text));
+                Assert.Equal(IMECompositionMode.Off, Input.imeCompositionMode);
+            }
+            finally
+            {
+                Reset();
+                Input.imeCompositionMode = previous;
+            }
+        }
+
+        [Fact]
         public void EscapeRestoresAnIntFieldsValue()
         {
             using var release = TestRelease.Pin(TestRelease.Measured);
