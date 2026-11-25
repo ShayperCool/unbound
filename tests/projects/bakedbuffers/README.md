@@ -245,7 +245,8 @@ from their first surface on whatever the Min Bounces.
   exponents 1 and 0 unfiltered and 2.5 and 0.7 filtered (the directions are weighed by the light
   ambient occlusion multiplied, filtered or not); `AoNoBounce`: Max Bounces 0 (with ambient
   occlusion on, the texels' rays are still sent: the ambient occlusion and the back faces they
-  meet are as with bounces, the indirect light none).
+  meet are as with bounces, the indirect light none; under a sky with light it is said and not
+  written: whether the sky's light then reaches the texels is not measured).
 
 The scenes above them have the default sky (`Bare`, `Charts`, `Samples`, `Shapes`: the default
 skybox, with the default Lighting Settings' picked directions) or none (a black sky: one picked
