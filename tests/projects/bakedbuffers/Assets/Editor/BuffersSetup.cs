@@ -1002,6 +1002,38 @@ public static class BuffersSetup
         }
     }
 
+    /// <summary>Lights whose intensity multiplies their linear colour
+    /// (GraphicsSettings.lightsUseLinearIntensity, which the capture turns on for the scenes named
+    /// <c>Linear*</c>): a coloured sun, a point and a spot light over a light probe group, and a
+    /// rectangle area light.</summary>
+    static void LinearLights()
+    {
+        {
+            var scene = Lit("LinearSun");
+            NewLight("Sun", LightType.Directional, Vector3.zero, new Vector3(50f, -30f, 0f), new Color(1f, 0.7f, 0.4f), 1.6f);
+            Save(scene, "LinearSun");
+        }
+        {
+            var scene = Lit("LinearLamps");
+            NewLight("Bulb", LightType.Point, new Vector3(1.03f, 2.01f, -1.02f), Vector3.zero, new Color(1f, 0.6f, 0.3f), 2.5f).range = 6f;
+            var spot = NewLight("Spot", LightType.Spot, new Vector3(-1.97f, 3.02f, 0.03f), new Vector3(60f, 90f, 0f), new Color(0.5f, 0.8f, 1f), 5f);
+            spot.range = 10f;
+            spot.spotAngle = 50f;
+            new GameObject("ProbeGroup").AddComponent<LightProbeGroup>().probePositions = new[]
+            {
+                new Vector3(0.1f, 0.5f, -1.2f), new Vector3(1.5f, 1.2f, 0.3f), new Vector3(-1.1f, 2.0f, 1.1f),
+                new Vector3(0.3f, 0.2f, 2.2f), new Vector3(-2.2f, 0.7f, -0.4f), new Vector3(2.02f, 0.49f, 1.03f),
+            };
+            Save(scene, "LinearLamps");
+        }
+        {
+            var scene = Lit("LinearArea");
+            Lightmapping.lightingSettings.directSampleCount = 32;
+            NewLight("Rect", LightType.Rectangle, new Vector3(0.4f, 2.2f, -0.3f), new Vector3(90f, 0f, 0f), new Color(1f, 0.9f, 0.6f), 2.5f).areaSize = new Vector2(1.5f, 0.75f);
+            Save(scene, "LinearArea");
+        }
+    }
+
     /// <summary>Light probes under a sky of three colours (the gradient), with directions picked
     /// by its brightness and without, in the Shadowmask Lighting Mode with a probe in a mixed
     /// spot light's cone; beside the probes' group, a disabled group and a group of an inactive
@@ -1372,7 +1404,7 @@ public static class BuffersSetup
                 ("ModeSubtractive", () => Modes("ModeSubtractive", MixedLightingMode.Subtractive)),
                 ("ModeShadowmask", () => Modes("ModeShadowmask", MixedLightingMode.Shadowmask)),
                 ("Bounce", Bounces), ("Glow", Glow), ("Roof", Roof), ("Textured", Textured), ("Levels", Levels), ("Sky", Skies), ("Spare", Spare),
-                ("SkyRealtime", RealtimeSkies), ("SpareEmpty", SpareEmpty), ("Spread", Spread), ("Far", Far), ("Masks", Masks), ("MasksBright", MasksBright), ("MasksEdges", MasksEdges), ("Probes", Probes), ("ProbesGrid", ProbesGrid), ("ProbesReach", ProbesReach), ("ProbesSky", ProbesSky), ("Directional", Directional), ("Lod", Lod), ("Filter", Filtered), ("Denoise", Denoised), ("Intensity", Intensities), ("Ao", Occluded), ("Compress", Compressed), ("Soft", SoftLights),
+                ("SkyRealtime", RealtimeSkies), ("SpareEmpty", SpareEmpty), ("Spread", Spread), ("Far", Far), ("Masks", Masks), ("MasksBright", MasksBright), ("MasksEdges", MasksEdges), ("Probes", Probes), ("ProbesGrid", ProbesGrid), ("ProbesReach", ProbesReach), ("ProbesSky", ProbesSky), ("Directional", Directional), ("Lod", Lod), ("Filter", Filtered), ("Denoise", Denoised), ("Intensity", Intensities), ("Ao", Occluded), ("Compress", Compressed), ("Soft", SoftLights), ("Linear", LinearLights),
             };
             var only = Environment.GetEnvironmentVariable("BAKED_BUFFERS_SCENES");
             var wanted = string.IsNullOrEmpty(only) ? null : new HashSet<string>(only.Split(','));

@@ -76,7 +76,12 @@ public static class BuffersRecord
             {
                 var name = Path.GetFileNameWithoutExtension(path);
                 EditorSceneManager.OpenScene(path.Replace('\\', '/'));
-                log.Add(name + ": " + bake(name));
+                // The scenes named Linear* bake with lights whose intensity multiplies their
+                // linear colour (a project setting).
+                bool linear = UnityEngine.Rendering.GraphicsSettings.lightsUseLinearIntensity;
+                UnityEngine.Rendering.GraphicsSettings.lightsUseLinearIntensity = name.StartsWith("Linear", StringComparison.Ordinal);
+                try { log.Add(name + ": " + bake(name)); }
+                finally { UnityEngine.Rendering.GraphicsSettings.lightsUseLinearIntensity = linear; }
                 // (The runner watches this for progress: a whole capture takes longer than its
                 // progress timeout.)
                 File.WriteAllLines(Path.Combine(output, "progress.txt"), log);
