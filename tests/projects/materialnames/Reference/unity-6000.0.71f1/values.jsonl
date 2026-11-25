@@ -1,0 +1,317 @@
+{"k":"shaders","v":"True True"}
+{"k":"order/early_ids","v":"stencil<count True cutoff<glossiness True tintColor<color False tintColor<mainTexST False"}
+{"k":"order/ids","v":"pre<post True preColor<postColor True mainTexST<color True mainTex<color True color<glossiness True glossiness<count True saved<fresh True freshColor<freshTexST True"}
+{"k":"order/names/Float","v":"_Cutoff _Glossiness _Pre _Post"}
+{"k":"order/names/Int","v":"_Stencil _Count"}
+{"k":"order/names/Vector","v":"_MainTex_ST _MainTex_TexelSize _MainTex_HDR _Color _TintColor _PreColor _PostColor"}
+{"k":"order/names/Matrix","v":""}
+{"k":"order/names/Texture","v":"_MainTex"}
+{"k":"order/names/ConstantBuffer","v":""}
+{"k":"order/names/ComputeBuffer","v":""}
+{"k":"order/texture_names","v":"_MainTex"}
+{"k":"fresh/names/Float","v":"_Glossiness"}
+{"k":"fresh/names/Int","v":"_Count"}
+{"k":"fresh/names/Vector","v":"_MainTex_ST _MainTex_TexelSize _MainTex_HDR _Color"}
+{"k":"fresh/names/Matrix","v":""}
+{"k":"fresh/names/Texture","v":"_MainTex"}
+{"k":"fresh/names/ConstantBuffer","v":""}
+{"k":"fresh/names/ComputeBuffer","v":""}
+{"k":"fresh/texture_names","v":"_MainTex"}
+{"k":"set/names/Float","v":"_Glossiness _Zf _Af _Li _Fa _Mix"}
+{"k":"set/names/Int","v":"_Count _Zi"}
+{"k":"set/names/Vector","v":"_MainTex_ST _MainTex_TexelSize _MainTex_HDR _Color _Zc _Av _Zt_ST _Zt_TexelSize _Zt_HDR _At_ST _At_TexelSize _At_HDR _Mix _Sc_ST _Sc_TexelSize _Sc_HDR _Va"}
+{"k":"set/names/Matrix","v":"_Zm _Ma"}
+{"k":"set/names/Texture","v":"_MainTex _Zt _At _Sc"}
+{"k":"set/names/ConstantBuffer","v":""}
+{"k":"set/names/ComputeBuffer","v":""}
+{"k":"set/texture_names","v":"_MainTex"}
+{"k":"set/has/_Zf","v":"property True float True integer False color False texture False matrix False"}
+{"k":"set/has/_Zi","v":"property True float False integer True color False texture False matrix False"}
+{"k":"set/has/_Li","v":"property True float True integer False color False texture False matrix False"}
+{"k":"set/has/_Zc","v":"property True float False integer False color True texture False matrix False"}
+{"k":"set/has/_Av","v":"property True float False integer False color True texture False matrix False"}
+{"k":"set/has/_Zt","v":"property True float False integer False color False texture True matrix False"}
+{"k":"set/has/_At","v":"property True float False integer False color False texture True matrix False"}
+{"k":"set/has/_Zm","v":"property True float False integer False color False texture False matrix True"}
+{"k":"set/has/_Fa","v":"property True float True integer False color False texture False matrix False"}
+{"k":"set/has/_Mix","v":"property True float True integer False color True texture False matrix False"}
+{"k":"set/has/_Sc","v":"property True float False integer False color False texture True matrix False"}
+{"k":"set/has/_Va","v":"property True float False integer False color True texture False matrix False"}
+{"k":"set/has/_Ma","v":"property True float False integer False color False texture False matrix True"}
+{"k":"set/get/_Mix","v":"float 1 color 0.5 0.5 0.5 1"}
+{"k":"set/get/_Av","v":"1 2 3 4"}
+{"k":"set/get/_Zt","v":"null"}
+{"k":"set/get/_Zt.logs","v":"Error: Material 'Scripted' with Shader 'Probe/Names' doesn't have a texture property '_Zt'"}
+{"k":"set/get/_Zt_scale","v":"1"}
+{"k":"set/get/_MainTex","v":"UnityWhite"}
+{"k":"set/get/_Sc","v":"3 null"}
+{"k":"set/get/_Sc.logs","v":"Error: Material 'Scripted' with Shader 'Probe/Names' doesn't have a texture property '_Sc'"}
+{"k":"set/get/_Fa","v":"1 array 2"}
+{"k":"set/get/_Zm","v":"1"}
+{"k":"set/get/_Va","v":"5 6 7 8 array 2"}
+{"k":"set/get/_Ma","v":"9 array 2"}
+{"k":"copy/names/Float","v":"_Glossiness"}
+{"k":"copy/names/Int","v":"_Count"}
+{"k":"copy/names/Vector","v":"_MainTex_ST _MainTex_TexelSize _MainTex_HDR _Color"}
+{"k":"copy/names/Matrix","v":""}
+{"k":"copy/names/Texture","v":"_MainTex"}
+{"k":"copy/names/ConstantBuffer","v":""}
+{"k":"copy/names/ComputeBuffer","v":""}
+{"k":"copy/texture_names","v":"_MainTex"}
+{"k":"copy/has/_Zf","v":"property False float False integer False color False texture False matrix False"}
+{"k":"copy/has/_Zc","v":"property False float False integer False color False texture False matrix False"}
+{"k":"copy/has/_Zt","v":"property False float False integer False color False texture False matrix False"}
+{"k":"copy/has/_Zm","v":"property False float False integer False color False texture False matrix False"}
+{"k":"copy/has/_Fa","v":"property False float False integer False color False texture False matrix False"}
+{"k":"copy/get","v":"zf 0 zc 0 0 0 0 zm 1 fa -1"}
+{"k":"copy/get.logs","v":"Error: Material 'Scripted' with Shader 'Probe/Names' doesn't have a float or range property '_Zf'\n---\nError: Material 'Scripted' with Shader 'Probe/Names' doesn't have a color property '_Zc'\n---\nError: Material 'Scripted' with Shader 'Probe/Names' doesn't have a matrix property '_Zm'"}
+{"k":"instantiate/names/Float","v":"_Glossiness"}
+{"k":"instantiate/names/Int","v":"_Count"}
+{"k":"instantiate/names/Vector","v":"_MainTex_ST _MainTex_TexelSize _MainTex_HDR _Color"}
+{"k":"instantiate/names/Matrix","v":""}
+{"k":"instantiate/names/Texture","v":"_MainTex"}
+{"k":"instantiate/names/ConstantBuffer","v":""}
+{"k":"instantiate/names/ComputeBuffer","v":""}
+{"k":"instantiate/texture_names","v":"_MainTex"}
+{"k":"instantiate/has/_Zf","v":"property False float False integer False color False texture False matrix False"}
+{"k":"renderer_material/names/Float","v":"_Glossiness _Zf _Af _Li _Fa _Mix"}
+{"k":"renderer_material/names/Int","v":"_Count _Zi"}
+{"k":"renderer_material/names/Vector","v":"_MainTex_ST _MainTex_TexelSize _MainTex_HDR _Color _Zc _Av _Zt_ST _Zt_TexelSize _Zt_HDR _At_ST _At_TexelSize _At_HDR _Mix _Sc_ST _Sc_TexelSize _Sc_HDR _Va"}
+{"k":"renderer_material/names/Matrix","v":"_Zm _Ma"}
+{"k":"renderer_material/names/Texture","v":"_MainTex _Zt _At _Sc"}
+{"k":"renderer_material/names/ConstantBuffer","v":""}
+{"k":"renderer_material/names/ComputeBuffer","v":""}
+{"k":"renderer_material/texture_names","v":"_MainTex"}
+{"k":"renderer_material/has/_Zf","v":"property True float True integer False color False texture False matrix False"}
+{"k":"copy_properties/names/Float","v":"_Glossiness _Zf _Af _Li _Fa _Mix"}
+{"k":"copy_properties/names/Int","v":"_Count _Zi"}
+{"k":"copy_properties/names/Vector","v":"_MainTex_ST _MainTex_TexelSize _MainTex_HDR _Color _Zc _Av _Zt_ST _Zt_TexelSize _Zt_HDR _At_ST _At_TexelSize _At_HDR _Mix _Sc_ST _Sc_TexelSize _Sc_HDR _Va"}
+{"k":"copy_properties/names/Matrix","v":"_Zm _Ma"}
+{"k":"copy_properties/names/Texture","v":"_MainTex _Zt _At _Sc"}
+{"k":"copy_properties/names/ConstantBuffer","v":""}
+{"k":"copy_properties/names/ComputeBuffer","v":""}
+{"k":"copy_properties/texture_names","v":"_MainTex"}
+{"k":"copy_properties/has/_Zf","v":"property True float True integer False color False texture False matrix False"}
+{"k":"switched/names/Float","v":"_Saved _Fresh"}
+{"k":"switched/names/Int","v":""}
+{"k":"switched/names/Vector","v":"_FreshColor _FreshTex_ST _FreshTex_TexelSize _FreshTex_HDR"}
+{"k":"switched/names/Matrix","v":""}
+{"k":"switched/names/Texture","v":"_FreshTex"}
+{"k":"switched/names/ConstantBuffer","v":""}
+{"k":"switched/names/ComputeBuffer","v":""}
+{"k":"switched/texture_names","v":"_MainTex _FreshTex"}
+{"k":"switched_back/names/Float","v":"_Glossiness"}
+{"k":"switched_back/names/Int","v":"_Count"}
+{"k":"switched_back/names/Vector","v":"_MainTex_ST _MainTex_TexelSize _MainTex_HDR _Color"}
+{"k":"switched_back/names/Matrix","v":""}
+{"k":"switched_back/names/Texture","v":"_MainTex"}
+{"k":"switched_back/names/ConstantBuffer","v":""}
+{"k":"switched_back/names/ComputeBuffer","v":""}
+{"k":"switched_back/texture_names","v":"_MainTex _FreshTex"}
+{"k":"save_if_dirty/dirty_loaded","v":"False"}
+{"k":"save_if_dirty/dirty_set","v":"True"}
+{"k":"save_if_dirty/before/has/_Saved","v":"property True float True integer False color False texture False matrix False"}
+{"k":"save_if_dirty/before/has/_Fresh","v":"property True float True integer False color False texture False matrix False"}
+{"k":"save_if_dirty/before/has/_FreshColor","v":"property True float False integer False color True texture False matrix False"}
+{"k":"save_if_dirty/before/has/_FreshTex","v":"property True float False integer False color False texture True matrix False"}
+{"k":"save_if_dirty/before/has/_FreshM","v":"property True float False integer False color False texture False matrix True"}
+{"k":"save_if_dirty/before/has/_FreshA","v":"property True float True integer False color False texture False matrix False"}
+{"k":"save_if_dirty/before/has/_Glossiness","v":"property True float True integer False color False texture False matrix False"}
+{"k":"save_if_dirty/before/get/_Saved","v":"2"}
+{"k":"save_if_dirty/before/get/_Fresh","v":"3"}
+{"k":"save_if_dirty/before/get/_FreshColor","v":"0.25 0.5 0.75 1"}
+{"k":"save_if_dirty/before/get/_FreshTex","v":"null"}
+{"k":"save_if_dirty/before/get/_FreshTex.logs","v":"Error: Material 'save_if_dirty' with Shader 'Probe/Names' doesn't have a texture property '_FreshTex'"}
+{"k":"save_if_dirty/before/get/_FreshM","v":"3"}
+{"k":"save_if_dirty/before/get/_FreshA","v":"4 array 2"}
+{"k":"save_if_dirty/before/get/_Glossiness","v":"0.75"}
+{"k":"save_if_dirty/before/names/Float","v":"_Glossiness _Saved _Fresh _FreshA"}
+{"k":"save_if_dirty/before/names/Int","v":"_Count"}
+{"k":"save_if_dirty/before/names/Vector","v":"_MainTex_ST _MainTex_TexelSize _MainTex_HDR _Color _FreshColor _FreshTex_ST _FreshTex_TexelSize _FreshTex_HDR"}
+{"k":"save_if_dirty/before/names/Matrix","v":"_FreshM"}
+{"k":"save_if_dirty/before/names/Texture","v":"_MainTex _FreshTex"}
+{"k":"save_if_dirty/before/names/ConstantBuffer","v":""}
+{"k":"save_if_dirty/before/names/ComputeBuffer","v":""}
+{"k":"save_if_dirty/before/texture_names","v":"_MainTex"}
+{"k":"save_if_dirty/save","v":"saved dirty False"}
+{"k":"save_if_dirty/after/has/_Saved","v":"property False float False integer False color False texture False matrix False"}
+{"k":"save_if_dirty/after/has/_Fresh","v":"property False float False integer False color False texture False matrix False"}
+{"k":"save_if_dirty/after/has/_FreshColor","v":"property False float False integer False color False texture False matrix False"}
+{"k":"save_if_dirty/after/has/_FreshTex","v":"property False float False integer False color False texture False matrix False"}
+{"k":"save_if_dirty/after/has/_FreshM","v":"property False float False integer False color False texture False matrix False"}
+{"k":"save_if_dirty/after/has/_FreshA","v":"property False float False integer False color False texture False matrix False"}
+{"k":"save_if_dirty/after/has/_Glossiness","v":"property True float True integer False color False texture False matrix False"}
+{"k":"save_if_dirty/after/get/_Saved","v":"0"}
+{"k":"save_if_dirty/after/get/_Saved.logs","v":"Error: Material 'save_if_dirty' with Shader 'Probe/Names' doesn't have a float or range property '_Saved'"}
+{"k":"save_if_dirty/after/get/_Fresh","v":"0"}
+{"k":"save_if_dirty/after/get/_Fresh.logs","v":"Error: Material 'save_if_dirty' with Shader 'Probe/Names' doesn't have a float or range property '_Fresh'"}
+{"k":"save_if_dirty/after/get/_FreshColor","v":"0 0 0 0"}
+{"k":"save_if_dirty/after/get/_FreshColor.logs","v":"Error: Material 'save_if_dirty' with Shader 'Probe/Names' doesn't have a color property '_FreshColor'"}
+{"k":"save_if_dirty/after/get/_FreshTex","v":"null"}
+{"k":"save_if_dirty/after/get/_FreshTex.logs","v":"Error: Material 'save_if_dirty' with Shader 'Probe/Names' doesn't have a texture property '_FreshTex'"}
+{"k":"save_if_dirty/after/get/_FreshM","v":"1"}
+{"k":"save_if_dirty/after/get/_FreshM.logs","v":"Error: Material 'save_if_dirty' with Shader 'Probe/Names' doesn't have a matrix property '_FreshM'"}
+{"k":"save_if_dirty/after/get/_FreshA","v":"0 array -1"}
+{"k":"save_if_dirty/after/get/_FreshA.logs","v":"Error: Material 'save_if_dirty' with Shader 'Probe/Names' doesn't have a float or range property '_FreshA'"}
+{"k":"save_if_dirty/after/get/_Glossiness","v":"0.75"}
+{"k":"save_if_dirty/after/names/Float","v":"_Glossiness"}
+{"k":"save_if_dirty/after/names/Int","v":"_Count"}
+{"k":"save_if_dirty/after/names/Vector","v":"_MainTex_ST _MainTex_TexelSize _MainTex_HDR _Color"}
+{"k":"save_if_dirty/after/names/Matrix","v":""}
+{"k":"save_if_dirty/after/names/Texture","v":"_MainTex"}
+{"k":"save_if_dirty/after/names/ConstantBuffer","v":""}
+{"k":"save_if_dirty/after/names/ComputeBuffer","v":""}
+{"k":"save_if_dirty/after/texture_names","v":"_MainTex"}
+{"k":"save_if_dirty/file","v":"%YAML 1.1\n%TAG !u! tag:unity3d.com,2011:\n--- !u!21 &2100000\nMaterial:\n  serializedVersion: 8\n  m_ObjectHideFlags: 0\n  m_CorrespondingSourceObject: {fileID: 0}\n  m_PrefabInstance: {fileID: 0}\n  m_PrefabAsset: {fileID: 0}\n  m_Name: save_if_dirty\n  m_Shader: {fileID: 4800000, guid: 03dc6eba615f4aa19d21a9b521558453, type: 3}\n  m_Parent: {fileID: 0}\n  m_ModifiedSerializedProperties: 0\n  m_ValidKeywords: []\n  m_InvalidKeywords: []\n  m_LightmapFlags: 4\n  m_EnableInstancingVariants: 0\n  m_DoubleSidedGI: 0\n  m_CustomRenderQueue: -1\n  stringTagMap: {}\n  disabledShaderPasses: []\n  m_LockedProperties: \n  m_SavedProperties:\n    serializedVersion: 3\n    m_TexEnvs:\n    - _MainTex:\n        m_Texture: {fileID: 0}\n        m_Scale: {x: 1, y: 1}\n        m_Offset: {x: 0, y: 0}\n    m_Ints:\n    - _Count: 4\n    m_Floats:\n    - _Glossiness: 0.75\n    - _Saved: 2\n    m_Colors:\n    - _Color: {r: 0.5, g: 0.25, b: 0.75, a: 1}\n  m_BuildTextureStacks: []\n  m_AllowLocking: 1\n"}
+{"k":"save_if_dirty/other","v":"saved 2 fresh 8 color 0 1 0 1 tex null"}
+{"k":"save_if_dirty/back","v":"has saved False fresh False glossiness 0.75"}
+{"k":"save_assets/dirty_loaded","v":"False"}
+{"k":"save_assets/dirty_set","v":"True"}
+{"k":"save_assets/before/has/_Saved","v":"property True float True integer False color False texture False matrix False"}
+{"k":"save_assets/before/has/_Fresh","v":"property True float True integer False color False texture False matrix False"}
+{"k":"save_assets/before/has/_FreshColor","v":"property True float False integer False color True texture False matrix False"}
+{"k":"save_assets/before/has/_FreshTex","v":"property True float False integer False color False texture True matrix False"}
+{"k":"save_assets/before/has/_FreshM","v":"property True float False integer False color False texture False matrix True"}
+{"k":"save_assets/before/has/_FreshA","v":"property True float True integer False color False texture False matrix False"}
+{"k":"save_assets/before/has/_Glossiness","v":"property True float True integer False color False texture False matrix False"}
+{"k":"save_assets/before/get/_Saved","v":"2"}
+{"k":"save_assets/before/get/_Fresh","v":"3"}
+{"k":"save_assets/before/get/_FreshColor","v":"0.25 0.5 0.75 1"}
+{"k":"save_assets/before/get/_FreshTex","v":"null"}
+{"k":"save_assets/before/get/_FreshTex.logs","v":"Error: Material 'save_assets' with Shader 'Probe/Names' doesn't have a texture property '_FreshTex'"}
+{"k":"save_assets/before/get/_FreshM","v":"3"}
+{"k":"save_assets/before/get/_FreshA","v":"4 array 2"}
+{"k":"save_assets/before/get/_Glossiness","v":"0.75"}
+{"k":"save_assets/before/names/Float","v":"_Glossiness _Saved _Fresh _FreshA"}
+{"k":"save_assets/before/names/Int","v":"_Count"}
+{"k":"save_assets/before/names/Vector","v":"_MainTex_ST _MainTex_TexelSize _MainTex_HDR _Color _FreshColor _FreshTex_ST _FreshTex_TexelSize _FreshTex_HDR"}
+{"k":"save_assets/before/names/Matrix","v":"_FreshM"}
+{"k":"save_assets/before/names/Texture","v":"_MainTex _FreshTex"}
+{"k":"save_assets/before/names/ConstantBuffer","v":""}
+{"k":"save_assets/before/names/ComputeBuffer","v":""}
+{"k":"save_assets/before/texture_names","v":"_MainTex"}
+{"k":"save_assets/save","v":"saved dirty False"}
+{"k":"save_assets/after/has/_Saved","v":"property False float False integer False color False texture False matrix False"}
+{"k":"save_assets/after/has/_Fresh","v":"property False float False integer False color False texture False matrix False"}
+{"k":"save_assets/after/has/_FreshColor","v":"property False float False integer False color False texture False matrix False"}
+{"k":"save_assets/after/has/_FreshTex","v":"property False float False integer False color False texture False matrix False"}
+{"k":"save_assets/after/has/_FreshM","v":"property False float False integer False color False texture False matrix False"}
+{"k":"save_assets/after/has/_FreshA","v":"property False float False integer False color False texture False matrix False"}
+{"k":"save_assets/after/has/_Glossiness","v":"property True float True integer False color False texture False matrix False"}
+{"k":"save_assets/after/get/_Saved","v":"0"}
+{"k":"save_assets/after/get/_Saved.logs","v":"Error: Material 'save_assets' with Shader 'Probe/Names' doesn't have a float or range property '_Saved'"}
+{"k":"save_assets/after/get/_Fresh","v":"0"}
+{"k":"save_assets/after/get/_Fresh.logs","v":"Error: Material 'save_assets' with Shader 'Probe/Names' doesn't have a float or range property '_Fresh'"}
+{"k":"save_assets/after/get/_FreshColor","v":"0 0 0 0"}
+{"k":"save_assets/after/get/_FreshColor.logs","v":"Error: Material 'save_assets' with Shader 'Probe/Names' doesn't have a color property '_FreshColor'"}
+{"k":"save_assets/after/get/_FreshTex","v":"null"}
+{"k":"save_assets/after/get/_FreshTex.logs","v":"Error: Material 'save_assets' with Shader 'Probe/Names' doesn't have a texture property '_FreshTex'"}
+{"k":"save_assets/after/get/_FreshM","v":"1"}
+{"k":"save_assets/after/get/_FreshM.logs","v":"Error: Material 'save_assets' with Shader 'Probe/Names' doesn't have a matrix property '_FreshM'"}
+{"k":"save_assets/after/get/_FreshA","v":"0 array -1"}
+{"k":"save_assets/after/get/_FreshA.logs","v":"Error: Material 'save_assets' with Shader 'Probe/Names' doesn't have a float or range property '_FreshA'"}
+{"k":"save_assets/after/get/_Glossiness","v":"0.75"}
+{"k":"save_assets/after/names/Float","v":"_Glossiness"}
+{"k":"save_assets/after/names/Int","v":"_Count"}
+{"k":"save_assets/after/names/Vector","v":"_MainTex_ST _MainTex_TexelSize _MainTex_HDR _Color"}
+{"k":"save_assets/after/names/Matrix","v":""}
+{"k":"save_assets/after/names/Texture","v":"_MainTex"}
+{"k":"save_assets/after/names/ConstantBuffer","v":""}
+{"k":"save_assets/after/names/ComputeBuffer","v":""}
+{"k":"save_assets/after/texture_names","v":"_MainTex"}
+{"k":"save_assets/file","v":"%YAML 1.1\n%TAG !u! tag:unity3d.com,2011:\n--- !u!21 &2100000\nMaterial:\n  serializedVersion: 8\n  m_ObjectHideFlags: 0\n  m_CorrespondingSourceObject: {fileID: 0}\n  m_PrefabInstance: {fileID: 0}\n  m_PrefabAsset: {fileID: 0}\n  m_Name: save_assets\n  m_Shader: {fileID: 4800000, guid: 03dc6eba615f4aa19d21a9b521558453, type: 3}\n  m_Parent: {fileID: 0}\n  m_ModifiedSerializedProperties: 0\n  m_ValidKeywords: []\n  m_InvalidKeywords: []\n  m_LightmapFlags: 4\n  m_EnableInstancingVariants: 0\n  m_DoubleSidedGI: 0\n  m_CustomRenderQueue: -1\n  stringTagMap: {}\n  disabledShaderPasses: []\n  m_LockedProperties: \n  m_SavedProperties:\n    serializedVersion: 3\n    m_TexEnvs:\n    - _MainTex:\n        m_Texture: {fileID: 0}\n        m_Scale: {x: 1, y: 1}\n        m_Offset: {x: 0, y: 0}\n    m_Ints:\n    - _Count: 4\n    m_Floats:\n    - _Glossiness: 0.75\n    - _Saved: 2\n    m_Colors:\n    - _Color: {r: 0.5, g: 0.25, b: 0.75, a: 1}\n  m_BuildTextureStacks: []\n  m_AllowLocking: 1\n"}
+{"k":"save_assets/other","v":"saved 2 fresh 8 color 0 1 0 1 tex null"}
+{"k":"save_assets/back","v":"has saved False fresh False glossiness 0.75"}
+{"k":"not_dirty/dirty_loaded","v":"False"}
+{"k":"not_dirty/dirty_set","v":"True"}
+{"k":"not_dirty/before/has/_Saved","v":"property True float True integer False color False texture False matrix False"}
+{"k":"not_dirty/before/has/_Fresh","v":"property True float True integer False color False texture False matrix False"}
+{"k":"not_dirty/before/has/_FreshColor","v":"property True float False integer False color True texture False matrix False"}
+{"k":"not_dirty/before/has/_FreshTex","v":"property True float False integer False color False texture True matrix False"}
+{"k":"not_dirty/before/has/_FreshM","v":"property True float False integer False color False texture False matrix True"}
+{"k":"not_dirty/before/has/_FreshA","v":"property True float True integer False color False texture False matrix False"}
+{"k":"not_dirty/before/has/_Glossiness","v":"property True float True integer False color False texture False matrix False"}
+{"k":"not_dirty/before/get/_Saved","v":"2"}
+{"k":"not_dirty/before/get/_Fresh","v":"3"}
+{"k":"not_dirty/before/get/_FreshColor","v":"0.25 0.5 0.75 1"}
+{"k":"not_dirty/before/get/_FreshTex","v":"null"}
+{"k":"not_dirty/before/get/_FreshTex.logs","v":"Error: Material 'not_dirty' with Shader 'Probe/Names' doesn't have a texture property '_FreshTex'"}
+{"k":"not_dirty/before/get/_FreshM","v":"3"}
+{"k":"not_dirty/before/get/_FreshA","v":"4 array 2"}
+{"k":"not_dirty/before/get/_Glossiness","v":"0.75"}
+{"k":"not_dirty/before/names/Float","v":"_Glossiness _Saved _Fresh _FreshA"}
+{"k":"not_dirty/before/names/Int","v":"_Count"}
+{"k":"not_dirty/before/names/Vector","v":"_MainTex_ST _MainTex_TexelSize _MainTex_HDR _Color _FreshColor _FreshTex_ST _FreshTex_TexelSize _FreshTex_HDR"}
+{"k":"not_dirty/before/names/Matrix","v":"_FreshM"}
+{"k":"not_dirty/before/names/Texture","v":"_MainTex _FreshTex"}
+{"k":"not_dirty/before/names/ConstantBuffer","v":""}
+{"k":"not_dirty/before/names/ComputeBuffer","v":""}
+{"k":"not_dirty/before/texture_names","v":"_MainTex"}
+{"k":"not_dirty/save","v":"saved dirty False"}
+{"k":"not_dirty/after/has/_Saved","v":"property False float False integer False color False texture False matrix False"}
+{"k":"not_dirty/after/has/_Fresh","v":"property False float False integer False color False texture False matrix False"}
+{"k":"not_dirty/after/has/_FreshColor","v":"property False float False integer False color False texture False matrix False"}
+{"k":"not_dirty/after/has/_FreshTex","v":"property False float False integer False color False texture False matrix False"}
+{"k":"not_dirty/after/has/_FreshM","v":"property False float False integer False color False texture False matrix False"}
+{"k":"not_dirty/after/has/_FreshA","v":"property False float False integer False color False texture False matrix False"}
+{"k":"not_dirty/after/has/_Glossiness","v":"property True float True integer False color False texture False matrix False"}
+{"k":"not_dirty/after/get/_Saved","v":"0"}
+{"k":"not_dirty/after/get/_Saved.logs","v":"Error: Material 'not_dirty' with Shader 'Probe/Names' doesn't have a float or range property '_Saved'"}
+{"k":"not_dirty/after/get/_Fresh","v":"0"}
+{"k":"not_dirty/after/get/_Fresh.logs","v":"Error: Material 'not_dirty' with Shader 'Probe/Names' doesn't have a float or range property '_Fresh'"}
+{"k":"not_dirty/after/get/_FreshColor","v":"0 0 0 0"}
+{"k":"not_dirty/after/get/_FreshColor.logs","v":"Error: Material 'not_dirty' with Shader 'Probe/Names' doesn't have a color property '_FreshColor'"}
+{"k":"not_dirty/after/get/_FreshTex","v":"null"}
+{"k":"not_dirty/after/get/_FreshTex.logs","v":"Error: Material 'not_dirty' with Shader 'Probe/Names' doesn't have a texture property '_FreshTex'"}
+{"k":"not_dirty/after/get/_FreshM","v":"1"}
+{"k":"not_dirty/after/get/_FreshM.logs","v":"Error: Material 'not_dirty' with Shader 'Probe/Names' doesn't have a matrix property '_FreshM'"}
+{"k":"not_dirty/after/get/_FreshA","v":"0 array -1"}
+{"k":"not_dirty/after/get/_FreshA.logs","v":"Error: Material 'not_dirty' with Shader 'Probe/Names' doesn't have a float or range property '_FreshA'"}
+{"k":"not_dirty/after/get/_Glossiness","v":"0.75"}
+{"k":"not_dirty/after/names/Float","v":"_Glossiness"}
+{"k":"not_dirty/after/names/Int","v":"_Count"}
+{"k":"not_dirty/after/names/Vector","v":"_MainTex_ST _MainTex_TexelSize _MainTex_HDR _Color"}
+{"k":"not_dirty/after/names/Matrix","v":""}
+{"k":"not_dirty/after/names/Texture","v":"_MainTex"}
+{"k":"not_dirty/after/names/ConstantBuffer","v":""}
+{"k":"not_dirty/after/names/ComputeBuffer","v":""}
+{"k":"not_dirty/after/texture_names","v":"_MainTex"}
+{"k":"not_dirty/file","v":"%YAML 1.1\n%TAG !u! tag:unity3d.com,2011:\n--- !u!21 &2100000\nMaterial:\n  serializedVersion: 8\n  m_ObjectHideFlags: 0\n  m_CorrespondingSourceObject: {fileID: 0}\n  m_PrefabInstance: {fileID: 0}\n  m_PrefabAsset: {fileID: 0}\n  m_Name: not_dirty\n  m_Shader: {fileID: 4800000, guid: 03dc6eba615f4aa19d21a9b521558453, type: 3}\n  m_Parent: {fileID: 0}\n  m_ModifiedSerializedProperties: 0\n  m_ValidKeywords: []\n  m_InvalidKeywords: []\n  m_LightmapFlags: 4\n  m_EnableInstancingVariants: 0\n  m_DoubleSidedGI: 0\n  m_CustomRenderQueue: -1\n  stringTagMap: {}\n  disabledShaderPasses: []\n  m_LockedProperties: \n  m_SavedProperties:\n    serializedVersion: 3\n    m_TexEnvs:\n    - _MainTex:\n        m_Texture: {fileID: 0}\n        m_Scale: {x: 1, y: 1}\n        m_Offset: {x: 0, y: 0}\n    m_Ints:\n    - _Count: 4\n    m_Floats:\n    - _Glossiness: 0.75\n    - _Saved: 2\n    m_Colors:\n    - _Color: {r: 0.5, g: 0.25, b: 0.75, a: 1}\n  m_BuildTextureStacks: []\n  m_AllowLocking: 1\n"}
+{"k":"not_dirty/other","v":"saved 2 fresh 8 color 0 1 0 1 tex null"}
+{"k":"not_dirty/back","v":"has saved False fresh False glossiness 0.75"}
+{"k":"create/save","v":"created"}
+{"k":"create/after/has/_Saved","v":"property False float False integer False color False texture False matrix False"}
+{"k":"create/after/has/_Fresh","v":"property False float False integer False color False texture False matrix False"}
+{"k":"create/after/has/_FreshColor","v":"property False float False integer False color False texture False matrix False"}
+{"k":"create/after/has/_FreshTex","v":"property False float False integer False color False texture False matrix False"}
+{"k":"create/after/has/_FreshM","v":"property False float False integer False color False texture False matrix False"}
+{"k":"create/after/has/_FreshA","v":"property False float False integer False color False texture False matrix False"}
+{"k":"create/after/has/_Glossiness","v":"property True float True integer False color False texture False matrix False"}
+{"k":"create/after/get/_Saved","v":"0"}
+{"k":"create/after/get/_Saved.logs","v":"Error: Material 'create' with Shader 'Probe/Names' doesn't have a float or range property '_Saved'"}
+{"k":"create/after/get/_Fresh","v":"0"}
+{"k":"create/after/get/_Fresh.logs","v":"Error: Material 'create' with Shader 'Probe/Names' doesn't have a float or range property '_Fresh'"}
+{"k":"create/after/get/_FreshColor","v":"0 0 0 0"}
+{"k":"create/after/get/_FreshColor.logs","v":"Error: Material 'create' with Shader 'Probe/Names' doesn't have a color property '_FreshColor'"}
+{"k":"create/after/get/_FreshTex","v":"null"}
+{"k":"create/after/get/_FreshTex.logs","v":"Error: Material 'create' with Shader 'Probe/Names' doesn't have a texture property '_FreshTex'"}
+{"k":"create/after/get/_FreshM","v":"1"}
+{"k":"create/after/get/_FreshM.logs","v":"Error: Material 'create' with Shader 'Probe/Names' doesn't have a matrix property '_FreshM'"}
+{"k":"create/after/get/_FreshA","v":"0 array -1"}
+{"k":"create/after/get/_FreshA.logs","v":"Error: Material 'create' with Shader 'Probe/Names' doesn't have a float or range property '_FreshA'"}
+{"k":"create/after/get/_Glossiness","v":"0.75"}
+{"k":"create/after/names/Float","v":"_Glossiness"}
+{"k":"create/after/names/Int","v":"_Count"}
+{"k":"create/after/names/Vector","v":"_MainTex_ST _MainTex_TexelSize _MainTex_HDR _Color"}
+{"k":"create/after/names/Matrix","v":""}
+{"k":"create/after/names/Texture","v":"_MainTex"}
+{"k":"create/after/names/ConstantBuffer","v":""}
+{"k":"create/after/names/ComputeBuffer","v":""}
+{"k":"create/after/texture_names","v":"_MainTex"}
+{"k":"create/file","v":"%YAML 1.1\n%TAG !u! tag:unity3d.com,2011:\n--- !u!21 &2100000\nMaterial:\n  serializedVersion: 8\n  m_ObjectHideFlags: 0\n  m_CorrespondingSourceObject: {fileID: 0}\n  m_PrefabInstance: {fileID: 0}\n  m_PrefabAsset: {fileID: 0}\n  m_Name: create\n  m_Shader: {fileID: 4800000, guid: 03dc6eba615f4aa19d21a9b521558453, type: 3}\n  m_Parent: {fileID: 0}\n  m_ModifiedSerializedProperties: 0\n  m_ValidKeywords: []\n  m_InvalidKeywords: []\n  m_LightmapFlags: 4\n  m_EnableInstancingVariants: 0\n  m_DoubleSidedGI: 0\n  m_CustomRenderQueue: -1\n  stringTagMap: {}\n  disabledShaderPasses: []\n  m_LockedProperties: \n  m_SavedProperties:\n    serializedVersion: 3\n    m_TexEnvs:\n    - _MainTex:\n        m_Texture: {fileID: 0}\n        m_Scale: {x: 1, y: 1}\n        m_Offset: {x: 0, y: 0}\n    m_Ints:\n    - _Count: 2\n    m_Floats:\n    - _Glossiness: 0.75\n    m_Colors:\n    - _Color: {r: 1, g: 1, b: 1, a: 1}\n  m_BuildTextureStacks: []\n  m_AllowLocking: 1\n"}
+{"k":"create/resave","v":"has False get 0 names _Glossiness"}
+{"k":"create/resave.logs","v":"Error: Material 'create' with Shader 'Probe/Names' doesn't have a float or range property '_Later'"}
+{"k":"create/refile","v":"%YAML 1.1\n%TAG !u! tag:unity3d.com,2011:\n--- !u!21 &2100000\nMaterial:\n  serializedVersion: 8\n  m_ObjectHideFlags: 0\n  m_CorrespondingSourceObject: {fileID: 0}\n  m_PrefabInstance: {fileID: 0}\n  m_PrefabAsset: {fileID: 0}\n  m_Name: create\n  m_Shader: {fileID: 4800000, guid: 03dc6eba615f4aa19d21a9b521558453, type: 3}\n  m_Parent: {fileID: 0}\n  m_ModifiedSerializedProperties: 0\n  m_ValidKeywords: []\n  m_InvalidKeywords: []\n  m_LightmapFlags: 4\n  m_EnableInstancingVariants: 0\n  m_DoubleSidedGI: 0\n  m_CustomRenderQueue: -1\n  stringTagMap: {}\n  disabledShaderPasses: []\n  m_LockedProperties: \n  m_SavedProperties:\n    serializedVersion: 3\n    m_TexEnvs:\n    - _MainTex:\n        m_Texture: {fileID: 0}\n        m_Scale: {x: 1, y: 1}\n        m_Offset: {x: 0, y: 0}\n    m_Ints:\n    - _Count: 2\n    m_Floats:\n    - _Glossiness: 0.75\n    m_Colors:\n    - _Color: {r: 1, g: 1, b: 1, a: 1}\n  m_BuildTextureStacks: []\n  m_AllowLocking: 1\n"}
+{"k":"create/other","v":"saved 9 fresh 8 color 0 1 0 1 tex null"}
+{"k":"create/back","v":"has saved False fresh False glossiness 0.75"}
+{"k":"complete","v":true}

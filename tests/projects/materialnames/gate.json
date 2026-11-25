@@ -1,0 +1,10 @@
+{
+  "commands": [
+    "python3 tests/projects/materialnames/run.py gate"
+  ],
+  "summary": "materialnames: .*",
+  "engine_paths": [
+    "managed/UnityEngine/Graphics/Material.cs",
+    "managed/UnityEngine/Editor/MaterialSerialization.cs"
+  ]
+}
