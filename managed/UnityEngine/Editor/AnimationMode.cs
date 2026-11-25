@@ -132,13 +132,62 @@ namespace UnityEditor
                 Record(AnimationUtility.GetAnimatedObject(gameObject, binding), binding.propertyName);
             }
             foreach (var binding in AnimationUtility.GetObjectReferenceCurveBindings(clip))
-            {
-                var target = AnimationUtility.GetAnimatedObject(gameObject, binding);
-                if (target == null || IsRecorded(target, binding.propertyName)) continue;
-                AnimationUtility.GetObjectReferenceValue(gameObject, binding, out var current);
-                s_Recorded.Add(new Recorded { Target = target, Path = binding.propertyName, IsObject = true, ObjectValue = current });
-            }
+                RecordBinding(AnimationUtility.GetAnimatedObject(gameObject, binding), binding, gameObject);
             clip.SampleAnimation(gameObject, time);
+        }
+
+        /// <summary>Records, for the revert when animation mode stops, every property the clip
+        /// animates below the object (its bindings as <see cref="GetCurveBindings"/> lists them:
+        /// children's, components', a Transform's whole vectors, object references); throws outside
+        /// animation mode (matches the Unity 6000.0.71f1 Editor, tests/projects/animinternal
+        /// <c>init.gameObject*</c>, <c>init.objectCurve*</c>; the Timeline editor's preview).</summary>
+        internal static void InitializePropertyModificationForGameObject(GameObject gameObject, AnimationClip clip)
+        {
+            if (!Unbound.Runtime.Compat.TimelineEditorAnimationMeasured) { Unbound.Runtime.Stubs.NotImplemented("UnityEditor.AnimationMode.InitializePropertyModificationForGameObject"); return; }
+            if (gameObject == null) throw new ArgumentNullException(nameof(gameObject));
+            if (clip == null) throw new ArgumentNullException(nameof(clip));
+            RequireAnimationMode("InitializePropertyModificationForGameObject");
+            foreach (var binding in GetCurveBindings(clip))
+                RecordBinding(AnimationUtility.GetAnimatedObject(gameObject, binding), binding, gameObject);
+        }
+
+        /// <summary>Records the clip's properties of the object itself (its bindings without a path
+        /// whose type the object is), only those the object has (tests/projects/animinternal
+        /// <c>init.object*</c>).</summary>
+        internal static void InitializePropertyModificationForObject(Object target, AnimationClip clip)
+        {
+            if (!Unbound.Runtime.Compat.TimelineEditorAnimationMeasured) { Unbound.Runtime.Stubs.NotImplemented("UnityEditor.AnimationMode.InitializePropertyModificationForObject"); return; }
+            if (target == null) throw new ArgumentNullException(nameof(target));
+            if (clip == null) throw new ArgumentNullException(nameof(clip));
+            RequireAnimationMode("InitializePropertyModificationForObject");
+            foreach (var binding in GetCurveBindings(clip))
+            {
+                if (!string.IsNullOrEmpty(binding.path) || binding.type == null || !binding.type.IsInstanceOfType(target)) continue;
+                if (binding.isPPtrCurve)
+                    Unbound.Runtime.Stubs.Ignored("AnimationMode.InitializePropertyModificationForObject object references", "records no object reference properties of the object (unmeasured)");
+                else Record(target, binding.propertyName);
+            }
+        }
+
+        static void RequireAnimationMode(string member)
+        {
+            if (!InAnimationMode())
+                throw new InvalidOperationException("AnimationMode." + member + " may only be called in animation mode.  See AnimationMode.StartAnimationMode.");
+        }
+
+        /// <summary>A binding's current value recorded on its target below the root: an object
+        /// reference's object, else the number.</summary>
+        static void RecordBinding(Object target, EditorCurveBinding binding, GameObject root)
+        {
+            if (target == null) return;
+            if (!binding.isPPtrCurve)
+            {
+                Record(target, binding.propertyName);
+                return;
+            }
+            if (IsRecorded(target, binding.propertyName)) return;
+            AnimationUtility.GetObjectReferenceValue(root, binding, out var current);
+            s_Recorded.Add(new Recorded { Target = target, Path = binding.propertyName, IsObject = true, ObjectValue = current });
         }
 
         public static void AddEditorCurveBinding(GameObject gameObject, EditorCurveBinding binding)

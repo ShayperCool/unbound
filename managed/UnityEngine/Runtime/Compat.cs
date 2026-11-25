@@ -1015,6 +1015,12 @@ namespace Unbound.Runtime
         /// <c>euler.*</c> on 6000.0.71f1. Other releases report it not implemented, as before.</summary>
         internal static bool ClosestEulerMeasured => Family == ReleaseFamily.Unity6000_0;
 
+        /// <summary>What the Timeline editor's preview and key edits call: UpdateTangentsFromMode
+        /// (Surrounding), SyncEditorCurves, AnimationMode.InitializePropertyModificationForGameObject
+        /// and ForObject, measured by tests/projects/animinternal <c>tangents.*</c>, <c>sync.*</c>,
+        /// <c>init.*</c> on 6000.0.71f1. Other releases report them not implemented, as before.</summary>
+        internal static bool TimelineEditorAnimationMeasured => Family == ReleaseFamily.Unity6000_0;
+
         /// <summary>Humanoid hips scale writes through a TransformStreamHandle (humanoid bone.scaleHips).</summary>
         internal static bool HumanStreamHipsScale => Family == ReleaseFamily.Unity6000_0;
 

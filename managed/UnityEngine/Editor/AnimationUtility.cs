@@ -151,6 +151,17 @@ namespace UnityEditor
             SetEditorCurveNoSync(clip, binding, curve);
         }
 
+        /// <summary>Brings the clip up to its editor curves (the Timeline editor calls it after
+        /// curve edits). Unbound's curve edits take effect at once, so this compiles the clip; a
+        /// curve replaced without a sync shows its new length before it, where the Editor keeps the
+        /// synced length until then (tests/projects/animinternal <c>sync.length</c>, a residual).</summary>
+        internal static void SyncEditorCurves(AnimationClip clip)
+        {
+            if (!Unbound.Runtime.Compat.TimelineEditorAnimationMeasured) { Unbound.Runtime.Stubs.NotImplemented("UnityEditor.AnimationUtility.SyncEditorCurves"); return; }
+            if (clip == null) throw new ArgumentNullException(nameof(clip));
+            clip.Compile();
+        }
+
         internal static void SetEditorCurveNoSync(AnimationClip clip, EditorCurveBinding binding, AnimationCurve curve)
         {
             if (clip == null) throw new ArgumentNullException(nameof(clip));

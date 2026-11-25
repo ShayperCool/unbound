@@ -142,6 +142,24 @@ namespace UnityEditor
             UpdateTangentsAround(curve, index);
         }
 
+        /// <summary>The key's and its neighbours' tangents from their modes; an index outside the
+        /// keys throws (matches the Unity 6000.0.71f1 Editor, tests/projects/animinternal
+        /// <c>tangents.surrounding.*</c>; the Timeline editor calls it as it edits keys).</summary>
+        internal static void UpdateTangentsFromModeSurrounding(AnimationCurve curve, int index)
+        {
+            if (!Unbound.Runtime.Compat.TimelineEditorAnimationMeasured) { Unbound.Runtime.Stubs.NotImplemented("UnityEditor.AnimationUtility.UpdateTangentsFromModeSurrounding"); return; }
+            UpdateTangentsAround(curve, CheckKey(curve, index));
+        }
+
+        /// <summary>Every key's tangents from its modes (tests/projects/animinternal
+        /// <c>tangents.all*</c>).</summary>
+        internal static void UpdateTangentsFromMode(AnimationCurve curve)
+        {
+            if (!Unbound.Runtime.Compat.TimelineEditorAnimationMeasured) { Unbound.Runtime.Stubs.NotImplemented("UnityEditor.AnimationUtility.UpdateTangentsFromMode"); return; }
+            if (curve == null) throw new ArgumentNullException(nameof(curve));
+            for (int i = 0; i < curve.length; i++) UpdateTangents(curve, i);
+        }
+
         static void UpdateTangentsAround(AnimationCurve curve, int index)
         {
             for (int i = index - 1; i <= index + 1; i++)
