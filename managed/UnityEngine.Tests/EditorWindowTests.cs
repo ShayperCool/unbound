@@ -29,6 +29,8 @@ namespace UnityEngine.Tests
             window.Close();
             Assert.False(EditorWindow.HasOpenInstances<ProbeWindow>());
             Assert.Null(EditorWindow.focusedWindow);
+            // One OnFocus at the show (window.afterShow); the Editor's second one at GetWindow's show
+            // is a recorded residual of tests/projects/editorwindowgui (window/getWindow).
             Assert.Equal(new[] { "OnEnable", "OnFocus", "OnDestroy" }, ProbeWindow.Calls);
         }
 
