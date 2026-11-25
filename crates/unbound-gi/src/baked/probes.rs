@@ -5,6 +5,7 @@
 
 use super::grid::Grid;
 use super::light::{Light, Mode, Tables};
+use super::sampling::{self, Samples};
 use super::trace::{Ray, Scene};
 
 /// The coefficients of a probe's light: nine, each red, green and blue.
@@ -46,6 +47,74 @@ pub fn add(out: &mut Coefficients, color: [f32; 3], direction: [f32; 3]) {
     }
 }
 
+/// How light probes take the lights they sample (soft shadows, area lights): over the probes'
+/// Direct Samples, each probe's samples by the Sobol sequence turned by its place in its
+/// group's frame (its index in the group, and the group's size), without blue noise.
+pub struct Sampling<'a> {
+    pub samples: &'a Samples,
+    pub count: u32,
+    /// Each probe's index in its group and the group's size.
+    pub places: Vec<(usize, usize)>,
+}
+
+impl<'a> Sampling<'a> {
+    /// The places of probes in groups of these sizes, the groups in order.
+    pub fn new(samples: &'a Samples, count: u32, groups: impl IntoIterator<Item = usize>) -> Self {
+        let places = groups
+            .into_iter()
+            .flat_map(|size| (0..size).map(move |k| (k, size.max(1))))
+            .collect();
+        Sampling {
+            samples,
+            count: count.max(1),
+            places,
+        }
+    }
+
+    /// The two numbers of a probe's sample.
+    pub fn numbers(&self, probe: usize, index: u32) -> [f32; 2] {
+        let (k, width) = self.places[probe];
+        let rotation = self.samples.rotation(k, 0, width, 0);
+        [
+            sampling::fraction(self.samples.sobol(index, 0) + rotation[0]),
+            sampling::fraction(self.samples.sobol(index, 1) + rotation[1]),
+        ]
+    }
+}
+
+/// Whether a light is sampled: area lights, and lights with soft shadows.
+pub fn is_sampled(light: &Light) -> bool {
+    light.kind.is_area() || (light.casts_shadows && light.shadow_size > 0.0)
+}
+
+/// What a sampled light sends a probe at `p` for a sample of `u`, if it sees it: its colour
+/// and the direction it comes from (a soft shadow's ray aimed at a point of its disk, an area
+/// light's at a point of its surface).
+pub fn sampled_light(
+    light: &Light,
+    tables: &Tables,
+    color: [f32; 3],
+    p: [f32; 3],
+    u: [f32; 2],
+    casters: &Scene,
+) -> Option<([f32; 3], [f32; 3])> {
+    let arriving = light.sampled_around(tables, color, p, u)?;
+    let direction = if light.kind.is_area() {
+        arriving.direction
+    } else {
+        light.jittered(&arriving, p, u)
+    };
+    let shadowed = light.casts_shadows
+        && casters.occluded_inclusive(
+            &Ray {
+                origin: p,
+                direction,
+            },
+            arriving.distance,
+        );
+    (!shadowed).then_some((arriving.color, direction))
+}
+
 /// The direct light of the bake's baked lights at each probe's point: every directional light
 /// and the lights of the point's region of the light grid, unshadowed from the point (which
 /// faces every way). A mixed light's direct light is in no probe, in any Lighting Mode (in the
@@ -57,15 +126,30 @@ pub fn direct(
     lights: &[Light],
     grid: &Grid,
     casters: &Scene,
+    sampled: Option<&Sampling>,
 ) -> Vec<Coefficients> {
     let tables = Tables::new();
     positions
         .iter()
-        .map(|&p| {
+        .enumerate()
+        .map(|(probe, &p)| {
             let mut out = Coefficients::default();
             let mut take = |index: usize| {
                 let light = &lights[index];
                 if light.mode != Mode::Baked {
+                    return;
+                }
+                // A sampled light: the mean of its samples.
+                if let Some(sampling) = sampled.filter(|_| is_sampled(light)) {
+                    let weight = 1.0 / sampling.count as f32;
+                    for i in 0..sampling.count {
+                        let u = sampling.numbers(probe, i);
+                        if let Some((color, direction)) =
+                            sampled_light(light, &tables, light.color, p, u, casters)
+                        {
+                            add(&mut out, color.map(|c| c * weight), direction);
+                        }
+                    }
                     return;
                 }
                 let Some(arriving) = light.arriving_around(&tables, light.color, p) else {
@@ -145,7 +229,7 @@ mod tests {
                 max: [1.0; 3],
             },
         );
-        direct(&[[0.0; 3]], lights, &grid, scene)[0]
+        direct(&[[0.0; 3]], lights, &grid, scene, None)[0]
     }
 
     #[test]

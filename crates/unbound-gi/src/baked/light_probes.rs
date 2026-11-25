@@ -402,12 +402,14 @@ pub fn occlusion(
     lights: &[Light],
     channels: &[Option<u8>],
     casters: &Scene,
+    sampled: Option<&super::probes::Sampling>,
 ) -> Vec<Occlusion> {
     let tables = Tables::new();
     let listed = occluding_lights(lights, channels);
     positions
         .iter()
-        .map(|&p| {
+        .enumerate()
+        .map(|(probe, &p)| {
             let mut entry = Occlusion {
                 lights: [-1; 4],
                 channels: [255; 4],
@@ -417,6 +419,18 @@ pub fn occlusion(
                 let light = &lights[index];
                 entry.lights[slot] = index as i32;
                 entry.channels[slot] = channel;
+                // A light with soft shadows: the part of its samples that see it.
+                if let Some(sampling) = sampled.filter(|_| super::probes::is_sampled(light)) {
+                    let seen = (0..sampling.count)
+                        .filter(|&i| {
+                            let u = sampling.numbers(probe, i);
+                            super::probes::sampled_light(light, &tables, light.color, p, u, casters)
+                                .is_some()
+                        })
+                        .count();
+                    entry.occlusion[slot] = seen as f32 / sampling.count as f32;
+                    continue;
+                }
                 let reaches =
                     light
                         .arriving_around(&tables, light.color, p)
@@ -604,7 +618,7 @@ mod tests {
             [0.0, -20.0, 0.0], // beyond the range
             [5.0, -1.0, 0.0],  // outside the cone
         ];
-        let open = occlusion(&probes, &lights, &channels, &Scene::new([]));
+        let open = occlusion(&probes, &lights, &channels, &Scene::new([]), None);
         // Only the mixed light with a channel is listed, by its place in the bake's lights.
         assert!(
             open.iter()
@@ -621,12 +635,12 @@ mod tests {
             [[-5.0, -1.0, -5.0], [-5.0, -1.0, 5.0], [5.0, -1.0, 5.0]],
         ]);
         assert_eq!(
-            occlusion(&probes[..1], &lights, &channels, &floor)[0].occlusion[0],
+            occlusion(&probes[..1], &lights, &channels, &floor, None)[0].occlusion[0],
             0.0
         );
         // A probe coplanar with the shadow-casting floor (t == 0) is also shadowed.
         assert_eq!(
-            occlusion(&[[0.0, -1.0, 0.0]], &lights, &channels, &floor)[0].occlusion[0],
+            occlusion(&[[0.0, -1.0, 0.0]], &lights, &channels, &floor, None)[0].occlusion[0],
             0.0
         );
     }

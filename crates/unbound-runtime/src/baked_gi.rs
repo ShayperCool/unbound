@@ -1505,7 +1505,22 @@ fn bake(request: BakeRequest, buffers: Option<&Path>) -> Result<Json> {
                     .flat_map(|v| v.to_le_bytes())
                     .collect()
             };
-            let lit = probes::direct(&points, &baked_lights, &grid, &scene);
+            // (Soft shadows and area lights: sampled over the probes' Direct Samples, each probe
+            // by its place in its group.)
+            let probe_sampling = bounce.as_ref().map(|b| {
+                probes::Sampling::new(
+                    &b.samples,
+                    probe_samples(request.direct_samples),
+                    groups.iter().map(|g| g.len()),
+                )
+            });
+            let lit = probes::direct(
+                &points,
+                &baked_lights,
+                &grid,
+                &scene,
+                probe_sampling.as_ref(),
+            );
             written.write(Buffers::PROBES[0].into(), flat(&lit))?;
             let mut counts = Json::Null;
             if let Some(b) = &bounce {
@@ -1549,7 +1564,13 @@ fn bake(request: BakeRequest, buffers: Option<&Path>) -> Result<Json> {
                     &lit,
                     &probed.radiance,
                     (mixed != MixedMode::IndirectOnly).then(|| {
-                        light_probes::occlusion(&points, &baked_lights, &channels, &scene)
+                        light_probes::occlusion(
+                            &points,
+                            &baked_lights,
+                            &channels,
+                            &scene,
+                            probe_sampling.as_ref(),
+                        )
                     }),
                     light_probes::occluding_lights(&baked_lights, &channels).len(),
                     request.indirect_scale,

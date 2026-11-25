@@ -2146,7 +2146,7 @@ mod bounced {
                 max: [5.0, 1.0, 5.0],
             },
         );
-        let coplanar_direct = probes::direct(&[[0.0, 0.0, 0.0]], &[sun], &grid, &floor_scene);
+        let coplanar_direct = probes::direct(&[[0.0, 0.0, 0.0]], &[sun], &grid, &floor_scene, None);
         assert_eq!(
             coplanar_direct[0],
             probes::Coefficients::default(),

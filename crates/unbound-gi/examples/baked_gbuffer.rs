@@ -210,7 +210,7 @@ fn main() {
             max: [0.0; 3],
         });
         let grid = Grid::new(&lights, around);
-        let probes = probes::direct(positions, &lights, &grid, &casters);
+        let probes = probes::direct(positions, &lights, &grid, &casters, None);
         let flat: Vec<f32> = probes.iter().flatten().flatten().copied().collect();
         std::fs::write(
             out.join("probesDirect.f32"),

@@ -348,7 +348,7 @@ pub fn integrate(request: IntegrateRequest) -> Result<Json> {
     let grid = Grid::new(&world.lights, around);
     let data = match request.kind.as_str() {
         "direct" => {
-            let direct_sh = probes::direct(&points, &world.lights, &grid, &world.casters);
+            let direct_sh = probes::direct(&points, &world.lights, &grid, &world.casters, None);
             encode_sh(&direct_sh)
         }
         "indirect" => {

@@ -316,9 +316,24 @@ impl Light {
         rnd: [f32; 2],
     ) -> Option<Arriving> {
         if self.kind.is_area() {
-            self.area_arriving(color, position, normal, rnd)
+            self.area_arriving(color, position, Some(normal), rnd)
         } else {
             self.arriving(tables, color, position, normal)
+        }
+    }
+
+    /// As [`Light::sampled`] for a point that faces every way (a light probe's).
+    pub fn sampled_around(
+        &self,
+        tables: &Tables,
+        color: [f32; 3],
+        position: [f32; 3],
+        rnd: [f32; 2],
+    ) -> Option<Arriving> {
+        if self.kind.is_area() {
+            self.area_arriving(color, position, None, rnd)
+        } else {
+            self.arriving_around(tables, color, position)
         }
     }
 
@@ -333,7 +348,7 @@ impl Light {
         &self,
         color: [f32; 3],
         position: [f32; 3],
-        normal: [f32; 3],
+        normal: Option<[f32; 3]>,
         rnd: [f32; 2],
     ) -> Option<Arriving> {
         let to_point: [f32; 3] = std::array::from_fn(|k| position[k] - self.position[k]);
@@ -365,7 +380,7 @@ impl Light {
                 return None;
             }
             let direction = v.map(|x| x / distance);
-            let facing = dot(direction, normal).max(0.0);
+            let facing = normal.map_or(1.0, |n| dot(direction, n).max(0.0));
             (direction, distance, solid_angle * facing / PI)
         } else {
             let radius = self.size[0];
@@ -382,7 +397,7 @@ impl Light {
                 return None;
             }
             let direction = v.map(|x| x / distance);
-            let facing = dot(direction, normal).max(0.0);
+            let facing = normal.map_or(1.0, |n| dot(direction, n).max(0.0));
             let towards = -dot(self.forward, direction);
             (
                 direction,
@@ -521,7 +536,7 @@ mod tests {
         let mut disc = light(Kind::Disc);
         disc.size = [0.1, 0.0];
         let a = disc
-            .area_arriving([1.0; 3], [0.0; 3], [0.0, 1.0, 0.0], [0.0, 0.0])
+            .area_arriving([1.0; 3], [0.0; 3], Some([0.0, 1.0, 0.0]), [0.0, 0.0])
             .unwrap();
         assert!(
             near(a.color[0], 0.01 / 4.0) && near(a.distance, 2.0),
@@ -532,17 +547,22 @@ mod tests {
         let mut rect = light(Kind::Rectangle);
         rect.size = [0.1, 0.1];
         let a = rect
-            .area_arriving([1.0; 3], [0.0; 3], [0.0, 1.0, 0.0], [0.5, 0.5])
+            .area_arriving([1.0; 3], [0.0; 3], Some([0.0, 1.0, 0.0]), [0.5, 0.5])
             .unwrap();
         assert!((a.color[0] - 0.01 / (PI * 4.0)).abs() < 1e-5, "{a:?}");
         // Nothing behind the light, beyond its range or without a sample.
         assert!(
-            rect.area_arriving([1.0; 3], [0.0, 3.0, 0.0], [0.0, -1.0, 0.0], [0.5, 0.5])
-                .is_none()
+            rect.area_arriving(
+                [1.0; 3],
+                [0.0, 3.0, 0.0],
+                Some([0.0, -1.0, 0.0]),
+                [0.5, 0.5]
+            )
+            .is_none()
         );
         rect.range = 1.0;
         assert!(
-            rect.area_arriving([1.0; 3], [0.0; 3], [0.0, 1.0, 0.0], [0.5, 0.5])
+            rect.area_arriving([1.0; 3], [0.0; 3], Some([0.0, 1.0, 0.0]), [0.5, 0.5])
                 .is_none()
         );
         // Not lit as a point light is.
