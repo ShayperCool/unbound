@@ -47,6 +47,24 @@ namespace Unbound.Runtime
             if (s_Request > 0) s_Request = 0;
         }
 
+        /// <summary>Runs what the Editor does in Edit mode before entering Play mode (the start's
+        /// import, which Unbound's single editor domain does as Play mode is being entered):
+        /// <c>isPlaying</c> and <c>isPlayingOrWillChangePlaymode</c> answer false meanwhile, and a
+        /// request to enter Play mode made then is the entry already under way.</summary>
+        internal static void AsEditMode(Action action)
+        {
+            bool playing = IsPlaying, entering = s_EnteringPlayMode;
+            IsPlaying = false;
+            s_EnteringPlayMode = false;
+            try { action(); }
+            finally
+            {
+                IsPlaying = playing;
+                s_EnteringPlayMode = entering;
+                if (entering && s_Request > 0) s_Request = 0;
+            }
+        }
+
         internal static void EndEnteringPlayMode()
         {
             s_EnteringPlayMode = false;

@@ -787,6 +787,8 @@ namespace Unbound.Runtime
                 {
                     SettingsAssets.SaveOnQuit();
                     savePreferences();
+                    // What the session wrote is not imported again at the next start.
+                    UnityEditor.ProjectImports.Settle();
                 }
                 finally { shutdownPlugins(); }
             }

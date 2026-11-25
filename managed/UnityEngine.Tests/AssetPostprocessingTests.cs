@@ -299,7 +299,9 @@ namespace UnityEngine.Tests
         {
             s_AllAssetsCalls.Clear();
             AssetPostprocessing.ImportedAssets(typeof(AssetPostprocessingTests).Assembly, new[] { "Assets/X.vfx" });
-            Assert.Equal(new[] { "Y", "A Assets/X.vfx", "Z Assets/X.vfx False", "B" },
+            // Unity's order (Kahn's algorithm): those that follow none (Y, Z) by name, then each as
+            // the one it follows has run (A after Y, B after Z); tests/projects/firstimport.
+            Assert.Equal(new[] { "Y", "Z Assets/X.vfx False", "A Assets/X.vfx", "B" },
                 s_AllAssetsCalls.FindAll(c => c.StartsWith("A ") || c.StartsWith("Z ") || c == "B" || c == "Y"));
         }
 

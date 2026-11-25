@@ -168,6 +168,18 @@ namespace Unbound.Runtime
             return Load(file) ? file : null;
         }
 
+        /// <summary>The project paths of the settings files the project has
+        /// (<c>ProjectSettings/&lt;manager&gt;.asset</c>), by name.</summary>
+        internal static List<string> ProjectFiles()
+        {
+            var paths = new List<string>();
+            if (string.IsNullOrEmpty(ProjectInfo.ProjectPath)) return paths;
+            foreach (var file in Files.Values)
+                if (File.Exists(file.FilePath)) paths.Add("ProjectSettings/" + file.Name + ".asset");
+            paths.Sort(StringComparer.Ordinal);
+            return paths;
+        }
+
         /// <summary>Reads settings without creating the editor object that exposes them.</summary>
         internal static YText ReadBody(string name) =>
             Files.TryGetValue(name, out var file) && LoadText(file) ? file.Body : null;

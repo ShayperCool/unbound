@@ -25,8 +25,10 @@ namespace UnityEditor
     /// (<see cref="HierarchyPostprocessing"/>). Every callback of an asset's import is called on
     /// one postprocessor per class (<see cref="ImportSession"/>). Postprocessors run by increasing
     /// <see cref="AssetPostprocessor.GetPostprocessOrder"/>, then class name;
-    /// OnPostprocessAllAssets runs by class name alone, and every load of the editor domain calls
-    /// its five-argument form with no assets and <c>didDomainReload</c> true.
+    /// OnPostprocessAllAssets runs in its own order (<see cref="Ordered"/>). The domain load at a
+    /// session's start calls it with what the project's import found
+    /// (<see cref="ProjectImports"/>: every asset at a project's first open), every other load of
+    /// the editor domain with no assets, both with <c>didDomainReload</c> true.
     /// </summary>
     internal static class AssetPostprocessing
     {
@@ -139,99 +141,183 @@ namespace UnityEditor
 
         // ------------------------------------------------------------------ OnPostprocessAllAssets
 
-        /// <summary>Per assembly: its postprocessors' OnPostprocessAllAssets, by class name, found once
-        /// and forgotten with the assembly (a reloaded game domain's assemblies are new ones).</summary>
+        /// <summary>Per assembly: its postprocessors' OnPostprocessAllAssets, found once and
+        /// forgotten with the assembly (a reloaded game domain's assemblies are new ones).</summary>
         static readonly System.Runtime.CompilerServices.ConditionalWeakTable<Assembly, MethodInfo[]> s_Callbacks =
             new System.Runtime.CompilerServices.ConditionalWeakTable<Assembly, MethodInfo[]>();
+
+        static readonly string[] s_None = Array.Empty<string>();
 
         /// <summary>Calls <c>OnPostprocessAllAssets</c> of the postprocessor classes of an
         /// assembly with <paramref name="imported"/> as the imported assets (nothing deleted or
         /// moved, no domain reload).</summary>
-        internal static void ImportedAssets(Assembly assembly, string[] imported)
+        internal static void ImportedAssets(Assembly assembly, string[] imported) =>
+            PostprocessAll(new List<MethodInfo>(s_Callbacks.GetValue(assembly, Callbacks)), imported, s_None, s_None, s_None, false);
+
+        /// <summary>The call every editor domain load makes, with <c>didDomainReload</c> true and the
+        /// assets imports asked for during the load imported (none usually: then the four-argument
+        /// callbacks are not called; tests/projects/assetpostprocessors allAssets.*,
+        /// tests/projects/initializeorder).</summary>
+        internal static void DomainLoaded(string[] imported = null) =>
+            PostprocessAll(AllCallbacks(), imported ?? s_None, s_None, s_None, s_None, true);
+
+        /// <summary>The call of the domain load at a session's start: what the project's import
+        /// found (<see cref="ProjectImports"/>), with <c>didDomainReload</c> true (matches the Unity
+        /// 6000.0.71f1 Editor, tests/projects/firstimport), and the assets imports asked for during
+        /// the load.</summary>
+        internal static void ProjectOpened(ProjectImports.Changes changes, string[] alsoImported = null) =>
+            Dispatch(AllCallbacks(), changes, alsoImported);
+
+        /// <summary><see cref="ProjectOpened"/> over the given callbacks (tests).</summary>
+        internal static void Dispatch(List<MethodInfo> callbacks, ProjectImports.Changes changes, string[] alsoImported)
         {
-            foreach (var method in s_Callbacks.GetValue(assembly, Callbacks)) Call(method, imported, false);
+            var imported = changes.Imported;
+            if (alsoImported != null && alsoImported.Length > 0)
+            {
+                var all = new List<string>(imported);
+                var seen = new HashSet<string>(imported, StringComparer.Ordinal);
+                foreach (var path in alsoImported)
+                    if (seen.Add(path)) all.Add(path);
+                imported = all.ToArray();
+            }
+            PostprocessAll(callbacks, imported, changes.Deleted, changes.Moved, changes.MovedFrom, true);
         }
 
-        /// <summary>The call every editor domain load makes: the five-argument callbacks of every
-        /// loaded postprocessor, by class name, with <c>didDomainReload</c> true and the assets
-        /// imports asked for during the load imported (none usually; the four-argument ones are
-        /// not called; tests/projects/assetpostprocessors allAssets.*, tests/projects/initializeorder).</summary>
-        internal static void DomainLoaded(string[] imported = null)
+        static List<MethodInfo> AllCallbacks()
         {
             var methods = new List<MethodInfo>();
-            foreach (var assembly in GameDomain.Assemblies())
-                foreach (var method in s_Callbacks.GetValue(assembly, Callbacks))
-                    if (method.GetParameters().Length == 5) methods.Add(method);
-            foreach (var method in Ordered(methods)) Call(method, imported ?? Array.Empty<string>(), true);
+            foreach (var assembly in GameDomain.Assemblies()) methods.AddRange(s_Callbacks.GetValue(assembly, Callbacks));
+            return methods;
         }
 
-        static void Call(MethodInfo method, string[] imported, bool didDomainReload)
+        /// <summary>One import's OnPostprocessAllAssets, as Unity's own C# dispatches it (6000.0,
+        /// Editor/Mono/AssetPostprocessor.cs PostprocessAllAssets): the callbacks in calling order,
+        /// those with <c>didDomainReload</c> always, the four-argument ones only when some list
+        /// holds an asset; an exception is logged and the next callback runs.</summary>
+        static void PostprocessAll(List<MethodInfo> callbacks, string[] imported, string[] deleted, string[] moved, string[] movedFrom, bool didDomainReload)
         {
-            var none = Array.Empty<string>();
-            var arguments = method.GetParameters().Length == 4
-                ? new object[] { imported, none, none, none }
-                : new object[] { imported, none, none, none, didDomainReload };
-            try { method.Invoke(null, arguments); }
-            catch (TargetInvocationException e) { Debug.LogException(e.InnerException ?? e); }
-            catch (Exception e) { Debug.LogException(e); }
+            bool containsNoAssets = imported.Length == 0 && deleted.Length == 0 && moved.Length == 0 && movedFrom.Length == 0;
+            object[] arguments = { imported, deleted, moved, movedFrom };
+            object[] withReload = { imported, deleted, moved, movedFrom, didDomainReload };
+            foreach (var method in Ordered(callbacks))
+            {
+                bool reloadForm = method.GetParameters().Length == 5;
+                if (!reloadForm && containsNoAssets) continue;
+                try { method.Invoke(null, reloadForm ? withReload : arguments); }
+                catch (TargetInvocationException e) { Debug.LogException(e.InnerException ?? e); }
+                catch (Exception e) { Debug.LogException(e); }
+            }
         }
 
+        static readonly Type[] s_FourArguments = { typeof(string[]), typeof(string[]), typeof(string[]), typeof(string[]) };
+        static readonly Type[] s_FiveArguments = { typeof(string[]), typeof(string[]), typeof(string[]), typeof(string[]), typeof(bool) };
+
+        /// <summary>The OnPostprocessAllAssets of an assembly's postprocessor classes, as Unity's own
+        /// C# finds them (6000.0, Editor/Mono/AssetPostprocessor.cs
+        /// OnPostprocessAllAssetsCallbackCollection): every class derived from AssetPostprocessor,
+        /// its static four-argument method, else its five-argument one.</summary>
         static MethodInfo[] Callbacks(Assembly assembly)
         {
             var callbacks = new List<MethodInfo>();
             Type[] types;
             try { types = assembly.GetTypes(); }
             catch (ReflectionTypeLoadException e) { types = e.Types; }
+            const BindingFlags flags = BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic;
             foreach (var type in types)
             {
-                if (type == null || type.IsAbstract || !typeof(AssetPostprocessor).IsAssignableFrom(type)) continue;
+                if (type == null || type == typeof(AssetPostprocessor) || !typeof(AssetPostprocessor).IsAssignableFrom(type)) continue;
                 if (type.IsDefined(typeof(Unbound.StubAttribute), false)) continue;
-                var method = type.GetMethod(AllAssets, BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.DeclaredOnly);
-                if (method == null) continue;
-                var parameters = method.GetParameters();
-                if (parameters.Length != 4 && !(parameters.Length == 5 && parameters[4].ParameterType == typeof(bool))) continue;
-                callbacks.Add(method);
+                var method = type.GetMethod(AllAssets, flags, null, s_FourArguments, null) ?? type.GetMethod(AllAssets, flags, null, s_FiveArguments, null);
+                if (method != null) callbacks.Add(method);
             }
-            return Ordered(callbacks).ToArray();
+            return callbacks.ToArray();
         }
 
-        /// <summary>OnPostprocessAllAssets callbacks in calling order: GetPostprocessOrder does not
-        /// order them (Scripting API 6000.0); the Editor runs them by class name
-        /// (tests/projects/assetpostprocessors allAssets.*), moved as their RunAfterClass,
-        /// RunBeforeClass, RunAfterAssembly, RunBeforeAssembly, RunAfterPackage and RunBeforePackage
-        /// attributes ask (each callback after every one it must follow, the others keeping their
-        /// order; a cycle keeps the name order, with a warning).</summary>
+        /// <summary>OnPostprocessAllAssets callbacks in calling order, as Unity's own C# orders them
+        /// (6000.0, Editor/Mono/OrderedCallbackCollection.cs): GetPostprocessOrder does not order
+        /// them (Scripting API 6000.0); the callbacks sorted by their class's full name are the
+        /// nodes of a graph whose edges their RunAfterClass, RunBeforeClass, RunAfterPackage,
+        /// RunBeforePackage, RunAfterAssembly and RunBeforeAssembly attributes ask for, taken
+        /// breadth first (Kahn's algorithm): first every callback that follows none, in name
+        /// order, then each as the last it follows has run. Callbacks in a cycle are not called,
+        /// with Unity's error (the order matches the Unity 6000.0.71f1 Editor,
+        /// tests/projects/firstimport and tests/projects/assetpostprocessors allAssets.*).</summary>
         internal static List<MethodInfo> Ordered(List<MethodInfo> callbacks)
         {
-            callbacks.Sort((a, b) => AssetPostprocessorHooks.ByClassName(a.DeclaringType, b.DeclaringType));
+            callbacks.Sort((a, b) => string.Compare(a.DeclaringType.FullName, b.DeclaringType.FullName, StringComparison.CurrentCulture));
             int n = callbacks.Count;
-            var after = new List<int>[n];
-            for (int i = 0; i < n; i++) after[i] = new List<int>();
+            var incoming = new List<int>[n];
+            var outgoing = new List<int>[n];
             for (int i = 0; i < n; i++)
-                foreach (var (relation, target) in OrderAttributes(callbacks[i]))
-                    for (int j = 0; j < n; j++)
-                    {
-                        if (j == i || !Matches(callbacks[j], relation, target)) continue;
-                        if (relation.StartsWith("RunAfter", StringComparison.Ordinal)) after[i].Add(j);
-                        else after[j].Add(i);
-                    }
-            var done = new bool[n];
-            var ordered = new List<MethodInfo>(n);
-            while (ordered.Count < n)
             {
-                int next = -1;
-                for (int i = 0; i < n && next < 0; i++)
-                    if (!done[i] && after[i].TrueForAll(j => done[j])) next = i;
-                if (next < 0)
-                {
-                    Debug.LogWarning("Unbound: the RunAfter/RunBefore attributes of OnPostprocessAllAssets callbacks form a cycle; the rest run by class name");
-                    for (int i = 0; i < n; i++) if (!done[i]) { done[i] = true; ordered.Add(callbacks[i]); }
-                    break;
-                }
-                done[next] = true;
-                ordered.Add(callbacks[next]);
+                incoming[i] = new List<int>();
+                outgoing[i] = new List<int>();
             }
+            void Edge(int from, int to)
+            {
+                if (!outgoing[from].Contains(to)) outgoing[from].Add(to);
+                if (!incoming[to].Contains(from)) incoming[to].Add(from);
+            }
+            for (int i = 0; i < n; i++)
+            {
+                var attributes = new List<(string Relation, object Target)>(OrderAttributes(callbacks[i]));
+                foreach (var relation in s_Relations)
+                    foreach (var (kind, target) in attributes)
+                    {
+                        if (kind != relation) continue;
+                        for (int j = 0; j < n; j++)
+                        {
+                            if (!Matches(callbacks[j], relation, target)) continue;
+                            if (relation.StartsWith("RunAfter", StringComparison.Ordinal)) Edge(j, i);
+                            else Edge(i, j);
+                        }
+                    }
+            }
+            var ordered = new List<MethodInfo>(n);
+            var queue = new Queue<int>();
+            var waiting = new int[n];
+            for (int i = 0; i < n; i++)
+            {
+                waiting[i] = incoming[i].Count;
+                if (waiting[i] == 0) queue.Enqueue(i);
+            }
+            while (queue.Count > 0)
+            {
+                int at = queue.Dequeue();
+                ordered.Add(callbacks[at]);
+                foreach (var o in outgoing[at])
+                    if (--waiting[o] == 0) queue.Enqueue(o);
+            }
+            if (ordered.Count != n) Debug.LogError(CycleMessage(callbacks, outgoing, waiting));
             return ordered;
+        }
+
+        /// <summary>The kinds of ordering attribute in the order Unity's C# adds their edges.</summary>
+        static readonly string[] s_Relations =
+            { "RunAfterClass", "RunBeforeClass", "RunAfterPackage", "RunBeforePackage", "RunAfterAssembly", "RunBeforeAssembly" };
+
+        /// <summary>Unity's error for callbacks in a cycle: each one left, with what follows it.</summary>
+        static string CycleMessage(List<MethodInfo> callbacks, List<int>[] outgoing, int[] waiting)
+        {
+            var sb = new System.Text.StringBuilder();
+            sb.Append($"Found cycles in callback dependency graph for {AllAssets}.\nThe following nodes could not be added:\n");
+            var visited = new HashSet<string>(StringComparer.Ordinal);
+            void Print(int node, int depth)
+            {
+                var name = callbacks[node].DeclaringType.FullName;
+                if (visited.Contains(name))
+                {
+                    if (depth != 0) sb.Append(new string('-', depth)).AppendLine($"<color=red>{name}</color>");
+                    return;
+                }
+                visited.Add(name);
+                if (depth != 0) sb.Append(new string('-', depth));
+                sb.AppendLine(name);
+                foreach (var o in outgoing[node]) Print(o, depth + 1);
+            }
+            for (int i = 0; i < callbacks.Count; i++)
+                if (waiting[i] != 0) Print(i, 0);
+            return sb.ToString();
         }
 
         /// <summary>A callback's ordering attributes (read without making them: Unbound has no

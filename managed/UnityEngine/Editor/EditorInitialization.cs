@@ -144,7 +144,28 @@ namespace UnityEditor
             // Imports asked for while the domain loaded run now, after afterAssemblyReload, and
             // the domain load's OnPostprocessAllAssets lists the assets they imported (matches the
             // Unity 6000.0.71f1 Editor, tests/projects/initializeorder game.sequence).
-            AssetPostprocessing.DomainLoaded(RunDeferredImports());
+            var deferred = RunDeferredImports();
+            // The session's start: its domain load postprocesses what the project's import found
+            // (every asset at a project's first open). Entering Play mode, this is the Editor's
+            // start in Edit mode before Play mode, whose reload lists nothing of it (matches the
+            // Unity 6000.0.71f1 Editor, tests/projects/firstimport).
+            var start = ProjectImports.TakeStart();
+            if (start == null) AssetPostprocessing.DomainLoaded(deferred);
+            else if (!enteringPlayMode) ProjectOpened(start, deferred);
+            else
+            {
+                EditorSession.AsEditMode(() => ProjectOpened(start, null));
+                AssetPostprocessing.DomainLoaded(deferred);
+            }
+        }
+
+        /// <summary>The start's OnPostprocessAllAssets; after a project's first open the Editor writes
+        /// the assets its postprocessors changed (matches the Unity 6000.0.71f1 Editor,
+        /// tests/projects/firstimport; on a later open they stay dirty).</summary>
+        static void ProjectOpened(ProjectImports.Changes start, string[] deferred)
+        {
+            AssetPostprocessing.ProjectOpened(start, deferred);
+            if (start.First) AssetFiles.SaveDirty();
         }
 
         /// <summary>While the editor domain's load callbacks run (its initializers, on the reload path
