@@ -1,0 +1,9 @@
+{
+  "commands": [
+    "python3 tests/projects/apvlighting/run.py gate"
+  ],
+  "summary": "apvlighting: .*",
+  "engine_paths": [
+    "tests/projects/apvlighting/"
+  ]
+}
