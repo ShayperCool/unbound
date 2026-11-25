@@ -194,6 +194,10 @@ from their first surface on whatever the Min Bounces.
 - `FilterGauss`, `FilterGaussHalf`, `FilterAtrous` (4, 128): the coloured scene of `Bounce`
   under the sun with the Advanced filtering, no denoisers, Gaussian filters of radius 1 (direct)
   and 5 (indirect), and 2.5 and 0.5, and A-Trous filters of position sigma 0.5 and 1.5.
+  `FilterDirectional`, `FilterShadowmask`, `FilterSubtractive` and their `*Auto` (and
+  `FilterDirectionalShadowmaskAuto`): the same filtered (Gaussian filters of radius 1 and 5, or
+  the Auto filtering) with directional lightmaps, and in the Shadowmask and Subtractive Lighting
+  Modes under a mixed sun and a mixed and a baked point light.
 - `DenoiseAuto`, `DenoiseAutoOver`, `DenoiseOidn`, `DenoiseOidnGauss` (4, 128): the same scene
   denoised: the Auto filtering (over the new Lighting Settings' Advanced settings, and over
   Advanced settings of no denoisers and A-Trous filters), and the Advanced filtering with Open
@@ -272,6 +276,10 @@ bakes them in the Editor's process and writes each lightmap's buffers unprocesse
   further out than the padding. The Auto filtering denoises both parts and filters them by
   Gaussian filters of radius 1, whatever its Advanced settings (as the Manual says of the
   denoiser and its filter, and as `DenoiseAutoOver` measures).
+  Where a lightmap is filtered, so are its images (compared as written): the directional
+  image weighs the directions by the light as denoised and filtered, and is filtered by a
+  Gaussian filter of radius 5 before it is filled; the shadowmask is denoised and filtered as the
+  direct light is (`FilterDirectional*`, `FilterShadowmask*`).
 - `lightingData.json`, the lighting data the whole bake writes beside the scene
   (`LightingData.asset`) as its fields (`unbound dump`), normalized as `tests/baked_files.py`
   says (the GUIDs of the assets the bake made, new with every bake): its bytes change from bake
@@ -347,9 +355,8 @@ texel holding its own light reaches (a chart all of whose texels met back faces:
 their light and spreads none from them), Backface Tolerances other than 0.9 and padding other
 than 2 (the runner refuses another Backface Tolerance), the Lighting Settings' Indirect
 Intensity other than 1 (Unbound's lightmap leaves it out), the OptiX denoiser (the Editor runs
-it only on Windows), the Editor's denoiser on macOS (another build of the library, on another processor), filtering
-of directional lightmaps and in the Shadowmask and Subtractive Lighting Modes, the texels
-beyond the padding; of the filters: the A-Trous filter with 4 x 4 samples a texel (only 2 x
+it only on Windows), the Editor's denoiser on macOS (another build of the library, on another
+processor), the texels beyond the padding; of the filters: the A-Trous filter with 4 x 4 samples a texel (only 2 x
 2 measured; it reads each texel's first sample's normal), the ambient occlusion target, charts
 reaching the lightmap's border, filter radii and sigmas other than those above.
 
