@@ -156,8 +156,9 @@ file the run added, changed or removed.
   the macOS Editor (batch mode, no graphics, the Android module installed: two identical captures).
 - `refresh-changes` (Edit Mode, `RefreshChangeTests`): files of imported assets changed on disk
   during the session, then `AssetDatabase.Refresh`: a file only touched, a text file, a YAML asset,
-  an image and an importer setting in the image's `.meta`; a change left without Refresh; a changed
-  file imported by `ImportAsset`. Each step logs the `OnPostprocessAllAssets` calls and what the
+  an image and an importer setting in the image's `.meta`, a material a scene object uses (the scene
+  saved after), a UI Toolkit document; a change left without Refresh; a changed file imported by
+  `ImportAsset`. Each step logs the `OnPostprocessAllAssets` calls and what the
   objects loaded before answer (content, alive, equal to a new load, instance id). Recorded in the
   macOS Editor (batch mode, no graphics: two identical captures).
 - `generic-refs` (Edit Mode, `GenericRefTests`): a scriptable object whose [SerializeReference] fields
