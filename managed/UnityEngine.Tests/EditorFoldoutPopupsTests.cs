@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using UnityEditor;
 using Xunit;
 
@@ -107,18 +108,36 @@ namespace UnityEngine.Tests
             }
         }
 
+        static int Hits(string member) =>
+            Unbound.Runtime.Stubs.HitReport().Where(h => h.Key == member).Select(h => h.Value).FirstOrDefault();
+
         [Fact]
-        public void AnUnmeasuredFamilysSkinStyledControlsKeepTheirValues()
+        public void AnUnmeasuredFamilysSkinStyledControlsKeepTheirValuesAndSaySo()
         {
             using var release = TestRelease.Pin(TestRelease.Unmeasured);
             var r = new Rect(0, 0, 100, 18);
             float min = 1f, max = 2f;
+            var members = new[]
+            {
+                "UnityEditor.EditorGUI.Foldout", "UnityEditor.EditorGUI.IntPopup", "UnityEditor.EditorGUI.MinMaxSlider",
+                "UnityEditor.EditorGUI.SelectableLabel", "UnityEditor.EditorGUILayout.Foldout", "UnityEditor.EditorGUILayout.IntPopup",
+                "UnityEditor.EditorGUILayout.MinMaxSlider", "UnityEditor.EditorGUILayout.SelectableLabel",
+            };
+            var before = members.Select(Hits).ToArray();
             Assert.True(EditorGUI.Foldout(r, true, "x"));
             Assert.Equal(20, EditorGUI.IntPopup(r, 20, new[] { "a" }, new[] { 10 }));
             EditorGUI.MinMaxSlider(r, ref min, ref max, 0f, 10f);
             Assert.Equal((1f, 2f), (min, max));
+            EditorGUI.SelectableLabel(r, "s");
             Assert.False(EditorGUILayout.Foldout(false, "x"));
             Assert.Equal(30, EditorGUILayout.IntPopup(30, new[] { "a" }, new[] { 10 }));
+            EditorGUILayout.MinMaxSlider(ref min, ref max, 0f, 10f);
+            Assert.Equal((1f, 2f), (min, max));
+            EditorGUILayout.SelectableLabel("s");
+            // (Outside OnGUI too: no event is read, no layout space taken.)
+            var after = members.Select(Hits).ToArray();
+            for (int i = 0; i < members.Length; i++)
+                Assert.True(after[i] == before[i] + 1, members[i] + " reported " + (after[i] - before[i]) + " times");
         }
 
         // The Editor skin's slider and min-max thumb paddings (editorskin): 19 points per unit on a
