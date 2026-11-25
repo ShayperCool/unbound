@@ -178,9 +178,10 @@ namespace UnityEditor
         }
 
         /// <summary>A key's tangents from its modes: Linear sides point at the neighbour; either
-        /// side ClampedAuto (else Auto) sets both to the smooth tangent; Constant sides are
-        /// infinite. Free sides keep theirs. Measured, tests/projects/animatorapi util.tangents.*,
-        /// extra.tangents.*.</summary>
+        /// side ClampedAuto (else Auto) sets both to the smooth tangent, ClampedAuto also both
+        /// weights to a third; Constant sides are infinite. Free sides keep theirs. Measured,
+        /// tests/projects/animatorapi util.tangents.*, extra.tangents.*, tests/projects/animrecorder
+        /// clampedAuto.*.</summary>
         static void UpdateTangents(AnimationCurve curve, int i)
         {
             var key = curve[i];
@@ -190,13 +191,21 @@ namespace UnityEditor
             if (left == TangentMode.Linear && i >= 1) key.inTangent = Slope(curve[i - 1], key);
             if (right == TangentMode.Linear && i + 1 < n) key.outTangent = Slope(key, curve[i + 1]);
             if (left == TangentMode.ClampedAuto || right == TangentMode.ClampedAuto)
+            {
                 key.inTangent = key.outTangent = ClampedAutoTangent(curve, i);
+                // The default weights too, on a curve of two keys or more (animrecorder clampedAuto.*;
+                // whether Auto keys get them is not measured).
+                if (n >= 2) key.inWeight = key.outWeight = k_DefaultWeight;
+            }
             else if (left == TangentMode.Auto || right == TangentMode.Auto)
                 key.inTangent = key.outTangent = AutoTangent(curve, i);
             if (left == TangentMode.Constant) key.inTangent = float.PositiveInfinity;
             if (right == TangentMode.Constant) key.outTangent = float.PositiveInfinity;
             curve.ReplaceKey(i, key);
         }
+
+        /// <summary>A key's weight when it is not weighted.</summary>
+        const float k_DefaultWeight = 1f / 3f;
 
         static float Slope(Keyframe a, Keyframe b) => (b.value - a.value) / (b.time - a.time);
 
