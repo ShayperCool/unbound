@@ -53,15 +53,17 @@ SubShaders (OpenGL Core: `subshaderCount` 1 for SelX and SelO, whose second SubS
 one that lost a pass keeps the others; the geometry and tessellation SubShaders are the ones
 selected and drawn on OpenGL Core and on Vulkan. The GPU Resident Drawer logs that the platform does not support its buffer target on
 OpenGL Core (constant buffers) and nothing on Vulkan (raw buffers); URP shaders have one more pass
-on Vulkan than on OpenGL Core. An ObjectId request's destination reads back zero everywhere in
-Play mode (with and without depth); its mapping lists the camera's renderers far to near after a
-null entry.
+on Vulkan than on OpenGL Core. An ObjectId request draws each renderer of its mapping (the camera's
+renderers far to near after a null entry) with its id as color, with and without depth, in the
+camera's own view: the probe's camera renders into a 64x64 target, since without one the request
+follows the Game view's size and the destination holds only a crop (earlier captures read zero
+there, later ones a crop of two objects).
 
     python3 tests/projects/graphicsgaps/run.py record --device opengl --label <L>   # twice; vulkan too
     python3 tests/projects/graphicsgaps/run.py publish [--device vulkan] <L1> <L2>
     UNBOUND=<build>/unbound python3 tests/projects/graphicsgaps/run.py gate          # both devices
 
 Values compare exactly. Known residuals are in `residuals.json` with their cause. The
-`select.restricted.*` keys were added from two identical captures per device; the `objectId.*.ids`
-values of those captures (and of a control capture of the probe without them) read back drawn ids
-where the committed ones read zero, which stays as recorded (a queue row follows it up).
+`select.restricted.*` keys were added from two identical captures per device. The `objectId.*`
+rows were re-recorded (two identical captures per device) after the camera got its target; every
+other row stayed byte-identical.

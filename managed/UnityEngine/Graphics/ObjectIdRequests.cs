@@ -59,7 +59,9 @@ namespace UnityEngine
                     || !RenderPipelineManager.TryPrepareRenderPipeline(GraphicsSettings.currentRenderPipeline)
                     || RenderPipelineManager.currentPipeline?.IsRenderRequestSupported(this, objectIdRequest) != true)
                 {
-                    objectIdRequest.result = new ObjectIdResult(ObjectIds());
+                    var mapping = ObjectIds();
+                    DrawObjectIds(objectIdRequest, mapping);
+                    objectIdRequest.result = new ObjectIdResult(mapping);
                     return;
                 }
             }
@@ -75,9 +77,55 @@ namespace UnityEngine
         /// The objects of the Editor's object id pass for the camera: none (id 0), then the
         /// renderers the camera sees (enabled, on a layer of its culling mask, bounds in its
         /// frustum), farthest first by depth along the view (Unity 6000.0.71f1 Editor,
-        /// tests/projects/graphicsgaps objectId.*.mapping). The destination is left as it is: the
-        /// Editor's reads back zero in Play mode (objectId.*.ids).
+        /// tests/projects/graphicsgaps objectId.*.mapping).
         /// </summary>
+        static readonly List<Material> s_IdMaterials = new List<Material>();
+
+        /// <summary>
+        /// The object id pass: the destination cleared to id 0, then each renderer of the mapping
+        /// drawn with its id as its color (the id's bytes as red, green, blue and alpha, unblended), farthest
+        /// first, with the camera's view and projection in the camera's pixel rect (Unity 6000.0.71f1
+        /// Editor, tests/projects/graphicsgaps objectId.*: silhouettes with and without depth; a camera
+        /// without a target renders at the Game view's size, so the destination holds a crop).
+        /// </summary>
+        void DrawObjectIds(ObjectIdRequest request, Object[] mapping)
+        {
+            var destination = request.destination;
+            if (destination == null) return;
+            // A shader that writes its color as it is, alpha included (Unlit/Color writes alpha 1).
+            var shader = Shader.Find("Hidden/Internal-Colored");
+            if (shader == null)
+            {
+                Unbound.Runtime.Stubs.Ignored("Camera.SubmitRenderRequest", "draws no object ids (the Hidden/Internal-Colored shader is missing)");
+                return;
+            }
+            var cmd = new CommandBuffer { name = "ObjectId" };
+            cmd.SetRenderTarget(destination, request.mipLevel, request.face, request.slice);
+            cmd.ClearRenderTarget(true, true, Color.clear);
+            cmd.SetViewport(pixelRect);
+            cmd.SetViewProjectionMatrices(worldToCameraMatrix, projectionMatrix);
+            for (int id = 1; id < mapping.Length; id++)
+            {
+                if (mapping[id] is not Renderer renderer) continue;
+                while (s_IdMaterials.Count < id)
+                {
+                    var made = new Material(shader) { hideFlags = HideFlags.HideAndDontSave };
+                    made.SetInt("_SrcBlend", (int)BlendMode.One);
+                    made.SetInt("_DstBlend", (int)BlendMode.Zero);
+                    made.SetInt("_ZWrite", 1);
+                    made.SetInt("_ZTest", (int)CompareFunction.LessEqual);
+                    made.SetInt("_Cull", (int)CullMode.Back);
+                    s_IdMaterials.Add(made);
+                }
+                var material = s_IdMaterials[id - 1];
+                material.color = new Color32((byte)id, (byte)(id >> 8), (byte)(id >> 16), (byte)(id >> 24));
+                int submeshes = Math.Max(1, renderer.sharedMaterials.Length);
+                for (int submesh = 0; submesh < submeshes; submesh++) cmd.DrawRenderer(renderer, material, submesh, 0);
+            }
+            Graphics.ExecuteCommandBuffer(cmd);
+            cmd.Release();
+        }
+
         Object[] ObjectIds()
         {
             var planes = GeometryUtility.CalculateFrustumPlanes(this);

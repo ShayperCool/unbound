@@ -1121,24 +1121,24 @@
 {"k":"objectId.depth.defaults","v":"0,Unknown,0,True"}
 {"k":"objectId.depth.result","v":"6"}
 {"k":"objectId.depth.mapping","v":"null,idBack:MeshRenderer,idB:MeshRenderer,idD:MeshRenderer,idA:MeshRenderer,idC:MeshRenderer"}
-{"k":"objectId.depth.pixel.a","v":"RGBA(0, 0, 0, 0) id 0 null"}
-{"k":"objectId.depth.pixel.b","v":"RGBA(0, 0, 0, 0) id 0 null"}
-{"k":"objectId.depth.pixel.c","v":"RGBA(0, 0, 0, 0) id 0 null"}
-{"k":"objectId.depth.pixel.back","v":"RGBA(0, 0, 0, 0) id 0 null"}
-{"k":"objectId.depth.pixel.d","v":"RGBA(0, 0, 0, 0) id 0 null"}
+{"k":"objectId.depth.pixel.a","v":"RGBA(4, 0, 0, 0) id 4 idA"}
+{"k":"objectId.depth.pixel.b","v":"RGBA(2, 0, 0, 0) id 2 idB"}
+{"k":"objectId.depth.pixel.c","v":"RGBA(5, 0, 0, 0) id 5 idC"}
+{"k":"objectId.depth.pixel.back","v":"RGBA(1, 0, 0, 0) id 1 idBack"}
+{"k":"objectId.depth.pixel.d","v":"RGBA(3, 0, 0, 0) id 3 idD"}
 {"k":"objectId.depth.pixel.background","v":"RGBA(0, 0, 0, 0) id 0 null"}
-{"k":"objectId.depth.ids","v":"0:4096"}
+{"k":"objectId.depth.ids","v":"0:3328,1:512,2:64,3:64,4:64,5:64"}
 {"k":"objectId.depth.logs","v":"0"}
 {"k":"objectId.noDepth.defaults","v":"0,Unknown,0,True"}
 {"k":"objectId.noDepth.result","v":"6"}
 {"k":"objectId.noDepth.mapping","v":"null,idBack:MeshRenderer,idB:MeshRenderer,idD:MeshRenderer,idA:MeshRenderer,idC:MeshRenderer"}
-{"k":"objectId.noDepth.pixel.a","v":"RGBA(0, 0, 0, 0) id 0 null"}
-{"k":"objectId.noDepth.pixel.b","v":"RGBA(0, 0, 0, 0) id 0 null"}
-{"k":"objectId.noDepth.pixel.c","v":"RGBA(0, 0, 0, 0) id 0 null"}
-{"k":"objectId.noDepth.pixel.back","v":"RGBA(0, 0, 0, 0) id 0 null"}
-{"k":"objectId.noDepth.pixel.d","v":"RGBA(0, 0, 0, 0) id 0 null"}
+{"k":"objectId.noDepth.pixel.a","v":"RGBA(4, 0, 0, 0) id 4 idA"}
+{"k":"objectId.noDepth.pixel.b","v":"RGBA(2, 0, 0, 0) id 2 idB"}
+{"k":"objectId.noDepth.pixel.c","v":"RGBA(5, 0, 0, 0) id 5 idC"}
+{"k":"objectId.noDepth.pixel.back","v":"RGBA(1, 0, 0, 0) id 1 idBack"}
+{"k":"objectId.noDepth.pixel.d","v":"RGBA(3, 0, 0, 0) id 3 idD"}
 {"k":"objectId.noDepth.pixel.background","v":"RGBA(0, 0, 0, 0) id 0 null"}
-{"k":"objectId.noDepth.ids","v":"0:4096"}
+{"k":"objectId.noDepth.ids","v":"0:3328,1:512,2:64,3:64,4:64,5:64"}
 {"k":"objectId.noDepth.logs","v":"1 Warning: ObjectId Render Request submitted without a depth stencil, which can produce results that are not depth tested correctly"}
 {"k":"objectId.standard.supports","v":"true"}
 {"k":"objectId.standard.logs","v":"0"}

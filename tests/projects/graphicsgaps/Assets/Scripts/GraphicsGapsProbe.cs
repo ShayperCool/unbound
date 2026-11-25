@@ -552,6 +552,9 @@ public class GraphicsGapsProbe : MonoBehaviour
         camera.orthographicSize = 4;
         camera.nearClipPlane = 1;
         camera.farClipPlane = 20;
+        // The request renders with the camera's own view: a 64x64 target makes it the requests' size
+        // (without one it follows the Game view's size, which differs between Editor sessions).
+        camera.targetTexture = new RenderTexture(64, 64, 24) { name = "idCameraTarget" };
         var lit = new Material(Shader.Find("Universal Render Pipeline/Lit"));
         var names = new[] { "idA", "idB", "idC" };
         var cubes = new GameObject[3];
