@@ -1,0 +1,15 @@
+{
+  "commands": [
+    "python3 tests/projects/animmaterialbindings/run.py gate"
+  ],
+  "summary": "animmaterialbindings: [0-9]+/[0-9]+ values match.*",
+  "engine_paths": [
+    "managed/UnityEngine/Editor/AnimationUtility.cs",
+    "managed/UnityEngine/Editor/AnimationMaterialBindings.cs",
+    "managed/UnityEngine/Editor/AnimatableBindingsTable.cs",
+    "tests/projects/animmaterialbindings/",
+    "tests/projects/analyticssession/ProjectSettings/",
+    "tests/projects/imguiskin/Assets/Editor/",
+    "tests/projects/imguiskin/Assets/Scenes/"
+  ]
+}
