@@ -36,5 +36,5 @@ Run it with `python3 tests/projects/animrecorder/run.py gate`; the macOS Editor 
 Keys are written as JSON numbers and compare within 2e-4 (`run.py`): the recorded inputs and curve
 evaluation differ from the Editor's in the last bits of single precision, which slopes over a short
 frame magnify. Key counts, bindings, tangent modes and strings compare exactly. `residuals.json` lists
-what stays different: material property bindings of a renderer's materials, which bindings `Bind`
+what stays different: the Editor's interleaved order of a renderer's float and object bindings, which bindings `Bind`
 adds a second time beside `BindComponent`'s, and the reduction with a float error of 0.
