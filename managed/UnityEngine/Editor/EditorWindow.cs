@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using Unbound.Runtime;
 using UnityEngine;
+using UnityEngine.UIElements;
 
 namespace UnityEditor
 {
@@ -21,6 +22,8 @@ namespace UnityEditor
         Vector2 m_MaxSize = new Vector2(4000, 4000);
         internal GUIContent m_TitleContent = new GUIContent();
         bool m_Shown;
+        VisualElement m_UIRootElement;
+        Panel m_Panel;
 
         // Creation-time values recorded by defaultstate on 6000.0.71f1.
         const float DefaultWindowWidth = 320f, DefaultWindowHeight = 550f, DefaultMinimumSize = 50f;
@@ -96,6 +99,27 @@ namespace UnityEditor
             get => Compat.RemovedEditorSettingsMeasured ? 1 : m_AntiAlias;
             set { if (!Compat.RemovedEditorSettingsMeasured) m_AntiAlias = value; }
         }
+        /// <summary>The window's root element, made at the first read (Unity's C#: a unique
+        /// <c>rootVisualContainer</c> name, picking ignored, overflow hidden, the root pseudo-state).
+        /// It joins an Editor panel when the window is shown and leaves it when the window closes,
+        /// keeping its children (measured: tests/projects/editorwindowgui window.*). The default
+        /// editor style sheets Unity adds are not added yet.</summary>
+        public VisualElement rootVisualElement => m_UIRootElement ??= CreateRoot();
+
+        static VisualElement CreateRoot()
+        {
+            const string rootName = VisualElement.k_RootVisualContainerName;
+            var root = new VisualElement
+            {
+                name = VisualElementUtils.GetUniqueName(rootName),
+                pickingMode = PickingMode.Ignore,
+                viewDataKey = rootName,
+            };
+            root.pseudoStates |= PseudoStates.Root;
+            root.style.overflow = Overflow.Hidden;
+            return root;
+        }
+
         public bool hasUnsavedChanges { get; protected set; }
         public string saveChangesMessage { get; protected set; }
 
@@ -190,6 +214,9 @@ namespace UnityEditor
             return window;
         }
 
+        /// <summary>Shows the window the first time: its root joins an Editor panel, CreateGUI runs,
+        /// and the window takes the focus (measured: tests/projects/editorwindowgui window.afterShow,
+        /// OnEnable then CreateGUI then OnFocus).</summary>
         void Open()
         {
             if (!s_Open.Contains(this)) s_Open.Add(this);
@@ -198,6 +225,10 @@ namespace UnityEditor
             var type = GetType();
             if (s_Reported.Add(type))
                 Native.Log((int)LogType.Log, $"[Unbound] editor window {type.FullName} (\"{m_TitleContent.text}\") opened; Unbound has no editor UI, so it is not shown");
+            m_Panel = new Panel(this, ContextType.Editor, EventDispatcher.CreateDefault());
+            m_Panel.visualTree.Add(rootVisualElement);
+            Message(this, "CreateGUI");
+            Focus();
         }
 
         public void Show() => Open();
@@ -217,14 +248,16 @@ namespace UnityEditor
             Open();
         }
 
+        /// <summary>Focuses the window; a focused window gets OnFocus again (measured:
+        /// tests/projects/editorwindowgui window.getWindow, OnFocus at the show and at GetWindow's
+        /// focus).</summary>
         public void Focus()
         {
-            if (s_Focused == this) return;
             var previous = s_Focused;
             s_Focused = this;
-            if (previous != null) Message(previous, "OnLostFocus");
+            if (previous != this && previous != null) Message(previous, "OnLostFocus");
             Message(this, "OnFocus");
-            windowFocusChanged?.Invoke();
+            if (previous != this) windowFocusChanged?.Invoke();
         }
 
         static void Message(EditorWindow window, string name)
@@ -238,6 +271,9 @@ namespace UnityEditor
         public void Close()
         {
             s_Open.Remove(this);
+            m_UIRootElement?.RemoveFromHierarchy();
+            m_Panel?.Dispose();
+            m_Panel = null;
             if (s_Focused == this)
             {
                 s_Focused = null;

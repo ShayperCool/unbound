@@ -117,7 +117,7 @@ namespace UnityEditor
         {
             var root = new VisualElement
             {
-                name = UniqueName(k_RootName),
+                name = VisualElementUtils.GetUniqueName(k_RootName),
                 pickingMode = PickingMode.Ignore,
                 viewDataKey = k_RootName,
             };
@@ -131,18 +131,6 @@ namespace UnityEditor
         static void AddStyleSheet(VisualElement target, string path)
         {
             if (UiResources.EditorLoad(path) is StyleSheet sheet) target.styleSheets.Add(sheet);
-        }
-
-        static readonly HashSet<string> s_UsedNames = new HashSet<string>();
-
-        /// <summary>The Editor's unique element names: the base name, then the base name with 2, 3, ...
-        /// for each later request within the session.</summary>
-        static string UniqueName(string nameBase)
-        {
-            string name = nameBase;
-            for (int n = 2; s_UsedNames.Contains(name); n++) name = nameBase + n;
-            s_UsedNames.Add(name);
-            return name;
         }
     }
 }
