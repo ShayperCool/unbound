@@ -9,7 +9,7 @@ using UnityEngine.UIElements;
 // (icon and label: EditorGUIUtility.ObjectContent without a null icon) and the picker button. Its
 // structure, defaults, display, GameObject-to-component reading and UXML data match the Unity
 // 6000.0.71f1 Editor (tests/projects/searchobjectfield). The search picker window it opens
-// (ShowObjectSelector) and the IMGUI DoObjectField draw nothing in Unbound: they stay stubs.
+// (ShowObjectSelector) is not shown in Unbound: it stays a stub.
 
 namespace UnityEngine.Search
 {

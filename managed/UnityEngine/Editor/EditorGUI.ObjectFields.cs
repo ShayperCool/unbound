@@ -236,6 +236,17 @@ namespace UnityEditor
             return null;
         }
 
+        /// <summary>The object a property takes for a dropped one: a GameObject's component of the
+        /// property's component type (matches the Unity 6000.0.71f1 Editor,
+        /// tests/projects/editorobjectfields script/sp.target.dropGameObject).</summary>
+        static Object PropertyReference(SerializedProperty property, Object validated)
+        {
+            var type = property.ObjectReferenceFieldType;
+            if (validated is GameObject go && type != null && typeof(Component).IsAssignableFrom(type))
+                return go.GetComponent(type);
+            return validated;
+        }
+
         static Rect GetButtonRect(ObjectFieldVisualType visualType, Rect position)
         {
             switch (visualType)
@@ -334,7 +345,7 @@ namespace UnityEditor
 
                             if (eventType == EventType.DragPerform)
                             {
-                                if (property != null) property.objectReferenceValue = validatedObject;
+                                if (property != null) property.objectReferenceValue = PropertyReference(property, validatedObject);
                                 else obj = validatedObject;
                                 GUI.changed = true;
                                 DragAndDrop.AcceptDrag();
@@ -426,7 +437,7 @@ namespace UnityEditor
                     }
                     break;
                 case EventType.Repaint:
-                    GUIContent temp = showMixedValue ? s_MixedValueContent : EditorGUIUtility.ObjectContent(obj, objType);
+                    GUIContent temp = showMixedValue ? s_MixedValueContent : ObjectFieldContent(obj, objType, property);
                     var contentColor = GUI.contentColor;
                     var oldAlpha = contentColor.a;
                     try
@@ -465,6 +476,11 @@ namespace UnityEditor
             EditorGUIUtility.SetIconSize(oldIconSize);
             return obj;
         }
+
+        /// <summary>What an object field shows: a property's reference ("None (Material)",
+        /// "Missing (...)", by the property's type when the field has none), else the object's.</summary>
+        internal static GUIContent ObjectFieldContent(Object obj, Type objType, SerializedProperty property) =>
+            property != null ? EditorGUIUtility.ObjectContentForProperty(obj, objType, property) : EditorGUIUtility.ObjectContent(obj, objType);
 
         /// <summary>The Editor's object picker: Unbound shows none (said once).</summary>
         static void ShowObjectSelector() =>
@@ -574,13 +590,25 @@ namespace UnityEditor
     public partial class SerializedProperty
     {
         /// <summary>Whether an object reference property can reference the object: one of its
-        /// field's type.</summary>
-        internal bool ValidateObjectReferenceValue(Object obj) =>
-            obj != null && N.PropertyType == SerializedPropertyType.ObjectReference && N.ClrType != null && N.ClrType.IsInstanceOfType(obj);
+        /// referenced type, or a GameObject with a component of it (the object fields take the
+        /// component; tests/projects/editorobjectfields script/sp.target.*).</summary>
+        internal bool ValidateObjectReferenceValue(Object obj)
+        {
+            var type = ObjectReferenceFieldType;
+            if (obj == null || type == null) return false;
+            if (type.IsInstanceOfType(obj)) return true;
+            return obj is GameObject go && typeof(Component).IsAssignableFrom(type) && go.GetComponent(type) != null;
+        }
 
-        /// <summary>The same for exactly the field's type.</summary>
-        internal bool ValidateObjectReferenceValueExact(Object obj) =>
-            obj != null && N.PropertyType == SerializedPropertyType.ObjectReference && N.ClrType == obj.GetType();
+        /// <summary>The same for exactly the referenced type (unmeasured: a GameObject's
+        /// component of exactly that type).</summary>
+        internal bool ValidateObjectReferenceValueExact(Object obj)
+        {
+            var type = ObjectReferenceFieldType;
+            if (obj == null || type == null) return false;
+            if (obj.GetType() == type) return true;
+            return obj is GameObject go && typeof(Component).IsAssignableFrom(type) && go.GetComponent(type)?.GetType() == type;
+        }
     }
 
     public sealed partial class EditorGUIUtility

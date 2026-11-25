@@ -315,11 +315,16 @@ namespace UnityEditor
             return EnumPopupInternal(position, label, selected, selected.GetType(), checkEnabled, includeObsolete, style ?? PopupStyle);
         }
 
-        static GUIContent[] EnumOptions(EnumData enumData)
+        static readonly Dictionary<(Type, bool), GUIContent[]> s_EnumOptions = new Dictionary<(Type, bool), GUIContent[]>();
+
+        /// <summary>An enum's options, made once per type (and obsolete-value choice).</summary>
+        internal static GUIContent[] EnumOptions(Type enumType, bool includeObsolete, EnumData enumData)
         {
-            var options = new GUIContent[enumData.displayNames.Length];
+            if (s_EnumOptions.TryGetValue((enumType, includeObsolete), out var options)) return options;
+            options = new GUIContent[enumData.displayNames.Length];
             for (int i = 0; i < options.Length; i++)
                 options[i] = new GUIContent(enumData.displayNames[i], enumData.tooltip != null && i < enumData.tooltip.Length ? enumData.tooltip[i] : null);
+            s_EnumOptions[(enumType, includeObsolete)] = options;
             return options;
         }
 
@@ -330,7 +335,7 @@ namespace UnityEditor
 
             var enumData = EnumDataUtility.GetCachedEnumData(enumType, !includeObsolete);
             var i = showMixedValue ? -1 : Array.IndexOf(enumData.values, selected);
-            var options = EnumOptions(enumData);
+            var options = EnumOptions(enumType, includeObsolete, enumData);
             i = EnumPopupIndex(position, label, i, options, checkEnabled == null ? null : index => checkEnabled(enumData.values[index]), style);
             return (i < 0 || i >= enumData.flagValues.Length) ? selected : enumData.values[i];
         }
@@ -342,7 +347,7 @@ namespace UnityEditor
 
             var enumData = EnumDataUtility.GetCachedEnumData(enumType, !includeObsolete);
             var i = showMixedValue ? -1 : Array.IndexOf(enumData.flagValues, flagValue);
-            var options = EnumOptions(enumData);
+            var options = EnumOptions(enumType, includeObsolete, enumData);
             i = EnumPopupIndex(position, label, i, options, checkEnabled == null ? null : index => checkEnabled(enumData.values[index]), style);
             return (i < 0 || i >= enumData.flagValues.Length) ? flagValue : enumData.flagValues[i];
         }
@@ -376,10 +381,19 @@ namespace UnityEditor
             }
             else
             {
-                Stubs.Ignored("UnityEditor.EditorGUI.EnumPopup of a property without its field", "an enum property whose field is not found is drawn without its names");
-                int id = GUIUtility.GetControlID(s_PopupHash, FocusType.Keyboard, position);
-                PrefixLabel(position, id, label);
+                // An enum without a script field (an engine object's): its value's names.
+                BeginChangeCheck();
+                int idx = Popup(position, label, property.enumValueIndex, EnumPropertyOptions(property));
+                if (EndChangeCheck()) property.enumValueIndex = idx;
             }
+        }
+
+        static GUIContent[] EnumPropertyOptions(SerializedProperty property)
+        {
+            var names = property.enumDisplayNames;
+            var options = new GUIContent[names.Length];
+            for (int i = 0; i < names.Length; i++) options[i] = new GUIContent(names[i]);
+            return options;
         }
 
         /// <summary>The type of the script field a property was read from (a collection's element
@@ -664,6 +678,8 @@ namespace UnityEditor
         static readonly List<int[]> s_OptionValues = new List<int[]>();
         static readonly List<int[]> s_SelectedOptions = new List<int[]>();
         static readonly HashSet<int> s_SelectedOptionsSet = new HashSet<int>();
+        static readonly List<int> s_UsedFlags = new List<int>();
+        static readonly StringBuilder s_Text = new StringBuilder();
 
         static T[] GetBuffer<T>(List<T[]> pool, int bufferLength)
         {
@@ -687,7 +703,8 @@ namespace UnityEditor
 
             var flagMask = 0;
             var intermediateMask = 0;
-            var usedFlags = new List<int>();
+            var usedFlags = s_UsedFlags;
+            usedFlags.Clear();
             buttonText = null;
             buttonMixedValuesText = null;
 
@@ -710,7 +727,7 @@ namespace UnityEditor
                 else
                 {
                     buttonText = "Mixed...";
-                    var sb = new StringBuilder();
+                    var sb = s_Text.Clear();
                     sb.Append(flagNames[usedFlags[0]]);
                     for (int i = 1; i < usedFlags.Count; ++i) sb.Append(", ").Append(flagNames[usedFlags[i]]);
                     buttonMixedValuesText = sb.ToString();
@@ -805,7 +822,7 @@ namespace UnityEditor
                 else
                 {
                     buttonText = "Mixed...";
-                    var sb = new StringBuilder();
+                    var sb = s_Text.Clear();
                     var iterator = s_SelectedOptionsSet.GetEnumerator();
                     iterator.MoveNext();
                     sb.Append(flagNames[iterator.Current + flagStartIndex - 2]);

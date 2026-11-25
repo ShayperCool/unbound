@@ -12,6 +12,7 @@ namespace UnityEngine.Tests
     public class ObjectFieldsHolder : ScriptableObject
     {
         public Texture2D texture;
+        public Transform target;
         public ObjectFieldsNested nested = new ObjectFieldsNested();
         public Vector4 v4 = new Vector4(1, 2, 3, 4);
         public Vector3 v3 = new Vector3(1, 2, 3);
@@ -216,6 +217,40 @@ namespace UnityEngine.Tests
                 Assert.NotEqual(Ids("nested"), Ids("v3"));
             }
             finally { Object.DestroyImmediate(holder); }
+        }
+
+        [Fact]
+        public void AnObjectPropertyShowsItsReferenceAndTakesADroppedGameObjectsComponent()
+        {
+            using var release = TestRelease.Pin(TestRelease.Measured);
+            Reset();
+            var holder = ScriptableObject.CreateInstance<ObjectFieldsHolder>();
+            var go = new GameObject("Dropped");
+            var other = new Texture2D(2, 2);
+            try
+            {
+                var so = new SerializedObject(holder);
+                // A field without a type of its own shows the property's: "None (Transform)".
+                Assert.Equal("None (Transform)", EditorGUI.ObjectFieldContent(null, null, so.FindProperty("target")).text);
+                // (Dropped on the field, right of its label.)
+                var at = new Rect(10, 300, 300, 18);
+                DragAndDrop.objectReferences = new Object[] { other };
+                Pass(Drop(new Vector2(250, 309)), () => { EditorGUI.PropertyField(at, so.FindProperty("target")); return 0; });
+                so.ApplyModifiedProperties();
+                Assert.Null(holder.target);
+                DragAndDrop.objectReferences = new Object[] { go };
+                Pass(Drop(new Vector2(250, 309)), () => { EditorGUI.PropertyField(at, so.FindProperty("target")); return 0; });
+                so.ApplyModifiedProperties();
+                Assert.Same(go.transform, holder.target);
+            }
+            finally { Object.DestroyImmediate(holder); Object.DestroyImmediate(go); Object.DestroyImmediate(other); Reset(); }
+        }
+
+        [Fact]
+        public void AnEnumsOptionsAreMadeOnce()
+        {
+            var data = UnityEditor.EnumDataUtility.GetCachedEnumData(typeof(KeyCode), true);
+            Assert.Same(EditorGUI.EnumOptions(typeof(KeyCode), false, data), EditorGUI.EnumOptions(typeof(KeyCode), false, data));
         }
 
         [Fact]
