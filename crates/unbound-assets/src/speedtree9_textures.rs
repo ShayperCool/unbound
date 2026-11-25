@@ -11,6 +11,8 @@ use std::path::{Path, PathBuf};
 
 use unbound_yaml::Value;
 
+use crate::speedtree_tables::{count, entry, string, uint};
+
 /// What the trees use a texture as (one texture can be several maps).
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub struct TreeMapRoles {
@@ -151,10 +153,8 @@ fn set(value: &mut Value, key: &str, scalar: &str) {
 
 /// The first three maps (colour, normal, extra) of each material of a SpeedTree 9 file: a map's
 /// file name when it is used and names one (the format as `Unbound.SpeedTree.SpeedTree9File`
-/// in the managed engine reads it for the tree's import). `None` when the file is not a readable SpeedTree 9
-/// file. Tables are a uint32 count and that many uint32 offsets, relative to the table, to their
-/// entries; a string is a uint32 length counting a terminating zero, then its bytes;
-/// little-endian.
+/// in the managed engine reads it for the tree's import, on the tables of
+/// [`crate::speedtree_tables`]). `None` when the file is not a readable SpeedTree 9 file.
 pub fn material_maps(bytes: &[u8]) -> Option<Vec<[Option<String>; 3]>> {
     if !bytes.starts_with(SIGNATURE) {
         return None;
@@ -177,35 +177,6 @@ pub fn material_maps(bytes: &[u8]) -> Option<Vec<[Option<String>; 3]>> {
         result.push(names);
     }
     Some(result)
-}
-
-fn uint(bytes: &[u8], at: usize) -> Option<u32> {
-    let b = bytes.get(at..at.checked_add(4)?)?;
-    Some(u32::from_le_bytes([b[0], b[1], b[2], b[3]]))
-}
-
-/// The absolute offset of entry `index` of the table at `table`.
-fn entry(bytes: &[u8], table: usize, index: usize) -> Option<usize> {
-    let offset = uint(
-        bytes,
-        table.checked_add(index.checked_add(1)?.checked_mul(4)?)?,
-    )?;
-    table.checked_add(offset as usize)
-}
-
-/// The count at `at` of items of `size` bytes that follow it, which must fit in the file.
-fn count(bytes: &[u8], at: usize, size: usize) -> Option<usize> {
-    let n = uint(bytes, at)? as usize;
-    let end = at.checked_add(4)?.checked_add(n.checked_mul(size)?)?;
-    (end <= bytes.len()).then_some(n)
-}
-
-fn string(bytes: &[u8], at: usize) -> Option<String> {
-    let length = count(bytes, at, 1)?;
-    if length <= 1 {
-        return Some(String::new());
-    }
-    Some(String::from_utf8_lossy(&bytes[at + 4..at + 4 + length - 1]).into_owned())
 }
 
 /// A SpeedTree 9 file with only materials, each with its maps `(used, path)` (tests).
