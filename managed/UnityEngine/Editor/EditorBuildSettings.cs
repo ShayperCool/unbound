@@ -77,8 +77,10 @@ namespace UnityEditor
         /// from its GUID when the project has that asset (a stale path, or none), keeps a missing
         /// one's as given, treats null as an empty list and refuses a null entry
         /// (NullReferenceException, nothing changed); sceneListChanged follows only a change of
-        /// the list; the scenes Play mode loads by build index are its enabled ones (build-scenes
-        /// set.*, again.*, nullEntry.*, nullList.*, empty.*).</summary>
+        /// the list (build-scenes set.*, again.*, nullEntry.*, nullList.*, empty.*). The build
+        /// indices then follow its enabled scenes (unmeasured for Play mode; in Edit mode the Editor
+        /// answers the count and the paths from the whole list: queued in build-scenes *.build), and
+        /// a loaded scene keeps the build index it was loaded with (unmeasured).</summary>
         public static EditorBuildSettingsScene[] scenes
         {
             get => Copies();
@@ -105,8 +107,15 @@ namespace UnityEditor
             return copies;
         }
 
-        static EditorBuildSettingsScene Copy(EditorBuildSettingsScene s) =>
-            new EditorBuildSettingsScene { enabled = s.enabled, path = s.path, guid = s.guid };
+        static EditorBuildSettingsScene Copy(EditorBuildSettingsScene s) => EditorBuildSettingsScene.Copy(s);
+
+        /// <summary>A copy whose path is its GUID's asset's when the project has that asset.</summary>
+        static EditorBuildSettingsScene Resolved(EditorBuildSettingsScene s)
+        {
+            var scene = Copy(s);
+            if (!scene.guid.Empty() && AssetDatabase.GUIDToAssetPath(scene.guid) is string known && known.Length > 0) scene.m_PathField = known;
+            return scene;
+        }
 
         /// <summary>Takes a new list; whether it differs from the old one.</summary>
         static bool SetScenes(EditorBuildSettingsScene[] value)
@@ -116,20 +125,22 @@ namespace UnityEditor
             foreach (var scene in value)
                 if (scene == null) throw new NullReferenceException("(null)");
             var next = new EditorBuildSettingsScene[value.Length];
-            for (int i = 0; i < value.Length; i++)
-            {
-                var scene = Copy(value[i]);
-                if (!scene.guid.Empty() && AssetDatabase.GUIDToAssetPath(scene.guid) is string known && known.Length > 0) scene.path = known;
-                next[i] = scene;
-            }
+            for (int i = 0; i < value.Length; i++) next[i] = Resolved(value[i]);
+            // A change of the list as resolved: a list read from the file with a stale path set again
+            // as it is changes nothing.
             bool changed = next.Length != s_Scenes.Length;
             for (int i = 0; !changed && i < next.Length; i++)
-                changed = next[i].enabled != s_Scenes[i].enabled || next[i].path != s_Scenes[i].path || !next[i].guid.Equals(s_Scenes[i].guid);
+            {
+                var old = Resolved(s_Scenes[i]);
+                changed = next[i].enabled != old.enabled || next[i].path != old.path || !next[i].guid.Equals(old.guid);
+            }
             if (!changed) return false;
             s_Scenes = next;
+            // The enabled scenes, as the host lists them at the start (that Play mode loads them by
+            // these indices is not measured).
             UnityEngine.ProjectInfo.BuildScenes.Clear();
             foreach (var scene in next)
-                if (scene.enabled && !string.IsNullOrEmpty(scene.path)) UnityEngine.ProjectInfo.BuildScenes.Add((scene.path, scene.guid.ToString()));
+                if (scene.enabled) UnityEngine.ProjectInfo.BuildScenes.Add((scene.path ?? "", scene.guid.ToString()));
             SettingsAssets.Edit("EditorBuildSettings", body =>
             {
                 var list = YText.Seq();
@@ -241,6 +252,12 @@ namespace UnityEditor
     public partial class EditorBuildSettingsScene : IComparable
     {
         string m_Path;
+
+        /// <summary>The path as kept, set without Unity's setter (which refuses null).</summary>
+        internal string m_PathField { get => m_Path; set => m_Path = value; }
+
+        internal static EditorBuildSettingsScene Copy(EditorBuildSettingsScene s) =>
+            new EditorBuildSettingsScene { enabled = s.enabled, m_Path = s.m_Path, guid = s.guid };
 
         public EditorBuildSettingsScene() { }
 

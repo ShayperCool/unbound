@@ -119,10 +119,19 @@ namespace UnityEngine.Tests
                 Assert.Equal(2, changed);
                 EditorBuildSettings.scenes = new EditorBuildSettingsScene[0];
                 Assert.Equal(2, changed);
+                // A scene given by its GUID alone (no path): its path is the GUID's asset's.
+                EditorBuildSettings.scenes = new[] { new EditorBuildSettingsScene { guid = new GUID(BaseGuid), enabled = true } };
+                Assert.Equal(new[] { "1|Assets/Scenes/Base.unity|" + BaseGuid }, EditorBuildSettings.scenes.Select(Describe));
+                Assert.Equal(3, changed);
                 // globalScenes sets the list with no event.
                 EditorBuildSettings.globalScenes = new[] { new EditorBuildSettingsScene("Assets/Scenes/Second.unity", true) };
                 Assert.Equal(new[] { "1|Assets/Scenes/Second.unity|" + SecondGuid }, EditorBuildSettings.scenes.Select(Describe));
-                Assert.Equal(2, changed);
+                Assert.Equal(3, changed);
+                // A list read with a stale path, set again as it is: no change.
+                EditorBuildSettings.Configure(new[] { new EditorBuildSettingsScene { path = "Assets/Old/Moved.unity", guid = new GUID(BaseGuid), enabled = true } },
+                    new System.Collections.Generic.Dictionary<string, (string, long)>());
+                EditorBuildSettings.scenes = EditorBuildSettings.scenes;
+                Assert.Equal(3, changed);
             }
             finally
             {
