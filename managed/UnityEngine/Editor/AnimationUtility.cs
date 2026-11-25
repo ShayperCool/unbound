@@ -162,7 +162,11 @@ namespace UnityEditor
             clip.Compile();
         }
 
-        internal static void SetEditorCurveNoSync(AnimationClip clip, EditorCurveBinding binding, AnimationCurve curve)
+        internal static void SetEditorCurveNoSync(AnimationClip clip, EditorCurveBinding binding, AnimationCurve curve) =>
+            SetEditorCurveNoSync(clip, binding, curve, notify: true);
+
+        /// <summary>Sets a binding's curve; <paramref name="notify"/>: calls <see cref="onCurveWasModified"/>.</summary>
+        internal static void SetEditorCurveNoSync(AnimationClip clip, EditorCurveBinding binding, AnimationCurve curve, bool notify)
         {
             if (clip == null) throw new ArgumentNullException(nameof(clip));
             clip.RestoreImportedCurves();
@@ -210,7 +214,7 @@ namespace UnityEditor
             clip.Compile();
             clip.m_EditorCurvesSynced = true;
             clip.m_Version++;
-            CurveWasModified(clip, binding, curve != null ? CurveModifiedType.CurveModified : CurveModifiedType.CurveDeleted);
+            if (notify) CurveWasModified(clip, binding, curve != null ? CurveModifiedType.CurveModified : CurveModifiedType.CurveDeleted);
         }
 
         /// <summary>Sets each curve (calling <see cref="onCurveWasModified"/> for each), then calls
@@ -243,12 +247,21 @@ namespace UnityEditor
             return binding.type == null ? null : t.gameObject.FindComponent(binding.type);
         }
 
-        /// <summary>A binding's current value on the objects below a root.</summary>
+        /// <summary>A binding's current value on the objects below a root. A Transform's Euler
+        /// angles read as the angles of its rotation nearest its Euler hint (rotation order ZXY), a
+        /// discrete binding's integer as its bits (measured: tests/projects/animrecorder
+        /// <c>read.*</c>).</summary>
         public static bool GetFloatValue(GameObject root, EditorCurveBinding binding, out float data)
         {
             data = 0f;
             var target = GetAnimatedObject(root, binding);
             if (target == null) return false;
+            if (Unbound.Runtime.Compat.GameObjectRecorderMeasured && binding.isDiscreteCurve && target is MonoBehaviour)
+            {
+                if (!GetDiscreteIntValue(root, binding, out int bits)) return false;
+                data = BitConverter.Int32BitsToSingle(bits);
+                return true;
+            }
             var value = SerializedValue(target, binding.propertyName);
             if (value == null) return false;
             data = value.Value;
@@ -267,6 +280,9 @@ namespace UnityEditor
                 {
                     case "m_LocalPosition": v = t.localPosition; break;
                     case "m_LocalScale": v = t.localScale; break;
+                    case "localEulerAnglesRaw" or "localEulerAngles" or "localEulerAnglesBaked" when Unbound.Runtime.Compat.GameObjectRecorderMeasured:
+                        v = ClosestEulerAngles.Of(t.localRotation, t.m_LocalEulerAnglesHint, RotationOrder.OrderZXY);
+                        break;
                     case "localEulerAnglesRaw": v = t.localEulerAngles; break;
                     case "m_LocalRotation":
                     {
@@ -326,70 +342,134 @@ namespace UnityEditor
             return true;
         }
 
-        /// <summary>The bindings the animation window offers for an object: its Transform's
-        /// position, rotation and scale, an engine component's measured bindings (in the Editor's
-        /// order, object references included: tests/projects/animbindings), and a script's
-        /// serialized numbers and flags.</summary>
+        /// <summary>The bindings the animation window offers for an object: its active state (not
+        /// the root's own), its Transform's rotation (a quaternion), position and scale, an engine
+        /// component's measured bindings (in the Editor's order, object references included:
+        /// tests/projects/animbindings), and a script's enabled state and serialized numbers and
+        /// flags (enums and DiscreteEvaluation ints as discrete bindings). Nothing for an object
+        /// outside the root's hierarchy. The active state, Transform and script listing match the
+        /// Unity 6000.0.71f1 Editor, tests/projects/animrecorder <c>animatable.*</c>.</summary>
         public static EditorCurveBinding[] GetAnimatableBindings(GameObject targetObject, GameObject root)
         {
             if (targetObject == null || root == null) return Array.Empty<EditorCurveBinding>();
-            var path = CalculateTransformPath(targetObject.transform, root.transform);
-            var list = new List<EditorCurveBinding>
-            {
-                EditorCurveBinding.FloatCurve(path, typeof(GameObject), "m_IsActive"),
-            };
-            foreach (var head in new[] { "m_LocalPosition", "localEulerAnglesRaw", "m_LocalScale" })
-                foreach (var axis in new[] { "x", "y", "z" })
-                    list.Add(EditorCurveBinding.FloatCurve(path, typeof(Transform), head + "." + axis));
-            foreach (var component in targetObject.GetComponents<Component>())
-            {
-                // The Transform's bindings are listed above; a RectTransform's come from the table.
-                if (component == null || (Unbound.Runtime.Compat.AnimatableBindingsMeasured ? component.GetType() == typeof(Transform) : component is Transform)) continue;
-                var type = component.GetType();
-                if (Unbound.Runtime.Compat.AnimatableBindingsMeasured && type.FullName != null && s_EngineBindings.TryGetValue(type.FullName, out var engine))
-                {
-                    // An engine component: the Editor's bindings of its type, measured on a fresh
-                    // component. Bindings that depend on its contents are not listed yet: material
-                    // properties, a skinned mesh's blend shapes, constraint sources, and material slots
-                    // other than the fresh component's.
-                    if (engine.Materials || component is Renderer withMaterials && Array.Exists(withMaterials.sharedMaterials, m => m != null))
-                        Unbound.Runtime.Stubs.Ignored("AnimationUtility.GetAnimatableBindings material properties", "lists no material property bindings of a renderer's materials");
-                    if (component is SkinnedMeshRenderer { sharedMesh: { blendShapeCount: > 0 } })
-                        Unbound.Runtime.Stubs.Ignored("AnimationUtility.GetAnimatableBindings blend shapes", "lists no blend shape bindings");
-                    if (component is UnityEngine.Animations.IConstraint { sourceCount: > 0 })
-                        Unbound.Runtime.Stubs.Ignored("AnimationUtility.GetAnimatableBindings constraint sources", "lists no constraint source bindings");
-                    foreach (var name in engine.Floats) list.Add(EditorCurveBinding.FloatCurve(path, type, name));
-                    int slots = 0;
-                    foreach (var name in engine.Objects)
-                    {
-                        list.Add(EditorCurveBinding.PPtrCurve(path, type, name));
-                        if (name.StartsWith("m_Materials.Array.data[", StringComparison.Ordinal)) slots++;
-                    }
-                    if (slots > 0 && component is Renderer renderer && renderer.sharedMaterials.Length != slots)
-                        Unbound.Runtime.Stubs.Ignored("AnimationUtility.GetAnimatableBindings material slots", "lists the material slots of a fresh renderer only (other material counts are unmeasured)");
-                    continue;
-                }
-                if (component is not MonoBehaviour)
-                    Unbound.Runtime.Stubs.Ignored("AnimationUtility.GetAnimatableBindings unmeasured components", "lists an unmeasured engine component's serialized numbers and flags (" + type.FullName + ")");
-                using var so = new SerializedObject(component);
-                var it = so.GetIterator();
-                for (bool enter = true; it.NextVisible(enter); enter = false)
-                {
-                    if (it.propertyType == SerializedPropertyType.Float || it.propertyType == SerializedPropertyType.Boolean || it.propertyType == SerializedPropertyType.Integer)
-                        list.Add(EditorCurveBinding.FloatCurve(path, component.GetType(), it.propertyPath));
-                }
-            }
+            var list = new List<EditorCurveBinding>();
+            AddAnimatableBindings(targetObject, root, list);
             return list.ToArray();
         }
 
+        /// <summary>Adds what <see cref="GetAnimatableBindings"/> offers for an object.</summary>
+        internal static void AddAnimatableBindings(GameObject targetObject, GameObject root, List<EditorCurveBinding> list)
+        {
+            bool measured = Unbound.Runtime.Compat.GameObjectRecorderMeasured;
+            if (measured && !IsBelow(targetObject.transform, root.transform)) return;
+            var path = CalculateTransformPath(targetObject.transform, root.transform);
+            if (!measured || targetObject != root)
+                list.Add(EditorCurveBinding.FloatCurve(path, typeof(GameObject), "m_IsActive"));
+            if (!measured)
+                AddTransformBindings(path, list);
+            foreach (var component in targetObject.GetComponents<Component>())
+            {
+                // Before the measurement the Transform's bindings are listed above.
+                if (component == null || (!measured && component is Transform && (!Unbound.Runtime.Compat.AnimatableBindingsMeasured || component.GetType() == typeof(Transform)))) continue;
+                AddComponentBindings(component, path, list);
+            }
+        }
+
+        /// <summary>Whether <paramref name="t"/> is <paramref name="root"/> or below it.</summary>
+        internal static bool IsBelow(Transform t, Transform root)
+        {
+            for (; t != null; t = t.parent)
+                if (t == root) return true;
+            return false;
+        }
+
+        /// <summary>The bindings animation offers for one component at <paramref name="path"/>
+        /// (<see cref="GetAnimatableBindings"/>, GameObjectRecorder.BindComponent).</summary>
+        internal static void AddComponentBindings(Component component, string path, List<EditorCurveBinding> list)
+        {
+            var type = component.GetType();
+            if (Unbound.Runtime.Compat.GameObjectRecorderMeasured && type == typeof(Transform))
+            {
+                // The rotation as its quaternion (measured).
+                foreach (var axis in new[] { "x", "y", "z", "w" })
+                    list.Add(EditorCurveBinding.FloatCurve(path, typeof(Transform), "m_LocalRotation." + axis));
+                foreach (var head in new[] { "m_LocalPosition", "m_LocalScale" })
+                    foreach (var axis in new[] { "x", "y", "z" })
+                        list.Add(EditorCurveBinding.FloatCurve(path, typeof(Transform), head + "." + axis));
+                return;
+            }
+            if (Unbound.Runtime.Compat.AnimatableBindingsMeasured && type.FullName != null && s_EngineBindings.TryGetValue(type.FullName, out var engine))
+            {
+                // An engine component: the Editor's bindings of its type, measured on a fresh
+                // component. Bindings that depend on its contents are not listed yet: material
+                // properties, a skinned mesh's blend shapes, constraint sources, and material slots
+                // other than the fresh component's.
+                if (engine.Materials || component is Renderer withMaterials && Array.Exists(withMaterials.sharedMaterials, m => m != null))
+                    Unbound.Runtime.Stubs.Ignored("AnimationUtility.GetAnimatableBindings material properties", "lists no material property bindings of a renderer's materials");
+                if (component is SkinnedMeshRenderer { sharedMesh: { blendShapeCount: > 0 } })
+                    Unbound.Runtime.Stubs.Ignored("AnimationUtility.GetAnimatableBindings blend shapes", "lists no blend shape bindings");
+                if (component is UnityEngine.Animations.IConstraint { sourceCount: > 0 })
+                    Unbound.Runtime.Stubs.Ignored("AnimationUtility.GetAnimatableBindings constraint sources", "lists no constraint source bindings");
+                foreach (var name in engine.Floats) list.Add(EditorCurveBinding.FloatCurve(path, type, name));
+                int slots = 0;
+                foreach (var name in engine.Objects)
+                {
+                    list.Add(EditorCurveBinding.PPtrCurve(path, type, name));
+                    if (name.StartsWith("m_Materials.Array.data[", StringComparison.Ordinal)) slots++;
+                }
+                if (slots > 0 && component is Renderer renderer && renderer.sharedMaterials.Length != slots)
+                    Unbound.Runtime.Stubs.Ignored("AnimationUtility.GetAnimatableBindings material slots", "lists the material slots of a fresh renderer only (other material counts are unmeasured)");
+                return;
+            }
+            bool script = component is MonoBehaviour;
+            if (!script)
+                Unbound.Runtime.Stubs.Ignored("AnimationUtility.GetAnimatableBindings unmeasured components", "lists an unmeasured engine component's serialized numbers and flags (" + type.FullName + ")");
+            bool measured = script && Unbound.Runtime.Compat.GameObjectRecorderMeasured;
+            // A script's enabled state comes first (measured).
+            if (measured) list.Add(EditorCurveBinding.FloatCurve(path, type, "m_Enabled"));
+            using var so = new SerializedObject(component);
+            var it = so.GetIterator();
+            for (bool enter = true; it.NextVisible(enter); enter = false)
+            {
+                if (measured && it.propertyPath == "m_Enabled") continue;
+                bool discrete = measured && IsDiscreteField(type, it.propertyPath);
+                if (discrete || it.propertyType == SerializedPropertyType.Float || it.propertyType == SerializedPropertyType.Boolean || it.propertyType == SerializedPropertyType.Integer)
+                    list.Add(discrete ? EditorCurveBinding.DiscreteCurve(path, type, it.propertyPath) : EditorCurveBinding.FloatCurve(path, type, it.propertyPath));
+            }
+        }
+
+        /// <summary>The Transform's position, Euler angles and scale, as listed before the
+        /// measurement.</summary>
+        static void AddTransformBindings(string path, List<EditorCurveBinding> list)
+        {
+            foreach (var head in new[] { "m_LocalPosition", "localEulerAnglesRaw", "m_LocalScale" })
+                foreach (var axis in new[] { "x", "y", "z" })
+                    list.Add(EditorCurveBinding.FloatCurve(path, typeof(Transform), head + "." + axis));
+        }
+
+        /// <summary>The type of a binding's values: an object reference's, else the number's as the
+        /// property holds it (Int32 for integers and discrete bindings, Boolean for flags such as
+        /// m_IsActive and m_Enabled, Single for the rest); null when nothing below the root has the
+        /// property's object (measured: tests/projects/animrecorder <c>read.*</c>).</summary>
         public static Type GetEditorCurveValueType(GameObject root, EditorCurveBinding binding)
         {
-            if (binding.isPPtrCurve)
+            var target = GetAnimatedObject(root, binding);
+            if (binding.isPPtrCurve) return target == null ? null : typeof(Object);
+            if (target == null) return null;
+            if (!Unbound.Runtime.Compat.GameObjectRecorderMeasured || target is Transform) return typeof(float);
+            var name = binding.propertyName ?? "";
+            if (binding.isDiscreteCurve) return typeof(int);
+            if ((target is GameObject && name == "m_IsActive") || name == "m_Enabled") return typeof(bool);
+            if (target is MonoBehaviour && ScriptField(target.GetType(), name) is { } field)
+                return field.FieldType == typeof(bool) ? typeof(bool) : field.FieldType == typeof(int) || field.FieldType.IsEnum ? typeof(int) : typeof(float);
+            if (target is GameObject) return typeof(float);
+            using var so = new SerializedObject(target);
+            return so.FindProperty(name)?.propertyType switch
             {
-                var target = GetAnimatedObject(root, binding);
-                return target == null ? null : typeof(Object);
-            }
-            return GetAnimatedObject(root, binding) != null ? typeof(float) : null;
+                SerializedPropertyType.Boolean => typeof(bool),
+                SerializedPropertyType.Integer or SerializedPropertyType.Enum => typeof(int),
+                _ => typeof(float),
+            };
         }
 
         public static AnimationClipSettings GetAnimationClipSettings(AnimationClip clip)

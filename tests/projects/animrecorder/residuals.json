@@ -1,0 +1,22 @@
+{
+  "GetAnimatableBindings, and through it BindComponent and BindAll, lists no material property bindings of a renderer's materials (the SpriteRenderer's default material's 38), reported as ignored; same.sprite also binds two of the sprite's bindings again through Bind": [
+    "animatable.child",
+    "bind.allChild",
+    "bind.allRecursive",
+    "bind.ofTypeRenderer",
+    "bind.sprite",
+    "same.sprite"
+  ],
+  "Bind beside BindComponent: the Editor binds some bindings BindComponent or BindAll made (or makes) a second time (a Transform's, a Light's m_Enabled, a script's float field) and not others (a Light's m_Intensity, a script's m_Enabled and enum); no rule over the measured cases explains the split, and Unbound binds each binding once": [
+    "api.bind.floatBeforePptr",
+    "same.bindFirst",
+    "same.light",
+    "same.script",
+    "same.transform"
+  ],
+  "Keyframe reduction with a float error of 0 drops a key only where the reduced curve equals the recorded one exactly; Unbound's single-precision curve evaluation differs from the Editor's in the last bit there, so it keeps 3 or 4 more keys of the three position curves": [
+    "motion.valueError0.curve.:m_LocalPosition.y",
+    "motion.valueError0.curve.:m_LocalPosition.z",
+    "motion.valueError0.curve.child:m_LocalPosition.z"
+  ]
+}

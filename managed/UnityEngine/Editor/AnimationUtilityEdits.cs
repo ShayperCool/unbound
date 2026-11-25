@@ -72,7 +72,11 @@ namespace UnityEditor
             CurveWasModified(clip, default, CurveModifiedType.ClipModified);
         }
 
-        internal static void SetObjectReferenceCurveNoSync(AnimationClip clip, EditorCurveBinding binding, ObjectReferenceKeyframe[] keyframes)
+        internal static void SetObjectReferenceCurveNoSync(AnimationClip clip, EditorCurveBinding binding, ObjectReferenceKeyframe[] keyframes) =>
+            SetObjectReferenceCurveNoSync(clip, binding, keyframes, notify: true);
+
+        /// <summary>Sets a binding's object curve; <paramref name="notify"/>: calls <see cref="onCurveWasModified"/>.</summary>
+        internal static void SetObjectReferenceCurveNoSync(AnimationClip clip, EditorCurveBinding binding, ObjectReferenceKeyframe[] keyframes, bool notify)
         {
             if (clip == null) throw new ArgumentNullException(nameof(clip));
             clip.m_ObjectCurves.RemoveAll(c => c.Binding.Path == (binding.path ?? "") && c.Binding.Attribute == binding.propertyName && c.Binding.Matches(binding.type));
@@ -92,7 +96,7 @@ namespace UnityEditor
                 clip.m_ObjectCurves.Add(new ClipObjectCurve { Binding = CurveBinding.ForClipCurve(binding.path ?? "", binding.propertyName, binding.type), Times = times, Values = values });
             }
             clip.m_Version++;
-            CurveWasModified(clip, binding, keyframes != null ? CurveModifiedType.CurveModified : CurveModifiedType.CurveDeleted);
+            if (notify) CurveWasModified(clip, binding, keyframes != null ? CurveModifiedType.CurveModified : CurveModifiedType.CurveDeleted);
         }
 
         // ------------------------------------------------------------------ tangent modes
@@ -200,19 +204,35 @@ namespace UnityEditor
         }
 
         /// <summary>The slope between the neighbours, flat at an extremum and at the ends, and at
-        /// most four times the smaller rise over the span of the two intervals.</summary>
+        /// most four times the smaller rise over the span of the two intervals. In single precision
+        /// as the Unity 6000.0.71f1 Editor computes it (tests/projects/animrecorder, whose saved
+        /// curves have ClampedAuto keys): the slopes over intervals shorter than
+        /// <see cref="k_MinSlopeInterval"/> count as zero; where the first rise is at least three
+        /// quarters of the whole, the slope is scaled by one less the excess over a quarter of the
+        /// whole; where it is under a quarter, by its share of that quarter.</summary>
         static float ClampedAutoTangent(AnimationCurve curve, int i)
         {
             int n = curve.length;
             if (i == 0 || i == n - 1) return 0f;
             Keyframe a = curve[i - 1], k = curve[i], b = curve[i + 1];
-            float rise1 = k.value - a.value, rise2 = b.value - k.value;
-            if (rise1 * rise2 <= 0f) return 0f;
-            float span = b.time - a.time;
-            float tangent = (b.value - a.value) / span;
-            float limit = 4f * Math.Min(Math.Abs(rise1), Math.Abs(rise2)) / span;
-            return Math.Abs(tangent) > limit ? Math.Sign(tangent) * limit : tangent;
+            float dx1 = k.time - a.time, dy1 = k.value - a.value;
+            float dx2 = b.time - k.time, dy2 = b.value - k.value;
+            float m1 = SafeSlope(dy1, dx1), m2 = SafeSlope(dy2, dx2), m = SafeSlope(dy1 + dy2, dx1 + dx2);
+            if (!(m1 > 0f && m2 > 0f) && !(m1 < 0f && m2 < 0f)) return 0f;
+            float dy = dy1 + dy2;
+            float quarter = 0.25f * dy, threeQuarters = 0.75f * dy;
+            float rise = MathF.Abs(dy1);
+            if (rise >= MathF.Abs(threeQuarters))
+                return m * (MathF.Abs(quarter) > k_MinSlopeInterval ? 1f - (dy1 - threeQuarters) / quarter : 1f);
+            if (rise < MathF.Abs(quarter))
+                return m * (MathF.Abs(quarter) > k_MinSlopeInterval ? dy1 / quarter : 0f);
+            return m;
         }
+
+        /// <summary>A rise over an interval, zero over an interval (or quarter rise) this short.</summary>
+        const float k_MinSlopeInterval = 1e-5f;
+
+        static float SafeSlope(float dy, float dx) => MathF.Abs(dx) > k_MinSlopeInterval ? dy / dx : 0f;
 
         // ------------------------------------------------------------------ clips of objects
 

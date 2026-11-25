@@ -25766,38 +25766,6 @@ namespace UnityEditor.Animations
         internal int recursiveBlendParameterCount { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Animations.BlendTree.recursiveBlendParameterCount"); return default; } }
     }
     [global::Unbound.Stub]
-    public unsafe partial struct CurveFilterOptions
-    {
-        [global::Unbound.Stub] public float positionError;
-        [global::Unbound.Stub] public float rotationError;
-        [global::Unbound.Stub] public float scaleError;
-        [global::Unbound.Stub] public float floatError;
-        [global::Unbound.Stub] public bool keyframeReduction;
-        [global::Unbound.Stub] public bool unrollRotation;
-    }
-    [global::Unbound.Stub]
-    public unsafe partial class GameObjectRecorder : global::UnityEngine.Object
-    {
-        [global::Unbound.Stub] public GameObjectRecorder(global::UnityEngine.GameObject root) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Animations.GameObjectRecorder.ctor"); }
-        [global::Unbound.Stub] public void BindComponentsOfType<T>(global::UnityEngine.GameObject target, bool recursive) where T : global::UnityEngine.Component { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Animations.GameObjectRecorder.BindComponentsOfType"); }
-        [global::Unbound.Stub] public void BindComponentsOfType(global::UnityEngine.GameObject target, global::System.Type componentType, bool recursive) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Animations.GameObjectRecorder.BindComponentsOfType"); }
-        [global::Unbound.Stub] public void Bind(global::UnityEditor.EditorCurveBinding binding) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Animations.GameObjectRecorder.Bind"); }
-        [global::Unbound.Stub] public void BindAll(global::UnityEngine.GameObject target, bool recursive) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Animations.GameObjectRecorder.BindAll"); }
-        [global::Unbound.Stub] public void BindComponent(global::UnityEngine.Component component) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Animations.GameObjectRecorder.BindComponent"); }
-        [global::Unbound.Stub] public global::UnityEditor.EditorCurveBinding[] GetBindings() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Animations.GameObjectRecorder.GetBindings"); return global::System.Array.Empty<global::UnityEditor.EditorCurveBinding>(); }
-        [global::Unbound.Stub] public void TakeSnapshot(float dt) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Animations.GameObjectRecorder.TakeSnapshot"); }
-        [global::Unbound.Stub] public void SaveToClip(global::UnityEngine.AnimationClip clip) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Animations.GameObjectRecorder.SaveToClip"); }
-        [global::Unbound.Stub] public void SaveToClip(global::UnityEngine.AnimationClip clip, float fps) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Animations.GameObjectRecorder.SaveToClip"); }
-        [global::Unbound.Stub] public void SaveToClip(global::UnityEngine.AnimationClip clip, float fps, global::UnityEditor.Animations.CurveFilterOptions filterOptions) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Animations.GameObjectRecorder.SaveToClip"); }
-        [global::Unbound.Stub] public void ResetRecording() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Animations.GameObjectRecorder.ResetRecording"); }
-        [global::System.Obsolete("The GameObjectRecorder constructor now takes a root GameObject")] [global::Unbound.Stub] public GameObjectRecorder() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Animations.GameObjectRecorder.ctor"); }
-        [global::System.Obsolete("BindComponent() using a System::Type is obsolete, use BindComponentsOfType() instead (UnityUpgradable) -> BindComponentsOfType(*)")] [global::Unbound.Stub] public void BindComponent(global::UnityEngine.GameObject target, global::System.Type componentType, bool recursive) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Animations.GameObjectRecorder.BindComponent"); }
-        [global::System.Obsolete("\"BindComponent<T>() where T : Component\" is obsolete, use BindComponentsOfType<T>() instead (UnityUpgradable) -> BindComponentsOfType<T>(*)")] [global::Unbound.Stub] public void BindComponent<T>(global::UnityEngine.GameObject target, bool recursive) where T : global::UnityEngine.Component { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Animations.GameObjectRecorder.BindComponent"); }
-        public global::UnityEngine.GameObject root { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Animations.GameObjectRecorder.root"); return default; } }
-        public float currentTime { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Animations.GameObjectRecorder.currentTime"); return default; } }
-        public bool isRecording { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Animations.GameObjectRecorder.isRecording"); return default; } }
-    }
-    [global::Unbound.Stub]
     internal unsafe partial class MecanimUtilities
     {
         [global::Unbound.Stub] public static bool StateMachineRelativePath(global::UnityEditor.Animations.AnimatorStateMachine parent, global::UnityEditor.Animations.AnimatorStateMachine toFind, ref global::System.Collections.Generic.List<global::UnityEditor.Animations.AnimatorStateMachine> hierarchy) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Animations.MecanimUtilities.StateMachineRelativePath"); return default; }
