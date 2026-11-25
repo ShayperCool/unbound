@@ -130,6 +130,10 @@ public sealed class StripProbe : MonoBehaviour
                 lamp.shadows = LightShadows.None;
                 lamp.transform.position = lit.Effect.transform.position + new Vector3(0.8f, 0.6f, -1f);
             }
+            // Strips and their particles drawn by two outputs that share one sort of the
+            // system's list (a global sort): by distance, for each camera, and by age.
+            Draw("global", "StripGlobal", 10, 20, 40, 66);
+            Draw("global youngest", "StripGlobalYoungest", 10, 20, 40, 66);
             foreach (var stage in m_Stages)
             {
                 m_Names.Clear();

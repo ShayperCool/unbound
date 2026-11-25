@@ -389,6 +389,36 @@ public static class StripAuthoring
         SetRandom(sortedMeshes, "color", new Vector3(0.2f, 0.2f, 0.2f), new Vector3(1f, 1f, 1f));
         Save(culledMeshes);
 
+        // Two strips of twelve, half transparent, drawn joined and each particle as a half
+        // transparent quad of its own, at places spread in depth: both outputs sort by the same
+        // criterion, so the system sorts one list for both (a global sort): by distance to each
+        // camera, and by age (youngest in front, one sort for all cameras).
+        foreach (var (name, criterion) in new[]
+        {
+            ("StripGlobal", VFXSortingUtility.SortCriteria.DistanceToCamera),
+            ("StripGlobalYoungest", VFXSortingUtility.SortCriteria.YoungestInFront),
+        })
+        {
+            var global = NewGraph(name);
+            var shared = Strips(global, 2, 12);
+            ConstantRate(shared.Spawn, 20f);
+            SetRandom(shared.Init, "position", new Vector3(-1.2f, -1.2f, -2f), new Vector3(1.2f, 1.2f, 2f));
+            Set(shared.Init, "lifetime", 0.6f);
+            Set(shared.Init, "size", 0.3f);
+            SetRandom(shared.Init, "color", new Vector3(0.1f, 0.1f, 0.1f), new Vector3(1f, 1f, 1f));
+            Set(shared.Init, "alpha", 0.5f);
+            var sheet = Output<VFXQuadStripOutput>(global, shared.Update);
+            sheet.SetSettingValue("blendMode", VFXAbstractRenderedOutput.BlendMode.Alpha);
+            sheet.SetSettingValue("sortMode", criterion);
+            var flecks = Output<VFXPlanarPrimitiveOutput>(global, shared.Update, false);
+            flecks.SetSettingValue("blendMode", VFXAbstractRenderedOutput.BlendMode.Alpha);
+            flecks.SetSettingValue("sortMode", criterion);
+            Set(flecks, "size", 0.2f);
+            Set(flecks, "alpha", 0.7f);
+            SetRandom(flecks, "color", new Vector3(0.2f, 0.2f, 0.2f), new Vector3(1f, 1f, 1f));
+            Save(global);
+        }
+
         // A strip that widens along itself: each particle's size times its place in the strip.
         var taper = NewGraph("StripTaper");
         var tapered = Strips(taper, 1, 16);

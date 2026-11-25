@@ -56,6 +56,11 @@ are `Output ParticleStrip Quad` contexts with an `Orient: Face Camera Position` 
 - `StripMeshesCulled`: two strips of twelve at places spread in depth, drawn joined, and their
   particles as half transparent meshes of colours of their own (sorted, by default) from a list
   culled in a compute pass, through an indirect buffer: overlapping meshes show the order.
+- `StripGlobal`, `StripGlobalYoungest`: two strips of twelve, half transparent, each particle of
+  a colour and at a depth of its own, drawn joined and each particle as a half transparent quad
+  of a colour of its own; both outputs sort by one criterion, by distance to the camera and
+  youngest in front, so the graph compiler gives the system one sort of its list for both (a
+  global sort) and neither output sorts on its own.
 - `StripTaper`: each particle's size multiplied by its place in the strip
   (`particleIndexInStrip`), in the output.
 - `StripImage`, `StripImageSegments`, `StripImageSwapped`: strips of eight that draw an image
@@ -93,6 +98,7 @@ capacity and whether it sleeps. `systems/<control>` lists the systems' names.
   directional light without shadows lights the scene (the other stages are unlit).
 - `meshes`, `meshes lit`, `meshes culled`: `StripMeshes`, `StripMeshesLit` and
   `StripMeshesCulled`, each under such a point light too (frames 10, 20, 40 and 66).
+- `global`, `global youngest`: `StripGlobal` and `StripGlobalYoungest`.
 - `trails alive`, `trails alive keep`: `StripTrailsAlive` and `StripTrailsAliveKeep`, images
   every four frames to frame 32, then at 40, 50 and 66. The heads' alive count includes the dead
   heads kept for their strips (room for four, full at frame 70 in both).
@@ -130,7 +136,8 @@ Unbound does. What decides which of the two the Editor shows there is not measur
 ## Not covered
 
 - Drawn but not measured: alpha blended strips with their sort off through a list (where
-  overlapping segments show the order), a sorted quad output of a strip system's particles,
+  overlapping segments show the order), a quad output of a strip system's particles sorted on
+  its own,
   `Compute Culling` on a strip output itself, several cameras.
 - Lit strips blended over what is behind them or drawn from lists, through the deferred
   renderer or Forward+, with maps, the specular workflow, the six-way smoke material, both
@@ -143,7 +150,7 @@ Unbound does. What decides which of the two the Editor shows there is not measur
   shadows cast by them, a Shader Graph mesh output: drawn, not measured (meshes chosen by their
   size on screen are not drawn, as for any system).
 - Additive strips; a sorted strip under a perspective camera or with another sort criterion
-  than the default; two strips of one sorted output that cross.
+  than distance or age; a global sort of a strip system with several cameras; two strips of one sorted output that cross.
 - A batch in which an effect wakes in every frame for longer than three frames (as measured,
   its counts would not be asked while that lasts).
 - `stripAlive` with several strip systems spawned from one system (the graph compiler reads
