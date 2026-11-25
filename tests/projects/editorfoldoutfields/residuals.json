@@ -1,3 +1,0 @@
-{
-  "The min-max slider's dragged end and its track click: the Editor's values differ from Unbound's in the last bits of single precision (4.10526371 vs 4.105263, 8.105264 vs 8.105263, 4 vs 3.999999), and the later steps carry them; Unbound's slider is Unity's C# (EditorGUIExt.DoMinMaxSlider) evaluated in single precision, the Editor's Mono evaluates the expressions with wider intermediates (insignificant, docs/COMPATIBILITY_GAPS.md)": ["script/minMax.end.down", "script/minMax.end.drag", "script/minMax.end.up", "script/minMax.track.down", "script/minMax.track.up", "script/popup.key"]
-}

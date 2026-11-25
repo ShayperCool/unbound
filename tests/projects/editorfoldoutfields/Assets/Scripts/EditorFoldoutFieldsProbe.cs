@@ -59,7 +59,7 @@ public sealed class EditorFoldoutFieldsProbe : MonoBehaviour
     static object Try(Func<object> read)
     {
         try { return read(); }
-        catch (Exception ex) { return "throws " + ex.GetType().Name; }
+        catch (Exception ex) { return "throws " + ex.GetType().Name + ": " + ex.Message; }
     }
 
     void RecordOutsideGui()
@@ -171,9 +171,18 @@ public sealed class EditorFoldoutFieldsProbe : MonoBehaviour
         ("minMax.thumb.down", () => Mouse(EventType.MouseDown, new Vector2(MinMaxRect.x + 80, MinMaxRect.center.y))),
         ("minMax.thumb.drag", () => Mouse(EventType.MouseDrag, new Vector2(MinMaxRect.x + 100, MinMaxRect.center.y), new Vector2(20, 0))),
         ("minMax.thumb.up", () => Mouse(EventType.MouseUp, new Vector2(MinMaxRect.x + 100, MinMaxRect.center.y))),
-        ("minMax.end.down", () => Mouse(EventType.MouseDown, new Vector2(MinMaxRect.x + 160, MinMaxRect.center.y))),
-        ("minMax.end.drag", () => Mouse(EventType.MouseDrag, new Vector2(MinMaxRect.x + 180, MinMaxRect.center.y), new Vector2(20, 0))),
-        ("minMax.end.up", () => Mouse(EventType.MouseUp, new Vector2(MinMaxRect.x + 180, MinMaxRect.center.y))),
+        // After the thumb step (about 3.05..7.05, 19 points per unit) the thumb spans x 67..155:
+        // its 6-point ends resize it.
+        ("minMax.maxEnd.down", () => Mouse(EventType.MouseDown, new Vector2(MinMaxRect.x + 142, MinMaxRect.center.y))),
+        ("minMax.maxEnd.drag", () => Mouse(EventType.MouseDrag, new Vector2(MinMaxRect.x + 162, MinMaxRect.center.y), new Vector2(20, 0))),
+        ("minMax.maxEnd.up", () => Mouse(EventType.MouseUp, new Vector2(MinMaxRect.x + 162, MinMaxRect.center.y))),
+        ("minMax.minEnd.down", () => Mouse(EventType.MouseDown, new Vector2(MinMaxRect.x + 60, MinMaxRect.center.y))),
+        ("minMax.minEnd.drag", () => Mouse(EventType.MouseDrag, new Vector2(MinMaxRect.x + 40, MinMaxRect.center.y), new Vector2(-20, 0))),
+        ("minMax.minEnd.up", () => Mouse(EventType.MouseUp, new Vector2(MinMaxRect.x + 40, MinMaxRect.center.y))),
+        // A press beside the thumb (on the track).
+        ("minMax.beside.down", () => Mouse(EventType.MouseDown, new Vector2(MinMaxRect.x + 175, MinMaxRect.center.y))),
+        ("minMax.beside.drag", () => Mouse(EventType.MouseDrag, new Vector2(MinMaxRect.x + 185, MinMaxRect.center.y), new Vector2(10, 0))),
+        ("minMax.beside.up", () => Mouse(EventType.MouseUp, new Vector2(MinMaxRect.x + 185, MinMaxRect.center.y))),
         ("minMax.track.down", () => Mouse(EventType.MouseDown, new Vector2(MinMaxRect.x + 10, MinMaxRect.center.y))),
         ("minMax.track.up", () => Mouse(EventType.MouseUp, new Vector2(MinMaxRect.x + 10, MinMaxRect.center.y))),
         ("popup.key", () => Key("down")),
@@ -219,6 +228,8 @@ public sealed class EditorFoldoutFieldsProbe : MonoBehaviour
         var real = Event.current;
         var step = Script[m_Step];
         var scripted = step.Make();
+        // The popup step starts from the slider's initial values, so it is compared on its own.
+        if (step.Name == "popup.key") { m_Min = 2f; m_Max = 6f; }
         Event.current = scripted;
         object[] answer;
         try { answer = ScriptedFields(); }

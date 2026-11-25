@@ -1,5 +1,6 @@
 {
   "engine_paths": [
+    "managed/UnityEngine/Editor/",
     "managed/UnityEngine/IMGUI/"
   ]
 }

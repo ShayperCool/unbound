@@ -1,5 +1,5 @@
-{"k":"outside/editorGUI","v":["throws NullReferenceException","throws NullReferenceException","throws NullReferenceException","throws NullReferenceException","throws ArgumentException","throws NullReferenceException"]}
-{"k":"outside/editorGUILayout","v":["throws NullReferenceException","throws NullReferenceException","throws NullReferenceException","throws NullReferenceException","throws ArgumentException","throws NullReferenceException"]}
+{"k":"outside/editorGUI","v":["throws NullReferenceException: Object reference not set to an instance of an object","throws NullReferenceException: Object reference not set to an instance of an object","throws NullReferenceException: Object reference not set to an instance of an object","throws NullReferenceException: Object reference not set to an instance of an object","throws ArgumentException: You can only call GUI functions from inside OnGUI.","throws NullReferenceException: Object reference not set to an instance of an object"]}
+{"k":"outside/editorGUILayout","v":["throws NullReferenceException: Object reference not set to an instance of an object","throws NullReferenceException: Object reference not set to an instance of an object","throws NullReferenceException: Object reference not set to an instance of an object","throws NullReferenceException: Object reference not set to an instance of an object","throws ArgumentException: You can only call GUI functions from inside OnGUI.","throws NullReferenceException: Object reference not set to an instance of an object"]}
 {"k":"rect/layout/foldout","v":[[false,1,false],[true,1,false],[false,1,false],[false,1,false],[true,1,false],[false,1,false],[true,1,false],[false,1,false]]}
 {"k":"rect/layout/intPopup","v":[[20,1,false],[25,1,false],[1,1,false],[30,1,false],[10,1,false],[20,1,false],[20,1,false]]}
 {"k":"rect/layout/minMax","v":[[["2","6"],1,false],[["8","3"],1,false],[["-5","20"],1,false],[["2","6"],1,false],[["2","6"],1,false]]}
@@ -27,10 +27,16 @@
 {"k":"script/minMax.thumb.down","v":[[true,true,"2","6",20,[false,false,false,false],true,true],12]}
 {"k":"script/minMax.thumb.drag","v":[[true,true,"3.05263162","7.05263138",20,[false,false,true,false],true,true],12]}
 {"k":"script/minMax.thumb.up","v":[[true,true,"3.05263162","7.05263138",20,[false,false,false,false],true,false],12]}
-{"k":"script/minMax.end.down","v":[[true,true,"4.10526371","8.105264",20,[false,false,true,false],true,true],12]}
-{"k":"script/minMax.end.drag","v":[[true,true,"5.157895","9.157895",20,[false,false,true,false],true,true],12]}
-{"k":"script/minMax.end.up","v":[[true,true,"5.157895","9.157895",20,[false,false,false,false],true,false],12]}
-{"k":"script/minMax.track.down","v":[[true,true,"0","4",20,[false,false,true,false],true,true],12]}
-{"k":"script/minMax.track.up","v":[[true,true,"0","4",20,[false,false,false,false],true,false],12]}
-{"k":"script/popup.key","v":[[true,true,"0","4",20,[false,false,false,false],true,false],4]}
+{"k":"script/minMax.maxEnd.down","v":[[true,true,"3.05263162","7.05263138",20,[false,false,false,false],true,true],12]}
+{"k":"script/minMax.maxEnd.drag","v":[[true,true,"3.05263162","8.105263",20,[false,false,true,false],true,true],12]}
+{"k":"script/minMax.maxEnd.up","v":[[true,true,"3.05263162","8.105263",20,[false,false,false,false],true,false],12]}
+{"k":"script/minMax.minEnd.down","v":[[true,true,"3.05263162","8.105263",20,[false,false,false,false],true,true],12]}
+{"k":"script/minMax.minEnd.drag","v":[[true,true,"2","8.105263",20,[false,false,true,false],true,true],12]}
+{"k":"script/minMax.minEnd.up","v":[[true,true,"2","8.105263",20,[false,false,false,false],true,false],12]}
+{"k":"script/minMax.beside.down","v":[[true,true,"2.789474","8.894737",20,[false,false,true,false],true,true],12]}
+{"k":"script/minMax.beside.drag","v":[[true,true,"3.3157897","9.421053",20,[false,false,true,false],true,true],12]}
+{"k":"script/minMax.beside.up","v":[[true,true,"3.3157897","9.421053",20,[false,false,false,false],true,false],12]}
+{"k":"script/minMax.track.down","v":[[true,true,"0","6.105263",20,[false,false,true,false],true,true],12]}
+{"k":"script/minMax.track.up","v":[[true,true,"0","6.105263",20,[false,false,false,false],true,false],12]}
+{"k":"script/popup.key","v":[[true,true,"2","6",20,[false,false,false,false],true,false],4]}
 {"k":"complete","v":true}
