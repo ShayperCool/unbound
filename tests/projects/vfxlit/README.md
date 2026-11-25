@@ -257,12 +257,13 @@ adds to that is not separated.
   culling left out.
 - A lit output that fades against the camera's depth (soft particles are measured for unlit
   outputs, `tests/projects/vfx`).
-- Probe volume lighting (the Editor here cannot bake probe volumes); Forward+ with reflection
-  probes, light cookies or more lights than one cluster holds; light cookies, light layers, reflection probes, light probes other than the ambient
-  one, fog, additional lights' shadows, soft shadows, shadow cascades, screen space occlusion,
-  the specular workflow, normal, occlusion, metallic and emissive maps, the six-way smoke lit
-  material, double sided lighting, an output that receives no shadows: the generated shaders
-  compile them like any shader, and none is measured here.
+- Probe volume lighting (the Editor here cannot bake probe volumes); more lights than one
+  Forward+ cluster holds; light cookies, light layers, reflection probes (with either
+  renderer), light probes other than the ambient one, fog, additional lights' shadows, soft
+  shadows, shadow cascades, screen space occlusion, the specular workflow, normal, occlusion,
+  metallic and emissive maps, the six-way smoke lit material, double sided lighting, an output
+  that receives no shadows: the generated shaders compile them like any shader, and none is
+  measured here.
 - A mesh with vertex colours or tangents, of 32-bit indices, or of other topologies than
   triangles (quads), or whose submeshes' indices are not in submesh order; a mesh or mask of an
   output drawn through an indirect buffer changed in a frame where its system takes no step at
