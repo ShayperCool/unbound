@@ -336,6 +336,21 @@ namespace Unbound.Runtime
             return false;
         }
 
+        /// <summary>The base layer runs a transition between a state with a humanoid clip and one
+        /// with a generic clip.</summary>
+        internal bool TransitionMixesHumanAndGeneric
+        {
+            get
+            {
+                if (Layers.Length == 0) return false;
+                var layer = Layers[0];
+                if (layer.Current == null || layer.Next == null) return false;
+                bool Human(StateRun run) => MotionOf(layer.Def, run.Def) is AnimationClip { HasHumanCurves: true };
+                bool Generic(StateRun run) => MotionOf(layer.Def, run.Def) is AnimationClip { HasHumanCurves: false, legacy: false };
+                return Human(layer.Current) && Generic(layer.Next) || Generic(layer.Current) && Human(layer.Next);
+            }
+        }
+
         /// <summary>Only the generic base clip contributes root motion. An additive humanoid clip
         /// above it can still change the pose. Unused clips do not determine the motion type.</summary>
         internal bool HasGenericBaseMotion

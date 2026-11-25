@@ -869,7 +869,11 @@ namespace Unbound.Runtime.Playables
                 || RootAnimation.Channels(e, out int pos, out int rot) && RootAnimation.Any(into.Animated, into.FloatCount, pos, rot)))
                 Stubs.Ignored("AnimatorControllerPlayable root motion of states without humanoid clips on a humanoid",
                     "a controller with humanoid clips played through an AnimatorControllerPlayable does not move the root while only its states "
-                    + "without a humanoid clip play (their root curves pose the root; not measured)");
+                    + "without a humanoid clip play (the root stays where it is; not measured)");
+            if (player.TransitionMixesHumanAndGeneric && (e.Animator.m_ApplyRootMotion || MoveCallbacks.Any(e.Animator)))
+                Stubs.Ignored("AnimatorControllerPlayable root motion of a transition between humanoid and generic states",
+                    "moves the root by the humanoid motion alone while a transition runs between a humanoid and a generic state "
+                    + "(the Editor blends both motions; not modelled, tests/projects/humanoid genericCut.fade*)");
             if (weight > 0f && player.BaseLayerIKPass) e.PlayableIK = true;
             if (weight > 0f && player.UpperLayerIKPass)
                 Stubs.Ignored("AnimatorControllerPlayable IK passes of layers above the first",
