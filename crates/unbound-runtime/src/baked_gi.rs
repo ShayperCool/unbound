@@ -1343,6 +1343,12 @@ fn bake(request: BakeRequest, buffers: Option<&Path>) -> Result<Json> {
             })
             .transpose()?;
         // One lightmap at a time: its texels are written and let go before the next.
+        // Soft shadows and area lights, of lightmaps and light probes, are sampled with the
+        // sequences the indirect light brings.
+        anyhow::ensure!(
+            bounce.is_some() || !baked_lights.iter().any(probes::is_sampled),
+            "soft baked shadows and area lights are sampled with the bake's blue noise, which comes with the request for its indirect light (none here)"
+        );
         let folder = buffers.map(|f| f.join(&request.scene));
         let mut written = Buffers::start(folder.as_deref(), request.lightmap_images)?;
         for (index, size) in layout.lightmaps.iter().enumerate() {
@@ -1375,15 +1381,6 @@ fn bake(request: BakeRequest, buffers: Option<&Path>) -> Result<Json> {
                 size[1] as usize,
                 parameters.supersampling as usize,
                 &placed,
-            );
-            // (Soft shadows and area lights are sampled with the sequences the indirect light
-            // brings.)
-            anyhow::ensure!(
-                bounce.is_some()
-                    || !baked_lights
-                        .iter()
-                        .any(|l| l.kind.is_area() || (l.casts_shadows && l.shadow_size > 0.0)),
-                "soft baked shadows and area lights are sampled with the bake's blue noise, which comes with the request for its indirect light (none here)"
             );
             let lit = direct::direct(
                 &g,
@@ -2372,6 +2369,43 @@ mod tests {
             assert_eq!(light["measured"], json!(measured), "mode {mode}");
             assert_eq!(light["mixedMode"], json!(0), "mode {mode}");
             assert_eq!(light["bakeType"], json!(1));
+        }
+    }
+
+    #[test]
+    fn soft_and_area_lights_without_the_indirect_lights_samples_are_refused_also_for_probes() {
+        let light = |kind: u8, shadow_size: f32| -> LightData {
+            serde_json::from_value(json!({
+                "name": "Lamp", "fileId": 5, "kind": kind, "mode": 2, "color": [1, 1, 1],
+                "indirectColor": [1, 1, 1], "position": [0, 2, 0], "rotation": [0, 0, 0, 1],
+                "range": 10.0, "spotAngle": 30.0, "castsShadows": true,
+                "shadowSize": shadow_size, "size": [1.0, 1.0],
+            }))
+            .unwrap()
+        };
+        let probes = || {
+            vec![ProbeGroupData {
+                file_id: 1,
+                points: vec![0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0],
+                dering: true,
+            }]
+        };
+        // A soft point light and a rectangle light refuse a bake of light probes alone (no
+        // lightmap, its probes' direct light still written among the buffers) as one of
+        // lightmaps; a hard point light is baked.
+        for (kind, shadow_size, refused) in [(2u8, 0.25, true), (3, 0.0, true), (2, 0.0, false)] {
+            let mut r = request(Vec::new(), Vec::new());
+            r.lightmap_images = true;
+            r.lights = vec![light(kind, shadow_size)];
+            r.probes = probes();
+            let reply = bake(r, None);
+            match reply {
+                Err(e) if refused => {
+                    assert!(e.to_string().contains("blue noise"), "{e}")
+                }
+                Ok(reply) if !refused => assert_eq!(reply["lights"][0]["measured"], true),
+                other => panic!("kind {kind}, shadow size {shadow_size}: {other:?}"),
+            }
         }
     }
 
