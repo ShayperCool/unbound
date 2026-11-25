@@ -4,6 +4,10 @@
   ],
   "summary": "apvlighting: .*",
   "engine_paths": [
+    "managed/UnityEngine/Graphics/CommandBuffer.cs",
+    "managed/UnityEngine/Graphics/Buffers.cs",
+    "managed/UnityEngine/Graphics/Shader.cs",
+    "crates/unbound-app/src/render/compiled.rs",
     "managed/UnityEngine/Graphics/TextureArrays.cs",
     "managed/UnityEngine/Graphics/GraphicsFormats.cs",
     "managed/UnityEngine/Graphics/Immediate.cs",

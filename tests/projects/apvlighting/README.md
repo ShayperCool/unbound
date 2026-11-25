@@ -39,7 +39,8 @@ Play mode the probe adds dynamic objects (none takes part in the bake) and camer
   `occlusionOnlyReflectionNormalization` off, `animateSamplingNoise` off. The offset moves the
   lighting visibly; with this bake's probe spacing of 1 the scaled biases equal the plain ones,
   and without TAA URP passes frame index 0 for the noise, so those two leave the image as it is
-  (unmeasured); the normalization clamp's own effect is not separated from the offset's.
+  (unmeasured); no URP 17.0.4 shader reads the normalization clamp
+  (`GetReflectionProbeNormalizationFactor` is not called), so it cannot change the image.
 - `particles forward`, `particles forward plus`, `simple particles forward`: Particles/Lit and
   Particles/Simple Lit billboards where the grid's spheres are (z -1).
 - `room`: the room alone from a corner.

@@ -192,9 +192,10 @@ public sealed class ApvLightingProbe : MonoBehaviour
             Stage("shaders forward", near, row, 70f, k_ShadersLayer);
             Stage("shaders forward plus", near, row, 70f, k_ShadersLayer).GetUniversalAdditionalCameraData().SetRenderer(k_ForwardPlusRenderer);
 
-            // The row through a volume that overrides the other options the shaders read: the
-            // sampling position offset, the biases scaled by the probe spacing, the reflection
-            // normalization's upper clamp, and no animated noise.
+            // The row through a volume that overrides the other options URP passes to the
+            // shaders: the sampling position offset, the biases scaled by the probe spacing, the
+            // reflection normalization's upper clamp (no URP 17.0.4 shader reads it), and no
+            // animated noise.
             var shaderOptions = Stage("shaders options", near, row, 70f, k_ShadersLayer);
             shaderOptions.GetUniversalAdditionalCameraData().volumeLayerMask = 1 << k_MoreOptionsVolumeLayer;
             var more = Options("more options volume", k_MoreOptionsVolumeLayer);
