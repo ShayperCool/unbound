@@ -1,0 +1,18 @@
+{
+  "commands": [
+    "python3 tests/projects/animrecorder/run.py gate"
+  ],
+  "summary": "animrecorder: [0-9]+/[0-9]+ values match.*",
+  "engine_paths": [
+    "managed/UnityEngine/Editor/GameObjectRecorder.cs",
+    "managed/UnityEngine/Animation/KeyframeReduction.cs",
+    "managed/UnityEngine/Editor/AnimationUtility.cs",
+    "managed/UnityEngine/Editor/AnimationUtilityEdits.cs",
+    "managed/UnityEngine/Editor/ClosestEulerAngles.cs",
+    "managed/UnityEngine/Math/AnimationCurve.cs",
+    "tests/projects/animrecorder/",
+    "tests/projects/analyticssession/ProjectSettings/",
+    "tests/projects/imguiskin/Assets/Editor/",
+    "tests/projects/imguiskin/Assets/Scenes/"
+  ]
+}
