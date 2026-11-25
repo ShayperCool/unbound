@@ -119,7 +119,11 @@ namespace Unbound.Runtime
             s_Generation++;
             if (s_Generation > 1) Unbound.Runtime.Playables.PlayableGraphData.ForgetAll();
             s_Context = new GameLoadContext($"Unbound.Game.{s_Generation}", facadeDir, assemblies);
-            if (s_Generation == 1) AssemblyLoadContext.Default.Resolving += ResolveFromDefault;
+            if (s_Generation == 1)
+            {
+                AssemblyLoadContext.Default.Resolving += ResolveFromDefault;
+                LoadModuleFacades(facadeDir);
+            }
             s_Assemblies.Clear();
             s_Descriptions = assemblies;
             s_SourcePaths.Clear();
@@ -153,6 +157,22 @@ namespace Unbound.Runtime
                     s_SourcePaths[assembly] = a.SourcePath ?? a.Dll;
                 }
                 IndexScripts(assembly, a);
+            }
+        }
+
+        /// <summary>Every module assembly of the release is loaded in the Editor's domain: code that
+        /// looks a module up among the loaded assemblies by name (AppDomain.GetAssemblies) finds its
+        /// facade, whose types resolve to Unbound's. Loaded once, into the first context, which stays.</summary>
+        static void LoadModuleFacades(string facadeDir)
+        {
+            if (string.IsNullOrEmpty(facadeDir) || !Directory.Exists(facadeDir)) return;
+            foreach (var file in Directory.GetFiles(facadeDir, "*.dll"))
+            {
+                try { s_Context.LoadFromAssemblyName(new AssemblyName(Path.GetFileNameWithoutExtension(file))); }
+                catch (Exception e) when (e is IOException || e is BadImageFormatException)
+                {
+                    Debug.LogError($"Unbound: could not load the module facade {Path.GetFileName(file)}: {e.Message}");
+                }
             }
         }
 
