@@ -837,6 +837,14 @@ namespace UnityEngine
             ScriptSet(nameID);
         }
 
+        /// <summary>A texture's scale or offset set from script (measured: the scale; the offset by
+        /// the same rule); a variant then overrides it.</summary>
+        void ScriptSetScaleOffset(int nameID)
+        {
+            if (Compat.MaterialScriptNamesMeasured) ScriptSetTexture(nameID);
+            else m_Own?.Add(nameID);
+        }
+
         // Cyclic variant chains are unsupported. Fail explicitly instead of hanging an API call.
         IEnumerable<Material> Ancestors()
         {
@@ -1182,7 +1190,8 @@ namespace UnityEngine
         /// <summary>An array set from script is a property of its element's kind, whose getter
         /// reads its first element (matches the Unity 6000.0.71f1 Editor, tests/projects/materialnames
         /// set.has._Fa, set.get._Va).</summary>
-        object ScriptSetArray(int nameID) => m_Arrays.Count == 0 || !m_ScriptSet.Contains(nameID) ? null : ScriptArray(nameID);
+        object ScriptSetArray(int nameID) =>
+            m_Arrays.Count == 0 || !m_ScriptSet.Contains(nameID) || !Compat.MaterialScriptNamesMeasured ? null : ScriptArray(nameID);
         /// <summary>Texture getters read every slot the material has, saved for another shader too.</summary>
         bool HasTextureSlot(int nameID) => IsTexture(nameID) || m_Textures.ContainsKey(nameID) || m_TextureNames.Contains(nameID);
 
@@ -1240,7 +1249,7 @@ namespace UnityEngine
                     }
                 }
             List<int> scripted = null;
-            foreach (var id in m_ScriptSet)
+            foreach (var id in Compat.MaterialScriptNamesMeasured ? m_ScriptSet : s_NoIds)
             {
                 if (Declared(id) != null) continue;
                 switch (type)
@@ -1269,6 +1278,8 @@ namespace UnityEngine
             return names.ToArray();
         }
 
+        static readonly HashSet<int> s_NoIds = new HashSet<int>();
+
         /// <summary>The array set from script for a name, if any (null for an empty one).</summary>
         object ScriptArray(int nameID) =>
             m_Arrays.TryGetValue(nameID, out var array) && array is Array { Length: > 0 } ? array : null;
@@ -1286,7 +1297,7 @@ namespace UnityEngine
         /// </summary>
         internal void ForgetScriptNamesOutsideShader()
         {
-            if (m_Parent != null) return;
+            if (m_Parent != null || !Compat.MaterialScriptNamesMeasured) return;
             List<int> gone = null;
             foreach (var id in m_ScriptSet)
                 if (Declared(id) == null && !m_Buffers.ContainsKey(id)) (gone ??= new List<int>()).Add(id);
@@ -1545,7 +1556,8 @@ namespace UnityEngine
         /// for it, GetTexture and GetTexturePropertyNames do not (matches the Unity 6000.0.71f1
         /// Editor, tests/projects/materialnames set.get._Zt, set.texture_names).</summary>
         bool ScriptOnlyTexture(int nameID) =>
-            m_ScriptSet.Contains(nameID) && !m_TextureNames.Contains(nameID) && Declared(nameID) != ShaderPropertyType.Texture;
+            m_ScriptSet.Contains(nameID) && !m_TextureNames.Contains(nameID) && Declared(nameID) != ShaderPropertyType.Texture
+            && Compat.MaterialScriptNamesMeasured;
 
         TextureSlot Slot(int nameID)
         {
@@ -1573,7 +1585,7 @@ namespace UnityEngine
         public void SetTextureOffset(int nameID, Vector2 value)
         {
             TouchSheet();
-            ScriptSetTexture(nameID);
+            ScriptSetScaleOffset(nameID);
             Slot(nameID).Offset = value;
             StopMeasuringPropertyStorage();
             MarkDirty();
@@ -1584,7 +1596,7 @@ namespace UnityEngine
         public void SetTextureScale(int nameID, Vector2 value)
         {
             TouchSheet();
-            ScriptSetTexture(nameID);
+            ScriptSetScaleOffset(nameID);
             Slot(nameID).Scale = value;
             StopMeasuringPropertyStorage();
             MarkDirty();
@@ -1711,7 +1723,7 @@ namespace UnityEngine
         {
             PropertyArrays.Set(m_Arrays, nameID, values);
             // A property of the material from here on, not an override of a variant (unmeasured).
-            m_ScriptSet.Add(nameID);
+            if (Compat.MaterialScriptNamesMeasured) m_ScriptSet.Add(nameID);
             StopMeasuringPropertyStorage();
             MarkDirty();
         }

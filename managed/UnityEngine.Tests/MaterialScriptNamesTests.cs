@@ -18,11 +18,13 @@ namespace UnityEngine.Tests
         readonly List<Object> m_Owned = new List<Object>();
         readonly ILogHandler m_Handler = Debug.unityLogger.logHandler;
         readonly Capture m_Logs = new Capture();
+        readonly IDisposable m_Release = TestRelease.Pin(TestRelease.Measured);
 
         public MaterialScriptNamesTests() { Debug.unityLogger.logHandler = m_Logs; }
 
         public void Dispose()
         {
+            m_Release.Dispose();
             Debug.unityLogger.logHandler = m_Handler;
             foreach (var o in m_Owned) if (o) Object.DestroyImmediate(o, true);
         }
@@ -199,6 +201,25 @@ namespace UnityEngine.Tests
             m.shader = other;
             Assert.Equal(2f, m.GetFloat("_Saved"));
             Assert.Equal(8f, m.GetFloat("_Fresh"));
+        }
+
+        [Fact]
+        public void AnUnmeasuredReleaseKeepsThePreviousModel()
+        {
+            using var release = TestRelease.Pin(TestRelease.Unmeasured);
+            var m = Own(new Material(Names()));
+            string f = Unique("_F"), arr = Unique("_A"), tex = Unique("_T");
+            m.SetFloat(f, 6);
+            m.SetFloatArray(arr, new[] { 1f });
+            m.SetTexture(tex, Texture2D.whiteTexture);
+            Assert.Equal(new[] { "_Glossiness" }, m.GetPropertyNames(MaterialPropertyType.Float));
+            Assert.False(m.HasFloat(arr));
+            Assert.Same(Texture2D.whiteTexture, m.GetTexture(tex));
+            var copy = Own(new Material(m));
+            Assert.Equal(6f, copy.GetFloat(f));
+            AssetFiles.Written(new Object[] { m });
+            Assert.Equal(6f, m.GetFloat(f));
+            Assert.Empty(m_Logs.Errors);
         }
 
         sealed class One : IReferenceResolver

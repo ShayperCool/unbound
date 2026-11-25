@@ -612,6 +612,12 @@ namespace Unbound.Runtime
         /// on Unity 6000.0.71f1. Other releases retain the unmeasured previous wrapper.</summary>
         internal static bool MaterialReloadWrappersMeasured => Family == ReleaseFamily.Unity6000_0;
 
+        /// <summary>The names a script sets on a material for which its shader has no property:
+        /// listed by GetPropertyNames, arrays and texture scales among them, and dropped by a copy
+        /// and a save (tests/projects/materialnames on Unity 6000.0.71f1). Other releases retain the
+        /// unmeasured previous model: unlisted, arrays no property, kept through copies and saves.</summary>
+        internal static bool MaterialScriptNamesMeasured => Family == ReleaseFamily.Unity6000_0;
+
         /// <summary>Captured exception formatting, tests/projects/stackcapture on 6000.0.71f1.
         /// Other releases retain their unmeasured previous exception text.</summary>
         internal static bool CapturedStackTracesMeasured => Family == ReleaseFamily.Unity6000_0;
