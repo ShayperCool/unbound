@@ -79,6 +79,13 @@ a ground, a cube and a sphere, and lights with hard shadows:
 - `DirectionalMixed`: the coloured scene under a sun and an ambient colour, two bounces, 16
   indirect and 64 environment samples with picked directions: a texel's paths and its sky
   samples each weigh as one ray in where its light comes from, whatever their numbers.
+- `DirectionalShadowmask`, `DirectionalSubtractive`: directional lightmaps in the Shadowmask
+  and Subtractive Lighting Modes: the coloured scene under a mixed sun, a mixed and a baked
+  point light, one bounce.
+- `DirectionalFaint`, `DirectionalFainter`, `DirectionalFaintDirect`: directional lightmaps
+  under a faint sun (0.0001 with 16 indirect samples; 0.00001 with 64; 0.0001 with 16 and 64
+  Direct Samples): the luminance summed over a texel's rays (its direct light's over Direct
+  Samples) divides its directions by no less than 0.001, so its mean direction is shorter.
 - `Masks`, `MasksIndirect`, `MasksSuns`: mixed lights and their shadowmask channels: two suns
   (channels 0 and 1), five point lights in a row whose ranges overlap (two take the last two
   channels, the other three are baked in the Shadowmask Lighting Mode and stay mixed without a
@@ -407,9 +414,10 @@ shadows (a Baked Shadow Angle or Radius: baked hard), lights whose intensity mul
 linear colour (GraphicsSettings.lightsUseLinearIntensity). Not done
 and not said: materials that let light through stop it.
 
-Not measured, of where the light comes from: mixed lights in the Shadowmask and Subtractive
-modes, ambient occlusion and emission in a directional bake, a project with a render pipeline
-asset.
+Not measured, of where the light comes from: ambient occlusion and emission in a directional
+bake, a project with a render pipeline asset, the sky's light of a faint texel (whether its
+rays add to the paths' in the sum the least weight is held against), Direct Samples that are
+no power of two or fewer than a texel's samples.
 
 Not measured, of light probes: groups of prefab instances or of several scenes (their order),
 negative file IDs, probes beyond the light grid's 20 regions a side, a mixed light baked for
