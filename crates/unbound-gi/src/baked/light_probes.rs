@@ -552,6 +552,10 @@ mod tests {
         let ringing = coefficients(&direct, &indirect, 1.0, true);
         assert_eq!(ringing[0], made[0]);
         assert!(ringing[3].abs() < made[3].abs());
+        // The Indirect Intensity multiplies the indirect light alone.
+        let twice = coefficients(&direct, &indirect, 2.0, false);
+        assert_eq!(twice[0], made[0]);
+        assert_eq!(twice[2 * 9 + 2], 4.0 * NORMALIZE[3]);
     }
 
     #[test]

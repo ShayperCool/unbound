@@ -257,6 +257,34 @@ mod tests {
         assert_eq!(out, vec![[1.75, 1.75, 1.75, 1.0], [0.0; 4]]);
     }
 
+    /// The Indirect Intensity multiplies the indirect and sky's light, not the direct light,
+    /// unfiltered and filtered alike.
+    #[test]
+    fn the_indirect_intensity_multiplies_the_indirect_and_skys_light() {
+        let used = [true];
+        let direct = lit(&[1.0]);
+        let indirect = lit(&[0.25]);
+        let environment = lit(&[0.5]);
+        let buffers = Buffers {
+            width: 1,
+            height: 1,
+            used: &used,
+            direct: &direct,
+            indirect: Some(&indirect),
+            environment: Some(&environment),
+            validity: None,
+            charts: &[0],
+            normals: None,
+            indirect_scale: 2.0,
+        };
+        for filtering in [None, Some(Filtering::default())] {
+            let out = composite(&buffers, 0.9, 0, filtering, None)
+                .unwrap()
+                .lightmap;
+            assert_eq!(out, vec![[2.5, 2.5, 2.5, 1.0]], "{filtering:?}");
+        }
+    }
+
     #[test]
     fn a_texel_whose_rays_met_back_faces_takes_its_neighbours_light_ring_by_ring() {
         // A row of five used texels: the last two met back faces (half of their rays), the
