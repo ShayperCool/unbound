@@ -1,0 +1,3 @@
+{
+  "The Editor sends OnFocus twice when GetWindow shows a new window (window/getWindow, right after another window of the type was closed) and once for a plain Show (window/afterShow); Unity's C# makes the same Show call in both, so the cause is not established (a focus handoff from the closed window is one candidate). Unbound sends it once at the show, as for a plain Show.": ["window/getWindow"]
+}

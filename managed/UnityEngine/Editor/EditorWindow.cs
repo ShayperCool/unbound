@@ -24,7 +24,6 @@ namespace UnityEditor
         bool m_Shown;
         VisualElement m_UIRootElement;
         Panel m_Panel;
-        int m_ShowFocusFrame = -1;
 
         // Creation-time values recorded by defaultstate on 6000.0.71f1.
         const float DefaultWindowWidth = 320f, DefaultWindowHeight = 550f, DefaultMinimumSize = 50f;
@@ -153,8 +152,9 @@ namespace UnityEditor
         public static T CreateWindow<T>(string title, params Type[] desiredDockNextTo) where T : EditorWindow
         {
             var window = (T)Create(typeof(T), title);
+            // Unity's C# shows the new window, which focuses it.
             window.Show();
-            window.Focus();
+            if (!Compat.EditorWindowGuiMeasured) window.Focus();
             return window;
         }
 
@@ -196,15 +196,28 @@ namespace UnityEditor
                     window = w;
                     break;
                 }
-            if (window == null) window = Create(type, title);
+            bool created = window == null;
+            if (created) window = Create(type, title);
             else if (title != null) window.titleContent = new GUIContent(title);
             if (rect.HasValue)
             {
                 window.position = rect.Value;
                 window.minSize = window.maxSize = rect.Value.size;
             }
-            window.Show();
-            if (focus) window.Focus();
+            if (!Compat.EditorWindowGuiMeasured)
+            {
+                window.Show();
+                if (focus) window.Focus();
+                return window;
+            }
+            // Unity's C#: a new window is shown (which focuses it); an open one, when focus is
+            // asked, is shown (by GetWindow) and focused.
+            if (created) window.Show();
+            else if (focus)
+            {
+                if (!rect.HasValue) window.Show();
+                window.Focus();
+            }
             return window;
         }
 
@@ -232,7 +245,6 @@ namespace UnityEditor
             m_Panel.visualTree.Add(rootVisualElement);
             Message(this, "CreateGUI");
             Focus();
-            m_ShowFocusFrame = Time.frameCount;
         }
 
         public void Show() => Open();
@@ -257,22 +269,16 @@ namespace UnityEditor
             Open();
         }
 
-        /// <summary>Focuses the window. A window focused already gets no OnFocus, except once from
-        /// the first Focus after it was shown in the same frame (measured: tests/projects/
-        /// editorwindowgui window.getWindow, OnFocus at the show and at GetWindow's focus, and
-        /// window.laterFrame, none for GetWindow or Focus in a later frame).</summary>
+        /// <summary>Focuses the window; a focused window gets no OnFocus again (measured:
+        /// tests/projects/editorwindowgui window.laterFrame).</summary>
         public void Focus()
         {
-            if (s_Focused == this)
-            {
-                if (m_ShowFocusFrame != Time.frameCount) return;
-                m_ShowFocusFrame = -1;
-            }
+            if (s_Focused == this) return;
             var previous = s_Focused;
             s_Focused = this;
-            if (previous != this && previous != null) Message(previous, "OnLostFocus");
+            if (previous != null) Message(previous, "OnLostFocus");
             Message(this, "OnFocus");
-            if (previous != this) windowFocusChanged?.Invoke();
+            windowFocusChanged?.Invoke();
         }
 
         static void Message(EditorWindow window, string name)

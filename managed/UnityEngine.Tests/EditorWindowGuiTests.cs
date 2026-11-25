@@ -41,15 +41,27 @@ namespace UnityEngine.Tests
             window.Show();
             Assert.Equal(new[] { "OnEnable", "CreateGUI:True", "OnFocus" }, GuiProbeWindow.Calls);
             Assert.Equal(ContextType.Editor, root.panel.contextType);
+            // A focused window gets no OnFocus again (window.laterFrame).
             window.Focus();
-            Assert.Equal(new[] { "OnEnable", "CreateGUI:True", "OnFocus", "OnFocus" }, GuiProbeWindow.Calls);
-            // Only the first Focus after the show sends it again.
-            window.Focus();
-            Assert.Equal(new[] { "OnEnable", "CreateGUI:True", "OnFocus", "OnFocus" }, GuiProbeWindow.Calls);
+            Assert.Equal(new[] { "OnEnable", "CreateGUI:True", "OnFocus" }, GuiProbeWindow.Calls);
             window.Close();
             Assert.Null(root.panel);
             Assert.Null(root.parent);
             Assert.Equal(1, root.childCount);
+        }
+
+        [Fact]
+        public void ATexturedPolyLineReadsTheTextureInEveryEvent()
+        {
+            var previous = Event.current;
+            Event.current = new Event { type = EventType.Layout };
+            try
+            {
+                // Unity's C# reads lineTex.height before its repaint check.
+                Assert.Throws<NullReferenceException>(() => Handles.DrawAAPolyLine((Texture2D)null, Vector3.zero, Vector3.one));
+                Handles.DrawAAPolyLine((Texture2D)null, 2f, Vector3.zero, Vector3.one);
+            }
+            finally { Event.current = previous; }
         }
 
         [Fact]
