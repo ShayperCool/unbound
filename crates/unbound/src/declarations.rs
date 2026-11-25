@@ -800,7 +800,9 @@ impl State {
     /// whether the device runs them (`runs`). The passes are the ones the device runs (a pass
     /// whose program excludes it, or a `UsePass` of such a pass, is not among them, as on the
     /// Editor's OpenGL Core device), and a SubShader the device runs no pass of is not among the
-    /// SubShaders (tests/projects/graphicsgaps select.restricted.*, OpenGL Core and Vulkan); one
+    /// SubShaders (tests/projects/graphicsgaps select.restricted.*, OpenGL Core and Vulkan) unless
+    /// the device runs none of the shader's SubShaders (as a Fallback: all are kept, `runs` null,
+    /// unmeasured); one
     /// whose passes have geometry or tessellation stages runs as the Editor's device runs them
     /// ([`unbound_app::shaderlab::SubShader::device_runs`]); `runs` is null where that is not
     /// known (unmeasured stages, [`State::pass_runs_unknown`], a SubShader left without passes by
