@@ -23,6 +23,7 @@ namespace UnityEditor
                 case SerializedPropertyType.Enum:
                 case SerializedPropertyType.ObjectReference:
                 case SerializedPropertyType.LayerMask:
+                case SerializedPropertyType.RenderingLayerMask:
                 case SerializedPropertyType.Character:
                 case SerializedPropertyType.AnimationCurve:
                 case SerializedPropertyType.Gradient:
@@ -51,6 +52,7 @@ namespace UnityEditor
                 case SerializedPropertyType.RectInt:
                 case SerializedPropertyType.Bounds:
                 case SerializedPropertyType.BoundsInt:
+                case SerializedPropertyType.RenderingLayerMask:
                     break;
                 default:
                     if (property.hasVisibleChildren) return false;
@@ -86,6 +88,9 @@ namespace UnityEditor
                     break;
                 case SerializedPropertyType.LayerMask:
                     LayerMaskPropertyField(position, property, label);
+                    break;
+                case SerializedPropertyType.RenderingLayerMask:
+                    RenderingLayerMaskField(position, label, property);
                     break;
                 case SerializedPropertyType.Character:
                 {
