@@ -22,6 +22,11 @@ namespace UnityEngine
         static readonly List<Entry> s_Stack = new List<Entry>();
         static Matrix4x4 s_Matrix = Matrix4x4.identity;
         static Matrix4x4 s_Inverse = Matrix4x4.identity;
+        // The mouse position of the event the pass started with, in window points: every clip and
+        // matrix change gives the current event this position in its new coordinates, so an event
+        // that replaces Event.current during the pass gets the pass's mouse position inside a clip
+        // (matches the Unity 6000.0.71f1 Editor, tests/projects/imguitreeview script/*).
+        static Vector2 s_WindowMouse;
 
         /// <summary>Starts a GUI pass over the whole screen.</summary>
         internal static void Begin(Rect screen)
@@ -30,6 +35,7 @@ namespace UnityEngine
             s_Stack.Add(new Entry { Rect = screen, Visible = screen, Offset = Vector2.zero });
             s_Matrix = Matrix4x4.identity;
             s_Inverse = Matrix4x4.identity;
+            s_WindowMouse = Event.current != null ? Event.current.mousePosition : default;
         }
 
         /// <summary>Starts the GUI of a UI Toolkit IMGUIContainer: its coordinates start at
@@ -41,6 +47,7 @@ namespace UnityEngine
             s_Stack.Add(new Entry { Rect = clip, Visible = clip, Offset = origin });
             s_Matrix = Matrix4x4.identity;
             s_Inverse = Matrix4x4.identity;
+            s_WindowMouse = Event.current != null ? Event.current.mousePosition + origin : default;
         }
 
         /// <summary>The clips and matrix of a GUI pass that another one interrupts.</summary>
@@ -48,9 +55,10 @@ namespace UnityEngine
         {
             internal object Stack;
             internal Matrix4x4 Matrix, Inverse;
+            internal Vector2 WindowMouse;
         }
 
-        internal static State Save() => new State { Stack = s_Stack.ToArray(), Matrix = s_Matrix, Inverse = s_Inverse };
+        internal static State Save() => new State { Stack = s_Stack.ToArray(), Matrix = s_Matrix, Inverse = s_Inverse, WindowMouse = s_WindowMouse };
 
         internal static void Restore(State state)
         {
@@ -58,6 +66,7 @@ namespace UnityEngine
             s_Stack.AddRange((Entry[])state.Stack);
             s_Matrix = state.Matrix;
             s_Inverse = state.Inverse;
+            s_WindowMouse = state.WindowMouse;
         }
 
         internal static int Depth => s_Stack.Count;
@@ -77,7 +86,7 @@ namespace UnityEngine
             var visible = Intersect(parent.Visible, abs);
             var entry = new Entry { Rect = abs, Visible = visible, Offset = abs.position + scrollOffset + renderOffset };
             s_Stack.Add(entry);
-            MoveMouse(parent.Offset - entry.Offset);
+            ApplyMouse();
         }
 
         internal static void Pop()
@@ -87,15 +96,15 @@ namespace UnityEngine
                 Debug.LogError("GUI Error: You are popping more GUIClips than you pushed. Make sure they are balanced.");
                 return;
             }
-            var top = s_Stack[s_Stack.Count - 1];
             s_Stack.RemoveAt(s_Stack.Count - 1);
-            MoveMouse(top.Offset - Top.Offset);
+            ApplyMouse();
         }
 
-        static void MoveMouse(Vector2 by)
+        /// <summary>Gives the current event the pass's mouse position in the current clip and matrix.</summary>
+        static void ApplyMouse()
         {
             var e = Event.current;
-            if (e != null) e.mousePosition += by;
+            if (e != null) e.mousePosition = Clip((Vector2)s_Inverse.MultiplyPoint(s_WindowMouse));
         }
 
         static Rect Intersect(Rect a, Rect b)
@@ -143,12 +152,9 @@ namespace UnityEngine
                 Debug.LogError("Ignoring invalid matrix assigned to GUI.matrix - the matrix needs to be invertible. Did you scale by 0 on Z-axis?");
                 return;
             }
-            var e = Event.current;
-            Vector2 screen = default;
-            if (e != null) screen = s_Matrix.MultiplyPoint(Unclip(e.mousePosition));
             s_Matrix = m;
             s_Inverse = m.inverse;
-            if (e != null) e.mousePosition = Clip((Vector2)s_Inverse.MultiplyPoint(screen));
+            ApplyMouse();
         }
 
         internal static Vector2 GUIToScreen(Vector2 local) => s_Matrix.MultiplyPoint(Unclip(local));

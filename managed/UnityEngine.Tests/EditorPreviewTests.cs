@@ -222,7 +222,6 @@ namespace UnityEngine.Tests
             {
                 if (Event.current.type != EventType.MouseDown) return;
                 Event.current.clickCount = clicks;
-                Event.current.mousePosition = at;
                 many.DrawPreview(area);
             });
             container.style.height = 300f;
@@ -232,9 +231,11 @@ namespace UnityEngine.Tests
             {
                 void Click()
                 {
+                    // (A clip gives the event the pass's own mouse position: the click is sent there.)
                     Selection.objects = new Object[0];
-                    Unbound.Runtime.GuiEvents.MousePosition = container.worldBound.center;
-                    IMGUIContainerTests.Send(container, MouseDownEvent.GetPooled(new Event { type = EventType.MouseDown, mousePosition = container.worldBound.center, clickCount = 1 }), out _);
+                    var point = container.worldBound.position + at;
+                    Unbound.Runtime.GuiEvents.MousePosition = point;
+                    IMGUIContainerTests.Send(container, MouseDownEvent.GetPooled(new Event { type = EventType.MouseDown, mousePosition = point, clickCount = 1 }), out _);
                 }
                 // The second of three squares of 82 points spans x from 112 to 195.
                 at = new Vector2(150f, 100f);
