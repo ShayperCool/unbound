@@ -381,4 +381,49 @@ mod tests {
         assert_eq!(out[2], [0.0, 0.0, 0.0, 0.5]);
         assert_eq!(out[3], [1.0, 0.0, 1.0, 1.0]);
     }
+
+    /// Where the lightmap is filtered, the shadowmask's three channels and its fourth are each
+    /// filtered as the direct light (here a Gaussian filter of radius 1), within their chart.
+    #[test]
+    fn a_filtered_lightmaps_shadowmask_is_filtered_as_its_direct_light() {
+        let used = [true; 4];
+        let b = Buffers {
+            width: 4,
+            height: 1,
+            used: &used,
+            validity: None,
+            direct: &[[0.0; 4]; 4],
+            indirect: None,
+            environment: None,
+        };
+        let mask = [
+            [1.0, 0.0, 0.0, 1.0],
+            [0.0, 0.0, 0.0, 0.0],
+            [0.0, 1.0, 0.0, 1.0],
+            [0.0, 1.0, 0.0, 1.0],
+        ];
+        let charts = [0, 0, 1, 1];
+        let post = Post {
+            width: 4,
+            height: 1,
+            charts: &charts,
+            normals: None,
+            denoiser: None,
+        };
+        let with = PartFiltering {
+            denoise: false,
+            filter: Some(PartFilter::Gaussian(1.0)),
+        };
+        let out = shadowmask(&b, &mask, 0.9, 0, Some((with, &post))).unwrap();
+        let k = super::super::filter::kernel(1.0);
+        let near = |a: f32, b: f32| (a - b).abs() < 1e-5;
+        // Chart 0: its two texels mix (first channel and fourth alike); chart 1 is uniform.
+        assert!(near(out[0][0], k[1] / (k[1] + k[2])), "{out:?}");
+        assert!(near(out[1][0], k[0] / (k[0] + k[1])), "{out:?}");
+        assert!(near(out[0][3], k[1] / (k[1] + k[2])), "{out:?}");
+        assert!(near(out[2][1], 1.0) && near(out[3][3], 1.0), "{out:?}");
+        // Unfiltered, the texels keep their own.
+        let plain = shadowmask(&b, &mask, 0.9, 0, None).unwrap();
+        assert_eq!(plain[0], [1.0, 0.0, 0.0, 1.0]);
+    }
 }
