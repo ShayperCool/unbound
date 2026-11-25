@@ -94,6 +94,31 @@ namespace Unbound.Tests
             Near(new[] { 0f, 0f, 0f, 1f }, group);
         }
 
+        /// <summary>Another renderer kind is not measured: its world bounds are boxed (a skinned
+        /// renderer's local bounds are its root bone's).</summary>
+        [Fact]
+        public void ASkinnedRendererCountsWithItsWorldBounds()
+        {
+            var root = new GameObject("LodGroupBoundsTests Skinned");
+            m_Owned.Add(root);
+            var cube = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            m_Owned.Add(cube);
+            var body = new GameObject("Body");
+            body.transform.SetParent(root.transform, false);
+            var hips = new GameObject("Hips");
+            hips.transform.SetParent(root.transform, false);
+            hips.transform.localPosition = new Vector3(0, 1, 0);
+            var skinned = body.AddComponent<SkinnedMeshRenderer>();
+            skinned.sharedMesh = cube.GetComponent<MeshFilter>().sharedMesh;
+            skinned.rootBone = hips.transform;
+            skinned.localBounds = new Bounds(Vector3.zero, new Vector3(0.6f, 1.8f, 0.4f));
+            var group = root.AddComponent<LODGroup>();
+            group.SetLODs(new[] { new LOD(0.5f, new Renderer[] { skinned }) });
+            var world = skinned.bounds;
+            Assert.Equal(world.center, group.localReferencePoint);
+            Assert.Equal(2f * Mathf.Max(world.extents.x, Mathf.Max(world.extents.y, world.extents.z)), group.size);
+        }
+
         [Fact]
         public void ACopiedGroupKeepsItsBounds()
         {

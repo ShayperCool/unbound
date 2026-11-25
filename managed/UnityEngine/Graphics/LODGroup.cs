@@ -246,12 +246,13 @@ namespace UnityEngine
         /// <summary>
         /// The size and reference point of the levels' renderers (matches the Unity 6000.0.71f1
         /// Editor, tests/projects/lodbounds): each renderer's local bounds carried into the group's
-        /// space (its corners through the group's world-to-local matrix times the renderer's
-        /// local-to-world one) as a box, the boxes joined one after another (each union's center
+        /// space (its corners through the group's world-to-local matrix times the matrix of the
+        /// renderer's bounds, its local-to-world one) as a box, the boxes joined one after another (each union's center
         /// and extents the halves of its corners' sum and difference); the reference point the
         /// box's center, the size its largest side. Disabled renderers and those of inactive
         /// objects count, missing ones do not; without any the point is zero and the size 1.
-        /// Not measured: renderers other than mesh renderers.
+        /// Not measured: renderers other than mesh renderers (their world bounds are boxed, with a
+        /// notice).
         /// </summary>
         public void RecalculateBounds()
         {
@@ -262,8 +263,23 @@ namespace UnityEngine
                 foreach (var r in lod.renderers ?? Array.Empty<Renderer>())
                 {
                     if (!r) continue;
-                    var local = r.localBounds;
-                    var toGroup = toLocal * r.transform.localToWorldMatrix;
+                    // A mesh renderer's local bounds through its bounds' matrix (measured); another
+                    // kind's world bounds, whose local bounds may be in another space (a skinned
+                    // renderer's root bone, a billboard's scale): not measured.
+                    Bounds local;
+                    Matrix4x4 toGroup;
+                    if (r.GetType() == typeof(MeshRenderer))
+                    {
+                        local = r.localBounds;
+                        toGroup = toLocal * r.BoundsMatrix;
+                    }
+                    else
+                    {
+                        Unbound.Runtime.Stubs.Ignored("LODGroup.RecalculateBounds of renderers other than mesh renderers",
+                            "boxes their world bounds in the group's space (measured for mesh renderers only)");
+                        local = r.bounds;
+                        toGroup = toLocal;
+                    }
                     Vector3 c = local.center, e = local.extents, min = default, max = default;
                     for (int i = 0; i < 8; i++)
                     {

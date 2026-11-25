@@ -76,9 +76,10 @@ namespace UnityEngine.Tests
             var group = b.Root.AddComponent<LODGroup>();
             group.fadeMode = LODFadeMode.SpeedTree;
             group.animateCrossFading = true;
+            // SetLODs recalculates the bounds (tests/projects/lodbounds counted.setlods): the group's own values after it.
+            group.SetLODs(new[] { new LOD(0.5f, new Renderer[] { renderer }) { fadeTransitionWidth = 0.25f }, new LOD(0.01f, new Renderer[0]) });
             group.localReferencePoint = new Vector3(0f, 0.5f, 0f);
             group.size = 1.25f;
-            group.SetLODs(new[] { new LOD(0.5f, new Renderer[] { renderer }) { fadeTransitionWidth = 0.25f }, new LOD(0.01f, new Renderer[0]) });
             var body = b.Root.AddComponent<Rigidbody>();
             body.isKinematic = true;
             body.useGravity = false;

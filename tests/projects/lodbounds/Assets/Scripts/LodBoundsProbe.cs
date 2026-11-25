@@ -9,8 +9,8 @@ using UnityEngine;
 /// <summary>
 /// Writes values.jsonl in $LODBOUNDS_OUT (tests/value_probe.py rows): for LODGroups of cube
 /// renderers placed with fractional positions, rotations and scales, what RecalculateBounds gives
-/// (the local reference point and size, as the bits of each float), and the inputs it works from
-/// (each renderer's bounds, the group's local-to-world and world-to-local matrices), also as bits.
+/// (the local reference point and size), and the inputs it works from (each renderer's bounds,
+/// the group's local-to-world and world-to-local matrices), as numbers compared within 4e-6.
 /// </summary>
 public class LodBoundsProbe : MonoBehaviour
 {
