@@ -903,6 +903,39 @@ public static class BuffersSetup
     /// by its brightness and without, in the Shadowmask Lighting Mode with a probe in a mixed
     /// spot light's cone; beside the probes' group, a disabled group and a group of an inactive
     /// object.</summary>
+    /// <summary>The scene of <c>Probes</c> (a sun, a point light, a mixed spot light, an
+    /// ambient colour, two bounces, light probes) with an Indirect Intensity of 2 and of 0.5,
+    /// and the coloured scene under a sun with one of 2 under the Auto filtering.</summary>
+    static void Intensities()
+    {
+        foreach (var (name, scale) in new[] { ("IntensityTwice", 2f), ("IntensityHalf", 0.5f) })
+        {
+            var scene = Lit(name);
+            var settings = Lightmapping.lightingSettings;
+            settings.indirectSampleCount = 64;
+            settings.environmentSampleCount = 64;
+            settings.maxBounces = 2;
+            settings.minBounces = 2;
+            settings.indirectScale = scale;
+            FlatSky();
+            NewLight("Sun", LightType.Directional, Vector3.zero, new Vector3(50f, -30f, 0f), new Color(1f, 0.9f, 0.8f), 1.5f);
+            NewLight("Bulb", LightType.Point, new Vector3(1.03f, 2.01f, -1.02f), Vector3.zero, new Color(1f, 0.6f, 0.3f), 2f).range = 6f;
+            var spot = NewLight("MixedSpot", LightType.Spot, new Vector3(-1.97f, 3.02f, 0.03f), new Vector3(60f, 90f, 0f), new Color(0.4f, 0.6f, 1f), 3f, LightmapBakeType.Mixed);
+            spot.range = 10f;
+            spot.spotAngle = 60f;
+            new GameObject("ProbeGroup").AddComponent<LightProbeGroup>().probePositions = new[] { new Vector3(0.1f, 0.5f, -1.2f), new Vector3(1.5f, 1.2f, 0.3f), new Vector3(-1.1f, 2.0f, 1.1f), new Vector3(0.3f, 0.2f, 2.2f), new Vector3(-2.2f, 0.7f, -0.4f), new Vector3(2.02f, 0.49f, 1.03f) };
+            Save(scene, name);
+        }
+        {
+            var scene = Coloured("IntensityAuto", 64, 1);
+            var settings = Lightmapping.lightingSettings;
+            settings.indirectScale = 2f;
+            settings.filteringMode = LightingSettings.FilterMode.Auto;
+            WhiteSun();
+            Save(scene, "IntensityAuto");
+        }
+    }
+
     static void ProbesSky()
     {
         foreach (var (name, picked) in new[] { ("ProbesSky", true), ("ProbesSkyEven", false) })
@@ -1209,7 +1242,7 @@ public static class BuffersSetup
                 ("ModeSubtractive", () => Modes("ModeSubtractive", MixedLightingMode.Subtractive)),
                 ("ModeShadowmask", () => Modes("ModeShadowmask", MixedLightingMode.Shadowmask)),
                 ("Bounce", Bounces), ("Glow", Glow), ("Roof", Roof), ("Textured", Textured), ("Levels", Levels), ("Sky", Skies), ("Spare", Spare),
-                ("SkyRealtime", RealtimeSkies), ("SpareEmpty", SpareEmpty), ("Spread", Spread), ("Far", Far), ("Masks", Masks), ("MasksBright", MasksBright), ("MasksEdges", MasksEdges), ("Probes", Probes), ("ProbesGrid", ProbesGrid), ("ProbesReach", ProbesReach), ("ProbesSky", ProbesSky), ("Directional", Directional), ("Lod", Lod), ("Filter", Filtered), ("Denoise", Denoised),
+                ("SkyRealtime", RealtimeSkies), ("SpareEmpty", SpareEmpty), ("Spread", Spread), ("Far", Far), ("Masks", Masks), ("MasksBright", MasksBright), ("MasksEdges", MasksEdges), ("Probes", Probes), ("ProbesGrid", ProbesGrid), ("ProbesReach", ProbesReach), ("ProbesSky", ProbesSky), ("Directional", Directional), ("Lod", Lod), ("Filter", Filtered), ("Denoise", Denoised), ("Intensity", Intensities),
             };
             var only = Environment.GetEnvironmentVariable("BAKED_BUFFERS_SCENES");
             var wanted = string.IsNullOrEmpty(only) ? null : new HashSet<string>(only.Split(','));
