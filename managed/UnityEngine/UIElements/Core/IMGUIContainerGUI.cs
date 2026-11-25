@@ -105,7 +105,6 @@ namespace UnityEngine.UIElements
             evt.mousePosition = this.WorldToLocal(Unbound.Runtime.GuiEvents.MousePosition);
             var outer = GUIUtility.BeginContainerGUI(Scope, cache, origin, clip, nested: outerEvent != null, skinMode: (int)m_ContextType);
             GUI.enabled = enabledInHierarchy;
-            if (m_ContextType == ContextType.Editor) UnityEditor.EditorStyles.Loaded = true;
             var type = evt.type;
             if (type != EventType.Layout) ApplyFocusEvents();
             bool exited = false;

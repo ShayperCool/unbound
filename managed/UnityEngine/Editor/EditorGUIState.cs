@@ -268,7 +268,7 @@ namespace UnityEditor
         public static Rect PrefixLabel(Rect totalPosition, GUIContent label, GUIStyle style) => PrefixLabel(totalPosition, 0, label, style);
 
         internal static GUIStyle DefaultPrefixLabelStyle =>
-            Compat.InspectorGuiStylesMeasured && Event.current != null ? EditorStyles.label : null;
+            Compat.InspectorGuiStylesMeasured ? EditorStyles.label : null;
 
         public static Rect PrefixLabel(Rect totalPosition, int id, GUIContent label) =>
             PrefixLabel(totalPosition, id, label, DefaultPrefixLabelStyle);
@@ -280,7 +280,9 @@ namespace UnityEditor
                 Stubs.NotImplemented("UnityEditor.EditorGUI.PrefixLabel");
                 return default;
             }
-            RequireGUI();
+            // As Unity's: a label for the next control (id 0) waits for that control, also outside
+            // OnGUI (tests/projects/editorui EditorGUI.PrefixLabel, windowed Editor).
+            if (EditorGUIControls.HasLabelContent(label) && (id != 0 || label == null)) RequireGUI();
             return EditorGUIControls.PrefixLabel(totalPosition, id, label, style);
         }
 
@@ -297,7 +299,7 @@ namespace UnityEditor
                 Stubs.NotImplemented("UnityEditor.EditorGUI.HandlePrefixLabel");
                 return;
             }
-            RequireGUI();
+            if (id != 0 || label == null) RequireGUI();
             EditorGUIControls.HandlePrefixLabel(labelPosition, label, id, style);
         }
 
@@ -630,7 +632,17 @@ namespace UnityEditor
 
         internal static void CompletePendingPrefixLabel(int id)
         {
-            if (!s_HasPendingPrefix || Event.current == null) return;
+            if (!s_HasPendingPrefix) return;
+            if (Event.current == null)
+            {
+                // Outside OnGUI the label cannot be drawn: as in the Editor, each control id taken
+                // then logs the NullReferenceException, the label stays pending and GUI.color keeps
+                // the label's (tests/projects/editorui Handles.PositionHandle, Handles.Button).
+                if (string.IsNullOrEmpty(s_PendingPrefixContent.text)) { s_HasPendingPrefix = false; return; }
+                GUI.color = s_PendingPrefixColor;
+                Debug.LogException(new NullReferenceException("Object reference not set to an instance of an object"));
+                return;
+            }
             var style = s_PendingPrefixStyle;
             s_HasPendingPrefix = false;
             s_PendingPrefixStyle = null;
@@ -937,15 +949,13 @@ namespace UnityEditor
         static GUIStyle s_LightHelpBox;
         static GUIStyle s_DarkHelpBox;
 
-        internal static bool HasInspectorStyles => Compat.InspectorGuiStylesMeasured && Event.current != null;
+        /// <summary>Whether the styles are there: in the interactive Editor Unbound plays as, the
+        /// Editor's windows have made them before any game code runs, so also outside a GUI pass
+        /// (the windowed Editor: tests/projects/editorui EditorStyles.*, editorvaluefields and
+        /// editormultifields outside/*).</summary>
+        internal static bool HasInspectorStyles => Compat.InspectorGuiStylesMeasured;
 
-        /// <summary>An Editor GUI pass has run (an Editor-context IMGUIContainer's): from then on
-        /// what the styles decide without their fonts is known outside a GUI pass too
-        /// (tests/projects/imguicontainer builtin.outsideGUI).</summary>
-        internal static bool Loaded;
-
-        /// <summary>Whether the styles are there: inside a GUI pass, or after an Editor one ran.</summary>
-        internal static bool Available => Compat.InspectorGuiStylesMeasured && (Event.current != null || Loaded);
+        internal static bool Available => HasInspectorStyles;
 
         static GUIStyle s_InspectorHorizontalDefaultMargins;
         static GUIStyle s_InspectorDefaultMargins;
@@ -967,8 +977,8 @@ namespace UnityEditor
                     : s_LightLabel ??= CreateInspectorLabel(dark: false, bold: false);
             }
         }
-        public static GUIStyle miniLabel => Style();
-        public static GUIStyle largeLabel => Style();
+        public static GUIStyle miniLabel => SkinStyle("MiniLabel");
+        public static GUIStyle largeLabel => SkinStyle("LargeLabel");
         public static GUIStyle boldLabel
         {
             get
@@ -979,12 +989,35 @@ namespace UnityEditor
                     : s_LightBoldLabel ??= CreateInspectorLabel(dark: false, bold: true);
             }
         }
-        public static GUIStyle miniBoldLabel => Style();
-        public static GUIStyle centeredGreyMiniLabel => Style();
-        public static GUIStyle wordWrappedMiniLabel => Style();
-        public static GUIStyle wordWrappedLabel => Style();
-        public static GUIStyle linkLabel => Style();
-        public static GUIStyle whiteLabel => Style();
+        public static GUIStyle miniBoldLabel => SkinStyle("MiniBoldLabel");
+        static GUIStyle s_CenteredGreyMiniLabel;
+        static GUIStyle s_CenteredGreyMiniLabelSource;
+
+        /// <summary>Unity's: the mini label centred, grey in every state but onNormal.</summary>
+        public static GUIStyle centeredGreyMiniLabel
+        {
+            get
+            {
+                var source = miniLabel;
+                if (s_CenteredGreyMiniLabel == null || s_CenteredGreyMiniLabelSource != source)
+                {
+                    s_CenteredGreyMiniLabelSource = source;
+                    s_CenteredGreyMiniLabel = new GUIStyle(source)
+                    {
+                        alignment = TextAnchor.MiddleCenter,
+                        normal = { textColor = Color.grey },
+                        hover = { textColor = Color.grey },
+                        active = { textColor = Color.grey },
+                        focused = { textColor = Color.grey },
+                    };
+                }
+                return s_CenteredGreyMiniLabel;
+            }
+        }
+        public static GUIStyle wordWrappedMiniLabel => SkinStyle("WordWrappedMiniLabel");
+        public static GUIStyle wordWrappedLabel => SkinStyle("WordWrappedLabel");
+        public static GUIStyle linkLabel => SkinStyle("LinkLabel");
+        public static GUIStyle whiteLabel => SkinStyle("WhiteLabel");
         public static GUIStyle textField => HasInspectorStyles ? TextFieldStyle : Style();
         public static GUIStyle textArea => HasInspectorStyles ? TextAreaStyle : Style();
         public static GUIStyle numberField => HasInspectorStyles ? TextFieldStyle : Style();
@@ -1062,9 +1095,9 @@ namespace UnityEditor
                     : s_LightToggle ??= CreateToggle(dark: false);
             }
         }
-        public static GUIStyle radioButton => Style();
-        public static GUIStyle foldout => Style();
-        public static GUIStyle foldoutHeader => Style();
+        public static GUIStyle radioButton => SkinStyle("Radio");
+        public static GUIStyle foldout => SkinStyle("Foldout");
+        public static GUIStyle foldoutHeader => SkinStyle("FoldoutHeader");
         public static GUIStyle helpBox
         {
             get
@@ -1075,17 +1108,21 @@ namespace UnityEditor
                     : s_LightHelpBox ??= CreateHelpBox(dark: false);
             }
         }
-        public static GUIStyle toolbar => Style();
-        public static GUIStyle toolbarButton => Style();
-        public static GUIStyle toolbarDropDown => Style();
-        public static GUIStyle toolbarSearchField => Style();
-        public static GUIStyle miniButton => Style();
-        public static GUIStyle miniButtonLeft => Style();
-        public static GUIStyle selectionRect => Style();
+        public static GUIStyle toolbar => SkinStyle("toolbar");
+        public static GUIStyle toolbarButton => SkinStyle("toolbarbutton");
+        public static GUIStyle toolbarDropDown => SkinStyle("toolbarDropDown");
+        public static GUIStyle toolbarSearchField => SkinStyle("ToolbarSearchTextField");
+        public static GUIStyle miniButton => SkinStyle("miniButton");
+        public static GUIStyle miniButtonLeft => SkinStyle("miniButtonLeft");
+        public static GUIStyle selectionRect => SkinStyle("selectionRect");
         /// <summary>The inspector's margins: 18 points left, 4 right, 4 at the top.</summary>
         public static GUIStyle inspectorDefaultMargins =>
             HasInspectorStyles ? s_InspectorDefaultMargins ??= new GUIStyle { padding = new RectOffset(18, 4, 4, 0) } : Style();
-        public static GUIStyle inspectorFullWidthMargins => Style();
+        static GUIStyle s_InspectorFullWidthMargins;
+
+        /// <summary>Unity's full-width margins: the right padding on both sides, one more on the left.</summary>
+        public static GUIStyle inspectorFullWidthMargins =>
+            HasInspectorStyles ? s_InspectorFullWidthMargins ??= new GUIStyle { padding = new RectOffset(5, 4, 0, 0) } : Style();
 
         /// <summary>The Editor's UI font (its fonts load without a window).</summary>
         public static Font standardFont => EditorFonts.Standard;

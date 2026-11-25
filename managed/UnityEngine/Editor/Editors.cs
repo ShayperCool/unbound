@@ -495,14 +495,36 @@ namespace UnityEditor
 
         public static void Label(Vector3 position, string text) => DrawLabel();
 
+        // Unity's handle id hints (Handles.cs).
+        internal static int s_xAxisMoveHandleHash = "xAxisFreeMoveHandleHash".GetHashCode();
+        internal static int s_yAxisMoveHandleHash = "yAxisFreeMoveHandleHash".GetHashCode();
+        internal static int s_zAxisMoveHandleHash = "zAxisFreeMoveHandleHash".GetHashCode();
+        internal static int s_FreeMoveHandleHash = "FreeMoveHandleHash".GetHashCode();
+        internal static int s_xzAxisMoveHandleHash = "xzAxisFreeMoveHandleHash".GetHashCode();
+        internal static int s_xyAxisMoveHandleHash = "xyAxisFreeMoveHandleHash".GetHashCode();
+        internal static int s_yzAxisMoveHandleHash = "yzAxisFreeMoveHandleHash".GetHashCode();
+        internal static int s_ButtonHash = "ButtonHash".GetHashCode();
+
+        /// <summary>As Unity's: the handle takes its seven control ids (PositionHandleIds.default),
+        /// then needs a scene view's GUI (tests/projects/editorui Handles.PositionHandle: outside
+        /// OnGUI each id logs a pending prefix label's exception before the handle throws).</summary>
         public static Vector3 PositionHandle(Vector3 position, Quaternion rotation)
         {
+            GUIUtility.GetControlID(s_xAxisMoveHandleHash, FocusType.Passive);
+            GUIUtility.GetControlID(s_yAxisMoveHandleHash, FocusType.Passive);
+            GUIUtility.GetControlID(s_zAxisMoveHandleHash, FocusType.Passive);
+            GUIUtility.GetControlID(s_xyAxisMoveHandleHash, FocusType.Passive);
+            GUIUtility.GetControlID(s_xzAxisMoveHandleHash, FocusType.Passive);
+            GUIUtility.GetControlID(s_yzAxisMoveHandleHash, FocusType.Passive);
+            GUIUtility.GetControlID(s_FreeMoveHandleHash, FocusType.Passive);
             RequireSceneGUI();
             return position;
         }
 
+        /// <summary>As Unity's: the button takes its control id, then needs a scene view's GUI.</summary>
         public static bool Button(Vector3 position, Quaternion direction, float size, float pickSize, CapFunction capFunction)
         {
+            GUIUtility.GetControlID(s_ButtonHash, FocusType.Passive);
             RequireSceneGUI();
             return false;
         }

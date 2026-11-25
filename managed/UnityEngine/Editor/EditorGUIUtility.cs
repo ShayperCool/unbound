@@ -156,11 +156,18 @@ namespace UnityEditor
         [Unbound.EditorFaithful("highlights the object in the Hierarchy and Project windows, which Unbound does not have; no exception and no log, as in the Editor (tests/projects/editorlayout util/pingObject)")]
         public static void PingObject(int targetInstanceID) { }
 
+        /// <summary>Unity's: the top clip's width, else the view's; outside a GUI pass there is no
+        /// clip and no view, so it throws (the windowed Editor: tests/projects/editorui
+        /// EditorGUI.GetPropertyHeight.area).</summary>
         internal static float CalcContextWidth()
         {
-            float width = GUIClip.GetTopRect().width;
+            float width = GUIClip.Depth > 0 ? GUIClip.GetTopRect().width : 0f;
             if (width < 1f || width >= 40000f)
-                return s_CurrentViewWidth > 0f ? s_CurrentViewWidth : Screen.width;
+            {
+                if (s_CurrentViewWidth > 0f) return s_CurrentViewWidth;
+                GUIUtility.CheckOnGUI();
+                return Screen.width;
+            }
             return width;
         }
 

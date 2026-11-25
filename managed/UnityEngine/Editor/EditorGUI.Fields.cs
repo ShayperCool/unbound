@@ -217,6 +217,7 @@ namespace UnityEditor
 
         internal static string DoTextField(RecycledTextEditor editor, int id, Rect position, string text, GUIStyle style, string allowedletters, out bool changed, bool reset, bool multiline, bool passwordField)
         {
+            EditorGUI.RequireGUI();
             Event evt = Event.current;
             string origText = text;
             if (text == null) text = string.Empty;
@@ -773,6 +774,7 @@ namespace UnityEditor
             string allowedCharacters = value.isDouble ? s_AllowedCharactersForFloat : s_AllowedCharactersForInt;
             if (draggable && GUI.enabled) DragNumberValue(dragHotZone, id, ref value, dragSensitivity);
 
+            EditorGUI.RequireGUI();
             Event evt = Event.current;
             string str;
             if (HasKeyboardFocus(id) || (evt.type == EventType.MouseDown && evt.button == 0 && position.Contains(evt.mousePosition)))
