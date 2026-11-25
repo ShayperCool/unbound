@@ -1399,7 +1399,6 @@ namespace Unbound.Runtime
 
         static readonly Comparison<Light> s_BrightestFirst = (a, b) => (b.intensity * b.color.grayscale).CompareTo(a.intensity * a.color.grayscale);
 
-        /// <summary>Whether bounds touch the inside of every culling plane (planes face inwards).</summary>
         static readonly HashSet<ReflectionProbe> s_AnchoredProbes = new HashSet<ReflectionProbe>();
         static readonly List<ReflectionProbe> s_Probes = new List<ReflectionProbe>();
 
@@ -1454,6 +1453,7 @@ namespace Unbound.Runtime
             }
         }
 
+        /// <summary>Whether bounds touch the inside of every culling plane (planes face inwards).</summary>
         static bool InsidePlanes(ReadOnlySpan<Plane> planes, ReadOnlySpan<Vector3> absNormals, Bounds bounds)
         {
             var c = bounds.center;
