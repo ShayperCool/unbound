@@ -1043,6 +1043,60 @@ public static class BuffersSetup
         }
     }
 
+    /// <summary>Baked lights with cookies, each cookie's red, green, blue and alpha different (what
+    /// the bake takes of them): a spot light's 16 by 16 clamped cookie over a light probe group,
+    /// a sun's 8 by 8 repeating cookie of size 2.5, and a point light's cube cookie of 8 a side.</summary>
+    static void Cookies()
+    {
+        Color32 Texel(int x, int y, int n) => new Color32((byte)(x * 255 / (n - 1)), (byte)(y * 255 / (n - 1)), (byte)(((x ^ y) & 1) == 0 ? 230 : 40), (byte)(((x / 2 + y / 2) & 1) == 0 ? 255 : 60));
+        {
+            var scene = Lit("CookieSpot");
+            var cookie = Tex("CookieSpotCookie", 16, 16, FilterMode.Bilinear, (x, y) => Texel(x, y, 16));
+            cookie.wrapMode = TextureWrapMode.Clamp;
+            var spot = NewLight("Spot", LightType.Spot, new Vector3(0.3f, 3.2f, -0.2f), new Vector3(85f, 10f, 0f), new Color(1f, 0.95f, 0.9f), 6f);
+            spot.range = 8f;
+            spot.spotAngle = 70f;
+            spot.cookie = cookie;
+            new GameObject("ProbeGroup").AddComponent<LightProbeGroup>().probePositions = new[]
+            {
+                new Vector3(0.1f, 0.5f, -1.2f), new Vector3(1.5f, 1.2f, 0.3f), new Vector3(-1.1f, 2.0f, 1.1f),
+                new Vector3(0.3f, 0.2f, 2.2f), new Vector3(-2.2f, 0.7f, -0.4f), new Vector3(2.02f, 0.49f, 1.03f),
+            };
+            Save(scene, "CookieSpot");
+        }
+        {
+            var scene = Lit("CookieSun");
+            var cookie = Tex("CookieSunCookie", 8, 8, FilterMode.Bilinear, (x, y) => Texel(x, y, 8));
+            cookie.wrapMode = TextureWrapMode.Repeat;
+            var sun = NewLight("Sun", LightType.Directional, new Vector3(0.4f, 3f, 0.2f), new Vector3(60f, -25f, 15f), Color.white, 1.5f);
+            sun.cookie = cookie;
+            sun.cookieSize = 2.5f;
+            Save(scene, "CookieSun");
+        }
+        {
+            var scene = Lit("CookiePoint");
+            var cube = new Cubemap(8, TextureFormat.RGBA32, false) { name = "CookiePointCookie", filterMode = FilterMode.Bilinear };
+            for (int face = 0; face < 6; face++)
+            {
+                var texels = new Color[64];
+                for (int y = 0; y < 8; y++)
+                    for (int x = 0; x < 8; x++)
+                    {
+                        Color32 c = Texel(x, y, 8);
+                        // Each face its own blue, to tell the faces apart.
+                        texels[y * 8 + x] = new Color32(c.r, c.g, (byte)(40 + face * 40), c.a);
+                    }
+                cube.SetPixels(texels, (CubemapFace)face);
+            }
+            cube.Apply();
+            AssetDatabase.CreateAsset(cube, $"{Folder}/CookiePointCookie.asset");
+            var bulb = NewLight("Bulb", LightType.Point, new Vector3(0.6f, 1.6f, -0.9f), new Vector3(20f, 35f, 10f), new Color(1f, 0.9f, 0.8f), 3f);
+            bulb.range = 7f;
+            bulb.cookie = cube;
+            Save(scene, "CookiePoint");
+        }
+    }
+
     /// <summary>Lights whose intensity multiplies their linear colour
     /// (GraphicsSettings.lightsUseLinearIntensity, which the capture turns on for the scenes named
     /// <c>Linear*</c>): a coloured sun, a point and a spot light over a light probe group, and a
@@ -1445,7 +1499,7 @@ public static class BuffersSetup
                 ("ModeSubtractive", () => Modes("ModeSubtractive", MixedLightingMode.Subtractive)),
                 ("ModeShadowmask", () => Modes("ModeShadowmask", MixedLightingMode.Shadowmask)),
                 ("Bounce", Bounces), ("Glow", Glow), ("Roof", Roof), ("Textured", Textured), ("Levels", Levels), ("Sky", Skies), ("Spare", Spare),
-                ("SkyRealtime", RealtimeSkies), ("SpareEmpty", SpareEmpty), ("Spread", Spread), ("Far", Far), ("Masks", Masks), ("MasksBright", MasksBright), ("MasksEdges", MasksEdges), ("Probes", Probes), ("ProbesGrid", ProbesGrid), ("ProbesReach", ProbesReach), ("ProbesSky", ProbesSky), ("Directional", Directional), ("Lod", Lod), ("Filter", Filtered), ("Denoise", Denoised), ("Intensity", Intensities), ("Ao", Occluded), ("Compress", Compressed), ("Soft", SoftLights), ("Linear", LinearLights),
+                ("SkyRealtime", RealtimeSkies), ("SpareEmpty", SpareEmpty), ("Spread", Spread), ("Far", Far), ("Masks", Masks), ("MasksBright", MasksBright), ("MasksEdges", MasksEdges), ("Probes", Probes), ("ProbesGrid", ProbesGrid), ("ProbesReach", ProbesReach), ("ProbesSky", ProbesSky), ("Directional", Directional), ("Lod", Lod), ("Filter", Filtered), ("Denoise", Denoised), ("Intensity", Intensities), ("Ao", Occluded), ("Compress", Compressed), ("Soft", SoftLights), ("Linear", LinearLights), ("Cookie", Cookies),
             };
             var only = Environment.GetEnvironmentVariable("BAKED_BUFFERS_SCENES");
             var wanted = string.IsNullOrEmpty(only) ? null : new HashSet<string>(only.Split(','));
