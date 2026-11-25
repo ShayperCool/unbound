@@ -4067,6 +4067,119 @@
         "value": "1"
       },
       "reason": "Q630 Search.ObjectField: the reference rows were recorded in the macOS Editor on a 2x (Retina) display, whose panel scale (scaledPixelsPerPoint) is 2; Unbound reports 1. Every other field of these rows matches; re-record on a 1x display or Linux to settle."
+    },
+    {
+      "key": "UnityEditorInternal.ReorderableList+Defaults/@factory",
+      "module": "UnityEditor.CoreModule",
+      "reason": "Q757 context: the reference is the batch-mode Editor's, where ReorderableList.Defaults' constructor reads EditorStyles, which do not exist there before any GUI has run (NullReferenceException). Unbound plays as the interactive Editor, whose styles exist from the start, so the constructor succeeds. The windowed Editor's values are unmeasured (its default-state capture stalls before the probe runs); the raw difference is kept.",
+      "expected": {
+        "status": "factory-threw",
+        "value": "System.NullReferenceException"
+      },
+      "actual": {
+        "status": "value",
+        "value": "class"
+      }
+    },
+    {
+      "key": "UnityEditorInternal.ReorderableList+Defaults/Field/UnityEditorInternal.ReorderableList+Defaults/boxBackground",
+      "module": "UnityEditor.CoreModule",
+      "reason": "Q757 context: the reference is the batch-mode Editor's, where ReorderableList.Defaults' constructor reads EditorStyles, which do not exist there before any GUI has run (NullReferenceException). Unbound plays as the interactive Editor, whose styles exist from the start, so the constructor succeeds. The windowed Editor's values are unmeasured (its default-state capture stalls before the probe runs); the raw difference is kept.",
+      "expected": null,
+      "actual": {
+        "status": "value",
+        "value": "UnityEngine.GUIStyle{active=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};alignment=enum:0;border=UnityEngine.RectOffset{bottom=0;horizontal=0;left=0;right=0;top=0;vertical=0};clipOffset=UnityEngine.Vector2{x=0;y=0};clipping=enum:0;contentOffset=UnityEngine.Vector2{x=0;y=0};fixedHeight=0;fixedWidth=0;focused=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};font=null;fontSize=0;fontStyle=enum:0;hover=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};imagePosition=enum:0;isHeightDependantOnWidth=false;lineHeight=14;margin=UnityEngine.RectOffset{bottom=0;horizontal=0;left=0;right=0;top=0;vertical=0};name=string:StyleNotFoundError;normal=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};onActive=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};onFocused=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};onHover=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};onNormal=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};overflow=UnityEngine.RectOffset{bottom=0;horizontal=0;left=0;right=0;top=0;vertical=0};padding=UnityEngine.RectOffset{bottom=0;horizontal=0;left=0;right=0;top=0;vertical=0};richText=true;stretchHeight=false;stretchWidth=true;wordWrap=false}"
+      }
+    },
+    {
+      "key": "UnityEditorInternal.ReorderableList+Defaults/Field/UnityEditorInternal.ReorderableList+Defaults/draggingHandle",
+      "module": "UnityEditor.CoreModule",
+      "reason": "Q757 context: the reference is the batch-mode Editor's, where ReorderableList.Defaults' constructor reads EditorStyles, which do not exist there before any GUI has run (NullReferenceException). Unbound plays as the interactive Editor, whose styles exist from the start, so the constructor succeeds. The windowed Editor's values are unmeasured (its default-state capture stalls before the probe runs); the raw difference is kept.",
+      "expected": null,
+      "actual": {
+        "status": "value",
+        "value": "UnityEngine.GUIStyle{active=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};alignment=enum:0;border=UnityEngine.RectOffset{bottom=0;horizontal=0;left=0;right=0;top=0;vertical=0};clipOffset=UnityEngine.Vector2{x=0;y=0};clipping=enum:0;contentOffset=UnityEngine.Vector2{x=0;y=0};fixedHeight=0;fixedWidth=0;focused=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};font=null;fontSize=0;fontStyle=enum:0;hover=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};imagePosition=enum:0;isHeightDependantOnWidth=false;lineHeight=14;margin=UnityEngine.RectOffset{bottom=0;horizontal=0;left=0;right=0;top=0;vertical=0};name=string:StyleNotFoundError;normal=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};onActive=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};onFocused=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};onHover=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};onNormal=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};overflow=UnityEngine.RectOffset{bottom=0;horizontal=0;left=0;right=0;top=0;vertical=0};padding=UnityEngine.RectOffset{bottom=0;horizontal=0;left=0;right=0;top=0;vertical=0};richText=true;stretchHeight=false;stretchWidth=true;wordWrap=false}"
+      }
+    },
+    {
+      "key": "UnityEditorInternal.ReorderableList+Defaults/Field/UnityEditorInternal.ReorderableList+Defaults/elementBackground",
+      "module": "UnityEditor.CoreModule",
+      "reason": "Q757 context: the reference is the batch-mode Editor's, where ReorderableList.Defaults' constructor reads EditorStyles, which do not exist there before any GUI has run (NullReferenceException). Unbound plays as the interactive Editor, whose styles exist from the start, so the constructor succeeds. The windowed Editor's values are unmeasured (its default-state capture stalls before the probe runs); the raw difference is kept.",
+      "expected": null,
+      "actual": {
+        "status": "value",
+        "value": "UnityEngine.GUIStyle{active=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};alignment=enum:0;border=UnityEngine.RectOffset{bottom=0;horizontal=0;left=0;right=0;top=0;vertical=0};clipOffset=UnityEngine.Vector2{x=0;y=0};clipping=enum:0;contentOffset=UnityEngine.Vector2{x=0;y=0};fixedHeight=0;fixedWidth=0;focused=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};font=null;fontSize=0;fontStyle=enum:0;hover=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};imagePosition=enum:0;isHeightDependantOnWidth=false;lineHeight=14;margin=UnityEngine.RectOffset{bottom=0;horizontal=0;left=0;right=0;top=0;vertical=0};name=string:StyleNotFoundError;normal=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};onActive=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};onFocused=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};onHover=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};onNormal=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};overflow=UnityEngine.RectOffset{bottom=0;horizontal=0;left=0;right=0;top=0;vertical=0};padding=UnityEngine.RectOffset{bottom=0;horizontal=0;left=0;right=0;top=0;vertical=0};richText=true;stretchHeight=false;stretchWidth=true;wordWrap=false}"
+      }
+    },
+    {
+      "key": "UnityEditorInternal.ReorderableList+Defaults/Field/UnityEditorInternal.ReorderableList+Defaults/emptyHeaderBackground",
+      "module": "UnityEditor.CoreModule",
+      "reason": "Q757 context: the reference is the batch-mode Editor's, where ReorderableList.Defaults' constructor reads EditorStyles, which do not exist there before any GUI has run (NullReferenceException). Unbound plays as the interactive Editor, whose styles exist from the start, so the constructor succeeds. The windowed Editor's values are unmeasured (its default-state capture stalls before the probe runs); the raw difference is kept.",
+      "expected": null,
+      "actual": {
+        "status": "value",
+        "value": "UnityEngine.GUIStyle{active=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};alignment=enum:0;border=UnityEngine.RectOffset{bottom=0;horizontal=0;left=0;right=0;top=0;vertical=0};clipOffset=UnityEngine.Vector2{x=0;y=0};clipping=enum:0;contentOffset=UnityEngine.Vector2{x=0;y=0};fixedHeight=0;fixedWidth=0;focused=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};font=null;fontSize=0;fontStyle=enum:0;hover=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};imagePosition=enum:0;isHeightDependantOnWidth=false;lineHeight=14;margin=UnityEngine.RectOffset{bottom=0;horizontal=0;left=0;right=0;top=0;vertical=0};name=string:StyleNotFoundError;normal=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};onActive=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};onFocused=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};onHover=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};onNormal=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};overflow=UnityEngine.RectOffset{bottom=0;horizontal=0;left=0;right=0;top=0;vertical=0};padding=UnityEngine.RectOffset{bottom=0;horizontal=0;left=0;right=0;top=0;vertical=0};richText=true;stretchHeight=false;stretchWidth=true;wordWrap=false}"
+      }
+    },
+    {
+      "key": "UnityEditorInternal.ReorderableList+Defaults/Field/UnityEditorInternal.ReorderableList+Defaults/footerBackground",
+      "module": "UnityEditor.CoreModule",
+      "reason": "Q757 context: the reference is the batch-mode Editor's, where ReorderableList.Defaults' constructor reads EditorStyles, which do not exist there before any GUI has run (NullReferenceException). Unbound plays as the interactive Editor, whose styles exist from the start, so the constructor succeeds. The windowed Editor's values are unmeasured (its default-state capture stalls before the probe runs); the raw difference is kept.",
+      "expected": null,
+      "actual": {
+        "status": "value",
+        "value": "UnityEngine.GUIStyle{active=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};alignment=enum:0;border=UnityEngine.RectOffset{bottom=0;horizontal=0;left=0;right=0;top=0;vertical=0};clipOffset=UnityEngine.Vector2{x=0;y=0};clipping=enum:0;contentOffset=UnityEngine.Vector2{x=0;y=0};fixedHeight=0;fixedWidth=0;focused=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};font=null;fontSize=0;fontStyle=enum:0;hover=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};imagePosition=enum:0;isHeightDependantOnWidth=false;lineHeight=14;margin=UnityEngine.RectOffset{bottom=0;horizontal=0;left=0;right=0;top=0;vertical=0};name=string:StyleNotFoundError;normal=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};onActive=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};onFocused=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};onHover=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};onNormal=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};overflow=UnityEngine.RectOffset{bottom=0;horizontal=0;left=0;right=0;top=0;vertical=0};padding=UnityEngine.RectOffset{bottom=0;horizontal=0;left=0;right=0;top=0;vertical=0};richText=true;stretchHeight=false;stretchWidth=true;wordWrap=false}"
+      }
+    },
+    {
+      "key": "UnityEditorInternal.ReorderableList+Defaults/Field/UnityEditorInternal.ReorderableList+Defaults/headerBackground",
+      "module": "UnityEditor.CoreModule",
+      "reason": "Q757 context: the reference is the batch-mode Editor's, where ReorderableList.Defaults' constructor reads EditorStyles, which do not exist there before any GUI has run (NullReferenceException). Unbound plays as the interactive Editor, whose styles exist from the start, so the constructor succeeds. The windowed Editor's values are unmeasured (its default-state capture stalls before the probe runs); the raw difference is kept.",
+      "expected": null,
+      "actual": {
+        "status": "value",
+        "value": "UnityEngine.GUIStyle{active=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};alignment=enum:0;border=UnityEngine.RectOffset{bottom=0;horizontal=0;left=0;right=0;top=0;vertical=0};clipOffset=UnityEngine.Vector2{x=0;y=0};clipping=enum:0;contentOffset=UnityEngine.Vector2{x=0;y=0};fixedHeight=0;fixedWidth=0;focused=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};font=null;fontSize=0;fontStyle=enum:0;hover=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};imagePosition=enum:0;isHeightDependantOnWidth=false;lineHeight=14;margin=UnityEngine.RectOffset{bottom=0;horizontal=0;left=0;right=0;top=0;vertical=0};name=string:StyleNotFoundError;normal=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};onActive=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};onFocused=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};onHover=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};onNormal=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};overflow=UnityEngine.RectOffset{bottom=0;horizontal=0;left=0;right=0;top=0;vertical=0};padding=UnityEngine.RectOffset{bottom=0;horizontal=0;left=0;right=0;top=0;vertical=0};richText=true;stretchHeight=false;stretchWidth=true;wordWrap=false}"
+      }
+    },
+    {
+      "key": "UnityEditorInternal.ReorderableList+Defaults/Field/UnityEditorInternal.ReorderableList+Defaults/iconToolbarMinus",
+      "module": "UnityEditor.CoreModule",
+      "reason": "Q757 context: the reference is the batch-mode Editor's, where ReorderableList.Defaults' constructor reads EditorStyles, which do not exist there before any GUI has run (NullReferenceException). Unbound plays as the interactive Editor, whose styles exist from the start, so the constructor succeeds. The windowed Editor's values are unmeasured (its default-state capture stalls before the probe runs); the raw difference is kept.",
+      "expected": null,
+      "actual": {
+        "status": "value",
+        "value": "UnityEngine.GUIContent{image=null;text=null;tooltip=string:Remove selection from the list}"
+      }
+    },
+    {
+      "key": "UnityEditorInternal.ReorderableList+Defaults/Field/UnityEditorInternal.ReorderableList+Defaults/iconToolbarPlus",
+      "module": "UnityEditor.CoreModule",
+      "reason": "Q757 context: the reference is the batch-mode Editor's, where ReorderableList.Defaults' constructor reads EditorStyles, which do not exist there before any GUI has run (NullReferenceException). Unbound plays as the interactive Editor, whose styles exist from the start, so the constructor succeeds. The windowed Editor's values are unmeasured (its default-state capture stalls before the probe runs); the raw difference is kept.",
+      "expected": null,
+      "actual": {
+        "status": "value",
+        "value": "UnityEngine.GUIContent{image=null;text=null;tooltip=string:Add to the list}"
+      }
+    },
+    {
+      "key": "UnityEditorInternal.ReorderableList+Defaults/Field/UnityEditorInternal.ReorderableList+Defaults/iconToolbarPlusMore",
+      "module": "UnityEditor.CoreModule",
+      "reason": "Q757 context: the reference is the batch-mode Editor's, where ReorderableList.Defaults' constructor reads EditorStyles, which do not exist there before any GUI has run (NullReferenceException). Unbound plays as the interactive Editor, whose styles exist from the start, so the constructor succeeds. The windowed Editor's values are unmeasured (its default-state capture stalls before the probe runs); the raw difference is kept.",
+      "expected": null,
+      "actual": {
+        "status": "value",
+        "value": "UnityEngine.GUIContent{image=null;text=null;tooltip=string:Choose to add to the list}"
+      }
+    },
+    {
+      "key": "UnityEditorInternal.ReorderableList+Defaults/Field/UnityEditorInternal.ReorderableList+Defaults/preButton",
+      "module": "UnityEditor.CoreModule",
+      "reason": "Q757 context: the reference is the batch-mode Editor's, where ReorderableList.Defaults' constructor reads EditorStyles, which do not exist there before any GUI has run (NullReferenceException). Unbound plays as the interactive Editor, whose styles exist from the start, so the constructor succeeds. The windowed Editor's values are unmeasured (its default-state capture stalls before the probe runs); the raw difference is kept.",
+      "expected": null,
+      "actual": {
+        "status": "value",
+        "value": "UnityEngine.GUIStyle{active=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};alignment=enum:0;border=UnityEngine.RectOffset{bottom=0;horizontal=0;left=0;right=0;top=0;vertical=0};clipOffset=UnityEngine.Vector2{x=0;y=0};clipping=enum:0;contentOffset=UnityEngine.Vector2{x=0;y=0};fixedHeight=0;fixedWidth=0;focused=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};font=null;fontSize=0;fontStyle=enum:0;hover=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};imagePosition=enum:0;isHeightDependantOnWidth=false;lineHeight=14;margin=UnityEngine.RectOffset{bottom=0;horizontal=0;left=0;right=0;top=0;vertical=0};name=string:StyleNotFoundError;normal=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};onActive=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};onFocused=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};onHover=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};onNormal=UnityEngine.GUIStyleState{background=null;scaledBackgrounds=[];textColor=UnityEngine.Color{r=0;g=0;b=0;a=1}};overflow=UnityEngine.RectOffset{bottom=0;horizontal=0;left=0;right=0;top=0;vertical=0};padding=UnityEngine.RectOffset{bottom=0;horizontal=0;left=0;right=0;top=0;vertical=0};richText=true;stretchHeight=false;stretchWidth=true;wordWrap=false}"
+      }
     }
   ],
   "constructorStores": []

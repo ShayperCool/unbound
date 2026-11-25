@@ -21,4 +21,3 @@ UNBOUND_PROBE_UNITY_VERSION=6000.0.71f1 python3 tests/projects/editormultifields
 ```
 
 The engine run keeps the window focused (`--focus 1:on`): an editor field edits only in a focused view.
-Residual: outside `OnGUI` the bounds fields (see `residuals.json`).

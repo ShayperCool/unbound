@@ -12,7 +12,7 @@ call's result, exception and logs.
 Measured (see `managed/UnityEngine/Editor/EditorGUIState.cs`, `Editors.cs`, `TreeView/`,
 `AnimationUtility.cs`): the state and the measurements work anywhere; drawing outside OnGUI throws
 (a NullReferenceException; IMGUI's own controls an ArgumentException), and so do EditorStyles in Play
-mode in the batch-mode Editor; dialogs are cancelled; a TreeView's rows, expansion, search and selection live in its state;
+mode in the batch-mode Editor (not in the windowed one Unbound models); dialogs are cancelled; a TreeView's rows, expansion, search and selection live in its state;
 editors get their targets before OnEnable; a non-legacy clip keeps a Transform's vector curves
 whole. `Editor/Data/editor-icons-6000.0.txt` is the Editor's icon names (the textures of
 `Editor/Data/Resources/unity editor resources`, listed by `tools/builtin-resources/names.py`).
@@ -20,13 +20,15 @@ whole. `Editor/Data/editor-icons-6000.0.txt` is the Editor's icon names (the tex
 The reference was recorded in the batch-mode Editor, a context Unbound does not model. Rows
 re-recorded in the windowed Editor (two identical captures, the `EditorUtility.DisplayDialog*`
 calls left out with `EDITORUI_PROBE_SKIP`, since the windowed Editor waits for a click on a dialog;
-every other row of those captures was compared with the batch reference): `TreeView.metrics` (the
-interactive Editor's styles exist before any GUI has run: foldout width 11, no log). The windowed
-captures also differ in the `EditorStyles.*` rows, `EditorGUI.PrefixLabel`,
-`EditorGUI.GetPropertyHeight.area`, `.noChildren.area`, `.afterHeader`, `.noChildren.afterHeader`
-(the styles exist outside a GUI pass) and the logs of `Handles.PositionHandle` and `Handles.Button`;
-those rows keep the batch answer until Q757 re-records them. The dialog rows stay batch-mode
-answers (unmeasured in the windowed Editor).
+every other row of those captures was compared with the batch reference, and these are all that
+differ): `TreeView.metrics` and the `EditorStyles.*` rows (the interactive Editor's styles exist
+before any GUI has run: foldout width 11, no log, the Editor skin's styles), `EditorGUI.PrefixLabel`
+(a label for the next control waits for it, also outside OnGUI), `EditorGUI.GetPropertyHeight.area`,
+`.noChildren.area` (a text area's height reads the context width, which needs a GUI pass:
+ArgumentException), `.afterHeader`, `.noChildren.afterHeader` (the header's style answers), and
+the logs of `Handles.PositionHandle` and `Handles.Button` (each control id they take logs the
+pending prefix label's NullReferenceException). The dialog rows stay batch-mode answers
+(unmeasured in the windowed Editor).
 
     EDITORUI_PROBE_OUT=<dir> EDITORUI_PROBE_SKIP=EditorUtility.DisplayDialog,EditorUtility.DisplayDialog.cancel,EditorUtility.DisplayDialogComplex \
         python3 tests/private_display.py --gpu -- ~/Unity/Hub/Editor/6000.0.71f1/Editor/Unity \

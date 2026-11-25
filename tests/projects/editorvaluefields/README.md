@@ -25,4 +25,3 @@ UNBOUND_PROBE_UNITY_VERSION=6000.0.71f1 python3 tests/projects/editorvaluefields
 
 The engine run keeps the window focused (`--focus 1:on`): an editor field edits only in a focused view.
 The event type is recorded as its number (`EventType`'s obsolete lower-case names share values).
-Residual: outside `OnGUI` the sliders and the layout `TextArea` (see `residuals.json`).
