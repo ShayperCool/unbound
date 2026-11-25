@@ -303,8 +303,8 @@ namespace Unbound.Runtime
         /// the heap; Unity first grows the block and then falls back to another linear allocator
         /// before its heap (the Unity 6000.0 Manual, Native memory allocators), which is not
         /// modelled, nor is freeing the newest allocation early (Free does nothing until the scope
-        /// ends, as com.unity.collections documents for Temp). So writing a little past the newest allocation
-        /// lands in the block's free part, as it does in Unity: a package's development-build
+        /// ends, as com.unity.collections documents for Temp). So writing a little past the newest
+        /// allocation lands in the block's free part, as it does in Unity: a package's development-build
         /// clear of a grown Temp buffer reaches past it (com.unity.multiplayer.tools
         /// FastBufferWriter.Grow clears sizeof(WriterHandle) bytes more than it allocates).
         /// </summary>
