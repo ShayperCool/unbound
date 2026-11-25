@@ -22,6 +22,8 @@ flate2 = "1"
 liblzma = "0.4"
 tar = { version = "0.4", default-features = false }
 md-5 = "0.10"
+# Open Image Denoise's release archive is checked against its SHA-256.
+sha2 = "0.10"
 base64 = "0.22"
 # The Package Manager's user configuration (`~/.upmconfig.toml`).
 toml = { version = "1", default-features = false, features = ["parse", "serde", "std"] }

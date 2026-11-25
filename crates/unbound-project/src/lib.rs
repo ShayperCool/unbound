@@ -5,6 +5,7 @@ pub mod assembly_identity;
 pub mod assetdb;
 pub mod builtin_shaders;
 pub mod compile;
+pub mod denoiser;
 pub mod editor_archive;
 pub mod git_packages;
 pub mod install;
