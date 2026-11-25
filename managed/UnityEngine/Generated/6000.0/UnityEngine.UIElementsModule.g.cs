@@ -1746,16 +1746,6 @@ namespace UnityEngine.UIElements
         [global::Unbound.Stub] public KeyboardTextEditorEventHandler(global::UnityEngine.UIElements.TextElement textElement, global::UnityEngine.TextEditingUtilities editingUtilities) : base(default(global::UnityEngine.UIElements.TextElement), default(global::UnityEngine.TextEditingUtilities)) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.KeyboardTextEditorEventHandler.ctor"); }
         [global::Unbound.Stub] public override void HandleEventBubbleUp(global::UnityEngine.UIElements.EventBase evt) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.KeyboardTextEditorEventHandler.HandleEventBubbleUp"); }
     }
-    unsafe partial class Label
-    {
-        [global::System.Serializable]
-        [global::Unbound.Stub]
-        public unsafe partial class UxmlSerializedData : global::UnityEngine.UIElements.TextElement.UxmlSerializedData
-        {
-            [global::Unbound.Stub] public override object CreateInstance() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Label.UxmlSerializedData.CreateInstance"); return default; }
-            [global::Unbound.Stub] public UxmlSerializedData() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.Label.UxmlSerializedData.ctor"); }
-        }
-    }
     [global::Unbound.Stub]
     internal unsafe static partial class LanguageDirectionExtensions
     {
@@ -3049,14 +3039,10 @@ namespace UnityEngine.UIElements
         [global::Unbound.Stub] internal static readonly global::UnityEngine.UIElements.BindingId reorderableProperty;
         [global::Unbound.Stub] internal override void OnViewDataReady() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TabView.OnViewDataReady"); }
         [global::Unbound.Stub] internal global::UnityEngine.UIElements.Tab FindTabByKey(string key) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TabView.FindTabByKey"); return default; }
-        [global::System.Serializable]
-        [global::Unbound.Stub]
-        public unsafe partial class UxmlSerializedData : global::UnityEngine.UIElements.VisualElement.UxmlSerializedData
+        unsafe partial class UxmlSerializedData
         {
             [global::Unbound.Stub] public static void Register() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TabView.UxmlSerializedData.Register"); }
-            [global::Unbound.Stub] public override object CreateInstance() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TabView.UxmlSerializedData.CreateInstance"); return default; }
             [global::Unbound.Stub] public override void Deserialize(object obj) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TabView.UxmlSerializedData.Deserialize"); }
-            [global::Unbound.Stub] public UxmlSerializedData() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TabView.UxmlSerializedData.ctor"); }
         }
     }
     [global::Unbound.Stub]
@@ -3472,14 +3458,10 @@ namespace UnityEngine.UIElements
     unsafe partial class TwoPaneSplitView
     {
         [global::Unbound.Stub] internal override void OnViewDataReady() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TwoPaneSplitView.OnViewDataReady"); }
-        [global::System.Serializable]
-        [global::Unbound.Stub]
-        public unsafe partial class UxmlSerializedData : global::UnityEngine.UIElements.VisualElement.UxmlSerializedData
+        unsafe partial class UxmlSerializedData
         {
             [global::Unbound.Stub] public static void Register() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TwoPaneSplitView.UxmlSerializedData.Register"); }
-            [global::Unbound.Stub] public override object CreateInstance() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TwoPaneSplitView.UxmlSerializedData.CreateInstance"); return default; }
             [global::Unbound.Stub] public override void Deserialize(object obj) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TwoPaneSplitView.UxmlSerializedData.Deserialize"); }
-            [global::Unbound.Stub] public UxmlSerializedData() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TwoPaneSplitView.UxmlSerializedData.ctor"); }
         }
     }
     unsafe partial class UIDocument
