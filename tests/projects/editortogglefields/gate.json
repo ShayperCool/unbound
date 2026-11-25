@@ -1,0 +1,12 @@
+{
+  "commands": [
+    "python3 tests/projects/editortogglefields/run.py gate"
+  ],
+  "summary": "editortogglefields: .*",
+  "engine_paths": [
+    "managed/UnityEngine/Editor/",
+    "managed/UnityEngine/IMGUI/",
+    "tests/projects/editortogglefields/",
+    "tests/projects/imguiskin/"
+  ]
+}
