@@ -589,7 +589,7 @@ namespace UnityEngine
                             if (skipUnmeasured) continue;
                         }
                         if (light.cookie != null || data.cookieID != 0)
-                            warn("light-cookie:" + path + fileId, $"{path}: '{light.name}' has a cookie, which Unbound's bake (Lightmapping.Bake) does not apply yet.");
+                            warn("light-cookie:" + path + fileId, $"{path}: '{light.name}' has a cookie through a render pipeline's light delegate, which Unbound's bake (Lightmapping.Bake) does not apply yet.");
                         if (data.shape0 > 0f && data.shadow != 0)
                             warn("light-soft:" + path + fileId, $"{path}: '{light.name}' has soft baked shadows (its Baked Shadow {(kind == 0 ? "Angle" : "Radius")}), which Unbound's bake (Lightmapping.Bake) bakes hard yet.");
                         int mode = data.mode == UnityEngine.Experimental.GlobalIllumination.LightMode.Mixed ? 1 : 2;
@@ -770,7 +770,8 @@ namespace UnityEngine
         /// simplified: non-directional lights of a RequestLightsDelegate under linear intensity or
         /// with non-Legacy falloff, spot
         /// lights with non-LUT angular falloff, color temperature under linear intensity, mixed
-        /// lights under a render pipeline asset, cookies (ignored), a Baked Shadow Radius or Angle
+        /// lights under a render pipeline asset, cookies through a RequestLightsDelegate or of a kind
+        /// the light does not take (ignored), a Baked Shadow Radius or Angle
         /// with hard shadows.</summary>
         internal static List<object> Lights(LoadedFile file, string path, int maxBounces = 2)
         {
