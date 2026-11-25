@@ -148,6 +148,7 @@ namespace UnityEditor.MPE
 
         public static string roleName => "";
 
+        /// <summary>False, also once the channel service runs (tests/projects/editorchannels mpe.process.*).</summary>
         public static bool IsChannelServiceStarted() => false;
 
         public static string ReadParameter(string paramName) => "";

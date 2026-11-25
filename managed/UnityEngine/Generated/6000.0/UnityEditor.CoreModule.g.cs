@@ -14083,8 +14083,7 @@ namespace UnityEditor
         [global::Unbound.Stub] public LocalizationAttribute(string locGroupName = null) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.LocalizationAttribute.ctor"); }
         internal string locGroupName { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.LocalizationAttribute.locGroupName"); return default; } }
     }
-    [global::Unbound.Stub]
-    internal unsafe partial class LocalizationDatabase
+    unsafe partial class LocalizationDatabase
     {
         [global::Unbound.Stub] public static global::UnityEngine.SystemLanguage GetDefaultEditorLanguage() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.LocalizationDatabase.GetDefaultEditorLanguage"); return default; }
         [global::Unbound.Stub] public static global::UnityEngine.SystemLanguage[] GetAvailableEditorLanguages() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.LocalizationDatabase.GetAvailableEditorLanguages"); return global::System.Array.Empty<global::UnityEngine.SystemLanguage>(); }
@@ -14097,9 +14096,6 @@ namespace UnityEditor
         [global::Unbound.Stub] public static string GetContextGroupName() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.LocalizationDatabase.GetContextGroupName"); return default; }
         [global::Unbound.Stub] public static void SetContextGroupName(string groupName) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.LocalizationDatabase.SetContextGroupName"); }
         [global::Unbound.Stub] public static string MarkForTranslation(string value) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.LocalizationDatabase.MarkForTranslation"); return default; }
-        [global::Unbound.Stub] public LocalizationDatabase() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.LocalizationDatabase.ctor"); }
-        public static global::UnityEngine.SystemLanguage currentEditorLanguage { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.LocalizationDatabase.currentEditorLanguage"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.LocalizationDatabase.currentEditorLanguage"); } }
-        public static bool enableEditorLocalization { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.LocalizationDatabase.enableEditorLocalization"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.LocalizationDatabase.enableEditorLocalization"); } }
         public static string noLocalizationGroupName { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.LocalizationDatabase.noLocalizationGroupName"); return default; } }
     }
     [global::Unbound.Stub]
@@ -28418,8 +28414,7 @@ namespace UnityEditor.Collaboration
         public bool complete { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Collaboration.CloudBuildStatus.complete"); return default; } }
         public bool success { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Collaboration.CloudBuildStatus.success"); return default; } }
     }
-    [global::Unbound.Stub]
-    internal unsafe partial class Collab
+    unsafe partial class Collab
     {
         [global::Unbound.Stub] public static global::UnityEditor.Collaboration.ShowToolbarAtPositionDelegate ShowToolbarAtPosition;
         [global::Unbound.Stub] public static global::UnityEditor.Collaboration.IsToolbarVisibleDelegate IsToolbarVisible;
@@ -28510,7 +28505,6 @@ namespace UnityEditor.Collaboration
         [global::Unbound.Stub] public global::UnityEditor.Collaboration.PublishInfo_V2 GetChangesToPublish_V2() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Collaboration.Collab.GetChangesToPublish_V2"); return default; }
         [global::Unbound.Stub] public void SetChangesToPublish(global::UnityEditor.Collaboration.ChangeItem[] changes) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Collaboration.Collab.SetChangesToPublish"); }
         [global::Unbound.Stub] public global::UnityEditor.Collaboration.ProgressInfo GetJobProgress(int jobId) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Collaboration.Collab.GetJobProgress"); return default; }
-        public static global::UnityEditor.Collaboration.Collab instance { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Collaboration.Collab.instance"); return default; } }
         public global::UnityEditor.Collaboration.CollabInfo collabInfo { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Collaboration.Collab.collabInfo"); return default; } }
         public string projectBrowserSingleSelectionPath { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Collaboration.Collab.projectBrowserSingleSelectionPath"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Collaboration.Collab.projectBrowserSingleSelectionPath"); } }
         public string projectBrowserSingleMetaSelectionPath { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Collaboration.Collab.projectBrowserSingleMetaSelectionPath"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Collaboration.Collab.projectBrowserSingleMetaSelectionPath"); } }
@@ -32433,20 +32427,6 @@ namespace UnityEditor.MPE
         public string channelName { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.MPE.ChannelClient.channelName"); return default; } }
         public bool isAutoTick { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.MPE.ChannelClient.isAutoTick"); return default; } }
     }
-    [global::System.Serializable]
-    [global::Unbound.Stub]
-    public unsafe partial struct ChannelClientInfo : global::System.IEquatable<global::UnityEditor.MPE.ChannelClientInfo>
-    {
-        [global::Unbound.Stub] public static global::UnityEditor.MPE.ChannelClientInfo invalidClient;
-        [global::Unbound.Stub] public bool Equals(global::UnityEditor.MPE.ChannelClientInfo obj) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.MPE.ChannelClientInfo.Equals"); return default; }
-        [global::Unbound.Stub] public override bool Equals(object obj) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.MPE.ChannelClientInfo.Equals"); return default; }
-        [global::Unbound.Stub] public override int GetHashCode() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.MPE.ChannelClientInfo.GetHashCode"); return default; }
-        [global::Unbound.Stub] public static bool operator ==(global::UnityEditor.MPE.ChannelClientInfo x, global::UnityEditor.MPE.ChannelClientInfo y) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.MPE.ChannelClientInfo.op_Equality"); return default; }
-        [global::Unbound.Stub] public static bool operator !=(global::UnityEditor.MPE.ChannelClientInfo x, global::UnityEditor.MPE.ChannelClientInfo y) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.MPE.ChannelClientInfo.op_Inequality"); return default; }
-        public string name { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.MPE.ChannelClientInfo.name"); return default; } }
-        public int clientId { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.MPE.ChannelClientInfo.clientId"); return default; } }
-        public int connectionId { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.MPE.ChannelClientInfo.connectionId"); return default; } }
-    }
     [global::Unbound.Stub]
     public unsafe partial struct ChannelClientScope : global::System.IDisposable
     {
@@ -32455,51 +32435,11 @@ namespace UnityEditor.MPE
         [global::Unbound.Stub] public void Dispose() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.MPE.ChannelClientScope.Dispose"); }
         public global::UnityEditor.MPE.ChannelClient client { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.MPE.ChannelClientScope.client"); return default; } }
     }
-    [global::System.Serializable]
-    [global::Unbound.Stub]
-    public unsafe partial struct ChannelInfo : global::System.IEquatable<global::UnityEditor.MPE.ChannelInfo>
-    {
-        [global::Unbound.Stub] public static global::UnityEditor.MPE.ChannelInfo invalidChannel;
-        [global::Unbound.Stub] public bool Equals(global::UnityEditor.MPE.ChannelInfo obj) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.MPE.ChannelInfo.Equals"); return default; }
-        [global::Unbound.Stub] public override bool Equals(object obj) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.MPE.ChannelInfo.Equals"); return default; }
-        [global::Unbound.Stub] public override int GetHashCode() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.MPE.ChannelInfo.GetHashCode"); return default; }
-        [global::Unbound.Stub] public static bool operator ==(global::UnityEditor.MPE.ChannelInfo x, global::UnityEditor.MPE.ChannelInfo y) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.MPE.ChannelInfo.op_Equality"); return default; }
-        [global::Unbound.Stub] public static bool operator !=(global::UnityEditor.MPE.ChannelInfo x, global::UnityEditor.MPE.ChannelInfo y) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.MPE.ChannelInfo.op_Inequality"); return default; }
-        public string name { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.MPE.ChannelInfo.name"); return default; } }
-        public int id { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.MPE.ChannelInfo.id"); return default; } }
-    }
     [global::Unbound.Stub]
     public unsafe partial struct ChannelScope : global::System.IDisposable
     {
         [global::Unbound.Stub] public ChannelScope(string channelName, global::System.Action<int, byte[]> handler, bool closeChannelOnExit = true) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.MPE.ChannelScope.ctor"); }
         [global::Unbound.Stub] public void Dispose() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.MPE.ChannelScope.Dispose"); }
-    }
-    [global::Unbound.Stub]
-    public unsafe static partial class ChannelService
-    {
-        [global::Unbound.Stub] internal static global::System.Collections.Generic.Dictionary<int, global::System.Collections.Generic.List<global::System.Action<int, byte[]>>> s_Handlers;
-        [global::Unbound.Stub] public static global::System.Action GetOrCreateChannel(string channelName, global::System.Action<int, byte[]> handler) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.MPE.ChannelService.GetOrCreateChannel"); return default; }
-        [global::Unbound.Stub] public static global::System.Action RegisterMessageHandler(string channelName, global::System.Action<int, byte[]> handler) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.MPE.ChannelService.RegisterMessageHandler"); return default; }
-        [global::Unbound.Stub] public static void UnregisterMessageHandler(string channelName, global::System.Action<int, byte[]> handler) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.MPE.ChannelService.UnregisterMessageHandler"); }
-        [global::Unbound.Stub] public static void CloseChannel(string channelName) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.MPE.ChannelService.CloseChannel"); }
-        [global::Unbound.Stub] public static void Broadcast(int channelId, byte[] data) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.MPE.ChannelService.Broadcast"); }
-        [global::Unbound.Stub] public static void Send(int connectionId, byte[] data) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.MPE.ChannelService.Send"); }
-        [global::Unbound.Stub] internal static global::UnityEditor.MPE.ChannelInfo GetChannelFromName(string channelName) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.MPE.ChannelService.GetChannelFromName"); return default; }
-        [global::Unbound.Stub] public static string GetAddress() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.MPE.ChannelService.GetAddress"); return default; }
-        [global::Unbound.Stub] public static int GetPort() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.MPE.ChannelService.GetPort"); return default; }
-        [global::Unbound.Stub] public static void DispatchMessages() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.MPE.ChannelService.DispatchMessages"); }
-        [global::Unbound.Stub] public static void Start() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.MPE.ChannelService.Start"); }
-        [global::Unbound.Stub] public static void Stop() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.MPE.ChannelService.Stop"); }
-        [global::Unbound.Stub] public static bool IsRunning() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.MPE.ChannelService.IsRunning"); return default; }
-        [global::Unbound.Stub] public static global::UnityEditor.MPE.ChannelInfo[] GetChannelList() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.MPE.ChannelService.GetChannelList"); return global::System.Array.Empty<global::UnityEditor.MPE.ChannelInfo>(); }
-        [global::Unbound.Stub] public static global::UnityEditor.MPE.ChannelClientInfo[] GetChannelClientList() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.MPE.ChannelService.GetChannelClientList"); return global::System.Array.Empty<global::UnityEditor.MPE.ChannelClientInfo>(); }
-        [global::Unbound.Stub] public static void Broadcast(int channelId, string data) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.MPE.ChannelService.Broadcast"); }
-        [global::Unbound.Stub] public static void BroadcastBinary(int channelId, byte[] data) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.MPE.ChannelService.BroadcastBinary"); }
-        [global::Unbound.Stub] public static void Send(int connectionId, string data) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.MPE.ChannelService.Send"); }
-        [global::Unbound.Stub] internal static void SendBinary(int connectionId, byte[] data) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.MPE.ChannelService.SendBinary"); }
-        [global::Unbound.Stub] public static int ChannelNameToId(string channelName) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.MPE.ChannelService.ChannelNameToId"); return default; }
-        [global::Unbound.Stub] internal static int Internal_GetOrCreateChannel(string channelName) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.MPE.ChannelService.Internal_GetOrCreateChannel"); return default; }
-        [global::Unbound.Stub] internal static void Internal_CloseChannel(string channelName) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.MPE.ChannelService.Internal_CloseChannel"); }
     }
     [global::Unbound.Stub]
     internal unsafe static partial class DataService
@@ -45743,14 +45683,6 @@ namespace UnityEditor.Toolbars
         [global::Unbound.Stub] public static global::UnityEditor.Overlays.OverlayToolbar CreateOverlay(global::System.Collections.Generic.IEnumerable<string> toolbarElementIds, global::UnityEditor.EditorWindow context = null) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Toolbars.EditorToolbar.CreateOverlay"); return default; }
         [global::Unbound.Stub] internal void LoadToolbarElements(global::UnityEngine.UIElements.VisualElement root) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Toolbars.EditorToolbar.LoadToolbarElements"); }
         public global::UnityEngine.UIElements.VisualElement rootVisualElement { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Toolbars.EditorToolbar.rootVisualElement"); return default; } }
-    }
-    [global::System.@AttributeUsageAttribute((global::System.AttributeTargets)4, AllowMultiple = true, Inherited = false)]
-    [global::Unbound.Stub]
-    public unsafe sealed partial class EditorToolbarElementAttribute : global::System.Attribute
-    {
-        [global::Unbound.Stub] public EditorToolbarElementAttribute(string id, params global::System.Type[] targetWindows) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Toolbars.EditorToolbarElementAttribute.ctor"); }
-        public string id { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Toolbars.EditorToolbarElementAttribute.id"); return default; } }
-        public global::System.Type[] targetWindows { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Toolbars.EditorToolbarElementAttribute.targetWindows"); return global::System.Array.Empty<global::System.Type>(); } }
     }
     [global::Unbound.Stub]
     internal unsafe sealed partial class EditorToolbarManager : global::UnityEditor.ScriptableSingleton<global::UnityEditor.Toolbars.EditorToolbarManager>

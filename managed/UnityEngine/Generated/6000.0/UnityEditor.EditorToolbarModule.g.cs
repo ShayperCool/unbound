@@ -192,12 +192,6 @@ namespace UnityEditor.Toolbars
         [global::Unbound.Stub] public PivotRotationDropdown() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Toolbars.PivotRotationDropdown.ctor"); }
     }
     [global::Unbound.Stub]
-    internal unsafe sealed partial class PlayModeButtons : global::UnityEngine.UIElements.VisualElement
-    {
-        [global::Unbound.Stub] public PlayModeButtons() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Toolbars.PlayModeButtons.ctor"); }
-        internal static event global::System.Action<global::UnityEngine.UIElements.VisualElement> onPlayModeButtonsCreated { [global::Unbound.Stub] add { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Toolbars.PlayModeButtons.onPlayModeButtonsCreated"); } [global::Unbound.Stub] remove { } }
-    }
-    [global::Unbound.Stub]
     internal unsafe sealed partial class SnapSettings : global::UnityEditor.Toolbars.EditorToolbarDropdownToggle
     {
         [global::Unbound.Stub] public SnapSettings() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Toolbars.SnapSettings.ctor"); }
