@@ -50,7 +50,9 @@ Unmeasured: other release families, an installation without the Android module, 
 has platform settings but no `DefaultValueInitialized` (the Editor gives some kinds their defaults
 again; Unbound reads it as it is), the importer's
 answers after the Editor has written a plug-in's `.meta` with its defaults (an `x86` plug-in is then
-read with the Editor off), the Editor's log line for an Android shared object without an ABI folder.
+read with the Editor off), the Editor's log line for an Android shared object without an ABI folder,
+folder names spelled in another case (`Assets/plugins/x86_64`: one folder with `Plugins` on the
+macOS Editor's file system, so not recorded; Unbound reads folder names ignoring case).
 
 ```sh
 python3 tests/projects/plugindefaults/run.py record --label a   # macOS: holds the heavy-job lock

@@ -35,7 +35,8 @@ KINDS = {
 # Plug-ins with a .meta of their GUID alone: every kind in Assets/Plugins, then kinds in the
 # folders whose names the Editor reads (and some it does not), in a package, in Editor folders.
 # No managed plug-in is in a folder of a 64-bit CPU: whether the Editor compiles against it depends
-# on the machine's CPU (x86 is no Editor's).
+# on the machine's CPU (x86 is no Editor's). No two folders differ only in case: on the macOS
+# Editor's file system they are one folder, on Linux two.
 FOLDERS = {
     'Assets/Plugins': list(KINDS),
     'Assets/Other': ['ManagedOther.dll', 'native.dll', 'libnative.so', 'libmac.dylib', 'Kit.bundle', 'Source.cpp',
@@ -67,10 +68,6 @@ FOLDERS = {
     'Assets/Plugins/Foo/x86_64': ['native.dll'],
     'Assets/Plugins/WSA': ['native.dll', 'ManagedWSA.dll'],
     'Assets/Plugins/Metro': ['native.dll'],
-    'Assets/plugins/x86_64': ['native.dll'],
-    'Assets/Plugins/android': ['libnative.so'],
-    'Assets/Plugins/arm64': ['native.dll'],
-    'Assets/editor': ['ManagedLowerEditor.dll'],
     'Assets/Plugins/x86_64/Editor': ['native.dll'],
     'Assets/Plugins/Editor/x86_64': ['native.dll'],
     'Assets/Editor/Plugins/x86_64': ['native.dll'],
