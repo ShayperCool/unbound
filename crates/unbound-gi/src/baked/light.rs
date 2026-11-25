@@ -465,3 +465,99 @@ impl Light {
         })
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn light(kind: Kind) -> Light {
+        Light {
+            kind,
+            mode: Mode::Baked,
+            color: [1.0; 3],
+            indirect_color: [1.0; 3],
+            position: [0.0, 2.0, 0.0],
+            // Pointing down.
+            forward: [0.0, -1.0, 0.0],
+            right: [1.0, 0.0, 0.0],
+            range: 10.0,
+            cone_angle: 1.0,
+            casts_shadows: true,
+            shadow_size: 0.0,
+            up: [0.0, 0.0, 1.0],
+            size: [0.0; 2],
+        }
+    }
+
+    fn near(a: f32, b: f32) -> bool {
+        (a - b).abs() < 1e-5
+    }
+
+    #[test]
+    fn a_soft_shadows_ray_aims_at_a_point_of_the_disk_around_the_light() {
+        let mut point = light(Kind::Point);
+        let arriving = Arriving {
+            color: [1.0; 3],
+            direction: [0.0, 1.0, 0.0],
+            distance: 2.0,
+        };
+        // The middle of the square is the middle of the disk: the light's own direction.
+        assert_eq!(
+            point.jittered(&arriving, [0.0; 3], [0.5, 0.5]),
+            [0.0, 1.0, 0.0]
+        );
+        // A corner of the square is the disk's edge: the radius beside the light, 2 away.
+        point.shadow_size = 0.5;
+        let d = point.jittered(&arriving, [0.0; 3], [1.0, 0.5]);
+        let sideways = (d[0] * d[0] + d[2] * d[2]).sqrt();
+        assert!(near(sideways / d[1], 0.25), "{d:?}");
+        // A directional light's disk lies one unit away: its angle in radians.
+        let mut sun = light(Kind::Directional);
+        sun.shadow_size = 0.1;
+        let far = Arriving {
+            distance: FAR,
+            ..arriving
+        };
+        let d = sun.jittered(&far, [0.0; 3], [1.0, 0.5]);
+        let sideways = (d[0] * d[0] + d[2] * d[2]).sqrt();
+        assert!(near(sideways / d[1], 0.1), "{d:?}");
+    }
+
+    #[test]
+    fn an_area_lights_sample_lights_a_point_by_its_solid_angle_or_its_area() {
+        // A disc of radius 0.1, 2 above a surface facing it: its middle sample sends the
+        // radius squared over the distance squared (both facings 1).
+        let mut disc = light(Kind::Disc);
+        disc.size = [0.1, 0.0];
+        let a = disc
+            .area_arriving([1.0; 3], [0.0; 3], [0.0, 1.0, 0.0], [0.0, 0.0])
+            .unwrap();
+        assert!(
+            near(a.color[0], 0.01 / 4.0) && near(a.distance, 2.0),
+            "{a:?}"
+        );
+        assert!(near(a.direction[1], 1.0));
+        // A small square, 2 above: about its area over pi times the distance squared.
+        let mut rect = light(Kind::Rectangle);
+        rect.size = [0.1, 0.1];
+        let a = rect
+            .area_arriving([1.0; 3], [0.0; 3], [0.0, 1.0, 0.0], [0.5, 0.5])
+            .unwrap();
+        assert!((a.color[0] - 0.01 / (PI * 4.0)).abs() < 1e-5, "{a:?}");
+        // Nothing behind the light, beyond its range or without a sample.
+        assert!(
+            rect.area_arriving([1.0; 3], [0.0, 3.0, 0.0], [0.0, -1.0, 0.0], [0.5, 0.5])
+                .is_none()
+        );
+        rect.range = 1.0;
+        assert!(
+            rect.area_arriving([1.0; 3], [0.0; 3], [0.0, 1.0, 0.0], [0.5, 0.5])
+                .is_none()
+        );
+        // Not lit as a point light is.
+        assert!(
+            rect.arriving(&Tables::new(), [1.0; 3], [0.0; 3], [0.0, 1.0, 0.0])
+                .is_none()
+        );
+    }
+}
