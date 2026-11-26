@@ -131,6 +131,73 @@ namespace UnityEngine.Tests
             }
         }
 
+        /// <summary>A behaviour that may set a render texture active in its Layout, then draws a
+        /// preview in its Repaint and counts the GUI pass's quads it recorded.</summary>
+        sealed class FramePreview : MonoBehaviour
+        {
+            internal RenderTexture LayoutTarget;
+            internal Texture2D Texture;
+            internal Material Material;
+            internal int Recorded = -1;
+
+            void OnGUI()
+            {
+                if (Event.current.type == EventType.Layout)
+                {
+                    if (LayoutTarget != null) RenderTexture.active = LayoutTarget;
+                    return;
+                }
+                if (Event.current.type != EventType.Repaint) return;
+                int before = GuiRender.QuadCount;
+                EditorGUI.DrawPreviewTexture(new Rect(0, 0, 8, 8), Texture, Material);
+                Recorded = GuiRender.QuadCount - before;
+            }
+        }
+
+        static int RunFramePreview(RenderTexture activeBefore, RenderTexture layoutTarget, Texture2D texture, Material material)
+        {
+            var go = new GameObject("preview frame");
+            var preview = go.AddComponent<FramePreview>();
+            preview.LayoutTarget = layoutTarget;
+            preview.Texture = texture;
+            preview.Material = material;
+            RenderTexture.active = activeBefore;
+            try
+            {
+                typeof(GuiDispatch).GetMethod("RunFrame", BindingFlags.NonPublic | BindingFlags.Static).Invoke(null, null);
+                return preview.Recorded;
+            }
+            finally
+            {
+                RenderTexture.active = null;
+                GuiRender.Clear();
+                Object.DestroyImmediate(go);
+            }
+        }
+
+        [Fact]
+        public void TheFramesGuiPassTakesTheTargetItBeganWithAsItsOwn()
+        {
+            // Through the frame's GUI pass itself: a target active before the pass is its own (the
+            // preview recorded), one a script's Layout sets is not (drawn as Graphics.DrawTexture).
+            var texture = new Texture2D(4, 4);
+            var material = UserMaterial();
+            var target = new RenderTexture(16, 16, 0);
+            try
+            {
+                Assert.Equal(1, RunFramePreview(null, null, texture, material));
+                Assert.Equal(1, RunFramePreview(target, null, texture, material));
+                Assert.Equal(0, RunFramePreview(null, target, texture, material));
+            }
+            finally
+            {
+                Object.DestroyImmediate(texture);
+                Object.DestroyImmediate(material);
+                target.Release();
+                Object.DestroyImmediate(target);
+            }
+        }
+
         [Fact]
         public void APreviewIntoARenderTextureOrUnderOtherMatricesIsNotRecordedInTheGuiPass()
         {
