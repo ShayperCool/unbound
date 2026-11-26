@@ -160,8 +160,8 @@ namespace UnityEngine.Tests
             Assert.False(clip.GetData(new float[4], 0));
             Assert.Contains((LogType.Log, "AudioClip.GetData failed; AudioClip  contains no data"), TakeLogs());
 
-            using var tracker = Send(UnityWebRequestMultimedia.GetAudioClip(Write("song.mod", Wav(4)), AudioType.MOD));
-            Assert.Equal(0, ((DownloadHandlerAudioClip)tracker.downloadHandler).audioClip.channels);
+            using var unsupported = Send(UnityWebRequestMultimedia.GetAudioClip(Write("song.aac", Wav(4)), AudioType.ACC));
+            Assert.Equal(0, ((DownloadHandlerAudioClip)unsupported.downloadHandler).audioClip.channels);
             // Unbound's own diagnostic (which skips the log callbacks), not the Editor's decoding error.
             Assert.DoesNotContain(TakeLogs(), l => l.Message.StartsWith("Error: Cannot create", StringComparison.Ordinal));
         }

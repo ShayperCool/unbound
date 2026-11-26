@@ -113,6 +113,12 @@ namespace Unbound.Runtime
         // (tests/projects/importerserialized). Elsewhere it reflects over the managed importer.
         internal static bool ImporterTypeTreesMeasured => Family == ReleaseFamily.Unity6000_0;
 
+        /// <summary>Tracker module AudioClip (.mod/.xm/.s3m/.it) lifecycle and download diagnostics
+        /// measured on 6000.0.71f1 (tests/projects/audiotracker): synchronous load with warning on
+        /// loadInBackground, shared-sample rejection on CompressedInMemory SetData, and rejecting
+        /// realtime streaming downloads of tracker files.</summary>
+        internal static bool TrackerAudioMeasured => Family == ReleaseFamily.Unity6000_0;
+
         /// <summary>First-use validation by the shader's editor: of model materials with built-in
         /// shader editors (tests/projects/modelimport, BuiltinBlend) and of loaded material assets
         /// with any editor (tests/projects/urpwrites, materialvalidation). The same measurements

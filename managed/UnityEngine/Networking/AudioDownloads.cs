@@ -82,7 +82,7 @@ namespace UnityEngine.Networking
             if (m_StreamAudio)
             {
                 var clip = AudioClip.FromDownload(data, m_Type, AudioClip.DownloadedForm.Streamed, headerOnly: !m_Complete);
-                m_FillAtEnd = !m_Complete && clip.m_Channels > 0;
+                m_FillAtEnd = !m_Complete && clip != null && clip.m_Channels > 0;
                 return clip;
             }
             if (!m_Complete) return AudioClip.FromDownload(default, m_Type, AudioClip.DownloadedForm.Decompressed, headerOnly: true);

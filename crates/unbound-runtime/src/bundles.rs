@@ -65,9 +65,9 @@ pub fn documents(key: &str) -> Result<Vec<u8>> {
     Ok(unbound_scene::encode_documents(&docs))
 }
 
-/// The audio of a clip in a loaded archive: the FSB5 bank at `offset` (`size` bytes) of the stream
-/// file, its sound `sound`, decoded.
-pub fn audio(key: &str) -> Result<unbound_assets::fsb5::Decoded> {
+/// The audio of a clip in a loaded archive: the FSB5 bank or raw tracker module at `offset`
+/// (`size` bytes) of the stream file, its sound `sound`, decoded. Returns `(decoded, is_tracker)`.
+pub fn audio(key: &str, output_sample_rate: u32) -> Result<(unbound_assets::fsb5::Decoded, bool)> {
     let key = key.strip_prefix("bundle:").unwrap_or(key);
     let (id, rest) = key
         .split_once('/')
@@ -90,7 +90,23 @@ pub fn audio(key: &str) -> Result<unbound_assets::fsb5::Decoded> {
         .with_context(|| {
             format!("the bundle has no audio data at {stream}:{offset} ({size} bytes)")
         })?;
-    unbound_assets::fsb5::decode(bytes, sound.parse()?)
+    if !bytes.starts_with(b"FSB5") && unbound_assets::tracker::detect(bytes).is_some() {
+        let rate = if output_sample_rate == 0 {
+            48_000
+        } else {
+            output_sample_rate
+        };
+        let decoded = unbound_assets::tracker::decode(bytes, None, rate)?;
+        return Ok((
+            unbound_assets::fsb5::Decoded {
+                channels: decoded.channels as usize,
+                rate: decoded.sample_rate,
+                samples: decoded.samples,
+            },
+            true,
+        ));
+    }
+    Ok((unbound_assets::fsb5::decode(bytes, sound.parse()?)?, false))
 }
 
 #[cfg(test)]

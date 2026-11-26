@@ -18,6 +18,7 @@ namespace Unbound.Runtime
         internal int LoadInBackground;
         internal int Ambisonic;
         internal int CompressionFormat;
+        internal int IsTracker;
     }
 
     internal static class AudioSourceFlags

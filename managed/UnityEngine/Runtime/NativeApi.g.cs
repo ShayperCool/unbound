@@ -10,7 +10,7 @@ namespace Unbound.Runtime
     [System.Runtime.InteropServices.StructLayout(System.Runtime.InteropServices.LayoutKind.Sequential)]
     internal unsafe struct NativeApi
     {
-        internal const uint CurrentVersion = 97;
+        internal const uint CurrentVersion = 98;
 
         internal uint Version;
         /// <summary>(level, UTF-8 text, length): writes a console line.</summary>

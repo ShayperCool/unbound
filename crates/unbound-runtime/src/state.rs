@@ -539,6 +539,11 @@ pub fn initialize(project: &Project) -> Result<&'static RuntimeState> {
                 .filter(|asset| !asset.is_folder)
                 .map(|asset| (asset.path.as_str(), asset.file.as_path())),
         ));
+    let audio = crate::audio::Engine::new_with_output_rules(
+        crate::audio::ProjectAudioSettings::read(&project.root),
+        true,
+        unbound_compat::AudioOutputRules::for_version(project.version),
+    );
     let state = RuntimeState {
         project_root: project.root.clone(),
         unity_data: project.install.data.clone(),
@@ -619,14 +624,11 @@ pub fn initialize(project: &Project) -> Result<&'static RuntimeState> {
         builtin_shaders: RwLock::new(None),
         audio_importer: RwLock::new(AudioImporter {
             guid_only_section: unbound_compat::MeasuredFamily::of(project.version).is_some(),
+            output_sample_rate: audio.configuration().sample_rate,
             ..AudioImporter::default()
         }),
         models: RwLock::new(HashMap::new()),
-        audio: crate::audio::Engine::new_with_output_rules(
-            crate::audio::ProjectAudioSettings::read(&project.root),
-            true,
-            unbound_compat::AudioOutputRules::for_version(project.version),
-        ),
+        audio,
         play_mode_atlases,
         atlases: RwLock::new(None),
         traced_texels: std::sync::Mutex::new(None),
@@ -3315,7 +3317,7 @@ pub fn decode_download(
     audio_type: i32,
     header_only: bool,
 ) -> Result<Option<crate::audio::protocol::AudioClipInfo>> {
-    use unbound_assets::audio_download::{Codec, Container, decode, header};
+    use unbound_assets::audio_download::{Codec, Container, decode_at_rate, header};
     let Some(container) = Container::of_audio_type(audio_type) else {
         return Ok(None);
     };
@@ -3330,16 +3332,19 @@ pub fn decode_download(
             header(data, container).map(|(channels, rate, frames)| info(channels, rate, frames))
         );
     }
-    let decoded = decode(data, container)?;
+    let output_rate = state().audio.configuration().sample_rate;
+    let decoded = decode_at_rate(data, container, output_rate)?;
     let frames = decoded.samples.len() / decoded.channels.max(1) as usize;
+    let is_tracker = decoded.codec == Codec::Tracker;
     let result = crate::audio::protocol::AudioClipInfo {
         // Unity's AudioCompressionFormat of the file's coding.
         compression_format: match decoded.codec {
-            Codec::Pcm => 0,
+            Codec::Pcm | Codec::Tracker => 0,
             Codec::Vorbis => 1,
             Codec::ImaAdpcm => 2,
             Codec::Mpeg => 3,
         },
+        is_tracker: is_tracker as i32,
         ..info(decoded.channels, decoded.rate, frames as u64)
     };
     state().audio.mixer().add_clip(
@@ -3355,11 +3360,13 @@ pub fn import_audio(handle: u64, guid: &str) -> Result<crate::audio::protocol::A
     let s = state();
     if guid.starts_with("bundle:") {
         // A player clip of an AssetBundle: its properties are the managed side's to read.
-        let decoded = crate::bundles::audio(guid)?;
+        let initial_rate = s.audio_importer.read().unwrap().output_sample_rate;
+        let (decoded, is_tracker) = crate::bundles::audio(guid, initial_rate)?;
         let info = crate::audio::protocol::AudioClipInfo {
             frames: (decoded.samples.len() / decoded.channels.max(1)) as i32,
             channels: decoded.channels as i32,
             frequency: decoded.rate as i32,
+            is_tracker: is_tracker as i32,
             ..Default::default()
         };
         s.audio.mixer().add_clip(
@@ -3388,6 +3395,7 @@ pub fn import_audio(handle: u64, guid: &str) -> Result<crate::audio::protocol::A
         load_in_background: settings.load_in_background as i32,
         ambisonic: settings.ambisonic as i32,
         compression_format: settings.sample.compression_format,
+        is_tracker: imported.is_tracker as i32,
     };
     let samples = match Arc::try_unwrap(imported) {
         Ok(owned) => owned.samples,

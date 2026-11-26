@@ -50,6 +50,8 @@ namespace UnityEngine
         [NonSerialized] internal bool m_OwnsStartupMemory;
         /// <summary><c>AudioCompressionFormat</c> of an asset's data.</summary>
         internal int m_CompressionFormat;
+        /// <summary>True when this clip came from a tracker module (.mod, .xm, .s3m, .it).</summary>
+        internal bool m_IsTracker;
         // One node per streamed clip; the latest voice owns its cached buffer.
         // Control-thread transfers and cleanup unlink in constant time.
         internal AudioSource m_StreamBufferOwner;
@@ -134,9 +136,17 @@ namespace UnityEngine
             if (m_IsAsset && m_LoadType == AudioClipLoadType.Streaming && !Compat.StreamingClipBufferLifetimeMeasured) return true;
             if (m_LoadInBackground)
             {
-                // Loaded on the next audio update, as a background load completes a frame later.
-                m_LoadState = AudioDataLoadState.Loading;
-                AudioSystem.QueueLoad(this);
+                if (m_IsTracker && Compat.TrackerAudioMeasured)
+                {
+                    Debug.LogWarning("At present background loading of tracked music files is not supported and will therefore block the system. Consider changing the load type of the AudioClip such that it is loaded when the scene is initialized.", this);
+                    m_LoadState = AudioDataLoadState.Loaded;
+                }
+                else
+                {
+                    // Loaded on the next audio update, as a background load completes a frame later.
+                    m_LoadState = AudioDataLoadState.Loading;
+                    AudioSystem.QueueLoad(this);
+                }
             }
             else
             {
@@ -214,8 +224,11 @@ namespace UnityEngine
                 Debug.LogError($"Can't get data from streamed samples for audio clip \"{m_Name}\". If you created the audio clip with AudioClip.Create, set the 'stream' argument to false, so you can access the data with 'AudioClip.GetData'. For a disk-based audio clip, change the load type to 'DecompressOnLoad', so you can access the data with 'AudioClip.GetData'.", this);
                 return false;
             }
-            // Compressed data stays compressed in memory: only PCM reads back.
-            if ((m_IsAsset && m_LoadType == AudioClipLoadType.CompressedInMemory && m_CompressionFormat != (int)AudioCompressionFormat.PCM) || m_Download == DownloadedForm.Compressed)
+            // Compressed data stays compressed in memory: only PCM reads back (tracker modules stay
+            // compressed in CompressedInMemory regardless of compressionFormat).
+            bool compressedAsset = m_IsAsset && m_LoadType == AudioClipLoadType.CompressedInMemory
+                && (m_IsTracker || m_CompressionFormat != (int)AudioCompressionFormat.PCM);
+            if (compressedAsset || m_Download == DownloadedForm.Compressed)
             {
                 Debug.LogError($"Cannot get data on compressed samples for audio clip \"{DataName}\". Changing the load type to DecompressOnLoad on the audio clip will fix this.", this);
                 return false;
@@ -234,7 +247,14 @@ namespace UnityEngine
                 Debug.LogError($"Cannot set data on streamed samples for audio clip \"{m_Name}\". If the AudioClip was created via AudioClip.Create and no PCM read callback was provided, the 'stream' argument must be false. For a disk-based AudioClip changing the load type to DecompressOnLoad on the AudioClip will allow modification of the data.", this);
                 return false;
             }
-            if ((m_IsAsset && m_LoadType == AudioClipLoadType.CompressedInMemory && m_CompressionFormat != (int)AudioCompressionFormat.PCM) || m_Download == DownloadedForm.Compressed)
+            if (m_IsTracker && m_IsAsset && m_LoadType == AudioClipLoadType.CompressedInMemory && Compat.TrackerAudioMeasured)
+            {
+                Debug.LogError($"Cannot set data on shared sample for audio clip \"{DataName}\"", this);
+                return false;
+            }
+            bool compressedAsset = m_IsAsset && m_LoadType == AudioClipLoadType.CompressedInMemory
+                && (m_IsTracker || m_CompressionFormat != (int)AudioCompressionFormat.PCM);
+            if (compressedAsset || m_Download == DownloadedForm.Compressed)
             {
                 Debug.LogError($"Cannot set data on compressed samples for audio clip \"{DataName}\". Changing the load type to DecompressOnLoad on the audio clip will fix this.", this);
                 return false;
@@ -323,6 +343,13 @@ namespace UnityEngine
         /// Editor's error; one of a type Unbound does not decode logs that instead.</summary>
         internal static AudioClip FromDownload(ReadOnlySpan<byte> data, AudioType type, DownloadedForm form, bool headerOnly)
         {
+            const string TrackerStreamError = "Tracker files (XM/IT/MOD/S3M) cannot be streamed in realtime but must be fully downloaded before they can play.";
+            if (form == DownloadedForm.Streamed && Compat.TrackerAudioMeasured
+                && type is AudioType.MOD or AudioType.XM or AudioType.S3M or AudioType.IT)
+            {
+                Debug.LogError(TrackerStreamError);
+                return null;
+            }
             var clip = new AudioClip { m_Name = "", m_LoadType = AudioClipLoadType.DecompressOnLoad, m_LoadState = AudioDataLoadState.Loaded, m_Download = form };
             clip.m_Handle = AudioBackend.NextHandle();
             clip.m_SharedData = new SharedClipData(AudioBackend.Current, clip.m_Handle);
@@ -331,16 +358,26 @@ namespace UnityEngine
                 clip.m_SharedData = null;
                 clip.m_Handle = 0;
                 if (headerOnly) return clip;
-                if (type is AudioType.UNKNOWN or AudioType.AIFF or AudioType.MPEG or AudioType.OGGVORBIS or AudioType.WAV)
+                if (type is AudioType.UNKNOWN or AudioType.AIFF or AudioType.MPEG or AudioType.OGGVORBIS or AudioType.WAV
+                    or AudioType.MOD or AudioType.XM or AudioType.S3M or AudioType.IT)
                     Debug.LogError("Error: Cannot create FMOD::Sound instance for clip \"\" (FMOD error: Unsupported file or audio format. )");
                 else
                     Debug.LogError($"Unbound: downloaded audio of AudioType.{type} is not supported; the clip has no data");
                 return clip;
             }
+            if (form == DownloadedForm.Streamed && info.IsTracker != 0 && Compat.TrackerAudioMeasured)
+            {
+                AudioBackend.Current.ReleaseClip(clip.m_Handle);
+                clip.m_SharedData = null;
+                clip.m_Handle = 0;
+                Debug.LogError(TrackerStreamError);
+                return null;
+            }
             // Until its file is complete a clip made from a header is silence of that length; a
             // voice already playing it reads the samples once they replace the silence.
+            clip.m_IsTracker = info.IsTracker != 0;
             if (headerOnly) AudioBackend.Current.CreateClip(clip.m_Handle, info.Frames, info.Channels, info.Frequency, false);
-            else if (form == DownloadedForm.Compressed && info.CompressionFormat is not ((int)AudioCompressionFormat.MP3 or (int)AudioCompressionFormat.ADPCM))
+            else if (form == DownloadedForm.Compressed && !clip.m_IsTracker && info.CompressionFormat is not ((int)AudioCompressionFormat.MP3 or (int)AudioCompressionFormat.ADPCM))
                 clip.m_Download = DownloadedForm.Decompressed;
             clip.m_Samples = info.Frames;
             clip.m_Channels = info.Channels;
@@ -361,6 +398,7 @@ namespace UnityEngine
             m_Samples = info.Frames;
             m_Channels = info.Channels;
             m_Frequency = info.Frequency;
+            m_IsTracker = info.IsTracker != 0;
         }
 
         /// <summary>The clip of an imported audio asset.</summary>
@@ -395,6 +433,7 @@ namespace UnityEngine
             m_LoadInBackground = info.LoadInBackground != 0;
             m_Ambisonic = info.Ambisonic != 0;
             m_CompressionFormat = info.CompressionFormat;
+            m_IsTracker = info.IsTracker != 0;
             InitializePreloadedData();
         }
 
@@ -482,6 +521,7 @@ namespace UnityEngine
                 return;
             }
             m_Samples = info.Frames;
+            m_IsTracker = info.IsTracker != 0 || body.Bool("m_IsTrackerFormat");
             InitializePreloadedData();
         }
 

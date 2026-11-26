@@ -45,6 +45,7 @@ namespace UnityEngine
                 copy.m_Samples = m_Samples;
                 copy.m_LoadType = m_LoadType;
                 copy.m_CompressionFormat = m_CompressionFormat;
+                copy.m_IsTracker = m_IsTracker;
                 if (m_LoadType != AudioClipLoadType.Streaming && loadState == AudioDataLoadState.Loaded)
                 {
                     copy.m_LoadStatus = m_LoadStatus;

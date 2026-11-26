@@ -112,7 +112,8 @@ use std::ffi::c_void;
 /// 16-bit color channels.
 /// 97: the `MipmapLimit` command and `texture-mipmap-limit` call; `ImportedTextureInfo` ends with
 /// the importer's `ignore_mipmap_limit`.
-pub const NATIVE_API_VERSION: u32 = 97;
+/// 98: `AudioClipInfo` ends with `is_tracker` for tracker modules (`.mod`, `.xm`, `.s3m`, `.it`).
+pub const NATIVE_API_VERSION: u32 = 98;
 
 /// A legacy glyph bitmap in pixels, with its logical top after bitmap synthesis.
 #[repr(C)]

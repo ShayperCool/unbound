@@ -16,6 +16,9 @@ pub struct AudioClipInfo {
     pub ambisonic: i32,
     /// `AudioCompressionFormat`.
     pub compression_format: i32,
+    /// Non-zero when the clip came from a tracker module (`.mod`, `.xm`, `.s3m`, `.it`)
+    /// (NativeApi 98).
+    pub is_tracker: i32,
 }
 
 /// `AudioSourcePacket.flags`.
@@ -359,7 +362,7 @@ mod tests {
     /// The managed side's layouts (checked by a matching test there).
     #[test]
     fn layouts() {
-        assert_eq!(size_of::<AudioClipInfo>(), 32);
+        assert_eq!(size_of::<AudioClipInfo>(), 36);
         assert_eq!(offset_of!(AudioSourcePacket, volume), 40);
         assert_eq!(offset_of!(AudioSourcePacket, flags), 84);
         assert_eq!(offset_of!(AudioSourcePacket, rolloff_curve), 96);
@@ -402,7 +405,7 @@ mod tests {
     /// The managed side pins the same version and refuses every other version.
     #[test]
     fn the_filter_descriptor_layout_is_native_api_61() {
-        assert_eq!(crate::native_api::NATIVE_API_VERSION, 97);
+        assert_eq!(crate::native_api::NATIVE_API_VERSION, 98);
         assert_eq!(
             [
                 filter_kind::LOWPASS,
