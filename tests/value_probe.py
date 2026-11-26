@@ -415,9 +415,22 @@ def engine_cli():
     return os.environ.get('UNBOUND') or os.environ.get('UNBOUND_CLI') or str(REPO/'target/release/unbound')
 
 
+def normalized(value, normalize):
+    """A value with `normalize` applied to its texts (inside lists and objects too)."""
+    if isinstance(value, str):
+        return normalize(value)
+    if isinstance(value, list):
+        return [normalized(v, normalize) for v in value]
+    if isinstance(value, dict):
+        return {k: normalized(v, normalize) for k, v in value.items()}
+    return value
+
+
 def gate(probe, variable, label, tolerance, engine_args, authored=None, base=None, space=None, device=None,
-         *, configure=None, profile=None, residuals_file='residuals.json', engine_env=None):
-    """`engine_env` (out -> dict) adds to the engine's environment."""
+         *, configure=None, profile=None, residuals_file='residuals.json', engine_env=None, normalize=None):
+    """`engine_env` (out -> dict) adds to the engine's environment. `normalize` (text -> text)
+    rewrites the texts of both the reference and the capture before they are compared: for what
+    the OS decides in a text (an installation's paths), never to hide a difference."""
     # The limits and residuals are read first: a missing Metal counterpart stops before the run.
     known, limits = residuals(probe, residuals_file), image_limits(probe)
     out = run_root(probe, label)
@@ -445,6 +458,9 @@ def gate(probe, variable, label, tolerance, engine_args, authored=None, base=Non
     except (OSError, ValueError) as error:
         print(f'{probe.name}: no complete engine capture ({error}); engine exit {code}; log {out}/engine.log')
         return 1
+    if normalize:
+        expected = {k: normalized(v, normalize) for k, v in expected.items()}
+        actual = {k: normalized(v, normalize) for k, v in actual.items()}
     matched, failures = compare(expected, actual, tolerance)
     residual = [f for f in failures if f['key'] in known]
     failures = [f for f in failures if f['key'] not in known]
@@ -476,7 +492,7 @@ def gate(probe, variable, label, tolerance, engine_args, authored=None, base=Non
 
 
 def main(probe, method, variable, tolerance, engine_args, batch=True, authored=None, record_timeout=RECORD_TIMEOUT, base=None,
-         macos_batch=False, metal=False, color_spaces=None, devices=None):
+         macos_batch=False, metal=False, color_spaces=None, devices=None, engine_env=None, normalize=None):
     """batch=False records in a windowed Editor (on the private display): batch mode calls no OnGUI.
     authored names the probe's authored set (tests/authored_project.py) when its Editor run also
     authors inputs the engine needs: publish keeps the first capture's project as that set and
@@ -488,7 +504,8 @@ def main(probe, method, variable, tolerance, engine_args, batch=True, authored=N
     the macOS Editor in batch mode. metal: the graphics device decides the probe's values, so on
     macOS arm64 it records, publishes and gates against a Metal reference (see the module's
     docstring). color_spaces: the color spaces the probe is recorded and gated in, devices the
-    Linux graphics devices (see the module's docstring)."""
+    Linux graphics devices (see the module's docstring). engine_env and normalize go to the gate
+    (see `gate`)."""
     global METAL
     METAL = metal and MACOS_ARM64
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
@@ -519,9 +536,11 @@ def main(probe, method, variable, tolerance, engine_args, batch=True, authored=N
         return code
     if color_spaces:
         spaces = [space] if space else color_spaces
-        return max(gate(probe, variable, f'{label}-{s}', tolerance, engine_args, authored, base, s) for s in spaces)
+        return max(gate(probe, variable, f'{label}-{s}', tolerance, engine_args, authored, base, s,
+                        engine_env=engine_env, normalize=normalize) for s in spaces)
     if devices and not MACOS_ARM64:
         chosen = [device] if device else devices
-        return max(gate(probe, variable, f'{label}-{d}', tolerance, engine_args, authored, base, device=None if d == 'opengl' else d)
+        return max(gate(probe, variable, f'{label}-{d}', tolerance, engine_args, authored, base,
+                        device=None if d == 'opengl' else d, engine_env=engine_env, normalize=normalize)
                    for d in chosen)
-    return gate(probe, variable, label, tolerance, engine_args, authored, base)
+    return gate(probe, variable, label, tolerance, engine_args, authored, base, engine_env=engine_env, normalize=normalize)
