@@ -522,14 +522,14 @@ namespace UnityEngine
 
         static void ResetAfterGUI()
         {
-            GUIClip.Begin(new Rect(0, 0, Screen.width, Screen.height));
+            GUIClip.End();
             GUILayoutUtility.End();
             GUIContent.ClearStaticCache();
         }
 
         internal static void EndGUIAfterException()
         {
-            GUIClip.Begin(new Rect(0, 0, Screen.width, Screen.height));
+            GUIClip.End();
             GUILayoutUtility.End();
             GUI.ResetScrollViews();
             GuiRender.ClearClips();

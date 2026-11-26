@@ -360,10 +360,12 @@ namespace UnityEngine.Tests
             Assert.Same(own ?? gameSkin, after);
             Assert.Equal(0, modeAfter);
             // After the game's pass its skin is still the one it had: the default, or its own
-            // (Unbound's own choice: what GUI.skin is between passes is not measured).
+            // (Unbound's own choice, unmeasured); GUI.skin itself throws between passes, as before
+            // the first one (tests/projects/guioutside between.skin).
             Assert.Equal(0, GUIUtility.s_SkinMode);
-            Assert.Same(own ?? gameSkin, GUI.skin);
-            GUI.skin = null;
+            Assert.Same(own ?? gameSkin, GUI.UserSkin ?? gameSkin);
+            Assert.Equal("You can only call GUI functions from inside OnGUI.", Assert.Throws<ArgumentException>(() => GUI.skin).Message);
+            GUI.DoSetSkin(null);
             if (own != null) Object.DestroyImmediate(own);
         }
 
@@ -414,7 +416,9 @@ namespace UnityEngine.Tests
             f.Tick();
             Assert.Same(Unbound.Runtime.EditorGuiSkins.Current, inside);
             Assert.Equal(0, GUIUtility.s_SkinMode);
-            Assert.Same(GUIUtility.GetDefaultSkin(0), GUI.skin);
+            Assert.Same(GUIUtility.GetDefaultSkin(0), GUIUtility.GetDefaultSkin());
+            // GUI.skin throws between passes (tests/projects/guioutside between.skin).
+            Assert.Throws<ArgumentException>(() => GUI.skin);
 
             // A container of the Player context has the game's skin in its pass.
             inside = null;
@@ -434,8 +438,8 @@ namespace UnityEngine.Tests
             f.Tick();
             Assert.Contains("Exception:handler", logs.Entries);
             Assert.Contains("Error:GUI Error: You are pushing more GUIClips than you are popping. Make sure they are balanced.", logs.Entries);
-            // The state after them is a clean one.
-            Assert.Equal(1, GUIClip.Depth);
+            // The state after them is a clean one: no clips, as before any pass.
+            Assert.Equal(0, GUIClip.Depth);
         }
 
         public class Tagged : PropertyAttribute { }
@@ -520,9 +524,10 @@ namespace UnityEngine.Tests
                 Assert.Equal(62f, heights["multi"]);
                 // Each takes a rect of its height; a checkbox with a decorator too.
                 foreach (var pair in heights) Assert.Equal(pair.Value, rects[pair.Key]);
-                // After an Editor GUI pass the heights are there outside one as well.
+                // After an Editor GUI pass, outside one, a header's height is there and a text
+                // area's still needs a pass (as before the first: tests/projects/guioutside).
                 Assert.Equal(45f, EditorGUI.GetPropertyHeight(so.FindProperty("headed")));
-                Assert.Equal(66f, EditorGUI.GetPropertyHeight(so.FindProperty("note")));
+                Assert.Throws<ArgumentException>(() => EditorGUI.GetPropertyHeight(so.FindProperty("note")));
             }
             finally
             {

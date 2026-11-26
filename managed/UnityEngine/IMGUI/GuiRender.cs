@@ -46,14 +46,18 @@ namespace UnityEngine
             s_WindowMouse = Event.current != null ? Event.current.mousePosition : default;
         }
 
-        /// <summary>The clips as before any GUI pass: none, so GUI functions throw as outside OnGUI
-        /// (Unbound keeps a screen root after a pass, so this state is the start's).</summary>
-        internal static void ClearForTests()
+        /// <summary>Ends a GUI pass: no clips, as before any pass, so GUI functions called between
+        /// passes throw as outside OnGUI (measured: tests/projects/guioutside between.*, the same
+        /// answers as before the first OnGUI).</summary>
+        internal static void End()
         {
             s_Stack.Clear();
             s_Matrix = Matrix4x4.identity;
             s_Inverse = Matrix4x4.identity;
         }
+
+        /// <summary>The clips as outside OnGUI (<see cref="End"/>).</summary>
+        internal static void ClearForTests() => End();
 
         /// <summary>Starts the GUI of a UI Toolkit IMGUIContainer: its coordinates start at
         /// <paramref name="origin"/> and <paramref name="clip"/> (absolute) is all it shows. Not a
