@@ -1,0 +1,11 @@
+{
+  "commands": [
+    "python3 tests/projects/forcelayers2d/run.py gate"
+  ],
+  "summary": "forcelayers2d: .*",
+  "engine_paths": [
+    "managed/UnityEngine/Physics2D/Physics2DWorld.cs",
+    "managed/UnityEngine/Physics2D/Collider2D.cs",
+    "managed/UnityEngine/Physics2D/Box2D/Dynamics/Contacts/ContactSolver.cs"
+  ]
+}
