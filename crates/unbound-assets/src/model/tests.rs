@@ -2306,3 +2306,19 @@ fn model_formats_not_imported_say_why() {
         assert_eq!(reason(imported), None, "{imported}");
     }
 }
+
+#[test]
+fn every_model_format_is_imported_or_reported() {
+    for format in [
+        "fbx", "obj", "blend", "dae", "3ds", "dxf", "max", "ma", "mb",
+    ] {
+        assert!(is_model_format(format), "{format}");
+        let file = format!("Assets/Model.{format}");
+        assert_eq!(
+            EXTENSIONS.contains(&format),
+            unsupported_format(Path::new(&file)).is_none(),
+            "{format}"
+        );
+    }
+    assert!(!is_model_format("prefab"));
+}

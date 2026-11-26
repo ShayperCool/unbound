@@ -451,10 +451,6 @@ pub fn initialize(project: &Project) -> Result<&'static RuntimeState> {
         db: RwLock::new(db),
         loader: DocumentLoader::new(locator)
             .with_synthesizer(Box::new(|guid, file| {
-                // A model format Unbound does not import fails as such (it is no text asset).
-                if let Some(reason) = unbound_assets::model::unsupported_format(file) {
-                    return Some(Err(anyhow::anyhow!("{}: {reason}", file.display())));
-                }
                 let is_model = file.extension().and_then(|e| e.to_str()).is_some_and(|e| {
                     unbound_assets::model::EXTENSIONS.contains(&e.to_ascii_lowercase().as_str())
                 });
@@ -474,8 +470,13 @@ pub fn initialize(project: &Project) -> Result<&'static RuntimeState> {
                     if is_speedtree8 {
                         return Some(crate::imported_prefabs::documents(guid));
                     }
-                    return effective_scripted_importer(state(), file)
-                        .map(|_| crate::imported_prefabs::documents(guid));
+                    if effective_scripted_importer(state(), file).is_some() {
+                        return Some(crate::imported_prefabs::documents(guid));
+                    }
+                    // A model format Unbound does not import (and no ScriptedImporter takes)
+                    // fails as such: it is no text asset.
+                    return unbound_assets::model::unsupported_format(file)
+                        .map(|reason| Err(anyhow::anyhow!("{reason}")));
                 }
                 let data = std::fs::read(file).ok()?;
                 unbound_assets::serialized::is_binary(&data)
@@ -574,7 +575,7 @@ fn asset_kind(path: &str) -> &'static str {
         "png" | "jpg" | "jpeg" | "tga" | "psd" | "bmp" | "gif" | "tif" | "tiff" | "exr" | "hdr"
         | "iff" | "pict" => "texture",
         "wav" | "mp3" | "ogg" | "aif" | "aiff" | "flac" | "mod" | "it" | "s3m" | "xm" => "audio",
-        "fbx" | "obj" | "dae" | "3ds" | "dxf" | "blend" | "max" | "ma" | "mb" => "model",
+        model if unbound_assets::model::is_model_format(model) => "model",
         "txt" | "json" | "bytes" | "xml" | "csv" | "html" | "htm" | "yaml" | "md" | "fnt" => "text",
         "ttf" | "otf" | "ttc" | "dfont" => "font",
         "cs" => "script",
@@ -1995,8 +1996,11 @@ pub fn load_documents(key: &str) -> Result<Vec<u8>> {
         let docs = s.loader.prefab(guid, &mut Vec::new())?;
         return Ok(unbound_scene::encode_documents(&docs));
     }
-    // A model format Unbound does not import fails as such (it is no text asset).
-    if let Some(reason) = unbound_assets::model::unsupported_format(&file) {
+    // A model format Unbound does not import (and no ScriptedImporter takes) fails as such: it
+    // is no text asset.
+    if let Some(reason) = unbound_assets::model::unsupported_format(&file)
+        && effective_scripted_importer(s, &file).is_none()
+    {
         return Err(anyhow::anyhow!("{}: {reason}", file.display()));
     }
     // A binary asset (NavMeshData the Editor bakes) reads by its type trees.

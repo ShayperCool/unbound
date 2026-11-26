@@ -59,21 +59,52 @@ pub use materials::{MaterialDescription, TextureDescription};
 /// File extensions Unity's ModelImporter handles that this importer reads.
 pub const EXTENSIONS: &[&str] = &["fbx", "obj", "blend"];
 
+/// Model formats the Editor's model importers take that this importer does not read, with why.
+/// The Editor's answers for `.dae` (its FBX SDK reader, with the FBX importer's conventions) and
+/// `.3ds` (its own 3DS importer) are recorded (docs/COMPATIBILITY_GAPS.md) but not implemented;
+/// `.dxf` is read by the Editor's FBX SDK too (unmeasured); `.max`, `.ma` and `.mb` the Editor
+/// converts with an installed 3ds Max or Maya (3ds Max runs on Windows only).
+const UNSUPPORTED_FORMATS: &[(&str, &str)] = &[
+    (
+        "dae",
+        "Collada (.dae) models are not imported by Unbound yet",
+    ),
+    ("3ds", "3DS (.3ds) models are not imported by Unbound yet"),
+    (
+        "dxf",
+        "AutoCAD DXF (.dxf) models are not imported by Unbound yet",
+    ),
+    (
+        "max",
+        "3ds Max (.max) models are not imported on macOS or Linux (the Editor converts them with an installed 3ds Max, which runs on Windows only)",
+    ),
+    (
+        "ma",
+        "Maya (.ma) models are not imported by Unbound (the Editor converts them with an installed Maya)",
+    ),
+    (
+        "mb",
+        "Maya (.mb) models are not imported by Unbound (the Editor converts them with an installed Maya)",
+    ),
+];
+
 /// Why a model file of a format the Editor imports is not imported here, for a clear failure
-/// (`None` for every other file). The Editor's answers for `.dae` (its FBX SDK reader, with the
-/// FBX importer's conventions) and `.3ds` (its own 3DS importer) are recorded but not implemented;
-/// `.max` needs 3ds Max installed, which runs on Windows only, so the Editor on macOS and Linux
-/// does not import it either.
+/// (`None` for every other file).
 pub fn unsupported_format(source: &Path) -> Option<&'static str> {
     let extension = source.extension()?.to_str()?.to_ascii_lowercase();
-    match extension.as_str() {
-        "dae" => Some("Collada (.dae) models are not imported by Unbound yet"),
-        "3ds" => Some("3DS (.3ds) models are not imported by Unbound yet"),
-        "max" => Some(
-            "3ds Max (.max) models are not imported on macOS or Linux (the Editor converts them with an installed 3ds Max, which runs on Windows only)",
-        ),
-        _ => None,
-    }
+    UNSUPPORTED_FORMATS
+        .iter()
+        .find(|(format, _)| *format == extension)
+        .map(|(_, reason)| *reason)
+}
+
+/// Whether a (lower-case) extension is a model format of the Editor's model importers: one this
+/// importer reads ([`EXTENSIONS`]) or one it reports ([`unsupported_format`]).
+pub fn is_model_format(extension: &str) -> bool {
+    EXTENSIONS.contains(&extension)
+        || UNSUPPORTED_FORMATS
+            .iter()
+            .any(|(format, _)| *format == extension)
 }
 
 /// The name the fileID tables give the prefab root.

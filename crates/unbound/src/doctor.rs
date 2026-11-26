@@ -326,12 +326,17 @@ pub fn doctor(args: &ProjectArgs, all: bool, as_json: bool) -> Result<()> {
         .map(|asset| asset.path.as_str())
         .collect();
     let messages = message_coverage(&project, args, &runtime, &asset_files)?;
-    // Model files of formats Unbound does not import, with why.
-    let unimported_models: Vec<(String, &str)> = asset_files
+    // Model files of formats Unbound does not import, with why; one whose .meta names a
+    // ScriptedImporter or an importer override may be imported by a project's importer and is
+    // left out.
+    let unimported_models: Vec<(String, &str)> = db
         .iter()
-        .filter_map(|path| {
-            unbound_assets::model::unsupported_format(std::path::Path::new(path))
-                .map(|reason| (path.to_string(), reason))
+        .filter(|asset| !asset.is_folder)
+        .filter_map(|asset| {
+            let reason = unbound_assets::model::unsupported_format(&asset.file)?;
+            let scripted = unbound_assets::meta::scripted_importer_of(&asset.file).is_some()
+                || unbound_assets::meta::has_importer_override(&asset.file);
+            (!scripted).then(|| (asset.path.clone(), reason))
         })
         .collect();
     let message_seconds = message_start.elapsed().as_secs_f64();
