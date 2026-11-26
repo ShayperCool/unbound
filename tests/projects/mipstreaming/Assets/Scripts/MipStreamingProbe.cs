@@ -14,7 +14,7 @@ using UnityEngine;
 public sealed class MipStreamingProbe : MonoBehaviour
 {
     readonly StringBuilder m_Out = new StringBuilder();
-    Texture2D m_Stream, m_Plain, m_Runtime;
+    Texture2D m_Stream, m_Plain, m_Runtime, m_Big, m_Tiny, m_NoMip;
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
     static void Boot() => new GameObject("MipStreamingProbe").AddComponent<MipStreamingProbe>();
@@ -72,6 +72,9 @@ public sealed class MipStreamingProbe : MonoBehaviour
         Texture(stage, "stream", m_Stream);
         Texture(stage, "plain", m_Plain);
         Texture(stage, "runtime", m_Runtime);
+        // Streaming textures of other sizes (1024x1024, 4x4).
+        Texture(stage, "big", m_Big);
+        Texture(stage, "tiny", m_Tiny);
     }
 
     IEnumerator Start()
@@ -79,7 +82,16 @@ public sealed class MipStreamingProbe : MonoBehaviour
         m_Stream = Resources.Load<Texture2D>("stream");
         m_Plain = Resources.Load<Texture2D>("plain");
         m_Runtime = new Texture2D(64, 64, TextureFormat.RGBA32, true);
+        m_Big = Resources.Load<Texture2D>("big");
+        m_Tiny = Resources.Load<Texture2D>("tiny");
         Stage("load");
+        // A streaming texture without mipmaps, with a requested level, before streaming is active
+        // (while it is loaded with streaming active the Editor's calculated levels of it and of
+        // plain.png swap between runs), then unloaded.
+        m_NoMip = Resources.Load<Texture2D>("nomip");
+        m_NoMip.requestedMipmapLevel = 3;
+        Texture("load", "nomip", m_NoMip);
+        Resources.UnloadAsset(m_NoMip);
 
         // A camera looking at two quads, one for each imported texture, five units away.
         var camera = new GameObject("eye", typeof(Camera)).GetComponent<Camera>();
@@ -102,8 +114,29 @@ public sealed class MipStreamingProbe : MonoBehaviour
         m_Stream.requestedMipmapLevel = 3;
         m_Plain.requestedMipmapLevel = 3;
         m_Runtime.requestedMipmapLevel = 3;
+        m_Big.requestedMipmapLevel = 0;
+        m_Tiny.requestedMipmapLevel = 3;
         for (int i = 0; i < 10; i++) yield return null;
         Stage("requested");
+
+        // A copy of a streaming texture with a requested level, and a negative request.
+        var copy = Instantiate(m_Stream);
+        Texture("requested", "copy", copy);
+        Destroy(copy);
+        m_Tiny.requestedMipmapLevel = -4;
+        Rec("negative/tiny/requestedMipmapLevel", Try(() => m_Tiny.requestedMipmapLevel));
+
+        // A larger maximum level reduction.
+        m_Big.ClearRequestedMipmapLevel();
+        m_Stream.ClearRequestedMipmapLevel();
+        QualitySettings.streamingMipmapsMaxLevelReduction = 5;
+        for (int i = 0; i < 10; i++) yield return null;
+        foreach (var (name, texture) in new[] { ("stream", m_Stream), ("big", m_Big), ("tiny", m_Tiny) })
+        {
+            Rec("reduction5/" + name + "/calculatedMipmapLevel", Try(() => texture.calculatedMipmapLevel));
+            Rec("reduction5/" + name + "/desiredMipmapLevel", Try(() => texture.desiredMipmapLevel));
+        }
+        QualitySettings.streamingMipmapsMaxLevelReduction = 2;
 
         m_Stream.ClearRequestedMipmapLevel();
         m_Stream.minimumMipmapLevel = 2;

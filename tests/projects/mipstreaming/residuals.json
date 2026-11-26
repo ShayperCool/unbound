@@ -35,8 +35,8 @@
   "viewed/targetTextureMemory>0",
   "viewed/totalTextureMemory>0"
  ],
- "The mip level the streaming system calculates for a streaming texture with QualitySettings.streamingMipmapsActive (calculatedMipmapLevel, desiredMipmapLevel) is not simulated (a notice): the Editor gives 2 for this view, where Unbound answers the requested level": [
-  "active/stream/calculatedMipmapLevel",
-  "active/stream/desiredMipmapLevel"
+ "The level the streaming system calculates for a drawn streaming texture from its size on screen is not simulated (a notice): Unbound answers the maximum level reduction, which is the Editor's answer for a texture it does not draw (big and tiny at reduction 2 and 5); for the drawn stream.png at reduction 5 the Editor gives 2": [
+  "reduction5/stream/calculatedMipmapLevel",
+  "reduction5/stream/desiredMipmapLevel"
  ]
 }
