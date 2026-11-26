@@ -121,7 +121,8 @@ are still open. **[ ]** means it has not started or is only a stub. The open det
   - [x] AudioSource, mixers, effects, 3D sound, surround output
   - [x] VideoPlayer (through the system's ffmpeg)
   - [ ] 🚧 Video audio output, URL sources, transparency
-  - [ ] Tracker modules, microphone recording, spatializer plugins
+  - [x] Tracker modules (`.mod`, `.xm`, `.s3m`, `.it`)
+  - [ ] Microphone recording, spatializer plugins
 - [ ] 🚧 **Assets**
   - [x] Model, texture, audio and font import
   - [x] AssetBundles (UnityFS), Addressables in Play mode
