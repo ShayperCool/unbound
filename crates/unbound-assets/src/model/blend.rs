@@ -77,6 +77,10 @@ pub(crate) fn conversion_key(script: Option<&Path>) -> String {
     let (Some(script), Ok(blender)) = (script, installed()) else {
         return String::new();
     };
+    if let Err(e) = fetch_script(script) {
+        tracing::warn!("{e:#}");
+        return String::new();
+    }
     let Ok(text) = std::fs::read(script) else {
         return String::new();
     };
@@ -85,6 +89,17 @@ pub(crate) fn conversion_key(script: Option<&Path>) -> String {
         blender.version,
         blake3::hash(&text).to_hex().as_str()
     )
+}
+
+/// Fetches the export script first when the Editor files hold it only as a file still to fetch
+/// (a cache tree linked from an earlier unpack set, `unbound_project::editor_archive::ensure`).
+fn fetch_script(script: &Path) -> Result<()> {
+    match script.parent().and_then(Path::parent) {
+        Some(data) if script.ends_with(EXPORT_SCRIPT) => {
+            unbound_project::editor_archive::ensure(data, EXPORT_SCRIPT)
+        }
+        _ => Ok(()),
+    }
 }
 
 /// The FBX that Blender writes for `source` with the export script. A conversion is refused
@@ -96,6 +111,7 @@ pub(crate) fn convert(source: &Path, script: Option<&Path>) -> Result<Vec<u8>> {
             source.display()
         )
     })?;
+    fetch_script(script).with_context(|| format!("cannot import {}", source.display()))?;
     if !script.is_file() {
         bail!(
             "cannot import {}: the Editor installation has no {} (it converts .blend files with it)",

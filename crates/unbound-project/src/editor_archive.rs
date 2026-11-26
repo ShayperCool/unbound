@@ -3,7 +3,9 @@
 //! assemblies), taken from the release's published downloads when no installation of it is
 //! present: the Editor archive and the platform modules games' code compiles against (Android,
 //! iOS by default) are streamed once each, and only those files are unpacked, into
-//! `<cache>/editors/v<N>/<release>/Editor/Data`. Nothing of the Editor is run.
+//! `<cache>/editors/v<N>/<release>/Editor/Data`. Nothing of the Editor is run. When a newer
+//! unpack set only adds files, an earlier complete tree is linked into the new one and the added
+//! files are fetched when first needed ([`ensure`]).
 use crate::releases::{self, Module};
 use anyhow::{Context, Result, bail};
 use md5::{Digest, Md5};
@@ -16,6 +18,16 @@ use unbound_compat::UnityVersion;
 
 /// Bumped when the set of unpacked files or their layout changes.
 const FORMAT_VERSION: u32 = 3;
+
+/// The files a format version added to the unpack set, for each version that changed nothing
+/// else: a complete tree of the version before becomes this version's by linking its files
+/// ([`upgrade`]), and the added files are fetched when first needed ([`ensure`]) instead of
+/// downloading the Editor archive again at once.
+const ADDED: &[(u32, &[&str])] = &[(3, &["Tools/Unity-BlenderToFBX.py"])];
+
+/// The files (below `Editor/Data`, one per line) a tree linked from an earlier format version
+/// still lacks: they are not there, so nothing stale can be read.
+const PENDING: &str = ".pending";
 
 /// Directories of `Editor/Data` that are unpacked whole.
 const DIRS: &[&str] = &[
@@ -68,10 +80,233 @@ fn wanted(rel: &str) -> bool {
 
 /// The release's unpacked files (holding `Editor/Data`), whether or not they are there yet.
 pub fn root(release: UnityVersion) -> PathBuf {
-    crate::cache_root()
-        .join("editors")
-        .join(format!("v{FORMAT_VERSION}"))
+    root_in(
+        &crate::cache_root().join("editors"),
+        FORMAT_VERSION,
+        release,
+    )
+}
+
+fn root_in(editors: &Path, version: u32, release: UnityVersion) -> PathBuf {
+    editors
+        .join(format!("v{version}"))
         .join(release.to_string())
+}
+
+/// Makes this format version's tree of the release from a complete tree of an earlier version
+/// when every version since only added files ([`ADDED`]): its files are linked (copied where
+/// links are not possible), the earlier tree stays for the builds that read it, and the added
+/// files are listed as [`PENDING`]. True when it made the tree.
+fn upgrade(editors: &Path, release: UnityVersion) -> Result<bool> {
+    let root = root_in(editors, FORMAT_VERSION, release);
+    if root.join(".complete").is_file() {
+        return Ok(false);
+    }
+    let mut pending: Vec<String> = Vec::new();
+    for version in (1..FORMAT_VERSION).rev() {
+        let Some((_, added)) = ADDED.iter().find(|(v, _)| *v == version + 1) else {
+            return Ok(false);
+        };
+        pending.extend(added.iter().map(|rel| rel.to_string()));
+        let old = root_in(editors, version, release);
+        if !old.join(".complete").is_file() {
+            continue;
+        }
+        pending.extend(read_pending(&old)?);
+        let parent = root.parent().context("cache path")?;
+        std::fs::create_dir_all(parent)?;
+        let temp = parent.join(format!(".upgrading-{release}-{}", std::process::id()));
+        if temp.exists() {
+            std::fs::remove_dir_all(&temp)?;
+        }
+        let result = link_tree(&old, &temp).and_then(|()| {
+            let data = temp.join("Editor/Data");
+            pending.retain(|rel| !data.join(rel).is_file());
+            pending.sort();
+            pending.dedup();
+            write_pending(&temp, &pending)
+        });
+        if let Err(e) = result {
+            let _ = std::fs::remove_dir_all(&temp);
+            return Err(e)
+                .with_context(|| format!("linking {} into {}", old.display(), root.display()));
+        }
+        if root.exists() {
+            if root.join(".complete").is_file() {
+                // Another process finished first.
+                let _ = std::fs::remove_dir_all(&temp);
+                return Ok(false);
+            }
+            std::fs::remove_dir_all(&root)?;
+        }
+        std::fs::rename(&temp, &root)?;
+        tracing::info!(
+            "Unity {release}'s files are linked from {} into {}{}",
+            old.display(),
+            root.display(),
+            if pending.is_empty() {
+                String::new()
+            } else {
+                format!("; {} are fetched when first needed", pending.join(", "))
+            }
+        );
+        return Ok(true);
+    }
+    Ok(false)
+}
+
+/// The files of `src` (folders, regular files; not unpacking leftovers) at the same places below
+/// `dst`, hard-linked, else copied.
+fn link_tree(src: &Path, dst: &Path) -> Result<()> {
+    std::fs::create_dir_all(dst)?;
+    for entry in std::fs::read_dir(src).with_context(|| format!("reading {}", src.display()))? {
+        let entry = entry?;
+        let name = entry.file_name();
+        if name.to_string_lossy().starts_with(".unpacking-")
+            || name.to_string_lossy().starts_with(".fetching-")
+        {
+            continue;
+        }
+        let kind = entry.file_type()?;
+        let (from, to) = (entry.path(), dst.join(&name));
+        if kind.is_dir() {
+            link_tree(&from, &to)?;
+        } else if kind.is_file() && std::fs::hard_link(&from, &to).is_err() {
+            std::fs::copy(&from, &to).with_context(|| format!("copying {}", from.display()))?;
+        }
+    }
+    Ok(())
+}
+
+fn read_pending(root: &Path) -> Result<Vec<String>> {
+    match std::fs::read_to_string(root.join(PENDING)) {
+        Ok(text) => Ok(text
+            .lines()
+            .filter(|l| !l.is_empty())
+            .map(str::to_string)
+            .collect()),
+        Err(e) if e.kind() == io::ErrorKind::NotFound => Ok(Vec::new()),
+        Err(e) => Err(e).with_context(|| format!("reading {}", root.join(PENDING).display())),
+    }
+}
+
+/// Replaces the tree's [`PENDING`] list (atomically; none when empty).
+fn write_pending(root: &Path, pending: &[String]) -> Result<()> {
+    let path = root.join(PENDING);
+    if pending.is_empty() {
+        return match std::fs::remove_file(&path) {
+            Err(e) if e.kind() != io::ErrorKind::NotFound => Err(e.into()),
+            _ => Ok(()),
+        };
+    }
+    let temp = root.join(format!("{PENDING}-{}", std::process::id()));
+    std::fs::write(&temp, pending.join("\n") + "\n")?;
+    std::fs::rename(&temp, &path)?;
+    Ok(())
+}
+
+/// Makes sure `rel` (a path below `data`, a release's `Editor/Data`) is there when it is one of
+/// the files a tree linked from an earlier format version still lacks ([`PENDING`]): those files
+/// are fetched from the release's Editor archive now, after the same consent as a first download.
+/// Anything else is left to the caller, who reports a missing file itself.
+pub fn ensure(data: &Path, rel: &str) -> Result<()> {
+    ensure_with(data, rel, |release, root, pending| {
+        if std::env::var_os("UNBOUND_OFFLINE").is_some() {
+            bail!(
+                "Unity {release}'s {} are not cached in {} and UNBOUND_OFFLINE forbids \
+                 downloading them",
+                pending.join(", "),
+                root.display()
+            );
+        }
+        let index = releases::lookup(release)?;
+        let editor = index.linux_editor().with_context(|| {
+            format!("Unity {release} has no Linux Editor archive to take its files from")
+        })?;
+        confirm_download(
+            release,
+            &[format!("its Editor archive (for {})", pending.join(", "))],
+            editor.download_size.as_ref().map(|s| s.value),
+            root,
+        )?;
+        fetch_pending(release, root, editor, pending)
+    })
+}
+
+fn ensure_with(
+    data: &Path,
+    rel: &str,
+    fetch: impl FnOnce(UnityVersion, &Path, &[String]) -> Result<()>,
+) -> Result<()> {
+    if data.join(rel).is_file() {
+        return Ok(());
+    }
+    let Some(root) = data.parent().and_then(Path::parent) else {
+        return Ok(());
+    };
+    let pending = read_pending(root)?;
+    if !pending.iter().any(|p| p == rel) {
+        return Ok(());
+    }
+    let Some(release) = root
+        .file_name()
+        .and_then(|n| n.to_str())
+        .and_then(|n| n.parse::<UnityVersion>().ok())
+    else {
+        bail!(
+            "{} lists files to fetch but names no Unity release",
+            root.display()
+        );
+    };
+    fetch(release, root, &pending)
+}
+
+/// Unpacks the [`PENDING`] files of `root` from the release's Editor archive (verified whole) and
+/// takes them off the list.
+fn fetch_pending(
+    release: UnityVersion,
+    root: &Path,
+    download: &releases::Download,
+    pending: &[String],
+) -> Result<()> {
+    let size = download.download_size.as_ref().map(|s| s.value);
+    tracing::warn!(
+        "downloading Unity {release}'s Editor archive{} for {} ({})",
+        size.map(|s| format!(" ({:.1} GB)", s as f64 / 1e9))
+            .unwrap_or_default(),
+        pending.join(", "),
+        download.url
+    );
+    let temp = root.join(format!(".fetching-{}", std::process::id()));
+    if temp.exists() {
+        std::fs::remove_dir_all(&temp)?;
+    }
+    let mut stream = Stream::new(&download.url, format!("Unity {release}'s Editor"), size);
+    let result = unpack_tar_xz(&mut stream, &temp, |path: &str| {
+        path.strip_prefix("Editor/Data/")
+            .filter(|rel| pending.iter().any(|p| p == rel))
+            .map(str::to_string)
+    })
+    .and_then(|_| stream.verify(&download.integrity))
+    .and_then(|()| {
+        let data = root.join("Editor/Data");
+        for rel in pending {
+            let from = temp.join(rel);
+            if !from.is_file() {
+                bail!("the archive has no Editor/Data/{rel}");
+            }
+            let to = data.join(rel);
+            std::fs::create_dir_all(to.parent().context("archive path")?)?;
+            std::fs::rename(&from, &to)?;
+        }
+        let left: Vec<String> = read_pending(root)?
+            .into_iter()
+            .filter(|rel| !data.join(rel).is_file())
+            .collect();
+        write_pending(root, &left)
+    });
+    let _ = std::fs::remove_dir_all(&temp);
+    result.with_context(|| format!("unpacking {}", download.url))
 }
 
 /// `Editor/Data` of the release's unpacked Editor files, when they are complete.
@@ -115,6 +350,11 @@ pub fn fetch_api_reference(release: UnityVersion) -> Result<PathBuf> {
 }
 
 fn fetch_with(release: UnityVersion, modules: &[String], required: bool) -> Result<PathBuf> {
+    if cached(release).is_none()
+        && let Err(e) = upgrade(&crate::cache_root().join("editors"), release)
+    {
+        tracing::warn!("{e:#}");
+    }
     let root = root(release);
     let missing: Vec<&String> = modules
         .iter()
@@ -755,6 +995,97 @@ mod tests {
         ] {
             assert!(!wanted(rel), "{rel}");
         }
+    }
+
+    fn temp_editors(name: &str) -> PathBuf {
+        let dir =
+            std::env::temp_dir().join(format!("unbound-editors-{name}-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        dir
+    }
+
+    fn complete_tree(root: &Path) -> PathBuf {
+        let dll = root.join("Editor/Data/Managed/UnityEngine/UnityEngine.dll");
+        std::fs::create_dir_all(dll.parent().unwrap()).unwrap();
+        std::fs::write(&dll, b"dll").unwrap();
+        std::fs::write(root.join(".complete"), b"").unwrap();
+        std::fs::write(root.join(".module-android"), b"").unwrap();
+        dll
+    }
+
+    #[test]
+    fn an_earlier_complete_tree_is_linked_and_its_added_files_wait() {
+        let editors = temp_editors("upgrade");
+        let release: UnityVersion = "6000.0.71f1".parse().unwrap();
+        let old = root_in(&editors, FORMAT_VERSION - 1, release);
+        let old_dll = complete_tree(&old);
+        assert!(upgrade(&editors, release).unwrap());
+        let root = root_in(&editors, FORMAT_VERSION, release);
+        assert!(root.join(".complete").is_file());
+        assert!(module_marker(&root, "android").is_file());
+        let dll = root.join("Editor/Data/Managed/UnityEngine/UnityEngine.dll");
+        assert_eq!(std::fs::read(&dll).unwrap(), b"dll");
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::MetadataExt;
+            assert_eq!(
+                dll.metadata().unwrap().ino(),
+                old_dll.metadata().unwrap().ino()
+            );
+        }
+        assert_eq!(
+            read_pending(&root).unwrap(),
+            vec!["Tools/Unity-BlenderToFBX.py".to_string()]
+        );
+        // The earlier tree stays for the builds that read it; a complete tree is not made again.
+        assert!(old.join(".complete").is_file() && old_dll.is_file());
+        assert!(!upgrade(&editors, release).unwrap());
+        let _ = std::fs::remove_dir_all(&editors);
+    }
+
+    #[test]
+    fn a_tree_is_not_linked_across_a_change_that_added_more_than_files() {
+        // Version 2 has no ADDED entry: a version 1 tree cannot become version 2's, nor later.
+        assert!(!ADDED.iter().any(|(v, _)| *v == 2));
+        let editors = temp_editors("noupgrade");
+        let release: UnityVersion = "6000.0.71f1".parse().unwrap();
+        complete_tree(&root_in(&editors, 1, release));
+        assert!(!upgrade(&editors, release).unwrap());
+        assert!(!root_in(&editors, FORMAT_VERSION, release).exists());
+        let _ = std::fs::remove_dir_all(&editors);
+    }
+
+    #[test]
+    fn a_pending_file_is_fetched_when_it_is_needed() {
+        let editors = temp_editors("pending");
+        let release: UnityVersion = "6000.0.71f1".parse().unwrap();
+        let root = root_in(&editors, FORMAT_VERSION, release);
+        complete_tree(&root);
+        let script = "Tools/Unity-BlenderToFBX.py".to_string();
+        write_pending(&root, std::slice::from_ref(&script)).unwrap();
+        let data = root.join("Editor/Data");
+        // A missing file that is not pending is the caller's to report.
+        ensure_with(&data, "Managed/Missing.dll", |_, _, _| {
+            panic!("not pending")
+        })
+        .unwrap();
+        let mut asked = None;
+        ensure_with(&data, &script, |r, at, pending| {
+            asked = Some((r, at.to_path_buf(), pending.to_vec()));
+            Ok(())
+        })
+        .unwrap();
+        assert_eq!(asked, Some((release, root.clone(), vec![script.clone()])));
+        // A failed fetch reaches the caller.
+        let error = ensure_with(&data, &script, |_, _, _| bail!("offline")).unwrap_err();
+        assert!(format!("{error:#}").contains("offline"));
+        // Once the file is there nothing is fetched; an empty list is no file.
+        std::fs::create_dir_all(data.join("Tools")).unwrap();
+        std::fs::write(data.join(&script), b"script").unwrap();
+        ensure_with(&data, &script, |_, _, _| panic!("present")).unwrap();
+        write_pending(&root, &[]).unwrap();
+        assert!(!root.join(PENDING).exists());
+        let _ = std::fs::remove_dir_all(&editors);
     }
 
     #[test]
