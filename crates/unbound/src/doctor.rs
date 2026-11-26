@@ -326,6 +326,14 @@ pub fn doctor(args: &ProjectArgs, all: bool, as_json: bool) -> Result<()> {
         .map(|asset| asset.path.as_str())
         .collect();
     let messages = message_coverage(&project, args, &runtime, &asset_files)?;
+    // Model files of formats Unbound does not import, with why.
+    let unimported_models: Vec<(String, &str)> = asset_files
+        .iter()
+        .filter_map(|path| {
+            unbound_assets::model::unsupported_format(std::path::Path::new(path))
+                .map(|reason| (path.to_string(), reason))
+        })
+        .collect();
     let message_seconds = message_start.elapsed().as_secs_f64();
     let fields_start = Instant::now();
     let field_coverage = fields::report(
@@ -378,6 +386,10 @@ pub fn doctor(args: &ProjectArgs, all: bool, as_json: bool) -> Result<()> {
             "unsupportedMessages": messages.messages,
             "messageAnalysisFailedAssemblies": messages.failed_assemblies,
             "unimportedSpeedTrees": messages.unimported_speed_trees,
+            "unimportedModels": unimported_models
+                .iter()
+                .map(|(path, reason)| json!({"path": path, "reason": reason}))
+                .collect::<Vec<_>>(),
         });
         println!("{}", serde_json::to_string_pretty(&report)?);
         return Ok(());
@@ -465,6 +477,23 @@ pub fn doctor(args: &ProjectArgs, all: bool, as_json: bool) -> Result<()> {
                 3
             )
         );
+    }
+    if !unimported_models.is_empty() {
+        println!(
+            "\n{} model files Unbound does not import:",
+            unimported_models.len()
+        );
+        let mut reasons: Vec<&str> = unimported_models.iter().map(|(_, r)| *r).collect();
+        reasons.sort();
+        reasons.dedup();
+        for reason in reasons {
+            let files: BTreeSet<String> = unimported_models
+                .iter()
+                .filter(|(_, r)| *r == reason)
+                .map(|(path, _)| path.clone())
+                .collect();
+            println!("  {reason}: {}", some_files(&files, 3));
+        }
     }
     println!("\nRendering limitations:");
     for limitation in RENDERING_LIMITATIONS {

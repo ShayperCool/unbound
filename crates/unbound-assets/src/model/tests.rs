@@ -2290,3 +2290,19 @@ fn obj_bindings_a_library_does_not_resolve_are_dropped() {
     );
     std::fs::remove_dir_all(&dir).unwrap();
 }
+
+#[test]
+fn model_formats_not_imported_say_why() {
+    let reason = |name: &str| unsupported_format(Path::new(name));
+    assert!(reason("Assets/Box.dae").unwrap().contains("Collada"));
+    assert!(reason("Assets/Box.3DS").unwrap().contains("3DS"));
+    assert!(reason("Assets/Box.max").unwrap().contains("Windows only"));
+    for imported in [
+        "Assets/Box.fbx",
+        "Assets/Box.obj",
+        "Assets/Scene.blend",
+        "Assets/Box.prefab",
+    ] {
+        assert_eq!(reason(imported), None, "{imported}");
+    }
+}

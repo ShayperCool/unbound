@@ -59,6 +59,23 @@ pub use materials::{MaterialDescription, TextureDescription};
 /// File extensions Unity's ModelImporter handles that this importer reads.
 pub const EXTENSIONS: &[&str] = &["fbx", "obj", "blend"];
 
+/// Why a model file of a format the Editor imports is not imported here, for a clear failure
+/// (`None` for every other file). The Editor's answers for `.dae` (its FBX SDK reader, with the
+/// FBX importer's conventions) and `.3ds` (its own 3DS importer) are recorded but not implemented;
+/// `.max` needs 3ds Max installed, which runs on Windows only, so the Editor on macOS and Linux
+/// does not import it either.
+pub fn unsupported_format(source: &Path) -> Option<&'static str> {
+    let extension = source.extension()?.to_str()?.to_ascii_lowercase();
+    match extension.as_str() {
+        "dae" => Some("Collada (.dae) models are not imported by Unbound yet"),
+        "3ds" => Some("3DS (.3ds) models are not imported by Unbound yet"),
+        "max" => Some(
+            "3ds Max (.max) models are not imported on macOS or Linux (the Editor converts them with an installed 3ds Max, which runs on Windows only)",
+        ),
+        _ => None,
+    }
+}
+
 /// The name the fileID tables give the prefab root.
 pub const ROOT_NODE_NAME: &str = "//RootNode";
 

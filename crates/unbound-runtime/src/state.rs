@@ -451,6 +451,10 @@ pub fn initialize(project: &Project) -> Result<&'static RuntimeState> {
         db: RwLock::new(db),
         loader: DocumentLoader::new(locator)
             .with_synthesizer(Box::new(|guid, file| {
+                // A model format Unbound does not import fails as such (it is no text asset).
+                if let Some(reason) = unbound_assets::model::unsupported_format(file) {
+                    return Some(Err(anyhow::anyhow!("{}: {reason}", file.display())));
+                }
                 let is_model = file.extension().and_then(|e| e.to_str()).is_some_and(|e| {
                     unbound_assets::model::EXTENSIONS.contains(&e.to_ascii_lowercase().as_str())
                 });
@@ -1990,6 +1994,10 @@ pub fn load_documents(key: &str) -> Result<Vec<u8>> {
         use unbound_scene::PrefabSource;
         let docs = s.loader.prefab(guid, &mut Vec::new())?;
         return Ok(unbound_scene::encode_documents(&docs));
+    }
+    // A model format Unbound does not import fails as such (it is no text asset).
+    if let Some(reason) = unbound_assets::model::unsupported_format(&file) {
+        return Err(anyhow::anyhow!("{}: {reason}", file.display()));
     }
     // A binary asset (NavMeshData the Editor bakes) reads by its type trees.
     if file
