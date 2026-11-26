@@ -69,6 +69,18 @@ public sealed class SpeedTree8WindProbe : MonoBehaviour
     };
     const int LastFrameFirst = 450;
 
+    /// <summary>The scene of the spherical zones' later cases: a zone that reaches a tree while its
+    /// asset's wind rests (after it blew), and a strong zone that reaches a tree for 13 seconds
+    /// under a weak directional wind before it goes (the tree's long return).</summary>
+    static readonly int[] k_RecordedZones =
+    {
+        1, 5, 10, 11, 12, 20, 40, 41, 42, 100, 200, 300, 400, 460, 500, 519,
+        520, 521, 522, 523, 525, 530, 540, 560, 600, 639, 640, 641, 642, 645, 660, 699,
+        700, 701, 702, 703, 705, 710, 711, 712, 713, 715, 720, 750, 800, 900, 1000, 1100, 1109,
+        1110, 1111, 1112, 1113, 1115, 1120, 1130, 1150, 1200, 1250, 1300, 1350, 1400, 1450,
+    };
+    const int LastFrameZones = 1450;
+
     readonly StringBuilder m_Out = new StringBuilder();
     /// <summary>Each tree's camera, the constants it records (a renderer without per-object motion
     /// vectors records the current ones only), the earlier tree of its asset, if any, and the
@@ -80,9 +92,9 @@ public sealed class SpeedTree8WindProbe : MonoBehaviour
     Texture2D m_Read;
     GameObject m_Field, m_Directional, m_Calm;
     Material m_Dump, m_Dump9;
-    WindZone m_A, m_B, m_Far, m_Again, m_Near;
+    WindZone m_A, m_B, m_Far, m_Again, m_Near, m_Gone, m_Strong;
     int m_Frame;
-    bool m_Failed, m_First;
+    bool m_Failed, m_First, m_Zones;
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
     static void Boot()
@@ -99,6 +111,7 @@ public sealed class SpeedTree8WindProbe : MonoBehaviour
         try
         {
             m_First = SceneManager.GetActiveScene().name == "FirstWind";
+            m_Zones = SceneManager.GetActiveScene().name == "ZonesWind";
             var field = m_Field = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Trees/v8/Broadleaf_Desktop_Field.st");
             if (field == null) throw new Exception("the staged sample tree Broadleaf_Desktop_Field.st is not there");
             m_Target = new RenderTexture(k_Names.Length, 1, 0, RenderTextureFormat.ARGBFloat);
@@ -112,6 +125,14 @@ public sealed class SpeedTree8WindProbe : MonoBehaviour
             Rec("hasSpeedTreeWind/level0", level0 != null && level0.hasSpeedTreeWind ? "true" : "false");
             Rec("levels", field.transform.childCount.ToString());
             if (m_First) return;
+            if (m_Zones)
+            {
+                // A tree a spherical zone reaches while the asset's wind rests, and one a strong
+                // zone reaches for long.
+                Tree("FieldCalm", null, field, 0, m_Dump, k_Names, 27, new Vector3(400f, 0f, 0f), Quaternion.identity, Vector3.one, MotionVectorGenerationMode.Object);
+                Tree("FieldLong", null, field, 0, m_Dump, k_Names, 26, new Vector3(500f, 0f, 0f), Quaternion.identity, Vector3.one, MotionVectorGenerationMode.Object);
+                return;
+            }
             // A tree a spherical zone reaches later (its own wind while it does).
             Tree("FieldNear", null, field, 0, m_Dump, k_Names, 27, new Vector3(400f, 0f, 0f), Quaternion.identity, Vector3.one, MotionVectorGenerationMode.Object);
             // The asset's billboard level (its last level with a Tree).
@@ -198,6 +219,21 @@ public sealed class SpeedTree8WindProbe : MonoBehaviour
         if (m_Failed) return;
         m_Frame++;
         if (m_First) return;
+        if (m_Zones)
+        {
+            // A wind that blows and goes: the asset's wind eases to rest (by about frame 460).
+            if (m_Frame == 10) m_Gone = Zone("Gone", null, WindZoneMode.Directional, 0.6f, Quaternion.Euler(0f, 120f, 0f), Vector3.zero);
+            if (m_Frame == 40) m_Gone.gameObject.SetActive(false);
+            // At rest, a spherical zone reaches FieldCalm, and goes out of its reach.
+            if (m_Frame == 520) m_Near = Zone("Near", null, WindZoneMode.Spherical, 1.2f, Quaternion.identity, new Vector3(397f, 0f, -2f));
+            if (m_Frame == 640) m_Near.transform.position = new Vector3(400f, 0f, 500f);
+            // A weak wind (FieldCalm's own wind returns to the asset's), and a strong spherical
+            // zone beside FieldLong for 400 frames.
+            if (m_Frame == 700) Zone("Weak", null, WindZoneMode.Directional, 0.15f, Quaternion.Euler(0f, -45f, 0f), Vector3.zero);
+            if (m_Frame == 710) m_Strong = Zone("Strong", null, WindZoneMode.Spherical, 3f, Quaternion.identity, new Vector3(497f, 0f, -2f));
+            if (m_Frame == 1110) m_Strong.transform.position = new Vector3(500f, 0f, 500f);
+            return;
+        }
         // A global value of _ST_WindAnimation (which the wind leaves unwritten), and later a
         // material one, set before the trees draw with wind and long after.
         if (m_Frame == 2) Shader.SetGlobalVector("_ST_WindAnimation", new Vector4(1f, 2f, 3f, 4f));
@@ -260,7 +296,7 @@ public sealed class SpeedTree8WindProbe : MonoBehaviour
             EditorApplication.Exit(1);
             return;
         }
-        bool record = Array.IndexOf(m_First ? k_RecordedFirst : k_Recorded, m_Frame) >= 0;
+        bool record = Array.IndexOf(m_First ? k_RecordedFirst : m_Zones ? k_RecordedZones : k_Recorded, m_Frame) >= 0;
         string frame = "f" + m_Frame.ToString("000");
         if (record) Rec(frame + "/time", F(Time.time));
         foreach (var (name, camera, history, twin, names) in m_Trees)
@@ -292,9 +328,9 @@ public sealed class SpeedTree8WindProbe : MonoBehaviour
                     // The wind leaves _ST_WindAnimation unwritten: before a tree draws with wind it
                     // reads the global (or material) value; once the wind's constants are bound,
                     // whatever the engine's buffer holds there (not repeatable), so only whether
-                    // it is the global or material value is recorded. Not in the scene whose wind
-                    // blows from the first frame.
-                    if (m_First) continue;
+                    // it is the global or material value is recorded. Not in the scenes of the
+                    // other profiles, which set neither.
+                    if (m_First || m_Zones) continue;
                     if (m_Frame < 10) Rec(frame + "/" + name + "/" + names[i], F(c.r) + " " + F(c.g) + " " + F(c.b) + " " + F(c.a));
                     else Rec(frame + "/" + name + "/" + names[i] + "/globalOrMaterial",
                         c == new Color(1f, 2f, 3f, 4f) || c == new Color(5f, 6f, 7f, 8f) ? "true" : "false");
@@ -303,7 +339,7 @@ public sealed class SpeedTree8WindProbe : MonoBehaviour
                 Rec(frame + "/" + name + "/" + names[i], F(c.r) + " " + F(c.g) + " " + F(c.b) + " " + F(c.a));
             }
         }
-        if (m_Frame < (m_First ? LastFrameFirst : LastFrame)) return;
+        if (m_Frame < (m_First ? LastFrameFirst : m_Zones ? LastFrameZones : LastFrame)) return;
         string dir = Environment.GetEnvironmentVariable("SPEEDTREE_PROBE_OUT");
         m_Out.Append("{\"k\":\"complete\",\"v\":true}\n");
         if (!string.IsNullOrEmpty(dir)) File.WriteAllText(Path.Combine(dir, "values.jsonl"), m_Out.ToString());

@@ -9,7 +9,9 @@ default), and stops when they are not there.
     python3 tests/projects/speedtree8wind/run.py publish A B        # two identical captures
     python3 tests/projects/speedtree8wind/run.py gate               # the engine against Reference/
     python3 tests/projects/speedtree8wind/run.py gate --if-staged   # the same, a SKIPPED line without the samples
-    (--profile first: the scene whose wind blows from the first frame; record and publish it on its own)
+    (--profile first: the scene whose wind blows from the first frame; --profile zones: a spherical
+    zone reaching a tree while its asset's wind rests, and a long one before a return; record and
+    publish each on its own)
 """
 import argparse
 import os
@@ -47,6 +49,12 @@ def samples():
 # speedtree8's reader, SpeedTree8File.ReadWind).
 WIND_OPTIONS = 4 + 11*4 + 10*40 + 2*4 + 2*40 + 2*(3*40 + 3*4) + 3*4 + 4 + 2*(5*40 + 2*4) + 40 + 2*4
 BRANCH_DIRECTIONAL = (3, 9)
+# The branch levels' direction-adherence curves (after the leading word, 11 floats, the ten
+# oscillation curves, the global height and exponent and the two global curves; each level's
+# distance curve first).
+CURVE = 10*4
+BRANCH_LEVEL = 3*CURVE + 3*4
+ADHERENCE = [4 + 11*4 + 10*CURVE + 2*4 + 2*CURVE + level*BRANCH_LEVEL + CURVE for level in (0, 1)]
 DIRECTIONAL = ('Broadleaf_Desktop_Field.st', 'Field_Directional.st', 'd1f2c3b4a5968778695a4b3c2d1e0f12')
 # The SpeedTree 9 tree and its dump, from tests/projects/speedtree9wind (committed there).
 SPEEDTREE9 = PROBE.parent/'speedtree9wind'/'Assets'
@@ -55,12 +63,17 @@ PROFILE_FILE = 'SpeedTree8WindProfile.txt'
 
 def with_directional_branches(data):
     """The tree's bytes with both branch levels' adherence made directional (wind options 3 and 9),
-    which no sample sets."""
+    which no sample sets, and the second level given the first level's adherence curve halved (the
+    sample's is zero, which no scale changes)."""
     data = bytearray(data)
     root = len(b'SpeedTree___')
     wind = root + struct.unpack_from('<I', data, root + 4 + 4*7)[0]
     for option in BRANCH_DIRECTIONAL:
         data[wind + WIND_OPTIONS + option] = 1
+    first, second = (wind + at for at in ADHERENCE)
+    if any(struct.unpack_from('<10f', data, second)):
+        raise SystemExit("speedtree8wind: the sample's second branch level already has an adherence curve")
+    struct.pack_into('<10f', data, second, *(0.5*v for v in struct.unpack_from('<10f', data, first)))
     return bytes(data)
 
 
@@ -94,8 +107,9 @@ def main():
     parser.add_argument('--label', default=None)
     parser.add_argument('--if-staged', action='store_true',
                         help='gate only where the samples are staged; elsewhere print SKIPPED and succeed')
-    parser.add_argument('--profile', choices=('first',), default=None,
-                        help='first: the scene whose wind blows from the first frame (gate runs both without it)')
+    parser.add_argument('--profile', choices=('first', 'zones'), default=None,
+                        help='first: the scene whose wind blows from the first frame; zones: the later spherical-zone '
+                        'cases (gate runs all three without it)')
     args = parser.parse_args()
     label = args.label or time.strftime('check-%Y%m%d-%H%M%S-')+str(os.getpid())
     if args.mode == 'record':
@@ -111,11 +125,12 @@ def main():
             raise
         print(f'speedtree8wind: SKIPPED, nothing compared: {absent}')
         return 0
-    profiles = [args.profile] if args.profile else [None, 'first']
+    profiles = [args.profile] if args.profile else [None, 'first', 'zones']
     code = 0
     for profile in profiles:
-        engine = ['--frames', '1700', '--size', '64x64'] if profile is None else \
-            ['--frames', '500', '--size', '64x64', '--scene', 'Assets/Scenes/FirstWind.unity']
+        engine = {None: ['--frames', '1700', '--size', '64x64'],
+                  'first': ['--frames', '500', '--size', '64x64', '--scene', 'Assets/Scenes/FirstWind.unity'],
+                  'zones': ['--frames', '1450', '--size', '64x64', '--scene', 'Assets/Scenes/ZonesWind.unity']}[profile]
         code |= value_probe.gate(PROBE, VARIABLE, label + ('-'+profile if profile else ''), 0, engine,
                                  configure=lambda project, p=profile: stage(project, p), profile=profile)
     return code

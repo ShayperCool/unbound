@@ -54,18 +54,28 @@ one that first draws (330) while only the SpeedTree 8 wind still eases. A global
 `_ST_WindAnimation` is set at frame 2 and the dump material's at 1299: before a tree draws with
 wind its raw value is recorded, afterwards only whether it is the global or material value. The
 profile `first` (`--profile first`) plays `Assets/Scenes/FirstWind.unity`, whose directional zone
-blows from the first frame, with FieldA and FieldB (frames 1 to 450).
+blows from the first frame, with FieldA and FieldB (frames 1 to 450). The profile `zones`
+(`--profile zones`, `Assets/Scenes/ZonesWind.unity`, frames 1 to 1450) has FieldA, FieldB,
+`FieldCalm` and `FieldLong`: a directional zone blows from 10 to 40 and the asset's wind eases to
+rest; a spherical zone reaches FieldCalm from 520 to 640; a weak directional zone from 700 and a
+strong spherical zone beside FieldLong from 710 to 1110, after which its phases return.
 
 Measured besides (same Editor, two identical captures per profile): a SpeedTree 8 wind starts
 along +x (a wind from the first frame turns from +x toward the scene's; the first update of a
 windless scene rests it at once); the billboard level draws the same constants as the first; the
-directional options multiply the branch levels' adherence by the first level's length (in the
-imported units); a tree that a spherical zone reaches gets a wind of its own, as a SpeedTree 9
-tree does, whose phases return to its asset's wind's out of reach; a SpeedTree 8 wind still easing
+directional options multiply both branch levels' adherence by the first level's length (in the
+imported units; the staged copy also gives the second level an adherence curve, the sample's
+first level's halved); a tree that a spherical zone reaches gets a wind of its own, as a SpeedTree 9
+tree does, whose phases return to its asset's wind's out of reach (each phase on its own: one
+whose return would take over 15 seconds jumps, the others ease); a tree that a spherical zone
+reaches while its asset's wind rests starts from rest (+x, its phases at zero); a SpeedTree 8 wind still easing
 keeps the world windy for a SpeedTree 9 tree that first draws; `_ST_WindAnimation` reads the
 global value until the tree draws with wind and then neither the global nor the material value
 (the engine's buffer holds something else there, not repeatable). The imported variant's children
 come in name order in the Editor (its collision objects first): a recorded residual.
 
-Not measured: gusts (the release never turns them on), the GPU Resident Drawer's SpeedTree 8
+Not measured: gusts (the release never turns them on), palm wind (no sample uses it; its
+turbulence reads `_ST_WindAnimation.x` as its time, which Unbound binds as zero once a tree draws
+with wind), a local wind becoming its asset's wind again (no capture reaches it: Unbound gives it
+up when every phase, current and previous, is within 5e-4 of the asset's), the GPU Resident Drawer's SpeedTree 8
 parameters (Unbound gives it the 15 constants in the SpeedTree 8 shaders' order and says so once).
