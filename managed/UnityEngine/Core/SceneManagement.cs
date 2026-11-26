@@ -854,6 +854,26 @@ namespace UnityEngine.SceneManagement
             return new Scene(data.Handle);
         }
 
+        /// <summary>The start scene open in Edit mode before Play mode starts (Enter Play Mode
+        /// Options that keep the domain or the scene, EditorSession.OpensStartSceneInEditMode): its
+        /// file loads into the <paramref name="prepared"/> scene as an Edit-mode open, raising no
+        /// SceneManager callback. Returns the roots the open added.</summary>
+        internal static List<UnityEngine.GameObject> OpenStartSceneInEditMode(SceneData prepared)
+        {
+            var before = new HashSet<UnityEngine.GameObject>(prepared.Roots);
+            prepared.OpenedInEditor = true;
+            bool outer = t_EditorOpen;
+            t_EditorOpen = true;
+            // A failing open is reported and its objects kept, as a failing Play-mode load's.
+            try { Perform(prepared, new LoadSceneParameters(LoadSceneMode.Single)); }
+            catch (Exception e) { UnityEngine.Debug.LogException(e); }
+            finally { t_EditorOpen = outer; }
+            var added = new List<UnityEngine.GameObject>();
+            foreach (var root in prepared.Roots)
+                if (root != null && !before.Contains(root)) added.Add(root);
+            return added;
+        }
+
         /// <summary>EditorSceneManager.OpenScene: the scene file loads now, alone or added.
         /// <paramref name="opened"/>: the Editor opens it (Edit mode), as opposed to a load in
         /// Play mode (EditorSceneManager.LoadSceneInPlayMode), which no bake follows.</summary>

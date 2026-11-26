@@ -44,14 +44,16 @@ namespace UnityEditor
         }
 
         /// <summary>Direct Play's editor load, as the Editor's start in Edit mode and its entry into
-        /// Play mode; Play mode's build list is fixed after it.</summary>
-        internal static void BeforePlayMode()
+        /// Play mode; Play mode's build list is fixed after it. <paramref name="startScene"/>: the
+        /// scene Play mode starts with, which the start opens in Edit mode when the options keep
+        /// the domain or the scene (EditorSession.OpensStartSceneInEditMode).</summary>
+        internal static void BeforePlayMode(SceneData startScene = null)
         {
-            try { LoadForPlayMode(); }
+            try { LoadForPlayMode(startScene); }
             finally { EditorSession.FixPlayModeBuildList(); }
         }
 
-        static void LoadForPlayMode()
+        static void LoadForPlayMode(SceneData startScene)
         {
             // Enter Play Mode Options that keep the domain: the Editor's domain is the one it loaded
             // at its start, in Edit mode; entering Play mode then reloads nothing (matches the Unity
@@ -63,6 +65,8 @@ namespace UnityEditor
                 // The start's load runs in Edit mode: isPlaying and isPlayingOrWillChangePlaymode false.
                 EditorSession.IsPlaying = false;
                 LoadEditorDomain();
+                // The start scene is open in Edit mode once the start has loaded the domain.
+                EditorSession.OpenStartSceneInEditMode(startScene);
                 EditorSession.BeginEnteringPlayMode();
                 UnityEngine.U2D.SpriteAtlasPacking.PackV1ForPlayMode();
                 try
@@ -72,6 +76,9 @@ namespace UnityEditor
                     PlayModeDomainLoading = true;
                     try { EnterPlayModeMethods(); }
                     finally { PlayModeDomainLoading = false; }
+                    // Then the Edit-mode start ends (matches the Unity 6000.0.71f1 Editor,
+                    // tests/projects/scenereloadoff domain.events, both.events).
+                    EditorSession.EndEditModeStart();
                 }
                 finally { EditorSession.EndEnteringPlayMode(); }
                 return;
@@ -79,7 +86,7 @@ namespace UnityEditor
             EditorSession.BeginEnteringPlayMode();
             // Play mode's atlases are packed before its domain loads.
             UnityEngine.U2D.SpriteAtlasPacking.PackV1ForPlayMode();
-            try { LoadEditorDomain(enteringPlayMode: true); }
+            try { LoadEditorDomain(enteringPlayMode: true, startScene); }
             finally { EditorSession.EndEnteringPlayMode(); }
         }
 
@@ -89,7 +96,10 @@ namespace UnityEditor
         /// afterAssemblyReload.</summary>
         static bool s_ExtensionsRegistered;
 
-        internal static void LoadEditorDomain(bool enteringPlayMode = false)
+        /// <paramref name="startScene"/> (entering Play mode with the scene kept): the start scene,
+        /// which Unbound's one domain load for the Editor's start and its reload for Play mode
+        /// opens in Edit mode before ExitingEditMode (EditorSession.OpenStartSceneInEditMode).
+        internal static void LoadEditorDomain(bool enteringPlayMode = false, SceneData startScene = null)
         {
             // A new domain orders its OnPostprocessAllAssets callbacks anew, as Unity's does.
             AssetPostprocessing.ForgetOrder();
@@ -131,10 +141,17 @@ namespace UnityEditor
                 // The Editor sends these before its reload, outside the domain load: their imports
                 // run at once.
                 DomainLoading = false;
+                // The scene the options keep is open in Edit mode before Play mode (its domain is
+                // reloaded: Unbound's single load stands for both).
+                if (EditorSession.KeepsScenesForPlay)
+                    EditorSession.AsEditMode(() => EditorSession.OpenStartSceneInEditMode(startScene));
                 EditorApplication.Internal_PlayModeStateChanged(PlayModeStateChange.ExitingEditMode);
                 // A session restarted for a script edit continues that reload (its old session raised
                 // beforeAssemblyReload). Options that keep the domain do not come here (BeforePlayMode).
                 if (!ContinuesScriptReload()) UnityEditor.AssemblyReloadEvents.RaiseBefore();
+                // The reload stops the Edit-mode objects: the kept scene's scripts get OnDisable
+                // (matches the Unity 6000.0.71f1 Editor, tests/projects/scenereloadoff scene.events).
+                EditorSession.EndEditModeStart();
             }
             try
             {

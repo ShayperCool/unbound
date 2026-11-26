@@ -445,14 +445,22 @@ namespace Unbound.Runtime
             try { UnityEngine.Rendering.RenderPipelineManager.ActivateConfiguredPipelineTag(); }
             catch (Exception e) { Debug.LogException(e); }
             // Play mode runs inside the Editor: its editor code prepares Play mode first.
-            UnityEditor.EditorInitialization.BeforePlayMode();
+            UnityEditor.EditorInitialization.BeforePlayMode(initialScene);
             // Each Play mode is an analytics session, counted in the project's preferences.
             UnityEngine.Analytics.AnalyticsSessionInfo.BeginPlaySession();
             UnityEngine.Time.PlayStarting();
             RuntimeInitializers.Run(RuntimeInitializeLoadType.SubsystemRegistration);
             RuntimeInitializers.Run(RuntimeInitializeLoadType.AfterAssembliesLoaded);
             RuntimeInitializers.Run(RuntimeInitializeLoadType.BeforeSplashScreen);
-            if (!string.IsNullOrEmpty(firstScene))
+            if (EditorSession.PlaysStartSceneAsOpened)
+            {
+                // Options that keep the scene: the one Edit mode opened plays, not loaded again;
+                // what its Edit mode drew was validated first, as for a loaded start scene.
+                MaterialValidation.ValidateDrawnBeforePlay(initialScene);
+                RuntimeInitializers.Run(RuntimeInitializeLoadType.BeforeSceneLoad);
+                EditorSession.PlayOpenScenes(reloaded: false);
+            }
+            else if (!string.IsNullOrEmpty(firstScene))
             {
                 try
                 {

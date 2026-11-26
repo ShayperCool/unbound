@@ -139,6 +139,9 @@ namespace Unbound.Runtime
         {
             Application.Internal_PlayModeStarting();
             LeaveEditModeForPlay();
+            // Options that keep the scenes: their objects stop in Edit mode, then play.
+            bool keep = KeepsScenesForPlay;
+            if (keep) StopOpenScenesForPlay();
             UnityEngine.U2D.SpriteAtlasPacking.PackV1ForPlayMode();
             IsPlaying = true;
             FixPlayModeBuildList();
@@ -148,28 +151,102 @@ namespace Unbound.Runtime
             RuntimeInitializers.Run(RuntimeInitializeLoadType.AfterAssembliesLoaded);
             RuntimeInitializers.Run(RuntimeInitializeLoadType.BeforeSplashScreen);
             RuntimeInitializers.Run(RuntimeInitializeLoadType.BeforeSceneLoad);
-            DisabledModules.PruneOpenScenes();
-            // The open scenes play: their objects wake up as a loaded scene's do.
+            PlayOpenScenes(reloaded: !keep);
+            PlayerLoopDriver.SendPlayModeStart();
+            RuntimeInitializers.Run(RuntimeInitializeLoadType.AfterSceneLoad);
+            PlayerLoopDriver.RestartPlayMode(s_SingleSceneOpenedThisEditorUpdate);
+        }
+
+        /// <summary>Enter Play Mode Options keep the open scenes for Play mode (Reload Scene
+        /// disabled).</summary>
+        internal static bool KeepsScenesForPlay => Compat.EnterPlayModeEditStartMeasured
+            && (EditorSettings.ActiveEnterPlayModeOptions & EnterPlayModeOptions.DisableSceneReload) != 0;
+
+        /// <summary>Direct Play opens its start scene in Edit mode first, as the Editor has it open
+        /// before entering Play mode (its [ExecuteAlways] and [ExecuteInEditMode] scripts awake
+        /// there), when the options keep for Play mode what that Edit mode did: the domain (Reload
+        /// Domain disabled) or the scene's objects (Reload Scene disabled). With both reloads on the
+        /// Editor discards that domain and those objects before Play mode starts, and the start
+        /// scene loads in Play mode only (a recorded residual of tests/projects/scenereloadoff).</summary>
+        internal static bool OpensStartSceneInEditMode => Compat.EnterPlayModeEditStartMeasured
+            && (EditorSettings.ActiveEnterPlayModeOptions & (EnterPlayModeOptions.DisableDomainReload | EnterPlayModeOptions.DisableSceneReload)) != 0;
+
+        /// <summary>The roots the Edit-mode open of the start scene added, until Play mode takes
+        /// them over (scene kept) or destroys them (scene reloaded).</summary>
+        static List<GameObject> s_EditModeStartRoots;
+
+        /// <summary>Opens Direct Play's start scene in Edit mode (<see cref="OpensStartSceneInEditMode"/>),
+        /// once the editor domain has loaded and before ExitingEditMode.</summary>
+        internal static void OpenStartSceneInEditMode(SceneData scene)
+        {
+            if (scene == null || !OpensStartSceneInEditMode) return;
+            s_EditModeStartRoots = SceneManagerInternal.OpenStartSceneInEditMode(scene);
+        }
+
+        /// <summary>Whether Direct Play's start scene plays as Edit mode left it: opened in Edit
+        /// mode and kept (<see cref="KeepsScenesForPlay"/>); then it is not loaded again.</summary>
+        internal static bool PlaysStartSceneAsOpened => s_EditModeStartRoots != null && KeepsScenesForPlay;
+
+        /// <summary>The Edit-mode start's end, after ExitingEditMode and the domain's
+        /// [InitializeOnEnterPlayMode] methods (when the domain is kept; matches the Unity
+        /// 6000.0.71f1 Editor, tests/projects/scenereloadoff), still in Edit mode: with the scene
+        /// kept its objects stop (<see cref="StopOpenScenesForPlay"/>); with the scene reloaded the
+        /// objects the open made are destroyed, before the reload loads the file in Play mode.</summary>
+        internal static void EndEditModeStart()
+        {
+            var roots = s_EditModeStartRoots;
+            if (roots == null) return;
+            if (KeepsScenesForPlay)
+            {
+                StopOpenScenesForPlay();
+                return;
+            }
+            s_EditModeStartRoots = null;
+            foreach (var root in roots)
+                if (root != null) Object.DestroyImmediate(root);
+        }
+
+        /// <summary>Entering Play mode with the open scenes kept: in Edit mode their enabled scripts
+        /// get OnDisable (matches the Unity 6000.0.71f1 Editor, tests/projects/scenereloadoff: after
+        /// ExitingEditMode, then OnEnable on the same instances in Play mode and no second Awake).
+        /// Their engine components stop too, so that Play mode starts them as a loaded scene's
+        /// (Play On Awake, for one); that part is Unbound's mechanism, not measured.</summary>
+        internal static void StopOpenScenesForPlay()
+        {
             var components = new List<Component>();
             foreach (var scene in SceneRegistry.Loaded.ToArray())
                 foreach (var root in scene.Roots.ToArray())
                     if (root != null) Collect(root.m_Transform, components);
-            // As the scenes the Editor reloads for Play mode: their objects are no prefab instances
-            // any more, wake up, are processed, then sceneLoaded.
+            Lifecycle.Deactivate(components);
+        }
+
+        /// <summary>The open scenes play, after the BeforeSceneLoad initializers: their objects wake
+        /// up as a loaded scene's do (the scripts awake in Edit mode get only OnEnable), are
+        /// processed (IProcessSceneWithReport, [PostProcessScene]). <paramref name="reloaded"/>: as
+        /// the scenes the Editor reloads for Play mode, their missing prefabs are reported again and
+        /// sceneLoaded follows; kept scenes raise no sceneLoaded and no activeSceneChanged (matches
+        /// the Unity 6000.0.71f1 Editor, tests/projects/scenereloadoff; whether a kept scene reports
+        /// its missing prefabs again is not measured: it does not). Their objects are no prefab
+        /// instances in Play mode (measured for reloaded scenes only).</summary>
+        internal static void PlayOpenScenes(bool reloaded)
+        {
+            s_EditModeStartRoots = null;
+            DisabledModules.PruneOpenScenes();
+            var components = new List<Component>();
+            foreach (var scene in SceneRegistry.Loaded.ToArray())
+                foreach (var root in scene.Roots.ToArray())
+                    if (root != null) Collect(root.m_Transform, components);
             foreach (var scene in SceneRegistry.Loaded.ToArray())
                 foreach (var root in scene.Roots.ToArray())
                     if (root != null) Unlink(root.m_Transform);
             Lifecycle.Activate(components);
-            // The Editor reloads the open scenes for Play mode: their missing prefabs are reported
-            // again once the objects have awoken.
-            foreach (var scene in SceneRegistry.Loaded.ToArray()) SceneLoader.LogMissingPrefabs(scene);
+            if (reloaded)
+                foreach (var scene in SceneRegistry.Loaded.ToArray()) SceneLoader.LogMissingPrefabs(scene);
             foreach (var scene in SceneRegistry.Loaded.ToArray())
                 EditorInitialization.ProcessScene(new Scene(scene.Handle));
+            if (!reloaded) return;
             foreach (var scene in SceneRegistry.Loaded.ToArray())
                 SceneManager.Internal_SceneLoaded(new Scene(scene.Handle), SceneManagerInternal.PlayModeEntry);
-            PlayerLoopDriver.SendPlayModeStart();
-            RuntimeInitializers.Run(RuntimeInitializeLoadType.AfterSceneLoad);
-            PlayerLoopDriver.RestartPlayMode(s_SingleSceneOpenedThisEditorUpdate);
         }
 
         static void Unlink(Transform t)

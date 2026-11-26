@@ -82,6 +82,14 @@ namespace Unbound.Runtime
         // session ends and EditorApplication.quitting is not.
         internal static bool QuitCallbacksMeasured => Family == ReleaseFamily.Unity6000_0;
 
+        // Entering Play mode with Enter Play Mode Options that keep the domain or the scene,
+        // measured on 6000.0.71f1 (tests/projects/scenereloadoff): the start scene is open in Edit
+        // mode first (its [ExecuteAlways] scripts awake there); with the scene kept, its objects
+        // play without a reload (OnDisable in Edit mode, OnEnable in Play mode, no second Awake, no
+        // sceneLoaded); with the domain kept and the scene reloaded, the Edit-mode objects are
+        // destroyed before the reload. Elsewhere the start scene loads in Play mode, as before.
+        internal static bool EnterPlayModeEditStartMeasured => Family == ReleaseFamily.Unity6000_0;
+
         /// <summary>The build facts InternalEditorUtility reports (GetUnityBuildBranch,
         /// GetUnityRevision, GetUnityVersionDate, GetUnityDisplayVersionVerbose, GetUnityProductName,
         /// GetUnityCopyright), measured on 6000.0.71f1 and answered by every release of its family
