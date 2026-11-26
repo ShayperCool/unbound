@@ -27,7 +27,10 @@ case with their variants (`name.variant`), sorted, a folder's name is its assets
 not listed), an asset name is a file name without its extension, case aside; a name set stays in
 the database until removed (`GetUnusedAssetBundleNames`), and `RemoveAssetBundleName` removes it from
 the database only (the `.meta` and importer keep it), one in use only when forced, else with a
-warning naming the first asset, a missing one with a warning and `true`; `DesiredWorkerCount` starts
+warning naming the first asset, a missing one with a warning and `true`, and a reimport does not
+bring it back; a name or a variant set is written into the `.meta` at once, each adding the name
+with the variant the importer has then (`set_both`, `set_variant`); an importer of a `.meta` naming
+`Mixed-Case` reads it in lower case; `DesiredWorkerCount` starts
 as the user setting (a quarter of the logical processors, 3 of 12) and is set apart from it, a
 negative one read back; an `AllowAutoRefresh` without its `DisallowAutoRefresh` asserts while the
 count is below zero; V2 is enabled.
