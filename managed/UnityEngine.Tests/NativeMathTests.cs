@@ -196,34 +196,66 @@ namespace Unbound.Tests
             Assert.Equal(4f, box.SqrDistance(new Vector3(float.NaN, 3f, 0f)));
         }
 
+        static uint[] Bits(Matrix4x4 m) => Enumerable.Range(0, 16).Select(i => BitConverter.SingleToUInt32Bits(m[i])).ToArray();
+
+        static uint[] Hex(string bits) => bits.Split(' ').Select(b => Convert.ToUInt32(b, 16)).ToArray();
+
         [Fact]
-        public void EngineCallersKeepTheirOwnInverseAndPerspective()
+        public void CameraMatricesMatchTheEditorBits()
         {
-            // The camera stands for Unity's internals: its matrices come from the double-precision
-            // forms, while the scripting API returns the Editor's single-precision results.
+            // Unity 6000.0.71f1 Editor, tests/projects/cameramatrices: projection/fov 60,
+            // world to camera / camera to world / world to local of "euler 10 0 0" at (0, 1.5, -6)
+            // and at the origin, and world to camera of a child of a scaled, turned parent.
             var go = new GameObject("camera");
+            var parent = new GameObject("parent");
             try
             {
-                go.transform.SetPositionAndRotation(new Vector3(1.3f, -2.7f, 4.1f), Quaternion.Euler(17f, -29f, 13f));
                 var camera = go.AddComponent<Camera>();
-                camera.fieldOfView = 47.3f;
-                camera.aspect = 1.37f;
-                camera.nearClipPlane = 0.31f;
-                camera.farClipPlane = 917f;
-                Matrix4x4 world = Matrix4x4.Scale(new Vector3(1, 1, -1)) * go.transform.localToWorldMatrix.inverseDoublePrecision;
-                Assert.Equal(world, camera.worldToCameraMatrix);
-                Assert.Equal(world.inverseDoublePrecision, camera.cameraToWorldMatrix);
-                Assert.Equal(Matrix4x4.PerspectiveDoublePrecision(47.3f, 1.37f, 0.31f, 917f), camera.projectionMatrix);
-                Assert.NotEqual(Matrix4x4.Perspective(47.3f, 1.37f, 0.31f, 917f), camera.projectionMatrix);
-                bool inverseDiffers = false;
-                Matrix4x4 single = world.inverse, exact = world.inverseDoublePrecision;
-                for (int i = 0; i < 16; i++)
-                    inverseDiffers |= single[i] != exact[i];
-                Assert.True(inverseDiffers);
+                camera.fieldOfView = 60f;
+                camera.aspect = 16f / 9f;
+                camera.nearClipPlane = 0.3f;
+                camera.farClipPlane = 1000f;
+                Assert.Equal(Hex("3f796a52 00000000 00000000 00000000 00000000 3fddb3d7 00000000 00000000 00000000 00000000 bf8013aa bf800000 00000000 00000000 bf19a566 00000000"),
+                    Bits(camera.projectionMatrix));
+                // The engine's own perspective (lights, projectors) keeps its double-precision cotangent.
+                Assert.NotEqual(Bits(Matrix4x4.PerspectiveDoublePrecision(60f, 16f / 9f, 0.3f, 1000f)), Bits(camera.projectionMatrix));
+
+                go.transform.SetPositionAndRotation(new Vector3(0f, 1.5f, -6f), Quaternion.Euler(10f, 0f, 0f));
+                Assert.Equal(Hex("3f800000 00000000 00000000 00000000 00000000 3f7c1c5c 3e31d0d3 00000000 00000000 3e31d0d3 bf7c1c5c 00000000 00000000 bedee29c c0c56b0f 3f800000"),
+                    Bits(camera.worldToCameraMatrix));
+                Assert.Equal(Hex("3f800000 00000000 80000000 00000000 00000000 3f7c1c5d 3e31d0d3 00000000 00000000 3e31d0d3 bf7c1c5c 00000000 00000000 3fc00000 c0bfffff 3f800000"),
+                    Bits(camera.cameraToWorldMatrix));
+                Assert.Equal(Hex("3f800000 00000000 00000000 00000000 00000000 3f7c1c5c be31d0d3 00000000 00000000 3e31d0d3 3f7c1c5c 00000000 00000000 bedee29c 40c56b0f 3f800000"),
+                    Bits(go.transform.worldToLocalMatrix));
+
+                // At the origin the translation's zeros take the negated position's sign.
+                go.transform.position = Vector3.zero;
+                Assert.Equal(Hex("3f800000 00000000 00000000 00000000 00000000 3f7c1c5c 3e31d0d3 00000000 00000000 3e31d0d3 bf7c1c5c 00000000 00000000 00000000 00000000 3f800000"),
+                    Bits(camera.worldToCameraMatrix));
+                Assert.Equal(Hex("3f800000 00000000 80000000 00000000 00000000 3f7c1c5d 3e31d0d3 00000000 00000000 3e31d0d3 bf7c1c5c 00000000 00000000 00000000 80000000 3f800000"),
+                    Bits(camera.cameraToWorldMatrix));
+                Assert.Equal(Hex("3f800000 00000000 00000000 00000000 00000000 3f7c1c5c be31d0d3 00000000 00000000 3e31d0d3 3f7c1c5c 00000000 80000000 80000000 00000000 3f800000"),
+                    Bits(go.transform.worldToLocalMatrix));
+
+                // The inverse rotation's exact off-diagonal zeros are positive (euler -89 0 0 at (0, 1.5, -6)).
+                go.transform.SetPositionAndRotation(new Vector3(0f, 1.5f, -6f), Quaternion.Euler(-89f, 0f, 0f));
+                Assert.Equal(Hex("3f800000 00000000 00000000 00000000 00000000 3c8ef860 3f7ff605 00000000 00000000 bf7ff605 3c8ef860 00000000 00000000 c0c0cef9 bfb2913b 3f800000"),
+                    Bits(go.transform.worldToLocalMatrix));
+
+                // Under a scaled parent the view has no scale.
+                parent.transform.position = new Vector3(1f, 2f, 3f);
+                parent.transform.rotation = Quaternion.Euler(0f, 30f, 0f);
+                parent.transform.localScale = new Vector3(2f, 2f, 2f);
+                go.transform.SetParent(parent.transform, false);
+                go.transform.localPosition = new Vector3(0f, 1f, -5f);
+                go.transform.localRotation = Quaternion.Euler(10f, 0f, 0f);
+                Assert.Equal(Hex("3f5db3d6 3db1d0d5 befc1c5f 00000000 00000000 3f7c1c5c 3e31d0d4 00000000 bf000001 3e19fe32 bf5a5597 00000000 3f224c2c c02f6807 c0efbbae 3f800000"),
+                    Bits(camera.worldToCameraMatrix));
             }
             finally
             {
                 UnityEngine.Object.DestroyImmediate(go);
+                UnityEngine.Object.DestroyImmediate(parent);
             }
         }
 

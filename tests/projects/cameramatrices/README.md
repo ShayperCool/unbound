@@ -22,16 +22,14 @@ difference of one float step or of the sign of a zero shows.
   (1, 2, 3), turned 30 degrees about y, scaled 2 (then (1, 3, 0.5)).
 
 Measured in the Unity 6000.0.71f1 Editor (Linux, OpenGL Core; two identical batch captures).
-Unbound matches 92 of the 198 rows; `residuals.json` lists the other 106 with their causes. The
-Editor's `projectionMatrix` is the single-precision `Matrix4x4.Perspective` at every measured field
-of view and aspect, where Unbound's camera uses its double-precision variant (one or two float
-steps apart); for a root camera its `worldToCameraMatrix` is the transform's `worldToLocalMatrix` with the
-third row negated (apart from signs of zero), where Unbound inverts the TRS in double precision
-(under a scaled parent the Editor's view has no scale: rule not identified); the other
-inverse matrices differ in last bits and signs of zero. These were found while tracing the STP
-upscaler's residual (docs/COMPATIBILITY_GAPS.md, Q227); making the 60-degree projection and the
-view rotation bit-equal did not change that residual. Switching the camera's matrices to these
-rules is a queued follow-up.
+Unbound matches all 198 rows. The rules: `projectionMatrix` is the single-precision
+`Matrix4x4.Perspective`; the transform's `worldToLocalMatrix` builds each level from the inverse
+rotation's matrix with its exact off-diagonal zeros positive, rows scaled by the reciprocal scale,
+translated by the negated position (summed x + (y + z)); `worldToCameraMatrix` is
+`Matrix4x4.Scale(1, 1, -1)` times that inverse of the world position and rotation without scale
+(also under a scaled parent); `cameraToWorldMatrix` is the single-precision `Matrix4x4.inverse` of
+`worldToCameraMatrix`; `cullingMatrix` is the product of projection and view. Physical-camera
+projections and a camera to world matrix of a set `worldToCameraMatrix` are not measured.
 
 ```bash
 python3 tests/projects/cameramatrices/run.py record --label a

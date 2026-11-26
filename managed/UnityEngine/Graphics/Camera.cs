@@ -356,15 +356,16 @@ namespace UnityEngine
 
         // ------------------------------------------------------------------ matrices
 
-        /// <summary>World to camera space: right-handed, the camera looking down -Z (as OpenGL).</summary>
+        /// <summary>World to camera space: right-handed, the camera looking down -Z (as OpenGL). The
+        /// product of a z flip and the transform's world to local matrix without scale, in single
+        /// precision (Unity 6000.0.71f1 Editor: tests/projects/cameramatrices <c>world to camera/*</c>,
+        /// also under a scaled parent).</summary>
         public Matrix4x4 worldToCameraMatrix
         {
             get
             {
                 if (m_HasCustomWorldToCamera) return m_CustomWorldToCamera;
-                var t = transform;
-                var cameraToWorld = Matrix4x4.TRS(t.position, t.rotation, Vector3.one);
-                return Matrix4x4.Scale(new Vector3(1, 1, -1)) * cameraToWorld.inverseDoublePrecision;
+                return Matrix4x4.Scale(new Vector3(1, 1, -1)) * transform.WorldToLocalMatrixNoScale();
             }
             set
             {
@@ -373,7 +374,9 @@ namespace UnityEngine
             }
         }
 
-        public Matrix4x4 cameraToWorldMatrix => worldToCameraMatrix.inverseDoublePrecision;
+        /// <summary>The single-precision inverse of <see cref="worldToCameraMatrix"/> (Unity 6000.0.71f1
+        /// Editor: tests/projects/cameramatrices <c>camera to world/*</c>).</summary>
+        public Matrix4x4 cameraToWorldMatrix => worldToCameraMatrix.inverse;
 
         public void ResetWorldToCameraMatrix() => m_HasCustomWorldToCamera = false;
 
@@ -393,7 +396,9 @@ namespace UnityEngine
                         m_NearClipPlane, m_FarClipPlane, new GateFitParameters(m_GateFit, aspect));
                     return physical;
                 }
-                return Matrix4x4.PerspectiveDoublePrecision(m_FieldOfView, aspect, m_NearClipPlane, m_FarClipPlane);
+                // The single-precision Matrix4x4.Perspective (Unity 6000.0.71f1 Editor:
+                // tests/projects/cameramatrices projection/fov, aspect, target, clip).
+                return Matrix4x4.Perspective(m_FieldOfView, aspect, m_NearClipPlane, m_FarClipPlane);
             }
             set
             {

@@ -880,15 +880,37 @@ namespace UnityEngine
             return float.IsNaN(refined) ? estimate : refined;
         }
 
-        Matrix4x4 InverseLocalMatrix()
+        Matrix4x4 InverseLocalMatrix() => InverseTRS(GetLocalPosition(), m_LocalRotation, m_LocalScale, true);
+
+        /// <summary>The world to local matrix without scale: the inverse of the world rotation and
+        /// position (a camera's view is built on it: Camera.worldToCameraMatrix).</summary>
+        internal Matrix4x4 WorldToLocalMatrixNoScale() => InverseTRS(position, rotation, Vector3.one, false);
+
+        /// <summary>
+        /// The inverse of a translation, rotation and (optionally) scale as the Unity 6000.0.71f1
+        /// Editor builds it: the inverse rotation's matrix with its exact off-diagonal zeros positive
+        /// (the basis adds the identity), each row scaled by the reciprocal scale, then translated by
+        /// the negated position, summed as x + (y + z) (tests/projects/cameramatrices
+        /// <c>world to local/*</c>: the signs of zero at the origin follow the negated position).
+        /// </summary>
+        static Matrix4x4 InverseTRS(Vector3 position, Quaternion rotation, Vector3 scale, bool scaled)
         {
-            var inverse = Matrix4x4.Rotate(Quaternion.Inverse(m_LocalRotation));
-            var position = GetLocalPosition();
+            var inverse = Matrix4x4.Rotate(Quaternion.Inverse(rotation));
+            inverse.m10 += 0f;
+            inverse.m20 += 0f;
+            inverse.m01 += 0f;
+            inverse.m21 += 0f;
+            inverse.m02 += 0f;
+            inverse.m12 += 0f;
+            var negated = -position;
             for (int row = 0; row < 3; row++)
             {
-                float scale = ReciprocalScale(m_LocalScale[row]);
-                for (int column = 0; column < 3; column++) inverse[row, column] *= scale;
-                inverse[row, 3] = -((inverse[row, 1] * position.y + inverse[row, 2] * position.z) + inverse[row, 0] * position.x);
+                if (scaled)
+                {
+                    float reciprocal = ReciprocalScale(scale[row]);
+                    for (int column = 0; column < 3; column++) inverse[row, column] *= reciprocal;
+                }
+                inverse[row, 3] = inverse[row, 0] * negated.x + (inverse[row, 1] * negated.y + inverse[row, 2] * negated.z);
             }
             return inverse;
         }
