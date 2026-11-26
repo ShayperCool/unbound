@@ -18,7 +18,9 @@ the same name, typed or not, while a file a ScriptedImporter takes is, whatever 
 `.meta` names (`h.foo`); `LoadAll` returns files ordered by their names without extension, letter
 case aside (`a, B, c, c/d, Enemy, Enemy (1)`), then by extension (`a.png` before `a.txt`), and
 untyped `Load` the first that loads; a folder named like a file is not an asset of that name. Not
-measured: several `Resources` folders, plug-ins and scenes in `Resources`.
+measured: several `Resources` folders, plug-ins, scenes and files of other importers Unbound does not
+load in `Resources`, names with the characters between `Z` and `a` (`_`, `[`), which tell folding to
+lower from folding to upper case.
 
 Record twice with the Unity Editor, publish when the captures agree, and compare Unbound:
 

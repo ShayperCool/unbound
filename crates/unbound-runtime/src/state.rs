@@ -910,14 +910,14 @@ pub fn dispatch(method: &str, request: &str) -> Result<String> {
                 found.extend(guids.iter().copied());
             }
             let db = s.db();
-            // A file that loads as a DefaultAsset (the DefaultImporter's, no ScriptedImporter
-            // taking it) is no Resources asset, whatever its name shares with other files
+            // A file the DefaultImporter imports as a DefaultAsset (no ScriptedImporter taking
+            // it) is no Resources asset, whatever its name shares with other files
             // (matches the Unity 6000.0.71f1 Editor, tests/projects/resourcesnames b, c, d, e, g,
             // h, i). `Load` takes the first that loads, `LoadAll` lists them in order.
             let mut assets: Vec<_> = found
                 .into_iter()
                 .filter_map(|g| db.by_guid(g))
-                .filter(|a| effective_kind(s, a).0 != "unknown")
+                .filter(|a| !loads_as_default_asset(effective_kind(s, a).0, asset_importer(a)))
                 .collect();
             assets.sort_by(|a, b| resources_order(&a.path).cmp(&resources_order(&b.path)));
             let list: Vec<_> = assets
@@ -2005,14 +2005,8 @@ fn model_documents(guid: Guid) -> Result<Vec<unbound_yaml::Document>> {
     Ok(crate::models::documents(guid, path, &model, &s.db()))
 }
 
-/// The ScriptedImporter that imports `file`, as its script `(guid, file id)`: the extension
-/// decides, not the `.meta` (matches the Unity 6000.0.71f1 Editor, tests/projects/importerpick):
-/// the project's ScriptedImporter that declares the extension, whatever importer the `.meta` names;
-/// for another extension the Editor's own scripted importer the `.meta` names (a SpeedTree 9 tree),
-/// none for a project's ScriptedImporter the `.meta` names (the extension's native importer, or the
-/// DefaultImporter, imports the file). Before the editor domain loaded, the `.meta` decides.
 /// How an asset loads (`asset-info`'s kind): "scripted" when a ScriptedImporter imports it
-/// (with that importer), else [`listed_kind`]; "unknown" is the DefaultImporter's DefaultAsset.
+/// (with that importer), else [`listed_kind`] ("unknown": Unbound loads it as a DefaultAsset).
 fn effective_kind(
     s: &RuntimeState,
     asset: &unbound_project::assetdb::Asset,
@@ -2024,6 +2018,15 @@ fn effective_kind(
         Some(importer) => ("scripted", Some(importer)),
         None => (listed_kind(asset), None),
     }
+}
+
+/// Whether a file of effective kind `kind` whose `.meta` names `importer` ([`asset_importer`]) is
+/// the DefaultImporter's DefaultAsset: unknown to Unbound and imported by the DefaultImporter,
+/// named or taking over from a ScriptedImporter that does not import the file
+/// (tests/projects/resourcesnames b, c, i). A kind another importer imports that Unbound does
+/// not load (a `.dds`, a `.avi`) is not one: it stays and loads as before.
+fn loads_as_default_asset(kind: &str, importer: &str) -> bool {
+    kind == "unknown" && matches!(importer, "DefaultImporter" | "ScriptedImporter")
 }
 
 /// The order `Resources` gives files in: by their names without extension, letter case aside,
@@ -2039,6 +2042,12 @@ fn resources_order(path: &str) -> (String, String, &str) {
     (stem.to_lowercase(), extension.to_lowercase(), path)
 }
 
+/// The ScriptedImporter that imports `file`, as its script `(guid, file id)`: the extension
+/// decides, not the `.meta` (matches the Unity 6000.0.71f1 Editor, tests/projects/importerpick):
+/// the project's ScriptedImporter that declares the extension, whatever importer the `.meta` names;
+/// for another extension the Editor's own scripted importer the `.meta` names (a SpeedTree 9 tree),
+/// none for a project's ScriptedImporter the `.meta` names (the extension's native importer, or the
+/// DefaultImporter, imports the file). Before the editor domain loaded, the `.meta` decides.
 fn effective_scripted_importer(s: &RuntimeState, file: &Path) -> Option<(String, i64)> {
     let registry = s.scripted_extensions.read().unwrap();
     // An override naming a project ScriptedImporter by its type hash (what SetImporterOverride
@@ -4266,6 +4275,21 @@ mod tests {
             ["b/resources/c", "c"]
         );
         assert!(resources_keys("Assets/Textures/a.png").is_empty());
+    }
+
+    /// The DefaultImporter's DefaultAssets, named or taking over from a ScriptedImporter that
+    /// does not import the file, are left out of Resources; the kinds Unbound loads, and unknown
+    /// kinds of other importers, stay (tests/projects/resourcesnames b, c, h, i).
+    #[test]
+    fn only_the_default_importers_default_assets_are_left_out() {
+        assert!(loads_as_default_asset("unknown", "DefaultImporter"));
+        assert!(loads_as_default_asset("unknown", "ScriptedImporter"));
+        assert!(!loads_as_default_asset("scripted", "DefaultImporter"));
+        assert!(!loads_as_default_asset("text", "TextScriptImporter"));
+        assert!(!loads_as_default_asset("scene", "DefaultImporter"));
+        assert!(!loads_as_default_asset("video", "DefaultImporter"));
+        assert!(!loads_as_default_asset("unknown", "IHVImageFormatImporter"));
+        assert!(!loads_as_default_asset("unknown", "VideoClipImporter"));
     }
 
     /// Resources' order: names without extension, letter case aside, then extensions
