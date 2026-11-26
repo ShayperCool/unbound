@@ -2717,67 +2717,6 @@ namespace UnityEngine.Experimental.GlobalIllumination
         public static bool useRadianceAmbientProbe { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Experimental.GlobalIllumination.RenderSettings.useRadianceAmbientProbe"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Experimental.GlobalIllumination.RenderSettings.useRadianceAmbientProbe"); } }
     }
 }
-namespace UnityEngine.Experimental.Playables
-{
-    [global::Unbound.Stub]
-    public unsafe partial struct CameraPlayable : global::UnityEngine.Playables.IPlayable, global::System.IEquatable<global::UnityEngine.Experimental.Playables.CameraPlayable>
-    {
-        [global::Unbound.Stub] public static global::UnityEngine.Experimental.Playables.CameraPlayable Create(global::UnityEngine.Playables.PlayableGraph graph, global::UnityEngine.Camera camera) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Experimental.Playables.CameraPlayable.Create"); return default; }
-        [global::Unbound.Stub] internal CameraPlayable(global::UnityEngine.Playables.PlayableHandle handle) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Experimental.Playables.CameraPlayable.ctor"); }
-        [global::Unbound.Stub] public global::UnityEngine.Playables.PlayableHandle GetHandle() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Experimental.Playables.CameraPlayable.GetHandle"); return default; }
-        [global::Unbound.Stub] public static implicit operator global::UnityEngine.Playables.Playable(global::UnityEngine.Experimental.Playables.CameraPlayable playable) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Experimental.Playables.CameraPlayable.op_Implicit"); return default; }
-        [global::Unbound.Stub] public static explicit operator global::UnityEngine.Experimental.Playables.CameraPlayable(global::UnityEngine.Playables.Playable playable) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Experimental.Playables.CameraPlayable.op_Explicit"); return default; }
-        [global::Unbound.Stub] public bool Equals(global::UnityEngine.Experimental.Playables.CameraPlayable other) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Experimental.Playables.CameraPlayable.Equals"); return default; }
-        [global::Unbound.Stub] public global::UnityEngine.Camera GetCamera() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Experimental.Playables.CameraPlayable.GetCamera"); return default; }
-        [global::Unbound.Stub] public void SetCamera(global::UnityEngine.Camera value) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Experimental.Playables.CameraPlayable.SetCamera"); }
-    }
-    [global::Unbound.Stub]
-    public unsafe partial struct MaterialEffectPlayable : global::UnityEngine.Playables.IPlayable, global::System.IEquatable<global::UnityEngine.Experimental.Playables.MaterialEffectPlayable>
-    {
-        [global::Unbound.Stub] public static global::UnityEngine.Experimental.Playables.MaterialEffectPlayable Create(global::UnityEngine.Playables.PlayableGraph graph, global::UnityEngine.Material material, int pass = -1) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Experimental.Playables.MaterialEffectPlayable.Create"); return default; }
-        [global::Unbound.Stub] internal MaterialEffectPlayable(global::UnityEngine.Playables.PlayableHandle handle) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Experimental.Playables.MaterialEffectPlayable.ctor"); }
-        [global::Unbound.Stub] public global::UnityEngine.Playables.PlayableHandle GetHandle() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Experimental.Playables.MaterialEffectPlayable.GetHandle"); return default; }
-        [global::Unbound.Stub] public static implicit operator global::UnityEngine.Playables.Playable(global::UnityEngine.Experimental.Playables.MaterialEffectPlayable playable) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Experimental.Playables.MaterialEffectPlayable.op_Implicit"); return default; }
-        [global::Unbound.Stub] public static explicit operator global::UnityEngine.Experimental.Playables.MaterialEffectPlayable(global::UnityEngine.Playables.Playable playable) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Experimental.Playables.MaterialEffectPlayable.op_Explicit"); return default; }
-        [global::Unbound.Stub] public bool Equals(global::UnityEngine.Experimental.Playables.MaterialEffectPlayable other) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Experimental.Playables.MaterialEffectPlayable.Equals"); return default; }
-        [global::Unbound.Stub] public global::UnityEngine.Material GetMaterial() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Experimental.Playables.MaterialEffectPlayable.GetMaterial"); return default; }
-        [global::Unbound.Stub] public void SetMaterial(global::UnityEngine.Material value) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Experimental.Playables.MaterialEffectPlayable.SetMaterial"); }
-        [global::Unbound.Stub] public int GetPass() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Experimental.Playables.MaterialEffectPlayable.GetPass"); return default; }
-        [global::Unbound.Stub] public void SetPass(int value) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Experimental.Playables.MaterialEffectPlayable.SetPass"); }
-    }
-    [global::Unbound.Stub]
-    public unsafe partial struct TextureMixerPlayable : global::UnityEngine.Playables.IPlayable, global::System.IEquatable<global::UnityEngine.Experimental.Playables.TextureMixerPlayable>
-    {
-        [global::Unbound.Stub] public static global::UnityEngine.Experimental.Playables.TextureMixerPlayable Create(global::UnityEngine.Playables.PlayableGraph graph) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Experimental.Playables.TextureMixerPlayable.Create"); return default; }
-        [global::Unbound.Stub] internal TextureMixerPlayable(global::UnityEngine.Playables.PlayableHandle handle) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Experimental.Playables.TextureMixerPlayable.ctor"); }
-        [global::Unbound.Stub] public global::UnityEngine.Playables.PlayableHandle GetHandle() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Experimental.Playables.TextureMixerPlayable.GetHandle"); return default; }
-        [global::Unbound.Stub] public static implicit operator global::UnityEngine.Playables.Playable(global::UnityEngine.Experimental.Playables.TextureMixerPlayable playable) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Experimental.Playables.TextureMixerPlayable.op_Implicit"); return default; }
-        [global::Unbound.Stub] public static explicit operator global::UnityEngine.Experimental.Playables.TextureMixerPlayable(global::UnityEngine.Playables.Playable playable) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Experimental.Playables.TextureMixerPlayable.op_Explicit"); return default; }
-        [global::Unbound.Stub] public bool Equals(global::UnityEngine.Experimental.Playables.TextureMixerPlayable other) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Experimental.Playables.TextureMixerPlayable.Equals"); return default; }
-    }
-    [global::Unbound.Stub]
-    public unsafe static partial class TexturePlayableBinding
-    {
-        [global::Unbound.Stub] public static global::UnityEngine.Playables.PlayableBinding Create(string name, global::UnityEngine.Object key) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Experimental.Playables.TexturePlayableBinding.Create"); return default; }
-    }
-    [global::Unbound.Stub]
-    internal unsafe static partial class TexturePlayableGraphExtensions
-    {
-        [global::Unbound.Stub] internal static bool InternalCreateTextureOutput(ref global::UnityEngine.Playables.PlayableGraph graph, string name, out global::UnityEngine.Playables.PlayableOutputHandle handle) { handle = default; global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Experimental.Playables.TexturePlayableGraphExtensions.InternalCreateTextureOutput"); return default; }
-    }
-    [global::Unbound.Stub]
-    public unsafe partial struct TexturePlayableOutput : global::UnityEngine.Playables.IPlayableOutput
-    {
-        [global::Unbound.Stub] public static global::UnityEngine.Experimental.Playables.TexturePlayableOutput Create(global::UnityEngine.Playables.PlayableGraph graph, string name, global::UnityEngine.RenderTexture target) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Experimental.Playables.TexturePlayableOutput.Create"); return default; }
-        [global::Unbound.Stub] internal TexturePlayableOutput(global::UnityEngine.Playables.PlayableOutputHandle handle) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Experimental.Playables.TexturePlayableOutput.ctor"); }
-        [global::Unbound.Stub] public global::UnityEngine.Playables.PlayableOutputHandle GetHandle() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Experimental.Playables.TexturePlayableOutput.GetHandle"); return default; }
-        [global::Unbound.Stub] public static implicit operator global::UnityEngine.Playables.PlayableOutput(global::UnityEngine.Experimental.Playables.TexturePlayableOutput output) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Experimental.Playables.TexturePlayableOutput.op_Implicit"); return default; }
-        [global::Unbound.Stub] public static explicit operator global::UnityEngine.Experimental.Playables.TexturePlayableOutput(global::UnityEngine.Playables.PlayableOutput output) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Experimental.Playables.TexturePlayableOutput.op_Explicit"); return default; }
-        [global::Unbound.Stub] public global::UnityEngine.RenderTexture GetTarget() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Experimental.Playables.TexturePlayableOutput.GetTarget"); return default; }
-        [global::Unbound.Stub] public void SetTarget(global::UnityEngine.RenderTexture value) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Experimental.Playables.TexturePlayableOutput.SetTarget"); }
-        public static global::UnityEngine.Experimental.Playables.TexturePlayableOutput Null { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Experimental.Playables.TexturePlayableOutput.Null"); return default; } }
-    }
-}
 namespace UnityEngine.Experimental.Rendering
 {
     [global::Unbound.Stub]
