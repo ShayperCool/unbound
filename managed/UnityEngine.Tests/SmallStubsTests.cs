@@ -32,5 +32,22 @@ namespace UnityEngine.Tests
             Assert.Equal("s", Assert.Throws<ArgumentNullException>(() => ShaderUtil.HasProceduralInstancing(null)).ParamName);
             Assert.Equal("material", Assert.Throws<ArgumentNullException>(() => ShaderUtil.IsPassCompiled(null, 0)).ParamName);
         }
+    
+        // The Editor's palette, cycled and filtered by luminance (tests/projects/smallstubs palette.*).
+        [Fact]
+        public void TheColorBlindSafePaletteCyclesTheColorsInTheLuminanceRange()
+        {
+            var all = new Color[40];
+            Assert.Equal(19, UnityEngine.Accessibility.VisionUtility.GetColorBlindSafePalette(all, 0f, 1f));
+            Assert.Equal(all[0], all[19]);
+            var bright = new Color[12];
+            Assert.Equal(3, UnityEngine.Accessibility.VisionUtility.GetColorBlindSafePalette(bright, 0.8f, 1f));
+            Assert.Equal((Color)new Color32(36, 255, 36, 255), bright[3]);
+            var none = new Color[4] { Color.red, Color.red, Color.red, Color.red };
+            Assert.Equal(0, UnityEngine.Accessibility.VisionUtility.GetColorBlindSafePalette(none, 2f, 3f));
+            Assert.Equal(default(Color), none[0]);
+            Assert.Throws<ArgumentNullException>(() => UnityEngine.Accessibility.VisionUtility.GetColorBlindSafePalette(new Color[0], 0f, 1f));
+            Assert.Equal("s", Assert.Throws<ArgumentNullException>(() => ShaderUtil.ClearCachedData(null)).ParamName);
+        }
     }
 }

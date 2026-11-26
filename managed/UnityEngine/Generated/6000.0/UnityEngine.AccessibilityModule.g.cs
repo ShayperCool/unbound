@@ -277,12 +277,4 @@ namespace UnityEngine.Accessibility
         [global::Unbound.Stub] public T GetService<T>() where T : global::UnityEngine.Accessibility.IService { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Accessibility.ServiceManager.GetService"); return default; }
         [global::Unbound.Stub] protected void ScreenReaderStatusChanged(bool isScreenReaderEnabled) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Accessibility.ServiceManager.ScreenReaderStatusChanged"); }
     }
-    [global::Unbound.Stub]
-    public unsafe static partial class VisionUtility
-    {
-        [global::Unbound.Stub] internal static float ComputePerceivedLuminance(global::UnityEngine.Color color) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Accessibility.VisionUtility.ComputePerceivedLuminance"); return default; }
-        [global::Unbound.Stub] internal static void GetLuminanceValuesForPalette(global::UnityEngine.Color[] palette, ref float[] outLuminanceValues) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Accessibility.VisionUtility.GetLuminanceValuesForPalette"); }
-        [global::Unbound.Stub] public static int GetColorBlindSafePalette(global::UnityEngine.Color[] palette, float minimumLuminance, float maximumLuminance) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Accessibility.VisionUtility.GetColorBlindSafePalette"); return default; }
-        [global::Unbound.Stub] internal static int GetColorBlindSafePalette(global::UnityEngine.Color32[] palette, float minimumLuminance, float maximumLuminance) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Accessibility.VisionUtility.GetColorBlindSafePalette"); return default; }
-    }
 }

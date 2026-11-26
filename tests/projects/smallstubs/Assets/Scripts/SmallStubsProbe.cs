@@ -46,6 +46,7 @@ public class SmallStubsProbe : MonoBehaviour
         {
             RawTextureData();
             ShaderQueries();
+            Palettes();
         }
         catch (Exception e) { Row("aborted", e.GetType().Name + ": " + e.Message); }
         output.Write("{\"k\":\"complete\",\"v\":true}\n");
@@ -107,5 +108,22 @@ public class SmallStubsProbe : MonoBehaviour
         Try("shader.isPassCompiled.standard.otherKeyword", () => ShaderUtil.IsPassCompiled(other, 0).ToString());
         Try("shader.isPassCompiled.badPass", () => ShaderUtil.IsPassCompiled(material, 7).ToString());
         Try("shader.isPassCompiled.null", () => ShaderUtil.IsPassCompiled(null, 0).ToString());
+    }
+
+    static string Colors(Color[] colors, int count) =>
+        count + ": " + string.Join(" ", colors.Select(c => $"{c.r:R},{c.g:R},{c.b:R},{c.a:R}"));
+
+    /// <summary>VisionUtility.GetColorBlindSafePalette: the palette whole (a long array, every
+    /// luminance), cycled when longer than it, filtered by luminance ranges, and its errors; then
+    /// ShaderUtil's hardware answers and ClearCachedData.</summary>
+    static void Palettes()
+    {
+        foreach (var (key, length, min, max) in new[] { ("all", 40, 0f, 1f), ("short", 3, 0f, 1f), ("mid", 12, 0.3f, 0.7f),
+                     ("bright", 12, 0.8f, 1f), ("dark", 12, 0f, 0.2f), ("none", 4, 2f, 3f), ("inverted", 4, 0.9f, 0.1f), ("empty", 0, 0f, 1f) })
+            Try("palette." + key, () => { var colors = new Color[length]; int n = UnityEngine.Accessibility.VisionUtility.GetColorBlindSafePalette(colors, min, max); return Colors(colors, n); });
+        Try("palette.null", () => UnityEngine.Accessibility.VisionUtility.GetColorBlindSafePalette(null, 0f, 1f).ToString());
+        Try("shader.hardwareSupportsRectRenderTexture", () => ShaderUtil.hardwareSupportsRectRenderTexture.ToString());
+        Try("shader.clearCachedData", () => { ShaderUtil.ClearCachedData(Shader.Find("Unlit/Color")); return "done"; });
+        Try("shader.clearCachedData.null", () => { ShaderUtil.ClearCachedData(null); return "done"; });
     }
 }

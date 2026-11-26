@@ -3455,6 +3455,12 @@
     },
     {
       "category": "class",
+      "module": "UnityEngine.AccessibilityModule",
+      "status": "static",
+      "type": "UnityEngine.Accessibility.VisionUtility"
+    },
+    {
+      "category": "class",
       "module": "UnityEngine.CoreModule",
       "status": "no-public-parameterless-constructor",
       "type": "UnityEngine.AddComponentMenu"

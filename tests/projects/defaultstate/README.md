@@ -1,5 +1,7 @@
 # Default state of implemented API types
 
+The vision utility slice adds one row: the static `UnityEngine.Accessibility.VisionUtility`, now written by hand, is excluded, from two independent Linux GPU captures that agree on it; earlier rows are unchanged.
+
 The Tile Palette and terrain layer slice adds 17 rows: GridBrushBase (abstract), CustomGridBrushAttribute
 and GridPalette written by hand (13), the static TerrainLayerUtility (1), and AssetPreview, Help and
 PresetType (3, type rows only), which an earlier commit wrote by hand without rows. All come from

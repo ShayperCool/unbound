@@ -25,6 +25,17 @@ namespace UnityEditor
             return s.HasProceduralInstancingPass("ShaderUtil.HasProceduralInstancing");
         }
 
+        /// <summary>True, as the Unity 6000.0.71f1 Editor answers on the measured GPU (tests/projects/smallstubs).</summary>
+        [Unbound.EditorFaithful("every GPU Unbound runs on supports rectangle render textures (measured: tests/projects/smallstubs shader.hardwareSupportsRectRenderTexture)")]
+        public static bool hardwareSupportsRectRenderTexture => true;
+
+        /// <summary>Unbound keeps no per-shader compilation cache to clear; no shader:
+        /// ArgumentNullException (matches the Unity 6000.0.71f1 Editor, tests/projects/smallstubs).</summary>
+        public static void ClearCachedData(Shader s)
+        {
+            if (s == null) throw new ArgumentNullException(nameof(s));
+        }
+
         /// <summary>The pass variants compiled on request (CompilePass): a shader's pass with a set of
         /// keywords, compiled for every material of the shader with those keywords.</summary>
         static readonly HashSet<(Shader, int, string)> s_CompiledPasses = new HashSet<(Shader, int, string)>();
