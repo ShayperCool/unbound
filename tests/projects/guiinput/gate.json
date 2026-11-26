@@ -1,0 +1,9 @@
+{
+  "commands": [
+    "python3 tests/projects/guiinput/run.py gate"
+  ],
+  "summary": "guiinput.*: [0-9]+/[0-9]+ values match.*",
+  "engine_paths": [
+    "tests/projects/guiinput/"
+  ]
+}
