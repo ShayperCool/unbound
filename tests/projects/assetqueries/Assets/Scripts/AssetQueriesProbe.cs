@@ -207,6 +207,20 @@ public class AssetQueriesProbe : MonoBehaviour
         Try("remove_variant", () => AssetDatabase.RemoveAssetBundleName("bundle-b.hd", true).ToString());
         Try("remove_variant/meta", () => Meta("Assets/Data/B.txt"));
         Names("remove_variant");
+
+        // An importer of a .meta whose name is in mixed case, and a name and variant set at once.
+        Try("importer/upper", () =>
+        {
+            var upper = AssetImporter.GetAtPath("Assets/Data/Upper.txt");
+            return S(upper.assetBundleName) + " " + S(upper.assetBundleVariant);
+        });
+        Try("set_both/name", () =>
+        {
+            plain.SetAssetBundleNameAndVariant("Both-Bundle", "HD");
+            return S(plain.assetBundleName) + " " + S(plain.assetBundleVariant) + " meta " + Meta("Assets/Data/Plain.txt");
+        });
+        Names("set_both");
+        Try("set_both/paths", () => L(AssetDatabase.GetAssetPathsFromAssetBundle("both-bundle.hd")));
     }
 
     /// <summary>The import worker counts: AssetDatabase's and the user settings', set and forced.</summary>
