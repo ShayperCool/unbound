@@ -9,43 +9,6 @@ namespace UnityEngine.Experimental.Playables
     // and the texture output's target and binding. What evaluating them draws into the output's
     // render texture (the Editor draws: the target's pixels change) is not implemented and says so.
 
-    sealed class CameraPlayableKind : PlayableKind
-    {
-        public Camera Camera;
-    }
-
-    sealed class MaterialEffectKind : PlayableKind
-    {
-        public Material Material;
-        public int Pass;
-    }
-
-    sealed class TextureMixerKind : PlayableKind
-    {
-    }
-
-    sealed class TextureOutputState
-    {
-        public RenderTexture Target;
-    }
-
-    static class TexturePlayableGraph
-    {
-        /// <summary>The graph's data; an invalid graph fails as the Editor's (measured for the
-        /// output and each playable).</summary>
-        internal static PlayableGraphData Of(PlayableGraph graph) =>
-            PlayableGraphData.Get(graph) ?? throw new NullReferenceException("The PlayableGraph is null.");
-
-        internal static PlayableNode Node(PlayableGraph graph, Type type, PlayableKind kind, int inputs)
-        {
-            var g = Of(graph);
-            var n = g.CreateNode(type);
-            n.Kind = kind;
-            if (inputs > 0) g.SetInputCount(n, inputs);
-            return n;
-        }
-    }
-
     /// <summary>A playable that renders a camera into the texture output it feeds.</summary>
     public partial struct CameraPlayable : IPlayable, IEquatable<CameraPlayable>
     {
@@ -154,34 +117,8 @@ namespace UnityEngine.Experimental.Playables
         }
     }
 
-    /// <summary>The texture outputs' processing: their notifications as any output's; drawing the
-    /// source into the target is reported as not implemented.</summary>
-    sealed class TextureOutputs : OutputSystems.IProcessor
-    {
-        static readonly TextureOutputs s_Instance = new TextureOutputs();
-        static bool s_Registered;
-
-        internal static void EnsureRegistered()
-        {
-            if (s_Registered) return;
-            s_Registered = true;
-            OutputSystems.Register(typeof(TexturePlayableOutput), s_Instance);
-        }
-
-        public void Process(PlayableOutputData output, double dt, bool seek)
-        {
-            if (output.Source != null && (output.Engine as TextureOutputState)?.Target != null)
-                Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Experimental.Playables.TexturePlayableOutput: drawing a graph into its render texture");
-            output.Graph.DeliverNotifications(output);
-        }
-
-        public void Stopped(PlayableGraphData graph) { }
-
-        public void Flush() { }
-    }
-
     /// <summary>An output drawing its source into a render texture. The drawing is not implemented
-    /// (reported once when a graph evaluates one).</summary>
+    /// (reported once when a graph evaluates one with a source).</summary>
     public partial struct TexturePlayableOutput : IPlayableOutput
     {
         PlayableOutputHandle m_Handle;
@@ -221,5 +158,77 @@ namespace UnityEngine.Experimental.Playables
         public RenderTexture GetTarget() => State.Target;
 
         public void SetTarget(RenderTexture value) => State.Target = value;
+    }
+}
+
+namespace Unbound.Runtime.Playables
+{
+    using UnityEngine;
+    using UnityEngine.Experimental.Playables;
+    using UnityEngine.Playables;
+
+    internal sealed class CameraPlayableKind : PlayableKind
+    {
+        public Camera Camera;
+    }
+
+    internal sealed class MaterialEffectKind : PlayableKind
+    {
+        public Material Material;
+        public int Pass;
+    }
+
+    internal sealed class TextureMixerKind : PlayableKind
+    {
+    }
+
+    internal sealed class TextureOutputState
+    {
+        public RenderTexture Target;
+    }
+
+    internal static class TexturePlayableGraph
+    {
+        /// <summary>The graph's data; an invalid graph fails as the Editor's (measured for the
+        /// output and each playable).</summary>
+        internal static PlayableGraphData Of(PlayableGraph graph) =>
+            PlayableGraphData.Get(graph) ?? throw new NullReferenceException("The PlayableGraph is null.");
+
+        internal static PlayableNode Node(PlayableGraph graph, Type type, PlayableKind kind, int inputs)
+        {
+            var g = Of(graph);
+            var n = g.CreateNode(type);
+            n.Kind = kind;
+            if (inputs > 0) g.SetInputCount(n, inputs);
+            return n;
+        }
+    }
+
+    /// <summary>The texture outputs' processing: their notifications as any output's; drawing the
+    /// source into the target is reported as not implemented.</summary>
+    internal sealed class TextureOutputs : OutputSystems.IProcessor
+    {
+        internal const string DrawingKey = "UnityEngine.Experimental.Playables.TexturePlayableOutput: drawing a graph into its render texture";
+        static readonly TextureOutputs s_Instance = new TextureOutputs();
+        static bool s_Registered;
+
+        internal static void EnsureRegistered()
+        {
+            if (s_Registered) return;
+            s_Registered = true;
+            OutputSystems.Register(typeof(TexturePlayableOutput), s_Instance);
+        }
+
+        public void Process(PlayableOutputData output, double dt, bool seek)
+        {
+            // Any evaluated output with a source (a director's binding gives none a target).
+            if (output.Source != null)
+                Stubs.NotImplemented(DrawingKey);
+            output.Graph.DeliverNotifications(output);
+        }
+
+        public void Stopped(PlayableGraphData graph) { }
+
+        public void Flush() { }
     }
 }

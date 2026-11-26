@@ -4,6 +4,9 @@
   ],
   "summary": "texplayables: .*",
   "engine_paths": [
-    "managed/UnityEngine/Playables/TexturePlayables.cs"
+    "managed/UnityEngine/Playables/TexturePlayables.cs",
+    "managed/UnityEngine/Playables/PlayableEngine.cs",
+    "managed/UnityEngine/Playables/PlayableHandles.cs",
+    "managed/UnityEngine/Playables/PlayableExtensions.cs"
   ]
 }

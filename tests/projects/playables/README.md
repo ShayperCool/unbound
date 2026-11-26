@@ -39,5 +39,5 @@ Run Unbound and compare:
 recording of the release named in its file name.
 
 `director.frames` destroys a director's GameObject from Update: the Editor runs OnDisable at the
-end of the Update scripts and OnDestroy right after them, so the director's graph is torn down
-before that frame's DirectorUpdate. Unbound matches every scenario (0 differ at dd8dffc1d).
+end of the Update scripts and OnDestroy right after them, so the director's graph is torn down in
+that frame's DirectorUpdate. Unbound matches every scenario (0 differ at dd8dffc1d).

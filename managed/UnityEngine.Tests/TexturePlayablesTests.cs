@@ -33,6 +33,27 @@ namespace UnityEngine.Tests
             finally { graph.Destroy(); }
         }
 
+        static int Hits(string member) => System.Linq.Enumerable.FirstOrDefault(Unbound.Runtime.Stubs.HitReport(), h => h.Key == member).Value;
+
+        [Fact]
+        public void EvaluatingATextureOutputWithASourceSaysItDoesNotDraw()
+        {
+            var graph = PlayableGraph.Create("Texture");
+            try
+            {
+                var key = Unbound.Runtime.Playables.TextureOutputs.DrawingKey;
+                Unbound.Runtime.Stubs.Forget(key);
+                // A director's binding gives the output no target: it still says so.
+                var output = TexturePlayableOutput.Create(graph, "Out", null);
+                graph.Evaluate();
+                Assert.Equal(0, Hits(key));
+                ((PlayableOutput)output).SetSourcePlayable(CameraPlayable.Create(graph, null));
+                graph.Evaluate();
+                Assert.Equal(1, Hits(key));
+            }
+            finally { graph.Destroy(); }
+        }
+
         [Fact]
         public void TheTextureOutputHoldsItsTargetAndAnInvalidGraphThrows()
         {
