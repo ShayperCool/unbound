@@ -153,6 +153,15 @@ namespace Unbound.Runtime
         }
 
         /// <summary>The resource of the graph file at a path; null for another asset.</summary>
+        /// <summary>The dirty resource of the graph file <paramref name="obj"/> belongs to (its
+        /// asset or the resource itself); null for another object or a resource with nothing to save.</summary>
+        internal static VisualEffectResource DirtyResourceOf(Object obj)
+        {
+            if (obj is not VisualEffectObject && obj is not VisualEffectResource) return null;
+            var resource = obj as VisualEffectResource ?? ResourceAtPath(AssetDatabase.GetAssetPath(obj));
+            return resource != null && EditorUtility.IsDirty(resource) ? resource : null;
+        }
+
         internal static VisualEffectResource ResourceAtPath(string path)
         {
             if (string.IsNullOrEmpty(path)) return null;

@@ -496,6 +496,10 @@ namespace UnityEditor
         {
             using var write = SessionImports.Write();
             if (SettingsAssets.Of(obj) is SettingsFile settings) SettingsAssets.Save(settings);
+            // A graph's asset or resource saves the graph when its resource is dirty (the asset
+            // itself is not marked), through the processors' OnWillSaveAssets with its path
+            // (tests/projects/vfxwrites save if dirty resource/asset; for other assets unmeasured).
+            else if (VisualEffectImports.DirtyResourceOf(obj) is UnityEditor.VFX.VisualEffectResource resource) AssetFiles.SaveDirty(resource, willSave: true);
             else if (obj != null && EditorUtility.IsDirty(obj)) AssetFiles.SaveDirty(obj);
         }
 

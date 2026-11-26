@@ -78,7 +78,7 @@ namespace Unbound.Runtime
                 }
                 foreach (var pair in byGuid)
                 {
-                    try { Save(pair.Key, pair.Value, unchangedStays, willSave); }
+                    try { Save(pair.Key, pair.Value, unchangedStays); }
                     catch (Exception e) when (e is IOException || e is NotSupportedException || e is UnauthorizedAccessException)
                     {
                         Debug.LogError($"Unbound: {AssetDatabaseRuntime.PathOf(pair.Key)} is not saved: {e.Message}");
@@ -105,15 +105,15 @@ namespace Unbound.Runtime
             return docs;
         }
 
-        static void Save(string guid, List<Object> dirty, bool unchangedStays, bool savingAssets)
+        static void Save(string guid, List<Object> dirty, bool unchangedStays)
         {
             var info = AssetDatabaseRuntime.Info(guid);
             var loaded = AssetDatabaseRuntime.LoadFile(guid);
             if (info == null || loaded == null || string.IsNullOrEmpty(info.File)) return;
-            // AssetDatabase.SaveAssets writes a graph file from its resource's objects
-            // (VisualEffectResource.WriteAsset; tests/projects/vfxwrites). Other saves of a graph
-            // (SaveAssetIfDirty, the Editor's exit) are unmeasured and keep the file as it is.
-            if (info.Kind == "vfx" && savingAssets)
+            // A save writes a graph file from its resource's objects (VisualEffectResource.WriteAsset):
+            // AssetDatabase.SaveAssets, SaveAssetIfDirty and the Editor's exit alike
+            // (tests/projects/vfxwrites).
+            if (info.Kind == "vfx")
             {
                 // A package's own graphs (its templates) are read only: they stay as they are.
                 if (AssetDatabase.IsImmutablePackagePath(info.Path)) return;
