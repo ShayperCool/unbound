@@ -1,6 +1,7 @@
 {"k":"loaded/before","v":"text v1 | texture 4 | text count 1 import 1"}
 {"k":"loaded/events","v":"<none>"}
 {"k":"refresh","v":"done"}
+{"k":"refresh/events.imports","v":"all Assets/Data/Loaded.count,Assets/Data/Loaded.png,Assets/Data/Loaded.txt,Assets/Data/Unloaded.count,Assets/Data/Unloaded.png,Assets/Data/Unloaded.txt\nimporter Assets/Data/Loaded.count\nimporter Assets/Data/Unloaded.count\npostprocessTexture Assets/Data/Loaded.png 8\npostprocessTexture Assets/Data/Unloaded.png 8\npreprocess Assets/Data/Loaded.count\npreprocess Assets/Data/Loaded.png\npreprocess Assets/Data/Unloaded.count\npreprocess Assets/Data/Unloaded.png"}
 {"k":"refresh/events","v":"all Assets/Data/Loaded.count,Assets/Data/Loaded.png,Assets/Data/Loaded.txt,Assets/Data/Unloaded.count,Assets/Data/Unloaded.png,Assets/Data/Unloaded.txt\nimporter Assets/Data/Loaded.count\nimporter Assets/Data/Unloaded.count\npostprocessTexture Assets/Data/Loaded.png 8\npostprocessTexture Assets/Data/Unloaded.png 8\npreprocess Assets/Data/Loaded.count\npreprocess Assets/Data/Loaded.png\npreprocess Assets/Data/Loaded.txt\npreprocess Assets/Data/Unloaded.count\npreprocess Assets/Data/Unloaded.png\npreprocess Assets/Data/Unloaded.txt"}
 {"k":"loaded/after","v":"text v2 | texture 8 | text count 2 import 1"}
 {"k":"loaded/fresh","v":"text v2 | texture 8 | text count 2 import 1"}

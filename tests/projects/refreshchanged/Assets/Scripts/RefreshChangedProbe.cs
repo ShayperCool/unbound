@@ -86,8 +86,17 @@ public class RefreshChangedProbe : MonoBehaviour
 
         Change("Loaded");
         Change("Unloaded");
+        // A model whose file does not import, changed in the same Refresh (outside Assets/Data).
+        File.WriteAllText("Assets/Broken/Broken.fbx", "still not a model\n");
+        File.SetLastWriteTimeUtc("Assets/Broken/Broken.fbx", DateTime.UtcNow.AddSeconds(5));
         Try("refresh", () => { AssetDatabase.Refresh(); return "done"; });
-        Try("refresh/events", Events);
+        Try("refresh/events", () =>
+        {
+            // The same without the texts' OnPreprocessAsset (a row of its own: refresh.events.imports).
+            var imports = RefreshEvents.Events.Where(e => !(e.StartsWith("preprocess ") && e.EndsWith(".txt"))).OrderBy(e => e, StringComparer.Ordinal).ToList();
+            Row("refresh/events.imports", string.Join("\n", imports));
+            return Events();
+        });
         Try("loaded/after", () => Describe(loadedTxt) + " | " + Describe(loadedPng) + " | " + Describe(loadedCount));
         Try("loaded/fresh", () => Describe(AssetDatabase.LoadAssetAtPath<TextAsset>(Data + "Loaded.txt")) + " | "
             + Describe(AssetDatabase.LoadAssetAtPath<Texture2D>(Data + "Loaded.png")) + " | " + Describe(AssetDatabase.LoadMainAssetAtPath(Data + "Loaded.count")));

@@ -286,7 +286,8 @@ namespace UnityEditor
         /// definitions are left to the script compilation). One an importer makes objects of that is
         /// not loaded is imported now too, its import's callbacks run now (tests/projects/refreshchanged
         /// refresh.events: a texture's and a scripted importer's, loaded or not); a native asset not
-        /// loaded is read at its next load.</summary>
+        /// loaded is read at its next load (a prefab's postprocessors too: not measured). An asset
+        /// whose import fails is said and the others are imported.</summary>
         internal static void ReimportChanged(IEnumerable<string> paths)
         {
             foreach (var path in paths)
@@ -297,9 +298,18 @@ namespace UnityEditor
                 // reported: SessionImports).
                 if (!IsValidFolder(path) && !CompilesScripts(path))
                 {
-                    bool unloaded = !AssetDatabaseRuntime.IsLoaded(guid);
+                    // (A failed earlier load counts as not loaded: its file is imported now.)
+                    bool unloaded = AssetDatabaseRuntime.LoadedOrNull(guid) == null;
                     AssetDatabaseRuntime.ReimportInPlace(guid);
-                    if (unloaded && !NativeFormat(path)) ImportUnloadedNow(guid);
+                    if (unloaded && !NativeFormat(path))
+                    {
+                        // One asset's failed import does not stop the others' (said).
+                        try { ImportUnloadedNow(guid); }
+                        catch (Exception e) when (e is not OutOfMemoryException)
+                        {
+                            Debug.LogError($"Unbound: '{path}' changed and could not be imported again: {e.Message}");
+                        }
+                    }
                 }
                 ProjectImports.Wrote(path);
                 SessionImports.Imported(path);
