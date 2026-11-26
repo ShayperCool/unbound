@@ -207,6 +207,89 @@ namespace UnityEngine.Tests
             }
         }
 
+        /// <summary>An unreadable texture an asset file holds in a format Unbound cannot read (PVRTC):
+        /// a warning, no exception, and GetRawTextureData answers the file's bytes.</summary>
+        [Fact]
+        public void AssetFileTexturesOfUnreadFormatsKeepTheirBytes()
+        {
+            string data = string.Concat(Enumerable.Range(0, 32).Select(i => i.ToString("x2")));
+            string yaml = @"Texture2D:
+  m_Name: Pvrtc
+  m_Width: 8
+  m_Height: 8
+  m_TextureFormat: 30
+  m_MipCount: 1
+  m_IsReadable: 0
+  m_ColorSpace: 1
+  image data: 32
+  _typelessdata: " + data + @"
+";
+            var capture = new LogCapture();
+            var previous = Debug.unityLogger.logHandler;
+            Debug.unityLogger.logHandler = capture;
+            var texture = new Texture2D(1, 1) { hideFlags = HideFlags.HideAndDontSave };
+            try
+            {
+                texture.ReadSerialized(TestYaml.DocumentBody(yaml), null);
+            }
+            finally
+            {
+                Debug.unityLogger.logHandler = previous;
+            }
+            try
+            {
+                // The loader names the texture after reading it.
+                // m_TextureFormat 30 is PVRTC_RGB2.
+                Assert.True(capture.Messages.Any(m => m == $"Warning: Unbound: texture '' has pixel data in {TextureFormat.PVRTC_RGB2}, which is not supported."),
+                    string.Join("\n", capture.Messages));
+                Assert.DoesNotContain(capture.Messages, m => m.StartsWith("Exception") || m.StartsWith("Error"));
+                Assert.Equal(Convert.FromHexString(data), texture.GetRawTextureData());
+            }
+            finally
+            {
+                Object.DestroyImmediate(texture);
+            }
+        }
+
+        /// <summary>An unreadable RGBA32 asset texture whose data is short (pixels in a stream file)
+        /// keeps the encoded chain of its blank pixels as its raw data, as before.</summary>
+        [Fact]
+        public void ShortUncompressedAssetTexturesKeepTheirEncodedChain()
+        {
+            const string yaml = @"Texture2D:
+  m_Name: Streamed
+  m_Width: 16
+  m_Height: 16
+  m_TextureFormat: 4
+  m_MipCount: 1
+  m_IsReadable: 0
+  m_ColorSpace: 1
+  image data: 0
+  _typelessdata: 
+";
+            var capture = new LogCapture();
+            var previous = Debug.unityLogger.logHandler;
+            Debug.unityLogger.logHandler = capture;
+            var texture = new Texture2D(1, 1) { hideFlags = HideFlags.HideAndDontSave };
+            try
+            {
+                texture.ReadSerialized(TestYaml.DocumentBody(yaml), null);
+            }
+            finally
+            {
+                Debug.unityLogger.logHandler = previous;
+            }
+            try
+            {
+                Assert.DoesNotContain(capture.Messages, m => m.StartsWith("Exception") || m.StartsWith("Error"));
+                Assert.Equal(new byte[16 * 16 * 4], texture.GetRawTextureData());
+            }
+            finally
+            {
+                Object.DestroyImmediate(texture);
+            }
+        }
+
         /// <summary>The blocks are a compressed texture's storage (tests/projects/texturecompression
         /// write.*): views write them and texel reads decode them; SetPixels and SetPixels32 throw,
         /// SetPixel leaves the texel; copies keep the blocks.</summary>

@@ -1062,7 +1062,8 @@ namespace UnityEngine
             return true;
         }
 
-        /// <summary>A texture serialized in an asset file (TextMeshPro atlases): pixels as hex.</summary>
+        /// <summary>A texture serialized in an asset file (TextMeshPro atlases, package editor icons): its
+        /// pixels or blocks as hex.</summary>
         internal void ReadSerialized(YNode body, IReferenceResolver resolver)
         {
             ReleaseStore();
@@ -1109,9 +1110,10 @@ namespace UnityEngine
                 else if (!ReadSerializedBlocks(bytes))
                 {
                     m_Pixels = new Color32[count];
-                    // What GetRawTextureData answers of a texture that is not readable: the file's bytes
-                    // (not pixels encoded in a format Unbound cannot write).
-                    if (!m_IsReadable) m_UnreadableRaw = bytes;
+                    // What GetRawTextureData answers of a texture that is not readable, in a format
+                    // Unbound cannot encode: the file's bytes (short data of a format it encodes keeps
+                    // the encoded chain, made when it becomes unreadable).
+                    if (!m_IsReadable && levelSize == 0) m_UnreadableRaw = bytes;
                     Debug.LogWarning($"Unbound: texture '{m_Name}' has pixel data in {m_Format}, which is not supported.");
                 }
             }
