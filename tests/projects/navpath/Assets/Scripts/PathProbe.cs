@@ -191,8 +191,10 @@ public class PathProbe : MonoBehaviour
     {
         Time.captureDeltaTime = 0.02f;
         yield return null;
-        bool obstacleSeparation = Environment.GetEnvironmentVariable("NAVPATH_PROBE_PROFILE")
-            == "obstacle-separation";
+        string profile = Environment.GetEnvironmentVariable("NAVPATH_PROBE_PROFILE");
+        // A dedicated profile runs its own scenario; the main profile runs no steer.* one.
+        string dedicated = profile == "obstacle-separation" ? "steer.separation"
+            : profile == "obstacle-shapes" ? "steer.shapes" : null;
         foreach (var (name, body) in new (string, Func<IEnumerator>)[]
         {
             ("cost.pool", CostPool),
@@ -228,9 +230,10 @@ public class PathProbe : MonoBehaviour
             ("replan.budget", () => ReplanTopology(false, 1)),
             ("replan.none", ReplanNone),
             ("steer.separation", ObstacleSeparation),
+            ("steer.shapes", ObstacleShapes),
         })
         {
-            if ((name == "steer.separation") != obstacleSeparation || !name.StartsWith(Only)) continue;
+            if ((dedicated == null ? name.StartsWith("steer.") : name != dedicated) || !name.StartsWith(Only)) continue;
             ProbeLog.Begin(name);
             var steps = body();
             while (true)
@@ -1534,6 +1537,93 @@ public class PathProbe : MonoBehaviour
         }
 
         yield return ClippedCapContacts();
+    }
+
+    /// <summary>Non-carving obstacles of other shapes than an upright capsule: boxes (square,
+    /// long, turned about the vertical, scaled, tilted) and capsules lying or tilted. Contact: an
+    /// agent placed inside or near the obstacle, its positions in the first three frames. Steering:
+    /// an agent walking past the obstacle, its position and velocity every fifth frame.</summary>
+    IEnumerator ObstacleShapes()
+    {
+        ClearAgents();
+        yield return null;
+        Level(12f);
+        ProbeLog.Value("release", Application.unityVersion);
+        float floor = 1f / 15f;
+        var center = new Vector3(0.11f, floor + 1f, 0.07f);
+        var shapes = new (string name, NavMeshObstacleShape shape, Vector3 size, Vector3 euler, Vector3 scale)[]
+        {
+            ("box", NavMeshObstacleShape.Box, new Vector3(1f, 2f, 1f), Vector3.zero, Vector3.one),
+            ("boxlong", NavMeshObstacleShape.Box, new Vector3(3f, 2f, 1f), Vector3.zero, Vector3.one),
+            ("boxturn", NavMeshObstacleShape.Box, new Vector3(3f, 2f, 1f), new Vector3(0f, 30f, 0f), Vector3.one),
+            ("boxscaled", NavMeshObstacleShape.Box, new Vector3(1f, 2f, 1f), Vector3.zero, new Vector3(2f, 1f, 0.5f)),
+            ("boxtilt", NavMeshObstacleShape.Box, new Vector3(3f, 2f, 1f), new Vector3(0f, 0f, 30f), Vector3.one),
+            ("caplying", NavMeshObstacleShape.Capsule, new Vector3(0.5f, 3f, 0f), new Vector3(0f, 0f, 90f), Vector3.one),
+            ("captilt", NavMeshObstacleShape.Capsule, new Vector3(0.5f, 3f, 0f), new Vector3(0f, 0f, 45f), Vector3.one),
+            ("captiltx", NavMeshObstacleShape.Capsule, new Vector3(0.5f, 3f, 0f), new Vector3(45f, 0f, 0f), Vector3.one),
+        };
+        var starts = new[]
+        {
+            new Vector2(0f, 0f), new Vector2(-0.25f, 0.1f), new Vector2(0.6f, -0.2f),
+            new Vector2(1.2f, 0.45f), new Vector2(1.7f, 0.8f), new Vector2(0.3f, 0.95f),
+        };
+        GameObject Place((string name, NavMeshObstacleShape shape, Vector3 size, Vector3 euler, Vector3 scale) s)
+        {
+            var post = new GameObject(s.name);
+            post.transform.position = center;
+            post.transform.rotation = Quaternion.Euler(s.euler);
+            post.transform.localScale = s.scale;
+            var obstacle = post.AddComponent<NavMeshObstacle>();
+            obstacle.carving = false;
+            obstacle.shape = s.shape;
+            if (s.shape == NavMeshObstacleShape.Box) obstacle.size = s.size;
+            else { obstacle.radius = s.size.x; obstacle.height = s.size.y; }
+            return post;
+        }
+        foreach (var s in shapes)
+        {
+            for (int i = 0; i < starts.Length; i++)
+            {
+                var post = Place(s);
+                yield return null;
+                var mover = new GameObject("mover");
+                mover.transform.position = new Vector3(center.x + starts[i].x, floor, center.z + starts[i].y);
+                var agent = mover.AddComponent<NavMeshAgent>();
+                string key = "contact." + s.name + ".s" + i;
+                for (int frame = 1; frame <= 3; frame++)
+                {
+                    yield return null;
+                    ProbeLog.Value(key + ".f" + frame + ".at", agent.nextPosition);
+                }
+                Destroy(mover);
+                Destroy(post);
+                yield return null;
+            }
+        }
+        foreach (var s in shapes)
+        {
+            if (s.name == "boxscaled" || s.name == "captiltx") continue;
+            foreach (float lane in new[] { 0.3f, 0.9f })
+            {
+                var post = Place(s);
+                yield return null;
+                var mover = new GameObject("mover");
+                mover.transform.position = new Vector3(center.x - 4f, floor, center.z + lane);
+                var agent = mover.AddComponent<NavMeshAgent>();
+                agent.SetDestination(new Vector3(center.x + 6f, floor, center.z + lane));
+                string key = "steer." + s.name + ".z" + lane.ToString("0.0", System.Globalization.CultureInfo.InvariantCulture);
+                for (int frame = 1; frame <= 80; frame++)
+                {
+                    yield return null;
+                    if (frame % 5 != 0) continue;
+                    ProbeLog.Value(key + ".f" + frame + ".at", agent.nextPosition);
+                    ProbeLog.Value(key + ".f" + frame + ".velocity", agent.velocity);
+                }
+                Destroy(mover);
+                Destroy(post);
+                yield return null;
+            }
+        }
     }
 
     IEnumerator ClippedCapContacts()

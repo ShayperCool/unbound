@@ -64,6 +64,11 @@ OUTPUT = 'navpath.json'
 TOLERANCE = 1e-3
 FRAMES = 5000
 OBSTACLE_SEPARATION = 'obstacle-separation'
+OBSTACLE_SHAPES = 'obstacle-shapes'
+# Profiles with their own scenario, reference file and strict comparison of every value.
+DEDICATED = (OBSTACLE_SEPARATION, OBSTACLE_SHAPES)
+SHAPES = ('box', 'boxlong', 'boxturn', 'boxscaled', 'boxtilt', 'caplying', 'captilt', 'captiltx')
+STEERED = ('box', 'boxlong', 'boxturn', 'boxtilt', 'caplying', 'captilt')
 # Scenario -> key prefixes of the differences that are reported but not gated ('' = all of them).
 LISTED = {
     'hole.shapes': ('two.p1.',),
@@ -92,7 +97,7 @@ def copy_project(dest):
 
 
 def select_project_release(project, args):
-    if args.profile == OBSTACLE_SEPARATION:
+    if args.profile in DEDICATED:
         (project/'ProjectSettings/ProjectVersion.txt').write_text(
             f'm_EditorVersion: {unity_version()}\n')
 
@@ -119,17 +124,52 @@ def editor(args):
 
 
 def capture_problem(directory, args):
-    if args.profile != OBSTACLE_SEPARATION:
+    if args.profile not in DEDICATED:
         return result_problem(directory)
     problem = result_problem(directory, gpu=True)
     if problem:
         return problem
     result = load_result(directory)
     if result.get('forced_exit') or result.get('exit_code') != 0:
-        return 'the obstacle separation Editor must exit normally'
+        return f'the {args.profile} Editor must exit normally'
     if Path(result.get('project', '')).resolve() != (directory/'project').resolve():
         return 'the Editor ran a different copy of the project'
+    if args.profile == OBSTACLE_SHAPES:
+        return obstacle_shapes_problem(directory/OUTPUT)
     return obstacle_separation_problem(directory/OUTPUT)
+
+
+def obstacle_shapes_problem(path):
+    """The obstacle shapes capture holds exactly its scenario's keys, every number finite."""
+    def unique_object(pairs):
+        record = dict(pairs)
+        if len(record) != len(pairs):
+            raise ValueError('duplicate keys in the obstacle shapes capture')
+        return record
+
+    try:
+        document = json.loads(path.read_bytes(), object_pairs_hook=unique_object)
+    except (OSError, ValueError) as error:
+        return str(error)
+    if not isinstance(document, dict) or set(document) != {'steer.shapes'}:
+        return 'expected the obstacle shapes scenario'
+    records = document['steer.shapes']
+    if not isinstance(records, dict) or records.get('release') != unity_version():
+        return 'wrong Unity release in the obstacle shapes capture'
+    numeric = {f'contact.{shape}.s{start}.f{frame}.at.{axis}'
+               for shape in SHAPES for start in range(6) for frame in (1, 2, 3) for axis in 'xyz'}
+    numeric |= {f'steer.{shape}.z{lane}.f{frame}.{vector}.{axis}'
+                for shape in STEERED for lane in ('0.3', '0.9') for frame in range(5, 81, 5)
+                for vector in ('at', 'velocity') for axis in 'xyz'}
+    expected = numeric | {'release', 'mesh0.triangles', 'mesh0.vertices'}
+    if set(records) != expected:
+        return (f'missing obstacle shapes keys {sorted(expected - records.keys())[:10]}, '
+                f'unexpected keys {sorted(records.keys() - expected)[:10]}')
+    for key in sorted(numeric):
+        value = records[key]
+        if type(value) not in (float, int) or not math.isfinite(value):
+            return f'{key} is not a finite number'
+    return None
 
 
 def obstacle_separation_problem(path):
@@ -199,7 +239,7 @@ def publish(args):
     if first != second:
         sys.exit('the two captures differ; nothing published')
     target = profile_reference(args)
-    if args.profile == OBSTACLE_SEPARATION and target.exists():
+    if args.profile in DEDICATED and target.exists():
         sys.exit(f'refusing to overwrite reference: {target}')
     target.parent.mkdir(parents=True, exist_ok=True)
     target.write_bytes(first)
@@ -269,7 +309,7 @@ def unbound(args):
         code = subprocess.run(command, env=env, stdout=log, stderr=subprocess.STDOUT, timeout=900).returncode
     if code != 0 or not result.exists():
         sys.exit(f'Unbound failed (exit {code}); see {out/"run.log"}')
-    dedicated = args.profile == OBSTACLE_SEPARATION
+    dedicated = args.profile in DEDICATED
     details = None if dedicated else args.details
     bad = compare(json.loads(profile_reference(args).read_text()), json.loads(result.read_text()),
                   args.scenario, details, strict_booleans=dedicated)
@@ -281,8 +321,8 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument('command', choices=('editor', 'publish', 'unbound'))
     parser.add_argument('--label', default='current')
-    parser.add_argument('--profile', choices=('main', 'layers', OBSTACLE_SEPARATION), default='main',
-                        help='main regression set, stacked links or obstacle separation')
+    parser.add_argument('--profile', choices=('main', 'layers', *DEDICATED), default='main',
+                        help='main regression set, stacked links, obstacle separation or obstacle shapes')
     parser.add_argument('--scenario', default='')
     parser.add_argument('--details', type=int, default=6, help='detail limit for the main and layers profiles')
     args = parser.parse_args()
