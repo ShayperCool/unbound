@@ -1,0 +1,56 @@
+{"k":"open/file","v":"lines 2086"}
+{"k":"import/dirty","v":"False"}
+{"k":"import/file","v":"unchanged"}
+{"k":"import/contents","v":"SetAttribute 5, VFXBasicInitialize 1, VFXBasicSpawner 1, VFXBasicUpdate 1, VFXDataParticle 1, VFXDataSpawner 1, VFXGraph 1, VFXPlanarPrimitiveOutput 1, VFXSlotBool 6, VFXSlotFloat 28, VFXSlotFloat3 8, VFXSlotPosition 2, VFXSlotTexture2D 1, VFXSlotVector 2, VFXSpawnerBurst 1, VFXUI 1, VFXURPSubOutput 1, VisualEffectResource 1"}
+{"k":"write unchanged/dirty","v":"False"}
+{"k":"write unchanged/file","v":"unchanged"}
+{"k":"initialEventName/dirty","v":"True"}
+{"k":"initialEventName/file","v":"unchanged"}
+{"k":"initialEventName save/dirty","v":"False"}
+{"k":"initialEventName save/will save","v":"Assets/Graphs/BoundsAuto.vfx"}
+{"k":"initialEventName save/file","v":"-     m_InitialEventName: OnPlay\n+     m_InitialEventName: ProbeEvent\nlines 2086 -> 2086"}
+{"k":"updateMode/dirty","v":"True"}
+{"k":"updateMode/file","v":"unchanged"}
+{"k":"updateMode save/dirty","v":"False"}
+{"k":"updateMode save/will save","v":"Assets/Graphs/BoundsAuto.vfx"}
+{"k":"updateMode save/file","v":"-     m_UpdateMode: 0\n+     m_UpdateMode: 1\nlines 2086 -> 2086"}
+{"k":"preWarmDeltaTime/dirty","v":"True"}
+{"k":"preWarmDeltaTime/file","v":"unchanged"}
+{"k":"preWarmDeltaTime save/dirty","v":"False"}
+{"k":"preWarmDeltaTime save/will save","v":"Assets/Graphs/BoundsAuto.vfx"}
+{"k":"preWarmDeltaTime save/file","v":"-     m_PreWarmDeltaTime: 0.05\n+     m_PreWarmDeltaTime: 0.125\nlines 2086 -> 2086"}
+{"k":"preWarmStepCount/dirty","v":"True"}
+{"k":"preWarmStepCount/file","v":"unchanged"}
+{"k":"preWarmStepCount save/dirty","v":"False"}
+{"k":"preWarmStepCount save/will save","v":"Assets/Graphs/BoundsAuto.vfx"}
+{"k":"preWarmStepCount save/file","v":"-     m_PreWarmStepCount: 0\n+     m_PreWarmStepCount: 7\nlines 2086 -> 2086"}
+{"k":"cullingFlags/dirty","v":"True"}
+{"k":"cullingFlags/file","v":"unchanged"}
+{"k":"cullingFlags save/dirty","v":"False"}
+{"k":"cullingFlags save/will save","v":"Assets/Graphs/BoundsAuto.vfx"}
+{"k":"cullingFlags save/file","v":"unchanged"}
+{"k":"instancingMode/dirty","v":"True"}
+{"k":"instancingMode/file","v":"unchanged"}
+{"k":"instancingMode save/dirty","v":"False"}
+{"k":"instancingMode save/will save","v":"Assets/Graphs/BoundsAuto.vfx"}
+{"k":"instancingMode save/file","v":"-     m_InstancingMode: 0\n+     m_InstancingMode: -1\nlines 2086 -> 2086"}
+{"k":"instancingCapacity/dirty","v":"True"}
+{"k":"instancingCapacity/file","v":"unchanged"}
+{"k":"instancingCapacity save/dirty","v":"False"}
+{"k":"instancingCapacity save/will save","v":"Assets/Graphs/BoundsAuto.vfx"}
+{"k":"instancingCapacity save/file","v":"-     m_InstancingCapacity: 64\n+     m_InstancingCapacity: 33\nlines 2086 -> 2086"}
+{"k":"write after saves/dirty","v":"False"}
+{"k":"write after saves/file","v":"unchanged"}
+{"k":"block edit/dirty","v":"False"}
+{"k":"block edit/file","v":"unchanged"}
+{"k":"block edit/slot dirty","v":"False"}
+{"k":"block edit write/dirty","v":"False"}
+{"k":"block edit write/file","v":"-       m_SerializableObject: 6\n+       m_SerializableObject: 9\nlines 2086 -> 2086"}
+{"k":"reimport/dirty","v":"False"}
+{"k":"reimport/file","v":"unchanged"}
+{"k":"create/file","v":"lines 9"}
+{"k":"create/meta","v":"fileFormatVersion: 2\nVisualEffectImporter:\n  externalObjects: {}\n  serializedVersion: 1\n  template:\n    name: \n    category: \n    description: \n    icon: {instanceID: 0}\n    thumbnail: {instanceID: 0}\n  userData: \n  assetBundleName: \n  assetBundleVariant: \n"}
+{"k":"create/text","v":"%YAML 1.1\n%TAG !u! tag:unity3d.com,2011:\n--- !u!114 &114350483966674976\nMonoBehaviour:\n  m_Script: {fileID: 11500000, guid: 7d4c867f6b72b714dbb5fd1780afe208, type: 3}\n--- !u!2058629511 &1\nVisualEffectResource:\n  m_Graph: {fileID: 114350483966674976}\n"}
+{"k":"create save/will save","v":""}
+{"k":"create save/file","v":"unchanged"}
+{"k": "complete", "v": true}

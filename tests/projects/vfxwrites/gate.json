@@ -1,0 +1,16 @@
+{
+  "commands": [
+    "python3 tests/projects/vfxwrites/run.py gate"
+  ],
+  "summary": "vfxwrites: .*",
+  "engine_paths": [
+    "managed/UnityEngine/Editor/VFX/",
+    "managed/UnityEngine/Editor/AssetFiles.cs",
+    "managed/UnityEngine/Editor/AssetDatabase.cs",
+    "managed/UnityEngine/Editor/AssetModificationProcessorInternal.cs",
+    "managed/UnityEngine/Editor/SceneFiles.cs",
+    "managed/UnityEngine/Editor/SerializedFiles.cs",
+    "managed/UnityEngine/Editor/UnityYamlText.cs",
+    "tests/projects/vfxwrites/"
+  ]
+}
