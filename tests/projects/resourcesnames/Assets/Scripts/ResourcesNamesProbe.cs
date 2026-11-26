@@ -27,7 +27,7 @@ public class ResourcesNamesProbe : MonoBehaviour
 
     void Start()
     {
-        foreach (var name in new[] { "a", "b", "c", "d", "e", "f", "g", "f/inner", "missing" })
+        foreach (var name in new[] { "a", "b", "c", "d", "e", "f", "g", "h", "i", "f/inner", "missing" })
         {
             string path = "pair/" + name;
             Add(name + ".load", Describe(Resources.Load(path)));
@@ -47,6 +47,10 @@ public class ResourcesNamesProbe : MonoBehaviour
         var folder = Resources.LoadAll("pair");
         Add("pair.loadAll", List(folder));
         Add("pair.loadAllSorted", Sorted(folder));
+        // Letter case, a space and a folder beside files: the order of the files' paths.
+        Add("order.loadAll", List(Resources.LoadAll("order")));
+        foreach (var name in new[] { "B", "b", "a", "A", "Enemy", "Enemy (1)", "c", "c/d" })
+            Add("order/" + name + ".load", Describe(Resources.Load("order/" + name)));
         Add("complete", true);
 
         string dir = Environment.GetEnvironmentVariable("RESOURCES_NAMES_OUT");

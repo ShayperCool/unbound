@@ -99,19 +99,11 @@ pub fn state() -> &'static RuntimeState {
     STATE.get().expect("the runtime state is not initialized")
 }
 
-/// A file the Editor imports as a `DefaultAsset`: the DefaultImporter's, of no kind Unbound
-/// loads (a scene, which the DefaultImporter imports too, is not one).
-fn is_default_asset(asset: &unbound_project::assetdb::Asset) -> bool {
-    asset_importer(asset) == "DefaultImporter" && listed_kind(asset) == "unknown"
-}
-
-/// The `Resources` keys of every asset of `db`. A file the DefaultImporter imports (a
-/// `DefaultAsset`: a kind the Editor does not know) is not one of them, whatever its name shares
-/// with other files (matches the Unity 6000.0.71f1 Editor, tests/projects/resourcesnames).
+/// The `Resources` keys of every asset of `db`.
 fn resources_of(db: &AssetDb) -> HashMap<String, Vec<Guid>> {
     let mut resources: HashMap<String, Vec<Guid>> = HashMap::new();
     for asset in db.iter() {
-        if asset.is_folder || is_default_asset(asset) {
+        if asset.is_folder {
             continue;
         }
         for key in resources_keys(&asset.path) {
@@ -871,14 +863,7 @@ pub fn dispatch(method: &str, request: &str) -> Result<String> {
                     r.guid.as_deref().or(r.path.as_deref()).unwrap_or("")
                 )
             })?;
-            let importer = (!asset.is_folder)
-                .then(|| effective_scripted_importer(s, &asset.file))
-                .flatten();
-            let kind = if importer.is_some() {
-                "scripted"
-            } else {
-                listed_kind(asset)
-            };
+            let (kind, importer) = effective_kind(s, asset);
             let main = if kind == "yaml" {
                 unbound_assets::meta::main_object_file_id(&asset.file)
                     .or_else(|| {
@@ -925,11 +910,16 @@ pub fn dispatch(method: &str, request: &str) -> Result<String> {
                 found.extend(guids.iter().copied());
             }
             let db = s.db();
-            let mut assets: Vec<_> = found.into_iter().filter_map(|g| db.by_guid(g)).collect();
-            // In the ordinal order of their paths: `Load` takes the first that loads, `LoadAll`
-            // lists them so (matches the Unity 6000.0.71f1 Editor, tests/projects/resourcesnames;
-            // several Resources folders and letter case are not measured).
-            assets.sort_by(|a, b| a.path.cmp(&b.path));
+            // A file that loads as a DefaultAsset (the DefaultImporter's, no ScriptedImporter
+            // taking it) is no Resources asset, whatever its name shares with other files
+            // (matches the Unity 6000.0.71f1 Editor, tests/projects/resourcesnames b, c, d, e, g,
+            // h, i). `Load` takes the first that loads, `LoadAll` lists them in order.
+            let mut assets: Vec<_> = found
+                .into_iter()
+                .filter_map(|g| db.by_guid(g))
+                .filter(|a| effective_kind(s, a).0 != "unknown")
+                .collect();
+            assets.sort_by(|a, b| resources_order(&a.path).cmp(&resources_order(&b.path)));
             let list: Vec<_> = assets
                 .into_iter()
                 .map(|a| json!({ "guid": a.guid.to_string(), "path": a.path }))
@@ -2021,6 +2011,34 @@ fn model_documents(guid: Guid) -> Result<Vec<unbound_yaml::Document>> {
 /// for another extension the Editor's own scripted importer the `.meta` names (a SpeedTree 9 tree),
 /// none for a project's ScriptedImporter the `.meta` names (the extension's native importer, or the
 /// DefaultImporter, imports the file). Before the editor domain loaded, the `.meta` decides.
+/// How an asset loads (`asset-info`'s kind): "scripted" when a ScriptedImporter imports it
+/// (with that importer), else [`listed_kind`]; "unknown" is the DefaultImporter's DefaultAsset.
+fn effective_kind(
+    s: &RuntimeState,
+    asset: &unbound_project::assetdb::Asset,
+) -> (&'static str, Option<(String, i64)>) {
+    let importer = (!asset.is_folder)
+        .then(|| effective_scripted_importer(s, &asset.file))
+        .flatten();
+    match importer {
+        Some(importer) => ("scripted", Some(importer)),
+        None => (listed_kind(asset), None),
+    }
+}
+
+/// The order `Resources` gives files in: by their names without extension, letter case aside,
+/// then by extension (matches the Unity 6000.0.71f1 Editor, tests/projects/resourcesnames
+/// order.loadAll and a.loadAll: `a, B, c, c/d, Enemy, Enemy (1)`; `a.png` before `a.txt`; files
+/// of several Resources folders are not measured).
+fn resources_order(path: &str) -> (String, String, &str) {
+    let name_start = path.rfind('/').map_or(0, |i| i + 1);
+    let (stem, extension) = match path[name_start..].rfind('.') {
+        Some(dot) => path.split_at(name_start + dot),
+        None => (path, ""),
+    };
+    (stem.to_lowercase(), extension.to_lowercase(), path)
+}
+
 fn effective_scripted_importer(s: &RuntimeState, file: &Path) -> Option<(String, i64)> {
     let registry = s.scripted_extensions.read().unwrap();
     // An override naming a project ScriptedImporter by its type hash (what SetImporterOverride
@@ -4250,37 +4268,34 @@ mod tests {
         assert!(resources_keys("Assets/Textures/a.png").is_empty());
     }
 
-    /// A file of a kind the DefaultImporter imports is no Resources asset, alone or beside a
-    /// file of the same name; one a `.meta` gives another importer is, and so is a kind Unbound
-    /// loads (tests/projects/resourcesnames).
+    /// Resources' order: names without extension, letter case aside, then extensions
+    /// (tests/projects/resourcesnames order.loadAll, a.loadAll).
     #[test]
-    fn default_assets_are_no_resources() {
-        let mut db = AssetDb::default();
-        for (guid, path, importer) in [
-            (1, "Assets/Resources/pair/a.txt", None),
-            (2, "Assets/Resources/pair/b.mtl", None),
-            (3, "Assets/Resources/pair/d.txt", None),
-            (4, "Assets/Resources/pair/d.mtl", None),
-            (5, "Assets/Resources/pair/s.xyz", Some("ScriptedImporter")),
-            (6, "Assets/Resources/pair/c.xyz", Some("DefaultImporter")),
-            // Kinds Unbound loads although their .meta names no importer: kept (not measured).
-            (7, "Assets/Resources/pair/v.mp4", None),
-            (8, "Assets/Resources/pair/m.unity", None),
-        ] {
-            db.insert(unbound_project::assetdb::Asset {
-                guid: Guid(guid),
-                path: path.into(),
-                file: path.into(),
-                is_folder: false,
-                labels: Vec::new(),
-                importer: importer.map(str::to_owned),
-            });
-        }
-        let resources = resources_of(&db);
-        let mut keys: Vec<_> = resources.keys().cloned().collect();
-        keys.sort();
-        assert_eq!(keys, ["pair/a", "pair/d", "pair/m", "pair/s", "pair/v"]);
-        assert_eq!(resources["pair/d"], [Guid(3)]);
+    fn resources_order_is_by_name_then_extension() {
+        let mut paths = vec![
+            "Assets/Resources/order/Enemy (1).txt",
+            "Assets/Resources/order/c/d.txt",
+            "Assets/Resources/order/B.txt",
+            "Assets/Resources/order/Enemy.txt",
+            "Assets/Resources/order/c.txt",
+            "Assets/Resources/order/a.txt",
+            "Assets/Resources/pair/a.txt",
+            "Assets/Resources/pair/a.png",
+        ];
+        paths.sort_by(|a, b| resources_order(a).cmp(&resources_order(b)));
+        assert_eq!(
+            paths,
+            [
+                "Assets/Resources/order/a.txt",
+                "Assets/Resources/order/B.txt",
+                "Assets/Resources/order/c.txt",
+                "Assets/Resources/order/c/d.txt",
+                "Assets/Resources/order/Enemy.txt",
+                "Assets/Resources/order/Enemy (1).txt",
+                "Assets/Resources/pair/a.png",
+                "Assets/Resources/pair/a.txt",
+            ]
+        );
     }
 
     /// One triangle, as the importer gets it from a file.
