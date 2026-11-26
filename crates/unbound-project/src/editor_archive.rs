@@ -15,7 +15,7 @@ use std::{
 use unbound_compat::UnityVersion;
 
 /// Bumped when the set of unpacked files or their layout changes.
-const FORMAT_VERSION: u32 = 2;
+const FORMAT_VERSION: u32 = 3;
 
 /// Directories of `Editor/Data` that are unpacked whole.
 const DIRS: &[&str] = &[
@@ -34,6 +34,7 @@ const FILES: &[&str] = &[
     "Resources/unity_builtin_extra",
     "Resources/unity editor resources",
     "Resources/modules.asset",
+    "Tools/Unity-BlenderToFBX.py",
 ];
 
 /// The platform modules taken with the Editor unless `UNBOUND_EDITOR_MODULES` (comma-separated

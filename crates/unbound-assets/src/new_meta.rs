@@ -94,7 +94,7 @@ pub fn importer_for(path: &Path, is_dir: bool) -> Option<NewImporter> {
         "prefab" => NewImporter::Prefab,
         "png" | "jpg" | "jpeg" | "tga" | "psd" | "exr" | "hdr" | "tif" | "tiff" | "bmp" | "gif"
         | "iff" | "pict" | "pic" | "pct" => NewImporter::Texture,
-        "fbx" | "obj" | "dae" | "3ds" | "dxf" => NewImporter::Model,
+        "fbx" | "obj" | "dae" | "3ds" | "dxf" | "blend" => NewImporter::Model,
         "wav" | "ogg" | "mp3" | "aif" | "aiff" | "flac" | "mod" | "it" | "s3m" | "xm" => {
             NewImporter::Audio
         }
@@ -629,6 +629,8 @@ mod tests {
         let of = |name: &str| importer_for(Path::new(name), false);
         assert_eq!(of("A.PNG"), Some(NewImporter::Texture));
         assert_eq!(of("a.fbx"), Some(NewImporter::Model));
+        // The Editor writes a .blend file the model importer's .meta (tests/projects/dccmodels).
+        assert_eq!(of("Scene.blend"), Some(NewImporter::Model));
         assert_eq!(of("a.cs"), Some(NewImporter::Script));
         assert_eq!(of("a.mat"), Some(NewImporter::NativeFormat { main: 0 }));
         assert_eq!(of("a.unity"), Some(NewImporter::Default));

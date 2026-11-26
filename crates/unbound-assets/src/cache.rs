@@ -163,6 +163,11 @@ impl AssetCache {
                 Err(e) => return Err(e.context(format!("reading {}", dependency.display()))),
             }
         }
+        let tool = importer.source_key(source)?;
+        if !tool.is_empty() {
+            inputs.update(&(tool.len() as u64).to_le_bytes());
+            inputs.update(tool.as_bytes());
+        }
         let key = entry_key::<I>(importer, inputs.finalize().as_bytes(), &meta_hash);
         let path = self.entry_path(I::KIND, &key);
 

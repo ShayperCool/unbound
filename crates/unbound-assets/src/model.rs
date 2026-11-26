@@ -57,7 +57,7 @@ use unbound_yaml::{ObjectRef, Value};
 pub use materials::{MaterialDescription, TextureDescription};
 
 /// File extensions Unity's ModelImporter handles that this importer reads.
-pub const EXTENSIONS: &[&str] = &["fbx", "obj"];
+pub const EXTENSIONS: &[&str] = &["fbx", "obj", "blend"];
 
 /// The name the fileID tables give the prefab root.
 pub const ROOT_NODE_NAME: &str = "//RootNode";
@@ -918,17 +918,27 @@ const MESH_OPTIMIZATION_POLYGON_ORDER: i64 = 1;
 /// `MeshOptimizationFlags.VertexOrder`.
 const MESH_OPTIMIZATION_VERTEX_ORDER: i64 = 2;
 
-/// The model importer, with the release's reading of OBJ material libraries.
-#[derive(Debug, Clone, Copy)]
+/// The model importer, with the release's reading of OBJ material libraries and the Editor
+/// installation's Blender export script (see [`blend`]).
+#[derive(Debug, Clone)]
 pub struct ModelImporter {
     pub mtl: &'static MtlRules,
+    /// The installation's `Tools/Unity-BlenderToFBX.py`, which converts `.blend` files.
+    pub blender_script: Option<std::path::PathBuf>,
 }
 
 impl ModelImporter {
     pub fn for_release(version: &UnityVersion) -> Self {
         Self {
             mtl: MtlRules::of(version),
+            blender_script: None,
         }
+    }
+
+    /// With the Blender export script of the installation whose data directory is `data`.
+    pub fn with_installation(mut self, data: &Path) -> Self {
+        self.blender_script = Some(data.join(blend::EXPORT_SCRIPT));
+        self
     }
 }
 
@@ -945,6 +955,7 @@ impl Importer for ModelImporter {
     // 60: `addColliders` gives every mesh node a MeshCollider.
     // 61: the nodes' FBX user properties, the root node's name and the fileID table are kept.
     // 62: OBJ bindings a missing or incomplete material library does not resolve are dropped.
+    // (`.blend` files, imported since, had no entries before: their key also holds Blender's.)
     const VERSION: u32 = 62;
 
     fn dependencies(&self, source: &Path) -> Result<Vec<std::path::PathBuf>> {
@@ -964,6 +975,14 @@ impl Importer for ModelImporter {
 
     fn options_key(&self) -> String {
         self.mtl.name.to_string()
+    }
+
+    fn source_key(&self, source: &Path) -> Result<String> {
+        Ok(if blend::is_blend(source) {
+            blend::conversion_key(self.blender_script.as_deref())
+        } else {
+            String::new()
+        })
     }
 }
 
@@ -1165,7 +1184,10 @@ pub fn import_model(
     meta: &Value,
     mtl: &'static MtlRules,
 ) -> Result<ImportedModel> {
-    let importer = ModelImporter { mtl };
+    let importer = ModelImporter {
+        mtl,
+        blender_script: None,
+    };
     import_with(&importer, source, bytes, meta)
 }
 
@@ -1176,6 +1198,13 @@ fn import_with(
     meta: &Value,
 ) -> Result<ImportedModel> {
     let mtl = rules.mtl;
+    // A `.blend` file is the FBX Blender writes for it (see `blend`).
+    let converted = if blend::is_blend(source) {
+        Some(blend::convert(source, rules.blender_script.as_deref())?)
+    } else {
+        None
+    };
+    let bytes = converted.as_deref().unwrap_or(bytes);
     let settings = ModelSettings::read(meta);
     let imp = importer(meta, "ModelImporter");
     let is_obj = source
@@ -4256,6 +4285,7 @@ fn bone_weight(skin: &ufbx::SkinDeformer, vertex: usize) -> BoneWeight {
 }
 
 mod axes;
+pub mod blend;
 pub mod curves;
 mod fbx_smoothing;
 mod lightmap_uv;

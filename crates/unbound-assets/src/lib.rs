@@ -88,6 +88,13 @@ pub trait Importer: Sync {
     fn options_key(&self) -> String {
         String::new()
     }
+
+    /// What decides `source`'s output besides its content, its dependencies and the options: a
+    /// tool that converts it, by its identity. Part of the key of that source's entry (an empty
+    /// key leaves the entry's key as it is without one).
+    fn source_key(&self, _source: &Path) -> Result<String> {
+        Ok(String::new())
+    }
 }
 
 /// What kind of asset a file is, by extension, as far as these importers are concerned.

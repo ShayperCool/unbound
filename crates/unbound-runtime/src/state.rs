@@ -489,7 +489,8 @@ pub fn initialize(project: &Project) -> Result<&'static RuntimeState> {
             guid_only_section: unbound_compat::MeasuredFamily::of(project.version).is_some(),
             ..TextureImporter::default()
         }),
-        model_importer: unbound_assets::ModelImporter::for_release(&project.version),
+        model_importer: unbound_assets::ModelImporter::for_release(&project.version)
+            .with_installation(&project.install.data),
         textures: RwLock::new(HashMap::new()),
         generated: RwLock::new(HashMap::new()),
         shaders: RwLock::new(None),
