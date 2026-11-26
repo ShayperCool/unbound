@@ -22,6 +22,9 @@ installed modules).
 | `BareWrap`, `BarePpu` | as `Bare` with `textureSettings: wrapU: 1`, with `spritePixelsToUnits: 50` |
 | `BareDefault` | only `textureType: 0` |
 | `BareFull` | `Control`'s keys as a Single sprite, without `serializedVersion` |
+| `BareLegacy`, `BareSize` | as `Bare` with `maxTextureSize: 512`, `compressionQuality: 100` and (`BareLegacy`) `textureFormat: 3` |
+| `BareSheet`, `BarePlat`, `BareTag` | as `Bare` with a `spriteSheet` of no `serializedVersion` at its defaults, with a `Standalone` entry of no `serializedVersion`, with keys the release lacks (`spritePackingTag`, `wrapMode`) |
+| `SaveData`, `SaveNpot`, `SaveClear`, `SaveBundle`, `SaveKeep` | as `Bare` with its sprite ID (`SaveClear` also a default and a `Standalone` entry of a few keys) |
 | `Order*`, `Near*` | none; 16x16 (`NearGrown` 16x8) blocks whose rows touch (side by side, a staircase, a tall block, padded grids of 2x2 and 3x3, tops at the edge), and pixels between big blocks at different gaps, on one row, two and three in a row, and joins that move a rect within its row |
 | `Slice*` | none; 16x16 (`SliceNpot` 10x6) of opaque blocks on a transparent ground: an L, blocks touching at a corner, a pixel beside a block, blocks at the edges, faint ones (alpha 1, 50), five 3x3 blocks, 3-wide blocks a pixel apart, a ring, narrow, flat and 5x2 blocks beside a big one, lone 3x3 and 4x4 blocks, two big blocks with pixels between or near them, a chain of overlapping rows, an empty texture |
 
@@ -30,12 +33,16 @@ installed modules).
 
 * `open/<texture>`: every `.meta` as the project opened with it; `end/<texture>`: the same at the end.
 * `importer/<texture>`: the importer's type, sprite mode, NPOT scaling, wrap modes, mipmaps, alpha
-  transparency and pixels per unit.
+  transparency and pixels per unit; `platform/<texture>`: its default and `Standalone` platform
+  settings, `maxTextureSize` and `compressionQuality`.
 * `sprites/<texture>`: the main asset's type and each sprite's name, rect, pivot, pixels per unit and
   sprite ID (`SpriteEditorExtension.GetSpriteID`).
 * `session/<texture>`: the `.meta` of a copy of `New`, `NewNpot` and `NewGaps` written into
   `Assets/Session` in Play mode and imported by `ImportAsset`, and of `SliceFive` imported by
   `Refresh`; their `importer/` and `sprites/` rows too.
+* `save/<texture>/meta`: the `.meta` of each `Save*` texture after a script's change of its importer
+  and `SaveAndReimport` (`userData`, `npotScale` `ToLarger`, `ClearPlatformTextureSettings("Standalone")`,
+  `assetBundleName` `Mixed-Bundle`, none), with its `importer/saved_*` and `platform/saved_*` rows.
 
 What it shows: a Single sprite whose `.meta` has no sprite ID gets one at its first import, and its
 `.meta` is written: the ID, `nPOTScale: 0`, the installed modules' platform entries, the file's
@@ -58,10 +65,16 @@ row of the rest. A new texture ImportAsset or Refresh imports during the session
 the same `.meta` (`session/*`). A sprite's `.meta` without `serializedVersion` is written whole in the
 release's layout, its top-level keys kept, `applyGammaDecoding` and `cookieLightType` 1, its
 `textureSettings` keys read as defaults, after its platform entries a default one and the installed
-platforms it lacks, uncompressed (`BareWrap`, `BarePpu`, `BareFull`); a Default texture's is left as it is (`BareDefault`). A Default texture is
-left as it is.
+platforms it lacks, uncompressed, of the section's `maxTextureSize` and `compressionQuality` (`BareWrap`,
+`BarePpu`, `BareFull`, `BareSize`), the keys the release lacks left out (`BareTag`); a `textureFormat`
+of 3 also makes `alphaUsage` 0 (`BareLegacy`), and an entry of no `serializedVersion` reads other
+defaults (`BarePlat`: compressed, `forceMaximumCompressionQuality_BC6H_BC7` 1). A script's save of such
+a section that has its sprite ID writes it the same way with the change (a cleared entry left out, a
+missing `nPOTScale` as 0, the bundle name in lower case); a save of no change writes nothing
+(`save/*`). A Default texture's is left as it is (`BareDefault`).
 
-Not covered: `SaveAndReimport`, `Multiple` sprites without IDs, formats other than PNG, a bake's
+Not covered: other changes of an oldest section's platform entries (one set that the file lacks),
+`Multiple` sprites without IDs, formats other than PNG, a bake's
 images, a 3D project's new texture (that is
 the Default texture's `.meta`, tests/projects/projectwrites).
 
@@ -71,5 +84,6 @@ Record and gate:
     python3 tests/projects/spritemeta/run.py publish A B
     python3 tests/projects/spritemeta/run.py gate
 
-`residuals.json` names the open difference: the importer's reading of a Default texture's `.meta`
-of the oldest layout.
+`residuals.json` names the open differences: the importer's reading of an oldest-layout `.meta`
+before any write, and the conversion of `BareLegacy` and `BarePlat` (not implemented: Unbound keeps
+their layout and says so).

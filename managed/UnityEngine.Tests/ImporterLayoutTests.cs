@@ -98,12 +98,14 @@ namespace UnityEngine.Tests
         [Fact]
         public void AStructureTheLayoutIsNotMeasuredForKeepsTheFilesLayout()
         {
-            // A value of another kind, no platform list: each keeps the file as it is (patched in
-            // place), and is named. (A texture section of no serialized version is the oldest
-            // layout, which is measured: ProjectWritesTests.AnOldestTextureSectionIsWrittenWhole...)
+            // A value of another kind, no serialized version, no platform list: each keeps the file
+            // as it is (patched in place), and is named. (A sprite's section of no serialized version
+            // is converted where that is measured, an oldest sprite section's write:
+            // ProjectWritesTests.AnOldestSpriteSectionIsConvertedByAnyWrite...)
             foreach (var (section, found) in new[]
             {
                 ("TextureImporter:\n  serializedVersion: 13\n  mipmaps: 1\n  platformSettings: []\n  isReadable: 0\n", "mipmaps: a Scalar where the release has a Map"),
+                ("TextureImporter:\n  mipmaps:\n    mipMapMode: 0\n  platformSettings: []\n  isReadable: 0\n", "serializedVersion: missing"),
                 ("TextureImporter:\n  serializedVersion: 13\n  isReadable: 0\n", "platformSettings: missing"),
             })
             {
