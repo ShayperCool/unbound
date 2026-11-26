@@ -114,8 +114,8 @@ namespace Unbound
             if (assembly == typeof(object).Assembly)
                 return ClassLibrary().TryGetValue("System.Object", out var corlib) ? corlib : null;
             if (IsClassLibrary(assembly))
-                Runtime.Stubs.Ignored("Assembly.FullName of " + assembly.GetName().Name,
-                    "a .NET class library assembly other than the core library keeps its .NET name (the Editor's Mono names the assembly of each of its types differently)");
+                Runtime.Stubs.Ignored("Assembly.FullName of .NET class library assemblies",
+                    "an assembly other than the core library keeps its .NET name (" + assembly.GetName().Name + " first): .NET's assemblies hold other sets of types than the Editor's Mono ones");
             return null;
         }
 
