@@ -75,6 +75,11 @@ namespace UnityEngine
         {
             m_InstanceID = ObjectRegistry.Register(this);
             ObjectDispatch.Created(this);
+            // No engine class makes an engine object for a plain Object (or a class derived from it
+            // outside the engine): it is a wrapper with nothing behind it, whose name and hideFlags
+            // throw (matches the Unity 6000.0.71f1 Editor, tests/projects/defaultstate).
+            if (Compat.UncreatedObjectWrappersMeasured && HasNoEngineClass(GetType()) && !ObjectConstruction.TakeBacking(this))
+                MarkUncreated();
         }
 
         public string name

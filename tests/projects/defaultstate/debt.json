@@ -1567,32 +1567,6 @@
       }
     },
     {
-      "key": "UnityEngine.Object/Property/UnityEngine.Object/hideFlags",
-      "module": "UnityEngine.CoreModule",
-      "reason": "Q403 UnityEngine.CoreModule default-state migration: queued getter-threw versus value row; measure and fix the module default or getter behavior before removing this exact entry.",
-      "expected": {
-        "status": "getter-threw",
-        "value": "System.NullReferenceException"
-      },
-      "actual": {
-        "status": "value",
-        "value": "enum:0"
-      }
-    },
-    {
-      "key": "UnityEngine.Object/Property/UnityEngine.Object/name",
-      "module": "UnityEngine.CoreModule",
-      "reason": "Q403 UnityEngine.CoreModule default-state migration: queued getter-threw versus value row; measure and fix the module default or getter behavior before removing this exact entry.",
-      "expected": {
-        "status": "getter-threw",
-        "value": "System.NullReferenceException"
-      },
-      "actual": {
-        "status": "value",
-        "value": "string:"
-      }
-    },
-    {
       "key": "UnityEngine.ParticleSystem/Property/UnityEngine.ParticleSystem/colorBySpeed",
       "module": "UnityEngine.ParticleSystemModule",
       "reason": "Q411 inactive MinMaxGradient color storage: initialized managed colors do not reproduce the canonical unused color fields. Active gradient mode/keys agree, but later Editor captures do not establish the canonical inactive values as deterministic defaults. Keep the raw row; do not substitute inactive-field constants. Q535 variable creation state: independent GPU Editor repeats differ in the unused colors of its inactive MinMaxGradient (color, colorMax, colorMin; values that vary like uninitialized storage: 7 distinct values in 42 captures). Only those Color leaves are variable; every other part of the row stays exact.",
