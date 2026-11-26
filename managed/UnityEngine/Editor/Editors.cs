@@ -203,6 +203,9 @@ namespace UnityEditor
         public Editor[] activeEditors => Array.Empty<Editor>();
 
         public static ActiveEditorTracker sharedTracker => s_Shared ??= new ActiveEditorTracker();
+
+        [Unbound.EditorFaithful("no inspector window is open, so there are no editors to make again")]
+        public void ForceRebuild() { }
     }
 
     internal partial class TransformInspector : Editor

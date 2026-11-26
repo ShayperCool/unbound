@@ -463,6 +463,21 @@ namespace UnityEditor
             catch (Exception e) { Debug.LogException(e); }
         }
 
+        internal enum UndoRedoType
+        {
+            Undo = 0,
+            Redo = 1,
+        }
+
+        /// <summary>A selection change undone or redone (Unity's own C#, Editor/Mono/Undo.cs).</summary>
+        internal static event Action<UndoRedoType> selectionUndoRedoPerformed;
+
+        static void OnSelectionUndo(bool redo)
+        {
+            var handlers = selectionUndoRedoPerformed;
+            if (handlers != null) Run(() => handlers(redo ? UndoRedoType.Redo : UndoRedoType.Undo));
+        }
+
         static void Notify(Group group, bool redo)
         {
             var info = new UndoRedoInfo { undoName = group.DisplayName, undoGroup = group.Index, isRedo = redo };
@@ -749,8 +764,17 @@ namespace UnityEditor
             public int[] Before, After;
             public int BeforeActive, AfterActive;
 
-            public override void Undo() => Selection.Restore(Before, BeforeActive);
-            public override void Redo() => Selection.Restore(After, AfterActive);
+            public override void Undo()
+            {
+                Selection.Restore(Before, BeforeActive);
+                OnSelectionUndo(redo: false);
+            }
+
+            public override void Redo()
+            {
+                Selection.Restore(After, AfterActive);
+                OnSelectionUndo(redo: true);
+            }
         }
     }
 

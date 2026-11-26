@@ -14,6 +14,14 @@ namespace UnityEditor
 {
     public sealed partial class ShaderUtil
     {
+        /// <summary>Makes the shader findable by its name (Shader.Find); Unity's own C# binds it to
+        /// the shader name registry, the shader not null.</summary>
+        public static void RegisterShader(Shader shader)
+        {
+            if (shader == null) throw new ArgumentNullException(nameof(shader));
+            Shader.Register(shader);
+        }
+
         /// <summary>A shader from ShaderLab source, as a .shader asset would import: its declared
         /// name, render queue and properties (Unbound does not compile ShaderLab).</summary>
         public static Shader CreateShaderAsset(string source) => CreateShaderAsset(source, true);

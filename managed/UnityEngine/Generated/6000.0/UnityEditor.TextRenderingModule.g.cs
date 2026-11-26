@@ -33,14 +33,12 @@ namespace UnityEditor
     internal unsafe static partial class TextRenderingCommands
     {
     }
-    [global::Unbound.Stub]
-    public unsafe sealed partial class TrueTypeFontImporter : global::UnityEditor.AssetImporter
+    unsafe partial class TrueTypeFontImporter
     {
         [global::Unbound.Stub] internal bool IsFormatSupported() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TrueTypeFontImporter.IsFormatSupported"); return default; }
         [global::Unbound.Stub] public global::UnityEngine.Font GenerateEditableFont(string path) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TrueTypeFontImporter.GenerateEditableFont"); return default; }
         [global::Unbound.Stub] internal global::UnityEngine.Font[] MarshalledLookupFallbackFontReferences(string[] names) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TrueTypeFontImporter.MarshalledLookupFallbackFontReferences"); return global::System.Array.Empty<global::UnityEngine.Font>(); }
         [global::Unbound.Stub] internal global::UnityEngine.Font[] LookupFallbackFontReferences(string[] names) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TrueTypeFontImporter.LookupFallbackFontReferences"); return global::System.Array.Empty<global::UnityEngine.Font>(); }
-        [global::Unbound.Stub] public TrueTypeFontImporter() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TrueTypeFontImporter.ctor"); }
         public int fontSize { [global::Unbound.Stub] get { this.CheckImporterState("get_fontSize"); global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TrueTypeFontImporter.fontSize"); return default; } [global::Unbound.Stub] set { this.CheckImporterState("set_fontSize"); global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TrueTypeFontImporter.fontSize"); } }
         public bool includeFontData { [global::Unbound.Stub] get { this.CheckImporterState("get_includeFontData"); global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TrueTypeFontImporter.includeFontData"); return default; } [global::Unbound.Stub] set { this.CheckImporterState("set_includeFontData"); global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TrueTypeFontImporter.includeFontData"); } }
         public global::UnityEditor.AscentCalculationMode ascentCalculationMode { [global::Unbound.Stub] get { this.CheckImporterState("get_ascentCalculationMode"); global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TrueTypeFontImporter.ascentCalculationMode"); return default; } [global::Unbound.Stub] set { this.CheckImporterState("set_ascentCalculationMode"); global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TrueTypeFontImporter.ascentCalculationMode"); } }

@@ -1063,7 +1063,6 @@ namespace UnityEditor
         [global::Unbound.Stub] internal void UnsavedChangesStateChanged(global::UnityEditor.Editor editor, bool value) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ActiveEditorTracker.UnsavedChangesStateChanged"); }
         [global::Unbound.Stub] public void RebuildIfNecessary() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ActiveEditorTracker.RebuildIfNecessary"); }
         [global::Unbound.Stub] internal static void RebuildAllIfNecessary() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ActiveEditorTracker.RebuildAllIfNecessary"); }
-        [global::Unbound.Stub] public void ForceRebuild() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ActiveEditorTracker.ForceRebuild"); }
         [global::Unbound.Stub] public void VerifyModifiedMonoBehaviours() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ActiveEditorTracker.VerifyModifiedMonoBehaviours"); }
         [global::System.Obsolete("Use Editor.CreateEditor instead")] [global::Unbound.Stub] public static global::UnityEditor.Editor MakeCustomEditor(global::UnityEngine.Object obj) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ActiveEditorTracker.MakeCustomEditor"); return default; }
         [global::Unbound.Stub] public static bool HasCustomEditor(global::UnityEngine.Object obj) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ActiveEditorTracker.HasCustomEditor"); return default; }
@@ -1855,8 +1854,7 @@ namespace UnityEditor
         [global::Unbound.Stub] public AreaManipulator(global::UnityEngine.GUIStyle style) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.AreaManipulator.ctor"); }
         [global::Unbound.Stub] public void OnGUI(global::UnityEngine.Rect widgetRect) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.AreaManipulator.OnGUI"); }
     }
-    [global::Unbound.Stub]
-    public unsafe static partial class ArrayUtility
+    unsafe static partial class ArrayUtility
     {
         [global::Unbound.Stub] public static void Add<T>(ref T[] array, T item) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ArrayUtility.Add"); }
         [global::Unbound.Stub] public static bool ArrayEquals<T>(T[] lhs, T[] rhs) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ArrayUtility.ArrayEquals"); return default; }
@@ -1870,7 +1868,6 @@ namespace UnityEditor
         [global::Unbound.Stub] public static int IndexOf<T>(T[] array, T value) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ArrayUtility.IndexOf"); return default; }
         [global::Unbound.Stub] public static int LastIndexOf<T>(T[] array, T value) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ArrayUtility.LastIndexOf"); return default; }
         [global::Unbound.Stub] public static void RemoveAt<T>(ref T[] array, int index) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ArrayUtility.RemoveAt"); }
-        [global::Unbound.Stub] public static bool Contains<T>(T[] array, T item) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ArrayUtility.Contains"); return default; }
         [global::Unbound.Stub] public static void Clear<T>(ref T[] array) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ArrayUtility.Clear"); }
     }
     [global::Unbound.Stub]
@@ -21725,7 +21722,6 @@ namespace UnityEditor
         [global::Unbound.Stub] internal static void RecreateGfxDevice() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ShaderUtil.RecreateGfxDevice"); }
         [global::Unbound.Stub] internal static void RecreateSkinnedMeshResources() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ShaderUtil.RecreateSkinnedMeshResources"); }
         [global::Unbound.Stub] internal static void ReloadAllShaders() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ShaderUtil.ReloadAllShaders"); }
-        [global::Unbound.Stub] public static void RegisterShader(global::UnityEngine.Shader shader) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ShaderUtil.RegisterShader"); }
         [global::Unbound.Stub] internal static void OpenCompiledShader(global::UnityEngine.Shader shader, int mode, int externPlatformsMask, bool includeAllVariants, bool preprocessOnly, bool stripLineDirectives) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ShaderUtil.OpenCompiledShader"); }
         [global::Unbound.Stub] internal static void OpenCompiledComputeShader(global::UnityEngine.ComputeShader shader, bool allVariantsAndPlatforms, bool showPreprocessed, bool stripLineDirectives) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ShaderUtil.OpenCompiledComputeShader"); }
         [global::Unbound.Stub] internal static void OpenParsedSurfaceShader(global::UnityEngine.Shader shader) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ShaderUtil.OpenParsedSurfaceShader"); }
@@ -23756,12 +23752,6 @@ namespace UnityEditor
         [global::System.Obsolete("Use Undo.RecordObject instead")] [global::Unbound.Stub] public static void RestoreSnapshot() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Undo.RestoreSnapshot"); }
         [global::System.Obsolete("Use Undo.RecordObject instead")] [global::Unbound.Stub] public static void RegisterSnapshot() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Undo.RegisterSnapshot"); }
         [global::System.Obsolete("Use DestroyObjectImmediate, RegisterCreatedObjectUndo or RegisterUndo instead.")] [global::Unbound.Stub] public static void RegisterSceneUndo(string name) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Undo.RegisterSceneUndo"); }
-        internal static event global::System.Action<global::UnityEditor.Undo.UndoRedoType> selectionUndoRedoPerformed { [global::Unbound.Stub] add { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Undo.selectionUndoRedoPerformed"); } [global::Unbound.Stub] remove { } }
-        internal enum UndoRedoType
-        {
-            Undo = 0,
-            Redo = 1,
-        }
     }
     [global::Unbound.Stub]
     internal unsafe partial class UndoHistoryWindow : global::UnityEditor.EditorWindow, global::UnityEditor.IHasCustomMenu
@@ -38655,11 +38645,9 @@ namespace UnityEditor.Presets
         internal static global::UnityEngine.Object[] InspectedObjects { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Presets.PresetEditorHelper.InspectedObjects"); return global::System.Array.Empty<global::UnityEngine.Object>(); } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Presets.PresetEditorHelper.InspectedObjects"); } }
         internal static bool presetEditorOpen { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Presets.PresetEditorHelper.presetEditorOpen"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Presets.PresetEditorHelper.presetEditorOpen"); } }
     }
-    [global::Unbound.Stub]
-    internal unsafe partial class PresetManager : global::UnityEditorInternal.ProjectSettingsBase
+    unsafe partial class PresetManager
     {
         [global::Unbound.Stub] internal void AddPresetType(global::UnityEditor.Presets.PresetType presetType) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Presets.PresetManager.AddPresetType"); }
-        [global::Unbound.Stub] public PresetManager() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Presets.PresetManager.ctor"); }
     }
     [global::Unbound.Stub]
     internal unsafe partial class PresetManagerPostProcessor : global::UnityEditor.AssetPostprocessor
