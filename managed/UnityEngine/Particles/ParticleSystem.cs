@@ -787,8 +787,8 @@ namespace UnityEngine
         /// setparticles and model/death/: the same order for SetParticles and for deaths in a
         /// step; a rate batch's newborns follow another order, see FlushRateBatch). A dying
         /// particle fires its Death sub-emitters as it leaves; one whose trail stays to fade
-        /// keeps its slot as the trail's carrier, and leaves the same way once the trail is spent
-        /// (tests/projects/particletrails).</summary>
+        /// keeps its slot as the trail's carrier, and leaves the same way once the trail is spent,
+        /// firing them then (tests/projects/particletrails).</summary>
         void RemoveDeadSlots(int from, DeadSlotRemoval removal)
         {
             var marks = m_SlotMarks;
@@ -805,13 +805,22 @@ namespace UnityEngine
                     marks[index] = 0;
                     if (m_Particles[index].IsTrailCarrier)
                     {
-                        // A carrier of a fading trail already died: no second death; its trail
-                        // goes with it (spent, or dropped by SetParticles: measured, it does not fade).
+                        // A carrier of a fading trail leaves: its particle's Death sub-emitters
+                        // fire now, where it rests (not when SetParticles drops it); its trail goes
+                        // with it (spent, or dropped by SetParticles: measured, it does not fade).
+                        if (removal == DeadSlotRemoval.DeathWithSubEmitters)
+                        {
+                            var dying = m_Particles[index];
+                            TriggerSubEmitters(ParticleSystemSubEmitterType.Death, ref dying);
+                        }
                         EndTrail(ref m_Particles[index]);
                     }
                     else if (removal != DeadSlotRemoval.Drop)
                     {
-                        if (removal == DeadSlotRemoval.DeathWithSubEmitters)
+                        // A death that leaves a carrier fires its Death sub-emitters when the
+                        // carrier leaves, its trail spent (6000.0.71f1, particletrails
+                        // pp/deathsub/die0: a child appears in each step a carrier leaves).
+                        if (removal == DeadSlotRemoval.DeathWithSubEmitters && !KeepsOrphanTrail(in m_Particles[index]))
                         {
                             var dying = m_Particles[index];
                             dying.m_Position = m_SlotPoints[index];

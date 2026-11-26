@@ -254,15 +254,18 @@ namespace UnityEngine
         /// slot against maxParticles (6000.0.71f1, tests/projects/particletrails).</summary>
         bool KeepOrphanTrail(ref Particle p)
         {
-            if (m_Trails.dieWithParticles || p.m_TrailId == 0) return false;
+            if (!KeepsOrphanTrail(in p)) return false;
             var trail = m_TrailList[p.m_TrailId - 1];
-            if (trail == null) return false;
             trail.Orphan = true;
             p.m_Flags |= Particle.FlagOrphanTrail;
             p.m_Lifetime = 0f;
             p.m_Velocity = p.m_AnimatedVelocity = Vector3.zero;
             return true;
         }
+
+        /// <summary>Whether a dying particle's trail stays to fade, the particle its carrier.</summary>
+        bool KeepsOrphanTrail(in Particle p) =>
+            !m_Trails.dieWithParticles && p.m_TrailId > 0 && p.m_TrailId <= m_TrailList.Count && m_TrailList[p.m_TrailId - 1] != null;
 
         /// <summary>A particle leaves the buffer (a death that keeps no fading trail, or a carrier
         /// whose trail is spent): its trail goes with it.</summary>

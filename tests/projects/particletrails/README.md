@@ -53,8 +53,8 @@ Everything below is measured in this release, not documented.
 | `pp/maxp/*` | It holds its slot against `maxParticles`. |
 | `pp/ratio`, `pp/ratiobig/*` | The ratio selects a particle when a seeded draw is below it (one draw per particle seed; the 0.25 selection is a subset of the 0.5 one); particles without a trail leave at death. |
 | `pp/setparticles`, `pp/killlife` | `SetParticles` removes a particle written at zero or negative lifetime, a carrier included, with its trail at once, whatever `dieWithParticles` says: the trail does not fade. |
-| `pp/collision/*` | A particle killed by a collision, by lifetime loss or by speed, with or without trails, shows zero lifetime and its bounced velocity for one update; the next update removes it (or makes it a carrier at rest where it was), and its Death sub-emitters fire then. |
-| `pp/deathsub` | Death sub-emitters fire when the particle dies, not when its trail ends (same with `dieWithParticles` true). |
+| `pp/collision/*` | A particle killed by a collision, by lifetime loss or by speed, with or without trails, shows zero lifetime and its bounced velocity for one update; the next update removes it (or makes it a carrier at rest where it was), and its Death sub-emitters fire then (measured without trails, `pp/collision/speedkill`; a collision-killed carrier's are unmeasured, Unbound fires them as `pp/deathsub` does, when the carrier leaves). |
+| `pp/deathsub` | Death sub-emitters fire when the particle leaves the buffer: with `dieWithParticles` true when it dies, with it false when its carrier leaves, its trail spent (a child appears in each step a carrier leaves, where the carrier rests). |
 | `ribbon/*` | Ribbons keep no dead particles; `dieWithParticles` changes nothing. The ribbon joins the particles youngest first by their age in hundredths of a second (the particle's age percentage over its inverse start lifetime, in single precision), equal values in particle order, so the baked mesh starts at the oldest: a burst's particles, born together with different start lifetimes, are a float step apart in that quotient and come in its order, not in particle order. |
 | `played/*` | Played over frames the same holds; the stop callback comes when the last carrier leaves. |
 | `api/*` | `GetTrails` returns the size of the system's trail storage, not the number of trails (the documented return): particle slots (at least 32, a power of two) times points per trail (at least 4, a power of two), from the most particles and the longest trail so far; it never shrinks (also after `Clear` and a restart) and is 0 in Ribbon mode. The `Trails`' capacity becomes that size when it is smaller; a larger presized capacity stays. |
@@ -71,7 +71,6 @@ any other difference. Two concern dead particles, `world-trail-death-head` and t
 - `newborn-trail-quad`: a newborn trail whose points still coincide gets its first quad across
   another direction in Unity (images `die1_9`, `world_9`; every `mvd/*` trail, whose two points
   coincide or lie along the view each time it restarts).
-- `death-child-age`: Death sub-emitter children of particles dying with their trails kept (`pp/deathsub/die0`): Unity's child keeps fewer particles in some steps.
 - `rate-at-capacity`: short trails of rate births sample other points (`die0` and `die1`); with
   `dieWithParticles` off a rate birth into the slot a leaving carrier frees comes one step later in
   Unbound (the `die1` control matches every particle): the `carrier-expiry-tie` below.

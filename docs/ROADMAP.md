@@ -248,9 +248,8 @@ In dependency order; each item ends with an Editor-reference probe.
       color/size/rotation modules, custom data, collisions with planes and the world, triggers,
       force fields and their rotation, trails and the order ribbons join particles in, the noise
       module (`tests/projects/particlenoise`), the lights module, the render modes, the job API
-      (`tests/projects/particlejobs`). Left: Death sub-emitter children of particles that keep
-      their trails (`tests/projects/particletrails` `death-child-age`), particle lights in the
-      built-in pipeline's drawing.
+      (`tests/projects/particlejobs`), Death sub-emitters of particles whose trails outlive them.
+      Left: particle lights in the built-in pipeline's drawing.
 - [ ] Terrain (leftovers back in scope 2026-11-12): TerrainData from the Editor's asset with its height, normal and steepness queries,
       the TerrainCollider (PhysX height field, holes, tree capsules), drawing with Unity's terrain
       shaders and trees (`tests/projects/terrain`: 214/216 records, two steepness values a float step
