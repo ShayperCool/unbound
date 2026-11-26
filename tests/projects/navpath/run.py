@@ -21,8 +21,9 @@ there are no listed keys for this profile. Its currently failing scope is in REA
 
 The `--profile obstacle-separation` records close-range steering and capsule contact. It uses
 Reference/unity-<release>/obstacle-separation.json and compares all values at the same tolerance.
-The `--profile obstacle-shapes` records agents placed in and walking past boxes and tilted
-capsules (Reference/unity-<release>/obstacle-shapes.json); its tilted-shape values are listed.
+The `--profile obstacle-shapes` records agents placed in and walking past boxes and lying or
+tilted capsules (Reference/unity-<release>/obstacle-shapes.json); box values and the walks past
+capsules are listed, capsule contacts are gated.
 
 Listed, not gated (docs/COMPATIBILITY_GAPS.md, the path-cost row):
   hole.shapes two.p1.*    a straight line grazing a mesh vertex that the builders place about 2e-6
@@ -81,8 +82,9 @@ LISTED = {
     'carve.rules': ('poly.p47', 'poly.p51'),
     'place.links': tuple(f'{path}.{part}' for path in ('m.p.ab', 'r30.p.ab', 'r30.w.ab', 'm.w.ba') for part in ('n', 'c')),
     'replan.topofar': ('a.given', 'mask.given'),
-    # Boxes and lying or tilted capsules: measured, not reproduced (README, Obstacle shapes).
-    'steer.shapes': tuple(f'{kind}.{shape}' for kind in ('contact', 'steer') for shape in ('box', 'caplying', 'captilt')),
+    # Boxes, and walks past lying or tilted capsules: measured, not reproduced (README, Obstacle
+    # shapes). Contacts with lying and tilted capsules are gated.
+    'steer.shapes': ('contact.box', 'steer.box', 'steer.caplying', 'steer.captilt'),
 }
 
 
@@ -310,7 +312,9 @@ def unbound(args):
     launcher = Path.home()/'.cache/compat/with-heavy-job'
     project = project_copy(PROBE, out/'project', fresh=True)
     select_project_release(project, args)
-    command = [binary, 'run', '-p', str(project), '--no-watch', '--frames', str(FRAMES)]
+    # The obstacle shapes profile walks about 5000 frames of its own.
+    frames = 12000 if args.profile == OBSTACLE_SHAPES else FRAMES
+    command = [binary, 'run', '-p', str(project), '--no-watch', '--frames', str(frames)]
     if launcher.exists():
         command = [str(launcher), '--kind', 'engine-cpu', *command]
     env = dict(os.environ, NAVPATH_PROBE_OUT=str(result), NAVPATH_PROBE_ONLY=args.scenario, NAVPATH_PROBE_PROFILE=args.profile)
