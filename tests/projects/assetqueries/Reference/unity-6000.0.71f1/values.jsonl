@@ -206,9 +206,9 @@
 {"k":"reimport_removed","v":"done"}
 {"k":"reimport_removed/all","v":"[\"both-bundle.hd\", \"folder-bundle.sd\", \"mixed-case\", \"shader-bundle\", \"var-bundle.hd\", \"var-bundle.sd\"]"}
 {"k":"reimport_removed/unused","v":"[\"both-bundle.hd\", \"var-bundle.hd\"]"}
-{"k":"workers/default","v":"desired 3 user 3 standby 2 processors 12"}
-{"k":"workers/set","v":"desired 3 user 3"}
-{"k":"workers/user_set","v":"desired 3 user 2"}
+{"k":"workers/default","v":"desired is the user's True; user is a quarter of the processors True; standby 2"}
+{"k":"workers/set","v":"desired is the set count True; user unchanged True"}
+{"k":"workers/user_set","v":"desired unchanged True; user 2"}
 {"k":"workers/negative","v":"desired -1 user 2"}
 {"k":"workers/force","v":"desired 1"}
 {"k":"workers/user_settings_file","v":"  m_DesiredImportWorkerCount: 3\n  m_StandbyImportWorkerCount: 2\n  m_IdleImportWorkerShutdownDelay: 60000"}
