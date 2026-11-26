@@ -303,20 +303,27 @@ namespace UnityEditor
             [SystemLanguage.Hindi] = "hi",
         };
 
-        static bool s_PacksChecked;
+        static bool s_PacksChecked, s_PreferenceChecked, s_EnableSet;
+
+        /// <summary>Gives a notice once when the installation holds language packs (`.po` files in
+        /// its Localization folder), which Unbound does not read; L10n's translations check too.</summary>
+        internal static void CheckLanguagePacks()
+        {
+            if (s_PacksChecked) return;
+            s_PacksChecked = true;
+            var folder = System.IO.Path.Combine(UnityInstallInfo.DataPath ?? "", "Localization");
+            if (!System.IO.Directory.Exists(folder)) return;
+            using var packs = System.IO.Directory.EnumerateFiles(folder, "*.po", System.IO.SearchOption.AllDirectories).GetEnumerator();
+            if (packs.MoveNext())
+                Unbound.Runtime.Stubs.Ignored("UnityEditor.LocalizationDatabase language packs",
+                    "are not read: the Editor's interface stays English and strings untranslated (" + folder + ")");
+        }
 
         static bool Measured(string member)
         {
             if (Unbound.Runtime.Compat.EditorChannelServiceMeasured)
             {
-                if (!s_PacksChecked)
-                {
-                    s_PacksChecked = true;
-                    var folder = System.IO.Path.Combine(UnityInstallInfo.DataPath ?? "", "Localization");
-                    if (System.IO.Directory.Exists(folder) && System.IO.Directory.EnumerateFileSystemEntries(folder).GetEnumerator().MoveNext())
-                        Unbound.Runtime.Stubs.Ignored("UnityEditor.LocalizationDatabase language packs",
-                            "are not read: the Editor's interface stays English and strings untranslated (" + folder + ")");
-                }
+                CheckLanguagePacks();
                 return true;
             }
             Unbound.Runtime.Stubs.NotImplemented("UnityEditor.LocalizationDatabase." + member);
@@ -331,9 +338,30 @@ namespace UnityEditor
 
         public static bool enableEditorLocalization
         {
-            get => Measured(nameof(enableEditorLocalization)) && s_EnableEditorLocalization;
-            set { if (Measured(nameof(enableEditorLocalization))) s_EnableEditorLocalization = value; }
+            get
+            {
+                if (!Measured(nameof(enableEditorLocalization))) return false;
+                // The Editor answers the machine's preference, which Unbound does not follow: say so
+                // when the preferences hold another value (measured: tests/projects/editorlocalization).
+                if (!s_PreferenceChecked && !s_EnableSet)
+                {
+                    s_PreferenceChecked = true;
+                    if (EditorPrefs.HasKey(PreferenceKey) && (EditorPrefs.GetInt(PreferenceKey, 0) != 0) != s_EnableEditorLocalization)
+                        Unbound.Runtime.Stubs.Ignored("UnityEditor.LocalizationDatabase.enableEditorLocalization",
+                            "answers " + s_EnableEditorLocalization + " where the Editor follows EditorPrefs " + PreferenceKey + " (" + EditorPrefs.GetInt(PreferenceKey, 0) + ")");
+                }
+                return s_EnableEditorLocalization;
+            }
+            set
+            {
+                if (!Measured(nameof(enableEditorLocalization))) return;
+                s_EnableEditorLocalization = value;
+                s_EnableSet = true;
+            }
         }
+
+        /// <summary>The EditorPrefs key the Editor's answer follows.</summary>
+        const string PreferenceKey = "Editor.kEnableEditorLocalization";
 
         public static SystemLanguage GetDefaultEditorLanguage() => Measured(nameof(GetDefaultEditorLanguage)) ? SystemLanguage.English : default;
 

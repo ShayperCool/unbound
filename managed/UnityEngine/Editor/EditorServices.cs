@@ -78,7 +78,11 @@ namespace UnityEditor
     /// strings are written in.</summary>
     public static partial class L10n
     {
-        public static string Tr(string str) => str;
+        public static string Tr(string str)
+        {
+            LocalizationDatabase.CheckLanguagePacks();
+            return str;
+        }
 
         public static string[] Tr(string[] str_list)
         {
@@ -87,9 +91,17 @@ namespace UnityEditor
             return result;
         }
 
-        public static string Tr(string str, string groupName) => str;
+        public static string Tr(string str, string groupName)
+        {
+            LocalizationDatabase.CheckLanguagePacks();
+            return str;
+        }
 
-        public static string TrPath(string path) => path;
+        public static string TrPath(string path)
+        {
+            LocalizationDatabase.CheckLanguagePacks();
+            return path;
+        }
     }
 
     public sealed partial class EditorApplication
