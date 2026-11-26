@@ -40,7 +40,10 @@ are still open. **[ ]** means it has not started or is only a stub. The open det
   - [x] Registry packages without `Library/PackageCache`
   - [x] No Unity installation needed (release files from Unity's downloads)
   - [x] Hot reload, source generators, ScriptedImporters
-  - [ ] 🚧 Unity API coverage: 5322 of 5974 referenced members implemented, 652 still stubs
+  - [ ] 🚧 Unity API coverage: in 11 Unity 6 test projects, 96-99% of API uses reach implemented
+    members; 2647 distinct referenced members are still stubs, mostly Editor tooling (scan of
+    2026-11-26). `unbound api-check`: 0 errors in 3567 hand-written types; default state: 17312
+    values match the Editor, 320 still open
 - [ ] 🚧 **Core runtime**
   - [x] Objects, components, player loop and messages
   - [x] Scenes, prefabs and Unity serialization
@@ -62,6 +65,8 @@ are still open. **[ ]** means it has not started or is only a stub. The open det
   - [x] LODGroup (no cross-fades)
   - [x] Projectors, replacement shaders, reflection probes, Deferred and Vertex Lit, halos, flares
   - [x] Baked lighting: lightmaps, light probes, skybox ambient
+  - [ ] 🚧 Baking in Unbound (Progressive Lightmapper): filters, denoising, ambient occlusion, soft and
+    area lights, cookies, directional maps; some settings are still refused with a notice
   - [ ] 🚧 Shadowmask mixing, mipmap limit, skinned motion vectors, a few shadow edges
   - [ ] 🚧 Precomputed realtime GI (Enlighten), see [docs/REALTIME_GI.md](docs/REALTIME_GI.md)
   - [ ] Mipmap streaming
@@ -71,8 +76,9 @@ are still open. **[ ]** means it has not started or is only a stub. The open det
   - [x] URP 2D renderer: 2D lights and shadows
   - [x] Shader Graph
   - [ ] 🚧 BatchRendererGroup / GPU Resident Drawer
-  - [ ] 🚧 Adaptive Probe Volumes (no Editor comparison yet)
-  - [ ] 🚧 VFX Graph: simulation, quad, mesh and strip outputs done; points, lines, cubes and some operators left
+  - [x] Adaptive Probe Volumes: bake and lighting compared with the Editor
+  - [ ] 🚧 VFX Graph: simulation, all output kinds (quad, mesh, strip, point, line, cube, decal), motion
+    vectors, graph files saved as the Editor saves them; a few unmeasured cases left
   - [ ] HDRP
 - [ ] 🚧 **Textures and shaders**
   - [x] Shaders compiled from Unity's own sources
@@ -103,8 +109,8 @@ are still open. **[ ]** means it has not started or is only a stub. The open det
 - [ ] 🚧 **Terrain and trees**
   - [x] TerrainData, TerrainCollider, terrain shaders, heightmap LOD
   - [x] Details and grass, tree billboards, URP terrains
-  - [x] SpeedTree 8 and 9 import
-  - [ ] SpeedTree wind, SpeedTree 7 (`.spm`), TerrainCallbacks
+  - [x] SpeedTree 8 and 9 import and wind
+  - [ ] SpeedTree 7 (`.spm`), TerrainCallbacks
 - [ ] 🚧 **UI and text**
   - [x] uGUI
   - [x] TextMeshPro
@@ -120,17 +126,23 @@ are still open. **[ ]** means it has not started or is only a stub. The open det
   - [x] Model, texture, audio and font import
   - [x] AssetBundles (UnityFS), Addressables in Play mode
   - [x] Sprite atlases, Tilemap, SpriteShape, 2D Animation
-  - [ ] 🚧 `AssetDatabase.Refresh` / `ImportAsset` re-imports, importer settings changes
+  - [x] First-run import pass, session re-imports, importer overrides, forced re-imports, GUID-only
+    `.meta` files
+  - [ ] 🚧 `Refresh` of some asset kinds, prefab saves after their source changed in the same session
   - [ ] `.dae`, `.3ds`, `.blend`, `.max` models
 - [ ] 🚧 **Networking and services**
   - [x] UnityWebRequest, Localization, XR without a device
+  - [ ] 🚧 Netcode for GameObjects: host and client on one machine; Multiplayer Play Mode virtual
+    players in progress
   - [ ] Unity Transport TLS
 - [ ] 🚧 **Editor API in Play mode**
   - [x] Undo, Selection, EditorSceneManager, compilation queries, ShaderUtil
-  - [x] Editor UI API in batch mode: IMGUI editors, property drawers, TreeView
+  - [x] Editor UI API: IMGUI editors and fields, property drawers, TreeView, ReorderableList
   - [x] ProjectSettings assets as the Editor's objects, saved as it saves them
   - [x] Test Framework (`unbound test`)
-  - [x] Project files (`.meta`, package lock) written as the Editor writes them
+  - [x] Project files (`.meta`, package lock, scenes, build settings, prefabs, VFX graphs) written as
+    the Editor writes them
+  - [x] Enter Play Mode options (no domain or scene reload)
   - [ ] 🚧 `ExecuteMenuItem` for built-in menus, `RequestScriptReload`, UI Toolkit inspectors
 
 ## Install
