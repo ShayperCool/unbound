@@ -969,6 +969,17 @@ fn normal_maps_are_dxt5nm_or_xyz_by_target() {
         texel(&import_with(meta, &bytes, true).mips[0], 0, 0),
         [128, 234, 198, 255]
     );
+    // Their usage modes say so (Editor previews pick their material by it); other textures have none.
+    assert_eq!(
+        import_with(meta, &bytes, false).usage_mode,
+        usage_mode::NORMALMAP_DXT5NM
+    );
+    assert_eq!(
+        import_with(meta, &bytes, true).usage_mode,
+        usage_mode::NORMALMAP_PLAIN
+    );
+    let plain = "TextureImporter:\n  textureType: 0\n  nPOTScale: 0\n";
+    assert_eq!(import_with(plain, &bytes, false).usage_mode, 0);
 }
 
 #[test]
@@ -2675,6 +2686,8 @@ fn the_mipmap_limit_flag_reads_its_former_name_too() {
     };
     assert!(flag("  ignoreMipmapLimit: 1\n"));
     assert!(flag("  ignoreMasterTextureLimit: 1\n"));
-    assert!(!flag("  ignoreMipmapLimit: 0\n  ignoreMasterTextureLimit: 1\n"));
+    assert!(!flag(
+        "  ignoreMipmapLimit: 0\n  ignoreMasterTextureLimit: 1\n"
+    ));
     assert!(!flag(""));
 }

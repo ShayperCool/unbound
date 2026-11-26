@@ -585,8 +585,9 @@ pub struct ImportedTexture {
     /// The build target stores the pixels uncompressed ([`Storage::Uncompressed`]).
     #[serde(default)]
     pub uncompressed: bool,
-    /// Unity's `TextureUsageMode` of HDR radiance stored as bytes, which says how shaders decode
-    /// it: 1 a double LDR lightmap, 2 an RGBM lightmap, 5 RGBM, 7 double LDR; 0 otherwise.
+    /// Unity's `TextureUsageMode`, which says how shaders decode the texture: 1 a double LDR
+    /// lightmap, 2 an RGBM lightmap, 5 RGBM, 7 double LDR (HDR radiance stored as bytes), 3 a
+    /// DXT5nm and 4 a plain normal map; 0 otherwise.
     #[serde(default)]
     pub usage_mode: i32,
     /// Why the texture is not stored the way the build target stores it (a compressed format
@@ -1553,7 +1554,8 @@ impl Importer for TextureImporter {
     // 53: a .meta that names no importer imports with the oldest settings (a cube map).
     // 54: that .meta's image size is read for the format the decoder takes it as.
     // 55: the settings keep the importer's ignoreMipmapLimit.
-    const VERSION: u32 = 55;
+    // 56: a normal map carries its usage mode (DXT5nm or plain).
+    const VERSION: u32 = 56;
 
     fn import(&self, source: &Path, bytes: &[u8], meta: &Value) -> Result<ImportedTexture> {
         // A GUID-only .meta reads its oldest settings before the trees' settings apply.
@@ -1706,6 +1708,8 @@ fn stored_as_bytes(texture: &mut ImportedTexture, usage: i32, alpha: bool) {
 pub mod usage_mode {
     pub const LIGHTMAP_DOUBLE_LDR: i32 = 1;
     pub const LIGHTMAP_RGBM: i32 = 2;
+    pub const NORMALMAP_DXT5NM: i32 = 3;
+    pub const NORMALMAP_PLAIN: i32 = 4;
     pub const RGBM: i32 = 5;
     pub const DOUBLE_LDR: i32 = 7;
 }
@@ -1959,6 +1963,7 @@ fn import_image(
             sprite::build_geometry(s, mips[0].width, mips[0].height, rgba, polygon);
         }
     }
+    let usage_mode = normal_map_usage(&settings);
     Ok(ImportedTexture {
         name,
         width: mips[0].width,
@@ -1983,10 +1988,21 @@ fn import_image(
         blocks: None,
         crunched: None,
         uncompressed: false,
-        usage_mode: 0,
+        usage_mode,
         approximation: None,
         bc7: None,
     })
+}
+
+/// A normal map's usage mode: DXT5nm-encoded (x in alpha, y in green) on targets whose shaders
+/// unpack that, plain XYZ on the others; 0 for other textures. Editor previews pick their
+/// material by it (tests/projects/editorpreviewtexture pixels/7,1).
+fn normal_map_usage(settings: &TextureSettings) -> i32 {
+    match settings.texture_type {
+        TextureType::NormalMap if settings.normal_maps_xyz => usage_mode::NORMALMAP_PLAIN,
+        TextureType::NormalMap => usage_mode::NORMALMAP_DXT5NM,
+        _ => 0,
+    }
 }
 
 /// Keeps the compressed-size byte fallback only where the final size and format need it (an
