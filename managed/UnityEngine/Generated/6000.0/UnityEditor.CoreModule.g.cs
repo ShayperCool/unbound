@@ -13324,18 +13324,7 @@ namespace UnityEditor
     }
     unsafe partial class LocalizationDatabase
     {
-        [global::Unbound.Stub] public static global::UnityEngine.SystemLanguage GetDefaultEditorLanguage() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.LocalizationDatabase.GetDefaultEditorLanguage"); return default; }
-        [global::Unbound.Stub] public static global::UnityEngine.SystemLanguage[] GetAvailableEditorLanguages() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.LocalizationDatabase.GetAvailableEditorLanguages"); return global::System.Array.Empty<global::UnityEngine.SystemLanguage>(); }
-        [global::Unbound.Stub] public static string GetLocalizedString(string original) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.LocalizationDatabase.GetLocalizedString"); return default; }
-        [global::Unbound.Stub] public static string GetLocalizedStringInLang(global::UnityEngine.SystemLanguage lang, string original) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.LocalizationDatabase.GetLocalizedStringInLang"); return default; }
-        [global::Unbound.Stub] public static string GetLocalizationResourceFolder() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.LocalizationDatabase.GetLocalizationResourceFolder"); return default; }
-        [global::Unbound.Stub] public static string GetCulture(global::UnityEngine.SystemLanguage lang) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.LocalizationDatabase.GetCulture"); return default; }
-        [global::Unbound.Stub] public static string GetLocalizedStringWithGroupName(string original, string groupName) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.LocalizationDatabase.GetLocalizedStringWithGroupName"); return default; }
-        [global::Unbound.Stub] public static string GetLocalizedStringWithGroupNameInLang(global::UnityEngine.SystemLanguage lang, string original, string groupName) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.LocalizationDatabase.GetLocalizedStringWithGroupNameInLang"); return default; }
-        [global::Unbound.Stub] public static string GetContextGroupName() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.LocalizationDatabase.GetContextGroupName"); return default; }
         [global::Unbound.Stub] public static void SetContextGroupName(string groupName) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.LocalizationDatabase.SetContextGroupName"); }
-        [global::Unbound.Stub] public static string MarkForTranslation(string value) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.LocalizationDatabase.MarkForTranslation"); return default; }
-        public static string noLocalizationGroupName { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.LocalizationDatabase.noLocalizationGroupName"); return default; } }
     }
     [global::Unbound.Stub]
     public unsafe partial class LocalizationGroup : global::System.IDisposable

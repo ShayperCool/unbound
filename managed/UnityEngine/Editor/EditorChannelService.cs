@@ -241,13 +241,63 @@ namespace UnityEditor.MPE
 namespace UnityEditor
 {
     /// <summary>The Editor's interface language settings as the Unity 6000.0.71f1 Editor answers them
-    /// (tests/projects/editorchannels localization.*): English; localization enabled in the macOS
-    /// Editor and disabled in the Linux Editor (both measured; that the host OS decides it, as the
-    /// Linux Editor installs no language packs, is an inference).</summary>
+    /// in Play mode (tests/projects/editorlocalization, the windowed Linux Editor, which Unbound is:
+    /// Application.isBatchMode false): English, the only language installed; localization enabled
+    /// (the batch-mode Linux Editor answers false, tests/projects/editorchannels; the macOS batch
+    /// Editor true); every string its own translation; each language's culture code. Unmeasured:
+    /// the languages a macOS installation offers (English here), null strings (returned as they
+    /// are), the setters' effects beyond the value read back, and context groups set by code.</summary>
     internal partial class LocalizationDatabase
     {
         static SystemLanguage s_EditorLanguage = SystemLanguage.English;
-        static bool s_EnableEditorLocalization = OperatingSystem.IsMacOS();
+        static bool s_EnableEditorLocalization = true;
+
+        static readonly Dictionary<SystemLanguage, string> s_Cultures = new Dictionary<SystemLanguage, string>
+        {
+            [SystemLanguage.Afrikaans] = "af",
+            [SystemLanguage.Arabic] = "ar",
+            [SystemLanguage.Basque] = "eu",
+            [SystemLanguage.Belarusian] = "be",
+            [SystemLanguage.Bulgarian] = "bg",
+            [SystemLanguage.Catalan] = "ca",
+            [SystemLanguage.Chinese] = "zh",
+            [SystemLanguage.Czech] = "cs",
+            [SystemLanguage.Danish] = "da",
+            [SystemLanguage.Dutch] = "nl",
+            [SystemLanguage.English] = "en",
+            [SystemLanguage.Estonian] = "et",
+            [SystemLanguage.Faroese] = "fo",
+            [SystemLanguage.Finnish] = "fi",
+            [SystemLanguage.French] = "fr",
+            [SystemLanguage.German] = "de",
+            [SystemLanguage.Greek] = "el",
+            [SystemLanguage.Hebrew] = "he",
+            [SystemLanguage.Hungarian] = "hu",
+            [SystemLanguage.Icelandic] = "is",
+            [SystemLanguage.Indonesian] = "id",
+            [SystemLanguage.Italian] = "it",
+            [SystemLanguage.Japanese] = "ja",
+            [SystemLanguage.Korean] = "ko",
+            [SystemLanguage.Latvian] = "lv",
+            [SystemLanguage.Lithuanian] = "lt",
+            [SystemLanguage.Norwegian] = "no",
+            [SystemLanguage.Polish] = "pl",
+            [SystemLanguage.Portuguese] = "pt",
+            [SystemLanguage.Romanian] = "ro",
+            [SystemLanguage.Russian] = "ru",
+            [SystemLanguage.SerboCroatian] = "hr",
+            [SystemLanguage.Slovak] = "sk",
+            [SystemLanguage.Slovenian] = "sl",
+            [SystemLanguage.Spanish] = "es",
+            [SystemLanguage.Swedish] = "sv",
+            [SystemLanguage.Thai] = "th",
+            [SystemLanguage.Turkish] = "tr",
+            [SystemLanguage.Ukrainian] = "uk",
+            [SystemLanguage.Vietnamese] = "vi",
+            [SystemLanguage.ChineseSimplified] = "zh-hans",
+            [SystemLanguage.ChineseTraditional] = "zh-hant",
+            [SystemLanguage.Hindi] = "hi",
+        };
 
         static bool Measured(string member)
         {
@@ -267,6 +317,34 @@ namespace UnityEditor
             get => Measured(nameof(enableEditorLocalization)) && s_EnableEditorLocalization;
             set { if (Measured(nameof(enableEditorLocalization))) s_EnableEditorLocalization = value; }
         }
+
+        public static SystemLanguage GetDefaultEditorLanguage() => Measured(nameof(GetDefaultEditorLanguage)) ? SystemLanguage.English : default;
+
+        public static SystemLanguage[] GetAvailableEditorLanguages() =>
+            Measured(nameof(GetAvailableEditorLanguages)) ? new[] { SystemLanguage.English } : Array.Empty<SystemLanguage>();
+
+        public static string GetLocalizedString(string original) => Measured(nameof(GetLocalizedString)) ? original : default;
+
+        public static string GetLocalizedStringInLang(SystemLanguage lang, string original) => Measured(nameof(GetLocalizedStringInLang)) ? original : default;
+
+        public static string GetLocalizedStringWithGroupName(string original, string groupName) =>
+            Measured(nameof(GetLocalizedStringWithGroupName)) ? original : default;
+
+        public static string GetLocalizedStringWithGroupNameInLang(SystemLanguage lang, string original, string groupName) =>
+            Measured(nameof(GetLocalizedStringWithGroupNameInLang)) ? original : default;
+
+        /// <summary>The installation's Localization folder.</summary>
+        public static string GetLocalizationResourceFolder() =>
+            Measured(nameof(GetLocalizationResourceFolder)) ? UnityInstallInfo.DataPath.TrimEnd('/') + "/Localization" : default;
+
+        public static string GetCulture(SystemLanguage lang) =>
+            Measured(nameof(GetCulture)) ? (s_Cultures.TryGetValue(lang, out var culture) ? culture : "") : default;
+
+        public static string GetContextGroupName() => Measured(nameof(GetContextGroupName)) ? "" : default;
+
+        public static string MarkForTranslation(string value) => Measured(nameof(MarkForTranslation)) ? value : default;
+
+        public static string noLocalizationGroupName => Measured(nameof(noLocalizationGroupName)) ? "." : default;
     }
 }
 
