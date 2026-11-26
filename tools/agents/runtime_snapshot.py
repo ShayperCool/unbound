@@ -283,8 +283,9 @@ def validate_snapshot(snapshot, hashes, modes):
     if json.loads((snapshot/MANIFEST).read_text()) != hashes:
         raise ValueError(f'invalid snapshot manifest: {snapshot}')
     for name, expected in hashes.items():
-        if name.startswith('managed/'):
-            restore_mode(snapshot/name, expected, modes[name])
+        path = snapshot/name
+        if name.startswith('managed/') and path.is_file() and path.stat().st_mode & 0o777 != modes[name]:
+            restore_mode(path, expected, modes[name])
     for path in [snapshot, *snapshot.rglob('*')]:
         if path.is_symlink() or path.stat().st_mode & 0o222:
             raise ValueError(f'snapshot is writable or contains a link: {path}')
