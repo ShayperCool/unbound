@@ -838,6 +838,9 @@ namespace Unbound.Runtime
             ListenerPlan = s_InstalledListenerPlan = 0;
         }
 
+        /// <summary>Drops the scripts of a voice that is gone (a VideoPlayer track's).</summary>
+        internal static void Forget(ulong key) => s_Filters.TryRemove(key, out _);
+
         static bool Publish(ulong key, List<Action<float[], int>> list)
         {
             if (list == null)

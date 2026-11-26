@@ -199,12 +199,15 @@ namespace UnityEngine
         }
 
         internal bool m_PendingPlayOnAwake;
+        /// <summary>A VideoPlayer's track has played through this source: it reports itself playing
+        /// from then on, also after the player stops (measured: tests/projects/videoaudio *.end).</summary>
+        internal bool m_VideoAudioClaimed;
 
         public bool isPlaying
         {
             get
             { MainThreadCheck.Check("get_isPlaying");
-                if (m_PendingPlayOnAwake) return true;
+                if (m_PendingPlayOnAwake || m_VideoAudioClaimed) return true;
                 if (m_Handle == 0 || m_Paused) return false;
                 var state = State("get_isPlaying");
                 return state.Main == AudioVoiceState.Playing || state.Main == AudioVoiceState.Scheduled || state.OneShots > 0;

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text.Json;
 using Unbound.Runtime;
 using UnityEngine.Rendering;
@@ -364,12 +365,13 @@ namespace UnityEngine.Video
                 if (target == m_Frame) return;
                 ShowFrame(target);
                 m_Time = target / m_FrameRate;
+                RestartAudio(m_Time);
                 // A seek completes an update later (after `started` of a Play right after it).
                 m_PendingNext.Add(() => seekCompleted?.Invoke(this));
             }
         }
 
-        // Audio: its tracks' formats are known (the probe); the sound is not played yet.
+        // Audio: its tracks' formats are known (the probe); the sound plays through VideoPlayer.Audio.cs.
         // The current clip's tracks, or a URL's once prepared ("For URL sources, this will only be
         // set once the source preparation is completed"): 0 or "" before, and past the tracks
         // (Unbound's choice, unmeasured).
@@ -396,7 +398,21 @@ namespace UnityEngine.Video
             return VideoClip.TryTrack(m_Clip.m_AudioTrackInfo, m_Clip.m_AudioTracks, index, member, out track);
         }
         readonly Dictionary<ushort, (bool Enabled, float Volume, bool Mute, AudioSource Source)> m_Tracks = new Dictionary<ushort, (bool, float, bool, AudioSource)>();
-        (bool Enabled, float Volume, bool Mute, AudioSource Source) Track(ushort i) => m_Tracks.TryGetValue(i, out var t) ? t : (true, 1f, false, null);
+        /// <summary>A player made at run time beside an AudioSource takes it as track 0's target (measured:
+        /// tests/projects/videoaudio *.prepared, the source added before the player); a serialized
+        /// player has its own targets.</summary>
+        bool m_TargetDefaulted;
+
+        (bool Enabled, float Volume, bool Mute, AudioSource Source) Track(ushort i)
+        {
+            if (!m_TargetDefaulted)
+            {
+                m_TargetDefaulted = true;
+                var own = m_GameObject != null ? m_GameObject.GetComponent<AudioSource>() : null;
+                if (own != null && !m_Tracks.ContainsKey(0)) m_Tracks[0] = (true, 1f, false, own);
+            }
+            return m_Tracks.TryGetValue(i, out var t) ? t : (true, 1f, false, null);
+        }
         public void EnableAudioTrack(ushort trackIndex, bool enabled) { var t = Track(trackIndex); t.Enabled = enabled; m_Tracks[trackIndex] = t; }
         public bool IsAudioTrackEnabled(ushort trackIndex) => Track(trackIndex).Enabled;
         public float GetDirectAudioVolume(ushort trackIndex) => Track(trackIndex).Volume;
@@ -482,8 +498,6 @@ namespace UnityEngine.Video
                     if (!m_Clip.sRGB && QualitySettings.activeColorSpace == ColorSpace.Linear)
                         Warn($"video '{m_Name}' is imported without sRGB (VideoClipImporter sRGB off), but its pictures are still converted as sRGB colour in Linear colour space.");
                 }
-                if (m_AudioOutputMode != VideoAudioOutputMode.None && m_SourceAudioTracks > 0)
-                    Warn($"the sound of video '{m_Name}' is not played yet (only its pictures).");
                 m_Decoder = JsonDocument.Parse(VideoClip.Call("video-open", JsonSerializer.Serialize(new { path = m_File, width = m_Width, height = m_Height, fps = m_FrameRate })))
                     .RootElement.GetProperty("id").GetUInt64();
                 return true;
@@ -516,6 +530,7 @@ namespace UnityEngine.Video
 
         void Release()
         {
+            CloseAllAudio();
             if (m_Decoder != 0)
             {
                 try { VideoClip.Call("video-close", JsonSerializer.Serialize(new { id = m_Decoder })); } catch (Exception) { }
@@ -744,6 +759,7 @@ namespace UnityEngine.Video
                 {
                     m_StartPending = false;
                     if (m_Frame < 0) ShowFrame(0);
+                    RestartAudio(m_Time);
                     m_Pending.Add(() => started?.Invoke(this));
                 }
                 else
@@ -757,6 +773,7 @@ namespace UnityEngine.Video
                         {
                             m_Time %= Math.Max(m_Length, 1e-6);
                             ShowFrame((long)Math.Floor(m_Time * m_FrameRate + 1e-6));
+                            RestartAudio(m_Time);
                         }
                         else
                         {
@@ -772,6 +789,7 @@ namespace UnityEngine.Video
                     }
                 }
             }
+            UpdateAudio();
             if (m_Pending.Count > 0)
             {
                 var events = m_Pending.ToArray();
@@ -834,6 +852,7 @@ namespace UnityEngine.Video
             m_AudioOutputMode = (VideoAudioOutputMode)body.Int("m_AudioOutputMode", (int)m_AudioOutputMode);
             m_Url = body.Str("m_Url");
             m_ControlledAudioTrackCount = (ushort)body.Int("m_ControlledAudioTrackCount", 1);
+            ReadAudioTracks(body, resolver);
             m_PlayOnAwake = body.Bool("m_PlayOnAwake", true);
             m_SkipOnDrop = body.Bool("m_SkipOnDrop", true);
             m_Looping = body.Bool("m_Looping");
@@ -841,9 +860,33 @@ namespace UnityEngine.Video
             m_SendFrameReadyEvents = body.Bool("m_FrameReadyEventEnabled");
         }
 
+        /// <summary>Each audio track's target source, direct volume, enabled flag and mute as the
+        /// Editor writes them (lists of references and volumes; the flags as hex bytes, "01").</summary>
+        void ReadAudioTracks(YNode body, IReferenceResolver resolver)
+        {
+            var targets = body.Get("m_TargetAudioSources")?.Seq().ToList() ?? new List<YNode>();
+            var volumes = body.Get("m_DirectAudioVolumes")?.Seq().ToList() ?? new List<YNode>();
+            string enabled = body.Str("m_EnabledAudioTracks"), mutes = body.Str("m_DirectAudioMutes");
+            bool Flag(string hex, int i, bool fallback) =>
+                hex.Length >= 2 * i + 2 && byte.TryParse(hex.AsSpan(2 * i, 2), System.Globalization.NumberStyles.HexNumber, null, out var b) ? b != 0 : fallback;
+            int count = Math.Max(Math.Max(targets.Count, volumes.Count), Math.Max(enabled.Length, mutes.Length) / 2);
+            m_Tracks.Clear();
+            for (int i = 0; i < count; i++)
+            {
+                var r = i < targets.Count ? targets[i].AsRef() : default;
+                var source = r.IsNull ? null : resolver.Resolve(r, typeof(AudioSource)) as AudioSource;
+                m_Tracks[(ushort)i] = (Flag(enabled, i, true), i < volumes.Count ? volumes[i].AsFloat(1f) : 1f, Flag(mutes, i, false), source);
+            }
+            m_TargetDefaulted = true;
+        }
+
         internal override void CopyFrom(Component source, Func<Object, Object> remap)
         {
             var s = (VideoPlayer)source;
+            m_Tracks.Clear();
+            foreach (var pair in s.m_Tracks)
+                m_Tracks[pair.Key] = (pair.Value.Enabled, pair.Value.Volume, pair.Value.Mute, remap(pair.Value.Source) as AudioSource);
+            m_TargetDefaulted = s.m_TargetDefaulted;
             m_Clip = remap(s.m_Clip) as VideoClip;
             m_TargetCamera = remap(s.m_TargetCamera) as Camera;
             m_TargetTexture = remap(s.m_TargetTexture) as RenderTexture;
