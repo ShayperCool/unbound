@@ -117,6 +117,9 @@
 {"k":"settings save if dirty guid/guid empty","v":"False"}
 {"k":"settings save if dirty guid/will save","v":""}
 {"k":"settings save if dirty guid/file changed","v":"False"}
+{"k":"editing write/shadows inside","v":"On"}
+{"k":"editing write/shadows after","v":"Off"}
+{"k":"editing write/dirty","v":"False"}
 {"k":"exit/created graph dirty before","v":"True"}
 {"k":"exit/created resource dirty before","v":"False"}
 {"k":"exit/created documents before","v":"7"}

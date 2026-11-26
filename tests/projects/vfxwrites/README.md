@@ -38,6 +38,9 @@ the step, when there was one).
   created (`VisualEffectAssetEditorUtility.CreateNew`), their text and .meta; `subgraph write/text`:
   the operator subgraph with an Add operator added and written; `subgraph setting/dirty`,
   `subgraph setting save/...`: its `initialEventName` set, then `SaveAssets`.
+- `editing write/...`: inside `AssetDatabase.StartAssetEditing`, the renderer's shadow casting set
+  and `WriteAsset`; the setting read inside the block and after `StopAssetEditing` (the graph's
+  import after its write gives the compile's value).
 - `save if dirty resource`, `save if dirty asset`: a setting set, then `AssetDatabase.SaveAssetIfDirty`
   of the resource and of its asset (not dirty itself); `model edit`, `model save if dirty
   asset|resource|graph`, `model save assets`: a block's input set through the graph (the graph model

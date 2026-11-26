@@ -253,6 +253,18 @@ public static class VfxWritesProbe
             Row("settings save if dirty guid/will save", string.Join(" | ", VfxWritesSaveLog.Calls));
             Row("settings save if dirty guid/file changed", File.ReadAllText(tagManager) != settingsBefore);
 
+            // A graph written inside StartAssetEditing: its renderer settings set, WriteAsset, read
+            // inside the block and after StopAssetEditing (a re-import gives the compile's values).
+            AssetDatabase.StartAssetEditing();
+            var shadows = resource.rendererSettings;
+            shadows.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.On;
+            resource.rendererSettings = shadows;
+            resource.WriteAsset();
+            Row("editing write/shadows inside", resource.rendererSettings.shadowCastingMode);
+            AssetDatabase.StopAssetEditing();
+            Row("editing write/shadows after", resource.rendererSettings.shadowCastingMode);
+            Row("editing write/dirty", EditorUtility.IsDirty(resource));
+
             // The created graph's model edited (an operator added) and left for the exit; run.py
             // counts the file's documents after the run (exit/created documents).
             var createdGraph = VisualEffectResource.GetResourceAtPath(Created).GetOrCreateGraph();
