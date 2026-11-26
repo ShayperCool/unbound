@@ -181,6 +181,34 @@ namespace Unbound.Tests
                     Assert.True(texture.isReadable);
                     Assert.Equal(-1, texture.FrozenMipmapLimit);
                     Assert.False(texture.UnderMipmapLimit);
+                    // An image that can drop mips follows the limit again.
+                    texture.ReplaceImage(64, 64, TextureFormat.RGBA32, true);
+                    Assert.Equal(3, texture.activeMipmapLimit);
+                    Assert.True(texture.UnderMipmapLimit);
+                    QualitySettings.globalTextureMipmapLimit = 1;
+                    Assert.Equal(1, texture.activeMipmapLimit);
+                });
+            }
+            finally
+            {
+                Object.DestroyImmediate(texture);
+            }
+        }
+
+        [Fact]
+        public void TheEnginesOwnApplyLeavesTheTextureFollowingTheLimit()
+        {
+            var texture = new Texture2D(64, 64, TextureFormat.RGBA32, true) { ignoreMipmapLimit = false };
+            try
+            {
+                WithLimit(0, () =>
+                {
+                    // An import's postprocessing applies an unreadable asset's edited pixels.
+                    texture.ApplyQuietly(false, true);
+                    Assert.Equal(-1, texture.FrozenMipmapLimit);
+                    QualitySettings.globalTextureMipmapLimit = 2;
+                    Assert.Equal(2, texture.activeMipmapLimit);
+                    Assert.True(texture.UnderMipmapLimit);
                 });
             }
             finally

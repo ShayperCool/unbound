@@ -178,13 +178,15 @@ namespace UnityEngine
         internal static void WarnCopyUnderMipmapLimit(string api, Texture texture)
         {
             if (texture == null || !texture.UnderMipmapLimit) return;
-            // Said once per API, without building its message again.
+            // Each use counts; the member's name is built once per API.
+            string member;
             lock (s_CopyWarnings)
-                if (!s_CopyWarnings.Add(api)) return;
-            Unbound.Runtime.Stubs.Ignored(api + " of a texture under the texture mipmap limit", "addresses the texture's whole mip chain, not the mips the limit keeps");
+                if (!s_CopyWarnings.TryGetValue(api, out member))
+                    s_CopyWarnings[api] = member = api + " of a texture under the texture mipmap limit";
+            Unbound.Runtime.Stubs.Ignored(member, "addresses the texture's whole mip chain, not the mips the limit keeps");
         }
 
-        static readonly System.Collections.Generic.HashSet<string> s_CopyWarnings = new System.Collections.Generic.HashSet<string>();
+        static readonly System.Collections.Generic.Dictionary<string, string> s_CopyWarnings = new System.Collections.Generic.Dictionary<string, string>();
 
         /// <summary>What the renderer holds for <see cref="m_SentMipmapLimitHandle"/>: the most mips
         /// it drops and whether that is a fixed count.</summary>

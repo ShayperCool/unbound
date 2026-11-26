@@ -432,8 +432,10 @@ namespace UnityEngine
             // The store, when views were handed out, is the raw data itself: kept, not copied.
             var rawCopy = makeNoLongerReadable && !SourceBlocks ? m_Store ?? EncodeMipChain() : null;
             m_PixelsDirty = true;
-            // Unreadable, it is not uploaded again: it keeps the mips this upload drops.
-            if (makeNoLongerReadable) m_FrozenMipmapLimit = activeMipmapLimit;
+            // Unreadable by a script's Apply, it is not uploaded again: it keeps the mips this upload
+            // drops. The engine's own applies (an import's postprocessing) leave an asset that
+            // keeps its file following the limit.
+            if (makeNoLongerReadable && !m_QuietApply) m_FrozenMipmapLimit = activeMipmapLimit;
             Upload();
             if (m_AstcMemoryPendingUpload || (m_ScriptTextureStorage && !IsPersistentAsset && m_ResizeMemoryPendingApply))
                 RecordUploadedAstcMemory(format);
