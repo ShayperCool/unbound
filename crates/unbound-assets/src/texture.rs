@@ -1544,7 +1544,8 @@ impl Importer for TextureImporter {
     // 51: a wrap key a serializedVersion 13 .meta lacks reads Repeat for the UI types too (was Clamp).
     // 52: a PNG's gamma (gAMA) applies unless ignorePngGamma.
     // 53: a .meta that names no importer imports with the oldest settings (a cube map).
-    const VERSION: u32 = 53;
+    // 54: that .meta's image size is read for the format the decoder takes it as.
+    const VERSION: u32 = 54;
 
     fn import(&self, source: &Path, bytes: &[u8], meta: &Value) -> Result<ImportedTexture> {
         // A GUID-only .meta reads its oldest settings before the trees' settings apply.
@@ -2612,10 +2613,25 @@ pub fn guid_only_image_size(source: &Path, bytes: &[u8]) -> Option<(u32, u32)> {
         .ok()
         .or_else(|| image::ImageFormat::from_path(source).ok())?;
     if format == image::ImageFormat::OpenExr {
-        // Any channel layout (decode_exr_channels): the first layer's data window.
+        // The rectangle the decoder reads: an RGB(A) image's display window (the image crate's),
+        // else the first layer's data window (decode_exr_channels).
         let meta =
             exr::meta::MetaData::read_from_buffered(std::io::Cursor::new(bytes), false).ok()?;
-        let size = meta.headers.first()?.layer_size;
+        let first = meta.headers.first()?;
+        let rgb = meta.headers.iter().any(|header| {
+            ["R", "G", "B"].iter().all(|name| {
+                header
+                    .channels
+                    .list
+                    .iter()
+                    .any(|c| c.name.eq_case_insensitive(name))
+            })
+        });
+        let size = if rgb {
+            first.shared_attributes.display_window.size
+        } else {
+            first.layer_size
+        };
         return Some((size.width() as u32, size.height() as u32));
     }
     if format == image::ImageFormat::Tiff
