@@ -147,6 +147,11 @@ view type how many callbacks ran. Scenarios:
   projection matrices, culling sphere, near plane, planes and culling matrix), on each device.
   The records compare field by field, numbers within 1e-5 of their size (at least 1): the Editor
   and Unbound round single-precision arithmetic differently (by at most 2e-6 here).
+- `motion_header`: the per-draw header's motion flags. Six procedural squares of Probe/DotsProcedural
+  with `_Show` 3 (its colour red 0 for zero motion, green 0 for camera motion, from
+  `LoadDOTSInstancedData_MotionVectorsParams`), each in a range of its own motion mode (Camera,
+  Object, ForceNoMotion), with and without the command's HasMotion flag; `.c<i>.color` is each
+  square's colour at its middle.
 - `log.<i>`: the draw command errors the Editor writes to its log (each distinct message once,
   with the line naming the IDs), read from the Editor's log and from Unbound's output by the
   runner: the Editor delivers them after the frame, so the probe, which records within it, does

@@ -103,6 +103,7 @@ public unsafe class BrgProbe : MonoBehaviour
             Procedural("procedural_topologies", s_ProcTopologyCommands);
             Procedural("procedural_ids", s_ProcIdCommands);
             LocalShadowMatrices();
+            MotionHeader();
         }
         catch (Exception e)
         {
@@ -1069,6 +1070,102 @@ public unsafe class BrgProbe : MonoBehaviour
         };
     }
 
+    /// <summary>The motion_header scenario's commands: a range's motion mode and the command's
+    /// HasMotion flag.</summary>
+    static readonly (MotionVectorGenerationMode Mode, bool HasMotion)[] s_MotionCommands =
+    {
+        (MotionVectorGenerationMode.Camera, false), (MotionVectorGenerationMode.Camera, true),
+        (MotionVectorGenerationMode.Object, false), (MotionVectorGenerationMode.Object, true),
+        (MotionVectorGenerationMode.ForceNoMotion, false), (MotionVectorGenerationMode.ForceNoMotion, true),
+    };
+    GraphicsBuffer m_MotionBuffer;
+    BatchID m_MotionBatch;
+    BatchMaterialID m_MotionMaterial;
+
+    /// <summary>The motion_header scenario's square i: a row across the view in front of the scene.</summary>
+    static Matrix4x4 MotionSquare(int i) =>
+        Matrix4x4.TRS(new Vector3(-3.0f + i * 1.0f, 1.6f, -2f), Quaternion.identity, Vector3.one * 0.6f);
+
+    /// <summary>The per-draw header's motion flags: a procedural square per command of
+    /// Probe/DotsProcedural showing them (_Show 3: red 0 for zero motion, green 0 for camera
+    /// motion), each in a range of its own motion mode, with and without HasMotion. Records each
+    /// square's colour at its middle.</summary>
+    void MotionHeader()
+    {
+        const string name = "motion_header";
+        int n = s_MotionCommands.Length;
+        int objectToWorld = SizeOfPackedMatrix * 2, worldToObject = objectToWorld + SizeOfPackedMatrix * n, colors = worldToObject + SizeOfPackedMatrix * n;
+        int bytes = (colors + SizeOfFloat4 * n + 255) / 256 * 256;
+        var data = new float[bytes / 4];
+        for (int i = 0; i < n; i++)
+        {
+            var m = MotionSquare(i);
+            Pack(data, objectToWorld / 4 + i * 12, m);
+            Pack(data, worldToObject / 4 + i * 12, m.inverse);
+            int o = colors / 4 + i * 4;
+            data[o] = 1f; data[o + 1] = 1f; data[o + 2] = 1f; data[o + 3] = 1f;
+        }
+        bool constant = BatchRendererGroup.BufferTarget == BatchBufferTarget.ConstantBuffer;
+        m_MotionBuffer = constant ? new GraphicsBuffer(GraphicsBuffer.Target.Constant, bytes / 16, 16) : new GraphicsBuffer(GraphicsBuffer.Target.Raw, bytes / 4, 4);
+        m_MotionBuffer.SetData(data);
+        var metadata = new NativeArray<MetadataValue>(3, Allocator.Temp);
+        metadata[0] = new MetadataValue { NameID = Shader.PropertyToID("unity_ObjectToWorld"), Value = PerInstance | (uint)objectToWorld };
+        metadata[1] = new MetadataValue { NameID = Shader.PropertyToID("unity_WorldToObject"), Value = PerInstance | (uint)worldToObject };
+        metadata[2] = new MetadataValue { NameID = Shader.PropertyToID("_BaseColor"), Value = PerInstance | (uint)colors };
+        m_MotionBatch = constant ? m_Brg.AddBatch(metadata, m_MotionBuffer.bufferHandle, 0, (uint)bytes) : m_Brg.AddBatch(metadata, m_MotionBuffer.bufferHandle);
+        metadata.Dispose();
+        var material = new Material(Shader.Find("Probe/DotsProcedural"));
+        material.SetFloat("_Expand", 1f);
+        material.SetFloat("_Show", 3f);
+        m_MotionMaterial = m_Brg.RegisterMaterial(material);
+
+        Scenario(name);
+        var target = RenderTexture.GetTemporary(Width, Height, 24);
+        m_Camera.targetTexture = target;
+        for (int i = 0; i < n; i++) Row(name + ".c" + i + ".color", Pixel(MotionSquare(i).MultiplyPoint(new Vector3(0.5f, 0.5f, 0f))));
+        m_Camera.targetTexture = null;
+        RenderTexture.ReleaseTemporary(target);
+
+        m_Brg.RemoveBatch(m_MotionBatch);
+        m_MotionBuffer.Dispose();
+        m_Brg.UnregisterMaterial(m_MotionMaterial);
+        DestroyImmediate(material);
+    }
+
+    /// <summary>The motion_header scenario's commands: one procedural square each, in a range of
+    /// its own motion mode.</summary>
+    void MotionCommands(BatchCullingOutputDrawCommands* commands)
+    {
+        int n = s_MotionCommands.Length;
+        int alignment = UnsafeUtility.AlignOf<long>();
+        commands->proceduralDrawCommands = (BatchDrawCommandProcedural*)UnsafeUtility.Malloc(UnsafeUtility.SizeOf<BatchDrawCommandProcedural>() * n, alignment, Allocator.TempJob);
+        commands->drawRanges = (BatchDrawRange*)UnsafeUtility.Malloc(UnsafeUtility.SizeOf<BatchDrawRange>() * n, alignment, Allocator.TempJob);
+        commands->visibleInstances = (int*)UnsafeUtility.Malloc(n * sizeof(int), alignment, Allocator.TempJob);
+        commands->drawCommands = null;
+        commands->instanceSortingPositions = null;
+        commands->instanceSortingPositionFloatCount = 0;
+        commands->drawCommandPickingInstanceIDs = null;
+        commands->drawCommandCount = 0;
+        commands->proceduralDrawCommandCount = n;
+        commands->visibleInstanceCount = n;
+        commands->drawRangeCount = n;
+        for (int i = 0; i < n; i++)
+        {
+            commands->visibleInstances[i] = i;
+            commands->proceduralDrawCommands[i] = new BatchDrawCommandProcedural
+            {
+                flags = s_MotionCommands[i].HasMotion ? BatchDrawCommandFlags.HasMotion : BatchDrawCommandFlags.None,
+                batchID = m_MotionBatch, materialID = m_MotionMaterial, splitVisibilityMask = 0xff,
+                visibleOffset = (uint)i, visibleCount = 1, topology = MeshTopology.Triangles, elementCount = 6,
+            };
+            commands->drawRanges[i] = new BatchDrawRange
+            {
+                drawCommandsType = BatchDrawCommandType.Procedural, drawCommandsBegin = (uint)i, drawCommandsCount = 1,
+                filterSettings = new BatchFilterSettings { renderingLayerMask = 0xffffffff, motionMode = s_MotionCommands[i].Mode },
+            };
+        }
+    }
+
     /// <summary>The gpu_written scenario's instances and how many of them the kernel colours.</summary>
     const int GpuCubes = 8, GpuColored = 4;
     GraphicsBuffer m_GpuBuffer;
@@ -1708,6 +1805,11 @@ public unsafe class BrgProbe : MonoBehaviour
         if (m_ProcTable != null)
         {
             if (context.viewType == BatchCullingViewType.Camera) ProceduralCommands((BatchCullingOutputDrawCommands*)output.drawCommands.GetUnsafePtr());
+            return new JobHandle();
+        }
+        if (m_Scenario == "motion_header")
+        {
+            if (context.viewType == BatchCullingViewType.Camera) MotionCommands((BatchCullingOutputDrawCommands*)output.drawCommands.GetUnsafePtr());
             return new JobHandle();
         }
         if (m_Scenario == "lightmap_arrays")
