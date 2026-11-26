@@ -713,7 +713,7 @@ namespace UnityEngine
             return m;
         }
 
-        /// <summary>The engine's own cameras', lights' and projectors' perspective, with a double-precision
+        /// <summary>The engine's own lights' and projectors' perspective, with a double-precision
         /// cotangent; Unity's scripting Matrix4x4.Perspective is <see cref="Perspective"/>.</summary>
         internal static Matrix4x4 PerspectiveDoublePrecision(float fov, float aspect, float zNear, float zFar)
         {
