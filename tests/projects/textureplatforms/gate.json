@@ -1,0 +1,15 @@
+{
+  "commands": [
+    "python3 tests/projects/textureplatforms/run.py gate"
+  ],
+  "summary": "textureplatforms: .*",
+  "engine_paths": [
+    "crates/unbound-assets/src/texture.rs",
+    "crates/unbound-runtime/src/state.rs",
+    "managed/UnityEngine/Editor/AssetImporterLookup.cs",
+    "managed/UnityEngine/Editor/ImporterMetaFiles.cs",
+    "managed/UnityEngine/Editor/ImporterSettings.cs",
+    "managed/UnityEngine/Editor/TextureImporterPlatforms.cs",
+    "managed/UnityEngine/Editor/TextureImporterSettings.cs"
+  ]
+}
