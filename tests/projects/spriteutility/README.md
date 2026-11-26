@@ -22,7 +22,8 @@ angle grows by the step in single precision, its sine and cosine taken in double
 left. A sprite's texture and coordinates are its own; asking for the atlas data of a sprite that
 is not packed throws an ArgumentException ("Could not get atlas data - Sprite is not packed."), a
 null sprite an ArgumentNullException. A packed sprite (its source or atlas data) is not measured
-(Unbound reports it as not implemented).
+(Unbound reports it as not implemented). Also not measured: a sprite drawn from a legacy packing atlas outside
+Play mode, which reports itself as not packed (Unbound answers its texture and coordinates).
 
 Record and gate:
 
