@@ -455,6 +455,7 @@ pub fn initialize(project: &Project) -> Result<&'static RuntimeState> {
             gamma: project_in_gamma_space(project),
             project: unbound_assets::texture::ProjectCompression::read(&project.root),
             tree_textures,
+            guid_only_section: unbound_compat::MeasuredFamily::of(project.version).is_some(),
             ..TextureImporter::default()
         }),
         model_importer: unbound_assets::ModelImporter::for_release(&project.version),
@@ -465,7 +466,10 @@ pub fn initialize(project: &Project) -> Result<&'static RuntimeState> {
             project.builtin_shaders().map(|b| b.shader_roots()),
         ),
         builtin_shaders: RwLock::new(None),
-        audio_importer: RwLock::new(AudioImporter::default()),
+        audio_importer: RwLock::new(AudioImporter {
+            guid_only_section: unbound_compat::MeasuredFamily::of(project.version).is_some(),
+            ..AudioImporter::default()
+        }),
         models: RwLock::new(HashMap::new()),
         audio: crate::audio::Engine::new_with_output_rules(
             crate::audio::ProjectAudioSettings::read(&project.root),
@@ -1926,6 +1930,20 @@ fn imported_model(guid: Guid) -> Result<Arc<unbound_assets::ImportedModel>> {
     for warning in &model.warnings {
         tracing::warn!("{}: {warning}", asset.path);
     }
+    // A model whose .meta names no importer: the Editor imports it with the model importer's
+    // oldest settings, a legacy import that also writes its materials into a Materials folder
+    // (tests/projects/guidonlymetas open.files, model.*), which Unbound does not do.
+    if s.new_meta_measured
+        && std::fs::read_to_string(&meta)
+            .ok()
+            .and_then(|text| unbound_yaml::parse_value(&text).ok())
+            .is_some_and(|value| unbound_assets::new_meta::names_no_importer(&value))
+    {
+        tracing::warn!(
+            "{}: its .meta holds its GUID alone; the Editor imports such a model with its oldest settings (a legacy import that writes its materials into a Materials folder, a Legacy animation), which Unbound does not support: it imports the model with a new model's settings",
+            asset.path
+        );
+    }
     s.models.write().unwrap().insert(guid, model.clone());
     Ok(model)
 }
@@ -1988,7 +2006,9 @@ fn load_importer_settings(guid: &str) -> Result<Vec<u8>> {
         return Ok(unbound_scene::encode_documents(&[doc]));
     }
     // A .meta that names no importer (hand-written ones, such as Firebase's manifests) gets the
-    // one the Editor picks for the file's extension, with default settings.
+    // one the Editor picks for the file's extension, with default settings, or the oldest
+    // settings of the importers that read those there (a texture's, a sound's: the section they
+    // import with, `guid_only_body`).
     let (type_name, mut body) = meta
         .as_map()
         .and_then(|m| {
@@ -1997,10 +2017,10 @@ fn load_importer_settings(guid: &str) -> Result<Vec<u8>> {
                 .map(|(k, v)| (k.to_string(), v.clone()))
         })
         .unwrap_or_else(|| {
-            (
-                asset_importer(asset).to_string(),
-                unbound_yaml::Value::Map(Default::default()),
-            )
+            let name = asset_importer(asset);
+            let body = guid_only_body(s, asset, name)
+                .unwrap_or_else(|| unbound_yaml::Value::Map(Default::default()));
+            (name.to_string(), body)
         });
     if type_name == "PluginImporter" {
         if !s.new_meta_measured {
@@ -2115,11 +2135,33 @@ fn label_meta_section(request: &str) -> Result<String> {
         .by_path(&path)
         .filter(|_| s.new_meta_measured)
         .and_then(|asset| {
-            label_meta_importer(&asset.file, asset.is_folder)
-                .map(|kind| meta_section(kind, &asset.file, &s.new_meta))
+            let kind = label_meta_importer(&asset.file, asset.is_folder)?;
+            match unbound_assets::new_meta::guid_only_section(kind, &s.new_meta) {
+                // The importers that read a GUID-only .meta with their oldest settings write
+                // those, where the asset gets that importer (a streaming asset gets none of them).
+                Some(section) => section
+                    .starts_with(&format!("{}:\n", asset_importer(asset)))
+                    .then_some(section),
+                None => Some(meta_section(kind, &asset.file, &s.new_meta)),
+            }
         })
         .unwrap_or_default();
     Ok(json!({ "section": section }).to_string())
+}
+
+/// The oldest settings an importer reads from a `.meta` of `asset` that names none, where they
+/// are measured ([`unbound_assets::new_meta::guid_only_section`]), as `name`'s section.
+fn guid_only_body(
+    s: &RuntimeState,
+    asset: &unbound_project::assetdb::Asset,
+    name: &str,
+) -> Option<unbound_yaml::Value> {
+    if !s.new_meta_measured || asset.is_folder {
+        return None;
+    }
+    let kind = unbound_assets::new_meta::importer_for(&asset.file, false)?;
+    let section = unbound_assets::new_meta::guid_only_section(kind, &s.new_meta)?;
+    unbound_yaml::parse_value(&section).ok()?.get(name).cloned()
 }
 
 /// The importer whose new-asset section a GUID-only `.meta` of `file` gets when it is written
@@ -2149,6 +2191,8 @@ fn label_meta_importer(
                 | NewImporter::Prefab
                 | NewImporter::Shader
                 | NewImporter::Scripted { .. }
+                | NewImporter::Texture
+                | NewImporter::Audio
         )
     })
 }
@@ -3141,7 +3185,20 @@ mod tests {
                 "{name}"
             );
         }
-        for name in ["Tex.png", "Beep.wav", "Other.xyz", "Model.fbx"] {
+        // A texture and a sound write their oldest settings (new_meta's
+        // guid_only_sections_match_the_editor compares them with these snapshots).
+        use unbound_assets::new_meta::NewImporter;
+        for (name, kind) in [
+            ("Tex.png", NewImporter::Texture),
+            ("Beep.wav", NewImporter::Audio),
+        ] {
+            assert_eq!(
+                super::label_meta_importer(std::path::Path::new(name), false),
+                Some(kind),
+                "{name}"
+            );
+        }
+        for name in ["Other.xyz", "Model.fbx"] {
             assert!(
                 super::label_meta_importer(std::path::Path::new(name), false).is_none(),
                 "{name}"

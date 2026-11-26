@@ -205,6 +205,76 @@ pub fn importer_layout(importer: &str) -> Option<(String, Option<String>)> {
     }
 }
 
+/// The importer section of a `.meta` that holds the GUID alone, for the importers that read it
+/// with their oldest settings: what such an asset imports with, and what the Editor writes there
+/// when it writes the file again (labels, a saved setting). A texture is a cube map with
+/// gamma decoding and uncompressed platforms, a sound compressed in memory without a sample-rate
+/// override (matches the Unity 6000.0.71f1 Editor, tests/projects/scenesave label-metas
+/// labelled.Tex.png and labelled.Beep.wav, tests/projects/guidonlymetas); `None` for the others
+/// (a model's legacy import, which also writes its materials, is not supported).
+pub fn guid_only_section(importer: NewImporter, context: &MetaContext) -> Option<String> {
+    // The new asset's section: its .meta after the format version and GUID lines.
+    let new = |name: &str| {
+        let text = text(importer, Guid(1), Path::new(name), context);
+        text.splitn(3, '\n').nth(2).unwrap_or_default().to_string()
+    };
+    let changed = |section: String, edits: &[(&str, &str)]| {
+        edits.iter().fold(section, |section, (from, to)| {
+            debug_assert!(section.contains(from), "{from}");
+            section.replace(from, to)
+        })
+    };
+    match importer {
+        NewImporter::Texture => Some(changed(
+            new("Texture.png"),
+            &[
+                ("\n  textureShape: 1\n", "\n  textureShape: 2\n"),
+                ("\n  applyGammaDecoding: 0\n", "\n  applyGammaDecoding: 1\n"),
+                ("\n  cookieLightType: 0\n", "\n  cookieLightType: 2\n"),
+                (
+                    "\n    textureCompression: 1\n",
+                    "\n    textureCompression: 0\n",
+                ),
+            ],
+        )),
+        NewImporter::Audio => Some(changed(
+            new("Sound.wav"),
+            &[
+                ("\n    loadType: 0\n", "\n    loadType: 1\n"),
+                (
+                    "\n    sampleRateOverride: 44100\n",
+                    "\n    sampleRateOverride: 0\n",
+                ),
+            ],
+        )),
+        _ => None,
+    }
+}
+
+/// Whether a `.meta` (parsed) names no importer: it holds its GUID (and perhaps labels) alone.
+pub fn names_no_importer(meta: &unbound_yaml::Value) -> bool {
+    meta.as_map()
+        .is_some_and(|m| !m.iter().any(|(k, _)| k.ends_with("Importer")))
+}
+
+/// `meta` as its importer reads it: a `.meta` that names no importer with the
+/// [`guid_only_section`] of `importer` (the installation's platforms left out, which the import
+/// does not read); `None` where `meta` names one or the importer has none.
+pub fn with_guid_only_section(
+    meta: &unbound_yaml::Value,
+    importer: NewImporter,
+    name: &str,
+) -> Option<unbound_yaml::Value> {
+    if !names_no_importer(meta) {
+        return None;
+    }
+    let section = guid_only_section(importer, &MetaContext::default())?;
+    let parsed = unbound_yaml::parse_value(&section).ok()?;
+    let mut map = meta.as_map()?.clone();
+    map.insert(name, parsed.get(name)?.clone());
+    Some(unbound_yaml::Value::Map(map))
+}
+
 /// A new GUID, as random as the Editor's.
 pub fn new_guid() -> Guid {
     let mut bytes = [0u8; 16];
@@ -803,5 +873,65 @@ mod tests {
         assert!(rendered.contains("  platformSettings: []\n"));
         assert!(rendered.contains("  variantMultiplier: 1\n  bindAsDefault: 1\n"));
         assert!(rendered.ends_with("  userData: \n  assetBundleName: \n  assetBundleVariant: \n"));
+    }
+
+    /// The sections a texture's and a sound's .meta holding the GUID alone are written with are
+    /// the Editor's (tests/projects/scenesave label-metas, recorded with the Android module).
+    #[test]
+    fn guid_only_sections_match_the_editor() {
+        let snapshot = |name: &str, importer: &str| {
+            let path = concat!(
+                env!("CARGO_MANIFEST_DIR"),
+                "/../../tests/projects/scenesave/Reference/unity-6000.0.71f1/label-metas/snapshots/"
+            );
+            let text = std::fs::read_to_string(format!("{path}{name}")).unwrap();
+            text[text.find(&format!("{importer}:\n")).unwrap()..].to_string()
+        };
+        let android = MetaContext {
+            platforms: vec!["Android".into()],
+        };
+        assert_eq!(
+            guid_only_section(NewImporter::Texture, &android).unwrap(),
+            snapshot("labelled.Tex.png.meta", "TextureImporter")
+        );
+        assert_eq!(
+            guid_only_section(NewImporter::Audio, &android).unwrap(),
+            snapshot("labelled.Beep.wav.meta", "AudioImporter")
+        );
+        assert_eq!(guid_only_section(NewImporter::Model, &android), None);
+    }
+
+    /// Only a .meta that names no importer reads the oldest section.
+    #[test]
+    fn a_meta_naming_no_importer_reads_the_oldest_section() {
+        let guid_only = unbound_yaml::parse_value(
+            "fileFormatVersion: 2\nguid: 0123456789abcdef0123456789abcdef\nlabels:\n- a\n",
+        )
+        .unwrap();
+        let read =
+            with_guid_only_section(&guid_only, NewImporter::Texture, "TextureImporter").unwrap();
+        assert_eq!(
+            read.get("TextureImporter")
+                .and_then(|t| t.get("textureShape"))
+                .and_then(|v| v.as_str()),
+            Some("2")
+        );
+        assert_eq!(
+            read.get("labels").map(|l| l.as_seq().unwrap().len()),
+            Some(1)
+        );
+        let named = unbound_yaml::parse_value("fileFormatVersion: 2\nguid: 0123456789abcdef0123456789abcdef\nTextureImporter:\n  isReadable: 1\n").unwrap();
+        assert!(with_guid_only_section(&named, NewImporter::Texture, "TextureImporter").is_none());
+        let texture = crate::texture::TextureImporter {
+            guid_only_section: true,
+            ..Default::default()
+        };
+        let settings = texture.settings(&guid_only);
+        assert_eq!(
+            (settings.shape, settings.compression),
+            (crate::texture::TextureShape::Cube, 0)
+        );
+        let plain = crate::texture::TextureImporter::default().settings(&guid_only);
+        assert_eq!(plain.shape, crate::texture::TextureShape::Texture2D);
     }
 }

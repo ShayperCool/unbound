@@ -167,12 +167,16 @@ impl ImportedAudio {
 #[derive(Debug, Clone)]
 pub struct AudioImporter {
     pub build_target: String,
+    /// A `.meta` that names no importer imports with the audio importer's oldest settings
+    /// ([`crate::new_meta::guid_only_section`]): the release families where that is measured.
+    pub guid_only_section: bool,
 }
 
 impl Default for AudioImporter {
     fn default() -> Self {
         Self {
             build_target: "Standalone".into(),
+            guid_only_section: false,
         }
     }
 }
@@ -183,10 +187,20 @@ impl Importer for AudioImporter {
     // 4: converted PCM samples (mono downmix, resampling) are stored as 16-bit samples.
     // 5: so are unconverted samples finer than 16 bits (24-bit, float).
     // 6: settings of serialized version 8 without `preloadAudioData` do not preload (did).
-    const VERSION: u32 = 6;
+    // 7: a .meta that names no importer imports with the oldest settings (compressed in memory).
+    const VERSION: u32 = 7;
 
     fn import(&self, source: &Path, bytes: &[u8], meta: &Value) -> Result<ImportedAudio> {
-        let settings = AudioSettings::read(meta, &self.build_target);
+        let oldest = if self.guid_only_section {
+            crate::new_meta::with_guid_only_section(
+                meta,
+                crate::new_meta::NewImporter::Audio,
+                "AudioImporter",
+            )
+        } else {
+            None
+        };
+        let settings = AudioSettings::read(oldest.as_ref().unwrap_or(meta), &self.build_target);
         let decoded = decode_source(source, bytes, false).context("decoding")?;
         let (channels, mut sample_rate, mut samples) =
             (decoded.channels, decoded.sample_rate, decoded.samples);
@@ -225,7 +239,11 @@ impl Importer for AudioImporter {
     }
 
     fn options_key(&self) -> String {
-        self.build_target.clone()
+        if self.guid_only_section {
+            format!("{}+guid-only-section", self.build_target)
+        } else {
+            self.build_target.clone()
+        }
     }
 }
 

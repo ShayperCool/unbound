@@ -726,7 +726,7 @@ namespace UnityEditor
         /// <summary>The section the Editor writes into a .meta that holds the GUID alone ("" where
         /// it is not measured: the texture and audio importers write their oldest version's values
         /// there).</summary>
-        static string LabelMetaSection(string path) =>
+        internal static string LabelMetaSection(string path) =>
             JsonDocument.Parse(Native.Call("label-meta-section", JsonSerializer.Serialize(new { path }))).RootElement.GetProperty("section").GetString() ?? "";
 
         static string s_ScriptMetaSection;

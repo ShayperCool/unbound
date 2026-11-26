@@ -1286,6 +1286,9 @@ pub struct TextureImporter {
     /// (stored RGB24 or RGBA32, matches the Unity 6000.0.71f1 Editor,
     /// tests/projects/assetpostprocessors Plain.png and Sprite.png), the rest as imported.
     pub before_compression: bool,
+    /// A `.meta` that names no importer imports with the texture importer's oldest settings
+    /// ([`crate::new_meta::guid_only_section`]): the release families where that is measured.
+    pub guid_only_section: bool,
 }
 
 impl Default for TextureImporter {
@@ -1299,6 +1302,7 @@ impl Default for TextureImporter {
             lighting: unbound_compat::LightingEncodings::default(),
             tree_textures: Default::default(),
             before_compression: false,
+            guid_only_section: false,
         }
     }
 }
@@ -1306,7 +1310,17 @@ impl Default for TextureImporter {
 impl TextureImporter {
     /// The settings a `.meta` imports with for this importer's build target and project.
     pub fn settings(&self, meta: &Value) -> TextureSettings {
-        let mut settings = TextureSettings::read(meta, &self.build_target);
+        let oldest = if self.guid_only_section {
+            crate::new_meta::with_guid_only_section(
+                meta,
+                crate::new_meta::NewImporter::Texture,
+                "TextureImporter",
+            )
+        } else {
+            None
+        };
+        let mut settings =
+            TextureSettings::read(oldest.as_ref().unwrap_or(meta), &self.build_target);
         if self.before_compression {
             settings.uncompressed = true;
             settings.explicit_format = None;
@@ -1524,7 +1538,8 @@ impl Importer for TextureImporter {
     //     width, sphere maps and the corner square; AutoCubemap by measured aspect bands.
     // 51: a wrap key a serializedVersion 13 .meta lacks reads Repeat for the UI types too (was Clamp).
     // 52: a PNG's gamma (gAMA) applies unless ignorePngGamma.
-    const VERSION: u32 = 52;
+    // 53: a .meta that names no importer imports with the oldest settings (a cube map).
+    const VERSION: u32 = 53;
 
     fn import(&self, source: &Path, bytes: &[u8], meta: &Value) -> Result<ImportedTexture> {
         let tree_meta = self.tree_textures.apply(source, meta);
@@ -1543,8 +1558,13 @@ impl Importer for TextureImporter {
     fn options_key(&self) -> String {
         // Resized textures depend on the Editor's job worker count, which follows the machine.
         format!(
-            "{}{}{}{}{}+workers{}+{}+{:?}",
+            "{}{}{}{}{}{}+workers{}+{}+{:?}",
             self.build_target,
+            if self.guid_only_section {
+                "+guid-only-section"
+            } else {
+                ""
+            },
             if self.before_compression {
                 "+before-compression"
             } else {

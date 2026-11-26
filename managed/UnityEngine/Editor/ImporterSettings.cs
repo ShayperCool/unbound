@@ -400,6 +400,14 @@ namespace UnityEditor
             set { CheckImporterState("set_mipmapFilter"); SetI("mipmaps.mipMapMode", (int)value); }
         }
 
+        /// <summary>How a cube map is made from the image (the .meta's <c>generateCubemap</c>;
+        /// tests/projects/guidonlymetas texture.*.importer).</summary>
+        public TextureImporterGenerateCubemap generateCubemap
+        {
+            get { CheckImporterState("get_generateCubemap"); return (TextureImporterGenerateCubemap)Read(m_Settings, "generateCubemap"); }
+            set { CheckImporterState("set_generateCubemap"); SetI("generateCubemap", (int)value); }
+        }
+
         public TextureImporterShape textureShape
         {
             get { CheckImporterState("get_textureShape"); return (TextureImporterShape)Read(m_Settings, "textureShape"); }

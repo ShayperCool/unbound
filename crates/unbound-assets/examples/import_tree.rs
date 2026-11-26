@@ -200,9 +200,12 @@ fn run(
         lighting,
         tree_textures: tree_textures.clone(),
         before_compression: false,
+        // As the engine imports for a release of the measured family (it asks the project's).
+        guid_only_section: true,
     };
     let audio = AudioImporter {
         build_target: target.to_string(),
+        guid_only_section: true,
     };
     let stats = Mutex::new(Stats::default());
     files.par_iter().for_each(|(kind, path)| {
