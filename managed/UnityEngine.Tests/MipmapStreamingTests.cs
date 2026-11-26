@@ -182,6 +182,13 @@ namespace UnityEngine.Tests
                 Assert.Equal(2, copy.loadedMipmapLevel);
                 Assert.Equal(2, copy.loadingMipmapLevel);
                 Assert.True(copy.IsRequestedMipmapLevelLoaded());
+                // A copy of the copy: unmeasured, a notice.
+                const string notice = "Texture2D.loadedMipmapLevel of a copy";
+                Unbound.Runtime.Stubs.Forget(notice);
+                var second = Object.Instantiate(copy);
+                Assert.Equal(2, second.loadedMipmapLevel);
+                Assert.Contains(Unbound.Runtime.Stubs.HitReport(), h => h.Key == notice);
+                Object.DestroyImmediate(second);
             }
             finally
             {

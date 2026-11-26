@@ -56,7 +56,10 @@ namespace UnityEngine
             copy.m_StreamingCopy = true;
             bool calculated = Calculated();
             int level = calculated ? desiredMipmapLevel : m_LoadedMipmapLevel;
-            if (calculated && (calculatedMipmapLevel != level || (m_RequestedMipmapLevel >= 0 && m_RequestedMipmapLevel != level)))
+            // Measured: a copy of a calculated source whose requested, calculated and desired levels
+            // agree. Another level of such a source, or a source that is itself a copy or not
+            // calculated with a level above 0, is not.
+            if (calculated ? calculatedMipmapLevel != level || (m_RequestedMipmapLevel >= 0 && m_RequestedMipmapLevel != level) : level > 0)
                 Unbound.Runtime.Stubs.Ignored("Texture2D.loadedMipmapLevel of a copy", "a copy reports its source's desired level as loaded (measured where the source's requested, calculated and desired levels were all the same)");
             copy.m_LoadedMipmapLevel = Mathf.Max(0, level);
         }
