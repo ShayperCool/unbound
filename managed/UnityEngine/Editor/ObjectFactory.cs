@@ -77,9 +77,9 @@ namespace UnityEditor
             Object made;
             if (typeof(ScriptableObject).IsAssignableFrom(type)) made = ScriptableObject.CreateInstance(type);
             else if (type == typeof(Material)) made = new Material(Shader.Find("Hidden/InternalErrorShader"));
-            // A plain Object (no engine class) is the engine's own object here, as before; what the
-            // Editor makes for one is unmeasured.
-            else if (Object.HasNoEngineClass(type) && type.GetConstructor(Type.EmptyTypes) != null) made = ObjectConstruction.CreateWithBacking(type);
+            // A plain Object is the engine's own object here, as before; what the Editor makes for
+            // one is unmeasured.
+            else if (type == typeof(Object)) made = ObjectConstruction.CreateWithBacking(type);
             else if (!s_EngineDefaults.Contains(type.FullName) && type.GetConstructor(Type.EmptyTypes) != null) made = (Object)Activator.CreateInstance(type);
             else throw new NotSupportedException("Unbound: ObjectFactory.CreateInstance cannot make a default " + type.FullName + " as the Editor does yet");
             made.name = "";

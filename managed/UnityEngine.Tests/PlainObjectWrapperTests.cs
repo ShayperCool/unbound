@@ -3,7 +3,7 @@ using Xunit;
 
 namespace UnityEngine.Tests
 {
-    /// <summary>A class deriving from Object outside the engine, with no engine class between.</summary>
+    /// <summary>A class deriving from Object outside the engine (unmeasured: stays an object).</summary>
     public class PlainObjectSubclass : Object
     {
     }
@@ -19,14 +19,18 @@ namespace UnityEngine.Tests
         [Fact]
         public void APlainObjectsNameAndHideFlagsThrow()
         {
-            foreach (var o in new Object[] { new Object(), new PlainObjectSubclass() })
-            {
-                Assert.Throws<NullReferenceException>(() => o.name);
-                Assert.Throws<NullReferenceException>(() => o.hideFlags);
-                Assert.Throws<NullReferenceException>(() => o.name = "x");
-                Assert.True(o == null);
-                Assert.Equal(0, o.GetInstanceID());
-            }
+            var o = new Object();
+            Assert.Throws<NullReferenceException>(() => o.name);
+            Assert.Throws<NullReferenceException>(() => o.hideFlags);
+            Assert.Throws<NullReferenceException>(() => o.name = "x");
+            Assert.True(o == null);
+            Assert.Equal(0, o.GetInstanceID());
+            // Only the measured plain Object: a class derived from it outside the engine is unmeasured
+            // and stays an object.
+            var subclass = new PlainObjectSubclass();
+            Assert.Equal("", subclass.name);
+            Assert.False(subclass == null);
+            Object.DestroyImmediate(subclass);
         }
 
         [Fact]

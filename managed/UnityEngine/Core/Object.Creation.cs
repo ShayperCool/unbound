@@ -14,21 +14,6 @@ namespace UnityEngine
             m_Destroyed = true;
         }
 
-        static readonly System.Collections.Concurrent.ConcurrentDictionary<Type, bool> s_NoEngineClass =
-            new System.Collections.Concurrent.ConcurrentDictionary<Type, bool>();
-
-        /// <summary>Whether the nearest engine class of <paramref name="type"/> is Object itself.</summary>
-        internal static bool HasNoEngineClass(Type type)
-        {
-            if (type == typeof(Object)) return true;
-            if (type.Assembly == typeof(Object).Assembly) return false;
-            return s_NoEngineClass.GetOrAdd(type, t =>
-            {
-                while (t.Assembly != typeof(Object).Assembly) t = t.BaseType;
-                return t == typeof(Object);
-            });
-        }
-
         /// <summary>Whether the wrapper has no engine object behind it (and never had one).</summary>
         internal bool IsUncreated => m_InstanceID == 0 && m_Destroyed && Compat.UncreatedObjectWrappersMeasured;
 
