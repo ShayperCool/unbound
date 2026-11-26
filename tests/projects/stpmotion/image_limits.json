@@ -54,10 +54,10 @@
   "reason": "The Editor's image within rounding (no pixel over 8/255), measured on one machine: an NVIDIA driver, the Linux Editor on OpenGL Core, Unbound's OpenGL Core device. Another GPU, driver or device is unmeasured."
  },
  "stp_pan_08.png": {
-  "mean": 0.0031,
+  "mean": 0.0035,
   "worst": 31,
   "over8": 4,
-  "reason": "One 2x2 cluster of pixels at a post's edge differs (up to 31/255); every other pixel is the Editor's within rounding. The cause is not resolved; stp_pan_noise, which shares the camera path, differs at the same spot. NVIDIA driver, OpenGL Core only."
+  "reason": "One 2x2 cluster of pixels at a post's edge differs (up to 31/255); every other pixel is the Editor's within rounding. The cause is not resolved; stp_pan_noise, which shares the camera path, differs at the same spot. NVIDIA driver, OpenGL Core only. Mean 0.0031 (over 8: 4) before Camera.projectionMatrix and worldToCameraMatrix took the Editor's bits (two identical runs of 2026-11-26)."
  },
  "stp_pan_far.png": {
   "mean": 0.0006,
@@ -72,10 +72,10 @@
   "reason": "The Editor's image within rounding (no pixel over 8/255), measured on one machine: an NVIDIA driver, the Linux Editor on OpenGL Core, Unbound's OpenGL Core device. Another GPU, driver or device is unmeasured."
  },
  "stp_pan_noise.png": {
-  "mean": 0.0031,
+  "mean": 0.0054,
   "worst": 20,
   "over8": 2,
-  "reason": "Two pixels at a post's edge differ (up to 20/255), where stp_pan_08 differs (the same camera path); every other pixel is the Editor's within rounding. The cause is not resolved. NVIDIA driver, OpenGL Core only."
+  "reason": "Two pixels at a post's edge differ (up to 20/255), where stp_pan_08 differs (the same camera path); every other pixel is the Editor's within rounding. The cause is not resolved. NVIDIA driver, OpenGL Core only. Mean 0.0031 (over 8: 2) before Camera.projectionMatrix and worldToCameraMatrix took the Editor's bits (two identical runs of 2026-11-26)."
  },
  "stp_pan_offset.png": {
   "mean": 0.0162,
@@ -90,16 +90,16 @@
   "reason": "The Editor's image within rounding (no pixel over 8/255), measured on one machine: an NVIDIA driver, the Linux Editor on OpenGL Core, Unbound's OpenGL Core device. Another GPU, driver or device is unmeasured."
  },
  "stp_post_texture.png": {
-  "mean": 8.3811,
+  "mean": 8.3828,
   "worst": 125,
-  "over8": 19947,
-  "reason": "Into the render texture through the renderer with post-processing data: the Editor's image keeps no STP history (aliased edges), Unbound's keeps it (softer). The OpenGL Core Editor's STP marks every pixel offscreen with no motion match through a renderer with post-processing data, even with a still camera; Unbound matches the motion (docs/COMPATIBILITY_GAPS.md, Q546). NVIDIA driver, OpenGL Core only."
+  "over8": 19964,
+  "reason": "Into the render texture through the renderer with post-processing data: the Editor's image keeps no STP history (aliased edges), Unbound's keeps it (softer). The OpenGL Core Editor's STP marks every pixel offscreen with no motion match through a renderer with post-processing data, even with a still camera; Unbound matches the motion (docs/COMPATIBILITY_GAPS.md, Q546). NVIDIA driver, OpenGL Core only. Mean 8.3811 (over 8: 19947) before Camera.projectionMatrix and worldToCameraMatrix took the Editor's bits (two identical runs of 2026-11-26)."
  },
  "stp_screen.png": {
-  "mean": 8.5685,
+  "mean": 8.5687,
   "worst": 116,
   "over8": 19834,
-  "reason": "The Editor's image keeps no STP history (aliased edges), Unbound's keeps it (softer). The OpenGL Core Editor's STP marks every pixel offscreen with no motion match through a renderer with post-processing data, even with a still camera; Unbound matches the motion (docs/COMPATIBILITY_GAPS.md, Q546). NVIDIA driver, OpenGL Core only."
+  "reason": "The Editor's image keeps no STP history (aliased edges), Unbound's keeps it (softer). The OpenGL Core Editor's STP marks every pixel offscreen with no motion match through a renderer with post-processing data, even with a still camera; Unbound matches the motion (docs/COMPATIBILITY_GAPS.md, Q546). NVIDIA driver, OpenGL Core only. Mean 8.5685 (over 8: 19834) before Camera.projectionMatrix and worldToCameraMatrix took the Editor's bits (two identical runs of 2026-11-26)."
  },
  "stp_screen_plain.png": {
   "mean": 0.0224,
@@ -138,10 +138,10 @@
   "reason": "The Editor's image within rounding (no pixel over 8/255), measured on one machine: an NVIDIA driver, the Linux Editor on OpenGL Core, Unbound's OpenGL Core device. Another GPU, driver or device is unmeasured."
  },
  "stp_turn_fast_720.png": {
-  "mean": 0.0011,
+  "mean": 0.0017,
   "worst": 3,
   "over8": 0,
-  "reason": "The Editor's image within rounding (no pixel over 8/255), measured on one machine: an NVIDIA driver, the Linux Editor on OpenGL Core, Unbound's OpenGL Core device. Another GPU, driver or device is unmeasured."
+  "reason": "The Editor's image within rounding (no pixel over 8/255), measured on one machine: an NVIDIA driver, the Linux Editor on OpenGL Core, Unbound's OpenGL Core device. Another GPU, driver or device is unmeasured. Mean 0.0011 (over 8: 0) before Camera.projectionMatrix and worldToCameraMatrix took the Editor's bits (two identical runs of 2026-11-26)."
  },
  "stp_turn_fast_noise.png": {
   "mean": 0.0039,
@@ -150,10 +150,10 @@
   "reason": "The Editor's image within rounding (no pixel over 8/255), measured on one machine: an NVIDIA driver, the Linux Editor on OpenGL Core, Unbound's OpenGL Core device. Another GPU, driver or device is unmeasured."
  },
  "stp_turn_fast_noise_720.png": {
-  "mean": 0.0034,
+  "mean": 0.0055,
   "worst": 2,
   "over8": 0,
-  "reason": "The Editor's image within rounding (no pixel over 8/255), measured on one machine: an NVIDIA driver, the Linux Editor on OpenGL Core, Unbound's OpenGL Core device. Another GPU, driver or device is unmeasured."
+  "reason": "The Editor's image within rounding (no pixel over 8/255), measured on one machine: an NVIDIA driver, the Linux Editor on OpenGL Core, Unbound's OpenGL Core device. Another GPU, driver or device is unmeasured. Mean 0.0034 (over 8: 0) before Camera.projectionMatrix and worldToCameraMatrix took the Editor's bits (two identical runs of 2026-11-26)."
  },
  "stp_veil.png": {
   "mean": 0.0,

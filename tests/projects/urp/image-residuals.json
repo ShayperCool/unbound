@@ -140,19 +140,19 @@
   "reason": "visually insignificant: 2 pixels up to 1/255 (not traced); 6000.0.71f1, Linux GPU, two identical runs of 2026-11-16"
  },
  "Reference/scenarios/lightmap_distance_shadowmask.png": {
-  "pixels": 13,
-  "worst": 1,
-  "reason": "visually insignificant: 13 pixels up to 1/255 (not traced); 6000.0.71f1, Linux GPU, two identical runs of 2026-11-16"
- },
- "Reference/scenarios/lightmap_shadowmask.png": {
   "pixels": 14,
   "worst": 1,
-  "reason": "visually insignificant: 14 pixels up to 1/255 (not traced); 6000.0.71f1, Linux GPU, two identical runs of 2026-11-16"
+  "reason": "visually insignificant: 14 pixels up to 1/255 (not traced); 6000.0.71f1, Linux GPU, two identical runs of 2026-11-16; 13 pixels up to 1 before Camera.projectionMatrix and worldToCameraMatrix took the Editor's bits (two identical runs of 2026-11-26)"
+ },
+ "Reference/scenarios/lightmap_shadowmask.png": {
+  "pixels": 15,
+  "worst": 1,
+  "reason": "visually insignificant: 15 pixels up to 1/255 (not traced); 6000.0.71f1, Linux GPU, two identical runs of 2026-11-16; 14 pixels up to 1 before Camera.projectionMatrix and worldToCameraMatrix took the Editor's bits (two identical runs of 2026-11-26)"
  },
  "Reference/scenarios/lightmap_subtractive.png": {
-  "pixels": 11,
+  "pixels": 12,
   "worst": 31,
-  "reason": "the edge of a sphere's realtime shadow in the lightmap scenarios (README); 6000.0.71f1, Linux GPU, two identical runs of 2026-11-16"
+  "reason": "the edge of a sphere's realtime shadow in the lightmap scenarios (README); 6000.0.71f1, Linux GPU, two identical runs of 2026-11-16; 11 pixels up to 31 before Camera.projectionMatrix and worldToCameraMatrix took the Editor's bits (two identical runs of 2026-11-26)"
  },
  "Reference/scenarios/lights.png": {
   "pixels": 1,
@@ -284,6 +284,11 @@
   "worst": 1,
   "reason": "visually insignificant: 1 pixels up to 1/255 (not traced); 6000.0.71f1, Linux GPU, two identical runs of 2026-11-16"
  },
+ "Reference/scenarios/postfx_grading_hdr.png": {
+  "pixels": 1,
+  "worst": 1,
+  "reason": "visually insignificant: 1 pixels up to 1/255 (not traced); exact before Camera.projectionMatrix and worldToCameraMatrix took the Editor's bits; 6000.0.71f1, Linux GPU, two identical runs of 2026-11-26"
+ },
  "Reference/scenarios/postfx_lift_gamma_gain.png": {
   "pixels": 1,
   "worst": 2,
@@ -300,9 +305,9 @@
   "reason": "visually insignificant: 1 pixels up to 1/255 (not traced); 6000.0.71f1, Linux GPU, two identical runs of 2026-11-16"
  },
  "Reference/scenarios/postfx_panini.png": {
-  "pixels": 1,
+  "pixels": 2,
   "worst": 1,
-  "reason": "visually insignificant: 1 pixels up to 1/255 (not traced); 6000.0.71f1, Linux GPU, two identical runs of 2026-11-16"
+  "reason": "visually insignificant: 2 pixels up to 1/255 (not traced); 6000.0.71f1, Linux GPU, two identical runs of 2026-11-16; 1 pixels up to 1 before Camera.projectionMatrix and worldToCameraMatrix took the Editor's bits (two identical runs of 2026-11-26)"
  },
  "Reference/scenarios/postfx_shadows_midtones_highlights.png": {
   "pixels": 1,
@@ -311,8 +316,8 @@
  },
  "Reference/scenarios/postfx_split_toning.png": {
   "pixels": 1,
-  "worst": 1,
-  "reason": "visually insignificant: 1 pixels up to 1/255 (not traced); 6000.0.71f1, Linux GPU, two identical runs of 2026-11-16"
+  "worst": 2,
+  "reason": "visually insignificant: 1 pixels up to 2/255 (not traced); 6000.0.71f1, Linux GPU, two identical runs of 2026-11-16; 1 pixels up to 1 before Camera.projectionMatrix and worldToCameraMatrix took the Editor's bits (two identical runs of 2026-11-26)"
  },
  "Reference/scenarios/postfx_tonemap.png": {
   "pixels": 1,
@@ -385,9 +390,9 @@
   "reason": "visually insignificant: 3 pixels up to 1/255 (not traced); 6000.0.71f1, Linux GPU, two identical runs of 2026-11-16"
  },
  "Reference/scenarios/ssao_lightmap.png": {
-  "pixels": 12,
+  "pixels": 13,
   "worst": 31,
-  "reason": "the edge of a sphere's realtime shadow in the lightmap scenarios (README); 6000.0.71f1, Linux GPU, two identical runs of 2026-11-16"
+  "reason": "the edge of a sphere's realtime shadow in the lightmap scenarios (README); 6000.0.71f1, Linux GPU, two identical runs of 2026-11-16; 12 pixels up to 31 before Camera.projectionMatrix and worldToCameraMatrix took the Editor's bits (two identical runs of 2026-11-26)"
  },
  "Reference/scenarios/ssao_params.png": {
   "pixels": 1,
@@ -409,6 +414,16 @@
   "worst": 1,
   "reason": "visually insignificant: 1 pixels up to 1/255 (not traced); 6000.0.71f1, Linux GPU, two identical runs of 2026-11-16"
  },
+ "Reference/scenarios/subpass_mrt_cleared.png": {
+  "pixels": 1,
+  "worst": 1,
+  "reason": "visually insignificant: 1 pixels up to 1/255 (not traced); exact before Camera.projectionMatrix and worldToCameraMatrix took the Editor's bits; 6000.0.71f1, Linux GPU, two identical runs of 2026-11-26"
+ },
+ "Reference/scenarios/subpass_mrt_mixed.png": {
+  "pixels": 1,
+  "worst": 1,
+  "reason": "visually insignificant: 1 pixels up to 1/255 (not traced); exact before Camera.projectionMatrix and worldToCameraMatrix took the Editor's bits; 6000.0.71f1, Linux GPU, two identical runs of 2026-11-26"
+ },
  "Reference/scenarios/terrain_light_layers.png": {
   "pixels": 1,
   "worst": 1,
@@ -420,9 +435,9 @@
   "reason": "visually insignificant: 1 pixels up to 1/255 (not traced); 6000.0.71f1, Linux GPU, two identical runs of 2026-11-16"
  },
  "Reference/scenarios/upscale_auto_fractional.png": {
-  "pixels": 11118,
+  "pixels": 11119,
   "worst": 133,
-  "reason": "fractional render scale: URP's (int)(pixelWidth * renderScale) without Mono's wider float intermediates (the Mono float opt-in is off by default), so the scaled target is a pixel off (docs/COMPATIBILITY_GAPS.md, script float arithmetic row); 6000.0.71f1, Linux GPU, two identical runs of 2026-11-16"
+  "reason": "fractional render scale: URP's (int)(pixelWidth * renderScale) without Mono's wider float intermediates (the Mono float opt-in is off by default), so the scaled target is a pixel off (docs/COMPATIBILITY_GAPS.md, script float arithmetic row); 6000.0.71f1, Linux GPU, two identical runs of 2026-11-16; 11118 pixels up to 133 before Camera.projectionMatrix and worldToCameraMatrix took the Editor's bits (two identical runs of 2026-11-26)"
  },
  "Reference/scenarios/upscale_stp.png": {
   "pixels": 16644,
@@ -470,34 +485,34 @@
   "reason": "visually insignificant: 1 pixels up to 1/255 (not traced); 6000.0.71f1, Linux GPU, two identical runs of 2026-11-16"
  },
  "Reference/unity-6000.0.71f1/paths-opengl/lightmap_distance_shadowmask_deferred.png": {
-  "pixels": 13,
+  "pixels": 14,
   "worst": 1,
-  "reason": "visually insignificant: 13 pixels up to 1/255 (not traced); 6000.0.71f1, Linux GPU, two identical runs of 2026-11-16"
+  "reason": "visually insignificant: 14 pixels up to 1/255 (not traced); 6000.0.71f1, Linux GPU, two identical runs of 2026-11-16; 13 pixels up to 1 before Camera.projectionMatrix and worldToCameraMatrix took the Editor's bits (two identical runs of 2026-11-26)"
  },
  "Reference/unity-6000.0.71f1/paths-opengl/lightmap_distance_shadowmask_forward.png": {
-  "pixels": 13,
+  "pixels": 14,
   "worst": 1,
-  "reason": "visually insignificant: 13 pixels up to 1/255 (not traced); 6000.0.71f1, Linux GPU, two identical runs of 2026-11-16"
+  "reason": "visually insignificant: 14 pixels up to 1/255 (not traced); 6000.0.71f1, Linux GPU, two identical runs of 2026-11-16; 13 pixels up to 1 before Camera.projectionMatrix and worldToCameraMatrix took the Editor's bits (two identical runs of 2026-11-26)"
  },
  "Reference/unity-6000.0.71f1/paths-opengl/lightmap_shadowmask_deferred.png": {
-  "pixels": 14,
+  "pixels": 15,
   "worst": 1,
-  "reason": "visually insignificant: 14 pixels up to 1/255 (not traced); 6000.0.71f1, Linux GPU, two identical runs of 2026-11-16"
+  "reason": "visually insignificant: 15 pixels up to 1/255 (not traced); 6000.0.71f1, Linux GPU, two identical runs of 2026-11-16; 14 pixels up to 1 before Camera.projectionMatrix and worldToCameraMatrix took the Editor's bits (two identical runs of 2026-11-26)"
  },
  "Reference/unity-6000.0.71f1/paths-opengl/lightmap_shadowmask_forward.png": {
-  "pixels": 14,
+  "pixels": 15,
   "worst": 1,
-  "reason": "visually insignificant: 14 pixels up to 1/255 (not traced); 6000.0.71f1, Linux GPU, two identical runs of 2026-11-16"
+  "reason": "visually insignificant: 15 pixels up to 1/255 (not traced); 6000.0.71f1, Linux GPU, two identical runs of 2026-11-16; 14 pixels up to 1 before Camera.projectionMatrix and worldToCameraMatrix took the Editor's bits (two identical runs of 2026-11-26)"
  },
  "Reference/unity-6000.0.71f1/paths-opengl/lightmap_subtractive_deferred.png": {
-  "pixels": 11,
+  "pixels": 12,
   "worst": 31,
-  "reason": "the edge of a sphere's realtime shadow in the lightmap scenarios (README); 6000.0.71f1, Linux GPU, two identical runs of 2026-11-16"
+  "reason": "the edge of a sphere's realtime shadow in the lightmap scenarios (README); 6000.0.71f1, Linux GPU, two identical runs of 2026-11-16; 11 pixels up to 31 before Camera.projectionMatrix and worldToCameraMatrix took the Editor's bits (two identical runs of 2026-11-26)"
  },
  "Reference/unity-6000.0.71f1/paths-opengl/lightmap_subtractive_forward.png": {
-  "pixels": 11,
+  "pixels": 12,
   "worst": 31,
-  "reason": "the edge of a sphere's realtime shadow in the lightmap scenarios (README); 6000.0.71f1, Linux GPU, two identical runs of 2026-11-16"
+  "reason": "the edge of a sphere's realtime shadow in the lightmap scenarios (README); 6000.0.71f1, Linux GPU, two identical runs of 2026-11-16; 11 pixels up to 31 before Camera.projectionMatrix and worldToCameraMatrix took the Editor's bits (two identical runs of 2026-11-26)"
  },
  "Reference/unity-6000.0.71f1/paths-opengl/lights_deferred.png": {
   "pixels": 1,
@@ -540,14 +555,14 @@
   "reason": "visually insignificant: 1 pixels up to 1/255 (not traced); 6000.0.71f1, Linux GPU, two identical runs of 2026-11-16"
  },
  "Reference/unity-6000.0.71f1/paths-opengl/shadows_deferred.png": {
-  "pixels": 8,
+  "pixels": 11,
   "worst": 1,
-  "reason": "visually insignificant: 8 pixels up to 1/255 (not traced); 6000.0.71f1, Linux GPU, two identical runs of 2026-11-16"
+  "reason": "visually insignificant: 11 pixels up to 1/255 (not traced); 6000.0.71f1, Linux GPU, two identical runs of 2026-11-16; 8 pixels up to 1 before Camera.projectionMatrix and worldToCameraMatrix took the Editor's bits (two identical runs of 2026-11-26)"
  },
  "Reference/unity-6000.0.71f1/paths-opengl/shadows_forward.png": {
-  "pixels": 8,
+  "pixels": 11,
   "worst": 1,
-  "reason": "visually insignificant: 8 pixels up to 1/255 (not traced); 6000.0.71f1, Linux GPU, two identical runs of 2026-11-16"
+  "reason": "visually insignificant: 11 pixels up to 1/255 (not traced); 6000.0.71f1, Linux GPU, two identical runs of 2026-11-16; 8 pixels up to 1 before Camera.projectionMatrix and worldToCameraMatrix took the Editor's bits (two identical runs of 2026-11-26)"
  },
  "Reference/unity-6000.0.71f1/paths-opengl/transparent_deferred.png": {
   "pixels": 1,
@@ -615,9 +630,9 @@
   "reason": "small: 725 pixels up to 1/255 (not traced); 6000.0.71f1, Linux GPU, two identical runs of 2026-11-16"
  },
  "Reference/unity-6000.0.71f1/paths-vulkan/lightmap_distance_shadowmask_forward.png": {
-  "pixels": 13,
+  "pixels": 14,
   "worst": 1,
-  "reason": "visually insignificant: 13 pixels up to 1/255 (not traced); 6000.0.71f1, Linux GPU, two identical runs of 2026-11-16"
+  "reason": "visually insignificant: 14 pixels up to 1/255 (not traced); 6000.0.71f1, Linux GPU, two identical runs of 2026-11-16; 13 pixels up to 1 before Camera.projectionMatrix and worldToCameraMatrix took the Editor's bits (two identical runs of 2026-11-26)"
  },
  "Reference/unity-6000.0.71f1/paths-vulkan/lightmap_shadowmask_deferred.png": {
   "pixels": 736,
@@ -625,19 +640,19 @@
   "reason": "small: 736 pixels up to 1/255 (not traced); 6000.0.71f1, Linux GPU, two identical runs of 2026-11-16"
  },
  "Reference/unity-6000.0.71f1/paths-vulkan/lightmap_shadowmask_forward.png": {
-  "pixels": 14,
+  "pixels": 15,
   "worst": 1,
-  "reason": "visually insignificant: 14 pixels up to 1/255 (not traced); 6000.0.71f1, Linux GPU, two identical runs of 2026-11-16"
+  "reason": "visually insignificant: 15 pixels up to 1/255 (not traced); 6000.0.71f1, Linux GPU, two identical runs of 2026-11-16; 14 pixels up to 1 before Camera.projectionMatrix and worldToCameraMatrix took the Editor's bits (two identical runs of 2026-11-26)"
  },
  "Reference/unity-6000.0.71f1/paths-vulkan/lightmap_subtractive_deferred.png": {
-  "pixels": 37,
+  "pixels": 38,
   "worst": 31,
-  "reason": "the edge of a sphere's realtime shadow in the lightmap scenarios (README); 6000.0.71f1, Linux GPU, two identical runs of 2026-11-16"
+  "reason": "the edge of a sphere's realtime shadow in the lightmap scenarios (README); 6000.0.71f1, Linux GPU, two identical runs of 2026-11-16; 37 pixels up to 31 before Camera.projectionMatrix and worldToCameraMatrix took the Editor's bits (two identical runs of 2026-11-26)"
  },
  "Reference/unity-6000.0.71f1/paths-vulkan/lightmap_subtractive_forward.png": {
-  "pixels": 11,
+  "pixels": 12,
   "worst": 31,
-  "reason": "the edge of a sphere's realtime shadow in the lightmap scenarios (README); 6000.0.71f1, Linux GPU, two identical runs of 2026-11-16"
+  "reason": "the edge of a sphere's realtime shadow in the lightmap scenarios (README); 6000.0.71f1, Linux GPU, two identical runs of 2026-11-16; 11 pixels up to 31 before Camera.projectionMatrix and worldToCameraMatrix took the Editor's bits (two identical runs of 2026-11-26)"
  },
  "Reference/unity-6000.0.71f1/paths-vulkan/lights_deferred.png": {
   "pixels": 241,
@@ -660,14 +675,14 @@
   "reason": "small: 127 pixels up to 1/255 (not traced); 6000.0.71f1, Linux GPU, two identical runs of 2026-11-16"
  },
  "Reference/unity-6000.0.71f1/paths-vulkan/shadows_deferred.png": {
-  "pixels": 952,
+  "pixels": 953,
   "worst": 2,
-  "reason": "small: 952 pixels up to 2/255 (not traced); 6000.0.71f1, Linux GPU, two identical runs of 2026-11-16"
+  "reason": "small: 953 pixels up to 2/255 (not traced); 6000.0.71f1, Linux GPU, two identical runs of 2026-11-16; 952 pixels up to 2 before Camera.projectionMatrix and worldToCameraMatrix took the Editor's bits (two identical runs of 2026-11-26)"
  },
  "Reference/unity-6000.0.71f1/paths-vulkan/shadows_forward.png": {
-  "pixels": 7,
+  "pixels": 10,
   "worst": 1,
-  "reason": "visually insignificant: 7 pixels up to 1/255 (not traced); 6000.0.71f1, Linux GPU, two identical runs of 2026-11-16"
+  "reason": "visually insignificant: 10 pixels up to 1/255 (not traced); 6000.0.71f1, Linux GPU, two identical runs of 2026-11-16; 7 pixels up to 1 before Camera.projectionMatrix and worldToCameraMatrix took the Editor's bits (two identical runs of 2026-11-26)"
  },
  "Reference/unity-6000.0.71f1/paths-vulkan/ssao_deferred.png": {
   "pixels": 818,
