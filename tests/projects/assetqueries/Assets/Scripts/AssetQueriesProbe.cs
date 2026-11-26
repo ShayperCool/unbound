@@ -33,8 +33,11 @@ public class AssetQueriesProbe : MonoBehaviour
         try { result = action(); }
         catch (Exception e) { result = "throws " + e.GetType().FullName + ": " + e.Message; }
         Row(key, result);
-        if (logs.Count > 0) Row(key + ".logs", string.Join("\n---\n", logs));
+        if (logs.Count > 0) Row(key + ".logs", Relative(string.Join("\n---\n", logs)));
     }
+
+    /// <summary>The project's absolute path read "<project>" (it differs between captures).</summary>
+    static string Relative(string text) => text.Replace(Path.GetFullPath("."), "<project>");
 
     static string S(string value) => value == null ? "null" : "\"" + value + "\"";
     static string L(IEnumerable<string> values) => values == null ? "null" : "[" + string.Join(", ", values.Select(S)) + "]";
