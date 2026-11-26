@@ -298,13 +298,7 @@ namespace Unbound.Runtime
     //   physics or animation are unmeasured.
     // C4 (Unbound's choice, unmeasured): a capsule is an upright circle of its radius times the
     //   larger horizontal scale (the Scripting API calls the obstacle "cylindrical in shape").
-    // C5: a box whose up axis stands vertical (turned about the vertical or not, of any size, moving
-    //   or still) is no obstacle for avoidance or contact: agents walk through it and one placed
-    //   inside stays where it is (Unity 6000.0.71f1, tests/projects/navpath obstacle-shapes `box*`
-    //   but `boxtilt*`), although the AI Navigation 2.0 Manual says agents avoid obstacles that do
-    //   not carve. A tilted box, even by 1 degree, is avoided and pushes agents out (boxtilt*),
-    //   measured but not reproduced: Unbound's choice for it, unmeasured in its details, is the
-    //   rectangle around its horizontal outline, along
+    // C5 (Unbound's choice, unmeasured): a box is the rectangle around its horizontal outline, along
     //   its turned x axis, cut into ceil(long side / short side) equal pieces along its longer side,
     //   each covered by the circle through its corners. Bound: each circle's radius is at most
     //   sqrt(2) times the box's half-width, so the cover bulges at most (sqrt(2) - 1) times the
@@ -728,10 +722,9 @@ namespace Unbound.Runtime
         {
             s_Circles.Clear();
             bool measuredCapsules = Compat.NavMeshUprightCapsuleAvoidanceMeasured;
-            bool uprightBoxesIgnored = Compat.NavMeshUprightBoxObstaclesIgnored;
             foreach (var obstacle in s_Obstacles)
                 if (obstacle != null && obstacle.isActiveAndEnabled && !IsCarved(obstacle))
-                    AddCircles(obstacle, s_Circles, measuredCapsules, uprightBoxesIgnored);
+                    AddCircles(obstacle, s_Circles, measuredCapsules);
         }
 
         /// <summary>Before <paramref name="crowd"/> updates: the enabled obstacles,
@@ -914,7 +907,7 @@ namespace Unbound.Runtime
         const float UprightAxisTolerance = 1e-6f;
 
         /// <summary>The obstacle's shape as circles in the horizontal plane, with its height span.</summary>
-        static void AddCircles(NavMeshObstacle obstacle, List<Circle> into, bool measuredCapsules, bool uprightBoxesIgnored)
+        static void AddCircles(NavMeshObstacle obstacle, List<Circle> into, bool measuredCapsules)
         {
             var t = obstacle.transform;
             var center = t.TransformPoint(obstacle.center);
@@ -937,12 +930,6 @@ namespace Unbound.Runtime
                 return;
             }
             var rotation = t.rotation;
-            if (uprightBoxesIgnored)
-            {
-                // An upright box is no avoidance obstacle at all (C5).
-                Vector3 up = rotation * Vector3.up;
-                if (Mathf.Abs(up.x) <= UprightAxisTolerance && Mathf.Abs(up.z) <= UprightAxisTolerance) return;
-            }
             var size = obstacle.size;
             var ax = rotation * new Vector3(size.x * scale.x * 0.5f, 0f, 0f);
             var ay = rotation * new Vector3(0f, size.y * scale.y * 0.5f, 0f);
