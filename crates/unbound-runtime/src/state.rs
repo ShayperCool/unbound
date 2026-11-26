@@ -3310,7 +3310,10 @@ mod tests {
     fn guid_only_texture_sections_follow_the_import() {
         let dir = std::env::temp_dir().join(format!("unbound-guid-only-{}", std::process::id()));
         std::fs::create_dir_all(&dir).unwrap();
-        let context = unbound_assets::new_meta::MetaContext { platforms: vec![] };
+        let context = unbound_assets::new_meta::MetaContext {
+            platforms: vec![],
+            mode_2d: false,
+        };
         let png = |name: &str, width, height| {
             let file = dir.join(name);
             let rgba = [1u8, 2, 3, 255].repeat((width * height) as usize);

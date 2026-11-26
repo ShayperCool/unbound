@@ -213,9 +213,14 @@ pub fn importer_layout(importer: &str) -> Option<(String, Option<String>)> {
 /// labelled.Tex.png and labelled.Beep.wav, tests/projects/guidonlymetas); `None` for the others
 /// (a model's legacy import, which also writes its materials, is not supported).
 pub fn guid_only_section(importer: NewImporter, context: &MetaContext) -> Option<String> {
-    // The new asset's section: its .meta after the format version and GUID lines.
+    // The new asset's section of a 3D project (a 2D project's new texture is a sprite; the oldest
+    // settings in a 2D project are not measured): its .meta after the format version and GUID lines.
+    let context = MetaContext {
+        mode_2d: false,
+        ..context.clone()
+    };
     let new = |name: &str| {
-        let text = text(importer, Guid(1), Path::new(name), context);
+        let text = text(importer, Guid(1), Path::new(name), &context);
         text.splitn(3, '\n').nth(2).unwrap_or_default().to_string()
     };
     let changed = |section: String, edits: &[(&str, &str)]| {
@@ -895,6 +900,7 @@ mod tests {
         };
         let android = MetaContext {
             platforms: vec!["Android".into()],
+            mode_2d: false,
         };
         assert_eq!(
             guid_only_section(NewImporter::Texture, &android).unwrap(),
