@@ -2000,13 +2000,18 @@ fn effective_scripted_importer(s: &RuntimeState, file: &Path) -> Option<(String,
     // writes beside the importer's section) imports with that importer (matches the Unity
     // 6000.0.71f1 Editor, tests/projects/importselfload asset.Preset.ovr2, set_override.*).
     let named = unbound_assets::meta::scripted_importer_of(file);
-    if let Some(script) = registry.as_ref().and_then(|r| {
-        override_of(
-            r,
-            unbound_assets::meta::importer_override_hash(file),
-            named.as_ref(),
-        )
-    }) {
+    // (The `.meta` is read for it only when some importer can be named so.)
+    if let Some(script) = registry
+        .as_ref()
+        .filter(|r| !r.overrides.is_empty())
+        .and_then(|r| {
+            override_of(
+                r,
+                unbound_assets::meta::importer_override_hash(file),
+                named.as_ref(),
+            )
+        })
+    {
         return Some(script);
     }
     let ext = file.extension().and_then(|e| e.to_str()).unwrap_or("");

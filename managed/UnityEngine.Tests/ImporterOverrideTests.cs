@@ -91,6 +91,15 @@ namespace UnityEngine.Tests
             {
                 AssetDatabase.SetImporterOverride<TopLevelOverrideImporter>("Assets/Data/Missing.ovr2");
                 Assert.Equal(new[] { "Error: Cannot set Importer override at \"Assets/Data/Missing.ovr2\". No Asset found at that path." }, logs);
+                // An asset deleted in this session: no asset there, as Unity's OnlyExistingAssets says.
+                logs.Clear();
+                AssetDatabase.ApplyRefresh("{\"assets\":[{\"path\":\"Assets/Data/Gone.ovr2\",\"removed\":\"c0de00000000000000000000000000e2\"}]}");
+                Assert.Equal("c0de00000000000000000000000000e2", AssetDatabase.AssetPathToGUID("Assets/Data/Gone.ovr2"));
+                AssetDatabase.SetImporterOverride<TopLevelOverrideImporter>("Assets/Data/Gone.ovr2");
+                Assert.Equal(new[] { "Error: Cannot set Importer override at \"Assets/Data/Gone.ovr2\". No Asset found at that path." }, logs);
+                AssetDatabase.ClearImporterOverride("Assets/Data/Gone.ovr2");
+                AssetDatabase.SetImporterOverrideInternal("Assets/Data/Gone.ovr2", typeof(TopLevelOverrideImporter));
+                Assert.Single(logs);
                 // A class registered as no project importer is not set: said.
                 logs.Clear();
                 AssetDatabase.SetImporterOverrideInternal("Assets/Data/Mismatch.json", typeof(TopLevelOverrideImporter));

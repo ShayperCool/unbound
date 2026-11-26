@@ -77,8 +77,12 @@ namespace UnityEditor
             return GetImporterType(path);
         }
 
-        /// <summary>An existing asset's GUID, empty for a path without one.</summary>
-        internal static GUID GUIDFromExistingAssetPath(string path) => new GUID(string.IsNullOrEmpty(path) ? "" : AssetPathToGUID(path));
+        /// <summary>An existing asset's GUID, empty for a path without one (a deleted asset's
+        /// included, as AssetPathToGUID with OnlyExistingAssets answers: Unity's C# goes through it).</summary>
+        internal static GUID GUIDFromExistingAssetPath(string path) => new GUID(ExistingAssetGuid(path));
+
+        static string ExistingAssetGuid(string path) =>
+            string.IsNullOrEmpty(path) ? "" : AssetPathToGUID(path, AssetPathToGUIDOptions.OnlyExistingAssets);
 
         // Unity's own C# (UnityCsReference 6000.0, Modules/AssetDatabase/Editor/ScriptBindings/AssetDatabase.bindings.cs).
         public static void SetImporterOverride<T>(string path)
@@ -119,7 +123,7 @@ namespace UnityEditor
         /// generic), is not set (said).</summary>
         internal static void SetImporterOverrideInternal(string path, Type importer)
         {
-            var guid = string.IsNullOrEmpty(path) ? null : AssetPathToGUID(path);
+            var guid = ExistingAssetGuid(path);
             if (string.IsNullOrEmpty(guid) || importer == null) return;
             var hash = typeof(ScriptedImporter).IsAssignableFrom(importer) ? ScriptedImports.OverrideHash(importer) : null;
             if (hash == null || ScriptedImports.ForOverrideHash(hash) != importer)
@@ -135,7 +139,7 @@ namespace UnityEditor
         /// one is left alone (not measured).</summary>
         public static void ClearImporterOverride(string path)
         {
-            var guid = string.IsNullOrEmpty(path) ? null : AssetPathToGUID(path);
+            var guid = ExistingAssetGuid(path);
             if (string.IsNullOrEmpty(guid) || MetaText(path) is not { } text || !text.Contains(AssetPaths.ImporterOverrideKey, StringComparison.Ordinal)) return;
             WriteImporterOverride(path, guid, null);
         }

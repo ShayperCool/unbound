@@ -93,7 +93,8 @@ pub fn scripted_importer_of(file: &std::path::Path) -> Option<(String, i64)> {
 pub fn has_importer_override(file: &std::path::Path) -> bool {
     let mut path = file.as_os_str().to_owned();
     path.push(".meta");
-    std::fs::read_to_string(path).is_ok_and(|meta| meta.lines().any(|l| l == "importerOverride:"))
+    std::fs::read_to_string(path)
+        .is_ok_and(|meta| meta.lines().any(|l| l.trim_end() == "importerOverride:"))
 }
 
 /// `nativeImporterType` of an importer override naming a ScriptedImporter (the ScriptedImporter
@@ -439,6 +440,17 @@ mod tests {
         )
         .unwrap();
         assert!(super::has_importer_override(&asset));
+        // A `.meta` of CRLF endings, as both readers take it.
+        std::fs::write(
+            &meta,
+            "fileFormatVersion: 2\r\nguid: 1\r\nimporterOverride:\r\n  nativeImporterType: 2089858483\r\n  scriptedImporterType:\r\n    serializedVersion: 2\r\n    Hash: 104ddd7902d5b6bcff8d6316c3d1f5bc\r\nDefaultImporter:\r\n  userData: \r\n",
+        )
+        .unwrap();
+        assert!(super::has_importer_override(&asset));
+        assert_eq!(
+            super::importer_override_hash(&asset).as_deref(),
+            Some("104ddd7902d5b6bcff8d6316c3d1f5bc")
+        );
         std::fs::write(
             &meta,
             "fileFormatVersion: 2\nguid: 1\nScriptedImporter:\n  script: {fileID: 11500000, guid: 2, type: 3}\n",
