@@ -24,6 +24,7 @@ public class TypeNamesProbe : MonoBehaviour
         ("nullableInt", typeof(int?)),
         ("funcInt", typeof(Func<int>)),
         ("enumerable", typeof(System.Linq.Enumerable)),
+        ("binaryFormatter", typeof(System.Runtime.Serialization.Formatters.Binary.BinaryFormatter)),
         ("listOpen", typeof(List<>)),
         ("game", typeof(TypeNamesProbe)),
         ("gameNested", typeof(Nested)),

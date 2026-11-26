@@ -12,7 +12,7 @@ Measured in the Unity 6000.0.71f1 Editor (batch mode, two identical captures): c
 are named after the Mono assembly that defines them, `Version=4.0.0.0, Culture=neutral,
 PublicKeyToken=b77a5c561934e089` (`System.Boolean, mscorlib`, `System.Uri, System`,
 `System.Collections.Generic.HashSet`1`, `System.Linq.Enumerable` in System.Core,
-`System.Xml.XmlDocument, System.Xml`); a constructed generic type's `FullName` and qualified name
+`System.Xml.XmlDocument, System.Xml`, `BinaryFormatter` in mscorlib, whose .NET assembly Unbound ships itself); a constructed generic type's `FullName` and qualified name
 hold its arguments' qualified names; engine types are named after their module
 (`UnityEngine.Rigidbody, UnityEngine.PhysicsModule, Version=0.0.0.0, Culture=neutral,
 PublicKeyToken=null`); every qualified name reads back; `Type.GetType` finds Mono's names, not

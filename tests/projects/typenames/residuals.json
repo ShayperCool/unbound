@@ -16,7 +16,8 @@
     "enumerable.assemblyToString",
     "uri.assemblyToString",
     "xmlDocument.assemblyToString",
-    "rigidbody.assemblyToString"
+    "rigidbody.assemblyToString",
+    "binaryFormatter.assemblyToString"
   ],
   "A .NET class library assembly holding types of several Mono assemblies keeps its .NET name (Assembly.FullName/GetName of System.Linq, System.Private.Uri, System.Private.Xml; HashSet's assembly is .NET's core library, named mscorlib): the Editor names System.Core, System, System.Xml": [
     "enumerable.assembly",
@@ -30,7 +31,10 @@
     "xmlDocument.assemblyNameFull",
     "hashSetInt.assembly",
     "hashSetInt.assemblyName",
-    "hashSetInt.assemblyNameFull"
+    "hashSetInt.assemblyNameFull",
+    "binaryFormatter.assembly",
+    "binaryFormatter.assemblyName",
+    "binaryFormatter.assemblyNameFull"
   ],
   "Unbound builds every Unity module into UnityEngine.CoreModule: an engine type's Assembly names it, where the Editor names the type's module (its AssemblyQualifiedName is mapped)": [
     "rigidbody.assembly",

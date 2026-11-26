@@ -120,24 +120,21 @@ namespace Unbound
         /// HashSet in System.Core, still names mscorlib this way). Another class library assembly
         /// holds types of several Mono assemblies and keeps .NET's name, with a notice; the engine
         /// keeps UnityEngine.CoreModule (unmeasured which module Mono would name).</summary>
-        static bool s_Noticed;
-
         static string Mapped(Assembly assembly)
         {
             if (assembly == typeof(object).Assembly)
                 return ClassLibrary().TryGetValue("System.Object", out var corlib) ? corlib : null;
-            if (IsClassLibrary(assembly) && !s_Noticed)
-            {
-                s_Noticed = true;
+            if (IsClassLibrary(assembly))
                 Runtime.Stubs.Ignored("Assembly.FullName of .NET class library assemblies",
-                    "an assembly other than the core library keeps its .NET name (" + assembly.GetName().Name + " first): .NET's assemblies hold other sets of types than the Editor's Mono ones");
-            }
+                    "keeps .NET's name for assemblies other than the core library: .NET's assemblies hold other sets of types than the Editor's Mono ones");
             return null;
         }
 
-        /// <summary>Whether an assembly is .NET's class library: loaded into the default context from
-        /// the runtime's directory. A game plugin of a framework name (a System.Buffers.dll in the
-        /// project) is the game's and keeps its own names.</summary>
+        /// <summary>Whether an assembly is .NET's class library: a framework assembly (System.*,
+        /// Microsoft.*, netstandard, mscorlib) loaded into the default context, from the runtime's
+        /// directory or Unbound's (its full BinaryFormatter and CodeDom builds). A game plugin of a
+        /// framework name (a System.Buffers.dll in the project) loads into the game's context and
+        /// keeps its own names.</summary>
         static bool IsClassLibrary(Assembly assembly)
         {
             if (assembly == typeof(object).Assembly) return true;
@@ -145,10 +142,9 @@ namespace Unbound
             bool library = false;
             if (!assembly.IsDynamic && AssemblyLoadContext.GetLoadContext(assembly) == AssemblyLoadContext.Default)
             {
-                var location = assembly.Location;
-                var runtime = Path.GetDirectoryName(typeof(object).Assembly.Location);
-                library = location.Length > 0 && runtime != null
-                    && string.Equals(Path.GetDirectoryName(location), runtime, StringComparison.Ordinal);
+                var name = assembly.GetName().Name ?? "";
+                library = name == "netstandard" || name == "mscorlib" || name == "System"
+                    || name.StartsWith("System.", StringComparison.Ordinal) || name.StartsWith("Microsoft.", StringComparison.Ordinal);
             }
             s_ClassLibraryAssemblies.AddOrUpdate(assembly, library ? s_Yes : s_No);
             return library;
@@ -188,6 +184,9 @@ namespace Unbound
                 var md = pe.GetMetadataReader();
                 if (!md.IsAssembly) return;
                 var assemblyName = md.GetAssemblyDefinition().GetAssemblyName();
+#pragma warning disable SYSLIB0044 // CodeBase: what Mono's AssemblyName holds
+                assemblyName.CodeBase = new Uri(Path.GetFullPath(file)).AbsoluteUri;
+#pragma warning restore SYSLIB0044
                 var assembly = assemblyName.FullName;
                 s_MonoAssemblies.TryAdd(assembly, assemblyName);
                 foreach (var handle in md.TypeDefinitions)

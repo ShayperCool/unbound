@@ -102,6 +102,14 @@
 {"k": "enumerable.assemblyNameFull", "v": "System.Core, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089"}
 {"k": "enumerable.assemblyToString", "v": "System.Core, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089"}
 {"k": "enumerable.roundTrip", "v": true}
+{"k": "binaryFormatter.aqn", "v": "System.Runtime.Serialization.Formatters.Binary.BinaryFormatter, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089"}
+{"k": "binaryFormatter.fullName", "v": "System.Runtime.Serialization.Formatters.Binary.BinaryFormatter"}
+{"k": "binaryFormatter.toString", "v": "System.Runtime.Serialization.Formatters.Binary.BinaryFormatter"}
+{"k": "binaryFormatter.assembly", "v": "mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089"}
+{"k": "binaryFormatter.assemblyName", "v": "mscorlib"}
+{"k": "binaryFormatter.assemblyNameFull", "v": "mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089"}
+{"k": "binaryFormatter.assemblyToString", "v": "mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089"}
+{"k": "binaryFormatter.roundTrip", "v": true}
 {"k": "listOpen.aqn", "v": "System.Collections.Generic.List`1, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089"}
 {"k": "listOpen.fullName", "v": "System.Collections.Generic.List`1"}
 {"k": "listOpen.toString", "v": "System.Collections.Generic.List`1[T]"}
