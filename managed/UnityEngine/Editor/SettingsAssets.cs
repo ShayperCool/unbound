@@ -354,7 +354,10 @@ namespace Unbound.Runtime
         /// kept from Play mode: the file is written when the Editor quits after Play mode has ended
         /// (matches the Unity 6000.0.71f1 Editor, tests/projects/scenesave build-index-play), and by
         /// the first SaveAssets after Play mode (unmeasured in a probe); SaveAssets in Play mode and
-        /// the Editor's exit with Play mode on still write nothing (unmeasured for this file).</summary>
+        /// the Editor's exit with Play mode on still write nothing (tests/projects/projectwrites
+        /// play.13.save, play.exit). The file is one: other values of it changed in Play mode are
+        /// written with the list (unmeasured), and so is the list at a restart of a session in Play
+        /// mode (unmeasured).</summary>
         internal static void Edit(string name, Action<YText> change, bool keptFromPlayMode = false)
         {
             var file = AtPath("ProjectSettings/" + name + ".asset");
