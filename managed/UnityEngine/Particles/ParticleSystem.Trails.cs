@@ -423,12 +423,19 @@ namespace UnityEngine
         /// second, the age percentage over the inverse start lifetime in single precision, equal
         /// ages in index order, so the oldest particle ends the ribbon (6000.0.71f1,
         /// tests/projects/particletrails ribbon/*: a burst's particles, of different lifetimes,
-        /// are a float step apart in that quotient).</summary>
+        /// are a float step apart in that quotient). A particle of infinite start lifetime, whose
+        /// quotient is 0 over 0, counts as newborn (Unbound's choice, unmeasured), so the order
+        /// stays a total one.</summary>
         int CompareRibbonAge(int a, int b)
         {
-            float ageA = m_Particles[a].m_AgePercent / m_Particles[a].m_InvStartLifetime;
-            float ageB = m_Particles[b].m_AgePercent / m_Particles[b].m_InvStartLifetime;
+            float ageA = RibbonAge(a), ageB = RibbonAge(b);
             return ageA < ageB ? -1 : ageA > ageB ? 1 : a.CompareTo(b);
+        }
+
+        float RibbonAge(int index)
+        {
+            float age = m_Particles[index].m_AgePercent / m_Particles[index].m_InvStartLifetime;
+            return float.IsNaN(age) ? 0f : age;
         }
 
         /// <summary>Fills <paramref name="into"/> with the trails to draw. Per-particle trails come
