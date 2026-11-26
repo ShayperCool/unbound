@@ -1,35 +1,37 @@
 # Precomputed realtime global illumination
 
-Unity's precomputed realtime GI (Lighting window: Realtime Global Illumination; Unity 6000.0
-Manual: [realtime GI](https://docs.unity3d.com/6000.0/Documentation/Manual/realtime-gi-using-enlighten.html))
-lights static geometry with bounced light from realtime lights, emissive materials and the
-environment, updated at runtime from data precomputed in the Editor. This page records what the
-data holds, how the runtime update behaves (documented, then measured against the Unity
-6000.0.71f1 Editor in [tests/projects/realtimegi](../tests/projects/realtimegi)), and how Unbound
-implements it. Status: the engine draws precomputed realtime GI for scenes whose renderers have
-Preserve UVs or [automatic charts](#automatic-charts), lit by point, spot and directional lights and the environment (an ambient color, a
-gradient, the skybox or a cube a script sets), non-directional or directional (with its
-[directionality](#directionality)), in the built-in
-pipeline and, for its lights and environment, under a render pipeline that gives realtime GI its
-lights (the Universal Render Pipeline: [Lights of a render pipeline](#lights-of-a-render-pipeline);
-frames drawn by a pipeline's own shaders are not compared). For tests/projects/realtimegi every
-renderer covers the same realtime lightmap texels as in the Editor and the lightmaps of the light
-cases match within the comparator's tolerance but for a few isolated texels, as its frames do (see [Residuals](#residuals)); `unbound doctor` lists scenes with realtime GI, which is
-drawn only in part. Not supported yet, each with a warning ([Open](#open) lists the main ones):
-light types other than point, spot and directional (the scene's realtime GI is then not drawn: its
-renderers take light probes again; area lights are baked only), light probes whose probe set cannot be read or placed (they light nothing; the
-lightmaps are drawn), light probes of a scene that are not the current ones (additive loads),
-systems that reference another scene's systems, and lights of linear intensity in a gamma-space
-project of the built-in pipeline (taken as in a linear-space one). In a gamma-space project the
-systems solve as in a linear one and the shaders decode the realtime lightmap with an exponent
-of 1/2.2 (`unity_DynamicLightmap_HDR` (1, 1/2.2) instead of (1, 1)), `DynamicGI.SetEmissive` takes its color as a gamma color in both, and the sky the
-environment and the ambient probe are drawn from writes gamma-encoded colors, which are taken
-as such (tests/projects/realtimegi `--color-space gamma`: the Room's lightmaps and frames match
-within the comparator's tolerance, as loaded, with its point light moved, brighter, with bounce
-intensity 3, with the indirect scale 2, in the three emission cases, with an albedo change,
-with a spot and a directional light, and with the ambient color, a procedural sky at ambient
-intensities 1 and 2, a gradient and a script's cube as the environment, and so do its light
-probes but in `room-bounce`, which has the linear project's residual (below, Residuals); the
+Unity's precomputed realtime GI (Lighting window: Realtime Global Illumination; Unity 6000.0 Manual:
+[realtime
+GI](https://docs.unity3d.com/6000.0/Documentation/Manual/realtime-gi-using-enlighten.html)) lights
+static geometry with bounced light from realtime lights, emissive materials and the environment,
+updated at runtime from data precomputed in the Editor. This page records what the data holds, how
+the runtime update behaves (documented, then measured against the Unity 6000.0.71f1 Editor in
+[tests/projects/realtimegi](../tests/projects/realtimegi)), and how Unbound implements it. Status:
+the engine draws precomputed realtime GI for scenes whose renderers have Preserve UVs or [automatic
+charts](#automatic-charts), lit by point, spot and directional lights and the environment (an
+ambient color, a gradient, the skybox or a cube a script sets), non-directional or directional (with
+its [directionality](#directionality)), in the built-in pipeline and, for its lights and
+environment, under a render pipeline that gives realtime GI its lights (the Universal Render
+Pipeline: [Lights of a render pipeline](#lights-of-a-render-pipeline); frames drawn by a pipeline's
+own shaders are not compared). For tests/projects/realtimegi every renderer covers the same realtime
+lightmap texels as in the Editor and the lightmaps of the light cases match within the comparator's
+tolerance but for a few isolated texels, as its frames do (see [Residuals](#residuals)); `unbound
+doctor` lists scenes with realtime GI, which is drawn only in part. Not supported yet, each with a
+warning ([Open](#open) lists the main ones): light types other than point, spot and directional (the
+scene's realtime GI is then not drawn: its renderers take light probes again; area lights are baked
+only), light probes whose probe set cannot be read or placed (they light nothing; the lightmaps are
+drawn), light probes of a scene that are not the current ones (additive loads), systems that
+reference another scene's systems, and lights of linear intensity in a gamma-space project of the
+built-in pipeline (taken as in a linear-space one). In a gamma-space project the systems solve as in
+a linear one and the shaders decode the realtime lightmap with an exponent of 1/2.2
+(`unity_DynamicLightmap_HDR` (1, 1/2.2) instead of (1, 1)), `DynamicGI.SetEmissive` takes its color
+as a gamma color in both, and the sky the environment and the ambient probe are drawn from writes
+gamma-encoded colors, which are taken as such (tests/projects/realtimegi `--color-space gamma`: the
+Room's lightmaps and frames match within the comparator's tolerance, as loaded, with its point light
+moved, brighter, with bounce intensity 3, with the indirect scale 2, in the three emission cases,
+with an albedo change, with a spot and a directional light, and with the ambient color, a procedural
+sky at ambient intensities 1 and 2, a gradient and a script's cube as the environment, and so do its
+light probes but in `room-bounce`, which has the linear project's residual (below, Residuals); the
 update threshold's and indirect scale's defaults are a linear project's; the rest of the linear
 sequence is not measured there).
 
@@ -84,28 +86,27 @@ Room cases of tests/projects/realtimegi in its tests):
 1. **Direct light per cluster**: the mean over the cluster's points of `max(0, n.l)` times the
    light's distance falloff, its angular falloff (spot lights) and its color, scaled by intensity
    and `Light.bounceIntensity` before its conversion to linear (in projects without linear light
-   intensity; with it, the built-in pipeline scales the linear color, tinted by the light's
-   color temperature, keeping the legacy falloff: tests/projects/realtimegi
-   `--linear-intensity`). Each point's normal is three bytes b, each component b / 127 - 1 (so
-   that axis normals are exact), not renormalized. The distance falloff is the built-in
-   pipeline's legacy curve 1 / (1 + 25 x^2) (faded to 0 from x^2 = 0.64 to 1) over x = distance / range, sampled at
-   the 16 table positions t = 15 / (1 + 14 x^2) = 0..15 (0 at t = 0 and 1, 1 at t = 15) and
-   interpolated linearly in t. A spot light's angular falloff is s^2, with s the cosine of the
-   angle from the light's direction placed between those of the outer half angle (half of
-   `Light.spotAngle`: 0) and the inner one (1 and above), where the inner half angle is
-   atan(tan(outer) * 0.71875) whatever `Light.innerSpotAngle` is (the probe's spot light has an
-   inner angle of 21.8 against this rule's 37.1); s is tabulated at 31 equal steps of the cosine
-   from the outer one to 1 and read at the step at or below the point's cosine, without
-   interpolation. Point and spot lights are not shadowed in this input (the probe's lights have
-   shadows enabled; `room-spot-behind` lights the wall behind the block). A directional light
-   lights a cluster's first n points in their stored order, the others are in its shadow (also
-   for a light without shadows, `room-directional-noshadows`): n is the
-   cluster's point count times its precomputed visibility toward the light, rounded down, read at
-   the four stored directions around the light's (latitude t = acos(y) * (rings - 1) / pi between
-   two rings, longitude atan2(z, -x) / 2 pi + 1/2 times each ring's count between two of its
-   directions, wrapping around), weighted bilinearly with byte weights that add up to 255. The
-   Editor's direct light per cluster matches this within 0.05% (point) and 0.6% (spot); the
-   directional cases' lightmaps match as the others do.
+   intensity; with it, the built-in pipeline scales the linear color, tinted by the light's color
+   temperature, keeping the legacy falloff: tests/projects/realtimegi `--linear-intensity`). Each
+   point's normal is three bytes b, each component b / 127 - 1 (so that axis normals are exact), not
+   renormalized. The distance falloff is the built-in pipeline's legacy curve 1 / (1 + 25 x^2)
+   (faded to 0 from x^2 = 0.64 to 1) over x = distance / range, sampled at the 16 table positions t
+   = 15 / (1 + 14 x^2) = 0..15 (0 at t = 0 and 1, 1 at t = 15) and interpolated linearly in t. A
+   spot light's angular falloff is s^2, with s the cosine of the angle from the light's direction
+   placed between those of the outer half angle (half of `Light.spotAngle`: 0) and the inner one (1
+   and above), where the inner half angle is atan(tan(outer) * 0.71875) whatever
+   `Light.innerSpotAngle` is (the probe's spot light has an inner angle of 21.8 against this rule's
+   37.1); s is tabulated at 31 equal steps of the cosine from the outer one to 1 and read at the
+   step at or below the point's cosine, without interpolation. Point and spot lights are not
+   shadowed in this input (the probe's lights have shadows enabled; `room-spot-behind` lights the
+   wall behind the block). A directional light lights a cluster's first n points in their stored
+   order, the others are in its shadow (also for a light without shadows,
+   `room-directional-noshadows`): n is the cluster's point count times its precomputed visibility
+   toward the light, rounded down, read at the four stored directions around the light's (latitude t
+   = acos(y) * (rings - 1) / pi between two rings, longitude atan2(z, -x) / 2 pi + 1/2 times each
+   ring's count between two of its directions, wrapping around), weighted bilinearly with byte
+   weights that add up to 255. The Editor's direct light per cluster matches this within 0.05%
+   (point) and 0.6% (spot); the directional cases' lightmaps match as the others do.
 2. **Cluster radiance**: `albedo^2 * (direct + bounce) + emission`, with albedo the cluster's
    8-bit gamma-space albedo and emission linear (see [Material inputs](#material-inputs)).
 3. **Cluster tree**: each parent value is the 8-bit-weighted (/255) sum of its children.
