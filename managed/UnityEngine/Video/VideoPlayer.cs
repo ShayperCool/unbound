@@ -129,7 +129,12 @@ namespace UnityEngine.Video
             clip.m_AudioTrackInfo = ReadAudioTracks(root);
             clip.m_Alpha = root.TryGetProperty("alpha", out var alpha) && alpha.ValueKind == JsonValueKind.True;
             clip.m_Codec = root.TryGetProperty("codec", out var codec) ? codec.GetString() ?? "" : "";
-            if (guid != null) clip.m_sRGB = ReadSRGB(ImporterSettings(guid, assetPath ?? file), assetPath ?? file);
+            if (guid != null)
+            {
+                var importer = ImporterSettings(guid, assetPath ?? file);
+                clip.m_sRGB = ReadSRGB(importer, assetPath ?? file);
+                if (clip.m_Alpha) clip.m_Alpha = KeepsAlpha(importer, assetPath ?? file);
+            }
             return clip;
         }
 
@@ -172,6 +177,36 @@ namespace UnityEngine.Video
         /// default. 1 is sRGB off: the setting's other value (Unbound's choice, unmeasured). No key
         /// is the default (on); any other value warns and counts as the default.
         /// </summary>
+        /// <summary>Whether a source's alpha survives its import: transcoding drops it unless Keep
+        /// Alpha (encodeAlpha) is on (the Manual's Video Clip Importer: "Keep Alpha: Preserve the
+        /// alpha channel and encode it during transcoding"; unmeasured). A clip transcoded with Keep
+        /// Alpha, which Unity packs into the colour stream, is drawn with the source's alpha (said
+        /// once: unmeasured).</summary>
+        internal static bool KeepsAlpha(YNode importer, string asset)
+        {
+            if (importer == null || !Transcodes(importer.Get("targetSettings"))) return true;
+            if (importer.Int("encodeAlpha") == 0) return false;
+            Stubs.Ignored("UnityEngine.Video.VideoClip transcoded with Keep Alpha", $"the source's alpha is drawn as decoded (Unity packs it into the colour stream of {asset}; unmeasured)");
+            return true;
+        }
+
+        /// <summary>Whether any of an importer's target settings turns transcoding on.</summary>
+        static bool Transcodes(YNode node)
+        {
+            if (node == null) return false;
+            if (node.Kind == YKind.Map)
+            {
+                for (int i = 0; i < node.Keys.Length; i++)
+                    if (node.Keys[i] == "enableTranscoding" ? node.Values[i].AsLong() != 0 : Transcodes(node.Values[i])) return true;
+            }
+            else if (node.Kind == YKind.Seq)
+            {
+                foreach (var item in node.Items)
+                    if (Transcodes(item)) return true;
+            }
+            return false;
+        }
+
         internal static bool ReadSRGB(YNode importer, string asset)
         {
             if (importer == null || !importer.TryGet("colorSpace", out var node) || node.IsNull) return true;
@@ -504,8 +539,12 @@ namespace UnityEngine.Video
                     if (!m_Clip.sRGB && QualitySettings.activeColorSpace == ColorSpace.Linear)
                         Warn($"video '{m_Name}' is imported without sRGB (VideoClipImporter sRGB off), but its pictures are still converted as sRGB colour in Linear colour space.");
                 }
-                m_Decoder = JsonDocument.Parse(VideoClip.Call("video-open", JsonSerializer.Serialize(new { path = m_File, width = m_Width, height = m_Height, fps = m_FrameRate, alpha = m_SourceAlpha, codec = m_SourceCodec })))
-                    .RootElement.GetProperty("id").GetUInt64();
+                using (var opened = JsonDocument.Parse(VideoClip.Call("video-open", JsonSerializer.Serialize(new { path = m_File, width = m_Width, height = m_Height, fps = m_FrameRate, alpha = m_SourceAlpha, codec = m_SourceCodec }))))
+                {
+                    m_Decoder = opened.RootElement.GetProperty("id").GetUInt64();
+                    // The decoder says whether it decodes the alpha (its codec and ffmpeg's decoders).
+                    m_SourceAlpha = opened.RootElement.TryGetProperty("alpha", out var decodes) && decodes.ValueKind == JsonValueKind.True;
+                }
                 return true;
             }
             catch (Exception e)
