@@ -68,5 +68,6 @@ cc = { version = "1", features = ["parallel"] }
 test-util = []
 
 [dev-dependencies]
+sha2 = "0.10"
 rayon.workspace = true
 walkdir.workspace = true
