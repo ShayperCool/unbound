@@ -1,0 +1,12 @@
+{
+  "commands": [
+    "python3 tests/projects/editorpreviewtexture/run.py gate"
+  ],
+  "summary": "editorpreviewtexture: .*",
+  "engine_paths": [
+    "managed/UnityEngine/Editor/",
+    "managed/UnityEngine/IMGUI/",
+    "tests/projects/editorpreviewtexture/",
+    "tests/projects/imguiskin/"
+  ]
+}
