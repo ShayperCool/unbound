@@ -176,7 +176,9 @@ namespace UnityEngine
 
         /// <summary>Moves each phase along its return at <paramref name="time"/> (the previous
         /// phase becomes the drawn one): one behind the asset's toward the asset's phase as it is
-        /// now, one ahead toward the meeting point; a return at its end is over.</summary>
+        /// now, one ahead toward the meeting point, behind or ahead as it is this frame; a return
+        /// at its end is over. A return that would be too long ends at once, phase by phase
+        /// (tests/projects/speedtree8wind profile zones: FieldLong's slowest phase).</summary>
         protected override void Return(float time, SpeedTreeWindMotion asset)
         {
             var other = (SpeedTree8WindState)asset;
@@ -216,7 +218,8 @@ namespace UnityEngine
             Set(at + 3, new Vector4(b1.Twitch, b1.TwitchFreqScale, b2.Twitch, b2.TwitchFreqScale));
             Set(at + 4, new Vector4(C(b1.Whip), C(b2.Whip), 0f, 0f));
             Set(at + 5, Anchor(c, d));
-            // Unmeasured: the sample sets neither option.
+            // Both levels by the first level's length (tests/projects/speedtree8wind FieldDirectional,
+            // a staged copy with both options set and a second-level adherence curve).
             float adherence1 = C(b1.DirectionAdherence), adherence2 = C(b2.DirectionAdherence);
             if (c.Options[BranchDirectional1]) adherence1 = c.MaxBranchLevel1Length * adherence1;
             if (c.Options[BranchDirectional2]) adherence2 = c.MaxBranchLevel1Length * adherence2;

@@ -335,6 +335,67 @@ namespace UnityEngine.Tests
             }
         }
 
+        /// <summary>A spherical zone reaching a tree while its asset's wind rests (after it blew)
+        /// starts the tree's wind from rest: along +x with its phases at zero, not from the asset's
+        /// direction and phases (tests/projects/speedtree8wind profile zones, FieldCalm f522).</summary>
+        [Fact]
+        public void ALocalWindStartedWhileTheAssetsWindRestsStartsFromRest()
+        {
+            var go = new GameObject("Tree8");
+            var asset = new SpeedTreeWindAsset(Config());
+            var zone = new GameObject("Sphere").AddComponent<WindZone>();
+            var directional = new GameObject("Sun").AddComponent<WindZone>();
+            float time = (float)Time.s_Time;
+            try
+            {
+                go.AddComponent<MeshFilter>().sharedMesh = new Mesh { vertices = new[] { Vector3.zero, Vector3.up, Vector3.right }, triangles = new[] { 0, 1, 2 } };
+                var renderer = go.AddComponent<MeshRenderer>();
+                var tree = go.AddComponent<Tree>();
+                tree.windAsset = asset;
+                directional.windMain = 0.6f;
+                directional.transform.rotation = Quaternion.Euler(0f, 120f, 0f);
+                zone.mode = WindZoneMode.Spherical;
+                zone.radius = 5f;
+                zone.windMain = 1.2f;
+                zone.transform.position = new Vector3(100f, 0f, 0f);
+                int frame = 0;
+                void Frame()
+                {
+                    Time.s_Time = ++frame * Dt;
+                    SpeedTreeWindSystem.Update();
+                }
+                for (int i = 0; i < 30; i++) Frame();
+                directional.gameObject.SetActive(false);
+                for (int i = 0; i < 3000 && Value(asset.Wind8, 0).w != 0f; i++) Frame();
+                for (int i = 0; i < 30; i++) Frame();
+                var rest = Value(asset.Wind8, 0);
+                Assert.Equal(0f, rest.w);
+                Assert.NotEqual(1f, rest.x);
+                Assert.NotEqual(0f, Value(asset.Wind8, 1).x);
+                using (Unbound.Runtime.DrawPropertyPool.Begin())
+                {
+                    zone.transform.position = new Vector3(-3f, 0.25f, 0f);
+                    Frame();
+                    var drawn = SpeedTreeWindSystem.Apply(renderer, new Dictionary<int, object>());
+                    Assert.NotNull(tree.m_LocalWind);
+                    Assert.Equal(rest, (Vector4)drawn[Shader.PropertyToID("_ST_WindVector")]);
+                    Frame();
+                    drawn = SpeedTreeWindSystem.Apply(renderer, new Dictionary<int, object>());
+                    Assert.Equal(new Vector4(1f, 0f, 0f, 0f), (Vector4)drawn[Shader.PropertyToID("_ST_WindVector")]);
+                    Assert.Equal(0f, ((Vector4)drawn[Shader.PropertyToID("_ST_WindGlobal")]).x);
+                }
+            }
+            finally
+            {
+                Time.s_Time = time;
+                Object.DestroyImmediate(go);
+                Object.DestroyImmediate(zone.gameObject);
+                Object.DestroyImmediate(directional.gameObject);
+                Object.DestroyImmediate(asset);
+                SpeedTreeWindSystem.Update();
+            }
+        }
+
         sealed class Warnings : ILogHandler
         {
             internal readonly List<string> Messages = new List<string>();
