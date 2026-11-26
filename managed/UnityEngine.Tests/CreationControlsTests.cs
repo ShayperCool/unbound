@@ -184,6 +184,20 @@ namespace UnityEngine.Tests
             Assert.Equal(1.5f, box.height);
             box.shape = NavMeshObstacleShape.Box;
             Assert.Equal(Vector3.one, box.size);
+            // On an object with a mesh, a shape change fits the mesh's bounds again.
+            var meshObject = Make("Mesh", Vector3.zero);
+            var mesh = new Mesh { vertices = new[] { new Vector3(-0.4f, 0f, -0.3f), new Vector3(0.4f, 1.2f, 0.3f), new Vector3(0f, 0.5f, 0f) }, triangles = new[] { 0, 1, 2 } };
+            meshObject.AddComponent<MeshFilter>().sharedMesh = mesh;
+            var fitted = meshObject.AddComponent<NavMeshObstacle>();
+            Assert.Equal(new Vector3(0.8f, 1.2f, 0.6f), fitted.size);
+            Assert.Equal(new Vector3(0f, 0.6f, 0f), fitted.center);
+            fitted.center = Vector3.zero;
+            fitted.shape = NavMeshObstacleShape.Capsule;
+            Assert.Equal(new Vector3(0.8f, 1.2f, 0.8f), fitted.size);
+            Assert.Equal(new Vector3(0f, 0.6f, 0f), fitted.center);
+            Assert.Equal(0.6f, fitted.height, 5);
+            Assert.Equal(0.4f, fitted.radius, 5);
+            Object.DestroyImmediate(mesh);
             using (TestRelease.Pin(TestRelease.Unmeasured))
             {
                 var other = Make("Other", Vector3.zero).AddComponent<NavMeshObstacle>();

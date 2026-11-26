@@ -996,12 +996,13 @@ namespace Unbound.Runtime
             float subStepTime = deltaTime, simulatedTime = deltaTime;
             bool subStepping = Physics2D.s_UseSubStepping && Physics2D.s_SimulationMode != SimulationMode2D.FixedUpdate
                 && SubSteps(deltaTime, out subStepCount, out subStepTime, out simulatedTime);
-            // A world without bodies or colliders reports no step (Unity 6000.0.71f1,
+            // A world without bodies or colliders reports no step and no lost time (Unity 6000.0.71f1,
             // tests/projects/defaultcontrols physics2d.*: an empty local scene 0, one with a static
-            // collider or a kinematic body alone 1; other releases unmeasured, the step).
+            // collider, a kinematic body or an unsimulated body alone 1; other releases
+            // unmeasured, the step).
             bool empty = Compat.DefaultConstructorStateMeasured && s_Rigidbodies.Count == 0 && s_Colliders.Count == 0;
             s_Space.SubStepCount = empty ? 0 : subStepCount;
-            s_Space.SubStepLostTime = deltaTime - simulatedTime;
+            s_Space.SubStepLostTime = empty ? 0f : deltaTime - simulatedTime;
             if (subStepping && !Physics2D.s_UseSubStepContacts && !s_MeasuredSimulation)
             {
                 Unbound.Runtime.Stubs.Ignored("Physics2D.useSubStepContacts",

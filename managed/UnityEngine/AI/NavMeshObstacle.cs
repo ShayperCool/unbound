@@ -30,8 +30,8 @@ namespace UnityEngine.AI
         /// <summary>Unity 6000.0.71f1 keeps one box of extents for both shapes (tests/projects/defaultcontrols
         /// obstacle.*): the height reads the extents' height and setting it sets the size's; the
         /// radius reads the extents' width and setting it sets the size's width and depth; changing
-        /// the shape puts that shape's default extents and a zero center back. Other releases keep
-        /// a height and radius of their own, unmeasured.</summary>
+        /// the shape fits the obstacle again (<see cref="FitExtents"/>). Other releases keep a
+        /// height and radius of their own, unmeasured.</summary>
         static bool OneBox => Compat.DefaultConstructorStateMeasured;
 
         /// <summary>A new box's extents and a capsule's after a shape change.</summary>
@@ -75,24 +75,40 @@ namespace UnityEngine.AI
             {
                 if (m_Shape == value) return;
                 m_Shape = value;
-                if (OneBox)
-                {
-                    m_Size = value == NavMeshObstacleShape.Capsule ? CapsuleDefaultSize : BoxDefaultSize;
-                    m_Center = Vector3.zero;
-                }
+                if (OneBox) FitExtents();
                 m_ShapeChanged = true;
             }
         }
         public Vector3 center { get => m_Center; set { m_Center = value; m_ShapeChanged = true; } }
         public Vector3 size { get => m_Size; set { m_Size = Vector3.Max(value, Vector3.zero); m_ShapeChanged = true; } }
 
-        /// <summary>Fits the obstacle to the GameObject's mesh, as Unity does when it is added.</summary>
+        /// <summary>Fits the obstacle to the GameObject's mesh, as Unity does when it is added and,
+        /// in Unity 6000.0.71f1, when its shape changes (tests/projects/defaultcontrols
+        /// obstacle.mesh.*, obstacle.*.switch): around the mesh's bounds, a capsule as wide as the
+        /// wider of their width and depth; without a mesh the shape's default size about the
+        /// origin.</summary>
         internal void FitExtents()
         {
             var filter = m_GameObject.FindComponent<MeshFilter>();
-            if (filter != null && filter.sharedMesh != null)
+            var mesh = filter != null ? filter.sharedMesh : null;
+            if (OneBox)
             {
-                var b = filter.sharedMesh.bounds;
+                bool capsule = m_Shape == NavMeshObstacleShape.Capsule;
+                if (mesh == null)
+                {
+                    m_Size = capsule ? CapsuleDefaultSize : BoxDefaultSize;
+                    m_Center = Vector3.zero;
+                    return;
+                }
+                var bounds = mesh.bounds;
+                float width = 2f * Mathf.Max(bounds.extents.x, bounds.extents.z);
+                m_Center = bounds.center;
+                m_Size = capsule ? new Vector3(width, bounds.size.y, width) : bounds.size;
+                return;
+            }
+            if (mesh != null)
+            {
+                var b = mesh.bounds;
                 m_Center = b.center;
                 m_Size = b.size;
                 m_Radius = Mathf.Max(b.extents.x, b.extents.z);
