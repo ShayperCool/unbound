@@ -78,7 +78,6 @@ namespace UnityEngine.Tests
             var holder = ScriptableObject.CreateInstance<ToggleSlidersHolder>();
             Reset();
             // (The drag's position follows the label width: pinned, as other tests leave it changed.)
-            float labelWidth = EditorGUIUtility.labelWidth;
             EditorGUIUtility.labelWidth = 150f;
             try
             {
@@ -100,7 +99,7 @@ namespace UnityEngine.Tests
             }
             finally
             {
-                EditorGUIUtility.labelWidth = labelWidth;
+                EditorGUIUtility.labelWidth = 0f;
                 Reset();
                 Object.DestroyImmediate(holder);
             }

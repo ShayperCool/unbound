@@ -13,6 +13,7 @@ namespace UnityEngine.Tests
     {
         [Flags] public enum Flags { None = 0, Red = 1, Green = 2, Blue = 4, Big = 8 }
         public enum Plain { First, Second, Third }
+        [Flags] public enum NoNone { A = 1, B = 2, C = 4 }
 
         static T Pass<T>(Event e, Func<T> draw, int instance = 47)
         {
@@ -50,6 +51,9 @@ namespace UnityEngine.Tests
                 Assert.Equal(value.GetType(), drawn.GetType());
             }
             Assert.Equal(Flags.Red | Flags.Big, Pass(new Event { type = EventType.Repaint }, () => EditorGUI.EnumMaskPopup(At, "L", Flags.Red | Flags.Big, s_Style)));
+            // Every listed name's bit set (the field numbers bits by name position) becomes ~0, as
+            // Unity's deprecated mask field does: 7 of a three-name enum comes back as -1.
+            Assert.Equal((NoNone)(-1), Pass(new Event { type = EventType.Repaint }, () => EditorGUI.EnumMaskField(At, (NoNone)7, s_Style)));
         }
 
         [Fact]
