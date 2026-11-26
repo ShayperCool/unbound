@@ -38,12 +38,14 @@ namespace UnityEditor.Presets
         internal const string DefaultPresetsNotice = "PresetManager default presets";
 
         /// <summary>The settings file was read: says when it sets default presets, which Unbound
-        /// does not apply.</summary>
+        /// does not apply, in the layout of serializedVersion 2 (<c>m_DefaultPresets</c>) or the one
+        /// before (<c>m_DefaultList</c>, which projects of this release still hold).</summary>
         internal static void Loaded(Unbound.Runtime.YText body)
         {
-            var presets = body?.Get("m_DefaultPresets");
-            bool any = presets != null && (presets.Keys.Count > 0 || presets.Items.Count > 0);
-            if (any) Unbound.Runtime.Stubs.Ignored(DefaultPresetsNotice, "are not applied to new imports or objects yet");
+            if (Sets(body?.Get("m_DefaultPresets")) || Sets(body?.Get("m_DefaultList")))
+                Unbound.Runtime.Stubs.Ignored(DefaultPresetsNotice, "are not applied to new imports or objects yet");
         }
+
+        static bool Sets(Unbound.Runtime.YText list) => list != null && (list.Keys.Count > 0 || list.Items.Count > 0);
     }
 }

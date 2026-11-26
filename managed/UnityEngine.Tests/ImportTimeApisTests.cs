@@ -115,13 +115,22 @@ namespace UnityEngine.Tests
             Stubs.Forget(UnityEditor.Presets.PresetManager.DefaultPresetsNotice);
             UnityEditor.Presets.PresetManager.Loaded(UnityYamlText.Parse(Settings("m_DefaultPresets: {}"))[0].Body);
             Assert.Empty(m_Logs.Lines);
-            UnityEditor.Presets.PresetManager.Loaded(UnityYamlText.Parse(Settings(
-                "m_DefaultPresets:\n    1060208752:\n    - m_Preset: {fileID: 2655988077585873504, guid: 0123456789abcdef0123456789abcdef, type: 2}\n      m_Filter: \n      m_Disabled: 0"))[0].Body);
-            Assert.Equal(new[] { "Warning: Unbound: PresetManager default presets are not applied to new imports or objects yet" }, m_Logs.Lines);
+            // The layouts projects of this release hold: serializedVersion 2's, and the one before.
+            foreach (var presets in new[]
+            {
+                "m_DefaultPresets:\n  - first:\n      m_NativeTypeID: 1006\n      m_ManagedTypePPtr: {fileID: 0}\n      m_ManagedTypeFallback: \n    second:\n    - m_Preset: {fileID: 2655988077585873504, guid: 0123456789abcdef0123456789abcdef, type: 2}\n      m_Filter: \n      m_Disabled: 0",
+                "m_DefaultList:\n  - type:\n      m_NativeTypeID: 108\n      m_ManagedTypePPtr: {fileID: 0}\n      m_ManagedTypeFallback: \n    defaultPresets:\n    - m_Preset: {fileID: 2655988077585873504, guid: 0123456789abcdef0123456789abcdef, type: 2}",
+            })
+            {
+                m_Logs.Lines.Clear();
+                Stubs.Forget(UnityEditor.Presets.PresetManager.DefaultPresetsNotice);
+                UnityEditor.Presets.PresetManager.Loaded(UnityYamlText.Parse(Settings(presets))[0].Body);
+                Assert.Equal(new[] { "Warning: Unbound: PresetManager default presets are not applied to new imports or objects yet" }, m_Logs.Lines);
+            }
             Stubs.Forget(UnityEditor.Presets.PresetManager.DefaultPresetsNotice);
         }
 
         static string Settings(string presets) =>
-            "%YAML 1.1\n%TAG !u! tag:unity3d.com,2011:\n--- !u!1386491679 &1\nPresetManager:\n  m_ObjectHideFlags: 0\n  serializedVersion: 2\n  " + presets + "\n";
+            "%YAML 1.1\n%TAG !u! tag:unity3d.com,2011:\n--- !u!1386491679 &1\nPresetManager:\n  m_ObjectHideFlags: 0\n  " + presets + "\n";
     }
 }
