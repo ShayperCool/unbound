@@ -2025,8 +2025,14 @@ fn effective_of(
         return named;
     }
     let ext = ext.to_ascii_lowercase();
-    // An extension Unbound does not pick by (a plug-in's importer declares it, or a native
-    // importer has it): the `.meta` decides, as before.
+    let builtin = |guid: &String| guid == unbound_assets::meta::BUILTIN_SCRIPT_GUID;
+    // An extension two importers declare, rejected for all (Unity's published
+    // ScriptedImporter.RegisterScriptedImporters): none of them imports its files.
+    if registry.rejected.contains(&ext) {
+        return named.filter(|(guid, _)| builtin(guid));
+    }
+    // An extension only a plug-in's importer declares, which Unbound does not pick by: the
+    // `.meta` decides, as before.
     if registry.keep_meta.contains(&ext) {
         return named;
     }
@@ -2035,19 +2041,21 @@ fn effective_of(
     }
     // The Editor's own importer the `.meta` names (a SpeedTree 9 tree) is kept, and so is a project
     // script that is no ScriptedImporter Unbound loaded (missing, not compiled, no attribute): its
-    // import then fails loudly.
-    named.filter(|(guid, _)| {
-        guid == unbound_assets::meta::BUILTIN_SCRIPT_GUID || !registry.loaded.contains(guid)
-    })
+    // import then fails loudly. A loaded one does not import a file of an extension it does not
+    // declare, nor of one a native importer has (the Manual's ScriptedImporters page: "Scripted
+    // importers can't handle a file extension that Unity already natively handles").
+    named.filter(|(guid, _)| builtin(guid) || !registry.loaded.contains(guid))
 }
 
 /// The project's ScriptedImporters by the extensions they declare (lowercase, no dot), by their
-/// script `(guid, file id)`: those one importer alone declares; the extensions a `.meta` still
-/// decides for; the scripts of the importers loaded.
+/// script `(guid, file id)`: those one importer alone declares (no native importer's); the
+/// extensions a `.meta` still decides for (a plug-in's importer's); those two or more declare;
+/// the scripts of the importers loaded.
 #[derive(Default)]
 struct ScriptedExtensions {
     defaults: HashMap<String, (String, i64)>,
     keep_meta: HashSet<String>,
+    rejected: HashSet<String>,
     loaded: HashSet<String>,
 }
 
@@ -2083,10 +2091,30 @@ fn native_importer(path: &str) -> Option<&'static str> {
     )
 }
 
-/// Whether an extension has an importer of the Editor's own (not the DefaultImporter's), which a
-/// project's ScriptedImporter declaring it is not picked over (not measured).
+/// The extensions the Unity 6000.0 Manual lists as natively supported ("Supported asset type
+/// reference", https://docs.unity3d.com/6000.0/Documentation/Manual/assets-supported-types.html)
+/// beyond the ones Unbound's importer lists know: video, IHV image formats, the DCC model formats,
+/// SketchUp, SpeedTree, Substance, more native formats, text, shader, localization and plug-in
+/// files. The Manual's `.svg` under the TextureImporter is left out: in 6000.0 the Vector Graphics
+/// package's ScriptedImporter declares and imports it (tests/projects/svgsprites).
+const DOCUMENTED_NATIVE_EXTENSIONS: &[&str] = &[
+    "c4d", "jas", "lxo", "ma", "mb", "max", "skp", "spm", "st9", "sbsar", "asf", "avi", "dv",
+    "m4v", "mov", "mp4", "mpg", "mpeg", "ogv", "vp8", "webm", "wmv", "astc", "dds", "ktx", "pvr",
+    "blendtree", "buildreport", "colors", "curves", "curvesnormalized", "gradients", "ht", "mesh",
+    "particlecurves", "particlecurvessigned", "particledoublecurves",
+    "particledoublecurvessigned", "state", "statemachine", "texture2d", "transition",
+    "webcamtexture", "cg", "po", "boo", "js", "manifest", "rsp", "unity", "bc", "config", "prx",
+    "rpl", "suprx", "winmd", "xib",
+];
+
+/// Whether Unity handles an extension natively: an importer of the Editor's own, which a project's
+/// ScriptedImporter declaring it does not replace (the Manual's ScriptedImporters page, 6000.0:
+/// "Scripted importers can't handle a file extension that Unity already natively handles"; such
+/// an importer can add itself only through `overrideFileExtensions`).
 fn has_native_importer(ext: &str) -> bool {
-    native_importer(&format!("x.{ext}")).is_some_and(|name| name != "DefaultImporter")
+    let ext = ext.to_ascii_lowercase();
+    DOCUMENTED_NATIVE_EXTENSIONS.contains(&ext.as_str())
+        || native_importer(&format!("x.{ext}")).is_some_and(|name| name != "DefaultImporter")
 }
 
 /// `meta` with the section of the importer that imports its file
@@ -2151,12 +2179,21 @@ fn set_scripted_importers(request: &str) -> Result<String> {
         #[serde(default)]
         unsupported: Vec<String>,
         #[serde(default)]
+        rejected: Vec<String>,
+        #[serde(default)]
         loaded: Vec<String>,
     }
     let r: Request = serde_json::from_str(request)?;
     let key = |ext: &str| ext.trim_matches('.').to_ascii_lowercase();
+    // A native importer's extension is the native importer's, whoever declares it.
     let mut registry = ScriptedExtensions {
-        keep_meta: r.unsupported.iter().map(|e| key(e)).collect(),
+        keep_meta: r
+            .unsupported
+            .iter()
+            .map(|e| key(e))
+            .filter(|e| !has_native_importer(e))
+            .collect(),
+        rejected: r.rejected.iter().map(|e| key(e)).collect(),
         loaded: r.loaded.iter().map(|g| g.to_ascii_lowercase()).collect(),
         ..Default::default()
     };
@@ -2164,7 +2201,6 @@ fn set_scripted_importers(request: &str) -> Result<String> {
     for (ext, script) in r.extensions {
         let ext = key(&ext);
         if has_native_importer(&ext) {
-            registry.keep_meta.insert(ext.clone());
             native.push(ext);
             continue;
         }
@@ -2507,11 +2543,18 @@ fn extension_importer(request: &str) -> Result<String> {
     let importer = native_importer(&asset.path);
     // The sections measured for a file whose `.meta` names a project's ScriptedImporter that does
     // not import it (tests/projects/importerpick labels.*): the TextScriptImporter's, and the
-    // DefaultImporter's for an extension no importer has (the project's ScriptedImporters known).
+    // DefaultImporter's for an extension it imports (labels.Unclaimed.qux: one no importer has;
+    // `.unity`, `.rsp` taken alike, unmeasured), the project's ScriptedImporters known.
     let known = s.scripted_extensions.read().unwrap().is_some();
     let kind = match unbound_assets::new_meta::importer_for(&asset.file, asset.is_folder) {
         Some(NewImporter::TextScript) => Some(NewImporter::TextScript),
-        None if importer.is_none() && known && !asset.is_folder => Some(NewImporter::Default),
+        Some(NewImporter::Default) | None
+            if importer.unwrap_or("DefaultImporter") == "DefaultImporter"
+                && known
+                && !asset.is_folder =>
+        {
+            Some(NewImporter::Default)
+        }
         _ => None,
     };
     let section = kind
@@ -3633,6 +3676,7 @@ mod tests {
             ]
             .into(),
             keep_meta: ["dllext".to_string()].into(),
+            rejected: ["both".to_string()].into(),
             loaded: ["aaaa".to_string(), "bbbb".to_string()].into(),
         };
         let pick = |named: Option<&(String, i64)>, ext, overridden| {
@@ -3642,9 +3686,15 @@ mod tests {
         assert_eq!(pick(None, "FOO", false), Some(foo.clone()));
         assert_eq!(pick(Some(&foo), "qux", false), None);
         assert_eq!(pick(Some(&foo), "txt", false), None);
-        // An extension two importers declare is in neither list: its files get the native
-        // importer or the DefaultImporter (Unity's RegisterScriptedImporters rejects both).
+        // An extension two importers declare: its files get the native importer or the
+        // DefaultImporter (Unity's RegisterScriptedImporters rejects both), whichever script the
+        // `.meta` names, loaded or not; an override still keeps it.
         assert_eq!(pick(Some(&foo), "both", false), None);
+        assert_eq!(pick(Some(&gone), "both", false), None);
+        assert_eq!(pick(Some(&tree), "both", false), Some(tree.clone()));
+        assert_eq!(pick(Some(&foo), "both", true), Some(foo.clone()));
+        // A native extension a loaded importer declares is in no list: the native importer.
+        assert_eq!(pick(Some(&foo), "json", false), None);
         // A plug-in's importer's (or a native) extension: the `.meta` decides.
         assert_eq!(pick(Some(&foo), "dllext", false), Some(foo.clone()));
         assert_eq!(pick(None, "dllext", false), None);
@@ -3672,7 +3722,13 @@ mod tests {
         assert_eq!(super::native_importer("Assets/a.unity"), Some("DefaultImporter"));
         assert_eq!(super::native_importer("Assets/a.qux"), None);
         assert!(super::has_native_importer("txt") && super::has_native_importer("cginc"));
-        assert!(!super::has_native_importer("unity") && !super::has_native_importer("foo"));
+        // The Manual's supported types beyond Unbound's lists; not `.svg` (a package's importer).
+        for ext in ["dds", "MP4", "max", "skp", "unity", "rsp"] {
+            assert!(super::has_native_importer(ext), "{ext}");
+        }
+        for ext in ["foo", "svg", "psb", "shadergraph", "inputactions", "modulecompilationtrigger"] {
+            assert!(!super::has_native_importer(ext), "{ext}");
+        }
     }
 
     /// The importer settings read for a file are its importer's: a section naming another

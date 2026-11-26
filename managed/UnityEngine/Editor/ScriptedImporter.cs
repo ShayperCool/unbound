@@ -365,6 +365,10 @@ namespace Unbound.Runtime
         static Dictionary<string, Type> s_ByExtension = new Dictionary<string, Type>(StringComparer.Ordinal);
         static Dictionary<string, List<Type>> s_OverridesByExtension = new Dictionary<string, List<Type>>(StringComparer.Ordinal);
 
+        /// <summary>The extensions a project's ScriptedImporter declares that Unity imports natively:
+        /// the native importer's, the ScriptedImporter imports them through an override only.</summary>
+        static HashSet<string> s_NativeDeclared = new HashSet<string>(StringComparer.Ordinal);
+
         static string ExtensionOf(string path) => System.IO.Path.GetExtension(path ?? "").TrimStart('.').ToLowerInvariant();
 
         /// <summary>The ScriptedImporter class the project declares for a path's extension, or null.</summary>
@@ -410,9 +414,10 @@ namespace Unbound.Runtime
         /// `.meta` setting an importer override keeps its importer (<see cref="ImportsAsset(string, long, string, bool)"/>).
         /// An extension more than one importer declares is rejected for all of them, with the error
         /// Unity's ScriptedImporter.RegisterScriptedImporters logs (its files then get their native
-        /// importer, or the DefaultImporter). Unbound runs a project's importers from C# scripts only:
-        /// one of a plug-in DLL, and one declaring an extension a native importer has, is not
-        /// registered, with a warning (the `.meta`'s importer then decides, as before).
+        /// importer, or the DefaultImporter). An extension Unity imports natively stays the native
+        /// importer's, warned (the Manual's ScriptedImporters page). Unbound runs a project's
+        /// importers from C# scripts only: one of a plug-in DLL is not registered, with a warning
+        /// (the `.meta`'s importer then decides, as before).
         /// For the measured release families only (Compat.ScriptedImporterSelectionMeasured):
         /// elsewhere the `.meta` decides, as before.</summary>
         internal static void RegisterExtensions(bool rewriteStale)
@@ -443,22 +448,26 @@ namespace Unbound.Runtime
             foreach (var (ext, type) in byExtension)
                 if (GameDomain.ScriptOf(type) is { } own) scripts[ext] = new { guid = own.Guid, fileId = own.FileId };
             string reply;
-            try { reply = Native.Call("scripted-importers", System.Text.Json.JsonSerializer.Serialize(new { extensions = scripts, unsupported, loaded })); }
+            try { reply = Native.Call("scripted-importers", System.Text.Json.JsonSerializer.Serialize(new { extensions = scripts, unsupported, rejected = selection.Rejected, loaded })); }
             catch (InvalidOperationException) // No native side (tests).
             {
                 s_ByExtension = byExtension;
                 s_OverridesByExtension = overrides;
+                s_NativeDeclared = new HashSet<string>(StringComparer.Ordinal);
                 return;
             }
             using var json = System.Text.Json.JsonDocument.Parse(reply);
+            var nativeDeclared = new HashSet<string>(StringComparer.Ordinal);
             foreach (var native in json.RootElement.GetProperty("native").EnumerateArray())
             {
                 var ext = native.GetString();
+                nativeDeclared.Add(ext);
                 if (!byExtension.Remove(ext, out var type)) continue;
-                Debug.LogWarning($"{Log.DiagnosticPrefix}the ScriptedImporter {type.FullName} declares the extension '.{ext}', which a native importer has: Unbound does not pick it by the extension (an asset's .meta decides; what the Editor does is not measured)");
+                Debug.LogWarning($"{Log.DiagnosticPrefix}the ScriptedImporter {type.FullName} declares the extension '.{ext}', which Unity imports natively: the native importer imports its files (\"Scripted importers can't handle a file extension that Unity already natively handles\", Unity Manual; overrideFileExtensions can add it)");
             }
             s_ByExtension = byExtension;
             s_OverridesByExtension = overrides;
+            s_NativeDeclared = nativeDeclared;
             if (!rewriteStale) return;
             foreach (var path in json.RootElement.GetProperty("stale").EnumerateArray())
                 WriteOwnSection(path.GetString());
@@ -499,6 +508,7 @@ namespace Unbound.Runtime
                 {
                     var rejected = string.Join(", ", declaring.ConvertAll(t => $"{t.FullName} (assembly: {t.Module.FullyQualifiedName})"));
                     selection.Errors.Add(string.Format("Multiple scripted importers are targeting the extension '{0}' and have all been rejected: {1} ", ext, rejected));
+                    selection.Rejected.Add(ext);
                 }
                 else if (isScript(declaring[0])) selection.ByExtension[ext] = declaring[0];
                 else selection.Plugin[ext] = declaring[0];
@@ -512,6 +522,7 @@ namespace Unbound.Runtime
             public readonly Dictionary<string, List<Type>> Overrides = new Dictionary<string, List<Type>>(StringComparer.Ordinal);
             public readonly SortedDictionary<string, Type> Plugin = new SortedDictionary<string, Type>(StringComparer.Ordinal);
             public readonly List<string> Errors = new List<string>();
+            public readonly SortedSet<string> Rejected = new SortedSet<string>(StringComparer.Ordinal);
         }
 
         /// <summary>The `.meta` of <paramref name="path"/> written with its importer's section at
@@ -587,6 +598,7 @@ namespace Unbound.Runtime
             if (overridden || !Compat.ScriptedImporterSelectionMeasured) return true;
             if (type?.GetCustomAttributes(typeof(ScriptedImporterAttribute), false) is not { Length: > 0 } attributes) return true;
             var extension = System.IO.Path.GetExtension(path ?? "").TrimStart('.');
+            if (s_NativeDeclared.Contains(extension.ToLowerInvariant())) return false;
             foreach (var declared in ((ScriptedImporterAttribute)attributes[0]).fileExtensions ?? Array.Empty<string>())
                 if (string.Equals(declared?.Trim('.'), extension, StringComparison.OrdinalIgnoreCase)) return true;
             return false;

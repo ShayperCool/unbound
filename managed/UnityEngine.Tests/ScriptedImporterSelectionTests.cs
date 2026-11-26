@@ -66,6 +66,7 @@ namespace UnityEngine.Tests
             Assert.Equal(new[] { "gen", "only1" }, Sorted(selection.ByExtension.Keys));
             Assert.Equal(typeof(GenImporter), selection.ByExtension["gen"]);
             Assert.Equal(typeof(DupOneImporter), selection.ByExtension["only1"]);
+            Assert.Equal(new[] { "dup" }, Sorted(selection.Rejected));
             var error = Assert.Single(selection.Errors);
             var module = typeof(DupOneImporter).Module.FullyQualifiedName;
             Assert.Equal("Multiple scripted importers are targeting the extension 'dup' and have all been rejected: "
