@@ -12,6 +12,7 @@
     "crates/unbound-assets/src/meta.rs",
     "managed/UnityEngine/Editor/SpriteImports.cs",
     "managed/UnityEngine/Editor/EditorInitialization.cs",
-    "managed/UnityEngine/Runtime/Compat.cs"
+    "managed/UnityEngine/Runtime/Compat.cs",
+    "managed/UnityEngine/Editor/AssetDatabase.cs"
   ]
 }

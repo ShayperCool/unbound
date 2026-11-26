@@ -46,7 +46,15 @@ namespace UnityEditor
 
         /// <summary>The project's import at the session's start found <paramref name="imported"/>:
         /// each Single sprite among them without a sprite ID gets it, and its .meta is written.</summary>
-        internal static void Imported(IEnumerable<string> imported)
+        internal static void Imported(IEnumerable<string> imported) =>
+            Imported(imported, AssetDatabase.Kind, AssetDatabase.AssetPathToGUID, guid => Native.LoadDocuments("meta:" + guid),
+                path => AssetImporter.GetAtPath(path) as TextureImporter, importer => ImporterMeta.Write(importer));
+
+        /// <summary><see cref="Imported(IEnumerable{string})"/> with the database's kind and GUID of a
+        /// path, a .meta's documents by GUID, the session's importer of a path and the .meta write
+        /// given (tests).</summary>
+        internal static void Imported(IEnumerable<string> imported, Func<string, string> kindOf, Func<string, string> guidOf,
+            Func<string, List<YDocument>> metaOf, Func<string, TextureImporter> importerAt, Func<AssetImporter, bool> write)
         {
             if (!Compat.SpriteFirstImportMeasured) return;
             foreach (var path in imported)
@@ -54,22 +62,23 @@ namespace UnityEditor
                 // Chosen by the database's listing and the .meta alone: no asset is loaded (a
                 // first open lists every asset, whose loads would run scripts' callbacks;
                 // tests/projects/assetloaded), and only a texture's .meta is read.
-                if (AssetDatabase.IsImmutablePackagePath(path) || AssetDatabase.Listed(path) is not { Kind: "texture" } listed) continue;
-                List<Unbound.Runtime.YDocument> meta;
-                try { meta = Native.LoadDocuments("meta:" + listed.Guid); }
+                if (kindOf(path) != "texture" || AssetDatabase.IsImmutablePackagePath(path)) continue;
+                var guid = guidOf(path);
+                if (string.IsNullOrEmpty(guid)) continue;
+                List<YDocument> meta;
+                try { meta = metaOf(guid); }
                 catch (InvalidOperationException e)
                 {
-                    UnityEngine.Debug.LogWarning($"Unbound: the .meta of {path} cannot be read, so its sprite is given no ID: {e.Message}");
+                    UnityEngine.Debug.LogWarning($"Unbound: the .meta of {path} cannot be read, so it is not given a sprite ID: {e.Message}");
                     continue;
                 }
-                if (meta.Count == 0 || meta[0].TypeName != "TextureImporter" || !NeedsSpriteId(meta[0].Body)) continue;
+                if (meta == null || meta.Count == 0 || meta[0].TypeName != "TextureImporter" || !NeedsSpriteId(meta[0].Body)) continue;
                 // The importer as the session holds it: a script may have changed it since.
-                if (AssetImporter.GetAtPath(path) is not TextureImporter importer || importer.m_Settings == null
-                    || !NeedsSpriteId(importer.m_Settings)) continue;
+                if (importerAt(path) is not TextureImporter importer || importer.m_Settings == null || !NeedsSpriteId(importer.m_Settings)) continue;
                 MetaSettings.Set(importer.m_Settings, "spriteSheet.spriteID", SingleSpriteId);
                 MetaSettings.SetInt(importer.m_Settings, "nPOTScale", (int)TextureImporterNPOTScale.None);
                 importer.Changed();
-                ImporterMeta.Write(importer);
+                write(importer);
             }
         }
 
