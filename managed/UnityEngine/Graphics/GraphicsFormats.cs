@@ -216,6 +216,10 @@ namespace UnityEngine.Experimental.Rendering
         public static bool HasAlphaChannel(GraphicsFormat format) => Of(format).AlphaComponents > 0;
         [Unbound.EditorFaithful("6000.0's GraphicsFormat enum names no alpha-only format (Alpha8's is the unnamed 54), so no named format is")]
         public static bool IsAlphaOnlyFormat(GraphicsFormat format) => false;
+
+        /// <summary>Alpha8 is the one texture format of alpha only (an alpha-only texture previews
+        /// with the alpha material, tests/projects/editorpreviewtexture pixels/6,1).</summary>
+        public static bool IsAlphaOnlyFormat(TextureFormat format) => format == TextureFormat.Alpha8;
         public static uint GetColorComponentCount(GraphicsFormat format) => Of(format).Components - Of(format).AlphaComponents;
         public static uint GetAlphaComponentCount(GraphicsFormat format) => Of(format).AlphaComponents;
         public static uint GetComponentCount(GraphicsFormat format) => Of(format).Components;

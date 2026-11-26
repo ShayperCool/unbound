@@ -7479,7 +7479,6 @@ namespace UnityEditor
         [global::Unbound.Stub] internal static void EndLabelHighlight() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUI.EndLabelHighlight"); }
         [global::Unbound.Stub] internal static bool DrawLabelHighlight(global::UnityEngine.Rect position, global::UnityEngine.GUIContent label, global::UnityEngine.GUIStyle style) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUI.DrawLabelHighlight"); return default; }
         [global::Unbound.Stub] internal static void HandlePrefixLabelInternal(global::UnityEngine.Rect totalPosition, global::UnityEngine.Rect labelPosition, global::UnityEngine.GUIContent label, int id, global::UnityEngine.GUIStyle style) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUI.HandlePrefixLabelInternal"); }
-        [global::Unbound.Stub] internal static bool UseVTMaterial(global::UnityEngine.Texture texture) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUI.UseVTMaterial"); return default; }
         [global::Unbound.Stub] internal static global::UnityEngine.GUIContent BeginPropertyInternal(global::UnityEngine.Rect totalPosition, global::UnityEngine.GUIContent label, global::UnityEditor.SerializedProperty property) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUI.BeginPropertyInternal"); return default; }
         [global::Unbound.Stub] internal static void DrawOverrideBackground(global::UnityEngine.Rect position, global::UnityEngine.Color color, bool fixupRectForHeadersAndBackgrounds = false) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUI.DrawOverrideBackground"); }
         [global::Unbound.Stub] internal static void DrawOverrideBackgroundApplicable(global::UnityEngine.Rect position, bool fixupRectForHeadersAndBackgrounds = false) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUI.DrawOverrideBackgroundApplicable"); }
@@ -7492,12 +7491,7 @@ namespace UnityEditor
         [global::Unbound.Stub] internal static uint LayerMaskField(global::UnityEngine.Rect position, uint layers, global::UnityEngine.GUIContent label) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUI.LayerMaskField"); return default; }
         [global::Unbound.Stub] internal static uint LayerMaskField(global::UnityEngine.Rect position, uint layers, global::UnityEditor.SerializedProperty property, global::UnityEngine.GUIContent label, global::UnityEngine.GUIStyle style) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUI.LayerMaskField"); return default; }
         [global::Unbound.Stub] internal static void ShowRepaints() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUI.ShowRepaints"); }
-        [global::Unbound.Stub] internal static void DrawTextureAlphaInternal(global::UnityEngine.Rect position, global::UnityEngine.Texture image, global::UnityEngine.ScaleMode scaleMode, float imageAspect, float mipLevel) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUI.DrawTextureAlphaInternal"); }
-        [global::Unbound.Stub] internal static void DrawTextureTransparentInternal(global::UnityEngine.Rect position, global::UnityEngine.Texture image, global::UnityEngine.ScaleMode scaleMode, float imageAspect, float mipLevel, global::UnityEngine.Rendering.ColorWriteMask colorWriteMask, float exposure) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUI.DrawTextureTransparentInternal"); }
-        [global::Unbound.Stub] internal static void DrawTransparencyCheckerTexture(global::UnityEngine.Rect position, global::UnityEngine.ScaleMode scaleMode, float imageAspect) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUI.DrawTransparencyCheckerTexture"); }
-        [global::Unbound.Stub] internal static void DrawPreviewTextureInternal(global::UnityEngine.Rect position, global::UnityEngine.Texture image, global::UnityEngine.Material mat, global::UnityEngine.ScaleMode scaleMode, float imageAspect, float mipLevel, global::UnityEngine.Rendering.ColorWriteMask colorWriteMask, float exposure) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUI.DrawPreviewTextureInternal"); }
         [global::Unbound.Stub] internal static void StreamTexture(global::UnityEngine.Texture texture, global::UnityEngine.Material mat, float mipLevel) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUI.StreamTexture"); }
-        [global::Unbound.Stub] internal static global::UnityEngine.Material GetMaterialForSpecialTexture(global::UnityEngine.Texture t, global::UnityEngine.Material defaultMat = null, bool manualTex2Linear = false, bool useVTMaterialWhenPossible = true) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUI.GetMaterialForSpecialTexture"); return default; }
         [global::Unbound.Stub] internal static void SetExpandedRecurse(global::UnityEditor.SerializedProperty property, bool expanded) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUI.SetExpandedRecurse"); }
         [global::Unbound.Stub] internal static float GetSinglePropertyHeight(global::UnityEditor.SerializedProperty property, global::UnityEngine.GUIContent label) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUI.GetSinglePropertyHeight"); return default; }
         [global::Unbound.Stub] internal static float GetPropertyHeightInternal(global::UnityEditor.SerializedProperty property, global::UnityEngine.GUIContent label, bool includeChildren) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUI.GetPropertyHeightInternal"); return default; }
@@ -7513,23 +7507,6 @@ namespace UnityEditor
         [global::Unbound.Stub] internal static int AdvancedPopup(global::UnityEngine.Rect rect, int selectedIndex, string[] displayedOptions) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUI.AdvancedPopup"); return default; }
         [global::Unbound.Stub] internal static int AdvancedPopup(global::UnityEngine.Rect rect, int selectedIndex, string[] displayedOptions, global::UnityEngine.GUIStyle style) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUI.AdvancedPopup"); return default; }
         [global::Unbound.Stub] internal static int AdvancedLazyPopup(global::UnityEngine.Rect rect, string displayedOption, int selectedIndex, global::System.Func<global::UnityEditor.Tuple<int, string[]>> displayedOptionsFunc, global::UnityEngine.GUIStyle style) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUI.AdvancedLazyPopup"); return default; }
-        [global::Unbound.Stub] public static void DrawTextureAlpha(global::UnityEngine.Rect position, global::UnityEngine.Texture image, global::UnityEngine.ScaleMode scaleMode, float imageAspect, float mipLevel) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUI.DrawTextureAlpha"); }
-        [global::Unbound.Stub] public static void DrawTextureAlpha(global::UnityEngine.Rect position, global::UnityEngine.Texture image) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUI.DrawTextureAlpha"); }
-        [global::Unbound.Stub] public static void DrawTextureAlpha(global::UnityEngine.Rect position, global::UnityEngine.Texture image, global::UnityEngine.ScaleMode scaleMode) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUI.DrawTextureAlpha"); }
-        [global::Unbound.Stub] public static void DrawTextureAlpha(global::UnityEngine.Rect position, global::UnityEngine.Texture image, global::UnityEngine.ScaleMode scaleMode, float imageAspect) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUI.DrawTextureAlpha"); }
-        [global::Unbound.Stub] public static void DrawTextureTransparent(global::UnityEngine.Rect position, global::UnityEngine.Texture image, global::UnityEngine.ScaleMode scaleMode, float imageAspect, float mipLevel, global::UnityEngine.Rendering.ColorWriteMask colorWriteMask, float exposure) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUI.DrawTextureTransparent"); }
-        [global::Unbound.Stub] public static void DrawTextureTransparent(global::UnityEngine.Rect position, global::UnityEngine.Texture image, global::UnityEngine.ScaleMode scaleMode) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUI.DrawTextureTransparent"); }
-        [global::Unbound.Stub] public static void DrawTextureTransparent(global::UnityEngine.Rect position, global::UnityEngine.Texture image) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUI.DrawTextureTransparent"); }
-        [global::Unbound.Stub] public static void DrawTextureTransparent(global::UnityEngine.Rect position, global::UnityEngine.Texture image, global::UnityEngine.ScaleMode scaleMode, float imageAspect) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUI.DrawTextureTransparent"); }
-        [global::Unbound.Stub] public static void DrawTextureTransparent(global::UnityEngine.Rect position, global::UnityEngine.Texture image, global::UnityEngine.ScaleMode scaleMode, float imageAspect, float mipLevel) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUI.DrawTextureTransparent"); }
-        [global::Unbound.Stub] public static void DrawTextureTransparent(global::UnityEngine.Rect position, global::UnityEngine.Texture image, global::UnityEngine.ScaleMode scaleMode, float imageAspect, float mipLevel, global::UnityEngine.Rendering.ColorWriteMask colorWriteMask) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUI.DrawTextureTransparent"); }
-        [global::Unbound.Stub] public static void DrawPreviewTexture(global::UnityEngine.Rect position, global::UnityEngine.Texture image, global::UnityEngine.Material mat, global::UnityEngine.ScaleMode scaleMode, float imageAspect, float mipLevel, global::UnityEngine.Rendering.ColorWriteMask colorWriteMask, float exposure) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUI.DrawPreviewTexture"); }
-        [global::Unbound.Stub] public static void DrawPreviewTexture(global::UnityEngine.Rect position, global::UnityEngine.Texture image, global::UnityEngine.Material mat, global::UnityEngine.ScaleMode scaleMode, float imageAspect, float mipLevel, global::UnityEngine.Rendering.ColorWriteMask colorWriteMask) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUI.DrawPreviewTexture"); }
-        [global::Unbound.Stub] public static void DrawPreviewTexture(global::UnityEngine.Rect position, global::UnityEngine.Texture image, global::UnityEngine.Material mat, global::UnityEngine.ScaleMode scaleMode, float imageAspect, float mipLevel) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUI.DrawPreviewTexture"); }
-        [global::Unbound.Stub] public static void DrawPreviewTexture(global::UnityEngine.Rect position, global::UnityEngine.Texture image, global::UnityEngine.Material mat, global::UnityEngine.ScaleMode scaleMode, float imageAspect) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUI.DrawPreviewTexture"); }
-        [global::Unbound.Stub] public static void DrawPreviewTexture(global::UnityEngine.Rect position, global::UnityEngine.Texture image, global::UnityEngine.Material mat, global::UnityEngine.ScaleMode scaleMode) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUI.DrawPreviewTexture"); }
-        [global::Unbound.Stub] public static void DrawPreviewTexture(global::UnityEngine.Rect position, global::UnityEngine.Texture image, global::UnityEngine.Material mat) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUI.DrawPreviewTexture"); }
-        [global::Unbound.Stub] public static void DrawPreviewTexture(global::UnityEngine.Rect position, global::UnityEngine.Texture image) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUI.DrawPreviewTexture"); }
         [global::Unbound.Stub] public static bool LinkButton(global::UnityEngine.Rect position, string label) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUI.LinkButton"); return default; }
         [global::Unbound.Stub] public static bool LinkButton(global::UnityEngine.Rect position, global::UnityEngine.GUIContent label) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUI.LinkButton"); return default; }
         [global::Unbound.Stub] internal static void FloatField(global::UnityEngine.Rect position, global::UnityEngine.GUIContent label, ref global::UnityEditor.EditorGUI.NumberFieldValue value) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUI.FloatField"); }
@@ -7568,19 +7545,6 @@ namespace UnityEditor
         [global::Unbound.Stub] internal static void RenderPipelineAssetField(global::UnityEngine.GUIContent content, global::UnityEditor.SerializedObject serializedObject, global::UnityEditor.SerializedProperty serializedProperty) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUI.RenderPipelineAssetField"); }
         [global::Unbound.Stub] internal static void RenderPipelineAssetField(global::UnityEditor.SerializedObject serializedObject, global::UnityEditor.SerializedProperty serializedProperty) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUI.RenderPipelineAssetField"); }
         internal static float lineHeight { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUI.lineHeight"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUI.lineHeight"); } }
-        internal static global::UnityEngine.Texture2D transparentCheckerTexture { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUI.transparentCheckerTexture"); return default; } }
-        internal static global::UnityEngine.Material colorMaterial { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUI.colorMaterial"); return default; } }
-        internal static global::UnityEngine.Material colorVTMaterial { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUI.colorVTMaterial"); return default; } }
-        internal static global::UnityEngine.Material alphaMaterial { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUI.alphaMaterial"); return default; } }
-        internal static global::UnityEngine.Material alphaVTMaterial { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUI.alphaVTMaterial"); return default; } }
-        internal static global::UnityEngine.Material transparentMaterial { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUI.transparentMaterial"); return default; } }
-        internal static global::UnityEngine.Material transparentVTMaterial { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUI.transparentVTMaterial"); return default; } }
-        internal static global::UnityEngine.Material normalmapMaterial { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUI.normalmapMaterial"); return default; } }
-        internal static global::UnityEngine.Material normalmapVTMaterial { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUI.normalmapVTMaterial"); return default; } }
-        internal static global::UnityEngine.Material lightmapRGBMMaterial { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUI.lightmapRGBMMaterial"); return default; } }
-        internal static global::UnityEngine.Material lightmapDoubleLDRMaterial { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUI.lightmapDoubleLDRMaterial"); return default; } }
-        internal static global::UnityEngine.Material lightmapFullHDRMaterial { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUI.lightmapFullHDRMaterial"); return default; } }
-        internal static global::UnityEngine.Material guiTextureClipVerticallyMaterial { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUI.guiTextureClipVerticallyMaterial"); return default; } }
         internal static bool isCollectingTooltips { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUI.isCollectingTooltips"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUI.isCollectingTooltips"); } }
         [global::Unbound.Stub]
         internal unsafe partial class DisabledGuiViewInputScope : global::UnityEngine.GUI.Scope
@@ -7782,7 +7746,6 @@ namespace UnityEditor
         [global::Unbound.Stub] internal static void PerformTonemappingForGameView() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUIUtility.PerformTonemappingForGameView"); }
         [global::Unbound.Stub] internal static void DrawTextureHdrSupport(global::UnityEngine.Rect screenRect, global::UnityEngine.Texture texture, global::UnityEngine.Rect sourceRect, int leftBorder, int rightBorder, int topBorder, int bottomBorder, global::UnityEngine.Color color, global::UnityEngine.Material mat, int pass, bool resetLinearToSrgbIfHdrActive) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUIUtility.DrawTextureHdrSupport"); }
         [global::Unbound.Stub] internal static string GetObjectNameWithInfo(global::UnityEngine.Object obj) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUIUtility.GetObjectNameWithInfo"); return default; }
-        [global::Unbound.Stub] internal static global::UnityEngine.Material GetPreviewMaterial(global::UnityEditor.EditorGUIUtility.PreviewType type) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUIUtility.GetPreviewMaterial"); return default; }
         [global::Unbound.Stub] internal static void RegisterResourceForCleanupOnDomainReload(global::UnityEngine.Object obj) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUIUtility.RegisterResourceForCleanupOnDomainReload"); }
         [global::Unbound.Stub] internal static void BeginPropertyCallback(global::UnityEngine.Rect totalRect, global::UnityEditor.SerializedProperty property) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUIUtility.BeginPropertyCallback"); }
         [global::Unbound.Stub] internal static void ContextualPropertyMenuCallback(global::UnityEditor.GenericMenu gm, global::UnityEditor.SerializedProperty prop) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUIUtility.ContextualPropertyMenuCallback"); }
@@ -7853,21 +7816,6 @@ namespace UnityEditor
         internal static global::UnityEngine.EventType swipeGestureEventType { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUIUtility.swipeGestureEventType"); return default; } }
         internal static global::UnityEngine.EventType rotateGestureEventType { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUIUtility.rotateGestureEventType"); return default; } }
         internal static event global::System.Action<global::UnityEditor.GenericMenu, global::UnityEditor.SerializedProperty> contextualPropertyMenu { [global::Unbound.Stub] add { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUIUtility.contextualPropertyMenu"); } [global::Unbound.Stub] remove { } }
-        internal enum PreviewType
-        {
-            Color = 0,
-            ColorVT = 1,
-            Alpha = 2,
-            AlphaVT = 3,
-            Transparent = 4,
-            TransparentVT = 5,
-            Normalmap = 6,
-            NormalmapVT = 7,
-            LightmapRGBM = 8,
-            LightmapDoubleLDR = 9,
-            LightmapFullHDR = 10,
-            GUITextureClipVertically = 11,
-        }
         [global::Unbound.Stub]
         public unsafe partial class PropertyCallbackScope : global::System.IDisposable
         {
@@ -22921,30 +22869,11 @@ namespace UnityEditor
         [global::Unbound.Stub] public TextureMipLevels(global::UnityEngine.Texture2D _texture) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TextureMipLevels.ctor"); }
         public global::UnityEngine.Texture2D texture { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TextureMipLevels.texture"); return default; } }
     }
-    internal enum TextureUsageMode
-    {
-        Default = 0,
-        BakedLightmapDoubleLDR = 1,
-        BakedLightmapRGBM = 2,
-        NormalmapDXT5nm = 3,
-        NormalmapPlain = 4,
-        RGBMEncoded = 5,
-        AlwaysPadded = 6,
-        DoubleLDR = 7,
-        BakedLightmapFullHDR = 8,
-        RealtimeLightmapRGBM = 9,
-        NormalmapASTCnm = 10,
-        SingleChannelRed = 11,
-        SingleChannelAlpha = 12,
-    }
-    [global::Unbound.Stub]
-    internal unsafe static partial class TextureUtil
+    unsafe static partial class TextureUtil
     {
         [global::Unbound.Stub] public static long GetStorageMemorySizeLong(global::UnityEngine.Texture t) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TextureUtil.GetStorageMemorySizeLong"); return default; }
         [global::Unbound.Stub] public static long GetRuntimeMemorySizeLong(global::UnityEngine.Texture t) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TextureUtil.GetRuntimeMemorySizeLong"); return default; }
         [global::Unbound.Stub] public static bool IsNonPowerOfTwo(global::UnityEngine.Texture2D t) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TextureUtil.IsNonPowerOfTwo"); return default; }
-        [global::Unbound.Stub] public static global::UnityEditor.TextureUsageMode GetUsageMode(global::UnityEngine.Texture t) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TextureUtil.GetUsageMode"); return default; }
-        [global::Unbound.Stub] public static bool IsNormalMapUsageMode(global::UnityEditor.TextureUsageMode usageMode) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TextureUtil.IsNormalMapUsageMode"); return default; }
         [global::Unbound.Stub] public static bool IsRGBMUsageMode(global::UnityEditor.TextureUsageMode usageMode) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TextureUtil.IsRGBMUsageMode"); return default; }
         [global::Unbound.Stub] public static bool IsDoubleLDRUsageMode(global::UnityEditor.TextureUsageMode usageMode) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TextureUtil.IsDoubleLDRUsageMode"); return default; }
         [global::Unbound.Stub] public static int GetBytesFromTextureFormat(global::UnityEngine.TextureFormat inFormat) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TextureUtil.GetBytesFromTextureFormat"); return default; }
@@ -22952,7 +22881,6 @@ namespace UnityEditor
         [global::Unbound.Stub] public static bool IsValidTextureFormat(global::UnityEngine.TextureFormat format) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TextureUtil.IsValidTextureFormat"); return default; }
         [global::System.Obsolete("IsCompressedTextureFormat has been moved to GraphicsFormatUtility.IsCompressedFormat(TextureFormat)")] [global::Unbound.Stub] public static bool IsCompressedTextureFormat(global::UnityEngine.TextureFormat format) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TextureUtil.IsCompressedTextureFormat"); return default; }
         [global::System.Obsolete("IsCompressedCrunchTextureFormat has been moved to GraphicsFormatUtility.IsCrunchFormat(TextureFormat)")] [global::Unbound.Stub] public static bool IsCompressedCrunchTextureFormat(global::UnityEngine.TextureFormat format) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TextureUtil.IsCompressedCrunchTextureFormat"); return default; }
-        [global::Unbound.Stub] public static global::UnityEngine.TextureFormat GetTextureFormat(global::UnityEngine.Texture texture) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TextureUtil.GetTextureFormat"); return default; }
         [global::System.Obsolete("IsAlphaOnlyTextureFormat has been moved to GraphicsFormatUtility.IsAlphaOnlyFormat(TextureFormat)")] [global::Unbound.Stub] public static bool IsAlphaOnlyTextureFormat(global::UnityEngine.TextureFormat format) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TextureUtil.IsAlphaOnlyTextureFormat"); return default; }
         [global::System.Obsolete("IsHDRFormat has been moved to GraphicsFormatUtility.IsHDRFormat(TextureFormat)")] [global::Unbound.Stub] public static bool IsHDRFormat(global::UnityEngine.TextureFormat format) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TextureUtil.IsHDRFormat"); return default; }
         [global::System.Obsolete("IsHDRGraphicsFormat has been moved to GraphicsFormatUtility.IsHDRFormat(GraphicsFormat)")] [global::Unbound.Stub] public static bool IsHDRGraphicsFormat(global::UnityEngine.Experimental.Rendering.GraphicsFormat format) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TextureUtil.IsHDRGraphicsFormat"); return default; }

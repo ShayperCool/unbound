@@ -591,6 +591,11 @@ namespace Unbound.Runtime
         /// families keep their unmeasured answers (not implemented, said once).</summary>
         internal static bool EditorTitlebarMeasured => Family == ReleaseFamily.Unity6000_0;
 
+        /// <summary>EditorGUI's texture previews (DrawPreviewTexture, DrawTextureAlpha,
+        /// DrawTextureTransparent), measured by tests/projects/editorpreviewtexture on Unity
+        /// 6000.0.71f1. Other families keep their unmeasured answer (not implemented, said once).</summary>
+        internal static bool EditorPreviewsMeasured => Family == ReleaseFamily.Unity6000_0;
+
         // EditorGUI's text, number and delayed fields and sliders (tests/projects/editorvaluefields).
         internal static bool EditorValueFieldsMeasured => Family == ReleaseFamily.Unity6000_0;
 
