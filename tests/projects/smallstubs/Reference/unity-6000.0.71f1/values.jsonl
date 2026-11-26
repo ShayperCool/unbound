@@ -1,0 +1,25 @@
+{"k":"raw.color32","v":"1,2,3,4 5,6,7,8 9,10,11,12 13,14,15,16"}
+{"k":"raw.bytes","v":"100,101,102,103 104,105,106,107 108,109,110,111 112,113,114,115"}
+{"k":"raw.longer","v":"200,201,202,203 204,205,206,207 208,209,210,211 212,213,214,215"}
+{"k":"raw.shorter","v":"throws UnityException: LoadRawTextureData: not enough data provided (will result in overread)."}
+{"k":"raw.empty","v":"throws UnityException: No texture data provided to LoadRawTextureData"}
+{"k":"raw.default","v":"throws UnityException: No texture data provided to LoadRawTextureData"}
+{"k":"raw.unreadable","v":"throws UnityException: Texture '' is not readable, the texture memory can not be accessed from scripts. You can make the texture readable in the Texture Import Settings."}
+{"k":"raw.unreadable_empty","v":"throws UnityException: Texture '' is not readable, the texture memory can not be accessed from scripts. You can make the texture readable in the Texture Import Settings."}
+{"k":"shader.hasProceduralInstancing.unlit","v":"False"}
+{"k":"shader.hasProceduralInstancing.standard","v":"False"}
+{"k":"shader.hasProceduralInstancing.procedural","v":"True"}
+{"k":"shader.hasProceduralInstancing.instanced","v":"False"}
+{"k":"shader.hasProceduralInstancing.null","v":"throws ArgumentNullException: Value cannot be null.\nParameter name: s"}
+{"k":"shader.isPassCompiled.before","v":"False"}
+{"k":"shader.compilePass","v":"done"}
+{"k":"shader.isPassCompiled.after","v":"True"}
+{"k":"shader.isPassCompiled.otherMaterial","v":"True"}
+{"k":"shader.isPassCompiled.standard.before","v":"False"}
+{"k":"shader.compilePass.standard.async","v":"done"}
+{"k":"shader.isPassCompiled.standard.afterAsync","v":"True"}
+{"k":"shader.isPassCompiled.standard.otherPass","v":"False"}
+{"k":"log","v":"Error: Trying to access pass 7, but material 'Unlit/Color' subshader (0) has only 1 valid passes."}
+{"k":"shader.isPassCompiled.badPass","v":"False"}
+{"k":"shader.isPassCompiled.null","v":"throws ArgumentNullException: Value cannot be null.\nParameter name: material"}
+{"k":"complete","v":true}

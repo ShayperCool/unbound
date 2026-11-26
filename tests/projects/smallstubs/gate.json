@@ -1,0 +1,11 @@
+{
+  "commands": [
+    "python3 tests/projects/smallstubs/run.py gate"
+  ],
+  "summary": "smallstubs: .*",
+  "engine_paths": [
+    "managed/UnityEngine/Editor/ShaderUtil.cs",
+    "managed/UnityEngine/Graphics/Texture2D.Mips.cs",
+    "managed/UnityEngine/Graphics/ShaderDeclarations.cs"
+  ]
+}
