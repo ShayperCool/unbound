@@ -336,17 +336,10 @@ namespace UnityEditor
         [global::Unbound.Stub] public override global::UnityEngine.Texture2D RenderStaticPreview(string assetPath, global::UnityEngine.Object[] subAssets, int width, int height) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TerrainLayerInspector.RenderStaticPreview"); return default; }
         [global::Unbound.Stub] public TerrainLayerInspector() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TerrainLayerInspector.ctor"); }
     }
-    [global::Unbound.Stub]
-    public unsafe static partial class TerrainLayerUtility
+    unsafe static partial class TerrainLayerUtility
     {
         [global::Unbound.Stub] public static int ShowTerrainLayersSelectionHelper(global::UnityEngine.Terrain terrain, int activeTerrainLayer) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TerrainLayerUtility.ShowTerrainLayersSelectionHelper"); return default; }
         [global::Unbound.Stub] public static void ShowTerrainLayerGUI(global::UnityEngine.Terrain terrain, global::UnityEngine.TerrainLayer terrainLayer, ref global::UnityEditor.Editor terrainLayerEditor, global::UnityEditor.ITerrainLayerCustomUI customGUI) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TerrainLayerUtility.ShowTerrainLayerGUI"); }
-        [global::Unbound.Stub] public static void ValidateDiffuseTextureUI(global::UnityEngine.Texture2D texture) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TerrainLayerUtility.ValidateDiffuseTextureUI"); }
-        [global::Unbound.Stub] public static bool CheckNormalMapTextureType(global::UnityEngine.Texture2D texture) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TerrainLayerUtility.CheckNormalMapTextureType"); return default; }
-        [global::Unbound.Stub] public static void ValidateNormalMapTextureUI(global::UnityEngine.Texture2D texture, bool normalMapTextureType) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TerrainLayerUtility.ValidateNormalMapTextureUI"); }
-        [global::Unbound.Stub] public static void ValidateMaskMapTextureUI(global::UnityEngine.Texture2D texture) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TerrainLayerUtility.ValidateMaskMapTextureUI"); }
-        [global::Unbound.Stub] public static void TilingSettingsUI(global::UnityEngine.TerrainLayer terrainLayer) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TerrainLayerUtility.TilingSettingsUI"); }
-        [global::Unbound.Stub] public static void TilingSettingsUI(global::UnityEditor.SerializedProperty tileSize, global::UnityEditor.SerializedProperty tileOffset) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TerrainLayerUtility.TilingSettingsUI"); }
         [global::Unbound.Stub] internal static void AddTerrainLayer(global::UnityEngine.Terrain terrain, global::UnityEngine.TerrainLayer inputLayer) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TerrainLayerUtility.AddTerrainLayer"); }
         [global::Unbound.Stub] internal static void ReplaceTerrainLayer(global::UnityEngine.Terrain terrain, int index, global::UnityEngine.TerrainLayer inputLayer) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TerrainLayerUtility.ReplaceTerrainLayer"); }
         [global::Unbound.Stub] internal static void RemoveTerrainLayer(global::UnityEngine.Terrain terrain, int index) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TerrainLayerUtility.RemoveTerrainLayer"); }

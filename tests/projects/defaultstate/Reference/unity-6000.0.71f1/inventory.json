@@ -2681,6 +2681,12 @@
     },
     {
       "category": "class",
+      "module": "UnityEditor.TerrainModule",
+      "status": "static",
+      "type": "UnityEditor.TerrainLayerUtility"
+    },
+    {
+      "category": "class",
       "module": "UnityEditor.CoreModule",
       "status": "candidate",
       "type": "UnityEditor.TextureImporter"

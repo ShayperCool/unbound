@@ -1485,6 +1485,7 @@
 {"key":"UnityEditor.SpriteUtilityWindow/Property/UnityEngine.Object/hideFlags","status":"value","value":"enum:52"}
 {"key":"UnityEditor.SpriteUtilityWindow/Property/UnityEngine.Object/name","status":"value","value":"string:"}
 {"key":"UnityEditor.Sprites.SpriteUtility/@factory","status":"value","value":"class"}
+{"key":"UnityEditor.TerrainLayerUtility/@factory","status":"excluded","value":"static"}
 {"key":"UnityEditor.TextureImporter/@factory","status":"value","value":"class"}
 {"key":"UnityEditor.TextureImporter/Property/UnityEditor.AssetImporter/assetBundleName","status":"getter-threw","value":"System.NullReferenceException"}
 {"key":"UnityEditor.TextureImporter/Property/UnityEditor.AssetImporter/assetBundleVariant","status":"getter-threw","value":"System.NullReferenceException"}
