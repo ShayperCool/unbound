@@ -1,0 +1,10 @@
+{
+  "commands": [
+    "python3 tests/projects/uvmetrics/run.py gate"
+  ],
+  "summary": "uvmetrics: .*",
+  "engine_paths": [
+    "managed/UnityEngine/Graphics/Mesh.cs",
+    "managed/UnityEngine/Editor/EditorChannelService.cs"
+  ]
+}
