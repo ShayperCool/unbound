@@ -1106,9 +1106,12 @@ namespace UnityEngine
                 {
                     m_Raw = bytes;
                 }
-                else
+                else if (!ReadSerializedBlocks(bytes))
                 {
                     m_Pixels = new Color32[count];
+                    // What GetRawTextureData answers of a texture that is not readable: the file's bytes
+                    // (not pixels encoded in a format Unbound cannot write).
+                    if (!m_IsReadable) m_UnreadableRaw = bytes;
                     Debug.LogWarning($"Unbound: texture '{m_Name}' has pixel data in {m_Format}, which is not supported.");
                 }
             }
@@ -1118,6 +1121,30 @@ namespace UnityEngine
             // As in Unity, a texture that is not readable goes to the GPU when it loads and keeps
             // no copy in memory.
             if (!m_IsReadable) EnsureUploaded();
+        }
+
+        /// <summary>A block-compressed texture an asset file holds as its blocks (a package's editor
+        /// icon in DXT5): the blocks become its storage and its pixels what they decode to, as for an
+        /// import of that format. False (nothing changed) for a format that is not a plain block
+        /// format (Crunch) or blocks too few for the mip chain.</summary>
+        bool ReadSerializedBlocks(byte[] bytes)
+        {
+            var format = m_Format;
+            if (m_SourceFormat != null || BlockFormats.BlockBytes(format) == 0 || BlockFormats.IsCrunch(format)) return false;
+            m_SourceFormat = format;
+            m_SourceMips = m_MipCount;
+            int total = 0;
+            for (int mip = 0; mip < m_SourceMips; mip++) total += SourceLevelSize(mip);
+            if (bytes.Length < total)
+            {
+                m_SourceFormat = null;
+                return false;
+            }
+            m_Format = format == TextureFormat.BC6H || BlockFormats.IsAstcHdr(format) ? TextureFormat.RGBAHalf : TextureFormat.RGBA32;
+            m_SourceRaw = bytes.Length == total ? bytes : bytes[..total];
+            // The pixels are decoded when first read.
+            m_BlockCellsDirty = m_IsReadable;
+            return true;
         }
 
         internal override void OnEngineDestroy()

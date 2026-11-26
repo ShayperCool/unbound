@@ -152,6 +152,61 @@ namespace UnityEngine.Tests
             return texture;
         }
 
+        sealed class LogCapture : ILogHandler
+        {
+            public readonly System.Collections.Generic.List<string> Messages = new System.Collections.Generic.List<string>();
+            public void LogFormat(LogType logType, Object context, string format, params object[] args) =>
+                Messages.Add(logType + ": " + (args == null || args.Length == 0 ? format : string.Format(format, args)));
+            public void LogException(Exception exception, Object context) => Messages.Add("Exception: " + exception.Message);
+        }
+
+        /// <summary>A texture an asset file holds in DXT5 (a package's 16x16 editor icon, not readable,
+        /// one mip, as com.unity.ai.navigation ships one): read without an exception or a warning,
+        /// its format DXT5, its blocks what GetRawTextureData answers (a readable one's pixels are
+        /// decoded from them when first read, by the native decoder).</summary>
+        [Theory]
+        [InlineData(false)]
+        [InlineData(true)]
+        public void AssetFileBlockTexturesKeepTheirBlocks(bool readable)
+        {
+            const string block = "ff00000000000000ffff000000000000";
+            string yaml = @"Texture2D:
+  m_Name: Icon
+  m_Width: 16
+  m_Height: 16
+  m_CompleteImageSize: 256
+  m_TextureFormat: 12
+  m_MipCount: 1
+  m_IsReadable: " + (readable ? "1" : "0") + @"
+  m_ColorSpace: 1
+  image data: 256
+  _typelessdata: " + string.Concat(Enumerable.Repeat(block, 16)) + @"
+";
+            var capture = new LogCapture();
+            var previous = Debug.unityLogger.logHandler;
+            Debug.unityLogger.logHandler = capture;
+            var texture = new Texture2D(1, 1) { hideFlags = HideFlags.HideAndDontSave };
+            try
+            {
+                texture.ReadSerialized(TestYaml.DocumentBody(yaml), null);
+            }
+            finally
+            {
+                Debug.unityLogger.logHandler = previous;
+            }
+            try
+            {
+                Assert.Empty(capture.Messages);
+                Assert.Equal(TextureFormat.DXT5, texture.format);
+                Assert.Equal(readable, texture.isReadable);
+                Assert.Equal(Convert.FromHexString(string.Concat(Enumerable.Repeat(block, 16))), texture.GetRawTextureData());
+            }
+            finally
+            {
+                Object.DestroyImmediate(texture);
+            }
+        }
+
         /// <summary>The blocks are a compressed texture's storage (tests/projects/texturecompression
         /// write.*): views write them and texel reads decode them; SetPixels and SetPixels32 throw,
         /// SetPixel leaves the texel; copies keep the blocks.</summary>
