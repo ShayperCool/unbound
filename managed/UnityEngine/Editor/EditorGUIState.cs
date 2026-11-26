@@ -1477,8 +1477,9 @@ namespace UnityEditor
     }
 
     /// <summary>The Editor's built-in icons, by the names its resources have
-    /// (Editor/Data/editor-icons-&lt;family&gt;.txt, from `unity editor resources`); each a small
-    /// placeholder texture, as Unbound draws no editor UI.</summary>
+    /// (Editor/Data/editor-icons-&lt;family&gt;.txt, from `unity editor resources`): the textures of
+    /// the installation's Editor resources, or a placeholder of one transparent texel without an
+    /// installation (managed tests) or for a texture that cannot be read (reported).</summary>
     internal static class EditorIcons
     {
         static HashSet<string> s_Names;
@@ -1513,9 +1514,13 @@ namespace UnityEditor
             return tex;
         }
 
-        /// <summary>A placeholder: one transparent texel (Unbound has no icon pixels to draw).</summary>
+        /// <summary>The installation's icon, else a placeholder: one transparent texel.</summary>
         static Texture2D Make(string name)
         {
+            var icon = Unbound.UIElements.UiResources.EditorLoadIcon(name);
+            if (icon != null) return icon;
+            if (Unbound.Runtime.Native.IsReady)
+                Debug.LogWarning($"Unbound: the Editor icon '{name}' is not readable from this installation's Editor resources; a transparent placeholder stands in for it.");
             var tex = new Texture2D(1, 1, TextureFormat.RGBA32, false) { name = name };
             tex.SetPixel(0, 0, Color.clear);
             tex.Apply();

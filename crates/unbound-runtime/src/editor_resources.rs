@@ -24,6 +24,8 @@ struct EditorResources {
     file: SerializedFile<'static>,
     /// Lower-case container path → path id.
     container: HashMap<String, i64>,
+    /// Lower-case icon name (an `icons/` path's file name without its extension) → path id.
+    icons: OnceLock<HashMap<String, i64>>,
 }
 
 fn resources(unity_data: &Path) -> Result<&'static EditorResources> {
@@ -57,7 +59,45 @@ fn load(unity_data: &Path) -> Result<EditorResources> {
             }
         }
     }
-    Ok(EditorResources { file, container })
+    Ok(EditorResources {
+        file,
+        container,
+        icons: OnceLock::new(),
+    })
+}
+
+/// The icons by name: every `icons/` path's file name without its extension, the Editor's icon
+/// names (`d_MeshRenderer Icon` is `icons/processed/unityengine/d_meshrenderer icon.asset`, `_Help`
+/// is `icons/_help.png`). A name two paths share takes the first path in sorted order.
+fn icon_index(r: &EditorResources) -> &HashMap<String, i64> {
+    r.icons.get_or_init(|| {
+        let mut paths: Vec<(&String, &i64)> = r
+            .container
+            .iter()
+            .filter(|(key, _)| key.starts_with("icons/"))
+            .collect();
+        paths.sort();
+        let mut icons = HashMap::new();
+        for (path, &id) in paths {
+            let file = path.rsplit('/').next().unwrap_or(path);
+            let stem = file.rsplit_once('.').map_or(file, |(stem, _)| stem);
+            icons.entry(stem.to_string()).or_insert(id);
+        }
+        icons
+    })
+}
+
+/// The icon of the Editor's resources an icon name names (case-insensitively, a skin's `d_`
+/// prefix and `@2x` suffix included): `{pathId, classId}` or null.
+pub fn find_icon(unity_data: &Path, name: &str) -> Result<Json> {
+    let r = resources(unity_data)?;
+    Ok(match icon_index(r).get(&name.to_lowercase()) {
+        Some(&id) => {
+            let class_id = r.file.info(id).map(|o| o.class_id).unwrap_or(0);
+            json!({ "pathId": id, "classId": class_id })
+        }
+        None => Json::Null,
+    })
 }
 
 /// The object a resource path names: `{pathId, classId}` or null.
@@ -328,6 +368,30 @@ mod tests {
             assert_eq!(answer["fields"]["m_Name"], name, "{file_id}");
             assert_eq!(answer["fields"]["m_CustomRenderQueue"], queue, "{file_id}");
         }
+    }
+
+    /// Icons are found by their names, whatever the case, as textures.
+    #[test]
+    fn icons_are_found_by_name() {
+        let Some(data) = installed() else { return };
+        for name in [
+            "d_MeshRenderer Icon",
+            "_Help",
+            "d__Help",
+            "cs Script Icon",
+            "Preset.Context",
+            "_Popup@2x",
+        ] {
+            let found = find_icon(&data, name).unwrap();
+            assert_eq!(found["classId"], 28, "{name}: {found}");
+            let texture = object(&data, found["pathId"].as_i64().unwrap()).unwrap();
+            assert_eq!(
+                texture["fields"]["m_Name"].as_str().map(str::to_lowercase),
+                Some(name.to_lowercase()),
+                "{name}"
+            );
+        }
+        assert_eq!(find_icon(&data, "no such icon").unwrap(), Json::Null);
     }
 
     /// The Editor's resources by GUID answer exactly what the path-id request answers.

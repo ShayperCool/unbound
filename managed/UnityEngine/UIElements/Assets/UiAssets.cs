@@ -289,6 +289,31 @@ namespace Unbound.UIElements
             return id == 0 ? null : LoadObject(id);
         }
 
+        static readonly Dictionary<string, long> s_Icons = new Dictionary<string, long>(StringComparer.Ordinal);
+
+        /// <summary>An icon of the Editor's resources by its name (an `icons/` file name without its
+        /// extension, such as "d_MeshRenderer Icon"), or null.</summary>
+        internal static Texture2D EditorLoadIcon(string name)
+        {
+            if (string.IsNullOrEmpty(name) || !Native.IsReady) return null;
+            if (!s_Icons.TryGetValue(name, out long id))
+            {
+                id = 0;
+                try
+                {
+                    var json = Native.Call("editor-resource", JsonSerializer.Serialize(new { icon = name }));
+                    using var doc = JsonDocument.Parse(json);
+                    if (doc.RootElement.ValueKind == JsonValueKind.Object) id = doc.RootElement.GetProperty("pathId").GetInt64();
+                }
+                catch (Exception e)
+                {
+                    Debug.LogWarning($"Unbound: editor icon {name}: {e.Message}");
+                }
+                s_Icons[name] = id;
+            }
+            return id == 0 ? null : LoadObject(id) as Texture2D;
+        }
+
         /// <summary>An object of the Editor's resources by its path id (references `{fileID, guid 0000...d000}`).</summary>
         internal static Object LoadObject(long pathId)
         {
