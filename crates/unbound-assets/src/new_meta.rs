@@ -403,10 +403,16 @@ fn sprites_2d(section: String, asset: &Path) -> String {
     let png = asset
         .extension()
         .is_some_and(|e| e.eq_ignore_ascii_case("png"));
-    let decoded = png
-        .then(|| std::fs::read(asset).ok())
-        .flatten()
-        .and_then(|bytes| crate::image_io::decode(&bytes).ok());
+    let bytes = png.then(|| std::fs::read(asset).ok()).flatten();
+    // A PNG of 16-bit channels (its header's bit depth): sliced on its alpha made 8-bit, which
+    // makes the faintest texels transparent (not measured).
+    if bytes.as_ref().is_some_and(|b| b.len() > 24 && b[24] == 16) {
+        tracing::warn!(
+            "{}: a 16-bit PNG is sliced on its alpha as 8 bits; the Editor's slicing of 16-bit alpha is not measured",
+            asset.display()
+        );
+    }
+    let decoded = bytes.and_then(|bytes| crate::image_io::decode(&bytes).ok());
     let Some(image) = decoded else {
         tracing::warn!(
             "{}: in a 2D project the Editor imports a new texture as sprites, sliced automatically; Unbound does so for a PNG only (not another format or one it cannot read) yet, so this one imports as a Default texture",

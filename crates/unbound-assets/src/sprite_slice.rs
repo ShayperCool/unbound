@@ -2,14 +2,16 @@
 //! Editor writes into its `.meta` (matches the Unity 6000.0.71f1 Editor, tests/projects/spritemeta
 //! sprites.New*, sprites.Slice*, sprites.Sess*).
 //!
-//! The measured rule: the regions of pixels whose alpha is not 0, 8-connected; a region narrower or
-//! lower than [`MIN_SIZE`] is small and joins the nearest region that is not (the rect around
-//! both); without any such region the texture is one sprite of its whole size. Each rect grows by
-//! one pixel on every side, within the texture. The sprites come in the order a scan from the top
-//! row down, each row left to right, first meets their regions; when small regions were joined, in
-//! reading order instead: a rect before another whose rows it shares and that lies to its right,
-//! else the higher one first (spritemeta sprites.SliceTwoBigDot, SliceSmallBetween, SliceRowMerge,
-//! SliceTopDot, SliceMany; without joins, SliceChain keeps the scan order).
+//! The measured rule: the regions of pixels whose alpha is not 0, 8-connected, listed as a scan
+//! from the bottom row up, each row left to right, meets them; a region narrower or lower than
+//! [`MIN_SIZE`] is small and joins the nearest region that is not (the rect around both), nearest
+//! by the squared gap between their rects, of equal ones the first listed (spritemeta
+//! sprites.NearChebyshev, NearCentre, NearTieRow, SliceSmallBetween); without any such region the
+//! texture is one sprite of its whole size. Each rect grows by one pixel on every side, within the
+//! texture. The sprites come in rows from the top: the rect of the highest top and every rect whose
+//! rows its rows touch form a row, left to right, then the next row of what is left (OrderRows,
+//! OrderStair, SliceChain, SliceFaint, SliceTwoBigDot, SliceRowMerge and the others: 33 textures).
+//! Which rect starts a row when two tops tie is not measured (the last listed is taken).
 
 /// The size under which a region is small (in either direction).
 pub const MIN_SIZE: u32 = 4;
@@ -40,39 +42,36 @@ pub fn slice(width: u32, height: u32, alpha: impl Fn(u32, u32) -> u8) -> Vec<Rec
     if regions.iter().all(small) {
         return whole;
     }
-    let mut joined = false;
-    let mut i = 0;
-    while i < regions.len() {
-        if !small(&regions[i]) {
-            i += 1;
+    let mut joined: Vec<Option<[u32; 4]>> = regions.drain(..).map(Some).collect();
+    for i in 0..joined.len() {
+        let Some(s) = joined[i].filter(|r| small(r)) else {
             continue;
-        }
-        let s = regions[i];
+        };
         // The nearest region that is not small, by the gap between their rects; of equal ones the
-        // last in scan order (spritemeta sprites.SliceSmallBetween).
+        // first listed.
         let mut best: Option<(usize, u64)> = None;
-        for (j, r) in regions.iter().enumerate() {
-            if j == i || small(r) {
+        for (j, r) in joined.iter().enumerate() {
+            let Some(r) = r.filter(|r| !small(r)) else {
                 continue;
-            }
-            let d = gap(&s, r);
-            if best.is_none_or(|(_, b)| d <= b) {
+            };
+            let d = gap(&s, &r);
+            if best.is_none_or(|(_, b)| d < b) {
                 best = Some((j, d));
             }
         }
         let (j, _) = best.expect("a region that is not small exists");
-        let b = regions[j];
-        regions[j] = [
+        let b = joined[j].expect("a listed region");
+        joined[j] = Some([
             s[0].min(b[0]),
             s[1].min(b[1]),
             s[2].max(b[2]),
             s[3].max(b[3]),
-        ];
-        regions.remove(i);
-        joined = true;
+        ]);
+        joined[i] = None;
     }
-    let mut rects: Vec<Rect> = regions
+    let mut left: Vec<Rect> = joined
         .iter()
+        .flatten()
         .map(|r| {
             let (x0, y0) = (r[0].saturating_sub(1), r[1].saturating_sub(1));
             let (x1, y1) = ((r[2] + 2).min(width), (r[3] + 2).min(height));
@@ -84,24 +83,25 @@ pub fn slice(width: u32, height: u32, alpha: impl Fn(u32, u32) -> u8) -> Vec<Rec
             }
         })
         .collect();
-    if joined {
-        // Insertion into reading order, from the scan order.
-        for k in 1..rects.len() {
-            let mut m = k;
-            while m > 0 && reads_before(&rects[m], &rects[m - 1]) {
-                rects.swap(m, m - 1);
-                m -= 1;
+    // Rows from the top: the highest rect and every rect whose rows touch its rows, left to right.
+    let mut rects = Vec::with_capacity(left.len());
+    while !left.is_empty() {
+        let top = (0..left.len())
+            .max_by_key(|&k| (left[k].y + left[k].height, k))
+            .expect("a rect is left");
+        let (lo, hi) = (left[top].y, left[top].y + left[top].height);
+        let mut row: Vec<Rect> = Vec::new();
+        left.retain(|r| {
+            let touches = r.y <= hi && lo <= r.y + r.height;
+            if touches {
+                row.push(*r);
             }
-        }
+            !touches
+        });
+        row.sort_by_key(|r| r.x);
+        rects.extend(row);
     }
     rects
-}
-
-/// Whether `a` comes before `b` in reading order: on shared rows (touching counts), the one to the
-/// left; else the higher one.
-fn reads_before(a: &Rect, b: &Rect) -> bool {
-    let share = a.y <= b.y + b.height && b.y <= a.y + a.height;
-    if share { a.x < b.x } else { a.y > b.y }
 }
 
 /// The squared gap between two inclusive pixel rects (0 when they touch or overlap).
@@ -112,13 +112,13 @@ fn gap(a: &[u32; 4], b: &[u32; 4]) -> u64 {
 }
 
 /// The 8-connected regions of non-zero alpha as inclusive rects `[x0, y0, x1, y1]`, in the order a
-/// scan from the top row down, left to right, meets them.
+/// scan from the bottom row up, left to right, meets them.
 fn regions(width: u32, height: u32, alpha: &impl Fn(u32, u32) -> u8) -> Vec<[u32; 4]> {
     let (w, h) = (width as usize, height as usize);
     let mut seen = vec![false; w * h];
     let mut out = Vec::new();
     let mut stack = Vec::new();
-    for y in (0..height).rev() {
+    for y in 0..height {
         for x in 0..width {
             let at = y as usize * w + x as usize;
             if seen[at] || alpha(x, y) == 0 {
@@ -195,17 +195,17 @@ mod tests {
         assert_eq!(s(&[]), [rect(0, 0, 16, 16)]);
         // SliceThin: narrow is small.
         assert_eq!(s(&[(2, 4, 2, 11), (9, 14, 9, 14)]), [rect(1, 1, 15, 15)]);
-        // SliceChain: no join, scan order.
+        // SliceChain: rows from the top.
         assert_eq!(
             s(&[(6, 9, 1, 4), (12, 15, 5, 8), (0, 3, 9, 12)]),
             [rect(0, 8, 5, 6), rect(11, 4, 5, 6), rect(5, 0, 6, 6)]
         );
-        // SliceTwoBigDot: joined, reading order.
+        // SliceTwoBigDot: one row.
         assert_eq!(
             s(&[(1, 5, 1, 5), (10, 14, 10, 14), (12, 12, 7, 7)]),
             [rect(0, 0, 7, 7), rect(9, 6, 7, 10)]
         );
-        // SliceSmallBetween: a tie joins the later one in scan order.
+        // SliceSmallBetween: a tie joins the first listed (the lower).
         assert_eq!(
             s(&[(1, 4, 1, 4), (11, 14, 11, 14), (7, 8, 7, 8)]),
             [rect(0, 0, 10, 10), rect(10, 10, 6, 6)]
@@ -214,6 +214,29 @@ mod tests {
         assert_eq!(
             s(&[(1, 4, 1, 4), (11, 14, 1, 4), (6, 9, 12, 15), (6, 7, 6, 7)]),
             [rect(5, 11, 6, 5), rect(0, 0, 9, 9), rect(10, 0, 6, 6)]
+        );
+        // OrderRows / OrderStair: rects of touching rows are one row, left to right.
+        assert_eq!(
+            s(&[(10, 13, 8, 11), (0, 3, 6, 9)]),
+            [rect(0, 5, 5, 6), rect(9, 7, 6, 6)]
+        );
+        assert_eq!(
+            s(&[(0, 3, 0, 3), (5, 8, 3, 6), (10, 13, 6, 9)]),
+            [rect(0, 0, 5, 5), rect(4, 2, 6, 6), rect(9, 5, 6, 6)]
+        );
+        // NearChebyshev / NearCentre: the squared gap decides; NearTieRow: a tie on one row joins
+        // the left one.
+        assert_eq!(
+            s(&[(0, 3, 0, 3), (12, 15, 4, 10), (7, 7, 7, 7)]),
+            [rect(0, 0, 5, 5), rect(6, 3, 10, 9)]
+        );
+        assert_eq!(
+            s(&[(0, 3, 0, 3), (8, 15, 8, 15), (6, 6, 6, 6)]),
+            [rect(0, 0, 5, 5), rect(5, 5, 11, 11)]
+        );
+        assert_eq!(
+            s(&[(0, 3, 10, 13), (10, 13, 10, 13), (6, 7, 4, 4)]),
+            [rect(0, 3, 9, 12), rect(9, 9, 6, 6)]
         );
         // SliceNpot: a 10x6 texture of small regions.
         assert_eq!(
