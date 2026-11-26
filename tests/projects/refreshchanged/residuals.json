@@ -1,0 +1,11 @@
+{
+ "Unbound runs no OnPreprocessAsset for assets it imports without an importer of its own (a text asset: AssetPostprocessing, 'Assets of other kinds ... get no OnPreprocessAsset'), where the Editor runs it before every import": [
+  "import/txt/events",
+  "refresh/events"
+ ],
+ "Unbound imports an asset at its first load in the session (its importer and postprocessors run then, and a scripted importer's static count goes on from there), where the Editor imported the project's assets when it opened it, before Play mode's domain reload": [
+  "loaded/after",
+  "loaded/events",
+  "loaded/fresh"
+ ]
+}

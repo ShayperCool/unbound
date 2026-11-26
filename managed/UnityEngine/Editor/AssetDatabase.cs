@@ -650,11 +650,18 @@ namespace UnityEditor
         /// import's messages logged now, and reported imported.</summary>
         static void ImportNow(string guid)
         {
+            ImportUnloadedNow(guid);
+            ProjectImports.Wrote(GUIDToAssetPath(guid));
+            SessionImports.Imported(GUIDToAssetPath(guid));
+        }
+
+        /// <summary>An asset not loaded imported now: its preprocessors run again and Unbound's import
+        /// of it (a load) runs its importer and postprocessors.</summary>
+        static void ImportUnloadedNow(string guid)
+        {
             AssetDatabaseRuntime.ImportedInSession(guid);
             AssetPostprocessing.ForgetPreprocessed(GUIDToAssetPath(guid));
             AssetDatabaseRuntime.LoadFile(guid);
-            ProjectImports.Wrote(GUIDToAssetPath(guid));
-            SessionImports.Imported(GUIDToAssetPath(guid));
         }
 
         [Unbound.EditorFaithful("Unbound keeps no asset files open")]

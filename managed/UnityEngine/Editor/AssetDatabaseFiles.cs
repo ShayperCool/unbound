@@ -283,7 +283,10 @@ namespace UnityEditor
         /// <summary>Assets whose file or .meta changed on disk since the session saw them are
         /// imported again, their loaded objects kept, and reported imported (matches the Unity
         /// 6000.0.71f1 Editor, tests/projects/scenesave refresh-changes; scripts and assembly
-        /// definitions are left to the script compilation).</summary>
+        /// definitions are left to the script compilation). One an importer makes objects of that is
+        /// not loaded is imported now too, its import's callbacks run now (tests/projects/refreshchanged
+        /// refresh.events: a texture's and a scripted importer's, loaded or not); a native asset not
+        /// loaded is read at its next load.</summary>
         internal static void ReimportChanged(IEnumerable<string> paths)
         {
             foreach (var path in paths)
@@ -292,7 +295,12 @@ namespace UnityEditor
                 if (string.IsNullOrEmpty(guid)) continue;
                 // A folder has nothing to import again; scripts go to the compilation (and are not
                 // reported: SessionImports).
-                if (!IsValidFolder(path) && !CompilesScripts(path)) AssetDatabaseRuntime.ReimportInPlace(guid);
+                if (!IsValidFolder(path) && !CompilesScripts(path))
+                {
+                    bool unloaded = !AssetDatabaseRuntime.IsLoaded(guid);
+                    AssetDatabaseRuntime.ReimportInPlace(guid);
+                    if (unloaded && !NativeFormat(path)) ImportUnloadedNow(guid);
+                }
                 ProjectImports.Wrote(path);
                 SessionImports.Imported(path);
             }
