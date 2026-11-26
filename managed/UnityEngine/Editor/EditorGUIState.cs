@@ -1562,28 +1562,35 @@ namespace UnityEditor
                 ?? (byName ? Unbound.UIElements.UiResources.EditorLoadByName(name) as Texture2D : null);
         }
 
-        /// <summary>The icon of a class or of its nearest engine base class that has one (script
-        /// classes have none of their own), the skin's first; null when none has.</summary>
+        /// <summary>The icon of a class or of its nearest base class that has one, the skin's first;
+        /// null when none has. An engine class, or a script class in a namespace, has the icon
+        /// `icons/processed/&lt;namespace&gt;/&lt;Class&gt; Icon.asset` (measured: a script class
+        /// UnityEngine.UI.Image has the Image icon, a script class GameManager without a namespace
+        /// not the GameManager one, tests/projects/editortitlebar thumbnails/scripts).</summary>
         internal static Texture2D ClassIcon(Type type)
         {
             bool dark = EditorGUIUtility.isProSkin;
             var icons = s_ClassIcons[dark ? 1 : 0];
             if (icons.TryGetValue(type, out var icon)) return icon;
             for (var t = type; icon == null && t != null && t != typeof(Object); t = t.BaseType)
-            {
-                if (t.Assembly != typeof(Object).Assembly) continue;
-                string name = t.Name + " Icon";
-                string folder = t.Namespace == null ? "" : t.Namespace.ToLowerInvariant().Replace('.', '/') + "/";
-                if (!Unbound.Runtime.Native.IsReady)
-                {
-                    icon = Names.Contains(dark ? "d_" + name : name) ? PlaceholderNamed(dark ? "d_" + name : name) : null;
-                    continue;
-                }
-                if (dark) icon = Unbound.UIElements.UiResources.EditorLoad("icons/processed/" + folder + "d_" + name + ".asset") as Texture2D;
-                icon ??= Unbound.UIElements.UiResources.EditorLoad("icons/processed/" + folder + name + ".asset") as Texture2D;
-            }
+                icon = OwnClassIcon(t);
             icons[type] = icon;
             return icon;
+        }
+
+        /// <summary>A class's own icon (no base class's), or null.</summary>
+        internal static Texture2D OwnClassIcon(Type t)
+        {
+            bool engine = t.Assembly == typeof(Object).Assembly;
+            if (!engine && string.IsNullOrEmpty(t.Namespace)) return null;
+            bool dark = EditorGUIUtility.isProSkin;
+            string name = t.Name + " Icon";
+            if (!Unbound.Runtime.Native.IsReady)
+                return Names.Contains(dark ? "d_" + name : name) ? PlaceholderNamed(dark ? "d_" + name : name) : null;
+            string folder = string.IsNullOrEmpty(t.Namespace) ? "" : t.Namespace.ToLowerInvariant().Replace('.', '/') + "/";
+            Texture2D icon = null;
+            if (dark) icon = Unbound.UIElements.UiResources.EditorLoad("icons/processed/" + folder + "d_" + name + ".asset") as Texture2D;
+            return icon ?? Unbound.UIElements.UiResources.EditorLoad("icons/processed/" + folder + name + ".asset") as Texture2D;
         }
 
         /// <summary>One transparent texel (managed tests, which have no installation).</summary>

@@ -273,6 +273,11 @@ namespace UnityEngine.Tests
                 Assert.Same(icon, AssetPreview.GetMiniThumbnail(go));
                 // The object field's picture is the same thumbnail.
                 Assert.EndsWith("cs Script Icon", EditorGUIUtility.ObjectContent(go.GetComponent<Plain>(), typeof(Plain)).image.name);
+                // thumbnails/scripts: a script class in a namespace with an icon folder has its
+                // class icon; one without a namespace named as an icon does not.
+                Assert.EndsWith("Image Icon", AssetPreview.GetMiniThumbnail(go.AddComponent<global::UnityEngine.UI.Image>()).name);
+                Assert.EndsWith("cs Script Icon", AssetPreview.GetMiniThumbnail(go.AddComponent<global::GameManager>()).name);
+                Assert.EndsWith("cs Script Icon", EditorGUIUtility.ObjectContent(null, typeof(global::GameManager)).image.name);
                 // An [Icon] class's icon is not used, which is said.
                 int said = Hits("UnityEditor.AssetPreview.GetMiniThumbnail of an [Icon] class");
                 Assert.EndsWith("cs Script Icon", AssetPreview.GetMiniThumbnail(go.AddComponent<Iconed>()).name);
@@ -329,3 +334,12 @@ namespace UnityEngine.Tests
         }
     }
 }
+
+namespace UnityEngine.UI
+{
+    /// <summary>A script class in a namespace the Editor has class icons for (InspectorTitlebarTests).</summary>
+    public sealed class Image : MonoBehaviour { }
+}
+
+/// <summary>A script class without a namespace named as an Editor class icon (InspectorTitlebarTests).</summary>
+public sealed class GameManager : UnityEngine.MonoBehaviour { }

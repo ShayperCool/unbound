@@ -478,22 +478,30 @@ namespace UnityEditor
             if (obj == null) return null;
             if (obj is Texture2D texture) return texture;
             if ((obj is GameObject || obj is ScriptableObject) && EditorGUIUtility.GetIconForObject(obj) is Texture2D custom) return custom;
-            var type = obj.GetType();
+            return MiniTypeThumbnail(obj.GetType());
+        }
+
+        static readonly Dictionary<Type, Texture2D>[] s_ScriptIcons = { new Dictionary<Type, Texture2D>(), new Dictionary<Type, Texture2D>() };
+
+        /// <summary>A class's icon: a script's behaviours its class's own icon (a script class in a
+        /// namespace that has one), else "cs Script Icon"; other classes the icon of the class or
+        /// its nearest base class (a script's ScriptableObject "ScriptableObject Icon"). An [Icon]
+        /// class's icon is not used, which is said. Unmeasured: a class with no icon in its chain
+        /// (none here), script base classes of a behaviour.</summary>
+        internal static Texture2D MiniTypeThumbnail(Type type)
+        {
+            if (type == null) return null;
             if (!s_HasIconAttribute.TryGetValue(type, out bool attributed))
                 s_HasIconAttribute[type] = attributed = Attribute.IsDefined(type, typeof(IconAttribute), true);
             if (attributed)
                 Stubs.Ignored("UnityEditor.AssetPreview.GetMiniThumbnail of an [Icon] class", "an [Icon] attribute's icon is not used: the class's default icon stands for it");
-            return MiniTypeThumbnail(type);
-        }
-
-        /// <summary>A class's icon: a script's behaviours "cs Script Icon", else the icon of the class
-        /// or its nearest engine base class (a script's ScriptableObject "ScriptableObject Icon").
-        /// Icons a script's MonoScript is given (packages' scripts among them) are unmeasured.</summary>
-        internal static Texture2D MiniTypeThumbnail(Type type)
-        {
-            if (type == null) return null;
             if (typeof(MonoBehaviour).IsAssignableFrom(type) && type.Assembly != typeof(Object).Assembly)
-                return EditorIcons.Find("cs Script Icon");
+            {
+                var icons = s_ScriptIcons[EditorGUIUtility.isProSkin ? 1 : 0];
+                if (!icons.TryGetValue(type, out var icon))
+                    icons[type] = icon = EditorIcons.OwnClassIcon(type) ?? EditorIcons.Find("cs Script Icon");
+                return icon;
+            }
             return EditorIcons.ClassIcon(type);
         }
     }
