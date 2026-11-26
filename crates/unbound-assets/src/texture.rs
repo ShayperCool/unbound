@@ -629,6 +629,10 @@ pub struct ImportedTexture {
     /// unmeasured cases) and the GPU samples BC7; a 2D RGBA8 texture of a size divisible by 4.
     /// Scripts see the uncompressed [`ImportedTexture::mips`].
     pub bc7: Option<Vec<serde_bytes::ByteBuf>>,
+    /// The format of a DDS, KTX or ASTC source taken as it is ([`ihv`]) where no block format
+    /// says it (ARGB32 texels).
+    #[serde(default)]
+    pub source_format: Option<i32>,
 }
 
 /// An import's block-compressed mip chain.
@@ -1144,6 +1148,9 @@ impl ImportedTexture {
     /// RG16 and R8, compressed formats Unbound does not produce, HDR, normal maps, directional
     /// lightmaps and shadowmasks stored uncompressed (unmeasured).
     pub fn reported_format(&self) -> Option<i32> {
+        if let Some(format) = self.source_format {
+            return Some(format);
+        }
         if let Some(archive) = &self.crunched {
             return Some(archive.format.unity_format());
         }
@@ -1589,9 +1596,14 @@ impl Importer for TextureImporter {
     // 57: textureSettings without their own serialized version wrap by their wrapMode alone, and a
     //     wrap no settings hold reads Repeat in the oldest layout too (a sprite's was Clamp); an
     //     oldest section without a default entry is uncompressed.
-    const VERSION: u32 = 57;
+    // 58: a DDS, KTX or ASTC source file keeps its own data (the IHVImageFormatImporter's).
+    const VERSION: u32 = 58;
 
     fn import(&self, source: &Path, bytes: &[u8], meta: &Value) -> Result<ImportedTexture> {
+        // A DDS, KTX or ASTC file keeps its own data (the IHVImageFormatImporter's).
+        if ihv::is_source(source) {
+            return ihv::import(source, bytes, meta);
+        }
         // A GUID-only .meta reads its oldest settings before the trees' settings apply.
         let oldest = self.oldest(source, bytes, meta);
         let meta = oldest.as_ref().unwrap_or(meta);
@@ -2025,6 +2037,7 @@ fn import_image(
         usage_mode,
         approximation: None,
         bc7: None,
+        source_format: None,
     })
 }
 
@@ -2108,6 +2121,7 @@ pub fn import_pixels(
         usage_mode: 0,
         approximation: None,
         bc7: None,
+        source_format: None,
     }
 }
 
@@ -2316,6 +2330,7 @@ fn import_flipbook(
         usage_mode: 0,
         approximation: None,
         bc7: None,
+        source_format: None,
     })
 }
 
@@ -2585,6 +2600,7 @@ fn import_cubemap(
         usage_mode: 0,
         approximation: None,
         bc7: None,
+        source_format: None,
     })
 }
 

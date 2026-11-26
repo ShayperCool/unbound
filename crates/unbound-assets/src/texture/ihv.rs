@@ -6,8 +6,145 @@
 //! uncompressed texels upside down to its bottom-up rows (see [`flip_blocks`]), not the BC7 blocks
 //! (nor BC6H, whose imported data is not measured). KTX and `.astc` data is taken as it is.
 
-use super::BlockFormat;
+use super::{
+    BlockFormat, Blocks, ImportedTexture, MipLevel, TextureFormat, TextureSettings, TextureShape,
+    bcn,
+};
 use anyhow::{Context, Result, bail};
+use std::path::Path;
+use unbound_yaml::{Map, Value};
+
+/// The extensions the Editor imports with its IHVImageFormatImporter that this module reads.
+pub const EXTENSIONS: &[&str] = &["dds", "ktx", "astc"];
+
+/// Whether a path is a source file of this module's.
+pub fn is_source(path: &Path) -> bool {
+    path.extension()
+        .and_then(|e| e.to_str())
+        .is_some_and(|e| EXTENSIONS.contains(&e.to_ascii_lowercase().as_str()))
+}
+
+/// Imports a source file as the Editor's IHVImageFormatImporter does (tests/projects/ihvsources
+/// asset.*): its own format, size and mip chain, a DDS cubemap a Cubemap, the importer's sampler,
+/// readability and colour-space settings (its `textureSettings`, `isReadable`, `sRGBTexture`);
+/// nothing resized or compressed again. The mips hold what the blocks decode to for CPU reads
+/// (BC6H: floats), the blocks the data as the Editor holds it.
+pub fn import(source: &Path, bytes: &[u8], meta: &Value) -> Result<ImportedTexture> {
+    let extension = source.extension().and_then(|e| e.to_str()).unwrap_or("");
+    let file = read(extension, bytes).with_context(|| format!("{}", source.display()))?;
+    let settings = settings(meta, &file);
+    let blocks = file.blocks();
+    let hdr = blocks.is_some_and(|f| f == BlockFormat::Bc6h || f.is_astc_hdr());
+    let mut raw = Vec::new();
+    let mut mips = Vec::new();
+    let mut at = 0;
+    for _ in 0..file.faces {
+        for (w, h) in levels(file.width, file.height, file.mips) {
+            let size = level_size(blocks, w, h);
+            let level = &file.data[at..at + size];
+            at += size;
+            let data = match blocks {
+                Some(BlockFormat::Bc6h) => bcn::decode_bc6h_f32(level, w, h)
+                    .into_iter()
+                    .flat_map(f32::to_le_bytes)
+                    .collect(),
+                Some(f) if f.is_astc_hdr() => super::astc::decode_f32(level, w, h, f)
+                    .into_iter()
+                    .flat_map(f32::to_le_bytes)
+                    .collect(),
+                Some(f) => bcn::decode_level(f, level, w, h),
+                // ARGB32 texels as RGBA for the importer's pixels.
+                None => level
+                    .chunks_exact(4)
+                    .flat_map(|t| [t[1], t[2], t[3], t[0]])
+                    .collect(),
+            };
+            raw.push(serde_bytes::ByteBuf::from(level.to_vec()));
+            mips.push(MipLevel {
+                width: w,
+                height: h,
+                data,
+            });
+        }
+    }
+    let has_alpha = !hdr
+        && mips
+            .first()
+            .is_some_and(|m| m.data.chunks_exact(4).any(|t| t[3] < 255));
+    Ok(ImportedTexture {
+        name: crate::asset_name(source),
+        width: file.width,
+        height: file.height,
+        original_width: file.width,
+        original_height: file.height,
+        format: if hdr {
+            TextureFormat::Rgba32F
+        } else {
+            TextureFormat::Rgba8
+        },
+        srgb: settings.srgb && !hdr,
+        mips,
+        layers: file.faces,
+        wrap_u: settings.wrap_u,
+        wrap_v: settings.wrap_v,
+        wrap_w: settings.wrap_w,
+        filter: settings.filter,
+        aniso: settings.aniso,
+        mip_bias: settings.mip_bias,
+        is_readable: settings.is_readable,
+        has_alpha,
+        sprites: Vec::new(),
+        import_settings_hash: settings.hash(),
+        settings,
+        blocks: blocks.map(|format| Blocks { format, mips: raw }),
+        crunched: None,
+        uncompressed: blocks.is_none(),
+        usage_mode: 0,
+        approximation: None,
+        bc7: None,
+        source_format: blocks.is_none().then_some(file.format),
+    })
+}
+
+/// The importer's settings: its section's `textureSettings`, `isReadable` and `sRGBTexture` read
+/// as a TextureImporter's are, with the file's shape and mips (an IHVImageFormatImporter has no
+/// type, size or compression settings of its own).
+fn settings(meta: &Value, file: &IhvTexture) -> TextureSettings {
+    let section = meta.get("IHVImageFormatImporter");
+    let mut importer = Map::default();
+    importer.insert("serializedVersion", Value::Scalar("13".into()));
+    if let Some(sampler) = section.and_then(|s| s.get("textureSettings")) {
+        importer.insert("textureSettings", sampler.clone());
+    }
+    let srgb = section
+        .and_then(|s| s.get("sRGBTexture"))
+        .cloned()
+        .unwrap_or(Value::Scalar("1".into()));
+    let mut mipmaps = Map::default();
+    mipmaps.insert("sRGBTexture", srgb);
+    mipmaps.insert(
+        "enableMipMap",
+        Value::Scalar(if file.mips > 1 { "1" } else { "0" }.into()),
+    );
+    importer.insert("mipmaps", Value::Map(mipmaps));
+    if let Some(readable) = section.and_then(|s| s.get("isReadable")) {
+        importer.insert("isReadable", readable.clone());
+    }
+    importer.insert(
+        "textureShape",
+        Value::Scalar(if file.faces == 6 { "2" } else { "1" }.into()),
+    );
+    importer.insert("nPOTScale", Value::Scalar("0".into()));
+    let mut root = Map::default();
+    root.insert("TextureImporter", Value::Map(importer));
+    let mut settings = TextureSettings::read(&Value::Map(root), "Standalone");
+    settings.shape = if file.faces == 6 {
+        TextureShape::Cube
+    } else {
+        TextureShape::Texture2D
+    };
+    settings
+}
 
 /// Unity's `TextureFormat.ARGB32`: the uncompressed DDS texels' format.
 pub const ARGB32: i32 = 5;
@@ -405,6 +542,75 @@ mod tests {
                 "{name}"
             );
         }
+    }
+
+    #[test]
+    fn an_import_keeps_the_files_data_with_the_importers_settings() {
+        let path = probe().join("Assets/Sources/BC1.dds");
+        let bytes = std::fs::read(&path).unwrap();
+        // The .meta the Editor writes (reference meta/BC1.dds), point filtering and clamping set.
+        let meta = unbound_yaml::parse_value(
+            "fileFormatVersion: 2\nIHVImageFormatImporter:\n  textureSettings:\n    serializedVersion: 2\n    filterMode: 0\n    aniso: 3\n    mipBias: 0\n    wrapU: 1\n    wrapV: 1\n    wrapW: 0\n  isReadable: 1\n  sRGBTexture: 0\n",
+        )
+        .unwrap();
+        let texture = import(&path, &bytes, &meta).unwrap();
+        assert_eq!(
+            (
+                texture.name.as_str(),
+                texture.width,
+                texture.height,
+                texture.layers
+            ),
+            ("BC1", 16, 16, 1)
+        );
+        assert_eq!(texture.reported_format(), Some(10));
+        let blocks = texture.blocks.as_ref().unwrap();
+        assert_eq!(
+            blocks.mips.iter().map(|m| m.len()).collect::<Vec<_>>(),
+            [128, 32, 8, 8, 8]
+        );
+        assert_eq!(
+            texture
+                .mips
+                .iter()
+                .map(|m| (m.width, m.data.len()))
+                .collect::<Vec<_>>(),
+            [(16, 1024), (8, 256), (4, 64), (2, 16), (1, 4)]
+        );
+        assert_eq!(
+            (
+                texture.filter,
+                texture.wrap_u,
+                texture.wrap_w,
+                texture.aniso
+            ),
+            (
+                super::super::FilterMode::Point,
+                super::super::WrapMode::Clamp,
+                super::super::WrapMode::Repeat,
+                3
+            )
+        );
+        assert!(texture.is_readable);
+        assert!(!texture.srgb);
+        // A DDS cube is a Cubemap; uncompressed texels report ARGB32.
+        let cube = import(
+            &probe().join("Assets/Sources/CubeBC1.dds"),
+            &std::fs::read(probe().join("Assets/Sources/CubeBC1.dds")).unwrap(),
+            &Value::Null,
+        )
+        .unwrap();
+        assert_eq!((cube.layers, cube.settings.shape), (6, TextureShape::Cube));
+        let rgba = import(
+            &probe().join("Assets/Sources/RGBA8.dds"),
+            &std::fs::read(probe().join("Assets/Sources/RGBA8.dds")).unwrap(),
+            &Value::Null,
+        )
+        .unwrap();
+        assert_eq!(
+            (rgba.reported_format(), rgba.blocks.is_none(), rgba.srgb),
+            (Some(ARGB32), true, true)
+        );
     }
 
     #[test]
