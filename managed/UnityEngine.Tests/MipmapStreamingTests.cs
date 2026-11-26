@@ -106,6 +106,7 @@ namespace UnityEngine.Tests
                 Assert.Equal(-1, big.calculatedMipmapLevel);
                 QualitySettings.streamingMipmapsActive = true;
                 QualitySettings.streamingMipmapsMaxLevelReduction = 5;
+                Unbound.Runtime.Stubs.Forget("Texture2D.calculatedMipmapLevel");
                 // reduction5/big, reduction5/tiny: 5 for both (not clamped to tiny's last mip).
                 Assert.Equal(5, big.calculatedMipmapLevel);
                 Assert.Equal(5, tiny.calculatedMipmapLevel);
@@ -115,6 +116,18 @@ namespace UnityEngine.Tests
                 Assert.Equal(0, big.desiredMipmapLevel);
                 Assert.Equal(5, big.calculatedMipmapLevel);
                 Assert.Contains(Unbound.Runtime.Stubs.HitReport(), h => h.Key == "Texture2D.calculatedMipmapLevel");
+                // minimum0*, minimum1request0: a minimum under the calculated level caps it; a request
+                // is the desired level whatever the minimum.
+                big.ClearRequestedMipmapLevel();
+                QualitySettings.streamingMipmapsMaxLevelReduction = 2;
+                big.minimumMipmapLevel = 0;
+                Assert.Equal(0, big.desiredMipmapLevel);
+                big.requestedMipmapLevel = 1;
+                Assert.Equal(1, big.desiredMipmapLevel);
+                big.minimumMipmapLevel = 1;
+                big.requestedMipmapLevel = 0;
+                Assert.Equal(0, big.desiredMipmapLevel);
+                Assert.Equal(2, big.calculatedMipmapLevel);
             }
             finally
             {

@@ -11,8 +11,8 @@ namespace UnityEngine
     /// 0 and to QualitySettings.streamingMipmapsMaxLevelReduction and its last mip, and reports a
     /// requested level other than the loaded one as not loaded. With streaming active, a texture
     /// the streaming system has not seen drawn is calculated at the maximum level reduction (not
-    /// clamped to its mips); the desired level is the requested one when set, else the calculated
-    /// one. A copy (Instantiate) streams with its source's settings but no requested level, is
+    /// clamped to its mips); the desired level is the requested one when set (whatever the
+    /// minimum), else the calculated one capped by the minimum. A copy (Instantiate) streams with its source's settings but no requested level, is
     /// not one the streaming system calculates, and reports its source's level as loaded. The
     /// level a drawn texture is calculated at from its size on screen is not simulated (a
     /// notice: the maximum level reduction stands in).
@@ -102,6 +102,8 @@ namespace UnityEngine
         bool Calculated()
         {
             ReadStreaming();
+            if (m_Streaming && !m_StreamsLevels && QualitySettings.streamingMipmapsActive)
+                Unbound.Runtime.Stubs.Ignored("Texture2D levels of a streaming texture without mipmaps", "while streaming is active they are not measured (the Editor's answers vary between runs): -1, as before streaming is active");
             return m_StreamsLevels && !m_StreamingCopy && QualitySettings.streamingMipmapsActive;
         }
 
@@ -113,7 +115,8 @@ namespace UnityEngine
 
         public int calculatedMipmapLevel => Calculated() ? CalculatedLevel() : -1;
 
-        public int desiredMipmapLevel => !Calculated() ? -1 : m_RequestedMipmapLevel >= 0 ? m_RequestedMipmapLevel : CalculatedLevel();
+        public int desiredMipmapLevel =>
+            !Calculated() ? -1 : m_RequestedMipmapLevel >= 0 ? m_RequestedMipmapLevel : Mathf.Min(CalculatedLevel(), m_MinimumMipmapLevel);
 
         public int loadingMipmapLevel { get { ReadStreaming(); return m_LoadedMipmapLevel; } }
 
