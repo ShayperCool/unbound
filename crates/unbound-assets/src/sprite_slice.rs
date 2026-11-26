@@ -39,7 +39,7 @@ pub fn slice(width: u32, height: u32, alpha: impl Fn(u32, u32) -> u8) -> Vec<Rec
     if width == 0 || height == 0 {
         return whole;
     }
-    let mut regions = regions(width, height, &alpha);
+    let regions = regions(width, height, &alpha);
     let small = |r: &[u32; 4]| r[2] - r[0] + 1 < MIN_SIZE || r[3] - r[1] + 1 < MIN_SIZE;
     if regions.iter().all(small) {
         return whole;
