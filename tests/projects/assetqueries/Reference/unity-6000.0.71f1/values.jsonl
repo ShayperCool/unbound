@@ -199,6 +199,13 @@
 {"k":"set_both/all","v":"[\"both-bundle.hd\", \"folder-bundle.sd\", \"mat-bundle\", \"mixed-case\", \"shader-bundle\"]"}
 {"k":"set_both/unused","v":"[]"}
 {"k":"set_both/paths","v":"[\"Assets/Data/Plain.txt\"]"}
+{"k":"set_variant/name","v":"\"var-bundle\" \"sd\" meta fileFormatVersion: 2\nguid: 7b67be48ed8441e8bf9f5545e0410b63\nTextScriptImporter:\n  externalObjects: {}\n  userData: \n  assetBundleName: var-bundle\n  assetBundleVariant: sd\n"}
+{"k":"set_variant/all","v":"[\"both-bundle.hd\", \"folder-bundle.sd\", \"mat-bundle\", \"mixed-case\", \"shader-bundle\", \"var-bundle.hd\", \"var-bundle.sd\"]"}
+{"k":"set_variant/unused","v":"[\"both-bundle.hd\", \"var-bundle.hd\"]"}
+{"k":"set_variant/paths","v":"[\"Assets/Data/Plain.txt\"]"}
+{"k":"reimport_removed","v":"done"}
+{"k":"reimport_removed/all","v":"[\"both-bundle.hd\", \"folder-bundle.sd\", \"mixed-case\", \"shader-bundle\", \"var-bundle.hd\", \"var-bundle.sd\"]"}
+{"k":"reimport_removed/unused","v":"[\"both-bundle.hd\", \"var-bundle.hd\"]"}
 {"k":"workers/default","v":"desired 3 user 3 standby 2 processors 12"}
 {"k":"workers/set","v":"desired 3 user 3"}
 {"k":"workers/user_set","v":"desired 3 user 2"}
