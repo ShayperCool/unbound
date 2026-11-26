@@ -494,8 +494,9 @@ namespace UnityEditor
 
         public static void SaveAssetIfDirty(Object obj)
         {
-            // As Unity's own C# does: the file of the object, by its GUID.
-            if (TryGetGUIDAndLocalFileIdentifier(obj, out var guid, out _)) SaveAssetIfDirty(new GUID(guid));
+            // As Unity's own C# does: the file of the object, by its GUID, found by instance id (so
+            // null throws, and a destroyed object with a file is still found).
+            if (TryGetGUIDAndLocalFileIdentifier(obj.GetInstanceID(), out var guid, out _)) SaveAssetIfDirty(new GUID(guid));
         }
 
         /// <summary>Saves an asset file that has something to save (AssetFiles.SaveFileIfDirty). A
