@@ -226,7 +226,14 @@ public class AssetQueriesProbe : MonoBehaviour
             AssetDatabase.DesiredWorkerCount = -1;
             return "desired " + AssetDatabase.DesiredWorkerCount + " user " + EditorUserSettings.desiredImportWorkerCount;
         });
-        Try("workers/force", () => { AssetDatabase.ForceToDesiredWorkerCount(); return "desired " + AssetDatabase.DesiredWorkerCount; });
+        // A small count before forcing: forcing a negative one makes the Editor start import
+        // workers without end.
+        Try("workers/force", () =>
+        {
+            AssetDatabase.DesiredWorkerCount = 1;
+            AssetDatabase.ForceToDesiredWorkerCount();
+            return "desired " + AssetDatabase.DesiredWorkerCount;
+        });
         Try("workers/user_settings_file", () => File.Exists("UserSettings/EditorUserSettings.asset")
             ? string.Join("\n", File.ReadAllLines("UserSettings/EditorUserSettings.asset").Where(l => l.Contains("ImportWorker")))
             : "absent");
