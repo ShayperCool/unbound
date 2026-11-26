@@ -25,7 +25,8 @@ At the first open the start's `OnPostprocessAllAssets` marks `PostDirty` and cha
 is recorded (`dirty.*`), every dispatch listing the probe's assets (`dispatches`), and the
 callbacks after the probe asks the Editor to leave (`leaving`: `Application.quitting`,
 `Application.unloading`, `EditorApplication.quitting`, Play mode state changes, a scene object's
-`OnApplicationQuit`, `OnDisable` and `OnDestroy`, dispatches).
+`OnApplicationQuit`, `OnDisable` and `OnDestroy`, dispatches; those three scene object events always
+write `play` as their second field).
 
 `run.py` opens one copy of the project four times (the Editor with `-executeMethod
 UnchangedSavesProbe.Record`, which enters Play mode; `unbound run`): `open1` with nothing imported,

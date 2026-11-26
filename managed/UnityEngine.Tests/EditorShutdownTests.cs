@@ -121,9 +121,9 @@ namespace UnityEngine.Tests
             }
         }
 
-        /// <summary>The Editor's exit with Play mode on saves before it closes its scenes; in Edit mode
-        /// after (tests/projects/unchangedsaves leaving: the scene objects' OnDisable and OnDestroy
-        /// come after the save's report).</summary>
+        /// <summary>The Editor's exit with Play mode on saves before it closes its scenes
+        /// (tests/projects/unchangedsaves leaving: the scene objects' OnDisable and OnDestroy come
+        /// after the save's report); in Edit mode Unbound keeps its unmeasured order, after.</summary>
         [Theory]
         [InlineData(true)]
         [InlineData(false)]
