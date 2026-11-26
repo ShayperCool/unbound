@@ -152,12 +152,17 @@ value is listed (reported, not gated).
 A lying or tilted capsule clips its shaft against the agent's height span with the horizontal cap
 margin `(1 - |axis.y|) * radius`, keeping full radius while the shaft overlaps the agent's height
 and clipped cap radius `sqrt(r^2 - dy^2)` when the entire shaft lies above or below it (collapsing
-to a single inward-pushing cap circle only when `|axis.y| > 0.99`, measured by `cap5low`/`cap5high`
-vs `cap10low`/`cap10high`), and ranks as a neighbour by the half-diagonal of its horizontal extents
-(`caprank`). Unbound matches every capsule contact value across upright, tilted, lying, clipped,
-sunk, raised, flipped and scaled capsules (including `cap45h382`/`cap45h384`, `cap30h6`, `cap60h8`,
-`cap5h6`, `cap45sunk`, `cap45raised`, `cap135sunk`, `cap45scaled`, `cap5low`/`cap5high`,
-`cap10low`/`cap10high`, `caplyinglow`/`caplyinghigh`/`caplyingabove`, and `caprank`). Walking past
+to a single inward-pushing cap circle only when `|axis.y| > 0.99`, bracketed by `cap8low` at 8
+degrees vs `cap85low` at 8.5 degrees and `capspheretilt` for zero-shaft tilted capsules, and keeping
+the unclipped far endpoint when it still lies within `radius` of the agent's height as measured by
+`cap45shortlow`, `cap45shortlow2`, `cap45shorthigh` and `cap45low`), and ranks as a neighbour by
+the half-diagonal of its horizontal extents without a vertical pre-cull (`caprank`, `caprankyaw`,
+`caprankoverhead`). Unbound matches every capsule contact value across upright, tilted, lying,
+clipped, sunk, raised, flipped and scaled capsules (including `cap45h382`/`cap45h384`, `cap30h6`,
+`cap60h8`, `cap5h6`, `cap45sunk`, `cap45raised`, `cap135sunk`, `cap45scaled`, `cap5low`/`cap5high`,
+`cap8low`/`cap85low`, `cap10low`/`cap10high`, `caplyinglow`/`caplyinghigh`/`caplyingabove`,
+`cap45shortlow`/`cap45shortlow2`/`cap45shorthigh`/`cap45low`, `capspheretilt`, `caprank`,
+`caprankyaw`, and `caprankoverhead`). Walking past
 a lying or tilted capsule, Unity keeps 1 to 2 cm more clearance alongside the shaft; those steering
 values are listed.
 

@@ -1724,8 +1724,7 @@ namespace DotRecast.Detour.Crowd
                             // away from the nearest point on its circumference, which points inward
                             // when the agent is inside that circle.
                             var direction = new RcVec3f(1f, 0f, 0f);
-                            float hitDistance = clippedCap ? MathF.Abs(dist - radius) : dist + radius;
-                            if (dist > 0f && hitDistance > CapsuleSurfaceNormalEpsilon)
+                            if (dist > 0f && (!clippedCap || MathF.Abs(dist - radius) > CapsuleSurfaceNormalEpsilon))
                             {
                                 float sign = clippedCap && dist < radius ? -1f : 1f;
                                 direction = new RcVec3f(sign * (diff.X / dist), 0f, sign * (diff.Z / dist));

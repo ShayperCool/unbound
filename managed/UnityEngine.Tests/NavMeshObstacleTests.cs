@@ -577,6 +577,71 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
+        public void OutOfSpanTiltedCapsuleBranchesThresholdAndYawedRankingMatchMeasuredControls()
+        {
+            using var release = TestRelease.Pin(TestRelease.Measured);
+
+            Vector3 RunOne(float radius, float height, Vector3 euler, Vector3 offset, Vector2 agentStart, float speed = 3.5f)
+            {
+                var standing = new GameObject("agent");
+                m_Objects.Add(standing);
+                standing.transform.position = new Vector3(agentStart.x, 0f, agentStart.y);
+                var agent = standing.AddComponent<NavMeshAgent>();
+                agent.speed = speed;
+                float feet = agent.nextPosition.y;
+
+                var go = new GameObject("ob");
+                m_Objects.Add(go);
+                go.transform.position = new Vector3(offset.x, feet + offset.y, offset.z);
+                go.transform.rotation = Quaternion.Euler(euler);
+                var ob = go.AddComponent<NavMeshObstacle>();
+                ob.shape = NavMeshObstacleShape.Capsule;
+                ob.radius = radius;
+                ob.height = height;
+                ob.carving = false;
+
+                for (int i = 0; i < 3; i++) Step();
+                var result = agent.nextPosition;
+                Remove(agent);
+                Object.DestroyImmediate(go);
+                return result;
+            }
+
+            // Finding 1: 45-deg short capsule below feet jumps when -y0 crosses r (centerY -0.25 vs -0.29),
+            // above head keeps unclipped p1 when y1 - maxY < r (centerY 2.25), and 45-deg h=3.0 at -0.75 clips p1.
+            var shortLow = RunOne(0.5f, 1.6f, new Vector3(0f, 0f, 45f), new Vector3(0f, -0.25f, 0f), new Vector2(0.8f, 0f));
+            var shortLow2 = RunOne(0.5f, 1.6f, new Vector3(0f, 0f, 45f), new Vector3(0f, -0.29f, 0f), new Vector2(0.8f, 0f));
+            var shortHigh = RunOne(0.5f, 1.6f, new Vector3(0f, 0f, 45f), new Vector3(0f, 2.25f, 0f), new Vector2(-0.8f, 0f));
+            var tiltLow = RunOne(0.5f, 3f, new Vector3(0f, 0f, 45f), new Vector3(0f, -0.75f, 0f), new Vector2(0.3f, 0f));
+            Assert.True(Mathf.Abs(shortLow.x - 1.2107f) < 2e-3f, $"shortLow {shortLow}");
+            Assert.True(Mathf.Abs(shortLow2.x - 0.8503f) < 2e-3f, $"shortLow2 {shortLow2}");
+            Assert.True(Mathf.Abs(shortHigh.x - (-1.2107f)) < 2e-3f, $"shortHigh {shortHigh}");
+            Assert.True(Mathf.Abs(tiltLow.x - 0.3946f) < 2e-3f, $"tiltLow {tiltLow}");
+
+            // Finding 3 & Q2: 8 deg (cos > 0.99) pushes inward across the cap center; 8.5 deg (cos <= 0.99)
+            // and 45-deg sphere-like (h <= 2r) push outward.
+            var deg8 = RunOne(0.5f, 3f, new Vector3(0f, 0f, 8f), new Vector3(0f, -1.25f, 0f), new Vector2(-0.3f, 0.1f));
+            var deg85 = RunOne(0.5f, 3f, new Vector3(0f, 0f, 8.5f), new Vector3(0f, -1.25f, 0f), new Vector2(-0.3f, 0.1f));
+            var sphereTilt = RunOne(0.5f, 0.5f, new Vector3(0f, 0f, 45f), new Vector3(0f, -0.25f, 0f), new Vector2(0.1f, 0f));
+            Assert.True(deg8.x > 0.5f && deg8.z < -0.3f, $"8 deg should push inward (+x,-z), got {deg8}");
+            Assert.True(deg85.x < -0.8f && deg85.z > 0.4f, $"8.5 deg should push outward (-x,+z), got {deg85}");
+            Assert.True(sphereTilt.x > 0.9f, $"45 deg sphere-like capsule should push outward (+x), got {sphereTilt}");
+
+            // Finding 2: 45-deg yawed lying bar (r=0.5, h=6) with zero-speed agent separates sqrt(ex^2+ez^2)=3.207
+            // from true horizontal reach (3.0) and 3D half-diagonal (3.246).
+            var yawAdmit = RunOne(0.5f, 6f, new Vector3(0f, 45f, 90f), new Vector3(2.4395f, 1.0f, -2.4395f), Vector2.zero, speed: 0f);
+            var yawMidReject = RunOne(0.5f, 6f, new Vector3(0f, 45f, 90f), new Vector3(2.4395f, 1.42f, -2.4395f), Vector2.zero, speed: 0f);
+            var yawFarReject = RunOne(0.5f, 6f, new Vector3(0f, 45f, 90f), new Vector3(2.4395f, 1.6f, -2.4395f), Vector2.zero, speed: 0f);
+            Assert.True(yawAdmit.x < -0.02f && yawAdmit.z > 0.02f, $"ry=1.0 should be admitted and pushed, got {yawAdmit}");
+            Assert.True(Mathf.Abs(yawMidReject.x) < 1e-4f && Mathf.Abs(yawMidReject.z) < 1e-4f, $"ry=1.42 should be rejected, got {yawMidReject}");
+            Assert.True(Mathf.Abs(yawFarReject.x) < 1e-4f && Mathf.Abs(yawFarReject.z) < 1e-4f, $"ry=1.6 should be rejected, got {yawFarReject}");
+
+            // Zero-radius shaft (non-single-cap) with a tiny negative offset keeps its -X normal.
+            var zeroRadius = RunOne(0f, 2f, Vector3.zero, new Vector3(0f, 1f, 0f), new Vector2(-5e-5f, 0f));
+            Assert.True(zeroRadius.x < -0.4f, $"zero-radius shaft at -5e-5 should push along -X, got {zeroRadius}");
+        }
+
+        [Fact]
         public void DisablingTheObstacleRestoresTheStraightWalk()
         {
             var obstacle = Box(new Vector3(0f, 0.5f, 0.2f), Vector3.one);

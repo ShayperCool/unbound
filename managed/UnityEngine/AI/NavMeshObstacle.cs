@@ -296,17 +296,15 @@ namespace Unbound.Runtime
     //   https://docs.unity3d.com/6000.0/Documentation/ScriptReference/AI.NavMeshObstacle-velocity.html)
     //   is a script that moves the object and computes and sets velocity itself. Obstacles moved by
     //   physics or animation are unmeasured.
-    // C4: a capsule is a circle of its radius times the larger horizontal scale (the Scripting API
-    //   calls the obstacle "cylindrical in shape"). Upright, at its axis (navpath
-    //   obstacle-separation); lying or tilted, on the measured release, at the point of its shaft
-    //   nearest the agent seen from above (navpath obstacle-shapes caplying, captilt, captiltx,
-    //   shafts within the agent's height: agents are pushed to the two radii from the shaft, along
-    //   +x when on it; walking past, Unity keeps 1 to 2 cm more clearance alongside the shaft,
-    //   listed), when its shaft lies wholly within the agent's height. Unbound's choice
-    //   (unmeasured) for any other shaft: the circle of its radius at its center, met as an
-    //   upright shaft is, when its height (the shaft's rise plus its radius) reaches the agent's;
-    //   a capsule whose height misses the agent's is no neighbour. Other releases keep an upright
-    //   circle at the center.
+    // C4: a capsule has radius times the larger horizontal scale and shaft along its local up axis.
+    //   On the measured release (navpath obstacle-separation and obstacle-shapes), capsule obstacles
+    //   enter the proximity grid by their per-axis horizontal extents, rank as neighbours by the
+    //   half-diagonal of those extents without a vertical pre-cull, and clip their shaft against
+    //   the agent's height span with the horizontal cap margin (1 - |axis.y|) * radius (using full
+    //   radius when the shaft overlaps the agent's height and the clipped cap radius sqrt(r^2 - dy^2)
+    //   when it lies wholly above or below, collapsing to a single inward-pushing cap circle only
+    //   for |axis.y| > 0.99; walking past lying or tilted shafts, Unity keeps 1 to 2 cm more
+    //   clearance alongside the shaft, listed). Other releases keep an upright circle at the center.
     // C5 (measured, not reproduced): Unity avoids a box, and pushes agents out of it, by its
     //   outline (navpath obstacle-shapes box*, listed); the one box it ignores is one spanning the
     //   agent's height exactly, a float coincidence. Unbound's choice:
@@ -318,9 +316,10 @@ namespace Unbound.Runtime
     //   box is one circle). At most MaxBoxCircles (16) circles per box: a box
     //   longer than 16 times its width (or with no width) gets 16 circles of larger radius, whose
     //   bulge grows with its length; that is reported once per run.
-    // C6 (Unbound's choice, unmeasured): an obstacle counts for an agent whose height span overlaps
-    //   its own (the test Unity's agents apply to each other: the obstacle's bottom is not above the
-    //   agent's head, its top not below the agent's feet).
+    // C6 (Unbound's choice, unmeasured for non-capsule obstacles): non-capsule obstacles count for an
+    //   agent whose height span overlaps their own (the test Unity's agents apply to each other:
+    //   the obstacle's bottom is not above the agent's head, its top not below the agent's feet).
+    //   On the measured release, capsules defer vertical culling to shaft clipping (C4).
     // C7 (Unbound's choice, unmeasured): an obstacle circle whose centre lies beyond an agent's
     //   neighbour range is not seen, and circles take places among the agent's nearest neighbours as
     //   other agents do. Limit: the crowd gathers at most DtCrowd.NeighbourCandidates (64) neighbour
