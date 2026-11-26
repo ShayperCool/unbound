@@ -504,19 +504,82 @@ namespace Unbound.Runtime
         {
             bool current = file.Get("serializedVersion") is { Kind: YKind.Scalar } version && m_Section.Get("serializedVersion") is { } own
                 && version.Text == own.Text;
-            return Arrange(file, m_Section, null, "", current, unmeasured);
+            // A texture section without a serialized version (the oldest layout, a hand-written
+            // .meta of a few keys): its missing keys at the layout's defaults, its textureSettings
+            // without their own version read as defaults, and a default platform entry added after
+            // the file's (matches the Unity 6000.0.71f1 Editor, tests/projects/spritemeta Bare,
+            // BareWrap, BarePpu, BareFull).
+            bool oldest = m_Importer == "TextureImporter" && file.Kind == YKind.Map && file.Get("serializedVersion") == null;
+            var arranged = Arrange(file, m_Section, null, "", current, unmeasured, oldest);
+            if (oldest && m_PlatformEntry != null && arranged.Get("platformSettings") is { Kind: YKind.Seq } platforms)
+            {
+                // After the file's entries: a default one, then each platform the import adds that
+                // the file lacks, without compression.
+                platforms.Items.Add(OldestEntry("DefaultTexturePlatform"));
+                foreach (var name in ImporterMeta.TextureImportPlatforms ?? Array.Empty<string>())
+                    if (!platforms.Items.Any(item => item.Kind == YKind.Map && item.Get("buildTarget")?.Text == name))
+                        platforms.Items.Add(OldestEntry(name));
+                platforms.Flow = false;
+            }
+            return arranged;
+        }
+
+        /// <summary>A platform entry the oldest texture layout gets: the release's entry for
+        /// <paramref name="target"/> without compression.</summary>
+        YText OldestEntry(string target)
+        {
+            var entry = m_PlatformEntry.Clone();
+            entry.Set("buildTarget", YText.Scalar(target));
+            if (entry.Get("textureCompression") != null) entry.Set("textureCompression", YText.Scalar("0"));
+            return entry;
+        }
+
+        /// <summary>Keys the Editor writes with these values into a texture section of the oldest
+        /// layout, whatever the file holds (the settings of textures older than the keys:
+        /// tests/projects/spritemeta Bare*, BareFull's are 0 in its file).</summary>
+        static readonly Dictionary<string, string> s_OldestDefaults = new Dictionary<string, string>(StringComparer.Ordinal)
+        {
+            ["applyGammaDecoding"] = "1",
+            ["cookieLightType"] = "1",
+        };
+
+        /// <summary>The settings a texture importer reads from a section of the oldest layout: its
+        /// textureSettings without their own serialized version are not read (their defaults hold;
+        /// tests/projects/spritemeta importer.BareWrap), and the keys of <see cref="s_OldestDefaults"/>
+        /// read with those values. Another section as it is.</summary>
+        internal static YNode ReadAsOldest(string importer, YNode body)
+        {
+            if (importer != "TextureImporter" || body == null || body.Kind != YKind.Map || body.Get("serializedVersion") != null) return body;
+            bool dropSettings = body.Get("textureSettings") is { Kind: YKind.Map } settings && settings.Get("serializedVersion") == null;
+            var keys = new List<string>();
+            var values = new List<YNode>();
+            for (int i = 0; i < body.Keys.Length; i++)
+            {
+                if ((dropSettings && body.Keys[i] == "textureSettings") || s_OldestDefaults.ContainsKey(body.Keys[i])) continue;
+                keys.Add(body.Keys[i]);
+                values.Add(body.Values[i]);
+            }
+            // The keys the oldest layout is read with (s_OldestDefaults).
+            foreach (var (key, value) in s_OldestDefaults)
+            {
+                keys.Add(key);
+                values.Add(new YNode { Kind = YKind.Scalar, Scalar = value });
+            }
+            return new YNode { Kind = YKind.Map, Keys = keys.ToArray(), Values = values.ToArray() };
         }
 
         /// <param name="current">Whether the file is of the release's serialized version.</param>
-        YText Arrange(YText file, YText layout, string key, string at, bool current, List<string> unmeasured)
+        /// <param name="oldest">Whether it is a texture section of no serialized version.</param>
+        YText Arrange(YText file, YText layout, string key, string at, bool current, List<string> unmeasured, bool oldest = false)
         {
+            if (oldest && key == "textureSettings" && file.Kind == YKind.Map && file.Get("serializedVersion") == null) return layout.Clone();
             if (key == "platformSettings" && file.Kind == YKind.Seq && m_PlatformEntry != null)
             {
                 var entries = YText.Seq(flow: file.Flow);
                 for (int k = 0; k < file.Items.Count; k++)
                 {
                     var item = file.Items[k];
-                    entries.Items.Add(item.Kind == YKind.Map ? Arrange(item, m_PlatformEntry, null, at + "[" + k + "]", current, unmeasured) : item);
+                    entries.Items.Add(item.Kind == YKind.Map ? Arrange(item, m_PlatformEntry, null, at + "[" + k + "]", current, unmeasured, oldest) : item);
                 }
                 return entries;
             }
@@ -535,9 +598,12 @@ namespace Unbound.Runtime
                 var name = layout.Keys[i];
                 var value = file.Get(name);
                 var path = at.Length == 0 ? name : at + "." + name;
-                if (value == null && (!current || !s_MeasuredMissing.Contains((m_Importer, s_EntryIndex.Replace(path, "[]")))))
+                if (value == null && !oldest && (!current || !s_MeasuredMissing.Contains((m_Importer, s_EntryIndex.Replace(path, "[]")))))
                     unmeasured.Add(path + ": missing");
-                map.Add(name, value == null ? layout.Values[i].Clone() : Arrange(value, layout.Values[i], name, path, current, unmeasured));
+                // The oldest layout's platform list is the file's (none: empty), before the default entry.
+                if (value == null && oldest && name == "platformSettings" && m_PlatformEntry != null) value = YText.Seq(flow: true);
+                if (oldest && at.Length == 0 && s_OldestDefaults.TryGetValue(name, out var oldestValue)) value = YText.Scalar(oldestValue);
+                map.Add(name, value == null ? layout.Values[i].Clone() : Arrange(value, layout.Values[i], name, path, current, unmeasured, oldest));
             }
             return map;
         }

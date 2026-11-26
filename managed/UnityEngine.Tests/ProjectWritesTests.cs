@@ -217,6 +217,49 @@ namespace UnityEngine.Tests
             return ImporterMeta.Rewritten(text, "TextureImporter", settings, saved, ("", "", ""), template ?? TextureTemplate(), unwritten);
         }
 
+        /// <summary>A texture section without a serialized version (the oldest layout) is written
+        /// whole as the Editor writes it when its sprite gets its ID (tests/projects/spritemeta
+        /// end.BareWrap, end.BarePpu, end.BareFull, the installed module's entries left out as
+        /// there): applyGammaDecoding and cookieLightType 1, textureSettings without their own
+        /// version at the defaults, the importer reading them so, after the file's platform entries
+        /// a default one and the installed platforms it lacks, uncompressed.</summary>
+        [Theory]
+        [InlineData("BareWrap")]
+        [InlineData("BarePpu")]
+        [InlineData("BareFull")]
+        public void AnOldestTextureSectionIsWrittenWholeAsTheEditorWritesIt(string name)
+        {
+            var previous = ImporterMeta.s_TextureImportPlatformsForTests;
+            ImporterMeta.s_TextureImportPlatformsForTests = new[] { "Standalone", "Android" };
+            try
+            {
+                var project = Path.Combine(Repo(), "tests", "projects", "spritemeta");
+                var text = File.ReadAllText(Path.Combine(project, "Assets", "Textures", name + ".png.meta"));
+                var saved = ImporterLayout.ReadAsOldest("TextureImporter", UnityYamlText.ParseTopLevel(text).Get("TextureImporter").ToNode());
+                if (name == "BareWrap") Assert.Null(saved.Get("textureSettings"));
+                Assert.Equal("1", saved.Get("applyGammaDecoding").Scalar);
+                // The sprite's ID and NPOT scaling given, as the first import gives them.
+                foreach (var node in new[] { saved })
+                {
+                    MetaSettings.Set(node, "spriteSheet.spriteID", "5e97eb03825dee720800000000000000");
+                    MetaSettings.SetInt(node, "nPOTScale", 0);
+                }
+                var settings = MetaSettings.Clone(saved);
+                var unwritten = new List<string>();
+                var written = ImporterMeta.Rewritten(text, "TextureImporter", settings, saved, ("", "", ""), TextureTemplate(), unwritten);
+                Assert.NotNull(written);
+                // As the probe reads it: the GUID line, the installed module's entry left out.
+                written = System.Text.RegularExpressions.Regex.Replace(written, "(?m)^guid: .*$", "guid: (guid)");
+                written = System.Text.RegularExpressions.Regex.Replace(written, @"(?m)^( *)- serializedVersion: [0-9]+\n\1  buildTarget: Android\n(?:\1  .*\n)*", "");
+                string expected = null;
+                foreach (var line in File.ReadLines(Path.Combine(project, "Reference", "unity-6000.0.71f1", "values.jsonl")))
+                    if (line.StartsWith("{\"k\":\"end/" + name + "\",", StringComparison.Ordinal))
+                        expected = System.Text.Json.JsonDocument.Parse(line).RootElement.GetProperty("v").GetString();
+                Assert.Equal(expected, written);
+            }
+            finally { ImporterMeta.s_TextureImportPlatformsForTests = previous; }
+        }
+
         /// <summary>A texture's section of the current version that lacks settings and a platform
         /// (tests/projects/scenesave label-metas, whose files are the input and the expected
         /// output) is written whole: the missing settings at their defaults where the Editor

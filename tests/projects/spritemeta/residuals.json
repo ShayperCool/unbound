@@ -1,25 +1,5 @@
 {
- "A .meta of the TextureImporter without serializedVersion (Bare*): the Editor reads it as an older layout, writes a sprite's whole in the release's layout (applyGammaDecoding 1, cookieLightType 1, platforms without compression; top-level keys such as spritePixelsToUnits kept, textureSettings keys without their serializedVersion read as defaults, a missing wrap as Repeat) and leaves a Default texture's as it is, read as SingleChannel; Unbound keeps such an older layout and warns (Q801), so the sprite keeps no ID": [
-  "end/Bare",
-  "end/Bare.platforms",
-  "end/BareFull",
-  "end/BarePpu",
-  "end/BarePpu.platforms",
-  "end/BareWrap",
-  "end/BareWrap.platforms",
-  "importer/Bare",
-  "importer/BareDefault",
-  "importer/BarePpu",
-  "importer/BareWrap",
-  "open/Bare",
-  "open/Bare.platforms",
-  "open/BareFull",
-  "open/BarePpu",
-  "open/BarePpu.platforms",
-  "open/BareWrap",
-  "open/BareWrap.platforms",
-  "sprites/Bare",
-  "sprites/BarePpu",
-  "sprites/BareWrap"
+ "A Default texture's .meta of the oldest layout (no serializedVersion, textureType 0 alone) is not written, and the Editor's importer reads it as a SingleChannel texture scaled to the nearest power of two; Unbound reads it as a Default texture (the oldest layout's reading of other keys is not measured)": [
+  "importer/BareDefault"
  ]
 }

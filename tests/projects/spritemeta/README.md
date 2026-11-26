@@ -56,8 +56,9 @@ The sprites are numbered in rows: the rect that scan meets last of those left an
 rows touch its rows, left to right (of equal left the one of the higher top first), then the next
 row of the rest. A new texture ImportAsset or Refresh imports during the session gets
 the same `.meta` (`session/*`). A sprite's `.meta` without `serializedVersion` is written whole in the
-release's layout, its top-level keys kept, its `textureSettings` keys read as defaults (`BareWrap`,
-`BarePpu`, `BareFull`); a Default texture's is left as it is (`BareDefault`). A Default texture is
+release's layout, its top-level keys kept, `applyGammaDecoding` and `cookieLightType` 1, its
+`textureSettings` keys read as defaults, after its platform entries a default one and the installed
+platforms it lacks, uncompressed (`BareWrap`, `BarePpu`, `BareFull`); a Default texture's is left as it is (`BareDefault`). A Default texture is
 left as it is.
 
 Not covered: `SaveAndReimport`, `Multiple` sprites without IDs, formats other than PNG, a bake's
@@ -70,5 +71,5 @@ Record and gate:
     python3 tests/projects/spritemeta/run.py publish A B
     python3 tests/projects/spritemeta/run.py gate
 
-`residuals.json` names the open differences: the `.meta` files of few keys (an older layout Unbound
-keeps).
+`residuals.json` names the open difference: the importer's reading of a Default texture's `.meta`
+of the oldest layout.

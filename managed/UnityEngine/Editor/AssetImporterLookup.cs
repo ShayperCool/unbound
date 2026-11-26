@@ -108,6 +108,7 @@ namespace UnityEditor
         /// <paramref name="body"/>) describes.</summary>
         internal static AssetImporter FromMeta(string path, string guid, string typeName, YNode body)
         {
+            body = ImporterLayout.ReadAsOldest(typeName, body);
             AssetImporter importer;
             using (ObjectRegistry.AsAssets())
             {
