@@ -316,8 +316,8 @@ namespace Unbound.Runtime
         /// <summary>Whether the frame's GUI pass (<see cref="GuiDispatch"/>) is running.</summary>
         internal static bool Painting;
 
-        /// <summary>GL's matrices and the render target as the GUI pass found them for the current
-        /// script.</summary>
+        /// <summary>GL's matrices as the GUI pass loaded them for the current script, and the render
+        /// target the frame's pass began with.</summary>
         internal static Matrix4x4 PassProjection, PassModelView;
         internal static RenderTexture PassTarget;
 
@@ -824,6 +824,9 @@ namespace Unbound.Runtime
             GuiRender.Clear();
             if (!CollectOrder()) return;
             GuiRender.Painting = true;
+            // The target the pass begins with, once for the frame (a script that leaves another
+            // active does not make it the pass's own for later calls).
+            GuiRender.PassTarget = RenderTexture.ActiveTarget;
             try { RunFrameCalls(); }
             finally { GuiRender.Painting = false; }
         }
@@ -864,7 +867,6 @@ namespace Unbound.Runtime
             Immediate.LoadScreenPixels();
             GuiRender.PassProjection = Immediate.Projection;
             GuiRender.PassModelView = Immediate.ModelView;
-            GuiRender.PassTarget = RenderTexture.ActiveTarget;
         }
 
         /// <summary>The frame's input events, at PreUpdate.IMGUISendQueuedEvents: after the fixed

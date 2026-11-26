@@ -44,6 +44,7 @@ namespace UnityEngine.Tests
             GUIUtility.BeginGUI(0, 41, 0);
             bool painting = GuiRender.Painting;
             GuiRender.Painting = true;
+            GuiRender.PassTarget = s_PassStart ? RenderTexture.ActiveTarget : GuiRender.PassTarget;
             GuiDispatch.LoadRepaintMatrices();
             try { draw(); }
             finally
@@ -53,6 +54,9 @@ namespace UnityEngine.Tests
                 Event.current = previous;
             }
         }
+
+        /// <summary>Whether the next <see cref="Repaint"/> begins a frame's pass (takes the active target as the pass's own).</summary>
+        static bool s_PassStart = true;
 
         static List<Dictionary<int, object>> MaterialDraws() =>
             (List<Dictionary<int, object>>)typeof(GuiRender).GetField("s_MaterialProperties", BindingFlags.NonPublic | BindingFlags.Static).GetValue(null);
@@ -158,6 +162,13 @@ namespace UnityEngine.Tests
                 finally { RenderTexture.active = null; }
                 Assert.Equal(quads + 1, GuiRender.QuadCount);
                 quads = GuiRender.QuadCount;
+                // A script that left a target active in an earlier call of the same pass (its Layout):
+                // the pass's own is still the one it began with, so the preview is not recorded.
+                Repaint(() => RenderTexture.active = target);
+                s_PassStart = false;
+                try { Repaint(() => EditorGUI.DrawPreviewTexture(new Rect(0, 0, 8, 8), texture, material)); }
+                finally { s_PassStart = true; RenderTexture.active = null; }
+                Assert.Equal(quads, GuiRender.QuadCount);
                 // The pass's own target and matrices: recorded.
                 Repaint(() => EditorGUI.DrawPreviewTexture(new Rect(0, 0, 8, 8), texture, material));
                 Assert.Equal(quads + 1, GuiRender.QuadCount);
