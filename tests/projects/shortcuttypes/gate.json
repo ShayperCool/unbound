@@ -1,0 +1,10 @@
+{
+  "commands": [
+    "python3 tests/projects/shortcuttypes/run.py gate"
+  ],
+  "summary": "shortcuttypes: .*",
+  "engine_paths": [
+    "managed/UnityEngine/Editor/ShortcutAttributes.cs",
+    "managed/UnityEngine/Editor/ShortcutBindings.cs"
+  ]
+}
