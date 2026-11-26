@@ -174,16 +174,14 @@ namespace UnityEngine.Tests
         {
             var data = UnityEditor.UnityInstallInfo.DataPath;
             var root = Path.Combine(Path.GetTempPath(), "unbound-eventplaces-" + Guid.NewGuid().ToString("N"));
-            var managed = Path.Combine(root, "Managed", "UnityEngine");
-            Directory.CreateDirectory(managed);
-            var engine = typeof(UnityEvent).Assembly.Location;
-            var pdb = Path.ChangeExtension(engine, ".pdb");
-            File.Copy(engine, Path.Combine(managed, "UnityEngine.CoreModule.dll"));
-            File.Copy(pdb, Path.Combine(managed, Path.GetFileName(pdb)), true);
-            File.Copy(pdb, Path.Combine(managed, "UnityEngine.CoreModule.pdb"), true);
-            UnityEditor.UnityInstallInfo.DataPath = root;
             try
             {
+                var managed = Path.Combine(root, "Managed", "UnityEngine");
+                Directory.CreateDirectory(managed);
+                var engine = typeof(UnityEvent).Assembly.Location;
+                File.Copy(engine, Path.Combine(managed, "UnityEngine.CoreModule.dll"));
+                File.Copy(Path.ChangeExtension(engine, ".pdb"), Path.Combine(managed, "UnityEngine.CoreModule.pdb"));
+                UnityEditor.UnityInstallInfo.DataPath = root;
                 string logged = null, extracted = null;
                 var e = new UnityEvent();
                 e.AddListener(() =>
@@ -199,7 +197,7 @@ namespace UnityEngine.Tests
             finally
             {
                 UnityEditor.UnityInstallInfo.DataPath = data;
-                Directory.Delete(root, true);
+                if (Directory.Exists(root)) Directory.Delete(root, true);
             }
         }
 
