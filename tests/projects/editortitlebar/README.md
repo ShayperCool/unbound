@@ -9,11 +9,15 @@ measures, in a game's `OnGUI`:
   `GUI.changed` and the layout forms' rects, for a behaviour, a disabled behaviour, a Transform, a
   renderer, a ScriptableObject, a GameObject, two behaviours and an Editor;
 - what the titlebar's parts depend on: `EditorUtility.GetObjectEnabled` (also for behaviours with
-  one event function each, and one inheriting one), `PresetType.IsValid`, `Help.HasHelpForObject`,
-  `AssetPreview.GetMiniThumbnail` and `ObjectNames.GetInspectorTitle`, and the "IN Title" style;
+  one of 33 event functions each, one inheriting one, an inactive GameObject and the child of one),
+  `PresetType.IsValid` (also of null and of `[ExcludeFromPreset]` classes), `Help.HasHelpForObject`
+  (also of a folder and a texture), `AssetPreview.GetMiniThumbnail` (also of a texture, null and a
+  GameObject with an icon set) and `ObjectNames.GetInspectorTitle`, and the "IN Title" style;
+- `EditorGUIUtility.FindTexture` and `IconContent` of icon names, some of which several Editor
+  resources share;
 - a scripted sequence of mouse and keyboard events, one per frame in place of the frame's
   Repaint: the title clicked (and released off it), left and right arrows on the focused titlebar,
-  the enabled toggle of one behaviour and of two behaviours, one of them disabled;
+  the enabled toggle of one behaviour, of two behaviours, one of them disabled, and of a GameObject;
 - `titlebars.png`: the game view (320x180) with six titlebars drawn after the script.
 
 ```sh

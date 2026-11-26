@@ -36,6 +36,9 @@ public sealed class EditorTitlebarProbe : MonoBehaviour
 
     static readonly Rect FoldRect = new Rect(10, 300, 300, 22);
     static readonly Rect MixedRect = new Rect(10, 330, 300, 22);
+    static readonly Rect GameObjectRect = new Rect(10, 360, 300, 22);
+    GameObject m_Toggled;
+    readonly List<string> m_Logs = new List<string>();
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
     static void StartProbe()
@@ -55,6 +58,7 @@ public sealed class EditorTitlebarProbe : MonoBehaviour
         probe.m_Asset = ScriptableObject.CreateInstance<TitlebarAsset>();
         probe.m_Asset.name = "Titlebar Asset";
         probe.m_Editor = Editor.CreateEditor(probe.m_Behaviour);
+        probe.m_Toggled = new GameObject("Titlebar Toggled");
         probe.RecordOutsideGui();
     }
 
@@ -93,12 +97,40 @@ public sealed class EditorTitlebarProbe : MonoBehaviour
         // Behaviours with one event function each, on an inactive object (none of them runs).
         var functions = new GameObject("Titlebar Functions");
         functions.SetActive(false);
-        Put("objectEnabled/functions", new[] { typeof(TitlebarWithAwake), typeof(TitlebarWithStart), typeof(TitlebarWithUpdate), typeof(TitlebarWithFixedUpdate), typeof(TitlebarWithLateUpdate), typeof(TitlebarWithOnGUI), typeof(TitlebarWithOnEnable), typeof(TitlebarWithOnDisable), typeof(TitlebarWithOnDestroy), typeof(TitlebarWithOnValidate), typeof(TitlebarWithReset), typeof(TitlebarWithOnDrawGizmos), typeof(TitlebarWithOnRenderObject), typeof(TitlebarWithOnBecameVisible), typeof(TitlebarWithOnApplicationQuit), typeof(TitlebarDerived) }
+        Put("objectEnabled/functions", new[] { typeof(TitlebarWithAwake), typeof(TitlebarWithStart), typeof(TitlebarWithStartCoroutine), typeof(TitlebarWithUpdate), typeof(TitlebarWithFixedUpdate), typeof(TitlebarWithLateUpdate), typeof(TitlebarWithOnGUI), typeof(TitlebarWithOnEnable), typeof(TitlebarWithOnDisable), typeof(TitlebarWithOnDestroy), typeof(TitlebarWithOnValidate), typeof(TitlebarWithReset), typeof(TitlebarWithOnDrawGizmos), typeof(TitlebarWithOnDrawGizmosSelected), typeof(TitlebarWithOnRenderObject), typeof(TitlebarWithOnRenderImage), typeof(TitlebarWithOnPreRender), typeof(TitlebarWithOnPostRender), typeof(TitlebarWithOnPreCull), typeof(TitlebarWithOnWillRenderObject), typeof(TitlebarWithOnBecameVisible), typeof(TitlebarWithOnBecameInvisible), typeof(TitlebarWithOnApplicationQuit), typeof(TitlebarWithOnApplicationPause), typeof(TitlebarWithOnApplicationFocus), typeof(TitlebarWithOnAudioFilterRead), typeof(TitlebarWithOnAnimatorMove), typeof(TitlebarWithOnAnimatorIK), typeof(TitlebarWithOnMouseDown), typeof(TitlebarWithOnTransformParentChanged), typeof(TitlebarWithOnTransformChildrenChanged), typeof(TitlebarWithOnRectTransformDimensionsChange), typeof(TitlebarWithOnDidApplyAnimationProperties), typeof(TitlebarDerived) }
             .Select(t => (object)new object[] { t.Name, Try(() => EditorUtility.GetObjectEnabled(functions.AddComponent(t))) }).ToArray());
         // What the titlebar's enabled toggle and header items (preset and help buttons) depend on.
         Put("objectEnabled", objects.Select(o => Try(() => EditorUtility.GetObjectEnabled(o))).ToArray());
         Put("presetValid", objects.Select(o => Try(() => new UnityEditor.Presets.PresetType(o).IsValid())).ToArray());
         Put("hasHelp", objects.Select(o => Try(() => Help.HasHelpForObject(o))).ToArray());
+        // GameObjects: inactive itself, and active itself under an inactive parent.
+        var inactive = new GameObject("Titlebar Inactive");
+        inactive.SetActive(false);
+        var child = new GameObject("Titlebar Child");
+        child.transform.SetParent(functions.transform, false);
+        Put("objectEnabled/gameObjects", Try(() => EditorUtility.GetObjectEnabled(inactive)), Try(() => EditorUtility.GetObjectEnabled(child)));
+        // Presets: a null object, classes excluded from presets.
+        var excludedAsset = ScriptableObject.CreateInstance<TitlebarExcludedAsset>();
+        Put("presetValid/more",
+            Try(() => new UnityEditor.Presets.PresetType((Object)null).IsValid()),
+            Try(() => new UnityEditor.Presets.PresetType(excludedAsset).IsValid()),
+            Try(() => new UnityEditor.Presets.PresetType(functions.AddComponent<TitlebarExcludedBehaviour>()).IsValid()));
+        // Help of a folder (a DefaultAsset) and of a texture.
+        var texture = new Texture2D(2, 2) { name = "Probe Texture" };
+        Put("hasHelp/more", Try(() => Help.HasHelpForObject(AssetDatabase.LoadAssetAtPath<Object>("Assets/Scripts"))), Try(() => Help.HasHelpForObject(texture)));
+        // Mini thumbnails: a texture, null, a GameObject with an icon set.
+        var iconed = new GameObject("Titlebar Iconed");
+        var icon = new Texture2D(4, 4) { name = "Custom Icon" };
+        EditorGUIUtility.SetIconForObject(iconed, icon);
+        Put("thumbnails/more", new Func<Object>[] { () => texture, () => null, () => iconed }
+            .Select(o => Try(() => AssetPreview.GetMiniThumbnail(o()) is Texture2D t ? t.name + " " + t.width + "x" + t.height : "null")).ToArray());
+        // Icons whose names several Editor resources share.
+        Application.logMessageReceived += (message, stack, type) => m_Logs.Add(type + ": " + message.Split('\n')[0]);
+        var iconNames = new[] { "Refresh", "d_Refresh", "Warning", "VerticalLayoutGroup Icon", "d_VerticalLayoutGroup Icon", "toggle on",
+            "MeshRenderer Icon", "d_MeshRenderer Icon", "cs Script Icon", "_Help", "Folder Icon" };
+        Put("icons", iconNames.Select(n => Try(() => EditorGUIUtility.FindTexture(n) is Texture2D t ? t.name + " " + t.width + "x" + t.height : "null")).ToArray());
+        Put("icons/content", iconNames.Select(n => Try(() => EditorGUIUtility.IconContent(n, "").image is Texture2D t ? t.name + " " + t.width + "x" + t.height : "null")).ToArray());
+        Put("icons/logs", m_Logs.ToArray());
         Put("style", Try(() => RectOffsetArr(TitleStyle.padding)), Try(() => TitleStyle.fixedHeight));
         Put("titles", new Object[] { m_Behaviour, m_Renderer, m_Behaviour.transform, m_Behaviour.gameObject, m_Asset }
             .Select(o => (object)ObjectNames.GetInspectorTitle(o)).ToArray());
@@ -185,6 +217,9 @@ public sealed class EditorTitlebarProbe : MonoBehaviour
         ("mixed.up", () => Mouse(EventType.MouseUp, Toggle(MixedRect))),
         ("mixedTitle.down", () => Mouse(EventType.MouseDown, new Vector2(MixedRect.x + 150, MixedRect.center.y))),
         ("mixedTitle.up", () => Mouse(EventType.MouseUp, new Vector2(MixedRect.x + 150, MixedRect.center.y))),
+        // A GameObject's enabled toggle.
+        ("gameObject.down", () => Mouse(EventType.MouseDown, Toggle(GameObjectRect))),
+        ("gameObject.up", () => Mouse(EventType.MouseUp, Toggle(GameObjectRect))),
     };
 
     /// <summary>The scripted controls, in the same order in every event so they keep their ids.</summary>
@@ -192,11 +227,13 @@ public sealed class EditorTitlebarProbe : MonoBehaviour
     {
         var a = Field(() => m_Fold = EditorGUI.InspectorTitlebar(FoldRect, m_Fold, m_Behaviour, true));
         var b = Field(() => m_FoldMixed = EditorGUI.InspectorTitlebar(MixedRect, m_FoldMixed, Mixed, true));
+        var c = Field(() => EditorGUI.InspectorTitlebar(GameObjectRect, false, m_Toggled, true));
         return new object[]
         {
             m_Fold, m_FoldMixed, m_Behaviour.enabled, m_Disabled.enabled,
             new object[] { a[1], a[2], b[1], b[2] },
             GUIUtility.keyboardControl != 0, GUIUtility.hotControl != 0,
+            m_Toggled.activeSelf, new object[] { c[1], c[2] },
         };
     }
 
