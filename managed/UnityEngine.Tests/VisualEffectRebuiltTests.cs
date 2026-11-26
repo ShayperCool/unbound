@@ -34,7 +34,8 @@ namespace UnityEngine.Tests
         }
 
         /// <summary>A re-import restarts every live effect of the graph's asset, one on a DontSave
-        /// object too (scene finders skip those), and no effect of another asset.</summary>
+        /// object too (scene finders skip those), and no effect of another asset nor a component of
+        /// an asset (a prefab's: it takes the asset's compile when it is copied).</summary>
         [Fact]
         public void AReimportRestartsEveryLiveEffectOfItsAssetOnly()
         {
@@ -45,6 +46,9 @@ namespace UnityEngine.Tests
             hidden.gameObject.hideFlags = HideFlags.HideAndDontSave;
             var unrelated = Running(other);
             var otherData = other.m_Data;
+            var stored = Running(asset);
+            stored.IsPersistentAsset = true;
+            var storedData = stored.Data;
             try
             {
                 foreach (var e in new[] { shown, hidden, unrelated }) Counts(e, 13);
@@ -56,10 +60,12 @@ namespace UnityEngine.Tests
                 Assert.Equal(0, hidden.aliveParticleCount);
                 Assert.Same(otherData, unrelated.Data);
                 Assert.Equal(3, unrelated.aliveParticleCount);
+                Assert.Same(storedData, stored.Data);
             }
             finally
             {
-                foreach (var e in new[] { shown, hidden, unrelated }) Object.DestroyImmediate(e.gameObject);
+                stored.IsPersistentAsset = false;
+                foreach (var e in new[] { shown, hidden, unrelated, stored }) Object.DestroyImmediate(e.gameObject);
             }
         }
     }
