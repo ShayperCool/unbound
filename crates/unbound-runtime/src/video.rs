@@ -100,7 +100,7 @@ fn clip_properties(path: &str, root: &Json) -> Result<Json> {
         "alpha": video["tags"]["alpha_mode"].as_str() == Some("1"),
         "codec": video["codec_name"].as_str().unwrap_or(""),
         // A pixel format with alpha (ProRes 4444, ...): drawn opaque, which the player says.
-        "pixelAlpha": video["pix_fmt"].as_str().is_some_and(|f| f.starts_with("yuva") || f.contains("rgba") || f.contains("argb") || f.contains("bgra") || f.contains("abgr")),
+        "pixelAlpha": video["pix_fmt"].as_str().is_some_and(pixel_format_has_alpha),
     }))
 }
 
@@ -254,6 +254,19 @@ impl Drop for Decoder {
 fn decoders() -> &'static Mutex<HashMap<u64, Decoder>> {
     static DECODERS: OnceLock<Mutex<HashMap<u64, Decoder>>> = OnceLock::new();
     DECODERS.get_or_init(|| Mutex::new(HashMap::new()))
+}
+
+/// Whether an ffmpeg pixel format carries alpha (yuva*, gbrap*, ya8/ya16, ayuv64, vuya and the
+/// packed RGB orders with an A).
+fn pixel_format_has_alpha(format: &str) -> bool {
+    format.starts_with("yuva")
+        || format.starts_with("gbrap")
+        || format.starts_with("ya")
+        || format.starts_with("ayuv")
+        || format.starts_with("vuya")
+        || ["rgba", "argb", "bgra", "abgr"]
+            .iter()
+            .any(|order| format.contains(order))
 }
 
 /// [`Decoder::planes`] of a frame of `width` x `height` (with alpha or not).
@@ -504,6 +517,20 @@ mod tests {
             "r_frame_rate": "10/1", "nb_read_packets": "10"}], "format": {"duration": "1"}}"#;
         assert_eq!(parse(prores)["pixelAlpha"], true);
         assert_eq!(parse(prores)["alpha"], false);
+        for format in [
+            "yuva420p",
+            "gbrap10le",
+            "ya8",
+            "ayuv64le",
+            "vuya",
+            "rgba",
+            "bgra64le",
+        ] {
+            assert!(pixel_format_has_alpha(format), "{format}");
+        }
+        for format in ["yuv420p", "gbrp", "gray", "nv12", "rgb24", "yuyv422"] {
+            assert!(!pixel_format_has_alpha(format), "{format}");
+        }
         assert_eq!(alpha_decoder(true, "vp8"), Some("libvpx"));
         assert_eq!(alpha_decoder(true, "vp9"), None);
         assert_eq!(alpha_decoder(true, "h264"), None);

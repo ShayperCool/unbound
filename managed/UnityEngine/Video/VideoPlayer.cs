@@ -131,7 +131,7 @@ namespace UnityEngine.Video
             clip.m_Codec = root.TryGetProperty("codec", out var codec) ? codec.GetString() ?? "" : "";
             // A source with per-pixel alpha in another codec (ProRes 4444, which the Editor imports
             // for transcoding with Keep Alpha) is drawn opaque: said once.
-            if (root.TryGetProperty("pixelAlpha", out var pixelAlpha) && pixelAlpha.ValueKind == JsonValueKind.True && !(clip.m_Alpha && clip.m_Codec == "vp8"))
+            if (root.TryGetProperty("pixelAlpha", out var pixelAlpha) && (pixelAlpha.ValueKind == JsonValueKind.True || clip.m_Alpha) && clip.m_Codec != "vp8")
                 Stubs.Ignored("UnityEngine.Video.VideoClip alpha of a non-VP8 source", $"{clip.m_Codec} video with alpha is drawn opaque ({assetPath ?? file})");
             if (guid != null)
             {
@@ -183,26 +183,31 @@ namespace UnityEngine.Video
         internal static bool KeepsAlpha(YNode importer, string asset)
         {
             if (importer == null) return true;
-            var (defaultTranscodes, overrideTranscodes) = Transcoding(importer.Get("targetSettings"));
+            var (defaultTranscodes, overrideTranscodes, overrideEntries) = Transcoding(importer.Get("targetSettings"));
             if (!defaultTranscodes)
             {
                 if (overrideTranscodes)
                     Stubs.Ignored("UnityEngine.Video.VideoClip platform transcoding override", $"the source's alpha is drawn; a platform's own transcoding of {asset} is not applied (unmeasured)");
                 return true;
             }
+            if (overrideEntries)
+                Stubs.Ignored("UnityEngine.Video.VideoClip platform transcoding override", $"the default entry's transcoding decides {asset}'s alpha; a platform's own entry is not applied (unmeasured)");
             if (importer.Int("encodeAlpha") == 0) return false;
             Stubs.Ignored("UnityEngine.Video.VideoClip transcoded with Keep Alpha", $"the source's alpha is drawn as decoded (Unity packs it into the colour stream of {asset}; unmeasured)");
             return true;
         }
 
         /// <summary>Whether an importer's target settings transcode for the default entry (platform
-        /// key -2) and for any other platform (a list of first/second pairs, or a map).</summary>
-        static (bool Default, bool Override) Transcoding(YNode targets)
+        /// key -2) and for any other platform, and whether any other platform has an entry (a list
+        /// of first/second pairs, or a map).</summary>
+        static (bool Default, bool Override, bool Overrides) Transcoding(YNode targets)
         {
-            bool byDefault = false, byOverride = false;
+            bool byDefault = false, byOverride = false, overrides = false;
             void Entry(string platform, YNode settings)
             {
-                if (settings == null || settings.Kind != YKind.Map || settings.Int("enableTranscoding") == 0) return;
+                if (settings == null || settings.Kind != YKind.Map) return;
+                if (platform != "-2") overrides = true;
+                if (settings.Int("enableTranscoding") == 0) return;
                 if (platform == "-2") byDefault = true;
                 else byOverride = true;
             }
@@ -210,7 +215,7 @@ namespace UnityEngine.Video
                 foreach (var item in targets.Items) Entry(item.Str("first"), item.Get("second"));
             else if (targets?.Kind == YKind.Map)
                 for (int i = 0; i < targets.Keys.Length; i++) Entry(targets.Keys[i], targets.Values[i]);
-            return (byDefault, byOverride);
+            return (byDefault, byOverride, overrides);
         }
 
         /// <summary>
