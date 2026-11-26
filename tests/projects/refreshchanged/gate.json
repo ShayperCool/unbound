@@ -1,0 +1,15 @@
+{
+  "commands": [
+    "python3 tests/projects/refreshchanged/run.py gate"
+  ],
+  "summary": "refreshchanged: .*",
+  "engine_paths": [
+    "managed/UnityEngine/Editor/AssetDatabase.cs",
+    "managed/UnityEngine/Editor/AssetDatabaseFiles.cs",
+    "managed/UnityEngine/Editor/AssetPostprocessing.cs",
+    "managed/UnityEngine/Editor/SessionImports.cs",
+    "managed/UnityEngine/Editor/ScriptedImporter.cs",
+    "managed/UnityEngine/Runtime/Loading.cs",
+    "crates/unbound-runtime/src/state.rs"
+  ]
+}
