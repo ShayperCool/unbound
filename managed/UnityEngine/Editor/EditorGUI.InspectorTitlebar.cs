@@ -32,6 +32,7 @@ namespace UnityEditor
         /// <summary>A titlebar without a foldout.</summary>
         public static void InspectorTitlebar(Rect position, Object[] targetObjs)
         {
+            if (!Compat.EditorTitlebarMeasured) { Stubs.NotImplemented("UnityEditor.EditorGUI.InspectorTitlebar"); return; }
             GUIStyle baseStyle = GUIStyle.none;
             int id = GUIUtility.GetControlID(s_TitlebarHash, FocusType.Keyboard, position);
             DoInspectorTitlebar(position, id, true, targetObjs, null, baseStyle);
@@ -43,6 +44,7 @@ namespace UnityEditor
         /// <summary>A foldable titlebar.</summary>
         public static bool InspectorTitlebar(Rect position, bool foldout, Object[] targetObjs, bool expandable)
         {
+            if (!Compat.EditorTitlebarMeasured) { Stubs.NotImplemented("UnityEditor.EditorGUI.InspectorTitlebar"); return foldout; }
             GUIStyle baseStyle = EditorStyles.inspectorTitlebar;
             // The foldout's id comes first, so it takes the keyboard focus before the toggle does.
             int id = GUIUtility.GetControlID(s_TitlebarHash, FocusType.Keyboard, position);
@@ -56,6 +58,7 @@ namespace UnityEditor
         /// <summary>A foldable titlebar of an editor's targets, its toggle the editor's m_Enabled.</summary>
         public static bool InspectorTitlebar(Rect position, bool foldout, Editor editor)
         {
+            if (!Compat.EditorTitlebarMeasured) { Stubs.NotImplemented("UnityEditor.EditorGUI.InspectorTitlebar"); return foldout; }
             GUIStyle baseStyle = EditorStyles.inspectorTitlebar;
             int id = GUIUtility.GetControlID(s_TitlebarHash, FocusType.Keyboard, position);
             DoInspectorTitlebar(position, id, foldout, editor.targets, editor.enabledProperty, baseStyle);
@@ -461,10 +464,11 @@ namespace UnityEditor
         /// icon for a ScriptableObject of a script, else the icon of its class or the nearest base
         /// class that has one (the skin's "d_" variant in the dark theme). Measured: a behaviour, a
         /// renderer, a Transform, a GameObject and a ScriptableObject; unmeasured: textures (which
-        /// may show themselves), objects with an icon set, null.</summary>
+        /// may show themselves), objects with an icon set, null and destroyed objects (null).</summary>
         public static Texture2D GetMiniThumbnail(Object obj)
         {
-            if (obj is null) return null;
+            if (!Compat.EditorTitlebarMeasured) { Stubs.NotImplemented("UnityEditor.AssetPreview.GetMiniThumbnail"); return null; }
+            if (obj == null) return null;
             if (obj is MonoBehaviour) return EditorIcons.Load("cs Script Icon", logError: false);
             for (var type = obj.GetType(); type != null && type != typeof(Object); type = type.BaseType)
             {
@@ -556,7 +560,11 @@ namespace UnityEditor
         /// <summary>Whether an object has a reference page: every live object has one, its class's
         /// or the scripting manual's MonoBehaviour page (matches the Unity 6000.0.71f1 Editor with
         /// its online documentation, tests/projects/editortitlebar hasHelp).</summary>
-        public static bool HasHelpForObject(Object obj) => obj != null;
+        public static bool HasHelpForObject(Object obj)
+        {
+            if (!Compat.EditorTitlebarMeasured) { Stubs.NotImplemented("UnityEditor.Help.HasHelpForObject"); return false; }
+            return obj != null;
+        }
     }
 }
 
@@ -572,7 +580,12 @@ namespace UnityEditor.Presets
         /// (Unity 6000.0 Manual, Presets; measured: a behaviour, a renderer, a Transform, a
         /// ScriptableObject and an Editor have one, a GameObject none, tests/projects/editortitlebar
         /// presetValid).</summary>
-        public PresetType(Object o) => m_Type = o != null && o is not GameObject ? o.GetType() : null;
+        public PresetType(Object o)
+        {
+            m_Type = null;
+            if (!Compat.EditorTitlebarMeasured) { Stubs.NotImplemented("UnityEditor.Presets.PresetType.ctor"); return; }
+            m_Type = o != null && o is not GameObject ? o.GetType() : null;
+        }
 
         public bool IsValid() => m_Type != null;
 

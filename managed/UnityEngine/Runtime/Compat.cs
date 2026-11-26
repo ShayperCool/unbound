@@ -586,6 +586,11 @@ namespace Unbound.Runtime
         /// 6000.0.71f1. Other families are unmeasured.</summary>
         internal static bool AnimatableBindingsMeasured => Family == ReleaseFamily.Unity6000_0;
 
+        /// <summary>EditorGUI's inspector titlebar, the enabled state of objects, presets, help and
+        /// mini thumbnails, measured by tests/projects/editortitlebar on Unity 6000.0.71f1. Other
+        /// families keep their unmeasured answers (not implemented, said once).</summary>
+        internal static bool EditorTitlebarMeasured => Family == ReleaseFamily.Unity6000_0;
+
         // EditorGUI's text, number and delayed fields and sliders (tests/projects/editorvaluefields).
         internal static bool EditorValueFieldsMeasured => Family == ReleaseFamily.Unity6000_0;
 

@@ -518,6 +518,14 @@ namespace UnityEditor
         /// (tests/projects/editortitlebar objectEnabled; an inactive GameObject unmeasured).</summary>
         public static int GetObjectEnabled(Object target) => target switch
         {
+            // Other families keep the unmeasured answer: every behaviour's enabled state, none for a GameObject.
+            _ when !Compat.EditorTitlebarMeasured => target switch
+            {
+                Behaviour b => b.enabled ? 1 : 0,
+                Renderer r => r.enabled ? 1 : 0,
+                Collider c => c.enabled ? 1 : 0,
+                _ => -1,
+            },
             MonoBehaviour m => HasEnabledToggle(m.GetType()) ? (m.enabled ? 1 : 0) : -1,
             Behaviour b => b.enabled ? 1 : 0,
             Renderer r => r.enabled ? 1 : 0,
@@ -542,7 +550,7 @@ namespace UnityEditor
             {
                 case Behaviour b: b.enabled = enabled; break;
                 // As GetObjectEnabled reads it (setting is unmeasured).
-                case GameObject g: g.SetActive(enabled); break;
+                case GameObject g when Compat.EditorTitlebarMeasured: g.SetActive(enabled); break;
                 case Renderer r: r.enabled = enabled; break;
                 case Collider c: c.enabled = enabled; break;
             }

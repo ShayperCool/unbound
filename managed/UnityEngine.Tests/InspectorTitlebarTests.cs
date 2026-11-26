@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using UnityEditor;
 using UnityEditor.Presets;
 using Xunit;
@@ -10,10 +11,17 @@ namespace UnityEngine.Tests
     [Collection("Serial")]
     public sealed class InspectorTitlebarTests : IDisposable
     {
-        // The host has no skin images: the enabled toggle gets a style of its own.
+        // The measured release (a test of another family pins its own), and, as the host has no
+        // skin images, an enabled toggle style of its own.
+        readonly IDisposable m_Release = TestRelease.Pin(TestRelease.Measured);
+
         public InspectorTitlebarTests() => EditorStyles.SetToggleForTests(new GUIStyle { name = "toggle", fixedWidth = 14, fixedHeight = 14 });
 
-        public void Dispose() => EditorStyles.SetToggleForTests(null);
+        public void Dispose()
+        {
+            EditorStyles.SetToggleForTests(null);
+            m_Release.Dispose();
+        }
 
         public sealed class Plain : MonoBehaviour { }
 
@@ -221,6 +229,30 @@ namespace UnityEngine.Tests
                 Event.current = previous;
                 Object.DestroyImmediate(go);
             }
+        }
+
+        static int Hits(string member) => Unbound.Runtime.Stubs.HitReport().FirstOrDefault(h => h.Key == member).Value;
+
+        [Fact]
+        public void AnUnmeasuredFamilyKeepsItsAnswersAndSaysSo()
+        {
+            using var release = TestRelease.Pin(TestRelease.Unmeasured);
+            var go = new GameObject("Titlebar");
+            try
+            {
+                var behaviour = go.AddComponent<Plain>();
+                int titlebar = Hits("UnityEditor.EditorGUI.InspectorTitlebar"), help = Hits("UnityEditor.Help.HasHelpForObject");
+                Assert.True(Pass(new Event { type = EventType.Repaint }, () => EditorGUI.InspectorTitlebar(Bar, true, behaviour, true)));
+                Assert.Equal(titlebar + 1, Hits("UnityEditor.EditorGUI.InspectorTitlebar"));
+                Assert.False(Help.HasHelpForObject(go));
+                Assert.Equal(help + 1, Hits("UnityEditor.Help.HasHelpForObject"));
+                Assert.False(new PresetType(go.transform).IsValid());
+                Assert.Null(AssetPreview.GetMiniThumbnail(go));
+                // The enabled state as before: every behaviour's own, none for a GameObject.
+                Assert.Equal(1, EditorUtility.GetObjectEnabled(behaviour));
+                Assert.Equal(-1, EditorUtility.GetObjectEnabled(go));
+            }
+            finally { Object.DestroyImmediate(go); }
         }
 
         [Fact]
