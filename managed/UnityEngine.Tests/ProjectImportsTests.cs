@@ -870,6 +870,36 @@ namespace UnityEngine.Tests
             }
         }
 
+        /// <summary>An import of an existing asset asked for while the editor domain loads is
+        /// among those the domain load lists once it has ended, with or without ForceUpdate (it is
+        /// imported again either way); a path that is no asset is not.</summary>
+        [Fact]
+        public void ADeferredImportOfAnExistingAssetIsListedWithOrWithoutForceUpdate()
+        {
+            var loading = typeof(EditorInitialization).GetProperty(nameof(EditorInitialization.DomainLoading),
+                System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Public);
+            var run = typeof(EditorInitialization).GetMethod("RunDeferredImports", System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.NonPublic);
+            AssetDatabase.List("[{\"guid\":\"c1\",\"path\":\"Assets/M/C.mat\",\"kind\":\"yaml\"},{\"guid\":\"b1\",\"path\":\"Assets/M/B.mat\",\"kind\":\"yaml\"}]");
+            var previous = Debug.unityLogger.logHandler;
+            Debug.unityLogger.logHandler = new LogCapture();
+            try
+            {
+                loading.SetValue(null, true);
+                Assert.True(EditorInitialization.DeferImport("Assets/M/C.mat", ImportAssetOptions.Default));
+                Assert.True(EditorInitialization.DeferImport("Assets/M/B.mat", ImportAssetOptions.ForceUpdate));
+                Assert.True(EditorInitialization.DeferImport("Assets/M/None.mat", ImportAssetOptions.Default));
+                loading.SetValue(null, false);
+                Assert.Equal(new[] { "Assets/M/C.mat", "Assets/M/B.mat" }, (string[])run.Invoke(null, null));
+            }
+            finally
+            {
+                loading.SetValue(null, false);
+                Debug.unityLogger.logHandler = previous;
+                AssetDatabaseRuntime.Invalidate("b1");
+                AssetDatabase.Invalidate();
+            }
+        }
+
         sealed class LogCapture : ILogHandler
         {
             internal readonly List<string> Lines = new List<string>();

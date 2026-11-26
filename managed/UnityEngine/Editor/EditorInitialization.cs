@@ -248,8 +248,11 @@ namespace UnityEditor
             if (!DomainLoading) return false;
             s_Deferred.Add(() =>
             {
+                // An existing asset is imported again, with or without ForceUpdate (AssetDatabase.ImportAsset);
+                // a new one only when forced, as before (unmeasured).
+                bool existed = !string.IsNullOrEmpty(AssetDatabase.AssetPathToGUID(path));
                 AssetDatabase.ImportAsset(path, options);
-                if ((options & ImportAssetOptions.ForceUpdate) != 0 && !string.IsNullOrEmpty(AssetDatabase.AssetPathToGUID(path)) && !s_DeferredImported.Contains(path))
+                if ((existed || (options & ImportAssetOptions.ForceUpdate) != 0) && !string.IsNullOrEmpty(AssetDatabase.AssetPathToGUID(path)) && !s_DeferredImported.Contains(path))
                     s_DeferredImported.Add(path);
             });
             return true;
@@ -267,7 +270,7 @@ namespace UnityEditor
         }
 
         /// <summary>Runs the work the domain load put off, in the order asked; the paths of the
-        /// assets its imports imported (forced imports of existing assets).</summary>
+        /// assets its imports imported (of existing assets, and forced ones of new assets).</summary>
         static string[] RunDeferredImports()
         {
             if (s_Deferred.Count == 0) return Array.Empty<string>();
