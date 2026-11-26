@@ -25,7 +25,10 @@ installed modules, `.modules` whether each was a copy of the first default entry
 | `BareLegacy`, `BareSize` | as `Bare` with `maxTextureSize: 512`, `compressionQuality: 100` and (`BareLegacy`) `textureFormat: 3` |
 | `BareDefaultEntry` | as `Bare` with a default entry of a few keys (`maxTextureSize: 1024`, compressed) |
 | `BareSheet`, `BarePlat`, `BareTag` | as `Bare` with a `spriteSheet` of no `serializedVersion` at its defaults, with a `Standalone` entry of no `serializedVersion`, with keys the release lacks (`spritePackingTag`, `wrapMode`) |
-| `SaveData`, `SaveNpot`, `SaveClear`, `SaveBundle`, `SaveKeep` | as `Bare` with its sprite ID (`SaveClear` also a default and a `Standalone` entry of a few keys) |
+| `SaveData`, `SaveNpot`, `SaveClear`, `SaveBundle`, `SaveKeep`, `SaveWrap` | as `Bare` with its sprite ID (`SaveClear` also a default and a `Standalone` entry of a few keys, `SaveWrap` `textureSettings: wrapU: 1`) |
+| `KeepWrap`, `KeepWrapV2`, `KeepWrapMode` | as `Bare` with its sprite ID and `textureSettings` of `wrapU: 1`, of `serializedVersion: 2`, `filterMode: 0` and `wrapU: 1`, of `filterMode: 0` and `wrapMode: 1` |
+| `KeepDefaultWrap` | only `textureType: 0` and `textureSettings: wrapU: 1` |
+| `CurrentWrap`, `CurrentWrapMode` | only `serializedVersion: 13`, `textureType: 0` and `textureSettings` of `filterMode: 0` and `wrapU: 1`, of `wrapMode: 1` |
 | `Order*`, `Near*` | none; 16x16 (`NearGrown` 16x8) blocks whose rows touch (side by side, a staircase, a tall block, padded grids of 2x2 and 3x3, tops at the edge), and pixels between big blocks at different gaps, on one row, two and three in a row, and joins that move a rect within its row |
 | `Slice*` | none; 16x16 (`SliceNpot` 10x6) of opaque blocks on a transparent ground: an L, blocks touching at a corner, a pixel beside a block, blocks at the edges, faint ones (alpha 1, 50), five 3x3 blocks, 3-wide blocks a pixel apart, a ring, narrow, flat and 5x2 blocks beside a big one, lone 3x3 and 4x4 blocks, two big blocks with pixels between or near them, a chain of overlapping rows, an empty texture |
 
@@ -34,7 +37,8 @@ installed modules, `.modules` whether each was a copy of the first default entry
 
 * `open/<texture>`: every `.meta` as the project opened with it; `end/<texture>`: the same at the end.
 * `importer/<texture>`: the importer's type, sprite mode, NPOT scaling, wrap modes, mipmaps, alpha
-  transparency and pixels per unit; `platform/<texture>`: its default and `Standalone` platform
+  transparency and pixels per unit; `texture/<texture>`: the imported Texture2D's wrap modes, filter mode, anisotropy,
+  mip bias, mip count and format; `platform/<texture>`: its default and `Standalone` platform
   settings, `maxTextureSize` and `compressionQuality`.
 * `sprites/<texture>`: the main asset's type and each sprite's name, rect, pivot, pixels per unit and
   sprite ID (`SpriteEditorExtension.GetSpriteID`).
@@ -43,7 +47,7 @@ installed modules, `.modules` whether each was a copy of the first default entry
   `Refresh`; their `importer/` and `sprites/` rows too.
 * `save/<texture>/meta`: the `.meta` of each `Save*` texture after a script's change of its importer
   and `SaveAndReimport` (`userData`, `npotScale` `ToLarger`, `ClearPlatformTextureSettings("Standalone")`,
-  `assetBundleName` `Mixed-Bundle`, none), with its `importer/saved_*` and `platform/saved_*` rows.
+  `assetBundleName` `Mixed-Bundle`, none, `userData`), with its `importer/saved_*` and `platform/saved_*` rows.
 
 What it shows: a Single sprite whose `.meta` has no sprite ID gets one at its first import, and its
 `.meta` is written: the ID, `nPOTScale: 0`, the installed modules' platform entries, the file's
@@ -69,12 +73,18 @@ release's layout, its top-level keys kept, `applyGammaDecoding` and `cookieLight
 platforms it lacks as copies of the first default entry (the file's, else the added one), the added
 default entry uncompressed, of the section's `maxTextureSize` and `compressionQuality` (`BareWrap`,
 `BarePpu`, `BareFull`, `BareSize`, `BareDefaultEntry`), the keys the release lacks left out (`BareTag`);
-the importer reads such a section so before any write (`importer/Save*`: wraps Repeat); a `textureFormat`
+the importer reads such a section so before any write (`importer/Save*`: wraps Repeat), and it imports so
+(`texture/Save*`, `KeepWrap`: Repeat; without a default entry uncompressed, RGB24); a `textureFormat`
 of 3 also makes `alphaUsage` 0 (`BareLegacy`), and an entry of no `serializedVersion` reads other
 defaults (`BarePlat`: compressed, `forceMaximumCompressionQuality_BC6H_BC7` 1). A script's save of such
 a section that has its sprite ID writes it the same way with the change (a cleared entry left out, a
 missing `nPOTScale` as 0, the bundle name in lower case); a save of no change writes nothing
-(`save/*`). A Default texture's is left as it is (`BareDefault`).
+(`save/*`). A Default texture's is left as it is (`BareDefault`), and read as an uncompressed
+SingleChannel texture (imported Alpha8; `KeepDefaultWrap` too). Texture settings without their own
+`serializedVersion` are of version 1 in a section of any version and type: their `wrapMode` is every
+axis's, their `wrapU`, `wrapV` and `wrapW` are not read, their `filterMode` is (`KeepWrap`,
+`KeepWrapMode`, `KeepDefaultWrap`, `CurrentWrap`, `CurrentWrapMode`); those of version 2 are read axis by
+axis (`KeepWrapV2`); a wrap no settings hold is Repeat (`Bare`, `KeepWrapV2`'s `wrapV`).
 
 Not covered: other changes of an oldest section's platform entries (one set that the file lacks),
 `Multiple` sprites without IDs, formats other than PNG, a bake's

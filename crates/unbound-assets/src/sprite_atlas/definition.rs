@@ -114,6 +114,8 @@ fn texture_meta(texture: &Value, platforms: &[Value]) -> Value {
             (
                 "textureSettings",
                 map(vec![
+                    // Of the release's version: its per-axis wraps are read.
+                    ("serializedVersion", scalar(2)),
                     ("filterMode", scalar(get("filterMode", 1))),
                     ("aniso", scalar(get("anisoLevel", 1))),
                     ("wrapU", scalar(1)),

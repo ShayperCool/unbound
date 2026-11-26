@@ -365,6 +365,74 @@ namespace UnityEngine.Tests
             Assert.Contains("  applyGammaDecoding: 0\n", gamma);
         }
 
+        /// <summary>Texture settings without their own serialized version are of version 1, in any
+        /// section: their wrapMode is every axis's, their per-axis keys are not read, a wrap neither
+        /// holds is Repeat (spritemeta importer/KeepWrap*, KeepDefaultWrap, CurrentWrap*, measured
+        /// beside the imported texture/ rows); reading so is no change (end/ = open/), and a wrap a
+        /// script sets on a converted oldest section reads back.</summary>
+        [Theory]
+        [InlineData("KeepWrap")]
+        [InlineData("KeepWrapV2")]
+        [InlineData("KeepWrapMode")]
+        [InlineData("KeepDefaultWrap")]
+        [InlineData("CurrentWrap")]
+        [InlineData("CurrentWrapMode")]
+        [InlineData("Bare")]
+        public void UnversionedTextureSettingsWrapByTheirWrapMode(string name)
+        {
+            using var platforms = SpriteMetaPlatforms();
+            var text = File.ReadAllText(Path.Combine(Repo(), "tests", "projects", "spritemeta", "Assets", "Textures", name + ".png.meta"));
+            var importer = (UnityEditor.TextureImporter)UnityEditor.AssetImporter.FromMeta("Assets/Textures/" + name + ".png",
+                "0123456789abcdef0123456789abcdef", "TextureImporter", UnityYamlText.ParseTopLevel(text).Get("TextureImporter").ToNode());
+            var wraps = System.Text.RegularExpressions.Regex.Match(SpriteMetaReference("importer/" + name), "wrap [A-Za-z]+,[A-Za-z]+,[A-Za-z]+").Value;
+            Assert.Equal(wraps, "wrap " + importer.wrapModeU + "," + importer.wrapModeV + "," + importer.wrapModeW);
+            if (name == "Bare") return;
+            Assert.Equal(SpriteMetaReference("open/" + name), SpriteMetaReference("end/" + name));
+            Assert.Null(RewriteSpriteMeta(name, _ => { }, out _, out _, new List<string>(), out _));
+            importer.wrapModeU = TextureWrapMode.Mirror;
+            Assert.Equal(TextureWrapMode.Mirror, importer.wrapModeU);
+            // Saved: a converted oldest section with the change; another keeps its layout, said (how
+            // the Editor writes a change of version-1 settings is not measured).
+            var unwritten = new List<string>();
+            var written = RewriteSpriteMeta(name, i => i.wrapModeU = TextureWrapMode.Mirror, out var older, out bool laidOut, unwritten, out _);
+            if (name is "KeepWrap" or "KeepWrapV2")
+            {
+                Assert.True(laidOut);
+                Assert.Contains("    wrapU: 2\n", written);
+            }
+            else
+            {
+                Assert.False(laidOut);
+                Assert.NotEmpty(older);
+            }
+        }
+
+        /// <summary>A sprite's oldest-layout section whose platform list has no default entry is read
+        /// with the one its importer adds, uncompressed, of the section's maximum size and
+        /// compression quality, the platforms it lacks copies of it (spritemeta platform/ rows, the
+        /// texture/ rows RGB24); reading so is no change (save.SaveKeep writes nothing).</summary>
+        [Theory]
+        [InlineData("SaveKeep")]
+        [InlineData("SaveData")]
+        [InlineData("KeepWrap")]
+        [InlineData("KeepWrapMode")]
+        [InlineData("BareLegacy")]
+        [InlineData("BarePlat")]
+        [InlineData("SaveClear")]
+        public void AnOldestSpriteSectionReadsTheDefaultEntryItsImporterAdds(string name)
+        {
+            using var platforms = SpriteMetaPlatforms();
+            var text = File.ReadAllText(Path.Combine(Repo(), "tests", "projects", "spritemeta", "Assets", "Textures", name + ".png.meta"));
+            var importer = (UnityEditor.TextureImporter)UnityEditor.AssetImporter.FromMeta("Assets/Textures/" + name + ".png",
+                "0123456789abcdef0123456789abcdef", "TextureImporter", UnityYamlText.ParseTopLevel(text).Get("TextureImporter").ToNode());
+            string P(UnityEditor.TextureImporterPlatformSettings p) => p.name + " overridden " + p.overridden + " max " + p.maxTextureSize + " format " + p.format
+                + " compression " + p.textureCompression + " quality " + p.compressionQuality;
+            Assert.Equal(SpriteMetaReference("platform/" + name), P(importer.GetDefaultPlatformTextureSettings()) + " | " + P(importer.GetPlatformTextureSettings("Standalone"))
+                + " | maxTextureSize " + importer.maxTextureSize + " compressionQuality " + importer.compressionQuality);
+            if (name is "SaveKeep" or "KeepWrap" or "KeepWrapMode")
+                Assert.Null(RewriteSpriteMeta(name, _ => { }, out _, out _, new List<string>(), out _));
+        }
+
         /// <summary>The oldest layout's conversion where it is not measured: a section of an older
         /// texture format (BareLegacy, whose alpha usage the Editor changes), with a platform entry
         /// of no serialized version (BarePlat), a Default texture's or one of other older

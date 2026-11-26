@@ -36,7 +36,7 @@ namespace UnityEngine.Tests
         {
             var gui = Importer("  textureType: 2\n");
             Assert.Equal((TextureWrapMode.Repeat, TextureWrapMode.Repeat, TextureWrapMode.Repeat), (gui.wrapModeU, gui.wrapModeV, gui.wrapModeW));
-            var auto = Importer("  textureSettings:\n    wrapU: -1\n  textureType: 8\n  spriteMode: 1\n");
+            var auto = Importer("  textureSettings:\n    serializedVersion: 2\n    wrapU: -1\n  textureType: 8\n  spriteMode: 1\n");
             Assert.Equal(TextureWrapMode.Clamp, auto.wrapModeU);
             Assert.Equal(TextureWrapMode.Repeat, auto.wrapModeV);
         }

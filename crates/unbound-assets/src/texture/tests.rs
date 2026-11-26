@@ -123,11 +123,11 @@ fn reads_legacy_settings() {
 }
 
 /// A GUI texture's serializedVersion 13 .meta without wrap keys repeats (tests/projects/importermeta
-/// change.GuiNoWrap); `-1` and older settings without them keep the type's default (Clamp for the
-/// UI types, `reads_legacy_settings`).
+/// change.GuiNoWrap), and so does a sprite's of no serialized version (tests/projects/spritemeta
+/// texture/Bare); `-1` keeps the type's default (Clamp for the UI types, `reads_legacy_settings`).
 #[test]
 fn a_missing_wrap_key_repeats_for_every_type() {
-    let gui = "TextureImporter:\n  serializedVersion: 13\n  textureSettings:\n    filterMode: 1\n  textureType: 2\n";
+    let gui = "TextureImporter:\n  serializedVersion: 13\n  textureSettings:\n    serializedVersion: 2\n    filterMode: 1\n  textureType: 2\n";
     let s = settings(gui, "Standalone");
     assert_eq!(s.texture_type, TextureType::Gui);
     assert_eq!(
@@ -136,8 +136,54 @@ fn a_missing_wrap_key_repeats_for_every_type() {
     );
     let auto = gui.replace("    filterMode: 1\n", "    filterMode: 1\n    wrapU: -1\n");
     assert_eq!(settings(&auto, "Standalone").wrap_u, WrapMode::Clamp);
-    let older = gui.replace("serializedVersion: 13", "serializedVersion: 12");
-    assert_eq!(settings(&older, "Standalone").wrap_u, WrapMode::Clamp);
+    let sprite = "TextureImporter:\n  textureType: 8\n  spriteMode: 1\n";
+    let s = settings(sprite, "Standalone");
+    assert_eq!(s.texture_type, TextureType::Sprite);
+    assert_eq!(
+        (s.wrap_u, s.wrap_v, s.wrap_w),
+        (WrapMode::Repeat, WrapMode::Repeat, WrapMode::Repeat)
+    );
+}
+
+/// Texture settings without their own serialized version are of version 1: their `wrapMode` is
+/// every axis's, their per-axis keys are not read, whatever the section's version or the type
+/// (tests/projects/spritemeta texture/KeepWrap, KeepWrapMode, KeepDefaultWrap, CurrentWrap,
+/// CurrentWrapMode); settings of version 2 read each axis (KeepWrapV2).
+#[test]
+fn unversioned_texture_settings_wrap_by_their_wrap_mode() {
+    let wraps = |meta: &str| {
+        let s = settings(meta, "Standalone");
+        (s.wrap_u, s.wrap_v, s.wrap_w, s.filter)
+    };
+    let sprite = "TextureImporter:\n  textureType: 8\n  spriteMode: 1\n  textureSettings:\n";
+    let (r, c, b, p) = (
+        WrapMode::Repeat,
+        WrapMode::Clamp,
+        FilterMode::Bilinear,
+        FilterMode::Point,
+    );
+    assert_eq!(wraps(&format!("{sprite}    wrapU: 1\n")), (r, r, r, b));
+    assert_eq!(
+        wraps(&format!("{sprite}    filterMode: 0\n    wrapMode: 1\n")),
+        (c, c, c, p)
+    );
+    assert_eq!(
+        wraps(&format!(
+            "{sprite}    serializedVersion: 2\n    filterMode: 0\n    wrapU: 1\n"
+        )),
+        (c, r, r, p)
+    );
+    let current =
+        "TextureImporter:\n  serializedVersion: 13\n  textureType: 0\n  textureSettings:\n";
+    assert_eq!(
+        wraps(&format!("{current}    filterMode: 0\n    wrapU: 1\n")),
+        (r, r, r, p)
+    );
+    assert_eq!(wraps(&format!("{current}    wrapMode: 1\n")), (c, c, c, b));
+    assert_eq!(
+        wraps("TextureImporter:\n  textureType: 0\n  textureSettings:\n    wrapU: 1\n"),
+        (r, r, r, b)
+    );
 }
 
 #[test]
@@ -2690,4 +2736,26 @@ fn the_mipmap_limit_flag_reads_its_former_name_too() {
         "  ignoreMipmapLimit: 0\n  ignoreMasterTextureLimit: 1\n"
     ));
     assert!(!flag(""));
+}
+
+/// A sprite's section of no serialized version whose platform list has no default entry reads the
+/// uncompressed one its importer adds (tests/projects/spritemeta texture/SaveKeep, KeepWrap*:
+/// RGB24); one with a default entry reads it (SaveClear: DXT1); other sections keep the platform
+/// settings' default, compressed.
+#[test]
+fn an_oldest_sprite_section_without_a_default_entry_is_uncompressed() {
+    let sprite = "TextureImporter:\n  textureType: 8\n  spriteMode: 1\n";
+    let s = settings(sprite, "Standalone");
+    assert!(s.uncompressed);
+    assert_eq!(s.compression, 0);
+    let entry = format!(
+        "{sprite}  platformSettings:\n  - serializedVersion: 4\n    buildTarget: DefaultTexturePlatform\n    textureCompression: 1\n"
+    );
+    assert!(!settings(&entry, "Standalone").uncompressed);
+    assert!(!settings("TextureImporter:\n  textureType: 0\n", "Standalone").uncompressed);
+    let current = sprite.replace(
+        "TextureImporter:\n",
+        "TextureImporter:\n  serializedVersion: 13\n",
+    );
+    assert!(!settings(&current, "Standalone").uncompressed);
 }

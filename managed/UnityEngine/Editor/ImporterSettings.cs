@@ -532,36 +532,26 @@ namespace UnityEditor
             Float("spriteBorder.w", 0, s => s.spriteBorder.w, (s, v) => s.spriteBorder = new Vector4(s.spriteBorder.x, s.spriteBorder.y, s.spriteBorder.z, v)),
         };
 
-        /// <summary>The TextureImporter's serialized version in the 6000.0 Editor's .meta files
-        /// (crates/unbound-assets/src/new_meta/texture_importer.yaml).</summary>
-        const int CurrentSerializedVersion = 13;
 
         /// <summary>The <c>alphaTestReferenceValue</c> of a .meta without one.</summary>
         const float AlphaTestReference = 0.5f;
 
         /// <summary>An integer setting as Unbound's texture import reads it
         /// (crates/unbound-assets/src/texture.rs): its key, else (missing or -1) the type's default;
-        /// a missing wrap key reads the older per-texture <c>wrapMode</c> first, a missing sRGB flag
-        /// the older <c>linearTexture</c>, a missing alpha source the older
-        /// <c>grayScaleToAlpha</c>.</summary>
+        /// a wrap reads <see cref="Wrap"/>, a missing sRGB flag the older <c>linearTexture</c>, a
+        /// missing alpha source the older <c>grayScaleToAlpha</c>.</summary>
         internal static int Read(YNode root, string path)
         {
+            if (path is "textureSettings.wrapU" or "textureSettings.wrapV" or "textureSettings.wrapW")
+            {
+                int wrap = Wrap(root, path);
+                return wrap < 0 ? TypeDefault(root, path) : wrap;
+            }
             var node = MetaSettings.Find(root, path);
             if (node == null)
             {
                 switch (path)
                 {
-                    case "textureSettings.wrapU":
-                    case "textureSettings.wrapV":
-                    case "textureSettings.wrapW":
-                        // The older per-texture key, else in settings of the release's serialized
-                        // version Repeat whatever the type (tests/projects/importermeta
-                        // change.GuiNoWrap), in older ones the type's default (not measured).
-                        int legacy = MetaSettings.Int(root, "textureSettings.wrapMode", -1);
-                        if (legacy >= 0) return legacy;
-                        if (MetaSettings.Find(root, "textureSettings.wrapMode") == null
-                            && MetaSettings.Int(root, "serializedVersion", 0) >= CurrentSerializedVersion) return 0;
-                        break;
                     case "mipmaps.sRGBTexture":
                         return MetaSettings.Bool(root, "mipmaps.linearTexture") ? 0 : 1;
                     case "alphaUsage":
@@ -572,6 +562,14 @@ namespace UnityEditor
             int value = node.AsInt(-1);
             return value < 0 ? TypeDefault(root, path) : value;
         }
+
+        /// <summary>A wrap setting as the import reads it, -1 for the type's default: its key, else the
+        /// older per-texture <c>wrapMode</c>, else Repeat whatever the type (matches the Unity
+        /// 6000.0.71f1 Editor, tests/projects/importermeta change.GuiNoWrap, tests/projects/spritemeta
+        /// importer/Bare, KeepWrapV2). Settings of version 1 are read as version 2 when the importer
+        /// loads them (<see cref="ImporterLayout.VersionOneReadValues"/>).</summary>
+        static int Wrap(YNode root, string path) =>
+            (MetaSettings.Find(root, path) ?? MetaSettings.Find(root, "textureSettings.wrapMode"))?.AsInt(-1) ?? 0;
 
         /// <summary>What a missing or -1 setting means: Clamp wrapping for the UI types (Sprite,
         /// GUI, Cursor) and Repeat for the others; bilinear filtering, anisotropy 1, mip maps,

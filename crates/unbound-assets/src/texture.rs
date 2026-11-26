@@ -25,10 +25,6 @@ use serde::{Deserialize, Serialize};
 use std::{path::Path, sync::OnceLock};
 use unbound_yaml::Value;
 
-/// The TextureImporter's serialized version in the 6000.0 Editor's .meta files
-/// (crates/unbound-assets/src/new_meta/texture_importer.yaml).
-const CURRENT_SERIALIZED_VERSION: i64 = 13;
-
 /// File extensions Unity's TextureImporter handles that this importer decodes.
 pub const EXTENSIONS: &[&str] = &[
     "png", "jpg", "jpeg", "tga", "bmp", "gif", "psd", "tif", "tiff", "hdr", "exr",
@@ -314,10 +310,7 @@ impl TextureSettings {
         let (max_size, resize_algorithm) = platform_max_size(imp, build_target);
         let uncompressed = platform_uncompressed(imp, build_target);
         let entry = platform_entry(imp, build_target);
-        let compression = entry
-            .and_then(|e| int(e, "textureCompression"))
-            .or_else(|| int(imp, "textureCompression"))
-            .unwrap_or(1) as i32;
+        let compression = platform_compression(imp, build_target) as i32;
         let crunched = entry
             .and_then(|e| boolean(e, "crunchedCompression"))
             .or_else(|| boolean(imp, "crunchedCompression"))
@@ -333,20 +326,25 @@ impl TextureSettings {
         let format_alpha = platform_format(imp, build_target).map(format_has_alpha);
         let normal_map = texture_type == TextureType::NormalMap;
 
-        // Sampler state. `-1` (and `-100` for the mip bias) mean "the type's default"; a wrap key
-        // that settings of the release's serialized version lack (and no older `wrapMode`) reads
-        // Repeat whatever the type (matches the Unity 6000.0.71f1 Editor, tests/projects/importermeta
-        // change.GuiNoWrap), the type's default in older settings (not measured).
-        let current = int(imp, "serializedVersion").unwrap_or(0) >= CURRENT_SERIALIZED_VERSION;
+        // Sampler state. `-1` (and `-100` for the mip bias) mean "the type's default". Settings of
+        // their own serialized version (2 and later) hold a wrap key per axis; settings without one
+        // are of version 1, whose `wrapMode` is every axis's and whose per-axis keys are not read.
+        // A wrap neither holds reads Repeat whatever the type (matches the Unity 6000.0.71f1 Editor,
+        // tests/projects/importermeta change.GuiNoWrap, tests/projects/spritemeta texture/KeepWrap*,
+        // Bare, CurrentWrap*; measured in sections of the release's serialized version and of none).
+        let versioned = matches!(imp.get("textureSettings"), Some(map) if map.get("serializedVersion").is_some());
         let wrap = |key: &str| -> WrapMode {
-            let value = int(imp, &format!("textureSettings.{key}"))
-                .or_else(|| int(imp, "textureSettings.wrapMode"))
-                .or(if current { Some(0) } else { None });
-            match value {
-                Some(0) => WrapMode::Repeat,
-                Some(1) => WrapMode::Clamp,
-                Some(2) => WrapMode::Mirror,
-                Some(3) => WrapMode::MirrorOnce,
+            let value = if versioned {
+                int(imp, &format!("textureSettings.{key}"))
+                    .or_else(|| int(imp, "textureSettings.wrapMode"))
+            } else {
+                int(imp, "textureSettings.wrapMode")
+            };
+            match value.unwrap_or(0) {
+                0 => WrapMode::Repeat,
+                1 => WrapMode::Clamp,
+                2 => WrapMode::Mirror,
+                3 => WrapMode::MirrorOnce,
                 _ if texture_type.is_ui() => WrapMode::Clamp,
                 _ => WrapMode::Repeat,
             }
@@ -518,16 +516,34 @@ fn format_has_alpha(format: i64) -> bool {
 /// block compression (Alpha8, RGB24, RGBA32, RGBAHalf, R8, ...), or `Automatic` with compression
 /// None.
 fn platform_uncompressed(imp: &Value, build_target: &str) -> bool {
-    let chosen = platform_entry(imp, build_target);
     if let Some(format) = platform_format(imp, build_target) {
         // DXT, BC4-7, PVRTC, ETC/EAC, ASTC (and their crunched forms).
         return !matches!(format, 10 | 12 | 24..=61 | 64..=71);
     }
-    chosen
-        .and_then(|e| int(e, "textureCompression"))
-        .or_else(|| int(imp, "textureCompression"))
-        .unwrap_or(1)
-        == 0
+    platform_compression(imp, build_target) == 0
+}
+
+/// The build target's TextureImporterCompression: its entry's, else the default entry's, else the
+/// section's, else Compressed. A sprite's section of no serialized version (the oldest layout)
+/// whose platform list holds neither entry reads the default entry its importer adds: uncompressed
+/// (matches the Unity 6000.0.71f1 Editor, tests/projects/spritemeta texture/SaveKeep, KeepWrap*:
+/// RGB24; platform/Save*). The oldest layout of other types is not measured that way (a Default
+/// texture's reads as another type, spritemeta importer/BareDefault).
+fn platform_compression(imp: &Value, build_target: &str) -> i64 {
+    match platform_entry(imp, build_target) {
+        Some(entry) => int(entry, "textureCompression")
+            .or_else(|| int(imp, "textureCompression"))
+            .unwrap_or(1),
+        None if is_oldest_sprite_section(imp) => 0,
+        None => int(imp, "textureCompression").unwrap_or(1),
+    }
+}
+
+/// Whether a texture section is a sprite's of the oldest layout: no serialized version.
+fn is_oldest_sprite_section(imp: &Value) -> bool {
+    imp.as_map().is_some()
+        && imp.get("serializedVersion").is_none()
+        && int(imp, "textureType") == Some(8)
 }
 
 /// One mip level, rows bottom-up.
@@ -1555,7 +1571,10 @@ impl Importer for TextureImporter {
     // 54: that .meta's image size is read for the format the decoder takes it as.
     // 55: the settings keep the importer's ignoreMipmapLimit.
     // 56: a normal map carries its usage mode (DXT5nm or plain).
-    const VERSION: u32 = 56;
+    // 57: textureSettings without their own serialized version wrap by their wrapMode alone, and a
+    //     wrap no settings hold reads Repeat in any layout (an oldest sprite's was Clamp); an
+    //     oldest sprite section without a default entry is uncompressed.
+    const VERSION: u32 = 57;
 
     fn import(&self, source: &Path, bytes: &[u8], meta: &Value) -> Result<ImportedTexture> {
         // A GUID-only .meta reads its oldest settings before the trees' settings apply.

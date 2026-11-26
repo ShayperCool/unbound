@@ -23,8 +23,13 @@ namespace UnityEditor
         /// since (its default edited through a property, any entry through a SerializedObject) is.</summary>
         readonly Dictionary<string, string> m_AddedPlatforms = new Dictionary<string, string>(StringComparer.Ordinal);
 
+        /// <summary>Whether the platform list is one the importer made for the entries it added (the
+        /// file has none).</summary>
+        bool m_CreatedList;
+
         /// <summary>The settings read as the Editor reads an oldest-layout sprite section
-        /// (<see cref="ImporterLayout.OldestReadValues"/>), each with the file's own value (null: the
+        /// (<see cref="ImporterLayout.OldestReadValues"/>) or texture settings of version 1
+        /// (<see cref="ImporterLayout.VersionOneReadValues"/>), each with the file's own value (null: the
         /// file lacks it) and the value read: while unchanged they are no change to save
         /// (tests/projects/spritemeta importer.Save*, save.SaveKeep).</summary>
         readonly Dictionary<string, (YNode File, string Read)> m_ReadAsOldest = new Dictionary<string, (YNode, string)>(StringComparer.Ordinal);
@@ -33,12 +38,23 @@ namespace UnityEditor
         {
             m_AddedPlatforms.Clear();
             m_ReadAsOldest.Clear();
-            if (ImporterMeta.TextureLayout is { } layout && m_Settings != null)
-                foreach (var (path, value) in layout.OldestReadValues(m_Settings))
+            void ReadAs(List<(string Path, string Value)> values)
+            {
+                foreach (var (path, value) in values)
                 {
                     m_ReadAsOldest[path] = (MetaSettings.Clone(MetaSettings.Find(m_Settings, path)), value);
                     MetaSettings.Set(m_Settings, path, value);
                 }
+            }
+            if (ImporterMeta.TextureLayout is { } layout && m_Settings != null) ReadAs(layout.OldestReadValues(m_Settings));
+            if (m_Settings != null) ReadAs(ImporterLayout.VersionOneReadValues(m_Settings));
+            m_CreatedList = false;
+            if (ImporterMeta.TextureLayout?.OldestReadEntry(m_Settings) is { } oldestDefault)
+            {
+                m_CreatedList = List() == null;
+                Append(m_Settings, List() ?? SetList(m_Settings, Array.Empty<YNode>()), oldestDefault);
+                Added(TextureImporterPlatformSettings.DefaultPlatformName);
+            }
             foreach (var name in AddMissingPlatforms(m_Settings, ImporterMeta.TextureImportPlatforms)) Added(name);
             // The settings the asset imported with hold the added entries too (a preprocessor's
             // save compares with them).
@@ -63,7 +79,9 @@ namespace UnityEditor
                 foreach (var item in m_Settings.Get(PlatformList).Items)
                     if (!(NameOf(item) is { } name && m_AddedPlatforms.TryGetValue(name, out var added) && added == MetaSettings.ToJson(item)))
                         kept.Add(MetaSettings.Clone(item));
-                SetList(copy, kept.ToArray());
+                // A list the importer made for its own entries is not the file's.
+                if (kept.Count == 0 && m_CreatedList) MetaSettings.Remove(copy, PlatformList);
+                else SetList(copy, kept.ToArray());
             }
             // What was read as an oldest section reads and is unchanged: the file's own.
             foreach (var (path, (file, read)) in m_ReadAsOldest)
@@ -90,6 +108,7 @@ namespace UnityEditor
         internal override void SettingsWritten()
         {
             m_AddedPlatforms.Clear();
+            m_CreatedList = false;
             m_ReadAsOldest.Clear();
         }
 

@@ -690,6 +690,20 @@ namespace Unbound.Runtime
             return entry;
         }
 
+        /// <summary>The default platform entry the importer reads a sprite's section of the oldest
+        /// layout (no serialized version) with when its platform list holds none: the one it adds,
+        /// uncompressed (<see cref="OldestEntry"/>; matches the Unity 6000.0.71f1 Editor,
+        /// tests/projects/spritemeta platform/Save*, KeepWrap*, texture/ of them: RGB24), as the
+        /// texture import reads it (crates/unbound-assets/src/texture.rs platform_compression). Null
+        /// for another section (the oldest layout of other types is not measured so).</summary>
+        internal YNode OldestReadEntry(YNode settings)
+        {
+            if (m_PlatformEntry == null || settings == null || settings.Kind != YKind.Map || settings.Get("serializedVersion") != null
+                || MetaSettings.Int(settings, "textureType", -1) != 8 || FindEntry(settings, TextureImporterPlatformSettings.DefaultPlatformName) != null)
+                return null;
+            return OldestEntry(ImporterMeta.FromNode(settings)).ToNode();
+        }
+
         /// <summary>The section's settings an oldest-layout section's added platform entries take.</summary>
         static readonly string[] s_OldestEntryKeys = { "maxTextureSize", "compressionQuality" };
 
@@ -706,7 +720,8 @@ namespace Unbound.Runtime
         /// (<see cref="ConvertsOldest"/>) with where they differ from its keys, by path (matches the
         /// Unity 6000.0.71f1 Editor, tests/projects/spritemeta importer.Save*, end.BareWrap,
         /// end.BareFull): textureSettings without their own serialized version, or none, at the
-        /// release's defaults, and the keys of <see cref="s_OldestDefaults"/> with those values.
+        /// release's defaults and version (so that a wrap a script sets reads back), and the keys of
+        /// <see cref="s_OldestDefaults"/> with those values.
         /// None for another section.</summary>
         internal List<(string Path, string Value)> OldestReadValues(YNode settings)
         {
@@ -715,9 +730,28 @@ namespace Unbound.Runtime
             if ((settings.Get("textureSettings") is not { Kind: YKind.Map } own || own.Get("serializedVersion") == null)
                 && m_Section.Get("textureSettings") is { Kind: YKind.Map } defaults)
                 for (int i = 0; i < defaults.Keys.Count; i++)
-                    if (defaults.Keys[i] != "serializedVersion" && defaults.Values[i].Kind == YKind.Scalar)
+                    if (defaults.Values[i].Kind == YKind.Scalar)
                         values.Add(("textureSettings." + defaults.Keys[i], defaults.Values[i].Text));
             foreach (var (key, value) in s_OldestDefaults) values.Add((key, value));
+            return values;
+        }
+
+        /// <summary>The release's serialized version of a texture's sampler settings
+        /// (crates/unbound-assets/src/new_meta/texture_importer.yaml textureSettings).</summary>
+        const string TextureSettingsVersion = "2";
+
+        /// <summary>The values an importer reads texture settings without their own serialized version
+        /// with (version 1, in any section): its <c>wrapMode</c>, else Repeat, is every axis's wrap, its
+        /// per-axis keys are not read (matches the Unity 6000.0.71f1 Editor, tests/projects/spritemeta
+        /// importer/ and texture/ KeepWrap, KeepWrapMode, KeepDefaultWrap, CurrentWrap,
+        /// CurrentWrapMode); they are then of the release's version. None for other settings.</summary>
+        internal static List<(string Path, string Value)> VersionOneReadValues(YNode settings)
+        {
+            var values = new List<(string, string)>();
+            if (settings?.Get("textureSettings") is not { Kind: YKind.Map } own || own.Get("serializedVersion") != null) return values;
+            var wrap = own.Get("wrapMode") is { Kind: YKind.Scalar } mode ? mode.Scalar : "0";
+            values.Add(("textureSettings.serializedVersion", TextureSettingsVersion));
+            foreach (var axis in new[] { "wrapU", "wrapV", "wrapW" }) values.Add(("textureSettings." + axis, wrap));
             return values;
         }
 
