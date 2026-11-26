@@ -1,0 +1,28 @@
+{"k": "start.eventCurrent", "v": "null"}
+{"k": "start.skin", "v": "throws ArgumentException: You can only call GUI functions from inside OnGUI."}
+{"k": "start.color", "v": "RGBA(1.000, 1.000, 1.000, 1.000)"}
+{"k": "start.depth", "v": "1"}
+{"k": "start.enabled", "v": "True"}
+{"k": "start.matrix", "v": "True"}
+{"k": "start.label", "v": "throws ArgumentException: You can only call GUI functions from inside OnGUI."}
+{"k": "start.button", "v": "throws ArgumentException: You can only call GUI functions from inside OnGUI."}
+{"k": "start.layoutLabel", "v": "throws ArgumentException: You can only call GUI functions from inside OnGUI."}
+{"k": "start.beginGroup", "v": "throws ArgumentException: You can only call GUI functions from inside OnGUI."}
+{"k": "start.controlId", "v": "positive"}
+{"k": "start.hotControl", "v": "0"}
+{"k": "start.calcSize", "v": "throws ArgumentException: You can only call GUI functions from inside OnGUI."}
+{"k": "onGuiCalls.positive", "v": "True"}
+{"k": "between.eventCurrent", "v": "null"}
+{"k": "between.skin", "v": "throws ArgumentException: You can only call GUI functions from inside OnGUI."}
+{"k": "between.color", "v": "RGBA(1.000, 1.000, 1.000, 1.000)"}
+{"k": "between.depth", "v": "1"}
+{"k": "between.enabled", "v": "True"}
+{"k": "between.matrix", "v": "True"}
+{"k": "between.label", "v": "throws ArgumentException: You can only call GUI functions from inside OnGUI."}
+{"k": "between.button", "v": "throws ArgumentException: You can only call GUI functions from inside OnGUI."}
+{"k": "between.layoutLabel", "v": "throws ArgumentException: You can only call GUI functions from inside OnGUI."}
+{"k": "between.beginGroup", "v": "throws ArgumentException: You can only call GUI functions from inside OnGUI."}
+{"k": "between.controlId", "v": "positive"}
+{"k": "between.hotControl", "v": "0"}
+{"k": "between.calcSize", "v": "throws ArgumentException: You can only call GUI functions from inside OnGUI."}
+{"k": "complete", "v": true}
