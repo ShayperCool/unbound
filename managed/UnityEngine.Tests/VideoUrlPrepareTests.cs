@@ -84,5 +84,27 @@ namespace UnityEngine.Tests
             }
             finally { Object.DestroyImmediate(go); }
         }
+
+        [Fact]
+        public void AMissingLocalPathKeepsUnboundsOwnMessage()
+        {
+            VideoClip.s_CallForTests = (method, request) => method == "video-probe" ? throw new InvalidOperationException("ffprobe cannot read it") : "{}";
+            var go = new GameObject("video");
+            try
+            {
+                var player = go.AddComponent<VideoPlayer>();
+                player.playOnAwake = false;
+                var errors = new List<string>();
+                player.errorReceived += (_, message) => errors.Add(message);
+                player.url = "/no/such/clip.webm";
+                player.Prepare();
+                Update(player);
+                Assert.False(player.isPrepared);
+                Assert.Single(errors);
+                Assert.StartsWith("VideoPlayer cannot play /no/such/clip.webm: ", errors[0]);
+                Assert.DoesNotContain("Cannot read file.", errors[0]);
+            }
+            finally { Object.DestroyImmediate(go); }
+        }
     }
 }
