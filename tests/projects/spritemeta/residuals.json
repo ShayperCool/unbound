@@ -20,10 +20,5 @@
   "open/BarePlat.platforms",
   "sprites/BareLegacy",
   "sprites/BarePlat"
- ],
- "A region of opaque texels lying inside another's rect (OrderEqualLeft: a block in the bend of a C-shaped region) is one sprite in the Editor's automatic slicing, by a rule not known; Unbound slices the two apart and warns": [
-  "end/OrderEqualLeft",
-  "open/OrderEqualLeft",
-  "sprites/OrderEqualLeft"
  ]
 }

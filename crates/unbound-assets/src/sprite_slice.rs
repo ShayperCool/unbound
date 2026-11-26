@@ -8,12 +8,14 @@
 //! that is not small (the rect around both), nearest by the squared gap to that region as earlier
 //! joins grew it, of equal ones the first listed (spritemeta sprites.NearChebyshev, NearCentre,
 //! NearTieRow, NearGrown, NearChain, SliceSmallBetween); without any region that is not small the
-//! texture is one sprite of its whole size. Each rect grows by one pixel on every side, within the
+//! texture is one sprite of its whole size. A region that is not small whose rect lies inside a
+//! larger such region's rect is part of it (OrderEqualLeft; one only overlapping is its own,
+//! OrderTieClamp). Each rect grows by one pixel on every side, within the
 //! texture. The sprites come in rows: the last listed rect left and every rect whose rows touch its
 //! rows form a row, ordered left to right, of equal left the one of the higher top first; then the
 //! next row of what is left (OrderRows, OrderStair, OrderTall, OrderGrid1-3, OrderClamp,
-//! OrderAnchorJoin, OrderTieJoin, SliceChain and the others: 42 textures). Not told apart by them:
-//! for equal left, the higher top first or the later listed first.
+//! OrderAnchorJoin, OrderTieJoin, SliceChain and the others; of equal left the higher top first,
+//! not the later listed: OrderTieClamp, OrderTieJoined).
 
 /// The size under which a region is small (in either direction).
 pub const MIN_SIZE: u32 = 4;
@@ -44,17 +46,22 @@ pub fn slice(width: u32, height: u32, alpha: impl Fn(u32, u32) -> u8) -> Vec<Rec
     if regions.iter().all(small) {
         return whole;
     }
+    // A region that is not small whose rect lies inside a larger one's is part of it, not a sprite
+    // (OrderEqualLeft; one whose rect only overlaps another's is its own, OrderTieClamp, and so is
+    // one inside a rect a join grew, OrderTieJoin, OrderTieJoined).
+    let contained = contained_regions(&regions, &small);
+    let target = |j: usize| !small(&regions[j]) && !contained[j];
     // The small regions, from the last listed back, each join the nearest region that is not
     // small as earlier joins grew it; of equal ones the first listed.
     let mut grown = regions.clone();
-    let mut kept = vec![true; regions.len()];
+    let mut kept: Vec<bool> = contained.iter().map(|c| !c).collect();
     for (i, s) in regions.iter().enumerate().rev() {
         if !small(s) {
             continue;
         }
         let mut best: Option<(usize, u64)> = None;
-        for (j, r) in regions.iter().enumerate() {
-            if small(r) {
+        for (j, _) in regions.iter().enumerate() {
+            if !target(j) {
                 continue;
             }
             let d = gap(s, &grown[j]);
@@ -106,17 +113,30 @@ pub fn slice(width: u32, height: u32, alpha: impl Fn(u32, u32) -> u8) -> Vec<Rec
     rects
 }
 
-/// Whether a region's rect lies inside another's (before any join): the Editor's slicing makes one
-/// sprite of such a texture's two (tests/projects/spritemeta sprites.OrderEqualLeft, a region in
-/// another's bend), by a rule not known; [`slice`] keeps both.
-pub fn has_nested_regions(width: u32, height: u32, alpha: impl Fn(u32, u32) -> u8) -> bool {
-    let regions = regions(width, height, &alpha);
-    regions.iter().enumerate().any(|(i, a)| {
-        regions
-            .iter()
-            .enumerate()
-            .any(|(j, b)| i != j && b[0] <= a[0] && b[1] <= a[1] && a[2] <= b[2] && a[3] <= b[3])
-    })
+/// Which regions that are not small lie inside the rect of a larger one that is not small (its
+/// area larger, so equal rects are not each other's); those of equal size are not compared,
+/// which keeps a texture of many like regions linear after the sort.
+fn contained_regions(regions: &[[u32; 4]], small: &impl Fn(&[u32; 4]) -> bool) -> Vec<bool> {
+    let area = |r: &[u32; 4]| u64::from(r[2] - r[0] + 1) * u64::from(r[3] - r[1] + 1);
+    let mut big: Vec<usize> = (0..regions.len())
+        .filter(|&i| !small(&regions[i]))
+        .collect();
+    big.sort_by_key(|&i| std::cmp::Reverse(area(&regions[i])));
+    let mut contained = vec![false; regions.len()];
+    for (n, &i) in big.iter().enumerate() {
+        let a = &regions[i];
+        for &j in &big[..n] {
+            let b = &regions[j];
+            if area(b) == area(a) {
+                break;
+            }
+            if b[0] <= a[0] && b[1] <= a[1] && a[2] <= b[2] && a[3] <= b[3] {
+                contained[i] = true;
+                break;
+            }
+        }
+    }
+    contained
 }
 
 /// The squared gap between two inclusive pixel rects (0 when they touch or overlap).
@@ -305,5 +325,21 @@ mod tests {
         assert_eq!(slice(6, 5, |_, _| 255), [rect(0, 0, 6, 5)]);
         // A faint texel is opaque.
         assert_eq!(slice(4, 4, |_, _| 1), [rect(0, 0, 4, 4)]);
+    }
+
+    /// A region inside a larger one's rect is part of it (spritemeta sprites.OrderEqualLeft); one
+    /// only overlapping it is its own, and of equal left the higher top comes first
+    /// (OrderTieClamp, OrderTieJoined), not the later listed.
+    #[test]
+    fn contained_regions_join_their_container_and_ties_take_the_higher_top() {
+        let c_with_block = image(&[(2, 9, 1, 2), (9, 10, 1, 14), (4, 10, 13, 14), (2, 5, 5, 9)]);
+        assert_eq!(slice(16, 16, c_with_block), [rect(1, 0, 11, 16)]);
+        let clamp = image(&[(1, 6, 0, 2), (5, 6, 0, 11), (1, 6, 9, 11), (0, 3, 4, 7)]);
+        assert_eq!(slice(16, 16, clamp), [rect(0, 0, 8, 13), rect(0, 3, 5, 6)]);
+        let joined = image(&[(0, 14, 0, 3), (14, 14, 11, 11), (0, 3, 6, 9)]);
+        assert_eq!(
+            slice(16, 16, joined),
+            [rect(0, 0, 16, 13), rect(0, 5, 5, 6)]
+        );
     }
 }

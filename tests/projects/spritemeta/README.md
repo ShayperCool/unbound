@@ -30,7 +30,7 @@ installed modules, `.modules` whether each was a copy of the first default entry
 | `KeepDefaultWrap` | only `textureType: 0` and `textureSettings: wrapU: 1` |
 | `CurrentWrap`, `CurrentWrapMode` | only `serializedVersion: 13`, `textureType: 0` and `textureSettings` of `filterMode: 0` and `wrapU: 1`, of `wrapMode: 1` |
 | `Order*`, `Near*` | none; 16x16 (`NearGrown` 16x8) blocks whose rows touch (side by side, a staircase, a tall block, padded grids of 2x2 and 3x3, tops at the edge), and pixels between big blocks at different gaps, on one row, two and three in a row, and joins that move a rect within its row |
-| `OrderEqualLeft`, `Alpha16`, `Alpha16b`, `SliceHuge` | none; 16x16 a C-shaped region with a block of the same left edge in its bend; 16x8 16-bit RGBA blocks of alpha 65535, 0x0081 and 0x0040 (`Alpha16b`: 65535, 0x0100, 0x00FF); 2560x16 two 100x8 blocks |
+| `OrderEqualLeft`, `OrderTieClamp`, `OrderTieJoined`, `Alpha16`, `Alpha16b`, `SliceHuge` | none; 16x16 a C-shaped region with a block of the same left edge in its bend; a C-shaped region at x 1 with a block at x 0 overlapping its rect (both grow to x 0); a wide block grown by a speck's join above a block of the same left; 16x8 16-bit RGBA blocks of alpha 65535, 0x0081 and 0x0040 (`Alpha16b`: 65535, 0x0100, 0x00FF); 2560x16 two 100x8 blocks |
 | `Slice*` | none; 16x16 (`SliceNpot` 10x6) of opaque blocks on a transparent ground: an L, blocks touching at a corner, a pixel beside a block, blocks at the edges, faint ones (alpha 1, 50), five 3x3 blocks, 3-wide blocks a pixel apart, a ring, narrow, flat and 5x2 blocks beside a big one, lone 3x3 and 4x4 blocks, two big blocks with pixels between or near them, a chain of overlapping rows, an empty texture |
 
 `Assets/Scripts/SpriteMetaProbe.cs` records in Play mode into values.jsonl in `$SPRITEMETA_OUT`
@@ -90,8 +90,9 @@ axis (`KeepWrapV2`); a wrap no settings hold is Repeat (`Bare`, `KeepWrapV2`'s `
 A 16-bit PNG is sliced on the high byte of its alpha (`Alpha16`, `Alpha16b`: 0x00FF transparent, 0x0100 not).
 A texture larger than `maxTextureSize` is sliced on its source pixels and its rects and pixels per unit
 scaled to the imported size (`SliceHuge`: 2560 wide to 2048, the rects by 0.8 across and 13/16 up, 80
-pixels per unit). A region inside another's rect is not a sprite of its own (`OrderEqualLeft`; the rule
-is not known: a residual).
+pixels per unit). A region inside another's rect is part of it, not a sprite of its own (`OrderEqualLeft`); one whose rect
+only overlaps another's is its own (`OrderTieClamp`); of equal left the higher top comes first, not the
+later listed (`OrderTieClamp`, `OrderTieJoined`).
 
 Not covered: other changes of an oldest section's platform entries (one set that the file lacks),
 `Multiple` sprites without IDs, formats other than PNG, a bake's

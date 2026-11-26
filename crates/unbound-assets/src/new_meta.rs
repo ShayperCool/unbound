@@ -410,6 +410,16 @@ fn sprites_2d(section: String, asset: &Path) -> String {
     let sixteen = bytes
         .as_ref()
         .is_some_and(|b| b.len() > 25 && b[24] == 16 && matches!(b[25], 4 | 6));
+    // (Measured for RGBA; grey with alpha takes the same reading, not measured.)
+    if bytes
+        .as_ref()
+        .is_some_and(|b| b.len() > 25 && b[24] == 16 && b[25] == 4)
+    {
+        tracing::warn!(
+            "{}: a 16-bit grey PNG with alpha is sliced on its alpha's high byte, as a 16-bit RGBA one; the Editor's slicing of this layout is not measured",
+            asset.display()
+        );
+    }
     let high_alpha = sixteen
         .then(|| {
             bytes
@@ -445,12 +455,6 @@ fn sprites_2d(section: String, asset: &Path) -> String {
             None => image.rgba[i * 4 + 3],
         }
     };
-    if crate::sprite_slice::has_nested_regions(width, height, alpha) {
-        tracing::warn!(
-            "{}: a region of opaque texels lies inside another's rect; the Editor's automatic slicing makes one sprite of such regions by a rule Unbound does not know, Unbound slices them apart",
-            asset.display()
-        );
-    }
     let rects = crate::sprite_slice::slice(width, height, alpha);
     let (mut table, mut sprites, mut names) = (String::new(), String::new(), String::new());
     for (i, r) in rects.iter().enumerate() {
@@ -731,7 +735,10 @@ mod tests {
         let path = dir.join("Alpha16b.png");
         let image = image::ImageBuffer::from_fn(16, 8, |x, y| {
             let y = 7 - y;
-            let a = if !(2..=5).contains(&y) {
+            // (The full block's rows 1..5, the others' 2..5: the slicing's rows are bottom first.)
+            let a = if (1..=4).contains(&x) && y == 1 {
+                u16::MAX
+            } else if !(2..=5).contains(&y) {
                 0
             } else if (1..=4).contains(&x) {
                 u16::MAX
@@ -752,6 +759,7 @@ mod tests {
             &MetaContext::default().with_mode_2d(true),
         );
         assert!(sprites.contains("      name: Alpha16b_1\n"), "{sprites}");
+        assert!(sprites.contains("      name: Alpha16b_0\n      rect:\n        serializedVersion: 2\n        x: 0\n        y: 0\n        width: 6\n        height: 7\n"), "{sprites}");
         assert!(!sprites.contains("      name: Alpha16b_2\n"), "{sprites}");
     }
 
