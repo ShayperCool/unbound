@@ -73,6 +73,23 @@ namespace UnityEngine.Tests
         public void APackagesSamplesAreFoundAsTheEditorFindsThem(string key, string name, string version) =>
             Assert.Equal(Reference("find/" + key), Find(name, version));
 
+        /// <summary>A sample's path is joined as the Package Manager joins paths: a trailing slash,
+        /// "." and doubled separators left out, backslashes read as slashes.</summary>
+        [Theory]
+        [InlineData("Samples~/Basic/")]
+        [InlineData("./Samples~/Basic")]
+        [InlineData("Samples~//Basic")]
+        [InlineData("Samples~\\Basic")]
+        [InlineData("Samples~/Other/../Basic")]
+        public void ASamplesPathIsJoinedWellFormed(string path)
+        {
+            var json = Path.Combine(m_Root, "Packages", "com.probe.samples", "package.json");
+            File.WriteAllText(json, "{\"name\":\"com.probe.samples\",\"version\":\"1.2.3\",\"displayName\":\"Probe: Samples\",\"samples\":[3,{\"displayName\":\"Basic Sample\",\"path\":"
+                + System.Text.Json.JsonSerializer.Serialize(path) + "}]}");
+            var sample = Assert.Single(Sample.FindByPackage("com.probe.samples", ""));
+            Assert.Equal(Path.Combine(m_Root, "Packages", "com.probe.samples") + "/Samples~/Basic", sample.resolvedPath);
+        }
+
         [Fact]
         public void ASampleIsImportedOnceItsImportFolderExists()
         {

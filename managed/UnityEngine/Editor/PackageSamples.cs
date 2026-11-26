@@ -46,6 +46,7 @@ namespace UnityEditor.PackageManager.UI
 
         Sample(string displayName, string description, string resolvedPath, string importPath, bool interactiveImport)
         {
+            m_PreviousImports = null;
             this.displayName = displayName;
             this.description = description;
             this.resolvedPath = resolvedPath;
@@ -73,19 +74,48 @@ namespace UnityEditor.PackageManager.UI
                 var found = new List<Sample>();
                 foreach (var sample in samples.EnumerateArray())
                 {
+                    // (Entries that are not objects are left out, as Unity's list reading does.)
+                    if (sample.ValueKind != JsonValueKind.Object) continue;
                     var name = Text(sample, "displayName");
-                    var importPath = Path.Combine(Application.dataPath, "Samples", SanitizeFileName(package.displayName), package.version,
+                    var importPath = CombinePaths(Application.dataPath, "Samples", SanitizeFileName(package.displayName), package.version,
                         string.IsNullOrEmpty(name) ? "" : SanitizeFileName(name));
-                    found.Add(new Sample(name, Text(sample, "description"), Path.Combine(package.resolvedPath, Text(sample, "path") ?? ""),
+                    found.Add(new Sample(name, Text(sample, "description"), CombinePaths(package.resolvedPath, Text(sample, "path")),
                         importPath, sample.TryGetProperty("interactiveImport", out var interactive) && interactive.ValueKind == JsonValueKind.True));
                 }
                 return found;
             }
-            catch (Exception e) when (e is IOException or JsonException or InvalidOperationException)
+            catch (IOException e)
             {
                 Debug.Log($"[Package Manager Window] Cannot find samples for package {package.displayName}: {e}");
                 return Enumerable.Empty<Sample>();
             }
+            catch (Exception)
+            {
+                // Unity's C# answers none for any other error, silently (malformed data among them).
+                return Enumerable.Empty<Sample>();
+            }
+        }
+
+        /// <summary>Paths joined as the Package Manager joins them: empty parts left out, each
+        /// separator '/', "." and empty segments dropped, ".." taken back, no trailing separator
+        /// (a sample's "Samples~/Basic/" is "Samples~/Basic").</summary>
+        internal static string CombinePaths(params string[] parts)
+        {
+            var segments = new List<string>();
+            bool rooted = false;
+            foreach (var part in parts)
+            {
+                if (string.IsNullOrEmpty(part)) continue;
+                var text = part.Replace('\\', '/');
+                if (text.StartsWith("/", StringComparison.Ordinal) && segments.Count == 0) rooted = true;
+                foreach (var segment in text.Split('/'))
+                {
+                    if (segment.Length == 0 || segment == ".") continue;
+                    if (segment == ".." && segments.Count > 0 && segments[^1] != "..") segments.RemoveAt(segments.Count - 1);
+                    else segments.Add(segment);
+                }
+            }
+            return (rooted ? "/" : "") + string.Join("/", segments);
         }
 
         static string Text(JsonElement sample, string key) =>
@@ -129,19 +159,30 @@ namespace UnityEditor.PackageManager.UI
             }
         }
 
-        /// <summary>The sample's import folders of each version of its package.</summary>
+        /// <summary>The sample's import folders of each version of its package, as first read by this
+        /// value (Unity's C# keeps them: a second import through the same value is not refused).</summary>
+        [NonSerialized] List<string> m_PreviousImports;
+
         List<string> PreviousImports()
         {
-            var found = new List<string>();
-            if (string.IsNullOrEmpty(importPath)) return found;
-            var root = Path.GetDirectoryName(Path.GetDirectoryName(importPath));
-            if (root == null || !Directory.Exists(root)) return found;
-            foreach (var version in Directory.GetDirectories(root, "*"))
+            if (m_PreviousImports != null) return m_PreviousImports;
+            m_PreviousImports = new List<string>();
+            if (string.IsNullOrEmpty(importPath)) return m_PreviousImports;
+            try
             {
-                var path = Path.Combine(version, Path.GetFileName(importPath));
-                if (Directory.Exists(path)) found.Add(path);
+                var root = Path.GetDirectoryName(Path.GetDirectoryName(importPath));
+                if (root == null || !Directory.Exists(root)) return m_PreviousImports;
+                foreach (var version in Directory.GetDirectories(root, "*"))
+                {
+                    var path = CombinePaths(version, Path.GetFileName(importPath));
+                    if (Directory.Exists(path)) m_PreviousImports.Add(path);
+                }
             }
-            return found;
+            catch (IOException e)
+            {
+                Debug.Log($"[Package Manager Window] Cannot get previous import for sample {displayName}: {e.Message}");
+            }
+            return m_PreviousImports;
         }
 
         /// <summary>Deletes a folder and its .meta, then each parent folder it leaves empty.</summary>
