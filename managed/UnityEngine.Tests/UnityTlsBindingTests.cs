@@ -51,9 +51,13 @@ Yw9/lfUAAH9G6yFFq+MFu8nHlfYVqEI0zigLYuz7AiBnnIeyviQS8FEZzYeAi6gB
 
         static readonly Dictionary<long, Queue<byte[]>> s_Inbound = new();
 
+        static int s_Calls;
+
         [UnmanagedCallersOnly(CallConvs = new[] { typeof(CallConvCdecl) })]
         static int Send(IntPtr user, byte* data, UIntPtr length, uint status)
         {
+            s_Calls++;
+            if (!s_Inbound.ContainsKey((long)user ^ 1)) return -0x7100;
             var bytes = new byte[(int)length];
             Marshal.Copy((IntPtr)data, bytes, 0, bytes.Length);
             s_Inbound[(long)user ^ 1].Enqueue(bytes);
@@ -63,6 +67,8 @@ Yw9/lfUAAH9G6yFFq+MFu8nHlfYVqEI0zigLYuz7AiBnnIeyviQS8FEZzYeAi6gB
         [UnmanagedCallersOnly(CallConvs = new[] { typeof(CallConvCdecl) })]
         static int Receive(IntPtr user, byte* data, UIntPtr length, uint status)
         {
+            s_Calls++;
+            if (!s_Inbound.ContainsKey((long)user)) return -0x7100;
             var queue = s_Inbound[(long)user];
             if (queue.Count == 0) return -0x6900;
             var packet = queue.Dequeue();
@@ -228,10 +234,11 @@ Yw9/lfUAAH9G6yFFq+MFu8nHlfYVqEI0zigLYuz7AiBnnIeyviQS8FEZzYeAi6gB
             {
                 var client = (Binding.unitytls_client*)c;
                 client->config->transportUserData = IntPtr.Zero;
-                int before = s_Inbound[2].Count;
+                s_Calls = 0;
                 Assert.Equal((uint)Binding.UNITYTLS_SSL_ERROR, Binding.unitytls_client_handshake(client));
                 Assert.Equal((uint)Binding.UnityTLSClientState_Fail, Binding.unitytls_client_get_state(client));
-                Assert.Equal(before, s_Inbound[2].Count);
+                // Its callbacks were not called.
+                Assert.Equal(0, s_Calls);
             });
         }
 
