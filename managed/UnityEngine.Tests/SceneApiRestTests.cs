@@ -56,7 +56,9 @@ namespace UnityEngine.Tests
         [Fact]
         public void ClosingASceneThatIsNoPreviewSceneThrowsAndLeavesIt()
         {
-            var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Additive);
+            // Any scene that is no preview scene (EditorSceneManager.NewScene refuses to add one
+            // beside an untitled scene, as the Editor does).
+            var scene = SceneManager.CreateScene("Rest");
             try
             {
                 var kept = new GameObject("Kept");

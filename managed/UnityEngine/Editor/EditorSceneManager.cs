@@ -102,6 +102,10 @@ namespace UnityEditor.SceneManagement
 
         public static Scene NewScene(NewSceneSetup setup, [DefaultValue("NewSceneMode.Single")] NewSceneMode mode)
         {
+            // A scene is not added beside an untitled one, saved or not (matches the Unity
+            // 6000.0.71f1 Editor, tests/projects/vfxwrites scene new additive: a clean untitled scene).
+            if (mode == NewSceneMode.Additive && SceneRegistry.Loaded.Any(s => s.IsLoaded && string.IsNullOrEmpty(s.Path)))
+                throw new InvalidOperationException("Cannot create a new scene additively with an untitled scene unsaved.");
             if (mode == NewSceneMode.Single)
                 foreach (var data in SceneRegistry.Loaded.ToArray())
                     sceneClosing?.Invoke(new Scene(data.Handle), true);
@@ -246,6 +250,13 @@ namespace UnityEditor.SceneManagement
             }
             if (!SceneFiles.CanSave(data, path)) return false;
             path = SceneFiles.ProjectRelative(path);
+            // A scene saved to its own path goes through the processors' OnWillSaveAssets and is
+            // written only when they return its path (else not saved, still dirty, false); an
+            // untitled scene's first save does not (matches the Unity 6000.0.71f1 Editor,
+            // tests/projects/vfxwrites scene save new|edited|open|dropped; a titled scene saved
+            // to another path is unmeasured and goes without them).
+            if (!string.IsNullOrEmpty(data.Path) && string.Equals(SceneFiles.ProjectRelative(data.Path), path, StringComparison.Ordinal)
+                && Array.IndexOf(AssetModificationProcessorInternal.OnWillSaveAssets(new[] { path }), path) < 0) return false;
             sceneSaving?.Invoke(scene, path);
             if (!SceneFiles.Save(data, path)) return false;
             if (!saveAsCopy)
