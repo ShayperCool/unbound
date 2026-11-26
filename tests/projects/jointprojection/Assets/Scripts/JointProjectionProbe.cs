@@ -138,6 +138,90 @@ public class JointProjectionProbe : MonoBehaviour
             m_Scenarios.Add((name, new[] { anchor, body }));
             z += 5f;
         }
+        Later(z);
+    }
+
+    /// <summary>Controls added after the first captures, placed beyond the others: projection by
+    /// distance alone and by angle alone; world-space frames with an axis along z and with a turned
+    /// connected body; drives toward a target position and rotation in world and local space; a
+    /// joint between two dynamic bodies, swapped and not.</summary>
+    void Later(float z)
+    {
+        foreach (var (name, distance, angle) in new[] { ("configurable/distanceonly", 0.01f, 180f), ("configurable/angleonly", 1000f, 1f) })
+        {
+            Chain(name, new Vector3(0f, 10f, z), go =>
+            {
+                var j = Hinge(go);
+                j.projectionMode = JointProjectionMode.PositionAndRotation;
+                j.projectionDistance = distance;
+                j.projectionAngle = angle;
+                return j;
+            });
+            z += 5f;
+        }
+        foreach (var (name, world, turnedAnchor, drive) in new (string, bool, bool, int)[]
+                 {
+                     ("frame/worldaxis", true, false, 0), ("frame/localaxis", false, false, 0),
+                     ("frame/worldturnedanchor", true, true, 0), ("frame/localturnedanchor", false, true, 0),
+                     ("frame/worlddrive", true, false, 1), ("frame/localdrive", false, false, 1),
+                     ("frame/worldrotdrive", true, false, 2), ("frame/localrotdrive", false, false, 2),
+                 })
+        {
+            var anchor = Body(name + "/anchor", new Vector3(0f, 10f, z), 1f, true);
+            if (turnedAnchor) anchor.transform.rotation = Quaternion.Euler(0f, 90f, 0f);
+            var body = Body(name + "/body", new Vector3(1f, 10f, z), 2f);
+            if (!turnedAnchor) body.transform.rotation = Quaternion.Euler(0f, 90f, 0f);
+            body.useGravity = drive == 0;
+            var j = body.gameObject.AddComponent<ConfigurableJoint>();
+            j.connectedBody = anchor;
+            j.anchor = Vector3.zero;
+            j.axis = turnedAnchor ? Vector3.right : Vector3.forward;
+            j.secondaryAxis = Vector3.up;
+            j.xMotion = drive == 1 ? ConfigurableJointMotion.Free : drive == 2 ? ConfigurableJointMotion.Locked : ConfigurableJointMotion.Limited;
+            j.yMotion = j.zMotion = ConfigurableJointMotion.Locked;
+            j.angularXMotion = drive == 2 ? ConfigurableJointMotion.Free : drive == 1 ? ConfigurableJointMotion.Locked : ConfigurableJointMotion.Free;
+            j.angularYMotion = j.angularZMotion = ConfigurableJointMotion.Locked;
+            j.linearLimit = new SoftJointLimit { limit = 0.3f };
+            if (drive == 1)
+            {
+                j.xDrive = new JointDrive { positionSpring = 100f, positionDamper = 10f, maximumForce = float.MaxValue };
+                j.targetPosition = new Vector3(1f, 0f, 0f);
+            }
+            if (drive == 2)
+            {
+                j.angularXDrive = new JointDrive { positionSpring = 50f, positionDamper = 5f, maximumForce = float.MaxValue };
+                j.targetRotation = Quaternion.Euler(30f, 0f, 0f);
+            }
+            j.configuredInWorldSpace = world;
+            if (drive == 0)
+            {
+                body.linearVelocity = new Vector3(2f, 1f, 0.5f);
+                body.angularVelocity = new Vector3(0f, 0f, 3f);
+            }
+            m_Scenarios.Add((name, new[] { anchor, body }));
+            z += 5f;
+        }
+        foreach (var (name, swap) in new[] { ("frame/pair", false), ("frame/pairswapped", true) })
+        {
+            var first = Body(name + "/first", new Vector3(0f, 10f, z), 1f);
+            var second = Body(name + "/second", new Vector3(1f, 10f, z), 3f);
+            var j = second.gameObject.AddComponent<ConfigurableJoint>();
+            j.connectedBody = first;
+            j.anchor = new Vector3(-0.5f, 0f, 0f);
+            j.axis = Vector3.forward;
+            j.xMotion = ConfigurableJointMotion.Limited;
+            j.yMotion = j.zMotion = ConfigurableJointMotion.Locked;
+            j.angularXMotion = ConfigurableJointMotion.Free;
+            j.angularYMotion = j.angularZMotion = ConfigurableJointMotion.Locked;
+            j.linearLimit = new SoftJointLimit { limit = 0.2f };
+            j.xDrive = new JointDrive { positionSpring = 20f, positionDamper = 1f, maximumForce = float.MaxValue };
+            j.targetPosition = new Vector3(0.1f, 0f, 0f);
+            j.swapBodies = swap;
+            first.linearVelocity = new Vector3(0f, 2f, 1f);
+            second.angularVelocity = new Vector3(0f, 0f, 2f);
+            m_Scenarios.Add((name, new Rigidbody[] { first, second }));
+            z += 5f;
+        }
     }
 
     void FixedUpdate()
