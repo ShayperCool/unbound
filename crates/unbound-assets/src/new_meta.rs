@@ -404,17 +404,26 @@ fn sprites_2d(section: String, asset: &Path) -> String {
         .extension()
         .is_some_and(|e| e.eq_ignore_ascii_case("png"));
     let bytes = png.then(|| std::fs::read(asset).ok()).flatten();
-    // A PNG of 16-bit channels with alpha (its header's bit depth and colour type): sliced on its alpha made 8-bit, which
-    // makes the faintest texels transparent (not measured).
-    if bytes
+    // A PNG of 16-bit channels with alpha (its header's bit depth and colour type) is sliced on
+    // the high byte of its alpha: a texel of alpha 0x00FF is transparent, one of 0x0100 not
+    // (matches the Unity 6000.0.71f1 Editor, tests/projects/spritemeta sprites.Alpha16, Alpha16b).
+    let sixteen = bytes
         .as_ref()
-        .is_some_and(|b| b.len() > 25 && b[24] == 16 && matches!(b[25], 4 | 6))
-    {
-        tracing::warn!(
-            "{}: a 16-bit PNG is sliced on its alpha as 8 bits; the Editor's slicing of 16-bit alpha is not measured",
-            asset.display()
-        );
-    }
+        .is_some_and(|b| b.len() > 25 && b[24] == 16 && matches!(b[25], 4 | 6));
+    let high_alpha = sixteen
+        .then(|| {
+            bytes
+                .as_deref()
+                .and_then(|b| image::load_from_memory(b).ok())
+        })
+        .flatten()
+        .map(|image| {
+            let mut rgba = image.to_rgba16();
+            image::imageops::flip_vertical_in_place(&mut rgba);
+            rgba.pixels()
+                .map(|p| (p.0[3] >> 8) as u8)
+                .collect::<Vec<u8>>()
+        });
     let decoded = bytes.and_then(|bytes| crate::image_io::decode(&bytes).ok());
     let Some(image) = decoded else {
         tracing::warn!(
@@ -429,9 +438,20 @@ fn sprites_2d(section: String, asset: &Path) -> String {
         .unwrap_or_default();
     // Rows bottom first in the decoded image, as the slicing's y.
     let (width, height) = (image.width, image.height);
-    let rects = crate::sprite_slice::slice(width, height, |x, y| {
-        image.rgba[(y as usize * width as usize + x as usize) * 4 + 3]
-    });
+    let alpha = |x: u32, y: u32| {
+        let i = y as usize * width as usize + x as usize;
+        match &high_alpha {
+            Some(alpha) => alpha[i],
+            None => image.rgba[i * 4 + 3],
+        }
+    };
+    if crate::sprite_slice::has_nested_regions(width, height, alpha) {
+        tracing::warn!(
+            "{}: a region of opaque texels lies inside another's rect; the Editor's automatic slicing makes one sprite of such regions by a rule Unbound does not know, Unbound slices them apart",
+            asset.display()
+        );
+    }
+    let rects = crate::sprite_slice::slice(width, height, alpha);
     let (mut table, mut sprites, mut names) = (String::new(), String::new(), String::new());
     for (i, r) in rects.iter().enumerate() {
         let name = format!("{stem}_{i}");
@@ -700,6 +720,39 @@ mod tests {
             crate::image_io::encode_rgba8(crate::image_io::Encoding::Png, width, height, &rgba)
                 .unwrap();
         std::fs::write(path, bytes).unwrap();
+    }
+
+    /// A new 16-bit PNG of a 2D project is sliced on its alpha's high byte (tests/projects/spritemeta
+    /// sprites.Alpha16b: a block of alpha 0x0100 is a sprite, one of 0x00FF is not).
+    #[test]
+    fn a_16_bit_png_is_sliced_on_its_alphas_high_byte() {
+        let dir = std::env::temp_dir().join(format!("unbound-sprites-16-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let path = dir.join("Alpha16b.png");
+        let image = image::ImageBuffer::from_fn(16, 8, |x, y| {
+            let y = 7 - y;
+            let a = if !(2..=5).contains(&y) {
+                0
+            } else if (1..=4).contains(&x) {
+                u16::MAX
+            } else if (6..=9).contains(&x) {
+                0x0100
+            } else if (11..=14).contains(&x) {
+                0x00FF
+            } else {
+                0
+            };
+            image::Rgba([u16::MAX, u16::MAX, u16::MAX, a])
+        });
+        image::DynamicImage::ImageRgba16(image).save(&path).unwrap();
+        let sprites = text(
+            NewImporter::Texture,
+            Guid(1),
+            &path,
+            &MetaContext::default().with_mode_2d(true),
+        );
+        assert!(sprites.contains("      name: Alpha16b_1\n"), "{sprites}");
+        assert!(!sprites.contains("      name: Alpha16b_2\n"), "{sprites}");
     }
 
     /// The `.meta` of a new opaque texture in a 2D project, as the Editor writes it

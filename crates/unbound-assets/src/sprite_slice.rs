@@ -106,6 +106,19 @@ pub fn slice(width: u32, height: u32, alpha: impl Fn(u32, u32) -> u8) -> Vec<Rec
     rects
 }
 
+/// Whether a region's rect lies inside another's (before any join): the Editor's slicing makes one
+/// sprite of such a texture's two (tests/projects/spritemeta sprites.OrderEqualLeft, a region in
+/// another's bend), by a rule not known; [`slice`] keeps both.
+pub fn has_nested_regions(width: u32, height: u32, alpha: impl Fn(u32, u32) -> u8) -> bool {
+    let regions = regions(width, height, &alpha);
+    regions.iter().enumerate().any(|(i, a)| {
+        regions
+            .iter()
+            .enumerate()
+            .any(|(j, b)| i != j && b[0] <= a[0] && b[1] <= a[1] && a[2] <= b[2] && a[3] <= b[3])
+    })
+}
+
 /// The squared gap between two inclusive pixel rects (0 when they touch or overlap).
 fn gap(a: &[u32; 4], b: &[u32; 4]) -> u64 {
     let dx = (a[0].max(b[0]) as i64 - a[2].min(b[2]) as i64 - 1).max(0) as u64;
