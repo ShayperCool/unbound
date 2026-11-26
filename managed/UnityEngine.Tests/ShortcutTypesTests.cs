@@ -239,7 +239,13 @@ namespace UnityEngine.Tests
                 Assert.False(manager.HasTag("probe-unit-public"));
                 Assert.Equal(6, changes);
             }
-            finally { ContextManager.onTagChange = previous; }
+            finally
+            {
+                ContextManager.onTagChange = previous;
+                ShortcutManager.UnregisterTag("probe-unit-public");
+                ShortcutManager.UnregisterTag(ShortcutStage.Begin);
+                ShortcutManager.UnregisterTag(ShortcutStage.End);
+            }
         }
 
         [Fact]

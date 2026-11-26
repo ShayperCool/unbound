@@ -32,7 +32,7 @@ hold, and equality of that pair.
   the directory supports; a context manager with tool contexts registered, activated and removed
   (its active count and contexts, the instance found for a type with and without the active
   filter, conflicts between contexts) and its Editor-wide tags (the probe's own, with the change
-  callback counted); the entries the probe's attributes make (id, display name, keys, context,
+  callback counted, also through the public ShortcutManager.RegisterTag and UnregisterTag); the entries the probe's attributes make (id, display name, keys, context,
   tag, kind, priority, reserved modifiers), their text without modifiers, their actions run, and
   prefix matching; a directory over them (lookups by keys, contexts and tags, through the context
   manager, potential conflicts, entries with conflicts).
