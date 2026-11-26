@@ -2644,6 +2644,60 @@
       "type": "UnityEditor.ShaderUtil"
     },
     {
+      "category": "struct",
+      "module": "UnityEditor.CoreModule",
+      "status": "candidate",
+      "type": "UnityEditor.ShortcutManagement.ActiveProfileChangedEventArgs"
+    },
+    {
+      "category": "class",
+      "module": "UnityEditor.CoreModule",
+      "status": "no-public-parameterless-constructor",
+      "type": "UnityEditor.ShortcutManagement.ClutchShortcutAttribute"
+    },
+    {
+      "category": "struct",
+      "module": "UnityEditor.CoreModule",
+      "status": "candidate",
+      "type": "UnityEditor.ShortcutManagement.KeyCombination"
+    },
+    {
+      "category": "class",
+      "module": "UnityEditor.CoreModule",
+      "status": "no-public-parameterless-constructor",
+      "type": "UnityEditor.ShortcutManagement.ReserveModifiersAttribute"
+    },
+    {
+      "category": "struct",
+      "module": "UnityEditor.CoreModule",
+      "status": "candidate",
+      "type": "UnityEditor.ShortcutManagement.ShortcutArguments"
+    },
+    {
+      "category": "class",
+      "module": "UnityEditor.CoreModule",
+      "status": "no-public-parameterless-constructor",
+      "type": "UnityEditor.ShortcutManagement.ShortcutAttribute"
+    },
+    {
+      "category": "class",
+      "module": "UnityEditor.CoreModule",
+      "status": "abstract",
+      "type": "UnityEditor.ShortcutManagement.ShortcutBaseAttribute"
+    },
+    {
+      "category": "struct",
+      "module": "UnityEditor.CoreModule",
+      "status": "candidate",
+      "type": "UnityEditor.ShortcutManagement.ShortcutBinding"
+    },
+    {
+      "category": "struct",
+      "module": "UnityEditor.CoreModule",
+      "status": "candidate",
+      "type": "UnityEditor.ShortcutManagement.ShortcutBindingChangedEventArgs"
+    },
+    {
       "category": "class",
       "module": "UnityEditor.CoreModule",
       "status": "static",
