@@ -200,7 +200,9 @@ namespace UnityEngine
 
         internal bool m_PendingPlayOnAwake;
         /// <summary>A VideoPlayer's track has played through this source: it reports itself playing
-        /// from then on, also after the player stops (measured: tests/projects/videoaudio *.end).</summary>
+        /// from then on, also after the player stops (measured: tests/projects/videoaudio *.end),
+        /// until the source's own Play, Pause or Stop or the player's destruction (Unbound's choice:
+        /// the Editor's answer then is unmeasured).</summary>
         internal bool m_VideoAudioClaimed;
 
         public bool isPlaying
@@ -508,6 +510,7 @@ namespace UnityEngine
         /// <summary>Starts the main voice: time 0 now, &gt; 0 at that dsp time, &lt; 0 after that delay.</summary>
         void PlayAt(double time, string api)
         {
+            m_VideoAudioClaimed = false;
             AudioSystem.CheckMainThread(api == "Play" ? "PlayHelper" : "Play");
             ThrowIfDestroyed();
             if (m_Clip != null) m_PendingPlayOnAwake = false;
@@ -619,6 +622,7 @@ namespace UnityEngine
 
         public void Stop()
         {
+            m_VideoAudioClaimed = false;
             AudioSystem.CheckMainThread("Stop");
             ThrowIfDestroyed();
             StopInternal();
@@ -638,6 +642,7 @@ namespace UnityEngine
 
         public void Pause()
         {
+            m_VideoAudioClaimed = false;
             AudioSystem.CheckMainThread("Pause");
             ThrowIfDestroyed();
             if (m_Handle == 0) return;

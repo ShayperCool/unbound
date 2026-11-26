@@ -759,7 +759,7 @@ namespace UnityEngine.Video
                 {
                     m_StartPending = false;
                     if (m_Frame < 0) ShowFrame(0);
-                    RestartAudio(m_Time);
+                    SyncAudio();
                     m_Pending.Add(() => started?.Invoke(this));
                 }
                 else
@@ -822,6 +822,7 @@ namespace UnityEngine.Video
         internal override void OnEngineDestroy()
         {
             Stop();
+            ReleaseAudioClaims();
             s_Active.Remove(this);
             if (m_Texture != null) DestroyImmediate(m_Texture);
             if (m_Composite != null) DestroyImmediate(m_Composite);

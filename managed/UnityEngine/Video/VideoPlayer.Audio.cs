@@ -32,12 +32,32 @@ namespace UnityEngine.Video
         }
 
         readonly List<AudioTrack> m_AudioPlayback = new List<AudioTrack>();
-        /// <summary>The time the sound starts again at on its next update (a start, seek or loop).</summary>
+        /// <summary>The time a seek or loop starts the sound again at on its next update.</summary>
         double? m_AudioRestart;
+        /// <summary>A start: the sound syncs to the pictures (decoding again only when it drifted).</summary>
+        bool m_AudioSync;
+        /// <summary>When the last drift check was sent (real time); at most every 0.25 s.</summary>
+        float m_AudioSyncedAt = float.NegativeInfinity;
+        readonly List<AudioSource> m_ClaimedSources = new List<AudioSource>();
         GameObject m_DirectAudio;
         bool m_ApiOnlyWarned;
 
         void RestartAudio(double time) => m_AudioRestart = time;
+
+        void SyncAudio() => m_AudioSync = true;
+
+        /// <summary>The rate the pictures move at: the playback speed, scaled by Time.timeScale unless
+        /// the player follows unscaled time.</summary>
+        float EffectiveAudioSpeed => m_TimeUpdateMode == VideoTimeUpdateMode.UnscaledGameTime ? m_PlaybackSpeed : m_PlaybackSpeed * Time.timeScale;
+
+        /// <summary>The sources this player's sound played through stop reporting themselves playing
+        /// when it is destroyed (unmeasured: the Editor's answer then).</summary>
+        void ReleaseAudioClaims()
+        {
+            foreach (var source in m_ClaimedSources)
+                if (source != null) source.m_VideoAudioClaimed = false;
+            m_ClaimedSources.Clear();
+        }
 
         static void AudioCall(string request, object body)
         {
@@ -72,19 +92,28 @@ namespace UnityEngine.Video
                 && (m_AudioOutputMode == VideoAudioOutputMode.AudioSource || m_AudioOutputMode == VideoAudioOutputMode.Direct);
             int count = output ? Math.Min((int)controlledAudioTrackCount, m_SourceAudioTracks) : 0;
             bool playing = m_Playing && !m_Paused && !m_StartPending;
-            // Below normal speed the sound would run ahead of the pictures (unmeasured): silent.
-            if (playing && m_PlaybackSpeed < 1f && count > 0)
+            float speed = EffectiveAudioSpeed;
+            // Pictures slower than normal (a playback speed or Time.timeScale below 1, a paused
+            // game) would leave the sound running ahead of them (unmeasured): it is silent then.
+            if (playing && speed < 1f && count > 0)
             {
-                Stubs.Ignored("UnityEngine.Video.VideoPlayer sound below playbackSpeed 1", "the sound is silent while the pictures play slower than normal");
+                Stubs.Ignored("UnityEngine.Video.VideoPlayer sound below normal speed", "the sound is silent while the pictures move slower than normal (playbackSpeed or Time.timeScale below 1)");
                 playing = false;
             }
             double? restart = m_AudioRestart;
             m_AudioRestart = null;
+            bool sync = m_AudioSync;
+            m_AudioSync = false;
+            float now = Time.realtimeSinceStartup;
+            bool check = playing && now - m_AudioSyncedAt >= 0.25f;
+            if (check) m_AudioSyncedAt = now;
             for (ushort i = 0; i < count; i++)
             {
                 var settings = Track(i);
                 var source = AudioTarget(i);
-                var track = m_AudioPlayback.Find(t => t.Index == i);
+                AudioTrack track = null;
+                foreach (var t in m_AudioPlayback)
+                    if (t.Index == i) { track = t; break; }
                 if (!settings.Enabled || source == null)
                 {
                     if (track != null) CloseAudio(track);
@@ -109,27 +138,36 @@ namespace UnityEngine.Video
                 if (source.m_HasFilter != hasFilter) source.m_HasFilter = hasFilter;
                 float volume = m_AudioOutputMode == VideoAudioOutputMode.Direct ? (settings.Mute ? 0f : settings.Volume) : source.m_Volume;
                 source.SendPacket(track.Voice, track.Clip, volume, false);
+                // A seek or loop starts the voice again too: what the mixer read ahead is dropped
+                // and the streamed clip's frames count from 0 again.
+                if (restart.HasValue) StopVoice(track);
                 if (!track.VoicePlaying && playing && source.isActiveAndEnabled)
                 {
                     AudioBackend.Current.Command(track.Voice, new AudioSourceCommand { Kind = AudioCommandKind.Play });
                     track.VoicePlaying = true;
-                    if (m_AudioOutputMode == VideoAudioOutputMode.AudioSource) source.m_VideoAudioClaimed = true;
+                    if (m_AudioOutputMode == VideoAudioOutputMode.AudioSource && !source.m_VideoAudioClaimed)
+                    {
+                        source.m_VideoAudioClaimed = true;
+                        if (!m_ClaimedSources.Contains(source)) m_ClaimedSources.Add(source);
+                    }
                 }
-                if (opened || restart.HasValue || playing != track.Playing || m_PlaybackSpeed != track.Speed || playing)
+                // A new decoder starts at the pictures' time, a seek or loop starts it again at its
+                // time; a start, and every 0.25 s of playing, syncs it to the pictures, which
+                // starts decoding again only when the sound has drifted (video.rs AudioStream).
+                double? again = opened ? m_Time : restart;
+                double? syncTo = again == null && (sync || check) ? m_Time : (double?)null;
+                if (again.HasValue || syncTo.HasValue || playing != track.Playing || speed != track.Speed)
                 {
-                    // A new decoder starts at the pictures' time; a start, seek or loop (and every
-                    // playing update) syncs to it, which starts decoding again only when the sound
-                    // is more than 0.2 seconds away.
                     AudioCall("video-audio-control", new
                     {
                         id = track.Stream,
                         playing,
-                        speed = (double)m_PlaybackSpeed,
-                        restart = opened ? m_Time : (double?)null,
-                        sync = !opened && (playing || restart.HasValue) ? (restart ?? m_Time) : (double?)null,
+                        speed = (double)speed,
+                        restart = again,
+                        sync = syncTo,
                     });
                     track.Playing = playing;
-                    track.Speed = m_PlaybackSpeed;
+                    track.Speed = speed;
                 }
             }
             for (int k = m_AudioPlayback.Count - 1; k >= 0; k--)
