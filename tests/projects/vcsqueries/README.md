@@ -8,7 +8,8 @@ control provider (`VersionControlSettings.mode` "Visible Meta Files"): `Provider
 `GetAssetByPath` and `new Asset(path)` for an asset, a folder, a missing file, a `.meta`, a project
 settings file and empty or null paths (each `Asset`'s path, names, folder and meta flags, state,
 lock and read-only flags), `VersionControlUtils.IsPathVersioned` for those and for package,
-Library, UserSettings, outside and absolute paths, `IsOpenForEdit`, `Checkout` of a path, an
+Library, UserSettings, outside and absolute paths, backslashes, another case, `Assets` alone, `AssetsX`,
+a package's `.meta` and a path through `..`, `IsOpenForEdit`, `Checkout` of a path, an
 `Asset`, an object and an `AssetList`, `CheckoutIsValid`, `Status`, `GetLatest`, `ClearCache`, a
 `preCheckoutCallback` set, and `AssetList` counts and `FilterChildren`; each task waited for and
 read (`success`, `resultCode`, `text`, `description`, `messages`, `assetList`). Logs are recorded with
@@ -20,7 +21,8 @@ error message naming the files ("Cannot check out files in offline mode" and the
 line), logged as "Version Control: " and that message; a status task fails silently;
 `GetAssetByPath` gives an asset of an existing path with state `Updating`, null for a missing one,
 and `new Asset(path)` state `None` (`MetaFile` for a `.meta`); a folder's path ends in `/` with
-empty names; paths under `Assets`, `Packages` and `ProjectSettings` are versioned, others not.
+empty names; paths written under `Assets`, `Packages` and `ProjectSettings` (an exact-case text prefix with forward
+slashes: `Assets/../Other` is, a backslash path is not) are versioned, others not.
 
 Unbound (`managed/UnityEngine/Editor/VersionControl.cs`) answers the same; a project whose settings
 choose a provider is not supported (NotSupportedException).

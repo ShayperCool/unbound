@@ -135,9 +135,8 @@ namespace UnityEngine.Tests
         [Fact]
         public void APreCheckoutCallbackIsSaid()
         {
-            bool ran = false;
             Stubs.Forget("UnityEditor.VersionControl.Provider.preCheckoutCallback");
-            Provider.preCheckoutCallback = (AssetList list, ref string id, ref string description) => ran = true;
+            Provider.preCheckoutCallback = (AssetList list, ref string id, ref string description) => true;
             try { Provider.Checkout("Assets/Data/A.txt", CheckoutMode.Both); }
             finally { Provider.preCheckoutCallback = null; }
             Assert.Contains(m_Logs.Lines, l => l.Contains("preCheckoutCallback is not run by a checkout yet"));
