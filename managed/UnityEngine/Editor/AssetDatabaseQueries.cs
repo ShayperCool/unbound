@@ -269,7 +269,9 @@ namespace UnityEditor
             set => s_DesiredWorkerCount = value;
         }
 
-        /// <summary>Unbound imports in its own process: there are no import workers to start or stop.</summary>
+        /// <summary>Unbound imports in its own process: there are no import workers to start or stop,
+        /// and the count reads back as set (assetqueries workers.force).</summary>
+        [Unbound.EditorFaithful("imports run in Unbound's own process: there are no import worker processes to start or stop")]
         public static void ForceToDesiredWorkerCount() { }
 
         static int s_DisallowAutoRefresh;
