@@ -342,6 +342,12 @@ namespace UnityEngine.Playables
             {
                 o.UserData = value;
             }
+            else if (o.OutputType == typeof(UnityEngine.Experimental.Playables.TexturePlayableOutput) && (object)value != null)
+            {
+                // Whether the Editor's director makes a bound render texture the output's target is
+                // unmeasured: the binding is not applied, and says so.
+                Stubs.Ignored("UnityEngine.Experimental.Playables.TexturePlayableOutput: a director's binding", "the output keeps no target");
+            }
             if (go != null)
             {
                 foreach (var c in go.GetComponents<Component>())
