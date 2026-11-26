@@ -1,0 +1,37 @@
+{"k":"camera.valid","v":"True,True"}
+{"k":"camera.type","v":"UnityEngine.Experimental.Playables.CameraPlayable"}
+{"k":"camera.camera","v":"ProbeCamera"}
+{"k":"camera.counts","v":"0,1"}
+{"k":"camera.state","v":"Playing,1.7976931348623157E+308,1"}
+{"k":"camera.set","v":"OtherCamera"}
+{"k":"camera.setNull","v":"null"}
+{"k":"camera.createNull","v":"True,null"}
+{"k":"camera.equals","v":"True,False"}
+{"k":"effect.type","v":"UnityEngine.Experimental.Playables.MaterialEffectPlayable"}
+{"k":"effect.material","v":"ProbeMaterial,-1"}
+{"k":"effect.counts","v":"0,1"}
+{"k":"effect.pass2","v":"2"}
+{"k":"effect.set","v":"null,5"}
+{"k":"effect.createNull","v":"True,null,7"}
+{"k":"mixer.type","v":"UnityEngine.Experimental.Playables.TextureMixerPlayable"}
+{"k":"mixer.counts","v":"2,1"}
+{"k":"mixer.equals","v":"True"}
+{"k":"camera.invalidGraph","v":"throws System.NullReferenceException: The PlayableGraph is null."}
+{"k":"effect.invalidGraph","v":"throws System.NullReferenceException: The PlayableGraph is null."}
+{"k":"mixer.invalidGraph","v":"throws System.NullReferenceException: The PlayableGraph is null."}
+{"k":"cast.cameraFromMixer","v":"throws System.InvalidCastException: Can't set handle: the playable is not an CameraPlayable."}
+{"k":"cast.effectFromCamera","v":"throws System.InvalidCastException: Can't set handle: the playable is not an MaterialEffectPlayable."}
+{"k":"cast.mixerFromNull","v":"False"}
+{"k":"output.valid","v":"True,True"}
+{"k":"output.type","v":"UnityEngine.Experimental.Playables.TexturePlayableOutput"}
+{"k":"output.target","v":"ProbeTarget"}
+{"k":"output.graphCounts","v":"1,1,7"}
+{"k":"output.name","v":"TexturePlayableOutput"}
+{"k":"output.null","v":"False"}
+{"k":"output.invalidGraph","v":"throws System.NullReferenceException: The PlayableGraph is null."}
+{"k":"output.setNull","v":"null"}
+{"k":"cast.outputFromNull","v":"False"}
+{"k":"binding","v":"ProbeStream,ProbeCamera,UnityEngine.RenderTexture"}
+{"k":"binding.null","v":"null,null,UnityEngine.RenderTexture"}
+{"k":"output.source","v":"CameraPlayable,8"}
+{"k":"complete","v":true}

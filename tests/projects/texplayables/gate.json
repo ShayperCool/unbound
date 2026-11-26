@@ -1,0 +1,9 @@
+{
+  "commands": [
+    "python3 tests/projects/texplayables/run.py gate"
+  ],
+  "summary": "texplayables: .*",
+  "engine_paths": [
+    "managed/UnityEngine/Playables/TexturePlayables.cs"
+  ]
+}
