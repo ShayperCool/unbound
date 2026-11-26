@@ -10,7 +10,7 @@ answers for textures and in `QualitySettings`/`Texture`'s counters
 (off), streaming `big.png` (1024x1024), `tiny.png` (4x4) and `nomip.png` (64x64, mipmaps off), and a
 runtime `Texture2D(64, 64, RGBA32, mips)`; at `requested` also a copy of `stream` (Instantiate)
 and a negative request on `tiny`; at the end a minimum level of 0, then 1, on `big` with and
-without a request (`minimum*`). `MipStreamingProbe` records each texture's
+without a request, then cleared, 3 and -1 (`minimum*`). `MipStreamingProbe` records each texture's
 streaming members and the global settings and counters at five stages: as the scene loads
 (`load`), after ten frames of a camera looking at a quad of each imported texture (`viewed`),
 with `QualitySettings.streamingMipmapsActive` turned on (`active`), with `requestedMipmapLevel = 3`
@@ -26,7 +26,8 @@ minimum level 8 whatever its size (3, 7 and 11 mips), takes a requested level cl
 reports it as not loaded. While streaming is active, a texture the camera does not draw is
 calculated at the maximum level reduction (2, and 5 at `reduction5`, also for the 4x4 texture);
 the desired level is the requested one when set (whatever the minimum), else the calculated one
-capped by the minimum (`minimum0`: 0). A copy streams with
+capped by the minimum (`minimum0`: 0); a set minimum is clamped like a request (3 reads back 2, -1
+reads back 0) and a cleared one reads 8 again. A copy streams with
 its source's priority and minimum 8, has no requested level and no calculated level, and reports
 the source's level 2 as loaded. `residuals.json` lists what Unbound does not simulate: the
 counters and memory totals, and the level of a drawn texture from its size on screen

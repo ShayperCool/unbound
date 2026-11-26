@@ -312,6 +312,15 @@
 {"k":"minimum1request0/big/calculatedMipmapLevel","v":"2"}
 {"k":"minimum1request0/big/desiredMipmapLevel","v":"0"}
 {"k":"minimum1request0/big/loadedMipmapLevel","v":"0"}
+{"k":"minimumCleared/big/minimumMipmapLevel","v":"8"}
+{"k":"minimumCleared/big/calculatedMipmapLevel","v":"2"}
+{"k":"minimumCleared/big/desiredMipmapLevel","v":"2"}
+{"k":"minimum3/big/minimumMipmapLevel","v":"2"}
+{"k":"minimum3/big/calculatedMipmapLevel","v":"2"}
+{"k":"minimum3/big/desiredMipmapLevel","v":"2"}
+{"k":"minimumNegative/big/minimumMipmapLevel","v":"0"}
+{"k":"minimumNegative/big/calculatedMipmapLevel","v":"2"}
+{"k":"minimumNegative/big/desiredMipmapLevel","v":"0"}
 {"k":"cleared/streamingMipmapsActive","v":"False"}
 {"k":"cleared/streamingMipmapsMemoryBudget","v":"512"}
 {"k":"cleared/streamingMipmapsRenderersPerFrame","v":"512"}

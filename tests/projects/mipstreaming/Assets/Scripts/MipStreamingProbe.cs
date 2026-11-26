@@ -155,6 +155,18 @@ public sealed class MipStreamingProbe : MonoBehaviour
         }
         m_Big.ClearRequestedMipmapLevel();
 
+        // The minimum cleared, then above the calculated level, then negative (no request).
+        m_Big.ClearMinimumMipmapLevel();
+        foreach (var (stage, minimum) in new[] { ("minimumCleared", int.MinValue), ("minimum3", 3), ("minimumNegative", -1) })
+        {
+            if (minimum != int.MinValue) m_Big.minimumMipmapLevel = minimum;
+            for (int i = 0; i < 10; i++) yield return null;
+            Rec(stage + "/big/minimumMipmapLevel", Try(() => m_Big.minimumMipmapLevel));
+            Rec(stage + "/big/calculatedMipmapLevel", Try(() => m_Big.calculatedMipmapLevel));
+            Rec(stage + "/big/desiredMipmapLevel", Try(() => m_Big.desiredMipmapLevel));
+        }
+        m_Big.minimumMipmapLevel = 1;
+
         m_Stream.ClearRequestedMipmapLevel();
         m_Stream.minimumMipmapLevel = 2;
         QualitySettings.streamingMipmapsActive = false;
