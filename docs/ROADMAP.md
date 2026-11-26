@@ -87,8 +87,7 @@ In dependency order; each item ends with an Editor-reference probe.
       (AnimationScriptPlayable, stream handles). `tests/projects/playables` matches the Editor in
       every scenario (graph callbacks and timing, director, animation and audio playables, jobs,
       a Timeline with animation/activation/audio/signal/control tracks, Animation Rigging, a
-      Cinemachine track) but one: objects destroyed from Update are destroyed later in the frame
-      than in the Editor (OnDisable/OnDestroy right after the Update scripts). Left: humanoid
+      Cinemachine track), objects destroyed from Update included. Left: humanoid
       avatars (generic animation only), root motion applied to the Animator's transform,
       Experimental Camera/Texture/Material playables, DataPlayable/PlayableSystems.
 - [x] AndroidJNI, iOS and platform APIs answering exactly as the Linux Editor does:

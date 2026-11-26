@@ -38,7 +38,6 @@ Run Unbound and compare:
 `PLAYABLES_DEBUG=1` logs the director graph's trees in `timeline.evaluate`. `Reference/` keeps the
 recording of the release named in its file name.
 
-Known difference: `director.frames` destroys a director's GameObject from Update. The Editor runs
-OnDisable at the end of the Update scripts and OnDestroy right after them, so the director's graph
-is torn down in that frame's DirectorUpdate; Unbound destroys objects later in the frame
-(PostLateUpdate), so the graph plays one more DirectorUpdate.
+`director.frames` destroys a director's GameObject from Update: the Editor runs OnDisable at the
+end of the Update scripts and OnDestroy right after them, so the director's graph is torn down
+before that frame's DirectorUpdate. Unbound matches every scenario (0 differ at dd8dffc1d).
