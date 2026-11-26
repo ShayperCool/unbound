@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using UnityEditor;
+using UnityEditor.Callbacks;
 using UnityEditor.SceneManagement;
 using UnityEngine;
 
@@ -29,6 +30,16 @@ static class SceneReloadProbe
         Line("opened", EditorApplication.isPlaying ? "play" : "edit");
         EditorApplication.isPlaying = true;
     }
+
+    /// <summary>Scene processing as a scene loads for Play mode, with Edit or Play mode.</summary>
+    [PostProcessScene]
+    static void Processed() =>
+        Line("processed", UnityEngine.SceneManagement.SceneManager.GetActiveScene().name, Application.isPlaying ? "play" : "edit");
+
+    /// <summary>[InitializeOnEnterPlayMode], with Edit or Play mode.</summary>
+    [InitializeOnEnterPlayMode]
+    static void EnteringPlayMode(EnterPlayModeOptions options) =>
+        Line("enterPlayMode", ((int)options).ToString(), Application.isPlaying ? "play" : "edit");
 
     static GameObject Make(string name, Type type, bool active, bool enabled, bool template)
     {

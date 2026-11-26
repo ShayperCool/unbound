@@ -10,12 +10,13 @@ setting (see README.md).
 
 Each capture runs every profile on a fresh copy of the project with
 ProjectSettings/EditorSettings.asset's Enter Play Mode Options set: `none` (options on, nothing
-disabled), `scene` (scene reload disabled), `both` (domain and scene reload disabled). Rows: per
-profile and object, its callbacks with Edit or Play mode and the instance's count in order, with the
-domain loads and Play mode state changes among them, until the probe leaves
-(`<profile>.events.<object>`; the order of different objects' callbacks is not compared), its
-callbacks after that (`<profile>.leaving.<object>`), and its template's state at Play mode's third
-frame (`<profile>.template.<object>`).
+disabled), `domain` (domain reload disabled), `scene` (scene reload disabled), `both` (domain and
+scene reload disabled). Rows: per profile and object, its callbacks with Edit or Play mode and the
+instance's count in order, with the lines of no object among them (domain loads, Play mode state
+changes, [InitializeOnEnterPlayMode], runtime initializers, sceneLoaded, activeSceneChanged, scene
+processing), until the probe leaves (`<profile>.events.<object>`; the order of different objects'
+callbacks is not compared), its callbacks after that (`<profile>.leaving.<object>`), and its
+template's state at Play mode's third frame (`<profile>.template.<object>`).
 """
 import argparse
 import json
@@ -40,7 +41,7 @@ HEAVY = Path.home()/'.cache/compat/with-heavy-job'
 OUT = 'values.jsonl'
 VARIABLE = 'SCENERELOADOFF_OUT'
 SCENE = 'Assets/Scenes/Main.unity'
-PROFILES = {'none': 0, 'scene': 2, 'both': 3}
+PROFILES = {'none': 0, 'domain': 1, 'scene': 2, 'both': 3}
 
 
 def copy(project, options):
@@ -54,6 +55,10 @@ def copy(project, options):
 
 
 OBJECTS = ('Always', 'Plain', 'AlwaysInactive', 'AlwaysDisabled')
+# Lines of no object, in every object's row: domain loads, Play mode state changes,
+# [InitializeOnEnterPlayMode], runtime initializers, sceneLoaded, activeSceneChanged and scene
+# processing.
+GLOBAL = ('domain', 'playmode', 'enterPlayMode', 'init', 'sceneLoaded', 'activeScene', 'processed')
 
 
 def rows(name, raw):
@@ -77,8 +82,8 @@ def rows(name, raw):
         else:
             lines.append(fields)
     for obj in OBJECTS:
-        events = ['/'.join(f) if f[0] in ('domain', 'playmode') else '/'.join(f[1:]) for f in lines
-                  if f[0] in ('domain', 'playmode') or f[0] == obj]
+        events = ['/'.join(f) if f[0] in GLOBAL else '/'.join(f[1:]) for f in lines
+                  if f[0] in GLOBAL or f[0] == obj]
         out.append({'key': f'{name}.events.{obj}', 'value': ' | '.join(events)})
         out.append({'key': f'{name}.leaving.{obj}', 'value': ' | '.join('/'.join(f[1:]) for f in leaving or [] if f[0] == obj)})
     return out

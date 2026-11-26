@@ -2,36 +2,48 @@
 {"key": "none.template.Plain", "value": "inactive"}
 {"key": "none.template.AlwaysInactive", "value": "active"}
 {"key": "none.template.AlwaysDisabled", "value": "inactive"}
-{"key": "none.events.Always", "value": "domain/1/edit | Awake1/edit | OnEnable1/edit | playmode/ExitingEditMode | OnDisable0/edit | domain/1/play | OnEnable1/edit | OnDisable0/edit | OnDestroy0/edit | Awake1/play | OnEnable1/play | Start1/play | Update1/play | playmode/EnteredPlayMode"}
+{"key": "none.events.Always", "value": "domain/1/edit | Awake1/edit | OnEnable1/edit | playmode/ExitingEditMode | OnDisable0/edit | enterPlayMode/0/edit | domain/1/play | OnEnable1/edit | OnDisable0/edit | OnDestroy0/edit | init/SubsystemRegistration/play | init/AfterAssembliesLoaded/play | init/BeforeSplashScreen/play | init/BeforeSceneLoad/play | Awake1/play | OnEnable1/play | processed/Main/play | activeScene/:Main/play | sceneLoaded/Main:4/play | init/AfterSceneLoad/play | Start1/play | Update1/play | playmode/EnteredPlayMode"}
 {"key": "none.leaving.Always", "value": "OnDisable0/play | OnDestroy0/play"}
-{"key": "none.events.Plain", "value": "domain/1/edit | playmode/ExitingEditMode | domain/1/play | Awake1/play | OnEnable1/play | Start1/play | Update1/play | playmode/EnteredPlayMode"}
+{"key": "none.events.Plain", "value": "domain/1/edit | playmode/ExitingEditMode | enterPlayMode/0/edit | domain/1/play | init/SubsystemRegistration/play | init/AfterAssembliesLoaded/play | init/BeforeSplashScreen/play | init/BeforeSceneLoad/play | Awake1/play | OnEnable1/play | processed/Main/play | activeScene/:Main/play | sceneLoaded/Main:4/play | init/AfterSceneLoad/play | Start1/play | Update1/play | playmode/EnteredPlayMode"}
 {"key": "none.leaving.Plain", "value": "OnDisable0/play | OnDestroy0/play"}
-{"key": "none.events.AlwaysInactive", "value": "domain/1/edit | playmode/ExitingEditMode | domain/1/play | playmode/EnteredPlayMode"}
+{"key": "none.events.AlwaysInactive", "value": "domain/1/edit | playmode/ExitingEditMode | enterPlayMode/0/edit | domain/1/play | init/SubsystemRegistration/play | init/AfterAssembliesLoaded/play | init/BeforeSplashScreen/play | init/BeforeSceneLoad/play | processed/Main/play | activeScene/:Main/play | sceneLoaded/Main:4/play | init/AfterSceneLoad/play | playmode/EnteredPlayMode"}
 {"key": "none.leaving.AlwaysInactive", "value": ""}
-{"key": "none.events.AlwaysDisabled", "value": "domain/1/edit | Awake1/edit | playmode/ExitingEditMode | domain/1/play | OnDestroy0/edit | Awake1/play | playmode/EnteredPlayMode"}
+{"key": "none.events.AlwaysDisabled", "value": "domain/1/edit | Awake1/edit | playmode/ExitingEditMode | enterPlayMode/0/edit | domain/1/play | OnDestroy0/edit | init/SubsystemRegistration/play | init/AfterAssembliesLoaded/play | init/BeforeSplashScreen/play | init/BeforeSceneLoad/play | Awake1/play | processed/Main/play | activeScene/:Main/play | sceneLoaded/Main:4/play | init/AfterSceneLoad/play | playmode/EnteredPlayMode"}
 {"key": "none.leaving.AlwaysDisabled", "value": "OnDestroy0/play"}
+{"key": "domain.template.Always", "value": "inactive"}
+{"key": "domain.template.Plain", "value": "inactive"}
+{"key": "domain.template.AlwaysInactive", "value": "active"}
+{"key": "domain.template.AlwaysDisabled", "value": "inactive"}
+{"key": "domain.events.Always", "value": "domain/1/edit | Awake1/edit | OnEnable1/edit | playmode/ExitingEditMode | enterPlayMode/1/edit | OnDisable0/edit | OnDestroy0/edit | init/SubsystemRegistration/play | init/AfterAssembliesLoaded/play | init/BeforeSplashScreen/play | init/BeforeSceneLoad/play | Awake1/play | OnEnable1/play | processed/Main/play | activeScene/:Main/play | sceneLoaded/Main:4/play | init/AfterSceneLoad/play | Start1/play | Update1/play | playmode/EnteredPlayMode"}
+{"key": "domain.leaving.Always", "value": "OnDisable0/play | OnDestroy0/play"}
+{"key": "domain.events.Plain", "value": "domain/1/edit | playmode/ExitingEditMode | enterPlayMode/1/edit | init/SubsystemRegistration/play | init/AfterAssembliesLoaded/play | init/BeforeSplashScreen/play | init/BeforeSceneLoad/play | Awake1/play | OnEnable1/play | processed/Main/play | activeScene/:Main/play | sceneLoaded/Main:4/play | init/AfterSceneLoad/play | Start1/play | Update1/play | playmode/EnteredPlayMode"}
+{"key": "domain.leaving.Plain", "value": "OnDisable0/play | OnDestroy0/play"}
+{"key": "domain.events.AlwaysInactive", "value": "domain/1/edit | playmode/ExitingEditMode | enterPlayMode/1/edit | init/SubsystemRegistration/play | init/AfterAssembliesLoaded/play | init/BeforeSplashScreen/play | init/BeforeSceneLoad/play | processed/Main/play | activeScene/:Main/play | sceneLoaded/Main:4/play | init/AfterSceneLoad/play | playmode/EnteredPlayMode"}
+{"key": "domain.leaving.AlwaysInactive", "value": ""}
+{"key": "domain.events.AlwaysDisabled", "value": "domain/1/edit | Awake1/edit | playmode/ExitingEditMode | enterPlayMode/1/edit | OnDestroy0/edit | init/SubsystemRegistration/play | init/AfterAssembliesLoaded/play | init/BeforeSplashScreen/play | init/BeforeSceneLoad/play | Awake1/play | processed/Main/play | activeScene/:Main/play | sceneLoaded/Main:4/play | init/AfterSceneLoad/play | playmode/EnteredPlayMode"}
+{"key": "domain.leaving.AlwaysDisabled", "value": "OnDestroy0/play"}
 {"key": "scene.template.Always", "value": "active"}
 {"key": "scene.template.Plain", "value": "inactive"}
 {"key": "scene.template.AlwaysInactive", "value": "active"}
 {"key": "scene.template.AlwaysDisabled", "value": "active"}
-{"key": "scene.events.Always", "value": "domain/1/edit | Awake1/edit | OnEnable1/edit | playmode/ExitingEditMode | OnDisable0/edit | domain/1/play | OnEnable1/edit | OnDisable0/edit | OnEnable2/play | Start1/play | Update1/play | playmode/EnteredPlayMode"}
+{"key": "scene.events.Always", "value": "domain/1/edit | Awake1/edit | OnEnable1/edit | playmode/ExitingEditMode | OnDisable0/edit | enterPlayMode/2/edit | domain/1/play | OnEnable1/edit | OnDisable0/edit | init/SubsystemRegistration/play | init/AfterAssembliesLoaded/play | init/BeforeSplashScreen/play | init/BeforeSceneLoad/play | OnEnable2/play | processed/Main/play | init/AfterSceneLoad/play | Start1/play | Update1/play | playmode/EnteredPlayMode"}
 {"key": "scene.leaving.Always", "value": "OnDisable0/play | OnDestroy0/play"}
-{"key": "scene.events.Plain", "value": "domain/1/edit | playmode/ExitingEditMode | domain/1/play | Awake1/play | OnEnable1/play | Start1/play | Update1/play | playmode/EnteredPlayMode"}
+{"key": "scene.events.Plain", "value": "domain/1/edit | playmode/ExitingEditMode | enterPlayMode/2/edit | domain/1/play | init/SubsystemRegistration/play | init/AfterAssembliesLoaded/play | init/BeforeSplashScreen/play | init/BeforeSceneLoad/play | Awake1/play | OnEnable1/play | processed/Main/play | init/AfterSceneLoad/play | Start1/play | Update1/play | playmode/EnteredPlayMode"}
 {"key": "scene.leaving.Plain", "value": "OnDisable0/play | OnDestroy0/play"}
-{"key": "scene.events.AlwaysInactive", "value": "domain/1/edit | playmode/ExitingEditMode | domain/1/play | playmode/EnteredPlayMode"}
+{"key": "scene.events.AlwaysInactive", "value": "domain/1/edit | playmode/ExitingEditMode | enterPlayMode/2/edit | domain/1/play | init/SubsystemRegistration/play | init/AfterAssembliesLoaded/play | init/BeforeSplashScreen/play | init/BeforeSceneLoad/play | processed/Main/play | init/AfterSceneLoad/play | playmode/EnteredPlayMode"}
 {"key": "scene.leaving.AlwaysInactive", "value": ""}
-{"key": "scene.events.AlwaysDisabled", "value": "domain/1/edit | Awake1/edit | playmode/ExitingEditMode | domain/1/play | playmode/EnteredPlayMode"}
+{"key": "scene.events.AlwaysDisabled", "value": "domain/1/edit | Awake1/edit | playmode/ExitingEditMode | enterPlayMode/2/edit | domain/1/play | init/SubsystemRegistration/play | init/AfterAssembliesLoaded/play | init/BeforeSplashScreen/play | init/BeforeSceneLoad/play | processed/Main/play | init/AfterSceneLoad/play | playmode/EnteredPlayMode"}
 {"key": "scene.leaving.AlwaysDisabled", "value": "OnDestroy0/play"}
 {"key": "both.template.Always", "value": "active"}
 {"key": "both.template.Plain", "value": "inactive"}
 {"key": "both.template.AlwaysInactive", "value": "active"}
 {"key": "both.template.AlwaysDisabled", "value": "active"}
-{"key": "both.events.Always", "value": "domain/1/edit | Awake1/edit | OnEnable1/edit | playmode/ExitingEditMode | OnDisable0/edit | OnEnable2/play | Start1/play | Update1/play | playmode/EnteredPlayMode"}
+{"key": "both.events.Always", "value": "domain/1/edit | Awake1/edit | OnEnable1/edit | playmode/ExitingEditMode | enterPlayMode/3/edit | OnDisable0/edit | init/SubsystemRegistration/play | init/AfterAssembliesLoaded/play | init/BeforeSplashScreen/play | init/BeforeSceneLoad/play | OnEnable2/play | processed/Main/play | init/AfterSceneLoad/play | Start1/play | Update1/play | playmode/EnteredPlayMode"}
 {"key": "both.leaving.Always", "value": "OnDisable0/play | OnDestroy0/play"}
-{"key": "both.events.Plain", "value": "domain/1/edit | playmode/ExitingEditMode | Awake1/play | OnEnable1/play | Start1/play | Update1/play | playmode/EnteredPlayMode"}
+{"key": "both.events.Plain", "value": "domain/1/edit | playmode/ExitingEditMode | enterPlayMode/3/edit | init/SubsystemRegistration/play | init/AfterAssembliesLoaded/play | init/BeforeSplashScreen/play | init/BeforeSceneLoad/play | Awake1/play | OnEnable1/play | processed/Main/play | init/AfterSceneLoad/play | Start1/play | Update1/play | playmode/EnteredPlayMode"}
 {"key": "both.leaving.Plain", "value": "OnDisable0/play | OnDestroy0/play"}
-{"key": "both.events.AlwaysInactive", "value": "domain/1/edit | playmode/ExitingEditMode | playmode/EnteredPlayMode"}
+{"key": "both.events.AlwaysInactive", "value": "domain/1/edit | playmode/ExitingEditMode | enterPlayMode/3/edit | init/SubsystemRegistration/play | init/AfterAssembliesLoaded/play | init/BeforeSplashScreen/play | init/BeforeSceneLoad/play | processed/Main/play | init/AfterSceneLoad/play | playmode/EnteredPlayMode"}
 {"key": "both.leaving.AlwaysInactive", "value": ""}
-{"key": "both.events.AlwaysDisabled", "value": "domain/1/edit | Awake1/edit | playmode/ExitingEditMode | playmode/EnteredPlayMode"}
+{"key": "both.events.AlwaysDisabled", "value": "domain/1/edit | Awake1/edit | playmode/ExitingEditMode | enterPlayMode/3/edit | init/SubsystemRegistration/play | init/AfterAssembliesLoaded/play | init/BeforeSplashScreen/play | init/BeforeSceneLoad/play | processed/Main/play | init/AfterSceneLoad/play | playmode/EnteredPlayMode"}
 {"key": "both.leaving.AlwaysDisabled", "value": "OnDestroy0/play"}
 {"key": "complete", "value": "1"}
