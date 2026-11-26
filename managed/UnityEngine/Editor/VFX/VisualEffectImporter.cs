@@ -344,6 +344,12 @@ namespace Unbound.Runtime
                 asset.m_Data = data;
                 asset.m_ShaderSourceIndices = sourceIndices;
                 asset.m_Imported = imported.ToArray();
+                // What an import makes is not dirty: the package sets its materials up through the
+                // material API, which marks a material dirty (after a graph's write and re-import the
+                // Editor's AssetDatabase.SaveAssets hands OnWillSaveAssets nothing: vfxwrites
+                // compileInitialVariants save/will save).
+                foreach (var o in imported)
+                    if (o != null) EditorUtility.ClearDirty(o);
             }
         }
 

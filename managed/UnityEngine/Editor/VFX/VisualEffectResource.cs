@@ -96,7 +96,7 @@ namespace UnityEditor.VFX
         public VFXRendererSettings rendererSettings
         {
             get => m_Settings.Renderer;
-            set => m_Settings.Renderer = value;
+            set { m_Settings.Renderer = value; EditorUtility.SetDirty(this); }
         }
 
         public VFXUpdateMode updateMode
@@ -258,6 +258,11 @@ namespace UnityEditor.VFX
                 for (int t = 0; t < tasks.Length; t++) models[s][t] = tasks[t].model;
             }
             m_ShaderSources = shaderSourceDesc ?? Array.Empty<VFXShaderSourceDesc>();
+            // The compiled graph's shadow casting and motion vectors become the renderer settings'
+            // (without marking the resource dirty): a write after the import holds them
+            // (tests/projects/vfxwrites block edit write/file after rendererSettings save).
+            m_Settings.Renderer.shadowCastingMode = shadowCastingMode;
+            m_Settings.Renderer.motionVectorGenerationMode = motionVectorGenerationMode;
             m_Models = models;
             m_Data = data;
             MarkRuntimeVersion();

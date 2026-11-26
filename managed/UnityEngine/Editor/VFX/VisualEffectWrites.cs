@@ -108,7 +108,8 @@ namespace Unbound.Runtime
             docs.Sort((a, b) => a.FileId.CompareTo(b.FileId));
             var written = UnityYamlText.Write(docs);
             // The same text again leaves the file as it is (and unimported).
-            if (!AssetFiles.Unchanged(text, written)) SceneFiles.WriteFile(info.File, written);
+            bool changed = !AssetFiles.Unchanged(text, written);
+            if (changed) SceneFiles.WriteFile(info.File, written);
             // The objects now in the file, and those no longer in it.
             foreach (var o in gained)
             {
@@ -123,6 +124,10 @@ namespace Unbound.Runtime
             EditorUtility.ClearDirty(resource);
             foreach (var o in resource.m_Contents)
                 if (o is not null) EditorUtility.ClearDirty(o);
+            // The Editor imports a graph file it wrote again: the graph compiles, and its compiled
+            // shadow casting and motion vectors become the renderer settings a later write holds
+            // (vfxwrites block edit write/file after rendererSettings save).
+            if (changed) VisualEffectImports.Reimport(info.Path);
         }
 
         /// <summary>The resource's own fields: its graph and its settings. A new graph's skeleton
