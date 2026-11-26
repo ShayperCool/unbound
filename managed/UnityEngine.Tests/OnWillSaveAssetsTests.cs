@@ -160,11 +160,67 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
-        public void ANewClassLibraryTypeNameIsRefused()
+        public void AChangedTypeNameIsWrittenAsMonosName()
         {
             var written = TypeMap(typeof(int).AssemblyQualifiedName);
+            VisualEffectWrites.KeepTypeNames(TypeMap(MonoSingle), written, "Assets/A.vfx");
+            Assert.Equal("System.Int32, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089",
+                written.Get("m_SerializableType").Raw);
+        }
+
+        [Fact]
+        public void AChangedOtherClassLibraryTypeNameIsRefused()
+        {
+            var written = TypeMap(typeof(decimal).AssemblyQualifiedName);
             var e = Assert.Throws<NotSupportedException>(() => VisualEffectWrites.KeepTypeNames(TypeMap(MonoSingle), written, "Assets/A.vfx"));
-            Assert.Contains("System.Int32, System.Private.CoreLib", e.Message);
+            Assert.Contains("System.Decimal, System.Private.CoreLib", e.Message);
+        }
+
+        /// <summary>A sequence's item maps sit one level below their key (an operator's m_Type and
+        /// m_Operands: the package's Editor-written OrientFaceCamera.vfx and 05_Head_Trail.vfx).</summary>
+        [Fact]
+        public void TypeNamesInSequencesAreLaidOutAtTheirItemsLevel()
+        {
+            var body = YText.Map();
+            var types = YText.Seq();
+            types.Items.Add(TypeMap(typeof(float).AssemblyQualifiedName));
+            body.Set("m_Type", types);
+            var operands = YText.Seq();
+            var operand = YText.Map();
+            operand.Set("name", YText.Scalar("a"));
+            operand.Set("type", TypeMap(typeof(float).AssemblyQualifiedName));
+            operands.Items.Add(operand);
+            body.Set("m_Operands", operands);
+            VisualEffectWrites.MonoTypeNames(body, 1, "Assets/A.vfx");
+            Assert.Equal("System.Single, mscorlib, Version=4.0.0.0, Culture=neutral,\n      PublicKeyToken=b77a5c561934e089",
+                body.Get("m_Type").Items[0].Get("m_SerializableType").Raw);
+            Assert.Equal("System.Single, mscorlib, Version=4.0.0.0, Culture=neutral,\n        PublicKeyToken=b77a5c561934e089",
+                body.Get("m_Operands").Items[0].Get("type").Get("m_SerializableType").Raw);
+        }
+
+        /// <summary>A part an existing document gains (an operand added) is written as a new
+        /// object's: its .NET names made Mono's.</summary>
+        [Fact]
+        public void APartAnExistingDocumentGainsGetsMonosNames()
+        {
+            var old = YText.Map();
+            var oldOperands = YText.Seq();
+            var a = YText.Map();
+            a.Set("type", TypeMap(MonoSingle));
+            oldOperands.Items.Add(a);
+            old.Set("m_Operands", oldOperands);
+            var written = YText.Map();
+            var operands = YText.Seq();
+            var a2 = YText.Map();
+            a2.Set("type", TypeMap(typeof(float).AssemblyQualifiedName));
+            operands.Items.Add(a2);
+            var b = YText.Map();
+            b.Set("type", TypeMap(typeof(float).AssemblyQualifiedName));
+            operands.Items.Add(b);
+            written.Set("m_Operands", operands);
+            VisualEffectWrites.KeepTypeNames(old, written, "Assets/A.vfx");
+            Assert.Equal(MonoSingle, written.Get("m_Operands").Items[0].Get("type").Get("m_SerializableType").Raw);
+            Assert.StartsWith("System.Single, mscorlib, Version=4.0.0.0", written.Get("m_Operands").Items[1].Get("type").Get("m_SerializableType").Raw);
         }
 
         [Fact]

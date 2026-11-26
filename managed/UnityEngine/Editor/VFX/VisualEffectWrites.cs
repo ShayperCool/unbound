@@ -105,6 +105,9 @@ namespace Unbound.Runtime
             }
             if (unlocated > 0)
                 Debug.LogWarning($"Unbound: {info.Path} is written with {unlocated} references to assets Unbound cannot name written as none.");
+            // The Editor writes a file's objects in file id order (a new graph's skeleton holds its
+            // graph before its resource).
+            docs.Sort((a, b) => a.FileId.CompareTo(b.FileId));
             var written = UnityYamlText.Write(docs);
             // The same text again leaves the file as it is (and unimported).
             if (!AssetFiles.Unchanged(text, written)) SceneFiles.WriteFile(info.File, written);
@@ -157,68 +160,73 @@ namespace Unbound.Runtime
         /// differently from the Editor's Mono (System.Single, mscorlib, Version=4.0.0.0 there), and
         /// the Editor's Mono cannot find .NET's names. A written name that stands for the same type
         /// as the file's keeps the file's text; a new .NET class-library name is refused.</summary>
-        internal static void KeepTypeNames(YText old, YText written, string path)
+        internal static void KeepTypeNames(YText old, YText written, string path, int level = 1)
         {
-            if (old == null || written == null || old.Kind != written.Kind) return;
+            if (written == null) return;
+            if (old == null || old.Kind != written.Kind)
+            {
+                // A part the file did not hold: written as a new object's.
+                MonoTypeNames(written, level, path);
+                return;
+            }
             if (written.Kind == YKind.Map)
             {
                 for (int i = 0; i < written.Keys.Count; i++)
                 {
                     var o = old.Get(written.Keys[i]);
                     var w = written.Values[i];
-                    if (written.Keys[i] == "m_SerializableType" && w.Kind == YKind.Scalar && o != null && o.Kind == YKind.Scalar && o.Raw != w.Raw)
+                    if (written.Keys[i] == "m_SerializableType" && w.Kind == YKind.Scalar && o != null && o.Kind == YKind.Scalar)
                     {
+                        if (o.Raw == w.Raw) continue;
                         var oldType = Type.GetType(Unfold(o.Raw));
-                        var newName = Unfold(w.Raw);
-                        if (oldType != null && oldType == Type.GetType(newName)) written.Values[i] = o;
-                        else if (newName.Contains(", System.Private.CoreLib,", StringComparison.Ordinal))
-                            throw new NotSupportedException($"Unbound does not write .NET class library type names into graph files yet ({path}: {newName}).");
+                        if (oldType != null && oldType == Type.GetType(Unfold(w.Raw))) written.Values[i] = o;
+                        else Translate(written, i, level, path);
                     }
-                    else if (o != null) KeepTypeNames(o, w, path);
+                    else if (written.Keys[i] == "m_SerializableType") Translate(written, i, level, path);
+                    else KeepTypeNames(o, w, path, level + 1);
                 }
             }
             else if (written.Kind == YKind.Seq)
-                for (int i = 0; i < written.Items.Count && i < old.Items.Count; i++) KeepTypeNames(old.Items[i], written.Items[i], path);
+                for (int i = 0; i < written.Items.Count; i++)
+                    KeepTypeNames(i < old.Items.Count ? old.Items[i] : null, written.Items[i], path, level);
         }
 
-        /// <summary>The class library types the Editor's Mono keeps in mscorlib, as a graph file names
-        /// them (System.Single, mscorlib, Version=4.0.0.0, Culture=neutral,
-        /// PublicKeyToken=b77a5c561934e089: the vfxwrites fixture's slots).</summary>
-        static readonly HashSet<string> s_MonoCoreLibrary = new HashSet<string>(StringComparer.Ordinal)
+        /// <summary>A new object's type names in the Editor's Mono form (<see cref="Translate"/>).
+        /// <paramref name="level"/>: the indentation level of <paramref name="node"/>'s keys (a
+        /// document body's are at 1; a sequence's item maps at its key's level plus one).</summary>
+        internal static void MonoTypeNames(YText node, int level, string path)
         {
-            "System.Boolean", "System.Byte", "System.SByte", "System.Int16", "System.UInt16", "System.Int32", "System.UInt32",
-            "System.Int64", "System.UInt64", "System.Single", "System.Double", "System.Char", "System.String",
-        };
-
-        /// <summary>A new object's type names in the Editor's Mono form: a .NET class library type
-        /// Mono keeps in mscorlib is named so; another class library name is refused (the Editor's
-        /// Mono could not read it back). <paramref name="level"/>: the map's indentation level.</summary>
-        internal static void MonoTypeNames(YText map, int level, string path)
-        {
-            if (map == null) return;
-            if (map.Kind == YKind.Seq)
+            if (node == null) return;
+            if (node.Kind == YKind.Seq)
             {
-                foreach (var item in map.Items) MonoTypeNames(item, level + 1, path);
+                foreach (var item in node.Items) MonoTypeNames(item, level, path);
                 return;
             }
-            if (map.Kind != YKind.Map) return;
-            for (int i = 0; i < map.Keys.Count; i++)
+            if (node.Kind != YKind.Map) return;
+            for (int i = 0; i < node.Keys.Count; i++)
             {
-                var value = map.Values[i];
-                if (map.Keys[i] == "m_SerializableType" && value.Kind == YKind.Scalar)
-                {
-                    var name = Unfold(value.Raw);
-                    const string core = ", System.Private.CoreLib, ";
-                    int at = name.IndexOf(core, StringComparison.Ordinal);
-                    if (at < 0) continue;
-                    var type = name.Substring(0, at);
-                    if (!s_MonoCoreLibrary.Contains(type))
-                        throw new NotSupportedException($"Unbound does not write .NET class library type names into graph files yet ({path}: {name}).");
-                    var mono = type + ", mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089";
-                    map.Values[i] = YText.Scalar(UnityYamlWriter.Scalar(mono, level * 2 + map.Keys[i].Length + 2, (level + 1) * 2));
-                }
-                else MonoTypeNames(value, level + 1, path);
+                if (node.Keys[i] == "m_SerializableType") Translate(node, i, level, path);
+                else MonoTypeNames(node.Values[i], level + 1, path);
             }
+        }
+
+        /// <summary>A type name the graph's models write, made the Editor's Mono form: a .NET class
+        /// library type Mono keeps in mscorlib (the primitive types and string) named as Mono names
+        /// it, laid out as the writer lays out a string at that level; another class library name is
+        /// refused (the Editor's Mono could not read it back); other names are left as written.</summary>
+        static void Translate(YText map, int i, int level, string path)
+        {
+            var value = map.Values[i];
+            if (value.Kind != YKind.Scalar) return;
+            var name = Unfold(value.Raw);
+            const string core = ", System.Private.CoreLib, ";
+            int at = name.IndexOf(core, StringComparison.Ordinal);
+            if (at < 0) return;
+            var type = name.Substring(0, at);
+            if (type.Contains('`') || !ManagedReferenceIds.s_MonoCoreLibrary.Contains(type))
+                throw new NotSupportedException($"Unbound does not write .NET class library type names into graph files yet ({path}: {name}).");
+            var mono = type + ", " + ManagedReferenceIds.MonoCoreLibraryIdentity;
+            map.Values[i] = YText.Scalar(UnityYamlWriter.Scalar(mono, level * 2 + map.Keys[i].Length + 2, (level + 1) * 2));
         }
 
         /// <summary>A plain scalar's text as one line (a long one is folded over lines in the file).</summary>

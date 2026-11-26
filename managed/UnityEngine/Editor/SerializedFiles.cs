@@ -1269,12 +1269,16 @@ namespace Unbound.Runtime
         /// them too: the primitive types, string and List (the Editor writes mscorlib for them,
         /// tests/projects/scenesave generic-refs). .NET's core library holds others Mono keeps
         /// elsewhere (HashSet in System.Core, for one): those are not written.</summary>
-        static readonly HashSet<string> s_MonoCoreLibrary = new HashSet<string>(StringComparer.Ordinal)
+        internal static readonly HashSet<string> s_MonoCoreLibrary = new HashSet<string>(StringComparer.Ordinal)
         {
             "System.Boolean", "System.Byte", "System.SByte", "System.Int16", "System.UInt16", "System.Int32", "System.UInt32",
             "System.Int64", "System.UInt64", "System.Single", "System.Double", "System.Char", "System.String",
             "System.Collections.Generic.List`1",
         };
+
+        /// <summary>The identity the Editor's Mono gives its mscorlib in an assembly-qualified type
+        /// name (a Visual Effect Graph file's type names, tests/projects/vfxwrites).</summary>
+        internal const string MonoCoreLibraryIdentity = "mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089";
 
         /// <summary>The engine types whose Unity module is measured as a type argument (Unbound
         /// builds every module's types into one assembly; Unity's modules are many).</summary>
