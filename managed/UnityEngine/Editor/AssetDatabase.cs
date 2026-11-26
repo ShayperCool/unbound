@@ -56,8 +56,9 @@ namespace UnityEditor
                 s_ByGuid[e.Guid] = e;
                 s_ByPath[e.Path] = e;
                 // An asset listed anew, or whose name changed since, brings its name (AssetBundle names).
-                if (previous == null || !previous.TryGetValue(e.Path, out var was) || was.Bundle != e.Bundle || was.Variant != e.Variant)
-                    BundleListed(e);
+                Entry was = null;
+                previous?.TryGetValue(e.Path, out was);
+                BundleListed(e, was);
             }
         }
 

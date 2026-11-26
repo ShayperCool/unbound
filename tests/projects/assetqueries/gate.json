@@ -11,6 +11,8 @@
     "managed/UnityEngine/Editor/AssetEditability.cs",
     "managed/UnityEngine/Editor/AssetDatabase.cs",
     "managed/UnityEngine/Editor/AssetDatabaseFiles.cs",
-    "managed/UnityEngine/Editor/EditorUserSettings.cs"
+    "managed/UnityEngine/Editor/EditorUserSettings.cs",
+    "managed/UnityEngine/Editor/ImporterMetaFiles.cs",
+    "crates/unbound-runtime/src/state.rs"
   ]
 }

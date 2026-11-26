@@ -78,9 +78,10 @@ namespace UnityEditor
             return new string(chars);
         }
 
-        /// <summary>A new AssetBundle name is saved into the .meta at once, with the importer's
-        /// other changes (tests/projects/projectwrites 08.importer.bundle), and the database has it
-        /// (tests/projects/assetqueries set.*).</summary>
+        /// <summary>A new AssetBundle name or variant is saved into the .meta at once, with the
+        /// importer's other changes (tests/projects/projectwrites 08.importer.bundle), and the
+        /// database has the name with the variant the importer has then (tests/projects/assetqueries
+        /// set.*, set_variant.*: a name set before a variant adds both combinations).</summary>
         void BundleChanged(bool write)
         {
             if (string.IsNullOrEmpty(m_AssetPath)) return;
@@ -117,8 +118,9 @@ namespace UnityEditor
                 var variant = BundleName(NormalizeString(value));
                 if (variant == m_AssetBundleVariant) return;
                 m_AssetBundleVariant = variant;
-                // (Whether a variant alone is saved into the .meta at once is not measured: it is not.)
-                BundleChanged(write: false);
+                // Saved at once too, the name with this variant a name of the database
+                // (tests/projects/assetqueries set_variant.*).
+                BundleChanged(write: true);
             }
         }
 

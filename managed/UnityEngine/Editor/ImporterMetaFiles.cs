@@ -85,7 +85,8 @@ namespace Unbound.Runtime
             var root = UnityYamlText.ParseTopLevel(text);
             var section = root.Get(importer.m_SettingsType);
             if (section == null || section.Kind != YKind.Map) return false;
-            var common = (importer.userData, importer.assetBundleName?.ToLowerInvariant(), importer.assetBundleVariant?.ToLowerInvariant());
+            // (The importer holds the AssetBundle names in lower case already.)
+            var common = (importer.userData, importer.assetBundleName, importer.assetBundleVariant);
             if (importer.UsesDirtyFlagForWrite)
             {
                 bool wasDirty = EditorUtility.IsDirty(importer) || importer.m_SettingsChanged;

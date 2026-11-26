@@ -232,6 +232,18 @@ impl AssetDb {
         self.assets.iter()
     }
 
+    /// Gives the asset at `path` the AssetBundle name its `.meta` has now (a script's set wrote
+    /// it); false for a path of no asset.
+    pub fn set_bundle(&mut self, path: &str, bundle: Bundle) -> bool {
+        match self.by_path.get(&path.to_ascii_lowercase()) {
+            Some(&i) => {
+                self.assets[i].bundle = bundle;
+                true
+            }
+            None => false,
+        }
+    }
+
     /// Lists `asset`, in place of what had its GUID or its path.
     pub fn insert(&mut self, asset: Asset) {
         if let Some(&index) = self.by_guid.get(&asset.guid) {
@@ -479,6 +491,19 @@ mod header_tests {
 #[cfg(test)]
 mod db_tests {
     use super::*;
+
+    #[test]
+    fn an_assets_bundle_name_changes_with_its_meta_without_a_new_scan() {
+        let mut db = AssetDb::default();
+        db.insert(asset(1, "Assets/A.txt"));
+        let bundle = Bundle {
+            name: "ui".into(),
+            variant: "hd".into(),
+        };
+        assert!(db.set_bundle("assets/a.txt", bundle.clone()));
+        assert_eq!(db.by_path("Assets/A.txt").unwrap().bundle, bundle);
+        assert!(!db.set_bundle("Assets/B.txt", Bundle::default()));
+    }
 
     #[test]
     fn changes_list_new_edited_and_gone_assets_only() {

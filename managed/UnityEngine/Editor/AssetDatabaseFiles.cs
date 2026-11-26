@@ -125,8 +125,10 @@ namespace UnityEditor
         static void Relist(string path, Imported asset)
         {
             if (s_Entries == null) return;  // listed from the engine when first asked
+            Entry replaced = null;
             if (s_ByPath.TryGetValue(path, out var old))
             {
+                replaced = old;
                 s_Entries.Remove(old);
                 s_ByPath.Remove(path);
                 if (s_ByGuid.TryGetValue(old.Guid, out var same) && same == old) s_ByGuid.Remove(old.Guid);
@@ -145,7 +147,7 @@ namespace UnityEditor
             s_Entries.Add(entry);
             s_ByPath[path] = entry;
             s_ByGuid[asset.Guid] = entry;
-            BundleListed(entry);
+            BundleListed(entry, replaced);
         }
 
         /// <summary>Writes a file a bake makes at <paramref name="path"/> (one there is replaced,

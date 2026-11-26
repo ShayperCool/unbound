@@ -112,10 +112,10 @@ namespace UnityEditor
         {
             if (string.IsNullOrEmpty(path)) return;
             _ = BundleNames;
-            // The engine's listing reads the .meta written again, as after SetLabels (a later
-            // Refresh finds nothing changed); not reported to OnPostprocessAllAssets (not measured).
-            if (written)
-                using (SessionImports.Muted()) ImportOne(path);
+            // The engine's listing reads the name from the .meta written (a later Refresh finds
+            // nothing changed); the asset is not imported again.
+            if (written && Native.IsReady)
+                Native.Call("asset-bundle", System.Text.Json.JsonSerializer.Serialize(new { path }));
             if (s_ByPath.TryGetValue(path, out var entry))
             {
                 entry.Bundle = name ?? "";
@@ -127,11 +127,15 @@ namespace UnityEditor
         /// <summary>The full AssetBundle name an asset has of its own ("" for none).</summary>
         static string OwnBundle(Entry e) => string.IsNullOrEmpty(e.Bundle) ? "" : FullBundleName(e.Bundle, e.Variant);
 
-        /// <summary>An asset newly listed (an import, a refresh, the listing taken again) brings its
-        /// name to the database (a name it has that the database lacks).</summary>
-        static void BundleListed(Entry e)
+        /// <summary>An asset listed anew (an import, a refresh, the listing taken again) brings its
+        /// name to the database when it is new or its name changed; an asset imported again with
+        /// the name a forced removal took away does not bring it back (assetqueries
+        /// reimport_removed.all).</summary>
+        static void BundleListed(Entry e, Entry previous)
         {
-            if (s_BundleNames != null && !string.IsNullOrEmpty(e.Bundle)) s_BundleNames.Add(FullBundleName(e.Bundle, e.Variant));
+            if (s_BundleNames == null || string.IsNullOrEmpty(e.Bundle)) return;
+            if (previous != null && previous.Bundle == e.Bundle && previous.Variant == e.Variant) return;
+            s_BundleNames.Add(FullBundleName(e.Bundle, e.Variant));
         }
 
         /// <summary>The asset's own AssetBundle name and variant, else its nearest folder's
@@ -300,7 +304,13 @@ namespace UnityEditor
         /// <summary>A quarter of the logical processors: 12 gave 3 (assetqueries workers.default and
         /// the user settings file the Editor wrote). Its rounding of other counts, and a floor, are
         /// not measured (here: rounded down, at least one).</summary>
-        internal static int DefaultDesiredImportWorkerCount(int processors) => Math.Max(1, processors / 4);
+        internal static int DefaultDesiredImportWorkerCount(int processors) =>
+            Math.Max(1, (int)(EditorPrefs.GetFloat(DesiredImportWorkerCountShareKey, DefaultDesiredImportWorkerCountShare) * processors));
+
+        /// <summary>The Editor preference "Import Worker Count %" (a share of the logical processors,
+        /// 0.25 by default: Unity's AssetPipelinePreferences).</summary>
+        const string DesiredImportWorkerCountShareKey = "DesiredImportWorkerCountPctOfLogicalCPUs";
+        const float DefaultDesiredImportWorkerCountShare = 0.25f;
 
         /// <summary>Workers kept waiting: the user settings file's, else 2 (assetqueries workers.default).</summary>
         public static int standbyImportWorkerCount
@@ -321,7 +331,11 @@ namespace UnityEditor
         static int? WorkerSetting(string key)
         {
             try { return WorkerSetting(File.Exists(UnityFile) ? File.ReadAllText(UnityFile) : null, key); }
-            catch (IOException) { return null; }
+            catch (Exception e)
+            {
+                Debug.LogWarning($"Unbound: could not read the import worker settings of EditorUserSettings: {e.Message}");
+                return null;
+            }
         }
 
         internal static int? WorkerSetting(string text, string key)
