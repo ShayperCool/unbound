@@ -276,10 +276,10 @@ mod tests {
         assert_eq!((settings.max_size, settings.compression), (2048, 0));
     }
 
-    /// An atlas without a default platform entry keeps its own compression for the other targets,
-    /// as the measured family's import reads its pages (Unity 6000.0.71f1,
-    /// tests/projects/spriteatlaseditor v1platformset Master.spriteatlas.setPlatform.initial:
-    /// Compressed).
+    /// An atlas without a default platform entry is not read as the oldest layout, whose added
+    /// default entry is uncompressed: its pages stay compressed (Unity 6000.0.71f1,
+    /// tests/projects/spriteatlaseditor v1platformset Master.spriteatlas.setPlatform.initial reads
+    /// Compressed; which settings the page imports with otherwise is not measured).
     #[test]
     fn an_atlas_without_a_default_entry_keeps_its_compression() {
         let atlas = read_v1(&V1.replace("textureCompression: 0", "textureCompression: 1")).unwrap();
