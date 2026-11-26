@@ -70,7 +70,8 @@ namespace UnityEditor.PackageManager.UI
                 var json = Path.Combine(package.resolvedPath, "package.json");
                 if (!File.Exists(json)) return Enumerable.Empty<Sample>();
                 using var document = JsonDocument.Parse(File.ReadAllText(json));
-                if (!document.RootElement.TryGetProperty("samples", out var samples) || samples.ValueKind != JsonValueKind.Array) return Enumerable.Empty<Sample>();
+                if (!document.RootElement.TryGetProperty("samples", out var samples) || samples.ValueKind == JsonValueKind.Null) return Enumerable.Empty<Sample>();
+                if (samples.ValueKind != JsonValueKind.Array) throw new InvalidCastException("Field 'samples' is not a list.");
                 var found = new List<Sample>();
                 foreach (var sample in samples.EnumerateArray())
                 {
@@ -80,7 +81,7 @@ namespace UnityEditor.PackageManager.UI
                     var importPath = CombinePaths(Application.dataPath, "Samples", SanitizeFileName(package.displayName), package.version,
                         string.IsNullOrEmpty(name) ? "" : SanitizeFileName(name));
                     found.Add(new Sample(name, Text(sample, "description"), CombinePaths(package.resolvedPath, Text(sample, "path")),
-                        importPath, sample.TryGetProperty("interactiveImport", out var interactive) && interactive.ValueKind == JsonValueKind.True));
+                        importPath, Flag(sample, "interactiveImport")));
                 }
                 return found;
             }
@@ -89,16 +90,22 @@ namespace UnityEditor.PackageManager.UI
                 Debug.Log($"[Package Manager Window] Cannot find samples for package {package.displayName}: {e}");
                 return Enumerable.Empty<Sample>();
             }
+            catch (InvalidCastException e)
+            {
+                Debug.Log($"[Package Manager Window] Invalid sample data for package {package.displayName}: {e}");
+                return Enumerable.Empty<Sample>();
+            }
             catch (Exception)
             {
-                // Unity's C# answers none for any other error, silently (malformed data among them).
+                // Unity's C# answers none for any other error (a package.json it cannot read), silently.
                 return Enumerable.Empty<Sample>();
             }
         }
 
-        /// <summary>Paths joined as the Package Manager joins them: empty parts left out, each
+        /// <summary>Paths joined as the Package Manager's NPath joins them: empty parts left out, each
         /// separator '/', "." and empty segments dropped, ".." taken back, no trailing separator
-        /// (a sample's "Samples~/Basic/" is "Samples~/Basic").</summary>
+        /// (a sample's "Samples~/Basic/" is "Samples~/Basic"); a later rooted part, or ".." past
+        /// the root, is refused (ArgumentException).</summary>
         internal static string CombinePaths(params string[] parts)
         {
             var segments = new List<string>();
@@ -107,19 +114,44 @@ namespace UnityEditor.PackageManager.UI
             {
                 if (string.IsNullOrEmpty(part)) continue;
                 var text = part.Replace('\\', '/');
-                if (text.StartsWith("/", StringComparison.Ordinal) && segments.Count == 0) rooted = true;
+                bool first = segments.Count == 0 && !rooted;
+                if (text.StartsWith("/", StringComparison.Ordinal))
+                {
+                    // A rooted path joined after another is refused, as the Package Manager's join does.
+                    if (!first) throw new ArgumentException("You cannot combine a non-relative path: " + part);
+                    rooted = true;
+                }
                 foreach (var segment in text.Split('/'))
                 {
                     if (segment.Length == 0 || segment == ".") continue;
-                    if (segment == ".." && segments.Count > 0 && segments[^1] != "..") segments.RemoveAt(segments.Count - 1);
+                    if (segment != "..") segments.Add(segment);
+                    else if (segments.Count > 0 && segments[^1] != "..") segments.RemoveAt(segments.Count - 1);
+                    else if (rooted) throw new ArgumentException("Cannot go beyond the root: " + part);
                     else segments.Add(segment);
                 }
             }
             return (rooted ? "/" : "") + string.Join("/", segments);
         }
 
-        static string Text(JsonElement sample, string key) =>
-            sample.TryGetProperty(key, out var value) && value.ValueKind == JsonValueKind.String ? value.GetString() : null;
+        /// <summary>A sample's text field; one of another type is invalid sample data (Unity's
+        /// field reading throws an InvalidCastException).</summary>
+        static string Text(JsonElement sample, string key)
+        {
+            if (!sample.TryGetProperty(key, out var value) || value.ValueKind == JsonValueKind.Null) return null;
+            if (value.ValueKind != JsonValueKind.String) throw new InvalidCastException($"Field '{key}' is not of type string.");
+            return value.GetString();
+        }
+
+        static bool Flag(JsonElement sample, string key)
+        {
+            if (!sample.TryGetProperty(key, out var value)) return false;
+            return value.ValueKind switch
+            {
+                JsonValueKind.True => true,
+                JsonValueKind.False => false,
+                _ => throw new InvalidCastException($"Field '{key}' is not of type bool."),
+            };
+        }
 
         /// <summary>A name with the characters a file name cannot hold, and those Unity avoids, as '_',
         /// trimmed (packagesamples: "Probe: Samples" -> "Probe_ Samples").</summary>
@@ -163,7 +195,7 @@ namespace UnityEditor.PackageManager.UI
         /// value (Unity's C# keeps them: a second import through the same value is not refused).</summary>
         [NonSerialized] List<string> m_PreviousImports;
 
-        List<string> PreviousImports()
+        internal List<string> PreviousImports()
         {
             if (m_PreviousImports != null) return m_PreviousImports;
             m_PreviousImports = new List<string>();

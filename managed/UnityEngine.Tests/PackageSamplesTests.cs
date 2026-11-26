@@ -23,8 +23,20 @@ namespace UnityEngine.Tests
         static string Probe([System.Runtime.CompilerServices.CallerFilePath] string here = "") =>
             Path.GetFullPath(Path.Combine(Path.GetDirectoryName(here)!, "..", "..", "tests", "projects", "packagesamples"));
 
+        readonly ILogHandler m_Handler = Debug.unityLogger.logHandler;
+        readonly Capture m_Logs = new Capture();
+
+        sealed class Capture : ILogHandler
+        {
+            internal readonly List<string> Lines = new List<string>();
+            public void LogException(Exception exception, Object context) => Lines.Add("Exception: " + exception.Message);
+            public void LogFormat(LogType type, Object context, string format, params object[] args) =>
+                Lines.Add(type + ": " + string.Format(System.Globalization.CultureInfo.InvariantCulture, format, args));
+        }
+
         public PackageSamplesTests()
         {
+            Debug.unityLogger.logHandler = m_Logs;
             var package = Path.Combine(m_Root, "Packages", "com.probe.samples");
             Directory.CreateDirectory(package);
             File.Copy(Path.Combine(Probe(), "Packages", "com.probe.samples", "package.json"), Path.Combine(package, "package.json"));
@@ -39,6 +51,7 @@ namespace UnityEngine.Tests
 
         public void Dispose()
         {
+            Debug.unityLogger.logHandler = m_Handler;
             PackageInfo.Register(m_Packages);
             ProjectInfo.AssetsPath = m_AssetsPath;
             try { Directory.Delete(m_Root, true); } catch (IOException) { }
@@ -88,6 +101,38 @@ namespace UnityEngine.Tests
                 + System.Text.Json.JsonSerializer.Serialize(path) + "}]}");
             var sample = Assert.Single(Sample.FindByPackage("com.probe.samples", ""));
             Assert.Equal(Path.Combine(m_Root, "Packages", "com.probe.samples") + "/Samples~/Basic", sample.resolvedPath);
+        }
+
+        void WritePackageJson(string samples) => File.WriteAllText(Path.Combine(m_Root, "Packages", "com.probe.samples", "package.json"),
+            "{\"name\":\"com.probe.samples\",\"version\":\"1.2.3\",\"displayName\":\"Probe: Samples\",\"samples\":" + samples + "}");
+
+        /// <summary>A package.json that does not parse gives no samples and no log; a field of
+        /// another type is invalid sample data, logged; a rooted sample path or one past the root
+        /// gives none (Unity's C#).</summary>
+        [Fact]
+        public void BadSampleDataGivesNone()
+        {
+            File.WriteAllText(Path.Combine(m_Root, "Packages", "com.probe.samples", "package.json"), "{ not json");
+            Assert.Empty(Sample.FindByPackage("com.probe.samples", ""));
+            Assert.Empty(m_Logs.Lines);
+            WritePackageJson("[{\"displayName\":5,\"path\":\"Samples~/Basic\"}]");
+            Assert.Empty(Sample.FindByPackage("com.probe.samples", ""));
+            Assert.Contains(m_Logs.Lines, l => l.StartsWith("Log: [Package Manager Window] Invalid sample data for package Probe: Samples", StringComparison.Ordinal));
+            m_Logs.Lines.Clear();
+            WritePackageJson("[{\"displayName\":\"Basic\",\"path\":\"/Samples~/Basic\"}]");
+            Assert.Empty(Sample.FindByPackage("com.probe.samples", ""));
+            Assert.Empty(m_Logs.Lines);
+        }
+
+        /// <summary>A sample value keeps the earlier imports it first read (Unity's C#).</summary>
+        [Fact]
+        public void ASampleKeepsTheEarlierImportsItFirstRead()
+        {
+            var basic = Sample.FindByPackage("com.probe.samples", "").First();
+            Assert.Empty(basic.PreviousImports());
+            Directory.CreateDirectory(basic.importPath);
+            Assert.Empty(basic.PreviousImports());
+            Assert.Single(Sample.FindByPackage("com.probe.samples", "").First().PreviousImports());
         }
 
         [Fact]
