@@ -215,10 +215,11 @@ namespace Unbound.Tests
         static void RunGuiFrame() =>
             typeof(GuiDispatch).GetMethod("RunFrame", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static).Invoke(null, null);
 
-        /// <summary>A Repaint runs every behaviour's Layout from the lowest GUI.depth up (equal
-        /// depths in their order), then the Repaints in the reverse order (tests/projects/imguicontrolids
-        /// order for equal depths; across depths the Repaint order is the earlier one), and a behaviour
-        /// another disables during its Layout still gets its own Layout and Repaint as a pair.</summary>
+        /// <summary>A Repaint runs every behaviour's Layout, then the Repaints in the reverse order
+        /// (measured for equal depths: tests/projects/imguicontrolids order). Not measured, the
+        /// engine's own choices kept from before: the Layouts across depths from the lowest up (the
+        /// Repaints highest first, as before), and a behaviour another disables during its Layout
+        /// still getting its own Layout and Repaint as a pair.</summary>
         [Fact]
         public void OnGuiRepaintRunsTheLayoutsThenTheRepaintsInReverse()
         {
