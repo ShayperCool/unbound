@@ -175,6 +175,40 @@ namespace UnityEngine.Tests
             Assert.StartsWith("UnityEngine.Vector3", written.Get("m_SerializableType").Raw);
         }
 
+        /// <summary>A new object's .NET class library name is written as the Editor's Mono names it,
+        /// laid out at its level as the writer lays out a string.</summary>
+        [Fact]
+        public void ANewObjectsClassLibraryTypeNameIsWrittenAsMonosName()
+        {
+            var body = YText.Map();
+            var property = YText.Map();
+            var type = YText.Map();
+            type.Set("m_SerializableType", YText.Scalar(typeof(float).AssemblyQualifiedName));
+            property.Set("m_serializedType", type);
+            body.Set("m_Property", property);
+            VisualEffectWrites.MonoTypeNames(body, 1, "Assets/A.vfx");
+            // The vfxwrites fixture's text for a float slot at this depth (BoundsAuto.vfx).
+            Assert.Equal("System.Single, mscorlib, Version=4.0.0.0, Culture=neutral,\n        PublicKeyToken=b77a5c561934e089",
+                body.Get("m_Property").Get("m_serializedType").Get("m_SerializableType").Raw);
+        }
+
+        [Fact]
+        public void ANewObjectsOtherClassLibraryTypeNameIsRefused()
+        {
+            var body = TypeMap(typeof(decimal).AssemblyQualifiedName);
+            var e = Assert.Throws<NotSupportedException>(() => VisualEffectWrites.MonoTypeNames(body, 1, "Assets/A.vfx"));
+            Assert.Contains("System.Decimal", e.Message);
+        }
+
+        [Fact]
+        public void ANewObjectsEngineTypeNameIsLeftAsWritten()
+        {
+            const string vector = "UnityEngine.Vector3, UnityEngine.CoreModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null";
+            var body = TypeMap(vector);
+            VisualEffectWrites.MonoTypeNames(body, 1, "Assets/A.vfx");
+            Assert.Equal(vector, body.Get("m_SerializableType").Raw);
+        }
+
         [Fact]
         public void NestedTypeNamesAreKeptToo()
         {

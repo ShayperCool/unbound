@@ -14,10 +14,11 @@ namespace Unbound.Runtime
     /// (tests/projects/vfxwrites): every document of the file is written again from its object, the
     /// resource's settings (<c>m_Infos</c>) from the resource and each of the graph's script objects
     /// whole, so a setting changed or a block's input edited changes only its lines, and a file with
-    /// nothing changed keeps its bytes. The graph's objects must be those of the file: a graph that
-    /// gained or lost objects since it was read is not written (refused loudly: <see
-    /// cref="NotSupportedException"/>, which WriteAsset reports; the Editor's file ids for new
-    /// objects are unmeasured).
+    /// nothing changed keeps its bytes. An object the graph gained (a block added, with its slots)
+    /// is written whole after the others, with the file id after the file's largest, in the order of
+    /// the resource's contents; an object it lost loses its document (both deterministic in the
+    /// Editor, tests/projects/vfxwrites block add/remove). Refused loudly (<see
+    /// cref="NotSupportedException"/>, which WriteAsset reports): what Unbound cannot write.
     /// </summary>
     internal static class VisualEffectWrites
     {
@@ -58,17 +59,32 @@ namespace Unbound.Runtime
             foreach (var p in loaded.Objects)
                 if (p.Value is not null) ids[p.Value] = p.Key;
 
-            // The file's objects and the graph's must be the same set.
+            // The graph's objects against the file's: those it gained get the file ids after the
+            // file's largest, in the contents' order; those it lost are dropped.
             var inFile = new HashSet<Object>(ReferenceEqualityComparer.Instance);
+            long largest = 0;
             foreach (var doc in docs)
+            {
+                largest = Math.Max(largest, doc.FileId);
                 if (loaded.Objects.TryGetValue(doc.FileId, out var o) && o is not null) inFile.Add(o);
+            }
+            var gained = new List<Object>();
             foreach (var o in resource.m_Contents)
-                if (o is not null && !inFile.Contains(o))
-                    throw new NotSupportedException($"Unbound does not write objects added to a graph into its file yet ({info.Path}: {o.GetType().Name} '{o.name}').");
+                if (o is not null && !inFile.Contains(o) && !gained.Contains(o))
+                {
+                    if (!UnityYamlWriter.WritesNew(o))
+                        throw new NotSupportedException($"Unbound does not write {o.GetType().Name} objects added to a graph yet ({info.Path}).");
+                    // An object of another asset file moved into this one: unmeasured.
+                    if (AssetDatabaseRuntime.TryGetLocation(o, out var otherGuid, out _) && otherGuid != guid)
+                        throw new NotSupportedException($"Unbound does not move an object of another asset into a graph file yet ({info.Path}: {o.GetType().Name} '{o.name}').");
+                    gained.Add(o);
+                    ids[o] = ++largest;
+                }
             var contents = new HashSet<Object>(resource.m_Contents, ReferenceEqualityComparer.Instance) { resource };
+            var lost = new List<Object>();
             foreach (var o in inFile)
-                if (!contents.Contains(o))
-                    throw new NotSupportedException($"Unbound does not write a graph that lost objects into its file yet ({info.Path}: {o.GetType().Name} '{o.name}').");
+                if (!contents.Contains(o)) lost.Add(o);
+            docs.RemoveAll(d => loaded.Objects.TryGetValue(d.FileId, out var o) && o is not null && lost.Contains(o));
 
             var locations = new AssetDatabaseRuntime.Locations();
             int unlocated = 0;
@@ -81,11 +97,28 @@ namespace Unbound.Runtime
                     throw new NotSupportedException($"Unbound does not write {o.GetType().Name} objects of a graph file yet ({info.Path}).");
                 KeepTypeNames(old, doc.Body, info.Path);
             }
+            foreach (var o in gained)
+            {
+                var doc = UnityYamlText.Parse(UnityYamlWriter.Write(new[] { o }, ids))[0];
+                MonoTypeNames(doc.Body, 1, info.Path);
+                docs.Add(doc);
+            }
             if (unlocated > 0)
                 Debug.LogWarning($"Unbound: {info.Path} is written with {unlocated} references to assets Unbound cannot name written as none.");
             var written = UnityYamlText.Write(docs);
             // The same text again leaves the file as it is (and unimported).
             if (!AssetFiles.Unchanged(text, written)) SceneFiles.WriteFile(info.File, written);
+            // The objects now in the file, and those no longer in it.
+            foreach (var o in gained)
+            {
+                AssetDatabaseRuntime.AddObject(loaded, o, ids[o]);
+                loaded.SourceObjects?.Add(o);
+            }
+            foreach (var o in lost)
+            {
+                AssetDatabaseRuntime.RemoveObject(loaded, o, ids[o]);
+                loaded.SourceObjects?.Remove(o);
+            }
             EditorUtility.ClearDirty(resource);
             foreach (var o in resource.m_Contents)
                 if (o is not null) EditorUtility.ClearDirty(o);
@@ -146,6 +179,46 @@ namespace Unbound.Runtime
             }
             else if (written.Kind == YKind.Seq)
                 for (int i = 0; i < written.Items.Count && i < old.Items.Count; i++) KeepTypeNames(old.Items[i], written.Items[i], path);
+        }
+
+        /// <summary>The class library types the Editor's Mono keeps in mscorlib, as a graph file names
+        /// them (System.Single, mscorlib, Version=4.0.0.0, Culture=neutral,
+        /// PublicKeyToken=b77a5c561934e089: the vfxwrites fixture's slots).</summary>
+        static readonly HashSet<string> s_MonoCoreLibrary = new HashSet<string>(StringComparer.Ordinal)
+        {
+            "System.Boolean", "System.Byte", "System.SByte", "System.Int16", "System.UInt16", "System.Int32", "System.UInt32",
+            "System.Int64", "System.UInt64", "System.Single", "System.Double", "System.Char", "System.String",
+        };
+
+        /// <summary>A new object's type names in the Editor's Mono form: a .NET class library type
+        /// Mono keeps in mscorlib is named so; another class library name is refused (the Editor's
+        /// Mono could not read it back). <paramref name="level"/>: the map's indentation level.</summary>
+        internal static void MonoTypeNames(YText map, int level, string path)
+        {
+            if (map == null) return;
+            if (map.Kind == YKind.Seq)
+            {
+                foreach (var item in map.Items) MonoTypeNames(item, level + 1, path);
+                return;
+            }
+            if (map.Kind != YKind.Map) return;
+            for (int i = 0; i < map.Keys.Count; i++)
+            {
+                var value = map.Values[i];
+                if (map.Keys[i] == "m_SerializableType" && value.Kind == YKind.Scalar)
+                {
+                    var name = Unfold(value.Raw);
+                    const string core = ", System.Private.CoreLib, ";
+                    int at = name.IndexOf(core, StringComparison.Ordinal);
+                    if (at < 0) continue;
+                    var type = name.Substring(0, at);
+                    if (!s_MonoCoreLibrary.Contains(type))
+                        throw new NotSupportedException($"Unbound does not write .NET class library type names into graph files yet ({path}: {name}).");
+                    var mono = type + ", mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089";
+                    map.Values[i] = YText.Scalar(UnityYamlWriter.Scalar(mono, level * 2 + map.Keys[i].Length + 2, (level + 1) * 2));
+                }
+                else MonoTypeNames(value, level + 1, path);
+            }
         }
 
         /// <summary>A plain scalar's text as one line (a long one is folded over lines in the file).</summary>
