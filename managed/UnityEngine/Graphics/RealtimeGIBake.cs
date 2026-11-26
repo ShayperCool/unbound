@@ -396,7 +396,37 @@ namespace UnityEngine
             : settings.filteringMode == LightingSettings.FilterMode.Advanced
                 && (Unmade(settings.denoiserTypeDirect) || Unmade(settings.denoiserTypeIndirect))
                 ? $"lightmaps with the {DenoiserName(Unmade(settings.denoiserTypeDirect) ? settings.denoiserTypeDirect : settings.denoiserTypeIndirect)} denoiser are not made"
+            // Unity's default Lighting Settings (Auto) denoise: where the release's Open Image
+            // Denoise cannot be had (no release for the platform, offline), the lightmaps are not
+            // made denoised, said, and the bake keeps its layout.
+            : Denoises(settings) && DenoiserUnavailable() is { } why
+                ? $"lightmaps denoised with Open Image Denoise are not made here ({why})"
             : null;
+
+        /// <summary>Whether the bake would denoise a part of its lightmaps with Open Image Denoise
+        /// (the Auto filtering denoises every part, see <see cref="Filtering"/>).</summary>
+        static bool Denoises(LightingSettings settings) =>
+            settings.filteringMode == LightingSettings.FilterMode.Auto
+            || settings.filteringMode == LightingSettings.FilterMode.Advanced
+                && (settings.denoiserTypeDirect == LightingSettings.DenoiserType.OpenImage
+                    || settings.denoiserTypeIndirect == LightingSettings.DenoiserType.OpenImage
+                    || settings.ao && settings.denoiserTypeAO == LightingSettings.DenoiserType.OpenImage);
+
+        /// <summary>Why Open Image Denoise cannot be had in this process (null: it can, or no
+        /// engine runs, as in tools and tests); asked of the engine once (tests replace it).</summary>
+        internal static Func<string> DenoiserUnavailable = AskDenoiser;
+
+        static string s_DenoiserWhy;
+        static bool s_DenoiserAsked;
+
+        static string AskDenoiser()
+        {
+            if (s_DenoiserAsked || !Native.IsReady) return s_DenoiserWhy;
+            s_DenoiserAsked = true;
+            using var reply = JsonDocument.Parse(Native.Call("baked-gi-denoiser", "{}"));
+            s_DenoiserWhy = reply.RootElement.GetProperty("unavailable") is { ValueKind: JsonValueKind.String } why ? why.GetString() : null;
+            return s_DenoiserWhy;
+        }
 
         static bool Unmade(LightingSettings.DenoiserType denoiser) =>
             denoiser != LightingSettings.DenoiserType.None && denoiser != LightingSettings.DenoiserType.OpenImage;

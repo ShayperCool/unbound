@@ -655,6 +655,11 @@ pub fn dispatch(method: &str, request: &str) -> Result<String> {
             let r: crate::baked_gi::DefaultReflectionRequest = serde_json::from_str(request)?;
             Ok(crate::baked_gi::default_reflection(r)?.to_string())
         }
+        // Why the lightmapper's denoiser cannot be had (null: it can), resolved once per process.
+        "baked-gi-denoiser" => Ok(serde_json::json!({
+            "unavailable": unbound_project::denoiser::library().err().map(|e| format!("{e:#}")),
+        })
+        .to_string()),
         "baked-gi-bake" => {
             let r: crate::baked_gi::BakeRequest = serde_json::from_str(request)?;
             Ok(crate::baked_gi::bake_request(r)?.to_string())
