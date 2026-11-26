@@ -9,6 +9,7 @@
     "agg.4-1",
     "agg.bigHighUv",
     "agg.bigLow",
+    "big.afterVertices.uv0",
     "big.uv0",
     "halfUv.uv0",
     "mixed.uv0",
@@ -35,9 +36,9 @@
     "seq.sameWorld.8",
     "seq.sameWorld.9",
     "threshold.below.uv0",
+    "twoSets.both.uv0",
     "twoSets.both.uv1",
     "twoSets.second.uv1",
-    "unit.recalculated.uv0",
     "weighted.uv0"
   ]
 }

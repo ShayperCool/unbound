@@ -164,11 +164,13 @@ public class UvMetricsProbe : MonoBehaviour
         thresholdMixed.RecalculateUVDistributionMetrics(0.2f);
         Metrics("threshold.mixed", thresholdMixed);
 
-        // A second UV set; each set recalculated alone.
-        var two = Make("TwoSets", Quad(1), QuadUv(1), QuadUv(0.5f));
+        // A second UV set; each set recalculated alone (set 0's ratio 4, set 1's 16; set 1's UVs
+        // changed to a ratio of 4 before set 0 is recalculated).
+        var two = Make("TwoSets", Quad(2), QuadUv(1), QuadUv(0.5f));
         Metrics("twoSets.before", two);
         two.RecalculateUVDistributionMetric(1);
         Metrics("twoSets.second", two);
+        two.uv2 = QuadUv(1);
         two.RecalculateUVDistributionMetric(0);
         Metrics("twoSets.both", two);
         Try("twoSets.index8", () => { two.RecalculateUVDistributionMetric(8); return "done"; });
@@ -184,11 +186,11 @@ public class UvMetricsProbe : MonoBehaviour
         rotated.RecalculateUVDistributionMetrics();
         Metrics("rotated", rotated);
 
-        // Changing the vertices afterwards keeps the metric until it is recalculated.
-        unit.vertices = Quad(4);
-        Metrics("unit.afterVertices", unit);
-        unit.RecalculateUVDistributionMetrics();
-        Metrics("unit.recalculated", unit);
+        // Changing the vertices afterwards keeps the metric until it is recalculated (big's 4).
+        big.vertices = Quad(1);
+        Metrics("big.afterVertices", big);
+        big.RecalculateUVDistributionMetrics();
+        Metrics("big.recalculated", big);
 
         // How the triangles' ratios combine: right triangles of world legs a and UV legs u (ratio
         // a²/u²), each set listed as (world leg, UV leg).

@@ -10,7 +10,7 @@ reflection, as packages call it). Unity 6000.0.71f1, recorded with the macOS Edi
 (tests/value_probe.py), floats with `"R"`:
 
 * `unit`, `big`, `halfUv`, `odd`, `rotated`: quads of other sizes, UV ranges and orientation;
-  `unit.before` before any recalculation; `unit.afterVertices`, `unit.recalculated` after the
+  `unit.before` before any recalculation; `big.afterVertices`, `big.recalculated` after the
   vertices change, before and after recalculating.
 * `mixed`, `weighted`: two triangles of ratios 1 and 4 (world area over UV area), of equal and of
   different areas; `agg.*`: sets of right triangles of chosen ratios and areas; `seq.sameUv.n`,
@@ -18,7 +18,8 @@ reflection, as packages call it). Unity 6000.0.71f1, recorded with the macOS Edi
   `outlier.*`: twenty triangles of one ratio and one of another.
 * `flatUv`, `allFlat`: triangles whose UVs have no area; `threshold.*`: the area threshold below and
   above the triangles' UV areas.
-* `twoSets.*`: a second UV set, each recalculated alone; indices 8 and -1.
+* `twoSets.*`: a second UV set (set 0's ratio 4, set 1's 16), each recalculated alone, set 1's UVs
+  changed before set 0 is recalculated; indices 8 and -1.
 * `noUv`: a mesh without UVs.
 * `collab.*`: the Collab class, its instance, and `IsCollabEnabledForCurrentProject`.
 
@@ -29,7 +30,8 @@ others keep theirs; triangles whose UV area is under the threshold are skipped, 
 the metric is 1; changing the vertices keeps the metric until it is recalculated. Ratios that
 differ do not give their average: 1 and 4 give 4 (whatever their areas); 1..n give values near the
 mean plus a standard deviation of the ratios kept after a cut that depends on the triangles' areas
-(Unbound does not compute the metric: residuals). `IsCollabEnabledForCurrentProject` answers false.
+(Unbound does not compute the metric: residuals). `IsCollabEnabledForCurrentProject` answers false (Unity's C#, CollabToUVCSBridge.cs, answers false
+for any project).
 
 Record and gate:
 

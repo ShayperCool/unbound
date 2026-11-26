@@ -25,9 +25,9 @@
 {"k":"twoSets.before.uv0","v":"1"}
 {"k":"twoSets.before.uv1","v":"1"}
 {"k":"twoSets.second.uv0","v":"1"}
-{"k":"twoSets.second.uv1","v":"4"}
-{"k":"twoSets.both.uv0","v":"1"}
-{"k":"twoSets.both.uv1","v":"4"}
+{"k":"twoSets.second.uv1","v":"16"}
+{"k":"twoSets.both.uv0","v":"4"}
+{"k":"twoSets.both.uv1","v":"16"}
 {"k":"twoSets.index8","v":"done"}
 {"k":"twoSets.get8","v":"1"}
 {"k":"twoSets.getNegative","v":"1"}
@@ -35,10 +35,10 @@
 {"k":"noUv.uv1","v":"1"}
 {"k":"rotated.uv0","v":"1.00000024"}
 {"k":"rotated.uv1","v":"1"}
-{"k":"unit.afterVertices.uv0","v":"1"}
-{"k":"unit.afterVertices.uv1","v":"1"}
-{"k":"unit.recalculated.uv0","v":"16"}
-{"k":"unit.recalculated.uv1","v":"1"}
+{"k":"big.afterVertices.uv0","v":"4"}
+{"k":"big.afterVertices.uv1","v":"1"}
+{"k":"big.recalculated.uv0","v":"1"}
+{"k":"big.recalculated.uv1","v":"1"}
 {"k":"agg.1-2-4","v":"4"}
 {"k":"agg.1-1-4","v":"4"}
 {"k":"agg.1-4-4","v":"4"}
