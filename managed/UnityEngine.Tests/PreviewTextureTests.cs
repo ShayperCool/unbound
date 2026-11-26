@@ -146,8 +146,18 @@ namespace UnityEngine.Tests
                     GL.LoadOrtho();
                     try { EditorGUI.DrawPreviewTexture(new Rect(0, 0, 1, 1), texture, material); }
                     finally { GL.PopMatrix(); }
+                    GL.PushMatrix();
+                    GL.MultMatrix(Matrix4x4.Translate(new Vector3(4, 0, 0)));
+                    try { EditorGUI.DrawPreviewTexture(new Rect(0, 0, 8, 8), texture, material); }
+                    finally { GL.PopMatrix(); }
                 });
                 Assert.Equal(quads, GuiRender.QuadCount);
+                // A target already active when the pass began is the pass's own: recorded.
+                RenderTexture.active = target;
+                try { Repaint(() => EditorGUI.DrawPreviewTexture(new Rect(0, 0, 8, 8), texture, material)); }
+                finally { RenderTexture.active = null; }
+                Assert.Equal(quads + 1, GuiRender.QuadCount);
+                quads = GuiRender.QuadCount;
                 // The pass's own target and matrices: recorded.
                 Repaint(() => EditorGUI.DrawPreviewTexture(new Rect(0, 0, 8, 8), texture, material));
                 Assert.Equal(quads + 1, GuiRender.QuadCount);

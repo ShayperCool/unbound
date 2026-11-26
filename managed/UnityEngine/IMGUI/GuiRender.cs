@@ -316,14 +316,17 @@ namespace Unbound.Runtime
         /// <summary>Whether the frame's GUI pass (<see cref="GuiDispatch"/>) is running.</summary>
         internal static bool Painting;
 
-        /// <summary>GL's matrices as the GUI pass loaded them for the current script.</summary>
+        /// <summary>GL's matrices and the render target as the GUI pass found them for the current
+        /// script.</summary>
         internal static Matrix4x4 PassProjection, PassModelView;
+        internal static RenderTexture PassTarget;
 
-        /// <summary>Whether a draw now goes where the GUI pass draws: the frame's GUI pass, the screen
-        /// as the target and GL's matrices the pass's own (a script that set a render texture or
+        /// <summary>Whether a draw now goes where the GUI pass draws: the frame's GUI pass, with the
+        /// target and GL's matrices the pass's own (a script that set another render texture or
         /// other matrices draws there instead).</summary>
         internal static bool DrawsIntoGuiPass =>
-            Painting && RenderTexture.active == null && Immediate.Projection == PassProjection && Immediate.ModelView == PassModelView;
+            Painting && ReferenceEquals(RenderTexture.ActiveTarget, PassTarget)
+            && Immediate.Projection.Equals(PassProjection) && Immediate.ModelView.Equals(PassModelView);
         static Mesh s_Mesh;
 
         internal static int QuadCount => s_Positions.Count / 4;
@@ -861,6 +864,7 @@ namespace Unbound.Runtime
             Immediate.LoadScreenPixels();
             GuiRender.PassProjection = Immediate.Projection;
             GuiRender.PassModelView = Immediate.ModelView;
+            GuiRender.PassTarget = RenderTexture.ActiveTarget;
         }
 
         /// <summary>The frame's input events, at PreUpdate.IMGUISendQueuedEvents: after the fixed
