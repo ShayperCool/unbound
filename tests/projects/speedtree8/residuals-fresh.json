@@ -36,7 +36,7 @@
   "v8/Card_Tree_Sample/card-tree-sample.st/go/card-tree-sample/card-tree-sample_LOD1/transform",
   "v8/Card_Tree_Sample/card-tree-sample.st/go/card-tree-sample/card-tree-sample_LOD2/transform"
  ],
- "A collision capsule rotation from Quaternion.FromToRotation is 1 ulp off in w and keeps a +0 x (Quaternion arithmetic follow-up)": [
+ "A collision capsule rotation from Quaternion.FromToRotation is 1 ulp off in y, z or w (Linux references) and keeps a +0 x (Quaternion arithmetic follow-up)": [
   "v8/Broadleaf_Desktop_Field.st/go/Broadleaf_Desktop_Field/CollisionObject1/transform",
   "v8/Broadleaf_Desktop_Field_OptionsOff.st/go/Broadleaf_Desktop_Field_OptionsOff/CollisionObject1/transform",
   "v8/Broadleaf_Desktop_Field_OptionsOn.st/go/Broadleaf_Desktop_Field_OptionsOn/CollisionObject1/transform"

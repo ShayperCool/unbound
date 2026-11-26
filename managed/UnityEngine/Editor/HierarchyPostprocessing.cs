@@ -407,8 +407,9 @@ namespace UnityEditor
             };
         }
 
-        /// <summary>A node's children sorted by name as the model importer sorts them.</summary>
-        static void SortByName(Transform t)
+        /// <summary>A node's children sorted by name as the model importer sorts them (also an
+        /// imported SpeedTree 8 tree's, SpeedTree8Import), without messages to its behaviours.</summary>
+        internal static void SortByName(Transform t)
         {
             if (t.m_Children.Count < 2) return;
             var names = new string[t.m_Children.Count];

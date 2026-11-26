@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
-using System.Linq;
 using Unbound.Runtime;
 using UnityEditor;
 using UnityEditor.AssetImporters;
@@ -230,22 +229,15 @@ namespace Unbound.SpeedTree
 
             bool IsBillboard(int lod) => m_Tree.LastLodIsBillboard && lod == m_Tree.Lods.Length - 1;
 
-            /// <summary>The imported tree keeps its children in name order, letters compared without
-            /// case: a tree named in lower case (`card-tree-sample`) has its levels before
-            /// `CollisionObject0`, `Field_Embedded` after it; OnPostprocessSpeedTree still sees them
-            /// in the order they were made, the levels first (matches the Unity 6000.0.71f1 Editor,
-            /// tests/projects/speedtree8 `children`, `callbacks`). Unmeasured: numbers of more
-            /// digits than others of their kind (an eleventh collision object; compared as text) and
-            /// children a postprocessor adds (sorted with the others).</summary>
-            internal void SortChildrenByName()
-            {
-                var root = Root.transform;
-                var children = new List<Transform>(root.childCount);
-                for (int i = 0; i < root.childCount; i++) children.Add(root.GetChild(i));
-                // A stable sort: equal names keep the order they were made in.
-                var sorted = children.OrderBy(t => t.name, StringComparer.OrdinalIgnoreCase).ToList();
-                for (int i = 0; i < sorted.Count; i++) sorted[i].SetSiblingIndex(i);
-            }
+            /// <summary>The imported tree keeps its children in the Editor's hierarchy name order, the
+            /// model importer's (<see cref="HierarchyPostprocessing.SortByName"/>): a tree named in
+            /// lower case (`card-tree-sample`) has its levels before `CollisionObject0`,
+            /// `Field_Embedded` after it; OnPostprocessSpeedTree still sees them in the order they
+            /// were made, the levels first (matches the Unity 6000.0.71f1 Editor,
+            /// tests/projects/speedtree8 `children`, `callbacks`). That the SpeedTree importer's sort
+            /// is the model importer's in what the samples do not hold (numbers, `_`, equal names) is
+            /// unmeasured.</summary>
+            internal void SortChildrenByName() => HierarchyPostprocessing.SortByName(Root.transform);
 
             MeshRenderer CreateLevel(int index)
             {
@@ -542,7 +534,7 @@ namespace Unbound.SpeedTree
                 m_Wind.hideFlags = HideFlags.HideInHierarchy | HideFlags.HideInInspector;
                 int kind = m_Importer.FileIdType;
                 if (kind == 0)
-                    Stubs.Ignored("SpeedTree 8 fileIDType 0", "file ids (class number counters, in creation order) are not measured for SpeedTree 8 trees: references to the tree's objects may not resolve");
+                    Stubs.Ignored("SpeedTree 8 fileIDType 0", "file ids (class number counters, in hierarchy order) are not measured for SpeedTree 8 trees: references to the tree's objects may not resolve");
                 var counters = new Dictionary<int, int>();
                 long Legacy(Object obj)
                 {
