@@ -248,7 +248,7 @@ namespace UnityEditor
     /// gives false, 1 true, windowed and batch alike, measured with private preferences); Unbound
     /// answers the value without the key (false; true on macOS, its batch Editor's answer) and does
     /// not read the preference, which packages write themselves (the tutorial framework turns it on).
-    /// Installed language packs (files in the installation's Localization folder) are not read: a
+    /// Installed language packs (.po files in the installation's Localization folder) are not read: a
     /// notice says so. Unmeasured: macOS's languages, null strings, the setters' effects beyond the
     /// value read back, context groups set by code, GetLocalizedStringWithGroupNameInLang.</summary>
     internal partial class LocalizationDatabase
