@@ -27,8 +27,42 @@ namespace UnityEngine.AI
         /// cut again then, without counting as a move.</summary>
         internal bool m_ShapeChanged;
 
-        public float height { get => m_Height; set { m_Height = Mathf.Max(0f, value); m_ShapeChanged = true; } }
-        public float radius { get => m_Radius; set { m_Radius = Mathf.Max(0f, value); m_ShapeChanged = true; } }
+        /// <summary>Unity 6000.0.71f1 keeps one box of extents for both shapes (tests/projects/defaultcontrols
+        /// obstacle.*): the height reads the extents' height and setting it sets the size's; the
+        /// radius reads the extents' width and setting it sets the size's width and depth; changing
+        /// the shape puts that shape's default extents and a zero center back. Other releases keep
+        /// a height and radius of their own, unmeasured.</summary>
+        static bool OneBox => Compat.DefaultConstructorStateMeasured;
+
+        /// <summary>A new box's extents and a capsule's after a shape change.</summary>
+        static readonly Vector3 BoxDefaultSize = Vector3.one, CapsuleDefaultSize = new Vector3(1f, 2f, 1f);
+
+        public float height
+        {
+            get => OneBox ? m_Size.y * 0.5f : m_Height;
+            set
+            {
+                if (OneBox) m_Size.y = Mathf.Max(0f, value);
+                else m_Height = Mathf.Max(0f, value);
+                m_ShapeChanged = true;
+            }
+        }
+
+        public float radius
+        {
+            get => OneBox ? m_Size.x * 0.5f : m_Radius;
+            set
+            {
+                if (OneBox) m_Size.x = m_Size.z = 2f * Mathf.Max(0f, value);
+                else m_Radius = Mathf.Max(0f, value);
+                m_ShapeChanged = true;
+            }
+        }
+
+        /// <summary>The capsule's radius and full height the obstacle stands with (its extents'
+        /// width and height in Unity 6000.0.71f1).</summary>
+        internal float ShapeRadius => OneBox ? m_Size.x * 0.5f : m_Radius;
+        internal float ShapeHeight => OneBox ? m_Size.y : m_Height;
         public Vector3 velocity { get => m_Velocity; set => m_Velocity = value; }
         public bool carving { get => m_Carving; set { m_Carving = value; } }
         public bool carveOnlyStationary { get => m_CarveOnlyStationary; set => m_CarveOnlyStationary = value; }
@@ -41,6 +75,11 @@ namespace UnityEngine.AI
             {
                 if (m_Shape == value) return;
                 m_Shape = value;
+                if (OneBox)
+                {
+                    m_Size = value == NavMeshObstacleShape.Capsule ? CapsuleDefaultSize : BoxDefaultSize;
+                    m_Center = Vector3.zero;
+                }
                 m_ShapeChanged = true;
             }
         }
@@ -539,8 +578,8 @@ namespace Unbound.Runtime
             scale = new Vector3(Mathf.Abs(scale.x), Mathf.Abs(scale.y), Mathf.Abs(scale.z));
             if (obstacle.shape == NavMeshObstacleShape.Capsule)
             {
-                float r = obstacle.radius * Mathf.Max(scale.x, scale.z);
-                return new Vector3(r, obstacle.height * 0.5f * scale.y, r);
+                float r = obstacle.ShapeRadius * Mathf.Max(scale.x, scale.z);
+                return new Vector3(r, obstacle.ShapeHeight * 0.5f * scale.y, r);
             }
             return Vector3.Scale(obstacle.size * 0.5f, scale);
         }
@@ -860,8 +899,8 @@ namespace Unbound.Runtime
             var velocity = obstacle.velocity;
             if (obstacle.shape == NavMeshObstacleShape.Capsule)
             {
-                float radius = obstacle.radius * Mathf.Max(Mathf.Abs(scale.x), Mathf.Abs(scale.z));
-                float half = obstacle.height * Mathf.Abs(scale.y) * 0.5f;
+                float radius = obstacle.ShapeRadius * Mathf.Max(Mathf.Abs(scale.x), Mathf.Abs(scale.z));
+                float half = obstacle.ShapeHeight * Mathf.Abs(scale.y) * 0.5f;
                 bool uprightCapsule = false;
                 if (measuredCapsules)
                 {

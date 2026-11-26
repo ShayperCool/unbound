@@ -160,6 +160,67 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
+        public void ObstacleKeepsOneBoxForBothShapes()
+        {
+            var box = Make("Box", Vector3.zero).AddComponent<NavMeshObstacle>();
+            Assert.Equal(0.5f, box.height);
+            box.height = 3f;
+            Assert.Equal(1.5f, box.height);
+            Assert.Equal(new Vector3(1f, 3f, 1f), box.size);
+            box.radius = 2f;
+            Assert.Equal(new Vector3(4f, 3f, 4f), box.size);
+            box.size = new Vector3(2f, 4f, 6f);
+            Assert.Equal(2f, box.height);
+            Assert.Equal(1f, box.radius);
+            box.center = new Vector3(1f, 2f, 3f);
+            box.shape = NavMeshObstacleShape.Box;
+            Assert.Equal(new Vector3(2f, 4f, 6f), box.size);
+            box.shape = NavMeshObstacleShape.Capsule;
+            Assert.Equal(new Vector3(1f, 2f, 1f), box.size);
+            Assert.Equal(Vector3.zero, box.center);
+            Assert.Equal(1f, box.height);
+            Assert.Equal(0.5f, box.radius);
+            box.height = 3f;
+            Assert.Equal(1.5f, box.height);
+            box.shape = NavMeshObstacleShape.Box;
+            Assert.Equal(Vector3.one, box.size);
+            using (TestRelease.Pin(TestRelease.Unmeasured))
+            {
+                var other = Make("Other", Vector3.zero).AddComponent<NavMeshObstacle>();
+                other.height = 3f;
+                Assert.Equal(3f, other.height);
+                Assert.Equal(Vector3.one, other.size);
+            }
+        }
+
+        [Fact]
+        public void EmptyPhysics2DWorldTakesNoStep()
+        {
+            var mode = Physics2D.simulationMode;
+            var empty = UnityEngine.SceneManagement.SceneManager.CreateScene("Empty2D", new UnityEngine.SceneManagement.CreateSceneParameters(UnityEngine.SceneManagement.LocalPhysicsMode.Physics2D));
+            var occupied = UnityEngine.SceneManagement.SceneManager.CreateScene("Occupied2D", new UnityEngine.SceneManagement.CreateSceneParameters(UnityEngine.SceneManagement.LocalPhysicsMode.Physics2D));
+            var collider = Make("Static2D", Vector3.zero);
+            UnityEngine.SceneManagement.SceneManager.MoveGameObjectToScene(collider, occupied);
+            collider.AddComponent<BoxCollider2D>();
+            try
+            {
+                Physics2D.simulationMode = SimulationMode2D.Script;
+                empty.GetPhysicsScene2D().Simulate(0.02f);
+                Assert.Equal(0, empty.GetPhysicsScene2D().subStepCount);
+                occupied.GetPhysicsScene2D().Simulate(0.02f);
+                Assert.Equal(1, occupied.GetPhysicsScene2D().subStepCount);
+            }
+            finally
+            {
+                Physics2D.simulationMode = mode;
+                Object.DestroyImmediate(collider);
+                m_Objects.Remove(collider);
+                UnityEngine.SceneManagement.SceneManager.UnloadSceneAsync(empty);
+                UnityEngine.SceneManagement.SceneManager.UnloadSceneAsync(occupied);
+            }
+        }
+
+        [Fact]
         public void TrailWithoutPointsSpansTheOriginAndTheObject()
         {
             var away = Make("Away", new Vector3(-10f, 5f, 2f)).AddComponent<TrailRenderer>();
