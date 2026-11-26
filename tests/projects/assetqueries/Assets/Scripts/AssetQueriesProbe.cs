@@ -243,17 +243,20 @@ public class AssetQueriesProbe : MonoBehaviour
     /// <summary>The import worker counts: AssetDatabase's and the user settings', set and forced.</summary>
     static void Workers()
     {
-        Try("workers/default", () => "desired " + AssetDatabase.DesiredWorkerCount + " user " + EditorUserSettings.desiredImportWorkerCount
-            + " standby " + EditorUserSettings.standbyImportWorkerCount + " processors " + SystemInfo.processorCount);
+        // Values relative to the machine's processors (they differ between machines).
+        int user = EditorUserSettings.desiredImportWorkerCount;
+        Try("workers/default", () => "desired is the user's " + (AssetDatabase.DesiredWorkerCount == user)
+            + "; user is a quarter of the processors " + (user == Math.Max(1, SystemInfo.processorCount / 4))
+            + "; standby " + EditorUserSettings.standbyImportWorkerCount);
         Try("workers/set", () =>
         {
-            AssetDatabase.DesiredWorkerCount = 3;
-            return "desired " + AssetDatabase.DesiredWorkerCount + " user " + EditorUserSettings.desiredImportWorkerCount;
+            AssetDatabase.DesiredWorkerCount = user + 1;
+            return "desired is the set count " + (AssetDatabase.DesiredWorkerCount == user + 1) + "; user unchanged " + (EditorUserSettings.desiredImportWorkerCount == user);
         });
         Try("workers/user_set", () =>
         {
             EditorUserSettings.desiredImportWorkerCount = 2;
-            return "desired " + AssetDatabase.DesiredWorkerCount + " user " + EditorUserSettings.desiredImportWorkerCount;
+            return "desired unchanged " + (AssetDatabase.DesiredWorkerCount == user + 1) + "; user " + EditorUserSettings.desiredImportWorkerCount;
         });
         Try("workers/negative", () =>
         {
