@@ -1,0 +1,46 @@
+{"k":"whiteTexture.name","v":"UnityWhite"}
+{"k":"plain.threw","v":"none"}
+{"k":"plain.logs","v":""}
+{"k":"plain.hit","v":"True"}
+{"k":"plain.colliderLogs","v":""}
+{"k":"convex.threw","v":"none"}
+{"k":"convex.logs","v":""}
+{"k":"convex.hit","v":"True"}
+{"k":"convex.colliderLogs","v":""}
+{"k":"options.threw","v":"none"}
+{"k":"options.logs","v":""}
+{"k":"options.hit","v":"True"}
+{"k":"options.colliderLogs","v":""}
+{"k":"nooptions.threw","v":"none"}
+{"k":"nooptions.logs","v":""}
+{"k":"nooptions.hit","v":"True"}
+{"k":"nooptions.colliderLogs","v":""}
+{"k":"thread.threw","v":"none"}
+{"k":"thread.logs","v":""}
+{"k":"thread.hit","v":"True"}
+{"k":"thread.colliderLogs","v":""}
+{"k":"zero.threw","v":"none"}
+{"k":"zero.logs","v":"Warning: Null mesh instance id is not allowed."}
+{"k":"notmesh.threw","v":"none"}
+{"k":"notmesh.logs","v":"Warning: Resolved the instance id to a valid object, but that object is not a Mesh: "}
+{"k":"notmeshnamed.threw","v":"none"}
+{"k":"notmeshnamed.logs","v":"Warning: Resolved the instance id to a valid object, but that object is not a Mesh: "}
+{"k":"destroyed.threw","v":"none"}
+{"k":"destroyed.logs","v":"Warning: Failed to resolve instance id: "}
+{"k":"empty.threw","v":"none"}
+{"k":"empty.logs","v":""}
+{"k":"empty.hit","v":"False"}
+{"k":"empty.colliderLogs","v":""}
+{"k":"emptyconvex.threw","v":"none"}
+{"k":"emptyconvex.logs","v":""}
+{"k":"emptyconvex.hit","v":"False"}
+{"k":"emptyconvex.colliderLogs","v":""}
+{"k":"unreadable.threw","v":"none"}
+{"k":"unreadable.logs","v":""}
+{"k":"unreadable.hit","v":"True"}
+{"k":"unreadable.colliderLogs","v":""}
+{"k":"unreadableconvex.threw","v":"none"}
+{"k":"unreadableconvex.logs","v":""}
+{"k":"unreadableconvex.hit","v":"True"}
+{"k":"unreadableconvex.colliderLogs","v":""}
+{"k":"complete","v":true}

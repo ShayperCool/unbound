@@ -1,0 +1,9 @@
+{
+  "commands": [
+    "python3 tests/projects/bakemesh/run.py gate"
+  ],
+  "summary": "bakemesh: .*",
+  "engine_paths": [
+    "managed/UnityEngine/Physics/Physics.cs"
+  ]
+}
