@@ -1,0 +1,14 @@
+{
+  "commands": [
+    "python3 tests/projects/scenereloadoff/run.py check"
+  ],
+  "summary": "scenereloadoff: \\d+/\\d+ rows match; \\d+ differ; \\d+ known residuals",
+  "engine_paths": [
+    "managed/UnityEngine/Core/SceneManagement.cs",
+    "managed/UnityEngine/Editor/EditorInitialization.cs",
+    "managed/UnityEngine/Editor/EditorSession.cs",
+    "managed/UnityEngine/Runtime/Lifecycle.cs",
+    "managed/UnityEngine/Runtime/PlayerLoopDriver.cs",
+    "tests/projects/scenereloadoff/"
+  ]
+}

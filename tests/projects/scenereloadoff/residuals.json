@@ -1,0 +1,13 @@
+{
+  "Scene reload disabled (Enter Play Mode Options): the Editor opens the start scene in Edit mode, where the objects whose behaviours run in Edit mode get Awake and OnEnable (Edit mode), OnDisable as Edit mode is left, then OnEnable in Play mode and no second Awake, so an Awake that acts only in Play mode never acts on them; Unbound loads the scene in Play mode and wakes everything there (queue row Q811)": [
+    "both.events",
+    "both.template.Always",
+    "both.template.AlwaysDisabled",
+    "scene.events",
+    "scene.template.Always",
+    "scene.template.AlwaysDisabled"
+  ],
+  "Unbound folds the Editor's start in Edit mode and its reload for Play mode into one domain load in Play mode: the Editor's Edit-mode wake of the start scene's Edit-mode behaviours and their teardown at the reload are not reproduced (the objects Play mode starts with are the same)": [
+    "none.events"
+  ]
+}
