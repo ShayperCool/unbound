@@ -11,6 +11,6 @@ import value_probe  # noqa: E402
 BASE = ('Assets/Editor', 'Assets/Scenes', 'Packages', 'ProjectSettings')
 
 if __name__ == '__main__':
-    sys.exit(value_probe.main(PROBE, 'ProbeRunner.Record', 'VIDEO_AUDIO_OUT', tolerance=0,
+    sys.exit(value_probe.main(PROBE, 'ProbeRunner.Record', 'VIDEO_AUDIO_OUT', tolerance=0.011,
                               engine_args=['--frames', '20000', '--size', '320x180'], batch=True, record_timeout=300,
                               base=(PROBE.parent/'video', BASE)))

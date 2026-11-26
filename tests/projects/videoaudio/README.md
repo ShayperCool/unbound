@@ -13,8 +13,12 @@ one fresh player and AudioSource per scenario:
 - A filter on the AudioSource (OnAudioFilterRead) measures every block it is given. Each phase
   records whether any sound came, the tone steps heard in order (0 for 300 Hz to 5 for 1050 Hz; a
   step counts when two blocks in a row hear it), and the steady blocks' RMS per channel; `.listener`
-  is whether AudioListener.GetOutputData heard anything. Also the prepared player's track answers,
-  and isPlaying of the player and the source at the end.
+  is whether AudioListener.GetOutputData heard anything; `.start` is when the first sound came
+  after Play and `play.endGap` how long before loopPointReached the last one came (by the filter's
+  AudioSettings.dspTime, to a tenth of a second). Also the prepared player's track answers,
+  isPlaying of the player and the source at the end, and the sought player's time at seekCompleted.
+
+`residuals.json` records what Unbound does not reproduce, with its cause.
 
 The clip was made with:
 

@@ -4,11 +4,14 @@
 {"k":"play.end","v":[false,true,"null"]}
 {"k":"play.a","v":[true,[0,1,2,3,4],0.35,0.18]}
 {"k":"play.listener","v":[true]}
+{"k":"play.start","v":[0]}
+{"k":"play.endGap","v":[0.7]}
 {"k":"volume.prepared","v":[true,1,1,true,true,true,1,false]}
 {"k":"Video volume.playing","v":[true,true]}
 {"k":"volume.end","v":[false,true,"null"]}
 {"k":"volume.a","v":[true,[0,1,2],0.18,0.09]}
 {"k":"volume.listener","v":[true]}
+{"k":"volume.start","v":[0]}
 {"k":"pause.prepared","v":[true,1,1,true,true,true,1,false]}
 {"k":"pause.end","v":[false,true,"null"]}
 {"k":"pause.a","v":[true,[0,1],0.35,0.18]}
@@ -26,6 +29,7 @@
 {"k":"speed2.end","v":[false,true,"null"]}
 {"k":"speed2.a","v":[true,[0,1,2,3,4],0.35,0.17]}
 {"k":"speed2.listener","v":[true]}
+{"k":"speed2.start","v":[0]}
 {"k":"trackOff.prepared","v":[true,1,1,true,true,false,1,false]}
 {"k":"Video trackOff.playing","v":[true,false]}
 {"k":"trackOff.end","v":[false,false,"null"]}
@@ -46,4 +50,5 @@
 {"k":"loop.end","v":[false,true,"null"]}
 {"k":"loop.a","v":[true,[0,1,2,3,4,0,1,2,3],0.35,0.18]}
 {"k":"loop.listener","v":[true]}
+{"k":"loop.start","v":[0]}
 {"k":"complete","v":true}

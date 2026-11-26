@@ -25,7 +25,7 @@ public sealed class VideoAudioProbe : MonoBehaviour
     sealed class Block
     {
         public string Phase;
-        public double RmsLeft, RmsRight, Frequency;
+        public double RmsLeft, RmsRight, Frequency, Dsp;
         public int Frames;
     }
 
@@ -56,6 +56,7 @@ public sealed class VideoAudioProbe : MonoBehaviour
                 Phase = phase, Frames = frames,
                 RmsLeft = Math.Sqrt(left / frames), RmsRight = Math.Sqrt(right / frames),
                 Frequency = crossings * 0.5 * m_Rate / frames,
+                Dsp = AudioSettings.dspTime,
             };
             lock (Blocks) Blocks.Add(block);
         }
@@ -144,9 +145,14 @@ public sealed class VideoAudioProbe : MonoBehaviour
         yield return new WaitForSecondsRealtime(0.3f);
     }
 
+    double m_PlayDsp, m_EndDsp;
+
     IEnumerator Play(float seconds)
     {
         m_Recorder.Phase = "a";
+        m_EndDsp = 0;
+        m_Player.loopPointReached += _ => { if (m_EndDsp == 0) m_EndDsp = AudioSettings.dspTime; };
+        m_PlayDsp = AudioSettings.dspTime;
         m_Player.Play();
         yield return new WaitForSecondsRealtime(seconds);
         Put(m_Player.name + ".playing", m_Player.isPlaying, m_Source.isPlaying);
@@ -214,6 +220,15 @@ public sealed class VideoAudioProbe : MonoBehaviour
                 steady.Count == 0 ? 0 : Math.Round(steady.Average(b => b.RmsRight), 2));
         }
         Put(name + ".listener", m_ListenerRms.Count > 0 && m_ListenerRms.Max() > 0.01);
+        // When the sound starts after Play and, for a clip played to its end, how long before the
+        // end (loopPointReached) its last sound came, to a tenth of a second.
+        var heard = blocks.Where(b => b.Phase == "a" && b.RmsLeft > 0.01).ToList();
+        if (heard.Count > 0 && m_PlayDsp > 0)
+        {
+            Put(name + ".start", Math.Round(heard[0].Dsp - m_PlayDsp, 1));
+            if (m_EndDsp > 0 && name != "loop") Put(name + ".endGap", Math.Round(m_EndDsp - heard[heard.Count - 1].Dsp, 1));
+        }
+        m_PlayDsp = 0;
     }
 
     static string Json(object value) => value switch

@@ -1,0 +1,21 @@
+{
+  "The Editor's sound of this 3-second clip ends 0.7 s before its pictures do (play.endGap: the last sound 0.7 s before loopPointReached; the 1050 Hz step from 2.5 s is never heard, also in the loop's first pass); why, and how that depends on a clip's length, frame rate or container, is unmeasured, so Unbound plays the sound to the end.": [
+    "play.a",
+    "loop.a",
+    "play.endGap"
+  ],
+  "The Editor's first sound comes within 0.05 s of Play by its filter's AudioSettings.dspTime; Unbound's reads 0 to 0.2 s, its DSP clock not moving within a frame (see the dspTime row of docs/COMPATIBILITY_GAPS.md).": [
+    "play.start",
+    "volume.start",
+    "speed2.start",
+    "loop.start"
+  ],
+  "The Editor calls the target GameObject's OnAudioFilterRead with silent blocks while no track plays through its AudioSource (None or Direct output, a disabled track); Unbound calls it only while a voice plays there, so those phases have no rows.": [
+    "direct.a",
+    "none.a",
+    "trackOff.a"
+  ],
+  "At seekCompleted of a paused player sought to 2 s, the Editor's time still reads the paused frame's time (0.2); Unbound's reads the sought time. One observation; other seeks are unmeasured.": [
+    "seek.completed"
+  ]
+}
