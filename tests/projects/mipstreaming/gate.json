@@ -1,0 +1,10 @@
+{
+  "commands": [
+    "python3 tests/projects/mipstreaming/run.py gate"
+  ],
+  "summary": "mipstreaming: .*",
+  "engine_paths": [
+    "managed/UnityEngine/Graphics/Texture2D.Streaming.cs",
+    "tests/projects/mipstreaming/"
+  ]
+}

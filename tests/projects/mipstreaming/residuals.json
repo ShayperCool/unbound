@@ -1,0 +1,42 @@
+{
+ "Texture.* mipmap streaming counters and texture memory totals (streamingTextureCount, nonStreamingTextureCount, streamingRendererCount, total/current/desired/target/nonStreaming texture memory) are not tracked: they answer 0 (loud notices; docs/COMPATIBILITY_GAPS.md mipmap streaming row)": [
+  "active/currentTextureMemory>0",
+  "active/desiredTextureMemory>0",
+  "active/nonStreamingTextureCount>0",
+  "active/nonStreamingTextureMemory>0",
+  "active/streamingRendererCount",
+  "active/streamingTextureCount>0",
+  "active/targetTextureMemory>0",
+  "active/totalTextureMemory>0",
+  "cleared/currentTextureMemory>0",
+  "cleared/desiredTextureMemory>0",
+  "cleared/nonStreamingTextureCount>0",
+  "cleared/nonStreamingTextureMemory>0",
+  "cleared/streamingTextureCount>0",
+  "cleared/targetTextureMemory>0",
+  "cleared/totalTextureMemory>0",
+  "load/currentTextureMemory>0",
+  "load/nonStreamingTextureCount>0",
+  "load/nonStreamingTextureMemory>0",
+  "load/streamingTextureCount>0",
+  "requested/currentTextureMemory>0",
+  "requested/desiredTextureMemory>0",
+  "requested/nonStreamingTextureCount>0",
+  "requested/nonStreamingTextureMemory>0",
+  "requested/streamingRendererCount",
+  "requested/streamingTextureCount>0",
+  "requested/targetTextureMemory>0",
+  "requested/totalTextureMemory>0",
+  "viewed/currentTextureMemory>0",
+  "viewed/desiredTextureMemory>0",
+  "viewed/nonStreamingTextureCount>0",
+  "viewed/nonStreamingTextureMemory>0",
+  "viewed/streamingTextureCount>0",
+  "viewed/targetTextureMemory>0",
+  "viewed/totalTextureMemory>0"
+ ],
+ "The mip level the streaming system calculates for a streaming texture with QualitySettings.streamingMipmapsActive (calculatedMipmapLevel, desiredMipmapLevel) is not simulated (a notice): the Editor gives 2 for this view, where Unbound answers the requested level": [
+  "active/stream/calculatedMipmapLevel",
+  "active/stream/desiredMipmapLevel"
+ ]
+}
