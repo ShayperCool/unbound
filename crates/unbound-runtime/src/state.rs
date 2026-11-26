@@ -622,11 +622,13 @@ pub fn dispatch(method: &str, request: &str) -> Result<String> {
             struct Request {
                 handle: u64,
                 max_drop: u32,
+                #[serde(default)]
+                fixed: bool,
             }
             let r: Request = serde_json::from_str(request)?;
             handle::plain(r.handle, method).map_err(anyhow::Error::msg)?;
             anyhow::ensure!(r.handle != 0, "a mipmap limit requires a texture handle");
-            backend().texture_mip_limit(r.handle, r.max_drop);
+            backend().texture_mip_limit(r.handle, r.max_drop, r.fixed);
             Ok("true".to_owned())
         }
         "texture-sampler-state" => {

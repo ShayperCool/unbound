@@ -117,6 +117,66 @@ namespace Unbound.Tests
         }
 
         [Fact]
+        public void TexturesOwnLimitIsTheActiveOneWithoutChangingTheLevels()
+        {
+            var limited = new Texture2D(64, 64, TextureFormat.RGBA32, true) { ignoreMipmapLimit = false };
+            try
+            {
+                WithLimit(1, () =>
+                {
+#pragma warning disable CS0618
+                    Assert.Equal(1, Texture.masterTextureLimit);
+                    Texture.masterTextureLimit = 3;
+                    Assert.Equal(1, QualitySettings.globalTextureMipmapLimit);
+                    Assert.Equal(3, Texture.globalMipmapLimit);
+                    Assert.Equal(3, limited.activeMipmapLimit);
+                    QualitySettings.globalTextureMipmapLimit = 0;
+                    Assert.Equal(0, Texture.masterTextureLimit);
+#pragma warning restore CS0618
+                    Assert.Equal(0, limited.activeMipmapLimit);
+                });
+            }
+            finally
+            {
+                Object.DestroyImmediate(limited);
+            }
+        }
+
+        [Fact]
+        public void ATextureMadeUnreadableKeepsTheMipsItsLastUploadDropped()
+        {
+            var texture = new Texture2D(64, 64, TextureFormat.RGBA32, true) { ignoreMipmapLimit = false };
+            try
+            {
+                WithLimit(2, () =>
+                {
+                    Assert.Equal(-1, texture.FrozenMipmapLimit);
+                    texture.Apply(false, true);
+                    Assert.Equal(2, texture.FrozenMipmapLimit);
+                    QualitySettings.globalTextureMipmapLimit = 0;
+                    // The answer follows the limit; what is sampled does not.
+                    Assert.Equal(0, texture.activeMipmapLimit);
+                    Assert.True(texture.UnderMipmapLimit);
+                });
+            }
+            finally
+            {
+                Object.DestroyImmediate(texture);
+            }
+        }
+
+        [Fact]
+        public void AGeneratedTexturesMetaKeepsItsIgnoreFlag()
+        {
+            var settings = new UnityEditor.AssetImporters.TextureGenerationSettings(UnityEditor.TextureImporterType.Default);
+            var meta = typeof(UnityEditor.AssetImporters.TextureGenerator).GetMethod("Meta", System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.NonPublic);
+            settings.textureImporterSettings.ignoreMipmapLimit = true;
+            Assert.Contains("\n  ignoreMipmapLimit: 1\n", (string)meta.Invoke(null, new object[] { settings }));
+            settings.textureImporterSettings.ignoreMipmapLimit = false;
+            Assert.Contains("\n  ignoreMipmapLimit: 0\n", (string)meta.Invoke(null, new object[] { settings }));
+        }
+
+        [Fact]
         public void AScriptLimitIsKeptByTheActiveLevel()
         {
             var levels = QualitySettings.s_LevelSettings;

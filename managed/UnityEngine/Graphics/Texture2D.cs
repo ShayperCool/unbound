@@ -251,7 +251,13 @@ namespace UnityEngine
 
         /// <summary>The top mips the quality level's limit drops: what the renderer samples
         /// (tests/projects/mipmaplimit).</summary>
-        public int activeMipmapLimit => Math.Min(QualitySettings.globalTextureMipmapLimit, MipmapLimitMaxDrop);
+        public int activeMipmapLimit => Math.Min(ActiveMipmapLimit, MipmapLimitMaxDrop);
+
+        /// <summary>The mips dropped when Apply made the texture unreadable (-1: it follows the
+        /// limit).</summary>
+        int m_FrozenMipmapLimit = -1;
+
+        internal override int FrozenMipmapLimit => m_FrozenMipmapLimit;
 
         public static Texture2D whiteTexture => DefaultTextures.White;
         public static Texture2D blackTexture => DefaultTextures.Black;
@@ -428,6 +434,8 @@ namespace UnityEngine
             // The store, when views were handed out, is the raw data itself: kept, not copied.
             var rawCopy = makeNoLongerReadable && !SourceBlocks ? m_Store ?? EncodeMipChain() : null;
             m_PixelsDirty = true;
+            // Unreadable, it is not uploaded again: it keeps the mips this upload drops.
+            if (makeNoLongerReadable) m_FrozenMipmapLimit = activeMipmapLimit;
             Upload();
             if (m_AstcMemoryPendingUpload || (m_ScriptTextureStorage && !IsPersistentAsset && m_ResizeMemoryPendingApply))
                 RecordUploadedAstcMemory(format);
@@ -754,7 +762,7 @@ namespace UnityEngine
         {
             if (nativeTex == IntPtr.Zero) throw new ArgumentException("nativeTex can not be null");
             if (width <= 0 || height <= 0) throw new ArgumentException("Texture dimensions must be positive.");
-            var texture = new Texture2D();
+            var texture = new Texture2D { m_IgnoreMipmapLimit = ScriptTextureIgnoresMipmapLimit };
             texture.InitEmpty(format, linear);
             texture.m_Width = width; texture.m_Height = height;
             texture.m_MipCount = mipChain ? 32 - System.Numerics.BitOperations.LeadingZeroCount((uint)Math.Max(width, height)) : 1;
@@ -1126,7 +1134,8 @@ namespace UnityEngine
             m_BlockCellsDirty = false;
             m_SourceRaw = encoded.Length > 0 ? Convert.FromHexString(encoded) : null;
             m_IsReadable = body.Bool("m_IsReadable");
-            m_IgnoreMipmapLimit = body.Bool("m_IgnoreMipmapLimit");
+            // Files written before the setting's rename keep its former name.
+            m_IgnoreMipmapLimit = body.Bool("m_IgnoreMipmapLimit", body.Bool("m_IgnoreMasterTextureLimit"));
             // m_ColorSpace 0 is linear data (TextMeshPro's Alpha8 atlases, terrain splat maps).
             m_Linear = body.Int("m_ColorSpace", 1) == 0;
             m_UsageMode = body.Int("m_LightmapFormat");

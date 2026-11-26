@@ -414,7 +414,10 @@ impl TextureSettings {
             flip_green: normal_map && boolean(imp, "bumpmap.flipGreenChannel").unwrap_or(false),
             format_alpha,
             is_readable: boolean(imp, "isReadable").unwrap_or(false),
-            ignore_mipmap_limit: boolean(imp, "ignoreMipmapLimit").unwrap_or(false),
+            // A .meta written before the setting's rename keeps its former name.
+            ignore_mipmap_limit: boolean(imp, "ignoreMipmapLimit")
+                .or_else(|| boolean(imp, "ignoreMasterTextureLimit"))
+                .unwrap_or(false),
             wrap_u: wrap("wrapU"),
             wrap_v: wrap("wrapV"),
             wrap_w: wrap("wrapW"),

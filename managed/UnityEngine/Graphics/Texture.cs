@@ -160,24 +160,47 @@ namespace UnityEngine
         /// (0 for the kinds it leaves whole and for a texture that ignores it).</summary>
         internal virtual int MipmapLimitMaxDrop => 0;
 
-        /// <summary>What the renderer holds as <see cref="MipmapLimitMaxDrop"/> for
-        /// <see cref="m_SentMipmapLimitHandle"/>.</summary>
+        /// <summary>The top mips a texture that keeps no CPU copy dropped when it was last uploaded
+        /// (-1: it follows the limit). Such a texture is not uploaded again when the limit changes
+        /// (matches the Unity 6000.0.71f1 Editor, tests/projects/mipmaplimit scriptLocked.*).</summary>
+        internal virtual int FrozenMipmapLimit => -1;
+
+        /// <summary>Whether the renderer samples fewer mips of this texture than it holds.</summary>
+        internal bool UnderMipmapLimit => FrozenMipmapLimit > 0 || (FrozenMipmapLimit < 0 && Math.Min(s_ActiveMipmapLimit, MipmapLimitMaxDrop) > 0);
+
+        /// <summary>A GPU copy or readback of a texture under the mipmap limit reads or writes its
+        /// whole chain; the Editor's mip 0 is the dropped size there (Scripting API 6000.0,
+        /// Texture2D.activeMipmapLimit). Said once.</summary>
+        internal static void WarnCopyUnderMipmapLimit(string api, Texture texture)
+        {
+            if (texture != null && texture.UnderMipmapLimit)
+                Unbound.Runtime.Stubs.Ignored(api + " of a texture under the texture mipmap limit", "addresses the texture's whole mip chain, not the mips the limit keeps");
+        }
+
+        /// <summary>What the renderer holds for <see cref="m_SentMipmapLimitHandle"/>: the most mips
+        /// it drops and whether that is a fixed count.</summary>
         int m_SentMipmapLimit;
+        bool m_SentMipmapLimitFixed;
         ulong m_SentMipmapLimitHandle;
 
         /// <summary>Tells the renderer the most top mips this texture drops under the quality
-        /// level's limit, when that changed (the renderer applies the global limit to it).</summary>
+        /// level's limit (or the fixed count of a frozen texture), when that changed.</summary>
         internal void SyncMipmapLimit()
         {
             if (m_NativeHandle == 0 || !Unbound.Runtime.Native.IsReady) return;
-            int drop = MipmapLimitMaxDrop;
-            int sent = m_SentMipmapLimitHandle == m_NativeHandle ? m_SentMipmapLimit : 0;
+            int frozen = FrozenMipmapLimit;
+            bool isFixed = frozen >= 0;
+            int drop = isFixed ? frozen : MipmapLimitMaxDrop;
+            bool known = m_SentMipmapLimitHandle == m_NativeHandle;
+            int sent = known ? m_SentMipmapLimit : 0;
+            bool sentFixed = known && m_SentMipmapLimitFixed;
             m_SentMipmapLimitHandle = m_NativeHandle;
             m_SentMipmapLimit = drop;
-            if (drop == sent) return;
+            m_SentMipmapLimitFixed = isFixed;
+            if (drop == sent && (isFixed == sentFixed || drop == 0)) return;
             Unbound.Runtime.GfxStream.Flush();
             Unbound.Runtime.Native.Call("texture-mipmap-limit", System.Text.Json.JsonSerializer.Serialize(
-                new { handle = m_NativeHandle, maxDrop = drop }));
+                new { handle = m_NativeHandle, maxDrop = drop, @fixed = isFixed }));
         }
 
         internal void EmitSamplerMetadata()
@@ -217,8 +240,25 @@ namespace UnityEngine
         /// <summary>The update count a texture taking a new import in place carries on with.</summary>
         internal void SetUpdateCount(uint count) => m_UpdateCount = count;
 
-        [global::System.@ObsoleteAttribute("masterTextureLimit has been deprecated. Use globalMipmapLimit instead (UnityUpgradable) -> globalMipmapLimit", false)] public static int masterTextureLimit { get; set; }
-        [global::System.@ObsoleteAttribute("globalMipmapLimit is not supported. Use QualitySettings.globalTextureMipmapLimit or Mipmap Limit Groups instead.", false)] public static int globalMipmapLimit { get; set; }
+        /// <summary>The texture mipmap limit textures are sampled under: what the quality level's
+        /// limit sets, and these two set without changing the level's (matches the Unity
+        /// 6000.0.71f1 Editor, tests/projects/mipmaplimit textureLimits.*, afterMaster3).</summary>
+        static int s_ActiveMipmapLimit;
+
+        internal static int ActiveMipmapLimit => s_ActiveMipmapLimit;
+
+        /// <summary>Makes <paramref name="limit"/> (at least 0; a negative limit set here is not
+        /// measured, the quality level's reads 0) the limit the renderer samples textures under.</summary>
+        internal static void SetActiveMipmapLimit(int limit)
+        {
+            s_ActiveMipmapLimit = Math.Max(0, limit);
+            if (s_ActiveMipmapLimit > 0 && SystemInfo.graphicsDeviceType == GraphicsDeviceType.Metal)
+                Unbound.Runtime.Stubs.Ignored("the texture mipmap limit on Metal", "keeps the 8-texel floor measured on OpenGL Core and Vulkan (tests/projects/mipmaplimit); the Metal device's is not measured");
+            Unbound.Runtime.GfxStream.MipmapLimit(s_ActiveMipmapLimit);
+        }
+
+        [global::System.@ObsoleteAttribute("masterTextureLimit has been deprecated. Use globalMipmapLimit instead (UnityUpgradable) -> globalMipmapLimit", false)] public static int masterTextureLimit { get => s_ActiveMipmapLimit; set => SetActiveMipmapLimit(value); }
+        [global::System.@ObsoleteAttribute("globalMipmapLimit is not supported. Use QualitySettings.globalTextureMipmapLimit or Mipmap Limit Groups instead.", false)] public static int globalMipmapLimit { get => s_ActiveMipmapLimit; set => SetActiveMipmapLimit(value); }
         static AnisotropicFiltering s_Anisotropic = AnisotropicFiltering.Enable;
         static int s_ForcedMinAniso = 9, s_GlobalMaxAniso = 16;
 

@@ -2661,3 +2661,20 @@ fn a_guid_only_texture_imports_as_a_cube_map_where_its_layout_is_measured() {
         Some((64, 64))
     );
 }
+
+/// The importer's ignoreMipmapLimit, and its former name in a .meta written before the rename;
+/// absent, the limit applies.
+#[test]
+fn the_mipmap_limit_flag_reads_its_former_name_too() {
+    let flag = |extra: &str| {
+        settings(
+            &format!("TextureImporter:\n  serializedVersion: 13\n{extra}"),
+            "Standalone",
+        )
+        .ignore_mipmap_limit
+    };
+    assert!(flag("  ignoreMipmapLimit: 1\n"));
+    assert!(flag("  ignoreMasterTextureLimit: 1\n"));
+    assert!(!flag("  ignoreMipmapLimit: 0\n  ignoreMasterTextureLimit: 1\n"));
+    assert!(!flag(""));
+}

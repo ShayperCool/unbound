@@ -863,8 +863,8 @@ pub trait RenderBackend: Send + Sync {
     fn texture_mip_bias(&self, _handle: u64, _bias: f32) {}
     fn texture_sampler(&self, _handle: u64, _properties: [i32; 5]) {}
     /// How many top mips of a texture the quality level's mipmap limit may drop at most (0: it
-    /// keeps them all).
-    fn texture_mip_limit(&self, _handle: u64, _max_drop: u32) {}
+    /// keeps them all), or, `fixed`, how many it dropped for good (a texture without a CPU copy).
+    fn texture_mip_limit(&self, _handle: u64, _max_drop: u32, _fixed: bool) {}
     fn release_texture(&self, handle: u64);
     fn update_material(&self, handle: u64, material: owned::Material);
     fn release_material(&self, handle: u64);

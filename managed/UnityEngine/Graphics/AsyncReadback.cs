@@ -292,6 +292,7 @@ namespace Unbound.Runtime
             Action<UnityEngine.Rendering.AsyncGPUReadbackRequest> callback, bool reportUnsupported = false, bool validateSource = true)
         {
             if (src == null) throw new ArgumentNullException("src");
+            UnityEngine.Texture.WarnCopyUnderMipmapLimit("AsyncGPUReadback.Request", src);
             var result = new Result { Callback = callback };
             // Direct explicit-format requests validate the source before the request's own checks.
             // Command-buffer requests omit this entry-point diagnostic.

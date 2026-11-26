@@ -584,6 +584,8 @@ namespace UnityEngine
         {
             if (src == null) throw new ArgumentNullException(nameof(src));
             if (dst == null) throw new ArgumentNullException(nameof(dst));
+            Texture.WarnCopyUnderMipmapLimit("Graphics.CopyTexture", src);
+            Texture.WarnCopyUnderMipmapLimit("Graphics.CopyTexture", dst);
             // A whole copy between 2D textures of other sizes copies nothing (the Unity 6000.0.71f1
             // Editor, tests/projects/apierrors `texture.copy_whole_*`; other kinds unmeasured).
             if (src is Texture2D && dst is Texture2D && (src.width != dst.width || src.height != dst.height))
@@ -625,6 +627,8 @@ namespace UnityEngine
         {
             if (src == null) throw new ArgumentNullException(nameof(src));
             if (dst == null) throw new ArgumentNullException(nameof(dst));
+            Texture.WarnCopyUnderMipmapLimit("Graphics.CopyTexture", src);
+            Texture.WarnCopyUnderMipmapLimit("Graphics.CopyTexture", dst);
             if (!CopyLevelsExist(src, srcElement, srcMip, dst, dstElement, dstMip)) return;
             int sw = Math.Max(1, src.width >> srcMip), sh = Math.Max(1, src.height >> srcMip);
             int dw = Math.Max(1, dst.width >> dstMip), dh = Math.Max(1, dst.height >> dstMip);
@@ -694,6 +698,8 @@ namespace UnityEngine
         {
             if (src == null) throw new ArgumentNullException(nameof(src));
             if (dst == null) throw new ArgumentNullException(nameof(dst));
+            Texture.WarnCopyUnderMipmapLimit("Graphics.CopyTexture", src);
+            Texture.WarnCopyUnderMipmapLimit("Graphics.CopyTexture", dst);
             if (!CopyLevelsExist(src, srcElement, srcMip, dst, dstElement, dstMip)) return;
             if (srcWidth < 0 || srcHeight < 0)
             {

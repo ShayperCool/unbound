@@ -2716,7 +2716,7 @@ namespace UnityEngine
                 s_GlobalTextureMipmapLimit = Math.Max(0, value);
                 if (s_LevelSettings != null && s_Level >= 0 && s_Level < s_LevelSettings.Count && s_LevelSettings[s_Level] is { } level)
                     level["globalTextureMipmapLimit"] = System.Text.Json.JsonSerializer.SerializeToElement(s_GlobalTextureMipmapLimit);
-                Unbound.Runtime.GfxStream.MipmapLimit(s_GlobalTextureMipmapLimit);
+                Texture.SetActiveMipmapLimit(s_GlobalTextureMipmapLimit);
             }
         }
 

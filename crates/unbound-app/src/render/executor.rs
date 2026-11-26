@@ -94,8 +94,9 @@ pub enum Upload {
     UploadTexture(u64, owned::Texture),
     TextureMipBias(u64, f32),
     TextureSampler(u64, [i32; 5]),
-    /// The most top mips the mipmap limit may drop from a texture (`texture-mipmap-limit`).
-    TextureMipLimit(u64, u32),
+    /// The most top mips the mipmap limit may drop from a texture, or (true) the mips it dropped
+    /// for good (`texture-mipmap-limit`).
+    TextureMipLimit(u64, u32, bool),
     ReleaseTexture(u64),
     UpdateMaterial(u64, owned::Material),
     ReleaseMaterial(u64),
@@ -1191,8 +1192,9 @@ pub struct UnityRenderer {
     /// Scaled images are textures of their own here.
     full_resolution: HashMap<u64, FullResolution>,
     texture_mip_biases: HashMap<u64, f32>,
-    /// Per texture, the most top mips the quality level's mipmap limit may drop (absent: none).
-    texture_mip_limits: HashMap<u64, u32>,
+    /// Per texture, the most top mips the quality level's mipmap limit may drop, or (true) the
+    /// mips a texture without a CPU copy dropped for good (absent: none).
+    texture_mip_limits: HashMap<u64, (u32, bool)>,
     /// `QualitySettings.globalTextureMipmapLimit` ([`Command::MipmapLimit`]).
     mipmap_limit: u32,
     defaults: HashMap<&'static str, GpuTexture>,
@@ -1820,11 +1822,11 @@ impl UnityRenderer {
                     texture.bind_groups = [None, None];
                 }
             }
-            Upload::TextureMipLimit(handle, max_drop) => {
+            Upload::TextureMipLimit(handle, max_drop, fixed) => {
                 if max_drop == 0 {
                     self.texture_mip_limits.remove(&handle);
                 } else {
-                    self.texture_mip_limits.insert(handle, max_drop);
+                    self.texture_mip_limits.insert(handle, (max_drop, fixed));
                 }
                 self.apply_mip_base(handle);
             }
@@ -1861,11 +1863,18 @@ impl UnityRenderer {
         }
     }
 
-    /// The top mips a texture drops: the quality level's limit, at most the texture's own.
+    /// The top mips a texture drops: the quality level's limit, at most the texture's own; a
+    /// fixed count whatever the limit.
     fn mip_base(&self, handle: u64) -> u32 {
         self.texture_mip_limits
             .get(&handle)
-            .map_or(0, |&max| max.min(self.mipmap_limit))
+            .map_or(0, |&(max, fixed)| {
+                if fixed {
+                    max
+                } else {
+                    max.min(self.mipmap_limit)
+                }
+            })
     }
 
     /// Makes a texture's sampled views start at its [`Self::mip_base`]; the bind groups holding
@@ -2793,8 +2802,12 @@ impl UnityRenderer {
                             }
                         }
                     } else {
-                        let (width, height, source) =
-                            (t.width, t.height, self.sampled_texture_view(t, space));
+                        // The sampled view's size: the mips a mipmap limit keeps.
+                        let (width, height, source) = (
+                            (t.width >> t.mip_base).max(1),
+                            (t.height >> t.mip_base).max(1),
+                            self.sampled_texture_view(t, space),
+                        );
                         let fits = self
                             .bit_views
                             .get(&(h, signed))
@@ -4696,8 +4709,12 @@ impl UnityRenderer {
                         let limit = limit.max(0) as u32;
                         if limit != self.mipmap_limit {
                             self.mipmap_limit = limit;
-                            let limited: Vec<u64> =
-                                self.texture_mip_limits.keys().copied().collect();
+                            let limited: Vec<u64> = self
+                                .texture_mip_limits
+                                .iter()
+                                .filter(|(_, (_, fixed))| !fixed)
+                                .map(|(&handle, _)| handle)
+                                .collect();
                             for handle in limited {
                                 self.apply_mip_base(handle);
                             }

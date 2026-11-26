@@ -329,6 +329,7 @@ namespace UnityEditor.AssetImporters
             Line(2, "normalMapFilter", (int)s.normalMapFilter);
             Line(2, "flipGreenChannel", s.flipGreenChannel);
             Line(1, "isReadable", s.readable);
+            Line(1, "ignoreMipmapLimit", s.ignoreMipmapLimit);
             Line(1, "generateCubemap", (int)s.generateCubemap);
             Line(1, "cubemapConvolution", (int)s.cubemapConvolution);
             y.Append("  textureSettings:\n");

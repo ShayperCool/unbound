@@ -750,7 +750,7 @@ namespace UnityEngine
 
         /// <summary>The top mips the quality level's limit drops from every slice
         /// (tests/projects/mipmaplimit array.*).</summary>
-        public int activeMipmapLimit => Math.Min(QualitySettings.globalTextureMipmapLimit, MipmapLimitMaxDrop);
+        public int activeMipmapLimit => Math.Min(ActiveMipmapLimit, MipmapLimitMaxDrop);
         internal override GraphicsFormat GraphicsFormatOf() => GraphicsFormatUtility.GetGraphicsFormat(m_Format, !m_Linear && QualitySettings.activeColorSpace == ColorSpace.Linear);
 
         LayeredPixels Pixels(string api)
@@ -855,7 +855,7 @@ namespace UnityEngine
             m_Linear = !read.Srgb;
             m_MipCount = read.Mips;
             m_Readable = read.Readable;
-            m_IgnoreMipmapLimit = body.Bool("m_IgnoreMipmapLimit");
+            m_IgnoreMipmapLimit = body.Bool("m_IgnoreMipmapLimit", body.Bool("m_IgnoreMasterTextureLimit"));
             m_Pixels?.Release();
             m_Pixels = null;
             if (read.Data == null) return;
