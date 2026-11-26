@@ -27453,7 +27453,6 @@ namespace UnityEditor.Collaboration
         [global::Unbound.Stub] public void ClearErrors() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Collaboration.Collab.ClearErrors"); }
         [global::Unbound.Stub] public void ForceRefresh(bool refreshAssetDatabase) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Collaboration.Collab.ForceRefresh"); }
         [global::Unbound.Stub] public void SetCollabEnabledForCurrentProject(bool enabled) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Collaboration.Collab.SetCollabEnabledForCurrentProject"); }
-        [global::Unbound.Stub] public bool IsCollabEnabledForCurrentProject() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Collaboration.Collab.IsCollabEnabledForCurrentProject"); return default; }
         [global::Unbound.Stub] public bool IsAssetIgnored(string path) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Collaboration.Collab.IsAssetIgnored"); return default; }
         [global::Unbound.Stub] public bool ShouldTrackAsset(string path) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Collaboration.Collab.ShouldTrackAsset"); return default; }
         [global::Unbound.Stub] public string GetProjectPath() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Collaboration.Collab.GetProjectPath"); return default; }

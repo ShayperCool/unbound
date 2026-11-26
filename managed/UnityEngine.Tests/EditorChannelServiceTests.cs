@@ -36,6 +36,8 @@ namespace UnityEngine.Tests
             }
             finally { ChannelService.Stop(); }
             Assert.False(ChannelService.IsRunning());
+            // tests/projects/uvmetrics collab.IsCollabEnabledForCurrentProject.
+            Assert.False(UnityEditor.Collaboration.Collab.instance.IsCollabEnabledForCurrentProject());
         }
 
         [Fact]
@@ -53,13 +55,15 @@ namespace UnityEngine.Tests
                 Assert.Empty(ChannelService.GetChannelList());
                 Assert.Null(ChannelService.GetOrCreateChannel("tests.unmeasured", (client, data) => { }));
                 Assert.Null(UnityEditor.Collaboration.Collab.instance);
+                var collab = (UnityEditor.Collaboration.Collab)System.Activator.CreateInstance(typeof(UnityEditor.Collaboration.Collab), nonPublic: true);
+                Assert.False(collab.IsCollabEnabledForCurrentProject());
                 Assert.False(UnityEditor.LocalizationDatabase.enableEditorLocalization);
                 Assert.Null(UnityEditor.LocalizationDatabase.GetCulture(SystemLanguage.German));
                 Assert.Null(UnityEditor.LocalizationDatabase.GetLocalizedString("Play"));
             }
             finally { Debug.unityLogger.logHandler = previous; }
             foreach (var member in new[] { "ChannelService.ChannelNameToId", "ChannelService.Start", "ChannelService.IsRunning",
-                         "ChannelService.GetChannelList", "ChannelService.GetOrCreateChannel", "Collab.instance",
+                         "ChannelService.GetChannelList", "ChannelService.GetOrCreateChannel", "Collab.instance", "Collab.IsCollabEnabledForCurrentProject",
                          "LocalizationDatabase.enableEditorLocalization", "LocalizationDatabase.GetCulture", "LocalizationDatabase.GetLocalizedString" })
                 Assert.Contains(capture.Lines, line => line.Contains(member + " is not implemented"));
         }

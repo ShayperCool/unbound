@@ -396,9 +396,19 @@ namespace UnityEditor
 namespace UnityEditor.Collaboration
 {
     /// <summary>The collaboration service object: one instance, as the Unity 6000.0.71f1 Editor
-    /// answers (tests/projects/editorchannels collab.instance); its other members are not implemented.</summary>
+    /// answers (tests/projects/editorchannels collab.instance); Collaborate is not enabled for the
+    /// project (tests/projects/uvmetrics collab.*); its other members are not implemented.</summary>
     internal partial class Collab
     {
+        /// <summary>False: the Unity 6000.0.71f1 Editor answers so for a project with its default
+        /// services settings (tests/projects/uvmetrics collab.IsCollabEnabledForCurrentProject).</summary>
+        public bool IsCollabEnabledForCurrentProject()
+        {
+            if (Unbound.Runtime.Compat.EditorChannelServiceMeasured) return false;
+            Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Collaboration.Collab.IsCollabEnabledForCurrentProject");
+            return default;
+        }
+
         static readonly Collab s_Instance = new Collab();
 
         Collab() { }
