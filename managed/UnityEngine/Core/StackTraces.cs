@@ -42,6 +42,11 @@ namespace Unbound.Runtime
         }
 
         static readonly Assembly s_Engine = typeof(UnityStackTrace).Assembly;
+
+        /// <summary>Whether the frame stands for a Unity method the Editor's native stacks leave out
+        /// (<see cref="Unbound.UnityFrameAttribute.Inlined"/>).</summary>
+        internal static bool IsInlined(MethodBase method) =>
+            method.GetCustomAttribute<Unbound.UnityFrameAttribute>()?.Inlined == true;
         static readonly Assembly s_CoreLib = typeof(object).Assembly;
 
         internal static bool IsGameMethod(MethodBase method)

@@ -25,4 +25,36 @@ public class EventListener : MonoBehaviour
         count++;
         Ran++;
     }
+
+    public void Log() => Debug.Log("From a listener.");
+
+    public void LogInt(int value) => Debug.Log("From a listener: " + value);
+
+    /// <summary>StackTraceUtility.ExtractStackTrace's text, asked by the last Extract listener.</summary>
+    public static string LastStack;
+
+    public void Extract() => LastStack = StackTraceUtility.ExtractStackTrace();
+
+    public void ExtractInt(int value) => LastStack = StackTraceUtility.ExtractStackTrace();
+
+    public void LogCaught()
+    {
+        try { throw new InvalidOperationException("Caught in a listener."); }
+        catch (Exception e) { Debug.LogException(e); }
+    }
+
+    /// <summary>The calls of the Mark listeners, in order; Mark1 runs <see cref="OnMark1"/> after
+    /// it notes itself.</summary>
+    public static readonly System.Collections.Generic.List<string> Marks = new System.Collections.Generic.List<string>();
+    public static Action OnMark1;
+
+    public void Mark1()
+    {
+        Marks.Add("M1");
+        OnMark1?.Invoke();
+    }
+
+    public void Mark2() => Marks.Add("M2");
+
+    public void Mark3() => Marks.Add("M3");
 }

@@ -452,6 +452,7 @@ namespace UnityEngine.Events
             for (var i = 0; i < calls.Count; i++)
             {
                 if (calls[i] is InvokableCall<T0> call) call.Invoke(arg0);
+                else if (calls[i] is InvokableCall staticCall) staticCall.Invoke();
                 else
                 {
                     m_InvokeArray ??= new object[1];
@@ -490,6 +491,7 @@ namespace UnityEngine.Events
             for (var i = 0; i < calls.Count; i++)
             {
                 if (calls[i] is InvokableCall<T0, T1> call) call.Invoke(arg0, arg1);
+                else if (calls[i] is InvokableCall staticCall) staticCall.Invoke();
                 else
                 {
                     m_InvokeArray ??= new object[2];
@@ -529,6 +531,7 @@ namespace UnityEngine.Events
             for (var i = 0; i < calls.Count; i++)
             {
                 if (calls[i] is InvokableCall<T0, T1, T2> call) call.Invoke(arg0, arg1, arg2);
+                else if (calls[i] is InvokableCall staticCall) staticCall.Invoke();
                 else
                 {
                     m_InvokeArray ??= new object[3];
@@ -569,6 +572,7 @@ namespace UnityEngine.Events
             for (var i = 0; i < calls.Count; i++)
             {
                 if (calls[i] is InvokableCall<T0, T1, T2, T3> call) call.Invoke(arg0, arg1, arg2, arg3);
+                else if (calls[i] is InvokableCall staticCall) staticCall.Invoke();
                 else
                 {
                     m_InvokeArray ??= new object[4];

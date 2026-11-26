@@ -56,7 +56,7 @@ namespace Unbound.Runtime
             }
             if (hasCaller)
             {
-                bool unity = false;
+                bool inlinedInto = false;
                 for (int i = 0; i < call.FrameCount; i++)
                 {
                     var frame = call.GetFrame(i);
@@ -64,11 +64,15 @@ namespace Unbound.Runtime
                     if (method == null || method.DeclaringType == null) continue;
                     bool game = IsGameMethod(method);
                     bool entry = method.DeclaringType == typeof(UnityEngine.Debug) && method.Name == nameof(UnityEngine.Debug.LogException);
+                    bool unity = false;
                     string unitySource = game || entry ? null : UnitySource(method, i > 0 ? call.GetFrame(i - 1)?.GetMethod() : null, out unity);
                     if (!game && !entry && !unity) continue;
+                    bool placeless = inlinedInto;
+                    inlinedInto = unity && IsInlined(method);
+                    if (inlinedInto) continue;
                     AppendManagedMethod(text, method);
                     if (game) AppendSource(text, frame, ProjectFolder);
-                    else if (unitySource != null) text.Append(" (at ").Append(unitySource).Append(')');
+                    else if (unitySource != null && !placeless) text.Append(" (at ").Append(unitySource).Append(')');
                     text.Append('\n');
                 }
             }
@@ -151,10 +155,7 @@ namespace Unbound.Runtime
 
         /// <summary>Whether <paramref name="method"/> stands for a managed Unity method
         /// (<see cref="Unbound.UnityFrameAttribute"/>), and that method's source place as
-        /// <c>path:line</c> (null without the release's .pdb).</summary>
-        internal static string UnitySource(MethodBase method, out bool unity) => UnitySource(method, null, out unity);
-
-        /// <summary><see cref="UnitySource(MethodBase, out bool)"/> of a frame whose callee is
+        /// <c>path:line</c> (null without the release's .pdb), for a frame whose callee is
         /// <paramref name="inner"/> (the next frame inward, null for none).</summary>
         internal static string UnitySource(MethodBase method, MethodBase inner, out bool unity)
         {

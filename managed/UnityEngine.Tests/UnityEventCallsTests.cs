@@ -60,6 +60,14 @@ namespace UnityEngine.Tests
                 Assert.Equal(3, ((ArgumentOutOfRangeException)e).ActualValue);
                 Assert.Equal(new[] { "Listener.ThrowInt", "InvokableCall`1.Invoke", "UnityEvent`1.Invoke" }, Frames(e).Take(3));
 
+                // A listener without the event's arguments on an event with them.
+                var voidOnInt = new UnityEvent<int>();
+                Tools.AddVoidPersistentListener(voidOnInt, listener.Throw);
+                var voidFrames = new StackTrace(Thrown(() => voidOnInt.Invoke(1)), false).GetFrames().Select(f => f.GetMethod()).ToArray();
+                Assert.Equal(new[] { "Listener.Throw", "InvokableCall.Invoke", "UnityEvent`1.Invoke" }, voidFrames.Take(3).Select(m => m.DeclaringType.Name + "." + m.Name));
+                // InvokableCall.Invoke(), not Invoke(object[]).
+                Assert.Empty(voidFrames[1].GetParameters());
+
                 // The listeners after a throwing one do not run.
                 var others = new UnityEvent();
                 Tools.AddVoidPersistentListener(others, listener.Throw);
@@ -101,6 +109,35 @@ namespace UnityEngine.Tests
             nested.Invoke();
             Assert.Equal("a0,a1,b2,extra2,b2,extra2", string.Join(",", trace));
 
+            // A removal replaces the list an Invoke under way goes over.
+            trace.Clear();
+            depth = 0;
+            var removed = new UnityEvent();
+            UnityAction b = () => trace.Add("B" + depth);
+            removed.AddListener(() =>
+            {
+                trace.Add("A" + depth);
+                if (depth++ == 0) { removed.RemoveListener(b); removed.Invoke(); }
+            });
+            removed.AddListener(b);
+            removed.AddListener(() => trace.Add("C" + depth));
+            removed.AddListener(() => trace.Add("D" + depth));
+            removed.Invoke();
+            Assert.Equal("A0,A1,C2,D2,B2,C2,D2", string.Join(",", trace));
+
+            trace.Clear();
+            depth = 0;
+            var emptied = new UnityEvent();
+            emptied.AddListener(() =>
+            {
+                trace.Add("A" + depth);
+                if (depth++ == 0) { emptied.RemoveAllListeners(); emptied.Invoke(); }
+            });
+            emptied.AddListener(() => trace.Add("B" + depth));
+            emptied.AddListener(() => trace.Add("C" + depth));
+            emptied.Invoke();
+            Assert.Equal("A0,B1,C1", string.Join(",", trace));
+
             trace.Clear();
             var cleared = new UnityEvent();
             cleared.AddListener(() => { trace.Add("first"); cleared.RemoveAllListeners(); });
@@ -109,6 +146,23 @@ namespace UnityEngine.Tests
             trace.Add("|");
             cleared.Invoke();
             Assert.Equal("first,second,|", string.Join(",", trace));
+        }
+
+        // Debug.LogException's caller lines leave the invokable call's frame out and give the
+        // event's frame no place, as the Editor's do (tests/projects/eventstacks log_exception_inside).
+        [Fact]
+        public void LogExceptionCallerLinesLeaveTheInvokableCallOut()
+        {
+            string trace = null;
+            var e = new UnityEvent();
+            e.AddListener(() =>
+            {
+                try { throw new InvalidOperationException("Caught."); }
+                catch (Exception caught) { trace = UnityStackTrace.ExceptionText(caught).Trace; }
+            });
+            e.Invoke();
+            Assert.Contains("\nUnityEngine.Events.UnityEvent:Invoke()\n", trace);
+            Assert.DoesNotContain("UnityEngine.Events.InvokableCall", trace);
         }
 
         [Fact]

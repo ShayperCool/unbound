@@ -62,13 +62,13 @@ namespace UnityEngine.Events
 
         public InvokableCall(UnityAction action) => Delegate += action;
 
-        [Unbound.UnityFrame("Invoke"), MethodImpl(MethodImplOptions.NoInlining)]
+        [Unbound.UnityFrame("Invoke", Inlined = true), MethodImpl(MethodImplOptions.NoInlining)]
         public override void Invoke(object[] args)
         {
             if (AllowInvoke(Delegate)) Delegate();
         }
 
-        [Unbound.UnityFrame("Invoke"), MethodImpl(MethodImplOptions.NoInlining)]
+        [Unbound.UnityFrame("Invoke", Inlined = true), MethodImpl(MethodImplOptions.NoInlining)]
         public void Invoke()
         {
             if (AllowInvoke(Delegate)) Delegate();
@@ -86,7 +86,7 @@ namespace UnityEngine.Events
 
         public InvokableCall(UnityAction<T1> action) => Delegate += action;
 
-        [Unbound.UnityFrame("Invoke"), MethodImpl(MethodImplOptions.NoInlining)]
+        [Unbound.UnityFrame("Invoke", Inlined = true), MethodImpl(MethodImplOptions.NoInlining)]
         public override void Invoke(object[] args)
         {
             if (args.Length != 1) throw new ArgumentException("Passed argument 'args' is invalid size. Expected size is 1");
@@ -94,7 +94,7 @@ namespace UnityEngine.Events
             if (AllowInvoke(Delegate)) Delegate((T1)args[0]);
         }
 
-        [Unbound.UnityFrame("Invoke"), MethodImpl(MethodImplOptions.NoInlining)]
+        [Unbound.UnityFrame("Invoke", Inlined = true), MethodImpl(MethodImplOptions.NoInlining)]
         public virtual void Invoke(T1 args0)
         {
             if (AllowInvoke(Delegate)) Delegate(args0);
@@ -112,7 +112,7 @@ namespace UnityEngine.Events
 
         public InvokableCall(UnityAction<T1, T2> action) => Delegate += action;
 
-        [Unbound.UnityFrame("Invoke"), MethodImpl(MethodImplOptions.NoInlining)]
+        [Unbound.UnityFrame("Invoke", Inlined = true), MethodImpl(MethodImplOptions.NoInlining)]
         public override void Invoke(object[] args)
         {
             if (args.Length != 2) throw new ArgumentException("Passed argument 'args' is invalid size. Expected size is 1");
@@ -121,7 +121,7 @@ namespace UnityEngine.Events
             if (AllowInvoke(Delegate)) Delegate((T1)args[0], (T2)args[1]);
         }
 
-        [Unbound.UnityFrame("Invoke"), MethodImpl(MethodImplOptions.NoInlining)]
+        [Unbound.UnityFrame("Invoke", Inlined = true), MethodImpl(MethodImplOptions.NoInlining)]
         public void Invoke(T1 args0, T2 args1)
         {
             if (AllowInvoke(Delegate)) Delegate(args0, args1);
@@ -139,7 +139,7 @@ namespace UnityEngine.Events
 
         public InvokableCall(UnityAction<T1, T2, T3> action) => Delegate += action;
 
-        [Unbound.UnityFrame("Invoke"), MethodImpl(MethodImplOptions.NoInlining)]
+        [Unbound.UnityFrame("Invoke", Inlined = true), MethodImpl(MethodImplOptions.NoInlining)]
         public override void Invoke(object[] args)
         {
             if (args.Length != 3) throw new ArgumentException("Passed argument 'args' is invalid size. Expected size is 1");
@@ -149,7 +149,7 @@ namespace UnityEngine.Events
             if (AllowInvoke(Delegate)) Delegate((T1)args[0], (T2)args[1], (T3)args[2]);
         }
 
-        [Unbound.UnityFrame("Invoke"), MethodImpl(MethodImplOptions.NoInlining)]
+        [Unbound.UnityFrame("Invoke", Inlined = true), MethodImpl(MethodImplOptions.NoInlining)]
         public void Invoke(T1 args0, T2 args1, T3 args2)
         {
             if (AllowInvoke(Delegate)) Delegate(args0, args1, args2);
@@ -167,7 +167,7 @@ namespace UnityEngine.Events
 
         public InvokableCall(UnityAction<T1, T2, T3, T4> action) => Delegate += action;
 
-        [Unbound.UnityFrame("Invoke"), MethodImpl(MethodImplOptions.NoInlining)]
+        [Unbound.UnityFrame("Invoke", Inlined = true), MethodImpl(MethodImplOptions.NoInlining)]
         public override void Invoke(object[] args)
         {
             if (args.Length != 4) throw new ArgumentException("Passed argument 'args' is invalid size. Expected size is 1");
@@ -178,7 +178,7 @@ namespace UnityEngine.Events
             if (AllowInvoke(Delegate)) Delegate((T1)args[0], (T2)args[1], (T3)args[2], (T4)args[3]);
         }
 
-        [Unbound.UnityFrame("Invoke"), MethodImpl(MethodImplOptions.NoInlining)]
+        [Unbound.UnityFrame("Invoke", Inlined = true), MethodImpl(MethodImplOptions.NoInlining)]
         public void Invoke(T1 args0, T2 args1, T3 args2, T4 args3)
         {
             if (AllowInvoke(Delegate)) Delegate(args0, args1, args2, args3);
@@ -195,23 +195,23 @@ namespace UnityEngine.Events
 
         public CachedInvokableCall(Object target, MethodInfo theFunction, T argument) : base(target, theFunction) => m_Arg1 = argument;
 
-        [Unbound.UnityFrame("Invoke"), MethodImpl(MethodImplOptions.NoInlining)]
+        [Unbound.UnityFrame("Invoke", Inlined = true), MethodImpl(MethodImplOptions.NoInlining)]
         public override void Invoke(object[] args) => base.Invoke(m_Arg1);
 
-        [Unbound.UnityFrame("Invoke"), MethodImpl(MethodImplOptions.NoInlining)]
+        [Unbound.UnityFrame("Invoke", Inlined = true), MethodImpl(MethodImplOptions.NoInlining)]
         public override void Invoke(T arg0) => base.Invoke(m_Arg1);
     }
 
     /// <summary>The calls of one event: its persistent calls, then its runtime listeners. An Invoke
-    /// goes over the executing list, which is made again only when the calls changed since: a
-    /// listener added or removed during an Invoke changes the next one, and an Invoke of the same
-    /// event from a listener (which makes it again) the rest of the outer one (matches the Unity
-    /// 6000.0.71f1 Editor, tests/projects/eventstacks changes.*).</summary>
+    /// goes over the executing list. An added call makes it again, in place, at the next Invoke: an
+    /// Invoke of the same event from a listener then changes the rest of the outer one too; a
+    /// removal replaces it at once, leaving the outer Invoke its list (matches the Unity 6000.0.71f1
+    /// Editor, tests/projects/eventstacks changes.*).</summary>
     internal partial class InvokableCallList
     {
         readonly List<BaseInvokableCall> m_PersistentCalls = new List<BaseInvokableCall>();
         readonly List<BaseInvokableCall> m_RuntimeCalls = new List<BaseInvokableCall>();
-        readonly List<BaseInvokableCall> m_ExecutingCalls = new List<BaseInvokableCall>();
+        List<BaseInvokableCall> m_ExecutingCalls = new List<BaseInvokableCall>();
         bool m_NeedsUpdate = true;
 
         public InvokableCallList() { }
@@ -236,19 +236,31 @@ namespace UnityEngine.Events
             foreach (var call in m_RuntimeCalls)
                 if (call.Find(targetObj, method)) toRemove.Add(call);
             m_RuntimeCalls.RemoveAll(toRemove.Contains);
-            m_NeedsUpdate = true;
+            Replace();
         }
 
         public void Clear()
         {
             m_RuntimeCalls.Clear();
-            m_NeedsUpdate = true;
+            Replace();
         }
 
         public void ClearPersistent()
         {
             m_PersistentCalls.Clear();
-            m_NeedsUpdate = true;
+            Replace();
+        }
+
+        /// <summary>A removal makes the executing list anew at once: an Invoke under way goes on
+        /// over the list it took (tests/projects/eventstacks changes.nested_invoke_after_remove*,
+        /// nested_invoke_after_persistent_off).</summary>
+        void Replace()
+        {
+            var executing = new List<BaseInvokableCall>(m_PersistentCalls.Count + m_RuntimeCalls.Count);
+            executing.AddRange(m_PersistentCalls);
+            executing.AddRange(m_RuntimeCalls);
+            m_ExecutingCalls = executing;
+            m_NeedsUpdate = false;
         }
 
         public List<BaseInvokableCall> PrepareInvoke()

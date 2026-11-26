@@ -50,7 +50,10 @@ public class EventStacksProbe : MonoBehaviour
             Caught(key, make());
             yield return Unhandled(key, make());
         }
+        yield return Logs(listener);
+        yield return CoroutineThrow();
         Changes();
+        Removals(listener);
         output.Write("{\"k\":\"complete\",\"v\":true}\n");
         output.Dispose();
 #if UNITY_EDITOR
@@ -93,6 +96,12 @@ public class EventStacksProbe : MonoBehaviour
             UnityEventTools.AddVoidPersistentListener(e, listener.Count);
             e.AddListener(listener.Count);
             return e.Invoke;
+        });
+        yield return ("persistent_void_on_int", () =>
+        {
+            var e = new UnityEvent<int>();
+            UnityEventTools.AddVoidPersistentListener(e, listener.Throw);
+            return () => e.Invoke(3);
         });
         yield return ("runtime_method", () =>
         {
@@ -188,5 +197,124 @@ public class EventStacksProbe : MonoBehaviour
         trace.Add("|");
         cleared.Invoke();
         Row("changes.remove_all_during_invoke", string.Join(",", trace));
+    }
+
+    /// <summary>The message and stack text of Debug.Log called by listeners.</summary>
+    static IEnumerator Logs(EventListener listener)
+    {
+        void Logged(string key, Action invoke)
+        {
+            logs.Clear();
+            invoke();
+            Row(key, Paths(string.Join("\n---\n", logs)));
+        }
+        var plain = new UnityEvent();
+        UnityEventTools.AddVoidPersistentListener(plain, listener.Log);
+        Logged("log.persistent_void", plain.Invoke);
+        var dynamic = new UnityEvent<int>();
+        UnityEventTools.AddPersistentListener(dynamic, listener.LogInt);
+        Logged("log.persistent_dynamic", () => dynamic.Invoke(4));
+        var voidOnInt = new UnityEvent<int>();
+        UnityEventTools.AddVoidPersistentListener(voidOnInt, listener.Log);
+        Logged("log.persistent_void_on_int", () => voidOnInt.Invoke(4));
+        var fixedArgument = new UnityEvent();
+        UnityEventTools.AddIntPersistentListener(fixedArgument, listener.LogInt, 6);
+        Logged("log.persistent_int", fixedArgument.Invoke);
+        var runtime = new UnityEvent<int>();
+        runtime.AddListener(value => Debug.Log("From a lambda: " + value));
+        Logged("log.runtime_lambda_on_int", () => runtime.Invoke(5));
+
+        // StackTraceUtility.ExtractStackTrace asked by a listener.
+        void Extracted(string key, Action invoke)
+        {
+            EventListener.LastStack = null;
+            invoke();
+            Row(key, Paths(EventListener.LastStack ?? "null"));
+        }
+        var extract = new UnityEvent();
+        UnityEventTools.AddVoidPersistentListener(extract, listener.Extract);
+        Extracted("extract.persistent_void", extract.Invoke);
+        var extractDynamic = new UnityEvent<int>();
+        UnityEventTools.AddPersistentListener(extractDynamic, listener.ExtractInt);
+        Extracted("extract.persistent_dynamic", () => extractDynamic.Invoke(2));
+        var extractFixed = new UnityEvent();
+        UnityEventTools.AddIntPersistentListener(extractFixed, listener.ExtractInt, 3);
+        Extracted("extract.persistent_int", extractFixed.Invoke);
+        var extractVoidOnInt = new UnityEvent<int>();
+        UnityEventTools.AddVoidPersistentListener(extractVoidOnInt, listener.Extract);
+        Extracted("extract.persistent_void_on_int", () => extractVoidOnInt.Invoke(2));
+
+        // Debug.LogException of an exception a listener catches: its caller lines.
+        var caught = new UnityEvent<int>();
+        UnityEventTools.AddVoidPersistentListener(caught, listener.LogCaught);
+        Logged("log_exception_inside.persistent_void_on_int", () => caught.Invoke(1));
+        yield return null;
+    }
+
+    static IEnumerator Throwing()
+    {
+        yield return null;
+        throw new InvalidOperationException("From a coroutine.");
+    }
+
+    /// <summary>The log of an exception a coroutine throws after its first step.</summary>
+    IEnumerator CoroutineThrow()
+    {
+        logs.Clear();
+        StartCoroutine(Throwing());
+        yield return null;
+        yield return null;
+        yield return null;
+        Row("coroutine.unhandled", Paths(string.Join("\n---\n", logs)));
+    }
+
+    /// <summary>Listeners removed, cleared or turned off before an Invoke of the same event from a
+    /// listener: the calls of the outer and inner Invokes (Mark listeners: persistent ones).</summary>
+    static void Removals(EventListener listener)
+    {
+        var trace = new List<string>();
+        int depth = 0;
+
+        var removed = new UnityEvent();
+        UnityAction b = () => trace.Add("B" + depth);
+        removed.AddListener(() =>
+        {
+            trace.Add("A" + depth);
+            if (depth++ == 0) { removed.RemoveListener(b); removed.Invoke(); }
+        });
+        removed.AddListener(b);
+        removed.AddListener(() => trace.Add("C" + depth));
+        removed.AddListener(() => trace.Add("D" + depth));
+        removed.Invoke();
+        Row("changes.nested_invoke_after_remove", string.Join(",", trace));
+
+        trace.Clear();
+        depth = 0;
+        var cleared = new UnityEvent();
+        cleared.AddListener(() =>
+        {
+            trace.Add("A" + depth);
+            if (depth++ == 0) { cleared.RemoveAllListeners(); cleared.Invoke(); }
+        });
+        cleared.AddListener(() => trace.Add("B" + depth));
+        cleared.AddListener(() => trace.Add("C" + depth));
+        cleared.Invoke();
+        Row("changes.nested_invoke_after_remove_all", string.Join(",", trace));
+
+        EventListener.Marks.Clear();
+        depth = 0;
+        var persistent = new UnityEvent();
+        UnityEventTools.AddVoidPersistentListener(persistent, listener.Mark1);
+        UnityEventTools.AddVoidPersistentListener(persistent, listener.Mark2);
+        UnityEventTools.AddVoidPersistentListener(persistent, listener.Mark3);
+        EventListener.OnMark1 = () =>
+        {
+            if (depth++ != 0) return;
+            persistent.SetPersistentListenerState(1, UnityEventCallState.Off);
+            persistent.Invoke();
+        };
+        persistent.Invoke();
+        EventListener.OnMark1 = null;
+        Row("changes.nested_invoke_after_persistent_off", string.Join(",", EventListener.Marks));
     }
 }

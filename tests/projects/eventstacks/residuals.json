@@ -3,5 +3,20 @@
   "persistent_deep.extract",
   "persistent_deep.log_exception",
   "persistent_deep.unhandled"
+ ],
+ "Debug.Log's stack text: Unbound gives .NET's stack trace text (`   at Type.Method(...) in path:line N`), not the Editor's (`Type:Method (int) (at path:line)` without the inlined InvokableCall frames); a separate gap (Debug.Log's stack format), not changed here": [
+  "log.persistent_dynamic",
+  "log.persistent_int",
+  "log.persistent_void",
+  "log.persistent_void_on_int",
+  "log.runtime_lambda_on_int"
+ ],
+ "A generic Unity class's frame in a stack of a running call: CoreCLR's stack frames give the method of the generic class's definition, so Unbound writes `InvokableCall`1:Invoke (T1)` where the Editor writes the instantiation `InvokableCall`1<int>:Invoke (int)`": [
+  "extract.persistent_dynamic",
+  "extract.persistent_int",
+  "extract.persistent_void_on_int"
+ ],
+ "Debug.LogException's caller lines: the generic class's frame by its definition (`UnityEvent`1:Invoke(T0)`, the Editor `Invoke(Int32)`), and a call inside a catch block placed at the try's line (CoreCLR's line of a catch handler's frame)": [
+  "log_exception_inside.persistent_void_on_int"
  ]
 }

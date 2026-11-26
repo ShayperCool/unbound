@@ -18,6 +18,13 @@ namespace Unbound
         public UnityFrameAttribute(string callee) => Callee = callee;
 
         public string Callee { get; }
+
+        /// <summary>The stacks the Editor's native side writes of a running call (Debug.Log's,
+        /// Debug.LogException's caller lines) leave this frame out and give its caller's frame no
+        /// place; managed stacks (StackTraceUtility.ExtractStackTrace, an exception's own stack)
+        /// list both with their places (InvokableCall.Invoke inside UnityEvent.Invoke, matches the
+        /// Unity 6000.0.71f1 Editor, tests/projects/eventstacks extract.*, log_exception_inside.*).</summary>
+        public bool Inlined { get; set; }
     }
 }
 
