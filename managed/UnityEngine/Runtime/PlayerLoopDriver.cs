@@ -446,6 +446,8 @@ namespace Unbound.Runtime
             catch (Exception e) { Debug.LogException(e); }
             // Play mode runs inside the Editor: its editor code prepares Play mode first.
             UnityEditor.EditorInitialization.BeforePlayMode(initialScene);
+            // Activate any Multiplayer Play Mode virtual players requested via --virtual-player.
+            UnityEditor.VirtualPlayerActivation.ActivateRequested();
             // Each Play mode is an analytics session, counted in the project's preferences.
             UnityEngine.Analytics.AnalyticsSessionInfo.BeginPlaySession();
             UnityEngine.Time.PlayStarting();
