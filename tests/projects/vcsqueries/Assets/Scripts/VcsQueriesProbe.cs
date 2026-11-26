@@ -101,7 +101,9 @@ public class VcsQueriesProbe : MonoBehaviour
             Try("versioned/" + name, () => VersionControlUtils.IsPathVersioned(path).ToString());
         }
         foreach (var (name, path) in new[] { ("packages", "Packages/manifest.json"), ("library", "Library/ArtifactDB"), ("user", "UserSettings/x"),
-                     ("other", "Other/A.txt"), ("absolute", Path.GetFullPath("Assets/Data/A.txt")) })
+                     ("other", "Other/A.txt"), ("absolute", Path.GetFullPath("Assets/Data/A.txt")),
+                     ("backslash", "Assets\\Data\\A.txt"), ("lower", "assets/Data/A.txt"), ("assets", "Assets"), ("assetsx", "AssetsX/A.txt"),
+                     ("packagemeta", "Packages/manifest.json.meta"), ("dotdot", "Assets/../Other/A.txt") })
             Try("versioned/" + name, () => VersionControlUtils.IsPathVersioned(path).ToString());
 
         Try("isopen/asset", () => Provider.IsOpenForEdit(Provider.GetAssetByPath("Assets/Data/A.txt") ?? new Asset("Assets/Data/A.txt")).ToString());

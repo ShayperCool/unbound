@@ -36,6 +36,12 @@
 {"k":"versioned/user","v":"False"}
 {"k":"versioned/other","v":"False"}
 {"k":"versioned/absolute","v":"False"}
+{"k":"versioned/backslash","v":"False"}
+{"k":"versioned/lower","v":"False"}
+{"k":"versioned/assets","v":"True"}
+{"k":"versioned/assetsx","v":"False"}
+{"k":"versioned/packagemeta","v":"True"}
+{"k":"versioned/dotdot","v":"True"}
 {"k":"isopen/asset","v":"True"}
 {"k":"isopen/new","v":"True"}
 {"k":"checkout/path","v":"success False resultCode 2 text \"\" description \"\" messages [Error: Cannot check out files in offline mode\nAssets/Data/A.txt] assets []"}

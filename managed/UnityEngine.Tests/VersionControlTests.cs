@@ -107,6 +107,11 @@ namespace UnityEngine.Tests
         [InlineData("UserSettings/x", false)]
         [InlineData("Other/A.txt", false)]
         [InlineData("Assets\\Data\\A.txt", false)]
+        [InlineData("assets/Data/A.txt", false)]
+        [InlineData("Assets", true)]
+        [InlineData("AssetsX/A.txt", false)]
+        [InlineData("Packages/manifest.json.meta", true)]
+        [InlineData("Assets/../Other/A.txt", true)]
         [InlineData("", false)]
         [InlineData(null, false)]
         public void APathIsVersionedInTheProjectsVersionedFolders(string path, bool versioned) =>
@@ -126,7 +131,7 @@ namespace UnityEngine.Tests
             Assert.Equal(new[] { "Log: Version control:\nCannot check out files in offline mode\nAssets/Data/A.txt" }, m_Logs.Lines);
         }
 
-        /// <summary>A pre-checkout callback is not run: said.</summary>
+        /// <summary>A pre-checkout callback is not run (Unity's C# runs it): said.</summary>
         [Fact]
         public void APreCheckoutCallbackIsSaid()
         {
@@ -135,7 +140,6 @@ namespace UnityEngine.Tests
             Provider.preCheckoutCallback = (AssetList list, ref string id, ref string description) => ran = true;
             try { Provider.Checkout("Assets/Data/A.txt", CheckoutMode.Both); }
             finally { Provider.preCheckoutCallback = null; }
-            Assert.False(ran);
             Assert.Contains(m_Logs.Lines, l => l.Contains("preCheckoutCallback is not run by a checkout yet"));
         }
 

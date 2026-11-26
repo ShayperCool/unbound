@@ -510,9 +510,9 @@ namespace UnityEditor.VersionControl
 
     public static partial class VersionControlUtils
     {
-        /// <summary>Whether a project-relative path is under version control: one in Assets, Packages
-        /// or ProjectSettings (vcsqueries versioned.*; AssetEditability's rule); others, and absolute
-        /// paths, are not.</summary>
+        /// <summary>Whether a project-relative path is under version control: one written in Assets,
+        /// Packages or ProjectSettings, ordinally and with forward slashes (vcsqueries versioned.*:
+        /// not with backslashes, another case or absolute; AssetEditability's rule).</summary>
         public static bool IsPathVersioned(string path) => !string.IsNullOrEmpty(path) && AssetDatabase.IsVersionedPath(path);
     }
 }

@@ -12,7 +12,6 @@ namespace UnityEditor
 
     public sealed partial class AssetDatabase
     {
-        static bool s_EditSettingsLoaded;
         static bool s_ExternalVersionControl;
 
         static string EditObjectPath(Object assetObject)
@@ -192,11 +191,7 @@ namespace UnityEditor
             return false;
         }
 
-        static void EnsureEditSettings()
-        {
-            if (s_EditSettingsLoaded) return;
-            s_EditSettingsLoaded = true;
-            s_ExternalVersionControl = VersionControlSettings.ChoosesProvider;
-        }
+        /// <summary>Read each time: the mode follows the loaded settings and a script's set.</summary>
+        static void EnsureEditSettings() => s_ExternalVersionControl = VersionControlSettings.ChoosesProvider;
     }
 }
