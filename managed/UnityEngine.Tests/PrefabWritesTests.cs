@@ -483,6 +483,41 @@ namespace UnityEngine.Tests
             Assert.False(EditorUtility.IsDirty(holder));
         }
 
+        /// <summary>The objects OnPostprocessPrefab adds get DontSaveInEditor (the 6000.0 Scripting
+        /// API, AssetPostprocessor.OnPostprocessPrefab), keeping their other flags, and what the
+        /// callbacks mark dirty is the import's: a later save does not write the import's result
+        /// back into the prefab's source.</summary>
+        [Fact]
+        public void APrefabPostprocessorsAdditionsAreNotSavedIntoItsSource()
+        {
+            var hook = (0, typeof(AddingPostprocessor), typeof(AddingPostprocessor).GetMethod("Add", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic));
+            var importer = AssetImporter.FromMeta(AssetPath, m_Guid, "PrefabImporter", TestYaml.DocumentBody("PrefabImporter:\n  userData: \n"));
+            using (AssetPostprocessing.HooksForTests("OnPreprocessAsset", new List<(int, Type, System.Reflection.MethodInfo)>()))
+            using (AssetPostprocessing.HooksForTests("OnPostprocessPrefab", new List<(int, Type, System.Reflection.MethodInfo)> { hook }))
+            using (AssetImporter.Importing(AssetPath, importer))
+                HierarchyPostprocessing.Run(m_File, model: false);
+            var added = m_Asset.GetComponent<UnityEngine.SphereCollider>();
+            Assert.NotNull(added);
+            Assert.Equal(HideFlags.DontSaveInEditor | HideFlags.HideInInspector, added.hideFlags);
+            Assert.False(EditorUtility.IsDirty(m_Asset));
+            var holder = m_Asset.GetComponent<PrefabTestHolder>();
+            holder.label = "after the import";
+            EditorUtility.SetDirty(holder);
+            AssetDatabase.SaveAssets();
+            Assert.Contains("label: after the import", FileText());
+            Assert.DoesNotContain("SphereCollider", FileText());
+        }
+
+        sealed class AddingPostprocessor : AssetPostprocessor
+        {
+            // Not a message name: other tests' editor domain must not see a postprocessor.
+            void Add(GameObject root)
+            {
+                root.AddComponent<UnityEngine.SphereCollider>().hideFlags = HideFlags.HideInInspector;
+                EditorUtility.SetDirty(root);
+            }
+        }
+
         /// <summary>A component added to a prefab asset's GameObject makes it dirty (matches the
         /// Unity 6000.0.71f1 Editor, tests/projects/scenesave prefab-dirty-saves structure.*), not
         /// one an import's postprocessor adds.</summary>

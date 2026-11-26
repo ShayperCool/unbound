@@ -124,8 +124,21 @@ namespace UnityEditor
                     if (before[o] == null) unwritable[o] = Fields(o);
                 }
                 List<Material> dropped;
-                using (ScriptedImports.Scope())
-                    dropped = model ? RunModel(file, root, session) : RunPrefab(file, root, session);
+                // What the callbacks mark dirty is the import's, not a change to save into the
+                // asset's source: the file's objects keep the dirtiness they had (unmeasured).
+                var dirtyBefore = new HashSet<int>(EditorUtility.DirtyIds);
+                try
+                {
+                    using (ScriptedImports.Scope())
+                        dropped = model ? RunModel(file, root, session) : RunPrefab(file, root, session);
+                }
+                finally
+                {
+                    foreach (var o in HierarchyObjects(root))
+                        if (o != null && !dirtyBefore.Contains(o.GetInstanceID())) EditorUtility.ClearDirty(o);
+                    foreach (var o in file.Objects.Values)
+                        if (o is not null && !o.m_Destroyed && !dirtyBefore.Contains(o.GetInstanceID())) EditorUtility.ClearDirty(o);
+                }
                 file.PostprocessAnswer = Changes(file, root, model, oldIds, assets, before, dropped, located);
                 foreach (var (o, fields) in unwritable)
                     if (o != null && Fields(o) != fields && s_Unkept.Add(o.GetType()))
@@ -478,7 +491,8 @@ namespace UnityEditor
             // "Added GameObjects and Components always get the DontSaveInEditor flag added").
             if (!model)
                 foreach (var o in objects)
-                    if (!oldIds.ContainsKey(o) && (o is GameObject || o is Component)) o.hideFlags |= HideFlags.DontSaveInEditor;
+                    if (!oldIds.ContainsKey(o) && (o is GameObject || o is Component))
+                        o.SetHideFlagsQuietly(o.HideFlagsNoThrow | HideFlags.DontSaveInEditor);
 
             // The loaded file holds its objects by their new fileIDs.
             foreach (var id in removed) file.Objects.Remove(id);
