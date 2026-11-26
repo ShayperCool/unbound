@@ -680,6 +680,196 @@ namespace UnityEngine.Tests
             finally { AssetDatabase.Invalidate(); }
         }
 
+        static readonly ImportedTextureInfo Square4 = new ImportedTextureInfo
+        {
+            Width = 4, Height = 4, MipCount = 1, Srgb = 1, FilterMode = (int)FilterMode.Bilinear, AnisoLevel = 1, Readable = 1, Format = 0, Dimension = 2,
+        };
+
+        /// <summary>A generated texture imported again takes the new import's texels under its own
+        /// handle and the copy (destroyed next) the old ones (importselfload kept.Thing.gen width:
+        /// the old reference has the new size); a failed import changes neither.</summary>
+        [Fact]
+        public void AGeneratedTextureTakesTheNewImportUnderItsHandle()
+        {
+            var larger = Square4;
+            larger.Width = larger.Height = 8;
+            var calls = new List<(ulong, string)>();
+            bool succeed = true;
+            var previous = Texture2D.Reimport;
+            Texture2D.Reimport = (handle, key) => { calls.Add((handle, key)); return (succeed, larger); };
+            var old = Texture2D.FromImport(9101, "generated:00000000000000000000000000000a01", "Thing", Square4);
+            var fresh = Texture2D.FromImport(9102, "generated:00000000000000000000000000000a02", "Thing", larger);
+            try
+            {
+                Assert.True(old.TakeImport(fresh));
+                Assert.Equal(new[] { (9101UL, "generated:00000000000000000000000000000a02") }, calls);
+                Assert.Equal(8, old.width);
+                Assert.Equal(9101UL, old.m_NativeHandle);
+                Assert.True(old.IsImported);
+                // The copy releases the texels the loaded texture had.
+                Assert.Equal("generated:00000000000000000000000000000a01", fresh.m_ImportedFrom);
+
+                succeed = false;
+                var other = Texture2D.FromImport(9103, "generated:00000000000000000000000000000a03", "Thing", Square4);
+                Assert.False(old.TakeImport(other));
+                Assert.Equal("generated:00000000000000000000000000000a02", old.m_ImportedFrom);
+                Assert.Equal("generated:00000000000000000000000000000a03", other.m_ImportedFrom);
+                Assert.Equal(8, old.width);
+                other.m_ImportedFrom = null;
+                Object.DestroyImmediate(other, true);
+            }
+            finally
+            {
+                Texture2D.Reimport = previous;
+                // Not generated texels of the native side: nothing to release.
+                old.m_ImportedFrom = fresh.m_ImportedFrom = null;
+                Object.DestroyImmediate(old, true);
+                Object.DestroyImmediate(fresh, true);
+            }
+        }
+
+        /// <summary>A loaded texture and its sprite take a new import in place: the texture its
+        /// texels, the sprite the new rect and pivot, still drawing the loaded texture, not the new
+        /// import's (importselfload kept.Sprite.png: both keep their instance ids).</summary>
+        [Fact]
+        public void ATextureAndItsSpriteTakeANewImportInPlace()
+        {
+            var previous = Texture2D.Reimport;
+            var reimports = new List<string>();
+            Texture2D.Reimport = (handle, key) => { reimports.Add(key); return (true, Square4); };
+            const string guid = "c0de00000000000000000000000000b1";
+            var texture = Texture2D.FromImport(9111, guid, "Sprite", Square4);
+            var copyTexture = Texture2D.FromImport(9112, guid, "Sprite", Square4);
+            var sprite = Sprite.Create(texture, new Rect(0, 0, 4, 4), new Vector2(0.5f, 0.5f), 100, 0, SpriteMeshType.FullRect);
+            var copySprite = Sprite.Create(copyTexture, new Rect(0, 0, 2, 4), Vector2.zero, 50, 0, SpriteMeshType.FullRect);
+            int spriteId = sprite.GetInstanceID();
+            try
+            {
+                Assert.Null(AssetDatabaseRuntime.InPlaceRefusal(sprite, copySprite));
+                AssetDatabaseRuntime.TakeInPlace(new Dictionary<Object, Object>(ReferenceEqualityComparer.Instance)
+                {
+                    [copyTexture] = texture,
+                    [copySprite] = sprite,
+                }, "Assets/Sprite.png");
+                Assert.Equal(new[] { guid }, reimports);
+                Assert.Equal(new Rect(0, 0, 2, 4), sprite.rect);
+                Assert.Equal(50f, sprite.pixelsPerUnit);
+                Assert.Equal(Vector2.zero, sprite.pivot);
+                Assert.Same(texture, sprite.texture);
+                Assert.Equal(spriteId, sprite.GetInstanceID());
+                // The copy, destroyed next, holds the old content.
+                Assert.Equal(new Rect(0, 0, 4, 4), copySprite.rect);
+            }
+            finally
+            {
+                Texture2D.Reimport = previous;
+                foreach (var o in new Object[] { copySprite, sprite, copyTexture, texture }) Object.DestroyImmediate(o, true);
+            }
+        }
+
+        /// <summary>A sprite packed in an atlas is not taken in place (not measured), nor an asset
+        /// whose loaded objects include a kind not taken so; one of text assets is.</summary>
+        [Fact]
+        public void LoadedObjectsThatCannotTakeANewImportAreSaidBeforeReading()
+        {
+            var texture = new Texture2D(4, 4);
+            var sprite = Sprite.Create(texture, new Rect(0, 0, 4, 4), Vector2.zero, 100, 0, SpriteMeshType.FullRect);
+            var bound = Sprite.Create(texture, new Rect(0, 0, 4, 4), Vector2.zero, 100, 0, SpriteMeshType.FullRect);
+            bound.m_AtlasBinding = ("c0de00000000000000000000000000b2", 21300000L);
+            var mesh = new Mesh { IsPersistentAsset = true };
+            var text = new TextAsset("notes") { IsPersistentAsset = true };
+            const string meshGuid = "c0de00000000000000000000000000b3", textGuid = "c0de00000000000000000000000000b4";
+            try
+            {
+                Assert.NotNull(AssetDatabaseRuntime.InPlaceRefusal(bound, sprite));
+                Assert.NotNull(AssetDatabaseRuntime.InPlaceRefusal(sprite, bound));
+                Assert.True(AssetDatabaseRuntime.TakesContentInPlace(sprite));
+                AddLoaded(meshGuid, "Assets/Triangle.fbx", 4300000, mesh);
+                AddLoaded(textGuid, "Assets/Notes.txt", AssetImporters.TextAssetFileId, text);
+                Assert.Contains("Mesh", AssetDatabaseRuntime.LoadedRefusal(meshGuid));
+                Assert.Null(AssetDatabaseRuntime.LoadedRefusal(textGuid));
+                Assert.Null(AssetDatabaseRuntime.LoadedRefusal("c0de00000000000000000000000000b5"));
+            }
+            finally
+            {
+                AssetDatabaseRuntime.Invalidate(meshGuid);
+                AssetDatabaseRuntime.Invalidate(textGuid);
+                foreach (var o in new Object[] { bound, sprite, texture, mesh, text }) Object.DestroyImmediate(o, true);
+            }
+        }
+
+        static void AddLoaded(string guid, string path, long fileId, Object asset)
+        {
+            var file = new LoadedFile { Guid = guid, Path = path, MainObject = asset };
+            file.Objects[fileId] = asset;
+            AssetDatabaseRuntime.AddLoaded(file);
+        }
+
+        /// <summary>ImportAsset of an unchanged asset an importer makes imports it again, with or
+        /// without ForceUpdate (importselfload plain.*): a loaded one whose objects cannot take the
+        /// new import says so once and keeps them; StartAssetEditing holds it back to the last
+        /// StopAssetEditing. An unchanged native-format asset is only reported imported.</summary>
+        [Fact]
+        public void AnUnchangedImportedAssetIsImportedAgainWithOrWithoutForceUpdate()
+        {
+            Write("Assets/M/T.png", "t");
+            Write("Assets/M/T.png.meta", "guid: t1\n");
+            var assets = Initial();
+            assets.AddRange(Assets(("Assets/M/T.png", "c0de00000000000000000000000000c1")));
+            ProjectImports.Scan(assets, Record, out var start);
+            var before = ProjectInfo.ProjectPath;
+            ProjectImports.ResetForTests();
+            ProjectImports.SessionForTests(start);
+            ProjectInfo.ProjectPath = m_Root;
+            AssetDatabase.List("[{\"guid\":\"c0de00000000000000000000000000c1\",\"path\":\"Assets/M/T.png\",\"kind\":\"texture\"},"
+                + "{\"guid\":\"c1\",\"path\":\"Assets/M/C.mat\",\"kind\":\"yaml\"}]");
+            var mesh = new Mesh { IsPersistentAsset = true };
+            var material = new Material(Shader.Find("Hidden/InternalErrorShader")) { IsPersistentAsset = true };
+            AddLoaded("c0de00000000000000000000000000c1", "Assets/M/T.png", 4300000, mesh);
+            AddLoaded("c1", "Assets/M/C.mat", 2100000, material);
+            const string member = "AssetDatabase.ImportAsset of texture asset";
+            Stubs.Forget(member);
+            var reports = new List<string>();
+            var logs = new LogCapture();
+            var previous = Debug.unityLogger.logHandler;
+            Debug.unityLogger.logHandler = logs;
+            using var capture = SessionImports.ReportsForTests((imported, deleted, moved, from) => reports.Add(string.Join(",", imported)));
+            try
+            {
+                AssetDatabase.ImportAsset("Assets/M/T.png");
+                Assert.Equal(1, Stubs.HitReport().FirstOrDefault(h => h.Key == member).Value);
+                Assert.Contains(logs.Lines, l => l.Contains("does not import a loaded asset again (Assets/M/T.png"));
+                AssetDatabase.ImportAsset("Assets/M/T.png", ImportAssetOptions.ForceUpdate);
+                Assert.Equal(2, Stubs.HitReport().FirstOrDefault(h => h.Key == member).Value);
+                Assert.Same(mesh, AssetDatabaseRuntime.Load("c0de00000000000000000000000000c1", 4300000, typeof(Mesh)));
+                // The native-format asset: reported, nothing read again, nothing said.
+                logs.Lines.Clear();
+                AssetDatabase.ImportAsset("Assets/M/C.mat");
+                Assert.Empty(logs.Lines);
+                Assert.Same(material, AssetDatabaseRuntime.Load("c1", 2100000, typeof(Material)));
+                AssetDatabase.StartAssetEditing();
+                AssetDatabase.ImportAsset("Assets/M/T.png");
+                Assert.Equal(1, AssetDatabase.PendingReimportCount);
+                Assert.Equal(2, Stubs.HitReport().FirstOrDefault(h => h.Key == member).Value);
+                AssetDatabase.StopAssetEditing();
+                Assert.Equal(0, AssetDatabase.PendingReimportCount);
+                Assert.Equal(3, Stubs.HitReport().FirstOrDefault(h => h.Key == member).Value);
+                Assert.Equal(new[] { "Assets/M/T.png", "Assets/M/T.png", "Assets/M/C.mat", "Assets/M/T.png" }, reports);
+            }
+            finally
+            {
+                while (AssetDatabase.Editing) AssetDatabase.StopAssetEditing();
+                Debug.unityLogger.logHandler = previous;
+                ProjectInfo.ProjectPath = before;
+                ProjectImports.ResetForTests();
+                AssetDatabaseRuntime.Invalidate("c0de00000000000000000000000000c1");
+                AssetDatabaseRuntime.Invalidate("c1");
+                AssetDatabase.Invalidate();
+                Object.DestroyImmediate(mesh, true);
+                Object.DestroyImmediate(material, true);
+            }
+        }
+
         sealed class LogCapture : ILogHandler
         {
             internal readonly List<string> Lines = new List<string>();

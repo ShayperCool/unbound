@@ -1584,10 +1584,16 @@ namespace Unbound.Runtime
         /// content and the asset loads as it, of the same instance id). A game script's object
         /// takes the new serialized values (its references to the file's other objects pointing at
         /// the kept ones), a text asset the new bytes, a material its file's values (as when it is
-        /// unloaded), an imported 2D texture the new import under
-        /// its renderer handle (so materials that bind it draw the new texels), a UI Toolkit document
-        /// (VisualTreeAsset) the new document tree (refresh-changes document.*: a clone made after
-        /// shows the new content; elements cloned before keep theirs, unmeasured). An asset with
+        /// unloaded), an imported or generated 2D texture the new import under
+        /// its renderer handle (so materials that bind it draw the new texels), a sprite the new
+        /// import's geometry and settings, a UI Toolkit document (VisualTreeAsset) the new document
+        /// tree (refresh-changes document.*: a clone made after shows the new content; elements
+        /// cloned before keep theirs, unmeasured). An asset imported again unchanged by ImportAsset
+        /// takes its new import so too (matches the Unity 6000.0.71f1 Editor,
+        /// tests/projects/importselfload kept.*: a sprite, its texture and a ScriptedImporter's
+        /// generated texture keep their instance ids, the generated one takes the new size). The
+        /// import runs the asset's preprocessors again (Scripting API 6000.0,
+        /// AssetPostprocessor.OnPreprocessTexture: called before the texture importer runs). An asset with
         /// objects of other kinds (a material variant among them), or whose new import has other
         /// objects, keeps its loaded objects
         /// as they are, with a warning: not measured. Nothing loaded: the next load reads the file.
@@ -1600,6 +1606,7 @@ namespace Unbound.Runtime
                 return;
             }
             ImportedInSession(guid);
+            UnityEditor.AssetPostprocessing.ForgetPreprocessed(loaded.Path);
             var (fresh, registered) = ReadFileAgain(guid);
             var kept = new Dictionary<Object, Object>(ReferenceEqualityComparer.Instance);
             string refused = fresh == null ? "its file no longer imports" : null;
@@ -1618,17 +1625,26 @@ namespace Unbound.Runtime
             }
             if (refused != null)
             {
-                Debug.LogWarning($"Unbound: {loaded.Path} changed on disk; its loaded objects keep their old content: {refused}");
+                Debug.LogWarning($"Unbound: {loaded.Path} was imported again; its loaded objects keep their old content: {refused}");
                 if (fresh != null) DestroyFresh(fresh, registered);
                 return;
             }
-            var copier = new SerializedCopier(o => o != null && kept.TryGetValue(o, out var mine) ? mine : o);
+            TakeInPlace(kept, loaded.Path);
+            DestroyFresh(fresh, registered);
+        }
+
+        /// <summary>Each loaded object takes its new import's copy (<paramref name="kept"/>: copy to
+        /// loaded object); references to the copies become references to the loaded objects.</summary>
+        internal static void TakeInPlace(Dictionary<Object, Object> kept, string path)
+        {
+            Object Kept(Object o) => o != null && kept.TryGetValue(o, out var mine) ? mine : o;
+            var copier = new SerializedCopier(Kept);
             foreach (var pair in kept)
             {
                 // A UI Toolkit document's tree is state its serialized values do not hold: the
                 // loaded document takes the new import's (clones made after show the new content).
                 if (pair.Value.GetType() == typeof(UnityEngine.UIElements.VisualTreeAsset))
-                    Unbound.UIElements.UxmlImporter.Adopt((UnityEngine.UIElements.VisualTreeAsset)pair.Value, (UnityEngine.UIElements.VisualTreeAsset)pair.Key, loaded.Path);
+                    Unbound.UIElements.UxmlImporter.Adopt((UnityEngine.UIElements.VisualTreeAsset)pair.Value, (UnityEngine.UIElements.VisualTreeAsset)pair.Key, path);
                 else if (pair.Value is ScriptableObject) copier.CopyScriptObject(pair.Key, pair.Value);
                 // As a material unloaded reads its file again (it draws the new values).
                 else if (pair.Value is Material material) material.RevertTo((Material)pair.Key);
@@ -1636,12 +1652,42 @@ namespace Unbound.Runtime
                 {
                     // Counted as updated once, then the import's count is the one it now has.
                     texture.IncrementUpdateCount();
-                    if (!texture.ReloadImported())
-                        Debug.LogWarning($"Unbound: {loaded.Path} changed on disk; its texture '{texture.name}' keeps its old content (its file no longer imports as a 2D texture)");
+                    if (!texture.TakeImport((Texture2D)pair.Key))
+                        Debug.LogWarning($"Unbound: {path} was imported again; its texture '{texture.name}' keeps its old content (its new import is not a 2D texture)");
                 }
-                else SwapContent(pair.Key, pair.Value);
+                else
+                {
+                    SwapContent(pair.Key, pair.Value);
+                    // A sprite's texture is the kept one, not the new import's (destroyed next).
+                    RemapReferences(pair.Value, Kept);
+                }
             }
-            DestroyFresh(fresh, registered);
+        }
+
+        /// <summary>Why the asset's loaded objects cannot take a new import in place (a kind
+        /// <see cref="TakesContentInPlace"/> does not take, a material variant or a sprite in an
+        /// atlas), before it is read again; null when they can or nothing is loaded.</summary>
+        internal static string LoadedRefusal(string guid)
+        {
+            if (!s_Files.TryGetValue(guid, out var loaded) || loaded == null) return null;
+            foreach (var old in loaded.Objects.Values)
+                if (old != null && !old.m_Destroyed && InPlaceRefusal(old, old) is string why) return why;
+            return null;
+        }
+
+        /// <summary>The fields below Object of <paramref name="obj"/> that hold an object
+        /// <paramref name="map"/> replaces, given its replacement.</summary>
+        static void RemapReferences(Object obj, Func<Object, Object> map)
+        {
+            for (var type = obj.GetType(); type != null && type != typeof(Object); type = type.BaseType)
+                foreach (var field in type.GetFields(System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public
+                    | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.DeclaredOnly))
+                {
+                    if (field.IsInitOnly || !typeof(Object).IsAssignableFrom(field.FieldType)) continue;
+                    var value = (Object)field.GetValue(obj);
+                    var mapped = map(value);
+                    if (!ReferenceEquals(mapped, value)) field.SetValue(obj, mapped);
+                }
         }
 
         /// <summary>Why a loaded object cannot take its new import's copy in place, or null: not
@@ -1652,15 +1698,19 @@ namespace Unbound.Runtime
         {
             if (copy == null || copy.GetType() != old.GetType()) return $"its {old.GetType().Name} '{old.name}' is not in its new import";
             if (!TakesContentInPlace(old))
-                return $"Unbound takes a new import into loaded objects only for text assets, materials, imported 2D textures, UI Toolkit documents and game scripts' objects, not a {old.GetType().Name}";
+                return $"Unbound takes a new import into loaded objects only for text assets, materials, imported 2D textures, their sprites, UI Toolkit documents and game scripts' objects, not a {old.GetType().Name}";
             if (old is Material a && copy is Material b && (a.isVariant || b.isVariant || a.HasLockedProperties || b.HasLockedProperties))
                 return $"its material '{old.name}' is a material variant or has locked properties";
+            // Bound to a packed atlas's page in Play mode: not measured.
+            if ((old is Sprite s && s.m_AtlasBinding != null) || (copy is Sprite t && t.m_AtlasBinding != null))
+                return $"its sprite '{old.name}' is packed in a sprite atlas";
             return null;
         }
 
         /// <summary>Whether a loaded object takes a new import's content in place (measured kinds:
-        /// a game script's object as a YAML asset holds it, a text asset, a material, an imported 2D
-        /// texture, a UI Toolkit document).
+        /// a game script's object as a YAML asset holds it, a text asset, a material, an imported or
+        /// generated 2D texture and its sprites, a UI Toolkit document, a DefaultAsset, which holds
+        /// nothing).
         /// The engine's other script objects (UI Toolkit's style sheets, ...) build state the
         /// serialized values do not hold: not kept (unmeasured).</summary>
         internal static bool TakesContentInPlace(Object o) =>
@@ -1668,7 +1718,9 @@ namespace Unbound.Runtime
             || o.GetType() == typeof(UnityEngine.UIElements.VisualTreeAsset)
             || (o is TextAsset && o is not UnityEditor.MonoScript)
             || o.GetType() == typeof(Material)
-            || (o.GetType() == typeof(Texture2D) && ((Texture2D)o).IsImported);
+            || (o.GetType() == typeof(Texture2D) && ((Texture2D)o).IsImported)
+            || o.GetType() == typeof(Sprite)
+            || o.GetType() == typeof(UnityEditor.DefaultAsset);
 
         /// <summary>The fields a text asset's or a UI Toolkit document's own classes declare
         /// (everything below Object, ScriptableObject's enabled state too, which both hold)

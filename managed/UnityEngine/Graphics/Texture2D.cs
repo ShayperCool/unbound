@@ -980,7 +980,7 @@ namespace UnityEngine
 
         /// <summary>The texture file this texture was imported from. Unlike <see cref="m_AssetGuid"/>
         /// it stays when a script reinitializes the texture: unloading reads the file again.</summary>
-        string m_ImportedFrom;
+        internal string m_ImportedFrom;
 
         /// <summary>Whether a texture file made this texture (it can be imported again in place).</summary>
         internal bool IsImported => m_ImportedFrom != null;
@@ -1059,6 +1059,23 @@ namespace UnityEngine
             SetSamplerQuietly(filterMode, wrapModeU, wrapModeV, m_WrapModeW, anisoLevel, 0f);
             ApplyImport(info);
             m_ImportUpdateCount = updateCount;
+            return true;
+        }
+
+        /// <summary>The import <paramref name="fresh"/> (a new import of the same asset, destroyed next)
+        /// made, taken under this texture's renderer handle as <see cref="ReloadImported"/> takes its
+        /// file's: a generated texture takes the new texels, and the copy the old ones, which it
+        /// releases. False, with nothing changed, as <see cref="ReloadImported"/>.</summary>
+        internal bool TakeImport(Texture2D fresh)
+        {
+            var own = m_ImportedFrom;
+            m_ImportedFrom = fresh.m_ImportedFrom ?? own;
+            if (!ReloadImported())
+            {
+                m_ImportedFrom = own;
+                return false;
+            }
+            fresh.m_ImportedFrom = own;
             return true;
         }
 

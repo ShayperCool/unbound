@@ -289,8 +289,9 @@ namespace UnityEditor
         /// back: imported again at the last StopAssetEditing.</summary>
         static readonly List<string> s_PendingReimports = new List<string>();
 
-        /// <summary>How many changed assets wait for the last StopAssetEditing (tests).</summary>
-        internal static int PendingReimportCount => s_PendingReimports.Count;
+        /// <summary>How many assets wait for the last StopAssetEditing to be imported again, changed
+        /// or not (tests).</summary>
+        internal static int PendingReimportCount => s_PendingReimports.Count + s_PendingImportsAgain.Count;
 
         static bool CompilesScripts(string path) =>
             path.EndsWith(".cs", StringComparison.OrdinalIgnoreCase) || path.EndsWith(".asmdef", StringComparison.OrdinalIgnoreCase)
@@ -352,6 +353,9 @@ namespace UnityEditor
                 var reimports = s_PendingReimports.Distinct(StringComparer.Ordinal).ToList();
                 s_PendingReimports.Clear();
                 if (reimports.Count > 0) ReimportChanged(reimports);
+                var again = s_PendingImportsAgain.Distinct(StringComparer.Ordinal).ToList();
+                s_PendingImportsAgain.Clear();
+                foreach (var path in again) ImportAgain(path);
                 if (s_PendingRefresh)
                 {
                     s_PendingRefresh = false;

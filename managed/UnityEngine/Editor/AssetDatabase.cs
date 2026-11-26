@@ -508,11 +508,15 @@ namespace UnityEditor
 
         public static void ImportAsset(string path) => ImportAsset(path, ImportAssetOptions.Default);
 
-        /// <summary>Assets are read from the project as they load, so there is nothing to bring
-        /// up to date; a forced import of a loaded Visual Effect Graph compiles it again
-        /// (<see cref="VisualEffectImports.Reimport"/>), and a forced import of an asset not loaded
-        /// yet imports it now, as the Editor runs the importer during the call (tests/projects/toolapis
-        /// imported.during). A loaded asset is not imported again.</summary>
+        /// <summary>An asset of the database is imported again during the call, with or without
+        /// <c>ForceUpdate</c>, whether or not it changed: its preprocessors, importer and
+        /// postprocessors run again and the objects loaded before take the new import in place
+        /// (matches the Unity 6000.0.71f1 Editor, tests/projects/importselfload plain.*, plain2.*,
+        /// reimport.*, kept.*: textures and ScriptedImporter assets; <see cref="ImportAgain"/>). A
+        /// loaded Visual Effect Graph compiles again (<see cref="VisualEffectImports.Reimport"/>),
+        /// an asset not loaded yet is imported now (tests/projects/toolapis imported.during). A
+        /// native-format asset (a YAML asset, prefab or scene), whose loaded objects are the asset,
+        /// is read again only when its file changed on disk.</summary>
         public static void ImportAsset(string path, ImportAssetOptions options)
         {
             // Asked for while the editor domain loads: it runs once the load has ended.
@@ -526,62 +530,95 @@ namespace UnityEditor
                 ImportNew(normalized);
                 return;
             }
-            if ((options & ImportAssetOptions.ForceUpdate) != 0)
+            var existing = normalized;
+            var guid = string.IsNullOrEmpty(existing) ? null : AssetPathToGUID(existing);
+            if (string.IsNullOrEmpty(guid)) return;
+            bool force = (options & ImportAssetOptions.ForceUpdate) != 0;
+            bool changed = ProjectImports.ChangedSinceSeen(existing);
+            // What an import imports is the session's import, not the next start's.
+            if (!changed && VisualEffectImports.Reimport(existing))
             {
-                // What a forced import imports is the session's import, not the next start's.
-                if (VisualEffectImports.Reimport(path))
-                {
-                    ProjectImports.Wrote(path);
-                    SessionImports.Imported(path);
-                    return;
-                }
-                var guid = AssetPathToGUID(path);
-                if (!string.IsNullOrEmpty(guid) && !IsValidFolder(path))
-                {
-                    // A V2 sprite atlas is imported by SpriteAtlasImporter; a forced import
-                    // flushes any dirty cached importer to `.meta`, evicts the cached importer,
-                    // and reloads a fresh clean SpriteAtlas from its source and `.meta` (matches
-                    // the Unity 6000.0.71f1 Editor, tests/projects/spriteatlaseditor v2include and
-                    // v2importerplatformset).
-                    if (path.EndsWith(".spriteatlasv2", StringComparison.OrdinalIgnoreCase))
-                    {
-                        if (AssetImporter.TryGetCached(path) is UnityEditor.U2D.SpriteAtlasImporter cached && EditorUtility.IsDirty(cached))
-                            ImporterMeta.Write(cached);
-                        UnityEditor.U2D.SpriteAtlasImporter.ReimportAsset(path, guid);
-                        ProjectImports.Wrote(GUIDToAssetPath(guid));
-                        SessionImports.Imported(GUIDToAssetPath(guid));
-                        return;
-                    }
-                    if (!AssetDatabaseRuntime.IsLoaded(guid))
-                    {
-                        // Imported now: its import's messages are logged now.
-                        AssetDatabaseRuntime.ImportedInSession(guid);
-                        AssetDatabaseRuntime.LoadFile(guid);
-                        ProjectImports.Wrote(GUIDToAssetPath(guid));
-                        SessionImports.Imported(GUIDToAssetPath(guid));
-                        return;
-                    }
-                }
+                ProjectImports.Wrote(existing);
+                SessionImports.Imported(existing);
+                return;
             }
-            // An asset of the database is imported (and reported so) whether or not it changed
-            // (tests/projects/scenesave session-imports plain-import, force-import); one whose file
-            // or .meta changed on disk is imported again, its loaded objects kept (refresh-changes
-            // import).
-            var existing = path?.Replace('\\', '/').TrimEnd('/');
-            if (string.IsNullOrEmpty(existing) || string.IsNullOrEmpty(AssetPathToGUID(existing))) return;
-            if (ProjectImports.ChangedSinceSeen(existing))
+            // A V2 sprite atlas is imported by SpriteAtlasImporter; a forced import
+            // flushes any dirty cached importer to `.meta`, evicts the cached importer,
+            // and reloads a fresh clean SpriteAtlas from its source and `.meta` (matches
+            // the Unity 6000.0.71f1 Editor, tests/projects/spriteatlaseditor v2include and
+            // v2importerplatformset).
+            if (force && !IsValidFolder(existing) && existing.EndsWith(".spriteatlasv2", StringComparison.OrdinalIgnoreCase))
             {
-                // Held back by StartAssetEditing like the other imports (Scripting API 6000.0,
-                // AssetDatabase.StartAssetEditing: no imports until StopAssetEditing).
+                if (AssetImporter.TryGetCached(existing) is UnityEditor.U2D.SpriteAtlasImporter cached && EditorUtility.IsDirty(cached))
+                    ImporterMeta.Write(cached);
+                UnityEditor.U2D.SpriteAtlasImporter.ReimportAsset(existing, guid);
+                ProjectImports.Wrote(GUIDToAssetPath(guid));
+                SessionImports.Imported(GUIDToAssetPath(guid));
+                return;
+            }
+            // An asset whose file or .meta changed on disk is imported again, its loaded objects
+            // kept (tests/projects/scenesave refresh-changes import); held back by StartAssetEditing
+            // like the other imports (Scripting API 6000.0, AssetDatabase.StartAssetEditing: no
+            // imports until StopAssetEditing).
+            if (changed)
+            {
                 if (Editing) s_PendingReimports.Add(existing);
                 else ReimportChanged(new[] { existing });
+                return;
             }
-            else
+            if (IsValidFolder(existing) || CompilesScripts(existing) || NativeFormat(existing))
             {
+                // Imported now: its import's messages are logged now.
+                if (force && !IsValidFolder(existing) && !AssetDatabaseRuntime.IsLoaded(guid))
+                {
+                    AssetDatabaseRuntime.ImportedInSession(guid);
+                    AssetDatabaseRuntime.LoadFile(guid);
+                    ProjectImports.Wrote(GUIDToAssetPath(guid));
+                    SessionImports.Imported(GUIDToAssetPath(guid));
+                    return;
+                }
+                // Reported imported whether or not it changed (tests/projects/scenesave
+                // session-imports plain-import, force-import).
                 SessionImports.Imported(existing);
-                if ((options & ImportAssetOptions.ForceUpdate) != 0)
-                    Stubs.Ignored("AssetDatabase.ImportAsset", "a forced import of an unchanged asset does not import it again");
+                if (force && !IsValidFolder(existing))
+                    Stubs.Ignored("AssetDatabase.ImportAsset", "a forced import of an unchanged native-format asset or script does not import it again");
+                return;
             }
+            if (Editing) s_PendingImportsAgain.Add(existing);
+            else ImportAgain(existing);
+        }
+
+        /// <summary>Unchanged assets ImportAsset was asked for while StartAssetEditing held imports
+        /// back: imported again at the last StopAssetEditing.</summary>
+        static readonly List<string> s_PendingImportsAgain = new List<string>();
+
+        /// <summary>Whether an asset's loaded objects are the asset itself, read from its file (a
+        /// YAML asset, a prefab, a scene), not made by an importer from it.</summary>
+        static bool NativeFormat(string path) => Kind(path) is "yaml" or "prefab" or "scene";
+
+        /// <summary>An unchanged asset that an importer makes objects of, imported again now: one not
+        /// loaded yet is loaded (its import runs, tests/projects/importselfload plain.*); a loaded one
+        /// reads its file again into its loaded objects, its preprocessors, importer and
+        /// postprocessors run (<see cref="AssetDatabaseRuntime.ReimportInPlace"/>), unless they
+        /// cannot take a new import (said once per kind, the asset kept as it is). Reported
+        /// imported.</summary>
+        static void ImportAgain(string path)
+        {
+            var guid = AssetPathToGUID(path);
+            if (string.IsNullOrEmpty(guid)) return;
+            // Asked for by the asset's own import (its importer or postprocessors): not measured.
+            if (AssetDatabaseRuntime.Importing(guid))
+                Stubs.Ignored("AssetDatabase.ImportAsset from an asset's own import", $"does not import it again ({path})");
+            else if (!AssetDatabaseRuntime.IsLoaded(guid))
+            {
+                AssetDatabaseRuntime.ImportedInSession(guid);
+                AssetDatabaseRuntime.LoadFile(guid);
+            }
+            else if (AssetDatabaseRuntime.LoadedRefusal(guid) is string why)
+                Stubs.Ignored("AssetDatabase.ImportAsset of " + (Kind(path) ?? "an") + " asset", $"does not import a loaded asset again ({path}: {why})");
+            else AssetDatabaseRuntime.ReimportInPlace(guid);
+            ProjectImports.Wrote(path);
+            SessionImports.Imported(path);
         }
 
         [Unbound.EditorFaithful("Unbound keeps no asset files open")]

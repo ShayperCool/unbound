@@ -52,30 +52,5 @@
   "kept/Assets/Quiet/Quiet.png Texture2D Quiet",
   "kept/Assets/Textures/Sprite.png Sprite Sprite",
   "kept/Assets/Textures/Sprite.png Texture2D Sprite"
- ],
- "AssetDatabase.ImportAsset of an asset already imported does not import it again (its importer and callbacks do not run again; the generated texture keeps its size): forced reimport follow-up": [
-  "kept/Assets/Data/Thing.gen width",
-  "plain/import Assets/Data/Thing.gen",
-  "plain/import Assets/Quiet/Quiet.gen",
-  "plain/lines",
-  "plain/post Assets/Data/Thing.gen",
-  "plain/post Assets/Quiet/Quiet.gen",
-  "plain/post Assets/Quiet/Quiet.png",
-  "plain/post Assets/Textures/Sprite.png",
-  "plain/pre Assets/Quiet/Quiet.png",
-  "plain/pre Assets/Textures/Sprite.png",
-  "plain/sprites Assets/Quiet/Quiet.png",
-  "plain/sprites Assets/Textures/Sprite.png",
-  "plain2/import Assets/Quiet/Quiet.gen",
-  "plain2/lines",
-  "plain2/post Assets/Quiet/Quiet.gen",
-  "plain2/post Assets/Quiet/Quiet.png",
-  "plain2/pre Assets/Quiet/Quiet.png",
-  "plain2/sprites Assets/Quiet/Quiet.png",
-  "reimport/import Assets/Data/Thing.gen",
-  "reimport/post Assets/Data/Thing.gen",
-  "reimport/post Assets/Textures/Sprite.png",
-  "reimport/pre Assets/Textures/Sprite.png",
-  "reimport/sprites Assets/Textures/Sprite.png"
  ]
 }
