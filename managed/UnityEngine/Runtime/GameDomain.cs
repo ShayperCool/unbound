@@ -320,8 +320,9 @@ namespace Unbound.Runtime
         /// own script (what an object of it names as m_Script, MonoScript.FromMonoBehaviour,
         /// a ScriptedImporter's .meta section) is the file named like it. A partial class whose
         /// other files declare it first (com.unity.2d.psdimporter: PSDImporterAPI.cs,
-        /// PSDSpriteEditorDataProvider.cs beside PSDImporter.cs) keeps PSDImporter.cs, which every
-        /// .meta the Editor writes for its assets names. A class no file is named like keeps the
+        /// PSDSpriteEditorDataProvider.cs beside PSDImporter.cs) keeps PSDImporter.cs: the Editor
+        /// imports with the settings of a .meta naming that file and keeps naming it when it writes
+        /// the .meta again (tests/projects/importerpick Own.part). A class no file is named like keeps the
         /// last file that stands for it (several such files: which one the Editor takes is not
         /// measured).
         /// </summary>
