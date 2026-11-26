@@ -290,7 +290,8 @@ In dependency order; each item ends with an Editor-reference probe.
       property or a camera's far or near plane (built-in RP): prepare, play, pause, seek, step,
       loop, events and states as the Editor (`tests/projects/video`: every record and frame
       matches, camera planes within 0.6/255). Left: camera plane modes under a render pipeline
-      asset, audio output, URL sources over the network, transparency (VP8 alpha).
+      asset, URL sources over the network, transparency (VP8 alpha). Audio output (AudioSource and
+      Direct) plays through ffmpeg and the mixer (`tests/projects/videoaudio`, Q841); API Only output is left.
 - [x] XR without a device: XRSettings, XRDevice, XRStats, input devices and tracking, usages and
       subsystems answer as the Editor with no XR provider (`tests/projects/xr`: all records match).
 - [x] Wind zones: WindZone as the Editor has it and its wind on particles (External Forces):
