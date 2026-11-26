@@ -37,7 +37,7 @@ nine-line file and its .meta.
 
 Unbound matches every row but `create/meta` (`residuals.json`). Not measured: a graph whose objects
 change (models added or removed: Unbound refuses to write it), subgraphs (`.vfxoperator`,
-`.vfxblock`), `rendererSettings`, `SaveAssetIfDirty` and the Editor's exit for a dirty graph (the
+`.vfxblock`: refused too), `rendererSettings`, `SaveAssetIfDirty` and the Editor's exit for a dirty graph (the
 file is left as it is), several dirty assets at once (their order in `OnWillSaveAssets`), scene
 saves' `OnWillSaveAssets`, and a type that a graph's models name newly (Unbound refuses a .NET class
 library name, which the Editor's Mono could not read back).

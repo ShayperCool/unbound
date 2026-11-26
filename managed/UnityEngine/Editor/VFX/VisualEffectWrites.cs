@@ -21,6 +21,11 @@ namespace Unbound.Runtime
     /// </summary>
     internal static class VisualEffectWrites
     {
+        /// <summary>While AssetDatabase.SaveAssets saves: the resources whose WriteAsset refused
+        /// (the package's OnWillSaveAssets wrote them first), which the save then leaves alone
+        /// instead of refusing them again.</summary>
+        internal static HashSet<VisualEffectResource> RefusedInSave;
+
         internal static void Write(VisualEffectResource resource)
         {
             if (!AssetDatabaseRuntime.TryGetLocation(resource, out var guid, out _))
@@ -36,8 +41,14 @@ namespace Unbound.Runtime
                 Debug.LogWarning($"Unbound: {info.Path} is not written: it is in a package the project does not hold.");
                 return;
             }
+            // Subgraph files (.vfxoperator, .vfxblock) are not measured.
+            if (!info.Path.EndsWith(".vfx", StringComparison.OrdinalIgnoreCase))
+                throw new NotSupportedException($"Unbound does not write subgraph files yet ({info.Path}).");
             var text = File.ReadAllText(info.File);
-            if (!text.StartsWith(UnityYamlText.Preamble, StringComparison.Ordinal))
+            // A file with CRLF line endings is text serialization too (Parse reads it as LF, and it
+            // is written with LF, as AssetFiles writes such a file).
+            if (!text.StartsWith(UnityYamlText.Preamble, StringComparison.Ordinal)
+                && !text.StartsWith(UnityYamlText.Preamble.Replace("\n", "\r\n"), StringComparison.Ordinal))
             {
                 Debug.LogError($"Unbound: {info.Path} is not written: Unbound writes graph files in Unity's text serialization only.");
                 return;

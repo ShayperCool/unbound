@@ -177,7 +177,11 @@ namespace UnityEditor.VFX
             // What Unbound cannot write yet is reported, and the file left as it is (the package
             // calls this from AssetDatabase.SaveAssets' OnWillSaveAssets, which must go on).
             try { VisualEffectWrites.Write(this); }
-            catch (NotSupportedException e) { Debug.LogError($"Unbound: {AssetDatabase.GetAssetPath(this)} is not written: {e.Message}"); }
+            catch (NotSupportedException e)
+            {
+                Debug.LogError($"Unbound: {AssetDatabase.GetAssetPath(this)} is not written: {e.Message}");
+                VisualEffectWrites.RefusedInSave?.Add(this);
+            }
         }
 
         /// <summary>Makes a set of objects the file's contents (the resource itself is not one of

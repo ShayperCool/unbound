@@ -101,6 +101,17 @@ namespace UnityEngine.Tests
             Assert.Empty(m_Logs);
         }
 
+        /// <summary>The engine's own processors (the terrain editor's, which saves every path it is
+        /// given, as Unity's C# does) keep the paths: a save with no project processor saves them all.</summary>
+        [Fact]
+        public void TheEnginesOwnProcessorsKeepEveryPath()
+        {
+            AssetModificationProcessorInternal.ProcessorsForTests = null;
+            var saved = AssetModificationProcessorInternal.OnWillSaveAssets(new[] { "Assets/A.asset", "Assets/B.mat" });
+            Assert.Equal(new[] { "Assets/A.asset", "Assets/B.mat" }, saved);
+            Assert.Empty(m_Logs);
+        }
+
         [Fact]
         public void NoneDirtyStillCallsWithAnEmptyList()
         {

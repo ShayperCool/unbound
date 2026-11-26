@@ -57,29 +57,37 @@ namespace Unbound.Runtime
             // dirty assets (in path order; the Editor's order for several is unmeasured; assets
             // CreateAsset made, written above, are not among them: unmeasured) and saves the paths
             // they return; a processor may have saved some itself (the VFX package writes its graphs).
-            if (willSave)
+            try
             {
-                // A package the project does not hold is not the project's to save: its paths are
-                // not offered, and Save leaves them as before.
-                var paths = new List<string>();
-                foreach (var guid in byGuid.Keys)
-                    if (!AssetDatabase.IsImmutablePackagePath(AssetDatabaseRuntime.PathOf(guid))) paths.Add(AssetDatabaseRuntime.PathOf(guid));
-                paths.Sort(StringComparer.Ordinal);
-                var save = new HashSet<string>(AssetModificationProcessorInternal.OnWillSaveAssets(paths.ToArray()), StringComparer.Ordinal);
-                foreach (var guid in new List<string>(byGuid.Keys))
+                if (willSave)
                 {
-                    var path = AssetDatabaseRuntime.PathOf(guid);
-                    byGuid[guid].RemoveAll(o => o == null || !EditorUtility.IsDirty(o));
-                    if (byGuid[guid].Count == 0 || (!save.Contains(path) && !AssetDatabase.IsImmutablePackagePath(path))) byGuid.Remove(guid);
+                    // A package the project does not hold is not the project's to save: its paths
+                    // are not offered, and Save leaves them as before.
+                    var paths = new List<string>();
+                    foreach (var guid in byGuid.Keys)
+                        if (!AssetDatabase.IsImmutablePackagePath(AssetDatabaseRuntime.PathOf(guid))) paths.Add(AssetDatabaseRuntime.PathOf(guid));
+                    paths.Sort(StringComparer.Ordinal);
+                    VisualEffectWrites.RefusedInSave = new HashSet<UnityEditor.VFX.VisualEffectResource>(ReferenceEqualityComparer.Instance);
+                    var save = new HashSet<string>(AssetModificationProcessorInternal.OnWillSaveAssets(paths.ToArray()), StringComparer.Ordinal);
+                    foreach (var guid in new List<string>(byGuid.Keys))
+                    {
+                        var path = AssetDatabaseRuntime.PathOf(guid);
+                        byGuid[guid].RemoveAll(o => o == null || !EditorUtility.IsDirty(o));
+                        if (byGuid[guid].Count == 0 || (!save.Contains(path) && !AssetDatabase.IsImmutablePackagePath(path))) byGuid.Remove(guid);
+                    }
+                }
+                foreach (var pair in byGuid)
+                {
+                    try { Save(pair.Key, pair.Value, unchangedStays, willSave); }
+                    catch (Exception e) when (e is IOException || e is NotSupportedException || e is UnauthorizedAccessException)
+                    {
+                        Debug.LogError($"Unbound: {AssetDatabaseRuntime.PathOf(pair.Key)} is not saved: {e.Message}");
+                    }
                 }
             }
-            foreach (var pair in byGuid)
+            finally
             {
-                try { Save(pair.Key, pair.Value, unchangedStays, willSave); }
-                catch (Exception e) when (e is IOException || e is NotSupportedException || e is UnauthorizedAccessException)
-                {
-                    Debug.LogError($"Unbound: {AssetDatabaseRuntime.PathOf(pair.Key)} is not saved: {e.Message}");
-                }
+                VisualEffectWrites.RefusedInSave = null;
             }
         }
 
@@ -112,7 +120,8 @@ namespace Unbound.Runtime
                 foreach (var o in loaded.Objects.Values)
                     if (o is UnityEditor.VFX.VisualEffectResource resource)
                     {
-                        VisualEffectWrites.Write(resource);
+                        // Refused while the package's OnWillSaveAssets wrote it: said once already.
+                        if (VisualEffectWrites.RefusedInSave?.Contains(resource) != true) VisualEffectWrites.Write(resource);
                         return;
                     }
             }

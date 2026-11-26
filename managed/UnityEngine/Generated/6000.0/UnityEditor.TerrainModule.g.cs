@@ -372,12 +372,6 @@ namespace UnityEditor
         [global::Unbound.Stub] internal static void RefreshPrototypes() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TerrainMenus.RefreshPrototypes"); }
         [global::Unbound.Stub] public TerrainMenus() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TerrainMenus.ctor"); }
     }
-    [global::Unbound.Stub]
-    internal unsafe partial class TerrainModificationProcessor : global::UnityEditor.AssetModificationProcessor
-    {
-        [global::Unbound.Stub] public static string[] OnWillSaveAssets(string[] paths) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TerrainModificationProcessor.OnWillSaveAssets"); return global::System.Array.Empty<string>(); }
-        [global::Unbound.Stub] public TerrainModificationProcessor() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TerrainModificationProcessor.ctor"); }
-    }
     internal enum TerrainTool
     {
         None = -1,
