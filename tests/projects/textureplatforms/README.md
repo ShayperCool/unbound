@@ -61,7 +61,7 @@ corrected before they are narrowed.
 Not covered: a default and another platform both missing on load (Unbound adds the default
 last), a read adding an entry after the default changed (Unbound copies the default as it is
 then), a save after reads alone added entries or after only an added entry was cleared (Unbound
-writes nothing), values a platform
+writes nothing), a save after an entry the importer added was edited (a property of an added default, a SerializedObject edit: Unbound writes the list with it), values a platform
 validates (sizes, formats, qualities out of range), the format quality a platform reads for BC6H
 and BC7 (the sprite atlas importer's rule is not applied), files of older serialized versions,
 PNGs with an iCCP chunk, gAMA values above libpng's range, an sRGB chunk after the palette, the rounding of 16-bit samples between the 256 measured ones, and the
