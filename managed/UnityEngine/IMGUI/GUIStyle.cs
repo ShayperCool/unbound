@@ -605,6 +605,10 @@ namespace UnityEngine
                 foreach (var style in m_CustomStyles)
                     if (style != null && !string.IsNullOrEmpty(style.name))
                         m_Styles[style.name] = style;
+            // Unity's C#: the style a missing name gives stretches vertically, its text red (measured:
+            // a layout rect of a missing style fills its area, tests/projects/editorcontrolsb2).
+            error.stretchHeight = true;
+            error.normal.textColor = Color.red;
         }
 
         public GUIStyle GetStyle(string styleName)
