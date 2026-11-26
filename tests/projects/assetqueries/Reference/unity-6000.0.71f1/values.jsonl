@@ -1,0 +1,215 @@
+{"k":"meta/assets","v":"\"Assets.meta\""}
+{"k":"exists/assets","v":"True"}
+{"k":"folder/assets","v":"found True root True immutable False"}
+{"k":"meta/data","v":"\"Assets/Data.meta\""}
+{"k":"exists/data","v":"True"}
+{"k":"folder/data","v":"found True root False immutable False"}
+{"k":"meta/data_slash","v":"\"Assets/Data.meta\""}
+{"k":"exists/data_slash","v":"False"}
+{"k":"folder/data_slash","v":"found True root False immutable False"}
+{"k":"meta/a","v":"\"Assets/Data/A.txt.meta\""}
+{"k":"exists/a","v":"True"}
+{"k":"folder/a","v":"found True root False immutable False"}
+{"k":"meta/a_lower","v":"\"assets/data/a.txt.meta\""}
+{"k":"exists/a_lower","v":"True"}
+{"k":"folder/a_lower","v":"found True root False immutable False"}
+{"k":"meta/a_slash","v":"\"Assets/Data/A.txt.meta\""}
+{"k":"exists/a_slash","v":"False"}
+{"k":"folder/a_slash","v":"found True root False immutable False"}
+{"k":"meta/a_backslash","v":"\"Assets\\Data\\A.txt.meta\""}
+{"k":"exists/a_backslash","v":"True"}
+{"k":"folder/a_backslash","v":"found True root False immutable False"}
+{"k":"meta/a_dot","v":"\"Assets/./Data/A.txt.meta\""}
+{"k":"exists/a_dot","v":"False"}
+{"k":"folder/a_dot","v":"found True root False immutable False"}
+{"k":"meta/a_space","v":"\" Assets/Data/A.txt.meta\""}
+{"k":"exists/a_space","v":"False"}
+{"k":"folder/a_space","v":"found False root False immutable False"}
+{"k":"meta/missing","v":"\"Assets/Data/Missing.txt.meta\""}
+{"k":"exists/missing","v":"False"}
+{"k":"folder/missing","v":"found True root False immutable False"}
+{"k":"meta/missing_folder","v":"\"Assets/Nothing.meta\""}
+{"k":"exists/missing_folder","v":"False"}
+{"k":"folder/missing_folder","v":"found True root False immutable False"}
+{"k":"meta/sub","v":"\"Assets/Bundled/Sub.meta\""}
+{"k":"exists/sub","v":"True"}
+{"k":"folder/sub","v":"found True root False immutable False"}
+{"k":"meta/packages","v":"\"Packages.meta\""}
+{"k":"exists/packages","v":"False"}
+{"k":"folder/packages","v":"found False root False immutable False"}
+{"k":"meta/local","v":"\"Packages/com.probe.local.meta\""}
+{"k":"exists/local","v":"True"}
+{"k":"folder/local","v":"found True root True immutable False"}
+{"k":"meta/local_runtime","v":"\"Packages/com.probe.local/Runtime.meta\""}
+{"k":"exists/local_runtime","v":"True"}
+{"k":"folder/local_runtime","v":"found True root False immutable False"}
+{"k":"meta/local_manifest","v":"\"Packages/com.probe.local/package.json.meta\""}
+{"k":"exists/local_manifest","v":"True"}
+{"k":"folder/local_manifest","v":"found True root False immutable False"}
+{"k":"meta/local_e","v":"\"Packages/com.probe.local/Runtime/E.txt.meta\""}
+{"k":"exists/local_e","v":"True"}
+{"k":"folder/local_e","v":"found True root False immutable False"}
+{"k":"meta/module","v":"\"Packages/com.unity.modules.audio.meta\""}
+{"k":"exists/module","v":"True"}
+{"k":"folder/module","v":"found True root True immutable True"}
+{"k":"meta/module_manifest","v":"\"Packages/com.unity.modules.audio/package.json.meta\""}
+{"k":"exists/module_manifest","v":"True"}
+{"k":"folder/module_manifest","v":"found True root False immutable True"}
+{"k":"meta/unknown_package","v":"\"Packages/com.probe.none.meta\""}
+{"k":"exists/unknown_package","v":"False"}
+{"k":"folder/unknown_package","v":"found False root False immutable False"}
+{"k":"meta/project_settings","v":"\"ProjectSettings/ProjectSettings.asset.meta\""}
+{"k":"exists/project_settings","v":"True"}
+{"k":"folder/project_settings","v":"found False root False immutable False"}
+{"k":"meta/library","v":"\"Library.meta\""}
+{"k":"exists/library","v":"False"}
+{"k":"folder/library","v":"found False root False immutable False"}
+{"k":"meta/empty","v":"\".meta\""}
+{"k":"exists/empty","v":"False"}
+{"k":"folder/empty","v":"found False root False immutable False"}
+{"k":"meta/relative_other","v":"\"Other/A.txt.meta\""}
+{"k":"exists/relative_other","v":"False"}
+{"k":"folder/relative_other","v":"found False root False immutable False"}
+{"k":"meta/absolute","v":"\"<absolute>.meta\""}
+{"k":"exists/absolute","v":"False"}
+{"k":"exists/absolute.logs","v":"Warning: Invalid AssetDatabase path: <project>/Assets/Data/A.txt. Use path relative to the project folder."}
+{"k":"folder/absolute","v":"found False root False immutable False"}
+{"k":"meta/null","v":"\".meta\""}
+{"k":"exists/null","v":"False"}
+{"k":"folder/null","v":"found False root False immutable False"}
+{"k":"main_type/a","v":"UnityEngine.TextAsset"}
+{"k":"main_type/mat","v":"UnityEngine.Material"}
+{"k":"main_type/shader","v":"UnityEngine.Shader"}
+{"k":"main_type/data","v":"UnityEditor.DefaultAsset"}
+{"k":"main_type/scene","v":"UnityEditor.SceneAsset"}
+{"k":"main_type/script","v":"UnityEditor.MonoScript"}
+{"k":"main_type/local_manifest","v":"UnityEditorInternal.PackageManifest"}
+{"k":"main_type/local_e","v":"UnityEngine.TextAsset"}
+{"k":"main_type/unknown","v":"null"}
+{"k":"main_type/empty","v":"null"}
+{"k":"scene_path/text","v":"\"Assets/Data/A.txt\""}
+{"k":"asset_path/text","v":"\"Assets/Data/A.txt\""}
+{"k":"scene_path/material","v":"\"Assets/Data/Mat.mat\""}
+{"k":"asset_path/material","v":"\"Assets/Data/Mat.mat\""}
+{"k":"scene_path/scene_asset","v":"\"Assets/Scenes/Probe.unity\""}
+{"k":"asset_path/scene_asset","v":"\"Assets/Scenes/Probe.unity\""}
+{"k":"scene_path/folder","v":"\"Assets/Data\""}
+{"k":"asset_path/folder","v":"\"Assets/Data\""}
+{"k":"scene_path/saved","v":"\"Assets/Scenes/Probe.unity\""}
+{"k":"asset_path/saved","v":"\"\""}
+{"k":"scene_path/saved_transform","v":"\"Assets/Scenes/Probe.unity\""}
+{"k":"asset_path/saved_transform","v":"\"\""}
+{"k":"scene_path/made","v":"\"Assets/Scenes/Probe.unity\""}
+{"k":"asset_path/made","v":"\"\""}
+{"k":"scene_path/hidden","v":"\"\""}
+{"k":"asset_path/hidden","v":"\"\""}
+{"k":"scene_path/dont_destroy","v":"\"DontDestroyOnLoad\""}
+{"k":"asset_path/dont_destroy","v":"\"\""}
+{"k":"scene_path/instance","v":"\"\""}
+{"k":"asset_path/instance","v":"\"\""}
+{"k":"scene_path/new_material","v":"\"\""}
+{"k":"asset_path/new_material","v":"\"\""}
+{"k":"scene_path/null","v":"\"\""}
+{"k":"asset_path/null","v":"\"\""}
+{"k":"bundles/all","v":"[\"bundle-a\", \"bundle-b.hd\", \"folder-bundle.sd\", \"mat-bundle\", \"mixed-case\", \"shader-bundle\"]"}
+{"k":"bundles/unused","v":"[]"}
+{"k":"bundle_paths/bundle-a","v":"[\"Assets/Data/A.txt\", \"Packages/com.probe.local/Runtime/E.txt\"]"}
+{"k":"bundle_paths/bundle-b","v":"[]"}
+{"k":"bundle_paths/bundle-b.hd","v":"[\"Assets/Data/B.txt\"]"}
+{"k":"bundle_paths/BUNDLE-A","v":"[]"}
+{"k":"bundle_paths/folder-bundle","v":"[]"}
+{"k":"bundle_paths/folder-bundle.sd","v":"[\"Assets/Bundled/C.txt\", \"Assets/Bundled/Sub/D.txt\"]"}
+{"k":"bundle_paths/mixed-case","v":"[\"Assets/Data/Upper.txt\"]"}
+{"k":"bundle_paths/Mixed-Case","v":"[]"}
+{"k":"bundle_paths/mixed-case.","v":"[]"}
+{"k":"bundle_paths/mat-bundle","v":"[\"Assets/Data/Mat.mat\"]"}
+{"k":"bundle_paths/shader-bundle","v":"[\"Assets/Data/Dep.shader\"]"}
+{"k":"bundle_paths/missing","v":"[]"}
+{"k":"bundle_paths/empty","v":"[]"}
+{"k":"bundle_asset/bundle-a/A","v":"[\"Assets/Data/A.txt\"]"}
+{"k":"bundle_asset/bundle-a/a","v":"[\"Assets/Data/A.txt\"]"}
+{"k":"bundle_asset/bundle-a/A.txt","v":"[]"}
+{"k":"bundle_asset/bundle-a/Assets_Data_A.txt","v":"[]"}
+{"k":"bundle_asset/bundle-a/assets_data_a.txt","v":"[]"}
+{"k":"bundle_asset/bundle-a/E","v":"[\"Packages/com.probe.local/Runtime/E.txt\"]"}
+{"k":"bundle_asset/bundle-b.hd/B","v":"[\"Assets/Data/B.txt\"]"}
+{"k":"bundle_asset/bundle-b/B","v":"[]"}
+{"k":"bundle_asset/folder-bundle.sd/C","v":"[\"Assets/Bundled/C.txt\"]"}
+{"k":"bundle_asset/folder-bundle.sd/D","v":"[\"Assets/Bundled/Sub/D.txt\"]"}
+{"k":"bundle_asset/missing/A","v":"[]"}
+{"k":"implicit/a","v":"\"bundle-a\""}
+{"k":"implicit_variant/a","v":"\"\""}
+{"k":"implicit/b","v":"\"bundle-b\""}
+{"k":"implicit_variant/b","v":"\"hd\""}
+{"k":"implicit/plain","v":"\"\""}
+{"k":"implicit_variant/plain","v":"\"\""}
+{"k":"implicit/upper","v":"\"mixed-case\""}
+{"k":"implicit_variant/upper","v":"\"\""}
+{"k":"implicit/bundled","v":"\"folder-bundle\""}
+{"k":"implicit_variant/bundled","v":"\"sd\""}
+{"k":"implicit/c","v":"\"folder-bundle\""}
+{"k":"implicit_variant/c","v":"\"sd\""}
+{"k":"implicit/d","v":"\"folder-bundle\""}
+{"k":"implicit_variant/d","v":"\"sd\""}
+{"k":"implicit/sub","v":"\"folder-bundle\""}
+{"k":"implicit_variant/sub","v":"\"sd\""}
+{"k":"implicit/local_e","v":"\"bundle-a\""}
+{"k":"implicit_variant/local_e","v":"\"\""}
+{"k":"implicit/missing","v":"throws System.ArgumentException: The specified asset Assets/Bundled/Missing.txt cannot be found."}
+{"k":"implicit_variant/missing","v":"throws System.ArgumentException: The specified asset Assets/Bundled/Missing.txt cannot be found."}
+{"k":"implicit/empty","v":"throws System.ArgumentException: The specified asset  cannot be found."}
+{"k":"implicit_variant/empty","v":"throws System.ArgumentException: The specified asset  cannot be found."}
+{"k":"dependencies/mat-bundle/False","v":"[\"shader-bundle\"]"}
+{"k":"dependencies/mat-bundle/True","v":"[\"shader-bundle\"]"}
+{"k":"dependencies/shader-bundle/False","v":"[]"}
+{"k":"dependencies/shader-bundle/True","v":"[]"}
+{"k":"dependencies/bundle-a/False","v":"[]"}
+{"k":"dependencies/bundle-a/True","v":"[]"}
+{"k":"dependencies/missing/False","v":"[]"}
+{"k":"dependencies/missing/True","v":"[]"}
+{"k":"set/name","v":"\"temp-bundle\" meta fileFormatVersion: 2\nguid: 7b67be48ed8441e8bf9f5545e0410b63\nTextScriptImporter:\n  externalObjects: {}\n  userData: \n  assetBundleName: temp-bundle\n  assetBundleVariant: \n"}
+{"k":"set/all","v":"[\"bundle-a\", \"bundle-b.hd\", \"folder-bundle.sd\", \"mat-bundle\", \"mixed-case\", \"shader-bundle\", \"temp-bundle\"]"}
+{"k":"set/unused","v":"[]"}
+{"k":"set/paths","v":"[\"Assets/Data/Plain.txt\"]"}
+{"k":"cleared/name","v":"\"\" meta fileFormatVersion: 2\nguid: 7b67be48ed8441e8bf9f5545e0410b63\nTextScriptImporter:\n  externalObjects: {}\n  userData: \n  assetBundleName: \n  assetBundleVariant: \n"}
+{"k":"cleared/all","v":"[\"bundle-a\", \"bundle-b.hd\", \"folder-bundle.sd\", \"mat-bundle\", \"mixed-case\", \"shader-bundle\", \"temp-bundle\"]"}
+{"k":"cleared/unused","v":"[\"temp-bundle\"]"}
+{"k":"remove_unused","v":"done"}
+{"k":"removed_unused/all","v":"[\"bundle-a\", \"bundle-b.hd\", \"folder-bundle.sd\", \"mat-bundle\", \"mixed-case\", \"shader-bundle\"]"}
+{"k":"removed_unused/unused","v":"[]"}
+{"k":"remove_used","v":"False"}
+{"k":"remove_used.logs","v":"Warning: AssetBundle name \"bundle-a\" is still in use by \"Assets/Data/A.txt\"."}
+{"k":"remove_used/meta","v":"fileFormatVersion: 2\nguid: c1613015ca084464ae52f2d303dcd486\nTextScriptImporter:\n  externalObjects: {}\n  userData: \n  assetBundleName: bundle-a\n  assetBundleVariant: \n"}
+{"k":"remove_used/all","v":"[\"bundle-a\", \"bundle-b.hd\", \"folder-bundle.sd\", \"mat-bundle\", \"mixed-case\", \"shader-bundle\"]"}
+{"k":"remove_used/unused","v":"[]"}
+{"k":"remove_forced","v":"True"}
+{"k":"remove_forced/meta","v":"fileFormatVersion: 2\nguid: c1613015ca084464ae52f2d303dcd486\nTextScriptImporter:\n  externalObjects: {}\n  userData: \n  assetBundleName: bundle-a\n  assetBundleVariant: \n"}
+{"k":"remove_forced/importer","v":"\"bundle-a\""}
+{"k":"remove_forced/local_meta","v":"fileFormatVersion: 2\nguid: 04047c01d17e4e25b408d0116d044e6a\nTextScriptImporter:\n  externalObjects: {}\n  userData: \n  assetBundleName: bundle-a\n  assetBundleVariant: \n"}
+{"k":"remove_forced/all","v":"[\"bundle-b.hd\", \"folder-bundle.sd\", \"mat-bundle\", \"mixed-case\", \"shader-bundle\"]"}
+{"k":"remove_forced/unused","v":"[]"}
+{"k":"remove_missing","v":"True"}
+{"k":"remove_missing.logs","v":"Warning: AssetBundle name \"missing\" is not in the asset database."}
+{"k":"remove_variant","v":"True"}
+{"k":"remove_variant/meta","v":"fileFormatVersion: 2\nguid: 6bbcc4ececcc440fb0ffa55d3523870d\nTextScriptImporter:\n  externalObjects: {}\n  userData: \n  assetBundleName: bundle-b\n  assetBundleVariant: hd\n"}
+{"k":"remove_variant/all","v":"[\"folder-bundle.sd\", \"mat-bundle\", \"mixed-case\", \"shader-bundle\"]"}
+{"k":"remove_variant/unused","v":"[]"}
+{"k":"workers/default","v":"desired 3 user 3 standby 2 processors 12"}
+{"k":"workers/set","v":"desired 3 user 3"}
+{"k":"workers/user_set","v":"desired 3 user 2"}
+{"k":"workers/negative","v":"desired -1 user 2"}
+{"k":"workers/force","v":"desired 1"}
+{"k":"workers/user_settings_file","v":"  m_DesiredImportWorkerCount: 3\n  m_StandbyImportWorkerCount: 2\n  m_IdleImportWorkerShutdownDelay: 60000"}
+{"k":"autorefresh/balanced","v":"done"}
+{"k":"autorefresh/twice","v":"done"}
+{"k":"autorefresh/extra_allow","v":"done"}
+{"k":"autorefresh/extra_allow.logs","v":"Assert: Assertion failed on expression: 'm_DisallowAutoRefresh >= 0'"}
+{"k":"autorefresh/after_extra","v":"done"}
+{"k":"autorefresh/after_extra.logs","v":"Assert: Assertion failed on expression: 'm_DisallowAutoRefresh >= 0'"}
+{"k":"internal/v1","v":"False"}
+{"k":"internal/v2","v":"True"}
+{"k":"internal/guid_a","v":"c1613015ca084464ae52f2d303dcd486"}
+{"k":"internal/guid_a_matches","v":"True"}
+{"k":"internal/guid_missing","v":"00000000000000000000000000000000"}
+{"k":"internal/guid_folder_matches","v":"True"}
+{"k":"complete","v":true}
