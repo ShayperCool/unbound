@@ -476,6 +476,9 @@ namespace UnityEngine
             int count = 0;
             foreach (var light in s_FrameLights)
             {
+                // Measured in a linear-space project; a gamma-space one is taken alike.
+                if (GraphicsSettings.lightsUseLinearIntensity && QualitySettings.activeColorSpace == ColorSpace.Gamma)
+                    Warn("linear-intensity-gamma", "precomputed realtime GI with linear light intensity (GraphicsSettings.lightsUseLinearIntensity) in a gamma-space project of the built-in render pipeline is not measured: its lights are taken as in a linear-space project.");
                 var t = light.transform;
                 var color = light.ScaledColor(light.intensity * light.bounceIntensity, linear: true);
                 Add(ref count, (int)light.type, t.position, t.forward, color.r, color.g, color.b, light.range, light.spotAngle,

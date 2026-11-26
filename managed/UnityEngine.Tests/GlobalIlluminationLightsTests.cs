@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System;
 using Unbound.Runtime;
 using Unity.Collections;
@@ -15,6 +16,14 @@ namespace UnityEngine.Tests
     [Collection("RenderSettings state")]
     public class GlobalIlluminationLightsTests
     {
+        sealed class Logs : ILogHandler
+        {
+            readonly List<string> m_Into;
+            internal Logs(List<string> into) => m_Into = into;
+            public void LogException(Exception exception, UnityEngine.Object context) => m_Into.Add(exception.Message);
+            public void LogFormat(LogType type, UnityEngine.Object context, string format, params object[] args) => m_Into.Add(string.Format(format, args));
+        }
+
         static void WithLinearIntensity(bool linear, Action test)
         {
             bool before = GraphicsSettings.lightsUseLinearIntensity;
@@ -336,6 +345,38 @@ namespace UnityEngine.Tests
                     Assert.Equal(2f * Mathf.Atan(Mathf.Tan(30f * Mathf.Deg2Rad) * 0.71875f) * Mathf.Rad2Deg, s.InnerSpotAngle, 3);
                     Assert.NotNull(Find(903f));
                 });
+                // With linear light intensity: the linear color times intensity and bounce
+                // intensity (tests/projects/realtimegi --linear-intensity), the legacy falloff.
+                var space = QualitySettings.s_ColorSpace;
+                QualitySettings.s_ColorSpace = ColorSpace.Linear;
+                try
+                {
+                    WithLinearIntensity(true, () =>
+                    {
+                        var p = Find(901f).Value;
+                        Assert.Equal((int)GI.FalloffType.Legacy, p.Falloff);
+                        Assert.Equal(6f, p.R, 4);
+                        Assert.Equal(6f * Mathf.GammaToLinearSpace(0.5f), p.G, 4);
+                        Assert.Equal(6f * Mathf.GammaToLinearSpace(0.25f), p.B, 4);
+                    });
+                    // In a gamma-space project (unmeasured) the lights are taken alike, said once.
+                    var logs = new List<string>();
+                    var handler = Debug.unityLogger.logHandler;
+                    Debug.unityLogger.logHandler = new Logs(logs);
+                    try
+                    {
+                        RealtimeGI.s_Warned.Remove("linear-intensity-gamma");
+                        QualitySettings.s_ColorSpace = ColorSpace.Gamma;
+                        WithLinearIntensity(true, () =>
+                        {
+                            Assert.Equal(6f, Find(901f).Value.R, 4);
+                            Assert.NotNull(Find(901f));
+                        });
+                        Assert.Single(logs, l => l.Contains("in a gamma-space project of the built-in render pipeline is not measured"));
+                    }
+                    finally { Debug.unityLogger.logHandler = handler; }
+                }
+                finally { QualitySettings.s_ColorSpace = space; }
             }
             finally
             {

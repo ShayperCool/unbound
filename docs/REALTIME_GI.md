@@ -19,9 +19,10 @@ drawn only in part. Not supported yet, each with a warning ([Open](#open) lists 
 light types other than point, spot and directional (the scene's realtime GI is then not drawn: its
 renderers take light probes again; area lights are baked only), light probes whose probe set cannot be read or placed (they light nothing; the
 lightmaps are drawn), light probes of a scene that are not the current ones (additive loads),
-and systems that reference another scene's systems. In a gamma-space project the systems solve as in a linear one and the shaders decode
-the realtime lightmap with an exponent of 1/2.2 (`unity_DynamicLightmap_HDR` (1, 1/2.2) instead
-of (1, 1)), `DynamicGI.SetEmissive` takes its color as a gamma color in both, and the sky the
+systems that reference another scene's systems, and lights of linear intensity in a gamma-space
+project of the built-in pipeline (taken as in a linear-space one). In a gamma-space project the
+systems solve as in a linear one and the shaders decode the realtime lightmap with an exponent
+of 1/2.2 (`unity_DynamicLightmap_HDR` (1, 1/2.2) instead of (1, 1)), `DynamicGI.SetEmissive` takes its color as a gamma color in both, and the sky the
 environment and the ambient probe are drawn from writes gamma-encoded colors, which are taken
 as such (tests/projects/realtimegi `--color-space gamma`: the Room's lightmaps and frames match
 within the comparator's tolerance, as loaded, with its point light moved, brighter, with bounce
@@ -84,9 +85,10 @@ Room cases of tests/projects/realtimegi in its tests):
    light's distance falloff, its angular falloff (spot lights) and its color, scaled by intensity
    and `Light.bounceIntensity` before its conversion to linear (in projects without linear light
    intensity; with it, the built-in pipeline scales the linear color, tinted by the light's
-   color temperature, keeping the legacy falloff: tests/projects/realtimegi `--linear-intensity`). Each point's normal is three bytes b, each component b / 127 - 1 (so that axis
-   normals are exact), not renormalized. The distance falloff is the built-in pipeline's legacy
-   curve 1 / (1 + 25 x^2) (faded to 0 from x^2 = 0.64 to 1) over x = distance / range, sampled at
+   color temperature, keeping the legacy falloff: tests/projects/realtimegi
+   `--linear-intensity`). Each point's normal is three bytes b, each component b / 127 - 1 (so
+   that axis normals are exact), not renormalized. The distance falloff is the built-in
+   pipeline's legacy curve 1 / (1 + 25 x^2) (faded to 0 from x^2 = 0.64 to 1) over x = distance / range, sampled at
    the 16 table positions t = 15 / (1 + 14 x^2) = 0..15 (0 at t = 0 and 1, 1 at t = 15) and
    interpolated linearly in t. A spot light's angular falloff is s^2, with s the cosine of the
    angle from the light's direction placed between those of the outer half angle (half of
@@ -1212,7 +1214,9 @@ measure):
   UpdateEnvironment, the other skybox, environment-data and ambient-probe cases, nor the other
   scenes but the directional one's `roomdirectional-base`, `-moved` and `-dim`), a render
   pipeline other than the Universal Render Pipeline in a gamma-space project, and a device other
-  than the NVIDIA OpenGL Core one both the Editor and Unbound ran on. The Universal Render
+  than the NVIDIA OpenGL Core one both the Editor and Unbound ran on, and lights of linear
+  intensity in the built-in pipeline (`--linear-intensity` is recorded in a linear-space project;
+  a gamma-space one takes them alike, with a warning). The Universal Render
   Pipeline's sequence in a gamma-space project (tests/projects/realtimegi `--pipeline urp
   --color-space gamma`, two identical captures; lightmaps and values, no frames) gives the
   Editor's lightmaps but for one value: no state value off, the spot cases 7 isolated values off
