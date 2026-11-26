@@ -91,16 +91,42 @@ public class SpriteMetaProbe : MonoBehaviour
 #endif
     }
 
-    static readonly string[] Textures = { "Control", "EmptyId", "IdNpot", "EmptyIdPot0", "Bare", "New", "NewNpot", "NewGaps" };
+    static readonly string[] Textures = { "Control", "EmptyId", "IdNpot", "EmptyIdPot0", "Bare", "New", "NewNpot", "NewGaps",
+        "BareWrap", "BarePpu", "BareDefault", "BareFull",
+        "SliceL", "SliceDiag", "SliceDot", "SliceEdge", "SliceFaint", "SliceFive", "SliceNear", "SliceHole", "SliceNpot",
+        "SliceThin", "SliceFlat", "SliceAlone3", "SliceAlone4", "SliceTwoBigDot", "SliceBigNear", "SliceBigGap2", "SliceSmallBetween", "SliceAreaSmall",
+        "SliceRowMerge", "SliceTopDot", "SliceEmpty", "SliceChain", "SliceMany" };
+
+    /// <summary>Textures written in Play mode into Assets/Session and imported by ImportAsset (their
+    /// sources' bytes), the last by Refresh.</summary>
+    static readonly (string Name, string Source)[] Session = { ("SessNew", "New"), ("SessNpot", "NewNpot"), ("SessGaps", "NewGaps"), ("SessRefresh", "SliceFive") };
 
     static string F(float f) => f.ToString("R", System.Globalization.CultureInfo.InvariantCulture);
 
     static void Run()
     {
         foreach (var name in Textures) Meta("open/" + name, "Assets/Textures/" + name + ".png");
-        foreach (var name in Textures)
+        foreach (var name in Textures) Describe(name, "Assets/Textures/" + name + ".png");
+        // New textures an API imports during the session.
+        Try("session/folder", () => AssetDatabase.CreateFolder("Assets", "Session").Length > 0 ? "created" : "none");
+        foreach (var (name, source) in Session)
         {
-            string path = "Assets/Textures/" + name + ".png";
+            File.Copy("Assets/Textures/" + source + ".png", "Assets/Session/" + name + ".png");
+            if (name != "SessRefresh") Try("session/import " + name, () => { AssetDatabase.ImportAsset("Assets/Session/" + name + ".png"); return "done"; });
+        }
+        Try("session/refresh", () => { AssetDatabase.Refresh(); return "done"; });
+        foreach (var (name, _) in Session)
+        {
+            Meta("session/" + name, "Assets/Session/" + name + ".png");
+            Describe(name, "Assets/Session/" + name + ".png");
+        }
+        // What the project's files are once every import is done (a later write would show here).
+        foreach (var name in Textures) Meta("end/" + name, "Assets/Textures/" + name + ".png");
+    }
+
+    static void Describe(string name, string path)
+    {
+        {
             Try("importer/" + name, () =>
             {
                 var importer = (TextureImporter)AssetImporter.GetAtPath(path);
@@ -119,7 +145,5 @@ public class SpriteMetaProbe : MonoBehaviour
                     + " id " + UnityEditor.U2D.SpriteEditorExtension.GetSpriteID(s)));
             });
         }
-        // What the project's files are once every import is done (a later write would show here).
-        foreach (var name in Textures) Meta("end/" + name, "Assets/Textures/" + name + ".png");
     }
 }
