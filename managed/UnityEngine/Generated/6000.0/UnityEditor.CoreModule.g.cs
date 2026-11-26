@@ -41807,39 +41807,6 @@ namespace UnityEditor.ShortcutManagement
         [global::Unbound.Stub] public ConflictResolverWindow() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ShortcutManagement.ConflictResolverWindow.ctor"); }
     }
     [global::Unbound.Stub]
-    internal unsafe partial class ContextManager : global::UnityEditor.ShortcutManagement.IContextManager
-    {
-        [global::Unbound.Stub] public static readonly global::UnityEditor.ShortcutManagement.ContextManager.GlobalContext globalContext;
-        [global::Unbound.Stub] public static readonly global::System.Type globalContextType;
-        [global::Unbound.Stub] public static global::System.Action onTagChange;
-        [global::Unbound.Stub] public void SetFocusedWindow(global::UnityEditor.EditorWindow window) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ShortcutManagement.ContextManager.SetFocusedWindow"); }
-        [global::Unbound.Stub] public bool DoContextsConflict(global::System.Type context1, global::System.Type context2) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ShortcutManagement.ContextManager.DoContextsConflict"); return default; }
-        [global::Unbound.Stub] public void RegisterToolContext(global::UnityEditor.ShortcutManagement.IShortcutContext context) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ShortcutManagement.ContextManager.RegisterToolContext"); }
-        [global::Unbound.Stub] public void DeregisterToolContext(global::UnityEditor.ShortcutManagement.IShortcutContext context) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ShortcutManagement.ContextManager.DeregisterToolContext"); }
-        [global::Unbound.Stub] public bool HasAnyPriorityContext() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ShortcutManagement.ContextManager.HasAnyPriorityContext"); return default; }
-        [global::Unbound.Stub] public bool HasPriorityContextOfType(global::System.Type type) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ShortcutManagement.ContextManager.HasPriorityContextOfType"); return default; }
-        [global::Unbound.Stub] public bool HasActiveContextOfType(global::System.Type type, bool useActiveForHelperBar = false) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ShortcutManagement.ContextManager.HasActiveContextOfType"); return default; }
-        [global::Unbound.Stub] internal object GetToolContextOfType(global::System.Type type, bool filterActive = true, bool useActiveForHelperBar = false) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ShortcutManagement.ContextManager.GetToolContextOfType"); return default; }
-        [global::Unbound.Stub] internal object GetPriorityContextOfType(global::System.Type type, bool filterActive = true, bool useActiveForHelperBar = false) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ShortcutManagement.ContextManager.GetPriorityContextOfType"); return default; }
-        [global::Unbound.Stub] public object GetContextInstanceOfType(global::System.Type type, bool filterActive = true, bool useActiveForHelperBar = false) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ShortcutManagement.ContextManager.GetContextInstanceOfType"); return default; }
-        [global::Unbound.Stub] internal static string EnumTagFormat(global::System.Enum tag) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ShortcutManagement.ContextManager.EnumTagFormat"); return default; }
-        [global::Unbound.Stub] public void RegisterTag(string tag) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ShortcutManagement.ContextManager.RegisterTag"); }
-        [global::Unbound.Stub] public void RegisterTag(global::System.Enum e) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ShortcutManagement.ContextManager.RegisterTag"); }
-        [global::Unbound.Stub] public void UnregisterTag(string tag) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ShortcutManagement.ContextManager.UnregisterTag"); }
-        [global::Unbound.Stub] public void UnregisterTag(global::System.Enum e) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ShortcutManagement.ContextManager.UnregisterTag"); }
-        [global::Unbound.Stub] public bool HasTag(string tag) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ShortcutManagement.ContextManager.HasTag"); return default; }
-        [global::Unbound.Stub] global::System.Collections.Generic.List<global::System.Type> global::UnityEditor.ShortcutManagement.IContextManager.GetActiveContexts() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ShortcutManagement.ContextManager.GetActiveContexts"); return new global::System.Collections.Generic.List<global::System.Type>(); }
-        [global::Unbound.Stub] public global::System.Collections.Generic.List<string> GetActiveTags() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ShortcutManagement.ContextManager.GetActiveTags"); return new global::System.Collections.Generic.List<string>(); }
-        [global::Unbound.Stub] public ContextManager() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ShortcutManagement.ContextManager.ctor"); }
-        public int activeContextCount { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ShortcutManagement.ContextManager.activeContextCount"); return default; } }
-        public bool playModeContextIsActive { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ShortcutManagement.ContextManager.playModeContextIsActive"); return default; } }
-        [global::Unbound.Stub]
-        internal unsafe partial class GlobalContext
-        {
-            [global::Unbound.Stub] public GlobalContext() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ShortcutManagement.ContextManager.GlobalContext.ctor"); }
-        }
-    }
-    [global::Unbound.Stub]
     internal unsafe partial class DeleteShortcutProfileWindow : global::UnityEditor.EditorWindow
     {
         [global::Unbound.Stub] public static void Show(string profileName, global::System.Action action) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ShortcutManagement.DeleteShortcutProfileWindow.Show"); }
@@ -41875,22 +41842,6 @@ namespace UnityEditor.ShortcutManagement
         internal event global::System.Func<global::UnityEngine.KeyCode, global::UnityEngine.EventModifiers, global::UnityEditor.ShortcutManagement.ShortcutEntry, bool> CanDrop { [global::Unbound.Stub] add { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ShortcutManagement.Device.CanDrop"); } [global::Unbound.Stub] remove { } }
         internal event global::System.Func<global::UnityEngine.KeyCode, global::UnityEngine.EventModifiers, string> TooltipProvider { [global::Unbound.Stub] add { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ShortcutManagement.Device.TooltipProvider"); } [global::Unbound.Stub] remove { } }
         internal event global::System.Func<global::UnityEngine.KeyCode, global::UnityEngine.EventModifiers, global::UnityEditor.GenericMenu> ContextMenuProvider { [global::Unbound.Stub] add { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ShortcutManagement.Device.ContextMenuProvider"); } [global::Unbound.Stub] remove { } }
-    }
-    [global::Unbound.Stub]
-    internal unsafe partial class Directory : global::UnityEditor.ShortcutManagement.IDirectory
-    {
-        [global::Unbound.Stub] public static bool IsKeyCodeSupported(global::UnityEngine.KeyCode key) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ShortcutManagement.Directory.IsKeyCodeSupported"); return default; }
-        [global::Unbound.Stub] public Directory(global::System.Collections.Generic.IEnumerable<global::UnityEditor.ShortcutManagement.ShortcutEntry> entries) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ShortcutManagement.Directory.ctor"); }
-        [global::Unbound.Stub] public void Initialize(global::System.Collections.Generic.IEnumerable<global::UnityEditor.ShortcutManagement.ShortcutEntry> entries) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ShortcutManagement.Directory.Initialize"); }
-        [global::Unbound.Stub] public void GetAllShortcuts(global::System.Collections.Generic.List<global::UnityEditor.ShortcutManagement.ShortcutEntry> output) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ShortcutManagement.Directory.GetAllShortcuts"); }
-        [global::Unbound.Stub] public void FindShortcutEntries(global::System.Collections.Generic.List<global::UnityEditor.ShortcutManagement.KeyCombination> combinationSequence, global::System.Type[] context, string[] tags, global::System.Collections.Generic.List<global::UnityEditor.ShortcutManagement.ShortcutEntry> outputShortcuts) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ShortcutManagement.Directory.FindShortcutEntries"); }
-        [global::Unbound.Stub] public void FindShortcutEntries(global::System.Collections.Generic.List<global::UnityEditor.ShortcutManagement.KeyCombination> combinationSequence, global::UnityEditor.ShortcutManagement.IContextManager contextManager, global::System.Collections.Generic.List<global::UnityEditor.ShortcutManagement.ShortcutEntry> outputShortcuts) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ShortcutManagement.Directory.FindShortcutEntries"); }
-        [global::Unbound.Stub] public void FindShortcutEntries(global::System.Collections.Generic.List<global::UnityEditor.ShortcutManagement.KeyCombination> combinationSequence, global::System.Collections.Generic.List<global::UnityEditor.ShortcutManagement.ShortcutEntry> outputShortcuts) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ShortcutManagement.Directory.FindShortcutEntries"); }
-        [global::Unbound.Stub] public void FindPotentialShortcutEntries(global::UnityEditor.ShortcutManagement.IContextManager contextManager, global::System.Collections.Generic.List<global::UnityEditor.ShortcutManagement.ShortcutEntry> outputShortcuts, bool useActiveForHelperBar) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ShortcutManagement.Directory.FindPotentialShortcutEntries"); }
-        [global::Unbound.Stub] public global::UnityEditor.ShortcutManagement.ShortcutEntry FindShortcutEntry(global::UnityEditor.ShortcutManagement.Identifier identifier) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ShortcutManagement.Directory.FindShortcutEntry"); return default; }
-        [global::Unbound.Stub] public global::UnityEditor.ShortcutManagement.ShortcutEntry FindShortcutEntry(string shortcutId) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ShortcutManagement.Directory.FindShortcutEntry"); return default; }
-        [global::Unbound.Stub] public void FindPotentialConflicts(global::System.Type context, string tag, global::System.Collections.Generic.IList<global::UnityEditor.ShortcutManagement.KeyCombination> binding, global::System.Collections.Generic.IList<global::UnityEditor.ShortcutManagement.ShortcutEntry> output, global::UnityEditor.ShortcutManagement.IContextManager contextManager) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ShortcutManagement.Directory.FindPotentialConflicts"); }
-        [global::Unbound.Stub] public void FindShortcutsWithConflicts(global::System.Collections.Generic.List<global::UnityEditor.ShortcutManagement.ShortcutEntry> output, global::UnityEditor.ShortcutManagement.IContextManager contextManager) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ShortcutManagement.Directory.FindShortcutsWithConflicts"); }
     }
     [global::Unbound.Stub]
     internal unsafe partial class Discovery : global::UnityEditor.ShortcutManagement.IDiscovery
@@ -41934,37 +41885,6 @@ namespace UnityEditor.ShortcutManagement
     {
         void Show(global::IConflictResolver conflictResolver, global::System.Collections.Generic.IEnumerable<global::UnityEditor.ShortcutManagement.KeyCombination> keyCombinationSequence, global::System.Collections.Generic.IEnumerable<global::UnityEditor.ShortcutManagement.ShortcutEntry> entries);
     }
-    internal unsafe partial interface IContextManager
-    {
-        void SetFocusedWindow(global::UnityEditor.EditorWindow window);
-        void RegisterToolContext(global::UnityEditor.ShortcutManagement.IShortcutContext context);
-        void DeregisterToolContext(global::UnityEditor.ShortcutManagement.IShortcutContext context);
-        bool HasAnyPriorityContext();
-        bool HasPriorityContextOfType(global::System.Type type);
-        bool HasActiveContextOfType(global::System.Type type, bool useActiveForHelperBar = false);
-        bool DoContextsConflict(global::System.Type context1, global::System.Type context2);
-        object GetContextInstanceOfType(global::System.Type type, bool filterActive, bool useActiveForHelperBar = false);
-        global::System.Collections.Generic.List<global::System.Type> GetActiveContexts();
-        global::System.Collections.Generic.List<string> GetActiveTags();
-        void RegisterTag(string tag);
-        void RegisterTag(global::System.Enum e);
-        void UnregisterTag(string tag);
-        void UnregisterTag(global::System.Enum e);
-        bool HasTag(string tag);
-        bool playModeContextIsActive { get; }
-    }
-    internal unsafe partial interface IDirectory
-    {
-        void GetAllShortcuts(global::System.Collections.Generic.List<global::UnityEditor.ShortcutManagement.ShortcutEntry> output);
-        void FindShortcutEntries(global::System.Collections.Generic.List<global::UnityEditor.ShortcutManagement.KeyCombination> combinationSequence, global::System.Type[] context, string[] tags, global::System.Collections.Generic.List<global::UnityEditor.ShortcutManagement.ShortcutEntry> outputShortcuts);
-        void FindShortcutEntries(global::System.Collections.Generic.List<global::UnityEditor.ShortcutManagement.KeyCombination> combinationSequence, global::UnityEditor.ShortcutManagement.IContextManager contextManager, global::System.Collections.Generic.List<global::UnityEditor.ShortcutManagement.ShortcutEntry> outputShortcuts);
-        void FindShortcutEntries(global::System.Collections.Generic.List<global::UnityEditor.ShortcutManagement.KeyCombination> combinationSequence, global::System.Collections.Generic.List<global::UnityEditor.ShortcutManagement.ShortcutEntry> outputShortcuts);
-        void FindPotentialShortcutEntries(global::UnityEditor.ShortcutManagement.IContextManager contextManager, global::System.Collections.Generic.List<global::UnityEditor.ShortcutManagement.ShortcutEntry> outputShortcuts, bool useActiveForHelperBar);
-        global::UnityEditor.ShortcutManagement.ShortcutEntry FindShortcutEntry(global::UnityEditor.ShortcutManagement.Identifier identifier);
-        global::UnityEditor.ShortcutManagement.ShortcutEntry FindShortcutEntry(string identifier);
-        void FindPotentialConflicts(global::System.Type context, string tag, global::System.Collections.Generic.IList<global::UnityEditor.ShortcutManagement.KeyCombination> binding, global::System.Collections.Generic.IList<global::UnityEditor.ShortcutManagement.ShortcutEntry> output, global::UnityEditor.ShortcutManagement.IContextManager contextManager);
-        void FindShortcutsWithConflicts(global::System.Collections.Generic.List<global::UnityEditor.ShortcutManagement.ShortcutEntry> output, global::UnityEditor.ShortcutManagement.IContextManager contextManager);
-    }
     internal unsafe partial interface IDiscovery
     {
         global::System.Collections.Generic.IEnumerable<global::UnityEditor.ShortcutManagement.ShortcutEntry> GetAllShortcuts();
@@ -41981,10 +41901,6 @@ namespace UnityEditor.ShortcutManagement
     internal unsafe partial interface IDiscoveryShortcutProvider
     {
         global::System.Collections.Generic.IEnumerable<global::UnityEditor.ShortcutManagement.IShortcutEntryDiscoveryInfo> GetDefinedShortcuts();
-    }
-    internal unsafe partial interface IHelperBarShortcutContext
-    {
-        bool helperBarActive { get; }
     }
     internal unsafe partial interface IKeyBindingStateProvider
     {
@@ -42180,12 +42096,6 @@ namespace UnityEditor.ShortcutManagement
     {
         [global::Unbound.Stub] public Mouse(global::UnityEditor.ShortcutManagement.IKeyBindingStateProvider keyBindingStateProvider, global::UnityEngine.KeyCode initiallySelectedKey = (global::UnityEngine.KeyCode)0, global::UnityEngine.EventModifiers initiallyActiveModifiers = (global::UnityEngine.EventModifiers)0) : base(default(global::UnityEditor.ShortcutManagement.IKeyBindingStateProvider), default(global::UnityEngine.KeyCode), default(global::UnityEngine.EventModifiers)) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ShortcutManagement.Mouse.ctor"); }
     }
-    [global::System.@AttributeUsageAttribute((global::System.AttributeTargets)4)]
-    [global::Unbound.Stub]
-    internal unsafe partial class PriorityContextAttribute : global::System.Attribute
-    {
-        [global::Unbound.Stub] public PriorityContextAttribute() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ShortcutManagement.PriorityContextAttribute.ctor"); }
-    }
     [global::Unbound.Stub]
     internal unsafe partial class PromptWindow : global::UnityEditor.EditorWindow
     {
@@ -42232,10 +42142,6 @@ namespace UnityEditor.ShortcutManagement
         [global::Unbound.Stub] internal global::UnityEditor.ShortcutManagement.Identifier selectedEntryIdentifier;
         [global::Unbound.Stub] public SerializedShortcutManagerWindowState() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ShortcutManagement.SerializedShortcutManagerWindowState.ctor"); }
     }
-    unsafe partial class ShortcutAttribute
-    {
-        [global::Unbound.Stub] internal override global::UnityEditor.ShortcutManagement.ShortcutEntry CreateShortcutEntry(global::System.Reflection.MethodInfo methodInfo) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ShortcutManagement.ShortcutAttribute.CreateShortcutEntry"); return default; }
-    }
     [global::Unbound.Stub]
     internal unsafe partial class ShortcutAttributeDiscoveryProvider : global::UnityEditor.ShortcutManagement.IDiscoveryShortcutProvider
     {
@@ -42250,10 +42156,6 @@ namespace UnityEditor.ShortcutManagement
         [global::Unbound.Stub] public string GetFullMemberName() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ShortcutManagement.ShortcutAttributeEntryInfo.GetFullMemberName"); return default; }
         [global::Unbound.Stub] public int GetLineNumber() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ShortcutManagement.ShortcutAttributeEntryInfo.GetLineNumber"); return default; }
         [global::Unbound.Stub] public string GetFilePath() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ShortcutManagement.ShortcutAttributeEntryInfo.GetFilePath"); return default; }
-    }
-    unsafe partial class ShortcutBaseAttribute
-    {
-        [global::Unbound.Stub] internal virtual global::UnityEditor.ShortcutManagement.ShortcutEntry CreateShortcutEntry(global::System.Reflection.MethodInfo methodInfo) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ShortcutManagement.ShortcutBaseAttribute.CreateShortcutEntry"); return default; }
     }
     [global::Unbound.Stub]
     internal unsafe partial class ShortcutController : global::UnityEditor.ShortcutManagement.IAvailableShortcutsChangedNotifier
@@ -42271,29 +42173,11 @@ namespace UnityEditor.ShortcutManagement
         public global::UnityEditor.ShortcutManagement.IContextManager contextManager { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ShortcutManagement.ShortcutController.contextManager"); return default; } }
         public event global::System.Action availableShortcutsChanged { [global::Unbound.Stub] add { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ShortcutManagement.ShortcutController.availableShortcutsChanged"); } [global::Unbound.Stub] remove { } }
     }
-    [global::Unbound.Stub]
-    internal unsafe partial class ShortcutEntry
+    unsafe partial class ShortcutEntry
     {
-        [global::Unbound.Stub] internal global::UnityEditor.ShortcutManagement.ShortcutModifiers m_ReservedModifier;
-        [global::Unbound.Stub] internal ShortcutEntry(global::UnityEditor.ShortcutManagement.Identifier id, global::System.Collections.Generic.IEnumerable<global::UnityEditor.ShortcutManagement.KeyCombination> defaultCombination, global::System.Action<global::UnityEditor.ShortcutManagement.ShortcutArguments> action, global::System.Type context, global::UnityEditor.ShortcutManagement.ShortcutType type, string displayName = null, int priority = 2147483647) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ShortcutManagement.ShortcutEntry.ctor"); }
-        [global::Unbound.Stub] internal ShortcutEntry(global::UnityEditor.ShortcutManagement.Identifier id, global::System.Collections.Generic.IEnumerable<global::UnityEditor.ShortcutManagement.KeyCombination> defaultCombination, global::System.Action<global::UnityEditor.ShortcutManagement.ShortcutArguments> action, global::System.Type context, string tag, global::UnityEditor.ShortcutManagement.ShortcutType type, string displayName = null, int priority = 2147483647) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ShortcutManagement.ShortcutEntry.ctor"); }
-        [global::Unbound.Stub] public override string ToString() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ShortcutManagement.ShortcutEntry.ToString"); return default; }
-        [global::Unbound.Stub] public bool StartsWith(global::System.Collections.Generic.IList<global::UnityEditor.ShortcutManagement.KeyCombination> prefix, global::System.Collections.Generic.IEnumerable<global::UnityEngine.KeyCode> keyCodes = null) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ShortcutManagement.ShortcutEntry.StartsWith"); return default; }
-        [global::Unbound.Stub] public bool FullyMatches(global::System.Collections.Generic.List<global::UnityEditor.ShortcutManagement.KeyCombination> other) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ShortcutManagement.ShortcutEntry.FullyMatches"); return default; }
         [global::Unbound.Stub] internal void ResetToDefault() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ShortcutManagement.ShortcutEntry.ResetToDefault"); }
         [global::Unbound.Stub] internal void SetOverride(global::System.Collections.Generic.IEnumerable<global::UnityEditor.ShortcutManagement.KeyCombination> newKeyCombinations) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ShortcutManagement.ShortcutEntry.SetOverride"); }
-        [global::Unbound.Stub] internal global::System.Collections.Generic.List<global::UnityEditor.ShortcutManagement.KeyCombination> GetDefaultCombinations() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ShortcutManagement.ShortcutEntry.GetDefaultCombinations"); return new global::System.Collections.Generic.List<global::UnityEditor.ShortcutManagement.KeyCombination>(); }
         [global::Unbound.Stub] internal void ApplyOverride(global::UnityEditor.ShortcutManagement.SerializableShortcutEntry shortcutOverride) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ShortcutManagement.ShortcutEntry.ApplyOverride"); }
-        public global::UnityEditor.ShortcutManagement.Identifier identifier { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ShortcutManagement.ShortcutEntry.identifier"); return default; } }
-        public string displayName { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ShortcutManagement.ShortcutEntry.displayName"); return default; } }
-        public global::System.Collections.Generic.IList<global::UnityEditor.ShortcutManagement.KeyCombination> combinations { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ShortcutManagement.ShortcutEntry.combinations"); return global::System.Array.Empty<global::UnityEditor.ShortcutManagement.KeyCombination>(); } }
-        public bool overridden { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ShortcutManagement.ShortcutEntry.overridden"); return default; } }
-        public global::System.Action<global::UnityEditor.ShortcutManagement.ShortcutArguments> action { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ShortcutManagement.ShortcutEntry.action"); return default; } }
-        public global::System.Type context { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ShortcutManagement.ShortcutEntry.context"); return default; } }
-        public global::System.Type clutchContext { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ShortcutManagement.ShortcutEntry.clutchContext"); return default; } }
-        public string tag { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ShortcutManagement.ShortcutEntry.tag"); return default; } }
-        public global::UnityEditor.ShortcutManagement.ShortcutType type { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ShortcutManagement.ShortcutEntry.type"); return default; } }
-        public int priority { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ShortcutManagement.ShortcutEntry.priority"); return default; } }
     }
     [global::Unbound.Stub]
     internal unsafe partial class ShortcutHelperBar : global::UnityEditor.ShortcutManagement.ShortcutHelperBarUtility.IShortcutUpdate
@@ -42568,12 +42452,6 @@ namespace UnityEditor.ShortcutManagement
         public global::System.Collections.Generic.List<global::UnityEditor.ShortcutManagement.KeyCombination> WorkingValue { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ShortcutManagement.ShortcutTextField.WorkingValue"); return new global::System.Collections.Generic.List<global::UnityEditor.ShortcutManagement.KeyCombination>(); } }
         public event global::System.Action<global::System.Collections.Generic.List<global::UnityEditor.ShortcutManagement.KeyCombination>> OnWorkingValueChanged { [global::Unbound.Stub] add { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ShortcutManagement.ShortcutTextField.OnWorkingValueChanged"); } [global::Unbound.Stub] remove { } }
         public event global::System.Action OnCancel { [global::Unbound.Stub] add { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ShortcutManagement.ShortcutTextField.OnCancel"); } [global::Unbound.Stub] remove { } }
-    }
-    internal enum ShortcutType
-    {
-        Action = 0,
-        Clutch = 1,
-        Menu = 2,
     }
     [global::Unbound.Stub]
     internal unsafe partial class Trigger

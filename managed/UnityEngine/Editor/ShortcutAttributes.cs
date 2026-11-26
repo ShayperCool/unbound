@@ -1,5 +1,7 @@
 using System;
 using System.ComponentModel;
+using System.Linq;
+using System.Reflection;
 using UnityEngine;
 
 namespace UnityEditor.ShortcutManagement
@@ -23,6 +25,8 @@ namespace UnityEditor.ShortcutManagement
     public abstract partial class ShortcutBaseAttribute : Attribute
     {
         protected ShortcutBaseAttribute() { }
+
+        internal abstract ShortcutEntry CreateShortcutEntry(MethodInfo methodInfo);
     }
 
     /// <summary>
@@ -64,6 +68,30 @@ namespace UnityEditor.ShortcutManagement
 
         public ShortcutAttribute(string id, KeyCode defaultKeyCode, [DefaultValue("None")] ShortcutModifiers defaultShortcutModifiers = ShortcutModifiers.None)
             : this(id, null, null, int.MaxValue, new ShortcutBinding(new KeyCombination(defaultKeyCode, defaultShortcutModifiers))) { }
+
+        Action m_NoArgumentsAction;
+
+        void NoArgumentShortcutMethodProxy(ShortcutArguments arguments) => m_NoArgumentsAction();
+
+        /// <summary>The shortcut of the method it is on: a method without parameters runs through
+        /// a proxy that drops the arguments; a clutch attribute makes a clutch.</summary>
+        internal override ShortcutEntry CreateShortcutEntry(MethodInfo methodInfo)
+        {
+            var id = new Identifier(methodInfo, this);
+            var type = this is ClutchShortcutAttribute ? ShortcutType.Clutch : ShortcutType.Action;
+            Action<ShortcutArguments> action;
+            if (methodInfo.GetParameters().Any())
+                action = (Action<ShortcutArguments>)Delegate.CreateDelegate(typeof(Action<ShortcutArguments>), null, methodInfo);
+            else
+            {
+                m_NoArgumentsAction = (Action)Delegate.CreateDelegate(typeof(Action), null, methodInfo);
+                action = NoArgumentShortcutMethodProxy;
+            }
+            var entry = new ShortcutEntry(id, defaultBinding.keyCombinationSequence, action, context, tag, type, displayName, priority);
+            foreach (var reserved in methodInfo.GetCustomAttributes(typeof(ReserveModifiersAttribute), inherit: true))
+                entry.m_ReservedModifier |= ((ReserveModifiersAttribute)reserved).Modifiers;
+            return entry;
+        }
     }
 
     /// <summary>A shortcut that acts while its keys are held (begins on press, ends on release).</summary>
@@ -121,16 +149,12 @@ namespace UnityEditor.ShortcutManagement
         internal const int DefaultGlobalPriority = 1000000;
         internal const int DefaultContextPriority = 1000;
 
-        // The context manager's global context (ContextManager.globalContextType). The context
-        // manager is not written by hand yet, so its type is looked up by name.
-        static readonly Type s_GlobalContextType = typeof(ShortcutAttributeUtility).Assembly.GetType("UnityEditor.ShortcutManagement.ContextManager+GlobalContext");
-
         /// <summary>A priority left at its default: a global shortcut's, or a context's.</summary>
         internal static int AssignPriority(Type context, int suggestedPriority = int.MaxValue)
         {
             if (suggestedPriority != int.MaxValue)
                 return suggestedPriority;
-            return context == null || (s_GlobalContextType != null && context == s_GlobalContextType) ? DefaultGlobalPriority : DefaultContextPriority;
+            return context == null || context == ContextManager.globalContextType ? DefaultGlobalPriority : DefaultContextPriority;
         }
     }
 

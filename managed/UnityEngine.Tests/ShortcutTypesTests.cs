@@ -136,6 +136,100 @@ namespace UnityEngine.Tests
             var clutch = new ClutchShortcutAttribute("Probe/Clutch", typeof(UnityEditor.SceneView), typeof(UnityEditor.SceneView), KeyCode.C);
             Assert.Equal(typeof(UnityEditor.SceneView), clutch.clutchActivatedContext);
             Assert.Equal(ShortcutModifiers.Shift, new ReserveModifiersAttribute(ShortcutModifiers.Shift).Modifiers);
+            Assert.Equal(typeof(ContextManager.GlobalContext), ContextManager.globalContextType);
+        }
+
+        sealed class Tool : IShortcutContext { public bool active { get; set; } }
+        sealed class OtherTool : IShortcutContext { public bool active { get; set; } }
+
+        [ReserveModifiers(ShortcutModifiers.Shift)]
+        sealed class ReservingTool : IShortcutContext { public bool active => true; }
+
+        static int s_Runs;
+        static void CountRun() => s_Runs++;
+
+        static ShortcutEntry Entry(string id, Type context, string tag, params KeyCombination[] keys) =>
+            new ShortcutEntry(new Identifier(id), keys, null, context, tag, ShortcutType.Action);
+
+        [Fact]
+        public void EntriesDefaultToTheGlobalContextAndDropReservedModifiers()
+        {
+            var entry = Entry("Probe/Global", null, null, new KeyCombination(KeyCode.G));
+            Assert.Equal(ContextManager.globalContextType, entry.context);
+            Assert.Equal("Probe/Global", entry.displayName);
+            Assert.Equal(1000000, entry.priority);
+            var reserving = Entry("Probe/Reserving", typeof(ReservingTool), null, new KeyCombination(KeyCode.R, ShortcutModifiers.Shift));
+            Assert.Equal(ShortcutModifiers.Shift, reserving.m_ReservedModifier);
+            Assert.True(reserving.StartsWith(new[] { new KeyCombination(KeyCode.R) }));
+            Assert.False(reserving.StartsWith(new[] { new KeyCombination(KeyCode.R, ShortcutModifiers.Alt) }));
+            Assert.True(entry.FullyMatches(new System.Collections.Generic.List<KeyCombination> { new KeyCombination(KeyCode.G) }));
+        }
+
+        [Fact]
+        public void AMethodWithoutParametersRunsThroughTheProxy()
+        {
+            var method = typeof(ShortcutTypesTests).GetMethod(nameof(CountRun), System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.NonPublic);
+            var entry = new ShortcutAttribute("Probe/Run", KeyCode.F2).CreateShortcutEntry(method);
+            s_Runs = 0;
+            entry.action(new ShortcutArguments { stage = ShortcutStage.End });
+            Assert.Equal(1, s_Runs);
+            Assert.Equal(ShortcutType.Action, entry.type);
+            Assert.Equal(ShortcutType.Clutch, new ClutchShortcutAttribute("Probe/Clutch").CreateShortcutEntry(method).type);
+        }
+
+        [Fact]
+        public void WithoutTheActiveFilterTheFirstToolContextAnswersAnyType()
+        {
+            var manager = new ContextManager();
+            var tool = new Tool { active = false };
+            var other = new OtherTool { active = true };
+            manager.RegisterToolContext(tool);
+            manager.RegisterToolContext(tool);
+            manager.RegisterToolContext(other);
+            manager.RegisterToolContext(null);
+            Assert.Equal(2, manager.activeContextCount);
+            Assert.Same(tool, manager.GetContextInstanceOfType(typeof(OtherTool), filterActive: false));
+            Assert.Same(other, manager.GetContextInstanceOfType(typeof(OtherTool), filterActive: true));
+            Assert.Null(manager.GetContextInstanceOfType(typeof(Tool), filterActive: true));
+            Assert.Same(ContextManager.globalContext, manager.GetContextInstanceOfType(ContextManager.globalContextType, true));
+            manager.DeregisterToolContext(other);
+            Assert.Equal(1, manager.activeContextCount);
+            Assert.Equal("ShortcutStage.End", ContextManager.EnumTagFormat(ShortcutStage.End));
+        }
+
+        [Fact]
+        public void LookupsPreferAContextsEntriesAndActiveTags()
+        {
+            var t = new KeyCombination(KeyCode.T);
+            var tool = Entry("Probe/Tool", typeof(Tool), null, t);
+            var global = Entry("Probe/GlobalT", null, null, t);
+            var tagged = Entry("Probe/TaggedT", null, "probe-unit-tag", t);
+            var directory = new Directory(new[] { tool, global, tagged });
+            var found = new System.Collections.Generic.List<ShortcutEntry>();
+            directory.FindShortcutEntries(new System.Collections.Generic.List<KeyCombination> { t }, found);
+            Assert.Equal(new[] { tool }, found);
+            directory.FindShortcutEntries(new System.Collections.Generic.List<KeyCombination> { t }, new[] { ContextManager.globalContextType }, new string[0], found);
+            Assert.Equal(new[] { global }, found);
+            directory.FindShortcutEntries(new System.Collections.Generic.List<KeyCombination> { t }, new[] { ContextManager.globalContextType }, new[] { "probe-unit-tag" }, found);
+            Assert.Equal(new[] { tagged }, found);
+            Assert.Same(global, directory.FindShortcutEntry("Probe/GlobalT"));
+            Assert.Null(directory.FindShortcutEntry("probe/globalt"));
+            var conflicts = new System.Collections.Generic.List<ShortcutEntry>();
+            directory.FindPotentialConflicts(ContextManager.globalContextType, null, new[] { t }, conflicts, new ContextManager());
+            Assert.Equal(new[] { global }, conflicts);
+        }
+
+        [Fact]
+        public void AnActionAndAClutchOnOneMouseButtonDoNotConflict()
+        {
+            var mouse = new KeyCombination(KeyCode.Mouse1);
+            var action = Entry("Probe/Action", typeof(Tool), null, mouse);
+            var clutch = new ShortcutEntry(new Identifier("Probe/Clutch"), new[] { mouse }, null, typeof(Tool), ShortcutType.Clutch);
+            var key = Entry("Probe/Key", typeof(Tool), null, new KeyCombination(KeyCode.K));
+            var sameKey = Entry("Probe/SameKey", typeof(Tool), null, new KeyCombination(KeyCode.K));
+            var conflicts = new System.Collections.Generic.List<ShortcutEntry>();
+            new Directory(new[] { action, clutch, key, sameKey }).FindShortcutsWithConflicts(conflicts, new ContextManager());
+            Assert.Equal(new[] { key, sameKey }, conflicts);
         }
     }
 }

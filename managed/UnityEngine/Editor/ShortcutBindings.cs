@@ -90,12 +90,7 @@ namespace UnityEditor.ShortcutManagement
 
         static bool MacEditor => Application.platform == RuntimePlatform.OSXEditor;
 
-        public KeyCode keyCode => IsKeyCodeSupported(m_KeyCode) ? m_KeyCode : KeyCode.None;
-
-        /// <summary>The shortcut directory's check (Directory.IsKeyCodeSupported, whose class is
-        /// not written by hand yet): the keyboard and mouse keys up to the last mouse button, and
-        /// F16 to F24.</summary>
-        static bool IsKeyCodeSupported(KeyCode key) => key <= KeyCode.Mouse6 || (key >= KeyCode.F16 && key <= KeyCode.F24);
+        public KeyCode keyCode => Directory.IsKeyCodeSupported(m_KeyCode) ? m_KeyCode : KeyCode.None;
         public ShortcutModifiers modifiers => m_Modifiers;
         public bool alt => (modifiers & ShortcutModifiers.Alt) == ShortcutModifiers.Alt;
         public bool action => (modifiers & ShortcutModifiers.Action) == ShortcutModifiers.Action;
