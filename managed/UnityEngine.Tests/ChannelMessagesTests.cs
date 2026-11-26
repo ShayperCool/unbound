@@ -131,5 +131,59 @@ namespace UnityEngine.Tests
                 if (wasRunning) ChannelService.Start();
             }
         }
+    
+        // A closed client's Close closes the client a later GetOrCreateClient made for its channel,
+        // as Unity's C# does: nothing is left connected and unticked.
+        [Fact]
+        public void AnOldClientsCloseClosesTheChannelsCurrentClient()
+        {
+            bool wasRunning = ChannelService.IsRunning();
+            ChannelService.Start();
+            try
+            {
+                var a = ChannelClient.GetOrCreateClient(Channel);
+                a.Start(false);
+                a.Close();
+                var b = ChannelClient.GetOrCreateClient(Channel);
+                Assert.NotSame(a, b);
+                b.Start(false);
+                Assert.True(b.IsConnected());
+                a.Close();
+                Assert.False(b.IsConnected());
+                Assert.NotSame(b, ChannelClient.GetOrCreateClient(Channel));
+            }
+            finally
+            {
+                ChannelClient.Close(Channel);
+                if (!wasRunning) ChannelService.Stop();
+            }
+        }
+
+        // The command line's service port wins over this process's service (a virtual player runs
+        // its own service and reaches the main one through the port it was given).
+        [Fact]
+        public void TheCommandLinesServicePortWinsOverThisProcesssService()
+        {
+            bool wasRunning = ChannelService.IsRunning();
+            var line = Unbound.EditorProcess.s_CommandLine;
+            ChannelService.Start();
+            var listener = new System.Net.Sockets.TcpListener(System.Net.IPAddress.Loopback, 0);
+            listener.Start();
+            int closedPort = ((System.Net.IPEndPoint)listener.LocalEndpoint).Port;
+            listener.Stop();
+            Unbound.EditorProcess.s_CommandLine = new[] { "Unity", "-ump-channel-service-port", closedPort.ToString() };
+            try
+            {
+                var client = ChannelClient.GetOrCreateClient(Channel);
+                client.Start(false);
+                Assert.False(client.IsConnected());
+            }
+            finally
+            {
+                Unbound.EditorProcess.s_CommandLine = line;
+                ChannelClient.Close(Channel);
+                if (!wasRunning) ChannelService.Stop();
+            }
+        }
     }
 }

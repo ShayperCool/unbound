@@ -58,6 +58,7 @@ namespace UnityEngine.Tests
                 Assert.False(ChannelService.IsRunning());
                 Assert.Empty(ChannelService.GetChannelList());
                 Assert.Null(ChannelService.GetOrCreateChannel("tests.unmeasured", (client, data) => { }));
+                Assert.Null(ChannelClient.GetOrCreateClient("tests.unmeasured"));
                 Assert.Null(UnityEditor.Collaboration.Collab.instance);
                 var collab = (UnityEditor.Collaboration.Collab)System.Activator.CreateInstance(typeof(UnityEditor.Collaboration.Collab), nonPublic: true);
                 Assert.False(collab.IsCollabEnabledForCurrentProject());
@@ -67,7 +68,7 @@ namespace UnityEngine.Tests
             }
             finally { Debug.unityLogger.logHandler = previous; }
             foreach (var member in new[] { "ChannelService.ChannelNameToId", "ChannelService.Start", "ChannelService.IsRunning",
-                         "ChannelService.GetChannelList", "ChannelService.GetOrCreateChannel", "Collab.instance", "Collab.IsCollabEnabledForCurrentProject",
+                         "ChannelService.GetChannelList", "ChannelService.GetOrCreateChannel", "ChannelClient.GetOrCreateClient", "Collab.instance", "Collab.IsCollabEnabledForCurrentProject",
                          "LocalizationDatabase.enableEditorLocalization", "LocalizationDatabase.GetCulture", "LocalizationDatabase.GetLocalizedString" })
                 Assert.Contains(capture.Lines, line => line.Contains(member + " is not implemented"));
         }

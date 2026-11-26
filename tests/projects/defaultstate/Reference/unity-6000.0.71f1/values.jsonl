@@ -936,6 +936,7 @@
 {"key":"UnityEditor.InspectorWindow/Property/UnityEngine.Object/name","status":"value","value":"string:"}
 {"key":"UnityEditor.L10n/@factory","status":"excluded","value":"static"}
 {"key":"UnityEditor.Lightmapping/@factory","status":"excluded","value":"static"}
+{"key":"UnityEditor.MPE.ChannelClient/@factory","status":"excluded","value":"no-public-parameterless-constructor"}
 {"key":"UnityEditor.MPE.ChannelClientInfo/@factory","status":"value","value":"struct"}
 {"key":"UnityEditor.MPE.ChannelClientInfo/Property/UnityEditor.MPE.ChannelClientInfo/clientId","status":"value","value":"0"}
 {"key":"UnityEditor.MPE.ChannelClientInfo/Property/UnityEditor.MPE.ChannelClientInfo/connectionId","status":"value","value":"0"}

@@ -62,8 +62,6 @@ namespace UnityEditor.MPE
 
         public bool IsConnected() => m_Socket != null && m_Socket.Connected;
 
-        /// <summary>Connects to the service (no-op when connected) and sets whether each Editor update
-        /// ticks the client.</summary>
         /// <summary>Connects to the service (unless connected), sets whether each Editor update ticks
         /// the client, and ticks it, as Unity's C# does.</summary>
         public void Start(bool autoTick)
@@ -91,7 +89,7 @@ namespace UnityEditor.MPE
         /// else this process's service's.</summary>
         static int ServicePort()
         {
-            var args = Environment.GetCommandLineArgs();
+            var args = Unbound.EditorProcess.GetCommandLineArgs();
             for (int i = 0; i + 1 < args.Length; i++)
                 if (args[i] == "-ump-channel-service-port" && int.TryParse(args[i + 1], out int port)) return port;
             return ChannelServer.Running ? ChannelServer.Port : 0;
@@ -103,12 +101,13 @@ namespace UnityEditor.MPE
             m_Socket = null;
         }
 
+        /// <summary>Drops the handlers, then closes the client of this channel (Unity's C#: the one the
+        /// channel's id names now, which a later GetOrCreateClient may have made).</summary>
         public void Close()
         {
             m_TextHandlers = new List<Action<string>>();
             m_BinaryHandlers = new List<Action<byte[]>>();
-            Stop();
-            s_Clients.Remove(clientId);
+            Close(channelName);
         }
 
         /// <summary>Sends what was queued, then gives the received messages to the handlers.</summary>
@@ -175,7 +174,9 @@ namespace UnityEditor.MPE
 
         public static void Close(string channelName)
         {
-            if (s_Clients.TryGetValue(ChannelService.ChannelNameToId(channelName), out var client)) client.Close();
+            int id = ChannelService.ChannelNameToId(channelName);
+            if (!s_Clients.Remove(id, out var client)) return;
+            client.Stop();
         }
 
         public static void Shutdown()

@@ -1900,6 +1900,12 @@
       "type": "UnityEditor.Lightmapping"
     },
     {
+      "category": "class",
+      "module": "UnityEditor.CoreModule",
+      "status": "no-public-parameterless-constructor",
+      "type": "UnityEditor.MPE.ChannelClient"
+    },
+    {
       "category": "struct",
       "module": "UnityEditor.CoreModule",
       "status": "candidate",
