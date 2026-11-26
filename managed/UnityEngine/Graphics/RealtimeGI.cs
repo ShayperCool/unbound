@@ -468,19 +468,14 @@ namespace UnityEngine
 
         /// <summary>The frame's lights as the built-in pipeline gives them to realtime GI: the
         /// legacy falloff, the color scaled by the intensity and bounce intensity before its
-        /// conversion to linear, LightmapperUtils' inner spot angle.</summary>
+        /// conversion to linear (with GraphicsSettings.lightsUseLinearIntensity the linear color,
+        /// tinted by its color temperature, scaled: tests/projects/realtimegi
+        /// `--linear-intensity`), LightmapperUtils' inner spot angle.</summary>
         static int BuiltinLights()
         {
             int count = 0;
             foreach (var light in s_FrameLights)
             {
-                if (GraphicsSettings.lightsUseLinearIntensity)
-                {
-                    // How the built-in pipeline's realtime GI takes lights of linear intensity
-                    // is not measured (a render pipeline's are its delegate's).
-                    Warn("linear-intensity", "precomputed realtime GI with linear light intensity (GraphicsSettings.lightsUseLinearIntensity) in the built-in render pipeline is not supported yet: lights add no realtime indirect light.");
-                    continue;
-                }
                 var t = light.transform;
                 var color = light.ScaledColor(light.intensity * light.bounceIntensity, linear: true);
                 Add(ref count, (int)light.type, t.position, t.forward, color.r, color.g, color.b, light.range, light.spotAngle,

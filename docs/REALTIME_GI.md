@@ -19,8 +19,7 @@ drawn only in part. Not supported yet, each with a warning ([Open](#open) lists 
 light types other than point, spot and directional (the scene's realtime GI is then not drawn: its
 renderers take light probes again; area lights are baked only), light probes whose probe set cannot be read or placed (they light nothing; the
 lightmaps are drawn), light probes of a scene that are not the current ones (additive loads),
-systems that reference another scene's systems and linear light intensity in the built-in
-pipeline. In a gamma-space project the systems solve as in a linear one and the shaders decode
+and systems that reference another scene's systems. In a gamma-space project the systems solve as in a linear one and the shaders decode
 the realtime lightmap with an exponent of 1/2.2 (`unity_DynamicLightmap_HDR` (1, 1/2.2) instead
 of (1, 1)), `DynamicGI.SetEmissive` takes its color as a gamma color in both, and the sky the
 environment and the ambient probe are drawn from writes gamma-encoded colors, which are taken
@@ -84,7 +83,8 @@ Room cases of tests/projects/realtimegi in its tests):
 1. **Direct light per cluster**: the mean over the cluster's points of `max(0, n.l)` times the
    light's distance falloff, its angular falloff (spot lights) and its color, scaled by intensity
    and `Light.bounceIntensity` before its conversion to linear (in projects without linear light
-   intensity). Each point's normal is three bytes b, each component b / 127 - 1 (so that axis
+   intensity; with it, the built-in pipeline scales the linear color, tinted by the light's
+   color temperature, keeping the legacy falloff: tests/projects/realtimegi `--linear-intensity`). Each point's normal is three bytes b, each component b / 127 - 1 (so that axis
    normals are exact), not renormalized. The distance falloff is the built-in pipeline's legacy
    curve 1 / (1 + 25 x^2) (faded to 0 from x^2 = 0.64 to 1) over x = distance / range, sampled at
    the 16 table positions t = 15 / (1 + 14 x^2) = 0..15 (0 at t = 0 and 1, 1 at t = 15) and
@@ -1198,8 +1198,7 @@ measure):
   the rows above every chart, the order of equal regions made by different placements, and the
   block-search limit ([Realtime lightmap UVs](#realtime-lightmap-uvs)).
 - Lights: render pipelines other than the Universal Render Pipeline,
-  light types other than point, spot and directional (area lights are baked only), linear light
-  intensity in the built-in pipeline
+  light types other than point, spot and directional (area lights are baked only)
   ([Lights of a render pipeline](#lights-of-a-render-pipeline)).
 - Scenes: light probes of additive loads, probe sets that cannot be read or placed, probes
   merged from several scenes, and systems that reference another scene's systems.
