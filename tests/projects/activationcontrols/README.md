@@ -40,8 +40,9 @@ different execution orders and leaves the order among scripts of the same order 
 should never rely on this behavior").
 
 Limits: runtime-built hierarchies only (GameObjects made with `new GameObject`, recorders added with
-`AddComponent`), two script classes, one tree shape, plain `SetActive` on the root, the macOS
-Editor in batch mode.
+`AddComponent`), two script classes (so whether different classes of one execution order keep
+creation order or group by class is unmeasured), one tree shape, plain `SetActive` on the root,
+the macOS Editor in batch mode.
 
 Residuals (residuals.json): the order rows; Unbound runs OnDisable in hierarchy pre-order and
 OnEnable in execution order, then pre-order. Not implemented yet: scene-loaded hierarchies (their
