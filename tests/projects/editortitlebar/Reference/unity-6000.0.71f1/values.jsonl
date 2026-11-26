@@ -1,0 +1,30 @@
+{"k":"outside/editorGUI","v":["throws NullReferenceException: Object reference not set to an instance of an object","throws NullReferenceException: Object reference not set to an instance of an object","throws NullReferenceException: Object reference not set to an instance of an object","throws NullReferenceException: Object reference not set to an instance of an object"]}
+{"k":"outside/editorGUILayout","v":["throws ArgumentException: You can only call GUI functions from inside OnGUI.","throws ArgumentException: You can only call GUI functions from inside OnGUI.","throws ArgumentException: You can only call GUI functions from inside OnGUI.","throws ArgumentException: You can only call GUI functions from inside OnGUI.","throws ArgumentException: You can only call GUI functions from inside OnGUI.","throws ArgumentException: You can only call GUI functions from inside OnGUI."]}
+{"k":"thumbnails","v":["d_cs Script Icon 256x256","d_MeshRenderer Icon 64x64","d_Transform Icon 64x64","d_GameObject Icon 256x256","d_ScriptableObject Icon 64x64"]}
+{"k":"objectEnabled/functions","v":[["TitlebarWithAwake",-1],["TitlebarWithStart",1],["TitlebarWithUpdate",1],["TitlebarWithFixedUpdate",1],["TitlebarWithLateUpdate",1],["TitlebarWithOnGUI",1],["TitlebarWithOnEnable",1],["TitlebarWithOnDisable",1],["TitlebarWithOnDestroy",-1],["TitlebarWithOnValidate",-1],["TitlebarWithReset",-1],["TitlebarWithOnDrawGizmos",-1],["TitlebarWithOnRenderObject",-1],["TitlebarWithOnBecameVisible",-1],["TitlebarWithOnApplicationQuit",-1],["TitlebarDerived",1]]}
+{"k":"objectEnabled","v":[-1,1,-1,1,-1,-1]}
+{"k":"presetValid","v":[true,true,true,false,true,true]}
+{"k":"hasHelp","v":[true,true,true,true,true,true]}
+{"k":"style","v":[[16,0,2,0],17]}
+{"k":"titles","v":["Titlebar Target (Script)","Mesh Renderer","Transform","Titlebar Target","Titlebar Asset (Titlebar Asset)"]}
+{"k":"rect/layout/titlebar","v":[["ok",4,false],[false,4,false],[true,4,false],[false,4,false],[false,3,false],[false,4,false],[false,3,false],[false,3,false],[true,4,false],[false,4,false]]}
+{"k":"layout/layout/titlebar","v":[[false,4,false],[true,4,false],[false,4,false],[true,4,false],[false,4,false],["ok",3,false]]}
+{"k":"layout/layout/rects","v":[[0,0,1,1],[0,0,1,1],[0,0,1,1],[0,0,1,1],[0,0,1,1],[0,0,1,1]]}
+{"k":"rect/repaint/titlebar","v":[["ok",4,false],[false,4,false],[true,4,false],[false,4,false],[false,3,false],[false,4,false],[false,3,false],[false,3,false],[true,4,false],[false,4,false]]}
+{"k":"layout/repaint/titlebar","v":[[false,4,false],[true,4,false],[false,4,false],[true,4,false],[false,4,false],["ok",3,false]]}
+{"k":"layout/repaint/rects","v":[[0,0,300,22],[0,22,300,22],[0,44,300,22],[0,66,300,22],[0,88,300,22],[0,110,300,22]]}
+{"k":"script/start","v":[false,false,true,false,[4,false,4,false],false,false]}
+{"k":"script/title.down","v":[[false,false,true,false,["used",false,"used before",false],true,true],12,true]}
+{"k":"script/title.up","v":[[true,false,true,false,["used",true,"used before",false],true,false],12,true]}
+{"k":"script/title.left","v":[[false,false,true,false,["used",false,"used before",false],true,false],12,true]}
+{"k":"script/title.right","v":[[true,false,true,false,["used",false,"used before",false],true,false],12,true]}
+{"k":"script/title.away.down","v":[[true,false,true,false,["used",false,"used before",false],true,true],12,true]}
+{"k":"script/title.away.up","v":[[true,false,true,false,["used",false,"used before",false],true,false],12,true]}
+{"k":"script/toggle.down","v":[[true,false,true,false,["used",false,"used before",false],true,true],12,true]}
+{"k":"script/toggle.up","v":[[true,false,false,false,["used",true,"used before",false],true,false],12,true]}
+{"k":"script/mixed.down","v":[[true,false,false,false,[4,false,"used",false],true,true],12,true]}
+{"k":"script/mixed.up","v":[[true,false,true,true,[4,false,"used",true],true,false],12,true]}
+{"k":"script/mixedTitle.down","v":[[true,false,true,true,[4,false,"used",false],true,true],12,true]}
+{"k":"script/mixedTitle.up","v":[[true,true,true,true,[4,false,"used",true],true,false],12,true]}
+{"k":"screen","v":[320,180]}
+{"k":"complete","v":true}

@@ -1,0 +1,12 @@
+{
+  "commands": [
+    "python3 tests/projects/editortitlebar/run.py gate"
+  ],
+  "summary": "editortitlebar: .*",
+  "engine_paths": [
+    "managed/UnityEngine/Editor/",
+    "managed/UnityEngine/IMGUI/",
+    "tests/projects/editortitlebar/",
+    "tests/projects/imguiskin/"
+  ]
+}
