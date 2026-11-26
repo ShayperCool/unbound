@@ -1,0 +1,14 @@
+{
+  "commands": [
+    "python3 tests/projects/reorderableinput/run.py gate"
+  ],
+  "summary": "reorderableinput: .*",
+  "engine_paths": [
+    "managed/UnityEngine/Editor/",
+    "managed/UnityEngine/IMGUI/",
+    "managed/UnityEngine/Editor/ReorderableList.cs",
+    "managed/UnityEngine/Editor/ReorderableList.Drawing.cs",
+    "tests/projects/reorderableinput/",
+    "tests/projects/imguiskin/"
+  ]
+}
