@@ -57,7 +57,8 @@ and compares the rest of each frame exactly. Both sides compile the scripts with
 optimization (the Editor records with `-releaseCodeOptimization`, the engine runs with
 `UNBOUND_CODE_OPTIMIZATION=release`), as the Reference's scripts were: a machine whose Editor
 preference starts in Debug (`ScriptDebugInfoEnabled`) would otherwise place the IL offsets of the
-frames elsewhere. Asynchronous AssetBundle loads that
+frames elsewhere. A new Reference is published from Linux Editor captures: a macOS capture names
+the `/Users/bokken/...` root, which the Linux gate would not read. Asynchronous AssetBundle loads that
 fail report later, at a moment that varies between runs, so only their synchronous answers are
 recorded. `run.py record` / `publish` / `gate` (tests/value_probe.py).
 
