@@ -8,7 +8,7 @@ OnGUI ran (`Event.current`, `GUI.skin`, `GUI.color`, `GUI.depth`, `GUI.enabled`,
 
 Measured in the windowed Unity 6000.0.71f1 Linux Editor (two identical captures; the batch-mode
 Editor runs no OnGUI): between passes every call answers as before the first pass: `GUI.skin`,
-the controls, `GUILayout`, groups and `CalcSize` throw `ArgumentException: You can only call GUI
+the controls, `GUILayout`, groups and `GUI.skin.label.CalcSize` (through `GUI.skin`) throw `ArgumentException: You can only call GUI
 functions from inside OnGUI.`; `Event.current` is null; `GUI.color`, `enabled` and `matrix` keep
 their defaults; `GetControlID` gives an id; `hotControl` is 0.
 

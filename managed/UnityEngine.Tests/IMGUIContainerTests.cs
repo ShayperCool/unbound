@@ -416,7 +416,7 @@ namespace UnityEngine.Tests
             f.Tick();
             Assert.Same(Unbound.Runtime.EditorGuiSkins.Current, inside);
             Assert.Equal(0, GUIUtility.s_SkinMode);
-            Assert.Same(GUIUtility.GetDefaultSkin(0), GUIUtility.GetDefaultSkin());
+            Assert.Null(GUI.UserSkin);
             // GUI.skin throws between passes (tests/projects/guioutside between.skin).
             Assert.Throws<ArgumentException>(() => GUI.skin);
 
