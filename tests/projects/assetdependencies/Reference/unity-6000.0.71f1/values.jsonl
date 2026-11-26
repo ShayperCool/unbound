@@ -170,6 +170,16 @@
 {"k":"odd/absolute/recursive.set","v":"[]"}
 {"k":"odd/absolute/direct","v":"[]"}
 {"k":"odd/absolute/direct.set","v":"[]"}
+{"k":"resolved/Fall/import","v":"done"}
+{"k":"resolved/Fall/direct","v":"[]"}
+{"k":"resolved/Fall/direct.set","v":"[]"}
+{"k":"resolved/UsePass/import","v":"done"}
+{"k":"resolved/UsePass/direct","v":"[]"}
+{"k":"resolved/UsePass/direct.set","v":"[]"}
+{"k":"resolved/Dependency/import","v":"done"}
+{"k":"resolved/Dependency/import.logs","v":"Warning: Importer(ShaderImporter) generated inconsistent result for asset(guid:d1e00000000000000000000000000012) \"Assets/Deps/Dependency.shader\""}
+{"k":"resolved/Dependency/direct","v":"[\"Assets/Deps/Custom.shader\"]"}
+{"k":"resolved/Dependency/direct.set","v":"[\"Assets/Deps/Custom.shader\"]"}
 {"k":"bundles/all","v":"[\"data\", \"mat\", \"prefab\", \"tex\", \"tex.hd\"]"}
 {"k":"bundles/prefab/False","v":"[\"mat\"]"}
 {"k":"bundles/prefab/False.set","v":"[\"mat\"]"}

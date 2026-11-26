@@ -116,6 +116,14 @@ public class AssetDependenciesProbe : MonoBehaviour
             Answer("odd/" + name + "/direct", () => AssetDatabase.GetDependencies(p, false));
         }
 
+        // The shaders that name Probe/Custom imported again, now that it is known.
+        foreach (var name in new[] { "Fall", "UsePass", "Dependency" })
+        {
+            var path = "Assets/Deps/" + name + ".shader";
+            Try("resolved/" + name + "/import", () => { AssetDatabase.ImportAsset(path, ImportAssetOptions.ForceUpdate); return "done"; });
+            Answer("resolved/" + name + "/direct", () => AssetDatabase.GetDependencies(path, false));
+        }
+
         // The AssetBundles the assets of a bundle depend on: Prefab (prefab) -> Mat (mat) -> Custom.shader
         // (none) -> Tex (tex), Tex2 (tex.hd); Prefab -> Other.asset (none) -> Data (data) -> Mat.
         Try("bundles/all", () => L(AssetDatabase.GetAllAssetBundleNames()));

@@ -83,11 +83,13 @@ namespace UnityEngine.Tests
                 Lines.Add(type + ": " + string.Format(System.Globalization.CultureInfo.InvariantCulture, format, args));
         }
 
+        /// <summary>The probe's assets (Dependency.shader aside: its first import came before the
+        /// shader it names, AShadersDependencyShaderIsADependency).</summary>
         public static IEnumerable<object[]> Assets() =>
             new[]
             {
                 "Assets/Deps/Tex.png", "Assets/Deps/Tex2.png", "Assets/Deps/Sec.png", "Assets/Deps/Custom.shader", "Assets/Deps/Fall.shader",
-                "Assets/Deps/UsePass.shader", "Assets/Deps/Dependency.shader", "Assets/Deps/DepInclude.cginc", "Assets/Deps/Mat.mat",
+                "Assets/Deps/UsePass.shader", "Assets/Deps/DepInclude.cginc", "Assets/Deps/Mat.mat",
                 "Assets/Deps/BuiltinMat.mat", "Assets/Deps/Variant.mat", "Assets/Scripts/DepData.cs", "Assets/Scripts/DepBehaviour.cs",
                 "Assets/Deps/Data.asset", "Assets/Deps/Other.asset", "Assets/Deps/Text.txt", "Assets/Deps/Prefab.prefab",
                 "Assets/Deps/Deps.unity", "Assets/Scenes/Probe.unity", "Assets/Scripts/AssetDependenciesProbe.cs",
@@ -172,6 +174,36 @@ namespace UnityEngine.Tests
             Assert.Empty(AssetDatabase.GetDependencies("Assets/Deps/Notes.md", false));
             Assert.Empty(m_Logs.Lines);
         }
+
+        /// <summary>A text-serialized asset of an importer that is not read (a visual effect), and an
+        /// asset a scripted importer overrides, answer none and say so.</summary>
+        [Fact]
+        public void AnAssetOfAnImporterNotReadAnswersNoneAndSaysSo()
+        {
+            using var listing = AssetDatabase.ListForTests("[" + Entry("d1e000000000000000000000000000ae", "Assets/Deps/X.vfx", "asset", "VisualEffectImporter", "", "") + ","
+                + Entry("d1e000000000000000000000000000af", "Assets/Deps/Over.png", "texture", "TextureImporter", "", "") + ","
+                + Entry("d1e00000000000000000000000000004", "Assets/Deps/Mat.mat", "asset", "NativeFormatImporter", "", "") + "]");
+            var reference = "{fileID: 2100000, guid: d1e00000000000000000000000000004, type: 2}";
+            File.WriteAllText(Path.Combine(m_Root, "Assets", "Deps", "X.vfx"), "%YAML 1.1\n--- !u!114 &1\nMonoBehaviour:\n  m: " + reference + "\n");
+            File.WriteAllBytes(Path.Combine(m_Root, "Assets", "Deps", "Over.png"), new byte[] { 1, 2, 3 });
+            File.WriteAllText(Path.Combine(m_Root, "Assets", "Deps", "Over.png.meta"), "fileFormatVersion: 2\nguid: d1e000000000000000000000000000af\n"
+                + "importerOverride:\n  nativeImporterType: 2089858483\nScriptedImporter:\n  script: " + reference + "\n");
+            Stubs.Forget("AssetDatabase.GetDependencies(VisualEffectImporter)");
+            Stubs.Forget("AssetDatabase.GetDependencies(ScriptedImporter)");
+            Assert.Empty(AssetDatabase.GetDependencies("Assets/Deps/X.vfx", false));
+            Assert.Empty(AssetDatabase.GetDependencies("Assets/Deps/Over.png", false));
+            Assert.Single(m_Logs.Lines, l => l.Contains("does not read the references of VisualEffectImporter assets yet"));
+            Assert.Single(m_Logs.Lines, l => l.Contains("does not read the references of ScriptedImporter assets yet"));
+        }
+
+        /// <summary>A shader's Dependency shader of the project is a dependency once known; its
+        /// Fallback and UsePass shaders are none (resolved.*).</summary>
+        [Theory]
+        [InlineData("Fall")]
+        [InlineData("UsePass")]
+        [InlineData("Dependency")]
+        public void AShadersDependencyShaderIsADependency(string name) =>
+            Assert.Equal(m_Reference["resolved/" + name + "/direct.set"], Set(AssetDatabase.GetDependencies("Assets/Deps/" + name + ".shader", false)));
 
         /// <summary>A binary-serialized scene's references are not read: said.</summary>
         [Fact]

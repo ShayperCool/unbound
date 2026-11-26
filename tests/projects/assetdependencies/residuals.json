@@ -38,5 +38,14 @@
   "change/file",
   "change/saved/direct",
   "change/saved/direct.set"
+ ],
+ "The Editor imported Dependency.shader before the shader it names (its log: 'Probe/Custom' not found), so its first answers lack it and its reimport warns of an inconsistent result; Unbound answers with the named shader once it is a project shader, as the Editor does after that reimport (resolved/Dependency)": [
+  "deps/Assets/Deps/Dependency.shader/default",
+  "deps/Assets/Deps/Dependency.shader/default.set",
+  "deps/Assets/Deps/Dependency.shader/direct",
+  "deps/Assets/Deps/Dependency.shader/direct.set",
+  "deps/Assets/Deps/Dependency.shader/recursive",
+  "deps/Assets/Deps/Dependency.shader/recursive.set",
+  "resolved/Dependency/import.logs"
  ]
 }

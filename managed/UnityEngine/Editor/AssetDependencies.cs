@@ -84,9 +84,9 @@ namespace UnityEditor
         };
 
         /// <summary>The importers whose assets reference what their .meta does: a shader its default and
-        /// non-modifiable textures (not its fallback, UsePass or Dependency shaders), a texture its
-        /// sprites' secondary textures (tests/projects/assetdependencies deps.Custom.shader,
-        /// Fall.shader, UsePass.shader, Dependency.shader, Tex.png, Sec.png).</summary>
+        /// non-modifiable textures (and its Dependency shaders, <see cref="DependencyShaders"/>), a
+        /// texture its sprites' secondary textures (tests/projects/assetdependencies deps.Custom.shader,
+        /// Tex.png, Sec.png).</summary>
         static readonly HashSet<string> s_ImportersOfMetaReferences = new HashSet<string>(StringComparer.Ordinal)
         {
             "ShaderImporter", "TextureImporter",
@@ -101,6 +101,53 @@ namespace UnityEditor
         {
             foreach (var guid in DirectGuids(asset))
                 if (!string.Equals(guid, asset.Guid, StringComparison.OrdinalIgnoreCase) && s_ByGuid.TryGetValue(guid, out var e))
+                    yield return e;
+            if (asset.Importer == "ShaderImporter")
+                foreach (var e in DependencyShaders(asset))
+                    if (!string.Equals(e.Guid, asset.Guid, StringComparison.OrdinalIgnoreCase)) yield return e;
+        }
+
+        // ------------------------------------------------------------------ shaders by name
+
+        /// <summary>A shader's <c>Dependency "..." = "name"</c> declarations.</summary>
+        static readonly Regex s_ShaderDependency = new Regex(@"\bDependency\s+""[^""]*""\s*=\s*""([^""]+)""", RegexOptions.CultureInvariant);
+
+        /// <summary>The name a shader file declares first (<c>Shader "name"</c>).</summary>
+        static readonly Regex s_ShaderName = new Regex(@"\bShader\s+""([^""]+)""", RegexOptions.CultureInvariant);
+
+        /// <summary>A shader file's name and Dependency shaders' names, by its file and stamp.</summary>
+        static readonly Dictionary<string, (Stamp Stamp, string Name, string[] Dependencies)> s_ShaderSources =
+            new Dictionary<string, (Stamp, string, string[])>(StringComparer.OrdinalIgnoreCase);
+
+        static (string Name, string[] Dependencies) ShaderSource(Entry shader)
+        {
+            var file = FileOf(shader.Path);
+            try
+            {
+                var stamp = Stamp.Of(file);
+                if (s_ShaderSources.TryGetValue(file, out var cached) && cached.Stamp == stamp) return (cached.Name, cached.Dependencies);
+                var text = stamp.Length > 0 ? File.ReadAllText(file) : "";
+                var name = s_ShaderName.Match(text) is { Success: true } m ? m.Groups[1].Value : null;
+                var dependencies = s_ShaderDependency.Matches(text).Select(d => d.Groups[1].Value).Distinct(StringComparer.Ordinal).ToArray();
+                s_ShaderSources[file] = (stamp, name, dependencies);
+                return (name, dependencies);
+            }
+            catch (Exception e) when (e is IOException or UnauthorizedAccessException)
+            {
+                return (null, Array.Empty<string>());
+            }
+        }
+
+        /// <summary>The project's shaders a shader names in its <c>Dependency</c> declarations: once
+        /// the named shader is imported, a dependency (matches the Unity 6000.0.71f1 Editor,
+        /// tests/projects/assetdependencies resolved.Dependency; a shader its Fallback or UsePass
+        /// names is none, resolved.Fall, resolved.UsePass). Built-in shaders are not listed.</summary>
+        static IEnumerable<Entry> DependencyShaders(Entry asset)
+        {
+            var names = ShaderSource(asset).Dependencies;
+            if (names.Length == 0) yield break;
+            foreach (var e in s_Entries)
+                if (e.Importer == "ShaderImporter" && ShaderSource(e).Name is { } name && Array.IndexOf(names, name) >= 0)
                     yield return e;
         }
 
@@ -125,8 +172,24 @@ namespace UnityEditor
             return guids;
         }
 
+        /// <summary>An importer section a .meta names, and whether it overrides the path's importer.</summary>
+        static readonly Regex s_MetaImporter = new Regex(@"(?m)^(\w+Importer):", RegexOptions.CultureInvariant);
+
         static string[] ReadDirectGuids(Entry asset, string file, string meta)
         {
+            if (!File.Exists(file)) return Array.Empty<string>();
+            // An asset another importer imports than its path's (a scripted importer's override).
+            if (File.Exists(meta))
+            {
+                var text = File.ReadAllText(meta);
+                var section = s_MetaImporter.Match(text) is { Success: true } m ? m.Groups[1].Value : null;
+                if (text.Contains("\nimporterOverride:", StringComparison.Ordinal) || (section != null && section != asset.Importer))
+                {
+                    Stubs.Ignored("AssetDatabase.GetDependencies(" + (section ?? "override") + ")",
+                        "does not read the references of " + (section ?? "overridden") + " assets yet (" + asset.Path + "): it answers none of them");
+                    return Array.Empty<string>();
+                }
+            }
             if (asset.Importer != null && s_ImportersWithoutReferences.Contains(asset.Importer)) return Array.Empty<string>();
             try
             {
