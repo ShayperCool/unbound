@@ -267,6 +267,31 @@ namespace UnityEngine.Tests
             Assert.Equal(vector, body.Get("m_SerializableType").Raw);
         }
 
+        /// <summary>A new graph's skeleton (the package's, naming only its graph) gets its resource's
+        /// fields whole, as the Editor writes them on the first write (vfxwrites fresh write/text).</summary>
+        [Fact]
+        public void ASkeletonsResourceGetsItsFieldsWhole()
+        {
+            var body = YText.Map();
+            body.Set("m_Graph", YText.Scalar("{fileID: 114350483966674976}"));
+            VisualEffectWrites.WriteResource(body, new UnityEditor.VFX.VisualEffectResource(), "Assets/A.vfx");
+            Assert.Equal(new[] { "m_ObjectHideFlags", "m_CorrespondingSourceObject", "m_PrefabInstance", "m_PrefabAsset", "m_Name", "m_Graph", "m_Infos" }, body.Keys);
+            Assert.Equal("{fileID: 114350483966674976}", body.Get("m_Graph").Raw);
+            var infos = body.Get("m_Infos");
+            Assert.Equal(new[] { "m_RendererSettings", "m_CullingFlags", "m_UpdateMode", "m_PreWarmDeltaTime", "m_PreWarmStepCount", "m_InitialEventName", "m_InstancingMode", "m_InstancingCapacity" }, infos.Keys);
+            Assert.Equal(new[] { "3", "0", "0.05", "0", "OnPlay", "0", "64" }, infos.Values.GetRange(1, 7).ConvertAll(v => v.Raw));
+            Assert.Equal(new[] { "motionVectorGenerationMode", "shadowCastingMode", "rayTracingMode", "receiveShadows", "reflectionProbeUsage", "lightProbeUsage" }, infos.Get("m_RendererSettings").Keys);
+        }
+
+        [Fact]
+        public void AResourceOfAnotherShapeIsRefused()
+        {
+            var body = YText.Map();
+            body.Set("m_Graph", YText.Scalar("{fileID: 1}"));
+            body.Set("m_Name", YText.Scalar(""));
+            Assert.Throws<NotSupportedException>(() => VisualEffectWrites.WriteResource(body, new UnityEditor.VFX.VisualEffectResource(), "Assets/A.vfx"));
+        }
+
         [Fact]
         public void NestedTypeNamesAreKeptToo()
         {

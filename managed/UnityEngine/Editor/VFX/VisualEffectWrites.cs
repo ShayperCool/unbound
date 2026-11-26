@@ -42,9 +42,6 @@ namespace Unbound.Runtime
                 Debug.LogWarning($"Unbound: {info.Path} is not written: it is in a package the project does not hold.");
                 return;
             }
-            // Subgraph files (.vfxoperator, .vfxblock) are not measured.
-            if (!info.Path.EndsWith(".vfx", StringComparison.OrdinalIgnoreCase))
-                throw new NotSupportedException($"Unbound does not write subgraph files yet ({info.Path}).");
             var text = File.ReadAllText(info.File);
             // A file with CRLF line endings is text serialization too (Parse reads it as LF, and it
             // is written with LF, as AssetFiles writes such a file).
@@ -105,9 +102,9 @@ namespace Unbound.Runtime
             }
             if (unlocated > 0)
                 Debug.LogWarning($"Unbound: {info.Path} is written with {unlocated} references to assets Unbound cannot name written as none.");
-            // The Editor writes a file's objects in file id order (tests/projects/vfx's authored
-            // graphs, built from the package's graph-first skeleton, start with the resource); an
-            // unsorted file with nothing changed is written again sorted (unmeasured).
+            // The Editor writes a file's objects in file id order (tests/projects/vfxwrites fresh
+            // write and subgraph write: the package's skeleton holds its graph before its resource);
+            // an unsorted file with nothing changed is written again sorted (unmeasured).
             docs.Sort((a, b) => a.FileId.CompareTo(b.FileId));
             var written = UnityYamlText.Write(docs);
             // The same text again leaves the file as it is (and unimported).
@@ -128,11 +125,34 @@ namespace Unbound.Runtime
                 if (o is not null) EditorUtility.ClearDirty(o);
         }
 
-        /// <summary>The resource's own fields: its graph and its settings.</summary>
-        static void WriteResource(YText body, VisualEffectResource resource, string path)
+        /// <summary>The resource's own fields: its graph and its settings. A new graph's skeleton
+        /// (the package's, which names only the graph) gets them all, as the Editor writes them.</summary>
+        internal static void WriteResource(YText body, VisualEffectResource resource, string path)
         {
             var infos = body.Get("m_Infos");
-            if (infos == null || infos.Kind != YKind.Map)
+            if (infos == null)
+            {
+                var graph = body.Get("m_Graph");
+                if (graph == null || body.Keys.Count != 1)
+                    throw new NotSupportedException($"Unbound does not write a graph file whose resource has neither settings nor the package's skeleton yet ({path}).");
+                body.Keys.Clear();
+                body.Values.Clear();
+                body.Set("m_ObjectHideFlags", YText.Scalar("0"));
+                body.Set("m_CorrespondingSourceObject", YText.Scalar("{fileID: 0}"));
+                body.Set("m_PrefabInstance", YText.Scalar("{fileID: 0}"));
+                body.Set("m_PrefabAsset", YText.Scalar("{fileID: 0}"));
+                body.Set("m_Name", YText.Scalar(""));
+                body.Set("m_Graph", graph);
+                infos = YText.Map();
+                var rendererMap = YText.Map();
+                foreach (var field in new[] { "motionVectorGenerationMode", "shadowCastingMode", "rayTracingMode", "receiveShadows", "reflectionProbeUsage", "lightProbeUsage" })
+                    rendererMap.Set(field, YText.Scalar("0"));
+                infos.Set("m_RendererSettings", rendererMap);
+                foreach (var field in new[] { "m_CullingFlags", "m_UpdateMode", "m_PreWarmDeltaTime", "m_PreWarmStepCount", "m_InitialEventName", "m_InstancingMode", "m_InstancingCapacity" })
+                    infos.Set(field, YText.Scalar(""));
+                body.Set("m_Infos", infos);
+            }
+            if (infos.Kind != YKind.Map)
                 throw new NotSupportedException($"Unbound does not write a graph file whose resource has no settings map yet ({path}).");
             var s = resource.m_Settings;
             var renderer = infos.Get("m_RendererSettings");

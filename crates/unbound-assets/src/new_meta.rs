@@ -44,7 +44,8 @@ pub enum NewImporter {
     Audio,
     Font,
     SpriteAtlas,
-    /// A Visual Effect Graph (`.vfx`): the VisualEffectImporter with an empty template.
+    /// A Visual Effect Graph or subgraph (`.vfx`, `.vfxoperator`, `.vfxblock`): the
+    /// VisualEffectImporter with an empty template.
     VisualEffect,
     /// A SpeedTree 8 tree, with what its `.meta` takes from the file.
     SpeedTree8(crate::speedtree8_meta::TreeShape),
@@ -105,11 +106,11 @@ pub fn importer_for(path: &Path, is_dir: bool) -> Option<NewImporter> {
                 .and_then(|bytes| crate::speedtree8_meta::shape(&bytes))?,
         ),
         "spriteatlasv2" => NewImporter::SpriteAtlas,
-        // Measured for a graph the package's VisualEffectAssetEditorUtility.CreateNewAsset writes
-        // and imports (tests/projects/vfxwrites create/meta); a graph found on disk at startup or
-        // refresh gets the same .meta, unmeasured; subgraphs (.vfxoperator, .vfxblock) are not
-        // measured.
-        "vfx" => NewImporter::VisualEffect,
+        // Measured for a graph and both kinds of subgraph the package's
+        // VisualEffectAssetEditorUtility writes and imports (tests/projects/vfxwrites create/meta,
+        // subgraph create/*/meta); one found on disk at startup or refresh gets the same .meta,
+        // unmeasured.
+        "vfx" | "vfxoperator" | "vfxblock" => NewImporter::VisualEffect,
         "uss" => NewImporter::Scripted {
             script: STYLE_SHEET_IMPORTER,
             validation: true,
@@ -788,8 +789,13 @@ mod tests {
             ),
             "fileFormatVersion: 2\nguid: 00000000000000000000000000000002\nVisualEffectImporter:\n  externalObjects: {}\n  serializedVersion: 1\n  template:\n    name: \n    category: \n    description: \n    icon: {instanceID: 0}\n    thumbnail: {instanceID: 0}\n  userData: \n  assetBundleName: \n  assetBundleVariant: \n"
         );
-        assert!(importer_for(Path::new("a.vfxoperator"), false).is_none());
-        assert!(importer_for(Path::new("a.vfxblock"), false).is_none());
+        // Subgraphs get the same (subgraph create/.vfxoperator/meta, .vfxblock/meta).
+        for subgraph in ["a.vfxoperator", "a.vfxblock"] {
+            assert_eq!(
+                importer_for(Path::new(subgraph), false),
+                Some(NewImporter::VisualEffect)
+            );
+        }
     }
 
     #[test]
