@@ -8,6 +8,7 @@ use std::path::{Path, PathBuf};
 fn main() {
     let native = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../native");
     build_crunch(&native);
+    build_libxmp_lite(&native);
     let astc = native.join("astcenc");
     let astc_adapter = native.join("unbound_astc.cpp");
     println!("cargo:rerun-if-changed={}", astc.display());
@@ -203,4 +204,61 @@ fn build_crunch(native: &Path) {
         .opt_level(2)
         .warnings(false)
         .compile("unbound_crunch");
+}
+
+fn build_libxmp_lite(native: &Path) {
+    let prepare = native.join("libxmp_lite/source.py");
+    let adapter = native.join("unbound_tracker.c");
+    println!("cargo:rerun-if-changed={}", prepare.display());
+    println!(
+        "cargo:rerun-if-changed={}",
+        native.join("pinned_source.py").display()
+    );
+    println!("cargo:rerun-if-changed={}", adapter.display());
+    for key in [
+        "XDG_CACHE_HOME",
+        "UNBOUND_LIBXMP_LITE_ARCHIVE",
+        "UNBOUND_OFFLINE",
+        "CARGO_NET_OFFLINE",
+    ] {
+        println!("cargo:rerun-if-env-changed={key}");
+    }
+    let output = std::process::Command::new("python3")
+        .arg(&prepare)
+        .output()
+        .expect("running the libxmp-lite dependency preparation");
+    assert!(
+        output.status.success(),
+        "{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let root = PathBuf::from(String::from_utf8(output.stdout).unwrap().trim());
+    println!("cargo:rerun-if-changed={}", root.display());
+    let mut sources: Vec<PathBuf> = Vec::new();
+    for dir in ["src", "src/loaders"] {
+        for entry in std::fs::read_dir(root.join(dir))
+            .unwrap_or_else(|e| panic!("reading libxmp-lite/{dir}: {e}"))
+        {
+            let path = entry.unwrap().path();
+            if path.extension().is_some_and(|e| e == "c")
+                && path.file_name().is_some_and(|n| n != "win32.c")
+            {
+                sources.push(path);
+            }
+        }
+    }
+    sources.sort();
+    sources.push(adapter);
+    cc::Build::new()
+        .files(&sources)
+        .include(root.join("include/libxmp-lite"))
+        .include(root.join("src"))
+        .define("LIBXMP_CORE_PLAYER", None)
+        .define("LIBXMP_STATIC", None)
+        .define("_REENTRANT", None)
+        .define("NDEBUG", None)
+        .opt_level(2)
+        .flag_if_supported("-ffp-contract=off")
+        .warnings(false)
+        .compile("unbound_tracker");
 }

@@ -25,7 +25,9 @@ use symphonia::core::{
 use unbound_yaml::Value;
 
 /// File extensions Unity's AudioImporter handles that this importer decodes.
-pub const EXTENSIONS: &[&str] = &["wav", "mp3", "ogg", "aif", "aiff", "flac"];
+pub const EXTENSIONS: &[&str] = &[
+    "wav", "mp3", "ogg", "aif", "aiff", "flac", "mod", "xm", "s3m", "it",
+];
 
 /// The fileID of the AudioClip object of an imported clip.
 pub const AUDIO_CLIP_FILE_ID: i64 = 8_300_000;
@@ -150,6 +152,8 @@ pub struct ImportedAudio {
     #[serde(with = "f32_bytes")]
     pub samples: Vec<f32>,
     pub settings: AudioSettings,
+    /// Whether the source was a tracker module (`.mod`, `.xm`, `.s3m`, `.it`).
+    pub is_tracker: bool,
 }
 
 impl ImportedAudio {
@@ -170,6 +174,8 @@ pub struct AudioImporter {
     /// A `.meta` that names no importer imports with the audio importer's oldest settings
     /// ([`crate::new_meta::guid_only_section`]): the release families where that is measured.
     pub guid_only_section: bool,
+    /// The mixer's initial output sample rate, at which tracker modules decode (default 48000 Hz).
+    pub output_sample_rate: u32,
 }
 
 impl Default for AudioImporter {
@@ -177,6 +183,7 @@ impl Default for AudioImporter {
         Self {
             build_target: "Standalone".into(),
             guid_only_section: false,
+            output_sample_rate: 48_000,
         }
     }
 }
@@ -188,7 +195,9 @@ impl Importer for AudioImporter {
     // 5: so are unconverted samples finer than 16 bits (24-bit, float).
     // 6: settings of serialized version 8 without `preloadAudioData` do not preload (did).
     // 7: a .meta that names no importer imports with the oldest settings (compressed in memory).
-    const VERSION: u32 = 7;
+    // 8: tracker modules (.mod, .xm, .s3m, .it) decode to stereo PCM at output_sample_rate and
+    //    carry `is_tracker`.
+    const VERSION: u32 = 8;
 
     fn import(&self, source: &Path, bytes: &[u8], meta: &Value) -> Result<ImportedAudio> {
         let oldest = if self.guid_only_section {
@@ -201,6 +210,30 @@ impl Importer for AudioImporter {
             None
         };
         let settings = AudioSettings::read(oldest.as_ref().unwrap_or(meta), &self.build_target);
+        if let Some(format) = source
+            .extension()
+            .and_then(|e| e.to_str())
+            .and_then(crate::tracker::TrackerFormat::from_extension)
+        {
+            // Tracker modules render directly to stereo PCM at the mixer's output sample rate,
+            // ignoring forceToMono, sampleRateOverride and compressionFormat (matches the Unity
+            // 6000.0.71f1 Editor, tests/projects/audiotracker).
+            let rate = if self.output_sample_rate == 0 {
+                48_000
+            } else {
+                self.output_sample_rate
+            };
+            let decoded = crate::tracker::decode(bytes, Some(format), rate)
+                .context("decoding tracker module")?;
+            return Ok(ImportedAudio {
+                name: asset_name(source),
+                channels: decoded.channels,
+                sample_rate: decoded.sample_rate,
+                samples: decoded.samples,
+                settings,
+                is_tracker: true,
+            });
+        }
         let decoded = decode_source(source, bytes, false).context("decoding")?;
         let (channels, mut sample_rate, mut samples) =
             (decoded.channels, decoded.sample_rate, decoded.samples);
@@ -235,15 +268,20 @@ impl Importer for AudioImporter {
             sample_rate,
             samples,
             settings,
+            is_tracker: false,
         })
     }
 
     fn options_key(&self) -> String {
-        if self.guid_only_section {
+        let mut key = if self.guid_only_section {
             format!("{}+guid-only-section", self.build_target)
         } else {
             self.build_target.clone()
+        };
+        if self.output_sample_rate != 0 && self.output_sample_rate != 48_000 {
+            key.push_str(&format!("+rate={}", self.output_sample_rate));
         }
+        key
     }
 }
 
@@ -696,5 +734,31 @@ AudioImporter:
         let encoded = postcard::to_allocvec(&clip).unwrap();
         let decoded: ImportedAudio = postcard::from_bytes(&encoded).unwrap();
         assert_eq!(decoded, clip);
+    }
+
+    #[test]
+    fn tracker_imports_ignore_force_mono_and_sample_rate_override() {
+        let root = Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("../../tests/projects/audiotracker/Assets/Audio");
+        let xm = std::fs::read(root.join("tone.xm")).unwrap();
+        let meta = unbound_yaml::parse_value(
+            "AudioImporter:\n  forceToMono: 1\n  normalize: 1\n  defaultSettings:\n    sampleRateSetting: 2\n    sampleRateOverride: 22050\n    compressionFormat: 2\n",
+        )
+        .unwrap();
+        let clip = AudioImporter::default()
+            .import(Path::new("tone.xm"), &xm, &meta)
+            .unwrap();
+        assert!(clip.is_tracker);
+        assert_eq!((clip.channels, clip.sample_rate), (2, 48_000));
+        assert_eq!(clip.frames(), 92_160);
+        // Output sample rate follows the importer's configured mixer rate and changes options_key.
+        let mut at44 = AudioImporter::default();
+        at44.output_sample_rate = 44_100;
+        assert_ne!(at44.options_key(), AudioImporter::default().options_key());
+        let clip44 = at44.import(Path::new("tone.xm"), &xm, &meta).unwrap();
+        assert_eq!(
+            (clip44.channels, clip44.sample_rate, clip44.frames()),
+            (2, 44_100, 84_672)
+        );
     }
 }

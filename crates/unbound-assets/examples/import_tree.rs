@@ -206,6 +206,7 @@ fn run(
     let audio = AudioImporter {
         build_target: target.to_string(),
         guid_only_section: true,
+        ..AudioImporter::default()
     };
     let stats = Mutex::new(Stats::default());
     files.par_iter().for_each(|(kind, path)| {

@@ -25,20 +25,39 @@ pub enum Container {
     Mpeg,
     Ogg,
     Wav,
+    Mod,
+    Xm,
+    S3m,
+    It,
 }
 
 impl Container {
     /// The container of a Unity `AudioType` value; None for the types Unbound does not decode
-    /// (tracker modules, AAC, XMA, VAG, AudioQueue).
+    /// (AAC, XMA, VAG, AudioQueue).
     pub fn of_audio_type(audio_type: i32) -> Option<Container> {
         Some(match audio_type {
             0 => Container::Any,
             2 => Container::Aiff,
+            10 => Container::It,
+            12 => Container::Mod,
             13 => Container::Mpeg,
             14 => Container::Ogg,
+            17 => Container::S3m,
             20 => Container::Wav,
+            21 => Container::Xm,
             _ => return None,
         })
+    }
+
+    fn tracker_format(self) -> Option<crate::tracker::TrackerFormat> {
+        use crate::tracker::TrackerFormat;
+        match self {
+            Container::Mod => Some(TrackerFormat::Mod),
+            Container::Xm => Some(TrackerFormat::Xm),
+            Container::S3m => Some(TrackerFormat::S3m),
+            Container::It => Some(TrackerFormat::It),
+            _ => None,
+        }
     }
 
     fn extension(self) -> &'static str {
@@ -48,6 +67,10 @@ impl Container {
             Container::Mpeg => "mp3",
             Container::Ogg => "ogg",
             Container::Wav => "wav",
+            Container::Mod => "mod",
+            Container::Xm => "xm",
+            Container::S3m => "s3m",
+            Container::It => "it",
         }
     }
 
@@ -66,6 +89,9 @@ impl Container {
                 let start = id3_size(data);
                 data.len() >= start + 4 && frame(&data[start..]).is_some()
             }
+            Container::Mod | Container::Xm | Container::S3m | Container::It => {
+                crate::tracker::detect(data) == self.tracker_format()
+            }
         }
     }
 }
@@ -77,6 +103,7 @@ pub enum Codec {
     Vorbis,
     ImaAdpcm,
     Mpeg,
+    Tracker,
 }
 
 /// A decoded download: its channels, rate, interleaved samples and codec.
@@ -87,10 +114,57 @@ pub struct Decoded {
     pub codec: Codec,
 }
 
-/// Decodes a downloaded file of the container `container`.
+/// Whether `data` under `container` is a tracker module (explicitly requested or detected under
+/// `Container::Any`).
+pub fn is_tracker(data: &[u8], container: Container) -> bool {
+    container.tracker_format().is_some()
+        || (container == Container::Any && crate::tracker::detect(data).is_some())
+}
+
+/// Decodes a downloaded file of the container `container` (tracker modules render at 48000 Hz).
 pub fn decode(data: &[u8], container: Container) -> Result<Decoded> {
+    decode_at_rate(data, container, 48_000)
+}
+
+/// Decodes a downloaded file of the container `container`; tracker modules render at
+/// `output_sample_rate` Hz (matching `AudioSettings.outputSampleRate`).
+pub fn decode_at_rate(
+    data: &[u8],
+    container: Container,
+    output_sample_rate: u32,
+) -> Result<Decoded> {
     if !container.holds(data) {
         bail!("the data is not a {container:?} file");
+    }
+    if let Some(fmt) = container.tracker_format() {
+        let rate = if output_sample_rate == 0 {
+            48_000
+        } else {
+            output_sample_rate
+        };
+        let decoded = crate::tracker::decode(data, Some(fmt), rate)?;
+        return Ok(Decoded {
+            channels: decoded.channels,
+            rate: decoded.sample_rate,
+            samples: decoded.samples,
+            codec: Codec::Tracker,
+        });
+    }
+    if container == Container::Any
+        && let Some(fmt) = crate::tracker::detect(data)
+    {
+        let rate = if output_sample_rate == 0 {
+            48_000
+        } else {
+            output_sample_rate
+        };
+        let decoded = crate::tracker::decode(data, Some(fmt), rate)?;
+        return Ok(Decoded {
+            channels: decoded.channels,
+            rate: decoded.sample_rate,
+            samples: decoded.samples,
+            codec: Codec::Tracker,
+        });
     }
     if Container::Wav.holds(data)
         && let Some(decoded) = ima_adpcm(data)
@@ -435,7 +509,11 @@ mod tests {
         assert!(decode(&data, Container::Ogg).is_err());
         assert!(decode(&data, Container::Mpeg).is_err());
         assert!(decode(b"this is not audio data at all\n", Container::Wav).is_err());
-        assert_eq!(Container::of_audio_type(12), None, "tracker modules");
+        assert_eq!(Container::of_audio_type(12), Some(Container::Mod));
+        assert_eq!(Container::of_audio_type(21), Some(Container::Xm));
+        assert_eq!(Container::of_audio_type(17), Some(Container::S3m));
+        assert_eq!(Container::of_audio_type(10), Some(Container::It));
+        assert_eq!(Container::of_audio_type(1), None, "AAC unsupported");
     }
 
     #[test]
@@ -566,5 +644,40 @@ mod tests {
         assert_eq!(mpeg_length(&info), Some((24 * 1152, Some(1152))));
         assert!(Container::Mpeg.holds(&mpeg(2, true, None)));
         assert!(!Container::Mpeg.holds(b"OggS\0\0\0\0"));
+    }
+
+    #[test]
+    fn downloaded_tracker_modules_respect_container_and_output_rate() {
+        let root = Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("../../tests/projects/audiotracker/Assets/Audio");
+        let mod_bytes = std::fs::read(root.join("tone.mod")).unwrap();
+        let xm_bytes = std::fs::read(root.join("tone.xm")).unwrap();
+        let s3m_bytes = std::fs::read(root.join("tone.s3m")).unwrap();
+        let it_bytes = std::fs::read(root.join("tone.it")).unwrap();
+
+        for (bytes, container) in [
+            (&mod_bytes, Container::Mod),
+            (&xm_bytes, Container::Xm),
+            (&s3m_bytes, Container::S3m),
+            (&it_bytes, Container::It),
+        ] {
+            assert!(is_tracker(bytes, container));
+            assert!(is_tracker(bytes, Container::Any));
+            let decoded = decode_at_rate(bytes, container, 48_000).unwrap();
+            assert_eq!(
+                (decoded.codec, decoded.channels, decoded.rate),
+                (Codec::Tracker, 2, 48_000)
+            );
+            assert_eq!(decoded.samples.len() / 2, 92_160);
+            let any = decode_at_rate(bytes, Container::Any, 44_100).unwrap();
+            assert_eq!(
+                (any.codec, any.channels, any.rate),
+                (Codec::Tracker, 2, 44_100)
+            );
+            assert_eq!(any.samples.len() / 2, 84_672);
+        }
+        assert!(decode_at_rate(&mod_bytes, Container::Xm, 48_000).is_err());
+        assert!(decode_at_rate(&mod_bytes, Container::Wav, 48_000).is_err());
+        assert!(!is_tracker(&wav(1, 22050, 16), Container::Any));
     }
 }
