@@ -19,6 +19,9 @@ namespace Unbound.Runtime
     // FinalPass, no depth texture events (measured: tests/projects/builtinfx paths.events.*).
     internal static partial class FrameBuilder
     {
+        static readonly List<ulong> s_Cleared = new List<ulong>();
+        static readonly int s_ProbesOcclusionId = Shader.PropertyToID("unity_ProbesOcclusion");
+        static readonly Dictionary<int, object> s_Occlusion = new Dictionary<int, object>();
         static Material s_DeferredShading, s_DeferredReflections, s_DeferredReflectionsOver;
         /// <summary>The shading and reflection materials with the blend factors the camera's
         /// light buffer takes: added (HDR) or multiplied (LDR).</summary>
@@ -135,7 +138,8 @@ namespace Unbound.Runtime
             // A light mixed with a shadow mask: the Deferred passes write the mask into a fifth
             // target (SV_Target4, _CameraGBufferTexture4) that its light pass reads (Unity's
             // UnityStandardCore and UnityDeferredLibrary; tests/projects/shadowmaskmix deferred_*).
-            bool shadowmask = BakedLighting.MixesShadowmask(ForwardLights.Main) || ForwardLights.Lights.Exists(BakedLighting.MixesShadowmask);
+            bool shadowmask = BakedLighting.MixesShadowmask(ForwardLights.Main);
+            foreach (var mixed in ForwardLights.Lights) shadowmask |= BakedLighting.MixesShadowmask(mixed);
             var gbuffer4 = shadowmask ? Temporary(new RenderTextureDescriptor(width, height, RenderTextureFormat.ARGB32, 0) { sRGB = false }) : null;
             ulong g4 = shadowmask ? TextureHandles.Of(gbuffer4) : 0;
             ulong g0 = TextureHandles.Of(gbuffer0), g1 = TextureHandles.Of(gbuffer1), g2 = TextureHandles.Of(gbuffer2);
@@ -146,10 +150,13 @@ namespace Unbound.Runtime
             // light buffer to black), then the Deferred passes.
             var background = camera.clearFlags is CameraClearFlags.Skybox or CameraClearFlags.SolidColor ? camera.backgroundColor : Color.black;
             if (QualitySettings.activeColorSpace == ColorSpace.Linear) background = background.linear;
-            var cleared = new List<ulong> { g0, g1, g2 };
-            if (!hdr) cleared.Add(lightHandle);
-            if (shadowmask) cleared.Add(g4);
-            foreach (var handle in cleared)
+            s_Cleared.Clear();
+            s_Cleared.Add(g0);
+            s_Cleared.Add(g1);
+            s_Cleared.Add(g2);
+            if (!hdr) s_Cleared.Add(lightHandle);
+            if (shadowmask) s_Cleared.Add(g4);
+            foreach (var handle in s_Cleared)
             {
                 GfxStream.SetTarget(handle, GfxStream.NoTexture);
                 GfxStream.Viewport(viewport);
@@ -174,7 +181,14 @@ namespace Unbound.Runtime
             {
                 var (item, pass) = deferred[i];
                 if (item.Material.shader != null && item.Material.shader.IsLodHidden) continue;
-                EmitDraw(item, item.Material.Sync(), pass, extraKeyword: shadowmask ? "SHADOWS_SHADOWMASK" : null);
+                // A probe-lit renderer writes its probes' occlusion as its mask (unity_ProbesOcclusion).
+                Dictionary<int, object> occlusion = null;
+                if (shadowmask && item.Renderer != null && IsMeshLike(item.Renderer))
+                {
+                    s_Occlusion[s_ProbesOcclusionId] = BakedLighting.ProbeOcclusionVector(item.Renderer);
+                    occlusion = s_Occlusion;
+                }
+                EmitDraw(item, item.Material.Sync(), pass, extra: occlusion, extraKeyword: shadowmask ? "SHADOWS_SHADOWMASK" : null);
             }
             GfxStream.StateOverride(null);
             RunEvent(camera, CameraEvent.AfterGBuffer, light);

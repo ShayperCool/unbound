@@ -277,15 +277,7 @@ namespace Unbound.Runtime
         /// Shadowmask mode). Not measured: the probe's light is realtime.</summary>
         static bool ExcludesLightmappedCasters(Light light)
         {
-            if (FrameBuilder.InLightmap(light)) return true;
-            var baking = light.bakingOutput;
-            if (!baking.isBaked || baking.lightmapBakeType != LightmapBakeType.Mixed || baking.mixedLightingMode != MixedLightingMode.Shadowmask) return false;
-            return light.lightShadowCasterMode switch
-            {
-                LightShadowCasterMode.NonLightmappedOnly => true,
-                LightShadowCasterMode.Everything => false,
-                _ => QualitySettings.shadowmaskMode == ShadowmaskMode.Shadowmask,
-            };
+            return FrameBuilder.InLightmap(light) || BakedLighting.ShadowmaskLeavesOutLightmapped(light);
         }
 
         /// <summary>Invokes the callbacks for a culling (the groups created by a callback wait for

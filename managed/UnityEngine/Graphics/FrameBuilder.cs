@@ -2619,6 +2619,8 @@ namespace Unbound.Runtime
                 var properties = new Dictionary<int, object>();
                 string lightKeyword = ForwardLights.AddPassProperties(light, s_ObjectLights.PixelScale(p), properties);
                 AddPassShadow(light, receives, properties, out var shadowDepth, out var shadowSoft);
+                float occlusion = BakedLighting.ProbeOcclusion(item.Renderer, light);
+                if (occlusion != 1f) properties[s_LightColor0Id] = (Vector4)properties[s_LightColor0Id] * occlusion;
                 Unbound.Runtime.Profiling.RenderStats.NextDrawLight(light);
                 s_ShadowmaskLight = light;
                 try { EmitDraw(item, s_MaterialHandles[i], addPass, false, false, properties, lightKeyword, shadowDepth, shadowSoft, dispatch); }

@@ -275,22 +275,68 @@ namespace UnityEngine
                 }
                 keywords.Add("SHADOWS_SHADOWMASK");
             }
+            else if (lightmaps)
+            {
+                // A probe-lit renderer's base pass: its light attenuated by the probes' occlusion
+                // (the add pass's: FrameBuilder.EmitItem).
+                properties = DrawPropertyPool.Copy(properties);
+                properties[s_LightColor0] = (Vector4)light.FinalColor(QualitySettings.activeColorSpace == ColorSpace.Linear) * ProbeOcclusion(renderer, light);
+            }
             if (shadowmaskMode) keywords.Add("LIGHTMAP_SHADOW_MIXING");
             return properties;
         }
 
-        /// <summary>Whether a renderer casts <paramref name="light"/>'s realtime shadows: a light
-        /// mixed with a shadow mask leaves lightmapped renderers out under NonLightmappedOnly, and
-        /// Default is NonLightmappedOnly in the Shadowmask mode and Everything in Distance Shadowmask
-        /// (Light.lightShadowCasterMode; tests/projects/shadowmaskmix *_default, *_nonlightmappedonly).</summary>
-        internal static bool CastsRealtimeShadow(Light light, Renderer renderer)
+        static readonly int s_LightColor0 = Shader.PropertyToID("_LightColor0");
+
+        /// <summary>
+        /// The occlusion a probe-lit renderer's light probes give a light mixed with a shadow mask
+        /// (its channel of the probes' occlusion blended at the renderer, 1 otherwise): the built-in
+        /// pipeline's forward passes attenuate the light's color by it in both Shadowmask modes
+        /// (UnityShadowLibrary.cginc: light probe occlusion is done on the CPU), so a dynamic object
+        /// takes static objects' shadows (tests/projects/shadowmaskmix, Shadowed Sphere, also with
+        /// the static wall left out of the realtime casters in Distance Shadowmask).
+        /// </summary>
+        internal static float ProbeOcclusion(Renderer renderer, Light light)
         {
-            if (!MixesShadowmask(light)) return true;
-            var mode = light.lightShadowCasterMode;
-            if (mode == LightShadowCasterMode.Default)
-                mode = QualitySettings.shadowmaskMode == ShadowmaskMode.Shadowmask ? LightShadowCasterMode.NonLightmappedOnly : LightShadowCasterMode.Everything;
-            return mode == LightShadowCasterMode.Everything || !Lightmapped(renderer);
+            if (!MixesShadowmask(light)) return 1f;
+            int channel = light.bakingOutput.occlusionMaskChannel;
+            var occlusion = ProbeOcclusionVector(renderer);
+            return channel >= 0 && channel < 4 ? occlusion[channel] : 1f;
         }
+
+        /// <summary>The probes' occlusion blended at a probe-lit renderer (unity_ProbesOcclusion; 1
+        /// for a lightmapped renderer or one without blended probes).</summary>
+        internal static Vector4 ProbeOcclusionVector(Renderer renderer)
+        {
+            var lightProbes = LightmapSettings.lightProbes;
+            if (renderer == null || Lightmapped(renderer) || lightProbes == null || lightProbes.count == 0
+                || renderer.lightProbeUsage != LightProbeUsage.BlendProbes) return Vector4.one;
+            var anchor = renderer.probeAnchor;
+            int cell = -1;
+            return lightProbes.Occlusion(anchor != null ? anchor.position : renderer.bounds.center, ref cell);
+        }
+
+        /// <summary>Whether <paramref name="light"/>'s realtime shadows leave lightmapped casters out:
+        /// a light mixed in a Shadowmask bake under NonLightmappedOnly, Default being NonLightmappedOnly
+        /// in the Shadowmask mode and Everything in Distance Shadowmask (Light.lightShadowCasterMode;
+        /// tests/projects/shadowmaskmix *_default, *_nonlightmappedonly). The built-in casters and the
+        /// BatchRendererGroup culling flag share it.</summary>
+        internal static bool ShadowmaskLeavesOutLightmapped(Light light)
+        {
+            var baking = light.bakingOutput;
+            if (!baking.isBaked || baking.lightmapBakeType != LightmapBakeType.Mixed || baking.mixedLightingMode != MixedLightingMode.Shadowmask) return false;
+            return light.lightShadowCasterMode switch
+            {
+                LightShadowCasterMode.NonLightmappedOnly => true,
+                LightShadowCasterMode.Everything => false,
+                _ => QualitySettings.shadowmaskMode == ShadowmaskMode.Shadowmask,
+            };
+        }
+
+        /// <summary>Whether a renderer casts <paramref name="light"/>'s realtime shadows in the
+        /// built-in pipeline (<see cref="ShadowmaskLeavesOutLightmapped"/>).</summary>
+        internal static bool CastsRealtimeShadow(Light light, Renderer renderer) =>
+            !MixesShadowmask(light) || !ShadowmaskLeavesOutLightmapped(light) || !Lightmapped(renderer);
 
         internal static int RealtimeContributors(JsonElement root)
         {

@@ -2128,7 +2128,11 @@ mod tests {
     fn forward_passes_select_the_shadow_mask_keywords() {
         // tests/projects/shadowmaskmix: the forward base and full-shadow add passes have the
         // shadow mask and its mixing as variants of their own.
-        for pass in ["multi_compile_fwdbase", "multi_compile_fwdadd_fullshadows"] {
+        for pass in [
+            "multi_compile_fwdbase",
+            "multi_compile_fwdadd_fullshadows",
+            "multi_compile_lightpass",
+        ] {
             let lines = vec![preprocess::Pragma {
                 words: words(&[pass]),
             }];

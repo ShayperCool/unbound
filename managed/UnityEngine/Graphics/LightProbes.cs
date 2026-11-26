@@ -842,6 +842,11 @@ namespace UnityEngine
 
         internal bool IsOuterCell(int cell) => m_Set.IsOuterCell(cell);
 
+        /// <summary>The probes' baked occlusion blended at <paramref name="p"/> (one per shadow mask
+        /// channel; 1 where no probe gives one), as LightProbes.CalculateInterpolatedLightAndOcclusionProbes
+        /// answers it.</summary>
+        internal Vector4 Occlusion(Vector3 p, ref int cell) => m_Set.Evaluate(p, ref cell, out _, out var occlusion) ? occlusion : Vector4.one;
+
         internal static LightProbes FromJson(JsonElement json) => FromSet(ProbeSet.FromJson(json));
 
         /// <summary>Probes of a set made at runtime (Unbound's realtime GI bake).</summary>
