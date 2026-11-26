@@ -1,0 +1,13 @@
+fileFormatVersion: 2
+guid: d1e00000000000000000000000000007
+MonoImporter:
+  externalObjects: {}
+  serializedVersion: 2
+  defaultReferences:
+  - tex: {fileID: 2800000, guid: d1e00000000000000000000000000001, type: 3}
+  - data: {instanceID: 0}
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 

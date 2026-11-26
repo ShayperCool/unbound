@@ -1,0 +1,195 @@
+{"k":"deps/Assets/Deps/Tex.png/default","v":"[\"Assets/Deps/Tex.png\"]"}
+{"k":"deps/Assets/Deps/Tex.png/default.set","v":"[\"Assets/Deps/Tex.png\"]"}
+{"k":"deps/Assets/Deps/Tex.png/recursive","v":"[\"Assets/Deps/Tex.png\"]"}
+{"k":"deps/Assets/Deps/Tex.png/recursive.set","v":"[\"Assets/Deps/Tex.png\"]"}
+{"k":"deps/Assets/Deps/Tex.png/direct","v":"[]"}
+{"k":"deps/Assets/Deps/Tex.png/direct.set","v":"[]"}
+{"k":"deps/Assets/Deps/Tex2.png/default","v":"[\"Assets/Deps/Tex2.png\"]"}
+{"k":"deps/Assets/Deps/Tex2.png/default.set","v":"[\"Assets/Deps/Tex2.png\"]"}
+{"k":"deps/Assets/Deps/Tex2.png/recursive","v":"[\"Assets/Deps/Tex2.png\"]"}
+{"k":"deps/Assets/Deps/Tex2.png/recursive.set","v":"[\"Assets/Deps/Tex2.png\"]"}
+{"k":"deps/Assets/Deps/Tex2.png/direct","v":"[]"}
+{"k":"deps/Assets/Deps/Tex2.png/direct.set","v":"[]"}
+{"k":"deps/Assets/Deps/Custom.shader/default","v":"[\"Assets/Deps/Tex2.png\", \"Assets/Deps/Custom.shader\", \"Assets/Deps/Tex.png\"]"}
+{"k":"deps/Assets/Deps/Custom.shader/default.set","v":"[\"Assets/Deps/Custom.shader\", \"Assets/Deps/Tex.png\", \"Assets/Deps/Tex2.png\"]"}
+{"k":"deps/Assets/Deps/Custom.shader/recursive","v":"[\"Assets/Deps/Tex2.png\", \"Assets/Deps/Custom.shader\", \"Assets/Deps/Tex.png\"]"}
+{"k":"deps/Assets/Deps/Custom.shader/recursive.set","v":"[\"Assets/Deps/Custom.shader\", \"Assets/Deps/Tex.png\", \"Assets/Deps/Tex2.png\"]"}
+{"k":"deps/Assets/Deps/Custom.shader/direct","v":"[\"Assets/Deps/Tex2.png\", \"Assets/Deps/Tex.png\"]"}
+{"k":"deps/Assets/Deps/Custom.shader/direct.set","v":"[\"Assets/Deps/Tex.png\", \"Assets/Deps/Tex2.png\"]"}
+{"k":"deps/Assets/Deps/DepInclude.cginc/default","v":"[\"Assets/Deps/DepInclude.cginc\"]"}
+{"k":"deps/Assets/Deps/DepInclude.cginc/default.set","v":"[\"Assets/Deps/DepInclude.cginc\"]"}
+{"k":"deps/Assets/Deps/DepInclude.cginc/recursive","v":"[\"Assets/Deps/DepInclude.cginc\"]"}
+{"k":"deps/Assets/Deps/DepInclude.cginc/recursive.set","v":"[\"Assets/Deps/DepInclude.cginc\"]"}
+{"k":"deps/Assets/Deps/DepInclude.cginc/direct","v":"[]"}
+{"k":"deps/Assets/Deps/DepInclude.cginc/direct.set","v":"[]"}
+{"k":"deps/Assets/Deps/Mat.mat/default","v":"[\"Assets/Deps/Tex2.png\", \"Assets/Deps/Custom.shader\", \"Assets/Deps/Mat.mat\", \"Assets/Deps/Tex.png\"]"}
+{"k":"deps/Assets/Deps/Mat.mat/default.set","v":"[\"Assets/Deps/Custom.shader\", \"Assets/Deps/Mat.mat\", \"Assets/Deps/Tex.png\", \"Assets/Deps/Tex2.png\"]"}
+{"k":"deps/Assets/Deps/Mat.mat/recursive","v":"[\"Assets/Deps/Tex2.png\", \"Assets/Deps/Custom.shader\", \"Assets/Deps/Mat.mat\", \"Assets/Deps/Tex.png\"]"}
+{"k":"deps/Assets/Deps/Mat.mat/recursive.set","v":"[\"Assets/Deps/Custom.shader\", \"Assets/Deps/Mat.mat\", \"Assets/Deps/Tex.png\", \"Assets/Deps/Tex2.png\"]"}
+{"k":"deps/Assets/Deps/Mat.mat/direct","v":"[\"Assets/Deps/Custom.shader\", \"Assets/Deps/Tex.png\"]"}
+{"k":"deps/Assets/Deps/Mat.mat/direct.set","v":"[\"Assets/Deps/Custom.shader\", \"Assets/Deps/Tex.png\"]"}
+{"k":"deps/Assets/Deps/BuiltinMat.mat/default","v":"[\"Assets/Deps/BuiltinMat.mat\"]"}
+{"k":"deps/Assets/Deps/BuiltinMat.mat/default.set","v":"[\"Assets/Deps/BuiltinMat.mat\"]"}
+{"k":"deps/Assets/Deps/BuiltinMat.mat/recursive","v":"[\"Assets/Deps/BuiltinMat.mat\"]"}
+{"k":"deps/Assets/Deps/BuiltinMat.mat/recursive.set","v":"[\"Assets/Deps/BuiltinMat.mat\"]"}
+{"k":"deps/Assets/Deps/BuiltinMat.mat/direct","v":"[]"}
+{"k":"deps/Assets/Deps/BuiltinMat.mat/direct.set","v":"[]"}
+{"k":"deps/Assets/Deps/Variant.mat/default","v":"[\"Assets/Deps/Variant.mat\", \"Assets/Deps/Tex2.png\", \"Assets/Deps/Custom.shader\", \"Assets/Deps/Mat.mat\", \"Assets/Deps/Tex.png\"]"}
+{"k":"deps/Assets/Deps/Variant.mat/default.set","v":"[\"Assets/Deps/Custom.shader\", \"Assets/Deps/Mat.mat\", \"Assets/Deps/Tex.png\", \"Assets/Deps/Tex2.png\", \"Assets/Deps/Variant.mat\"]"}
+{"k":"deps/Assets/Deps/Variant.mat/recursive","v":"[\"Assets/Deps/Variant.mat\", \"Assets/Deps/Tex2.png\", \"Assets/Deps/Custom.shader\", \"Assets/Deps/Mat.mat\", \"Assets/Deps/Tex.png\"]"}
+{"k":"deps/Assets/Deps/Variant.mat/recursive.set","v":"[\"Assets/Deps/Custom.shader\", \"Assets/Deps/Mat.mat\", \"Assets/Deps/Tex.png\", \"Assets/Deps/Tex2.png\", \"Assets/Deps/Variant.mat\"]"}
+{"k":"deps/Assets/Deps/Variant.mat/direct","v":"[\"Assets/Deps/Custom.shader\", \"Assets/Deps/Mat.mat\"]"}
+{"k":"deps/Assets/Deps/Variant.mat/direct.set","v":"[\"Assets/Deps/Custom.shader\", \"Assets/Deps/Mat.mat\"]"}
+{"k":"deps/Assets/Scripts/DepData.cs/default","v":"[\"Assets/Scripts/DepData.cs\"]"}
+{"k":"deps/Assets/Scripts/DepData.cs/default.set","v":"[\"Assets/Scripts/DepData.cs\"]"}
+{"k":"deps/Assets/Scripts/DepData.cs/recursive","v":"[\"Assets/Scripts/DepData.cs\"]"}
+{"k":"deps/Assets/Scripts/DepData.cs/recursive.set","v":"[\"Assets/Scripts/DepData.cs\"]"}
+{"k":"deps/Assets/Scripts/DepData.cs/direct","v":"[]"}
+{"k":"deps/Assets/Scripts/DepData.cs/direct.set","v":"[]"}
+{"k":"deps/Assets/Scripts/DepBehaviour.cs/default","v":"[\"Assets/Scripts/DepBehaviour.cs\"]"}
+{"k":"deps/Assets/Scripts/DepBehaviour.cs/default.set","v":"[\"Assets/Scripts/DepBehaviour.cs\"]"}
+{"k":"deps/Assets/Scripts/DepBehaviour.cs/recursive","v":"[\"Assets/Scripts/DepBehaviour.cs\"]"}
+{"k":"deps/Assets/Scripts/DepBehaviour.cs/recursive.set","v":"[\"Assets/Scripts/DepBehaviour.cs\"]"}
+{"k":"deps/Assets/Scripts/DepBehaviour.cs/direct","v":"[]"}
+{"k":"deps/Assets/Scripts/DepBehaviour.cs/direct.set","v":"[]"}
+{"k":"deps/Assets/Deps/Data.asset/default","v":"[\"Assets/Deps/Other.asset\", \"Assets/Scripts/DepData.cs\", \"Assets/Deps/Data.asset\", \"Assets/Deps/Tex2.png\", \"Assets/Deps/Custom.shader\", \"Assets/Deps/Text.txt\", \"Assets/Deps/Mat.mat\", \"Assets/Deps/BuiltinMat.mat\", \"Assets/Deps/Tex.png\"]"}
+{"k":"deps/Assets/Deps/Data.asset/default.set","v":"[\"Assets/Deps/BuiltinMat.mat\", \"Assets/Deps/Custom.shader\", \"Assets/Deps/Data.asset\", \"Assets/Deps/Mat.mat\", \"Assets/Deps/Other.asset\", \"Assets/Deps/Tex.png\", \"Assets/Deps/Tex2.png\", \"Assets/Deps/Text.txt\", \"Assets/Scripts/DepData.cs\"]"}
+{"k":"deps/Assets/Deps/Data.asset/recursive","v":"[\"Assets/Deps/Other.asset\", \"Assets/Scripts/DepData.cs\", \"Assets/Deps/Data.asset\", \"Assets/Deps/Tex2.png\", \"Assets/Deps/Custom.shader\", \"Assets/Deps/Text.txt\", \"Assets/Deps/Mat.mat\", \"Assets/Deps/BuiltinMat.mat\", \"Assets/Deps/Tex.png\"]"}
+{"k":"deps/Assets/Deps/Data.asset/recursive.set","v":"[\"Assets/Deps/BuiltinMat.mat\", \"Assets/Deps/Custom.shader\", \"Assets/Deps/Data.asset\", \"Assets/Deps/Mat.mat\", \"Assets/Deps/Other.asset\", \"Assets/Deps/Tex.png\", \"Assets/Deps/Tex2.png\", \"Assets/Deps/Text.txt\", \"Assets/Scripts/DepData.cs\"]"}
+{"k":"deps/Assets/Deps/Data.asset/direct","v":"[\"Assets/Deps/Other.asset\", \"Assets/Scripts/DepData.cs\", \"Assets/Deps/Mat.mat\"]"}
+{"k":"deps/Assets/Deps/Data.asset/direct.set","v":"[\"Assets/Deps/Mat.mat\", \"Assets/Deps/Other.asset\", \"Assets/Scripts/DepData.cs\"]"}
+{"k":"deps/Assets/Deps/Other.asset/default","v":"[\"Assets/Deps/Other.asset\", \"Assets/Scripts/DepData.cs\", \"Assets/Deps/Data.asset\", \"Assets/Deps/Tex2.png\", \"Assets/Deps/Custom.shader\", \"Assets/Deps/Text.txt\", \"Assets/Deps/Mat.mat\", \"Assets/Deps/BuiltinMat.mat\", \"Assets/Deps/Tex.png\"]"}
+{"k":"deps/Assets/Deps/Other.asset/default.set","v":"[\"Assets/Deps/BuiltinMat.mat\", \"Assets/Deps/Custom.shader\", \"Assets/Deps/Data.asset\", \"Assets/Deps/Mat.mat\", \"Assets/Deps/Other.asset\", \"Assets/Deps/Tex.png\", \"Assets/Deps/Tex2.png\", \"Assets/Deps/Text.txt\", \"Assets/Scripts/DepData.cs\"]"}
+{"k":"deps/Assets/Deps/Other.asset/recursive","v":"[\"Assets/Deps/Other.asset\", \"Assets/Scripts/DepData.cs\", \"Assets/Deps/Data.asset\", \"Assets/Deps/Tex2.png\", \"Assets/Deps/Custom.shader\", \"Assets/Deps/Text.txt\", \"Assets/Deps/Mat.mat\", \"Assets/Deps/BuiltinMat.mat\", \"Assets/Deps/Tex.png\"]"}
+{"k":"deps/Assets/Deps/Other.asset/recursive.set","v":"[\"Assets/Deps/BuiltinMat.mat\", \"Assets/Deps/Custom.shader\", \"Assets/Deps/Data.asset\", \"Assets/Deps/Mat.mat\", \"Assets/Deps/Other.asset\", \"Assets/Deps/Tex.png\", \"Assets/Deps/Tex2.png\", \"Assets/Deps/Text.txt\", \"Assets/Scripts/DepData.cs\"]"}
+{"k":"deps/Assets/Deps/Other.asset/direct","v":"[\"Assets/Scripts/DepData.cs\", \"Assets/Deps/Data.asset\", \"Assets/Deps/Text.txt\", \"Assets/Deps/BuiltinMat.mat\"]"}
+{"k":"deps/Assets/Deps/Other.asset/direct.set","v":"[\"Assets/Deps/BuiltinMat.mat\", \"Assets/Deps/Data.asset\", \"Assets/Deps/Text.txt\", \"Assets/Scripts/DepData.cs\"]"}
+{"k":"deps/Assets/Deps/Text.txt/default","v":"[\"Assets/Deps/Text.txt\"]"}
+{"k":"deps/Assets/Deps/Text.txt/default.set","v":"[\"Assets/Deps/Text.txt\"]"}
+{"k":"deps/Assets/Deps/Text.txt/recursive","v":"[\"Assets/Deps/Text.txt\"]"}
+{"k":"deps/Assets/Deps/Text.txt/recursive.set","v":"[\"Assets/Deps/Text.txt\"]"}
+{"k":"deps/Assets/Deps/Text.txt/direct","v":"[]"}
+{"k":"deps/Assets/Deps/Text.txt/direct.set","v":"[]"}
+{"k":"deps/Assets/Deps/Prefab.prefab/default","v":"[\"Assets/Deps/Other.asset\", \"Assets/Scripts/DepData.cs\", \"Assets/Deps/Prefab.prefab\", \"Assets/Deps/Data.asset\", \"Assets/Deps/Tex2.png\", \"Assets/Deps/Custom.shader\", \"Assets/Deps/Text.txt\", \"Assets/Deps/Mat.mat\", \"Assets/Scripts/DepBehaviour.cs\", \"Assets/Deps/BuiltinMat.mat\", \"Assets/Deps/Tex.png\"]"}
+{"k":"deps/Assets/Deps/Prefab.prefab/default.set","v":"[\"Assets/Deps/BuiltinMat.mat\", \"Assets/Deps/Custom.shader\", \"Assets/Deps/Data.asset\", \"Assets/Deps/Mat.mat\", \"Assets/Deps/Other.asset\", \"Assets/Deps/Prefab.prefab\", \"Assets/Deps/Tex.png\", \"Assets/Deps/Tex2.png\", \"Assets/Deps/Text.txt\", \"Assets/Scripts/DepBehaviour.cs\", \"Assets/Scripts/DepData.cs\"]"}
+{"k":"deps/Assets/Deps/Prefab.prefab/recursive","v":"[\"Assets/Deps/Other.asset\", \"Assets/Scripts/DepData.cs\", \"Assets/Deps/Prefab.prefab\", \"Assets/Deps/Data.asset\", \"Assets/Deps/Tex2.png\", \"Assets/Deps/Custom.shader\", \"Assets/Deps/Text.txt\", \"Assets/Deps/Mat.mat\", \"Assets/Scripts/DepBehaviour.cs\", \"Assets/Deps/BuiltinMat.mat\", \"Assets/Deps/Tex.png\"]"}
+{"k":"deps/Assets/Deps/Prefab.prefab/recursive.set","v":"[\"Assets/Deps/BuiltinMat.mat\", \"Assets/Deps/Custom.shader\", \"Assets/Deps/Data.asset\", \"Assets/Deps/Mat.mat\", \"Assets/Deps/Other.asset\", \"Assets/Deps/Prefab.prefab\", \"Assets/Deps/Tex.png\", \"Assets/Deps/Tex2.png\", \"Assets/Deps/Text.txt\", \"Assets/Scripts/DepBehaviour.cs\", \"Assets/Scripts/DepData.cs\"]"}
+{"k":"deps/Assets/Deps/Prefab.prefab/direct","v":"[\"Assets/Deps/Other.asset\", \"Assets/Deps/Mat.mat\", \"Assets/Scripts/DepBehaviour.cs\"]"}
+{"k":"deps/Assets/Deps/Prefab.prefab/direct.set","v":"[\"Assets/Deps/Mat.mat\", \"Assets/Deps/Other.asset\", \"Assets/Scripts/DepBehaviour.cs\"]"}
+{"k":"deps/Assets/Deps/Deps.unity/default","v":"[\"Assets/Deps/Other.asset\", \"Assets/Scripts/DepData.cs\", \"Assets/Deps/Prefab.prefab\", \"Assets/Deps/Data.asset\", \"Assets/Deps/Tex2.png\", \"Assets/Deps/Custom.shader\", \"Assets/Deps/Text.txt\", \"Assets/Deps/Mat.mat\", \"Assets/Scripts/DepBehaviour.cs\", \"Assets/Deps/Tex.png\", \"Assets/Deps/BuiltinMat.mat\", \"Assets/Deps/Deps.unity\"]"}
+{"k":"deps/Assets/Deps/Deps.unity/default.set","v":"[\"Assets/Deps/BuiltinMat.mat\", \"Assets/Deps/Custom.shader\", \"Assets/Deps/Data.asset\", \"Assets/Deps/Deps.unity\", \"Assets/Deps/Mat.mat\", \"Assets/Deps/Other.asset\", \"Assets/Deps/Prefab.prefab\", \"Assets/Deps/Tex.png\", \"Assets/Deps/Tex2.png\", \"Assets/Deps/Text.txt\", \"Assets/Scripts/DepBehaviour.cs\", \"Assets/Scripts/DepData.cs\"]"}
+{"k":"deps/Assets/Deps/Deps.unity/recursive","v":"[\"Assets/Deps/Other.asset\", \"Assets/Scripts/DepData.cs\", \"Assets/Deps/Prefab.prefab\", \"Assets/Deps/Data.asset\", \"Assets/Deps/Tex2.png\", \"Assets/Deps/Custom.shader\", \"Assets/Deps/Text.txt\", \"Assets/Deps/Mat.mat\", \"Assets/Scripts/DepBehaviour.cs\", \"Assets/Deps/Tex.png\", \"Assets/Deps/BuiltinMat.mat\", \"Assets/Deps/Deps.unity\"]"}
+{"k":"deps/Assets/Deps/Deps.unity/recursive.set","v":"[\"Assets/Deps/BuiltinMat.mat\", \"Assets/Deps/Custom.shader\", \"Assets/Deps/Data.asset\", \"Assets/Deps/Deps.unity\", \"Assets/Deps/Mat.mat\", \"Assets/Deps/Other.asset\", \"Assets/Deps/Prefab.prefab\", \"Assets/Deps/Tex.png\", \"Assets/Deps/Tex2.png\", \"Assets/Deps/Text.txt\", \"Assets/Scripts/DepBehaviour.cs\", \"Assets/Scripts/DepData.cs\"]"}
+{"k":"deps/Assets/Deps/Deps.unity/direct","v":"[\"Assets/Deps/Prefab.prefab\", \"Assets/Scripts/DepBehaviour.cs\", \"Assets/Deps/Tex.png\"]"}
+{"k":"deps/Assets/Deps/Deps.unity/direct.set","v":"[\"Assets/Deps/Prefab.prefab\", \"Assets/Deps/Tex.png\", \"Assets/Scripts/DepBehaviour.cs\"]"}
+{"k":"deps/Assets/Scenes/Probe.unity/default","v":"[\"Assets/Scenes/Probe.unity\"]"}
+{"k":"deps/Assets/Scenes/Probe.unity/default.set","v":"[\"Assets/Scenes/Probe.unity\"]"}
+{"k":"deps/Assets/Scenes/Probe.unity/recursive","v":"[\"Assets/Scenes/Probe.unity\"]"}
+{"k":"deps/Assets/Scenes/Probe.unity/recursive.set","v":"[\"Assets/Scenes/Probe.unity\"]"}
+{"k":"deps/Assets/Scenes/Probe.unity/direct","v":"[]"}
+{"k":"deps/Assets/Scenes/Probe.unity/direct.set","v":"[]"}
+{"k":"deps/Assets/Scripts/AssetDependenciesProbe.cs/default","v":"[\"Assets/Scripts/AssetDependenciesProbe.cs\"]"}
+{"k":"deps/Assets/Scripts/AssetDependenciesProbe.cs/default.set","v":"[\"Assets/Scripts/AssetDependenciesProbe.cs\"]"}
+{"k":"deps/Assets/Scripts/AssetDependenciesProbe.cs/recursive","v":"[\"Assets/Scripts/AssetDependenciesProbe.cs\"]"}
+{"k":"deps/Assets/Scripts/AssetDependenciesProbe.cs/recursive.set","v":"[\"Assets/Scripts/AssetDependenciesProbe.cs\"]"}
+{"k":"deps/Assets/Scripts/AssetDependenciesProbe.cs/direct","v":"[]"}
+{"k":"deps/Assets/Scripts/AssetDependenciesProbe.cs/direct.set","v":"[]"}
+{"k":"many/default","v":"[\"Assets/Deps/Other.asset\", \"Assets/Scripts/DepData.cs\", \"Assets/Deps/Prefab.prefab\", \"Assets/Deps/Data.asset\", \"Assets/Deps/Tex2.png\", \"Assets/Deps/Custom.shader\", \"Assets/Deps/Text.txt\", \"Assets/Deps/Mat.mat\", \"Assets/Scripts/DepBehaviour.cs\", \"Assets/Deps/Tex.png\", \"Assets/Deps/BuiltinMat.mat\"]"}
+{"k":"many/default.set","v":"[\"Assets/Deps/BuiltinMat.mat\", \"Assets/Deps/Custom.shader\", \"Assets/Deps/Data.asset\", \"Assets/Deps/Mat.mat\", \"Assets/Deps/Other.asset\", \"Assets/Deps/Prefab.prefab\", \"Assets/Deps/Tex.png\", \"Assets/Deps/Tex2.png\", \"Assets/Deps/Text.txt\", \"Assets/Scripts/DepBehaviour.cs\", \"Assets/Scripts/DepData.cs\"]"}
+{"k":"many/recursive","v":"[\"Assets/Deps/Other.asset\", \"Assets/Scripts/DepData.cs\", \"Assets/Deps/Prefab.prefab\", \"Assets/Deps/Data.asset\", \"Assets/Deps/Tex2.png\", \"Assets/Deps/Custom.shader\", \"Assets/Deps/Text.txt\", \"Assets/Deps/Mat.mat\", \"Assets/Scripts/DepBehaviour.cs\", \"Assets/Deps/Tex.png\", \"Assets/Deps/BuiltinMat.mat\"]"}
+{"k":"many/recursive.set","v":"[\"Assets/Deps/BuiltinMat.mat\", \"Assets/Deps/Custom.shader\", \"Assets/Deps/Data.asset\", \"Assets/Deps/Mat.mat\", \"Assets/Deps/Other.asset\", \"Assets/Deps/Prefab.prefab\", \"Assets/Deps/Tex.png\", \"Assets/Deps/Tex2.png\", \"Assets/Deps/Text.txt\", \"Assets/Scripts/DepBehaviour.cs\", \"Assets/Scripts/DepData.cs\"]"}
+{"k":"many/direct","v":"[\"Assets/Deps/Other.asset\", \"Assets/Deps/Custom.shader\", \"Assets/Deps/Mat.mat\", \"Assets/Scripts/DepBehaviour.cs\", \"Assets/Deps/Tex.png\"]"}
+{"k":"many/direct.set","v":"[\"Assets/Deps/Custom.shader\", \"Assets/Deps/Mat.mat\", \"Assets/Deps/Other.asset\", \"Assets/Deps/Tex.png\", \"Assets/Scripts/DepBehaviour.cs\"]"}
+{"k":"cycle/recursive","v":"[\"Assets/Deps/Other.asset\", \"Assets/Scripts/DepData.cs\", \"Assets/Deps/Data.asset\", \"Assets/Deps/Tex2.png\", \"Assets/Deps/Custom.shader\", \"Assets/Deps/Text.txt\", \"Assets/Deps/Mat.mat\", \"Assets/Deps/BuiltinMat.mat\", \"Assets/Deps/Tex.png\"]"}
+{"k":"cycle/recursive.set","v":"[\"Assets/Deps/BuiltinMat.mat\", \"Assets/Deps/Custom.shader\", \"Assets/Deps/Data.asset\", \"Assets/Deps/Mat.mat\", \"Assets/Deps/Other.asset\", \"Assets/Deps/Tex.png\", \"Assets/Deps/Tex2.png\", \"Assets/Deps/Text.txt\", \"Assets/Scripts/DepData.cs\"]"}
+{"k":"cycle/direct","v":"[\"Assets/Deps/Other.asset\", \"Assets/Scripts/DepData.cs\", \"Assets/Deps/Data.asset\", \"Assets/Deps/Text.txt\", \"Assets/Deps/Mat.mat\", \"Assets/Deps/BuiltinMat.mat\"]"}
+{"k":"cycle/direct.set","v":"[\"Assets/Deps/BuiltinMat.mat\", \"Assets/Deps/Data.asset\", \"Assets/Deps/Mat.mat\", \"Assets/Deps/Other.asset\", \"Assets/Deps/Text.txt\", \"Assets/Scripts/DepData.cs\"]"}
+{"k":"many/empty","v":"[]"}
+{"k":"many/empty.set","v":"[]"}
+{"k":"many/null","v":"[]"}
+{"k":"many/null.set","v":"[]"}
+{"k":"many/withMissing","v":"[\"Assets/Deps/Custom.shader\", \"Assets/Deps/Tex.png\"]"}
+{"k":"many/withMissing.set","v":"[\"Assets/Deps/Custom.shader\", \"Assets/Deps/Tex.png\"]"}
+{"k":"odd/null/recursive","v":"[]"}
+{"k":"odd/null/recursive.set","v":"[]"}
+{"k":"odd/null/direct","v":"[]"}
+{"k":"odd/null/direct.set","v":"[]"}
+{"k":"odd/empty/recursive","v":"[]"}
+{"k":"odd/empty/recursive.set","v":"[]"}
+{"k":"odd/empty/direct","v":"[]"}
+{"k":"odd/empty/direct.set","v":"[]"}
+{"k":"odd/folder/recursive","v":"[\"Assets/Deps\"]"}
+{"k":"odd/folder/recursive.set","v":"[\"Assets/Deps\"]"}
+{"k":"odd/folder/direct","v":"[]"}
+{"k":"odd/folder/direct.set","v":"[]"}
+{"k":"odd/assets/recursive","v":"[\"Assets\"]"}
+{"k":"odd/assets/recursive.set","v":"[\"Assets\"]"}
+{"k":"odd/assets/direct","v":"[]"}
+{"k":"odd/assets/direct.set","v":"[]"}
+{"k":"odd/missing/recursive","v":"[]"}
+{"k":"odd/missing/recursive.set","v":"[]"}
+{"k":"odd/missing/direct","v":"[]"}
+{"k":"odd/missing/direct.set","v":"[]"}
+{"k":"odd/case/recursive","v":"[\"Assets/Deps/Tex2.png\", \"Assets/Deps/Custom.shader\", \"Assets/Deps/Mat.mat\", \"Assets/Deps/Tex.png\"]"}
+{"k":"odd/case/recursive.set","v":"[\"Assets/Deps/Custom.shader\", \"Assets/Deps/Mat.mat\", \"Assets/Deps/Tex.png\", \"Assets/Deps/Tex2.png\"]"}
+{"k":"odd/case/direct","v":"[\"Assets/Deps/Custom.shader\", \"Assets/Deps/Tex.png\"]"}
+{"k":"odd/case/direct.set","v":"[\"Assets/Deps/Custom.shader\", \"Assets/Deps/Tex.png\"]"}
+{"k":"odd/backslash/recursive","v":"[\"Assets/Deps/Tex2.png\", \"Assets/Deps/Custom.shader\", \"Assets/Deps/Mat.mat\", \"Assets/Deps/Tex.png\"]"}
+{"k":"odd/backslash/recursive.set","v":"[\"Assets/Deps/Custom.shader\", \"Assets/Deps/Mat.mat\", \"Assets/Deps/Tex.png\", \"Assets/Deps/Tex2.png\"]"}
+{"k":"odd/backslash/direct","v":"[\"Assets/Deps/Custom.shader\", \"Assets/Deps/Tex.png\"]"}
+{"k":"odd/backslash/direct.set","v":"[\"Assets/Deps/Custom.shader\", \"Assets/Deps/Tex.png\"]"}
+{"k":"odd/slash/recursive","v":"[]"}
+{"k":"odd/slash/recursive.set","v":"[]"}
+{"k":"odd/slash/direct","v":"[]"}
+{"k":"odd/slash/direct.set","v":"[]"}
+{"k":"odd/absolute/recursive","v":"[]"}
+{"k":"odd/absolute/recursive.set","v":"[]"}
+{"k":"odd/absolute/direct","v":"[]"}
+{"k":"odd/absolute/direct.set","v":"[]"}
+{"k":"bundles/all","v":"[\"data\", \"mat\", \"prefab\", \"tex\", \"tex.hd\"]"}
+{"k":"bundles/prefab/False","v":"[\"mat\"]"}
+{"k":"bundles/prefab/False.set","v":"[\"mat\"]"}
+{"k":"bundles/prefab/True","v":"[\"data\", \"mat\", \"tex\", \"tex.hd\"]"}
+{"k":"bundles/prefab/True.set","v":"[\"data\", \"mat\", \"tex\", \"tex.hd\"]"}
+{"k":"bundles/mat/False","v":"[\"tex\"]"}
+{"k":"bundles/mat/False.set","v":"[\"tex\"]"}
+{"k":"bundles/mat/True","v":"[\"tex\", \"tex.hd\"]"}
+{"k":"bundles/mat/True.set","v":"[\"tex\", \"tex.hd\"]"}
+{"k":"bundles/data/False","v":"[\"mat\"]"}
+{"k":"bundles/data/False.set","v":"[\"mat\"]"}
+{"k":"bundles/data/True","v":"[\"mat\", \"tex\", \"tex.hd\"]"}
+{"k":"bundles/data/True.set","v":"[\"mat\", \"tex\", \"tex.hd\"]"}
+{"k":"bundles/tex/False","v":"[]"}
+{"k":"bundles/tex/False.set","v":"[]"}
+{"k":"bundles/tex/True","v":"[]"}
+{"k":"bundles/tex/True.set","v":"[]"}
+{"k":"bundles/tex.hd/False","v":"[]"}
+{"k":"bundles/tex.hd/False.set","v":"[]"}
+{"k":"bundles/tex.hd/True","v":"[]"}
+{"k":"bundles/tex.hd/True.set","v":"[]"}
+{"k":"bundles/missing/False","v":"[]"}
+{"k":"bundles/missing/False.set","v":"[]"}
+{"k":"bundles/missing/True","v":"[]"}
+{"k":"bundles/missing/True.set","v":"[]"}
+{"k":"change/set","v":"done"}
+{"k":"change/dirty/default","v":"[\"Assets/Deps/Tex2.png\", \"Assets/Deps/Custom.shader\", \"Assets/Deps/Mat.mat\", \"Assets/Deps/Tex.png\"]"}
+{"k":"change/dirty/default.set","v":"[\"Assets/Deps/Custom.shader\", \"Assets/Deps/Mat.mat\", \"Assets/Deps/Tex.png\", \"Assets/Deps/Tex2.png\"]"}
+{"k":"change/dirty/recursive","v":"[\"Assets/Deps/Tex2.png\", \"Assets/Deps/Custom.shader\", \"Assets/Deps/Mat.mat\", \"Assets/Deps/Tex.png\"]"}
+{"k":"change/dirty/recursive.set","v":"[\"Assets/Deps/Custom.shader\", \"Assets/Deps/Mat.mat\", \"Assets/Deps/Tex.png\", \"Assets/Deps/Tex2.png\"]"}
+{"k":"change/dirty/direct","v":"[\"Assets/Deps/Custom.shader\", \"Assets/Deps/Tex.png\"]"}
+{"k":"change/dirty/direct.set","v":"[\"Assets/Deps/Custom.shader\", \"Assets/Deps/Tex.png\"]"}
+{"k":"change/save","v":"done"}
+{"k":"change/file","v":"%YAML 1.1\n%TAG !u! tag:unity3d.com,2011:\n--- !u!21 &2100000\nMaterial:\n  serializedVersion: 8\n  m_ObjectHideFlags: 0\n  m_CorrespondingSourceObject: {fileID: 0}\n  m_PrefabInstance: {fileID: 0}\n  m_PrefabAsset: {fileID: 0}\n  m_Name: Mat\n  m_Shader: {fileID: 4800000, guid: d1e00000000000000000000000000002, type: 3}\n  m_Parent: {fileID: 0}\n  m_ModifiedSerializedProperties: 0\n  m_ValidKeywords: []\n  m_InvalidKeywords: []\n  m_LightmapFlags: 4\n  m_EnableInstancingVariants: 0\n  m_DoubleSidedGI: 0\n  m_CustomRenderQueue: -1\n  stringTagMap: {}\n  disabledShaderPasses: []\n  m_LockedProperties: \n  m_SavedProperties:\n    serializedVersion: 3\n    m_TexEnvs:\n    - _Locked:\n        m_Texture: {fileID: 2800000, guid: d1e0000000000000000000000000000e, type: 3}\n        m_Scale: {x: 1, y: 1}\n        m_Offset: {x: 0, y: 0}\n    - _MainTex:\n        m_Texture: {fileID: 0}\n        m_Scale: {x: 1, y: 1}\n        m_Offset: {x: 0, y: 0}\n    - _Missing:\n        m_Texture: {fileID: 2800000, guid: d1e000000000000000000000000000ff, type: 3}\n        m_Scale: {x: 1, y: 1}\n        m_Offset: {x: 0, y: 0}\n    - _Other:\n        m_Texture: {fileID: 0}\n        m_Scale: {x: 1, y: 1}\n        m_Offset: {x: 0, y: 0}\n    m_Ints: []\n    m_Floats: []\n    m_Colors: []\n  m_BuildTextureStacks: []\n  m_AllowLocking: 1\n"}
+{"k":"change/saved/default","v":"[\"Assets/Deps/Tex2.png\", \"Assets/Deps/Custom.shader\", \"Assets/Deps/Mat.mat\", \"Assets/Deps/Tex.png\"]"}
+{"k":"change/saved/default.set","v":"[\"Assets/Deps/Custom.shader\", \"Assets/Deps/Mat.mat\", \"Assets/Deps/Tex.png\", \"Assets/Deps/Tex2.png\"]"}
+{"k":"change/saved/recursive","v":"[\"Assets/Deps/Tex2.png\", \"Assets/Deps/Custom.shader\", \"Assets/Deps/Mat.mat\", \"Assets/Deps/Tex.png\"]"}
+{"k":"change/saved/recursive.set","v":"[\"Assets/Deps/Custom.shader\", \"Assets/Deps/Mat.mat\", \"Assets/Deps/Tex.png\", \"Assets/Deps/Tex2.png\"]"}
+{"k":"change/saved/direct","v":"[\"Assets/Deps/Tex2.png\", \"Assets/Deps/Custom.shader\"]"}
+{"k":"change/saved/direct.set","v":"[\"Assets/Deps/Custom.shader\", \"Assets/Deps/Tex2.png\"]"}
+{"k":"change/savedPrefab/default","v":"[\"Assets/Deps/Other.asset\", \"Assets/Scripts/DepData.cs\", \"Assets/Deps/Prefab.prefab\", \"Assets/Deps/Data.asset\", \"Assets/Deps/Tex2.png\", \"Assets/Deps/Custom.shader\", \"Assets/Deps/Text.txt\", \"Assets/Deps/Mat.mat\", \"Assets/Scripts/DepBehaviour.cs\", \"Assets/Deps/BuiltinMat.mat\", \"Assets/Deps/Tex.png\"]"}
+{"k":"change/savedPrefab/default.set","v":"[\"Assets/Deps/BuiltinMat.mat\", \"Assets/Deps/Custom.shader\", \"Assets/Deps/Data.asset\", \"Assets/Deps/Mat.mat\", \"Assets/Deps/Other.asset\", \"Assets/Deps/Prefab.prefab\", \"Assets/Deps/Tex.png\", \"Assets/Deps/Tex2.png\", \"Assets/Deps/Text.txt\", \"Assets/Scripts/DepBehaviour.cs\", \"Assets/Scripts/DepData.cs\"]"}
+{"k":"change/savedPrefab/recursive","v":"[\"Assets/Deps/Other.asset\", \"Assets/Scripts/DepData.cs\", \"Assets/Deps/Prefab.prefab\", \"Assets/Deps/Data.asset\", \"Assets/Deps/Tex2.png\", \"Assets/Deps/Custom.shader\", \"Assets/Deps/Text.txt\", \"Assets/Deps/Mat.mat\", \"Assets/Scripts/DepBehaviour.cs\", \"Assets/Deps/BuiltinMat.mat\", \"Assets/Deps/Tex.png\"]"}
+{"k":"change/savedPrefab/recursive.set","v":"[\"Assets/Deps/BuiltinMat.mat\", \"Assets/Deps/Custom.shader\", \"Assets/Deps/Data.asset\", \"Assets/Deps/Mat.mat\", \"Assets/Deps/Other.asset\", \"Assets/Deps/Prefab.prefab\", \"Assets/Deps/Tex.png\", \"Assets/Deps/Tex2.png\", \"Assets/Deps/Text.txt\", \"Assets/Scripts/DepBehaviour.cs\", \"Assets/Scripts/DepData.cs\"]"}
+{"k":"change/savedPrefab/direct","v":"[\"Assets/Deps/Other.asset\", \"Assets/Deps/Mat.mat\", \"Assets/Scripts/DepBehaviour.cs\"]"}
+{"k":"change/savedPrefab/direct.set","v":"[\"Assets/Deps/Mat.mat\", \"Assets/Deps/Other.asset\", \"Assets/Scripts/DepBehaviour.cs\"]"}
+{"k":"complete","v":true}

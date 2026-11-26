@@ -1,0 +1,42 @@
+{
+ "The order of GetDependencies answers is not documented and the Editor's is not sorted (neither by path nor by GUID); Unbound answers in ordinal path order (each such row's .set row, the paths sorted, matches)": [
+  "change/dirty/default",
+  "change/dirty/recursive",
+  "change/saved/default",
+  "change/saved/recursive",
+  "change/savedPrefab/default",
+  "change/savedPrefab/direct",
+  "change/savedPrefab/recursive",
+  "cycle/direct",
+  "cycle/recursive",
+  "deps/Assets/Deps/Custom.shader/default",
+  "deps/Assets/Deps/Custom.shader/direct",
+  "deps/Assets/Deps/Custom.shader/recursive",
+  "deps/Assets/Deps/Data.asset/default",
+  "deps/Assets/Deps/Data.asset/direct",
+  "deps/Assets/Deps/Data.asset/recursive",
+  "deps/Assets/Deps/Deps.unity/default",
+  "deps/Assets/Deps/Deps.unity/direct",
+  "deps/Assets/Deps/Deps.unity/recursive",
+  "deps/Assets/Deps/Mat.mat/default",
+  "deps/Assets/Deps/Mat.mat/recursive",
+  "deps/Assets/Deps/Other.asset/default",
+  "deps/Assets/Deps/Other.asset/direct",
+  "deps/Assets/Deps/Other.asset/recursive",
+  "deps/Assets/Deps/Prefab.prefab/default",
+  "deps/Assets/Deps/Prefab.prefab/direct",
+  "deps/Assets/Deps/Prefab.prefab/recursive",
+  "deps/Assets/Deps/Variant.mat/default",
+  "deps/Assets/Deps/Variant.mat/recursive",
+  "many/default",
+  "many/direct",
+  "many/recursive",
+  "odd/backslash/recursive",
+  "odd/case/recursive"
+ ],
+ "A material's save in Unbound writes its shader's non-modifiable textures (_Locked) and a reference to a GUID no asset has (_Missing) as none, where the Editor writes them (so the saved material's direct dependencies lack Tex2.png)": [
+  "change/file",
+  "change/saved/direct",
+  "change/saved/direct.set"
+ ]
+}

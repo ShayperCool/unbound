@@ -1,0 +1,13 @@
+{
+  "commands": [
+    "python3 tests/projects/assetdependencies/run.py gate"
+  ],
+  "summary": "assetdependencies: .*",
+  "engine_paths": [
+    "managed/UnityEngine/Editor/AssetDependencies.cs",
+    "managed/UnityEngine/Editor/AssetDatabaseQueries.cs",
+    "managed/UnityEngine/Editor/AssetDatabase.cs",
+    "managed/UnityEngine/Editor/AssetDatabaseFiles.cs",
+    "crates/unbound-project/src/assetdb.rs"
+  ]
+}
