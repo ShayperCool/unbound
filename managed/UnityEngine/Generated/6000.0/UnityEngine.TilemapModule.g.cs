@@ -5,60 +5,6 @@
 // next generation drops the stub.
 #pragma warning disable
 
-namespace UnityEngine
-{
-    [global::System.@AttributeUsageAttribute((global::System.AttributeTargets)4)]
-    [global::Unbound.Stub]
-    public unsafe partial class CustomGridBrushAttribute : global::System.Attribute
-    {
-        [global::Unbound.Stub] public CustomGridBrushAttribute() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.CustomGridBrushAttribute.ctor"); }
-        [global::Unbound.Stub] public CustomGridBrushAttribute(bool hideAssetInstances, bool hideDefaultInstance, bool defaultBrush, string defaultName) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.CustomGridBrushAttribute.ctor"); }
-        public bool hideAssetInstances { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.CustomGridBrushAttribute.hideAssetInstances"); return default; } }
-        public bool hideDefaultInstance { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.CustomGridBrushAttribute.hideDefaultInstance"); return default; } }
-        public bool defaultBrush { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.CustomGridBrushAttribute.defaultBrush"); return default; } }
-        public string defaultName { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.CustomGridBrushAttribute.defaultName"); return default; } }
-    }
-    [global::Unbound.Stub]
-    public unsafe abstract partial class GridBrushBase : global::UnityEngine.ScriptableObject
-    {
-        [global::Unbound.Stub] public virtual void Paint(global::UnityEngine.GridLayout gridLayout, global::UnityEngine.GameObject brushTarget, global::UnityEngine.Vector3Int position) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.GridBrushBase.Paint"); }
-        [global::Unbound.Stub] public virtual void Erase(global::UnityEngine.GridLayout gridLayout, global::UnityEngine.GameObject brushTarget, global::UnityEngine.Vector3Int position) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.GridBrushBase.Erase"); }
-        [global::Unbound.Stub] public virtual void BoxFill(global::UnityEngine.GridLayout gridLayout, global::UnityEngine.GameObject brushTarget, global::UnityEngine.BoundsInt position) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.GridBrushBase.BoxFill"); }
-        [global::Unbound.Stub] public virtual void BoxErase(global::UnityEngine.GridLayout gridLayout, global::UnityEngine.GameObject brushTarget, global::UnityEngine.BoundsInt position) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.GridBrushBase.BoxErase"); }
-        [global::Unbound.Stub] public virtual void Select(global::UnityEngine.GridLayout gridLayout, global::UnityEngine.GameObject brushTarget, global::UnityEngine.BoundsInt position) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.GridBrushBase.Select"); }
-        [global::Unbound.Stub] public virtual void FloodFill(global::UnityEngine.GridLayout gridLayout, global::UnityEngine.GameObject brushTarget, global::UnityEngine.Vector3Int position) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.GridBrushBase.FloodFill"); }
-        [global::Unbound.Stub] public virtual void Rotate(global::UnityEngine.GridBrushBase.RotationDirection direction, global::UnityEngine.GridLayout.CellLayout layout) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.GridBrushBase.Rotate"); }
-        [global::Unbound.Stub] public virtual void Flip(global::UnityEngine.GridBrushBase.FlipAxis flip, global::UnityEngine.GridLayout.CellLayout layout) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.GridBrushBase.Flip"); }
-        [global::Unbound.Stub] public virtual void Pick(global::UnityEngine.GridLayout gridLayout, global::UnityEngine.GameObject brushTarget, global::UnityEngine.BoundsInt position, global::UnityEngine.Vector3Int pivot) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.GridBrushBase.Pick"); }
-        [global::Unbound.Stub] public virtual void Move(global::UnityEngine.GridLayout gridLayout, global::UnityEngine.GameObject brushTarget, global::UnityEngine.BoundsInt from, global::UnityEngine.BoundsInt to) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.GridBrushBase.Move"); }
-        [global::Unbound.Stub] public virtual void MoveStart(global::UnityEngine.GridLayout gridLayout, global::UnityEngine.GameObject brushTarget, global::UnityEngine.BoundsInt position) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.GridBrushBase.MoveStart"); }
-        [global::Unbound.Stub] public virtual void MoveEnd(global::UnityEngine.GridLayout gridLayout, global::UnityEngine.GameObject brushTarget, global::UnityEngine.BoundsInt position) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.GridBrushBase.MoveEnd"); }
-        [global::Unbound.Stub] public virtual void ChangeZPosition(int change) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.GridBrushBase.ChangeZPosition"); }
-        [global::Unbound.Stub] public virtual void ResetZPosition() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.GridBrushBase.ResetZPosition"); }
-        [global::Unbound.Stub] protected GridBrushBase() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.GridBrushBase.ctor"); }
-        public enum Tool
-        {
-            Select = 0,
-            Move = 1,
-            Paint = 2,
-            Box = 3,
-            Pick = 4,
-            Erase = 5,
-            FloodFill = 6,
-            Other = 7,
-        }
-        public enum RotationDirection
-        {
-            Clockwise = 0,
-            CounterClockwise = 1,
-        }
-        public enum FlipAxis
-        {
-            X = 0,
-            Y = 1,
-        }
-    }
-}
 namespace UnityEngine.Tilemaps
 {
     unsafe partial class ITilemap
@@ -79,6 +25,10 @@ namespace UnityEngine.Tilemaps
         public int gameObject { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Tilemaps.TileDataNative.gameObject"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Tilemaps.TileDataNative.gameObject"); } }
         public global::UnityEngine.Tilemaps.TileFlags flags { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Tilemaps.TileDataNative.flags"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Tilemaps.TileDataNative.flags"); } }
         public global::UnityEngine.Tilemaps.Tile.ColliderType colliderType { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Tilemaps.TileDataNative.colliderType"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Tilemaps.TileDataNative.colliderType"); } }
+    }
+    unsafe partial class Tilemap
+    {
+        internal global::UnityEngine.Bounds localFrameBounds { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Tilemaps.Tilemap.localFrameBounds"); return default; } }
     }
     unsafe partial class TilemapRenderer
     {

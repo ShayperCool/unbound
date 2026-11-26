@@ -18,19 +18,6 @@ namespace UnityEditor
         [global::Unbound.Stub] public override T GetTile<T>(global::UnityEngine.Vector3Int position) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorPreviewTilemap.GetTile"); return default; }
     }
     [global::Unbound.Stub]
-    public unsafe partial class GridPalette : global::UnityEngine.ScriptableObject
-    {
-        [global::Unbound.Stub] public global::UnityEditor.GridPalette.CellSizing cellSizing;
-        [global::Unbound.Stub] public GridPalette() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.GridPalette.ctor"); }
-        public global::UnityEngine.TransparencySortMode transparencySortMode { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.GridPalette.transparencySortMode"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.GridPalette.transparencySortMode"); } }
-        public global::UnityEngine.Vector3 transparencySortAxis { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.GridPalette.transparencySortAxis"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.GridPalette.transparencySortAxis"); } }
-        public enum CellSizing
-        {
-            Automatic = 0,
-            Manual = 100,
-        }
-    }
-    [global::Unbound.Stub]
     public unsafe partial class TileBaseEditor : global::UnityEditor.Editor
     {
         [global::Unbound.Stub] public override global::UnityEngine.Texture2D RenderStaticPreview(string assetPath, global::UnityEngine.Object[] subAssets, int width, int height) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.TileBaseEditor.RenderStaticPreview"); return default; }
