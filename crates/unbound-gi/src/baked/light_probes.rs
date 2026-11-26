@@ -649,12 +649,11 @@ mod tests {
 
     #[test]
     fn a_soft_mixed_lights_occlusion_is_the_part_of_its_samples_that_see_the_probe() {
-        let samples =
-            super::super::sampling::Samples::new(&vec![
+        let samples = super::super::sampling::Samples::new(&vec![
                 0;
                 super::super::sampling::BLUE_NOISE_BYTES
             ])
-            .unwrap();
+        .unwrap();
         let sampling = super::super::probes::Sampling::new(&samples, 128, [3]);
         // A soft mixed sun shining straight down, its disk 0.2 across one unit away.
         let mut sun = spot(Mode::Mixed);

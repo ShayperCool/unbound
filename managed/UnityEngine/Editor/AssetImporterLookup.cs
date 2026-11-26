@@ -135,8 +135,8 @@ namespace UnityEditor
             importer.m_AssetPath = path;
             importer.m_Guid = guid;
             importer.userData = body.Str("userData");
-            importer.assetBundleName = body.Str("assetBundleName");
-            importer.assetBundleVariant = body.Str("assetBundleVariant");
+            // As the .meta holds them, in lower case: reading writes nothing.
+            importer.ReadBundle(body);
             importer.ReadSettings(body);
             importer.m_Loaded = true;
             EditorUtility.ClearDirty(importer);
@@ -166,8 +166,7 @@ namespace UnityEditor
             m_Settings = MetaSettings.Clone(body);
             m_ImportedSettings = MetaSettings.ToJson(m_Settings);
             m_UserData = body.Str("userData") ?? "";
-            m_AssetBundleName = body.Str("assetBundleName") ?? "";
-            m_AssetBundleVariant = body.Str("assetBundleVariant") ?? "";
+            ReadBundle(body);
             ReadExternalObjects(body);
             ReadSettings(body);
             if (this is AssetImporters.ScriptedImporter)

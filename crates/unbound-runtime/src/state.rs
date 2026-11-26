@@ -162,6 +162,8 @@ impl RuntimeState {
                         "kind": listed_kind(&asset),
                         "importer": asset_importer(&asset),
                         "labels": asset.labels,
+                        "bundle": asset.bundle.name,
+                        "variant": asset.bundle.variant,
                     });
                     if let Some((guid, owner)) = conflict {
                         result["conflict"] = json!({ "guid": guid.to_string(), "owner": owner });
@@ -268,7 +270,12 @@ impl RuntimeState {
                 unbound_assets::new_meta::text(importer, guid, &file, &context),
             )?;
         }
-        let (guid, labels, importer) = unbound_project::assetdb::read_meta_header(&meta);
+        let unbound_project::assetdb::MetaHeader {
+            guid,
+            labels,
+            importer,
+            bundle,
+        } = unbound_project::assetdb::read_meta_header(&meta);
         let mut guid = guid.with_context(|| format!("{}.meta has no guid", request.path))?;
         let path = request.path.to_ascii_lowercase();
         let owner = db
@@ -300,6 +307,7 @@ impl RuntimeState {
                 file,
                 labels,
                 importer,
+                bundle,
             },
             conflict,
         )))
@@ -1010,6 +1018,8 @@ pub fn dispatch(method: &str, request: &str) -> Result<String> {
                         "kind": listed_kind(a),
                         "importer": asset_importer(a),
                         "labels": a.labels,
+                        "bundle": a.bundle.name,
+                        "variant": a.bundle.variant,
                     })
                 })
                 .collect();
@@ -3698,6 +3708,7 @@ mod tests {
             is_folder: false,
             labels: vec![],
             importer: Some("ScriptedImporter".into()),
+            bundle: Default::default(),
         };
         // Unbound does not run a precompiled importer as a scripted import of its own, yet the
         // override is set.
@@ -4211,6 +4222,7 @@ mod tests {
             is_folder: false,
             labels: Vec::new(),
             importer: importer.map(str::to_string),
+            bundle: Default::default(),
         };
         // A native-format kind the list does not know (a package's preset library).
         let colors = asset(

@@ -59,18 +59,34 @@ namespace UnityEditor
             set
             {
                 CheckImporterState("set_assetBundleName");
-                var changed = NormalizeString(value) != m_AssetBundleName;
-                m_AssetBundleName = NormalizeString(value);
+                // In lower case, as the Editor holds AssetBundle names (tests/projects/assetqueries set.name).
+                var name = NormalizeString(value)?.ToLowerInvariant();
+                var changed = name != m_AssetBundleName;
+                m_AssetBundleName = name;
                 // A new AssetBundle name is saved into the .meta at once, with the importer's other
                 // changes (tests/projects/projectwrites 08.importer.bundle).
                 if (changed && !string.IsNullOrEmpty(m_AssetPath)) Unbound.Runtime.ImporterMeta.Write(this);
+                if (changed && !string.IsNullOrEmpty(m_AssetPath)) AssetDatabase.BundleNameSet(m_AssetPath, m_AssetBundleName, m_AssetBundleVariant);
             }
+        }
+
+        /// <summary>The AssetBundle name and variant a .meta's section gives, in lower case as the
+        /// Editor holds them (tests/projects/assetqueries bundles.all), without writing it.</summary>
+        internal void ReadBundle(YNode body)
+        {
+            m_AssetBundleName = (body?.Str("assetBundleName") ?? "").ToLowerInvariant();
+            m_AssetBundleVariant = (body?.Str("assetBundleVariant") ?? "").ToLowerInvariant();
         }
 
         public string assetBundleVariant
         {
             get { CheckImporterState("get_assetBundleVariant"); return NormalizeString(m_AssetBundleVariant); }
-            set { CheckImporterState("set_assetBundleVariant"); m_AssetBundleVariant = NormalizeString(value); }
+            set
+            {
+                CheckImporterState("set_assetBundleVariant");
+                m_AssetBundleVariant = NormalizeString(value)?.ToLowerInvariant();
+                if (!string.IsNullOrEmpty(m_AssetPath)) AssetDatabase.BundleNameSet(m_AssetPath, m_AssetBundleName, m_AssetBundleVariant);
+            }
         }
 
         /// <summary>The .meta's <c>externalObjects</c>: imported objects by class and name, remapped
@@ -667,8 +683,7 @@ namespace Unbound.Runtime
             {
                 new YamlReader(new LoadedFile { Guid = guid, Path = path }, metaNames: true).ReadScriptObject(importer, settings);
                 importer.userData = settings.Get("userData")?.Scalar ?? "";
-                importer.assetBundleName = settings.Get("assetBundleName")?.Scalar ?? "";
-                importer.assetBundleVariant = settings.Get("assetBundleVariant")?.Scalar ?? "";
+                importer.ReadBundle(settings);
             }
             return importer;
         }

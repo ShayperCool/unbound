@@ -48,7 +48,9 @@ fn main() -> anyhow::Result<()> {
         if (ext != "prefab" && ext != "unity") || !asset.path.contains(&filter) {
             continue;
         }
-        let Ok(docs) = loader.load(&asset.file) else { continue };
+        let Ok(docs) = loader.load(&asset.file) else {
+            continue;
+        };
         files += 1;
         let ids: HashSet<i64> = docs.iter().map(|d| d.file_id).collect();
         let mut found = 0;
@@ -69,9 +71,14 @@ fn main() -> anyhow::Result<()> {
                 }
                 if !ids.contains(&id) {
                     found += 1;
-                    *by_field.entry(format!("{}.{}", doc.type_name, field)).or_default() += 1;
+                    *by_field
+                        .entry(format!("{}.{}", doc.type_name, field))
+                        .or_default() += 1;
                     if found <= 3 && dangling_files < 15 {
-                        eprintln!("{}: {} {} &{} -> {id} missing", asset.path, doc.type_name, field, doc.file_id);
+                        eprintln!(
+                            "{}: {} {} &{} -> {id} missing",
+                            asset.path, doc.type_name, field, doc.file_id
+                        );
                     }
                 }
             }
@@ -81,7 +88,9 @@ fn main() -> anyhow::Result<()> {
             dangling += found;
         }
     }
-    println!("{files} files, {dangling_files} with dangling local references ({dangling} references)");
+    println!(
+        "{files} files, {dangling_files} with dangling local references ({dangling} references)"
+    );
     let mut fields: Vec<_> = by_field.into_iter().collect();
     fields.sort_by(|a, b| b.1.cmp(&a.1));
     for (field, n) in fields.into_iter().take(25) {

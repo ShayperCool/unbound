@@ -2675,6 +2675,8 @@ fn the_mipmap_limit_flag_reads_its_former_name_too() {
     };
     assert!(flag("  ignoreMipmapLimit: 1\n"));
     assert!(flag("  ignoreMasterTextureLimit: 1\n"));
-    assert!(!flag("  ignoreMipmapLimit: 0\n  ignoreMasterTextureLimit: 1\n"));
+    assert!(!flag(
+        "  ignoreMipmapLimit: 0\n  ignoreMasterTextureLimit: 1\n"
+    ));
     assert!(!flag(""));
 }

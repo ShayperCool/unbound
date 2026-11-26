@@ -22,7 +22,8 @@ namespace UnityEditor
             string path = GetAssetPath(assetObject);
             if (path.Length != 0) return path;
             if (assetObject is Component component) assetObject = component.gameObject;
-            return assetObject is GameObject gameObject ? gameObject.scene.path : "";
+            // A GameObject in no scene (HideAndDontSave) has none (tests/projects/assetqueries scene_path.hidden).
+            return assetObject is GameObject gameObject ? gameObject.scene.path ?? "" : "";
         }
 
         public static bool IsOpenForEdit(Object assetObject) => IsOpenForEdit(assetObject, out _, StatusQueryOptions.UseCachedIfPossible);

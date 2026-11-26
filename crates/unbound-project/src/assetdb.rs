@@ -17,6 +17,24 @@ pub struct Asset {
     pub labels: Vec<String>,
     /// The importer its `.meta` names (`NativeFormatImporter:`, ...), if it names one.
     pub importer: Option<String>,
+    /// The AssetBundle name and variant its `.meta` gives it, in lower case ("" for none).
+    pub bundle: Bundle,
+}
+
+/// An asset's AssetBundle name and variant, in lower case as the Editor holds them ("" for none).
+#[derive(Debug, Default, Clone, PartialEq, Eq)]
+pub struct Bundle {
+    pub name: String,
+    pub variant: String,
+}
+
+/// What `AssetDb` reads of a `.meta`: its GUID, labels, importer section and AssetBundle name.
+#[derive(Debug, Default, Clone, PartialEq, Eq)]
+pub struct MetaHeader {
+    pub guid: Option<Guid>,
+    pub labels: Vec<String>,
+    pub importer: Option<String>,
+    pub bundle: Bundle,
 }
 
 #[derive(Debug, Default, Clone)]
@@ -120,10 +138,7 @@ impl AssetDb {
         }
         let read: Vec<_> = metas
             .into_par_iter()
-            .map(|(meta, file, path)| {
-                let (guid, labels, importer) = read_meta_header(&meta);
-                (guid, labels, importer, file, path)
-            })
+            .map(|(meta, file, path)| (read_meta_header(&meta), file, path))
             .collect();
         let mut db = AssetDb::default();
         // The `Assets` folder is an asset of its own (GetAllAssetPaths lists it; it loads as a
@@ -136,6 +151,7 @@ impl AssetDb {
                 is_folder: true,
                 labels: Vec::new(),
                 importer: Some("DefaultImporter".to_string()),
+                bundle: Bundle::default(),
             });
         }
         // So is each package's root folder (GetAllAssetPaths lists it, it loads as a folder),
@@ -152,10 +168,17 @@ impl AssetDb {
                     is_folder: true,
                     labels: Vec::new(),
                     importer: Some("DefaultImporter".to_string()),
+                    bundle: Bundle::default(),
                 });
             }
         }
-        for (guid, labels, importer, file, path) in read {
+        for (header, file, path) in read {
+            let MetaHeader {
+                guid,
+                labels,
+                importer,
+                bundle,
+            } = header;
             let Some(guid) = guid else {
                 db.problems.push(format!("{path}: .meta has no guid"));
                 continue;
@@ -180,6 +203,7 @@ impl AssetDb {
                 file,
                 labels,
                 importer,
+                bundle,
             });
         }
         db
@@ -273,11 +297,12 @@ pub fn changes(
     let changed = metas
         .into_par_iter()
         .filter_map(|(path, meta)| {
-            let (guid, labels, importer) = read_meta_header(&meta);
+            let header = read_meta_header(&meta);
             let same = db.by_path(&path).is_some_and(|known| {
-                Some(known.guid) == guid
-                    && known.labels == labels
-                    && known.importer == importer
+                Some(known.guid) == header.guid
+                    && known.labels == header.labels
+                    && known.importer == header.importer
+                    && known.bundle == header.bundle
                     && known.path == path
             });
             (!same).then_some(path)
@@ -293,14 +318,39 @@ pub fn changes(
     (changed, gone)
 }
 
-/// The `guid:`, the `labels:` and the importer section's name of a `.meta`; the rest is parsed by
-/// the importer that needs it.
-pub fn read_meta_header(meta: &Path) -> (Option<Guid>, Vec<String>, Option<String>) {
+/// The `guid:`, the `labels:`, the importer section's name and its AssetBundle name and variant
+/// of a `.meta`; the rest is parsed by the importer that needs it.
+pub fn read_meta_header(meta: &Path) -> MetaHeader {
     let Ok(text) = std::fs::read_to_string(meta) else {
-        return (None, Vec::new(), None);
+        return MetaHeader::default();
     };
     let (guid, labels) = header(text.as_str());
-    (guid, labels, importer_section(&text))
+    MetaHeader {
+        guid,
+        labels,
+        importer: importer_section(&text),
+        bundle: bundle(&text),
+    }
+}
+
+/// The importer section's `assetBundleName` and `assetBundleVariant` (the keys every importer's
+/// section ends with), in lower case as the Editor reads them (tests/projects/assetqueries
+/// bundles.all: `Mixed-Case` lists as `mixed-case`).
+fn bundle(text: &str) -> Bundle {
+    let value = |key: &str| {
+        text.lines()
+            .find_map(|line| {
+                line.strip_prefix("  ")?
+                    .strip_prefix(key)?
+                    .strip_prefix(':')
+            })
+            .map(|value| value.trim().trim_matches(['\'', '"']).to_lowercase())
+            .unwrap_or_default()
+    };
+    Bundle {
+        name: value("assetBundleName"),
+        variant: value("assetBundleVariant"),
+    }
 }
 
 /// The name of a `.meta`'s importer section: its top-level key ending in `Importer`.
@@ -378,6 +428,27 @@ impl Header for unbound_yaml::Value {
 #[cfg(test)]
 mod header_tests {
     use super::*;
+
+    #[test]
+    fn the_bundle_name_and_variant_are_the_importer_sections_in_lower_case() {
+        let text = "fileFormatVersion: 2\nguid: 1\nTextScriptImporter:\n  externalObjects: {}\n  userData: \n  assetBundleName: Mixed-Case\n  assetBundleVariant: HD\n";
+        assert_eq!(
+            bundle(text),
+            Bundle {
+                name: "mixed-case".into(),
+                variant: "hd".into()
+            }
+        );
+        assert_eq!(
+            bundle("guid: 1\nDefaultImporter:\n  assetBundleName: \n  assetBundleVariant: \n"),
+            Bundle::default()
+        );
+        // A nested key of the same name is not the section's.
+        assert_eq!(
+            bundle("guid: 1\nX:\n  a:\n    assetBundleName: no\n").name,
+            ""
+        );
+    }
 
     #[test]
     fn envelope_scan_and_tracked_metadata_share_the_same_field_reader() {
@@ -536,6 +607,7 @@ mod db_tests {
             is_folder: false,
             labels: Vec::new(),
             importer: None,
+            bundle: Bundle::default(),
         }
     }
 

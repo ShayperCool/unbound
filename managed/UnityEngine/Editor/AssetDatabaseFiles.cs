@@ -49,6 +49,9 @@ namespace UnityEditor
             /// <summary>The importer the Editor gives the asset.</summary>
             public string Importer { get; set; }
             public string[] Labels { get; set; }
+            /// <summary>The AssetBundle name and variant its .meta gives it, in lower case.</summary>
+            public string Bundle { get; set; }
+            public string Variant { get; set; }
             /// <summary>Why the path was not imported (no .meta is written for it).</summary>
             public string Error { get; set; }
             /// <summary>The GUID of an asset a refresh found gone.</summary>
@@ -134,7 +137,11 @@ namespace UnityEditor
                 s_Entries.Remove(moved);
                 s_ByPath.Remove(moved.Path);
             }
-            var entry = new Entry { Guid = asset.Guid, Path = path, Kind = asset.Kind, Importer = asset.Importer, Labels = asset.Labels ?? Array.Empty<string>() };
+            var entry = new Entry
+            {
+                Guid = asset.Guid, Path = path, Kind = asset.Kind, Importer = asset.Importer, Labels = asset.Labels ?? Array.Empty<string>(),
+                Bundle = asset.Bundle ?? "", Variant = asset.Variant ?? "",
+            };
             s_Entries.Add(entry);
             s_ByPath[path] = entry;
             s_ByGuid[asset.Guid] = entry;

@@ -24,6 +24,9 @@ namespace UnityEditor
             /// <summary>The importer the Editor gives the asset by its path.</summary>
             public string Importer { get; set; }
             public string[] Labels { get; set; }
+            /// <summary>The AssetBundle name and variant its .meta gives it, in lower case.</summary>
+            public string Bundle { get; set; }
+            public string Variant { get; set; }
         }
 
         static List<Entry> s_Entries;
