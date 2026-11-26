@@ -322,7 +322,7 @@ mod tests {
         let source = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
             .join("../../tests/projects/texturecompression/Assets/Textures/SoftSourceRGBA32.png");
         let mut image =
-            super::super::decode(&source, &std::fs::read(&source).unwrap(), false).unwrap();
+            super::super::decode(&source, &std::fs::read(&source).unwrap(), false, true).unwrap();
         image.flip_rows();
         let format = BlockFormat::Astc6x6;
         let rgba = &image.data;

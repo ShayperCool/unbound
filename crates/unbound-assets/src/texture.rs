@@ -247,6 +247,9 @@ pub struct TextureSettings {
     /// `pSDRemoveMatte`: take Photoshop's white matte out of a flattened image with transparency.
     #[serde(default)]
     pub remove_matte: bool,
+    /// `ignorePngGamma`: a PNG's gamma (its gAMA chunk) is left out ([`png_gamma_exponent`]).
+    #[serde(default)]
+    pub ignore_png_gamma: bool,
 }
 
 fn default_compression_quality() -> i32 {
@@ -428,6 +431,7 @@ impl TextureSettings {
             crunched,
             split_alpha,
             remove_matte: boolean(imp, "pSDRemoveMatte").unwrap_or(false),
+            ignore_png_gamma: boolean(imp, "ignorePngGamma").unwrap_or(false),
         }
     }
 
@@ -1519,7 +1523,8 @@ impl Importer for TextureImporter {
     // 50: cubemaps from images: faces the next power of two up, panoramas half the image's
     //     width, sphere maps and the corner square; AutoCubemap by measured aspect bands.
     // 51: a wrap key a serializedVersion 13 .meta lacks reads Repeat for the UI types too (was Clamp).
-    const VERSION: u32 = 51;
+    // 52: a PNG's gamma (gAMA) applies unless ignorePngGamma.
+    const VERSION: u32 = 52;
 
     fn import(&self, source: &Path, bytes: &[u8], meta: &Value) -> Result<ImportedTexture> {
         let tree_meta = self.tree_textures.apply(source, meta);
@@ -1675,7 +1680,13 @@ pub fn import_texture(
     meta: &Value,
     settings: TextureSettings,
 ) -> Result<ImportedTexture> {
-    let image = decode(source, bytes, settings.remove_matte).context("decoding")?;
+    let image = decode(
+        source,
+        bytes,
+        settings.remove_matte,
+        !settings.ignore_png_gamma,
+    )
+    .context("decoding")?;
     import_image(source, image, meta, settings)
 }
 
@@ -2543,8 +2554,106 @@ fn narrow_u16(v: u16) -> u8 {
     ((u32::from(v) + 128) / 257) as u8
 }
 
-/// Decodes an image file; `remove_matte` applies to Photoshop files ([`psd::decode`]).
-fn decode(source: &Path, bytes: &[u8], remove_matte: bool) -> Result<Image> {
+/// The screen gamma a PNG's gamma is corrected for, 2.2 in the PNG fixed point (gamma x 100000).
+const PNG_SCREEN_GAMMA: f64 = 220_000.0;
+/// The PNG fixed point's one.
+const PNG_FP_1: f64 = 100_000.0;
+/// How far from one (in the fixed point) the product of the file's and the screen's gamma must be
+/// for a correction to apply: 5%.
+const PNG_GAMMA_THRESHOLD: f64 = 5_000.0;
+
+/// The exponent a PNG's samples are raised to for its gamma `file_gamma` (the gAMA value x 100000;
+/// an sRGB chunk stands for 45455), or `None` where none applies: no gamma, a zero one, or one whose
+/// correction for the 2.2 screen gamma is within 5% of none. The exponent is 1 / (file x screen),
+/// rounded in the PNG fixed point, as libpng computes it (matches the Unity 6000.0.71f1 Editor for
+/// every 8-bit value at the gammas 1.0, 0.5, 2.2, 0.43, 0.47, 0.45455, 0, and with an sRGB chunk,
+/// tests/projects/textureplatforms gamma.*).
+fn png_gamma_exponent(file_gamma: u32) -> Option<f64> {
+    if file_gamma == 0 {
+        return None;
+    }
+    let product = (PNG_SCREEN_GAMMA * f64::from(file_gamma) / PNG_FP_1 + 0.5).floor();
+    if (product - PNG_FP_1).abs() <= PNG_GAMMA_THRESHOLD {
+        return None;
+    }
+    let fixed = (1e15 / f64::from(file_gamma) / PNG_SCREEN_GAMMA + 0.5).floor();
+    Some(fixed / PNG_FP_1)
+}
+
+/// The gamma an sRGB chunk stands for (1 / 2.2 in the PNG fixed point).
+const PNG_SRGB_GAMMA: u32 = 45_455;
+
+/// The gamma a PNG file declares before its image data (x 100000): an sRGB chunk's, which wins
+/// over a gAMA chunk wherever it is, else the first gAMA chunk's value.
+fn png_file_gamma(bytes: &[u8]) -> Option<u32> {
+    const SIGNATURE: usize = 8;
+    let mut at = SIGNATURE;
+    let mut gama = None;
+    while let Some(header) = bytes.get(at..at + 8) {
+        let len = u32::from_be_bytes(header[..4].try_into().unwrap()) as usize;
+        let kind = &header[4..8];
+        if kind == b"IDAT" || kind == b"IEND" {
+            break;
+        }
+        let data = bytes.get(at + 8..(at + 8).checked_add(len)?)?;
+        match kind {
+            b"sRGB" => return Some(PNG_SRGB_GAMMA),
+            b"gAMA" if gama.is_none() && len == 4 => {
+                gama = Some(u32::from_be_bytes(data.try_into().unwrap()))
+            }
+            _ => {}
+        }
+        at += 12 + len;
+    }
+    gama
+}
+
+/// `sample` of `max` (255 or 65535) raised to `exponent`, as the nearest byte; 0 and `max` stay.
+fn gamma_corrected(sample: u16, max: u16, exponent: f64) -> u8 {
+    if sample == 0 {
+        return 0;
+    }
+    if sample >= max {
+        return 255;
+    }
+    (255.0 * (f64::from(sample) / f64::from(max)).powf(exponent) + 0.5).floor() as u8
+}
+
+/// A PNG's pixels as RGBA bytes with its gamma applied to the colour (not the alpha): an 8-bit
+/// image through a table of its 256 values, a 16-bit one at 16 bits before narrowing (matches the
+/// Unity 6000.0.71f1 Editor, tests/projects/textureplatforms gamma.Gamma100000Deep; the 256 values
+/// it holds are measured, the rounding of the others between them is not).
+fn png_with_gamma(image: image::DynamicImage, exponent: f64) -> Vec<u8> {
+    use image::DynamicImage::{ImageLuma16, ImageLumaA16, ImageRgb16, ImageRgba16};
+    if matches!(
+        image,
+        ImageLuma16(_) | ImageLumaA16(_) | ImageRgb16(_) | ImageRgba16(_)
+    ) {
+        let deep = image.into_rgba16().into_raw();
+        let mut data = Vec::with_capacity(deep.len());
+        for pixel in deep.chunks_exact(4) {
+            for &c in &pixel[..3] {
+                data.push(gamma_corrected(c, u16::MAX, exponent));
+            }
+            data.push(narrow_u16(pixel[3]));
+        }
+        return data;
+    }
+    let table: Vec<u8> = (0..=255u16)
+        .map(|v| gamma_corrected(v, 255, exponent))
+        .collect();
+    let mut data = image.into_rgba8().into_raw();
+    for pixel in data.chunks_exact_mut(4) {
+        for c in &mut pixel[..3] {
+            *c = table[usize::from(*c)];
+        }
+    }
+    data
+}
+
+/// Decodes an image file; `remove_matte` applies to Photoshop files ([`psd::decode`]),
+/// `png_gamma` to PNG files ([`png_gamma_exponent`]).
+fn decode(source: &Path, bytes: &[u8], remove_matte: bool, png_gamma: bool) -> Result<Image> {
     let ext = source
         .extension()
         .and_then(|e| e.to_str())
@@ -2578,6 +2687,11 @@ fn decode(source: &Path, bytes: &[u8], remove_matte: bool) -> Result<Image> {
             data,
         });
     }
+    let exponent = if png_gamma && format == image::ImageFormat::Png {
+        png_file_gamma(bytes).and_then(png_gamma_exponent)
+    } else {
+        None
+    };
     let image = match image::load_from_memory_with_format(bytes, format) {
         Ok(image) => image,
         // The image crate reads only RGB(A) EXR layers; Unity also imports single-channel and
@@ -2608,7 +2722,10 @@ fn decode(source: &Path, bytes: &[u8], remove_matte: bool) -> Result<Image> {
             width,
             height,
             format: TextureFormat::Rgba8,
-            data: image.into_rgba8().into_raw(),
+            data: match exponent {
+                Some(exponent) => png_with_gamma(image, exponent),
+                None => image.into_rgba8().into_raw(),
+            },
         },
     })
 }

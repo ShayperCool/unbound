@@ -2457,3 +2457,85 @@ fn a_cube_of_faces_is_convolved_as_an_imported_one() {
         }
     }
 }
+
+/// A PNG of `samples` (one row of RGBA, 8 or 16 bits a sample) with optional sRGB and gAMA chunks.
+fn png_with_chunks(samples: &[u16], deep: bool, srgb: bool, gama: Option<u32>) -> Vec<u8> {
+    fn chunk(out: &mut Vec<u8>, kind: &[u8; 4], data: &[u8]) {
+        out.extend((data.len() as u32).to_be_bytes());
+        let start = out.len();
+        out.extend(kind);
+        out.extend(data);
+        let crc = crc32fast::hash(&out[start..]);
+        out.extend(crc.to_be_bytes());
+    }
+    let width = (samples.len() / 4) as u32;
+    let mut header = width.to_be_bytes().to_vec();
+    header.extend(1u32.to_be_bytes());
+    header.extend([if deep { 16 } else { 8 }, 6, 0, 0, 0]);
+    let mut raw = vec![0u8];
+    for &s in samples {
+        if deep {
+            raw.extend(s.to_be_bytes());
+        } else {
+            raw.push(s as u8);
+        }
+    }
+    let mut z = flate2::write::ZlibEncoder::new(Vec::new(), flate2::Compression::default());
+    std::io::Write::write_all(&mut z, &raw).unwrap();
+    let mut out = b"\x89PNG\r\n\x1a\n".to_vec();
+    chunk(&mut out, b"IHDR", &header);
+    if srgb {
+        chunk(&mut out, b"sRGB", &[0]);
+    }
+    if let Some(g) = gama {
+        chunk(&mut out, b"gAMA", &g.to_be_bytes());
+    }
+    chunk(&mut out, b"IDAT", &z.finish().unwrap());
+    chunk(&mut out, b"IEND", &[]);
+    out
+}
+
+fn decoded(bytes: &[u8], png_gamma: bool) -> Vec<u8> {
+    decode(Path::new("Gamma.png"), bytes, false, png_gamma)
+        .unwrap()
+        .data
+}
+
+/// A PNG's gamma corrects its colour for a 2.2 screen, not its alpha, unless ignorePngGamma
+/// (tests/projects/textureplatforms gamma.Gamma100000 and gamma.Gamma100000Ignored: 240 reads 248,
+/// 15 reads 70 at gamma 1.0).
+#[test]
+fn a_png_gamma_corrects_its_colour() {
+    let samples = [240, 15, 0, 208, 255, 128, 1, 3];
+    let png = png_with_chunks(&samples, false, false, Some(100_000));
+    assert_eq!(decoded(&png, true)[..4], [248, 70, 0, 208]);
+    assert_eq!(decoded(&png, true)[4..7], [255, 186, 21]);
+    assert_eq!(decoded(&png, false), samples.map(|s| s as u8));
+    // An sRGB chunk stands for the screen's own gamma: no correction (gamma.Gamma100000Srgb).
+    let srgb = png_with_chunks(&samples, false, true, Some(100_000));
+    assert_eq!(decoded(&srgb, true), samples.map(|s| s as u8));
+}
+
+/// The correction applies outside 5% of none (gamma.Gamma43000 changes, gamma.Gamma47000 and
+/// gamma.Gamma45455 do not), never for a zero gamma (gamma.Gamma0).
+#[test]
+fn a_png_gamma_within_five_percent_of_the_screens_is_left_out() {
+    assert_eq!(png_gamma_exponent(100_000), Some(0.45455));
+    assert_eq!(png_gamma_exponent(220_000), Some(0.20661));
+    assert_eq!(png_gamma_exponent(43_000), Some(1.05708));
+    for none in [47_000, 45_455, 0] {
+        assert_eq!(png_gamma_exponent(none), None, "{none}");
+    }
+    // gamma.Gamma43000's first texel: 240, 15, 144 read 239, 13, 139.
+    let png = png_with_chunks(&[240, 15, 144, 208], false, false, Some(43_000));
+    assert_eq!(decoded(&png, true), [239, 13, 139, 208]);
+}
+
+/// A 16-bit PNG is corrected at 16 bits, then narrowed (gamma.Gamma100000Deep's first texel:
+/// 61455, 4080, 61680 read 248, 72, 248; its alpha 64815 reads 252).
+#[test]
+fn a_deep_png_gamma_corrects_before_narrowing() {
+    let png = png_with_chunks(&[61455, 4080, 61680, 64815], true, false, Some(100_000));
+    assert_eq!(decoded(&png, true), [248, 72, 248, 252]);
+    assert_eq!(decoded(&png, false), [239, 16, 240, 252]);
+}
