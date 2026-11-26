@@ -53,7 +53,7 @@ namespace UnityEngine.Tests
 
         /// <summary>The start's pass over the paths with the given kinds, .meta texts (null: a .meta
         /// that does not read) and session importers: the importers written.</summary>
-        static List<string> Pass(Dictionary<string, (string Kind, string Meta, TextureImporter Importer)> assets, Capture logs)
+        static List<string> Pass(Dictionary<string, (string Kind, string Meta, TextureImporter Importer)> assets, Capture logs, List<string> read = null)
         {
             var written = new List<string>();
             var handler = Debug.unityLogger.logHandler;
@@ -63,6 +63,7 @@ namespace UnityEngine.Tests
                 SpriteImports.Imported(assets.Keys, path => assets[path].Kind, path => "guid-" + path,
                     guid =>
                     {
+                        read?.Add(guid);
                         var entry = assets[guid.Substring("guid-".Length)];
                         if (entry.Meta == null) throw new InvalidOperationException("loading meta: line 4: expected `key:`");
                         return Meta(entry.Meta);
@@ -82,14 +83,16 @@ namespace UnityEngine.Tests
             // A script made the session's importer a Default texture (not saved): it is not given an ID.
             var changed = Importer("Assets/Changed.png", "TextureImporter:\n  textureType: 0\n");
             var logs = new Capture();
+            var read = new List<string>();
             var written = Pass(new Dictionary<string, (string, string, TextureImporter)>
             {
                 ["Assets/Sprite.png"] = ("texture", SingleWithoutId, sprite),
                 ["Assets/Changed.png"] = ("texture", SingleWithoutId, changed),
                 ["Assets/Broken.png"] = ("texture", null, null),
                 // Not a texture: its .meta is not read (a texture .meta here would be).
-                ["Assets/Data.asset"] = ("yaml", SingleWithoutId, sprite),
-            }, logs);
+                ["Assets/Data.asset"] = ("yaml", SingleWithoutId, Importer("Assets/Data.asset", SingleWithoutId)),
+            }, logs, read);
+            Assert.DoesNotContain("guid-Assets/Data.asset", read);
             Assert.Equal(new[] { "Assets/Sprite.png" }, written);
             Assert.Equal("5e97eb03825dee720800000000000000", MetaSettings.Find(sprite.m_Settings, "spriteSheet.spriteID")?.AsString());
             Assert.Equal(0, MetaSettings.Int(sprite.m_Settings, "nPOTScale", -1));
