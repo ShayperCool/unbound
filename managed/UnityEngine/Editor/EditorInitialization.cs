@@ -333,7 +333,6 @@ namespace UnityEditor
         /// the reload).</summary>
         internal static bool PlayModeDomainLoading { get; private set; }
 
-        /// <summary>[InitializeOnEnterPlayMode] methods, as Play mode is entered.</summary>
         /// <summary>[InitializeOnEnterPlayMode] as Play mode is entered with the domain kept: as on
         /// the reload path, a Lightmapping bake from them is Play mode's (PlayModeDomainLoading).</summary>
         internal static void EnterPlayModeMethodsKeepingTheDomain()
@@ -343,6 +342,7 @@ namespace UnityEditor
             finally { PlayModeDomainLoading = false; }
         }
 
+        /// <summary>[InitializeOnEnterPlayMode] methods, as Play mode is entered.</summary>
         internal static void EnterPlayModeMethods()
         {
             ForEachStaticMethod(InitializeOnEnterPlayMode, method =>

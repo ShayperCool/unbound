@@ -77,8 +77,8 @@ namespace UnityEditor
         /// test`, editor scripts) it bakes the open scenes' realtime GI with Unbound's own
         /// precompute (`script_bake.py --edit`; RealtimeGI.BakeInEditMode). Entering Play mode
         /// from Edit mode without a domain reload (`unbound test`), [InitializeOnEnterPlayMode]
-        /// code runs with isPlaying already true and gets the Play mode answer (the Editor's is
-        /// not measured there).
+        /// code gets the answer Direct Play gives with the domain kept (the Editor's is not
+        /// measured there).
         /// </summary>
         public static bool Bake()
         {
