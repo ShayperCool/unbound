@@ -306,10 +306,16 @@ def seed_build_index_list(project, play):
     settings.write_bytes(text.replace(old, seeded))
 
 
-# The cases whose texture `.meta` files list the installation's platform modules, with the modules
-# of the Editor installation their reference was recorded with (the macOS Editor with the Android
-# module, README label-metas).
-INSTALLATION_CASES = {'label-metas': ('Android',)}
+# The cases with texture `.meta` files whose platform list is the installation's (a .meta that
+# held its GUID alone, written by the importer), those files, and the modules of the Editor
+# installation their reference was recorded with (the macOS Editor with the Android module,
+# README label-metas). Other texture .meta files list what the probe wrote into them.
+INSTALLATION_CASES = {
+    'label-metas': {
+        'modules': ('Android',),
+        'files': ('Assets/Labels/Tex.png.meta', 'snapshot:labelled.Tex.png.meta', 'snapshot:cleared.Tex.png.meta'),
+    },
+}
 
 
 def run_case(kind, case, out, cli=None):
@@ -400,8 +406,7 @@ def main():
             run_case(args.command, case, out/case)
         return 0
     if args.command == 'compare':
-        return scenesave_compare.compare_runs(args.reference, args.actual, args.case or sorted(CASES),
-                                              recorded_modules=INSTALLATION_CASES)
+        return scenesave_compare.compare_runs(args.reference, args.actual, args.case or sorted(CASES))
     if args.command == 'compare-file':
         problem = scenesave_compare.compare_file(args.reference, args.actual, args.actual.name)
         print(problem or 'identical')
@@ -410,7 +415,7 @@ def main():
     for case in sorted(CASES):
         run_case('unbound', case, out/case)
     return scenesave_compare.compare_runs(reference_root(PROBE), out, sorted(CASES), report=out/'report.json',
-                                          recorded_modules=INSTALLATION_CASES)
+                                          installation_files=INSTALLATION_CASES)
 
 
 if __name__ == '__main__':

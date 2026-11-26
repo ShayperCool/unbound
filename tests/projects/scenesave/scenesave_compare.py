@@ -356,7 +356,7 @@ def file_set(case_dir, summary):
     return files
 
 
-def compare_runs(reference, actual, cases, report=None, recorded_modules=None):
+def compare_runs(reference, actual, cases, report=None, installation_files=None):
     failures, compared = [], 0
     for case in cases:
         ref, act = Path(reference)/case, Path(actual)/case
@@ -373,21 +373,24 @@ def compare_runs(reference, actual, cases, report=None, recorded_modules=None):
             if rr.get(key) != ar.get(key):
                 failures.append({'case': case, 'key': key, 'reference': rr.get(key), 'actual': ar.get(key)})
         rf, af = file_set(ref, rs), file_set(act, acs)
-        # The platform modules one installation has and the other lacks (a reference's from its
-        # summary, else as recorded; a run's from its summary).
-        modules = ()
-        if recorded_modules and case in recorded_modules:
+        # The gate's Unbound run against the reference: the platform modules one installation has
+        # and the other lacks (the reference's as recorded, the run's from its summary), left out
+        # of the files whose platform list is the installation's.
+        modules, listed = (), ()
+        if installation_files and case in installation_files:
             if 'modules' not in acs:
                 failures.append({'case': case, 'key': 'modules', 'reference': 'listed', 'actual': 'missing'})
             else:
-                modules = texture_platforms.installation_differences(rs.get('modules', recorded_modules[case]), acs['modules'])
+                modules = texture_platforms.installation_differences(
+                    rs.get('modules', installation_files[case]['modules']), acs['modules'])
+                listed = installation_files[case]['files']
         created = created_assets(rf, af)
         for rel in sorted(set(rf) | set(af)):
             compared += 1
             if rel not in rf or rel not in af:
                 failures.append({'case': case, 'key': 'file:' + rel, 'reference': rel in rf, 'actual': rel in af})
                 continue
-            problem = compare_file(rf[rel], af[rel], rel, created, modules)
+            problem = compare_file(rf[rel], af[rel], rel, created, modules if rel in listed else ())
             if problem:
                 failures.append({'case': case, 'key': 'file:' + rel, 'reference': 'written', 'actual': problem})
         compared += 1

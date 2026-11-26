@@ -66,5 +66,49 @@ class TexturePlatformTests(unittest.TestCase):
         self.assertEqual(texture_platforms.strip(text, set()), text)
 
 
+class InstallationFilesTests(unittest.TestCase):
+    """compare_runs leaves the entries out of the listed files only, on the gate path only."""
+
+    FILES = {'label-metas': {'modules': ('Android',), 'files': ('Assets/Labels/Tex.png.meta',)}}
+
+    def run_dir(self, root, metas, modules=None):
+        case = Path(root)/'label-metas'
+        summary = {'case': 'label-metas', 'exit': 0, 'changed': sorted(metas), 'removed': []}
+        if modules is not None:
+            summary['modules'] = modules
+        (case/'files').mkdir(parents=True)
+        (case/'summary.json').write_text(__import__('json').dumps(summary))
+        (case/'rows.jsonl').write_text('')
+        for rel, text in metas.items():
+            (case/'files'/rel).parent.mkdir(parents=True, exist_ok=True)
+            (case/'files'/rel).write_text(text)
+        return root
+
+    def compare(self, reference, actual, **kwargs):
+        with tempfile.TemporaryDirectory() as ref, tempfile.TemporaryDirectory() as act:
+            self.run_dir(ref, reference)
+            self.run_dir(act, actual, kwargs.pop('modules', None))
+            with open(__import__('os').devnull, 'w') as quiet, __import__('contextlib').redirect_stdout(quiet):
+                return scenesave_compare.compare_runs(ref, act, ['label-metas'], **kwargs)
+
+    def test_only_the_listed_files_leave_the_entries_out(self):
+        authored = meta('DefaultTexturePlatform', 'Android', 'iOS')
+        reference = {'Assets/Labels/Tex.png.meta': meta('DefaultTexturePlatform', 'Standalone', 'Android'),
+                     'Assets/Labels/Partial.png.meta': authored}
+        actual = {'Assets/Labels/Tex.png.meta': meta('DefaultTexturePlatform', 'Standalone', 'Android', 'iOS'),
+                  'Assets/Labels/Partial.png.meta': authored}
+        self.assertEqual(self.compare(reference, actual, modules=['Android', 'iOS'], installation_files=self.FILES), 0)
+        # A change to the authored iOS entry of another texture's .meta still fails.
+        actual['Assets/Labels/Partial.png.meta'] = authored.replace('buildTarget: iOS\n    maxTextureSize: 2048', 'buildTarget: iOS\n    maxTextureSize: 512')
+        self.assertEqual(self.compare(reference, actual, modules=['Android', 'iOS'], installation_files=self.FILES), 1)
+        # The gate's run must list its modules.
+        actual['Assets/Labels/Partial.png.meta'] = authored
+        self.assertEqual(self.compare(reference, actual, installation_files=self.FILES), 1)
+
+    def test_two_editor_captures_compare_without_modules(self):
+        files = {'Assets/Labels/Tex.png.meta': meta('DefaultTexturePlatform', 'Standalone', 'Android')}
+        self.assertEqual(self.compare(files, dict(files)), 0)
+
+
 if __name__ == '__main__':
     unittest.main()
