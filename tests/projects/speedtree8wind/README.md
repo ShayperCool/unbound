@@ -72,7 +72,7 @@ reaches while its asset's wind rests starts from rest (+x, its phases at zero); 
 keeps the world windy for a SpeedTree 9 tree that first draws; `_ST_WindAnimation` reads the
 global value until the tree draws with wind and then neither the global nor the material value
 (the engine's buffer holds something else there, not repeatable). The imported variant's children
-come in name order in the Editor (its collision objects first): a recorded residual.
+come in name order in the Editor (its collision objects first), as tests/projects/speedtree8 measures.
 
 Not measured: gusts (the release never turns them on), the directional options set one at a time
 (the staged copy sets both; Unbound scales each option's own level), palm wind (no sample uses it; its

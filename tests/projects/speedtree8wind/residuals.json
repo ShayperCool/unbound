@@ -1,5 +1,0 @@
-{
-  "The Editor's imported SpeedTree 8 prefab keeps its children in name order (the staged Field_Directional.st's CollisionObject0/1 before Field_Directional_LOD0..3; Broadleaf_Desktop_Field.st's LODs come first only because their names sort first); Unbound's importer makes the levels, then the collision objects. Not a wind value: the probe finds the variant's first level by its components (queue row Q799)": [
-    "directional/children"
-  ]
-}
