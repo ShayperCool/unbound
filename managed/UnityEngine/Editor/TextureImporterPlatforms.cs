@@ -23,9 +23,22 @@ namespace UnityEditor
         /// since (its default edited through a property, any entry through a SerializedObject) is.</summary>
         readonly Dictionary<string, string> m_AddedPlatforms = new Dictionary<string, string>(StringComparer.Ordinal);
 
+        /// <summary>The settings read as the Editor reads an oldest-layout sprite section
+        /// (<see cref="ImporterLayout.OldestReadValues"/>), each with the file's own value (null: the
+        /// file lacks it) and the value read: while unchanged they are no change to save
+        /// (tests/projects/spritemeta importer.Save*, save.SaveKeep).</summary>
+        readonly Dictionary<string, (YNode File, string Read)> m_ReadAsOldest = new Dictionary<string, (YNode, string)>(StringComparer.Ordinal);
+
         internal override void ReadSettings(YNode body)
         {
             m_AddedPlatforms.Clear();
+            m_ReadAsOldest.Clear();
+            if (ImporterMeta.TextureLayout is { } layout && m_Settings != null)
+                foreach (var (path, value) in layout.OldestReadValues(m_Settings))
+                {
+                    m_ReadAsOldest[path] = (MetaSettings.Clone(MetaSettings.Find(m_Settings, path)), value);
+                    MetaSettings.Set(m_Settings, path, value);
+                }
             foreach (var name in AddMissingPlatforms(m_Settings, ImporterMeta.TextureImportPlatforms)) Added(name);
             // The settings the asset imported with hold the added entries too (a preprocessor's
             // save compares with them).
@@ -41,17 +54,32 @@ namespace UnityEditor
         /// since: what the .meta holds unless something changed.</summary>
         internal override YNode SavedSettings()
         {
-            if (m_AddedPlatforms.Count == 0 || m_Settings == null || !(m_Settings.Get(PlatformList) is { Kind: YKind.Seq } list)) return m_Settings;
+            bool platforms = m_AddedPlatforms.Count > 0 && m_Settings?.Get(PlatformList) is { Kind: YKind.Seq };
+            if (m_Settings == null || (!platforms && m_ReadAsOldest.Count == 0)) return m_Settings;
             var copy = MetaSettings.Clone(m_Settings);
-            var kept = new List<YNode>();
-            foreach (var item in list.Items)
-                if (!(NameOf(item) is { } name && m_AddedPlatforms.TryGetValue(name, out var added) && added == MetaSettings.ToJson(item)))
-                    kept.Add(MetaSettings.Clone(item));
-            SetList(copy, kept.ToArray());
+            if (platforms)
+            {
+                var kept = new List<YNode>();
+                foreach (var item in m_Settings.Get(PlatformList).Items)
+                    if (!(NameOf(item) is { } name && m_AddedPlatforms.TryGetValue(name, out var added) && added == MetaSettings.ToJson(item)))
+                        kept.Add(MetaSettings.Clone(item));
+                SetList(copy, kept.ToArray());
+            }
+            // What was read as an oldest section reads and is unchanged: the file's own.
+            foreach (var (path, (file, read)) in m_ReadAsOldest)
+                if (MetaSettings.Find(copy, path) is { Kind: YKind.Scalar } now && now.Scalar == read)
+                {
+                    if (file is { Kind: YKind.Scalar }) MetaSettings.Set(copy, path, file.Scalar);
+                    else MetaSettings.Remove(copy, path);
+                }
             return copy;
         }
 
-        internal override void SettingsWritten() => m_AddedPlatforms.Clear();
+        internal override void SettingsWritten()
+        {
+            m_AddedPlatforms.Clear();
+            m_ReadAsOldest.Clear();
+        }
 
         /// <summary>Adds to <paramref name="settings"/> the entries its platform list lacks of the
         /// platforms in <paramref name="platforms"/> (null: none, where that is not measured), then

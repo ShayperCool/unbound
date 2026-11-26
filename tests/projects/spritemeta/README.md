@@ -5,7 +5,7 @@ whose default behaviour mode is 2D (`EditorSettings.m_DefaultBehaviorMode: 1`). 
 recorded with the macOS Editor in batch mode (two identical captures): the values depend on neither
 the OS nor the graphics device, apart from the installation's platform modules, whose per-platform
 texture entries are left out of each text (`.platforms` says whether those left out were the
-installed modules).
+installed modules, `.modules` whether each was a copy of the first default entry but for its name).
 
 `Assets/Textures` holds PNGs (4x4 opaque unless named otherwise):
 
@@ -23,6 +23,7 @@ installed modules).
 | `BareDefault` | only `textureType: 0` |
 | `BareFull` | `Control`'s keys as a Single sprite, without `serializedVersion` |
 | `BareLegacy`, `BareSize` | as `Bare` with `maxTextureSize: 512`, `compressionQuality: 100` and (`BareLegacy`) `textureFormat: 3` |
+| `BareDefaultEntry` | as `Bare` with a default entry of a few keys (`maxTextureSize: 1024`, compressed) |
 | `BareSheet`, `BarePlat`, `BareTag` | as `Bare` with a `spriteSheet` of no `serializedVersion` at its defaults, with a `Standalone` entry of no `serializedVersion`, with keys the release lacks (`spritePackingTag`, `wrapMode`) |
 | `SaveData`, `SaveNpot`, `SaveClear`, `SaveBundle`, `SaveKeep` | as `Bare` with its sprite ID (`SaveClear` also a default and a `Standalone` entry of a few keys) |
 | `Order*`, `Near*` | none; 16x16 (`NearGrown` 16x8) blocks whose rows touch (side by side, a staircase, a tall block, padded grids of 2x2 and 3x3, tops at the edge), and pixels between big blocks at different gaps, on one row, two and three in a row, and joins that move a rect within its row |
@@ -65,8 +66,10 @@ row of the rest. A new texture ImportAsset or Refresh imports during the session
 the same `.meta` (`session/*`). A sprite's `.meta` without `serializedVersion` is written whole in the
 release's layout, its top-level keys kept, `applyGammaDecoding` and `cookieLightType` 1, its
 `textureSettings` keys read as defaults, after its platform entries a default one and the installed
-platforms it lacks, uncompressed, of the section's `maxTextureSize` and `compressionQuality` (`BareWrap`,
-`BarePpu`, `BareFull`, `BareSize`), the keys the release lacks left out (`BareTag`); a `textureFormat`
+platforms it lacks as copies of the first default entry (the file's, else the added one), the added
+default entry uncompressed, of the section's `maxTextureSize` and `compressionQuality` (`BareWrap`,
+`BarePpu`, `BareFull`, `BareSize`, `BareDefaultEntry`), the keys the release lacks left out (`BareTag`);
+the importer reads such a section so before any write (`importer/Save*`: wraps Repeat); a `textureFormat`
 of 3 also makes `alphaUsage` 0 (`BareLegacy`), and an entry of no `serializedVersion` reads other
 defaults (`BarePlat`: compressed, `forceMaximumCompressionQuality_BC6H_BC7` 1). A script's save of such
 a section that has its sprite ID writes it the same way with the change (a cleared entry left out, a
@@ -84,6 +87,6 @@ Record and gate:
     python3 tests/projects/spritemeta/run.py publish A B
     python3 tests/projects/spritemeta/run.py gate
 
-`residuals.json` names the open differences: the importer's reading of an oldest-layout `.meta`
-before any write, and the conversion of `BareLegacy` and `BarePlat` (not implemented: Unbound keeps
+`residuals.json` names the open differences: the importer's reading of an oldest-layout `.meta`'s
+platform entries before any write, a Default texture's reading, and the conversion of `BareLegacy` and `BarePlat` (not implemented: Unbound keeps
 their layout and says so).

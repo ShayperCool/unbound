@@ -102,6 +102,34 @@ namespace Unbound.Runtime
             Append(node, last, YNode.MakeScalar(scalar));
         }
 
+        /// <summary>Removes the key at <paramref name="path"/> (of map keys), and each map on the way
+        /// that this leaves empty.</summary>
+        internal static void Remove(YNode root, string path)
+        {
+            var segments = path.Split('.');
+            var maps = new List<YNode> { root };
+            for (int i = 0; i < segments.Length - 1; i++)
+            {
+                if (maps[^1].Get(segments[i]) is not { Kind: YKind.Map } next) return;
+                maps.Add(next);
+            }
+            for (int i = segments.Length - 1; i >= 0; i--)
+            {
+                var map = maps[i];
+                int at = Array.IndexOf(map.Keys, segments[i]);
+                if (at < 0) return;
+                var keys = new string[map.Keys.Length - 1];
+                var values = new YNode[keys.Length];
+                Array.Copy(map.Keys, keys, at);
+                Array.Copy(map.Keys, at + 1, keys, at, keys.Length - at);
+                Array.Copy(map.Values, values, at);
+                Array.Copy(map.Values, at + 1, values, at, values.Length - at);
+                map.Keys = keys;
+                map.Values = values;
+                if (i == 0 || map.Keys.Length > 0) return;
+            }
+        }
+
         internal static int Int(YNode root, string path, int fallback = 0) => Find(root, path)?.AsInt(fallback) ?? fallback;
         internal static float Float(YNode root, string path, float fallback = 0) => Find(root, path) is { } n ? (float)n.AsDouble(fallback) : fallback;
         internal static bool Bool(YNode root, string path, bool fallback = false) => Find(root, path) is { } n ? n.AsLong(fallback ? 1 : 0) != 0 : fallback;

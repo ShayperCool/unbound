@@ -198,7 +198,11 @@ namespace Unbound.Runtime
                         // (With the file's own common settings: a given one it lacks is a change;
                         // an oldest section read as its importer reads it, with the entries it adds.)
                         var plainSettings = plain.Get(type).ToNode();
-                        if (oldest) TextureImporter.AddMissingPlatforms(plainSettings, TextureImportPlatforms);
+                        if (oldest)
+                        {
+                            foreach (var (path, value) in layout.OldestReadValues(plainSettings)) MetaSettings.Set(plainSettings, path, value);
+                            TextureImporter.AddMissingPlatforms(plainSettings, TextureImportPlatforms);
+                        }
                         LayOut(plain, type, layout, plainSettings, _ => { }, new List<string>(),
                             oldest ? new OldestSource(plain.Get(type).Clone(), plain.Get(type).ToNode()) : null);
                         if (UnityYamlText.WriteTopLevel(root) == UnityYamlText.WriteTopLevel(plain))
@@ -299,7 +303,7 @@ namespace Unbound.Runtime
         }
 
         /// <summary>The text of a block map or sequence of scalars as the managed reader holds it.</summary>
-        static YText FromNode(YNode node)
+        internal static YText FromNode(YNode node)
         {
             switch (node?.Kind ?? YKind.Null)
             {
@@ -328,6 +332,28 @@ namespace Unbound.Runtime
             new[] { ("userData", common.UserData), ("assetBundleName", common.Bundle), ("assetBundleVariant", common.Variant) };
 
         static string s_TextureTemplate;
+        static ImporterLayout s_TextureLayout;
+        static bool s_TextureLayoutKnown;
+
+        /// <summary>For tests: the texture section <see cref="TextureLayout"/> is made of.</summary>
+        internal static string s_TextureTemplateForTests;
+
+        /// <summary>The release's texture layout; null where it is not measured (another release
+        /// family) or there is no native side.</summary>
+        internal static ImporterLayout TextureLayout
+        {
+            get
+            {
+                if (s_TextureTemplateForTests != null) return ImporterLayout.ForTexture(s_TextureTemplateForTests);
+                if (!Native.IsReady) return null;
+                if (!s_TextureLayoutKnown)
+                {
+                    s_TextureLayout = ImporterLayout.ForTexture(TextureTemplate());
+                    s_TextureLayoutKnown = true;
+                }
+                return s_TextureLayout;
+            }
+        }
 
         static string TextureTemplate() =>
             s_TextureTemplate ??= System.Text.Json.JsonDocument.Parse(Native.Call("texture-meta-template", "{}")).RootElement.GetProperty("section").GetString() ?? "";
@@ -399,7 +425,7 @@ namespace Unbound.Runtime
             var arranged = layout.Arrange((oldest != null ? oldest.File : root.Get(importerType)).Clone(), older, oldest != null);
             var placed = new List<string>();
             // The oldest layout's settings are written as the Editor converts them.
-            Patch(arranged, oldest != null ? ImporterLayout.ReadAsOldest(settings, oldest.File) : settings, "", placed);
+            Patch(arranged, oldest != null ? ImporterLayout.WithoutPlatforms(settings) : settings, "", placed);
             common(arranged);
             if (oldest != null) layout.OldestPlatforms(arranged, oldest.File, oldest.Saved, settings, older);
             older.AddRange(layout.Normalize(arranged));
@@ -574,21 +600,25 @@ namespace Unbound.Runtime
 
         /// <summary>An oldest-layout section's platform list as the Editor's importer holds it and a
         /// save writes it (tests/projects/spritemeta Bare*, Save*): the file's entries (laid out,
-        /// those the importer cleared left out, its values patched in), then a default entry and
-        /// each platform the import adds that the file lacks, uncompressed with the file's maximum
-        /// size and compression quality, unless the importer cleared it. An entry the importer
-        /// set or changed that the file lacks is not measured: named in <paramref name="unmeasured"/>.</summary>
+        /// those the importer cleared left out, its values patched in), then a default entry,
+        /// uncompressed with the file's maximum size and compression quality, and each platform the
+        /// import adds that the file lacks, unless the importer cleared it, as a copy of the first
+        /// default entry as read (the file's, else the added one; the installed modules' entries,
+        /// end.BareFull.modules, save.SaveClear/meta.modules). An entry the importer set or changed
+        /// that the file lacks is not measured: named in <paramref name="unmeasured"/>.</summary>
         internal void OldestPlatforms(YText arranged, YText file, YNode saved, YNode settings, List<string> unmeasured)
         {
             if (m_PlatformEntry == null || arranged.Get("platformSettings") is not { Kind: YKind.Seq } list) return;
             var own = new HashSet<string>(StringComparer.Ordinal);
             var entries = new List<YText>();
+            YText firstDefault = null;
             var unplaced = new List<string>();
             foreach (var item in list.Items)
             {
                 var name = item.Kind == YKind.Map ? item.Get("buildTarget")?.Text : null;
                 if (name == null) continue;
                 own.Add(name);
+                if (name == TextureImporterPlatformSettings.DefaultPlatformName) firstDefault ??= item.Clone();
                 if (FindEntry(saved, name) is not { } kept) continue;
                 ImporterMeta.Patch(item, kept, "platformSettings[" + name + "].", unplaced);
                 entries.Add(item);
@@ -599,12 +629,19 @@ namespace Unbound.Runtime
             {
                 if (own.Contains(name)) return;
                 if (FindEntry(saved, name) != null) unmeasured.Add("platformSettings: " + name + " set or changed on an oldest-layout section");
-                else if (name == TextureImporterPlatformSettings.DefaultPlatformName || !listed || FindEntry(settings, name) != null) entries.Add(OldestEntry(name, file));
+                else if (!listed || FindEntry(settings, name) != null)
+                {
+                    var copy = firstDefault.Clone();
+                    copy.Set("buildTarget", YText.Scalar(name));
+                    entries.Add(copy);
+                }
             }
             // The default entry is added even when the file has one (BareFull).
+            var addedDefault = OldestEntry(file);
             if (FindEntry(saved, TextureImporterPlatformSettings.DefaultPlatformName) != null && !own.Contains(TextureImporterPlatformSettings.DefaultPlatformName))
                 unmeasured.Add("platformSettings: " + TextureImporterPlatformSettings.DefaultPlatformName + " set or changed on an oldest-layout section");
-            else entries.Add(OldestEntry(TextureImporterPlatformSettings.DefaultPlatformName, file));
+            else entries.Add(addedDefault);
+            firstDefault ??= addedDefault;
             foreach (var name in ImporterMeta.TextureImportPlatforms ?? Array.Empty<string>()) Add(name);
             if (saved?.Get("platformSettings") is { Kind: YKind.Seq } given)
                 foreach (var entry in given.Items)
@@ -638,13 +675,13 @@ namespace Unbound.Runtime
             return true;
         }
 
-        /// <summary>A platform entry an oldest-layout section's importer adds: the release's entry
-        /// for <paramref name="target"/> without compression, of the file's maximum size and
-        /// compression quality (tests/projects/spritemeta BareSize).</summary>
-        YText OldestEntry(string target, YText file)
+        /// <summary>The default platform entry an oldest-layout section's importer adds: the
+        /// release's entry without compression, of the file's maximum size and compression quality
+        /// (tests/projects/spritemeta BareSize).</summary>
+        YText OldestEntry(YText file)
         {
             var entry = m_PlatformEntry.Clone();
-            entry.Set("buildTarget", YText.Scalar(target));
+            entry.Set("buildTarget", YText.Scalar(TextureImporterPlatformSettings.DefaultPlatformName));
             if (entry.Get("textureCompression") != null) entry.Set("textureCompression", YText.Scalar("0"));
             foreach (var key in s_OldestEntryKeys)
                 if (entry.Get(key) != null && file.Get(key) is { Kind: YKind.Scalar } value) entry.Set(key, value.Clone());
@@ -663,50 +700,33 @@ namespace Unbound.Runtime
             ["cookieLightType"] = "1",
         };
 
-        /// <summary>The settings an importer of an oldest-layout sprite section writes into its
-        /// conversion (<see cref="Arrange(YText, List{string}, bool)"/>, which reads the file's
-        /// textureSettings without their own serialized version as defaults, tests/projects/spritemeta
-        /// end.BareWrap, and the keys of <see cref="s_OldestDefaults"/> with those values): of those,
-        /// only the ones the importer changed from the file's (a key the importer holds as the file
-        /// does reads as the Editor's importer reads it); the platform entries left out
-        /// (<see cref="OldestPlatforms"/>). Other settings as they are.</summary>
-        internal static YNode ReadAsOldest(YNode body, YText file)
+        /// <summary>The values an importer reads an oldest-layout sprite section of a measured shape
+        /// (<see cref="ConvertsOldest"/>) with where they differ from its keys, by path (matches the
+        /// Unity 6000.0.71f1 Editor, tests/projects/spritemeta importer.Save*, end.BareWrap,
+        /// end.BareFull): textureSettings without their own serialized version, or none, at the
+        /// release's defaults, and the keys of <see cref="s_OldestDefaults"/> with those values.
+        /// None for another section.</summary>
+        internal List<(string Path, string Value)> OldestReadValues(YNode settings)
         {
-            if (body == null || body.Kind != YKind.Map) return body;
-            bool readAsDefaults = file.Get("textureSettings") is { Kind: YKind.Map } fileSettings && fileSettings.Get("serializedVersion") == null;
-            var keys = new List<string>();
-            var values = new List<YNode>();
-            for (int i = 0; i < body.Keys.Length; i++)
-            {
-                var key = body.Keys[i];
-                var value = body.Values[i];
-                if (key == "platformSettings") continue;
-                if (s_OldestDefaults.ContainsKey(key) && value.Kind == YKind.Scalar && file.Get(key) is { Kind: YKind.Scalar } own && own.Text == value.Scalar) continue;
-                if (readAsDefaults && key == "textureSettings")
-                {
-                    value = Changed(value, file.Get(key));
-                    if (value == null) continue;
-                }
-                keys.Add(key);
-                values.Add(value);
-            }
-            return new YNode { Kind = YKind.Map, Keys = keys.ToArray(), Values = values.ToArray() };
+            var values = new List<(string, string)>();
+            if (settings == null || settings.Kind != YKind.Map || !ConvertsOldest(ImporterMeta.FromNode(settings))) return values;
+            if ((settings.Get("textureSettings") is not { Kind: YKind.Map } own || own.Get("serializedVersion") == null)
+                && m_Section.Get("textureSettings") is { Kind: YKind.Map } defaults)
+                for (int i = 0; i < defaults.Keys.Count; i++)
+                    if (defaults.Keys[i] != "serializedVersion" && defaults.Values[i].Kind == YKind.Scalar)
+                        values.Add(("textureSettings." + defaults.Keys[i], defaults.Values[i].Text));
+            foreach (var (key, value) in s_OldestDefaults) values.Add((key, value));
+            return values;
         }
 
-        /// <summary>The scalars of <paramref name="settings"/> that differ from <paramref name="file"/>'s; null for none.</summary>
-        static YNode Changed(YNode settings, YText file)
+        /// <summary>The settings without their platform list (an oldest-layout section's is laid
+        /// out apart, <see cref="OldestPlatforms"/>).</summary>
+        internal static YNode WithoutPlatforms(YNode body)
         {
-            if (settings.Kind != YKind.Map) return settings;
-            var keys = new List<string>();
-            var values = new List<YNode>();
-            for (int i = 0; i < settings.Keys.Length; i++)
-            {
-                var own = file?.Get(settings.Keys[i]);
-                if (settings.Values[i].Kind == YKind.Scalar && own is { Kind: YKind.Scalar } && own.Text == settings.Values[i].Scalar) continue;
-                keys.Add(settings.Keys[i]);
-                values.Add(settings.Values[i]);
-            }
-            return keys.Count == 0 ? null : new YNode { Kind = YKind.Map, Keys = keys.ToArray(), Values = values.ToArray() };
+            if (body == null || body.Kind != YKind.Map || body.Get("platformSettings") == null) return body;
+            var copy = MetaSettings.Clone(body);
+            MetaSettings.Remove(copy, "platformSettings");
+            return copy;
         }
 
         /// <param name="current">Whether the file is of the release's serialized version.</param>
