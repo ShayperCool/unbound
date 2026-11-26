@@ -17,7 +17,7 @@ ControllerAssetTests), `controller-additions` (Edit Mode ControllerAdditionTests
 (Edit Mode SceneApiRestTests), `build-scenes` (Edit Mode BuildSceneTests), `generic-refs` (Edit Mode GenericRefTests),
 `session-imports` (Edit Mode SessionImportTests), `build-index-edit` (Edit Mode BuildIndexTests) and
 `build-index-play` (Play Mode BuildIndexPlayTests), `label-metas` (Edit Mode LabelMetaTests),
-`refresh-changes` (Edit Mode RefreshChangeTests).
+`refresh-changes` (Edit Mode RefreshChangeTests), `prefab-dirty-saves` (Edit Mode PrefabDirtySaveTests).
 """
 import argparse
 import json
@@ -62,6 +62,7 @@ CASES = {
     'build-index-play': ('PlayMode', 'BuildIndexPlayTests.PlayMode'),
     'label-metas': ('EditMode', 'LabelMetaTests.LabelMetas'),
     'refresh-changes': ('EditMode', 'RefreshChangeTests.RefreshChanges'),
+    'prefab-dirty-saves': ('EditMode', 'PrefabDirtySaveTests.PrefabDirtySaves'),
 }
 SKIPPED = {'Library', 'LibraryUnbound', 'Logs', 'Temp', 'UserSettings', 'obj', 'run.py', 'README.md', 'Reference',
            'gate.json', 'scenesave_compare.py', 'test_compare.py', '__pycache__'}
@@ -306,6 +307,37 @@ def seed_build_index_list(project, play):
     settings.write_bytes(text.replace(old, seeded))
 
 
+# The prefab copies `prefab-dirty-saves` changes and saves (Thing.prefab's content), by GUID.
+PREFAB_SAVE_COPIES = {
+    'Fields': '0a1b2c3d4e5f40718293a4b5c6d7e8f9',
+    'Unmarked': '1b2c3d4e5f6a41829304b5c6d7e8f90a',
+    'Touched': '2c3d4e5f6a7b42930415c6d7e8f90a1b',
+    'Untouched': '3d4e5f6a7b8c43a41526d7e8f90a1b2c',
+    'Structure': '4e5f6a7b8c9d44b52637e8f90a1b2c3d',
+    'Base': '5f6a7b8c9d0e45c63748f90a1b2c3d4e',
+    'Single': '6a7b8c9d0e1f46d74859a0a1b2c3d4e5',
+    'Exit': '7b8c9d0e1f2a47e8596ab1b2c3d4e5f6',
+}
+
+
+def seed_prefab_saves(project):
+    """Copies of Thing.prefab (its .meta's importer section) under Assets/PrefabSaves, each with
+    its own GUID, for `prefab-dirty-saves`."""
+    folder = project/'Assets/PrefabSaves'
+    folder.mkdir()
+    (project/'Assets/PrefabSaves.meta').write_bytes(
+        b'fileFormatVersion: 2\nguid: 8c9d0e1f2a3b48f96a7bc2c3d4e5f6a7\nfolderAsset: yes\nDefaultImporter:\n'
+        b'  externalObjects: {}\n  userData: \n  assetBundleName: \n  assetBundleVariant: \n')
+    source = project/'Assets/Prefabs/Thing.prefab'
+    meta = (project/'Assets/Prefabs/Thing.prefab.meta').read_bytes()
+    original = b'guid: cbd4e62ce7b3045a485591c760497429\n'
+    if original not in meta:
+        raise SystemExit('scenesave: Thing.prefab.meta does not hold its GUID line')
+    for name, guid in PREFAB_SAVE_COPIES.items():
+        shutil.copyfile(source, folder/f'{name}.prefab')
+        (folder/f'{name}.prefab.meta').write_bytes(meta.replace(original, b'guid: %s\n' % guid.encode()))
+
+
 # The cases with texture `.meta` files whose platform list is the installation's (a .meta that
 # held its GUID alone, written by the importer), those files, and the modules of the Editor
 # installation their reference was recorded with (the macOS Editor with the Android module,
@@ -333,6 +365,8 @@ def run_case(kind, case, out, cli=None):
         seed_build_index_list(project, play=case == 'build-index-play')
     if case == 'label-metas':
         seed_label_metas(project)
+    if case == 'prefab-dirty-saves':
+        seed_prefab_saves(project)
     rows = work/'rows.jsonl'
     env = dict(os.environ, SCENESAVE_LOG=str(rows))
     results = work/'results.xml'

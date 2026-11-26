@@ -165,6 +165,14 @@ file the run added, changed or removed.
   `ImportAsset`. Each step logs the `OnPostprocessAllAssets` calls and what the
   objects loaded before answer (content, alive, equal to a new load, instance id). Recorded in the
   macOS Editor (batch mode, no graphics: two identical captures).
+- `prefab-dirty-saves` (Edit Mode, `PrefabDirtySaveTests`): `run.py` adds `Assets/PrefabSaves` with
+  copies of `Thing.prefab` (each its own GUID); the test changes them through their objects: fields
+  set through the API and directly, with and without `EditorUtility.SetDirty`, a root marked dirty
+  with nothing changed, a component added and a GameObject parented under the root, a variant of
+  one made in the session and changed; then `SaveAssetIfDirty` of one, `SaveAssets` (twice), and
+  one prefab left dirty for the Editor's exit. Each step logs the objects' dirty flags; the files
+  are snapshotted after the saves and kept as the run leaves them. Recorded in the macOS Editor
+  (batch mode, no graphics: two identical captures).
 - `generic-refs` (Edit Mode, `GenericRefTests`): a scriptable object whose [SerializeReference] fields
   hold objects of generic classes (`Box<int>`, `Pair<string, Vector3>`, `Box<Box<float>>`,
   `Box<List<int>>`, a namespaced `Tagged<Circle>`, one shared, one added later) made an asset by

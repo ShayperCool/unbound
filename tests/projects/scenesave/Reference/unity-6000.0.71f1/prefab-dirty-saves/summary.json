@@ -1,0 +1,26 @@
+{
+  "case": "prefab-dirty-saves",
+  "exit": 0,
+  "changed": [
+    "Assets/PrefabSaves/Base.prefab",
+    "Assets/PrefabSaves/Base.prefab.meta",
+    "Assets/PrefabSaves/Exit.prefab",
+    "Assets/PrefabSaves/Exit.prefab.meta",
+    "Assets/PrefabSaves/Fields.prefab",
+    "Assets/PrefabSaves/Fields.prefab.meta",
+    "Assets/PrefabSaves/Single.prefab",
+    "Assets/PrefabSaves/Single.prefab.meta",
+    "Assets/PrefabSaves/Structure.prefab",
+    "Assets/PrefabSaves/Structure.prefab.meta",
+    "Assets/PrefabSaves/Touched.prefab",
+    "Assets/PrefabSaves/Touched.prefab.meta",
+    "Assets/PrefabSaves/Unmarked.prefab",
+    "Assets/PrefabSaves/Unmarked.prefab.meta",
+    "Assets/PrefabSaves/Untouched.prefab",
+    "Assets/PrefabSaves/Untouched.prefab.meta",
+    "Assets/PrefabSaves/Variant.prefab",
+    "Assets/PrefabSaves/Variant.prefab.meta",
+    "Assets/PrefabSaves.meta"
+  ],
+  "removed": []
+}
