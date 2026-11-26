@@ -162,14 +162,15 @@ namespace UnityEngine.Tests
             for (; frame < 60; frame++) asset.Update(frame * Dt, Vector3.forward, 1f, ref config);
             var cancelled = new SpeedTreeWindState();
             var weakened = new SpeedTreeWindState();
-            cancelled.Begin(asset, Vector3.zero, ref config, true);
-            weakened.Begin(asset, new Vector3(0f, 0f, 0.5f), ref config, true);
+            var owner = new SpeedTreeWindAsset(1, config);
+            cancelled.Begin(asset, Vector3.zero, owner, true);
+            weakened.Begin(asset, new Vector3(0f, 0f, 0.5f), owner, true);
             float strength = Value(asset, 0).w;
             for (int i = 0; i < 5; i++, frame++)
             {
                 asset.Update(frame * Dt, Vector3.forward, 1f, ref config);
-                cancelled.UpdateLocal(frame * Dt, Vector3.forward, Vector3.back, asset, ref config);
-                weakened.UpdateLocal(frame * Dt, Vector3.forward, new Vector3(0f, 0f, -0.5f), asset, ref config);
+                cancelled.UpdateLocal(frame * Dt, Vector3.forward, Vector3.back, asset, owner);
+                weakened.UpdateLocal(frame * Dt, Vector3.forward, new Vector3(0f, 0f, -0.5f), asset, owner);
             }
             var none = Value(cancelled, 0);
             Assert.True(float.IsNaN(none.x) && float.IsNaN(none.y) && float.IsNaN(none.z), none.ToString());
@@ -183,14 +184,15 @@ namespace UnityEngine.Tests
             for (int i = 0; i < 600; i++, frame++)
             {
                 asset.Update(frame * Dt, Vector3.forward, 1f, ref config);
-                cancelledArrived |= cancelled.UpdateLocal(frame * Dt, Vector3.forward, Vector3.zero, asset, ref config);
-                weakenedArrived |= weakened.UpdateLocal(frame * Dt, Vector3.forward, Vector3.zero, asset, ref config);
+                cancelledArrived |= cancelled.UpdateLocal(frame * Dt, Vector3.forward, Vector3.zero, asset, owner);
+                weakenedArrived |= weakened.UpdateLocal(frame * Dt, Vector3.forward, Vector3.zero, asset, owner);
             }
             Assert.False(cancelledArrived);
             Assert.True(weakenedArrived);
             none = Value(cancelled, 0);
             Assert.True(float.IsNaN(none.x) && float.IsNaN(Value(cancelled, 3).x), none.ToString());
             Assert.Equal(Value(asset, 0).w, none.w, 5);
+            Object.DestroyImmediate(owner);
         }
 
         sealed class Warnings : ILogHandler
@@ -252,7 +254,7 @@ namespace UnityEngine.Tests
                     Time.s_Time = frame * Dt;
                     SpeedTreeWindSystem.Update();
                 }
-                var local = (Vector4)component.m_LocalWind.Wind.Values[0];
+                var local = (Vector4)component.m_LocalWind.Wind.Constants[0];
                 // The directional wind blows along +z; the zone pushes the tree along +x.
                 Assert.True(local.x > 0.5f, local.ToString());
                 Assert.True(local.w > 0.5f, local.ToString());
@@ -338,14 +340,14 @@ namespace UnityEngine.Tests
                 var shared = trees[0].m_LocalWind;
                 Assert.NotNull(shared);
                 Assert.Same(shared, trees[1].m_LocalWind);
-                var before = (Vector4)shared.Wind.Values[3];
+                var before = (Vector4)shared.Wind.Constants[3];
                 zone.windMain = 3f;
                 for (int frame = 1; frame <= 5; frame++)
                 {
                     Time.s_Time += Dt;
                     SpeedTreeWindSystem.Update();
                 }
-                Assert.NotEqual(before, (Vector4)shared.Wind.Values[3]);
+                Assert.NotEqual(before, (Vector4)shared.Wind.Constants[3]);
                 // Destroying the group with its inactive owner ends the local wind; the next
                 // wind update runs without it.
                 Object.DestroyImmediate(root);

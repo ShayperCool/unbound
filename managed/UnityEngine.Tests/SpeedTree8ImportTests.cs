@@ -279,14 +279,17 @@ namespace UnityEngine.Tests
                 using (Unbound.Runtime.DrawPropertyPool.Begin())
                 {
                     var drawn = SpeedTreeWindSystem.Apply(renderer, new Dictionary<int, object>());
-                    Assert.Equal(SpeedTree8WindState.ConstantCount, drawn.Count);
+                    // The 30 constants and _ST_WindAnimation with its history.
+                    Assert.Equal(SpeedTree8WindState.ConstantCount + 2, drawn.Count);
                     var vector = (Vector4)drawn[Shader.PropertyToID("_ST_WindVector")];
                     Assert.Equal((Vector4)asset.Wind8.Values[0], vector);
                     // The zone blows along +z.
                     Assert.True(vector.z > 0.99f && vector.w > 0f, vector.ToString());
                     Assert.Equal((Vector4)asset.Wind8.Values[SpeedTree8WindState.HistoryOffset + 14],
                         (Vector4)drawn[Shader.PropertyToID("_ST_WindFrondRippleHistory")]);
-                    Assert.False(drawn.ContainsKey(Shader.PropertyToID("_ST_WindAnimation")));
+                    // _ST_WindAnimation, which the wind never writes, is bound (zero) once the tree
+                    // draws with wind (tests/projects/speedtree8wind).
+                    Assert.Equal(Vector4.zero, (Vector4)drawn[Shader.PropertyToID("_ST_WindAnimation")]);
                     renderer.motionVectorGenerationMode = MotionVectorGenerationMode.Camera;
                     drawn = SpeedTreeWindSystem.Apply(renderer, new Dictionary<int, object>());
                     Assert.Equal(Vector4.zero, (Vector4)drawn[Shader.PropertyToID("_ST_WindVectorHistory")]);

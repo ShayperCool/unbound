@@ -34,8 +34,43 @@ namespace UnityEngine
         /// constants draw).</summary>
         readonly float[] m_Phase = new float[Phases], m_DrawnPhase = new float[Phases];
 
+        /// <summary>A local wind's return to its asset's wind, per phase: when it starts and ends
+        /// (<see cref="SpeedTreeWindMotion.Unset"/>: none), the phase it starts from and the one it
+        /// heads for while it is ahead of the asset's.</summary>
+        readonly float[] m_ReturnStart = Filled(Unset), m_ReturnEnd = Filled(Unset), m_ReturnFrom = new float[Phases], m_ReturnTo = new float[Phases];
+
+        /// <summary>How close a local wind's phases, the current and the previous ones, must be to
+        /// its asset's wind's to count as the same.</summary>
+        const float SamePhase = 5e-4f;
+        /// <summary>A phase behind the asset's catches up this much faster than the asset's moves,
+        /// and at least this fast (phase per second).</summary>
+        const float CatchUp = 1.2f, LeastCatchUp = 1.1f;
+        /// <summary>A phase ahead of the asset's meets it halfway.</summary>
+        const float Halfway = 0.5f;
+        /// <summary>A return that would take longer (in seconds) jumps instead.</summary>
+        const float LongestReturn = 15f;
+
+        static float[] Filled(float value)
+        {
+            var a = new float[Phases];
+            for (int i = 0; i < a.Length; i++) a[i] = value;
+            return a;
+        }
+
         /// <summary>The 30 constants as boxed Vector4 values, updated in place each frame.</summary>
         internal readonly object[] Values = NewValues(ConstantCount);
+
+        /// <summary>A SpeedTree 8 wind starts blowing along +x (its direction and the previous
+        /// update's), where a SpeedTree 9 wind starts without one: a wind from the first frame
+        /// turns from +x toward the scene's over the direction response, and a first update
+        /// without wind takes it to rest at once (Unity 6000.0.71f1, tests/projects/speedtree8wind
+        /// `first`).</summary>
+        internal SpeedTree8WindState()
+        {
+            m_Direction = m_PreviousDirection = Vector3.right;
+        }
+
+        internal override object[] Constants => Values;
 
         /// <summary>Advances the wind to <paramref name="time"/> under the scene's wind (a unit
         /// direction, or zero, and its strength) and updates <see cref="Values"/>.</summary>
@@ -56,19 +91,115 @@ namespace UnityEngine
                 SetDirection(time, direction, config.DirectionResponse);
                 SetStrength(time, strength, config.StrengthResponse);
                 Advance(time);
-                float s = Clamp01(m_Strength);
-                Curve(CurveSamples, s, out int i0, out int i1, out float t);
-                float dt = m_Time - m_PreviousTime;
-                for (int k = 0; k < Phases; k++)
-                {
-                    m_DrawnPhase[k] = m_Phase[k];
-                    m_Phase[k] += Sample(config.Oscillation[k], i0, i1, t) * dt;
-                }
+                StepPhases(config);
             }
             // The current constants: this update's strength and direction, the phases before its
             // step; the history: the previous update's strength and direction, the phases after it.
             Write(0, config, Clamp01(m_Strength), m_Direction, m_DrawnPhase);
             Write(HistoryOffset, config, m_PreviousStrength, m_PreviousDirection, m_Phase);
+        }
+
+        /// <summary>Each phase on by its oscillation curve at the strength times the time since the
+        /// previous update (the previous phases kept as the drawn ones).</summary>
+        void StepPhases(SpeedTreeWindConfig8 config)
+        {
+            Curve(CurveSamples, Clamp01(m_Strength), out int i0, out int i1, out float t);
+            float dt = m_Time - m_PreviousTime;
+            for (int k = 0; k < Phases; k++)
+            {
+                m_DrawnPhase[k] = m_Phase[k];
+                m_Phase[k] += Sample(config.Oscillation[k], i0, i1, t) * dt;
+            }
+        }
+
+        // A local wind's parts are its phases (Unity 6000.0.71f1, tests/projects/speedtree8wind
+        // FieldNear).
+
+        protected override void Responses(SpeedTreeWindAsset asset, out float direction, out float strength)
+        {
+            direction = asset.Config8.DirectionResponse;
+            strength = asset.Config8.StrengthResponse;
+        }
+
+        protected override void Step(SpeedTreeWindAsset asset) => StepPhases(asset.Config8);
+
+        protected override void CopyParts(SpeedTreeWindMotion from)
+        {
+            var other = (SpeedTree8WindState)from;
+            Array.Copy(other.m_Phase, m_Phase, Phases);
+            Array.Copy(other.m_DrawnPhase, m_DrawnPhase, Phases);
+        }
+
+        /// <summary>Whether every phase, the current and the previous one, is within
+        /// <see cref="SamePhase"/> of the other wind's.</summary>
+        protected override bool SameParts(SpeedTreeWindMotion other)
+        {
+            var o = (SpeedTree8WindState)other;
+            for (int k = 0; k < Phases; k++)
+                if (!(Math.Abs(m_Phase[k] - o.m_Phase[k]) <= SamePhase) || !(Math.Abs(m_DrawnPhase[k] - o.m_DrawnPhase[k]) <= SamePhase))
+                    return false;
+            return true;
+        }
+
+        /// <summary>
+        /// Starts each phase's return (one not returning already) to the asset's wind's from
+        /// <paramref name="now"/>: a phase behind the asset's catches up at its oscillation (at
+        /// the asset's strength) times <see cref="CatchUp"/>, at least <see cref="LeastCatchUp"/>,
+        /// over the gap; one ahead moves back to meet the asset's halfway, in the time the asset's
+        /// takes to cover the other half. A return longer than <see cref="LongestReturn"/> jumps.
+        /// </summary>
+        protected override void StartReturn(SpeedTreeWindMotion asset, float now, SpeedTreeWindAsset owner, float strength)
+        {
+            var other = (SpeedTree8WindState)asset;
+            var config = owner.Config8;
+            Curve(CurveSamples, strength, out int i0, out int i1, out float t);
+            for (int k = 0; k < Phases; k++)
+            {
+                float target = other.m_Phase[k], local = m_Phase[k];
+                float speed = Sample(config.Oscillation[k], i0, i1, t);
+                if (!(local > target))
+                {
+                    speed *= CatchUp;
+                    speed = speed > LeastCatchUp ? speed : LeastCatchUp;
+                }
+                if (m_ReturnStart[k] != Unset) continue;
+                float gap = Math.Abs(target - local), half = gap * Halfway;
+                bool ahead = target < local;
+                float span = (ahead ? half : gap) / speed;
+                if (LongestReturn < span) span = 0f;
+                m_ReturnStart[k] = now;
+                m_ReturnEnd[k] = span + now;
+                m_ReturnFrom[k] = local;
+                m_ReturnTo[k] = ahead ? half + target : target;
+            }
+        }
+
+        /// <summary>Moves each phase along its return at <paramref name="time"/> (the previous
+        /// phase becomes the drawn one): one behind the asset's toward the asset's phase as it is
+        /// now, one ahead toward the meeting point; a return at its end is over.</summary>
+        protected override void Return(float time, SpeedTreeWindMotion asset)
+        {
+            var other = (SpeedTree8WindState)asset;
+            for (int k = 0; k < Phases; k++)
+            {
+                float local = m_Phase[k];
+                m_DrawnPhase[k] = local;
+                float start = m_ReturnStart[k];
+                float f = (time - start) / (m_ReturnEnd[k] - start);
+                f = f < 1f ? f : 1f;
+                f = f > 0f ? f : 0f;
+                float target = other.m_Phase[k];
+                m_Phase[k] = !(local > target)
+                    ? m_ReturnFrom[k] * (1f - f) + target * f
+                    : m_ReturnTo[k] * f + m_ReturnFrom[k] * (1f - f);
+                if (f == 1f) m_ReturnStart[k] = m_ReturnEnd[k] = Unset;
+            }
+        }
+
+        protected override void WriteAll(SpeedTreeWindAsset asset)
+        {
+            Write(0, asset.Config8, Clamp01(m_Strength), m_Direction, m_DrawnPhase);
+            Write(HistoryOffset, asset.Config8, m_PreviousStrength, m_PreviousDirection, m_Phase);
         }
 
         void Write(int at, SpeedTreeWindConfig8 c, float s, Vector3 d, float[] a)

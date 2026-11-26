@@ -88,7 +88,8 @@ namespace UnityEngine.Tests
         {
             var wind = new SpeedTree8WindState();
             var config = Config();
-            for (int frame = 1; frame <= 3; frame++) wind.Update(frame * Dt, Vector3.forward, 1f, config);
+            // (The wind turns from +x: it has arrived along +z long after.)
+            for (int frame = 1; frame <= 3000; frame++) wind.Update(frame * Dt, Vector3.forward, 1f, config);
             // (0, 3, 0) + 2 * 0.5 * (0, 0, 1).
             float length = Mathf.Sqrt(10f);
             var anchor = Value(wind, 5);
@@ -207,29 +208,44 @@ namespace UnityEngine.Tests
                 Value(wind, SpeedTree8WindState.HistoryOffset + 14).x, 3);
         }
 
-        /// <summary>A spherical zone that reaches a SpeedTree 8 tree gives it no local wind (it
-        /// draws its asset's wind), said once; one out of reach says nothing.</summary>
+        /// <summary>A SpeedTree 8 wind starts along +x: a wind from the first update turns from
+        /// +x toward the scene's over the direction response; a first windless update rests it
+        /// (tests/projects/speedtree8wind `first`).</summary>
         [Fact]
-        public void ASphericalZoneReachingASpeedTree8TreeSaysItIsNotSimulated()
+        public void ASpeedTree8WindStartsAlongX()
+        {
+            var config = Config();
+            var windy = new SpeedTree8WindState();
+            windy.Update(Dt, Vector3.forward, 0.8f, config);
+            var first = Value(windy, 0);
+            Assert.Equal(1f, first.x);
+            Assert.Equal(Vector4.zero.z, first.z);
+            windy.Update(2 * Dt, Vector3.forward, 0.8f, config);
+            var second = Value(windy, 0);
+            Assert.InRange(second.x, 0.99f, 1f - 1e-7f);
+            Assert.True(second.z > 0f);
+            var calm = new SpeedTree8WindState();
+            calm.Update(Dt, Vector3.zero, 0f, config);
+            Assert.Equal(Vector4.zero, Value(calm, 0));
+        }
+
+        /// <summary>_ST_WindAnimation, which the wind never writes: a tree drawn with wind binds
+        /// it (zero, where the Editor's buffer holds no repeatable value) instead of letting the
+        /// global value through; before that the draw leaves it to the global value.</summary>
+        [Fact]
+        public void ATreeDrawnWithWindBindsTheAnimationVector()
         {
             var go = new GameObject("Tree8");
             var asset = new SpeedTreeWindAsset(Config());
-            var zone = new GameObject("Sphere").AddComponent<WindZone>();
-            var previous = Debug.unityLogger.logHandler;
-            var warnings = new Warnings();
+            var zone = new GameObject("Sun").AddComponent<WindZone>();
+            zone.gameObject.SetActive(false);
             float time = (float)Time.s_Time;
+            int animation = Shader.PropertyToID("_ST_WindAnimation");
             try
             {
-                Debug.unityLogger.logHandler = warnings;
-                SpeedTreeWindSystem.s_SpeedTree8LocalWindReported = false;
-                Unbound.Runtime.Stubs.Forget("SpeedTree 8 local wind");
                 go.AddComponent<MeshFilter>().sharedMesh = new Mesh { vertices = new[] { Vector3.zero, Vector3.up, Vector3.right }, triangles = new[] { 0, 1, 2 } };
                 var renderer = go.AddComponent<MeshRenderer>();
                 go.AddComponent<Tree>().windAsset = asset;
-                zone.mode = WindZoneMode.Spherical;
-                zone.radius = 5f;
-                zone.windMain = 1f;
-                zone.transform.position = new Vector3(100f, 0f, 0f);
                 for (int frame = 1; frame <= 3; frame++)
                 {
                     Time.s_Time = frame * Dt;
@@ -237,23 +253,83 @@ namespace UnityEngine.Tests
                 }
                 using (Unbound.Runtime.DrawPropertyPool.Begin())
                 {
-                    SpeedTreeWindSystem.Apply(renderer, new Dictionary<int, object>());
-                    Assert.DoesNotContain(warnings.Messages, m => m.Contains("SpeedTree 8 local wind"));
-                    zone.transform.position = new Vector3(-3f, 0.25f, 0f);
+                    Assert.False(SpeedTreeWindSystem.Apply(renderer, new Dictionary<int, object>()).ContainsKey(animation));
+                    zone.gameObject.SetActive(true);
                     Time.s_Time = 4 * Dt;
                     SpeedTreeWindSystem.Update();
                     var drawn = SpeedTreeWindSystem.Apply(renderer, new Dictionary<int, object>());
-                    SpeedTreeWindSystem.Apply(renderer, new Dictionary<int, object>());
-                    Assert.Equal(Value(asset.Wind8, 0), (Vector4)drawn[Shader.PropertyToID("_ST_WindVector")]);
+                    Assert.Equal(Vector4.zero, (Vector4)drawn[animation]);
+                    Assert.Equal(Vector4.zero, (Vector4)drawn[Shader.PropertyToID("_ST_WindAnimationHistory")]);
                 }
-                Assert.Single(warnings.Messages, m => m.Contains("SpeedTree 8 local wind") && m.Contains("not simulated"));
             }
             finally
             {
                 Time.s_Time = time;
-                Debug.unityLogger.logHandler = previous;
                 Object.DestroyImmediate(go);
                 Object.DestroyImmediate(zone.gameObject);
+                Object.DestroyImmediate(asset);
+                SpeedTreeWindSystem.Update();
+            }
+        }
+
+        /// <summary>A spherical zone that reaches a SpeedTree 8 tree gives it a local wind of its
+        /// own after its draw (as a SpeedTree 9 tree's), which eases toward the zone's wind; out of
+        /// every zone's reach its phases return to the asset's wind's and the tree takes the
+        /// asset's wind again (Unity 6000.0.71f1, tests/projects/speedtree8wind FieldNear); one
+        /// out of reach gives none.</summary>
+        [Fact]
+        public void ASphericalZoneReachingASpeedTree8TreeGivesItALocalWind()
+        {
+            var go = new GameObject("Tree8");
+            var asset = new SpeedTreeWindAsset(Config());
+            var zone = new GameObject("Sphere").AddComponent<WindZone>();
+            var directional = new GameObject("Sun").AddComponent<WindZone>();
+            float time = (float)Time.s_Time;
+            try
+            {
+                go.AddComponent<MeshFilter>().sharedMesh = new Mesh { vertices = new[] { Vector3.zero, Vector3.up, Vector3.right }, triangles = new[] { 0, 1, 2 } };
+                var renderer = go.AddComponent<MeshRenderer>();
+                var tree = go.AddComponent<Tree>();
+                tree.windAsset = asset;
+                directional.windMain = 0.5f;
+                zone.mode = WindZoneMode.Spherical;
+                zone.radius = 5f;
+                zone.windMain = 1f;
+                zone.transform.position = new Vector3(100f, 0f, 0f);
+                int frame = 0;
+                void Frame()
+                {
+                    Time.s_Time = ++frame * Dt;
+                    SpeedTreeWindSystem.Update();
+                }
+                for (int i = 0; i < 30; i++) Frame();
+                using (Unbound.Runtime.DrawPropertyPool.Begin())
+                {
+                    SpeedTreeWindSystem.Apply(renderer, new Dictionary<int, object>());
+                    Assert.Null(tree.m_LocalWind);
+                    zone.transform.position = new Vector3(-3f, 0.25f, 0f);
+                    Frame();
+                    var drawn = SpeedTreeWindSystem.Apply(renderer, new Dictionary<int, object>());
+                    // The draw that starts it still takes the asset's wind.
+                    Assert.Equal(Value(asset.Wind8, 0), (Vector4)drawn[Shader.PropertyToID("_ST_WindVector")]);
+                    Assert.NotNull(tree.m_LocalWind);
+                    for (int i = 0; i < 30; i++) Frame();
+                    drawn = SpeedTreeWindSystem.Apply(renderer, new Dictionary<int, object>());
+                    Assert.NotEqual(Value(asset.Wind8, 0), (Vector4)drawn[Shader.PropertyToID("_ST_WindVector")]);
+                    // Out of reach: the local wind returns to the asset's and is given up.
+                    zone.transform.position = new Vector3(100f, 0f, 0f);
+                    for (int i = 0; i < 3000 && tree.m_LocalWind != null; i++) Frame();
+                    Assert.Null(tree.m_LocalWind);
+                    drawn = SpeedTreeWindSystem.Apply(renderer, new Dictionary<int, object>());
+                    Assert.Equal(Value(asset.Wind8, 0), (Vector4)drawn[Shader.PropertyToID("_ST_WindVector")]);
+                }
+            }
+            finally
+            {
+                Time.s_Time = time;
+                Object.DestroyImmediate(go);
+                Object.DestroyImmediate(zone.gameObject);
+                Object.DestroyImmediate(directional.gameObject);
                 Object.DestroyImmediate(asset);
                 SpeedTreeWindSystem.Update();
             }
