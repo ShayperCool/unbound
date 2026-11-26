@@ -84,9 +84,9 @@ namespace Unbound.Runtime
                 Int("m_CookingOptions", (int)DefaultCookingOptions);
                 Line(1, "m_BakedConvexCollisionMesh", "");
                 Line(1, "m_BakedTriangleCollisionMesh", "");
-                // The UV distribution metrics of the first two channels: 1, not computed.
-                Line(1, "'m_MeshMetrics[0]'", "1");
-                Line(1, "'m_MeshMetrics[1]'", "1");
+                // The UV distribution metrics of the first two channels (1 until recalculated).
+                Float("'m_MeshMetrics[0]'", mesh.m_UVMetrics[0]);
+                Float("'m_MeshMetrics[1]'", mesh.m_UVMetrics[1]);
                 Int("m_MeshOptimizationFlags", 1);
                 StreamData();
             }

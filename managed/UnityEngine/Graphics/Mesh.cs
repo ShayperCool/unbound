@@ -130,6 +130,7 @@ namespace UnityEngine
                 m_UVs[i] = CopyOf(source.m_UVs[i], m_UVs[i], reuseArrays);
                 m_UVDimensions[i] = source.m_UVDimensions[i];
             }
+            Array.Copy(source.m_UVMetrics, m_UVMetrics, m_UVMetrics.Length);
             if (reuseArrays && m_SubMeshes.Count == source.m_SubMeshes.Count)
             {
                 for (int i = 0; i < m_SubMeshes.Count; i++)
@@ -1172,13 +1173,125 @@ namespace UnityEngine
             Changed(indices: false);
         }
 
-        public void RecalculateUVDistributionMetrics(float uvAreaThreshold = 1e-9f) =>
-            Unbound.Runtime.Stubs.Ignored("Mesh.RecalculateUVDistributionMetrics", "is not computed yet: GetUVDistributionMetric answers 1");
+        /// <summary>The UV distribution metrics of the first two UV sets (a mesh asset's
+        /// m_MeshMetrics); 1 until recalculated.</summary>
+        internal readonly float[] m_UVMetrics = { 1f, 1f };
 
-        public float GetUVDistributionMetric(int uvSetIndex)
+        public void RecalculateUVDistributionMetrics(float uvAreaThreshold = 1e-9f)
         {
-            Unbound.Runtime.Stubs.Ignored("Mesh.GetUVDistributionMetric", "is not computed yet: it answers 1");
-            return 1f;
+            for (int set = 0; set < m_UVMetrics.Length; set++) RecalculateUVDistributionMetric(set, uvAreaThreshold);
+        }
+
+        /// <summary>A UV set's metric: the triangles' world-to-UV area ratio, as the Unity
+        /// 6000.0.71f1 Editor gives it (tests/projects/uvmetrics). Small triangles are left out
+        /// first: the world areas, largest first, of all but a tenth of the triangles give a mean
+        /// and the deviation of those under it; a triangle under the mean less that deviation (when
+        /// the deviation is at least 0.1; never under 0.001) is not counted. A triangle with an edge
+        /// under 0.001, an angle under 5 degrees or a UV area under the threshold is not counted
+        /// either. The metric is the counted ratios' mean plus the deviation of those over it; 1
+        /// when it is not over 0.001. Only the first two sets are kept (another index does
+        /// nothing).</summary>
+        public void RecalculateUVDistributionMetric(int uvSetIndex, float uvAreaThreshold = 1e-9f)
+        {
+            if (uvSetIndex < 0 || uvSetIndex >= m_UVMetrics.Length) return;
+            EnsureModelLoaded();
+            var indices = new List<int>();
+            foreach (var sub in m_SubMeshes)
+                if (sub.Topology == MeshTopology.Triangles)
+                    foreach (var i in sub.Indices) indices.Add(i + sub.BaseVertex);
+            m_UVMetrics[uvSetIndex] = UVDistributionMetric(m_Vertices, indices.ToArray(), m_UVs[uvSetIndex], uvAreaThreshold);
+        }
+
+        public float GetUVDistributionMetric(int uvSetIndex) =>
+            uvSetIndex >= 0 && uvSetIndex < m_UVMetrics.Length ? m_UVMetrics[uvSetIndex] : 1f;
+
+        const float k_MetricMinimum = 0.001f;
+        const double k_MetricDeviationFloor = 0.1;
+        const float k_MetricMinimumAngle = 0.0872664675f; // 5 degrees
+
+        internal static float UVDistributionMetric(Vector3[] vertices, int[] indices, Vector4[] uvs, float uvAreaThreshold)
+        {
+            int triangleCount = indices.Length / 3;
+            Vector3 P(int i) => i < vertices.Length ? vertices[i] : default;
+            Vector2 U(int i) => uvs != null && i < uvs.Length ? (Vector2)uvs[i] : default;
+
+            // The area below which triangles are not counted.
+            var areas = new float[triangleCount];
+            for (int t = 0; t < triangleCount; t++)
+            {
+                Vector3 a = P(indices[3 * t]), b = P(indices[3 * t + 1]), c = P(indices[3 * t + 2]);
+                float e1x = b.x - a.x, e1y = b.y - a.y, e1z = b.z - a.z;
+                float e2x = c.x - a.x, e2y = c.y - a.y, e2z = c.z - a.z;
+                float cx = e1y * e2z - e1z * e2y, cy = e1z * e2x - e1x * e2z, cz = e1x * e2y - e1y * e2x;
+                areas[t] = MathF.Sqrt(cz * cz + cy * cy + cx * cx) * 0.5f;
+            }
+            Array.Sort(areas, (x, y) => y.CompareTo(x));
+            int kept = triangleCount - indices.Length / 30;
+            float cut = k_MetricMinimum;
+            if (kept > 0)
+            {
+                float mean = MeanOf(areas, kept);
+                float deviation = DeviationOf(areas, kept, mean, below: true);
+                if (deviation >= k_MetricDeviationFloor) cut = Math.Max(mean - deviation, k_MetricMinimum);
+            }
+
+            var ratios = new List<float>(triangleCount);
+            for (int t = 0; t < triangleCount; t++)
+            {
+                int i0 = indices[3 * t], i1 = indices[3 * t + 1], i2 = indices[3 * t + 2];
+                Vector3 a = P(i0), b = P(i1), c = P(i2);
+                float ab = Length(b - a), ac = Length(c - a), bc = Length(b - c);
+                if (ab < k_MetricMinimum || ac < k_MetricMinimum || bc < k_MetricMinimum) continue;
+                float ab2 = ab * ab, ac2 = ac * ac, bc2 = bc * bc;
+                if (MathF.Acos((ab2 + ac2 - bc2) / ((ab + ab) * ac)) < k_MetricMinimumAngle
+                    || MathF.Acos((ac2 + bc2 - ab2) / ((ac + ac) * bc)) < k_MetricMinimumAngle
+                    || MathF.Acos((ab2 + bc2 - ac2) / (ab * (bc + bc))) < k_MetricMinimumAngle) continue;
+                float e1x = b.x - a.x, e1y = b.y - a.y, e1z = b.z - a.z;
+                float e2x = c.x - a.x, e2y = c.y - a.y, e2z = c.z - a.z;
+                float cx = e1y * e2z - e1z * e2y, cy = e1z * e2x - e1x * e2z, cz = e1x * e2y - e1y * e2x;
+                float area = MathF.Sqrt(cx * cx + cy * cy + cz * cz) * 0.5f;
+                if (!(cut <= area)) continue;
+                Vector2 ua = U(i0), ub = U(i1), uc = U(i2);
+                float uvArea = MathF.Abs((uc.y - ua.y) * (ub.x - ua.x) - (ub.y - ua.y) * (uc.x - ua.x)) * 0.5f;
+                if (!(uvAreaThreshold <= uvArea)) continue;
+                float ratio = area / uvArea;
+                if (k_MetricMinimum < ratio) ratios.Add(ratio);
+            }
+            float metric = 0f;
+            if (ratios.Count > 0)
+            {
+                var values = ratios.ToArray();
+                float mean = MeanOf(values, values.Length);
+                metric = mean + DeviationOf(values, values.Length, mean, below: false);
+            }
+            return k_MetricMinimum < metric ? metric : 1f;
+
+            static float Length(Vector3 v) => MathF.Sqrt(v.z * v.z + v.y * v.y + v.x * v.x);
+        }
+
+        static float MeanOf(float[] values, int count)
+        {
+            float sum = 0f;
+            for (int i = 0; i < count; i++) sum += values[i];
+            return sum / count;
+        }
+
+        /// <summary>The deviation from <paramref name="mean"/> of the values on one side of it.</summary>
+        static float DeviationOf(float[] values, int count, float mean, bool below)
+        {
+            float sum = 0f;
+            int n = 0;
+            for (int i = 0; i < count; i++)
+            {
+                float v = values[i];
+                if (below ? v < mean : mean < v)
+                {
+                    float d = v - mean;
+                    sum += d * d;
+                    n++;
+                }
+            }
+            return n == 0 ? 0f : MathF.Sqrt(sum / n);
         }
 
         [Unbound.EditorFaithful("no-op is equivalent: a buffer usage hint for frequent updates; the mesh draws the same")]
