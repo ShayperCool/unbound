@@ -1249,10 +1249,17 @@ namespace UnityEngine
                     }
                 }
             List<int> scripted = null;
-            // A declared name set as another kind is listed for that kind too (a declared float
-            // given a texture: tests/projects/materialnames declared_float_texture).
+            // A declared name given a texture is listed among the textures too (a declared float:
+            // tests/projects/materialnames declared_float_texture); its vectors and other kinds of
+            // declared names are not measured and not listed.
             foreach (var id in Compat.MaterialScriptNamesMeasured ? m_ScriptSet : s_NoIds)
             {
+                if (Declared(id) is ShaderPropertyType declared)
+                {
+                    if (type == MaterialPropertyType.Texture && declared != ShaderPropertyType.Texture && m_Textures.ContainsKey(id))
+                        (scripted ??= new List<int>()).Add(id);
+                    continue;
+                }
                 switch (type)
                 {
                     case MaterialPropertyType.Float when m_Floats.ContainsKey(id) || ScriptArray(id) is float[]:
@@ -1290,19 +1297,22 @@ namespace UnityEngine
         /// (AssetDatabase.SaveAssetIfDirty, SaveAssets, CreateAsset): the names set from script for
         /// which the shader has no property stop being the material's, of every kind, arrays and
         /// matrices too; a value its data holds (its shader declares it or its saved property sheet
-        /// lists it as that kind) stays, unseen as a loaded material's is, and the others are gone,
-        /// also a value set for a declared name as another kind (matches the Unity 6000.0.71f1
-        /// Editor, tests/projects/materialnames copy.*, instantiate.*, save_*, create.*, kinds.*;
-        /// the renderer's own material and CopyPropertiesFromMaterial keep them). Not measured: a
-        /// material variant (kept as it is), buffers (kept), and whether a copy keeps the values of
-        /// the names it drops (dropped, as a save does).
+        /// lists it as that kind) stays, unseen as a loaded material's is, and the others are gone
+        /// (matches the Unity 6000.0.71f1 Editor, tests/projects/materialnames copy.*,
+        /// instantiate.*, save_*, create.*, kinds.*; the renderer's own material and
+        /// CopyPropertiesFromMaterial keep them). Not measured, kept as they are: a material
+        /// variant, buffers, a declared name's values of another kind than the declared one; also
+        /// not measured: whether a copy keeps the values of the names it drops (dropped, as a save
+        /// does).
         /// </summary>
         internal void ForgetScriptNamesOutsideShader()
         {
             if (m_Parent != null || m_ScriptSet.Count == 0 || !Compat.MaterialScriptNamesMeasured) return;
+            // A name the shader declares keeps every value set for it (unmeasured for values of
+            // another kind than the declared one).
             List<int> ids = null;
             foreach (var id in m_ScriptSet)
-                if (!m_Buffers.ContainsKey(id)) (ids ??= new List<int>()).Add(id);
+                if (Declared(id) == null && !m_Buffers.ContainsKey(id)) (ids ??= new List<int>()).Add(id);
             if (ids == null) return;
             foreach (var id in ids)
             {
@@ -1325,16 +1335,15 @@ namespace UnityEngine
                     slot.Texture = null;
                     (m_State.m_SpareSlots ??= new List<TextureSlot>()).Add(slot);
                 }
-                if (Declared(id) == null) m_ScriptSet.Remove(id);
+                m_ScriptSet.Remove(id);
             }
             MarkChanged();
         }
 
-        /// <summary>Whether the material's data holds a name's value of a kind: its shader declares
-        /// it so, or its saved property sheet lists it so (a colour set for a name the data saves
-        /// as a float is not kept: tests/projects/materialnames kinds.*).</summary>
-        bool Keeps(int id, SheetKind kind) =>
-            Declared(id) is ShaderPropertyType type && KindOf(type) == kind || m_Sheet != null && m_Sheet.List(kind).Contains(id);
+        /// <summary>Whether the material's data holds a value of a kind for a name its shader does
+        /// not declare: its saved property sheet lists it so (a colour set for a name the data
+        /// saves as a float is not kept: tests/projects/materialnames kinds.*).</summary>
+        bool Keeps(int id, SheetKind kind) => m_Sheet != null && m_Sheet.List(kind).Contains(id);
 
         public void SetFloat(string name, float value) => SetFloat(Shader.PropertyToID(name), value);
 

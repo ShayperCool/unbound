@@ -41,7 +41,8 @@ namespace Unbound.Tests
                 // Neither reverted nor its sibling destroyed.
                 Assert.Equal(Color.red, material.color);
                 Assert.True(texture != null);
-                Assert.Same(texture, material.mainTexture);
+                // Its slot (its shader declares no _MainTex, so mainTexture does not answer).
+                Assert.Same(texture, material.SlotTexture(Shader.PropertyToID("_MainTex")));
                 Assert.Same(material, AssetDatabaseRuntime.Load(file.Guid, 1, typeof(Material)));
                 Assert.Same(texture, AssetDatabaseRuntime.Load(file.Guid, 2, typeof(Texture2D)));
             }

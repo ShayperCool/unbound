@@ -244,6 +244,27 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
+        public void ACopyKeepsTheValuesSetForNamesTheShaderDeclares()
+        {
+            // Values of another kind than the declared one are not measured: a copy keeps them.
+            var m = Own(new Material(Names()));
+            m.SetInt("_Count", 3);
+            m.SetInteger("_Glossiness", 1);
+            m.SetTexture("_Glossiness", Texture2D.whiteTexture);
+            m.SetColor("_Color", Color.red);
+            var copy = Own(new Material(m));
+            Assert.Equal(3, copy.GetInteger("_Count"));
+            Assert.Equal(1, copy.GetInteger("_Glossiness"));
+            Assert.True(copy.HasTexture("_Glossiness"));
+            Assert.Equal(Color.red, copy.GetColor("_Color"));
+            // The declared float given a texture is listed among the textures, its vectors are not.
+            Assert.Contains("_Glossiness", copy.GetPropertyNames(MaterialPropertyType.Texture));
+            Assert.DoesNotContain("_Glossiness_ST", copy.GetPropertyNames(MaterialPropertyType.Vector));
+            Assert.DoesNotContain("_Glossiness", copy.GetPropertyNames(MaterialPropertyType.Int));
+            Assert.Empty(m_Logs.Errors);
+        }
+
+        [Fact]
         public void AnUnmeasuredReleaseKeepsThePreviousModel()
         {
             using var release = TestRelease.Pin(TestRelease.Unmeasured);
