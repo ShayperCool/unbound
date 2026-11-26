@@ -48,10 +48,58 @@ pub fn cache_root() -> PathBuf {
     }
 }
 
+/// Options affecting how a project is opened (from Editor command-line arguments).
+#[derive(Debug, Default, Clone, PartialEq, Eq)]
+pub struct OpenOptions {
+    /// Relative path from the project root to a redirected `Library/` folder (`-library-redirect`),
+    /// as Multiplayer Play Mode passes for virtual project clones (`-library-redirect ../..`).
+    pub library_redirect: Option<PathBuf>,
+    /// Read-only asset database (`-readonly`): do not create or modify `ProjectSettings/`,
+    /// `Packages/` or asset `.meta` files.
+    pub read_only: bool,
+}
+
+impl OpenOptions {
+    /// Parses Editor command-line arguments (`-library-redirect <rel>`, `-readonly`).
+    pub fn from_command_line(args: &[String]) -> Result<Self> {
+        let mut options = Self::default();
+        let mut i = 0;
+        while i < args.len() {
+            if args[i].eq_ignore_ascii_case("-library-redirect") {
+                let value = args.get(i + 1).ok_or_else(|| {
+                    anyhow::anyhow!(
+                        "invalid -library-redirect: missing relative path to an existing Library folder"
+                    )
+                })?;
+                if value.is_empty() || Path::new(value).is_absolute() {
+                    anyhow::bail!(
+                        "invalid -library-redirect '{value}': expected a relative path to an existing Library folder"
+                    );
+                }
+                options.library_redirect = Some(PathBuf::from(value));
+                i += 2;
+                continue;
+            }
+            if args[i].eq_ignore_ascii_case("-readonly") {
+                options.read_only = true;
+            }
+            i += 1;
+        }
+        Ok(options)
+    }
+}
+
 pub struct Project {
     pub root: PathBuf,
     /// `<root>/Assets`
     pub assets: PathBuf,
+    /// The project root whose `Packages/` holds `manifest.json` (equals `root` for normal projects,
+    /// or the main project root for a virtual project clone whose own `Packages/` is empty).
+    pub packages_root: PathBuf,
+    /// Validated canonical directory named by `-library-redirect`, when opening a virtual project clone.
+    pub library_redirect: Option<PathBuf>,
+    /// Options this project was opened with.
+    pub open_options: OpenOptions,
     pub version: UnityVersion,
     pub profile: Profile,
     pub install: UnityInstall,
@@ -312,9 +360,67 @@ pub fn prepare_unbound_dir(project_root: &Path, dir: &Path) -> std::io::Result<O
 
 impl Project {
     pub fn open(root: &Path) -> Result<Self> {
+        Self::open_with_options(root, &OpenOptions::default())
+    }
+
+    pub fn open_with_options(root: &Path, options: &OpenOptions) -> Result<Self> {
         let root = root
             .canonicalize()
             .with_context(|| format!("project {}", root.display()))?;
+        let library_redirect = match &options.library_redirect {
+            Some(rel) => {
+                if rel.as_os_str().is_empty() || rel.is_absolute() {
+                    anyhow::bail!(
+                        "invalid -library-redirect '{}': expected a relative path to an existing Library folder",
+                        rel.display()
+                    );
+                }
+                let target = root.join(rel);
+                if !target.is_dir() {
+                    anyhow::bail!(
+                        "invalid -library-redirect '{}': directory '{}' does not exist",
+                        rel.display(),
+                        target.display()
+                    );
+                }
+                Some(
+                    target.canonicalize().with_context(|| {
+                        format!("resolving -library-redirect '{}'", rel.display())
+                    })?,
+                )
+            }
+            None => None,
+        };
+        let packages_root = if root.join("Packages/manifest.json").exists() {
+            root.clone()
+        } else if let Some(ref redirect) = library_redirect {
+            // Unity's layout: <main>/Library/VP/<id> with -library-redirect ../.. -> <main>/Library.
+            // Unbound's project-view layout: <main>/LibraryUnbound/Library/VP/<id> with Assets
+            // symlinked to <main>/LibraryUnbound/ProjectView/Assets -> <main>/Assets.
+            let from_redirect = redirect
+                .parent()
+                .filter(|p| p.join("Packages/manifest.json").exists())
+                .map(Path::to_path_buf);
+            let from_assets = root
+                .join("Assets")
+                .canonicalize()
+                .ok()
+                .and_then(|a| a.parent().map(Path::to_path_buf))
+                .filter(|p| p.join("Packages/manifest.json").exists());
+            from_redirect.or(from_assets).with_context(|| {
+                format!(
+                    "Packages/manifest.json is missing in '{}' and could not be located via -library-redirect '{}'",
+                    root.display(),
+                    options
+                        .library_redirect
+                        .as_deref()
+                        .unwrap_or(Path::new(""))
+                        .display()
+                )
+            })?
+        } else {
+            root.clone()
+        };
         let version_txt = std::fs::read_to_string(root.join("ProjectSettings/ProjectVersion.txt"))
             .context("not a Unity project: ProjectSettings/ProjectVersion.txt is missing")?;
         let version = UnityVersion::from_project_version_txt(&version_txt)?;
@@ -337,16 +443,21 @@ impl Project {
             Ok(None) => {}
             Err(e) => tracing::warn!("{}: {e}", data.display()),
         }
-        settings::write_missing_input_manager(&root, &profile);
+        if !options.read_only {
+            settings::write_missing_input_manager(&root, &profile);
+        }
         let settings = Settings::read(&root)?;
         let resolution = packages::resolve(
-            &root,
+            &packages_root,
             &install,
             unbound_compat::PackageResolutionRules::for_version(version),
         )?;
         Ok(Self {
             assets: root.join("Assets"),
             root,
+            packages_root,
+            library_redirect,
+            open_options: options.clone(),
             version,
             profile,
             install,
@@ -725,7 +836,8 @@ impl Project {
             .iter()
             .filter_map(|p| Some(p.file_stem()?.to_str()?.to_string()))
             .collect();
-        let packages = packages::module_packages(&self.root, &self.install, &self.packages);
+        let packages =
+            packages::module_packages(&self.packages_root, &self.install, &self.packages);
         let names: std::collections::BTreeSet<&str> = packages.iter().map(String::as_str).collect();
         let builtin = self.install.builtin_packages_dir();
         Ok(modules::excluded(&list, &engine, &names, &|package| {
@@ -1152,6 +1264,9 @@ mod tests {
         let project = Project {
             assets: root.join("Assets"),
             root: root.clone(),
+            packages_root: root.clone(),
+            library_redirect: None,
+            open_options: OpenOptions::default(),
             version,
             profile: Profile::for_version(version).unwrap(),
             // The installation found is the profile's release, without a Hub record.
@@ -1203,6 +1318,9 @@ mod tests {
             let project = Project {
                 assets: root.join("Assets"),
                 root: root.clone(),
+                packages_root: root.clone(),
+                library_redirect: None,
+                open_options: OpenOptions::default(),
                 version,
                 profile: Profile::for_version(version).unwrap(),
                 install: UnityInstall { data, version },
@@ -1273,6 +1391,9 @@ mod tests {
         let project = Project {
             assets: root.join("Assets"),
             root: root.clone(),
+            packages_root: root.clone(),
+            library_redirect: None,
+            open_options: OpenOptions::default(),
             version,
             profile: Profile::for_version(version).unwrap(),
             install: UnityInstall { data, version },
@@ -1330,6 +1451,9 @@ mod tests {
         let project = Project {
             assets: root.join("Assets"),
             root: root.clone(),
+            packages_root: root.clone(),
+            library_redirect: None,
+            open_options: OpenOptions::default(),
             version,
             profile: Profile::for_version(version).unwrap(),
             install: UnityInstall { data, version },
@@ -1383,6 +1507,9 @@ mod tests {
         let project = Project {
             assets: root.join("Assets"),
             root: root.clone(),
+            packages_root: root.clone(),
+            library_redirect: None,
+            open_options: OpenOptions::default(),
             version,
             profile: Profile::for_version(version).unwrap(),
             install: UnityInstall { data, version },
@@ -1457,6 +1584,9 @@ mod tests {
         let project = Project {
             assets: root.join("Assets"),
             root: root.clone(),
+            packages_root: root.clone(),
+            library_redirect: None,
+            open_options: OpenOptions::default(),
             version,
             profile: Profile::for_version(version).unwrap(),
             install: UnityInstall { data, version },
@@ -1542,6 +1672,9 @@ mod tests {
         let project = Project {
             assets: assets.clone(),
             root: root.clone(),
+            packages_root: root.clone(),
+            library_redirect: None,
+            open_options: OpenOptions::default(),
             version,
             profile: Profile::for_version(version).unwrap(),
             install: UnityInstall { data, version },
@@ -1599,5 +1732,92 @@ mod tests {
             .unwrap();
         assert_eq!(spec.response_arguments, ["-define:RSP_GLOBAL", "-unsafe"]);
         assert!(spec.plugins.iter().any(|p| p.ends_with("Ref.dll")));
+    }
+
+    #[test]
+    fn open_options_parses_library_redirect_and_read_only() {
+        let args: Vec<String> = vec![
+            "-projectPath",
+            "/tmp/clone",
+            "--virtual-project-clone",
+            "-library-redirect",
+            "../..",
+            "-readonly",
+        ]
+        .into_iter()
+        .map(String::from)
+        .collect();
+        let opts = OpenOptions::from_command_line(&args).unwrap();
+        assert_eq!(opts.library_redirect.as_deref(), Some(Path::new("../..")));
+        assert!(opts.read_only);
+
+        let missing: Vec<String> = vec!["-library-redirect".into()];
+        assert!(OpenOptions::from_command_line(&missing).is_err());
+
+        let absolute: Vec<String> = vec!["-library-redirect".into(), "/tmp/lib".into()];
+        assert!(OpenOptions::from_command_line(&absolute).is_err());
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn open_with_options_opens_virtual_project_clone_with_empty_packages() {
+        let scratch = std::env::temp_dir().join(format!(
+            "unbound-vp-clone-{}-{:?}",
+            std::process::id(),
+            std::thread::current().id()
+        ));
+        let _ = std::fs::remove_dir_all(&scratch);
+        let main = scratch.join("main");
+        std::fs::create_dir_all(main.join("Assets")).unwrap();
+        std::fs::create_dir_all(main.join("ProjectSettings")).unwrap();
+        std::fs::create_dir_all(main.join("Packages")).unwrap();
+        std::fs::write(
+            main.join("ProjectSettings/ProjectVersion.txt"),
+            "m_EditorVersion: 6000.0.71f1\n",
+        )
+        .unwrap();
+        std::fs::write(
+            main.join("Packages/manifest.json"),
+            r#"{"dependencies": {}}"#,
+        )
+        .unwrap();
+
+        // Simulate Unbound's ProjectView layout: <main>/LibraryUnbound/Library/VP/mppm1234
+        // with Assets and ProjectSettings symlinked via ProjectView, empty Packages/ and Temp/.
+        let view = main.join("LibraryUnbound/ProjectView");
+        std::fs::create_dir_all(&view).unwrap();
+        std::os::unix::fs::symlink(main.join("Assets"), view.join("Assets")).unwrap();
+        std::os::unix::fs::symlink(main.join("ProjectSettings"), view.join("ProjectSettings"))
+            .unwrap();
+        let clone = main.join("LibraryUnbound/Library/VP/mppm1234");
+        std::fs::create_dir_all(clone.join("Packages")).unwrap();
+        std::fs::create_dir_all(clone.join("Temp")).unwrap();
+        std::os::unix::fs::symlink(view.join("Assets"), clone.join("Assets")).unwrap();
+        std::os::unix::fs::symlink(view.join("ProjectSettings"), clone.join("ProjectSettings"))
+            .unwrap();
+
+        let opts = OpenOptions {
+            library_redirect: Some(PathBuf::from("../..")),
+            read_only: true,
+        };
+        let opened = Project::open_with_options(&clone, &opts).unwrap();
+        assert_eq!(opened.root, clone.canonicalize().unwrap());
+        assert_eq!(opened.packages_root, main.canonicalize().unwrap());
+        assert_eq!(
+            opened.library_redirect,
+            Some(main.join("LibraryUnbound/Library").canonicalize().unwrap())
+        );
+        assert!(opened.open_options.read_only);
+        // -readonly must not create ProjectSettings/InputManager.asset.
+        assert!(!main.join("ProjectSettings/InputManager.asset").exists());
+
+        // Missing redirect directory fails loudly.
+        let bad = OpenOptions {
+            library_redirect: Some(PathBuf::from("no/such/dir")),
+            read_only: true,
+        };
+        assert!(Project::open_with_options(&clone, &bad).is_err());
+
+        let _ = std::fs::remove_dir_all(&scratch);
     }
 }

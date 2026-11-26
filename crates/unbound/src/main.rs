@@ -177,6 +177,12 @@ enum Command {
         /// thread); refused where it is not measured.
         #[arg(long)]
         force_gfx_mt: bool,
+        /// Activate a Multiplayer Play Mode virtual player at startup (stands for clicking its
+        /// Activate toggle in the Multiplayer Play Mode window): a 1-based player index (`2`..`4`)
+        /// or player name (`Player 2`), repeatable. Calls the package's own `UnityPlayer.Activate`
+        /// path; fails loudly if the package is missing or its version is unsupported.
+        #[arg(long = "virtual-player", value_name = "PLAYER")]
+        virtual_players: Vec<String>,
         /// The Editor's command line as editor code reads it (`Environment.GetCommandLineArgs`),
         /// after the Editor's executable: how a Multiplayer Play Mode virtual player that Unbound
         /// starts gets its arguments (after `--`).
@@ -400,6 +406,7 @@ fn main() -> anyhow::Result<()> {
             force_vulkan,
             force_glcore,
             force_gfx_mt,
+            virtual_players,
             editor_args,
         } => exit_after(commands::run(
             &project,
@@ -438,6 +445,7 @@ fn main() -> anyhow::Result<()> {
                     None
                 },
                 force_gfx_mt,
+                virtual_players,
                 editor_args,
             },
         )),

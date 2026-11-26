@@ -81,7 +81,17 @@ fn from_current_dir(path: &Path) -> Result<PathBuf> {
 /// is written (the version file's build revision, a `.meta` for each new file and folder of the
 /// project's own assets). Tools that only read the project (`info`, `doctor`, ...) use [`open`].
 fn open_in_editor(args: &ProjectArgs) -> Result<Project> {
-    let project = open(args)?;
+    open_in_editor_with_options(args, &unbound_project::OpenOptions::default())
+}
+
+fn open_in_editor_with_options(
+    args: &ProjectArgs,
+    options: &unbound_project::OpenOptions,
+) -> Result<Project> {
+    let project = Project::open_with_options(&args.project, options)?;
+    if options.read_only {
+        return Ok(project);
+    }
     // What the Editor writes when it opens a project is measured for 6000.0 only.
     if unbound_compat::MeasuredFamily::of(project.version).is_none() {
         tracing::warn!(
@@ -1307,6 +1317,9 @@ pub struct RunArgs {
     pub forced_device: Option<unbound_compat::GraphicsDevice>,
     /// `--force-gfx-mt`: multithreaded rendering, as the Editor's `-force-gfx-mt` asks for it.
     pub force_gfx_mt: bool,
+    /// `--virtual-player`: Multiplayer Play Mode virtual players to activate at startup (1-based
+    /// index or player name).
+    pub virtual_players: Vec<String>,
     /// The Editor's arguments after `--` (a virtual player's): its command line as editor code
     /// reads it, after the Editor's executable.
     pub editor_args: Vec<String>,
@@ -1462,6 +1475,7 @@ pub fn test(args: &ProjectArgs, test: TestArgs) -> Result<()> {
         player_prefs: None,
         persistent_data_path: None,
         screen: None,
+        virtual_players: Vec::new(),
     };
     let (width, height) = project.settings.default_screen_for(&args.target);
     // The Editor's own `-force-vulkan` / `-force-glcore` among the test arguments.
@@ -1599,8 +1613,20 @@ fn run_session(args: &ProjectArgs, run: RunArgs) -> Result<()> {
     {
         anyhow::bail!("--fixed-fps {fps}: expected a positive number of frames per second");
     }
+    if !run.virtual_players.is_empty() && args.player {
+        anyhow::bail!("--virtual-player requires Editor Play mode (cannot be used with --player)");
+    }
+    if !run.virtual_players.is_empty()
+        && run
+            .editor_args
+            .iter()
+            .any(|a| a == "--virtual-project-clone")
+    {
+        anyhow::bail!("--virtual-player cannot be used inside a virtual project clone");
+    }
     let script = parse_script(&run)?;
-    let project = open_in_editor(args)?;
+    let open_options = unbound_project::OpenOptions::from_command_line(&run.editor_args)?;
+    let project = open_in_editor_with_options(args, &open_options)?;
     // The game's launches of the Editor's executable (crate::editor_launch).
     crate::editor_launch::install(&project.install.editor_executable());
     let command_line: Vec<String> = if run.editor_args.is_empty() {
@@ -1641,6 +1667,7 @@ fn run_session(args: &ProjectArgs, run: RunArgs) -> Result<()> {
             .map(from_current_dir)
             .transpose()?,
         screen: Some((width, height)),
+        virtual_players: run.virtual_players,
     };
     choose_graphics_device(
         &project,

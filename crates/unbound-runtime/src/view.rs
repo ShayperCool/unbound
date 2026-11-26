@@ -86,8 +86,36 @@ pub fn build(project: &Project) -> Result<PathBuf> {
     let library = library(project);
     std::fs::create_dir_all(&library).with_context(|| format!("creating {}", library.display()))?;
     link(&library, &view.join("Library"))?;
+    // A virtual project clone reads sibling files in its parent directory (e.g. Library/VP/SystemData.json)
+    // via Path.Combine(Application.dataPath, "..", ".."). Because the game runs inside
+    // <projectData>/ProjectView, its parent is <projectData>; link those sibling files there so
+    // they stay live without touching Unity's Library/.
+    if project.library_redirect.is_some()
+        && let Some(parent) = project.root.parent()
+        && let Ok(entries) = std::fs::read_dir(parent)
+    {
+        for entry in entries.flatten() {
+            let src = entry.path();
+            if !src.is_file() {
+                continue;
+            }
+            let name = entry.file_name();
+            if name == ".gitignore" || name == "VirtualPlayer.log" {
+                continue;
+            }
+            let dst = data.join(&name);
+            if let Ok(meta) = std::fs::symlink_metadata(&dst) {
+                if meta.file_type().is_symlink() {
+                    let _ = std::fs::remove_file(&dst);
+                } else {
+                    continue;
+                }
+            }
+            link(&src, &dst)?;
+        }
+    }
     // The manifest, the lock and anything else at the top of Packages/.
-    if let Ok(entries) = std::fs::read_dir(project.root.join("Packages")) {
+    if let Ok(entries) = std::fs::read_dir(project.packages_root.join("Packages")) {
         for entry in entries.flatten() {
             if entry.path().is_file() {
                 link(&entry.path(), &packages.join(entry.file_name()))?;
@@ -110,7 +138,7 @@ fn link(target: &Path, at: &Path) -> Result<()> {
 
 /// The packages as the Package Manager reports them (`PackageInfo`).
 pub fn package_infos(project: &Project) -> Vec<Json> {
-    let direct = direct_dependencies(&project.root);
+    let direct = direct_dependencies(&project.packages_root);
     project
         .packages
         .iter()
@@ -176,4 +204,78 @@ fn direct_dependencies(root: &Path) -> Vec<String> {
         .and_then(|m| m.get("dependencies").and_then(Json::as_object).cloned())
         .map(|d| d.keys().cloned().collect())
         .unwrap_or_default()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use unbound_project::OpenOptions;
+
+    #[test]
+    fn build_for_virtual_project_clone_links_main_packages_and_sibling_system_data() {
+        let base =
+            std::env::temp_dir().join(format!("unbound-view-clone-test-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&base);
+        let main = base.join("main");
+        std::fs::create_dir_all(main.join("Assets")).unwrap();
+        std::fs::create_dir_all(main.join("Packages")).unwrap();
+        std::fs::create_dir_all(main.join("ProjectSettings")).unwrap();
+        std::fs::write(
+            main.join("Packages/manifest.json"),
+            r#"{"dependencies":{}}"#,
+        )
+        .unwrap();
+        std::fs::write(
+            main.join("ProjectSettings/ProjectVersion.txt"),
+            "m_EditorVersion: 6000.0.71f1\n",
+        )
+        .unwrap();
+
+        let vp = main.join("LibraryUnbound/Library/VP");
+        let clone = vp.join("mppm1234abcd");
+        std::fs::create_dir_all(clone.join("Packages")).unwrap();
+        std::fs::create_dir_all(clone.join("Temp")).unwrap();
+        std::os::unix::fs::symlink(main.join("Assets"), clone.join("Assets")).unwrap();
+        std::os::unix::fs::symlink(main.join("ProjectSettings"), clone.join("ProjectSettings"))
+            .unwrap();
+        std::fs::write(vp.join("SystemData.json"), r#"{"players":[]}"#).unwrap();
+
+        let opts = OpenOptions {
+            library_redirect: Some(PathBuf::from("../..")),
+            read_only: true,
+        };
+        let project = Project::open_with_options(&clone, &opts).unwrap();
+        let view = build(&project).unwrap();
+
+        // Main project's manifest is linked into the clone's ProjectView/Packages/.
+        let manifest = std::fs::read_to_string(view.join("Packages/manifest.json")).unwrap();
+        assert!(manifest.contains("dependencies"), "{manifest}");
+
+        // In .NET, Path.GetFullPath(Path.Combine(Application.dataPath, "..", "..", "SystemData.json"))
+        // lexically collapses <projectData>/ProjectView/Assets/../.. to <projectData>/SystemData.json.
+        let sys_data_in_project_data = view
+            .parent()
+            .expect("ProjectView sits inside project data")
+            .join("SystemData.json");
+        assert!(
+            std::fs::symlink_metadata(&sys_data_in_project_data)
+                .unwrap()
+                .file_type()
+                .is_symlink()
+        );
+        assert_eq!(
+            std::fs::read_to_string(&sys_data_in_project_data).unwrap(),
+            r#"{"players":[]}"#
+        );
+        // Live update to VP/SystemData.json is immediately visible through the symlink.
+        std::fs::write(vp.join("SystemData.json"), r#"{"players":[1]}"#).unwrap();
+        assert_eq!(
+            std::fs::read_to_string(&sys_data_in_project_data).unwrap(),
+            r#"{"players":[1]}"#
+        );
+        // Unity's own Library/ in the main project was never created.
+        assert!(!main.join("Library").exists());
+
+        std::fs::remove_dir_all(&base).unwrap();
+    }
 }

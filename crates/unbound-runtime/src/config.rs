@@ -41,6 +41,9 @@ pub struct GameOptions {
     /// scripts see from the first callback of Play mode on; None in `unbound test`'s Edit-mode
     /// runs, whose size before the first frame is unmeasured.
     pub screen: Option<(i32, i32)>,
+    /// Multiplayer Play Mode virtual players requested via `--virtual-player` (names or 1-based
+    /// indices) to activate via the package's own `UnityPlayer.Activate` path at startup.
+    pub virtual_players: Vec<String>,
 }
 
 /// Where a Unity release's module facades are kept: they depend on the release alone, so they
@@ -399,6 +402,9 @@ pub fn prepare(
     if let Some((width, height)) = options.screen {
         config["screenWidth"] = json!(width);
         config["screenHeight"] = json!(height);
+    }
+    if !options.virtual_players.is_empty() {
+        config["virtualPlayers"] = json!(options.virtual_players);
     }
     // Retain the metadata in Edit mode too: a session may enter Play mode later.
     config["disabledModules"] = json!(

@@ -252,7 +252,7 @@ impl Game {
         options: &GameOptions,
         backend: Option<Arc<dyn RenderBackend>>,
     ) -> Result<Self> {
-        let mut project = Project::open(&project.root)?;
+        let mut project = Project::open_with_options(&project.root, &project.open_options)?;
         apply_define_overrides(&mut project.settings);
         let plugins = crate::prepare_plugins(&project);
         let runtime = ManagedRuntime::start()?;
