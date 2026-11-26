@@ -252,6 +252,32 @@ namespace UnityEngine
         /// cref="Unbound.Runtime.ShaderDeclarations.SubShader.Runs"/>) or an older-host answer; the
         /// caller then keeps its renderer-based answer.
         /// </summary>
+        /// <summary>Whether a pass of the active SubShader declares procedural instancing
+        /// (<c>#pragma instancing_options procedural:...</c>), for <paramref name="api"/>: false,
+        /// noticed, where Unbound cannot read the SubShaders or a pass (matches the Unity
+        /// 6000.0.71f1 Editor: ParticleSystemRenderer.supportsMeshInstancing, tests/projects/particlerender;
+        /// ShaderUtil.HasProceduralInstancing, tests/projects/smallstubs).</summary>
+        internal bool HasProceduralInstancingPass(string api)
+        {
+            if (!Unbound.Runtime.ShaderDeclarations.Of(this).SubShadersKnown)
+            {
+                Unbound.Runtime.Stubs.Ignored(api + " of a shader Unbound cannot read", "answers false (its SubShaders are not known)");
+                return false;
+            }
+            var active = ActiveSubShader(api, "answers false");
+            if (active == null) return false;
+            bool unknown = false;
+            foreach (var procedural in active.ProceduralInstancing)
+            {
+                if (procedural == true) return true;
+                unknown |= procedural == null;
+            }
+            if (unknown)
+                Unbound.Runtime.Stubs.Ignored(api + " of a shader whose passes are not all read",
+                    "answers false for a pass Unbound cannot read (a UsePass, an include with pragmas, a serialized built-in shader)");
+            return false;
+        }
+
         internal Unbound.Runtime.ShaderDeclarations.SubShader ActiveSubShader(string api, string keeps)
         {
             var d = Unbound.Runtime.ShaderDeclarations.Of(this);

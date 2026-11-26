@@ -22,39 +22,35 @@ namespace UnityEditor
         public static bool HasProceduralInstancing(Shader s)
         {
             if (s == null) throw new ArgumentNullException(nameof(s));
-            if (!ShaderDeclarations.Of(s).SubShadersKnown)
-            {
-                Stubs.Ignored("ShaderUtil.HasProceduralInstancing of a shader Unbound cannot read", "answers false (its SubShaders are not known)");
-                return false;
-            }
-            var active = s.ActiveSubShader("ShaderUtil.HasProceduralInstancing", "answers false");
-            if (active == null) return false;
-            bool unknown = false;
-            foreach (var procedural in active.ProceduralInstancing)
-            {
-                if (procedural == true) return true;
-                unknown |= procedural == null;
-            }
-            if (unknown)
-                Stubs.Ignored("ShaderUtil.HasProceduralInstancing of a shader whose passes are not all read",
-                    "answers false for a pass Unbound cannot read");
-            return false;
+            return s.HasProceduralInstancingPass("ShaderUtil.HasProceduralInstancing");
         }
 
-        /// <summary>The shader passes compiled on request (CompilePass): a pass is compiled for every
-        /// material of its shader.</summary>
-        static readonly HashSet<(Shader, int)> s_CompiledPasses = new HashSet<(Shader, int)>();
+        /// <summary>The pass variants compiled on request (CompilePass): a shader's pass with a set of
+        /// keywords, compiled for every material of the shader with those keywords.</summary>
+        static readonly HashSet<(Shader, int, string)> s_CompiledPasses = new HashSet<(Shader, int, string)>();
 
-        /// <summary>Whether CompilePass compiled the material's shader's pass (for any material of the
-        /// shader); a pass the SubShader does not have logs Unity's error and answers false; no
-        /// material: ArgumentNullException (matches the Unity 6000.0.71f1 Editor, tests/projects/smallstubs
-        /// shader.isPassCompiled.*). Unmeasured: a pass the Editor compiled for rendering (Unbound's
-        /// own compilation is not counted), keyword variants.</summary>
+        /// <summary>The variant of a material's pass: its enabled keywords, sorted.</summary>
+        static (Shader, int, string) Variant(Material material, int pass)
+        {
+            var keywords = (string[])material.shaderKeywords.Clone();
+            Array.Sort(keywords, StringComparer.Ordinal);
+            return (material.shader, pass, string.Join(" ", keywords));
+        }
+
+        /// <summary>Whether CompilePass compiled the material's pass variant (its shader's pass with
+        /// the material's keywords, for any material with them); a pass the SubShader does not have
+        /// logs Unity's error and answers false; no material: ArgumentNullException (matches the
+        /// Unity 6000.0.71f1 Editor, tests/projects/smallstubs shader.isPassCompiled.*). A variant
+        /// Unbound compiled for rendering but not on request answers false, noticed (the Editor's
+        /// answer there is unmeasured).</summary>
         public static bool IsPassCompiled(Material material, int pass)
         {
             if (material == null) throw new ArgumentNullException(nameof(material));
             if (!ValidPass(material, pass)) return false;
-            return material.shader != null && s_CompiledPasses.Contains((material.shader, pass));
+            if (material.shader != null && s_CompiledPasses.Contains(Variant(material, pass))) return true;
+            Stubs.Ignored("ShaderUtil.IsPassCompiled of a pass variant not compiled through ShaderUtil.CompilePass",
+                "answers false: the variants Unbound compiles for rendering are not counted");
+            return false;
         }
 
         /// <summary>Compiles the material's shader's pass (Unbound compiles its shaders itself: the
@@ -64,7 +60,7 @@ namespace UnityEditor
         {
             if (material == null) throw new ArgumentNullException(nameof(material));
             if (!ValidPass(material, pass) || material.shader == null) return;
-            s_CompiledPasses.Add((material.shader, pass));
+            s_CompiledPasses.Add(Variant(material, pass));
         }
 
         static bool ValidPass(Material material, int pass)

@@ -16,9 +16,13 @@
 {"k":"shader.isPassCompiled.after","v":"True"}
 {"k":"shader.isPassCompiled.otherMaterial","v":"True"}
 {"k":"shader.isPassCompiled.standard.before","v":"False"}
+{"k":"shader.compilePass.standard.plain","v":"done"}
+{"k":"shader.isPassCompiled.standard.plain","v":"True"}
+{"k":"shader.isPassCompiled.standard.keyedAfterPlain","v":"False"}
 {"k":"shader.compilePass.standard.async","v":"done"}
 {"k":"shader.isPassCompiled.standard.afterAsync","v":"True"}
 {"k":"shader.isPassCompiled.standard.otherPass","v":"False"}
+{"k":"shader.isPassCompiled.standard.otherKeyword","v":"False"}
 {"k":"log","v":"Error: Trying to access pass 7, but material 'Unlit/Color' subshader (0) has only 1 valid passes."}
 {"k":"shader.isPassCompiled.badPass","v":"False"}
 {"k":"shader.isPassCompiled.null","v":"throws ArgumentNullException: Value cannot be null.\nParameter name: material"}

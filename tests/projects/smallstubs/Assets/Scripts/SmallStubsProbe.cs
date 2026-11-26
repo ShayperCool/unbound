@@ -94,9 +94,17 @@ public class SmallStubsProbe : MonoBehaviour
         var keyed = new Material(standard);
         keyed.EnableKeyword("_EMISSION");
         Try("shader.isPassCompiled.standard.before", () => ShaderUtil.IsPassCompiled(keyed, 0).ToString());
+        // The same pass compiled without the keyword: is the keyword's variant compiled?
+        var plain = new Material(standard);
+        Try("shader.compilePass.standard.plain", () => { ShaderUtil.CompilePass(plain, 0, true); return "done"; });
+        Try("shader.isPassCompiled.standard.plain", () => ShaderUtil.IsPassCompiled(plain, 0).ToString());
+        Try("shader.isPassCompiled.standard.keyedAfterPlain", () => ShaderUtil.IsPassCompiled(keyed, 0).ToString());
         Try("shader.compilePass.standard.async", () => { ShaderUtil.CompilePass(keyed, 0); return "done"; });
         Try("shader.isPassCompiled.standard.afterAsync", () => ShaderUtil.IsPassCompiled(keyed, 0).ToString());
         Try("shader.isPassCompiled.standard.otherPass", () => ShaderUtil.IsPassCompiled(keyed, 1).ToString());
+        var other = new Material(standard);
+        other.EnableKeyword("_NORMALMAP");
+        Try("shader.isPassCompiled.standard.otherKeyword", () => ShaderUtil.IsPassCompiled(other, 0).ToString());
         Try("shader.isPassCompiled.badPass", () => ShaderUtil.IsPassCompiled(material, 7).ToString());
         Try("shader.isPassCompiled.null", () => ShaderUtil.IsPassCompiled(null, 0).ToString());
     }

@@ -6,6 +6,7 @@
   "engine_paths": [
     "managed/UnityEngine/Editor/ShaderUtil.cs",
     "managed/UnityEngine/Graphics/Texture2D.Mips.cs",
-    "managed/UnityEngine/Graphics/ShaderDeclarations.cs"
+    "managed/UnityEngine/Graphics/ShaderDeclarations.cs",
+    "managed/UnityEngine/Graphics/ShaderPasses.cs"
   ]
 }

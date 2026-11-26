@@ -149,24 +149,7 @@ namespace UnityEngine
             {
                 var shader = sharedMaterial != null ? sharedMaterial.shader : null;
                 if (shader == null) return false;
-                if (!ShaderDeclarations.Of(shader).SubShadersKnown)
-                {
-                    Stubs.Ignored("ParticleSystemRenderer.supportsMeshInstancing of a shader Unbound cannot read",
-                        "answers false (its SubShaders are not known)");
-                    return false;
-                }
-                var active = shader.ActiveSubShader("ParticleSystemRenderer.supportsMeshInstancing", "answers false");
-                if (active == null) return false;
-                bool unknown = false;
-                foreach (var procedural in active.ProceduralInstancing)
-                {
-                    if (procedural == true) return true;
-                    unknown |= procedural == null;
-                }
-                if (unknown)
-                    Stubs.Ignored("ParticleSystemRenderer.supportsMeshInstancing of a shader whose passes are not all read",
-                        "answers false for a pass Unbound cannot read (a UsePass, an include with pragmas, a serialized built-in shader)");
-                return false;
+                return shader.HasProceduralInstancingPass("ParticleSystemRenderer.supportsMeshInstancing");
             }
         }
 

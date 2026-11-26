@@ -11,8 +11,9 @@ captures in `Reference/unity-6000.0.71f1/`):
 * `shader.*`: `ShaderUtil.HasProceduralInstancing` for built-in shaders and the probe's
   `Assets/Shaders` (one with `#pragma instancing_options procedural:setup`, one with plain
   instancing), and a null shader; `ShaderUtil.IsPassCompiled` before and after
-  `CompilePass` (synchronous and not), for another material of the same shader, another pass, a
-  pass the SubShader does not have (its error) and a null material.
+  `CompilePass` (synchronous and not), for another material of the same shader, another pass,
+  the same pass with other keywords (each keyword set its own variant), a pass the SubShader does
+  not have (its error) and a null material.
 
 Not measured here: `QualitySettings.GetActiveQualityLevelsForPlatform[Count]` (the answers did
 not follow the levels' excluded platforms in a first capture: rule not found) and
