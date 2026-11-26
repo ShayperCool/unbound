@@ -257,12 +257,7 @@ def dedupe_managed(staging, hashes, modes, storage):
         if blob.exists():
             if blob.is_symlink() or not blob.is_file():
                 raise ValueError(f'invalid managed blob: {blob}')
-            if blob.stat().st_mode & 0o777 != modes[name]:
-                # A name of the shared inode was made writable outside these tools (a manual
-                # cleanup): it gets its recorded mode back, for every snapshot sharing it, when
-                # its content is still the recorded one (checked after the change).
-                os.chmod(blob, modes[name])
-            if digest(blob) != expected or blob.stat().st_mode & 0o777 != modes[name]:
+            if not restore_mode(blob, expected, modes[name]):
                 raise ValueError(f'invalid managed blob: {blob}')
             target.unlink()
             os.link(blob, target)
@@ -270,9 +265,26 @@ def dedupe_managed(staging, hashes, modes, storage):
             os.link(target, blob)
 
 
+def restore_mode(path, expected, mode):
+    """Whether a shared managed file holds the recorded content with the recorded mode, which it
+    gets back when only the mode differs: a name of its inode made writable outside these tools
+    (a manual cleanup) changes every snapshot sharing it. The content is checked before the
+    change and again after it; a link or another file kind is never changed."""
+    if path.is_symlink() or not path.is_file():
+        return False
+    if path.stat().st_mode & 0o777 != mode:
+        if digest(path) != expected:
+            return False
+        os.chmod(path, mode)
+    return digest(path) == expected and path.stat().st_mode & 0o777 == mode
+
+
 def validate_snapshot(snapshot, hashes, modes):
     if json.loads((snapshot/MANIFEST).read_text()) != hashes:
         raise ValueError(f'invalid snapshot manifest: {snapshot}')
+    for name, expected in hashes.items():
+        if name.startswith('managed/'):
+            restore_mode(snapshot/name, expected, modes[name])
     for path in [snapshot, *snapshot.rglob('*')]:
         if path.is_symlink() or path.stat().st_mode & 0o222:
             raise ValueError(f'snapshot is writable or contains a link: {path}')
