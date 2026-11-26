@@ -1,0 +1,9 @@
+{"k": "tie.lower", "v": "none"}
+{"k": "aLower.lower", "v": "U1"}
+{"k": "bLower.lower", "v": "U2"}
+{"k": "used.lower", "v": "none"}
+{"k": "tie.input", "v": "U1:Layout U2:Layout U1:MouseDown U2:MouseDown U1:Layout U2:Layout U1:MouseUp U2:MouseUp U1:Layout U2:Layout U1:KeyDown(97,0) U2:KeyDown(97,0) U1:Layout U2:Layout U1:KeyDown(0,97) U2:KeyDown(0,97) U1:Layout U2:Layout U1:KeyUp(97,0) U2:KeyUp(97,0) "}
+{"k": "aLower.input", "v": "U1:Layout U2:Layout U1:MouseDown U2:MouseDown U1:Layout U2:Layout U1:MouseUp U2:MouseUp U1:Layout U2:Layout U1:KeyDown(97,0) U2:KeyDown(97,0) U1:Layout U2:Layout U1:KeyDown(0,97) U2:KeyDown(0,97) U1:Layout U2:Layout U1:KeyUp(97,0) U2:KeyUp(97,0) "}
+{"k": "bLower.input", "v": "U1:Layout U2:Layout U2:MouseDown U1:MouseDown U1:Layout U2:Layout U2:MouseUp U1:MouseUp U1:Layout U2:Layout U2:KeyDown(97,0) U1:KeyDown(97,0) U1:Layout U2:Layout U2:KeyDown(0,97) U1:KeyDown(0,97) U1:Layout U2:Layout U2:KeyUp(97,0) U1:KeyUp(97,0) "}
+{"k": "used.input", "v": "U1:Layout U2:Layout U1:MouseDown U1:Layout U2:Layout U1:MouseUp U2:MouseUp "}
+{"k": "complete", "v": true}

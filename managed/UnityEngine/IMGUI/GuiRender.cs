@@ -664,9 +664,9 @@ namespace Unbound.Runtime
     }
 
     /// <summary>
-    /// Runs OnGUI as Unity does: each of the frame's input events (each preceded by Layout) at
-    /// PreUpdate, from the lowest GUI.depth up, an event a behaviour uses reaching the rest as
-    /// <c>Used</c> (the order of input events across behaviours is unmeasured); after the scene
+    /// Runs OnGUI as Unity does: each of the frame's input events at PreUpdate, every behaviour's
+    /// Layout first, then the event from the lowest GUI.depth up until a behaviour uses it (the rest
+    /// get no call: tests/projects/guiinput); after the scene
     /// renders, every behaviour's Layout in the order the behaviours were enabled, whatever their
     /// depths, then their Repaints in the reverse order, the higher depth first (a lower depth
     /// draws on top). Each call starts with GUI.depth 1 and leaves 1 behind; the depth a call ends
@@ -752,7 +752,9 @@ namespace Unbound.Runtime
 
         /// <summary>The frame's input events, at PreUpdate.IMGUISendQueuedEvents: after the fixed
         /// steps, before the Input System's update and Update (measured,
-        /// tests/projects/inputframes), from the lowest GUI.depth up.</summary>
+        /// tests/projects/inputframes). Each event runs every behaviour's Layout first, in their
+        /// order, then reaches them from the lowest GUI.depth up (equal depths in their order) until
+        /// one uses it: the rest get no call (measured: tests/projects/guiinput).</summary>
         internal static void SendQueuedEvents()
         {
             var events = GuiEvents.Frame;
@@ -761,10 +763,13 @@ namespace Unbound.Runtime
             {
                 var e = new Event(events[i]);
                 var type = e.type;
-                foreach (var mb in Sorted(descending: false))
+                foreach (var mb in s_Order)
+                    if (mb != null && mb.isActiveAndEnabled) Layout(mb, e);
+                foreach (var mb in InputOrder())
                 {
+                    if (e.type == EventType.Used) break;
                     if (mb == null || !mb.isActiveAndEnabled) continue;
-                    Call(mb, e);
+                    Call(mb, e, layout: false);
                 }
                 if (type == EventType.MouseDown && e.type != EventType.Used)
                     GUIUtility.keyboardControl = 0;
@@ -801,19 +806,28 @@ namespace Unbound.Runtime
 
         static Vector2 MousePosition() => new Vector2(Input.s_MousePosition.x, Screen.height - Input.s_MousePosition.y);
 
-        static List<MonoBehaviour> Sorted(bool descending)
+        /// <summary>The order an input event reaches the behaviours: theirs, stably sorted by the
+        /// depths their Layouts left, the lowest first (reused buffers).</summary>
+        static List<MonoBehaviour> InputOrder()
         {
-            var list = new List<MonoBehaviour>(s_Order);
-            var index = new Dictionary<MonoBehaviour, int>(ReferenceEqualityComparer.Instance);
-            for (int i = 0; i < list.Count; i++) index[list[i]] = i;
-            list.Sort((a, b) =>
+            s_InputOrder.Clear();
+            s_InputPosition.Clear();
+            foreach (var mb in s_Order)
             {
-                int da = DepthOf(a), db = DepthOf(b);
-                int c = descending ? db.CompareTo(da) : da.CompareTo(db);
-                return c != 0 ? c : index[a].CompareTo(index[b]);
-            });
-            return list;
+                s_InputPosition[mb] = s_InputOrder.Count;
+                s_InputOrder.Add(mb);
+            }
+            s_InputOrder.Sort(s_ByDepthAscending);
+            return s_InputOrder;
         }
+
+        static readonly List<MonoBehaviour> s_InputOrder = new List<MonoBehaviour>();
+        static readonly Dictionary<MonoBehaviour, int> s_InputPosition = new Dictionary<MonoBehaviour, int>(ReferenceEqualityComparer.Instance);
+        static readonly Comparison<MonoBehaviour> s_ByDepthAscending = (a, b) =>
+        {
+            int c = DepthOf(a).CompareTo(DepthOf(b));
+            return c != 0 ? c : s_InputPosition[a].CompareTo(s_InputPosition[b]);
+        };
 
         /// <summary>One OnGUI call for an event, with the Layout pass before it when the behaviour
         /// uses GUILayout (input events; a Repaint's Layout passes all run first, <see cref="RunFrame"/>).</summary>

@@ -41,10 +41,6 @@ public static class ProbeRunner
         PlayModeWindow.SetPlayModeFocused(true);
         var gameView = EditorWindow.GetWindow(typeof(EditorWindow).Assembly.GetType("UnityEditor.GameView"));
         gameView.maximized = true;
-        EditorApplication.playModeStateChanged += state =>
-        {
-            if (state == PlayModeStateChange.EnteredEditMode) EditorApplication.Exit(0);
-        };
         EditorApplication.EnterPlaymode();
     }
 }
@@ -59,9 +55,17 @@ public static class ProbeDriver
 
     static ProbeDriver()
     {
-        if (!EditorApplication.isPlayingOrWillChangePlaymode || Application.isBatchMode) return;
+        if (Application.isBatchMode || !EditorApplication.isPlayingOrWillChangePlaymode) return;
         GuiInputProbe.driver = Play;
-        GuiInputProbe.finished = () => EditorApplication.delayCall += EditorApplication.ExitPlaymode;
+        // Quit from Edit mode (leaving Play mode reloads no domain: the handler stays).
+        GuiInputProbe.finished = () =>
+        {
+            EditorApplication.playModeStateChanged += state =>
+            {
+                if (state == PlayModeStateChange.EnteredEditMode) EditorApplication.Exit(0);
+            };
+            EditorApplication.ExitPlaymode();
+        };
     }
 
     static void Locate()

@@ -259,6 +259,60 @@ namespace Unbound.Tests
             }
         }
 
+        sealed class InputGui : MonoBehaviour
+        {
+            internal string Tag;
+            internal int? Set;
+            internal bool UseMouseDown;
+            void OnGUI()
+            {
+                if (Set.HasValue) GUI.depth = Set.Value;
+                var e = Event.current;
+                s_Passes.Add(Tag + ":" + (e.type == EventType.Layout ? "L" : e.type == EventType.MouseDown ? "D" : e.type == EventType.Used ? "U" : e.type.ToString()));
+                if (UseMouseDown && e.type == EventType.MouseDown) e.Use();
+            }
+        }
+
+        static void SendInput()
+        {
+            GuiEvents.Clear();
+            GuiEvents.Queue(new Event { type = EventType.MouseDown, button = 0 });
+            GuiDispatch.SendQueuedEvents();
+            GuiEvents.Clear();
+        }
+
+        /// <summary>An input event runs every behaviour's Layout first, in their order, then reaches
+        /// them from the lowest depth up (equal depths in their order) until one uses it: the rest
+        /// get no call (tests/projects/guiinput).</summary>
+        [Fact]
+        public void InputEventsRunTheLayoutsThenReachTheLowestDepthFirstUntilUsed()
+        {
+            var go = new GameObject("gui input");
+            try
+            {
+                var x = go.AddComponent<InputGui>();
+                var y = go.AddComponent<InputGui>();
+                (x.Tag, y.Tag) = ("x", "y");
+                SendInput();
+                Assert.Equal(new[] { "x:L", "y:L", "x:D", "y:D" }, s_Passes);
+                y.Set = -3;
+                s_Passes.Clear();
+                SendInput();
+                Assert.Equal(new[] { "x:L", "y:L", "y:D", "x:D" }, s_Passes);
+                y.UseMouseDown = true;
+                s_Passes.Clear();
+                SendInput();
+                Assert.Equal(new[] { "x:L", "y:L", "y:D" }, s_Passes);
+            }
+            finally
+            {
+                GUI.depth = GUI.DefaultDepth;
+                s_Passes.Clear();
+                GuiEvents.Clear();
+                UnityEngine.Object.DestroyImmediate(go);
+            }
+        }
+
         static void RunGuiFrame() =>
             typeof(GuiDispatch).GetMethod("RunFrame", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static).Invoke(null, null);
 
