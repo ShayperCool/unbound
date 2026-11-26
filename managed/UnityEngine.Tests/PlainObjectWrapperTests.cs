@@ -43,10 +43,14 @@ namespace UnityEngine.Tests
                 Assert.Equal("", handle.name);
                 Object.DestroyImmediate(handle, true);
             }
-            var made = UnityEditor.ObjectFactory.CreateInstance(typeof(Object));
-            Assert.False(made == null);
-            Assert.Equal("", made.name);
-            Object.DestroyImmediate(made);
+            foreach (var type in new[] { typeof(Object), typeof(PlainObjectSubclass) })
+            {
+                var made = UnityEditor.ObjectFactory.CreateInstance(type);
+                Assert.False(made == null);
+                Assert.IsType(type, made);
+                Assert.Equal("", made.name);
+                Object.DestroyImmediate(made);
+            }
         }
 
         [Fact]
