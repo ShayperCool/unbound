@@ -1087,6 +1087,12 @@
       "category": "class",
       "module": "UnityEditor.CoreModule",
       "status": "static",
+      "type": "UnityEditor.ArrayUtility"
+    },
+    {
+      "category": "class",
+      "module": "UnityEditor.CoreModule",
+      "status": "static",
       "type": "UnityEditor.AssemblyReloadEvents"
     },
     {
@@ -1382,6 +1388,12 @@
       "module": "UnityEditor.CoreModule",
       "status": "candidate",
       "type": "UnityEditor.Compilation.ScriptCompilerOptions"
+    },
+    {
+      "category": "class",
+      "module": "UnityEditor.CoreModule",
+      "status": "candidate",
+      "type": "UnityEditor.ComputeShaderImporter"
     },
     {
       "category": "scriptable",
@@ -2684,6 +2696,12 @@
       "module": "UnityEditor.CoreModule",
       "status": "candidate",
       "type": "UnityEditor.TransformInspector"
+    },
+    {
+      "category": "class",
+      "module": "UnityEditor.TextRenderingModule",
+      "status": "candidate",
+      "type": "UnityEditor.TrueTypeFontImporter"
     },
     {
       "category": "class",

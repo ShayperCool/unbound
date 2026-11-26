@@ -17,6 +17,8 @@ The IMGUI TreeView slice adds six rows for the four types Unity's TreeView sourc
 
 The SpeedTreeImporter and SearchField slice adds 50 rows for the two types now written by hand (`UnityEditor.SpeedTreeImporter`: 47, its uncreated importer's members throw as in the Editor except the deprecated `specColor` and `shininess`, which read clear and 0; `UnityEditor.IMGUI.Controls.SearchField`: 3) from two independent Linux GPU captures that agree on them; earlier rows are unchanged. The search field's permanent control id is a counter position (2 in the Editor, 102 in Unbound) and stays queued.
 
+The importer and array utility slice adds 32 rows for the three types now written by hand (`UnityEditor.ComputeShaderImporter`: 10, `UnityEditor.TrueTypeFontImporter`: 21, their uncreated importers' members throw as in the Editor except ComputeShaderImporter.preprocessorOverride, which reads 0; `UnityEditor.ArrayUtility`: 1, static) from two independent Linux GPU captures that agree on them; earlier rows are unchanged, and the two text-asset identity rows record their shifted implementation values (`-23656` and `-23682`).
+
 The Editor service slice adds seven rows for five newly implemented types. Two independent GPU captures agree on the added rows; all earlier canonical rows remain byte-identical.
 The consent struct has two zero-valued intents, and the four service classes are excluded
 as static or nonconstructible.
