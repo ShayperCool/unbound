@@ -4,12 +4,16 @@
 (`Assets/Scripts/ForceLayers2DProbe.cs`; two byte-identical Linux batch Editor captures in
 `Reference/unity-6000.0.71f1/`). `Physics2D.Simulate(0.02)` 50 times; every fifth step each
 body's position and velocity, the collision messages it got so far (enter, stay, exit), whether
-the two touch and the first one's contact count. Tolerance 1e-4.
+the two touch, the first one's contact count and the sums of its contacts' `normalImpulse` and
+`tangentImpulse`. Tolerance 1e-4.
 
 * `drop/*`: a circle (radius 0.5, layer 9) dropped from 0.2 above static ground (a 4 x 1 box,
   layer 8): every layer in; the circle receiving nothing from the ground's layer; the ground
   sending nothing to the circle's; the circle sending nothing to the ground; the ground receiving
   nothing from the circle.
+* `drop/childLayerNotSent`, `drop/bodyLayerNotSent`: the circle's collider on a child of
+  another layer (10) than its body's (9), the ground sending nothing to the child's layer or to
+  the body's; `drop/continuous`: a continuous body the ground sends nothing to.
 * `push/*`: a circle at 3 m/s along +x hits one at rest (no gravity, equal masses): every layer
   in; A sending nothing to B; B receiving nothing from A; B sending nothing to A; A receiving
   nothing from B; both A and B sending nothing to each other.
@@ -21,7 +25,14 @@ moved by it. A circle that takes nothing from the ground falls through it, touch
 leaves; one circle stops against another that takes nothing from it (its approach halves at each
 of the solver's 8 velocity iterations: 3/256 m/s is left), or carries along one it takes nothing
 from; taking nothing either way they pass through each other. What the static ground sends or
-receives changes nothing for itself.
+receives changes nothing for itself. The masks read the collider's own layer, not its body's.
+The contacts' impulses are the solver's: while it pushes a body that takes nothing they grow
+step by step (102, 243, 424 for the falling circle), although the Scripting API pages of both
+properties say the impulses reported are those "that would have been applied if
+forceSendLayers and forceReceiveLayers were not used".
+
+Not measured: off-centre contacts (every hit is head-on), friction while one side takes nothing,
+CompositeCollider2D, kinematic bodies.
 
     python3 tests/projects/forcelayers2d/run.py record --label L     # twice, then publish
     python3 tests/projects/forcelayers2d/run.py publish L1 L2

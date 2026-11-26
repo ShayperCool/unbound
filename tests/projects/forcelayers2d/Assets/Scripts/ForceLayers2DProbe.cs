@@ -97,17 +97,49 @@ public class ForceLayers2DProbe : MonoBehaviour
             scenarios.Add(("push/" + variant, a, b, null));
             x += 20f;
         }
+        // The circle's collider on a child of another layer (10) than its body's (9): which
+        // layer the ground's send mask reads; and a continuous body the ground sends nothing to.
+        foreach (var variant in new[] { "childLayerNotSent", "bodyLayerNotSent", "continuous" })
+        {
+            var ground = new GameObject("ground " + variant) { layer = LayerG };
+            ground.transform.position = new Vector2(x, 0f);
+            var box = ground.AddComponent<BoxCollider2D>();
+            box.size = new Vector2(4f, 1f);
+            ground.AddComponent<Counter>();
+            Rigidbody2D circle;
+            if (variant == "continuous")
+            {
+                circle = Circle("drop " + variant, LayerA, new Vector2(x, 1.2f), 1f);
+                circle.collisionDetectionMode = CollisionDetectionMode2D.Continuous;
+                box.forceSendLayers = ~(1 << LayerA);
+            }
+            else
+            {
+                var go = new GameObject("drop " + variant) { layer = LayerA };
+                go.transform.position = new Vector2(x, 1.2f);
+                circle = go.AddComponent<Rigidbody2D>();
+                go.AddComponent<Counter>();
+                var child = new GameObject("collider") { layer = LayerB };
+                child.transform.SetParent(go.transform, false);
+                child.AddComponent<CircleCollider2D>().radius = 0.5f;
+                box.forceSendLayers = ~(1 << (variant == "childLayerNotSent" ? LayerB : LayerA));
+            }
+            scenarios.Add(("drop/" + variant, circle, null, box));
+            x += 20f;
+        }
         for (int step = 0; step <= 50; step++)
         {
             if (step % 5 == 0)
                 foreach (var (name, first, second, ground) in scenarios)
                 {
                     var other = (Collider2D)ground ?? second.GetComponent<Collider2D>();
-                    var mine = first.GetComponent<Collider2D>();
+                    var mine = first.GetComponentInChildren<Collider2D>();
                     var contacts = new List<ContactPoint2D>();
                     int count = mine.GetContacts(contacts);
+                    float normal = 0f, tangent = 0f;
+                    foreach (var c in contacts) { normal += c.normalImpulse; tangent += c.tangentImpulse; }
                     string v = "[" + Body(first) + (second != null ? "," + Body(second) : "")
-                        + "," + (mine.IsTouching(other) ? 1 : 0) + "," + count + "]";
+                        + "," + (mine.IsTouching(other) ? 1 : 0) + "," + count + "," + F(normal) + "," + F(tangent) + "]";
                     Row(name + "." + step, v);
                 }
             Physics2D.Simulate(0.02f);
