@@ -1,0 +1,29 @@
+{
+  "the Android target's block compression of the PNG: Unbound's own encoder's colours differ from the Editor's (not the mipmap limit: activeMipmapLimit and the sampled level agree)": [
+    "afterMaster3.pngCompressed.pixels",
+    "afterSetLevel0.pngCompressed.pixels",
+    "afterSetLevel1.pngCompressed.pixels",
+    "ignoreFlipped.pngCompressed.pixels",
+    "ignoreRestored.pngCompressed.pixels",
+    "level0.pngCompressed.pixels",
+    "level1.pngCompressed.pixels",
+    "limit0.pngCompressed.pixels",
+    "limit1.pngCompressed.pixels",
+    "limit1again.pngCompressed.pixels",
+    "limit3.pngCompressed.pixels",
+    "limit4.pngCompressed.pixels",
+    "limit7.pngCompressed.pixels",
+    "limitNeg.pngCompressed.pixels",
+    "start.pngCompressed.pixels"
+  ],
+  "the Android target's lightmap encoding of a Lightmap-type PNG: single colour channels one level apart (encoding rounding, not the mipmap limit)": [
+    "afterMaster3.pngLightmap.pixels",
+    "afterSetLevel0.pngLightmap.pixels",
+    "level0.pngLightmap.pixels",
+    "limit0.pngLightmap.pixels",
+    "limit3.pngLightmap.pixels",
+    "limit4.pngLightmap.pixels",
+    "limit7.pngLightmap.pixels",
+    "limitNeg.pngLightmap.pixels"
+  ]
+}

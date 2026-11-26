@@ -67,10 +67,14 @@ public class MipmapLimitProbe : MonoBehaviour
 
     void Start()
     {
-        foreach (var name in new[] { "png", "pngIgnore", "pngNoMips", "pngCompressed", "asset", "assetIgnore", "small16", "small8", "small4", "small2", "chain3", "chain5", "wide", "tall" })
+        foreach (var name in new[] { "png", "pngIgnore", "pngNoMips", "pngCompressed", "pngLightmap", "pngSprite", "asset", "assetIgnore", "small16", "small8", "small4", "small2", "chain3", "chain5", "wide", "tall" })
             AddCase(name, Resources.Load<Texture2D>(name));
         AddCase("script", ScriptTexture(false));
         AddCase("scriptDefault", ScriptTexture(true));
+        // A script texture limited, then made unreadable by Apply.
+        var locked = ScriptTexture(false);
+        locked.Apply(false, true);
+        AddCase("scriptLocked", locked);
         AddCase("array", Resources.Load<Texture2DArray>("array"), true);
 
         int width = Cell * m_Cases.Count;
@@ -117,6 +121,15 @@ public class MipmapLimitProbe : MonoBehaviour
         Step("afterSetLevel0");
         QualitySettings.SetQualityLevel(1);
         Step("afterSetLevel1");
+        // Texture's own limit properties beside the quality level's.
+#pragma warning disable CS0618
+        Add("textureLimits.before", QualitySettings.globalTextureMipmapLimit + "," + Texture.masterTextureLimit + "," + Texture.globalMipmapLimit);
+        Texture.masterTextureLimit = 3;
+        Add("textureLimits.afterMaster3", QualitySettings.globalTextureMipmapLimit + "," + Texture.masterTextureLimit + "," + Texture.globalMipmapLimit);
+        Step("afterMaster3");
+        QualitySettings.globalTextureMipmapLimit = 0;
+        Add("textureLimits.afterQuality0", QualitySettings.globalTextureMipmapLimit + "," + Texture.masterTextureLimit + "," + Texture.globalMipmapLimit);
+#pragma warning restore CS0618
         Add("complete", true);
 
         string dir = Environment.GetEnvironmentVariable("MIPMAP_LIMIT_OUT");

@@ -40,13 +40,14 @@ public static class ProbeSetup
         return t;
     }
 
-    static void Png(string name, bool mips, bool ignoreLimit, bool compressed = false)
+    static void Png(string name, bool mips, bool ignoreLimit, bool compressed = false, TextureImporterType type = TextureImporterType.Default)
     {
         string path = Resources + name + ".png";
         File.WriteAllBytes(path, Checker().EncodeToPNG());
         AssetDatabase.ImportAsset(path);
         var importer = (TextureImporter)AssetImporter.GetAtPath(path);
-        importer.textureType = TextureImporterType.Default;
+        importer.textureType = type;
+        if (type == TextureImporterType.Sprite) importer.spriteImportMode = SpriteImportMode.Single;
         importer.mipmapEnabled = mips;
         importer.mipmapFilter = TextureImporterMipFilter.BoxFilter;
         importer.filterMode = FilterMode.Point;
@@ -98,6 +99,8 @@ public static class ProbeSetup
         Png("pngIgnore", true, true);
         Png("pngNoMips", false, false);
         Png("pngCompressed", true, false, true);
+        Png("pngLightmap", true, false, false, TextureImporterType.Lightmap);
+        Png("pngSprite", true, false, false, TextureImporterType.Sprite);
         Asset("asset", 64, 64, -1, false);
         Asset("assetIgnore", 64, 64, -1, true);
         Asset("small16", 16, 16, -1, false);
