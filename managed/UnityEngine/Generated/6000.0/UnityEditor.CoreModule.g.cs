@@ -43241,11 +43241,8 @@ namespace UnityEditor.Sprites
     }
     unsafe partial class SpriteUtility
     {
-        [global::Unbound.Stub] public static global::UnityEngine.Texture2D GetSpriteTexture(global::UnityEngine.Sprite sprite, bool getAtlasData) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Sprites.SpriteUtility.GetSpriteTexture"); return default; }
         [global::System.Obsolete("Use Sprite.vertices API instead. This data is the same for packed and unpacked sprites.")] [global::Unbound.Stub] public static global::UnityEngine.Vector2[] GetSpriteMesh(global::UnityEngine.Sprite sprite, bool getAtlasData) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Sprites.SpriteUtility.GetSpriteMesh"); return global::System.Array.Empty<global::UnityEngine.Vector2>(); }
-        [global::Unbound.Stub] public static global::UnityEngine.Vector2[] GetSpriteUVs(global::UnityEngine.Sprite sprite, bool getAtlasData) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Sprites.SpriteUtility.GetSpriteUVs"); return global::System.Array.Empty<global::UnityEngine.Vector2>(); }
         [global::System.Obsolete("Use Sprite.triangles API instead. This data is the same for packed and unpacked sprites.")] [global::Unbound.Stub] public static ushort[] GetSpriteIndices(global::UnityEngine.Sprite sprite, bool getAtlasData) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Sprites.SpriteUtility.GetSpriteIndices"); return global::System.Array.Empty<ushort>(); }
-        [global::Unbound.Stub] internal static global::UnityEngine.Vector2[] GeneratePolygonOutlineVerticesOfSize(int sides, int width, int height) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Sprites.SpriteUtility.GeneratePolygonOutlineVerticesOfSize"); return global::System.Array.Empty<global::UnityEngine.Vector2>(); }
     }
 }
 namespace UnityEditor.StyleSheets

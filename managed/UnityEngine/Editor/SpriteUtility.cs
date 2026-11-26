@@ -7,6 +7,62 @@ namespace UnityEditor.Sprites
 {
     public sealed partial class SpriteUtility
     {
+        /// <summary>What asking for the atlas data of a sprite that is not packed throws (Unity
+        /// 6000.0.71f1, tests/projects/spriteutility texture.*.True, uvs.*.True).</summary>
+        const string NotPackedMessage = "Could not get atlas data - Sprite is not packed.";
+
+        /// <summary>The sprite's texture (matches the Unity 6000.0.71f1 Editor, tests/projects/spriteutility
+        /// texture.*). The atlas data of a sprite that is not packed throws; a packed sprite's atlas
+        /// texture is not implemented yet.</summary>
+        public static Texture2D GetSpriteTexture(Sprite sprite, bool getAtlasData)
+        {
+            if (sprite == null) throw new ArgumentNullException(nameof(sprite));
+            if (!getAtlasData) return sprite.texture;
+            if (!sprite.packed) throw new ArgumentException(NotPackedMessage);
+            Stubs.NotImplemented("UnityEditor.Sprites.SpriteUtility.GetSpriteTexture(packed atlas data)");
+            return sprite.texture;
+        }
+
+        /// <summary>The sprite's texture coordinates (matches the Unity 6000.0.71f1 Editor,
+        /// tests/projects/spriteutility uvs.*): its uv. The atlas data of a sprite that is not packed
+        /// throws; a packed sprite's atlas coordinates are not implemented yet.</summary>
+        public static Vector2[] GetSpriteUVs(Sprite sprite, bool getAtlasData)
+        {
+            if (sprite == null) throw new ArgumentNullException(nameof(sprite));
+            if (!getAtlasData) return sprite.uv;
+            if (!sprite.packed) throw new ArgumentException(NotPackedMessage);
+            Stubs.NotImplemented("UnityEditor.Sprites.SpriteUtility.GetSpriteUVs(packed atlas data)");
+            return sprite.uv;
+        }
+
+        /// <summary>The corners of a regular polygon of <paramref name="sides"/> sides inscribed in a
+        /// width by height box about the origin: the first at the top, then counter-clockwise, each a
+        /// step of one sides-th turn from the last (x = -sin, y = cos, scaled to the half sizes); no
+        /// sides give the box's four corners from its bottom left (matches the Unity 6000.0.71f1
+        /// Editor, tests/projects/spriteutility outline.*; a negative side count, which ends the
+        /// Editor, throws).</summary>
+        internal static Vector2[] GeneratePolygonOutlineVerticesOfSize(int sides, int width, int height)
+        {
+            float halfWidth = width * 0.5f, halfHeight = height * 0.5f;
+            if (sides == 0)
+                return new[]
+                {
+                    new Vector2(-halfWidth, -halfHeight), new Vector2(halfWidth, -halfHeight),
+                    new Vector2(halfWidth, halfHeight), new Vector2(-halfWidth, halfHeight),
+                };
+            if (sides < 0) throw new ArgumentOutOfRangeException(nameof(sides));
+            var points = new Vector2[sides];
+            // The angle grows by one step per corner, in single precision (the measured corners
+            // of 128 sides keep the sum's rounding).
+            float step = 2f * MathF.PI / sides, angle = 0f;
+            for (int k = 0; k < sides; k++)
+            {
+                points[k] = new Vector2(-MathF.Sin(angle) * halfWidth, MathF.Cos(angle) * halfHeight);
+                angle += step;
+            }
+            return points;
+        }
+
         sealed class OutlineJson { public float[][][] Paths { get; set; } }
 
         /// <summary>The traced outlines of a texture rect, in pixels from the rect's centre (matches the
