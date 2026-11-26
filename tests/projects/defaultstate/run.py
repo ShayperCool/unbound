@@ -92,19 +92,20 @@ def keep_inventory(key, report):
 
 
 def base_inventory(base):
-    """The base's inventory: the one recorded for its sources (by an earlier gate of that tree),
-    else its committed reference inventory, said so (None without either)."""
+    """The base's inventory and whether it was recorded: the one recorded for its sources (by an
+    earlier gate of that tree), else its committed reference inventory, said so (None without
+    either)."""
     recorded = cached_inventory(inventory_key(base))
     if recorded is not None:
         print(f'base inventory: recorded for the sources of {base}')
-        return recorded
+        return recorded, True
     relative = (reference_root(ROOT)/'inventory.json').relative_to(REPO).as_posix()
     shown = subprocess.run(['git', 'show', f'{base}:{relative}'], cwd=REPO, capture_output=True, text=True)
     if shown.returncode:
-        return None
+        return None, False
     print(f'base inventory: none recorded for {base}, its committed reference {relative} '
           '(a type main added without rows shows here too)')
-    return json.loads(shown.stdout)
+    return json.loads(shown.stdout), False
 
 
 def inventory_changed(base, label):
@@ -117,8 +118,7 @@ def inventory_changed(base, label):
     if clean and inventory_key('HEAD') == inventory_key(base):
         print(f'public type inventory unchanged: the inventory sources are {base}\'s')
         return 0
-    before = base_inventory(base)
-    recorded = cached_inventory(inventory_key(base)) is not None
+    before, recorded = base_inventory(base)
     report = inventory(WORK/label)
     # Only a gate records: its CLI is built from this checkout, so the report is of these sources.
     if clean and os.environ.get('UNBOUND_INVENTORY_RECORD') == '1':

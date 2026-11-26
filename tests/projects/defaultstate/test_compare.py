@@ -230,6 +230,16 @@ class InventoryCheckTests(unittest.TestCase):
         for path in capture_runner.INVENTORY_SOURCES:
             probe = path + ('/x.cs' if '.' not in Path(path).name else '')
             self.assertIsNotNone(land.STUB_INPUTS.match(probe), path)
+        # And every stub input but land.py's own files is a source.
+        sources = re.compile('^(' + '|'.join(re.escape(path) + ('/' if '.' not in Path(path).name else '$')
+                                              for path in capture_runner.INVENTORY_SOURCES) + ')')
+        for stub in ['managed/x.cs', 'crates/unbound-compat/x.rs', 'crates/unbound-project/src/install.rs',
+                     'crates/unbound-project/src/editor_archive.rs', 'crates/unbound-project/src/compile.rs',
+                     'crates/unbound/src/commands.rs']:
+            self.assertIsNotNone(land.STUB_INPUTS.match(stub), stub)
+            self.assertIsNotNone(sources.match(stub), stub)
+        alternatives = land.STUB_INPUTS.pattern.count('|') + 1  # inner alternatives included
+        self.assertEqual(alternatives, 8, 'STUB_INPUTS changed: keep INVENTORY_SOURCES and this list in step')
 
     def test_only_a_gate_records_and_a_dirty_checkout_never(self):
         with tempfile.TemporaryDirectory() as directory:
