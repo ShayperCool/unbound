@@ -89,7 +89,8 @@ In dependency order; each item ends with an Editor-reference probe.
       a Timeline with animation/activation/audio/signal/control tracks, Animation Rigging, a
       Cinemachine track), objects destroyed from Update included. Left: humanoid
       avatars (generic animation only), root motion applied to the Animator's transform,
-      Experimental Camera/Texture/Material playables, DataPlayable/PlayableSystems.
+      drawing of the Experimental Camera/Texture/Material playables (their graph nodes, output and
+      binding match the Editor: `tests/projects/texplayables`), DataPlayable/PlayableSystems.
 - [x] AndroidJNI, iOS and platform APIs answering exactly as the Linux Editor does:
       AndroidJNI (defaults), the Java wrappers over it (AndroidJavaObject/Class/Proxy, field
       lookups failing with Unity's message), AndroidJNIHelper signatures and argument arrays,

@@ -51,7 +51,7 @@ are still open. **[ ]** means it has not started or is only a stub. The open det
   - [x] Profiling API
   - [x] Unity.Properties
   - [x] Android, iOS and platform APIs, answered as the Linux Editor answers them
-  - [ ] 🚧 Playables and Timeline (generic animation done; experimental playables left)
+  - [ ] 🚧 Playables and Timeline (generic animation done; experimental playables: graph API done, drawing left)
   - [ ] 🚧 Destroy timing, batch activation order, `LazyLoadReference`
 - [ ] 🚧 **Input**
   - [x] Legacy Input Manager
