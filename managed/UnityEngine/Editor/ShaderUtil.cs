@@ -14,6 +14,67 @@ namespace UnityEditor
 {
     public sealed partial class ShaderUtil
     {
+        /// <summary>Whether a pass of the shader's active SubShader declares procedural instancing
+        /// (<c>#pragma instancing_options procedural:...</c>); no shader: ArgumentNullException
+        /// (matches the Unity 6000.0.71f1 Editor, tests/projects/smallstubs shader.hasProceduralInstancing.*;
+        /// unmeasured: a shader with several SubShaders). A shader whose passes Unbound cannot all
+        /// read answers false, noticed.</summary>
+        public static bool HasProceduralInstancing(Shader s)
+        {
+            if (s == null) throw new ArgumentNullException(nameof(s));
+            if (!ShaderDeclarations.Of(s).SubShadersKnown)
+            {
+                Stubs.Ignored("ShaderUtil.HasProceduralInstancing of a shader Unbound cannot read", "answers false (its SubShaders are not known)");
+                return false;
+            }
+            var active = s.ActiveSubShader("ShaderUtil.HasProceduralInstancing", "answers false");
+            if (active == null) return false;
+            bool unknown = false;
+            foreach (var procedural in active.ProceduralInstancing)
+            {
+                if (procedural == true) return true;
+                unknown |= procedural == null;
+            }
+            if (unknown)
+                Stubs.Ignored("ShaderUtil.HasProceduralInstancing of a shader whose passes are not all read",
+                    "answers false for a pass Unbound cannot read");
+            return false;
+        }
+
+        /// <summary>The shader passes compiled on request (CompilePass): a pass is compiled for every
+        /// material of its shader.</summary>
+        static readonly HashSet<(Shader, int)> s_CompiledPasses = new HashSet<(Shader, int)>();
+
+        /// <summary>Whether CompilePass compiled the material's shader's pass (for any material of the
+        /// shader); a pass the SubShader does not have logs Unity's error and answers false; no
+        /// material: ArgumentNullException (matches the Unity 6000.0.71f1 Editor, tests/projects/smallstubs
+        /// shader.isPassCompiled.*). Unmeasured: a pass the Editor compiled for rendering (Unbound's
+        /// own compilation is not counted), keyword variants.</summary>
+        public static bool IsPassCompiled(Material material, int pass)
+        {
+            if (material == null) throw new ArgumentNullException(nameof(material));
+            if (!ValidPass(material, pass)) return false;
+            return material.shader != null && s_CompiledPasses.Contains((material.shader, pass));
+        }
+
+        /// <summary>Compiles the material's shader's pass (Unbound compiles its shaders itself: the
+        /// pass then counts as compiled); a pass the SubShader does not have logs Unity's error
+        /// (unmeasured for this call).</summary>
+        public static void CompilePass(Material material, int pass, bool forceSync = false)
+        {
+            if (material == null) throw new ArgumentNullException(nameof(material));
+            if (!ValidPass(material, pass) || material.shader == null) return;
+            s_CompiledPasses.Add((material.shader, pass));
+        }
+
+        static bool ValidPass(Material material, int pass)
+        {
+            int count = material.passCount;
+            if (pass >= 0 && pass < count) return true;
+            Debug.LogError($"Trying to access pass {pass}, but material '{material.name}' subshader (0) has only {count} valid passes.");
+            return false;
+        }
+
         /// <summary>Makes the shader findable by its name (Shader.Find); Unity's own C# binds it to
         /// the shader name registry, the shader not null.</summary>
         public static void RegisterShader(Shader shader)

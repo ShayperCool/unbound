@@ -421,6 +421,19 @@ namespace UnityEngine
             DecodeMipChain(data);
             CpuTexelsChanged();
         }
+        /// <summary>The data's bytes as LoadRawTextureData(byte[]) takes them; an uncreated or empty
+        /// array throws (the readable check first), as Unity's C# has it (matches the Unity
+        /// 6000.0.71f1 Editor, tests/projects/smallstubs raw.*).</summary>
+        public unsafe void LoadRawTextureData<T>(Unity.Collections.NativeArray<T> data) where T : struct
+        {
+            RequireReadable(pixels: !SourceBlocks);
+            if (!data.IsCreated || data.Length == 0) throw new UnityException("No texture data provided to LoadRawTextureData");
+            var bytes = new byte[(long)data.Length * Unity.Collections.LowLevel.Unsafe.UnsafeUtility.SizeOf<T>()];
+            fixed (byte* to = bytes)
+                Buffer.MemoryCopy(Unity.Collections.LowLevel.Unsafe.NativeArrayUnsafeUtility.GetUnsafeReadOnlyPtr(data), to, bytes.Length, bytes.Length);
+            LoadRawTextureData(bytes);
+        }
+
         public void LoadRawTextureData(IntPtr data, int size)
         {
             var bytes = new byte[size];
