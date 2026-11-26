@@ -386,6 +386,30 @@ mod tests {
         );
     }
 
+    /// An importer override is the `importerOverride:` section SetImporterOverride writes
+    /// (tests/projects/importselfload set_override.meta), not a ScriptedImporter section.
+    #[test]
+    fn an_importer_override_is_its_own_section() {
+        let dir = std::env::temp_dir().join(format!("unbound-override-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let asset = dir.join("Plain.ovr2");
+        let meta = dir.join("Plain.ovr2.meta");
+        std::fs::write(
+            &meta,
+            "fileFormatVersion: 2\nguid: 1\nimporterOverride:\n  nativeImporterType: 2089858483\nDefaultImporter:\n  userData: \n",
+        )
+        .unwrap();
+        assert!(super::has_importer_override(&asset));
+        std::fs::write(
+            &meta,
+            "fileFormatVersion: 2\nguid: 1\nScriptedImporter:\n  script: {fileID: 11500000, guid: 2, type: 3}\n",
+        )
+        .unwrap();
+        assert!(!super::has_importer_override(&asset));
+        assert!(!super::has_importer_override(&dir.join("Missing.ovr2")));
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+
     #[test]
     fn main_object_file_id_comes_from_the_native_format_importer() {
         let meta = "fileFormatVersion: 2\nguid: 0123\nNativeFormatImporter:\n  externalObjects: {}\n  mainObjectFileID: 9100000\n  userData: \n";
