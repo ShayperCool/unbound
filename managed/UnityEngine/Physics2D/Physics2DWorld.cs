@@ -1512,11 +1512,14 @@ namespace Unbound.Runtime
             }
 
             /// <summary>Collider2D force layers (tests/projects/forcelayers2d, Unity 6000.0.71f1): a
-            /// body takes the contact's impulses only when the other collider sends to its layer and
-            /// its own collider receives from the other's. The contact is solved with both bodies'
-            /// masses and stays, touching and reporting; a body that takes none is not moved by it
-            /// (a body falls through the ground; one circle stops against another that takes none,
-            /// its approach halving each solver iteration, or carries along one it takes none from).</summary>
+            /// body takes the contact's impulses only when the other collider sends to its
+            /// collider's layer and its own collider receives from the other's. The contact is solved
+            /// with both bodies' masses and stays, touching and reporting; a body that takes none is
+            /// not moved by it (a body falls through the ground; one circle stops against another
+            /// that takes none, its approach halving each solver iteration, or carries along one it
+            /// takes none from). ContactPoint2D's impulses are the solver's, growing while it pushes
+            /// in vain, as the Editor reports them (not those "that would have been applied" without
+            /// the layers, as the Scripting API says).</summary>
             static void ApplyForceLayers(Contact contact, Collider2D a, Collider2D b)
             {
                 int layerA = a.gameObject.layer, layerB = b.gameObject.layer;
@@ -1527,6 +1530,7 @@ namespace Unbound.Runtime
             public void PreSolve(Contact contact, in Manifold oldManifold)
             {
                 using var scope = Enter(m_Owner);
+                contact.NoResponseA = contact.NoResponseB = false;
                 var a = contact.FixtureA.UserData as Collider2D;
                 var b = contact.FixtureB.UserData as Collider2D;
                 if (a == null || b == null) return;

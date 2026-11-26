@@ -72,6 +72,7 @@ namespace Unbound.Box2D.Dynamics.Contacts
         internal void Initialize(Fixture fixtureA, int indexA, Fixture fixtureB, int indexB)
         {
             Flags = ContactFlag.EnabledFlag;
+            NoResponseA = NoResponseB = false;
 
             FixtureA = fixtureA;
             FixtureB = fixtureB;
@@ -90,6 +91,7 @@ namespace Unbound.Box2D.Dynamics.Contacts
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal virtual void Reset()
         {
+            NoResponseA = NoResponseB = false;
             FixtureA = default;
             FixtureB = default;
             Flags = default;
