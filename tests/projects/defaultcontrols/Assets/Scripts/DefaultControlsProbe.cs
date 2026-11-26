@@ -107,7 +107,12 @@ public class DefaultControlsProbe : MonoBehaviour
 
     static void Read(string stage)
     {
-        foreach (var entry in s_Staged) Try(entry.Key + "." + stage, entry.Value);
+        foreach (var entry in s_Staged)
+        {
+            // Once moving, the agent's position follows the frame times (two Editor captures differ).
+            if (stage == "destinationFrame" && entry.Key == "agent.destination") continue;
+            Try(entry.Key + "." + stage, entry.Value);
+        }
     }
 
     static GameObject Make(string name, Vector3 position, Vector3 scale, bool active = true)
@@ -218,6 +223,13 @@ public class DefaultControlsProbe : MonoBehaviour
         var trailOff = Make("TrailOff", new Vector3(40, 0, 0), Vector3.one).AddComponent<TrailRenderer>();
         trailOff.emitting = false;
         Staged("trail.notEmitting", () => RendererBounds(trailOff));
+        var trailAway = Make("TrailAway", new Vector3(-10, 5, 2), Vector3.one).AddComponent<TrailRenderer>();
+        Staged("trail.away", () => RendererBounds(trailAway));
+        var trailWide = Make("TrailWide", new Vector3(10, 0, 0), Vector3.one).AddComponent<TrailRenderer>();
+        trailWide.widthMultiplier = 3f;
+        Staged("trail.wide", () => RendererBounds(trailWide));
+        var trailScaled = Make("TrailScaled", new Vector3(0, 0, 10), new Vector3(2, 2, 2)).AddComponent<TrailRenderer>();
+        Staged("trail.scaled", () => RendererBounds(trailScaled));
         var line = Make("Line", new Vector3(50, 0, 0), Vector3.one).AddComponent<LineRenderer>();
         Staged("line.new", () => RendererBounds(line));
 
@@ -247,6 +259,15 @@ public class DefaultControlsProbe : MonoBehaviour
         worldCanvas.renderMode = RenderMode.WorldSpace;
         Staged("canvas.world", () => V2(worldCanvas.renderingDisplaySize));
 
+        var cameraCanvas = new GameObject("CameraCanvas").AddComponent<Canvas>();
+        cameraCanvas.renderMode = RenderMode.ScreenSpaceCamera;
+        Staged("canvas.cameraWithout", () => V2(cameraCanvas.renderingDisplaySize));
+        var sizedCanvas = new GameObject("SizedCanvas").AddComponent<Canvas>();
+        sizedCanvas.renderMode = RenderMode.WorldSpace;
+        ((RectTransform)sizedCanvas.transform).sizeDelta = new Vector2(200, 50);
+        Staged("canvas.worldSized", () => V2(sizedCanvas.renderingDisplaySize));
+        Staged("canvas.new", () => { var c = new GameObject("NewCanvas").AddComponent<Canvas>(); var r = c.renderMode + ":" + V2(c.renderingDisplaySize); DestroyImmediate(c.gameObject); return r; });
+
         Staged("physics2d.default.subStepCount", () => Physics2D.defaultPhysicsScene.subStepCount.ToString(CultureInfo.InvariantCulture));
         var local = SceneManager.CreateScene("Physics2DLocal", new CreateSceneParameters(LocalPhysicsMode.Physics2D));
         Staged("physics2d.local.subStepCount", () => local.GetPhysicsScene2D().subStepCount.ToString(CultureInfo.InvariantCulture));
@@ -257,6 +278,23 @@ public class DefaultControlsProbe : MonoBehaviour
             return scene.subStepCount.ToString(CultureInfo.InvariantCulture);
         });
 
+        Staged("physics2d.script", () =>
+        {
+            var mode = Physics2D.simulationMode;
+            Physics2D.simulationMode = SimulationMode2D.Script;
+            var scene = local.GetPhysicsScene2D();
+            scene.Simulate(0.02f);
+            var r = "local=" + scene.subStepCount;
+            Physics2D.Simulate(0.02f);
+            r += ";default=" + Physics2D.defaultPhysicsScene.subStepCount;
+            var stepping = Physics2D.useSubStepping;
+            Physics2D.useSubStepping = true;
+            Physics2D.Simulate(0.1f);
+            r += ";subStepping=" + Physics2D.defaultPhysicsScene.subStepCount;
+            Physics2D.useSubStepping = stepping;
+            Physics2D.simulationMode = mode;
+            return r;
+        });
         Staged("terrainData.heightmapTexture", () => TextureName(terrainData.heightmapTexture));
         Staged("terrainData.holesTexture", () => TextureName(terrainData.holesTexture));
         Staged("terrainData.new.heightmapTexture", () => TextureName(new TerrainData().heightmapTexture));
@@ -434,6 +472,18 @@ public class DefaultControlsProbe : MonoBehaviour
         Try("lpg.authoredEmpty", () => Positions(GameObject.Find("AuthoredEmpty").GetComponent<LightProbeGroup>().probePositions));
         Try("lpg.authoredTwo", () => Positions(GameObject.Find("AuthoredTwo").GetComponent<LightProbeGroup>().probePositions));
         Try("lpg.instantiatedEmpty", () => { var g = Instantiate(GameObject.Find("AuthoredEmpty")); var r = Positions(g.GetComponent<LightProbeGroup>().probePositions); DestroyImmediate(g); return r; });
+        Try("lpg.instantiatedTwo", () => { var g = Instantiate(GameObject.Find("AuthoredTwo")); var r = Positions(g.GetComponent<LightProbeGroup>().probePositions); DestroyImmediate(g); return r; });
+        Try("lpg.instantiatedAdded", () =>
+        {
+            var g = new GameObject("ProbesToCopy");
+            var p = g.AddComponent<LightProbeGroup>();
+            p.probePositions = new[] { new Vector3(7, 8, 9) };
+            var copy = Instantiate(g);
+            var r = Positions(copy.GetComponent<LightProbeGroup>().probePositions);
+            DestroyImmediate(copy);
+            DestroyImmediate(g);
+            return r;
+        });
         Try("lpg.setEmpty", () => { var g = new GameObject("ProbesSet"); var p = g.AddComponent<LightProbeGroup>(); p.probePositions = new Vector3[0]; var r = Positions(p.probePositions); DestroyImmediate(g); return r; });
     }
 
@@ -498,6 +548,53 @@ public class DefaultControlsProbe : MonoBehaviour
             var a = g.AddComponent<Animator>();
             a.feetPivotActive = 0.5f;
             var r = F(a.feetPivotActive);
+            DestroyImmediate(g);
+            return r;
+        });
+        Try("animator.inactiveActivated", () =>
+        {
+            var g = new GameObject("AnimActivated");
+            g.SetActive(false);
+            var a = g.AddComponent<Animator>();
+            g.SetActive(true);
+            var r = AnimatorState(a);
+            DestroyImmediate(g);
+            return r;
+        });
+        Try("animator.inactiveSetActivated", () =>
+        {
+            var g = new GameObject("AnimSetActivated");
+            g.SetActive(false);
+            var a = g.AddComponent<Animator>();
+            a.feetPivotActive = 0.5f;
+            g.SetActive(true);
+            var before = F(a.feetPivotActive);
+            a.feetPivotActive = 0.25f;
+            var r = before + "," + F(a.feetPivotActive);
+            DestroyImmediate(g);
+            return r;
+        });
+        Try("animator.disabled", () =>
+        {
+            var g = new GameObject("AnimDisabled");
+            var a = g.AddComponent<Animator>();
+            a.enabled = false;
+            var r = F(a.feetPivotActive);
+            a.feetPivotActive = 0.5f;
+            r += "," + F(a.feetPivotActive);
+            DestroyImmediate(g);
+            return r;
+        });
+        Try("animator.deactivated", () =>
+        {
+            var g = new GameObject("AnimDeactivated");
+            var a = g.AddComponent<Animator>();
+            a.feetPivotActive = 0.5f;
+            g.SetActive(false);
+            var r = F(a.feetPivotActive);
+            a.feetPivotActive = 0.25f;
+            g.SetActive(true);
+            r += "," + F(a.feetPivotActive);
             DestroyImmediate(g);
             return r;
         });

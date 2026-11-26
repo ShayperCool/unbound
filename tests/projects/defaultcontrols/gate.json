@@ -1,0 +1,21 @@
+{
+  "commands": [
+    "python3 tests/projects/defaultcontrols/run.py gate"
+  ],
+  "summary": "defaultcontrols: .*",
+  "engine_paths": [
+    "managed/UnityEngine/AI/NavMeshAgent.cs",
+    "managed/UnityEngine/Animation/Animator.cs",
+    "managed/UnityEngine/Animation/Animator.Recorder.cs",
+    "managed/UnityEngine/Core/GameObject.cs",
+    "managed/UnityEngine/Graphics/AsyncReadback.cs",
+    "managed/UnityEngine/Graphics/CommandBuffer.cs",
+    "managed/UnityEngine/Graphics/GraphicsFormats.cs",
+    "managed/UnityEngine/Graphics/Light.Settings.cs",
+    "managed/UnityEngine/Graphics/Lightmapping.cs",
+    "managed/UnityEngine/Graphics/LineRenderers.cs",
+    "managed/UnityEngine/Graphics/RenderTexture.cs",
+    "managed/UnityEngine/Graphics/Srp/",
+    "managed/UnityEngine/UI/Canvas.cs"
+  ]
+}

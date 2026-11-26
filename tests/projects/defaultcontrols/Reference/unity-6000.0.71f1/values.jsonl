@@ -1,0 +1,493 @@
+{"k":"cmd.new.name","v":"Unnamed command buffer"}
+{"k":"cmd.set.name","v":"probe"}
+{"k":"cmd.setEmpty.name","v":""}
+{"k":"cmd.setNull.name","v":"string:"}
+{"k":"cmd.cleared.name","v":"Unnamed command buffer"}
+{"k":"rtformat.0.None","v":"29"}
+{"k":"rtformat.1.R8_SRGB","v":"16"}
+{"k":"rtformat.2.R8G8_SRGB","v":"25"}
+{"k":"rtformat.3.R8G8B8_SRGB","v":"29"}
+{"k":"rtformat.4.R8G8B8A8_SRGB","v":"0"}
+{"k":"rtformat.5.R8_UNorm","v":"16"}
+{"k":"rtformat.6.R8G8_UNorm","v":"25"}
+{"k":"rtformat.7.R8G8B8_UNorm","v":"29"}
+{"k":"rtformat.8.R8G8B8A8_UNorm","v":"0"}
+{"k":"rtformat.9.R8_SNorm","v":"29"}
+{"k":"rtformat.10.R8G8_SNorm","v":"29"}
+{"k":"rtformat.11.R8G8B8_SNorm","v":"29"}
+{"k":"rtformat.12.R8G8B8A8_SNorm","v":"29"}
+{"k":"rtformat.13.R8_UInt","v":"29"}
+{"k":"rtformat.14.R8G8_UInt","v":"29"}
+{"k":"rtformat.15.R8G8B8_UInt","v":"29"}
+{"k":"rtformat.16.R8G8B8A8_UInt","v":"29"}
+{"k":"rtformat.17.R8_SInt","v":"29"}
+{"k":"rtformat.18.R8G8_SInt","v":"29"}
+{"k":"rtformat.19.R8G8B8_SInt","v":"29"}
+{"k":"rtformat.20.R8G8B8A8_SInt","v":"29"}
+{"k":"rtformat.21.R16_UNorm","v":"28"}
+{"k":"rtformat.22.R16G16_UNorm","v":"23"}
+{"k":"rtformat.23.R16G16B16_UNorm","v":"29"}
+{"k":"rtformat.24.R16G16B16A16_UNorm","v":"10"}
+{"k":"rtformat.25.R16_SNorm","v":"29"}
+{"k":"rtformat.26.R16G16_SNorm","v":"29"}
+{"k":"rtformat.27.R16G16B16_SNorm","v":"29"}
+{"k":"rtformat.28.R16G16B16A16_SNorm","v":"29"}
+{"k":"rtformat.29.R16_UInt","v":"29"}
+{"k":"rtformat.30.R16G16_UInt","v":"29"}
+{"k":"rtformat.31.R16G16B16_UInt","v":"29"}
+{"k":"rtformat.32.R16G16B16A16_UInt","v":"24"}
+{"k":"rtformat.33.R16_SInt","v":"29"}
+{"k":"rtformat.34.R16G16_SInt","v":"29"}
+{"k":"rtformat.35.R16G16B16_SInt","v":"29"}
+{"k":"rtformat.36.R16G16B16A16_SInt","v":"29"}
+{"k":"rtformat.37.R32_UInt","v":"29"}
+{"k":"rtformat.38.R32G32_UInt","v":"29"}
+{"k":"rtformat.39.R32G32B32_UInt","v":"29"}
+{"k":"rtformat.40.R32G32B32A32_UInt","v":"29"}
+{"k":"rtformat.41.R32_SInt","v":"19"}
+{"k":"rtformat.42.R32G32_SInt","v":"18"}
+{"k":"rtformat.43.R32G32B32_SInt","v":"29"}
+{"k":"rtformat.44.R32G32B32A32_SInt","v":"17"}
+{"k":"rtformat.45.R16_SFloat","v":"15"}
+{"k":"rtformat.46.R16G16_SFloat","v":"13"}
+{"k":"rtformat.47.R16G16B16_SFloat","v":"29"}
+{"k":"rtformat.48.R16G16B16A16_SFloat","v":"2"}
+{"k":"rtformat.49.R32_SFloat","v":"14"}
+{"k":"rtformat.50.R32G32_SFloat","v":"12"}
+{"k":"rtformat.51.R32G32B32_SFloat","v":"29"}
+{"k":"rtformat.52.R32G32B32A32_SFloat","v":"11"}
+{"k":"rtformat.56.B8G8R8_SRGB","v":"29"}
+{"k":"rtformat.57.B8G8R8A8_SRGB","v":"20"}
+{"k":"rtformat.58.B8G8R8_UNorm","v":"29"}
+{"k":"rtformat.59.B8G8R8A8_UNorm","v":"20"}
+{"k":"rtformat.60.B8G8R8_SNorm","v":"29"}
+{"k":"rtformat.61.B8G8R8A8_SNorm","v":"29"}
+{"k":"rtformat.62.B8G8R8_UInt","v":"29"}
+{"k":"rtformat.63.B8G8R8A8_UInt","v":"29"}
+{"k":"rtformat.64.B8G8R8_SInt","v":"29"}
+{"k":"rtformat.65.B8G8R8A8_SInt","v":"29"}
+{"k":"rtformat.66.R4G4B4A4_UNormPack16","v":"29"}
+{"k":"rtformat.67.B4G4R4A4_UNormPack16","v":"5"}
+{"k":"rtformat.68.R5G6B5_UNormPack16","v":"29"}
+{"k":"rtformat.69.B5G6R5_UNormPack16","v":"4"}
+{"k":"rtformat.70.R5G5B5A1_UNormPack16","v":"29"}
+{"k":"rtformat.71.B5G5R5A1_UNormPack16","v":"6"}
+{"k":"rtformat.72.A1R5G5B5_UNormPack16","v":"29"}
+{"k":"rtformat.73.E5B9G9R9_UFloatPack32","v":"29"}
+{"k":"rtformat.74.B10G11R11_UFloatPack32","v":"22"}
+{"k":"rtformat.75.A2B10G10R10_UNormPack32","v":"8"}
+{"k":"rtformat.76.A2B10G10R10_UIntPack32","v":"29"}
+{"k":"rtformat.77.A2B10G10R10_SIntPack32","v":"29"}
+{"k":"rtformat.78.A2R10G10B10_UNormPack32","v":"8"}
+{"k":"rtformat.79.A2R10G10B10_UIntPack32","v":"29"}
+{"k":"rtformat.80.A2R10G10B10_SIntPack32","v":"29"}
+{"k":"rtformat.81.A2R10G10B10_XRSRGBPack32","v":"29"}
+{"k":"rtformat.82.A2R10G10B10_XRUNormPack32","v":"29"}
+{"k":"rtformat.83.R10G10B10_XRSRGBPack32","v":"29"}
+{"k":"rtformat.84.R10G10B10_XRUNormPack32","v":"27"}
+{"k":"rtformat.85.A10R10G10B10_XRSRGBPack32","v":"29"}
+{"k":"rtformat.86.A10R10G10B10_XRUNormPack32","v":"26"}
+{"k":"rtformat.90.D16_UNorm","v":"29"}
+{"k":"rtformat.91.D24_UNorm","v":"29"}
+{"k":"rtformat.92.D24_UNorm_S8_UInt","v":"29"}
+{"k":"rtformat.93.D32_SFloat","v":"29"}
+{"k":"rtformat.94.D32_SFloat_S8_UInt","v":"29"}
+{"k":"rtformat.95.S8_UInt","v":"29"}
+{"k":"rtformat.96.RGB_DXT1_SRGB","v":"29"}
+{"k":"rtformat.96.RGBA_DXT1_SRGB","v":"29"}
+{"k":"rtformat.97.RGB_DXT1_UNorm","v":"29"}
+{"k":"rtformat.97.RGBA_DXT1_UNorm","v":"29"}
+{"k":"rtformat.98.RGBA_DXT3_SRGB","v":"29"}
+{"k":"rtformat.99.RGBA_DXT3_UNorm","v":"29"}
+{"k":"rtformat.100.RGBA_DXT5_SRGB","v":"29"}
+{"k":"rtformat.101.RGBA_DXT5_UNorm","v":"29"}
+{"k":"rtformat.102.R_BC4_UNorm","v":"29"}
+{"k":"rtformat.103.R_BC4_SNorm","v":"29"}
+{"k":"rtformat.104.RG_BC5_UNorm","v":"29"}
+{"k":"rtformat.105.RG_BC5_SNorm","v":"29"}
+{"k":"rtformat.106.RGB_BC6H_UFloat","v":"29"}
+{"k":"rtformat.107.RGB_BC6H_SFloat","v":"29"}
+{"k":"rtformat.108.RGBA_BC7_SRGB","v":"29"}
+{"k":"rtformat.109.RGBA_BC7_UNorm","v":"29"}
+{"k":"rtformat.110.RGB_PVRTC_2Bpp_SRGB","v":"29"}
+{"k":"rtformat.111.RGB_PVRTC_2Bpp_UNorm","v":"29"}
+{"k":"rtformat.112.RGB_PVRTC_4Bpp_SRGB","v":"29"}
+{"k":"rtformat.113.RGB_PVRTC_4Bpp_UNorm","v":"29"}
+{"k":"rtformat.114.RGBA_PVRTC_2Bpp_SRGB","v":"29"}
+{"k":"rtformat.115.RGBA_PVRTC_2Bpp_UNorm","v":"29"}
+{"k":"rtformat.116.RGBA_PVRTC_4Bpp_SRGB","v":"29"}
+{"k":"rtformat.117.RGBA_PVRTC_4Bpp_UNorm","v":"29"}
+{"k":"rtformat.118.RGB_ETC_UNorm","v":"29"}
+{"k":"rtformat.119.RGB_ETC2_SRGB","v":"29"}
+{"k":"rtformat.120.RGB_ETC2_UNorm","v":"29"}
+{"k":"rtformat.121.RGB_A1_ETC2_SRGB","v":"29"}
+{"k":"rtformat.122.RGB_A1_ETC2_UNorm","v":"29"}
+{"k":"rtformat.123.RGBA_ETC2_SRGB","v":"29"}
+{"k":"rtformat.124.RGBA_ETC2_UNorm","v":"29"}
+{"k":"rtformat.125.R_EAC_UNorm","v":"29"}
+{"k":"rtformat.126.R_EAC_SNorm","v":"29"}
+{"k":"rtformat.127.RG_EAC_UNorm","v":"29"}
+{"k":"rtformat.128.RG_EAC_SNorm","v":"29"}
+{"k":"rtformat.129.RGBA_ASTC4X4_SRGB","v":"29"}
+{"k":"rtformat.130.RGBA_ASTC4X4_UNorm","v":"29"}
+{"k":"rtformat.131.RGBA_ASTC5X5_SRGB","v":"29"}
+{"k":"rtformat.132.RGBA_ASTC5X5_UNorm","v":"29"}
+{"k":"rtformat.133.RGBA_ASTC6X6_SRGB","v":"29"}
+{"k":"rtformat.134.RGBA_ASTC6X6_UNorm","v":"29"}
+{"k":"rtformat.135.RGBA_ASTC8X8_SRGB","v":"29"}
+{"k":"rtformat.136.RGBA_ASTC8X8_UNorm","v":"29"}
+{"k":"rtformat.137.RGBA_ASTC10X10_SRGB","v":"29"}
+{"k":"rtformat.138.RGBA_ASTC10X10_UNorm","v":"29"}
+{"k":"rtformat.139.RGBA_ASTC12X12_SRGB","v":"29"}
+{"k":"rtformat.140.RGBA_ASTC12X12_UNorm","v":"29"}
+{"k":"rtformat.141.YUV2","v":"21"}
+{"k":"rtformat.142.DepthAuto","v":"29"}
+{"k":"rtformat.143.ShadowAuto","v":"29"}
+{"k":"rtformat.144.VideoAuto","v":"29"}
+{"k":"rtformat.145.RGBA_ASTC4X4_UFloat","v":"29"}
+{"k":"rtformat.146.RGBA_ASTC5X5_UFloat","v":"29"}
+{"k":"rtformat.147.RGBA_ASTC6X6_UFloat","v":"29"}
+{"k":"rtformat.148.RGBA_ASTC8X8_UFloat","v":"29"}
+{"k":"rtformat.149.RGBA_ASTC10X10_UFloat","v":"29"}
+{"k":"rtformat.150.RGBA_ASTC12X12_UFloat","v":"29"}
+{"k":"rtformat.151.D16_UNorm_S8_UInt","v":"29"}
+{"k":"attach.default","v":"29/None"}
+{"k":"attach.none","v":"29/None"}
+{"k":"attach.argb32","v":"0/R8G8B8A8_UNorm"}
+{"k":"attach.depth","v":"1/depth"}
+{"k":"attach.shadowmap","v":"1/depth"}
+{"k":"attach.d32","v":"1/depth"}
+{"k":"attach.r8g8b8a8","v":"0/R8G8B8A8_UNorm"}
+{"k":"attach.setNone","v":"29/None"}
+{"k":"rtd.default","v":"3/None/CompareDepths/nodepth"}
+{"k":"rtd.default.samplingNone","v":"1/None/None/nodepth"}
+{"k":"rtd.default.samplingRaw","v":"3/None/RawDepth/nodepth"}
+{"k":"rtd.default.samplingCompare","v":"3/None/CompareDepths/nodepth"}
+{"k":"rtd.argb32","v":"0/R8G8B8A8_UNorm/None/nodepth"}
+{"k":"rtd.argb32.depth","v":"0/R8G8B8A8_UNorm/None/depthstencil"}
+{"k":"rtd.depth","v":"1/None/None/depthstencil"}
+{"k":"rtd.shadowmap","v":"3/None/CompareDepths/depth"}
+{"k":"rtd.depth.samplingRaw","v":"3/None/RawDepth/depthstencil"}
+{"k":"rtd.depth.samplingCompare","v":"3/None/CompareDepths/depthstencil"}
+{"k":"rtd.argb32.noColor","v":"1/None/None/nodepth"}
+{"k":"rtd.argb32.noColor.samplingCompare","v":"3/None/CompareDepths/nodepth"}
+{"k":"rtd.depth.setArgb32","v":"0/R8G8B8A8_UNorm/None/depthstencil"}
+{"k":"rtd.argb32.setShadowmap","v":"3/None/CompareDepths/depth"}
+{"k":"rtd.argb32.setDepth","v":"1/None/None/depthstencil"}
+{"k":"rtd.default.depth24","v":"3/None/CompareDepths/depth"}
+{"k":"rtd.default.samplingNone.depth24","v":"1/None/None/depthstencil"}
+{"k":"rtd.argb32.samplingCompare.depth24","v":"0/R8G8B8A8_UNorm/CompareDepths/depth"}
+{"k":"rtd.argb32.samplingRaw.depth24","v":"0/R8G8B8A8_UNorm/RawDepth/depth"}
+{"k":"rtd.texture.depth","v":"1/None/None/depthstencil"}
+{"k":"rtd.texture.shadowmap","v":"3/None/CompareDepths/depth"}
+{"k":"srf.new.terrainDetailUnsupported","v":"True"}
+{"k":"srf.setFalse.terrainDetailUnsupported","v":"True"}
+{"k":"bfs.default","v":"16140901064495857664"}
+{"k":"bfs.set5","v":"5"}
+{"k":"bfs.set0","v":"0"}
+{"k":"bfs.drawRange","v":"16140901064495857664"}
+{"k":"go.authored","v":"16140901064495857664"}
+{"k":"go.new","v":"16140901064495857664"}
+{"k":"go.inactive","v":"16140901064495857664"}
+{"k":"go.ddol","v":"16140901064495857664"}
+{"k":"go.created","v":"16140901064495857664"}
+{"k":"editor.activeScene","v":"16140901064495857664"}
+{"k":"editor.invalidScene","v":"0"}
+{"k":"editor.defaultConstant","v":"16140901064495857664"}
+{"k":"light.layerShadowCullDistances","v":"32:0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0"}
+{"k":"light.layerShadowCullDistances.copy","v":"copy:0"}
+{"k":"lpg.added","v":"8:(1,1,1);(1,1,-1);(1,-1,1);(1,-1,-1);(-1,1,1);(-1,1,-1);(-1,-1,1);(-1,-1,-1)"}
+{"k":"lpg.addedInactive","v":"8:(1,1,1);(1,1,-1);(1,-1,1);(1,-1,-1);(-1,1,1);(-1,1,-1);(-1,-1,1);(-1,-1,-1)"}
+{"k":"lpg.authoredEmpty","v":"0:"}
+{"k":"lpg.authoredTwo","v":"2:(0.5,2,-3);(4,0,1.25)"}
+{"k":"lpg.instantiatedEmpty","v":"0:"}
+{"k":"lpg.instantiatedTwo","v":"2:(0.5,2,-3);(4,0,1.25)"}
+{"k":"lpg.instantiatedAdded","v":"1:(7,8,9)"}
+{"k":"lpg.setEmpty","v":"0:"}
+{"k":"readback.default.done","v":"True"}
+{"k":"readback.default.hasError","v":"True"}
+{"k":"readback.default.width","v":"0"}
+{"k":"readback.default.layerCount","v":"0"}
+{"k":"culling.default.lightIndexCount","v":"throws System.InvalidOperationException: The CullingResults instance is invalid. This can happen if you construct an instance using the default constructor."}
+{"k":"culling.default.reflectionProbeIndexCount","v":"throws System.InvalidOperationException: The CullingResults instance is invalid. This can happen if you construct an instance using the default constructor."}
+{"k":"culling.default.lightAndReflectionProbeIndexCount","v":"throws System.InvalidOperationException: The CullingResults instance is invalid. This can happen if you construct an instance using the default constructor."}
+{"k":"culling.default.visibleLights","v":"throws System.NullReferenceException: Object reference not set to an instance of an object"}
+{"k":"culling.default.visibleOffscreenVertexLights","v":"throws System.NullReferenceException: Object reference not set to an instance of an object"}
+{"k":"culling.default.visibleReflectionProbes","v":"throws System.NullReferenceException: Object reference not set to an instance of an object"}
+{"k":"culling.default.GetLightIndexMap","v":"throws System.InvalidOperationException: The CullingResults instance is invalid. This can happen if you construct an instance using the default constructor."}
+{"k":"culling.default.equals","v":"True"}
+{"k":"animator.new","v":"pivot=1;target=0,0,0,1@0,0,0;playback=-1;start=-1;stop=-1;mode=Offline"}
+{"k":"animator.new.log","v":"Warning: Can't call GetPlaybackTime while not in playback mode. You must call StartPlayback before."}
+{"k":"animator.inactive","v":"pivot=0;target=0,0,0,1@0,0,0;playback=-1;start=-1;stop=-1;mode=Offline"}
+{"k":"animator.inactive.log","v":"Warning: Can't call GetPlaybackTime while not in playback mode. You must call StartPlayback before."}
+{"k":"animator.controller","v":"pivot=1;target=0,0,0,1@0,0,0;playback=-1;start=-1;stop=-1;mode=Offline"}
+{"k":"animator.controller.log","v":"Warning: Can't call GetPlaybackTime while not in playback mode. You must call StartPlayback before."}
+{"k":"animator.feetPivotActive.0.25","v":"0.25"}
+{"k":"animator.feetPivotActive.0","v":"0"}
+{"k":"animator.feetPivotActive.1","v":"1"}
+{"k":"animator.feetPivotActive.3","v":"3"}
+{"k":"animator.feetPivotActive.-1","v":"-1"}
+{"k":"animator.feetPivotActive.inactive","v":"0"}
+{"k":"animator.inactiveActivated","v":"pivot=1;target=0,0,0,1@0,0,0;playback=-1;start=-1;stop=-1;mode=Offline"}
+{"k":"animator.inactiveActivated.log","v":"Warning: Can't call GetPlaybackTime while not in playback mode. You must call StartPlayback before."}
+{"k":"animator.inactiveSetActivated","v":"1,0.25"}
+{"k":"animator.disabled","v":"1,0.5"}
+{"k":"animator.deactivated","v":"0,1"}
+{"k":"animator.recorderStartTime.set","v":"pivot=1;target=0,0,0,1@0,0,0;playback=-1;start=-1;stop=-1;mode=Offline"}
+{"k":"animator.recorderStartTime.set.log","v":"Warning: Can't call GetPlaybackTime while not in playback mode. You must call StartPlayback before."}
+{"k":"animator.recorderStopTime.set","v":"pivot=1;target=0,0,0,1@0,0,0;playback=-1;start=-1;stop=-1;mode=Offline"}
+{"k":"animator.recorderStopTime.set.log","v":"Warning: Can't call GetPlaybackTime while not in playback mode. You must call StartPlayback before."}
+{"k":"animator.playbackTime.set","v":"pivot=1;target=0,0,0,1@0,0,0;playback=-1;start=-1;stop=-1;mode=Offline"}
+{"k":"animator.playbackTime.set.log","v":"Warning: Can't call GetPlaybackTime while not in playback mode. You must call StartPlayback before."}
+{"k":"section.immediate","v":"done"}
+{"k":"section.staged","v":"made"}
+{"k":"section.staged.log","v":"Warning: Failed to create agent because it is not close enough to the NavMesh | Warning: Failed to create agent because it is not close enough to the NavMesh"}
+{"k":"geom.box.new","v":"Box:1,3,6"}
+{"k":"geom.boxDefault.new","v":"Box:0.5,0.5,0.5"}
+{"k":"geom.boxDisabled.new","v":"Invalid"}
+{"k":"geom.boxInactive.new","v":"Invalid"}
+{"k":"geom.capsule0.new","v":"Capsule:0.5,2.5"}
+{"k":"geom.capsule1.new","v":"Capsule:0.5,2.5"}
+{"k":"geom.capsule2.new","v":"Capsule:0.5,2.5"}
+{"k":"geom.capsuleDefault.new","v":"Capsule:0.5,5E-06"}
+{"k":"geom.sphere.new","v":"Sphere:2.8"}
+{"k":"geom.controller.new","v":"Capsule:0.4,0.4"}
+{"k":"geom.meshless.new","v":"Invalid"}
+{"k":"geom.mesh.triangles.new","v":"TriangleMesh:2,3,4;0,0,0,1"}
+{"k":"geom.mesh.convex.new","v":"ConvexMesh:2,3,4;0,0,0,1"}
+{"k":"geom.terrainEmpty.new","v":"Invalid"}
+{"k":"geom.terrain.new","v":"Terrain"}
+{"k":"geom.wheel.new","v":"Invalid"}
+{"k":"agent.on.new","v":"on=True;dest=0,0.08333337,0;status=PathComplete;remaining=0;hasPath=False;pending=False;next=0,0.08333337,0;end=0,0.08333337,0"}
+{"k":"agent.off.new","v":"on=False;dest=Infinity,Infinity,Infinity;status=PathInvalid;remaining=Infinity;hasPath=False;pending=False;next=100,0,100;end=100,0,100"}
+{"k":"agent.off.new.log","v":"Error: \"GetRemainingDistance\" can only be called on an active agent that has been placed on a NavMesh."}
+{"k":"agent.disabled.new","v":"on=False;dest=Infinity,Infinity,Infinity;status=PathInvalid;remaining=Infinity;hasPath=False;pending=False;next=3,0.08333337,3;end=3,0.08333337,3"}
+{"k":"agent.disabled.new.log","v":"Error: \"GetRemainingDistance\" can only be called on an active agent that has been placed on a NavMesh."}
+{"k":"agent.destination.new","v":"on=True;dest=-3,0.08333337,-3;status=PathComplete;remaining=0;hasPath=False;pending=False;next=-3,0.08333337,-3;end=-3,0.08333337,-3"}
+{"k":"agent.offDestination.new","v":"on=False;dest=Infinity,Infinity,Infinity;status=PathInvalid;remaining=Infinity;hasPath=False;pending=False;next=100,0,-100;end=100,0,-100"}
+{"k":"agent.offDestination.new.log","v":"Error: \"GetRemainingDistance\" can only be called on an active agent that has been placed on a NavMesh."}
+{"k":"obstacle.new.new","v":"Box:height=0.5;radius=0.5;size=1,1,1;center=0,0,0"}
+{"k":"obstacle.capsule.new","v":"Capsule:height=1;radius=0.5;size=1,2,1;center=0,0,0"}
+{"k":"obstacle.setHeight.new","v":"Box:height=1.5;radius=0.5;size=1,3,1;center=0,0,0 -> Capsule:height=1;radius=0.5;size=1,2,1;center=0,0,0 -> Box:height=0.5;radius=0.5;size=1,1,1;center=0,0,0"}
+{"k":"trail.still.new","v":"world=15,0,0/15.5,0.5,0.5;local=-15,0,0/15.5,0.5,0.5"}
+{"k":"trail.notEmitting.new","v":"world=20,0,0/20.5,0.5,0.5;local=-20,0,0/20.5,0.5,0.5"}
+{"k":"trail.away.new","v":"world=-5,2.5,1/5.5,3,1.5;local=5,-2.5,-1/5.5,3,1.5"}
+{"k":"trail.wide.new","v":"world=5,0,0/6.5,1.5,1.5;local=-5,0,0/6.5,1.5,1.5"}
+{"k":"trail.scaled.new","v":"world=0,0,5/0.5,0.5,5.5;local=0,0,-2.5/0.25,0.25,2.75"}
+{"k":"line.new.new","v":"world=0,0,0.5/0.5,0.5,1;local=-50,0,0.5/0.5,0.5,1"}
+{"k":"tilemap.empty.new","v":"cells=Position: (0, 0, 0), Size: (0, 0, 1);local=0,0,0.5/0,0,0.5;world=0,0,0.5/0,0,0.5;local=0,0,0.5/0,0,0.5"}
+{"k":"tilemap.spriteless.new","v":"cells=Position: (0, 0, 0), Size: (3, 2, 1);local=1.5,1,0.5/1.5,1,0.5;world=1.5,1,0.5/1.5,1,0.5;local=1.5,1,0.5/1.5,1,0.5"}
+{"k":"tilemap.sprite.new","v":"cells=Position: (0, 0, 0), Size: (3, 2, 1);local=1.5,1,0.5/1.5,1,0.5;world=1.5,1,0.5/1.5,1,0.5;local=1.5,1,0.5/1.5,1,0.5"}
+{"k":"canvas.overlay.new","v":"640,480"}
+{"k":"canvas.world.new","v":"100,100"}
+{"k":"canvas.cameraWithout.new","v":"640,480"}
+{"k":"canvas.worldSized.new","v":"200,50"}
+{"k":"canvas.new.new","v":"WorldSpace:100,100"}
+{"k":"physics2d.default.subStepCount.new","v":"0"}
+{"k":"physics2d.local.subStepCount.new","v":"0"}
+{"k":"physics2d.local.simulated.new","v":"0"}
+{"k":"physics2d.script.new","v":"local=0;default=0;subStepping=0"}
+{"k":"terrainData.heightmapTexture.new","v":"RenderTexture:TerrainHeightMap:33x33"}
+{"k":"terrainData.holesTexture.new","v":"RenderTexture:TerrainHolesMap:32x32"}
+{"k":"terrainData.new.heightmapTexture.new","v":"RenderTexture:TerrainHeightMap:33x33"}
+{"k":"terrainData.new.holesTexture.new","v":"RenderTexture:TerrainHolesMap:32x32"}
+{"k":"geom.box.fixed","v":"Box:1,3,6"}
+{"k":"geom.boxDefault.fixed","v":"Box:0.5,0.5,0.5"}
+{"k":"geom.boxDisabled.fixed","v":"Invalid"}
+{"k":"geom.boxInactive.fixed","v":"Invalid"}
+{"k":"geom.capsule0.fixed","v":"Capsule:0.5,2.5"}
+{"k":"geom.capsule1.fixed","v":"Capsule:0.5,2.5"}
+{"k":"geom.capsule2.fixed","v":"Capsule:0.5,2.5"}
+{"k":"geom.capsuleDefault.fixed","v":"Capsule:0.5,5E-06"}
+{"k":"geom.sphere.fixed","v":"Sphere:2.8"}
+{"k":"geom.controller.fixed","v":"Capsule:0.4,0.4"}
+{"k":"geom.meshless.fixed","v":"Invalid"}
+{"k":"geom.mesh.triangles.fixed","v":"TriangleMesh:2,3,4;0,0,0,1"}
+{"k":"geom.mesh.convex.fixed","v":"ConvexMesh:2,3,4;0,0,0,1"}
+{"k":"geom.terrainEmpty.fixed","v":"Invalid"}
+{"k":"geom.terrain.fixed","v":"Terrain"}
+{"k":"geom.wheel.fixed","v":"Invalid"}
+{"k":"agent.on.fixed","v":"on=True;dest=0,0.08333337,0;status=PathComplete;remaining=0;hasPath=False;pending=False;next=0,0.08333337,0;end=0,0.08333337,0"}
+{"k":"agent.off.fixed","v":"on=False;dest=Infinity,Infinity,Infinity;status=PathInvalid;remaining=Infinity;hasPath=False;pending=False;next=100,0,100;end=100,0,100"}
+{"k":"agent.off.fixed.log","v":"Error: \"GetRemainingDistance\" can only be called on an active agent that has been placed on a NavMesh."}
+{"k":"agent.disabled.fixed","v":"on=False;dest=Infinity,Infinity,Infinity;status=PathInvalid;remaining=Infinity;hasPath=False;pending=False;next=3,0.08333337,3;end=3,0.08333337,3"}
+{"k":"agent.disabled.fixed.log","v":"Error: \"GetRemainingDistance\" can only be called on an active agent that has been placed on a NavMesh."}
+{"k":"agent.destination.fixed","v":"on=True;dest=-3,0.08333337,-3;status=PathComplete;remaining=0;hasPath=False;pending=False;next=-3,0.08333337,-3;end=-3,0.08333337,-3"}
+{"k":"agent.offDestination.fixed","v":"on=False;dest=Infinity,Infinity,Infinity;status=PathInvalid;remaining=Infinity;hasPath=False;pending=False;next=100,0,-100;end=100,0,-100"}
+{"k":"agent.offDestination.fixed.log","v":"Error: \"GetRemainingDistance\" can only be called on an active agent that has been placed on a NavMesh."}
+{"k":"obstacle.new.fixed","v":"Box:height=0.5;radius=0.5;size=1,1,1;center=0,0,0"}
+{"k":"obstacle.capsule.fixed","v":"Capsule:height=1;radius=0.5;size=1,2,1;center=0,0,0"}
+{"k":"obstacle.setHeight.fixed","v":"Box:height=1.5;radius=0.5;size=1,3,1;center=0,0,0 -> Capsule:height=1;radius=0.5;size=1,2,1;center=0,0,0 -> Box:height=0.5;radius=0.5;size=1,1,1;center=0,0,0"}
+{"k":"trail.still.fixed","v":"world=15,0,0/15.5,0.5,0.5;local=-15,0,0/15.5,0.5,0.5"}
+{"k":"trail.notEmitting.fixed","v":"world=20,0,0/20.5,0.5,0.5;local=-20,0,0/20.5,0.5,0.5"}
+{"k":"trail.away.fixed","v":"world=-5,2.5,1/5.5,3,1.5;local=5,-2.5,-1/5.5,3,1.5"}
+{"k":"trail.wide.fixed","v":"world=5,0,0/6.5,1.5,1.5;local=-5,0,0/6.5,1.5,1.5"}
+{"k":"trail.scaled.fixed","v":"world=0,0,5/0.5,0.5,5.5;local=0,0,-2.5/0.25,0.25,2.75"}
+{"k":"line.new.fixed","v":"world=0,0,0.5/0.5,0.5,1;local=-50,0,0.5/0.5,0.5,1"}
+{"k":"tilemap.empty.fixed","v":"cells=Position: (0, 0, 0), Size: (0, 0, 1);local=0,0,0.5/0,0,0.5;world=0,0,0.5/0,0,0.5;local=0,0,0.5/0,0,0.5"}
+{"k":"tilemap.spriteless.fixed","v":"cells=Position: (0, 0, 0), Size: (3, 2, 1);local=1.5,1,0.5/1.5,1,0.5;world=1.5,1,0.5/1.5,1,0.5;local=1.5,1,0.5/1.5,1,0.5"}
+{"k":"tilemap.sprite.fixed","v":"cells=Position: (0, 0, 0), Size: (3, 2, 1);local=1.5,1,0.5/1.5,1,0.5;world=1.5,1,0.5/1.5,1,0.5;local=1.5,1,0.5/1.5,1,0.5"}
+{"k":"canvas.overlay.fixed","v":"640,480"}
+{"k":"canvas.world.fixed","v":"100,100"}
+{"k":"canvas.cameraWithout.fixed","v":"640,480"}
+{"k":"canvas.worldSized.fixed","v":"200,50"}
+{"k":"canvas.new.fixed","v":"WorldSpace:100,100"}
+{"k":"physics2d.default.subStepCount.fixed","v":"0"}
+{"k":"physics2d.local.subStepCount.fixed","v":"0"}
+{"k":"physics2d.local.simulated.fixed","v":"0"}
+{"k":"physics2d.script.fixed","v":"local=0;default=0;subStepping=0"}
+{"k":"terrainData.heightmapTexture.fixed","v":"RenderTexture:TerrainHeightMap:33x33"}
+{"k":"terrainData.holesTexture.fixed","v":"RenderTexture:TerrainHolesMap:32x32"}
+{"k":"terrainData.new.heightmapTexture.fixed","v":"RenderTexture:TerrainHeightMap:33x33"}
+{"k":"terrainData.new.holesTexture.fixed","v":"RenderTexture:TerrainHolesMap:32x32"}
+{"k":"geom.box.frame","v":"Box:1,3,6"}
+{"k":"geom.boxDefault.frame","v":"Box:0.5,0.5,0.5"}
+{"k":"geom.boxDisabled.frame","v":"Invalid"}
+{"k":"geom.boxInactive.frame","v":"Invalid"}
+{"k":"geom.capsule0.frame","v":"Capsule:0.5,2.5"}
+{"k":"geom.capsule1.frame","v":"Capsule:0.5,2.5"}
+{"k":"geom.capsule2.frame","v":"Capsule:0.5,2.5"}
+{"k":"geom.capsuleDefault.frame","v":"Capsule:0.5,5E-06"}
+{"k":"geom.sphere.frame","v":"Sphere:2.8"}
+{"k":"geom.controller.frame","v":"Capsule:0.4,0.4"}
+{"k":"geom.meshless.frame","v":"Invalid"}
+{"k":"geom.mesh.triangles.frame","v":"TriangleMesh:2,3,4;0,0,0,1"}
+{"k":"geom.mesh.convex.frame","v":"ConvexMesh:2,3,4;0,0,0,1"}
+{"k":"geom.terrainEmpty.frame","v":"Invalid"}
+{"k":"geom.terrain.frame","v":"Terrain"}
+{"k":"geom.wheel.frame","v":"Invalid"}
+{"k":"agent.on.frame","v":"on=True;dest=0,0.08333337,0;status=PathComplete;remaining=0;hasPath=False;pending=False;next=0,0.08333337,0;end=0,0.08333337,0"}
+{"k":"agent.off.frame","v":"on=False;dest=Infinity,Infinity,Infinity;status=PathInvalid;remaining=Infinity;hasPath=False;pending=False;next=100,0,100;end=100,0,100"}
+{"k":"agent.off.frame.log","v":"Error: \"GetRemainingDistance\" can only be called on an active agent that has been placed on a NavMesh."}
+{"k":"agent.disabled.frame","v":"on=False;dest=Infinity,Infinity,Infinity;status=PathInvalid;remaining=Infinity;hasPath=False;pending=False;next=3,0.08333337,3;end=3,0.08333337,3"}
+{"k":"agent.disabled.frame.log","v":"Error: \"GetRemainingDistance\" can only be called on an active agent that has been placed on a NavMesh."}
+{"k":"agent.destination.frame","v":"on=True;dest=-3,0.08333337,-3;status=PathComplete;remaining=0;hasPath=False;pending=False;next=-3,0.08333337,-3;end=-3,0.08333337,-3"}
+{"k":"agent.offDestination.frame","v":"on=False;dest=Infinity,Infinity,Infinity;status=PathInvalid;remaining=Infinity;hasPath=False;pending=False;next=100,0,-100;end=100,0,-100"}
+{"k":"agent.offDestination.frame.log","v":"Error: \"GetRemainingDistance\" can only be called on an active agent that has been placed on a NavMesh."}
+{"k":"obstacle.new.frame","v":"Box:height=0.5;radius=0.5;size=1,1,1;center=0,0,0"}
+{"k":"obstacle.capsule.frame","v":"Capsule:height=1;radius=0.5;size=1,2,1;center=0,0,0"}
+{"k":"obstacle.setHeight.frame","v":"Box:height=1.5;radius=0.5;size=1,3,1;center=0,0,0 -> Capsule:height=1;radius=0.5;size=1,2,1;center=0,0,0 -> Box:height=0.5;radius=0.5;size=1,1,1;center=0,0,0"}
+{"k":"trail.still.frame","v":"world=15,0,0/15.5,0.5,0.5;local=-15,0,0/15.5,0.5,0.5"}
+{"k":"trail.notEmitting.frame","v":"world=20,0,0/20.5,0.5,0.5;local=-20,0,0/20.5,0.5,0.5"}
+{"k":"trail.away.frame","v":"world=-5,2.5,1/5.5,3,1.5;local=5,-2.5,-1/5.5,3,1.5"}
+{"k":"trail.wide.frame","v":"world=5,0,0/6.5,1.5,1.5;local=-5,0,0/6.5,1.5,1.5"}
+{"k":"trail.scaled.frame","v":"world=0,0,5/0.5,0.5,5.5;local=0,0,-2.5/0.25,0.25,2.75"}
+{"k":"line.new.frame","v":"world=0,0,0.5/0.5,0.5,1;local=-50,0,0.5/0.5,0.5,1"}
+{"k":"tilemap.empty.frame","v":"cells=Position: (0, 0, 0), Size: (0, 0, 1);local=0,0,0.5/0,0,0.5;world=0,0,0.5/0,0,0.5;local=0,0,0.5/0,0,0.5"}
+{"k":"tilemap.spriteless.frame","v":"cells=Position: (0, 0, 0), Size: (3, 2, 1);local=1.5,1,0.5/1.5,1,0.5;world=1.5,1,0.5/1.5,1,0.5;local=1.5,1,0.5/1.5,1,0.5"}
+{"k":"tilemap.sprite.frame","v":"cells=Position: (0, 0, 0), Size: (3, 2, 1);local=1.5,1,0.5/1.5,1,0.5;world=1.5,1,0.5/1.5,1,0.5;local=1.5,1,0.5/1.5,1,0.5"}
+{"k":"canvas.overlay.frame","v":"640,480"}
+{"k":"canvas.world.frame","v":"100,100"}
+{"k":"canvas.cameraWithout.frame","v":"640,480"}
+{"k":"canvas.worldSized.frame","v":"200,50"}
+{"k":"canvas.new.frame","v":"WorldSpace:100,100"}
+{"k":"physics2d.default.subStepCount.frame","v":"0"}
+{"k":"physics2d.local.subStepCount.frame","v":"0"}
+{"k":"physics2d.local.simulated.frame","v":"0"}
+{"k":"physics2d.script.frame","v":"local=0;default=0;subStepping=0"}
+{"k":"terrainData.heightmapTexture.frame","v":"RenderTexture:TerrainHeightMap:33x33"}
+{"k":"terrainData.holesTexture.frame","v":"RenderTexture:TerrainHolesMap:32x32"}
+{"k":"terrainData.new.heightmapTexture.frame","v":"RenderTexture:TerrainHeightMap:33x33"}
+{"k":"terrainData.new.holesTexture.frame","v":"RenderTexture:TerrainHolesMap:32x32"}
+{"k":"agent.destination.set","v":"True"}
+{"k":"agent.offDestination.set","v":"False"}
+{"k":"agent.offDestination.set.log","v":"Error: \"SetDestination\" can only be called on an active agent that has been placed on a NavMesh."}
+{"k":"section.destinations","v":"set"}
+{"k":"geom.box.destination","v":"Box:1,3,6"}
+{"k":"geom.boxDefault.destination","v":"Box:0.5,0.5,0.5"}
+{"k":"geom.boxDisabled.destination","v":"Invalid"}
+{"k":"geom.boxInactive.destination","v":"Invalid"}
+{"k":"geom.capsule0.destination","v":"Capsule:0.5,2.5"}
+{"k":"geom.capsule1.destination","v":"Capsule:0.5,2.5"}
+{"k":"geom.capsule2.destination","v":"Capsule:0.5,2.5"}
+{"k":"geom.capsuleDefault.destination","v":"Capsule:0.5,5E-06"}
+{"k":"geom.sphere.destination","v":"Sphere:2.8"}
+{"k":"geom.controller.destination","v":"Capsule:0.4,0.4"}
+{"k":"geom.meshless.destination","v":"Invalid"}
+{"k":"geom.mesh.triangles.destination","v":"TriangleMesh:2,3,4;0,0,0,1"}
+{"k":"geom.mesh.convex.destination","v":"ConvexMesh:2,3,4;0,0,0,1"}
+{"k":"geom.terrainEmpty.destination","v":"Invalid"}
+{"k":"geom.terrain.destination","v":"Terrain"}
+{"k":"geom.wheel.destination","v":"Invalid"}
+{"k":"agent.on.destination","v":"on=True;dest=0,0.08333337,0;status=PathComplete;remaining=0;hasPath=False;pending=False;next=0,0.08333337,0;end=0,0.08333337,0"}
+{"k":"agent.off.destination","v":"on=False;dest=Infinity,Infinity,Infinity;status=PathInvalid;remaining=Infinity;hasPath=False;pending=False;next=100,0,100;end=100,0,100"}
+{"k":"agent.off.destination.log","v":"Error: \"GetRemainingDistance\" can only be called on an active agent that has been placed on a NavMesh."}
+{"k":"agent.disabled.destination","v":"on=False;dest=Infinity,Infinity,Infinity;status=PathInvalid;remaining=Infinity;hasPath=False;pending=False;next=3,0.08333337,3;end=3,0.08333337,3"}
+{"k":"agent.disabled.destination.log","v":"Error: \"GetRemainingDistance\" can only be called on an active agent that has been placed on a NavMesh."}
+{"k":"agent.destination.destination","v":"on=True;dest=5,0.08333337,5;status=PathComplete;remaining=0;hasPath=False;pending=True;next=-3,0.08333337,-3;end=-3,0.08333337,-3"}
+{"k":"agent.offDestination.destination","v":"on=False;dest=Infinity,Infinity,Infinity;status=PathInvalid;remaining=Infinity;hasPath=False;pending=False;next=100,0,-100;end=100,0,-100"}
+{"k":"agent.offDestination.destination.log","v":"Error: \"GetRemainingDistance\" can only be called on an active agent that has been placed on a NavMesh."}
+{"k":"obstacle.new.destination","v":"Box:height=0.5;radius=0.5;size=1,1,1;center=0,0,0"}
+{"k":"obstacle.capsule.destination","v":"Capsule:height=1;radius=0.5;size=1,2,1;center=0,0,0"}
+{"k":"obstacle.setHeight.destination","v":"Box:height=1.5;radius=0.5;size=1,3,1;center=0,0,0 -> Capsule:height=1;radius=0.5;size=1,2,1;center=0,0,0 -> Box:height=0.5;radius=0.5;size=1,1,1;center=0,0,0"}
+{"k":"trail.still.destination","v":"world=15,0,0/15.5,0.5,0.5;local=-15,0,0/15.5,0.5,0.5"}
+{"k":"trail.notEmitting.destination","v":"world=20,0,0/20.5,0.5,0.5;local=-20,0,0/20.5,0.5,0.5"}
+{"k":"trail.away.destination","v":"world=-5,2.5,1/5.5,3,1.5;local=5,-2.5,-1/5.5,3,1.5"}
+{"k":"trail.wide.destination","v":"world=5,0,0/6.5,1.5,1.5;local=-5,0,0/6.5,1.5,1.5"}
+{"k":"trail.scaled.destination","v":"world=0,0,5/0.5,0.5,5.5;local=0,0,-2.5/0.25,0.25,2.75"}
+{"k":"line.new.destination","v":"world=0,0,0.5/0.5,0.5,1;local=-50,0,0.5/0.5,0.5,1"}
+{"k":"tilemap.empty.destination","v":"cells=Position: (0, 0, 0), Size: (0, 0, 1);local=0,0,0.5/0,0,0.5;world=0,0,0.5/0,0,0.5;local=0,0,0.5/0,0,0.5"}
+{"k":"tilemap.spriteless.destination","v":"cells=Position: (0, 0, 0), Size: (3, 2, 1);local=1.5,1,0.5/1.5,1,0.5;world=1.5,1,0.5/1.5,1,0.5;local=1.5,1,0.5/1.5,1,0.5"}
+{"k":"tilemap.sprite.destination","v":"cells=Position: (0, 0, 0), Size: (3, 2, 1);local=1.5,1,0.5/1.5,1,0.5;world=1.5,1,0.5/1.5,1,0.5;local=1.5,1,0.5/1.5,1,0.5"}
+{"k":"canvas.overlay.destination","v":"640,480"}
+{"k":"canvas.world.destination","v":"100,100"}
+{"k":"canvas.cameraWithout.destination","v":"640,480"}
+{"k":"canvas.worldSized.destination","v":"200,50"}
+{"k":"canvas.new.destination","v":"WorldSpace:100,100"}
+{"k":"physics2d.default.subStepCount.destination","v":"0"}
+{"k":"physics2d.local.subStepCount.destination","v":"0"}
+{"k":"physics2d.local.simulated.destination","v":"0"}
+{"k":"physics2d.script.destination","v":"local=0;default=0;subStepping=0"}
+{"k":"terrainData.heightmapTexture.destination","v":"RenderTexture:TerrainHeightMap:33x33"}
+{"k":"terrainData.holesTexture.destination","v":"RenderTexture:TerrainHolesMap:32x32"}
+{"k":"terrainData.new.heightmapTexture.destination","v":"RenderTexture:TerrainHeightMap:33x33"}
+{"k":"terrainData.new.holesTexture.destination","v":"RenderTexture:TerrainHolesMap:32x32"}
+{"k":"geom.box.destinationFrame","v":"Box:1,3,6"}
+{"k":"geom.boxDefault.destinationFrame","v":"Box:0.5,0.5,0.5"}
+{"k":"geom.boxDisabled.destinationFrame","v":"Invalid"}
+{"k":"geom.boxInactive.destinationFrame","v":"Invalid"}
+{"k":"geom.capsule0.destinationFrame","v":"Capsule:0.5,2.5"}
+{"k":"geom.capsule1.destinationFrame","v":"Capsule:0.5,2.5"}
+{"k":"geom.capsule2.destinationFrame","v":"Capsule:0.5,2.5"}
+{"k":"geom.capsuleDefault.destinationFrame","v":"Capsule:0.5,5E-06"}
+{"k":"geom.sphere.destinationFrame","v":"Sphere:2.8"}
+{"k":"geom.controller.destinationFrame","v":"Capsule:0.4,0.4"}
+{"k":"geom.meshless.destinationFrame","v":"Invalid"}
+{"k":"geom.mesh.triangles.destinationFrame","v":"TriangleMesh:2,3,4;0,0,0,1"}
+{"k":"geom.mesh.convex.destinationFrame","v":"ConvexMesh:2,3,4;0,0,0,1"}
+{"k":"geom.terrainEmpty.destinationFrame","v":"Invalid"}
+{"k":"geom.terrain.destinationFrame","v":"Terrain"}
+{"k":"geom.wheel.destinationFrame","v":"Invalid"}
+{"k":"agent.on.destinationFrame","v":"on=True;dest=0,0.08333337,0;status=PathComplete;remaining=0;hasPath=False;pending=False;next=0,0.08333337,0;end=0,0.08333337,0"}
+{"k":"agent.off.destinationFrame","v":"on=False;dest=Infinity,Infinity,Infinity;status=PathInvalid;remaining=Infinity;hasPath=False;pending=False;next=100,0,100;end=100,0,100"}
+{"k":"agent.off.destinationFrame.log","v":"Error: \"GetRemainingDistance\" can only be called on an active agent that has been placed on a NavMesh."}
+{"k":"agent.disabled.destinationFrame","v":"on=False;dest=Infinity,Infinity,Infinity;status=PathInvalid;remaining=Infinity;hasPath=False;pending=False;next=3,0.08333337,3;end=3,0.08333337,3"}
+{"k":"agent.disabled.destinationFrame.log","v":"Error: \"GetRemainingDistance\" can only be called on an active agent that has been placed on a NavMesh."}
+{"k":"agent.offDestination.destinationFrame","v":"on=False;dest=Infinity,Infinity,Infinity;status=PathInvalid;remaining=Infinity;hasPath=False;pending=False;next=100,0,-100;end=100,0,-100"}
+{"k":"agent.offDestination.destinationFrame.log","v":"Error: \"GetRemainingDistance\" can only be called on an active agent that has been placed on a NavMesh."}
+{"k":"obstacle.new.destinationFrame","v":"Box:height=0.5;radius=0.5;size=1,1,1;center=0,0,0"}
+{"k":"obstacle.capsule.destinationFrame","v":"Capsule:height=1;radius=0.5;size=1,2,1;center=0,0,0"}
+{"k":"obstacle.setHeight.destinationFrame","v":"Box:height=1.5;radius=0.5;size=1,3,1;center=0,0,0 -> Capsule:height=1;radius=0.5;size=1,2,1;center=0,0,0 -> Box:height=0.5;radius=0.5;size=1,1,1;center=0,0,0"}
+{"k":"trail.still.destinationFrame","v":"world=15,0,0/15.5,0.5,0.5;local=-15,0,0/15.5,0.5,0.5"}
+{"k":"trail.notEmitting.destinationFrame","v":"world=20,0,0/20.5,0.5,0.5;local=-20,0,0/20.5,0.5,0.5"}
+{"k":"trail.away.destinationFrame","v":"world=-5,2.5,1/5.5,3,1.5;local=5,-2.5,-1/5.5,3,1.5"}
+{"k":"trail.wide.destinationFrame","v":"world=5,0,0/6.5,1.5,1.5;local=-5,0,0/6.5,1.5,1.5"}
+{"k":"trail.scaled.destinationFrame","v":"world=0,0,5/0.5,0.5,5.5;local=0,0,-2.5/0.25,0.25,2.75"}
+{"k":"line.new.destinationFrame","v":"world=0,0,0.5/0.5,0.5,1;local=-50,0,0.5/0.5,0.5,1"}
+{"k":"tilemap.empty.destinationFrame","v":"cells=Position: (0, 0, 0), Size: (0, 0, 1);local=0,0,0.5/0,0,0.5;world=0,0,0.5/0,0,0.5;local=0,0,0.5/0,0,0.5"}
+{"k":"tilemap.spriteless.destinationFrame","v":"cells=Position: (0, 0, 0), Size: (3, 2, 1);local=1.5,1,0.5/1.5,1,0.5;world=1.5,1,0.5/1.5,1,0.5;local=1.5,1,0.5/1.5,1,0.5"}
+{"k":"tilemap.sprite.destinationFrame","v":"cells=Position: (0, 0, 0), Size: (3, 2, 1);local=1.5,1,0.5/1.5,1,0.5;world=1.5,1,0.5/1.5,1,0.5;local=1.5,1,0.5/1.5,1,0.5"}
+{"k":"canvas.overlay.destinationFrame","v":"640,480"}
+{"k":"canvas.world.destinationFrame","v":"100,100"}
+{"k":"canvas.cameraWithout.destinationFrame","v":"640,480"}
+{"k":"canvas.worldSized.destinationFrame","v":"200,50"}
+{"k":"canvas.new.destinationFrame","v":"WorldSpace:100,100"}
+{"k":"physics2d.default.subStepCount.destinationFrame","v":"0"}
+{"k":"physics2d.local.subStepCount.destinationFrame","v":"0"}
+{"k":"physics2d.local.simulated.destinationFrame","v":"0"}
+{"k":"physics2d.script.destinationFrame","v":"local=0;default=0;subStepping=0"}
+{"k":"terrainData.heightmapTexture.destinationFrame","v":"RenderTexture:TerrainHeightMap:33x33"}
+{"k":"terrainData.holesTexture.destinationFrame","v":"RenderTexture:TerrainHolesMap:32x32"}
+{"k":"terrainData.new.heightmapTexture.destinationFrame","v":"RenderTexture:TerrainHeightMap:33x33"}
+{"k":"terrainData.new.holesTexture.destinationFrame","v":"RenderTexture:TerrainHolesMap:32x32"}
+{"k":"complete","v":true}
