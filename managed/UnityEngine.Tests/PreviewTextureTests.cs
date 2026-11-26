@@ -88,6 +88,44 @@ namespace UnityEngine.Tests
             }
         }
 
+        static List<FrameBuilder.DrawItem> Items()
+        {
+            var items = new List<FrameBuilder.DrawItem>();
+            GuiRender.CollectItems(0, 180, items);
+            return items;
+        }
+
+        [Fact]
+        public void APreviewSlotTakenByAnotherMaterialKeepsNoneOfTheFirstOnesValues()
+        {
+            var texture = new Texture2D(4, 4);
+            var first = UserMaterial();
+            var second = UserMaterial();
+            int cutoff = Shader.PropertyToID("_Cutoff");
+            try
+            {
+                first.SetFloat(cutoff, 0.9f);
+                GuiRender.Clear();
+                Repaint(() => EditorGUI.DrawPreviewTexture(new Rect(0, 0, 32, 32), texture, first));
+                Assert.Equal(0.9f, MaterialDraws()[0][cutoff]);
+                // The next frame draws another material first: the slot starts afresh.
+                GuiRender.Clear();
+                Repaint(() => EditorGUI.DrawPreviewTexture(new Rect(0, 0, 32, 32), texture, second));
+                Assert.False(MaterialDraws()[0].ContainsKey(cutoff));
+                // A caller's material draws unclipped; a destroyed one is not drawn (nor throws).
+                Assert.False(Assert.Single(Items()).ClipEnabled);
+                Object.DestroyImmediate(second);
+                Assert.Empty(Items());
+            }
+            finally
+            {
+                GuiRender.Clear();
+                Object.DestroyImmediate(texture);
+                Object.DestroyImmediate(first);
+                if (second) Object.DestroyImmediate(second);
+            }
+        }
+
         [Fact]
         public void OutsideOnGuiThePreviewThrowsAsTheEditors()
         {

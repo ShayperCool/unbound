@@ -159,6 +159,14 @@ namespace UnityEditor
             Rect screenRect = new Rect(), sourceRect = new Rect();
             GUI.CalculateScaledTextureRects(position, scaleMode, imageAspect, ref screenRect, ref sourceRect);
             // Unity shows only the unpadded part of an always-padded texture; Unbound pads none.
+            // Unity draws with Graphics.DrawTexture at once, among the GUI's draws: in the frame's GUI
+            // pass Unbound records the draw there (its GUI draws are drawn after the pass).
+            if (GuiRender.Painting)
+            {
+                GuiRender.DrawMaterialTexture(screenRect, image, sourceRect, GUI.color, mat, clip: EditorGUIUtility.IsPreviewMaterial(mat));
+                if (manualResolve) GuiRender.ReleaseAfterCollect((RenderTexture)image);
+                return;
+            }
             Graphics.DrawTexture(screenRect, image, sourceRect, 0, 0, 0, 0, GUI.color, mat);
 
             if (manualResolve)
@@ -249,6 +257,9 @@ namespace UnityEditor
         };
 
         static readonly Material[] s_PreviewMaterials = new Material[s_PreviewShaders.Length];
+
+        /// <summary>Whether a material is one of the preview materials (which clip by the GUI clip).</summary>
+        internal static bool IsPreviewMaterial(Material material) => Array.IndexOf(s_PreviewMaterials, material) >= 0;
 
         /// <summary>A preview material, made once from its Editor shader (drawn in IMGUI, so its clip
         /// texture is white: Unbound clips GUI draws by their rects).</summary>

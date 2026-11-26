@@ -267,8 +267,8 @@ namespace Unbound.Runtime
             /// <summary>Text from a signed distance field atlas, drawn with its font asset's own
             /// material (Hidden/TextCore/Distance Field SSD).</summary>
             DistanceFieldText,
-            /// <summary>Graphics.DrawTexture in OnGUI: the caller's material, its values as they
-            /// were at the call.</summary>
+            /// <summary>A texture preview of EditorGUI (DrawPreviewTexture and its kin): its material,
+            /// with the material's values as they were at the call.</summary>
             Material,
         }
 
@@ -286,6 +286,8 @@ namespace Unbound.Runtime
             internal Matrix4x4 ToScreen;
             internal int FirstVertex, VertexCount;
             internal Dictionary<int, object> Properties;
+            /// <summary>Drawn without the clip rect (a caller's material that does not clip itself).</summary>
+            internal bool Unclipped;
         }
 
         static readonly List<Vector3> s_Positions = new List<Vector3>();
@@ -301,13 +303,17 @@ namespace Unbound.Runtime
         /// <summary>Per-draw parameters of rounded draws, reused from frame to frame.</summary>
         static readonly List<Dictionary<int, object>> s_RoundedProperties = new List<Dictionary<int, object>>();
         static int s_RoundedUsed;
-        /// <summary>The material values of Graphics.DrawTexture draws, reused from frame to frame
-        /// (a value that did not change keeps its box).</summary>
+        /// <summary>The material values of preview draws, reused from frame to frame with the
+        /// material they were taken from (a value that did not change keeps its box; another
+        /// material starts the slot afresh).</summary>
         static readonly List<Dictionary<int, object>> s_MaterialProperties = new List<Dictionary<int, object>>();
+        static readonly List<Material> s_MaterialOwners = new List<Material>();
         static int s_MaterialUsed;
+        /// <summary>Temporary render textures a preview draw reads, released once the frame's draws
+        /// are collected.</summary>
+        static readonly List<RenderTexture> s_ReleaseAfterCollect = new List<RenderTexture>();
 
-        /// <summary>Whether the frame's GUI pass is running: what OnGUI draws with
-        /// Graphics.DrawTexture then goes among the GUI's own draws, in call order.</summary>
+        /// <summary>Whether the frame's GUI pass (<see cref="GuiDispatch"/>) is running.</summary>
         internal static bool Painting;
         static Mesh s_Mesh;
 
@@ -471,21 +477,32 @@ namespace Unbound.Runtime
             });
         }
 
-        /// <summary>Graphics.DrawTexture in the GUI pass: drawn where the GUI's own draws are, in call
-        /// order (Unity draws it there at once), with the material's floats, integers and vectors as
-        /// they are now (a later set does not change it). <paramref name="rect"/> is in GUI
-        /// coordinates; the tint is the vertex colour Graphics.DrawTexture gives (twice the colour).</summary>
-        internal static void DrawMaterialTexture(Rect rect, Texture texture, Rect uv, Color color, Material material, int pass)
+        /// <summary>A texture preview drawn in the GUI pass, where the GUI's own draws are, in call
+        /// order (Unity's preview draws at once there with Graphics.DrawTexture), with the material's
+        /// floats, integers and vectors as they are now (a later set does not change it).
+        /// <paramref name="rect"/> is in GUI coordinates; the colour is the vertex colour as given
+        /// (Graphics.DrawTexture's). <paramref name="clip"/>: the GUI clip applies (a preview shader
+        /// clips by the GUI clip texture; a caller's material is drawn unclipped: unmeasured).</summary>
+        internal static void DrawMaterialTexture(Rect rect, Texture texture, Rect uv, Color color, Material material, bool clip)
         {
-            if (pass > 0)
-                Stubs.Ignored("UnityEngine.Graphics.DrawTexture pass in OnGUI", "draws the material's first pass");
-            if (CurrentClip().width <= 0f) return;
-            if (s_MaterialUsed == s_MaterialProperties.Count) s_MaterialProperties.Add(new Dictionary<int, object>());
-            var properties = s_MaterialProperties[s_MaterialUsed++];
+            var clipRect = CurrentClip();
+            if (clip && clipRect.width <= 0f) return;
+            if (s_MaterialUsed == s_MaterialProperties.Count)
+            {
+                s_MaterialProperties.Add(new Dictionary<int, object>());
+                s_MaterialOwners.Add(null);
+            }
+            var properties = s_MaterialProperties[s_MaterialUsed];
+            if (!ReferenceEquals(s_MaterialOwners[s_MaterialUsed], material))
+            {
+                properties.Clear();
+                s_MaterialOwners[s_MaterialUsed] = material;
+            }
+            s_MaterialUsed++;
             Snapshot(material, properties);
-            var tint = color * 2f;
+            Color32 tint = color;
             var indices = s_Spare.Count > 0 ? s_Spare.Pop() : new List<int>();
-            s_Batches.Add(new Batch { Texture = texture, Clip = CurrentClip(), Kind = Kind.Material, Material = material, Indices = indices, Properties = properties });
+            s_Batches.Add(new Batch { Texture = texture, Clip = clipRect, Kind = Kind.Material, Material = material, Indices = indices, Properties = properties, Unclipped = !clip });
             int start = s_Positions.Count;
             s_Positions.Add(GUIClip.GUIToScreen(new Vector2(rect.xMin, rect.yMin)));
             s_Positions.Add(GUIClip.GUIToScreen(new Vector2(rect.xMax, rect.yMin)));
@@ -504,6 +521,10 @@ namespace Unbound.Runtime
             indices.Add(start + 3);
             indices.Add(start);
         }
+
+        /// <summary>A temporary render texture a preview draw of this frame reads: released once the
+        /// frame's draws are collected.</summary>
+        internal static void ReleaseAfterCollect(RenderTexture temporary) => s_ReleaseAfterCollect.Add(temporary);
 
         /// <summary>The material's floats, integers and vectors into <paramref name="into"/>, keeping
         /// the boxes of values that did not change (its textures, matrices and arrays stay the
@@ -619,6 +640,16 @@ namespace Unbound.Runtime
         /// from the bottom left).</summary>
         internal static void Collect(List<FrameBuilder.DrawItem> into)
         {
+            try { CollectBatches(into); }
+            finally
+            {
+                foreach (var temporary in s_ReleaseAfterCollect) RenderTexture.ReleaseTemporary(temporary);
+                s_ReleaseAfterCollect.Clear();
+            }
+        }
+
+        static void CollectBatches(List<FrameBuilder.DrawItem> into)
+        {
             if (s_Batches.Count == 0) return;
             if (s_Mesh == null)
             {
@@ -702,6 +733,8 @@ namespace Unbound.Runtime
             for (int i = 0; i < s_Batches.Count; i++)
             {
                 var b = s_Batches[i];
+                // A material of its own that was destroyed after the draw: nothing to draw with.
+                if (b.Kind is Kind.Material or Kind.DistanceFieldText && b.Material == null) continue;
                 var material = b.Material != null ? b.Material : GuiMaterial(b.Kind);
                 into.Add(new FrameBuilder.DrawItem
                 {
@@ -712,7 +745,7 @@ namespace Unbound.Runtime
                     Color = Color.white,
                     MainTexture = TextureHandles.Of(b.Texture),
                     Clip = new Rect(b.Clip.x, height - b.Clip.yMax, b.Clip.width, b.Clip.height),
-                    ClipEnabled = true,
+                    ClipEnabled = !b.Unclipped,
                     GammaImgui = linear,
                     Properties = b.Properties,
                     Queue = material.renderQueue,
