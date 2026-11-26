@@ -1,12 +1,16 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Text;
 using UnityEngine;
+using UnityEngine.AI;
 using UnityEngine.Experimental.Rendering;
+using UnityEngine.LowLevelPhysics;
 using UnityEngine.Rendering;
 using UnityEngine.SceneManagement;
+using UnityEngine.Tilemaps;
 
 /// <summary>
 /// Writes values.jsonl in $DEFAULTCONTROLS_OUT (tests/value_probe.py rows): controls for creation
@@ -58,13 +62,13 @@ public class DefaultControlsProbe : MonoBehaviour
         new GameObject("DefaultControlsProbe").AddComponent<DefaultControlsProbe>();
     }
 
-    void Start()
+    IEnumerator Start()
     {
         var dir = Environment.GetEnvironmentVariable(Variable);
         Directory.CreateDirectory(dir);
         output = new StreamWriter(Path.Combine(dir, "values.jsonl"), false, new UTF8Encoding(false));
         Application.logMessageReceived += OnLog;
-        try
+        Try("section.immediate", () =>
         {
             CommandBuffers();
             Formats();
@@ -73,8 +77,22 @@ public class DefaultControlsProbe : MonoBehaviour
             Lights();
             Readbacks();
             Animators();
-        }
-        catch (Exception e) { Row("aborted", e.GetType().FullName + ": " + e.Message); }
+            return "done";
+        });
+        // Objects whose values may change once the engine has stepped: read new, after the next
+        // physics step and after two more frames.
+        Try("section.staged", () => { Stage(); return "made"; });
+        Read("new");
+        yield return new WaitForFixedUpdate();
+        Read("fixed");
+        yield return null;
+        yield return null;
+        Read("frame");
+        Try("section.destinations", () => { Destinations(); return "set"; });
+        Read("destination");
+        yield return null;
+        yield return null;
+        Read("destinationFrame");
         Application.logMessageReceived -= OnLog;
         output.Write("{\"k\":\"complete\",\"v\":true}\n");
         output.Dispose();
@@ -82,6 +100,210 @@ public class DefaultControlsProbe : MonoBehaviour
         UnityEditor.EditorApplication.Exit(0);
 #endif
     }
+
+    static readonly List<KeyValuePair<string, Func<string>>> s_Staged = new List<KeyValuePair<string, Func<string>>>();
+
+    static void Staged(string key, Func<string> read) => s_Staged.Add(new KeyValuePair<string, Func<string>>(key, read));
+
+    static void Read(string stage)
+    {
+        foreach (var entry in s_Staged) Try(entry.Key + "." + stage, entry.Value);
+    }
+
+    static GameObject Make(string name, Vector3 position, Vector3 scale, bool active = true)
+    {
+        var g = new GameObject(name);
+        g.transform.position = position;
+        g.transform.localScale = scale;
+        if (!active) g.SetActive(false);
+        return g;
+    }
+
+    /// <summary>Makes the staged objects: colliders (their geometry holders), NavMesh agents on
+    /// and off a NavMesh built at run time, renderers whose bounds follow their geometry, a
+    /// canvas, a tilemap and the 2D physics scene.</summary>
+    static void Stage()
+    {
+        // Colliders, away from each other.
+        var box = Make("GeomBox", new Vector3(-20, 30, 0), new Vector3(2, 3, 4)).AddComponent<BoxCollider>();
+        box.size = new Vector3(1, 2, 3);
+        box.center = new Vector3(1, 0, 0);
+        Staged("geom.box", () => Geometry(box));
+        var boxDefault = Make("GeomBoxDefault", new Vector3(-24, 30, 0), Vector3.one).AddComponent<BoxCollider>();
+        Staged("geom.boxDefault", () => Geometry(boxDefault));
+        var boxDisabled = Make("GeomBoxDisabled", new Vector3(-28, 30, 0), Vector3.one).AddComponent<BoxCollider>();
+        boxDisabled.enabled = false;
+        Staged("geom.boxDisabled", () => Geometry(boxDisabled));
+        var boxInactive = Make("GeomBoxInactive", new Vector3(-32, 30, 0), Vector3.one, active: false).AddComponent<BoxCollider>();
+        Staged("geom.boxInactive", () => Geometry(boxInactive));
+        for (int direction = 0; direction < 3; direction++)
+        {
+            var capsule = Make("GeomCapsule" + direction, new Vector3(-20, 40 + direction * 6, 0), new Vector3(1, 2, 1)).AddComponent<CapsuleCollider>();
+            capsule.radius = 0.5f;
+            capsule.height = 3f;
+            capsule.direction = direction;
+            Staged("geom.capsule" + direction, () => Geometry(capsule));
+        }
+        var capsuleDefault = Make("GeomCapsuleDefault", new Vector3(-26, 40, 0), Vector3.one).AddComponent<CapsuleCollider>();
+        Staged("geom.capsuleDefault", () => Geometry(capsuleDefault));
+        var sphere = Make("GeomSphere", new Vector3(-20, 60, 0), new Vector3(2, 3, 4)).AddComponent<SphereCollider>();
+        sphere.radius = 0.7f;
+        Staged("geom.sphere", () => Geometry(sphere));
+        var controller = Make("GeomController", new Vector3(-20, 70, 0), Vector3.one).AddComponent<CharacterController>();
+        Staged("geom.controller", () => Geometry(controller));
+        var meshless = Make("GeomMeshless", new Vector3(-20, 80, 0), Vector3.one).AddComponent<MeshCollider>();
+        Staged("geom.meshless", () => Geometry(meshless));
+        var primitive = GameObject.CreatePrimitive(PrimitiveType.Cube);
+        var cube = primitive.GetComponent<MeshFilter>().sharedMesh;
+        DestroyImmediate(primitive);
+        foreach (var convex in new[] { false, true })
+        {
+            var mesh = Make("GeomMesh" + convex, new Vector3(-20, 90 + (convex ? 6 : 0), 0), new Vector3(2, 3, 4)).AddComponent<MeshCollider>();
+            mesh.convex = convex;
+            mesh.sharedMesh = cube;
+            Staged("geom.mesh." + (convex ? "convex" : "triangles"), () => Geometry(mesh));
+        }
+        var terrainData = new TerrainData();
+        terrainData.heightmapResolution = 33;
+        terrainData.size = new Vector3(10, 5, 10);
+        var terrain = Make("GeomTerrain", new Vector3(-60, 30, 0), Vector3.one).AddComponent<TerrainCollider>();
+        Staged("geom.terrainEmpty", () => Geometry(terrain));
+        var terrainSet = Make("GeomTerrainSet", new Vector3(-80, 30, 0), Vector3.one).AddComponent<TerrainCollider>();
+        terrainSet.terrainData = terrainData;
+        Staged("geom.terrain", () => Geometry(terrainSet));
+        var body = Make("GeomWheelBody", new Vector3(-20, 110, 0), Vector3.one).AddComponent<Rigidbody>();
+        body.isKinematic = true;
+        var wheelObject = new GameObject("GeomWheel");
+        wheelObject.transform.SetParent(body.transform, false);
+        var wheel = wheelObject.AddComponent<WheelCollider>();
+        Staged("geom.wheel", () => Geometry(wheel));
+
+        // A NavMesh of a 20 x 20 box, and agents on it, off it and disabled.
+        var sources = new List<NavMeshBuildSource>
+        {
+            new NavMeshBuildSource { shape = NavMeshBuildSourceShape.Box, size = new Vector3(20, 1, 20), transform = Matrix4x4.TRS(new Vector3(0, -0.5f, 0), Quaternion.identity, Vector3.one), area = 0 },
+        };
+        var data = NavMeshBuilder.BuildNavMeshData(NavMesh.GetSettingsByID(0), sources, new Bounds(Vector3.zero, new Vector3(40, 10, 40)), Vector3.zero, Quaternion.identity);
+        NavMesh.AddNavMeshData(data);
+        var on = Make("AgentOn", new Vector3(0, 0, 0), Vector3.one).AddComponent<NavMeshAgent>();
+        Staged("agent.on", () => Agent(on));
+        var off = Make("AgentOff", new Vector3(100, 0, 100), Vector3.one).AddComponent<NavMeshAgent>();
+        Staged("agent.off", () => Agent(off));
+        var disabled = Make("AgentDisabled", new Vector3(3, 0, 3), Vector3.one).AddComponent<NavMeshAgent>();
+        disabled.enabled = false;
+        Staged("agent.disabled", () => Agent(disabled));
+        s_DestinationAgent = Make("AgentDestination", new Vector3(-3, 0, -3), Vector3.one).AddComponent<NavMeshAgent>();
+        Staged("agent.destination", () => Agent(s_DestinationAgent));
+        s_OffDestinationAgent = Make("AgentOffDestination", new Vector3(100, 0, -100), Vector3.one).AddComponent<NavMeshAgent>();
+        Staged("agent.offDestination", () => Agent(s_OffDestinationAgent));
+        var obstacleCapsule = Make("ObstacleCapsule", new Vector3(-8, 0, 8), Vector3.one).AddComponent<NavMeshObstacle>();
+        obstacleCapsule.shape = NavMeshObstacleShape.Capsule;
+        Staged("obstacle.new", () => Obstacle(Make("ObstacleNew", new Vector3(8, 0, 8), Vector3.one).AddComponent<NavMeshObstacle>(), destroy: true));
+        Staged("obstacle.capsule", () => Obstacle(obstacleCapsule, destroy: false));
+        Staged("obstacle.setHeight", () =>
+        {
+            var o = Make("ObstacleHeight", new Vector3(8, 0, -8), Vector3.one).AddComponent<NavMeshObstacle>();
+            o.height = 3f;
+            var asBox = Obstacle(o, destroy: false);
+            o.shape = NavMeshObstacleShape.Capsule;
+            var asCapsule = Obstacle(o, destroy: false);
+            o.shape = NavMeshObstacleShape.Box;
+            var back = Obstacle(o, destroy: true);
+            return asBox + " -> " + asCapsule + " -> " + back;
+        });
+
+        // Renderers whose bounds follow their geometry.
+        var trail = Make("Trail", new Vector3(30, 0, 0), Vector3.one).AddComponent<TrailRenderer>();
+        Staged("trail.still", () => RendererBounds(trail));
+        var trailOff = Make("TrailOff", new Vector3(40, 0, 0), Vector3.one).AddComponent<TrailRenderer>();
+        trailOff.emitting = false;
+        Staged("trail.notEmitting", () => RendererBounds(trailOff));
+        var line = Make("Line", new Vector3(50, 0, 0), Vector3.one).AddComponent<LineRenderer>();
+        Staged("line.new", () => RendererBounds(line));
+
+        var grid = new GameObject("Grid").AddComponent<Grid>();
+        var tilemap = new GameObject("Tilemap").AddComponent<Tilemap>();
+        tilemap.transform.SetParent(grid.transform, false);
+        var tilemapRenderer = tilemap.gameObject.AddComponent<TilemapRenderer>();
+        Staged("tilemap.empty", () => TilemapBounds(tilemap, tilemapRenderer));
+        var spriteless = new GameObject("TilemapSpriteless").AddComponent<Tilemap>();
+        spriteless.transform.SetParent(grid.transform, false);
+        var spritelessRenderer = spriteless.gameObject.AddComponent<TilemapRenderer>();
+        spriteless.SetTile(new Vector3Int(2, 1, 0), ScriptableObject.CreateInstance<Tile>());
+        Staged("tilemap.spriteless", () => TilemapBounds(spriteless, spritelessRenderer));
+        var withSprite = new GameObject("TilemapSprite").AddComponent<Tilemap>();
+        withSprite.transform.SetParent(grid.transform, false);
+        var withSpriteRenderer = withSprite.gameObject.AddComponent<TilemapRenderer>();
+        var texture = new Texture2D(16, 16);
+        var tile = ScriptableObject.CreateInstance<Tile>();
+        tile.sprite = Sprite.Create(texture, new Rect(0, 0, 16, 16), new Vector2(0.5f, 0.5f), 16);
+        withSprite.SetTile(new Vector3Int(2, 1, 0), tile);
+        Staged("tilemap.sprite", () => TilemapBounds(withSprite, withSpriteRenderer));
+
+        var canvas = new GameObject("Canvas").AddComponent<Canvas>();
+        canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+        Staged("canvas.overlay", () => V2(canvas.renderingDisplaySize));
+        var worldCanvas = new GameObject("WorldCanvas").AddComponent<Canvas>();
+        worldCanvas.renderMode = RenderMode.WorldSpace;
+        Staged("canvas.world", () => V2(worldCanvas.renderingDisplaySize));
+
+        Staged("physics2d.default.subStepCount", () => Physics2D.defaultPhysicsScene.subStepCount.ToString(CultureInfo.InvariantCulture));
+        var local = SceneManager.CreateScene("Physics2DLocal", new CreateSceneParameters(LocalPhysicsMode.Physics2D));
+        Staged("physics2d.local.subStepCount", () => local.GetPhysicsScene2D().subStepCount.ToString(CultureInfo.InvariantCulture));
+        Staged("physics2d.local.simulated", () =>
+        {
+            var scene = local.GetPhysicsScene2D();
+            scene.Simulate(0.02f);
+            return scene.subStepCount.ToString(CultureInfo.InvariantCulture);
+        });
+
+        Staged("terrainData.heightmapTexture", () => TextureName(terrainData.heightmapTexture));
+        Staged("terrainData.holesTexture", () => TextureName(terrainData.holesTexture));
+        Staged("terrainData.new.heightmapTexture", () => TextureName(new TerrainData().heightmapTexture));
+        Staged("terrainData.new.holesTexture", () => TextureName(new TerrainData().holesTexture));
+    }
+
+    static NavMeshAgent s_DestinationAgent, s_OffDestinationAgent;
+
+    static void Destinations()
+    {
+        Try("agent.destination.set", () => s_DestinationAgent.SetDestination(new Vector3(5, 0, 5)).ToString());
+        Try("agent.offDestination.set", () => s_OffDestinationAgent.SetDestination(new Vector3(5, 0, 5)).ToString());
+    }
+
+    static string V2(Vector2 v) => F(v.x) + "," + F(v.y);
+
+    static string TextureName(Texture texture) => texture == null ? "null" : texture.GetType().Name + ":" + texture.name + ":" + texture.width + "x" + texture.height;
+
+    static string Geometry(Collider collider)
+    {
+        var holder = collider.GeometryHolder;
+        switch (holder.Type)
+        {
+            case GeometryType.Box: return "Box:" + V(holder.As<BoxGeometry>().HalfExtents);
+            case GeometryType.Sphere: return "Sphere:" + F(holder.As<SphereGeometry>().Radius);
+            case GeometryType.Capsule: { var c = holder.As<CapsuleGeometry>(); return "Capsule:" + F(c.Radius) + "," + F(c.HalfLength); }
+            case GeometryType.ConvexMesh: { var c = holder.As<ConvexMeshGeometry>(); return "ConvexMesh:" + V(c.Scale) + ";" + Q(c.ScaleAxisRotation); }
+            case GeometryType.TriangleMesh: { var c = holder.As<TriangleMeshGeometry>(); return "TriangleMesh:" + V(c.Scale) + ";" + Q(c.ScaleAxisRotation); }
+            default: return holder.Type.ToString();
+        }
+    }
+
+    static string Agent(NavMeshAgent agent) =>
+        "on=" + agent.isOnNavMesh + ";dest=" + V(agent.destination) + ";status=" + agent.pathStatus + ";remaining=" + F(agent.remainingDistance)
+        + ";hasPath=" + agent.hasPath + ";pending=" + agent.pathPending + ";next=" + V(agent.nextPosition) + ";end=" + V(agent.pathEndPosition);
+
+    static string Obstacle(NavMeshObstacle o, bool destroy)
+    {
+        var text = o.shape + ":height=" + F(o.height) + ";radius=" + F(o.radius) + ";size=" + V(o.size) + ";center=" + V(o.center);
+        if (destroy) DestroyImmediate(o.gameObject);
+        return text;
+    }
+
+    static string RendererBounds(Renderer renderer) => "world=" + V(renderer.bounds.center) + "/" + V(renderer.bounds.extents) + ";local=" + V(renderer.localBounds.center) + "/" + V(renderer.localBounds.extents);
+
+    static string TilemapBounds(Tilemap map, TilemapRenderer renderer) =>
+        "cells=" + map.cellBounds + ";local=" + V(map.localBounds.center) + "/" + V(map.localBounds.extents) + ";" + RendererBounds(renderer);
 
     static void OnLog(string condition, string stackTrace, LogType type) => s_Logs.Add(type + ": " + condition);
 
@@ -175,7 +397,6 @@ public class DefaultControlsProbe : MonoBehaviour
             DestroyImmediate(g);
             return r.ToString(CultureInfo.InvariantCulture);
         });
-        Try("camera.new", () => { var g = new GameObject("MaskCamera"); var c = g.AddComponent<Camera>(); var r = c.sceneCullingMask; DestroyImmediate(g); return r.ToString(CultureInfo.InvariantCulture); });
 #if UNITY_EDITOR
         Try("editor.activeScene", () => UnityEditor.SceneManagement.EditorSceneManager.GetSceneCullingMask(SceneManager.GetActiveScene()).ToString(CultureInfo.InvariantCulture));
         Try("editor.invalidScene", () => UnityEditor.SceneManagement.EditorSceneManager.GetSceneCullingMask(default).ToString(CultureInfo.InvariantCulture));
