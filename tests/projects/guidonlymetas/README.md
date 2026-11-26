@@ -25,7 +25,8 @@ the MTL with a DefaultImporter `.meta` of its own), each `.meta` the GUID alone.
 What it shows: opening the project writes none of these `.meta` files. A texture imports with the
 texture importer's oldest settings: a cube map (from the 16x16 image 8x8 faces, from the others
 16x16) made automatically, uncompressed (RGB24), with mip maps, gamma decoding and Clamp, every
-aspect a cube map (the face sizes give the layout: the corner square for the long, tall and 0.68,
+aspect a cube map (the face sizes, not the faces' pixels, are measured; Unbound takes each the
+neighbouring band's layout where its size allows several: the corner square for the long, tall and 0.68,
 1.22, 2.85 images, a sphere map at 1.13, a horizontal cross at 1.4; 1.53 is a corner square or a
 panorama, the same size: Unbound imports such an unmeasured aspect as a 2D texture with a
 warning); a sound

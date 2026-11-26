@@ -1309,25 +1309,22 @@ impl Default for TextureImporter {
 
 impl TextureImporter {
     /// The settings a `.meta` imports with for this importer's build target and project.
-    pub fn settings(&self, meta: &Value) -> TextureSettings {
-        let oldest = self.oldest(meta);
-        self.settings_of(oldest.as_ref().unwrap_or(meta))
-    }
-
-    /// `meta` with the oldest settings where it names no importer
-    /// ([`crate::new_meta::with_guid_only_section`]), where that is measured; `None` otherwise.
-    fn oldest(&self, meta: &Value) -> Option<Value> {
+    /// `meta` with the oldest settings where it holds its GUID alone
+    /// ([`crate::new_meta::with_guid_only_section`]) and the cube map they make has a measured
+    /// layout for the image ([`guid_only_cube_measured`]), where that is measured; `None` otherwise.
+    fn oldest(&self, source: &Path, bytes: &[u8], meta: &Value) -> Option<Value> {
         if !self.guid_only_section {
             return None;
         }
-        crate::new_meta::with_guid_only_section(
+        let oldest = crate::new_meta::with_guid_only_section(
             meta,
             crate::new_meta::NewImporter::Texture,
             "TextureImporter",
-        )
+        )?;
+        guid_only_cube_measured(source, bytes).then_some(oldest)
     }
 
-    fn settings_of(&self, meta: &Value) -> TextureSettings {
+    pub fn settings(&self, meta: &Value) -> TextureSettings {
         let mut settings = TextureSettings::read(meta, &self.build_target);
         if self.before_compression {
             settings.uncompressed = true;
@@ -1551,28 +1548,12 @@ impl Importer for TextureImporter {
 
     fn import(&self, source: &Path, bytes: &[u8], meta: &Value) -> Result<ImportedTexture> {
         // A GUID-only .meta reads its oldest settings before the trees' settings apply.
-        let oldest = self.oldest(meta);
-        let read = |meta: &Value| {
-            let tree_meta = self.tree_textures.apply(source, meta);
-            let meta = tree_meta.as_ref().unwrap_or(meta);
-            let settings = self.settings_of(meta);
-            import_texture(source, bytes, meta, settings)
-        };
-        let mut texture = match &oldest {
-            Some(oldest) => match read(oldest) {
-                // Those settings make a cube map, whose layout for this aspect is not measured:
-                // the texture imports as the file's settings say, as before (loudly).
-                Err(e) if e.chain().any(|c| c.is::<cubemap::UnmeasuredAutoCubemap>()) => {
-                    tracing::warn!(
-                        "{}: its .meta holds its GUID alone, which the Editor imports as a cube map; {e:#}; Unbound imports it as a 2D texture",
-                        source.display()
-                    );
-                    read(meta)?
-                }
-                other => other?,
-            },
-            None => read(meta)?,
-        };
+        let oldest = self.oldest(source, bytes, meta);
+        let meta = oldest.as_ref().unwrap_or(meta);
+        let tree_meta = self.tree_textures.apply(source, meta);
+        let meta = tree_meta.as_ref().unwrap_or(meta);
+        let settings = self.settings(meta);
+        let mut texture = import_texture(source, bytes, meta, settings)?;
         self.store(&mut texture)?;
         Ok(texture)
     }
@@ -2599,6 +2580,42 @@ struct Image {
 /// (tests/projects/textureimport Psd16*, TiffDeepExtra).
 fn narrow_u16(v: u16) -> u8 {
     ((u32::from(v) + 128) / 257) as u8
+}
+
+/// The bytes of an image [`guid_only_cube_measured`] reads its size from.
+pub const GUID_ONLY_HEADER_BYTES: usize = 1 << 20;
+
+/// Whether an image whose `.meta` holds its GUID alone takes the texture importer's oldest
+/// settings, which make it a cube map laid out automatically: only where that layout is measured
+/// for the image's size ([`cubemap::UnmeasuredAutoCubemap`]); an image whose size its header does
+/// not give, or of another aspect, keeps the new-asset settings, as before, with a warning. One
+/// rule for the import, the importer's settings and the sections written
+/// (tests/projects/guidonlymetas aspect.*).
+pub fn guid_only_cube_measured(source: &Path, bytes: &[u8]) -> bool {
+    // The header alone, as the runtime reads it for the importer's settings.
+    let bytes = &bytes[..bytes.len().min(GUID_ONLY_HEADER_BYTES)];
+    let size = if bytes.starts_with(b"8BPS") && bytes.len() >= 22 {
+        // A Photoshop file's header: height, then width, big-endian at 14.
+        let at = |i: usize| u32::from_be_bytes(bytes[i..i + 4].try_into().unwrap());
+        Some((at(18), at(14)))
+    } else {
+        image::ImageReader::new(std::io::Cursor::new(bytes))
+            .with_guessed_format()
+            .ok()
+            .and_then(|reader| reader.into_dimensions().ok())
+    };
+    let measured = size.is_some_and(|(w, h)| cubemap::layout(w, h, 6).is_ok());
+    if !measured {
+        tracing::warn!(
+            "{}: its .meta holds its GUID alone, which the Editor imports as a cube map laid out automatically; that layout is not measured for {}: Unbound keeps the new-asset settings (a 2D texture)",
+            source.display(),
+            size.map_or(
+                "an image whose size its header does not give".into(),
+                |(w, h)| format!("a {w}x{h} image")
+            )
+        );
+    }
+    measured
 }
 
 /// The screen gamma a PNG's gamma is corrected for, 2.2 in the PNG fixed point (gamma x 100000).

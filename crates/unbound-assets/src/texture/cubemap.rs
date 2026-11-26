@@ -43,9 +43,10 @@ fn exact(w: u64, h: u64) -> Option<Layout> {
 /// inclusive bounds as fractions): each layout takes images near its own aspect, within the
 /// bands every measured image of the Unity 6000.0.71f1 Editor falls in (tests/projects/
 /// cubemapimport Aspect*, Wide*, Square*, Tall*; tests/projects/guidonlymetas aspect.*, whose face
-/// sizes tell the layout: 1:16, 1:4, 0.68, 1.22, 2.85, 8:1, 16:1 and 256:1 the corner square, 1.13
-/// a sphere map, 1.4 a horizontal cross); between a layout's last measured image and the next
-/// layout's first, the choice is not measured, so it is not taken there.
+/// sizes, the faces' pixels not measured, rule some layouts out: 1:16, 1:4, 0.68, 1.22, 2.85, 8:1,
+/// 16:1 and 256:1 taken as the corner square, 1.13 as a sphere map, 1.4 as a horizontal cross, each
+/// the neighbouring band's layout where another one would give the same size); between a layout's
+/// last measured image and the next layout's first, the choice is not measured, so it is not taken.
 const AUTO_BANDS: &[((u64, u64), (u64, u64), Layout)] = &[
     ((1, 16), (17, 25), Layout::Corner),
     ((100, 143), (4, 5), Layout::VerticalCross),

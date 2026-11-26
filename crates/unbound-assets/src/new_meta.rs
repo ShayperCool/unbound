@@ -251,12 +251,13 @@ pub fn guid_only_section(importer: NewImporter, context: &MetaContext) -> Option
     }
 }
 
-/// Whether a `.meta` (parsed) holds its format version and GUID and nothing else but labels (as
+/// Whether a `.meta` (parsed) holds its format version 2 and GUID and nothing else but labels (as
 /// the managed side's `AssetPaths.HoldsGuidAlone` reads its text); one with other lines (a
 /// `timeCreated`, a `folderAsset`) is not measured and keeps reading the new-asset defaults.
 pub fn names_no_importer(meta: &unbound_yaml::Value) -> bool {
     meta.as_map().is_some_and(|m| {
-        m.iter().any(|(k, _)| k == "guid")
+        m.get("fileFormatVersion").and_then(|v| v.as_str()) == Some("2")
+            && m.get("guid").is_some()
             && m.iter()
                 .all(|(k, _)| matches!(k, "fileFormatVersion" | "guid" | "labels"))
     })
@@ -927,16 +928,9 @@ mod tests {
         );
         let named = unbound_yaml::parse_value("fileFormatVersion: 2\nguid: 0123456789abcdef0123456789abcdef\nTextureImporter:\n  isReadable: 1\n").unwrap();
         assert!(with_guid_only_section(&named, NewImporter::Texture, "TextureImporter").is_none());
-        let texture = crate::texture::TextureImporter {
-            guid_only_section: true,
-            ..Default::default()
-        };
-        let settings = texture.settings(&guid_only);
-        assert_eq!(
-            (settings.shape, settings.compression),
-            (crate::texture::TextureShape::Cube, 0)
-        );
-        let plain = crate::texture::TextureImporter::default().settings(&guid_only);
-        assert_eq!(plain.shape, crate::texture::TextureShape::Texture2D);
+        // A .meta without its format version is not one (as the managed side reads it).
+        let unversioned =
+            unbound_yaml::parse_value("guid: 0123456789abcdef0123456789abcdef\n").unwrap();
+        assert!(!names_no_importer(&unversioned));
     }
 }

@@ -35,6 +35,9 @@ pub struct RuntimeState {
     new_meta: unbound_assets::new_meta::MetaContext,
     /// The project's release family's new `.meta` files are measured (6000.0).
     new_meta_measured: bool,
+    /// The textures whose GUID-only `.meta` this session checked ([`guid_only_cube_measured`]
+    /// warns for each whose oldest settings it does not take, also when its import is cached).
+    guid_only_checked: std::sync::Mutex<std::collections::HashSet<Guid>>,
     /// The project's release (for what is measured in another one).
     release: String,
     /// TextCore's COLR layers select native hinting in the measured release family.
@@ -410,6 +413,7 @@ pub fn initialize(project: &Project) -> Result<&'static RuntimeState> {
             .map(Path::to_path_buf)
             .collect(),
         new_meta_measured: unbound_compat::MeasuredFamily::of(project.version).is_some(),
+        guid_only_checked: Default::default(),
         release: project.version.to_string(),
         font_colr_native_hinting: project.version.measured_family()
             == Some(unbound_compat::MeasuredFamily::Unity6000_0),
@@ -1987,6 +1991,14 @@ fn load_importer_settings(guid: &str) -> Result<Vec<u8>> {
         let text = std::fs::read_to_string(format!("{}.meta", asset.file.display()))?;
         unbound_yaml::parse_value(&text)?
     };
+    // A .meta holding its GUID alone: the oldest settings of the importers that read those there
+    // (a texture's, a sound's), as their imports read them, before a tree's settings apply.
+    if unbound_assets::new_meta::names_no_importer(&meta) {
+        let name = asset_importer(asset);
+        if let (Some(body), Some(map)) = (guid_only_body(s, asset, name), meta.as_map_mut()) {
+            map.insert(name, body);
+        }
+    }
     // The maps of SpeedTree 9 trees: the settings the trees give them, which the Editor saves into
     // their .meta files (the texture import reads the same).
     let tree_textures = s.texture_importer.read().unwrap().tree_textures.clone();
@@ -2006,9 +2018,7 @@ fn load_importer_settings(guid: &str) -> Result<Vec<u8>> {
         return Ok(unbound_scene::encode_documents(&[doc]));
     }
     // A .meta that names no importer (hand-written ones, such as Firebase's manifests) gets the
-    // one the Editor picks for the file's extension, with default settings, or the oldest
-    // settings of the importers that read those there (a texture's, a sound's: the section they
-    // import with, `guid_only_body`).
+    // one the Editor picks for the file's extension, with default settings.
     let (type_name, mut body) = meta
         .as_map()
         .and_then(|m| {
@@ -2017,12 +2027,10 @@ fn load_importer_settings(guid: &str) -> Result<Vec<u8>> {
                 .map(|(k, v)| (k.to_string(), v.clone()))
         })
         .unwrap_or_else(|| {
-            let name = asset_importer(asset);
-            let body = unbound_assets::new_meta::names_no_importer(&meta)
-                .then(|| guid_only_body(s, asset, name))
-                .flatten()
-                .unwrap_or_else(|| unbound_yaml::Value::Map(Default::default()));
-            (name.to_string(), body)
+            (
+                asset_importer(asset).to_string(),
+                unbound_yaml::Value::Map(Default::default()),
+            )
         });
     if type_name == "PluginImporter" {
         if !s.new_meta_measured {
@@ -2140,10 +2148,9 @@ fn label_meta_section(request: &str) -> Result<String> {
             let kind = label_meta_importer(&asset.file, asset.is_folder)?;
             match unbound_assets::new_meta::guid_only_section(kind, &s.new_meta) {
                 // The importers that read a GUID-only .meta with their oldest settings write
-                // those, where the asset gets that importer (a streaming asset gets none of them).
-                Some(section) => section
-                    .starts_with(&format!("{}:\n", asset_importer(asset)))
-                    .then_some(section),
+                // those, where the asset reads them (`guid_only_body`: not a streaming asset, nor
+                // a texture whose cube map layout is not measured).
+                Some(section) => guid_only_body(s, asset, asset_importer(asset)).map(|_| section),
                 None => Some(meta_section(kind, &asset.file, &s.new_meta)),
             }
         })
@@ -2163,7 +2170,28 @@ fn guid_only_body(
     }
     let kind = unbound_assets::new_meta::importer_for(&asset.file, false)?;
     let section = unbound_assets::new_meta::guid_only_section(kind, &s.new_meta)?;
-    unbound_yaml::parse_value(&section).ok()?.get(name).cloned()
+    let body = unbound_yaml::parse_value(&section)
+        .ok()?
+        .get(name)
+        .cloned()?;
+    // A texture's only where its import takes them (the same rule, from the image's header).
+    if kind == unbound_assets::new_meta::NewImporter::Texture
+        && !guid_only_cube_measured(&asset.file)
+    {
+        return None;
+    }
+    Some(body)
+}
+
+/// [`unbound_assets::texture::guid_only_cube_measured`] of an image file, from its header.
+fn guid_only_cube_measured(file: &Path) -> bool {
+    use std::io::Read;
+    let mut header = Vec::new();
+    let read = std::fs::File::open(file).and_then(|f| {
+        f.take(unbound_assets::texture::GUID_ONLY_HEADER_BYTES as u64)
+            .read_to_end(&mut header)
+    });
+    read.is_ok() && unbound_assets::texture::guid_only_cube_measured(file, &header)
 }
 
 /// The importer whose new-asset section a GUID-only `.meta` of `file` gets when it is written
@@ -2866,6 +2894,16 @@ fn imported_texture(
     let db = s.db();
     let asset = db.by_guid(guid).context("no such asset")?;
     let meta = PathBuf::from(format!("{}.meta", asset.file.display()));
+    if s.new_meta_measured && s.guid_only_checked.lock().unwrap().insert(guid) {
+        let guid_only = std::fs::read_to_string(&meta)
+            .ok()
+            .and_then(|text| unbound_yaml::parse_value(&text).ok())
+            .is_some_and(|value| unbound_assets::new_meta::names_no_importer(&value));
+        if guid_only {
+            // Warns for an image whose oldest settings it does not take (a cached import too).
+            guid_only_cube_measured(&asset.file);
+        }
+    }
     s.imports
         .get_or_import(&texture_importer(s), &asset.file, &meta)
 }

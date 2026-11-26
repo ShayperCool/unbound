@@ -2582,7 +2582,10 @@ fn a_guid_only_texture_imports_as_a_cube_map_where_its_layout_is_measured() {
         let image = image::RgbaImage::from_pixel(width, height, image::Rgba([10, 20, 30, 255]));
         let mut bytes = Vec::new();
         image
-            .write_to(&mut std::io::Cursor::new(&mut bytes), image::ImageFormat::Png)
+            .write_to(
+                &mut std::io::Cursor::new(&mut bytes),
+                image::ImageFormat::Png,
+            )
             .unwrap();
         bytes
     };
@@ -2601,4 +2604,27 @@ fn a_guid_only_texture_imports_as_a_cube_map_where_its_layout_is_measured() {
         .import(Path::new("Between.png"), &png(153, 100), &meta)
         .unwrap();
     assert_eq!(flat.settings.shape, TextureShape::Texture2D);
+    // The one rule the importer's settings and the written sections take too, from the header.
+    assert!(guid_only_cube_measured(
+        Path::new("Square.png"),
+        &png(16, 16)
+    ));
+    assert!(guid_only_cube_measured(
+        Path::new("Long.png"),
+        &png(256, 16)
+    ));
+    assert!(!guid_only_cube_measured(
+        Path::new("Between.png"),
+        &png(153, 100)
+    ));
+    assert!(!guid_only_cube_measured(
+        Path::new("Broken.png"),
+        b"not an image"
+    ));
+    let mut psd = b"8BPS\0\x01\0\0\0\0\0\0\0\x03".to_vec();
+    psd.extend(100u32.to_be_bytes());
+    psd.extend(153u32.to_be_bytes());
+    assert!(!guid_only_cube_measured(Path::new("Between.psd"), &psd));
+    psd[18..22].copy_from_slice(&100u32.to_be_bytes());
+    assert!(guid_only_cube_measured(Path::new("Square.psd"), &psd));
 }
