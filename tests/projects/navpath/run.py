@@ -21,6 +21,8 @@ there are no listed keys for this profile. Its currently failing scope is in REA
 
 The `--profile obstacle-separation` records close-range steering and capsule contact. It uses
 Reference/unity-<release>/obstacle-separation.json and compares all values at the same tolerance.
+The `--profile obstacle-shapes` records agents placed in and walking past boxes and tilted
+capsules (Reference/unity-<release>/obstacle-shapes.json); its tilted-shape values are listed.
 
 Listed, not gated (docs/COMPATIBILITY_GAPS.md, the path-cost row):
   hole.shapes two.p1.*    a straight line grazing a mesh vertex that the builders place about 2e-6
@@ -67,8 +69,9 @@ OBSTACLE_SEPARATION = 'obstacle-separation'
 OBSTACLE_SHAPES = 'obstacle-shapes'
 # Profiles with their own scenario, reference file and strict comparison of every value.
 DEDICATED = (OBSTACLE_SEPARATION, OBSTACLE_SHAPES)
-SHAPES = ('box', 'boxlong', 'boxturn', 'boxscaled', 'boxtilt', 'caplying', 'captilt', 'captiltx')
-STEERED = ('box', 'boxlong', 'boxturn', 'boxtilt', 'caplying', 'captilt')
+SHAPES = ('box', 'boxlong', 'boxturn', 'boxscaled', 'boxtilt', 'caplying', 'captilt', 'captiltx',
+          'boxbig', 'boxtilt1', 'boxtilt10', 'boxtiltx')
+STEERED = tuple(shape for shape in SHAPES if shape not in ('boxscaled', 'captiltx'))
 # Scenario -> key prefixes of the differences that are reported but not gated ('' = all of them).
 LISTED = {
     'hole.shapes': ('two.p1.',),
@@ -76,6 +79,8 @@ LISTED = {
     'carve.rules': ('poly.p47', 'poly.p51'),
     'place.links': tuple(f'{path}.{part}' for path in ('m.p.ab', 'r30.p.ab', 'r30.w.ab', 'm.w.ba') for part in ('n', 'c')),
     'replan.topofar': ('a.given', 'mask.given'),
+    # Tilted boxes and lying or tilted capsules: measured, not reproduced (README, Obstacle shapes).
+    'steer.shapes': tuple(f'{kind}.{shape}' for kind in ('contact', 'steer') for shape in ('boxtilt', 'caplying', 'captilt')),
 }
 
 
@@ -161,6 +166,8 @@ def obstacle_shapes_problem(path):
     numeric |= {f'steer.{shape}.z{lane}.f{frame}.{vector}.{axis}'
                 for shape in STEERED for lane in ('0.3', '0.9') for frame in range(5, 81, 5)
                 for vector in ('at', 'velocity') for axis in 'xyz'}
+    numeric |= {f'steer.boxmoving.f{frame}.{vector}.{axis}'
+                for frame in range(5, 81, 5) for vector in ('at', 'velocity') for axis in 'xyz'}
     expected = numeric | {'release', 'mesh0.triangles', 'mesh0.vertices'}
     if set(records) != expected:
         return (f'missing obstacle shapes keys {sorted(expected - records.keys())[:10]}, '

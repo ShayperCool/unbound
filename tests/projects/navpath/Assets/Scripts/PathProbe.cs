@@ -1561,6 +1561,10 @@ public class PathProbe : MonoBehaviour
             ("caplying", NavMeshObstacleShape.Capsule, new Vector3(0.5f, 3f, 0f), new Vector3(0f, 0f, 90f), Vector3.one),
             ("captilt", NavMeshObstacleShape.Capsule, new Vector3(0.5f, 3f, 0f), new Vector3(0f, 0f, 45f), Vector3.one),
             ("captiltx", NavMeshObstacleShape.Capsule, new Vector3(0.5f, 3f, 0f), new Vector3(45f, 0f, 0f), Vector3.one),
+            ("boxbig", NavMeshObstacleShape.Box, new Vector3(4f, 2f, 4f), Vector3.zero, Vector3.one),
+            ("boxtilt1", NavMeshObstacleShape.Box, new Vector3(3f, 2f, 1f), new Vector3(0f, 0f, 1f), Vector3.one),
+            ("boxtilt10", NavMeshObstacleShape.Box, new Vector3(3f, 2f, 1f), new Vector3(0f, 0f, 10f), Vector3.one),
+            ("boxtiltx", NavMeshObstacleShape.Box, new Vector3(3f, 2f, 1f), new Vector3(30f, 0f, 0f), Vector3.one),
         };
         var starts = new[]
         {
@@ -1623,6 +1627,27 @@ public class PathProbe : MonoBehaviour
                 Destroy(post);
                 yield return null;
             }
+        }
+        // A box (1 x 2 x 1) crossing the agent's lane at 1 m/s, moved by its transform each frame.
+        {
+            var post = Place(shapes[0]);
+            post.transform.position = center + new Vector3(0f, 0f, 2f);
+            yield return null;
+            var mover = new GameObject("mover");
+            mover.transform.position = new Vector3(center.x - 4f, floor, center.z);
+            var agent = mover.AddComponent<NavMeshAgent>();
+            agent.SetDestination(new Vector3(center.x + 6f, floor, center.z));
+            for (int frame = 1; frame <= 80; frame++)
+            {
+                post.transform.position += new Vector3(0f, 0f, -1f) * Time.deltaTime;
+                yield return null;
+                if (frame % 5 != 0) continue;
+                ProbeLog.Value("steer.boxmoving.f" + frame + ".at", agent.nextPosition);
+                ProbeLog.Value("steer.boxmoving.f" + frame + ".velocity", agent.velocity);
+            }
+            Destroy(mover);
+            Destroy(post);
+            yield return null;
         }
     }
 

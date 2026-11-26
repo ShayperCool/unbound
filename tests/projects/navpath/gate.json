@@ -2,7 +2,8 @@
   "exclusive": true,
  "commands": [
    "python3 tests/projects/navpath/run.py unbound",
-   "python3 tests/projects/navpath/run.py unbound --profile obstacle-separation"
+   "python3 tests/projects/navpath/run.py unbound --profile obstacle-separation",
+   "python3 tests/projects/navpath/run.py unbound --profile obstacle-shapes"
  ],
  "summary": "gated: \\d+ scenario\\(s\\) differ"
 }
