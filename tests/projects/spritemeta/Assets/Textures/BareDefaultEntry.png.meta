@@ -1,0 +1,10 @@
+fileFormatVersion: 2
+guid: f72e624a585848d6b2576e1e69e04cd4
+TextureImporter:
+  textureType: 8
+  spriteMode: 1
+  platformSettings:
+  - serializedVersion: 4
+    buildTarget: DefaultTexturePlatform
+    maxTextureSize: 1024
+    textureCompression: 1

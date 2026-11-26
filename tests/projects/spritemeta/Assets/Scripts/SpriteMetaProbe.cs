@@ -43,6 +43,7 @@ public class SpriteMetaProbe : MonoBehaviour
     }
 
     static Regex s_InstalledEntry;
+    static readonly Regex s_DefaultEntry = new Regex("(?m)^( *)- serializedVersion: [0-9]+\n\\1  buildTarget: DefaultTexturePlatform\n(?:\\1  .*\n)*");
 
     /// <summary>A .meta's text with its GUID and the installed modules' platform entries left out.</summary>
     static void Meta(string key, string path)
@@ -51,10 +52,23 @@ public class SpriteMetaProbe : MonoBehaviour
         if (!File.Exists(meta)) { Row(key, "<none>"); return; }
         var text = File.ReadAllText(meta);
         var removed = new List<string>();
-        text = s_InstalledEntry.Replace(text, m => { removed.Add(m.Groups[2].Value); return ""; });
+        // Whether each entry left out is the first default entry but for its name.
+        var firstDefault = s_DefaultEntry.Match(text);
+        var copies = new List<string>();
+        text = s_InstalledEntry.Replace(text, m =>
+        {
+            removed.Add(m.Groups[2].Value);
+            if (!firstDefault.Success || m.Value.Replace("buildTarget: " + m.Groups[2].Value + "\n", "buildTarget: DefaultTexturePlatform\n") != firstDefault.Value)
+                copies.Add(m.Groups[2].Value);
+            return "";
+        });
         Row(key, s_Guid.Replace(text, "guid: (guid)"));
         if (text.Contains("platformSettings:"))
+        {
             Row(key + ".platforms", string.Join(",", removed) == string.Join(",", Installed()) ? "the installed modules" : "differ: " + string.Join(",", removed));
+            if (removed.Count > 0)
+                Row(key + ".modules", copies.Count == 0 ? "copies of the first default entry" : "not copies of it: " + string.Join(",", copies));
+        }
     }
 
     static void Try(string key, Func<string> action)
@@ -92,7 +106,7 @@ public class SpriteMetaProbe : MonoBehaviour
     }
 
     static readonly string[] Textures = { "Control", "EmptyId", "IdNpot", "EmptyIdPot0", "Bare", "New", "NewNpot", "NewGaps",
-        "BareWrap", "BarePpu", "BareDefault", "BareFull", "BareLegacy", "BareSize", "BareSheet", "BarePlat", "BareTag",
+        "BareWrap", "BarePpu", "BareDefault", "BareFull", "BareLegacy", "BareSize", "BareDefaultEntry", "BareSheet", "BarePlat", "BareTag",
         "SaveData", "SaveNpot", "SaveClear", "SaveBundle", "SaveKeep",
         "SliceL", "SliceDiag", "SliceDot", "SliceEdge", "SliceFaint", "SliceFive", "SliceNear", "SliceHole", "SliceNpot",
         "SliceThin", "SliceFlat", "SliceAlone3", "SliceAlone4", "SliceTwoBigDot", "SliceBigNear", "SliceBigGap2", "SliceSmallBetween", "SliceAreaSmall",
