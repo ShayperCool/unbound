@@ -157,6 +157,8 @@ namespace UnityEngine.Tilemaps
             }
         }
 
+        internal Bounds localFrameBounds => localBounds;
+
         public float animationFrameRate
         {
             get => m_AnimationFrameRate;
