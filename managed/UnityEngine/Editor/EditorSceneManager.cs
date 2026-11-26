@@ -251,8 +251,10 @@ namespace UnityEditor.SceneManagement
             if (UnityEngine.Application.isPlaying) throw new InvalidOperationException(PlayModeRefusal);
             Undo.FlushDirtiness();
             var dirty = new List<(Scene, string)>();
+            // A scene given twice is saved once (as by the one-at-a-time saves before).
+            var seen = new HashSet<SceneData>(ReferenceEqualityComparer.Instance);
             foreach (var s in scenes)
-                if (s.Data is SceneData data && data.IsDirty) dirty.Add((s, ""));
+                if (s.Data is SceneData data && data.IsDirty && seen.Add(data)) dirty.Add((s, ""));
             return dirty.Count == 0 || Save(dirty, false);
         }
 
