@@ -48,6 +48,14 @@ static class FrameworkShims
         [("System.Reflection.Assembly", "GetName")] = typeof(Unbound.MonoTypeNames).GetMethod(nameof(Unbound.MonoTypeNames.GetName))!,
     };
 
+    /// <summary>Virtual members of <see cref="s_Replaced"/>: only their virtual calls are redirected; a
+    /// non-virtual call (a subclass's <c>base.FullName</c>) and a delegate of the member stay.</summary>
+    static readonly HashSet<(string Type, string Name)> s_VirtualOnly = new()
+    {
+        ("System.Type", "get_AssemblyQualifiedName"), ("System.Type", "get_FullName"),
+        ("System.Reflection.Assembly", "get_FullName"), ("System.Reflection.Assembly", "GetName"),
+    };
+
     /// <summary>Members .NET has, with parameters, that must answer as the Editor's Mono does: the
     /// replacement takes the same parameters (a generic method's the same type arguments).</summary>
     static readonly Dictionary<(string Type, string Name), System.Reflection.MethodInfo[]> s_ReplacedWithArguments = new()
@@ -85,7 +93,8 @@ static class FrameworkShims
                         continue;
                     }
                     if (instruction.OpCode == OpCodes.Ldftn && instruction.Operand is MethodReference pointed
-                        && pointed.Parameters.Count == 0 && s_Replaced.TryGetValue((pointed.DeclaringType.FullName, pointed.Name), out var pointedReplacement))
+                        && pointed.Parameters.Count == 0 && !s_VirtualOnly.Contains((pointed.DeclaringType.FullName, pointed.Name))
+                        && s_Replaced.TryGetValue((pointed.DeclaringType.FullName, pointed.Name), out var pointedReplacement))
                     {
                         // A delegate made of the member (`Func<string[]> f = Environment.GetCommandLineArgs`).
                         instruction.Operand = module.ImportReference(pointedReplacement);
@@ -104,7 +113,8 @@ static class FrameworkShims
                     if ((instruction.OpCode != OpCodes.Call && instruction.OpCode != OpCodes.Callvirt) || instruction.Operand is not MethodReference target)
                         continue;
                     if (!s_Names.Contains(target.Name)) continue;
-                    if (target.Parameters.Count == 0 && s_Replaced.TryGetValue((target.DeclaringType.FullName, target.Name), out var replacement))
+                    if (target.Parameters.Count == 0 && s_Replaced.TryGetValue((target.DeclaringType.FullName, target.Name), out var replacement)
+                        && !(instruction.OpCode == OpCodes.Call && s_VirtualOnly.Contains((target.DeclaringType.FullName, target.Name))))
                     {
                         instruction.OpCode = OpCodes.Call;
                         instruction.Operand = module.ImportReference(replacement);

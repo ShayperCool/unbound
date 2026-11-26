@@ -5,6 +5,8 @@ using System.Linq;
 using System.Reflection;
 using System.Reflection.Metadata;
 using System.Reflection.PortableExecutable;
+using System.Runtime.CompilerServices;
+using System.Runtime.Loader;
 using System.Text;
 
 namespace Unbound
@@ -26,14 +28,24 @@ namespace Unbound
     /// </summary>
     public static class MonoTypeNames
     {
-        static Dictionary<string, string> s_ClassLibrary;
-        static Dictionary<string, string> s_Modules;
+        static volatile Dictionary<string, string> s_ClassLibrary;
+        static volatile Dictionary<string, string> s_Modules;
+        /// <summary>The Mono class library's assemblies by full name, as their metadata names them.</summary>
+        static readonly Dictionary<string, AssemblyName> s_MonoAssemblies = new Dictionary<string, AssemblyName>(StringComparer.Ordinal);
         static readonly object s_Lock = new object();
+        static readonly ConditionalWeakTable<Assembly, object> s_ClassLibraryAssemblies = new ConditionalWeakTable<Assembly, object>();
+        static readonly object s_Yes = new object(), s_No = new object();
 
         /// <summary>The Mono class library directory (Mono's lib/mono/4.5) and the module facades'
         /// directory, set before game code runs.</summary>
         internal static string FrameworkDir => Runtime.GameDomain.FrameworkDir;
         internal static string FacadeDir;
+
+        /// <summary>Forgets the maps (tests that point the directories elsewhere).</summary>
+        internal static void Reset()
+        {
+            lock (s_Lock) { s_ClassLibrary = null; s_Modules = null; s_MonoAssemblies.Clear(); }
+        }
 
         public static string get_AssemblyQualifiedName(Type type)
         {
@@ -59,10 +71,9 @@ namespace Unbound
             if (assembly == null) throw new NullReferenceException();
             var mapped = Mapped(assembly);
             if (mapped == null) return assembly.GetName();
-            var name = new AssemblyName(mapped);
-            var own = assembly.GetName();
-            name.CodeBase = own.CodeBase;
-            return name;
+            // Mono's assembly as its metadata names it (version, public key, flags).
+            lock (s_Lock)
+                return s_MonoAssemblies.TryGetValue(mapped, out var mono) ? (AssemblyName)mono.Clone() : new AssemblyName(mapped);
         }
 
         /// <summary>A type's full name with its generic arguments' assembly-qualified names Mono's way.</summary>
@@ -109,22 +120,38 @@ namespace Unbound
         /// HashSet in System.Core, still names mscorlib this way). Another class library assembly
         /// holds types of several Mono assemblies and keeps .NET's name, with a notice; the engine
         /// keeps UnityEngine.CoreModule (unmeasured which module Mono would name).</summary>
+        static bool s_Noticed;
+
         static string Mapped(Assembly assembly)
         {
             if (assembly == typeof(object).Assembly)
                 return ClassLibrary().TryGetValue("System.Object", out var corlib) ? corlib : null;
-            if (IsClassLibrary(assembly))
+            if (IsClassLibrary(assembly) && !s_Noticed)
+            {
+                s_Noticed = true;
                 Runtime.Stubs.Ignored("Assembly.FullName of .NET class library assemblies",
                     "an assembly other than the core library keeps its .NET name (" + assembly.GetName().Name + " first): .NET's assemblies hold other sets of types than the Editor's Mono ones");
+            }
             return null;
         }
 
+        /// <summary>Whether an assembly is .NET's class library: loaded into the default context from
+        /// the runtime's directory. A game plugin of a framework name (a System.Buffers.dll in the
+        /// project) is the game's and keeps its own names.</summary>
         static bool IsClassLibrary(Assembly assembly)
         {
             if (assembly == typeof(object).Assembly) return true;
-            var name = assembly.GetName().Name;
-            return name == "netstandard" || name == "mscorlib" || name == "System" || name.StartsWith("System.", StringComparison.Ordinal)
-                || name.StartsWith("Microsoft.", StringComparison.Ordinal);
+            if (s_ClassLibraryAssemblies.TryGetValue(assembly, out var known)) return known == s_Yes;
+            bool library = false;
+            if (!assembly.IsDynamic && AssemblyLoadContext.GetLoadContext(assembly) == AssemblyLoadContext.Default)
+            {
+                var location = assembly.Location;
+                var runtime = Path.GetDirectoryName(typeof(object).Assembly.Location);
+                library = location.Length > 0 && runtime != null
+                    && string.Equals(Path.GetDirectoryName(location), runtime, StringComparison.Ordinal);
+            }
+            s_ClassLibraryAssemblies.AddOrUpdate(assembly, library ? s_Yes : s_No);
+            return library;
         }
 
         /// <summary>Each public type of the Mono class library by full name (nested types with '+'),
@@ -132,6 +159,7 @@ namespace Unbound
         /// first. Empty without the directory.</summary>
         static Dictionary<string, string> ClassLibrary()
         {
+            if (s_ClassLibrary is { } built) return built;
             lock (s_Lock)
             {
                 if (s_ClassLibrary != null) return s_ClassLibrary;
@@ -159,7 +187,9 @@ namespace Unbound
                 if (!pe.HasMetadata) return;
                 var md = pe.GetMetadataReader();
                 if (!md.IsAssembly) return;
-                var assembly = md.GetAssemblyDefinition().GetAssemblyName().FullName;
+                var assemblyName = md.GetAssemblyDefinition().GetAssemblyName();
+                var assembly = assemblyName.FullName;
+                s_MonoAssemblies.TryAdd(assembly, assemblyName);
                 foreach (var handle in md.TypeDefinitions)
                 {
                     var definition = md.GetTypeDefinition(handle);
@@ -193,6 +223,7 @@ namespace Unbound
         /// Other types (UnityEngine.CoreModule's own) are not listed.</summary>
         static Dictionary<string, string> Modules()
         {
+            if (s_Modules is { } built) return built;
             lock (s_Lock)
             {
                 if (s_Modules != null) return s_Modules;
