@@ -134,6 +134,39 @@ namespace Unbound.Tests
         }
 
         [Fact]
+        public void ARendererMovedWithinAFrameBlendsItsOcclusionAgain()
+        {
+            var saved = LightmapSettings.lightProbes;
+            var go = new GameObject("Moved occlusion");
+            var lightObject = new GameObject("Mixed light");
+            try
+            {
+                var probes = LightProbes.FromJson(JsonDocument.Parse(SparseOcclusionJson()).RootElement);
+                ProbeTetrahedralization.Build(probes.m_Self);
+                LightmapSettings.lightProbes = probes;
+                var renderer = go.AddComponent<MeshRenderer>();
+                renderer.probeAnchor = go.transform;
+                var light = lightObject.AddComponent<Light>();
+                light.bakingOutput = new LightBakingOutput
+                {
+                    isBaked = true, lightmapBakeType = LightmapBakeType.Mixed, mixedLightingMode = MixedLightingMode.Shadowmask,
+                    occlusionMaskChannel = 0, probeOcclusionLightIndex = 0,
+                };
+                // Channel 0 of the fixture is 0.25 at the origin, 0.75 at (0,1,0): blended by weight.
+                go.transform.position = new Vector3(0.25f, 0.25f, 0.25f);
+                Assert.Equal(0.25f, BakedLighting.ProbeOcclusion(renderer, light), 5);
+                go.transform.position = new Vector3(0f, 0.75f, 0f);
+                Assert.Equal(0.625f, BakedLighting.ProbeOcclusion(renderer, light), 5);
+            }
+            finally
+            {
+                LightmapSettings.lightProbes = saved;
+                UnityEngine.Object.DestroyImmediate(go);
+                UnityEngine.Object.DestroyImmediate(lightObject);
+            }
+        }
+
+        [Fact]
         public void OcclusionSlotsSharingAChannelAccumulate()
         {
             Assert.Equal(new Vector4(1f, 1f, 0.75f, 1f), ProbeSet.ProbeOcclusion(
