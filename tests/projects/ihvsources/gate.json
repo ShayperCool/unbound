@@ -1,0 +1,14 @@
+{
+  "commands": [
+    "python3 tests/projects/ihvsources/run.py gate"
+  ],
+  "summary": "ihvsources: .*",
+  "engine_paths": [
+    "crates/unbound-assets/src/texture/ihv.rs",
+    "crates/unbound-assets/src/texture.rs",
+    "crates/unbound-assets/src/new_meta.rs",
+    "crates/unbound-assets/src/new_meta/",
+    "managed/UnityEngine/Editor/IHVImageFormatImporter.cs",
+    "tests/projects/ihvsources/"
+  ]
+}

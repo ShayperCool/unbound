@@ -573,7 +573,7 @@ fn asset_kind(path: &str) -> &'static str {
         // A V2 atlas's SpriteAtlasAsset document loads like a native-format file.
         "spriteatlasv2" => "yaml",
         "png" | "jpg" | "jpeg" | "tga" | "psd" | "bmp" | "gif" | "tif" | "tiff" | "exr" | "hdr"
-        | "iff" | "pict" => "texture",
+        | "iff" | "pict" | "dds" | "ktx" | "astc" => "texture",
         "wav" | "mp3" | "ogg" | "aif" | "aiff" | "flac" | "mod" | "it" | "s3m" | "xm" => "audio",
         model if unbound_assets::model::is_model_format(model) => "model",
         "txt" | "json" | "bytes" | "xml" | "csv" | "html" | "htm" | "yaml" | "md" | "fnt" => "text",
@@ -2317,6 +2317,7 @@ fn native_importer(path: &str) -> Option<&'static str> {
             NewImporter::NativeFormat { .. } => "NativeFormatImporter",
             NewImporter::Prefab => "PrefabImporter",
             NewImporter::Texture => "TextureImporter",
+            NewImporter::IhvImage => "IHVImageFormatImporter",
             NewImporter::Model => "ModelImporter",
             NewImporter::Audio => "AudioImporter",
             NewImporter::Font => "TrueTypeFontImporter",
@@ -2340,7 +2341,7 @@ fn native_importer(path: &str) -> Option<&'static str> {
 #[rustfmt::skip]
 const DOCUMENTED_NATIVE_EXTENSIONS: &[&str] = &[
     "c4d", "jas", "lxo", "ma", "mb", "max", "skp", "spm", "asf", "avi", "dv", "m4v", "mov", "mp4",
-    "mpg", "mpeg", "ogv", "vp8", "webm", "wmv", "astc", "dds", "ktx", "pvr", "blendtree",
+    "mpg", "mpeg", "ogv", "vp8", "webm", "wmv", "pvr", "blendtree",
     "buildreport", "colors", "curves", "curvesnormalized", "gradients", "ht", "mesh",
     "particlecurves", "particlecurvessigned", "particledoublecurves", "particledoublecurvessigned",
     "state", "statemachine", "texture2d", "transition", "webcamtexture", "cg", "po", "boo", "js",
@@ -2914,6 +2915,7 @@ fn importer_of_path(path: &str) -> Option<&'static str> {
         "png" | "jpg" | "jpeg" | "tga" | "psd" | "tif" | "tiff" | "gif" | "bmp" | "exr" | "hdr" => {
             "TextureImporter"
         }
+        "dds" | "ktx" | "astc" => "IHVImageFormatImporter",
         "fbx" | "obj" | "dae" | "3ds" | "dxf" | "blend" => "ModelImporter",
         "st" => "SpeedTreeImporter",
         "wav" | "mp3" | "ogg" | "aif" | "aiff" | "mod" | "it" | "s3m" | "xm" => "AudioImporter",

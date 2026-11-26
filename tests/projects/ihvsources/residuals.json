@@ -1,0 +1,12 @@
+{
+ "A DDS file of BC6H blocks imports in the Editor with raw data that is all 0xCD (not its blocks); Unbound keeps the file's blocks": [
+  "raw/BC6H.dds",
+  "readable_raw/BC6H.dds"
+ ],
+ "An uncompressed (32-bit BGRA) DDS imports as ARGB32 (graphicsFormat 88) holding ARGB bytes; Unbound reports ARGB32 but keeps RGBA32 storage (graphicsFormat R8G8B8A8_UNorm, RGBA bytes)": [
+  "asset/RGBA8.dds",
+  "raw/RGBA8.dds",
+  "readable_asset/RGBA8.dds",
+  "readable_raw/RGBA8.dds"
+ ]
+}

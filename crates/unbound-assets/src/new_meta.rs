@@ -40,6 +40,8 @@ pub enum NewImporter {
     },
     Prefab,
     Texture,
+    /// A DDS, KTX or ASTC file: the IHVImageFormatImporter at its defaults (tests/projects/ihvsources meta.*).
+    IhvImage,
     Model,
     Audio,
     Font,
@@ -94,6 +96,7 @@ pub fn importer_for(path: &Path, is_dir: bool) -> Option<NewImporter> {
         "prefab" => NewImporter::Prefab,
         "png" | "jpg" | "jpeg" | "tga" | "psd" | "exr" | "hdr" | "tif" | "tiff" | "bmp" | "gif"
         | "iff" | "pict" | "pic" | "pct" => NewImporter::Texture,
+        "dds" | "ktx" | "astc" => NewImporter::IhvImage,
         "fbx" | "obj" | "dae" | "3ds" | "dxf" | "blend" => NewImporter::Model,
         "wav" | "ogg" | "mp3" | "aif" | "aiff" | "flac" | "mod" | "it" | "s3m" | "xm" => {
             NewImporter::Audio
@@ -361,6 +364,7 @@ pub fn text(importer: NewImporter, guid: Guid, asset: &Path, context: &MetaConte
                 section
             });
         }
+        NewImporter::IhvImage => out.push_str(include_str!("new_meta/ihv_image_format_importer.yaml")),
         NewImporter::Model => out.push_str(include_str!("new_meta/model_importer.yaml")),
         NewImporter::Audio => out.push_str(include_str!("new_meta/audio_importer.yaml")),
         NewImporter::Font => {

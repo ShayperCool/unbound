@@ -15,9 +15,16 @@ What it shows (Unity 6000.0.71f1, two identical macOS batch captures): these fil
 `IHVImageFormatImporter` (its `.meta` section: `textureSettings` of version 2, `isReadable`,
 `sRGBTexture`, streaming and mipmap-limit settings) into a `Texture2D`, or a `Cubemap` for a DDS
 cube, of the file's own block format and mip chain, the Editor's raw data available even when the
-importer is not readable.
+importer is not readable. A DDS file's BC1, BC3, BC4 and BC5 blocks and texels are turned upside
+down to the Editor's bottom-up rows (a level of one block's height left as it is, a shorter one's
+rows reversed within the block); BC7, KTX and ASTC data is kept as in the file; 32-bit BGRA texels
+become ARGB32.
+
+`residuals.json` names the open differences: a BC6H DDS's raw data (the Editor's is a fill) and the
+uncompressed DDS's ARGB32 storage.
 
 Record and gate:
 
     python3 tests/projects/ihvsources/run.py record --label A   # also B; macOS batch is fine
     python3 tests/projects/ihvsources/run.py publish A B
+    python3 tests/projects/ihvsources/run.py gate
