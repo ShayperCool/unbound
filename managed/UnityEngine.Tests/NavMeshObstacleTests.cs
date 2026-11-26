@@ -429,12 +429,13 @@ namespace UnityEngine.Tests
         }
 
         [Theory]
-        // Unbound's choice (unmeasured): a lying capsule out of the agent's height meets it with
-        // its radius cut by the height between, as an upright capsule's cap: sunk 0.1 m below the
-        // feet it still pushes, 0.6 m above the head (more than its radius) it does not.
+        // Unbound's choice (unmeasured): a lying capsule whose shaft is not wholly within the
+        // agent's height is met as before the measurement, the circle of its radius at its center,
+        // when its height reaches the agent's: sunk 0.1 m below the feet it pushes to the two radii
+        // from the center, 0.6 m above the head (beyond its radius) it does not push.
         [InlineData(-0.1f, true)]
         [InlineData(0.6f, false)]
-        public void ALyingCapsuleOutOfTheAgentsHeightMeetsItWithItsRadiusCut(float gap, bool pushes)
+        public void ALyingCapsuleOutOfTheAgentsHeightIsMetAtItsCenter(float gap, bool pushes)
         {
             using var release = TestRelease.Pin(TestRelease.Measured);
             var standing = new GameObject("agent");
@@ -453,9 +454,35 @@ namespace UnityEngine.Tests
             obstacle.height = 3f;
             obstacle.carving = false;
             for (int i = 0; i < 20; i++) Step();
-            float expected = pushes ? agent.radius + Mathf.Sqrt(0.25f - gap * gap) : 0.6f;
-            Assert.True(Mathf.Abs(agent.nextPosition.z - expected) < 2e-3f && Mathf.Abs(agent.nextPosition.x - 0.3f) < 2e-3f,
-                $"expected z {expected}, at {agent.nextPosition}");
+            var flat = new Vector2(agent.nextPosition.x, agent.nextPosition.z);
+            var start = new Vector2(0.3f, 0.6f);
+            if (pushes) Assert.True(Mathf.Abs(flat.magnitude - 1f) < 2e-3f, $"pushed to {agent.nextPosition}");
+            else Assert.True((flat - start).magnitude < 2e-3f, $"moved to {agent.nextPosition}");
+        }
+
+        [Fact]
+        public void ASteepCapsuleReachingAboveTheAgentIsMetAtItsCenter()
+        {
+            // A pole tilted 30 degrees from upright, radius 0.5, height 6, its center 1 m up: the
+            // shaft reaches above the agent's head, so the agent meets the circle at its center
+            // (Unbound's choice, unmeasured).
+            using var release = TestRelease.Pin(TestRelease.Measured);
+            var standing = new GameObject("agent");
+            m_Objects.Add(standing);
+            standing.transform.position = new Vector3(-0.9f, 0f, 0f);
+            var agent = standing.AddComponent<NavMeshAgent>();
+            var go = new GameObject("obstacle");
+            m_Objects.Add(go);
+            go.transform.position = new Vector3(0f, agent.nextPosition.y + 1f, 0f);
+            go.transform.rotation = Quaternion.Euler(0f, 0f, 30f);
+            var obstacle = go.AddComponent<NavMeshObstacle>();
+            obstacle.shape = NavMeshObstacleShape.Capsule;
+            obstacle.radius = 0.5f;
+            obstacle.height = 6f;
+            obstacle.carving = false;
+            for (int i = 0; i < 20; i++) Step();
+            Assert.True(Mathf.Abs(new Vector2(agent.nextPosition.x, agent.nextPosition.z).magnitude - 1f) < 2e-3f,
+                $"pushed to {agent.nextPosition}");
         }
 
         [Fact]
