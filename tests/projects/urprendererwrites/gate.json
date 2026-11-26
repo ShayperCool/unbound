@@ -1,0 +1,16 @@
+{
+  "commands": [
+    "python3 tests/projects/urprendererwrites/run.py check"
+  ],
+  "summary": "urprendererwrites: \\d+/\\d+ rows match; \\d+ differ; \\d+ known residuals",
+  "engine_paths": [
+    "managed/UnityEngine/Core/ScriptableObject.cs",
+    "managed/UnityEngine/Editor/AssetFiles.cs",
+    "managed/UnityEngine/Editor/EditorState.cs",
+    "managed/UnityEngine/Runtime/Loading.cs",
+    "managed/UnityEngine/Runtime/Messages.cs",
+    "managed/UnityEngine/Runtime/PlayerLoopDriver.cs",
+    "tests/file_writes.py",
+    "tests/projects/urprendererwrites/"
+  ]
+}
