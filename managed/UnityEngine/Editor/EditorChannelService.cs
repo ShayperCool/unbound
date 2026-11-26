@@ -244,17 +244,20 @@ namespace UnityEditor
     /// in Play mode (tests/projects/editorlocalization, the windowed Linux Editor with clean
     /// preferences; tests/projects/editorchannels in batch mode): English, the only language
     /// installed; every string its own translation; each language's culture code. Localization is
-    /// enabled when the machine's EditorPrefs say so (`Editor.kEnableEditorLocalization`: absent or 0
-    /// gives false, 1 true, windowed and batch alike, measured with private preferences); Unbound
-    /// answers the value without the key (false; true on macOS, its batch Editor's answer) and does
-    /// not read the preference, which packages write themselves (the tutorial framework turns it on).
+    /// enabled when the EditorPrefs say so (`Editor.kEnableEditorLocalization`: absent or 0 gives
+    /// false, 1 true, windowed and batch alike: tests/projects/editorlocalization profiles), read
+    /// once: a later write of the preference does not change it, and the setter changes it without
+    /// writing the preference (afterPrefWrite, afterSet). Without the key macOS answers true (its
+    /// batch Editor's answer, tests/projects/editorchannels metal). Packages write the preference
+    /// themselves (the tutorial framework turns it on). Unmeasured: the preference written in Play
+    /// mode before the first read (Unbound reads it then; the Editor presumably at its start).
     /// Installed language packs (.po files in the installation's Localization folder) are not read: a
     /// notice says so. Unmeasured: macOS's languages, null strings, the setters' effects beyond the
     /// value read back, context groups set by code, GetLocalizedStringWithGroupNameInLang.</summary>
     internal partial class LocalizationDatabase
     {
         static SystemLanguage s_EditorLanguage = SystemLanguage.English;
-        static bool s_EnableEditorLocalization = OperatingSystem.IsMacOS();
+        static bool s_EnableEditorLocalization;
 
         static readonly Dictionary<SystemLanguage, string> s_Cultures = new Dictionary<SystemLanguage, string>
         {
@@ -303,7 +306,7 @@ namespace UnityEditor
             [SystemLanguage.Hindi] = "hi",
         };
 
-        static bool s_PacksChecked, s_PreferenceChecked, s_EnableSet;
+        static bool s_PacksChecked, s_EnableKnown;
 
         /// <summary>Gives a notice once when the installation holds language packs (`.po` files in
         /// its Localization folder), which Unbound does not read; L10n's translations check too.</summary>
@@ -341,14 +344,10 @@ namespace UnityEditor
             get
             {
                 if (!Measured(nameof(enableEditorLocalization))) return false;
-                // The Editor answers the machine's preference, which Unbound does not follow: say so
-                // when the preferences hold another value (measured: tests/projects/editorlocalization).
-                if (!s_PreferenceChecked && !s_EnableSet)
+                if (!s_EnableKnown)
                 {
-                    s_PreferenceChecked = true;
-                    if (EditorPrefs.HasKey(PreferenceKey) && (EditorPrefs.GetInt(PreferenceKey, 0) != 0) != s_EnableEditorLocalization)
-                        Unbound.Runtime.Stubs.Ignored("UnityEditor.LocalizationDatabase.enableEditorLocalization",
-                            "answers " + s_EnableEditorLocalization + " where the Editor follows EditorPrefs " + PreferenceKey + " (" + EditorPrefs.GetInt(PreferenceKey, 0) + ")");
+                    s_EnableEditorLocalization = EditorPrefs.HasKey(PreferenceKey) ? EditorPrefs.GetInt(PreferenceKey, 0) != 0 : OperatingSystem.IsMacOS();
+                    s_EnableKnown = true;
                 }
                 return s_EnableEditorLocalization;
             }
@@ -356,7 +355,7 @@ namespace UnityEditor
             {
                 if (!Measured(nameof(enableEditorLocalization))) return;
                 s_EnableEditorLocalization = value;
-                s_EnableSet = true;
+                s_EnableKnown = true;
             }
         }
 

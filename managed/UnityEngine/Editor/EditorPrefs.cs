@@ -11,21 +11,29 @@ namespace UnityEditor
     /// (`~/.local/share/unity3d/prefs` on Linux, the `com.unity3d.UnityEditor5.x` preferences domain
     /// on macOS) are read; what the game changes goes to Unbound's own file
     /// (`$XDG_CACHE_HOME/unbound/EditorPrefs`), so the installed Editor's preferences are never written.
+    /// <c>UNBOUND_EDITOR_PREFS</c> names a directory that stands in for the machine's preferences
+    /// (probes, whose answers must not depend on the machine): Unity's values are read from its
+    /// <c>prefs</c> file (the Linux format, on every OS; absent: none) and the game's go to its
+    /// <c>EditorPrefs</c> file.
     /// </summary>
     public sealed partial class EditorPrefs
     {
         static Dictionary<string, object> s_Values;
         static HashSet<string> s_Deleted;
 
-        static string UnityFile => Path.Combine(Home(), ".local", "share", "unity3d", "prefs");
+        /// <summary>The directory standing in for the machine's preferences, if any.</summary>
+        static string Override => Environment.GetEnvironmentVariable("UNBOUND_EDITOR_PREFS") is { Length: > 0 } dir ? dir : null;
+
+        static string UnityFile => Override is { } dir ? Path.Combine(dir, "prefs") : Path.Combine(Home(), ".local", "share", "unity3d", "prefs");
 
         static Dictionary<string, object> ReadUnity() =>
-            OperatingSystem.IsMacOS() ? MacPreferences.Read("com.unity3d.UnityEditor5.x") : UnityPrefsXml.Read(UnityFile);
+            Override == null && OperatingSystem.IsMacOS() ? MacPreferences.Read("com.unity3d.UnityEditor5.x") : UnityPrefsXml.Read(UnityFile);
 
         static string OwnFile
         {
             get
             {
+                if (Override is { } dir) return Path.Combine(dir, "EditorPrefs");
                 var cache = Environment.GetEnvironmentVariable("XDG_CACHE_HOME");
                 if (string.IsNullOrEmpty(cache)) cache = Path.Combine(Home(), ".cache");
                 return Path.Combine(cache, "unbound", "EditorPrefs");

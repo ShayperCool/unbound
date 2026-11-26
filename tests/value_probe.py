@@ -279,8 +279,50 @@ def images(directory):
 RECORD_TIMEOUT = 900
 
 
+def editor_prefs_xml(values):
+    """A Unity prefs file (the Linux Editor's format) holding int `values` ({name: value})."""
+    lines = ['<unity_prefs version_major="1" version_minor="1">']
+    lines += [f'\t<pref name="{name}" type="int">{value}</pref>' for name, value in sorted(values.items())]
+    return '\n'.join(lines + ['</unity_prefs>', ''])
+
+
+def private_editor_prefs(out, values):
+    """The environment that makes an engine run read the EditorPrefs `values` ({name: int}) as the
+    machine's and keep its own writes beside them, in `out` (`UNBOUND_EDITOR_PREFS`), whatever
+    this machine's preferences hold."""
+    folder = out/'editor-prefs'
+    folder.mkdir(parents=True, exist_ok=True)
+    (folder/'prefs').write_text(editor_prefs_xml(values))
+    return {'UNBOUND_EDITOR_PREFS': str(folder)}
+
+
+def private_editor_home(out, values):
+    """The environment of an Editor that sees this machine's home except its Linux preferences
+    file: links to every other entry, and a prefs file holding only the int `values`
+    ({name: value}), so the Editor's answers do not depend on what the machine's preferences hold."""
+    real = Path(os.environ['HOME'])
+    home = out/'home'
+    prefs = Path('.local/share/unity3d/prefs')
+
+    def mirror(source, target, keep):
+        target.mkdir(parents=True, exist_ok=True)
+        for entry in source.iterdir():
+            path = target/entry.name
+            if keep and entry.name == keep[0]:
+                if len(keep) > 1 and entry.is_dir():
+                    mirror(entry, path, keep[1:])
+                continue
+            path.symlink_to(entry)
+
+    mirror(real, home, prefs.parts)
+    (home/prefs).parent.mkdir(parents=True, exist_ok=True)
+    (home/prefs).write_text(editor_prefs_xml(values))
+    return {'HOME': str(home)}
+
+
 def record(probe, method, variable, label, batch, timeout=RECORD_TIMEOUT, base=None, macos_batch=False, space=None, device=None,
-           *, configure=None, editor_args=()):
+           *, configure=None, editor_args=(), editor_env=None):
+    """`editor_env` (out -> dict) adds to the Editor's environment."""
     if sys.platform == 'darwin' and not (METAL or (macos_batch and batch)):
         raise SystemExit(f'{probe.name} records only with the Linux GPU Editor')
     out = run_root(probe, label)
@@ -293,7 +335,8 @@ def record(probe, method, variable, label, batch, timeout=RECORD_TIMEOUT, base=N
     capture.mkdir(parents=True)
     # On macOS arm64 editor_runner runs the macOS Editor, which draws with Metal.
     job = editor_runner.EditorJob(project, out/'editor.log', out, [*editor_args, '-executeMethod', method], batch=batch,
-        graphics=True, env={variable: str(capture)}, timeout=timeout, label=probe.name+'-'+label,
+        graphics=True, env={variable: str(capture), **(editor_env(out) if editor_env else {})}, timeout=timeout,
+        label=probe.name+'-'+label,
         vulkan=device == 'vulkan')
     print(editor_runner.summary(editor_runner.run(job)))
     problem = editor_runner.result_problem(out, gpu=True) or editor_runner.jsonl_complete()(capture)
@@ -373,7 +416,8 @@ def engine_cli():
 
 
 def gate(probe, variable, label, tolerance, engine_args, authored=None, base=None, space=None, device=None,
-         *, configure=None, profile=None, residuals_file='residuals.json'):
+         *, configure=None, profile=None, residuals_file='residuals.json', engine_env=None):
+    """`engine_env` (out -> dict) adds to the engine's environment."""
     # The limits and residuals are read first: a missing Metal counterpart stops before the run.
     known, limits = residuals(probe, residuals_file), image_limits(probe)
     out = run_root(probe, label)
@@ -389,7 +433,7 @@ def gate(probe, variable, label, tolerance, engine_args, authored=None, base=Non
     capture = out/'engine'
     capture.mkdir(parents=True)
     cli = engine_cli()
-    env = {**os.environ, variable: str(capture)}
+    env = {**os.environ, variable: str(capture), **(engine_env(out) if engine_env else {})}
     with (out/'engine.log').open('w') as log:
         code = subprocess.run([str(LAUNCHER), '--kind', 'engine-gpu', 'timeout', '600', cli, 'run', '-p', str(project),
                                '--no-watch', *engine_args, *(['--force-vulkan'] if device == 'vulkan' else [])],

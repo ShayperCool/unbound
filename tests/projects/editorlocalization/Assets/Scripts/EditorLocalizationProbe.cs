@@ -56,6 +56,20 @@ public class EditorLocalizationProbe : MonoBehaviour
         Try("MarkForTranslation", () => Call("MarkForTranslation", "Unbound text"));
         var l10n = editor.GetType("UnityEditor.L10n");
         Try("L10n.Tr.Play", () => l10n.GetMethods(Any).First(m => m.Name == "Tr" && m.GetParameters().Length == 1 && m.GetParameters()[0].ParameterType == typeof(string)).Invoke(null, new object[] { "Play" }));
+        // The preference against the setting: written by EditorPrefs, set through the property.
+        const string Key = "Editor.kEnableEditorLocalization";
+        Try("pref.before", () => UnityEditor.EditorPrefs.HasKey(Key) ? UnityEditor.EditorPrefs.GetInt(Key).ToString() : "absent");
+        bool enabled = (bool)Get("enableEditorLocalization");
+        UnityEditor.EditorPrefs.SetInt(Key, enabled ? 0 : 1);
+        Try("afterPrefWrite.enableEditorLocalization", () => Get("enableEditorLocalization"));
+        UnityEditor.EditorPrefs.SetInt(Key, enabled ? 1 : 0);
+        Try("afterPrefRestore.enableEditorLocalization", () => Get("enableEditorLocalization"));
+        Try("set", () => { db.GetProperty("enableEditorLocalization", Any).SetValue(null, !enabled); return "ok"; });
+        Try("afterSet.enableEditorLocalization", () => Get("enableEditorLocalization"));
+        Try("afterSet.pref", () => UnityEditor.EditorPrefs.HasKey(Key) ? UnityEditor.EditorPrefs.GetInt(Key).ToString() : "absent");
+        UnityEditor.EditorPrefs.SetInt(Key, enabled ? 0 : 1);
+        Try("afterSetThenPrefWrite.enableEditorLocalization", () => Get("enableEditorLocalization"));
+        db.GetProperty("enableEditorLocalization", Any).SetValue(null, enabled);
 #endif
         Add("complete", "true");
         m_Lines[m_Lines.Count - 1] = "{\"k\": \"complete\", \"v\": true}";

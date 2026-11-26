@@ -58,4 +58,11 @@
 {"k": "noLocalizationGroupName", "v": "."}
 {"k": "MarkForTranslation", "v": "Unbound text"}
 {"k": "L10n.Tr.Play", "v": "Play"}
+{"k": "pref.before", "v": "absent"}
+{"k": "afterPrefWrite.enableEditorLocalization", "v": "False"}
+{"k": "afterPrefRestore.enableEditorLocalization", "v": "False"}
+{"k": "set", "v": "ok"}
+{"k": "afterSet.enableEditorLocalization", "v": "True"}
+{"k": "afterSet.pref", "v": "0"}
+{"k": "afterSetThenPrefWrite.enableEditorLocalization", "v": "True"}
 {"k": "complete", "v": true}

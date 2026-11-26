@@ -165,14 +165,19 @@ impl CodeOptimization {
 
 /// An int EditorPref as the managed `EditorPrefs` reads it: Unbound's own file (what games
 /// changed) over what the installed Editor saved (its prefs file on Linux, the
-/// `com.unity3d.UnityEditor5.x` preferences domain on macOS).
+/// `com.unity3d.UnityEditor5.x` preferences domain on macOS), or both files of the directory
+/// `UNBOUND_EDITOR_PREFS` names instead (`EditorPrefs` over `prefs`).
 fn editor_pref_int(name: &str) -> Option<i64> {
+    let read = |file: &std::path::Path| pref_int(&std::fs::read_to_string(file).ok()?, name);
+    if let Some(dir) = std::env::var_os("UNBOUND_EDITOR_PREFS").filter(|d| !d.is_empty()) {
+        let dir = PathBuf::from(dir);
+        return read(&dir.join("EditorPrefs")).or_else(|| read(&dir.join("prefs")));
+    }
     let own = match std::env::var_os("XDG_CACHE_HOME") {
         Some(dir) => PathBuf::from(dir),
         None => crate::install::home().join(".cache"),
     }
     .join("unbound/EditorPrefs");
-    let read = |file: &std::path::Path| pref_int(&std::fs::read_to_string(file).ok()?, name);
     read(&own).or_else(|| {
         if cfg!(target_os = "macos") {
             let output = std::process::Command::new("defaults")

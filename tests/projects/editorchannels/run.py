@@ -21,17 +21,21 @@ def main():
     parser.add_argument('--label', default=f'check-{time.time_ns()}')
     args = parser.parse_args()
     # One value differs between the references (localization.enableEditorLocalization, which the
-    # machine's EditorPrefs decide; the macOS answer without the key is unmeasured): on macOS arm64
-    # the probe records, publishes and gates against the macOS Editor's reference (metal/).
+    # EditorPrefs decide; the macOS answer without the key is unmeasured): on macOS arm64 the probe
+    # records, publishes and gates against the macOS Editor's reference (metal/). The Linux Editor
+    # and the engine see EditorPrefs without the key, whatever the machine's hold.
     value_probe.METAL = value_probe.MACOS_ARM64
     if any(Path(label).name != label for label in (args.label, *args.labels)):
         parser.error('labels must be single directory names')
     if args.mode == 'record':
-        value_probe.record(PROBE, 'ImguiSkinRunner.Record', VARIABLE, args.label, batch=True, base=BASE, macos_batch=True)
+        private_home = None if value_probe.MACOS_ARM64 else (lambda out: value_probe.private_editor_home(out, {}))
+        value_probe.record(PROBE, 'ImguiSkinRunner.Record', VARIABLE, args.label, batch=True, base=BASE, macos_batch=True,
+                           editor_env=private_home)
         return 0
     if args.mode == 'publish':
         return value_probe.publish(PROBE, args.labels)
-    return value_probe.gate(PROBE, VARIABLE, args.label, 0, ['--headless', '120'], base=BASE)
+    return value_probe.gate(PROBE, VARIABLE, args.label, 0, ['--headless', '120'], base=BASE,
+                            engine_env=lambda out: value_probe.private_editor_prefs(out, {}))
 
 
 if __name__ == '__main__':
