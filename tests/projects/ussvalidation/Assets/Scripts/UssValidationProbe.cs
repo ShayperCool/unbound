@@ -39,6 +39,7 @@ namespace UssValidationProbe
             ("trans-ease", s => Join(s.transitionTimingFunction.Select(e => e.mode.ToString()))),
             ("trans-short", s => Join(s.transitionProperty.Select(p => p.ToString())) + " / " + Join(s.transitionTimingFunction.Select(e => e.mode.ToString()))),
             ("var-ok", s => F(s.width)), ("var-fallback", s => F(s.width)),
+            ("trailing-delim", s => F(s.width)), ("trailing-word", s => F(s.width)), ("trailing-open", s => F(s.width)), ("trailing-never", s => F(s.width)),
             ("unknown", s => C(s.color)), ("int-bad", s => s.unitySliceLeft.ToString(Inv)), ("num-bad", s => F(s.opacity)),
             ("font-bad", s => s.unityFontStyleAndWeight.ToString()),
             ("many-colors", s => C(s.borderTopColor) + " " + C(s.borderLeftColor)),
@@ -89,6 +90,18 @@ namespace UssValidationProbe
             var errors = Resources.Load<StyleSheet>("Errors");
             Application.logMessageReceived -= OnImportLog;
             Put("import.logs", TakeLogs());
+            // Sheets that end in text no rule takes (a stray character, a word, an unclosed block).
+            var trailing = new List<StyleSheet>();
+            foreach (var name in new[] { "TrailingDelim", "TrailingWord", "TrailingOpen" })
+            {
+                Import(name);
+                Application.logMessageReceived += OnImportLog;
+                var sheet = Resources.Load<StyleSheet>(name);
+                Application.logMessageReceived -= OnImportLog;
+                Put(name + ".import.logs", TakeLogs());
+                Put(name + ".loaded", sheet != null);
+                if (sheet != null) trailing.Add(sheet);
+            }
             Application.logMessageReceived += OnLog;
             var document = GetComponent<UIDocument>();
             var target = new RenderTexture(400, 300, 24, RenderTextureFormat.ARGB32);
@@ -100,6 +113,7 @@ namespace UssValidationProbe
             if (broken != null) root.styleSheets.Add(broken);
             Put("errors.loaded", errors != null);
             if (errors != null) root.styleSheets.Add(errors);
+            foreach (var sheet in trailing) root.styleSheets.Add(sheet);
             for (int i = 0; i < 3; i++) yield return null;
             Put("start.logs", TakeLogs());
             // One case at a time: a value the style pass throws on stops that pass.

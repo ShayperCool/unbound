@@ -25,6 +25,11 @@ What the Editor does:
   unknown color) but keeps the declaration; `inherit` and `unset` are warned about too. A unit it does not know or a variable without `--` is
   an error: the whole sheet then has no rules (`style.errors-*`), as one the parser cannot read
   (`style.broken-*`).
+- A sheet that ends in text no rule takes is imported without a message: a stray character or word
+  after the last rule (`TrailingDelim.uss`, `TrailingWord.uss`, as a package's sheet ends in `›`)
+  makes no rule, and a block the file ends in is closed by the end with its declarations
+  (`TrailingOpen.uss`: `.trailing-never` applies). Unmeasured, done alike (CSS Syntax's end-of-file
+  rules): a declaration value or an empty block the file ends in.
 - The style pass reads what was kept: a number without a unit as pixels or seconds, the first of
   too many values, a word for a length as 0 with an error, an unknown color word as clear, an
   enum or keyword it does not know as the default; a dimension for `transition-property` gives
