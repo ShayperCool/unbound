@@ -528,8 +528,6 @@ public class ResidentDrawerProbe : MonoBehaviour
         }
     }
 
-    /// <summary>The frame's motion and its scripted change, before the drawer dispatches the
-    /// frame's changes after LateUpdate.</summary>
     bool m_ControlsProfile;
     GameObject m_GroupParent;
 
@@ -553,6 +551,8 @@ public class ResidentDrawerProbe : MonoBehaviour
         }
     }
 
+    /// <summary>The frame's motion and its scripted change, before the drawer dispatches the
+    /// frame's changes after LateUpdate.</summary>
     void Step(int frame)
     {
         if (m_ControlsProfile) StepSortingGroups(frame);

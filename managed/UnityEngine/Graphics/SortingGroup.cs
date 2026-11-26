@@ -52,6 +52,8 @@ namespace UnityEngine.Rendering
             {
                 var node = pending[pending.Count - 1];
                 pending.RemoveAt(pending.Count - 1);
+                // An inactive branch's renderers change when it activates.
+                if (node.m_GameObject.m_Destroyed || !node.m_GameObject.m_IsActive) continue;
                 foreach (var component in node.m_GameObject.m_Components)
                     if (component is Renderer renderer && !renderer.m_Destroyed) renderer.Dirty();
                 pending.AddRange(node.m_Children);
