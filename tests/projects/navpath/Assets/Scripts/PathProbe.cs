@@ -1551,30 +1551,49 @@ public class PathProbe : MonoBehaviour
         ProbeLog.Value("release", Application.unityVersion);
         float floor = 1f / 15f;
         var center = new Vector3(0.11f, floor + 1f, 0.07f);
-        var shapes = new (string name, NavMeshObstacleShape shape, Vector3 size, Vector3 euler, Vector3 scale)[]
+        var shapes = new (string name, NavMeshObstacleShape shape, Vector3 size, Vector3 euler, Vector3 scale, float lift)[]
         {
-            ("box", NavMeshObstacleShape.Box, new Vector3(1f, 2f, 1f), Vector3.zero, Vector3.one),
-            ("boxlong", NavMeshObstacleShape.Box, new Vector3(3f, 2f, 1f), Vector3.zero, Vector3.one),
-            ("boxturn", NavMeshObstacleShape.Box, new Vector3(3f, 2f, 1f), new Vector3(0f, 30f, 0f), Vector3.one),
-            ("boxscaled", NavMeshObstacleShape.Box, new Vector3(1f, 2f, 1f), Vector3.zero, new Vector3(2f, 1f, 0.5f)),
-            ("boxtilt", NavMeshObstacleShape.Box, new Vector3(3f, 2f, 1f), new Vector3(0f, 0f, 30f), Vector3.one),
-            ("caplying", NavMeshObstacleShape.Capsule, new Vector3(0.5f, 3f, 0f), new Vector3(0f, 0f, 90f), Vector3.one),
-            ("captilt", NavMeshObstacleShape.Capsule, new Vector3(0.5f, 3f, 0f), new Vector3(0f, 0f, 45f), Vector3.one),
-            ("captiltx", NavMeshObstacleShape.Capsule, new Vector3(0.5f, 3f, 0f), new Vector3(45f, 0f, 0f), Vector3.one),
-            ("boxbig", NavMeshObstacleShape.Box, new Vector3(4f, 2f, 4f), Vector3.zero, Vector3.one),
-            ("boxtilt1", NavMeshObstacleShape.Box, new Vector3(3f, 2f, 1f), new Vector3(0f, 0f, 1f), Vector3.one),
-            ("boxtilt10", NavMeshObstacleShape.Box, new Vector3(3f, 2f, 1f), new Vector3(0f, 0f, 10f), Vector3.one),
-            ("boxtiltx", NavMeshObstacleShape.Box, new Vector3(3f, 2f, 1f), new Vector3(30f, 0f, 0f), Vector3.one),
+            ("box", NavMeshObstacleShape.Box, new Vector3(1f, 2f, 1f), Vector3.zero, Vector3.one, 0f),
+            ("boxlong", NavMeshObstacleShape.Box, new Vector3(3f, 2f, 1f), Vector3.zero, Vector3.one, 0f),
+            ("boxturn", NavMeshObstacleShape.Box, new Vector3(3f, 2f, 1f), new Vector3(0f, 30f, 0f), Vector3.one, 0f),
+            ("boxscaled", NavMeshObstacleShape.Box, new Vector3(1f, 2f, 1f), Vector3.zero, new Vector3(2f, 1f, 0.5f), 0f),
+            ("boxtilt", NavMeshObstacleShape.Box, new Vector3(3f, 2f, 1f), new Vector3(0f, 0f, 30f), Vector3.one, 0f),
+            ("caplying", NavMeshObstacleShape.Capsule, new Vector3(0.5f, 3f, 0f), new Vector3(0f, 0f, 90f), Vector3.one, 0f),
+            ("captilt", NavMeshObstacleShape.Capsule, new Vector3(0.5f, 3f, 0f), new Vector3(0f, 0f, 45f), Vector3.one, 0f),
+            ("captiltx", NavMeshObstacleShape.Capsule, new Vector3(0.5f, 3f, 0f), new Vector3(45f, 0f, 0f), Vector3.one, 0f),
+            ("boxbig", NavMeshObstacleShape.Box, new Vector3(4f, 2f, 4f), Vector3.zero, Vector3.one, 0f),
+            ("boxtilt1", NavMeshObstacleShape.Box, new Vector3(3f, 2f, 1f), new Vector3(0f, 0f, 1f), Vector3.one, 0f),
+            ("boxtilt10", NavMeshObstacleShape.Box, new Vector3(3f, 2f, 1f), new Vector3(0f, 0f, 10f), Vector3.one, 0f),
+            ("boxtiltx", NavMeshObstacleShape.Box, new Vector3(3f, 2f, 1f), new Vector3(30f, 0f, 0f), Vector3.one, 0f),
+            // The same 1 x 2 x 1 box sunk 0.1 m and 1 m and raised 0.5 m; a box lying as an FBX root
+            // turns it (-90 degrees about x, its 2 m side vertical), level and sunk; a 0.01 degree tilt.
+            ("boxsunk", NavMeshObstacleShape.Box, new Vector3(1f, 2f, 1f), Vector3.zero, Vector3.one, -0.1f),
+            ("boxfloor", NavMeshObstacleShape.Box, new Vector3(1f, 2f, 1f), Vector3.zero, Vector3.one, -1f),
+            ("boxraised", NavMeshObstacleShape.Box, new Vector3(1f, 2f, 1f), Vector3.zero, Vector3.one, 0.5f),
+            ("boxfbx", NavMeshObstacleShape.Box, new Vector3(1f, 1f, 2f), new Vector3(-90f, 0f, 0f), Vector3.one, 0f),
+            ("boxfbxsunk", NavMeshObstacleShape.Box, new Vector3(1f, 1f, 2f), new Vector3(-90f, 0f, 0f), Vector3.one, -0.1f),
+            ("boxtilt001", NavMeshObstacleShape.Box, new Vector3(3f, 2f, 1f), new Vector3(0f, 0f, 0.01f), Vector3.one, 0f),
+            // Boxes against the agent's height span (its feet at the floor, its head 2 m up):
+            // inside it (also turned, turned as an FBX root, tilted), over its head, over its feet,
+            // over both, above it.
+            ("boxinside", NavMeshObstacleShape.Box, new Vector3(1f, 1f, 1f), Vector3.zero, Vector3.one, 0f),
+            ("boxinsideturn", NavMeshObstacleShape.Box, new Vector3(1f, 1f, 1f), new Vector3(0f, 30f, 0f), Vector3.one, 0f),
+            ("boxinsidefbx", NavMeshObstacleShape.Box, new Vector3(1f, 1f, 1f), new Vector3(-90f, 0f, 0f), Vector3.one, 0f),
+            ("boxinsidetilt", NavMeshObstacleShape.Box, new Vector3(1f, 1f, 1f), new Vector3(0f, 0f, 30f), Vector3.one, 0f),
+            ("boxhead", NavMeshObstacleShape.Box, new Vector3(1f, 1.5f, 1f), Vector3.zero, Vector3.one, 1.25f),
+            ("boxfeet", NavMeshObstacleShape.Box, new Vector3(1f, 1f, 1f), Vector3.zero, Vector3.one, -1f),
+            ("boxtall", NavMeshObstacleShape.Box, new Vector3(1f, 4f, 1f), Vector3.zero, Vector3.one, 0f),
+            ("boxabove", NavMeshObstacleShape.Box, new Vector3(1f, 1f, 1f), Vector3.zero, Vector3.one, 2f),
         };
         var starts = new[]
         {
             new Vector2(0f, 0f), new Vector2(-0.25f, 0.1f), new Vector2(0.6f, -0.2f),
             new Vector2(1.2f, 0.45f), new Vector2(1.7f, 0.8f), new Vector2(0.3f, 0.95f),
         };
-        GameObject Place((string name, NavMeshObstacleShape shape, Vector3 size, Vector3 euler, Vector3 scale) s)
+        GameObject Place((string name, NavMeshObstacleShape shape, Vector3 size, Vector3 euler, Vector3 scale, float lift) s)
         {
             var post = new GameObject(s.name);
-            post.transform.position = center;
+            post.transform.position = center + new Vector3(0f, s.lift, 0f);
             post.transform.rotation = Quaternion.Euler(s.euler);
             post.transform.localScale = s.scale;
             var obstacle = post.AddComponent<NavMeshObstacle>();
@@ -1628,10 +1647,19 @@ public class PathProbe : MonoBehaviour
                 yield return null;
             }
         }
-        // A box (1 x 2 x 1) crossing the agent's lane at 1 m/s, moved by its transform each frame.
+        // A box (1 x 2 x 1) crossing the agent's lane at 1 m/s, moved by its transform each frame;
+        // then the same box carving only while it stands still.
+        foreach (var (key, carving, lift) in new[] { ("steer.boxmoving", false, 0f), ("steer.boxcarvemoving", true, 0f),
+                     ("steer.boxmovingsunk", false, -0.1f), ("steer.boxcarvemovingsunk", true, -0.1f) })
         {
             var post = Place(shapes[0]);
-            post.transform.position = center + new Vector3(0f, 0f, 2f);
+            if (carving)
+            {
+                var carver = post.GetComponent<NavMeshObstacle>();
+                carver.carving = true;
+                carver.carveOnlyStationary = true;
+            }
+            post.transform.position = center + new Vector3(0f, lift, 2f);
             yield return null;
             var mover = new GameObject("mover");
             mover.transform.position = new Vector3(center.x - 4f, floor, center.z);
@@ -1642,8 +1670,8 @@ public class PathProbe : MonoBehaviour
                 post.transform.position += new Vector3(0f, 0f, -1f) * Time.deltaTime;
                 yield return null;
                 if (frame % 5 != 0) continue;
-                ProbeLog.Value("steer.boxmoving.f" + frame + ".at", agent.nextPosition);
-                ProbeLog.Value("steer.boxmoving.f" + frame + ".velocity", agent.velocity);
+                ProbeLog.Value(key + ".f" + frame + ".at", agent.nextPosition);
+                ProbeLog.Value(key + ".f" + frame + ".velocity", agent.velocity);
             }
             Destroy(mover);
             Destroy(post);
