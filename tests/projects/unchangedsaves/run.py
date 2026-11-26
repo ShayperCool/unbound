@@ -6,10 +6,10 @@
     run.py publish L1 L2         # two identical captures -> Reference/
     run.py check                 # Unbound on a fresh copy against the reference
 
-Each capture opens one fresh copy of the project three times, keeping what the opens leave (the
+Each capture opens one fresh copy of the project four times, keeping what the opens leave (the
 Editor's Library/, Unbound's project directory): `open1` with nothing imported yet, `open2` with
 nothing changed (both make the cases), `open3` with nothing changed that does nothing (it plays and
-leaves). Before each open every file of the project gets one old modification time. The rows: for
+leaves), `open4` that makes the cases, leaves Play mode and exits the Editor in Edit mode. Before each open every file of the project gets one old modification time. The rows: for
 every file of the project after the open, whether its time is still that one (`<open>.time.<path>`:
 `kept`, `new`, `<removed>`) and its content (`<open>.exit.<path>`, tests/file_writes.py); the
 probe's dirtiness lines, the dispatches listing its assets (the imports of the files saved) and the
@@ -35,9 +35,11 @@ WORK = run_root(ROOT, 'runs')
 HEAVY = Path.home()/'.cache/compat/with-heavy-job'
 OUT = 'values.jsonl'
 VARIABLE = 'UNCHANGEDSAVES_OUT'
-OPENS = ('open1', 'open2', 'open3')
-# The third open changes nothing: it plays and leaves.
+OPENS = ('open1', 'open2', 'open3', 'open4')
+# The third open changes nothing: it plays and leaves. The fourth makes the cases, leaves Play mode
+# and exits the Editor in Edit mode.
 NOOP = {'open3'}
+LEAVE = {'open4'}
 # The time every file holds before an open (2020-09-13): a write gives a later one.
 STAMP = 1_600_000_000
 CRLF = 'Assets/P/Crlf.mat'
@@ -100,7 +102,8 @@ def capture(label, run_open):
         stamp(project)
         before = files(project)
         raw = out/f'{name}.txt'
-        code = run_open(project, out, name, {VARIABLE: str(raw), 'UNCHANGEDSAVES_NOOP': '1' if name in NOOP else '0'})
+        code = run_open(project, out, name, {VARIABLE: str(raw), 'UNCHANGEDSAVES_NOOP': '1' if name in NOOP else '0',
+                                           'UNCHANGEDSAVES_LEAVE': '1' if name in LEAVE else '0'})
         failed |= code != 0
         print(label, name, 'exit', code)
         for row in line_rows(raw) + time_rows(project, before.keys()) + exit_rows(project, before):

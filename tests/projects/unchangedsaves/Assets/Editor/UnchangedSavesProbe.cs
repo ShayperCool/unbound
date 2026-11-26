@@ -9,7 +9,7 @@ using UnityEngine;
 /// Which saves write a file whose text would not change (see README.md). Every open plays a few
 /// frames: frame 2 makes the SaveAssets cases and saves, frame 3 the SaveAssetIfDirty case, frame 4
 /// leaves the exit cases dirty, frame 6 leaves the Editor (a no-op open, UNCHANGEDSAVES_NOOP=1, only
-/// plays and leaves). At the first open the start's
+/// plays and leaves; with UNCHANGEDSAVES_LEAVE=1 it leaves Play mode first and exits in Edit mode). At the first open the start's
 /// OnPostprocessAllAssets marks the first-open cases. Lines go to the file UNCHANGEDSAVES_OUT
 /// names; run.py turns them and the files' times into rows. The Editor's capture runs
 /// <c>-executeMethod UnchangedSavesProbe.Record</c>, which enters Play mode, as `unbound run` plays
@@ -23,6 +23,8 @@ static class UnchangedSavesProbe
     internal static bool Recording => !string.IsNullOrEmpty(Out);
     /// <summary>A session that changes nothing: it plays and leaves.</summary>
     internal static bool NoOp => Environment.GetEnvironmentVariable("UNCHANGEDSAVES_NOOP") == "1";
+    /// <summary>A session that leaves Play mode first and exits the Editor in Edit mode.</summary>
+    internal static bool LeavesPlayMode => Environment.GetEnvironmentVariable("UNCHANGEDSAVES_LEAVE") == "1";
 
     internal static void Line(params string[] fields)
     {
@@ -141,7 +143,8 @@ static class UnchangedSavesFrames
                 case 4: UnchangedSavesProbe.ExitCases(); break;
                 case 6:
                     UnchangedSavesProbe.Line("exit");
-                    EditorApplication.Exit(0);
+                    if (UnchangedSavesProbe.LeavesPlayMode) EditorApplication.ExitPlaymode();
+                    else EditorApplication.Exit(0);
                     break;
             }
         };
@@ -149,7 +152,13 @@ static class UnchangedSavesFrames
         Application.quitting += () => UnchangedSavesProbe.Line("appquitting", UnchangedSavesProbe.State());
         Application.unloading += () => UnchangedSavesProbe.Line("unloading", UnchangedSavesProbe.State());
         EditorApplication.quitting += () => UnchangedSavesProbe.Line("quitting", UnchangedSavesProbe.State());
-        EditorApplication.playModeStateChanged += change => UnchangedSavesProbe.Line("playmode", change.ToString());
+        EditorApplication.playModeStateChanged += change =>
+        {
+            UnchangedSavesProbe.Line("playmode", change.ToString());
+            // Back in Edit mode, the Editor exits with the exit cases still dirty.
+            if (change == PlayModeStateChange.EnteredEditMode && UnchangedSavesProbe.Recording && UnchangedSavesProbe.LeavesPlayMode)
+                EditorApplication.Exit(0);
+        };
     }
 }
 

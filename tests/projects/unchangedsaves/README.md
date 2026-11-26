@@ -27,10 +27,12 @@ callbacks after the probe asks the Editor to leave (`leaving`: `Application.quit
 `Application.unloading`, `EditorApplication.quitting`, Play mode state changes,
 `OnApplicationQuit`, dispatches).
 
-`run.py` opens one copy of the project three times (the Editor with `-executeMethod
+`run.py` opens one copy of the project four times (the Editor with `-executeMethod
 UnchangedSavesProbe.Record`, which enters Play mode; `unbound run`): `open1` with nothing imported,
 `open2` with nothing changed, `open3` with nothing changed that does nothing (`UNCHANGEDSAVES_NOOP=1`:
-it plays and leaves). Before each open every file of the project's `Assets/`, `Packages/` and
+it plays and leaves), `open4` that makes the cases, then leaves Play mode at frame 6
+(`EditorApplication.ExitPlaymode`, `UNCHANGEDSAVES_LEAVE=1`) and calls `EditorApplication.Exit` back
+in Edit mode. Before each open every file of the project's `Assets/`, `Packages/` and
 `ProjectSettings/` gets one old modification time; after it each file's time is recorded
 (`<open>.time.<path>`: `kept` or `written`) with its content (`<open>.exit.<path>`,
 `tests/file_writes.py`).
@@ -44,9 +46,12 @@ as it is). A CRLF file is written with LF. A session that changes nothing writes
 (`open3`), settings and the package lock included. The Editor's exit with Play mode on raises
 `EditorApplication.quitting` (Play mode still on) and then reports its save to
 `OnPostprocessAllAssets` in one call; it raises no `Application.quitting`, no
-`Application.unloading`, no `OnApplicationQuit` and no Play mode state change.
+`OnApplicationQuit` and no Play mode state change. Leaving Play mode raises ExitingPlayMode,
+`OnApplicationQuit`, `Application.quitting` (with `isPlayingOrWillChangePlaymode` already false)
+and EnteredEditMode; the exit in Edit mode then raises `EditorApplication.quitting` and reports its
+save in one call, in Edit mode. No end raises `Application.unloading`.
 
-Unmeasured: the exit's save after the session left Play mode (in Edit mode); other asset kinds.
+Unmeasured: other asset kinds.
 
 Create (once), record, publish and check:
 
