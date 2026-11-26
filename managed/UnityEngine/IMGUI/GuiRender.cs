@@ -667,8 +667,11 @@ namespace Unbound.Runtime
     /// Runs OnGUI as Unity does: each of the frame's input events (each preceded by Layout) at
     /// PreUpdate, from the lowest GUI.depth up, an event a behaviour uses reaching the rest as
     /// <c>Used</c> (the order of input events across behaviours is unmeasured); after the scene
-    /// renders, every behaviour's Layout from the lowest GUI.depth up, then their Repaints in the
-    /// reverse order (ties of equal depth reversed too: measured). Its draws go on top of the frame.
+    /// renders, every behaviour's Layout in the order the behaviours were enabled, whatever their
+    /// depths, then their Repaints in the reverse order, the higher depth first (a lower depth
+    /// draws on top). Each call starts with GUI.depth 1 and leaves 1 behind; the depth a call ends
+    /// with is its behaviour's (measured: tests/projects/guidepth, tests/projects/imguicontrolids
+    /// order). Its draws go on top of the frame.
     /// </summary>
     internal sealed class GuiDispatch : FrameBuilder.IDrawSource
     {
@@ -723,19 +726,19 @@ namespace Unbound.Runtime
                 s_AtlasRebuilt = false;
                 GuiRender.Clear();
                 var repaint = new Event { type = EventType.Repaint, mousePosition = MousePosition() };
-                // Every behaviour's Layout first, front to back, then the Repaints back to front:
-                // the same order reversed, ties included (measured with two behaviours of equal
-                // GUI.depth, tests/projects/imguicontrolids order: L main, L second, R second, R main).
-                var order = Sorted(descending: false);
-                foreach (var mb in order)
+                // Every behaviour's Layout first, in their order, then the Repaints in the reverse
+                // order sorted by the depths the Layouts left, the higher first (measured:
+                // tests/projects/imguicontrolids order, L main, L second, R second, R main;
+                // tests/projects/guidepth repaints, layoutsAsUpdates).
+                foreach (var mb in s_Order)
                 {
                     LoadRepaintMatrices();
                     Layout(mb, repaint);
                 }
-                for (int i = order.Count - 1; i >= 0; i--)
+                foreach (var mb in RepaintOrder())
                 {
                     LoadRepaintMatrices();
-                    Call(order[i], repaint, layout: false);
+                    Call(mb, repaint, layout: false);
                 }
                 if (!s_AtlasRebuilt) break;
             }
@@ -771,6 +774,31 @@ namespace Unbound.Runtime
             }
         }
 
+        /// <summary>The Repaints' order: the behaviours' reversed, stably sorted by depth, the
+        /// higher first (reused buffers: it runs every frame).</summary>
+        static List<MonoBehaviour> RepaintOrder()
+        {
+            s_RepaintOrder.Clear();
+            s_RepaintPosition.Clear();
+            for (int i = s_Order.Count - 1; i >= 0; i--)
+            {
+                s_RepaintPosition[s_Order[i]] = s_RepaintOrder.Count;
+                s_RepaintOrder.Add(s_Order[i]);
+            }
+            s_RepaintOrder.Sort(s_ByDepthDescending);
+            return s_RepaintOrder;
+        }
+
+        static readonly List<MonoBehaviour> s_RepaintOrder = new List<MonoBehaviour>();
+        static readonly Dictionary<MonoBehaviour, int> s_RepaintPosition = new Dictionary<MonoBehaviour, int>(ReferenceEqualityComparer.Instance);
+        static readonly Comparison<MonoBehaviour> s_ByDepthDescending = (a, b) =>
+        {
+            int c = DepthOf(b).CompareTo(DepthOf(a));
+            return c != 0 ? c : s_RepaintPosition[a].CompareTo(s_RepaintPosition[b]);
+        };
+
+        static int DepthOf(MonoBehaviour mb) => s_Depth.TryGetValue(mb, out int depth) ? depth : GUI.DefaultDepth;
+
         static Vector2 MousePosition() => new Vector2(Input.s_MousePosition.x, Screen.height - Input.s_MousePosition.y);
 
         static List<MonoBehaviour> Sorted(bool descending)
@@ -780,8 +808,7 @@ namespace Unbound.Runtime
             for (int i = 0; i < list.Count; i++) index[list[i]] = i;
             list.Sort((a, b) =>
             {
-                s_Depth.TryGetValue(a, out int da);
-                s_Depth.TryGetValue(b, out int db);
+                int da = DepthOf(a), db = DepthOf(b);
                 int c = descending ? db.CompareTo(da) : da.CompareTo(db);
                 return c != 0 ? c : index[a].CompareTo(index[b]);
             });
@@ -797,7 +824,6 @@ namespace Unbound.Runtime
             int id = mb.GetInstanceID();
             if (layout) Layout(mb, e);
             Invoke(mb, onGui, id, e, mb.useGUILayout);
-            s_Depth[mb] = GUI.depth;
         }
 
         /// <summary>The Layout pass of a behaviour that uses GUILayout, for the event that follows
@@ -814,6 +840,7 @@ namespace Unbound.Runtime
         {
             var previous = Event.current;
             Event.current = e;
+            GUI.depth = GUI.DefaultDepth;
             GUIUtility.BeginGUI(0, id, useLayout ? 1 : 0);
             try
             {
@@ -831,6 +858,9 @@ namespace Unbound.Runtime
             finally
             {
                 Event.current = previous;
+                // The behaviour's depth is what its call leaves; outside OnGUI it reads 1 again.
+                s_Depth[mb] = GUI.depth;
+                GUI.depth = GUI.DefaultDepth;
             }
         }
     }

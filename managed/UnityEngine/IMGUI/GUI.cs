@@ -75,7 +75,11 @@ namespace UnityEngine
         static Color s_ContentColor = Color.white;
         static bool s_Changed;
         static bool s_Enabled = true;
-        static int s_Depth;
+        /// <summary>GUI.depth: 1 outside OnGUI and as each OnGUI call starts (matches the Unity
+        /// 6000.0.71f1 Editor, tests/projects/guidepth; <see cref="GuiDispatch"/> keeps what a
+        /// call leaves).</summary>
+        internal const int DefaultDepth = 1;
+        static int s_Depth = DefaultDepth;
         static GUISkin s_Skin;
         static string s_Tooltip = "";
         static string s_MouseTooltip = "";

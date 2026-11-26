@@ -1,6 +1,1 @@
-{
-  "GUI.depth reads 1 outside OnGUI in the Editor (before the first pass and between passes); Unbound's GUI.depth starts at 0 and is one global value scripts set (what OnGUI reads when no script set it is unmeasured): a row for the IMGUI owner": [
-    "start.depth",
-    "between.depth"
-  ]
-}
+{}

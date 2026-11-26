@@ -12,7 +12,7 @@ the controls, `GUILayout`, groups and `GUI.skin.label.CalcSize` (through `GUI.sk
 functions from inside OnGUI.`; `Event.current` is null; `GUI.color`, `enabled` and `matrix` keep
 their defaults; `GetControlID` gives an id; `hotControl` is 0.
 
-Known residual (`residuals.json`): `GUI.depth` reads 1 in the Editor, 0 in Unbound.
+`GUI.depth` reads 1 there (see tests/projects/guidepth).
 
     python3 tests/projects/guioutside/run.py record --label A   # windowed Editor capture
     python3 tests/projects/guioutside/run.py publish A B        # two identical captures

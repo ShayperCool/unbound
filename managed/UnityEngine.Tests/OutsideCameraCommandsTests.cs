@@ -212,14 +212,61 @@ namespace Unbound.Tests
             }
         }
 
+        static readonly System.Collections.Generic.List<string> s_Entries = new System.Collections.Generic.List<string>();
+
+        sealed class DepthGui : MonoBehaviour
+        {
+            internal string Tag;
+            internal int? Set;
+            void OnGUI()
+            {
+                s_Entries.Add(Tag + ":" + GUI.depth);
+                if (Set.HasValue) GUI.depth = Set.Value;
+                s_Passes.Add((Event.current.type == EventType.Layout ? "L " : "R ") + Tag);
+            }
+        }
+
+        /// <summary>Every OnGUI call starts at GUI.depth 1 and 1 is left after it, whatever was set
+        /// before; the Layouts keep the behaviours' order whatever their depths, and the depth a
+        /// behaviour's Layout leaves orders the Repaints, the higher first (tests/projects/guidepth).</summary>
+        [Fact]
+        public void OnGuiCallsStartAtDepthOneAndTheLowerDepthRepaintsLast()
+        {
+            var go = new GameObject("gui depth");
+            try
+            {
+                var x = go.AddComponent<DepthGui>();
+                var y = go.AddComponent<DepthGui>();
+                (x.Tag, y.Tag, y.Set) = ("x", "y", -3);
+                GUI.depth = 7;
+                RunGuiFrame();
+                Assert.Equal(new[] { "L x", "L y", "R x", "R y" }, s_Passes);
+                Assert.All(s_Entries, entry => Assert.EndsWith(":1", entry));
+                Assert.Equal(GUI.DefaultDepth, GUI.depth);
+                // Without the set the depths tie: the Repaints reverse the Layouts.
+                y.Set = null;
+                s_Passes.Clear();
+                RunGuiFrame();
+                Assert.Equal(new[] { "L x", "L y", "R y", "R x" }, s_Passes);
+            }
+            finally
+            {
+                GUI.depth = GUI.DefaultDepth;
+                s_Passes.Clear();
+                s_Entries.Clear();
+                GuiRender.Clear();
+                UnityEngine.Object.DestroyImmediate(go);
+            }
+        }
+
         static void RunGuiFrame() =>
             typeof(GuiDispatch).GetMethod("RunFrame", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static).Invoke(null, null);
 
-        /// <summary>A Repaint runs every behaviour's Layout, then the Repaints in the reverse order
-        /// (measured for equal depths: tests/projects/imguicontrolids order). Not measured, the
-        /// engine's own choices kept from before: the Layouts across depths from the lowest up (the
-        /// Repaints highest first, as before), and a behaviour another disables during its Layout
-        /// still getting its own Layout and Repaint as a pair.</summary>
+        /// <summary>A Repaint runs every behaviour's Layout, then the Repaints in the reverse order,
+        /// the higher depth first (measured: tests/projects/imguicontrolids order,
+        /// tests/projects/guidepth). Not measured, the engine's own choice kept from before: a
+        /// behaviour another disables during its Layout still getting its own Layout and Repaint
+        /// as a pair.</summary>
         [Fact]
         public void OnGuiRepaintRunsTheLayoutsThenTheRepaintsInReverse()
         {
@@ -243,7 +290,7 @@ namespace Unbound.Tests
             }
             finally
             {
-                GUI.depth = 0;
+                GUI.depth = GUI.DefaultDepth;
                 s_Passes.Clear();
                 GuiRender.Clear();
                 UnityEngine.Object.DestroyImmediate(go);
