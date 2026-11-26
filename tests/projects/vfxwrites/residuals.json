@@ -1,5 +1,0 @@
-{
- "VisualEffectAssetEditorUtility.CreateNewAsset writes the graph file and imports it; the Editor's import writes its .meta (a VisualEffectImporter with an empty template) at once, Unbound's new-.meta writer has no VisualEffectImporter layout and writes none (follow-up, docs/COMPATIBILITY_GAPS.md graph writes row)": [
-  "create/meta"
- ]
-}

@@ -44,6 +44,8 @@ pub enum NewImporter {
     Audio,
     Font,
     SpriteAtlas,
+    /// A Visual Effect Graph (`.vfx`): the VisualEffectImporter with an empty template.
+    VisualEffect,
     /// A SpeedTree 8 tree, with what its `.meta` takes from the file.
     SpeedTree8(crate::speedtree8_meta::TreeShape),
     /// A ScriptedImporter of the Editor's own (UI Toolkit's style sheets, documents, themes):
@@ -103,6 +105,10 @@ pub fn importer_for(path: &Path, is_dir: bool) -> Option<NewImporter> {
                 .and_then(|bytes| crate::speedtree8_meta::shape(&bytes))?,
         ),
         "spriteatlasv2" => NewImporter::SpriteAtlas,
+        // Measured for a graph the package's VisualEffectAssetEditorUtility.CreateNewAsset writes
+        // and imports (tests/projects/vfxwrites create/meta); subgraphs (.vfxoperator, .vfxblock)
+        // are not measured.
+        "vfx" => NewImporter::VisualEffect,
         "uss" => NewImporter::Scripted {
             script: STYLE_SHEET_IMPORTER,
             validation: true,
@@ -267,6 +273,9 @@ pub fn text(importer: NewImporter, guid: Guid, asset: &Path, context: &MetaConte
         NewImporter::SpriteAtlas => {
             out.push_str(include_str!("new_meta/sprite_atlas_importer.yaml"))
         }
+        NewImporter::VisualEffect => out.push_str(&format!(
+            "VisualEffectImporter:\n  externalObjects: {{}}\n  serializedVersion: 1\n  template:\n    name: \n    category: \n    description: \n    icon: {{instanceID: 0}}\n    thumbnail: {{instanceID: 0}}\n{TRAILER}"
+        )),
         NewImporter::SpeedTree8(shape) => out.push_str(&crate::speedtree8_meta::section(&shape)),
         NewImporter::Scripted { script, validation } => {
             out.push_str(&format!(
@@ -521,6 +530,23 @@ mod tests {
         );
         assert!(importer_layout("TextureImporter").is_none());
         assert!(importer_layout("TrueTypeFontImporter").is_none());
+    }
+
+    #[test]
+    fn a_new_graph_gets_the_visual_effect_importer() {
+        let context = MetaContext::default();
+        // tests/projects/vfxwrites create/meta (the Editor's text, GUID line aside).
+        assert_eq!(
+            text(
+                importer_for(Path::new("a.vfx"), false).unwrap(),
+                Guid(2),
+                Path::new("a.vfx"),
+                &context
+            ),
+            "fileFormatVersion: 2\nguid: 00000000000000000000000000000002\nVisualEffectImporter:\n  externalObjects: {}\n  serializedVersion: 1\n  template:\n    name: \n    category: \n    description: \n    icon: {instanceID: 0}\n    thumbnail: {instanceID: 0}\n  userData: \n  assetBundleName: \n  assetBundleVariant: \n"
+        );
+        assert!(importer_for(Path::new("a.vfxoperator"), false).is_none());
+        assert!(importer_for(Path::new("a.vfxblock"), false).is_none());
     }
 
     #[test]
