@@ -47,8 +47,6 @@ namespace UnityEngine
         const float CatchUp = 1.2f, LeastCatchUp = 1.1f;
         /// <summary>A phase ahead of the asset's meets it halfway.</summary>
         const float Halfway = 0.5f;
-        /// <summary>A return that would take longer (in seconds) jumps instead.</summary>
-        const float LongestReturn = 15f;
 
         static float[] Filled(float value)
         {

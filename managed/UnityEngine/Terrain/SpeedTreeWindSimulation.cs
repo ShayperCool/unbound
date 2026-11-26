@@ -27,6 +27,10 @@ namespace UnityEngine
         /// <summary>How close a local wind's parts, and its wind vector, must be to its asset's
         /// wind to count as the same.</summary>
         protected const float Close = 1e-5f, CloseSquared = Close * Close;
+        /// <summary>A local wind's return to its asset's wind that would take longer (in seconds)
+        /// jumps instead: SpeedTree 9 winds all their parts at once, SpeedTree 8 winds phase by phase
+        /// (tests/projects/speedtree9wind, tests/projects/speedtree8wind profile zones).</summary>
+        protected const float LongestReturn = 15f;
 
         /// <summary>The strength the constants and curves take (clamped to [0, 1]).</summary>
         internal float DrawnStrength => Clamp01(m_Strength);
@@ -264,8 +268,6 @@ namespace UnityEngine
         /// <summary>A local wind's noise positions converge with its asset's wind's at this many
         /// times the speed the noise drifts at.</summary>
         const float CatchUpSpeed = 4f;
-        /// <summary>A return to the asset's wind that would take longer (in seconds) jumps instead.</summary>
-        const float LongestCatchUp = 15f;
         /// <summary>Distances below this (between noise positions) take no catching up.</summary>
         const float NoDistance = 1e-6f;
 
@@ -389,7 +391,7 @@ namespace UnityEngine
         /// wind at the part's speed; this one moves straight at <see cref="CatchUpSpeed"/> times
         /// that speed to where they meet, the earliest positive meeting time (none: it jumps). A
         /// part without speed whose positions already agree takes no return. When any part's
-        /// meeting is later than <see cref="LongestCatchUp"/>, every part jumps to its meeting
+        /// meeting is later than <see cref="LongestReturn"/>, every part jumps to its meeting
         /// point. Every part counts, whether the asset's wind uses it or not.
         /// </summary>
         unsafe void StartReturn(SpeedTreeWindState asset, float now, SpeedTreeWindConfig9* c, float strength)
@@ -433,9 +435,9 @@ namespace UnityEngine
                         }
                     }
                 }
-                late |= meeting > LongestCatchUp;
+                late |= meeting > LongestReturn;
                 m_ReturnStart[part] = now;
-                m_ReturnEnd[part] = (meeting > LongestCatchUp ? 0f : meeting) + now;
+                m_ReturnEnd[part] = (meeting > LongestReturn ? 0f : meeting) + now;
                 m_ReturnTo[part] = new Vector3(drift_x * meeting + target.x, drift_y * meeting + target.y, meeting * drift_z + target.z);
                 m_ReturnFrom[part] = position;
             }
