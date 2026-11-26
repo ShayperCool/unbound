@@ -1313,6 +1313,32 @@ namespace Unbound.Runtime
             "_WINDQUALITY_BETTER", "_WINDQUALITY_FAST", "_WINDQUALITY_FASTEST", "_WINDQUALITY_NONE", "_WINDQUALITY_PALM",
         };
 
+        /// <summary>The shader property names the engine gives ids when it starts, before any
+        /// project content, in the order of their ids (matches the Unity 6000.0.71f1 Editor,
+        /// tests/projects/propertyids builtin.before_project: identical at InitializeOnLoad in
+        /// projects of other shaders). Null for a release whose order is not measured. Names the
+        /// Editor gives ids later in a session (the shaders it loads itself) are not among them, and
+        /// the ids' values (negative for some, one shared by two names) are not modelled: only their
+        /// order.</summary>
+        internal static string[] EnginePropertyNames => RenderingMeasured ? s_EnginePropertyNames6000_0 ??= ReadEnginePropertyNames("6000.0") : null;
+
+        static string[] s_EnginePropertyNames6000_0;
+
+        static string[] ReadEnginePropertyNames(string family)
+        {
+            using var stream = typeof(Compat).Assembly.GetManifestResourceStream("Unbound.property-ids-" + family + ".jsonl")
+                ?? throw new InvalidOperationException($"Unbound: the engine's shader property names of {family} are not embedded");
+            using var reader = new System.IO.StreamReader(stream);
+            for (string line; (line = reader.ReadLine()) != null;)
+            {
+                if (line.Length == 0) continue;
+                using var row = System.Text.Json.JsonDocument.Parse(line);
+                if (row.RootElement.GetProperty("k").GetString() == "builtin/before_project")
+                    return row.RootElement.GetProperty("v").GetString().Split('\n');
+            }
+            throw new InvalidOperationException($"Unbound: the engine's shader property names of {family} have no builtin/before_project row");
+        }
+
         /// <summary>The keywords of a shader's keyword space whose type is built-in (the four stereo
         /// keywords every space starts with; canonical *.space.keywords, 6000.0.71f1). Null for a
         /// release whose types are not measured: every keyword is then user-defined.</summary>

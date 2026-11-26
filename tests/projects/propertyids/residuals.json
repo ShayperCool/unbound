@@ -1,0 +1,18 @@
+{
+ "Unbound gives the eight renderer globals its frame builder uses (unity_RenderingLayer, _WorldSpaceLightPos0, _LightColor0, unity_OcclusionMaskSelector, _LightShadowData, _ShadowOffsets, _LightPositionRange, _LightProjectionParams) ids when it starts, after the engine's names; the Editor gives them later": [
+  "builtin/before_project",
+  "builtin/count",
+  "builtin/order"
+ ],
+ "Names the Editor gives ids later in its session (the shaders it loads itself: tree, skybox and GUI shaders' properties) are not modelled": [
+  "builtin/after_project",
+  "project/after_builtin"
+ ],
+ "The ids' values are not modelled, only their order: the Editor's are negative for 25 of the engine's names, and _CameraToWorld shares unity_CameraToWorld's": [
+  "builtin/negative",
+  "builtin/shared"
+ ],
+ "Unbound gives a project shader's names ids when it loads the shader (Shader.Find in the probe); the Editor when it imports it, before Play mode": [
+  "project/before_marker"
+ ]
+}

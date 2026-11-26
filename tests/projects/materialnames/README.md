@@ -62,4 +62,4 @@ Record and gate:
     python3 tests/projects/materialnames/run.py publish A B
     python3 tests/projects/materialnames/run.py gate
 
-`residuals.json` names the open difference (the built-in names' property ids, a follow-up).
+The built-in names' ids are those of tests/projects/propertyids (Q802).

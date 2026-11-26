@@ -1219,14 +1219,14 @@ namespace UnityEngine
         public bool HasMatrix(int nameID) => IsMatrix(nameID);
 
         /// <summary>
-        /// The material's properties of a kind: its shader's in declaration order, then the ones set
-        /// from script for names the shader does not declare, by property id (the order of
-        /// <see cref="Shader.PropertyToID"/>). A texture brings its _ST, _TexelSize and _HDR vectors;
-        /// an array set from script is a property of its element's kind (matches the Unity
-        /// 6000.0.71f1 Editor, tests/projects/materialnames set.*, order.*; tests/projects/materials).
-        /// The Editor lists every name by id, and a shader's names get theirs, in declaration order,
-        /// when it loads; it gives the names its built-in shaders use ids before a project's
-        /// (materialnames order.early_ids), which Unbound does not model.
+        /// The material's properties of a kind, its shader's and the ones set from script for names
+        /// the shader does not declare, by property id (the order of <see cref="Shader.PropertyToID"/>:
+        /// the engine's names first, then each name as it is first given one, a shader's as it
+        /// loads). A texture brings its _ST, _TexelSize and _HDR vectors; an array set from script is
+        /// a property of its element's kind (matches the Unity 6000.0.71f1 Editor,
+        /// tests/projects/materialnames set.*, order.*; tests/projects/materials). Where the
+        /// engine's names are not measured (<see cref="Compat.EnginePropertyNames"/>), the shader's
+        /// are listed in declaration order before the others.
         /// </summary>
         public string[] GetPropertyNames(MaterialPropertyType type)
         {
@@ -1248,7 +1248,14 @@ namespace UnityEngine
                             break;
                     }
                 }
+            bool byId = Compat.EnginePropertyNames != null;
             List<int> scripted = null;
+            if (byId)
+            {
+                // The shader's names among the others, by id.
+                foreach (var name in names) (scripted ??= new List<int>()).Add(Shader.PropertyToID(name));
+                names.Clear();
+            }
             // A declared name given a texture is listed among the textures too (a declared float:
             // tests/projects/materialnames declared_float_texture); its vectors and other kinds of
             // declared names are not measured and not listed.

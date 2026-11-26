@@ -30,8 +30,18 @@ namespace UnityEngine
         static string[] s_PropertyNames = new string[256];
         static byte[][] s_PropertyFramedUtf8 = new byte[256][];
         static int s_PropertyCount;
-        // The engine's own names come before any shader's (texture property names list in id order).
-        static readonly int s_EngineNames = PropertyToID("_MainTex") + PropertyToID("_Color");
+        // The engine's own names come before any shader's, in the order the release gives them ids
+        // (texture property names list in id order): Compat.EnginePropertyNames; where that is not
+        // measured, the two names Unbound's built-in shaders rely on.
+        static readonly int s_EngineNames = RegisterEngineNames();
+
+        static int RegisterEngineNames()
+        {
+            foreach (var name in Compat.EnginePropertyNames ?? s_UnmeasuredEngineNames) PropertyToID(name);
+            return s_PropertyCount;
+        }
+
+        static readonly string[] s_UnmeasuredEngineNames = { "_MainTex", "_Color" };
         internal static readonly HashSet<string> s_GlobalKeywords = new HashSet<string>();
         internal static readonly Dictionary<int, object> s_Globals = new Dictionary<int, object>();
 
@@ -603,6 +613,14 @@ namespace UnityEngine
         internal void PropertiesChanged(bool layoutKnown = false)
         {
             m_ById = null;
+            // The shader's names get ids as it loads, in declaration order, a texture's _ST,
+            // _TexelSize and _HDR with it (names given ids before keep theirs; matches the Unity
+            // 6000.0.71f1 Editor, tests/projects/propertyids project.*, tests/projects/materialnames order.*).
+            foreach (var property in m_Properties)
+            {
+                int id = PropertyToID(property.Name);
+                if (property.Type == ShaderPropertyType.Texture) TextureCompanionIds(id);
+            }
             ProfilerLayoutVersion++;
             ProfilerPropertyLayout = layoutKnown && Compat.MaterialScalarMemoryMeasured ? MeasureProfilerPropertyLayout() : null;
         }
