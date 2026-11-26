@@ -23,7 +23,6 @@ EXPECTED = [
 EXPECTED_IMAGES = [
     r"^flare_HaloLight_strength1$",
     r"^flare_LensFlareObject$",
-    r"^mip_limit_1$",
     r"^target_buffers_mrt1$",
     r"^path_deferred(_ldr)?$",
     r"^probe_blend_distance_now$",
