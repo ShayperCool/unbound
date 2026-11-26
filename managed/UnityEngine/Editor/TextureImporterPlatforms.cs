@@ -259,7 +259,7 @@ namespace UnityEditor
             SetPlatformTextureSettings(platform, maxTextureSize, textureFormat, false);
 
         [Obsolete("Use UnityEditor.TextureImporter.SetPlatformTextureSettings(TextureImporterPlatformSettings) instead.")]
-        public void SetPlatformTextureSettings(string platform, int maxTextureSize, TextureImporterFormat textureFormat, bool allowsAlphaSplit)
+        public void SetPlatformTextureSettings(string platform, int maxTextureSize, TextureImporterFormat textureFormat, [System.ComponentModel.DefaultValue(false)] bool allowsAlphaSplit)
         {
             TextureImporterPlatformSettings dest = GetPlatformTextureSettings(platform);
             dest.overridden = true;
