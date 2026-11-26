@@ -79,6 +79,9 @@ CLIPPED_CAPSULES = (
     ('cap45sunk', 5), ('cap45raised', 5), ('cap135sunk', 4), ('cap45scaled', 5),
     ('cap5low', 4), ('cap5high', 4), ('cap10low', 4), ('cap10high', 5),
     ('caplyinglow', 4), ('caplyinghigh', 4), ('caplyingabove', 2), ('caprank', 1),
+    ('cap45shortlow', 4), ('cap45shortlow2', 3), ('cap45shorthigh', 3), ('cap45low', 3),
+    ('cap8low', 3), ('cap85low', 3), ('capspheretilt', 3),
+    ('caprankyaw', 3), ('caprankoverhead', 1),
 )
 STEERED = tuple(shape for shape in SHAPES if shape not in ('boxscaled', 'captiltx'))
 # Scenario -> key prefixes of the differences that are reported but not gated ('' = all of them).

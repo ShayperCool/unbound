@@ -1715,6 +1715,20 @@ public class PathProbe : MonoBehaviour
                 new[] { new Vector2(0f, 0f), new Vector2(0.6f, -0.2f), new Vector2(1.2f, 0.45f), new Vector2(0.3f, 0.85f) }),
             ("caplyingabove", 0.5f, 3f, new Vector3(0f, 0f, 90f), Vector3.one, 1.6f,
                 new[] { new Vector2(0f, 0f), new Vector2(0.6f, -0.2f) }),
+            ("cap45shortlow", 0.5f, 1.6f, new Vector3(0f, 0f, 45f), Vector3.one, -1.25f,
+                new[] { new Vector2(0.8f, 0f), new Vector2(0.2f, 0.2f), new Vector2(-0.5f, 0f), new Vector2(0f, 0.3f) }),
+            ("cap45shortlow2", 0.5f, 1.6f, new Vector3(0f, 0f, 45f), Vector3.one, -1.29f,
+                new[] { new Vector2(0.8f, 0f), new Vector2(0.2f, 0.2f), new Vector2(-0.5f, 0f) }),
+            ("cap45shorthigh", 0.5f, 1.6f, new Vector3(0f, 0f, 45f), Vector3.one, 1.25f,
+                new[] { new Vector2(-0.8f, 0f), new Vector2(-0.2f, 0.2f), new Vector2(0.5f, 0f) }),
+            ("cap45low", 0.5f, 3f, new Vector3(0f, 0f, 45f), Vector3.one, -1.75f,
+                new[] { new Vector2(0.3f, 0f), new Vector2(-0.2f, 0.2f), new Vector2(-1f, 0f) }),
+            ("cap8low", 0.5f, 3f, new Vector3(0f, 0f, 8f), Vector3.one, -2.25f,
+                new[] { new Vector2(0f, 0f), new Vector2(-0.3f, 0.1f), new Vector2(0.5f, 0f) }),
+            ("cap85low", 0.5f, 3f, new Vector3(0f, 0f, 8.5f), Vector3.one, -2.25f,
+                new[] { new Vector2(0f, 0f), new Vector2(-0.3f, 0.1f), new Vector2(0.5f, 0f) }),
+            ("capspheretilt", 0.5f, 0.5f, new Vector3(0f, 0f, 45f), Vector3.one, -1.25f,
+                new[] { new Vector2(0.1f, 0f), new Vector2(-0.2f, 0.1f), new Vector2(0.6f, 0f) }),
         };
         foreach (var c in clippedCapsules)
         {
@@ -1779,6 +1793,84 @@ public class PathProbe : MonoBehaviour
             }
             Destroy(mover);
             Destroy(bar);
+            foreach (var d in decoys) Destroy(d);
+            yield return null;
+        }
+        // Yawed lying capsule admission boundary with zero-speed agent: 45-degree yawed bar
+        // (radius 0.5, height 6) at horizontal distance 3.45 m along its shaft, at three heights
+        // (ry = 1.0, 1.6, 1.42) separating true reach (3.0 m), horizontal half-diagonal (3.207 m),
+        // and 3D half-diagonal (3.246 m).
+        {
+            float[] lifts = { 0f, 0.6f, 0.42f };
+            for (int i = 0; i < lifts.Length; i++)
+            {
+                var bar = new GameObject("caprankyaw");
+                bar.transform.position = center + new Vector3(2.4395f, lifts[i], -2.4395f);
+                bar.transform.rotation = Quaternion.Euler(0f, 45f, 90f);
+                var barOb = bar.AddComponent<NavMeshObstacle>();
+                barOb.carving = false;
+                barOb.shape = NavMeshObstacleShape.Capsule;
+                barOb.radius = 0.5f;
+                barOb.height = 6f;
+                yield return null;
+                var mover = new GameObject("mover");
+                mover.transform.position = new Vector3(center.x, floor, center.z);
+                var agent = mover.AddComponent<NavMeshAgent>();
+                agent.speed = 0f;
+                string key = "contact.caprankyaw.s" + i;
+                for (int frame = 1; frame <= 3; frame++)
+                {
+                    yield return null;
+                    ProbeLog.Value(key + ".f" + frame + ".at", agent.nextPosition);
+                }
+                Destroy(mover);
+                Destroy(bar);
+                yield return null;
+            }
+        }
+        // Overhead lying capsule competing with 7 decoys and 1 overlapping ground obstacle for the
+        // 8-neighbour cap.
+        {
+            var decoys = new List<GameObject>();
+            for (int i = 0; i < 7; i++)
+            {
+                float a = (i + 1) * Mathf.PI * 0.25f;
+                var d = new GameObject("decoy" + i);
+                d.transform.position = new Vector3(center.x + Mathf.Cos(a) * 0.85f, floor, center.z + Mathf.Sin(a) * 0.85f);
+                var ob = d.AddComponent<NavMeshObstacle>();
+                ob.carving = false;
+                ob.shape = NavMeshObstacleShape.Capsule;
+                ob.radius = 0.2f;
+                ob.height = 2f;
+                decoys.Add(d);
+            }
+            var ground = new GameObject("ground");
+            ground.transform.position = center + new Vector3(0.85f, 0f, 0f);
+            var groundOb = ground.AddComponent<NavMeshObstacle>();
+            groundOb.carving = false;
+            groundOb.shape = NavMeshObstacleShape.Capsule;
+            groundOb.radius = 0.5f;
+            groundOb.height = 2f;
+            var overhead = new GameObject("overhead");
+            overhead.transform.position = new Vector3(center.x, floor + 5f, center.z);
+            overhead.transform.rotation = Quaternion.Euler(0f, 0f, 90f);
+            var overOb = overhead.AddComponent<NavMeshObstacle>();
+            overOb.carving = false;
+            overOb.shape = NavMeshObstacleShape.Capsule;
+            overOb.radius = 0.5f;
+            overOb.height = 12f;
+            yield return null;
+            var mover = new GameObject("mover");
+            mover.transform.position = new Vector3(center.x, floor, center.z);
+            var agent = mover.AddComponent<NavMeshAgent>();
+            for (int frame = 1; frame <= 3; frame++)
+            {
+                yield return null;
+                ProbeLog.Value("contact.caprankoverhead.s0.f" + frame + ".at", agent.nextPosition);
+            }
+            Destroy(mover);
+            Destroy(overhead);
+            Destroy(ground);
             foreach (var d in decoys) Destroy(d);
             yield return null;
         }
