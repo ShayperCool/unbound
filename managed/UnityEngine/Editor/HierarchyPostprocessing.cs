@@ -473,6 +473,13 @@ namespace UnityEditor
                 docs.Append(added);
             }
 
+            // The GameObjects and components OnPostprocessPrefab added are not saved back into the
+            // prefab's source (the 6000.0 Scripting API, AssetPostprocessor.OnPostprocessPrefab:
+            // "Added GameObjects and Components always get the DontSaveInEditor flag added").
+            if (!model)
+                foreach (var o in objects)
+                    if (!oldIds.ContainsKey(o) && (o is GameObject || o is Component)) o.hideFlags |= HideFlags.DontSaveInEditor;
+
             // The loaded file holds its objects by their new fileIDs.
             foreach (var id in removed) file.Objects.Remove(id);
             foreach (var (old, _) in remap) file.Objects.Remove(old);

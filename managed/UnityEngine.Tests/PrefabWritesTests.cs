@@ -464,7 +464,7 @@ namespace UnityEngine.Tests
             Assert.DoesNotContain("label: unmarked", FileText());
             holder.label = "at exit";
             EditorUtility.SetDirty(holder);
-            AssetFiles.SaveDirty();
+            AssetFiles.SaveDirty(exit: true);
             Assert.DoesNotContain("label: at exit", FileText());
             Assert.True(EditorUtility.IsDirty(holder));
             holder.label = "saved alone";
@@ -476,6 +476,25 @@ namespace UnityEngine.Tests
             AssetDatabase.SaveAssets();
             Assert.Contains("label: saved", FileText());
             Assert.False(EditorUtility.IsDirty(holder));
+            // SavePrefabAsset writes it clean too: a SaveAssets after it has nothing to write.
+            holder.label = "saved by the prefab API";
+            EditorUtility.SetDirty(holder);
+            PrefabUtility.SavePrefabAsset(m_Asset);
+            Assert.False(EditorUtility.IsDirty(holder));
+        }
+
+        /// <summary>A component added to a prefab asset's GameObject makes it dirty (matches the
+        /// Unity 6000.0.71f1 Editor, tests/projects/scenesave prefab-dirty-saves structure.*), not
+        /// one an import's postprocessor adds.</summary>
+        [Fact]
+        public void AComponentAddedToAPrefabAssetMakesItDirtyOutsideImports()
+        {
+            using (ScriptedImports.Scope())
+                m_AssetPart.AddComponent<UnityEngine.BoxCollider>();
+            Assert.False(EditorUtility.IsDirty(m_AssetPart));
+            m_AssetPart.AddComponent<UnityEngine.SphereCollider>();
+            Assert.True(EditorUtility.IsDirty(m_AssetPart));
+            EditorUtility.ClearDirty(m_AssetPart);
         }
 
         [Fact]

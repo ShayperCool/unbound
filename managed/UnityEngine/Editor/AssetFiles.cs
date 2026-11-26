@@ -34,10 +34,11 @@ namespace Unbound.Runtime
         /// when there are any); with <paramref name="settings"/> the edited settings files are saved
         /// too, offered with the assets when <paramref name="willSave"/>. Prefab assets are written
         /// by AssetDatabase.SaveAssets and SaveAssetIfDirty (<paramref name="writePrefabs"/>), not by
-        /// the Editor's exit (matches the Unity 6000.0.71f1 Editor, tests/projects/scenesave
-        /// prefab-dirty-saves exit.*).</summary>
+        /// the Editor's exit (<paramref name="exit"/>; matches the Unity 6000.0.71f1 Editor,
+        /// tests/projects/scenesave prefab-dirty-saves exit.*); the save as a project first opens
+        /// warns that a dirty prefab is not written (unmeasured).</summary>
         internal static void SaveDirty(Object only = null, bool unchangedStays = false, ICollection<string> onlyFiles = null, bool willSave = false,
-            bool settings = false, bool callWhenNone = true, bool writePrefabs = false)
+            bool settings = false, bool callWhenNone = true, bool writePrefabs = false, bool exit = false)
         {
             if (settings && !willSave) SettingsAssets.Save();
             Undo.FlushDirtiness();
@@ -94,7 +95,7 @@ namespace Unbound.Runtime
                 }
                 foreach (var pair in byGuid)
                 {
-                    try { Save(pair.Key, pair.Value, unchangedStays, writePrefabs); }
+                    try { Save(pair.Key, pair.Value, unchangedStays, writePrefabs, exit); }
                     catch (Exception e) when (e is IOException || e is NotSupportedException || e is UnauthorizedAccessException)
                     {
                         Debug.LogError($"Unbound: {AssetDatabaseRuntime.PathOf(pair.Key)} is not saved: {e.Message}");
@@ -169,7 +170,7 @@ namespace Unbound.Runtime
             return docs;
         }
 
-        static void Save(string guid, List<Object> dirty, bool unchangedStays, bool writePrefabs)
+        static void Save(string guid, List<Object> dirty, bool unchangedStays, bool writePrefabs, bool exit)
         {
             // A dirty prefab asset is written whole, as PrefabUtility.SavePrefabAsset writes it, its
             // instances taking the change (matches the Unity 6000.0.71f1 Editor,
@@ -178,15 +179,23 @@ namespace Unbound.Runtime
             if (PrefabAssets.FileOf(guid) is { } prefab && prefab.Path != null
                 && prefab.Path.EndsWith(".prefab", StringComparison.OrdinalIgnoreCase))
             {
-                if (!writePrefabs) return;
+                if (!writePrefabs)
+                {
+                    // The save as a project first opens, of what its postprocessors marked: not
+                    // measured for prefabs; kept as before.
+                    if (!exit)
+                    {
+                        Debug.LogWarning($"Unbound: {prefab.Path} is not saved: what the Editor writes of a prefab marked dirty as the project first opens is not measured.");
+                        foreach (var o in dirty) EditorUtility.ClearDirty(o);
+                    }
+                    return;
+                }
                 if (AssetDatabase.IsImmutablePackagePath(prefab.Path))
                 {
                     Debug.LogWarning($"Unbound: {prefab.Path} is not saved: it is in a package the project does not hold.");
                     return;
                 }
-                if (new PrefabAssets.Change(prefab, PrefabAssets.FileValues(prefab)).Commit())
-                    foreach (var o in prefab.Objects.Values)
-                        if (o is not null) EditorUtility.ClearDirty(o);
+                new PrefabAssets.Change(prefab, PrefabAssets.FileValues(prefab)).Commit();
                 return;
             }
             var info = AssetDatabaseRuntime.Info(guid);

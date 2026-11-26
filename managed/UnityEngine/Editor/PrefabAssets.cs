@@ -71,6 +71,12 @@ namespace Unbound.Runtime
                 Debug.LogError($"Unbound: {file.Path} is not saved: {e.Message}");
                 return false;
             }
+            // The file holds its objects now: they are no longer dirty (prefab-dirty-saves *.saved;
+            // after SavePrefabAsset and applies, unmeasured).
+            foreach (var pair in file.Objects)
+                if (pair.Value is not null && !pair.Value.m_Destroyed) EditorUtility.ClearDirty(pair.Value);
+            foreach (var pair in ids)
+                if (pair.Key is not null && !pair.Key.m_Destroyed) EditorUtility.ClearDirty(pair.Key);
             // New objects are the asset's under the ids they were written with; destroyed ones are gone.
             var removed = new List<long>();
             foreach (var pair in new List<KeyValuePair<long, Object>>(file.Objects))
