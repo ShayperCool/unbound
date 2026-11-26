@@ -30,7 +30,8 @@ What the Editor does:
   makes no rule, and a block the file ends in is closed by the end with its declarations
   (`TrailingOpen.uss`: `.trailing-never` applies; `TrailingValue.uss`: a declaration the file ends
   in without `;` too; `TrailingEmpty.uss`: an empty block changes nothing). Unmeasured, done
-  alike: the end of the file inside a value's open parenthesis or string (the value read so far).
+  alike: the end of the file inside a value's open parenthesis or string (the value read so far);
+  the end of the file right after a property name without `:` (still an error emptying the sheet).
 - The style pass reads what was kept: a number without a unit as pixels or seconds, the first of
   too many values, a word for a length as 0 with an error, an unknown color word as clear, an
   enum or keyword it does not know as the default; a dimension for `transition-property` gives
