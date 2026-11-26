@@ -36,7 +36,10 @@ sorting layer, `Probe`): one with an OnBecameInvisible script, one with a sortin
 GameObject with a sorting group, one with a disabled sorting group, one on the `Probe` sorting layer
 and one casting shadows only. The drawer refuses the first, second, third and fifth and holds the
 disabled group's and the shadows-only one, which is visible though out of view, as every renderer it
-holds.
+holds. Four more (`HeldGroup*`) are held at first; at frame 20 a sorting group comes above each (added
+on it, added on its parent, its disabled one enabled, the renderer moved under a parent with one) and
+the drawer drops them all; at frame 32 two of the groups go away (destroyed, disabled), and the drawer
+does not take their renderers back.
 
 `lightmaps` and `shadowmask` stage the URP probe's project (tests/projects/urp) instead and record
 its baked `Subtractive` scene (non-directional lightmaps) and `Shadowmask` scene (directional

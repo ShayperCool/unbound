@@ -24,6 +24,10 @@
 {"k":"f8.visible.ForcedOff","v":false}
 {"k":"f8.visible.Glass","v":true}
 {"k":"f8.visible.Ground","v":true}
+{"k":"f8.visible.HeldGroupAdded","v":true}
+{"k":"f8.visible.HeldGroupEnabled","v":true}
+{"k":"f8.visible.HeldGroupOnParent","v":true}
+{"k":"f8.visible.HeldGroupReparented","v":true}
 {"k":"f8.visible.Hidden","v":true}
 {"k":"f8.visible.LodAnimated.lod0","v":true}
 {"k":"f8.visible.LodAnimated.lod1","v":false}
@@ -65,7 +69,7 @@
 {"k":"f8.visible.VertexStreams","v":true}
 {"k":"f8.visible.Wall","v":true}
 {"k":"f8.willRenderCalled","v":true}
-{"k":"f8.drawer.renderers","v":"AnchoredNoProbes,Animation,AnimatorAlways,Cube0,Cube1,Cube2,Cube3,Cube4,Cube5,Glass,Ground,Hidden,Lit Sphere,LodFade.lod0,LodFade.lod1,LodFade.lod2,LodFar.lod0,LodFar.lod1,LodFar.lod2,LodMid.lod0,LodMid.lod1,LodMid.lod2,LodMover.lod0,LodMover.lod1,LodMover.lod2,LodNear.lod0,LodNear.lod1,LodNear.lod2,ManyMaterials,Mover,Plain,RenderObject,ShadowsOnly,SortingGroupDisabled,Spinner,TwoMat,Ungrouped.lod0,Ungrouped.lod1,Ungrouped.lod2,VertexStreams,Wall"}
+{"k":"f8.drawer.renderers","v":"AnchoredNoProbes,Animation,AnimatorAlways,Cube0,Cube1,Cube2,Cube3,Cube4,Cube5,Glass,Ground,HeldGroupAdded,HeldGroupEnabled,HeldGroupOnParent,HeldGroupReparented,Hidden,Lit Sphere,LodFade.lod0,LodFade.lod1,LodFade.lod2,LodFar.lod0,LodFar.lod1,LodFar.lod2,LodMid.lod0,LodMid.lod1,LodMid.lod2,LodMover.lod0,LodMover.lod1,LodMover.lod2,LodNear.lod0,LodNear.lod1,LodNear.lod2,ManyMaterials,Mover,Plain,RenderObject,ShadowsOnly,SortingGroupDisabled,Spinner,TwoMat,Ungrouped.lod0,Ungrouped.lod1,Ungrouped.lod2,VertexStreams,Wall"}
 {"k":"f14.drawer.enabled","v":true}
 {"k":"f14.visible.Anchored","v":false}
 {"k":"f14.visible.AnchoredNoProbes","v":true}
@@ -86,6 +90,10 @@
 {"k":"f14.visible.ForcedOff","v":false}
 {"k":"f14.visible.Glass","v":true}
 {"k":"f14.visible.Ground","v":true}
+{"k":"f14.visible.HeldGroupAdded","v":true}
+{"k":"f14.visible.HeldGroupEnabled","v":true}
+{"k":"f14.visible.HeldGroupOnParent","v":true}
+{"k":"f14.visible.HeldGroupReparented","v":true}
 {"k":"f14.visible.Hidden","v":true}
 {"k":"f14.visible.LodAnimated.lod0","v":true}
 {"k":"f14.visible.LodAnimated.lod1","v":false}
@@ -127,7 +135,7 @@
 {"k":"f14.visible.VertexStreams","v":true}
 {"k":"f14.visible.Wall","v":true}
 {"k":"f14.willRenderCalled","v":true}
-{"k":"f14.drawer.renderers","v":"AnchoredNoProbes,Animation,AnimatorAlways,Cube0,Cube1,Cube2,Cube3,Cube4,Cube5,Glass,Ground,Hidden,Lit Sphere,LodFade.lod0,LodFade.lod1,LodFade.lod2,LodFar.lod0,LodFar.lod1,LodFar.lod2,LodMid.lod0,LodMid.lod1,LodMid.lod2,LodMover.lod0,LodMover.lod1,LodMover.lod2,LodNear.lod0,LodNear.lod1,LodNear.lod2,ManyMaterials,Mover,Plain,RenderObject,ShadowsOnly,SortingGroupDisabled,Spinner,TwoMat,Ungrouped.lod0,Ungrouped.lod1,Ungrouped.lod2,VertexStreams,Wall"}
+{"k":"f14.drawer.renderers","v":"AnchoredNoProbes,Animation,AnimatorAlways,Cube0,Cube1,Cube2,Cube3,Cube4,Cube5,Glass,Ground,HeldGroupAdded,HeldGroupEnabled,HeldGroupOnParent,HeldGroupReparented,Hidden,Lit Sphere,LodFade.lod0,LodFade.lod1,LodFade.lod2,LodFar.lod0,LodFar.lod1,LodFar.lod2,LodMid.lod0,LodMid.lod1,LodMid.lod2,LodMover.lod0,LodMover.lod1,LodMover.lod2,LodNear.lod0,LodNear.lod1,LodNear.lod2,ManyMaterials,Mover,Plain,RenderObject,ShadowsOnly,SortingGroupDisabled,Spinner,TwoMat,Ungrouped.lod0,Ungrouped.lod1,Ungrouped.lod2,VertexStreams,Wall"}
 {"k":"f20.drawer.enabled","v":true}
 {"k":"f20.visible.Anchored","v":false}
 {"k":"f20.visible.AnchoredNoProbes","v":true}
@@ -148,6 +156,10 @@
 {"k":"f20.visible.ForcedOff","v":false}
 {"k":"f20.visible.Glass","v":true}
 {"k":"f20.visible.Ground","v":true}
+{"k":"f20.visible.HeldGroupAdded","v":false}
+{"k":"f20.visible.HeldGroupEnabled","v":false}
+{"k":"f20.visible.HeldGroupOnParent","v":false}
+{"k":"f20.visible.HeldGroupReparented","v":false}
 {"k":"f20.visible.Hidden","v":true}
 {"k":"f20.visible.LodAnimated.lod0","v":true}
 {"k":"f20.visible.LodAnimated.lod1","v":false}
@@ -209,6 +221,10 @@
 {"k":"f26.visible.ForcedOff","v":false}
 {"k":"f26.visible.Glass","v":true}
 {"k":"f26.visible.Ground","v":true}
+{"k":"f26.visible.HeldGroupAdded","v":false}
+{"k":"f26.visible.HeldGroupEnabled","v":false}
+{"k":"f26.visible.HeldGroupOnParent","v":false}
+{"k":"f26.visible.HeldGroupReparented","v":false}
 {"k":"f26.visible.Hidden","v":true}
 {"k":"f26.visible.LodAnimated.lod0","v":true}
 {"k":"f26.visible.LodAnimated.lod1","v":false}
@@ -270,6 +286,10 @@
 {"k":"f32.visible.ForcedOff","v":false}
 {"k":"f32.visible.Glass","v":true}
 {"k":"f32.visible.Ground","v":true}
+{"k":"f32.visible.HeldGroupAdded","v":false}
+{"k":"f32.visible.HeldGroupEnabled","v":false}
+{"k":"f32.visible.HeldGroupOnParent","v":false}
+{"k":"f32.visible.HeldGroupReparented","v":false}
 {"k":"f32.visible.Hidden","v":true}
 {"k":"f32.visible.LodAnimated.lod0","v":true}
 {"k":"f32.visible.LodAnimated.lod1","v":false}
@@ -331,6 +351,10 @@
 {"k":"f38.visible.ForcedOff","v":false}
 {"k":"f38.visible.Glass","v":true}
 {"k":"f38.visible.Ground","v":true}
+{"k":"f38.visible.HeldGroupAdded","v":false}
+{"k":"f38.visible.HeldGroupEnabled","v":false}
+{"k":"f38.visible.HeldGroupOnParent","v":false}
+{"k":"f38.visible.HeldGroupReparented","v":false}
 {"k":"f38.visible.Hidden","v":true}
 {"k":"f38.visible.LodAnimated.lod0","v":true}
 {"k":"f38.visible.LodAnimated.lod1","v":false}
@@ -392,6 +416,10 @@
 {"k":"f44.visible.ForcedOff","v":false}
 {"k":"f44.visible.Glass","v":true}
 {"k":"f44.visible.Ground","v":true}
+{"k":"f44.visible.HeldGroupAdded","v":false}
+{"k":"f44.visible.HeldGroupEnabled","v":false}
+{"k":"f44.visible.HeldGroupOnParent","v":false}
+{"k":"f44.visible.HeldGroupReparented","v":false}
 {"k":"f44.visible.Hidden","v":true}
 {"k":"f44.visible.Late","v":true}
 {"k":"f44.visible.LodAnimated.lod0","v":true}
@@ -454,6 +482,10 @@
 {"k":"f50.visible.ForcedOff","v":false}
 {"k":"f50.visible.Glass","v":true}
 {"k":"f50.visible.Ground","v":true}
+{"k":"f50.visible.HeldGroupAdded","v":false}
+{"k":"f50.visible.HeldGroupEnabled","v":false}
+{"k":"f50.visible.HeldGroupOnParent","v":false}
+{"k":"f50.visible.HeldGroupReparented","v":false}
 {"k":"f50.visible.Hidden","v":true}
 {"k":"f50.visible.Late","v":true}
 {"k":"f50.visible.LodAnimated.lod0","v":true}
@@ -516,6 +548,10 @@
 {"k":"f56.visible.ForcedOff","v":false}
 {"k":"f56.visible.Glass","v":true}
 {"k":"f56.visible.Ground","v":true}
+{"k":"f56.visible.HeldGroupAdded","v":false}
+{"k":"f56.visible.HeldGroupEnabled","v":false}
+{"k":"f56.visible.HeldGroupOnParent","v":false}
+{"k":"f56.visible.HeldGroupReparented","v":false}
 {"k":"f56.visible.Hidden","v":true}
 {"k":"f56.visible.Late","v":true}
 {"k":"f56.visible.LodAnimated.lod0","v":true}

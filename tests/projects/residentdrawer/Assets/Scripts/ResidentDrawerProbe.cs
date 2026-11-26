@@ -414,6 +414,19 @@ public class ResidentDrawerProbe : MonoBehaviour
             Control("SortingGroupDisabled", r => r.gameObject.AddComponent<SortingGroup>().enabled = false);
             Control("SortingLayer", r => r.sortingLayerName = "Probe");
             Control("ShadowsOnly", r => r.shadowCastingMode = ShadowCastingMode.ShadowsOnly);
+            // Renderers the drawer holds first; a sorting group comes above each at frame 20 (on
+            // it, on its parent, a disabled one enabled, a parent with one it is moved under), and
+            // two go away again at frame 32 (StepSortingGroups).
+            m_ControlsProfile = true;
+            Control("HeldGroupAdded", r => { });
+            Control("HeldGroupOnParent", r =>
+            {
+                var parent = new GameObject("HeldGroupOnParentParent");
+                parent.transform.position = r.transform.position;
+                r.transform.SetParent(parent.transform, true);
+            });
+            Control("HeldGroupEnabled", r => r.gameObject.AddComponent<SortingGroup>().enabled = false);
+            Control("HeldGroupReparented", r => { });
         }
         // Streams on a renderer the ordinary path draws first (in view, with a property block
         // until frame 16).
@@ -517,8 +530,32 @@ public class ResidentDrawerProbe : MonoBehaviour
 
     /// <summary>The frame's motion and its scripted change, before the drawer dispatches the
     /// frame's changes after LateUpdate.</summary>
+    bool m_ControlsProfile;
+    GameObject m_GroupParent;
+
+    /// <summary>The controls profile's sorting groups over renderers the drawer already holds.</summary>
+    void StepSortingGroups(int frame)
+    {
+        if (frame == 20)
+        {
+            m_Renderers["HeldGroupAdded"].gameObject.AddComponent<SortingGroup>();
+            m_Renderers["HeldGroupOnParent"].transform.parent.gameObject.AddComponent<SortingGroup>();
+            m_Renderers["HeldGroupEnabled"].GetComponent<SortingGroup>().enabled = true;
+            m_GroupParent = new GameObject("HeldGroupReparentedParent");
+            m_GroupParent.transform.position = m_Renderers["HeldGroupReparented"].transform.position;
+            m_GroupParent.AddComponent<SortingGroup>();
+            m_Renderers["HeldGroupReparented"].transform.SetParent(m_GroupParent.transform, true);
+        }
+        else if (frame == 32)
+        {
+            Destroy(m_Renderers["HeldGroupAdded"].GetComponent<SortingGroup>());
+            m_Renderers["HeldGroupEnabled"].GetComponent<SortingGroup>().enabled = false;
+        }
+    }
+
     void Step(int frame)
     {
+        if (m_ControlsProfile) StepSortingGroups(frame);
         m_Mover.position = new Vector3(-4 + 0.18f * frame, 3.2f, 4);
         m_Spinner.rotation = Quaternion.Euler(0, 6f * frame, 0);
         m_LodMover.position = new Vector3(0.5f, 1, -4 + 0.25f * frame);
