@@ -51,11 +51,13 @@ none of the values depends on the OS or the graphics device); the reference with
 rows was recorded in the Linux Editor (two byte-identical captures, every earlier row unchanged).
 The `format.extract.*` rows name Unity's own frames with the source paths the release's
 UnityEngine.CoreModule .pdb holds, here the Linux release's (`/home/bokken/build/output/unity/unity/`);
-the macOS release's root is `/Users/bokken/...`, which the OS decides, so the gate reads both roots
-as one (`run.py`'s `build_root`) and compares the rest of each frame exactly. The gate also runs the
-engine with Release code optimization (`UNBOUND_CODE_OPTIMIZATION=release`), as the Reference's
-scripts were compiled: a machine whose Editor preference starts in Debug (`ScriptDebugInfoEnabled`)
-would otherwise place the IL offsets of the frames elsewhere. Asynchronous AssetBundle loads that
+the macOS release's root is `/Users/bokken/...`, which the OS decides, so the gate reads the
+Reference's root as this OS's installation has it (`run.py`'s `build_root`), the capture unchanged,
+and compares the rest of each frame exactly. Both sides compile the scripts with Release code
+optimization (the Editor records with `-releaseCodeOptimization`, the engine runs with
+`UNBOUND_CODE_OPTIMIZATION=release`), as the Reference's scripts were: a machine whose Editor
+preference starts in Debug (`ScriptDebugInfoEnabled`) would otherwise place the IL offsets of the
+frames elsewhere. Asynchronous AssetBundle loads that
 fail report later, at a moment that varies between runs, so only their synchronous answers are
 recorded. `run.py record` / `publish` / `gate` (tests/value_probe.py).
 
