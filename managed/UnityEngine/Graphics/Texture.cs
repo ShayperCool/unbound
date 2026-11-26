@@ -160,8 +160,8 @@ namespace UnityEngine
         /// (0 for the kinds it leaves whole and for a texture that ignores it).</summary>
         internal virtual int MipmapLimitMaxDrop => 0;
 
-        /// <summary>The top mips a texture whose CPU copy Apply discarded dropped in that upload
-        /// (-1: it follows the limit). Such a texture is not uploaded again when the limit changes
+        /// <summary>The top mips a texture whose CPU copy a script's Apply discarded dropped in that
+        /// upload (-1: it follows the limit; the engine's own applies freeze nothing). Such a texture is not uploaded again when the limit changes
         /// (matches the Unity 6000.0.71f1 Editor, tests/projects/mipmaplimit scriptLocked.*; the
         /// Scripting API's Texture2D.Apply and Texture2DArray.Apply say so for both); it follows the
         /// limit again once it has pixels of its own again (Init, a reload).</summary>

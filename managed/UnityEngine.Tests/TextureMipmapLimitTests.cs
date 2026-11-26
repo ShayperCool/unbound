@@ -183,6 +183,7 @@ namespace Unbound.Tests
                     Assert.False(texture.UnderMipmapLimit);
                     // An image that can drop mips follows the limit again.
                     texture.ReplaceImage(64, 64, TextureFormat.RGBA32, true);
+                    Assert.Equal(-1, texture.FrozenMipmapLimit);
                     Assert.Equal(3, texture.activeMipmapLimit);
                     Assert.True(texture.UnderMipmapLimit);
                     QualitySettings.globalTextureMipmapLimit = 1;

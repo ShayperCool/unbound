@@ -465,8 +465,9 @@ namespace UnityEngine
         bool m_QuietApply;
 
         /// <summary>Apply by the engine itself (not a script's edit): the asset is not marked
-        /// dirty. Whether the Editor marks assets its own updates apply (a dynamic font's atlas,
-        /// a terrain's alphamaps) is unmeasured; Unbound writes nothing for them.</summary>
+        /// dirty, and an unreadable result keeps following the texture mipmap limit (only a script's
+        /// Apply freezes it). Whether the Editor marks assets its own updates apply (a dynamic
+        /// font's atlas, a terrain's alphamaps) is unmeasured; Unbound writes nothing for them.</summary>
         internal void ApplyQuietly(bool updateMipmaps = true, bool makeNoLongerReadable = false)
         {
             m_QuietApply = true;
