@@ -178,13 +178,6 @@
     "reason": "The runtime's own exception message: Unity's Mono writes NullReferenceException's without the final period CoreCLR writes"
   },
   {
-    "case": "build-index-play",
-    "key": "file:ProjectSettings/EditorBuildSettings.asset",
-    "reference": "written",
-    "actual": "after line 7: reference [], actual ['  - enabled: 0', '    path: Assets/Scenes/Second.unity', '    guid: 6f748856d2f6b48bba33779b860ce87a']; lines 9-9: reference ['    path: Assets/Scenes/Second.unity'], actual ['    path: Assets/Scenes/Base.unity', '    guid: e0fd96c04ed5f4230bfb1fc1aa060f13', '  - enabled: 1', '    path: Assets/Scenes/Missing.unity', '    guid: 0123456789abcdef0123456789abcdef', '  - enabled: 1', '    path: Assets/Old/Moved.unity']; after line 13: reference [], actual ['  - enabled: 1', '    path: Assets/Scenes/Deep/Third.unity', '    guid: 9a3e5c1d7b2f4e6a8c0d1e2f3a4b5c6d', '  - enabled: 1', '    path: Assets/Scenes/Base.unity', '    guid: e0fd96c04ed5f4230bfb1fc1aa060f13']",
-    "reason": "A build list set by EditorBuildSettings.scenes in Play mode: the Editor writes it into the file by the time it quits after Play mode has ended (no SaveAssets ran in Play mode); Unbound keeps changes of settings made in Play mode unsaved, as tests/projects/projectwrites measured when SaveAssets runs in Play mode and the Editor quits from Play mode. Which of the two decides is unmeasured: follow-up"
-  },
-  {
     "case": "label-metas",
     "key": "Style.uss.importer",
     "reference": [

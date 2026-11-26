@@ -226,7 +226,7 @@ namespace UnityEditor
                 }
                 list.Flow = list.Items.Count == 0;
                 body.Set("m_Scenes", list);
-            });
+            }, keptFromPlayMode: true);
             return true;
         }
 

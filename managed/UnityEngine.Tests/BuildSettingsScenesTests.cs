@@ -196,5 +196,51 @@ namespace UnityEngine.Tests
                 Directory.Delete(project, true);
             }
         }
+
+        /// <summary>A build list set in Play mode is kept from it: SaveAssets in Play mode writes
+        /// nothing, the first save after Play mode has ended writes the list (the Unity 6000.0.71f1
+        /// Editor writes it at its exit after Play mode, tests/projects/scenesave build-index-play);
+        /// a PlayerSettings value set in Play mode stays unsaved (tests/projects/projectwrites).</summary>
+        [Fact]
+        public void AListSetInPlayModeIsSavedAfterPlayModeEnds()
+        {
+            var probe = Path.Combine(Repo(), "tests", "projects", "scenesave");
+            var project = Path.Combine(Path.GetTempPath(), "unbound-build-scenes-" + Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(Path.Combine(project, "ProjectSettings"));
+            foreach (var f in Directory.GetFiles(Path.Combine(probe, "ProjectSettings")))
+                File.Copy(f, Path.Combine(project, "ProjectSettings", Path.GetFileName(f)));
+            var before = ProjectInfo.ProjectPath;
+            bool playing = EditorSession.IsPlaying;
+            var buildScenes = ProjectInfo.BuildScenes.ToList();
+            ProjectInfo.ProjectPath = project;
+            SettingsAssets.Reset();
+            AssetDatabase.List("[{\"guid\":\"" + SecondGuid + "\",\"path\":\"Assets/Scenes/Second.unity\",\"kind\":\"scene\"}]");
+            var buildFile = Path.Combine(project, "ProjectSettings/EditorBuildSettings.asset");
+            var playerFile = Path.Combine(project, "ProjectSettings/ProjectSettings.asset");
+            var player = File.ReadAllText(playerFile);
+            try
+            {
+                Assert.DoesNotContain("Second.unity", File.ReadAllText(buildFile));
+                EditorSession.IsPlaying = true;
+                EditorBuildSettings.scenes = new[] { new EditorBuildSettingsScene("Assets/Scenes/Second.unity", true) };
+                PlayerSettings.companyName = "PlayCo";
+                AssetDatabase.SaveAssets();
+                Assert.DoesNotContain("Second.unity", File.ReadAllText(buildFile));
+                EditorSession.IsPlaying = false;
+                AssetDatabase.SaveAssets();
+                Assert.Contains("    path: Assets/Scenes/Second.unity\n    guid: " + SecondGuid + "\n", File.ReadAllText(buildFile).Replace("\r\n", "\n"));
+                Assert.Equal(player, File.ReadAllText(playerFile));
+            }
+            finally
+            {
+                ProjectInfo.ProjectPath = before;
+                EditorSession.IsPlaying = playing;
+                ProjectInfo.BuildScenes.Clear();
+                ProjectInfo.BuildScenes.AddRange(buildScenes);
+                SettingsAssets.Reset();
+                AssetDatabase.Invalidate();
+                Directory.Delete(project, true);
+            }
+        }
     }
 }

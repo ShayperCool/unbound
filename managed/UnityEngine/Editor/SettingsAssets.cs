@@ -349,13 +349,18 @@ namespace Unbound.Runtime
         /// <summary>An editor API changed a value of a settings file (PlayerSettings, EditorSettings,
         /// EditorBuildSettings): the file's text follows at once; in Edit mode the file is written by
         /// the next SaveAssets or when the Editor quits, a change made in Play mode is not saved
-        /// (matches the Unity 6000.0.71f1 Editor, tests/projects/projectwrites 11-14).</summary>
-        internal static void Edit(string name, Action<YText> change)
+        /// (matches the Unity 6000.0.71f1 Editor, tests/projects/projectwrites 11-14). A change
+        /// <paramref name="keptFromPlayMode"/> (the build list EditorBuildSettings.scenes sets) is
+        /// kept from Play mode: the file is written when the Editor quits after Play mode has ended
+        /// (matches the Unity 6000.0.71f1 Editor, tests/projects/scenesave build-index-play), and by
+        /// the first SaveAssets after Play mode (unmeasured in a probe); SaveAssets in Play mode and
+        /// the Editor's exit with Play mode on still write nothing (unmeasured for this file).</summary>
+        internal static void Edit(string name, Action<YText> change, bool keptFromPlayMode = false)
         {
             var file = AtPath("ProjectSettings/" + name + ".asset");
             if (file?.Body == null) return;
             change(file.Body);
-            if (!EditorApplication.isPlaying)
+            if (!EditorApplication.isPlaying || keptFromPlayMode)
             {
                 file.Dirty = true;
                 if (file.Object != null) EditorUtility.SetDirty(file.Object);
