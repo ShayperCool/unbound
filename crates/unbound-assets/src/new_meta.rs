@@ -106,8 +106,9 @@ pub fn importer_for(path: &Path, is_dir: bool) -> Option<NewImporter> {
         ),
         "spriteatlasv2" => NewImporter::SpriteAtlas,
         // Measured for a graph the package's VisualEffectAssetEditorUtility.CreateNewAsset writes
-        // and imports (tests/projects/vfxwrites create/meta); subgraphs (.vfxoperator, .vfxblock)
-        // are not measured.
+        // and imports (tests/projects/vfxwrites create/meta); a graph found on disk at startup or
+        // refresh gets the same .meta, unmeasured; subgraphs (.vfxoperator, .vfxblock) are not
+        // measured.
         "vfx" => NewImporter::VisualEffect,
         "uss" => NewImporter::Scripted {
             script: STYLE_SHEET_IMPORTER,
