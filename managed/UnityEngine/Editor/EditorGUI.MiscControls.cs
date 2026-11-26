@@ -351,7 +351,11 @@ namespace UnityEditor
             return EditorGUI.BeginFoldoutHeaderGroup(backgroundRect, foldout, content, style, menuAction, menuIcon);
         }
 
-        public static void EndFoldoutHeaderGroup() => EditorGUI.EndFoldoutHeaderGroup();
+        public static void EndFoldoutHeaderGroup()
+        {
+            if (!EditorGUI.MiscMeasured("UnityEditor.EditorGUILayout.EndFoldoutHeaderGroup")) return;
+            EditorGUI.EndFoldoutHeaderGroup();
+        }
 
         public static bool LinkButton(string label, params GUILayoutOption[] options) => LinkButton(EditorGUIUtility.TempContent(label), options);
 

@@ -158,6 +158,8 @@ namespace UnityEngine.Tests
         [Fact]
         public void OtherFamiliesReportTheControlsNotImplemented()
         {
+            // Each notice is said once per process: forget earlier ones.
+            foreach (var member in s_Gated) Unbound.Runtime.Stubs.Forget(member);
             var capture = new Capture();
             var previous = Debug.unityLogger.logHandler;
             Debug.unityLogger.logHandler = capture;
@@ -170,11 +172,40 @@ namespace UnityEngine.Tests
                 Assert.False(Pass(Mouse(EventType.MouseUp, Header.center), () => EditorGUI.BeginFoldoutHeaderGroup(Header, false, "Header")));
                 Assert.Equal(0, ActiveHeaders());
                 Assert.Equal(7, Pass(new Event { type = EventType.Repaint }, () => EditorGUI.LogarithmicIntSlider(Bar, GUIContent.none, 7, 1, 100, 10, 1, 100)));
+                var data = ScriptableObject.CreateInstance<EditorControlsTestData>();
+                try
+                {
+                    var property = new SerializedObject(data).FindProperty("number");
+                    Pass(new Event { type = EventType.Repaint }, () => { EditorGUI.DelayedIntField(Bar, property, GUIContent.none); return 0; });
+                }
+                finally { Object.DestroyImmediate(data); }
+                Assert.False(Pass(new Event { type = EventType.Layout }, () => EditorGUILayout.LinkButton("Link")));
+                Assert.False(Pass(new Event { type = EventType.Layout }, () => EditorGUILayout.DropdownButton(new GUIContent("Drop"), FocusType.Keyboard)));
+                Pass(new Event { type = EventType.Layout }, () => { EditorGUILayout.EndFoldoutHeaderGroup(); return 0; });
+                Assert.Equal(0, ActiveHeaders());
             }
             finally { Debug.unityLogger.logHandler = previous; }
-            Assert.Contains(capture.Lines, line => line.Contains("EditorGUI.ProgressBar is not implemented"));
-            Assert.Contains(capture.Lines, line => line.Contains("EditorGUI.BeginFoldoutHeaderGroup is not implemented"));
-            Assert.Contains(capture.Lines, line => line.Contains("EditorGUI.LogarithmicIntSlider is not implemented"));
+            foreach (var member in s_Gated)
+                Assert.Contains(capture.Lines, line => line.Contains(member + " is not implemented"));
         }
+
+        static readonly string[] s_Gated =
+        {
+            "UnityEditor.EditorGUI.ProgressBar",
+            "UnityEditor.EditorGUI.BeginFoldoutHeaderGroup",
+            "UnityEditor.EditorGUI.LogarithmicIntSlider",
+            "UnityEditor.EditorGUI.DelayedIntField",
+            "UnityEditor.EditorGUILayout.LinkButton",
+            "UnityEditor.EditorGUILayout.DropdownButton",
+            "UnityEditor.EditorGUILayout.EndFoldoutHeaderGroup",
+        };
+    }
+}
+
+namespace UnityEngine.Tests
+{
+    public sealed class EditorControlsTestData : ScriptableObject
+    {
+        public int number = 7;
     }
 }
