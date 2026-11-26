@@ -133,8 +133,14 @@ namespace UnityEngine
             }
         }
 
-        /// <summary>The size of the display the canvas is shown on: the game view.</summary>
-        public Vector2 renderingDisplaySize => new Vector2(Screen.width, Screen.height);
+        /// <summary>The size of the display the canvas is shown on: the game view; a world-space
+        /// canvas's own rectangle (Unity 6000.0.71f1, tests/projects/defaultcontrols canvas.*:
+        /// overlay and camera without a camera answer the game view, world space the canvas's
+        /// size, also resized; other releases keep the game view, unmeasured).</summary>
+        public Vector2 renderingDisplaySize =>
+            Compat.DefaultConstructorStateMeasured && renderMode == RenderMode.WorldSpace && transform is RectTransform rect
+                ? rect.rect.size
+                : new Vector2(Screen.width, Screen.height);
 
         public float scaleFactor
         {

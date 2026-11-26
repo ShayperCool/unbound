@@ -9,6 +9,18 @@ namespace UnityEngine
         public LightUnit lightUnit { get; set; } = Compat.DefaultConstructorStateMeasured ? LightUnit.Candela : 0;
         public float luxAtDistance { get; set; } = Compat.DefaultConstructorStateMeasured ? 1f : 0f;
         public bool enableSpotReflector { get; set; } = Compat.DefaultConstructorStateMeasured;
+
+        /// <summary>The per-layer shadow culling distances: a new copy of the 32 layers' distances,
+        /// all 0 (use the shadow distance) until set (Unity 6000.0.71f1, tests/projects/defaultcontrols
+        /// light.layerShadowCullDistances*). Setting them is not implemented yet.</summary>
+        public float[] layerShadowCullDistances
+        {
+            get => Compat.DefaultConstructorStateMeasured ? new float[LayerCount] : Array.Empty<float>();
+            [Unbound.Stub] set => Stubs.NotImplemented("UnityEngine.Light.layerShadowCullDistances");
+        }
+
+        /// <summary>The number of layers.</summary>
+        const int LayerCount = 32;
         [Obsolete("light.attenuate was removed; all lights always attenuate now", true)]
         [Unbound.EditorFaithful("Removed setting ignores writes in Unity 6000.0.71f1, defaultstate setter controls")]
         public bool attenuate { get => Compat.DefaultConstructorStateMeasured; set { } }

@@ -159,7 +159,7 @@ namespace UnityEngine.Rendering
                 throw new InvalidOperationException("The CullingResults instance is invalid. This can happen if you construct an instance using the default constructor.");
         }
 
-        CullingData Lists => ptr != IntPtr.Zero || !Compat.DefaultConstructorStateMeasured ? Data : throw new NullReferenceException();
+        CullingData Lists => ptr != IntPtr.Zero || !Compat.DefaultConstructorStateMeasured ? Data : throw MonoExceptions.NullReference();
 
         public NativeArray<VisibleLight> visibleLights => Lists?.Lights ?? default;
         public NativeArray<VisibleLight> visibleOffscreenVertexLights => Lists?.OffscreenVertexLights ?? default;

@@ -423,6 +423,7 @@ namespace UnityEngine
         {
             MakeControllerGraph();
             m_Initialized = m_Controller == null || m_Controller.Graph != null;
+            ResetFeetPivot();
             if (!m_Initialized && m_LogWarnings)
                 Debug.LogWarning($"The Animator Controller ({m_Controller.m_Name}) you have used is not valid. Animations will not play", this);
         }

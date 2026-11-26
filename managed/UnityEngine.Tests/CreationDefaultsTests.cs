@@ -9,6 +9,7 @@ namespace Unbound.Tests
 {
     /// <summary>Creation defaults measured by tests/projects/defaultstate with their controls in
     /// tests/projects/defaultcontrols (Unity 6000.0.71f1), and the path other releases keep.</summary>
+    [Collection("Project release")]
     public class CreationDefaultsTests
     {
         const ulong EditorDefaultSceneCullingMask = 0xE000000000000000UL;

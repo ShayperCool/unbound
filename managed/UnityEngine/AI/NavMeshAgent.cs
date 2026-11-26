@@ -346,7 +346,7 @@ namespace UnityEngine.AI
         /// tests/projects/navlinks offedge, island, targets).</summary>
         public Vector3 destination
         {
-            get => Disabled ? Vector3.positiveInfinity : m_HasDestination ? m_ReportedDestination : m_NextPosition;
+            get => Disabled || Unplaced ? Vector3.positiveInfinity : m_HasDestination ? m_ReportedDestination : m_NextPosition;
             set => SetDestination(value);
         }
 
@@ -551,7 +551,7 @@ namespace UnityEngine.AI
 
         internal void RestoreStaleness((bool Own, int Version) staleness) => (m_OwnPathStale, m_PathStaleVersion) = staleness;
 
-        public NavMeshPathStatus pathStatus => m_PathStatus;
+        public NavMeshPathStatus pathStatus => Unplaced ? NavMeshPathStatus.PathInvalid : m_PathStatus;
 
         /// <summary>The current corridor's endpoint, including one given in the call, retained
         /// while a new one is pending and after hasPath changes (measured).</summary>
@@ -569,7 +569,12 @@ namespace UnityEngine.AI
             get
             {
                 AgentSystem.SyncQuery(this);
-                if (m_Crowd == null && Disabled) return float.PositiveInfinity;
+                if (Unplaced || m_Crowd == null && Disabled)
+                {
+                    if (Compat.DefaultConstructorStateMeasured)
+                        Debug.LogError("\"GetRemainingDistance\" can only be called on an active agent that has been placed on a NavMesh.", this);
+                    return float.PositiveInfinity;
+                }
                 // While a new path is pending, the current one's (measured).
                 if (m_Crowd == null || m_Crowd.targetState != DtMoveRequestState.DT_CROWDAGENT_TARGET_VALID) return 0f;
                 // On a link the path's end is beyond the corners the agent sees (measured:
@@ -944,6 +949,12 @@ namespace UnityEngine.AI
         /// <summary>The agent is disabled (not merely off the NavMesh): its destination and
         /// remainingDistance read as infinity.</summary>
         bool Disabled => !isActiveAndEnabled;
+
+        /// <summary>An active agent not placed on a NavMesh: its destination and remaining distance
+        /// read as infinity, its path as invalid, and reading the remaining distance logs the error
+        /// a disabled agent's does (Unity 6000.0.71f1, tests/projects/defaultcontrols agent.off*;
+        /// other releases keep the previous, unmeasured answers).</summary>
+        bool Unplaced => Compat.DefaultConstructorStateMeasured && !Disabled && !m_OnNavMesh;
 
         internal override void OnEngineDestroy() => AgentSystem.Remove(this);
 

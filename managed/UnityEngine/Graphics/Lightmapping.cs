@@ -136,6 +136,15 @@ namespace UnityEngine
             return points;
         }
 
+        /// <summary>Instantiate copies the probes, also none (tests/projects/defaultcontrols
+        /// lpg.instantiated*).</summary>
+        internal override void CopyFrom(Component source, Func<Object, Object> remap)
+        {
+            var s = (LightProbeGroup)source;
+            m_SourcePositions = (Vector3[])s.m_SourcePositions.Clone();
+            m_Dering = s.m_Dering;
+        }
+
         internal override void ReadSerialized(YNode body, IReferenceResolver resolver)
         {
             base.ReadSerialized(body, resolver);

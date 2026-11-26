@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Unbound.Runtime;
 using UnityEngine.Rendering;
 
 namespace UnityEngine.Experimental.Rendering
@@ -472,8 +473,21 @@ namespace UnityEngine.Experimental.Rendering
             return GetGraphicsFormat(format, srgb);
         }
 
+        /// <summary>What GetRenderTextureFormat answers for a format no RenderTextureFormat names
+        /// (also None and the depth and stencil formats): the value past the last one (Unity
+        /// 6000.0.71f1, tests/projects/defaultcontrols rtformat.*).</summary>
+        const RenderTextureFormat NoRenderTextureFormat = (RenderTextureFormat)29;
+
+        /// <summary>What it answers for YUV2, a value RenderTextureFormat does not name (Unity
+        /// 6000.0.71f1, tests/projects/defaultcontrols rtformat.141.YUV2).</summary>
+        const RenderTextureFormat VideoRenderTextureFormat = (RenderTextureFormat)21;
+
+        /// <summary>The RenderTextureFormat of a graphics format, every one measured in Unity
+        /// 6000.0.71f1 (tests/projects/defaultcontrols rtformat.*); other releases keep the
+        /// previous, unmeasured mapping of the formats it does not list.</summary>
         public static RenderTextureFormat GetRenderTextureFormat(GraphicsFormat format)
         {
+            bool measured = Compat.DefaultConstructorStateMeasured;
             switch (format)
             {
                 case GraphicsFormat.R8G8B8A8_SRGB:
@@ -500,8 +514,14 @@ namespace UnityEngine.Experimental.Rendering
                 case GraphicsFormat.B5G5R5A1_UNormPack16: return RenderTextureFormat.ARGB1555;
                 case GraphicsFormat.A2B10G10R10_UNormPack32: return RenderTextureFormat.ARGB2101010;
                 case GraphicsFormat.B10G11R11_UFloatPack32: return RenderTextureFormat.RGB111110Float;
-                case GraphicsFormat.None: return RenderTextureFormat.Depth;
-                default: return RenderTextureFormat.ARGB32;
+                case GraphicsFormat.R8_SRGB when measured: return RenderTextureFormat.R8;
+                case GraphicsFormat.R8G8_SRGB when measured: return RenderTextureFormat.RG16;
+                case GraphicsFormat.A2R10G10B10_UNormPack32 when measured: return RenderTextureFormat.ARGB2101010;
+                case GraphicsFormat.R10G10B10_XRUNormPack32 when measured: return RenderTextureFormat.BGR101010_XR;
+                case GraphicsFormat.A10R10G10B10_XRUNormPack32 when measured: return RenderTextureFormat.BGRA10101010_XR;
+                case GraphicsFormat.YUV2 when measured: return VideoRenderTextureFormat;
+                case GraphicsFormat.None: return measured ? NoRenderTextureFormat : RenderTextureFormat.Depth;
+                default: return measured ? NoRenderTextureFormat : RenderTextureFormat.ARGB32;
             }
         }
     }

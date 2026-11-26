@@ -1459,45 +1459,6 @@
       }
     },
     {
-      "key": "UnityEngine.AI.NavMeshAgent/Property/UnityEngine.AI.NavMeshAgent/destination",
-      "module": "UnityEngine.AIModule",
-      "reason": "Navigation agent queries need initialized NavMesh attachment controls. The obstacle height observation reflects half extents and shape-dependent size conversion; direct constructor-height storage is ruled out. Preserve these exact observations until query validity and shape transition rules are implemented together.",
-      "expected": {
-        "status": "value",
-        "value": "UnityEngine.Vector3{x=Infinity;y=Infinity;z=Infinity}"
-      },
-      "actual": {
-        "status": "value",
-        "value": "UnityEngine.Vector3{x=0;y=0;z=0}"
-      }
-    },
-    {
-      "key": "UnityEngine.AI.NavMeshAgent/Property/UnityEngine.AI.NavMeshAgent/pathStatus",
-      "module": "UnityEngine.AIModule",
-      "reason": "Navigation agent queries need initialized NavMesh attachment controls. The obstacle height observation reflects half extents and shape-dependent size conversion; direct constructor-height storage is ruled out. Preserve these exact observations until query validity and shape transition rules are implemented together.",
-      "expected": {
-        "status": "value",
-        "value": "enum:2"
-      },
-      "actual": {
-        "status": "value",
-        "value": "enum:0"
-      }
-    },
-    {
-      "key": "UnityEngine.AI.NavMeshAgent/Property/UnityEngine.AI.NavMeshAgent/remainingDistance",
-      "module": "UnityEngine.AIModule",
-      "reason": "Navigation agent queries need initialized NavMesh attachment controls. The obstacle height observation reflects half extents and shape-dependent size conversion; direct constructor-height storage is ruled out. Preserve these exact observations until query validity and shape transition rules are implemented together.",
-      "expected": {
-        "status": "value",
-        "value": "Infinity"
-      },
-      "actual": {
-        "status": "value",
-        "value": "0"
-      }
-    },
-    {
       "key": "UnityEngine.AI.NavMeshObstacle/Property/UnityEngine.AI.NavMeshObstacle/height",
       "module": "UnityEngine.AIModule",
       "reason": "Navigation agent queries need initialized NavMesh attachment controls. The obstacle height observation reflects half extents and shape-dependent size conversion; direct constructor-height storage is ruled out. Preserve these exact observations until query validity and shape transition rules are implemented together.",
@@ -1524,71 +1485,6 @@
       }
     },
     {
-      "key": "UnityEngine.Animator/Property/UnityEngine.Animator/feetPivotActive",
-      "module": "UnityEngine.AnimationModule",
-      "reason": "Q403 UnityEngine.AnimationModule default-state migration: queued value versus value row; measure and fix the module default or getter behavior before removing this exact entry.",
-      "expected": {
-        "status": "value",
-        "value": "1"
-      },
-      "actual": {
-        "status": "value",
-        "value": "0"
-      }
-    },
-    {
-      "key": "UnityEngine.Animator/Property/UnityEngine.Animator/playbackTime",
-      "module": "UnityEngine.AnimationModule",
-      "reason": "Q403 UnityEngine.AnimationModule default-state migration: queued value versus value row; measure and fix the module default or getter behavior before removing this exact entry.",
-      "expected": {
-        "status": "value",
-        "value": "-1"
-      },
-      "actual": {
-        "status": "value",
-        "value": "0"
-      }
-    },
-    {
-      "key": "UnityEngine.Animator/Property/UnityEngine.Animator/recorderStartTime",
-      "module": "UnityEngine.AnimationModule",
-      "reason": "Q403 UnityEngine.AnimationModule default-state migration: queued value versus value row; measure and fix the module default or getter behavior before removing this exact entry.",
-      "expected": {
-        "status": "value",
-        "value": "-1"
-      },
-      "actual": {
-        "status": "value",
-        "value": "0"
-      }
-    },
-    {
-      "key": "UnityEngine.Animator/Property/UnityEngine.Animator/recorderStopTime",
-      "module": "UnityEngine.AnimationModule",
-      "reason": "Q403 UnityEngine.AnimationModule default-state migration: queued value versus value row; measure and fix the module default or getter behavior before removing this exact entry.",
-      "expected": {
-        "status": "value",
-        "value": "-1"
-      },
-      "actual": {
-        "status": "value",
-        "value": "0"
-      }
-    },
-    {
-      "key": "UnityEngine.Animator/Property/UnityEngine.Animator/targetRotation",
-      "module": "UnityEngine.AnimationModule",
-      "reason": "Q403 UnityEngine.AnimationModule default-state migration: queued value versus value row; measure and fix the module default or getter behavior before removing this exact entry.",
-      "expected": {
-        "status": "value",
-        "value": "UnityEngine.Quaternion{x=0;y=0;z=0;w=1}"
-      },
-      "actual": {
-        "status": "value",
-        "value": "UnityEngine.Quaternion{x=0;y=0;z=0;w=0}"
-      }
-    },
-    {
       "key": "UnityEngine.BillboardRenderer/Property/UnityEngine.Renderer/materials",
       "module": "UnityEngine.CoreModule",
       "reason": "BillboardRenderer material-array ownership remains queued. An empty constructor array was ruled out because sharedMaterials retains one null slot, while materials is empty and the singular material getter creates the default instance. The material count and asset association need independent controls.",
@@ -1612,19 +1508,6 @@
       "actual": {
         "status": "value",
         "value": "UnityEngine.LowLevelPhysics.GeometryHolder{Type=enum:0}"
-      }
-    },
-    {
-      "key": "UnityEngine.Canvas/Property/UnityEngine.Canvas/renderingDisplaySize",
-      "module": "UnityEngine.UIModule",
-      "reason": "Q411 viewport context now matches the Editor at 640x480. The fresh Canvas renderingDisplaySize still disagrees before layout; keep this exact raw discrepancy for the UI initialization migration.",
-      "expected": {
-        "status": "value",
-        "value": "UnityEngine.Vector2{x=100;y=100}"
-      },
-      "actual": {
-        "status": "value",
-        "value": "UnityEngine.Vector2{x=640;y=480}"
       }
     },
     {
@@ -1684,19 +1567,6 @@
       "actual": {
         "status": "value",
         "value": "UnityEngine.JointLimits{maxBounce=0;minBounce=0;bounceMinVelocity=0.200000003;bounciness=0;contactDistance=0;max=0;min=0}"
-      }
-    },
-    {
-      "key": "UnityEngine.Light/Property/UnityEngine.Light/layerShadowCullDistances",
-      "module": "UnityEngine.CoreModule",
-      "reason": "Q403 UnityEngine.CoreModule default-state migration: queued value versus value row; measure and fix the module default or getter behavior before removing this exact entry.",
-      "expected": {
-        "status": "value",
-        "value": "[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]"
-      },
-      "actual": {
-        "status": "value",
-        "value": "[]"
       }
     },
     {
@@ -1806,19 +1676,6 @@
       "actual": {
         "status": "value",
         "value": "1"
-      }
-    },
-    {
-      "key": "UnityEngine.Rendering.AttachmentDescriptor/Property/UnityEngine.Rendering.AttachmentDescriptor/format",
-      "module": "UnityEngine.CoreModule",
-      "reason": "Q403 UnityEngine.CoreModule default-state migration: queued value versus value row; measure and fix the module default or getter behavior before removing this exact entry.",
-      "expected": {
-        "status": "value",
-        "value": "enum:29"
-      },
-      "actual": {
-        "status": "value",
-        "value": "enum:1"
       }
     },
     {
@@ -2032,32 +1889,6 @@
       "actual": {
         "status": "value",
         "value": "UnityEngine.Bounds{center=UnityEngine.Vector3{x=0;y=0;z=0.5};extents=UnityEngine.Vector3{x=0;y=0;z=0.5};max=UnityEngine.Vector3{x=0;y=0;z=1};min=UnityEngine.Vector3{x=0;y=0;z=0};size=UnityEngine.Vector3{x=0;y=0;z=1}}"
-      }
-    },
-    {
-      "key": "UnityEngine.TrailRenderer/Property/UnityEngine.Renderer/bounds",
-      "module": "UnityEngine.CoreModule",
-      "reason": "Q403 UnityEngine.CoreModule default-state migration: queued value versus value row; measure and fix the module default or getter behavior before removing this exact entry.",
-      "expected": {
-        "status": "value",
-        "value": "UnityEngine.Bounds{center=UnityEngine.Vector3{x=0;y=0;z=0};extents=UnityEngine.Vector3{x=0.5;y=0.5;z=0.5};max=UnityEngine.Vector3{x=0.5;y=0.5;z=0.5};min=UnityEngine.Vector3{x=-0.5;y=-0.5;z=-0.5};size=UnityEngine.Vector3{x=1;y=1;z=1}}"
-      },
-      "actual": {
-        "status": "value",
-        "value": "UnityEngine.Bounds{center=UnityEngine.Vector3{x=0;y=0;z=0};extents=UnityEngine.Vector3{x=0;y=0;z=0};max=UnityEngine.Vector3{x=0;y=0;z=0};min=UnityEngine.Vector3{x=0;y=0;z=0};size=UnityEngine.Vector3{x=0;y=0;z=0}}"
-      }
-    },
-    {
-      "key": "UnityEngine.TrailRenderer/Property/UnityEngine.Renderer/localBounds",
-      "module": "UnityEngine.CoreModule",
-      "reason": "Q403 UnityEngine.CoreModule default-state migration: queued value versus value row; measure and fix the module default or getter behavior before removing this exact entry.",
-      "expected": {
-        "status": "value",
-        "value": "UnityEngine.Bounds{center=UnityEngine.Vector3{x=0;y=0;z=0};extents=UnityEngine.Vector3{x=0.5;y=0.5;z=0.5};max=UnityEngine.Vector3{x=0.5;y=0.5;z=0.5};min=UnityEngine.Vector3{x=-0.5;y=-0.5;z=-0.5};size=UnityEngine.Vector3{x=1;y=1;z=1}}"
-      },
-      "actual": {
-        "status": "value",
-        "value": "UnityEngine.Bounds{center=UnityEngine.Vector3{x=0;y=0;z=0};extents=UnityEngine.Vector3{x=0;y=0;z=0};max=UnityEngine.Vector3{x=0;y=0;z=0};min=UnityEngine.Vector3{x=0;y=0;z=0};size=UnityEngine.Vector3{x=0;y=0;z=0}}"
       }
     },
     {

@@ -741,8 +741,33 @@ namespace UnityEngine
             m_Strip.WriteTo(mesh, streaming: false);
         }
 
-        internal override Bounds GetLocalBounds() =>
-            LineDrawing.BoundsOf(DrawPoints(), Mathf.Abs(m_Parameters.WidthMultiplier), transform.worldToLocalMatrix);
+        internal override Bounds GetLocalBounds()
+        {
+            var points = DrawPoints();
+            if (points.Count == 0 && Compat.DefaultConstructorStateMeasured)
+                return TransformBounds(PointlessWorldBounds(), transform.worldToLocalMatrix);
+            return LineDrawing.BoundsOf(points, Mathf.Abs(m_Parameters.WidthMultiplier), transform.worldToLocalMatrix);
+        }
+
+        internal override Bounds GetWorldBounds()
+        {
+            if (LocalBoundsOverride == null && Compat.DefaultConstructorStateMeasured && DrawPoints().Count == 0)
+                return PointlessWorldBounds();
+            return base.GetWorldBounds();
+        }
+
+        /// <summary>A trail without points spans the world origin and the object, widened by the
+        /// width multiplier (Unity 6000.0.71f1, tests/projects/defaultcontrols trail.*: at the origin,
+        /// away from it, wider and scaled; the object's scale does not widen it). Its local bounds
+        /// are that box in the object's space. Other releases keep the empty box at the origin,
+        /// unmeasured.</summary>
+        Bounds PointlessWorldBounds()
+        {
+            var b = new Bounds(Vector3.zero, Vector3.zero);
+            b.Encapsulate(transform.position);
+            b.Expand(Mathf.Abs(m_Parameters.WidthMultiplier));
+            return b;
+        }
 
         internal override void CollectDraws(FrameBuilder.CameraContext camera, List<FrameBuilder.DrawItem> into)
         {

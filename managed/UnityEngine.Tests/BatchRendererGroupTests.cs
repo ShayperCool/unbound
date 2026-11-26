@@ -190,10 +190,11 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
-        public void FilterSettingsKeepTheirFieldsAndEverySceneUntilSet()
+        public void FilterSettingsKeepTheirFieldsAndTheEditorSceneMaskUntilSet()
         {
             var filter = new BatchFilterSettings { layer = 5, shadowCastingMode = ShadowCastingMode.ShadowsOnly, motionMode = MotionVectorGenerationMode.ForceNoMotion, receiveShadows = true };
-            Assert.Equal(ulong.MaxValue, filter.sceneCullingMask);
+            // The Editor's default scene culling mask (tests/projects/defaultcontrols bfs.default).
+            Assert.Equal(UnityEditor.SceneManagement.SceneCullingMasks.DefaultSceneCullingMask, filter.sceneCullingMask);
             filter.sceneCullingMask = 0;
             Assert.Equal(0ul, filter.sceneCullingMask);
             Assert.Equal(ShadowCastingMode.ShadowsOnly, filter.shadowCastingMode);
