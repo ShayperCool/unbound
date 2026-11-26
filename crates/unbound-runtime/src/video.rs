@@ -447,6 +447,23 @@ fn spawn_decoder(
     let mut stderr = child.stderr.take().context("no ffmpeg error output")?;
     let limit = (AUDIO_AHEAD_SECONDS * rate as f64) as usize * channels;
     let name = path.to_string();
+    // ffmpeg's errors are read as they come (a full pipe would stop its output); a track it could
+    // not decode plays as silence, and the first lines say why once, when its output ends.
+    let errors = Arc::new(Mutex::new(String::new()));
+    let collected = errors.clone();
+    std::thread::spawn(move || {
+        let mut text = String::new();
+        let mut buffer = [0u8; 4096];
+        while let Ok(n) = stderr.read(&mut buffer) {
+            if n == 0 {
+                break;
+            }
+            if text.len() < 2048 {
+                text.push_str(&String::from_utf8_lossy(&buffer[..n]));
+            }
+        }
+        *collected.lock().unwrap() = text;
+    });
     std::thread::spawn(move || {
         let mut bytes = vec![0u8; 4096];
         let mut carry = Vec::<u8>::new();
@@ -476,9 +493,8 @@ fn spawn_decoder(
             drop(q);
             carry.drain(..whole);
         }
-        // A track ffmpeg could not decode plays as silence: say why once.
-        let mut message = String::new();
-        let _ = stderr.read_to_string(&mut message);
+        std::thread::sleep(std::time::Duration::from_millis(50));
+        let message = errors.lock().unwrap().clone();
         if generation.load(Ordering::SeqCst) == mine && !message.trim().is_empty() {
             tracing::warn!(
                 "the sound of video {name} could not be decoded by ffmpeg: {}",
@@ -493,12 +509,18 @@ impl AudioStream {
     /// Starts decoding again at `time` seconds, dropping what was decoded. The process is
     /// started and the old one stopped outside the state lock, which the mixer's thread takes.
     fn restart(&self, time: f64) -> Result<()> {
+        // The stream starts over at once (an empty queue at the new time), so the mixer reads no
+        // earlier sound while the new process starts.
+        let queue = Arc::new(Mutex::new(VecDeque::new()));
         let (generation, mine) = {
-            let state = self.state.lock().unwrap();
+            let mut state = self.state.lock().unwrap();
             let mine = state.generation.fetch_add(1, Ordering::SeqCst) + 1;
+            state.queue = queue.clone();
+            state.skip = 0.0;
+            state.hold = 0.0;
+            state.position = time.max(0.0) * self.rate as f64;
             (state.generation.clone(), mine)
         };
-        let queue = Arc::new(Mutex::new(VecDeque::new()));
         let child = spawn_decoder(
             &self.path,
             self.track,
@@ -511,11 +533,12 @@ impl AudioStream {
         )?;
         let old = {
             let mut state = self.state.lock().unwrap();
-            state.queue = queue;
-            state.skip = 0.0;
-            state.hold = 0.0;
-            state.position = time.max(0.0) * self.rate as f64;
-            state.process.replace(child)
+            if state.generation.load(Ordering::SeqCst) != mine {
+                // A later restart took over meanwhile: this process is not needed.
+                Some(child)
+            } else {
+                state.process.replace(child)
+            }
         };
         if let Some(mut old) = old {
             let _ = old.kill();
@@ -565,15 +588,17 @@ impl AudioStream {
         }
     }
 
-    /// How the sound given out stands against the pictures at `time` (seconds), beyond the chunk
-    /// the mixer reads ahead at this speed plus [`AUDIO_DRIFT_SECONDS`]: behind them, or more than
-    /// [`AUDIO_HOLD_SECONDS`] ahead, it starts again at their time; ahead by less, it waits for
-    /// them (pictures that fell behind in a hitch); otherwise it is in step.
+    /// How the sound given out stands against the pictures at `time` (seconds): more than
+    /// [`AUDIO_DRIFT_SECONDS`] behind them, or more than the chunk the mixer reads ahead at this
+    /// speed plus [`AUDIO_HOLD_SECONDS`] ahead, it starts again at their time; ahead by more than
+    /// the chunk plus [`AUDIO_DRIFT_SECONDS`] but less, it waits for them (pictures that fell
+    /// behind in a hitch); otherwise it is in step.
     fn drift(&self, state: &AudioState, time: f64) -> Drift {
         let ahead =
             state.speed.max(1.0) * crate::audio::mixer::STREAM_CHUNK as f64 / self.rate as f64;
         let d = state.position / self.rate as f64 - time;
-        if d < -(ahead + AUDIO_DRIFT_SECONDS) || d > ahead + AUDIO_HOLD_SECONDS {
+        // The chunk read ahead only ever puts the sound further ahead: behind needs no allowance.
+        if d < -AUDIO_DRIFT_SECONDS || d > ahead + AUDIO_HOLD_SECONDS {
             Drift::Restart
         } else if d > ahead + AUDIO_DRIFT_SECONDS {
             Drift::Hold((d - ahead) * self.rate as f64)
@@ -584,7 +609,7 @@ impl AudioStream {
 
     /// The player's state: playing or not, its speed, a time to start decoding again at (a seek or
     /// loop), and the pictures' time, which starts decoding again there when the sound has drifted
-    /// from it ([`Self::drifted`]).
+    /// from it ([`Self::drift`]).
     pub fn control(
         &self,
         playing: Option<bool>,
@@ -722,6 +747,29 @@ mod audio_stream_tests {
         assert_eq!(out, [0.0, 0.0, 0.0, 0.0, 1.0, 2.0]);
         assert_eq!(s.state.lock().unwrap().position, 1.0);
         assert_eq!(s.state.lock().unwrap().hold, 0.0);
+    }
+
+    #[test]
+    fn a_restart_drops_the_earlier_sound_before_its_decoder_starts() {
+        let s = stream(&[1.0, 2.0, 3.0, 4.0], true, 1.0, 10);
+        s.state.lock().unwrap().hold = 3.0;
+        // The decoder may not start here (no file); the stream has started over regardless.
+        let _ = s.restart(2.0);
+        let state = s.state.lock().unwrap();
+        assert_eq!(state.queue.lock().unwrap().len(), 0);
+        assert_eq!(state.position, 20.0);
+        assert_eq!(state.hold, 0.0);
+    }
+
+    #[test]
+    fn sound_behind_the_pictures_beyond_the_allowance_starts_again() {
+        let s = stream(&[], true, 1.0, 48000);
+        let mut state = s.state.lock().unwrap();
+        state.position = 48000.0;
+        // 0.25 s behind the pictures: no read-ahead allowance on that side.
+        assert_eq!(s.drift(&state, 1.25), Drift::Restart);
+        assert_eq!(s.drift(&state, 1.15), Drift::InStep);
+        state.position = 0.0;
     }
 
     #[test]
