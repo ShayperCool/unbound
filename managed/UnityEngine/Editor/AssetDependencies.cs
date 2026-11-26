@@ -13,9 +13,10 @@ namespace UnityEditor
 
         // Matches the Unity 6000.0.71f1 Editor, tests/projects/assetdependencies: an asset's direct
         // dependencies are the other listed assets its saved data references (a native asset's
-        // object references, a shader's default and non-modifiable textures), not itself, not the
-        // built-in resources and not a GUID no asset has; a script's default references, a shader's
-        // includes, a texture's, a text's and a folder's are none. The recursive answer holds the
+        // object references, a shader's default and non-modifiable textures, a texture's sprites'
+        // secondary textures), not itself, not the built-in resources and not a GUID no asset has; a
+        // script's default references, a shader's includes, fallback and UsePass and Dependency
+        // shaders, a text's and a folder's are none. The recursive answer holds the
         // given assets and every asset reached through them. An unsaved change is not seen (it
         // reads the files). Paths are read as AssetPathToGUID reads them (any case, either slash),
         // but for a trailing slash; null, empty and unknown paths answer nothing. The Editor's
@@ -61,17 +62,40 @@ namespace UnityEditor
             return s_ByPath.TryGetValue(path.Replace('\\', '/'), out var e) ? e : null;
         }
 
-        /// <summary>An asset's direct dependencies as GUIDs, by its file, with the write times of the
-        /// file and its .meta they were read from.</summary>
-        static readonly Dictionary<string, (DateTime File, DateTime Meta, string[] Guids)> s_Dependencies =
-            new Dictionary<string, (DateTime, DateTime, string[])>(StringComparer.OrdinalIgnoreCase);
+        /// <summary>An asset's direct dependencies as GUIDs, by its file, with the write times and
+        /// lengths of the file and its .meta they were read from.</summary>
+        static readonly Dictionary<string, (Stamp File, Stamp Meta, string[] Guids)> s_Dependencies =
+            new Dictionary<string, (Stamp, Stamp, string[])>(StringComparer.OrdinalIgnoreCase);
+
+        readonly record struct Stamp(DateTime Time, long Length)
+        {
+            internal static Stamp Of(string file)
+            {
+                var info = new FileInfo(file);
+                return info.Exists ? new Stamp(info.LastWriteTimeUtc, info.Length) : default;
+            }
+        }
 
         /// <summary>The importers whose assets reference no other asset (tests/projects/assetdependencies
-        /// deps.Tex.png, DepBehaviour.cs, Text.txt, DepInclude.cginc).</summary>
+        /// deps.DepBehaviour.cs: not its default references, Text.txt, DepInclude.cginc).</summary>
         static readonly HashSet<string> s_ImportersWithoutReferences = new HashSet<string>(StringComparer.Ordinal)
         {
-            "TextureImporter", "MonoImporter", "TextScriptImporter", "ShaderIncludeImporter",
+            "MonoImporter", "TextScriptImporter", "ShaderIncludeImporter",
         };
+
+        /// <summary>The importers whose assets reference what their .meta does: a shader its default and
+        /// non-modifiable textures (not its fallback, UsePass or Dependency shaders), a texture its
+        /// sprites' secondary textures (tests/projects/assetdependencies deps.Custom.shader,
+        /// Fall.shader, UsePass.shader, Dependency.shader, Tex.png, Sec.png).</summary>
+        static readonly HashSet<string> s_ImportersOfMetaReferences = new HashSet<string>(StringComparer.Ordinal)
+        {
+            "ShaderImporter", "TextureImporter",
+        };
+
+        /// <summary>The importers of Unity's own serialized assets, whose text-serialized files
+        /// reference what their objects do (deps.Mat.mat, Data.asset, Prefab.prefab, Deps.unity).</summary>
+        static bool IsNativeAsset(Entry asset) =>
+            asset.Importer is "NativeFormatImporter" or "PrefabImporter" || (asset.Importer == "DefaultImporter" && asset.Kind == "scene");
 
         static IEnumerable<Entry> DirectDependencies(Entry asset)
         {
@@ -85,41 +109,43 @@ namespace UnityEditor
             if (asset.Kind == "folder") return Array.Empty<string>();
             var file = FileOf(asset.Path);
             var meta = file + ".meta";
-            DateTime fileTime, metaTime;
+            Stamp fileStamp, metaStamp;
             try
             {
-                fileTime = File.GetLastWriteTimeUtc(file);
-                metaTime = File.GetLastWriteTimeUtc(meta);
+                fileStamp = Stamp.Of(file);
+                metaStamp = Stamp.Of(meta);
             }
             catch (Exception e) when (e is IOException or UnauthorizedAccessException)
             {
                 return Array.Empty<string>();
             }
-            if (s_Dependencies.TryGetValue(file, out var cached) && cached.File == fileTime && cached.Meta == metaTime) return cached.Guids;
+            if (s_Dependencies.TryGetValue(file, out var cached) && cached.File == fileStamp && cached.Meta == metaStamp) return cached.Guids;
             var guids = ReadDirectGuids(asset, file, meta);
-            s_Dependencies[file] = (fileTime, metaTime, guids);
+            s_Dependencies[file] = (fileStamp, metaStamp, guids);
             return guids;
         }
 
         static string[] ReadDirectGuids(Entry asset, string file, string meta)
         {
-            // (A text whose content happens to look like Unity's serialization is a text.)
             if (asset.Importer != null && s_ImportersWithoutReferences.Contains(asset.Importer)) return Array.Empty<string>();
             try
             {
-                // A text-serialized native asset (a material, a prefab, a scene, a ScriptableObject):
-                // the objects it references.
-                if (IsTextSerialized(file)) return ReferencedGuids(File.ReadAllText(file));
-                // A shader: the default and non-modifiable textures its importer gives it.
-                if (asset.Importer == "ShaderImporter") return File.Exists(meta) ? ReferencedGuids(File.ReadAllText(meta)) : Array.Empty<string>();
+                if (asset.Importer != null && s_ImportersOfMetaReferences.Contains(asset.Importer))
+                    return File.Exists(meta) ? ReferencedGuids(File.ReadAllText(meta)) : Array.Empty<string>();
+                if (IsNativeAsset(asset))
+                {
+                    if (IsTextSerialized(file)) return ReferencedGuids(File.ReadAllText(file));
+                    Stubs.Ignored("AssetDatabase.GetDependencies(binary)",
+                        "does not read the references of binary-serialized assets yet (" + asset.Path + "): it answers none of them");
+                    return Array.Empty<string>();
+                }
             }
             catch (Exception e) when (e is IOException or UnauthorizedAccessException)
             {
                 return Array.Empty<string>();
             }
-            // A file of the DefaultImporter that is not text-serialized (an unknown format) holds no
-            // object references; a binary-serialized scene is not read.
-            if (asset.Importer == "DefaultImporter" && asset.Kind != "scene") return Array.Empty<string>();
+            // Another file of the DefaultImporter (an unknown format) holds no object references.
+            if (asset.Importer == "DefaultImporter") return Array.Empty<string>();
             if (asset.Importer != null)
                 Stubs.Ignored("AssetDatabase.GetDependencies(" + asset.Importer + ")",
                     "does not read the references of " + asset.Importer + " assets yet (" + asset.Path + "): it answers none of them");

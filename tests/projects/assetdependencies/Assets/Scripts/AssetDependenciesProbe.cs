@@ -72,7 +72,8 @@ public class AssetDependenciesProbe : MonoBehaviour
 
     static readonly string[] Assets =
     {
-        "Assets/Deps/Tex.png", "Assets/Deps/Tex2.png", "Assets/Deps/Custom.shader", "Assets/Deps/DepInclude.cginc", "Assets/Deps/Mat.mat",
+        "Assets/Deps/Tex.png", "Assets/Deps/Tex2.png", "Assets/Deps/Sec.png", "Assets/Deps/Custom.shader",
+        "Assets/Deps/Fall.shader", "Assets/Deps/UsePass.shader", "Assets/Deps/Dependency.shader", "Assets/Deps/DepInclude.cginc", "Assets/Deps/Mat.mat",
         "Assets/Deps/BuiltinMat.mat", "Assets/Deps/Variant.mat", "Assets/Scripts/DepData.cs", "Assets/Scripts/DepBehaviour.cs",
         "Assets/Deps/Data.asset", "Assets/Deps/Other.asset", "Assets/Deps/Text.txt", "Assets/Deps/Prefab.prefab",
         "Assets/Deps/Deps.unity", "Assets/Scenes/Probe.unity", "Assets/Scripts/AssetDependenciesProbe.cs",

@@ -44,7 +44,7 @@ namespace UnityEngine.Tests
                     if (name.EndsWith(".meta", StringComparison.Ordinal)) continue;
                     var meta = File.ReadAllText(file + ".meta");
                     var importer = Regex.Match(meta, @"(?m)^(\w+Importer):").Groups[1].Value;
-                    entries.Add(Entry(GuidOf(meta), name, "asset", importer, Scalar(meta, "assetBundleName"), Scalar(meta, "assetBundleVariant")));
+                    entries.Add(Entry(GuidOf(meta), name, name.EndsWith(".unity", StringComparison.Ordinal) ? "scene" : "asset", importer, Scalar(meta, "assetBundleName"), Scalar(meta, "assetBundleVariant")));
                 }
             }
             ProjectInfo.ProjectPath = m_Root;
@@ -86,7 +86,8 @@ namespace UnityEngine.Tests
         public static IEnumerable<object[]> Assets() =>
             new[]
             {
-                "Assets/Deps/Tex.png", "Assets/Deps/Tex2.png", "Assets/Deps/Custom.shader", "Assets/Deps/DepInclude.cginc", "Assets/Deps/Mat.mat",
+                "Assets/Deps/Tex.png", "Assets/Deps/Tex2.png", "Assets/Deps/Sec.png", "Assets/Deps/Custom.shader", "Assets/Deps/Fall.shader",
+                "Assets/Deps/UsePass.shader", "Assets/Deps/Dependency.shader", "Assets/Deps/DepInclude.cginc", "Assets/Deps/Mat.mat",
                 "Assets/Deps/BuiltinMat.mat", "Assets/Deps/Variant.mat", "Assets/Scripts/DepData.cs", "Assets/Scripts/DepBehaviour.cs",
                 "Assets/Deps/Data.asset", "Assets/Deps/Other.asset", "Assets/Deps/Text.txt", "Assets/Deps/Prefab.prefab",
                 "Assets/Deps/Deps.unity", "Assets/Scenes/Probe.unity", "Assets/Scripts/AssetDependenciesProbe.cs",
@@ -170,6 +171,17 @@ namespace UnityEngine.Tests
             Assert.Empty(AssetDatabase.GetDependencies("Assets/Deps/Yaml.txt", false));
             Assert.Empty(AssetDatabase.GetDependencies("Assets/Deps/Notes.md", false));
             Assert.Empty(m_Logs.Lines);
+        }
+
+        /// <summary>A binary-serialized scene's references are not read: said.</summary>
+        [Fact]
+        public void ABinarySceneIsSaid()
+        {
+            using var listing = AssetDatabase.ListForTests("[" + Entry("d1e000000000000000000000000000ad", "Assets/Deps/Binary.unity", "scene", "DefaultImporter", "", "") + "]");
+            File.WriteAllBytes(Path.Combine(m_Root, "Assets", "Deps", "Binary.unity"), new byte[] { 0, 0, 0, 0, 1, 2, 3, 4 });
+            Stubs.Forget("AssetDatabase.GetDependencies(binary)");
+            Assert.Empty(AssetDatabase.GetDependencies("Assets/Deps/Binary.unity", false));
+            Assert.Single(m_Logs.Lines, l => l.Contains("does not read the references of binary-serialized assets yet"));
         }
 
         /// <summary>The assets of an importer whose references are not read say so, once.</summary>

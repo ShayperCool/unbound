@@ -9,7 +9,9 @@ neither the OS nor the graphics device).
 | asset | references |
 | --- | --- |
 | `Tex.png`, `Tex2.png` | none (AssetBundles `tex`, `tex.hd`) |
+| `Sec.png` | a sprite whose `.meta` gives it `Tex.png` as a secondary texture |
 | `Custom.shader` | `#include "DepInclude.cginc"`, a `Fallback` to a built-in shader; its `.meta` gives it `Tex.png` as a default texture and `Tex2.png` as a non-modifiable one |
+| `Fall.shader`, `UsePass.shader`, `Dependency.shader` | `Custom.shader` (`Probe/Custom`) as their `Fallback`, through `UsePass`, as a `Dependency` |
 | `Mat.mat` | `Custom.shader`, `Tex.png`, a GUID no asset has (bundle `mat`) |
 | `BuiltinMat.mat` | the built-in Standard shader |
 | `Variant.mat` | `Custom.shader`, its parent `Mat.mat` |
@@ -30,8 +32,9 @@ What it shows: an asset's direct dependencies are the other assets its saved dat
 itself, not the built-in resources and not a GUID no asset has: a native asset's object references
 (a material's shader, textures and parent, a ScriptableObject's references, a prefab's and a scene's
 components' references and scripts, a scene's prefab instances' sources), a shader's default and
-non-modifiable textures; a script's default references, a shader's includes, a texture's and a text's
-are none. The recursive answer (the default) holds the given assets too and everything reached through
+non-modifiable textures, a texture's sprites' secondary textures; a script's default references, a
+shader's includes and the shaders it names (`Fallback`, `UsePass`, `Dependency`), a plain texture's
+and a text's are none. The recursive answer (the default) holds the given assets too and everything reached through
 them, once (a cycle ends); of several paths, the union. A folder's recursive answer is the folder.
 Paths of another case or with backslashes are read as the asset's (answered in its own case); null,
 empty, missing, absolute and trailing-slash paths answer nothing, without a log. An unsaved change is
@@ -40,9 +43,9 @@ reference to the missing GUID. The Editor's order is not sorted (not by path and
 documented. An AssetBundle's dependencies are the bundle names, with their variants, of its assets'
 dependencies (direct or recursive alike), but its own, sorted.
 
-Not covered: models, scripted importers, sprite atlases, textures with secondary textures and other
+Not covered: models, scripted importers, sprite atlases of the V2 importer, visual effects and other
 imported assets that may hold references (Unbound answers none for them, warned), binary-serialized
-assets, packages' assets.
+assets (warned), packages' assets.
 
 Record and gate:
 

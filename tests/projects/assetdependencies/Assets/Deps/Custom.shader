@@ -5,6 +5,7 @@ Shader "Probe/Custom"
     {
         Pass
         {
+            Name "MAIN"
             CGPROGRAM
             #pragma vertex vert
             #pragma fragment frag
