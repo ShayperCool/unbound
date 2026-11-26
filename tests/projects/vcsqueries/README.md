@@ -22,6 +22,9 @@ line), logged as "Version Control: " and that message; a status task fails silen
 and `new Asset(path)` state `None` (`MetaFile` for a `.meta`); a folder's path ends in `/` with
 empty names; paths under `Assets`, `Packages` and `ProjectSettings` are versioned, others not.
 
+Unbound (`managed/UnityEngine/Editor/VersionControl.cs`) answers the same; a project whose settings
+choose a provider is answered as without one, with a warning.
+
 Record and gate:
 
     python3 tests/projects/vcsqueries/run.py record --label A   # also B; macOS batch is fine

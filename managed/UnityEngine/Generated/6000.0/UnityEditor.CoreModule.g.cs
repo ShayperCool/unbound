@@ -23812,10 +23812,8 @@ namespace UnityEditor
         [global::Unbound.Stub] public override void OnInspectorGUI(global::UnityEditor.InitialModuleUI initial) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.VelocityModuleUI.OnInspectorGUI"); }
         [global::Unbound.Stub] public override void UpdateCullingSupportedString(ref string text) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.VelocityModuleUI.UpdateCullingSupportedString"); }
     }
-    [global::Unbound.Stub]
-    public unsafe sealed partial class VersionControlSettings : global::UnityEngine.Object
+    unsafe partial class VersionControlSettings
     {
-        public static string mode { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.VersionControlSettings.mode"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.VersionControlSettings.mode"); } }
         public static bool trackPackagesOutsideProject { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.VersionControlSettings.trackPackagesOutsideProject"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.VersionControlSettings.trackPackagesOutsideProject"); } }
     }
     [global::Unbound.Stub]
@@ -44911,58 +44909,8 @@ namespace UnityEditor.Utils
 }
 namespace UnityEditor.VersionControl
 {
-    [global::Unbound.Stub]
-    public unsafe partial class Asset
+    unsafe partial class Asset
     {
-        [global::Unbound.Stub] internal static bool IsState(global::UnityEditor.VersionControl.Asset.States isThisState, global::UnityEditor.VersionControl.Asset.States partOfThisState) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.VersionControl.Asset.IsState"); return default; }
-        [global::Unbound.Stub] public bool IsState(global::UnityEditor.VersionControl.Asset.States state) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.VersionControl.Asset.IsState"); return default; }
-        [global::Unbound.Stub] public bool IsOneOfStates(global::UnityEditor.VersionControl.Asset.States[] states) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.VersionControl.Asset.IsOneOfStates"); return default; }
-        [global::Unbound.Stub] public void Edit() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.VersionControl.Asset.Edit"); }
-        [global::Unbound.Stub] public global::UnityEngine.Object Load() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.VersionControl.Asset.Load"); return default; }
-        [global::Unbound.Stub] internal static string StateToString(global::UnityEditor.VersionControl.Asset.States state) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.VersionControl.Asset.StateToString"); return default; }
-        [global::Unbound.Stub] internal static string AllStateToString(global::UnityEditor.VersionControl.Asset.States state) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.VersionControl.Asset.AllStateToString"); return default; }
-        [global::Unbound.Stub] internal string StateToString() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.VersionControl.Asset.StateToString"); return default; }
-        [global::Unbound.Stub] public Asset(string clientPath) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.VersionControl.Asset.ctor"); }
-        [global::Unbound.Stub] public void Dispose() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.VersionControl.Asset.Dispose"); }
-        [global::Unbound.Stub] public bool IsChildOf(global::UnityEditor.VersionControl.Asset other) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.VersionControl.Asset.IsChildOf"); return default; }
-        internal bool IsUnderVersionControl { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.VersionControl.Asset.IsUnderVersionControl"); return default; } }
-        public string prettyPath { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.VersionControl.Asset.prettyPath"); return default; } }
-        public global::UnityEditor.VersionControl.Asset.States state { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.VersionControl.Asset.state"); return default; } }
-        public string path { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.VersionControl.Asset.path"); return default; } }
-        public string metaPath { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.VersionControl.Asset.metaPath"); return default; } }
-        public string assetPath { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.VersionControl.Asset.assetPath"); return default; } }
-        public bool isFolder { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.VersionControl.Asset.isFolder"); return default; } }
-        public bool readOnly { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.VersionControl.Asset.readOnly"); return default; } }
-        public bool isMeta { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.VersionControl.Asset.isMeta"); return default; } }
-        public bool locked { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.VersionControl.Asset.locked"); return default; } }
-        public string name { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.VersionControl.Asset.name"); return default; } }
-        public string fullName { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.VersionControl.Asset.fullName"); return default; } }
-        public bool isInCurrentProject { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.VersionControl.Asset.isInCurrentProject"); return default; } }
-        [global::System.Flags]
-        public enum States
-        {
-            None = 0,
-            Local = 1,
-            Synced = 2,
-            OutOfSync = 4,
-            Missing = 8,
-            CheckedOutLocal = 16,
-            CheckedOutRemote = 32,
-            DeletedLocal = 64,
-            DeletedRemote = 128,
-            AddedLocal = 256,
-            AddedRemote = 512,
-            Conflicted = 1024,
-            LockedLocal = 2048,
-            LockedRemote = 4096,
-            Updating = 8192,
-            ReadOnly = 16384,
-            MetaFile = 32768,
-            MovedLocal = 65536,
-            MovedRemote = 131072,
-            Unversioned = 262144,
-            Exclusive = 524288,
-        }
         [global::Unbound.Stub]
         internal unsafe static partial class BindingsMarshaller
         {
@@ -44970,21 +44918,13 @@ namespace UnityEditor.VersionControl
             [global::Unbound.Stub] public static global::UnityEditor.VersionControl.Asset ConvertToManaged(global::System.IntPtr ptr) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.VersionControl.Asset.BindingsMarshaller.ConvertToManaged"); return default; }
         }
     }
-    [global::Unbound.Stub]
-    public unsafe partial class AssetList : global::System.Collections.Generic.List<global::UnityEditor.VersionControl.Asset>
+    unsafe partial class AssetList
     {
-        [global::Unbound.Stub] public AssetList() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.VersionControl.AssetList.ctor"); }
-        [global::Unbound.Stub] public AssetList(global::UnityEditor.VersionControl.AssetList src) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.VersionControl.AssetList.ctor"); }
-        [global::Unbound.Stub] public global::UnityEditor.VersionControl.AssetList Filter(bool includeFolder, params global::UnityEditor.VersionControl.Asset.States[] states) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.VersionControl.AssetList.Filter"); return default; }
-        [global::Unbound.Stub] public int FilterCount(bool includeFolder, params global::UnityEditor.VersionControl.Asset.States[] states) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.VersionControl.AssetList.FilterCount"); return default; }
-        [global::Unbound.Stub] public global::UnityEditor.VersionControl.AssetList FilterChildren() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.VersionControl.AssetList.FilterChildren"); return default; }
         [global::Unbound.Stub] internal global::UnityEditor.VersionControl.AssetList NaturalSort() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.VersionControl.AssetList.NaturalSort"); return default; }
     }
-    [global::Unbound.Stub]
-    public unsafe partial class ChangeSet
+    unsafe partial class ChangeSet
     {
         [global::Unbound.Stub] public static string defaultID;
-        [global::Unbound.Stub] public ChangeSet() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.VersionControl.ChangeSet.ctor"); }
         [global::Unbound.Stub] public ChangeSet(string description) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.VersionControl.ChangeSet.ctor"); }
         [global::Unbound.Stub] public ChangeSet(string description, string revision) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.VersionControl.ChangeSet.ctor"); }
         [global::Unbound.Stub] public ChangeSet(global::UnityEditor.VersionControl.ChangeSet other) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.VersionControl.ChangeSet.ctor"); }
@@ -44996,19 +44936,12 @@ namespace UnityEditor.VersionControl
         {
             [global::Unbound.Stub] public static global::System.IntPtr ConvertToNative(global::UnityEditor.VersionControl.ChangeSet changeSet) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.VersionControl.ChangeSet.BindingsMarshaller.ConvertToNative"); return default; }
         }
+        public ChangeSet() { }
     }
     [global::Unbound.Stub]
     public unsafe partial class ChangeSets : global::System.Collections.Generic.List<global::UnityEditor.VersionControl.ChangeSet>
     {
         [global::Unbound.Stub] public ChangeSets() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.VersionControl.ChangeSets.ctor"); }
-    }
-    [global::System.Flags]
-    public enum CheckoutMode
-    {
-        Asset = 1,
-        Meta = 2,
-        Both = 3,
-        Exact = 4,
     }
     internal enum CommandContext
     {
@@ -45095,39 +45028,16 @@ namespace UnityEditor.VersionControl
         MergeAll = 1,
         [global::System.Obsolete("This member is no longer supported (UnityUpgradable) -> MergeNone")] MergeNonConflicting = 2,
     }
-    [global::Unbound.Stub]
-    public unsafe partial class Message
+    unsafe partial class Message
     {
-        [global::Unbound.Stub] public void Show() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.VersionControl.Message.Show"); }
-        [global::Unbound.Stub] internal Message() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.VersionControl.Message.ctor"); }
-        [global::Unbound.Stub] public void Dispose() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.VersionControl.Message.Dispose"); }
-        public global::UnityEditor.VersionControl.Message.Severity severity { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.VersionControl.Message.severity"); return default; } }
-        public string message { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.VersionControl.Message.message"); return default; } }
-        public enum Severity
-        {
-            Data = 0,
-            Verbose = 1,
-            Info = 2,
-            Warning = 3,
-            Error = 4,
-        }
         [global::Unbound.Stub]
         internal unsafe static partial class BindingsMarshaller
         {
             [global::Unbound.Stub] public static global::System.IntPtr ConvertToNative(global::UnityEditor.VersionControl.Message message) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.VersionControl.Message.BindingsMarshaller.ConvertToNative"); return default; }
         }
     }
-    [global::System.Flags]
-    public enum OnlineState
+    unsafe partial class Plugin
     {
-        Updating = 0,
-        Online = 1,
-        Offline = 2,
-    }
-    [global::Unbound.Stub]
-    public unsafe partial class Plugin
-    {
-        [global::Unbound.Stub] internal Plugin() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.VersionControl.Plugin.ctor"); }
         [global::Unbound.Stub] public void Dispose() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.VersionControl.Plugin.Dispose"); }
         public static global::UnityEditor.VersionControl.Plugin[] availablePlugins { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.VersionControl.Plugin.availablePlugins"); return global::System.Array.Empty<global::UnityEditor.VersionControl.Plugin>(); } }
         public string name { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.VersionControl.Plugin.name"); return default; } }
@@ -45139,38 +45049,13 @@ namespace UnityEditor.VersionControl
             [global::Unbound.Stub] public static global::UnityEditor.VersionControl.Plugin ConvertToManaged(global::System.IntPtr ptr) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.VersionControl.Plugin.BindingsMarshaller.ConvertToManaged"); return default; }
         }
     }
-    [global::Unbound.Stub]
-    public unsafe partial class Provider
+    unsafe partial class Provider
     {
         [global::Unbound.Stub] public static global::UnityEditor.VersionControl.Provider.PreSubmitCallback preSubmitCallback;
         [global::Unbound.Stub] public static global::UnityEditor.VersionControl.Provider.PreCheckoutCallback preCheckoutCallback;
         [global::Unbound.Stub] internal static global::UnityEditor.VersionControl.Asset CacheStatus(string assetPath) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.VersionControl.Provider.CacheStatus"); return default; }
-        [global::Unbound.Stub] public static global::UnityEditor.VersionControl.Task Status(global::UnityEditor.VersionControl.AssetList assets) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.VersionControl.Provider.Status"); return default; }
-        [global::Unbound.Stub] public static global::UnityEditor.VersionControl.Task Status(global::UnityEditor.VersionControl.Asset asset) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.VersionControl.Provider.Status"); return default; }
-        [global::Unbound.Stub] public static global::UnityEditor.VersionControl.Task Status(global::UnityEditor.VersionControl.AssetList assets, bool recursively) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.VersionControl.Provider.Status"); return default; }
-        [global::Unbound.Stub] public static global::UnityEditor.VersionControl.Task Status(global::UnityEditor.VersionControl.Asset asset, bool recursively) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.VersionControl.Provider.Status"); return default; }
-        [global::Unbound.Stub] public static global::UnityEditor.VersionControl.Task Status(string[] assets) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.VersionControl.Provider.Status"); return default; }
-        [global::Unbound.Stub] public static global::UnityEditor.VersionControl.Task Status(string[] assets, bool recursively) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.VersionControl.Provider.Status"); return default; }
-        [global::Unbound.Stub] public static global::UnityEditor.VersionControl.Task Status(string asset) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.VersionControl.Provider.Status"); return default; }
-        [global::Unbound.Stub] public static global::UnityEditor.VersionControl.Task Status(string asset, bool recursively) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.VersionControl.Provider.Status"); return default; }
         [global::Unbound.Stub] public static global::UnityEditor.VersionControl.Task Move(string from, string to) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.VersionControl.Provider.Move"); return default; }
-        [global::Unbound.Stub] public static bool CheckoutIsValid(global::UnityEditor.VersionControl.AssetList assets) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.VersionControl.Provider.CheckoutIsValid"); return default; }
-        [global::Unbound.Stub] public static bool CheckoutIsValid(global::UnityEditor.VersionControl.AssetList assets, global::UnityEditor.VersionControl.CheckoutMode mode) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.VersionControl.Provider.CheckoutIsValid"); return default; }
         [global::Unbound.Stub] internal static global::UnityEditor.VersionControl.AssetList ConsolidateAssetList(global::UnityEditor.VersionControl.AssetList assets, global::UnityEditor.VersionControl.CheckoutMode mode) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.VersionControl.Provider.ConsolidateAssetList"); return default; }
-        [global::Unbound.Stub] public static global::UnityEditor.VersionControl.Task Checkout(global::UnityEditor.VersionControl.AssetList assets, global::UnityEditor.VersionControl.CheckoutMode mode) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.VersionControl.Provider.Checkout"); return default; }
-        [global::Unbound.Stub] public static global::UnityEditor.VersionControl.Task Checkout(global::UnityEditor.VersionControl.AssetList assets, global::UnityEditor.VersionControl.CheckoutMode mode, global::UnityEditor.VersionControl.ChangeSet changeset) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.VersionControl.Provider.Checkout"); return default; }
-        [global::Unbound.Stub] public static global::UnityEditor.VersionControl.Task Checkout(string[] assets, global::UnityEditor.VersionControl.CheckoutMode mode) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.VersionControl.Provider.Checkout"); return default; }
-        [global::Unbound.Stub] public static global::UnityEditor.VersionControl.Task Checkout(string[] assets, global::UnityEditor.VersionControl.CheckoutMode mode, global::UnityEditor.VersionControl.ChangeSet changeset) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.VersionControl.Provider.Checkout"); return default; }
-        [global::Unbound.Stub] public static global::UnityEditor.VersionControl.Task Checkout(global::UnityEngine.Object[] assets, global::UnityEditor.VersionControl.CheckoutMode mode) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.VersionControl.Provider.Checkout"); return default; }
-        [global::Unbound.Stub] public static global::UnityEditor.VersionControl.Task Checkout(global::UnityEngine.Object[] assets, global::UnityEditor.VersionControl.CheckoutMode mode, global::UnityEditor.VersionControl.ChangeSet changeset) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.VersionControl.Provider.Checkout"); return default; }
-        [global::Unbound.Stub] public static bool CheckoutIsValid(global::UnityEditor.VersionControl.Asset asset) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.VersionControl.Provider.CheckoutIsValid"); return default; }
-        [global::Unbound.Stub] public static bool CheckoutIsValid(global::UnityEditor.VersionControl.Asset asset, global::UnityEditor.VersionControl.CheckoutMode mode) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.VersionControl.Provider.CheckoutIsValid"); return default; }
-        [global::Unbound.Stub] public static global::UnityEditor.VersionControl.Task Checkout(global::UnityEditor.VersionControl.Asset asset, global::UnityEditor.VersionControl.CheckoutMode mode) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.VersionControl.Provider.Checkout"); return default; }
-        [global::Unbound.Stub] public static global::UnityEditor.VersionControl.Task Checkout(global::UnityEditor.VersionControl.Asset asset, global::UnityEditor.VersionControl.CheckoutMode mode, global::UnityEditor.VersionControl.ChangeSet changeset) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.VersionControl.Provider.Checkout"); return default; }
-        [global::Unbound.Stub] public static global::UnityEditor.VersionControl.Task Checkout(string asset, global::UnityEditor.VersionControl.CheckoutMode mode) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.VersionControl.Provider.Checkout"); return default; }
-        [global::Unbound.Stub] public static global::UnityEditor.VersionControl.Task Checkout(string asset, global::UnityEditor.VersionControl.CheckoutMode mode, global::UnityEditor.VersionControl.ChangeSet changeset) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.VersionControl.Provider.Checkout"); return default; }
-        [global::Unbound.Stub] public static global::UnityEditor.VersionControl.Task Checkout(global::UnityEngine.Object asset, global::UnityEditor.VersionControl.CheckoutMode mode) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.VersionControl.Provider.Checkout"); return default; }
-        [global::Unbound.Stub] public static global::UnityEditor.VersionControl.Task Checkout(global::UnityEngine.Object asset, global::UnityEditor.VersionControl.CheckoutMode mode, global::UnityEditor.VersionControl.ChangeSet changeset) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.VersionControl.Provider.Checkout"); return default; }
         [global::Unbound.Stub] internal static bool HandlePreCheckoutCallback(ref string[] paths, ref global::UnityEditor.VersionControl.ChangeSet changeSet) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.VersionControl.Provider.HandlePreCheckoutCallback"); return default; }
         [global::Unbound.Stub] public static global::UnityEditor.VersionControl.Task Delete(string assetProjectPath) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.VersionControl.Provider.Delete"); return default; }
         [global::Unbound.Stub] public static global::UnityEditor.VersionControl.Task Delete(global::UnityEditor.VersionControl.AssetList assets) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.VersionControl.Provider.Delete"); return default; }
@@ -45199,10 +45084,6 @@ namespace UnityEditor.VersionControl
         [global::Unbound.Stub] public static global::UnityEditor.VersionControl.Task Revert(global::UnityEditor.VersionControl.AssetList assets, global::UnityEditor.VersionControl.RevertMode mode) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.VersionControl.Provider.Revert"); return default; }
         [global::Unbound.Stub] public static bool RevertIsValid(global::UnityEditor.VersionControl.Asset asset, global::UnityEditor.VersionControl.RevertMode mode) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.VersionControl.Provider.RevertIsValid"); return default; }
         [global::Unbound.Stub] public static global::UnityEditor.VersionControl.Task Revert(global::UnityEditor.VersionControl.Asset asset, global::UnityEditor.VersionControl.RevertMode mode) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.VersionControl.Provider.Revert"); return default; }
-        [global::Unbound.Stub] public static bool GetLatestIsValid(global::UnityEditor.VersionControl.AssetList assets) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.VersionControl.Provider.GetLatestIsValid"); return default; }
-        [global::Unbound.Stub] public static bool GetLatestIsValid(global::UnityEditor.VersionControl.Asset asset) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.VersionControl.Provider.GetLatestIsValid"); return default; }
-        [global::Unbound.Stub] public static global::UnityEditor.VersionControl.Task GetLatest(global::UnityEditor.VersionControl.AssetList assets) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.VersionControl.Provider.GetLatest"); return default; }
-        [global::Unbound.Stub] public static global::UnityEditor.VersionControl.Task GetLatest(global::UnityEditor.VersionControl.Asset asset) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.VersionControl.Provider.GetLatest"); return default; }
         [global::Unbound.Stub] internal static global::UnityEditor.VersionControl.Task SetFileMode(global::UnityEditor.VersionControl.AssetList assets, global::UnityEditor.VersionControl.FileMode mode) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.VersionControl.Provider.SetFileMode"); return default; }
         [global::Unbound.Stub] internal static global::UnityEditor.VersionControl.Task SetFileMode(string[] assets, global::UnityEditor.VersionControl.FileMode mode) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.VersionControl.Provider.SetFileMode"); return default; }
         [global::Unbound.Stub] public static global::UnityEditor.VersionControl.Task ChangeSetDescription(global::UnityEditor.VersionControl.ChangeSet changeset) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.VersionControl.Provider.ChangeSetDescription"); return default; }
@@ -45216,7 +45097,6 @@ namespace UnityEditor.VersionControl
         [global::Unbound.Stub] public static global::UnityEditor.VersionControl.Task ChangeSetMove(global::UnityEditor.VersionControl.Asset asset, string changesetID) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.VersionControl.Provider.ChangeSetMove"); return default; }
         [global::Unbound.Stub] public static global::UnityEditor.VersionControl.AssetList GetAssetListFromSelection() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.VersionControl.Provider.GetAssetListFromSelection"); return default; }
         [global::Unbound.Stub] internal static global::UnityEngine.Rect GetAtlasRectForState(int state) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.VersionControl.Provider.GetAtlasRectForState"); return default; }
-        [global::Unbound.Stub] public static global::UnityEditor.VersionControl.Plugin GetActivePlugin() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.VersionControl.Provider.GetActivePlugin"); return default; }
         [global::Unbound.Stub] public static global::UnityEditor.VersionControl.ConfigField[] GetActiveConfigFields() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.VersionControl.Provider.GetActiveConfigFields"); return global::System.Array.Empty<global::UnityEditor.VersionControl.ConfigField>(); }
         [global::Unbound.Stub] internal static bool IsCustomCommandEnabled(string name) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.VersionControl.Provider.IsCustomCommandEnabled"); return default; }
         [global::Unbound.Stub] internal static void ClearCustomCommands() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.VersionControl.Provider.ClearCustomCommands"); }
@@ -45224,11 +45104,7 @@ namespace UnityEditor.VersionControl
         [global::Unbound.Stub] public static global::UnityEditor.VersionControl.Task ChangeSets() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.VersionControl.Provider.ChangeSets"); return default; }
         [global::Unbound.Stub] public static global::UnityEditor.VersionControl.Task Incoming() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.VersionControl.Provider.Incoming"); return default; }
         [global::Unbound.Stub] public static global::UnityEditor.VersionControl.Task UpdateSettings() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.VersionControl.Provider.UpdateSettings"); return default; }
-        [global::Unbound.Stub] public static global::UnityEditor.VersionControl.Asset GetAssetByPath(string unityPath) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.VersionControl.Provider.GetAssetByPath"); return default; }
-        [global::Unbound.Stub] public static global::UnityEditor.VersionControl.Asset GetAssetByGUID(string guid) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.VersionControl.Provider.GetAssetByGUID"); return default; }
-        [global::Unbound.Stub] public static bool IsOpenForEdit(global::UnityEditor.VersionControl.Asset asset) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.VersionControl.Provider.IsOpenForEdit"); return default; }
         [global::Unbound.Stub] internal static int GenerateID() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.VersionControl.Provider.GenerateID"); return default; }
-        [global::Unbound.Stub] public static void ClearCache() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.VersionControl.Provider.ClearCache"); }
         [global::Unbound.Stub] internal static void InvalidateCache() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.VersionControl.Provider.InvalidateCache"); }
         [global::Unbound.Stub] public static global::UnityEditor.VersionControl.Task Internal_WarningTask(string message) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.VersionControl.Provider.Internal_WarningTask"); return default; }
         [global::Unbound.Stub] public static global::UnityEditor.VersionControl.Task Internal_ErrorTask(string message) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.VersionControl.Provider.Internal_ErrorTask"); return default; }
@@ -45238,17 +45114,7 @@ namespace UnityEditor.VersionControl
         [global::Unbound.Stub] internal static void WaitForRelatedTasks(string[] assets) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.VersionControl.Provider.WaitForRelatedTasks"); }
         [global::Unbound.Stub] internal static void WaitForRelatedTasks(global::UnityEditor.VersionControl.Asset asset) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.VersionControl.Provider.WaitForRelatedTasks"); }
         [global::Unbound.Stub] internal static void WaitForRelatedTasks(string asset) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.VersionControl.Provider.WaitForRelatedTasks"); }
-        [global::Unbound.Stub] public Provider() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.VersionControl.Provider.ctor"); }
-        public static bool enabled { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.VersionControl.Provider.enabled"); return default; } }
-        public static bool isActive { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.VersionControl.Provider.isActive"); return default; } }
-        public static bool requiresNetwork { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.VersionControl.Provider.requiresNetwork"); return default; } }
         public static bool hasChangelistSupport { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.VersionControl.Provider.hasChangelistSupport"); return default; } }
-        public static bool hasCheckoutSupport { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.VersionControl.Provider.hasCheckoutSupport"); return default; } }
-        public static bool hasLockingSupport { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.VersionControl.Provider.hasLockingSupport"); return default; } }
-        public static bool isVersioningFolders { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.VersionControl.Provider.isVersioningFolders"); return default; } }
-        public static global::UnityEditor.VersionControl.OnlineState onlineState { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.VersionControl.Provider.onlineState"); return default; } }
-        public static string offlineReason { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.VersionControl.Provider.offlineReason"); return default; } }
-        public static global::UnityEditor.VersionControl.Task activeTask { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.VersionControl.Provider.activeTask"); return default; } }
         internal static global::UnityEngine.Texture2D overlayAtlas { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.VersionControl.Provider.overlayAtlas"); return default; } }
         internal static global::UnityEditor.VersionControl.CustomCommand[] customCommands { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.VersionControl.Provider.customCommands"); return global::System.Array.Empty<global::UnityEditor.VersionControl.CustomCommand>(); } }
         public unsafe delegate bool PreSubmitCallback(global::UnityEditor.VersionControl.AssetList list, ref string changesetID, ref string changesetDescription);
@@ -45276,24 +45142,16 @@ namespace UnityEditor.VersionControl
         ConflictingFiles = 4,
         UnaddedFiles = 8,
     }
-    [global::Unbound.Stub]
-    public unsafe partial class Task
+    unsafe partial class Task
     {
-        [global::Unbound.Stub] public void Wait() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.VersionControl.Task.Wait"); }
         [global::Unbound.Stub] public void SetCompletionAction(global::UnityEditor.VersionControl.CompletionAction action) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.VersionControl.Task.SetCompletionAction"); }
         [global::Unbound.Stub] public void Dispose() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.VersionControl.Task.Dispose"); }
         [global::Unbound.Stub] internal Task() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.VersionControl.Task.ctor"); }
-        public global::UnityEditor.VersionControl.AssetList assetList { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.VersionControl.Task.assetList"); return default; } }
         public global::UnityEditor.VersionControl.ChangeSets changeSets { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.VersionControl.Task.changeSets"); return default; } }
         public int userIdentifier { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.VersionControl.Task.userIdentifier"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.VersionControl.Task.userIdentifier"); } }
-        public string text { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.VersionControl.Task.text"); return default; } }
-        public string description { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.VersionControl.Task.description"); return default; } }
-        public bool success { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.VersionControl.Task.success"); return default; } }
         public int secondsSpent { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.VersionControl.Task.secondsSpent"); return default; } }
         public int progressPct { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.VersionControl.Task.progressPct"); return default; } }
         public string progressMessage { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.VersionControl.Task.progressMessage"); return default; } }
-        public int resultCode { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.VersionControl.Task.resultCode"); return default; } }
-        public global::UnityEditor.VersionControl.Message[] messages { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.VersionControl.Task.messages"); return global::System.Array.Empty<global::UnityEditor.VersionControl.Message>(); } }
         [global::Unbound.Stub]
         internal unsafe static partial class BindingsMarshaller
         {
@@ -45340,10 +45198,8 @@ namespace UnityEditor.VersionControl
         [global::Unbound.Stub] protected VersionControlObject() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.VersionControl.VersionControlObject.ctor"); }
         public virtual bool isConnected { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.VersionControl.VersionControlObject.isConnected"); return default; } }
     }
-    [global::Unbound.Stub]
-    public unsafe static partial class VersionControlUtils
+    unsafe static partial class VersionControlUtils
     {
-        [global::Unbound.Stub] public static bool IsPathVersioned(string path) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.VersionControl.VersionControlUtils.IsPathVersioned"); return default; }
         internal static bool isVersionControlConnected { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.VersionControl.VersionControlUtils.isVersionControlConnected"); return default; } }
     }
     [global::Unbound.Stub]
