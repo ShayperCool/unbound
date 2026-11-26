@@ -234,6 +234,37 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
+        public void AFontAssetWithoutAtlasTexturesOrMaterialThrowsAsUnitysDoes()
+        {
+            // Unity 6000.0.71f1 (tests/projects/defaultstate): a new font asset's atlasTexture,
+            // characterLookupTable and glyphLookupTable getters throw NullReferenceException.
+            foreach (var read in new System.Func<FontAsset, object>[] { a => a.atlasTexture, a => a.characterLookupTable, a => a.glyphLookupTable })
+            {
+                var asset = ScriptableObject.CreateInstance<FontAsset>();
+                try { Assert.Throws<System.NullReferenceException>(() => read(asset)); }
+                finally { Object.DestroyImmediate(asset); }
+            }
+            // With its atlas texture and a material it reads as before.
+            var made = ScriptableObject.CreateInstance<FontAsset>();
+            var texture = new Texture2D(1, 1);
+            var material = new Material(Shader.Find("Hidden/InternalErrorShader"));
+            try
+            {
+                made.atlasTextures = new[] { texture };
+                made.material = material;
+                Assert.Same(texture, made.atlasTexture);
+                Assert.NotNull(made.characterLookupTable);
+                Assert.NotNull(made.glyphLookupTable);
+            }
+            finally
+            {
+                Object.DestroyImmediate(made);
+                Object.DestroyImmediate(texture);
+                Object.DestroyImmediate(material);
+            }
+        }
+
+        [Fact]
         public void FontAssetsOfOsFontsTakeNoFontFeaturesWhereThatWasMeasured()
         {
             var asset = ScriptableObject.CreateInstance<FontAsset>();

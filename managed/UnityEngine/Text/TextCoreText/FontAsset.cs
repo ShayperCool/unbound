@@ -198,11 +198,13 @@ namespace UnityEngine.TextCore.Text
             }
         }
 
+        /// <summary>The first atlas texture; a font asset without atlas textures throws, as Unity's does
+        /// (matches the Unity 6000.0.71f1 Editor, tests/projects/defaultstate).</summary>
         public Texture2D atlasTexture
         {
             get
             {
-                if (m_AtlasTexture == null && m_AtlasTextures != null && m_AtlasTextures.Length > 0) m_AtlasTexture = m_AtlasTextures[0];
+                if (m_AtlasTexture == null) m_AtlasTexture = atlasTextures[0];
                 return m_AtlasTexture;
             }
         }
@@ -516,7 +518,9 @@ namespace UnityEngine.TextCore.Text
                 m_FaceInfo.meanLine = m_GlyphLookupDictionary[x.glyphIndex].metrics.horizontalBearingY;
             if (m_FaceInfo.scale == 0f) m_FaceInfo.scale = 1f;
             if (m_FaceInfo.strikethroughOffset == 0f) m_FaceInfo.strikethroughOffset = m_FaceInfo.capLine / 2.5f;
-            if (m_AtlasPadding == 0 && material != null && material.HasProperty(TextShaderUtilities.ID_GradientScale))
+            // A font asset without a material throws here with its lookup tables made, as Unity's
+            // does (tests/projects/defaultstate characterLookupTable, glyphLookupTable).
+            if (m_AtlasPadding == 0 && material.HasProperty(TextShaderUtilities.ID_GradientScale))
                 m_AtlasPadding = (int)material.GetFloat(TextShaderUtilities.ID_GradientScale) - k_SdfGradientExtra;
             if (m_FaceInfo.unitsPerEM == 0 && atlasPopulationMode != AtlasPopulationMode.Static)
                 m_FaceInfo.unitsPerEM = FontEngine.GetFaceInfo().unitsPerEM;
