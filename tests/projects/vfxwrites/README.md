@@ -19,6 +19,9 @@ the step, when there was one).
   `instancingMode`, `instancingCapacity`: each resource setting set, then `<setting> save`:
   `AssetDatabase.SaveAssets`;
 - `write after saves`: `WriteAsset` again;
+- `rendererSettings`, `rendererSettings save`: the renderer settings set (shadows, motion vectors,
+  probes), then `SaveAssets`; `compileInitialVariants`, `compileInitialVariants save`: that flag
+  toggled (a control), then `SaveAssets`;
 - `block edit`: the spawner's burst block's `Count` input set (and `block edit/slot dirty`), then
   `block edit write`: `WriteAssetWithSubAssets` (the package's save: the graph's objects set as the
   resource's contents, then `WriteAsset`);
@@ -67,7 +70,7 @@ settings file; `SaveAssets` offers a changed material `CreateAsset` made; the Ed
 whose resource or model alone was left dirty.
 
 Unbound matches every row. Not measured: a graph whose objects
-change other than one block added and removed, a block subgraph's contents, `rendererSettings`, several dirty assets at once (their order in `OnWillSaveAssets`), scene
+change other than one block added and removed, a block subgraph's contents, several dirty assets at once (their order in `OnWillSaveAssets`), scene
 saves' `OnWillSaveAssets`, and class library types other than the primitive types and string in an
 added object's type names (Unbound refuses them: .NET names them otherwise than the Editor's Mono,
 which could not read .NET's names back).

@@ -41,11 +41,21 @@
 {"k":"instancingCapacity save/file","v":"-     m_InstancingCapacity: 64\n+     m_InstancingCapacity: 33\nlines 2086 -> 2086"}
 {"k":"write after saves/dirty","v":"False"}
 {"k":"write after saves/file","v":"unchanged"}
+{"k":"rendererSettings/dirty","v":"True"}
+{"k":"rendererSettings/file","v":"unchanged"}
+{"k":"rendererSettings save/dirty","v":"False"}
+{"k":"rendererSettings save/will save","v":"Assets/Graphs/BoundsAuto.vfx"}
+{"k":"rendererSettings save/file","v":"-       motionVectorGenerationMode: 0\n-       shadowCastingMode: 0\n-       receiveShadows: 0\n-       reflectionProbeUsage: 0\n-       lightProbeUsage: 0\n+       motionVectorGenerationMode: 1\n+       shadowCastingMode: 1\n+       receiveShadows: 1\n+       reflectionProbeUsage: 1\n+       lightProbeUsage: 1\nlines 2086 -> 2086"}
+{"k":"compileInitialVariants/dirty","v":"False"}
+{"k":"compileInitialVariants/file","v":"unchanged"}
+{"k":"compileInitialVariants save/dirty","v":"False"}
+{"k":"compileInitialVariants save/will save","v":""}
+{"k":"compileInitialVariants save/file","v":"unchanged"}
 {"k":"block edit/dirty","v":"False"}
 {"k":"block edit/file","v":"unchanged"}
 {"k":"block edit/slot dirty","v":"False"}
 {"k":"block edit write/dirty","v":"False"}
-{"k":"block edit write/file","v":"-       m_SerializableObject: 6\n+       m_SerializableObject: 9\nlines 2086 -> 2086"}
+{"k":"block edit write/file","v":"-       motionVectorGenerationMode: 1\n-       shadowCastingMode: 1\n-       m_SerializableObject: 6\n+       motionVectorGenerationMode: 0\n+       shadowCastingMode: 0\n+       m_SerializableObject: 9\nlines 2086 -> 2086"}
 {"k":"reimport/dirty","v":"False"}
 {"k":"reimport/file","v":"unchanged"}
 {"k":"block add/dirty","v":"False"}

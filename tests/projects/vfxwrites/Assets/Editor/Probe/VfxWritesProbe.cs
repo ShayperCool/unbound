@@ -111,6 +111,21 @@ public static class VfxWritesProbe
             Step("instancingCapacity", resource, () => resource.instancingCapacity = 33u);
             Step("instancingCapacity save", resource, () => AssetDatabase.SaveAssets());
             Step("write after saves", resource, () => resource.WriteAsset());
+            // The renderer settings, then a save; the initial variants' compilation flag (a
+            // control: it marks nothing and is not written), then a save.
+            Step("rendererSettings", resource, () =>
+            {
+                var renderer = resource.rendererSettings;
+                renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.On;
+                renderer.receiveShadows = true;
+                renderer.motionVectorGenerationMode = MotionVectorGenerationMode.Object;
+                renderer.lightProbeUsage = UnityEngine.Rendering.LightProbeUsage.BlendProbes;
+                renderer.reflectionProbeUsage = UnityEngine.Rendering.ReflectionProbeUsage.BlendProbes;
+                resource.rendererSettings = renderer;
+            });
+            Step("rendererSettings save", resource, () => AssetDatabase.SaveAssets());
+            Step("compileInitialVariants", resource, () => resource.compileInitialVariants = !resource.compileInitialVariants);
+            Step("compileInitialVariants save", resource, () => AssetDatabase.SaveAssets());
 
             // A block's input edited through the graph, then written with its sub-assets.
             var graph = resource.GetOrCreateGraph();
