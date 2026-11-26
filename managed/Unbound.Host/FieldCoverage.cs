@@ -35,7 +35,7 @@ internal static class FieldCoverageHost
             foreach (var source in spec.Sources)
             {
                 var guid = GuidOf(source + ".meta");
-                if (guid != null) assembly.Scripts.Add((Path.GetFileNameWithoutExtension(source), guid, null));
+                if (guid != null) assembly.Scripts.Add((Path.GetFileNameWithoutExtension(source), guid, null, Path.GetFileNameWithoutExtension(source)));
             }
             assemblies.Add(assembly);
             added.Add(assembly.Name);

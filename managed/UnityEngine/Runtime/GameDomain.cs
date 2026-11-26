@@ -17,9 +17,10 @@ namespace Unbound.Runtime
         internal string Pdb;
         /// <summary>The asset GUID of the plugin DLL; scripts of a plugin are `{fileID: hash, guid: this}`.</summary>
         internal string PluginGuid;
-        /// <summary>Script files: (file name without extension, asset guid) — a script's class has
-        /// the file's name.</summary>
-        internal List<(string FileName, string Guid, string Namespace)> Scripts = new List<(string, string, string)>();
+        /// <summary>Script files: (the class the file stands for, its asset guid, the namespace it
+        /// declares that class in, the file name without extension). A file stands for the class
+        /// named like it, else for the first type it declares.</summary>
+        internal List<(string ClassName, string Guid, string Namespace, string FileName)> Scripts = new List<(string, string, string, string)>();
         /// <summary>One of the assembly's source files (or the plugin DLL): where it lives.</summary>
         internal string SourcePath;
         // As CompilationPipeline reports them (script assemblies only).
@@ -310,9 +311,28 @@ namespace Unbound.Runtime
                     Debug.LogWarning($"Unbound: {info.Name}: skipping a type: {e.Message}");
                 }
             }
-            foreach (var (fileName, guid, ns) in info.Scripts)
+            IndexSourceScripts(byName, info.Scripts, s_ScriptsByGuid, s_GuidByScript);
+        }
+
+        /// <summary>
+        /// Indexes script files by the class each stands for (<paramref name="byName"/>: the
+        /// assembly's top-level types by name): every file's GUID resolves to its class; the class's
+        /// own script (what an object of it names as m_Script, MonoScript.FromMonoBehaviour,
+        /// a ScriptedImporter's .meta section) is the file named like it. A partial class whose
+        /// other files declare it first (com.unity.2d.psdimporter: PSDImporterAPI.cs,
+        /// PSDSpriteEditorDataProvider.cs beside PSDImporter.cs) keeps PSDImporter.cs, which every
+        /// .meta the Editor writes for its assets names. A class no file is named like keeps the
+        /// last file that stands for it (several such files: which one the Editor takes is not
+        /// measured).
+        /// </summary>
+        internal static void IndexSourceScripts(Dictionary<string, List<Type>> byName,
+            List<(string ClassName, string Guid, string Namespace, string FileName)> scripts,
+            Dictionary<string, Type> byGuid, Dictionary<Type, string> guidByType)
+        {
+            var own = new HashSet<Type>();
+            foreach (var (className, guid, ns, fileName) in scripts)
             {
-                if (!byName.TryGetValue(fileName, out var candidates)) continue;
+                if (!byName.TryGetValue(className, out var candidates)) continue;
                 // The class the file declares (by namespace) wins over others of the same name.
                 Type chosen = null;
                 if (ns != null)
@@ -329,8 +349,11 @@ namespace Unbound.Runtime
                     }
                 }
                 chosen ??= candidates[0];
-                s_ScriptsByGuid[guid] = chosen;
-                s_GuidByScript[chosen] = guid;
+                byGuid[guid] = chosen;
+                bool named = string.Equals(fileName, chosen.Name, StringComparison.Ordinal);
+                if (named) own.Add(chosen);
+                else if (own.Contains(chosen)) continue;
+                guidByType[chosen] = guid;
             }
         }
 

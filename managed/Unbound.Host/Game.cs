@@ -317,7 +317,7 @@ public static unsafe class Game
                     ResponseFile = a.ResponseFile,
                     ResponseFileDefines = a.ResponseFileDefines?.ToArray(),
                 };
-                foreach (var s in a.Scripts) ga.Scripts.Add((s.ClassName ?? s.FileName, s.Guid, s.Namespace));
+                foreach (var s in a.Scripts) ga.Scripts.Add((s.ClassName ?? s.FileName, s.Guid, s.Namespace, s.FileName));
                 assemblies.Add(ga);
             }
             var searchDirectories = new List<string> { Path.GetDirectoryName(typeof(UnityEngine.Object).Assembly.Location)!, settings.FacadeDir };

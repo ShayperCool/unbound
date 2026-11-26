@@ -436,7 +436,7 @@ namespace UnityEditor
             foreach (var assembly in GameDomain.Descriptions)
             {
                 if (assembly.Editor) continue;
-                foreach (var (_, guid, _) in assembly.Scripts)
+                foreach (var (_, guid, _, _) in assembly.Scripts)
                     if (AssetDatabaseRuntime.LoadMain(guid, typeof(MonoScript)) is MonoScript script) scripts.Add(script);
             }
             return scripts.ToArray();
