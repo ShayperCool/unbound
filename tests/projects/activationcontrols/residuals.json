@@ -1,11 +1,15 @@
 {
-  "Unbound runs a SetActive's OnDisable and OnEnable in hierarchy pre-order (each GameObject's components in order); the Editor runs OnDisable in hierarchy post-order (children before their parent, C1's subtree before C2, components in order) and OnEnable in the order the behaviours were created, across the hierarchy. Not changed yet: scene-loaded and instantiated hierarchies, which take the same path, are not measured (README)": [
+  "Order only (every <case>.offStates/onStates row matches): Unbound runs a SetActive's OnDisable in hierarchy pre-order and its OnEnable in script execution order, then hierarchy pre-order; the Editor observed here runs OnDisable in hierarchy post-order and OnEnable in script execution order, then the order the behaviours were created. An observation of these runtime-built cases, not a documented contract (the Manual leaves the order within one execution order undefined); scene-loaded and instantiated hierarchies, which take the same path, are not measured (README)": [
     "add.off",
     "add.on",
     "addHierarchy.off",
     "created.off",
     "late.off",
     "late.on",
+    "lateStarted.off",
+    "lateStarted.on",
+    "orders.off",
+    "orders.on",
     "reactivated.off",
     "reactivated.on",
     "reenabled.off",

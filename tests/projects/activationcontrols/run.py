@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""The Editor activation order controls Unbound implements; see README.md."""
+"""Records the Editor's activation callback order controls; see README.md."""
 from pathlib import Path
 import sys
 

@@ -1,15 +1,37 @@
 {"k":"add.off","v":"G:D+- C1:D+- C2:D+- P:D--"}
+{"k":"add.offStates","v":"C1:D+- C2:D+- G:D+- P:D--"}
 {"k":"add.on","v":"C2:E++ C1:E++ P:E++ G:E++"}
+{"k":"add.onStates","v":"C1:E++ C2:E++ G:E++ P:E++"}
 {"k":"addHierarchy.off","v":"G:D+- C1:D+- C2:D+- P:D--"}
+{"k":"addHierarchy.offStates","v":"C1:D+- C2:D+- G:D+- P:D--"}
 {"k":"addHierarchy.on","v":"P:E++ C1:E++ G:E++ C2:E++"}
+{"k":"addHierarchy.onStates","v":"C1:E++ C2:E++ G:E++ P:E++"}
 {"k":"reenabled.off","v":"G:D+- C1:D+- C2:D+- P:D--"}
+{"k":"reenabled.offStates","v":"C1:D+- C2:D+- G:D+- P:D--"}
 {"k":"reenabled.on","v":"C2:E++ C1:E++ P:E++ G:E++"}
+{"k":"reenabled.onStates","v":"C1:E++ C2:E++ G:E++ P:E++"}
 {"k":"reactivated.off","v":"G:D+- C1:D+- C2:D+- P:D--"}
+{"k":"reactivated.offStates","v":"C1:D+- C2:D+- G:D+- P:D--"}
 {"k":"reactivated.on","v":"C2:E++ C1:E++ P:E++ G:E++"}
+{"k":"reactivated.onStates","v":"C1:E++ C2:E++ G:E++ P:E++"}
 {"k":"two.off","v":"G:D+- C1:D+- C2:D+- P.a:D-- P.b:D--"}
+{"k":"two.offStates","v":"C1:D+- C2:D+- G:D+- P.a:D-- P.b:D--"}
 {"k":"two.on","v":"P.a:E++ C2:E++ C1:E++ G:E++ P.b:E++"}
+{"k":"two.onStates","v":"C1:E++ C2:E++ G:E++ P.a:E++ P.b:E++"}
 {"k":"late.off","v":"G:D+- C1:D+- C1.late:D+- C2:D+- P:D--"}
+{"k":"late.offStates","v":"C1.late:D+- C1:D+- C2:D+- G:D+- P:D--"}
 {"k":"late.on","v":"C2:E++ C1:E++ P:E++ G:E++ C1.late:E++"}
+{"k":"late.onStates","v":"C1.late:E++ C1:E++ C2:E++ G:E++ P:E++"}
+{"k":"lateStarted.off","v":"G:D+- C1:D+- C1.late:D+- C2:D+- P:D--"}
+{"k":"lateStarted.offStates","v":"C1.late:D+- C1:D+- C2:D+- G:D+- P:D--"}
+{"k":"lateStarted.on","v":"C2:E++ C1:E++ P:E++ G:E++ C1.late:E++"}
+{"k":"lateStarted.onStates","v":"C1.late:E++ C1:E++ C2:E++ G:E++ P:E++"}
+{"k":"orders.off","v":"G:D+- C1:D+- C2:D+- P.early:D--"}
+{"k":"orders.offStates","v":"C1:D+- C2:D+- G:D+- P.early:D--"}
+{"k":"orders.on","v":"P.early:E++ C2:E++ C1:E++ G:E++"}
+{"k":"orders.onStates","v":"C1:E++ C2:E++ G:E++ P.early:E++"}
 {"k":"created.off","v":"G:D+- C1:D+- C2:D+- P:D--"}
+{"k":"created.offStates","v":"C1:D+- C2:D+- G:D+- P:D--"}
 {"k":"created.on","v":"P:E++ C1:E++ G:E++ C2:E++"}
+{"k":"created.onStates","v":"C1:E++ C2:E++ G:E++ P:E++"}
 {"k":"complete","v":true}

@@ -61,18 +61,25 @@ public class ActivationControlsProbe : MonoBehaviour
         return r;
     }
 
-    IEnumerator Cycle(string key, Dictionary<string, GameObject> nodes, Action before)
+    /// <summary>The callbacks without their order (sorted), so their states stay compared apart
+    /// from the order.</summary>
+    static string States() => string.Join(" ", s_Trace.OrderBy(x => x, StringComparer.Ordinal).ToArray());
+
+    IEnumerator Cycle(string key, Dictionary<string, GameObject> nodes, Action before, int settle = 0)
     {
         yield return null;
         yield return null;
         before?.Invoke();
+        for (int i = 0; i < settle; i++) yield return null;
         s_Trace.Clear();
         s_Recording = true;
         nodes["P"].SetActive(false);
         Row(key + ".off", string.Join(" ", s_Trace.ToArray()));
+        Row(key + ".offStates", States());
         s_Trace.Clear();
         nodes["P"].SetActive(true);
         Row(key + ".on", string.Join(" ", s_Trace.ToArray()));
+        Row(key + ".onStates", States());
         s_Recording = false;
         UnityEngine.Object.Destroy(nodes["P"]);
         yield return null;
@@ -119,6 +126,20 @@ public class ActivationControlsProbe : MonoBehaviour
         var t6 = t;
         yield return Cycle("late", t, () => Add(t6, "C1", "C1.late"));
 
+        // lateStarted: as late, the second recorder's Start run before the toggle.
+        t = Tree();
+        foreach (var n in new[] { "C2", "C1", "P", "G" }) Add(t, n, n);
+        var t7 = t;
+        yield return Cycle("lateStarted", t, () => Add(t7, "C1", "C1.late"), settle: 2);
+
+        // orders: a recorder with an earlier script execution order (-10) on P, added last;
+        // C2, C1, G default order, added first.
+        t = Tree();
+        foreach (var n in new[] { "C2", "C1", "G" }) Add(t, n, n);
+        var early = t["P"].AddComponent<EarlyActivationRecorder>();
+        early.Label = "P.early";
+        yield return Cycle("orders", t, null);
+
         // created: GameObjects created G, C2, P, C1 (not in the hierarchy's order), recorders
         // added in pre-order.
         var created = new Dictionary<string, GameObject>();
@@ -135,4 +156,10 @@ public class ActivationControlsProbe : MonoBehaviour
         UnityEditor.EditorApplication.Exit(0);
 #endif
     }
+}
+
+/// <summary>A recorder whose script runs before the default order (Script Execution Order -10).</summary>
+[DefaultExecutionOrder(-10)]
+public class EarlyActivationRecorder : ActivationControlsProbe
+{
 }

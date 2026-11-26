@@ -17,19 +17,37 @@ activeInHierarchy (`+`/`-`) at that moment.
 * `reactivated`: as `add`, with C2's GameObject deactivated and activated again before it.
 * `two`: two recorders on P, one added first and one last (P.a, C2, C1, G, P.b).
 * `late`: as `add`, with a second recorder added to C1 after every Start.
+* `lateStarted`: as `late`, two frames later (the second recorder's Start has run).
+* `orders`: a recorder of a class with an earlier script execution order (-10) on P, added after
+  the default-order recorders of C2, C1 and G.
 * `created`: GameObjects created G, C2, P, C1, recorders added in pre-order.
 
-What it shows: OnDisable runs in hierarchy post-order (children before their parent, the first
-child's subtree before the next, a GameObject's components in their order); OnEnable runs in the
-order the behaviours were created, across the hierarchy: neither enabling a behaviour again nor
-activating its GameObject again moves it, a behaviour added later comes last, and the order the
-GameObjects were created does not count. Each GameObject's own state during its callbacks is the
-new one (its OnDisable sees activeSelf false).
+`<case>.offStates` and `<case>.onStates` are the same callbacks sorted, so their states are compared
+apart from their order.
 
-Residuals (residuals.json): Unbound runs both in hierarchy pre-order. The rule is not
-implemented yet: scene-loaded hierarchies (their objects' creation is the load) and instantiated
-ones (the clones' creation order) take the same path and are not measured here; a later slice
-records them before the activation order changes.
+What it shows, in these cases: OnDisable runs in hierarchy post-order (children before their
+parent, the first child's subtree before the next, a GameObject's components in their order),
+whatever the script execution order; OnEnable runs in script execution order (the `orders` case:
+the earlier-order recorder first, though added last), and within one execution order in the order
+the behaviours were created, across the hierarchy: neither enabling a behaviour again nor
+activating its GameObject again moves it, a behaviour added later comes last (before or after its
+Start), and the order the GameObjects were created does not count. Each GameObject's own state
+during its callbacks is the new one (its OnDisable sees activeSelf false).
+
+These are observations, not a documented contract: the 6000.0 Manual's Script Execution Order page
+(https://docs.unity3d.com/6000.0/Documentation/Manual/script-execution-order.html) orders scripts of
+different execution orders and leaves the order among scripts of the same order undefined ("you
+should never rely on this behavior").
+
+Limits: runtime-built hierarchies only (GameObjects made with `new GameObject`, recorders added with
+`AddComponent`), two script classes, one tree shape, plain `SetActive` on the root, the macOS
+Editor in batch mode.
+
+Residuals (residuals.json): the order rows; Unbound runs OnDisable in hierarchy pre-order and
+OnEnable in execution order, then pre-order. Not implemented yet: scene-loaded hierarchies (their
+objects' creation is the load) and instantiated ones (the clones' creation order) take the same
+path and are not measured here, nor are other activation paths (`SetGameObjectsActive`, a parent
+activated with its children); a later slice records them before the activation order changes.
 
 Record and gate:
 
