@@ -223,6 +223,14 @@ class InventoryCheckTests(unittest.TestCase):
             # The recorded base is the base's, not the branch's.
             self.assertEqual([row['type'] for row in json.loads((work/'inventories'/'k0.json').read_text())['types']], ['A', 'B'])
 
+    def test_the_sources_are_land_s_stub_inputs(self):
+        import sys as system
+        system.path.insert(0, str(Path(capture_runner.REPO)/'tools/agents'))
+        import land
+        for path in capture_runner.INVENTORY_SOURCES:
+            probe = path + ('/x.cs' if '.' not in Path(path).name else '')
+            self.assertIsNotNone(land.STUB_INPUTS.match(probe), path)
+
     def test_only_a_gate_records_and_a_dirty_checkout_never(self):
         with tempfile.TemporaryDirectory() as directory:
             work = Path(directory)
@@ -232,11 +240,40 @@ class InventoryCheckTests(unittest.TestCase):
 
     def test_without_a_recorded_base_the_reference_is_used(self):
         with tempfile.TemporaryDirectory() as directory:
+            stores = {'differences': [{'type': 'X'}]}  # the reference's own stores are not the branch's to match
             code, _ = self.run_check(Path(directory), {'HEAD': 'k4', 'base0': 'k5'}, branch=('A',),
-                                     reference={'types': [self.row('A'), self.row('Gone')]})
+                                     reference={'types': [self.row('A'), self.row('Gone')], 'constructorStores': stores})
             self.assertEqual(code, capture_runner.INVENTORY_CHANGED)
-            code, _ = self.run_check(Path(directory), {'HEAD': 'k4', 'base0': 'k5'}, branch=('A',), reference={'types': [self.row('A')]})
+            code, _ = self.run_check(Path(directory), {'HEAD': 'k4', 'base0': 'k5'}, branch=('A',),
+                                     reference={'types': [self.row('A')], 'constructorStores': stores})
             self.assertEqual(code, 0)
+
+    def test_the_key_covers_every_input_of_the_inventory(self):
+        """A change of any inventory source changes the key; another file does not."""
+        import subprocess as sp
+        with tempfile.TemporaryDirectory() as directory:
+            repo = Path(directory)
+            git = lambda *args: sp.run(['git', '-C', str(repo), *args], check=True, capture_output=True, text=True).stdout.strip()
+            git('init', '-q', '-b', 'main')
+            files = ['managed/A.cs', 'crates/unbound-compat/src/lib.rs', 'crates/unbound-project/src/install.rs',
+                     'crates/unbound-project/src/editor_archive.rs', 'crates/unbound-project/src/compile.rs',
+                     'crates/unbound/src/commands.rs', 'docs/other.md']
+            for name in files:
+                (repo/name).parent.mkdir(parents=True, exist_ok=True)
+                (repo/name).write_text('0')
+            commit = lambda message: (git('add', '-A'), git('-c', 'user.name=T', '-c', 'user.email=t@e.invalid', 'commit', '-qm', message))
+            commit('base')
+            with mock.patch.object(capture_runner, 'REPO', repo), mock.patch.object(capture_runner, 'unity_version', return_value='6000.0.71f1'):
+                keys = [capture_runner.inventory_key('HEAD')]
+                self.assertTrue(capture_runner.sources_clean())
+                for name in files:
+                    (repo/name).write_text(name)
+                    if name != 'docs/other.md':
+                        self.assertFalse(capture_runner.sources_clean(), name)
+                    commit(name)
+                    keys.append(capture_runner.inventory_key('HEAD'))
+            changed = [keys[i] != keys[i+1] for i in range(len(files))]
+            self.assertEqual(changed, [True]*6 + [False])
 
 
 if __name__ == '__main__': unittest.main()

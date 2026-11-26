@@ -51,8 +51,11 @@ def type_changes(before, after):
 
 
 # What an inventory is made from: `api-defaults` compiles the checkout's hand-written sources
-# (managed/) and reflects over them with its own code (commands.rs) against the release's assemblies.
-INVENTORY_SOURCES = ('managed', 'crates/unbound/src/commands.rs')
+# (managed/), chooses the release's Unity files (unbound-compat, install/editor_archive/compile.rs)
+# and reflects with its own code (commands.rs): land.py's STUB_INPUTS, less land.py itself.
+INVENTORY_SOURCES = ('managed', 'crates/unbound-compat', 'crates/unbound-project/src/install.rs',
+                     'crates/unbound-project/src/editor_archive.rs', 'crates/unbound-project/src/compile.rs',
+                     'crates/unbound/src/commands.rs')
 
 
 def git_output(*args):
@@ -115,6 +118,7 @@ def inventory_changed(base, label):
         print(f'public type inventory unchanged: the inventory sources are {base}\'s')
         return 0
     before = base_inventory(base)
+    recorded = cached_inventory(inventory_key(base)) is not None
     report = inventory(WORK/label)
     # Only a gate records: its CLI is built from this checkout, so the report is of these sources.
     if clean and os.environ.get('UNBOUND_INVENTORY_RECORD') == '1':
@@ -124,9 +128,10 @@ def inventory_changed(base, label):
         return 0
     added, removed, changed = type_changes(before['types'], report['types'])
     # The constructor stores' differences (what `check` compares; their other fields are counts
-    # that move with any constructor). A reference inventory has none to compare.
+    # that move with any constructor), against a recorded base only: a reference's stores are
+    # judged against debt.json by `check`, not against the branch.
     differences = lambda inventory: (inventory.get('constructorStores') or {}).get('differences', [])
-    stores = 'constructorStores' in before and differences(before) != differences(report)
+    stores = recorded and differences(before) != differences(report)
     if stores:
         print('constructor store differences changed')
     if not (added or removed or changed or stores):
