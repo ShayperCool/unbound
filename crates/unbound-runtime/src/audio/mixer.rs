@@ -28,7 +28,7 @@ pub const BLOCK: usize = 256;
 /// spectrum, 8192 bins).
 const RING_FRAMES: usize = 16384;
 /// Frames a streamed clip's PCM reader is asked for at a time.
-const STREAM_CHUNK: usize = 4096;
+pub(crate) const STREAM_CHUNK: usize = 4096;
 /// Source gain changes accumulate for 64 samples, then reach the exact target.
 /// Measured by tests/projects/audiodistortion at both output rates.
 const VOICE_GAIN_RAMP_FRAMES: u32 = 64;
