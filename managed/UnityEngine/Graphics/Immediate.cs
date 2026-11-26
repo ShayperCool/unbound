@@ -755,6 +755,8 @@ namespace UnityEngine
         {
             if (src == null) { Debug.LogError("Graphics.ConvertTexture called with null source texture"); return false; }
             if (dst == null) { Debug.LogError("Graphics.ConvertTexture called with null destination texture"); return false; }
+            Texture.WarnCopyUnderMipmapLimit("Graphics.ConvertTexture", src);
+            Texture.WarnCopyUnderMipmapLimit("Graphics.ConvertTexture", dst);
             if (dst is RenderTexture)
             {
                 Debug.LogError("Graphics.ConvertTexture called with a render target destination.  Please use Graphics.Blit instead.");

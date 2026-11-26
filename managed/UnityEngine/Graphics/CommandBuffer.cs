@@ -747,6 +747,8 @@ namespace UnityEngine.Rendering
         {
             var sourceTexture = Resolve(src, c);
             var destinationTexture = Resolve(dst, c);
+            Texture.WarnCopyUnderMipmapLimit("CommandBuffer.CopyTexture", sourceTexture);
+            Texture.WarnCopyUnderMipmapLimit("CommandBuffer.CopyTexture", destinationTexture);
             // The screen is no texture to copy: CameraTarget of a camera drawing to the screen (and
             // outside cameras) names none, nor does the texture standing for it (measured on the
             // macOS Editor's Metal device, in batch mode and windowed in Play mode's Game view:
