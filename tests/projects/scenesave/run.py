@@ -317,6 +317,8 @@ PREFAB_SAVE_COPIES = {
     'Base': '5f6a7b8c9d0e45c63748f90a1b2c3d4e',
     'Single': '6a7b8c9d0e1f46d74859a0a1b2c3d4e5',
     'Exit': '7b8c9d0e1f2a47e8596ab1b2c3d4e5f6',
+    'Base2': 'a1b2c3d4e5f64a7b8c9d0e1f2a3b4c5d',
+    'Inner2': 'b2c3d4e5f6a74b8c9d0e1f2a3b4c5d6e',
 }
 
 

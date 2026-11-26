@@ -9,7 +9,8 @@ using UnityEngine.TestTools;
 /// SaveAssetIfDirty: fields set through the API and directly, with and without SetDirty; a root
 /// marked dirty with nothing changed; a component added and a child parented; variants made in
 /// the session and changed (their script marked dirty, their root alone, saved by
-/// SavePrefabAsset unmarked); one prefab left untouched; one left dirty for the Editor's exit.
+/// SavePrefabAsset unmarked); a variant and a nesting prefab written after their base and nested
+/// prefab were saved; one prefab left untouched; one left dirty for the Editor's exit.
 /// Each row records a dirty flag, a step's result or a file's hash (with a snapshot); run.py
 /// keeps the files on disk after the run.
 /// </summary>
@@ -137,6 +138,45 @@ public class PrefabDirtySaveTests
         ProbeLog.Row("fields.fileAfterSecondSave", ProbeLog.Hash(Folder + "/Fields.prefab"));
         // The new GameObject, where it stayed in the scene.
         if (added != null && added.transform.parent == null) Object.DestroyImmediate(added);
+
+        // A variant of Base2 and a prefab nesting Inner2, made in the session; a second variant of
+        // Base2 with its own count, unsaved; then Base2 and Inner2 changed and saved by
+        // SavePrefabAsset, and the dependents written by a later SaveAssets.
+        var dependentInstance = (GameObject)PrefabUtility.InstantiatePrefab(Load("Base2"));
+        var dependent = PrefabUtility.SaveAsPrefabAsset(dependentInstance, Folder + "/Dependent.prefab");
+        Object.DestroyImmediate(dependentInstance);
+        var ownInstance = (GameObject)PrefabUtility.InstantiatePrefab(Load("Base2"));
+        var dependentOwn = PrefabUtility.SaveAsPrefabAsset(ownInstance, Folder + "/DependentOwn.prefab");
+        Object.DestroyImmediate(ownInstance);
+        var nestingRoot = new GameObject("Nesting");
+        var nestedInner = (GameObject)PrefabUtility.InstantiatePrefab(Load("Inner2"));
+        nestedInner.transform.SetParent(nestingRoot.transform, false);
+        var nesting = PrefabUtility.SaveAsPrefabAsset(nestingRoot, Folder + "/Nesting.prefab");
+        Object.DestroyImmediate(nestingRoot);
+        ProbeLog.Snapshot("dependent.made", Folder + "/Dependent.prefab");
+        ProbeLog.Snapshot("nesting.made", Folder + "/Nesting.prefab");
+        dependentOwn.GetComponent<Holder>().count = 30;
+        EditorUtility.SetDirty(dependentOwn.GetComponent<Holder>());
+        var base2 = Load("Base2");
+        base2.GetComponent<Holder>().count = 21;
+        base2.GetComponent<Holder>().label = "base changed";
+        ProbeLog.Try("base2.save", () => { PrefabUtility.SavePrefabAsset(base2, out var saved); return saved; });
+        var inner2 = Load("Inner2");
+        inner2.GetComponent<Holder>().count = 22;
+        ProbeLog.Try("inner2.save", () => { PrefabUtility.SavePrefabAsset(inner2, out var saved); return saved; });
+        ProbeLog.Row("dependent.afterBaseSave", dependent.GetComponent<Holder>().count + " " + dependent.GetComponent<Holder>().label);
+        ProbeLog.Row("dependentOwn.afterBaseSave", dependentOwn.GetComponent<Holder>().count + " " + dependentOwn.GetComponent<Holder>().label);
+        ProbeLog.Row("nesting.afterInnerSave", nesting.transform.GetChild(0).GetComponent<Holder>().count);
+        Dirty("dependent.afterBaseSave", dependent);
+        ProbeLog.Row("dependentOwn.afterBaseSave.holder", EditorUtility.IsDirty(dependentOwn.GetComponent<Holder>()));
+        EditorUtility.SetDirty(dependent);
+        EditorUtility.SetDirty(nesting);
+        ProbeLog.Try("saveAssets.dependents", () => { AssetDatabase.SaveAssets(); return "done"; });
+        foreach (var name in new[] { "Dependent", "DependentOwn", "Nesting", "Base2", "Inner2" })
+            ProbeLog.Snapshot(name.ToLowerInvariant() + ".file", Folder + "/" + name + ".prefab");
+        ProbeLog.Row("dependent.afterSave", dependent.GetComponent<Holder>().count + " " + dependent.GetComponent<Holder>().label);
+        ProbeLog.Row("dependentOwn.afterSave", dependentOwn.GetComponent<Holder>().count + " " + dependentOwn.GetComponent<Holder>().label);
+        ProbeLog.Row("nesting.afterSave", nesting.transform.GetChild(0).GetComponent<Holder>().count);
 
         // Left dirty for the Editor's exit, which run.py's file list shows.
         var exit = Load("Exit");
