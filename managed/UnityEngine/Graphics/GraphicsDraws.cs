@@ -494,6 +494,13 @@ namespace UnityEngine
                 s_WarnedBorders = true;
                 Debug.LogWarning("Unbound: Graphics.DrawTexture borders are not drawn yet; the whole rect is.");
             }
+            // In OnGUI the texture is drawn among the GUI's own draws, in call order, as Unity
+            // draws it at once in the GUI pass (tests/projects/editorpreviewtexture).
+            if (GuiRender.Painting && mat != null)
+            {
+                GuiRender.DrawMaterialTexture(screenRect, texture, sourceRect, color, mat, pass);
+                return;
+            }
             if (s_TextureQuad == null)
             {
                 s_TextureQuad = new Mesh { name = "Unbound DrawTexture" };

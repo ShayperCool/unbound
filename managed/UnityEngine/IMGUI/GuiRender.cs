@@ -267,6 +267,9 @@ namespace Unbound.Runtime
             /// <summary>Text from a signed distance field atlas, drawn with its font asset's own
             /// material (Hidden/TextCore/Distance Field SSD).</summary>
             DistanceFieldText,
+            /// <summary>Graphics.DrawTexture in OnGUI: the caller's material, its values as they
+            /// were at the call.</summary>
+            Material,
         }
 
         struct Batch
@@ -298,6 +301,14 @@ namespace Unbound.Runtime
         /// <summary>Per-draw parameters of rounded draws, reused from frame to frame.</summary>
         static readonly List<Dictionary<int, object>> s_RoundedProperties = new List<Dictionary<int, object>>();
         static int s_RoundedUsed;
+        /// <summary>The material values of Graphics.DrawTexture draws, reused from frame to frame
+        /// (a value that did not change keeps its box).</summary>
+        static readonly List<Dictionary<int, object>> s_MaterialProperties = new List<Dictionary<int, object>>();
+        static int s_MaterialUsed;
+
+        /// <summary>Whether the frame's GUI pass is running: what OnGUI draws with
+        /// Graphics.DrawTexture then goes among the GUI's own draws, in call order.</summary>
+        internal static bool Painting;
         static Mesh s_Mesh;
 
         internal static int QuadCount => s_Positions.Count / 4;
@@ -316,6 +327,7 @@ namespace Unbound.Runtime
             s_Batches.Clear();
             s_ExtraClips.Clear();
             s_RoundedUsed = 0;
+            s_MaterialUsed = 0;
         }
 
         /// <summary>Clips further drawing to a rect (in the current coordinates) as well.</summary>
@@ -457,6 +469,53 @@ namespace Unbound.Runtime
                 ToScreen = GUIClip.GetMatrix() * Matrix4x4.Translate(GUIClip.Unclip(Vector2.zero)),
                 FirstVertex = start, VertexCount = 4, Properties = properties,
             });
+        }
+
+        /// <summary>Graphics.DrawTexture in the GUI pass: drawn where the GUI's own draws are, in call
+        /// order (Unity draws it there at once), with the material's floats, integers and vectors as
+        /// they are now (a later set does not change it). <paramref name="rect"/> is in GUI
+        /// coordinates; the tint is the vertex colour Graphics.DrawTexture gives (twice the colour).</summary>
+        internal static void DrawMaterialTexture(Rect rect, Texture texture, Rect uv, Color color, Material material, int pass)
+        {
+            if (pass > 0)
+                Stubs.Ignored("UnityEngine.Graphics.DrawTexture pass in OnGUI", "draws the material's first pass");
+            if (CurrentClip().width <= 0f) return;
+            if (s_MaterialUsed == s_MaterialProperties.Count) s_MaterialProperties.Add(new Dictionary<int, object>());
+            var properties = s_MaterialProperties[s_MaterialUsed++];
+            Snapshot(material, properties);
+            var tint = color * 2f;
+            var indices = s_Spare.Count > 0 ? s_Spare.Pop() : new List<int>();
+            s_Batches.Add(new Batch { Texture = texture, Clip = CurrentClip(), Kind = Kind.Material, Material = material, Indices = indices, Properties = properties });
+            int start = s_Positions.Count;
+            s_Positions.Add(GUIClip.GUIToScreen(new Vector2(rect.xMin, rect.yMin)));
+            s_Positions.Add(GUIClip.GUIToScreen(new Vector2(rect.xMax, rect.yMin)));
+            s_Positions.Add(GUIClip.GUIToScreen(new Vector2(rect.xMax, rect.yMax)));
+            s_Positions.Add(GUIClip.GUIToScreen(new Vector2(rect.xMin, rect.yMax)));
+            s_Uvs.Add(new Vector2(uv.xMin, uv.yMax));
+            s_Uvs.Add(new Vector2(uv.xMax, uv.yMax));
+            s_Uvs.Add(new Vector2(uv.xMax, uv.yMin));
+            s_Uvs.Add(new Vector2(uv.xMin, uv.yMin));
+            for (int i = 0; i < 4; i++) s_Colors.Add(tint);
+            for (int i = 0; i < 4; i++) s_Uvs2.Add(s_RegularGlyph);
+            indices.Add(start);
+            indices.Add(start + 1);
+            indices.Add(start + 2);
+            indices.Add(start + 2);
+            indices.Add(start + 3);
+            indices.Add(start);
+        }
+
+        /// <summary>The material's floats, integers and vectors into <paramref name="into"/>, keeping
+        /// the boxes of values that did not change (its textures, matrices and arrays stay the
+        /// material's own: unmeasured if changed between two draws of one frame).</summary>
+        static void Snapshot(Material material, Dictionary<int, object> into)
+        {
+            foreach (var pair in material.m_Floats)
+                if (!(into.TryGetValue(pair.Key, out var old) && old is float f && f == pair.Value)) into[pair.Key] = pair.Value;
+            foreach (var pair in material.m_Ints)
+                if (!(into.TryGetValue(pair.Key, out var old) && old is int i && i == pair.Value)) into[pair.Key] = pair.Value;
+            foreach (var pair in material.m_Vectors)
+                if (!(into.TryGetValue(pair.Key, out var old) && old is Vector4 v && v == pair.Value)) into[pair.Key] = pair.Value;
         }
 
         static void Set(float[] into, float a, float b, float c, float d)
@@ -719,6 +778,13 @@ namespace Unbound.Runtime
         {
             GuiRender.Clear();
             if (!CollectOrder()) return;
+            GuiRender.Painting = true;
+            try { RunFrameCalls(); }
+            finally { GuiRender.Painting = false; }
+        }
+
+        static void RunFrameCalls()
+        {
 
             // Repaint, back to front. A glyph atlas that grows meanwhile moves earlier glyphs: paint again.
             for (int attempt = 0; attempt < 2; attempt++)
