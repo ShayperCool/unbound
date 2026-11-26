@@ -127,9 +127,10 @@ namespace Unbound.Runtime
         /// the commands it lights: there is one, its culling mask has the range's layer and,
         /// the command lightmapped, its direct light is not in the lightmaps (the rule of
         /// unity_LightData.z: <see cref="FrameBuilder.InLightmap"/>). The probe
-        /// (tests/projects/brg, matching the Unity 6000.0.71f1 Editor) covers the flip and the main
-        /// light of an unlightmapped command at the default motion mode; the other motion modes
-        /// (no motion vector pass is drawn) and lightmapped commands are not measured.
+        /// (tests/projects/brg, matching the Unity 6000.0.71f1 Editor) covers the flip, the main
+        /// light of an unlightmapped command and the motion flags of all three motion modes, with
+        /// and without HasMotion, which changes neither (motion_header); a motion vector pass and
+        /// lightmapped commands' bits are not measured.
         /// </summary>
         internal struct Header
         {
