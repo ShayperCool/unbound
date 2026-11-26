@@ -360,16 +360,47 @@ namespace Unbound.Runtime
     internal static class ScriptedImports
     {
         /// <summary>The project's ScriptedImporters by the extensions they declare (lowercase, no
-        /// dot); the first by type name where two declare one (not measured).</summary>
+        /// dot), each extension one importer alone declares (fileExtensions); the extensions it may
+        /// override (overrideFileExtensions) in <see cref="s_OverridesByExtension"/>.</summary>
         static Dictionary<string, Type> s_ByExtension = new Dictionary<string, Type>(StringComparer.Ordinal);
+        static Dictionary<string, List<Type>> s_OverridesByExtension = new Dictionary<string, List<Type>>(StringComparer.Ordinal);
+
+        static string ExtensionOf(string path) => System.IO.Path.GetExtension(path ?? "").TrimStart('.').ToLowerInvariant();
 
         /// <summary>The ScriptedImporter class the project declares for a path's extension, or null.</summary>
         internal static Type ForExtension(string path)
         {
-            var ext = System.IO.Path.GetExtension(path ?? "").TrimStart('.').ToLowerInvariant();
+            var ext = ExtensionOf(path);
             return ext.Length > 0 && s_ByExtension.TryGetValue(ext, out var type) ? type : null;
         }
 
+        /// <summary>The ScriptedImporter classes that name a path's extension among the ones they can
+        /// override, by type name.</summary>
+        internal static IReadOnlyList<Type> OverridesForExtension(string path)
+        {
+            var ext = ExtensionOf(path);
+            return ext.Length > 0 && s_OverridesByExtension.TryGetValue(ext, out var types) ? types : Array.Empty<Type>();
+        }
+
+        /// <summary>The extensions an importer's attribute declares, as Unity's
+        /// ScriptedImporter.GetHandledExtensionsByImporter takes them: each without its dots, once,
+        /// true for one it imports by default (fileExtensions), false for one it can override
+        /// (overrideFileExtensions, unless also among the former). Lowercase.</summary>
+        static SortedDictionary<string, bool> HandledExtensions(ScriptedImporterAttribute attribute)
+        {
+            var handled = new SortedDictionary<string, bool>(StringComparer.Ordinal);
+            foreach (var raw in attribute.fileExtensions ?? Array.Empty<string>())
+            {
+                var ext = (raw ?? "").Trim('.').ToLowerInvariant();
+                if (ext.Length > 0) handled[ext] = true;
+            }
+            foreach (var raw in attribute.overrideFileExtensions ?? Array.Empty<string>())
+            {
+                var ext = (raw ?? "").Trim('.').ToLowerInvariant();
+                if (ext.Length > 0 && !handled.ContainsKey(ext)) handled[ext] = false;
+            }
+            return handled;
+        }
 
         /// <summary>Collects the extensions the loaded ScriptedImporter classes declare and gives
         /// them to the native side, which then picks a file's importer by its extension, as the Editor
@@ -377,13 +408,16 @@ namespace Unbound.Runtime
         /// ScriptedImporter than their extension's are written with that importer's section at its
         /// defaults, as the Editor writes them when the project opens (importerpick open.*); a
         /// `.meta` setting an importer override keeps its importer (<see cref="ImportsAsset(string, long, string, bool)"/>).
+        /// An extension more than one importer declares is rejected for all of them, with the error
+        /// Unity's ScriptedImporter.RegisterScriptedImporters logs (its files then get their native
+        /// importer, or the DefaultImporter). Unbound runs a project's importers from C# scripts only:
+        /// one of a plug-in DLL, and one declaring an extension a native importer has, is not
+        /// registered, with a warning (the `.meta`'s importer then decides, as before).
         /// For the measured release families only (Compat.ScriptedImporterSelectionMeasured):
         /// elsewhere the `.meta` decides, as before.</summary>
         internal static void RegisterExtensions(bool rewriteStale)
         {
             if (!Compat.ScriptedImporterSelectionMeasured) return;
-            var byExtension = new Dictionary<string, Type>(StringComparer.Ordinal);
-            var scripts = new Dictionary<string, object>(StringComparer.Ordinal);
             var types = new List<Type>();
             foreach (var assembly in GameDomain.Assemblies())
             {
@@ -395,32 +429,89 @@ namespace Unbound.Runtime
                         && type.GetCustomAttributes(typeof(ScriptedImporterAttribute), false).Length > 0)
                         types.Add(type);
             }
+            var selection = Select(types, type => GameDomain.ScriptOf(type) is { FileId: 11500000 });
+            foreach (var error in selection.Errors) Debug.LogError(error);
+            foreach (var (ext, type) in selection.Plugin)
+                Debug.LogWarning($"{Log.DiagnosticPrefix}the ScriptedImporter {type.FullName} declares the extension '.{ext}' from a plug-in assembly: Unbound does not pick it by the extension (an asset's .meta decides)");
+            var byExtension = selection.ByExtension;
+            var overrides = selection.Overrides;
+            var unsupported = new SortedSet<string>(selection.Plugin.Keys, StringComparer.Ordinal);
+            var scripts = new Dictionary<string, object>(StringComparer.Ordinal);
+            var loaded = new SortedSet<string>(StringComparer.Ordinal);
+            foreach (var type in types)
+                if (GameDomain.ScriptOf(type) is { FileId: 11500000 } own) loaded.Add(own.Guid);
+            foreach (var (ext, type) in byExtension)
+                if (GameDomain.ScriptOf(type) is { } own) scripts[ext] = new { guid = own.Guid, fileId = own.FileId };
+            string reply;
+            try { reply = Native.Call("scripted-importers", System.Text.Json.JsonSerializer.Serialize(new { extensions = scripts, unsupported, loaded })); }
+            catch (InvalidOperationException) // No native side (tests).
+            {
+                s_ByExtension = byExtension;
+                s_OverridesByExtension = overrides;
+                return;
+            }
+            using var json = System.Text.Json.JsonDocument.Parse(reply);
+            foreach (var native in json.RootElement.GetProperty("native").EnumerateArray())
+            {
+                var ext = native.GetString();
+                if (!byExtension.Remove(ext, out var type)) continue;
+                Debug.LogWarning($"{Log.DiagnosticPrefix}the ScriptedImporter {type.FullName} declares the extension '.{ext}', which a native importer has: Unbound does not pick it by the extension (an asset's .meta decides; what the Editor does is not measured)");
+            }
+            s_ByExtension = byExtension;
+            s_OverridesByExtension = overrides;
+            if (!rewriteStale) return;
+            foreach (var path in json.RootElement.GetProperty("stale").EnumerateArray())
+                WriteOwnSection(path.GetString());
+        }
+
+        static void Add(IDictionary<string, List<Type>> map, string ext, Type type)
+        {
+            if (!map.TryGetValue(ext, out var list)) map[ext] = list = new List<Type>();
+            list.Add(type);
+        }
+
+        /// <summary>Which of a project's ScriptedImporter classes imports each extension, as Unity's
+        /// ScriptedImporter.RegisterScriptedImporters decides: an extension two or more declare
+        /// (fileExtensions) is rejected for all of them, with its error; one an importer of a plug-in
+        /// (not <paramref name="isScript"/>) alone declares is listed apart; the extensions
+        /// importers of scripts can override, by type name.</summary>
+        internal static Selection Select(IEnumerable<Type> importers, Func<Type, bool> isScript)
+        {
+            var types = new List<Type>(importers);
             types.Sort((a, b) => string.CompareOrdinal(a.FullName, b.FullName));
+            var autoselect = new SortedDictionary<string, List<Type>>(StringComparer.Ordinal);
+            var selection = new Selection();
             foreach (var type in types)
             {
                 var attribute = (ScriptedImporterAttribute)type.GetCustomAttributes(typeof(ScriptedImporterAttribute), false)[0];
-                var script = GameDomain.ScriptOf(type);
-                foreach (var raw in attribute.fileExtensions ?? Array.Empty<string>())
+                bool script = isScript(type);
+                var handled = HandledExtensions(attribute);
+                if (handled.Count == 0) selection.Errors.Add($"The ScriptedImporter {type.FullName} does not provide any non-null file extension.");
+                foreach (var (ext, isDefault) in handled)
                 {
-                    var ext = (raw ?? "").TrimStart('.').ToLowerInvariant();
-                    if (ext.Length == 0) continue;
-                    if (byExtension.TryGetValue(ext, out var first))
-                    {
-                        Debug.LogWarning($"{Log.DiagnosticPrefix}ScriptedImporters {first.FullName} and {type.FullName} both declare the extension '.{ext}': Unbound uses {first.FullName} (which the Editor picks is not measured)");
-                        continue;
-                    }
-                    byExtension[ext] = type;
-                    if (script is { } s) scripts[ext] = new { guid = s.Guid, fileId = s.FileId };
+                    if (isDefault) Add(autoselect, ext, type);
+                    else if (script) Add(selection.Overrides, ext, type);
                 }
             }
-            s_ByExtension = byExtension;
-            string reply;
-            try { reply = Native.Call("scripted-importers", System.Text.Json.JsonSerializer.Serialize(new { extensions = scripts })); }
-            catch (InvalidOperationException) { return; } // No native side (tests).
-            if (!rewriteStale) return;
-            using var json = System.Text.Json.JsonDocument.Parse(reply);
-            foreach (var path in json.RootElement.GetProperty("stale").EnumerateArray())
-                WriteOwnSection(path.GetString());
+            foreach (var (ext, declaring) in autoselect)
+            {
+                if (declaring.Count > 1)
+                {
+                    var rejected = string.Join(", ", declaring.ConvertAll(t => $"{t.FullName} (assembly: {t.Module.FullyQualifiedName})"));
+                    selection.Errors.Add(string.Format("Multiple scripted importers are targeting the extension '{0}' and have all been rejected: {1} ", ext, rejected));
+                }
+                else if (isScript(declaring[0])) selection.ByExtension[ext] = declaring[0];
+                else selection.Plugin[ext] = declaring[0];
+            }
+            return selection;
+        }
+
+        internal sealed class Selection
+        {
+            public readonly Dictionary<string, Type> ByExtension = new Dictionary<string, Type>(StringComparer.Ordinal);
+            public readonly Dictionary<string, List<Type>> Overrides = new Dictionary<string, List<Type>>(StringComparer.Ordinal);
+            public readonly SortedDictionary<string, Type> Plugin = new SortedDictionary<string, Type>(StringComparer.Ordinal);
+            public readonly List<string> Errors = new List<string>();
         }
 
         /// <summary>The `.meta` of <paramref name="path"/> written with its importer's section at

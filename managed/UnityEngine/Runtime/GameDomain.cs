@@ -317,18 +317,17 @@ namespace Unbound.Runtime
             return false;
         }
 
-        /// <summary>The class a serialized `m_Script` reference names.</summary>
         /// <summary>The script `(guid, file id)` that holds <paramref name="type"/>: its own C# file's
         /// (file id 11500000) or a plug-in DLL's class; null for a type of neither.</summary>
         internal static (string Guid, long FileId)? ScriptOf(Type type)
         {
-            foreach (var (guid, scripted) in s_ScriptsByGuid)
-                if (scripted == type) return (guid.ToLowerInvariant(), 11500000);
-            foreach (var (key, scripted) in s_PluginScripts)
-                if (scripted == type) return key;
+            if (type == null) return null;
+            if (GuidOfScript(type) is { } guid) return (guid.ToLowerInvariant(), 11500000);
+            if (TryGetPluginScriptLocation(type, out var plugin, out var fileId)) return (plugin.ToLowerInvariant(), fileId);
             return null;
         }
 
+        /// <summary>The class a serialized `m_Script` reference names.</summary>
         internal static Type ResolveScript(string guid, long fileId)
         {
             if (guid == null) return null;

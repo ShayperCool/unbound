@@ -7,7 +7,7 @@ use anyhow::{Context, Result, bail};
 use serde::Deserialize;
 use serde_json::json;
 use std::{
-    collections::HashMap,
+    collections::{HashMap, HashSet},
     path::{Path, PathBuf},
     sync::{Arc, OnceLock, RwLock},
 };
@@ -2024,17 +2024,69 @@ fn effective_of(
     if overridden && named.is_some() {
         return named;
     }
-    if let Some(entry) = registry.defaults.get(&ext.to_ascii_lowercase()) {
+    let ext = ext.to_ascii_lowercase();
+    // An extension Unbound does not pick by (a plug-in's importer declares it, or a native
+    // importer has it): the `.meta` decides, as before.
+    if registry.keep_meta.contains(&ext) {
+        return named;
+    }
+    if let Some(entry) = registry.defaults.get(&ext) {
         return Some(entry.clone());
     }
-    named.filter(|(guid, _)| guid == unbound_assets::meta::BUILTIN_SCRIPT_GUID)
+    // The Editor's own importer the `.meta` names (a SpeedTree 9 tree) is kept, and so is a project
+    // script that is no ScriptedImporter Unbound loaded (missing, not compiled, no attribute): its
+    // import then fails loudly.
+    named.filter(|(guid, _)| {
+        guid == unbound_assets::meta::BUILTIN_SCRIPT_GUID || !registry.loaded.contains(guid)
+    })
 }
 
 /// The project's ScriptedImporters by the extensions they declare (lowercase, no dot), by their
-/// script `(guid, file id)`.
+/// script `(guid, file id)`: those one importer alone declares; the extensions a `.meta` still
+/// decides for; the scripts of the importers loaded.
 #[derive(Default)]
 struct ScriptedExtensions {
     defaults: HashMap<String, (String, i64)>,
+    keep_meta: HashSet<String>,
+    loaded: HashSet<String>,
+}
+
+/// The importer the Editor has natively for a path by its extension (the measured lists of
+/// [`importer_of_path`] and new `.meta` files), as its class name; None for an extension neither
+/// knows. The UI Toolkit files' ScriptedImporters answer `ScriptedImporter`.
+fn native_importer(path: &str) -> Option<&'static str> {
+    use unbound_assets::new_meta::NewImporter;
+    if let Some(name) = importer_of_path(path) {
+        return Some(name);
+    }
+    Some(
+        match unbound_assets::new_meta::importer_for(Path::new(path), false)? {
+            NewImporter::Folder | NewImporter::Default => "DefaultImporter",
+            NewImporter::Script => "MonoImporter",
+            NewImporter::Plugin => "PluginImporter",
+            NewImporter::AssemblyDefinition => "AssemblyDefinitionImporter",
+            NewImporter::TextScript => "TextScriptImporter",
+            NewImporter::Shader => "ShaderImporter",
+            NewImporter::ShaderInclude => "ShaderIncludeImporter",
+            NewImporter::ComputeShader => "ComputeShaderImporter",
+            NewImporter::NativeFormat { .. } => "NativeFormatImporter",
+            NewImporter::Prefab => "PrefabImporter",
+            NewImporter::Texture => "TextureImporter",
+            NewImporter::Model => "ModelImporter",
+            NewImporter::Audio => "AudioImporter",
+            NewImporter::Font => "TrueTypeFontImporter",
+            NewImporter::SpriteAtlas => "SpriteAtlasImporter",
+            NewImporter::VisualEffect => "VisualEffectImporter",
+            NewImporter::SpeedTree8(_) => "SpeedTreeImporter",
+            NewImporter::Scripted { .. } => "ScriptedImporter",
+        },
+    )
+}
+
+/// Whether an extension has an importer of the Editor's own (not the DefaultImporter's), which a
+/// project's ScriptedImporter declaring it is not picked over (not measured).
+fn has_native_importer(ext: &str) -> bool {
+    native_importer(&format!("x.{ext}")).is_some_and(|name| name != "DefaultImporter")
 }
 
 /// `meta` with the section of the importer that imports its file
@@ -2096,17 +2148,31 @@ fn set_scripted_importers(request: &str) -> Result<String> {
     #[derive(Deserialize)]
     struct Request {
         extensions: HashMap<String, Script>,
+        #[serde(default)]
+        unsupported: Vec<String>,
+        #[serde(default)]
+        loaded: Vec<String>,
     }
     let r: Request = serde_json::from_str(request)?;
-    let key = |ext: &str| ext.trim_start_matches('.').to_ascii_lowercase();
-    let script = |s: Script| (s.guid.to_ascii_lowercase(), s.file_id);
-    let registry = ScriptedExtensions {
-        defaults: r
-            .extensions
-            .into_iter()
-            .map(|(ext, s)| (key(&ext), script(s)))
-            .collect(),
+    let key = |ext: &str| ext.trim_matches('.').to_ascii_lowercase();
+    let mut registry = ScriptedExtensions {
+        keep_meta: r.unsupported.iter().map(|e| key(e)).collect(),
+        loaded: r.loaded.iter().map(|g| g.to_ascii_lowercase()).collect(),
+        ..Default::default()
     };
+    let mut native = Vec::new();
+    for (ext, script) in r.extensions {
+        let ext = key(&ext);
+        if has_native_importer(&ext) {
+            registry.keep_meta.insert(ext.clone());
+            native.push(ext);
+            continue;
+        }
+        registry
+            .defaults
+            .insert(ext, (script.guid.to_ascii_lowercase(), script.file_id));
+    }
+    native.sort();
     let s = state();
     let mut stale = Vec::new();
     {
@@ -2124,7 +2190,7 @@ fn set_scripted_importers(request: &str) -> Result<String> {
             };
             if let Some(named) = unbound_assets::meta::scripted_importer_of(&asset.file)
                 .map(|(guid, file_id)| (guid.to_ascii_lowercase(), file_id))
-                && named.0 != unbound_assets::meta::BUILTIN_SCRIPT_GUID
+                && registry.loaded.contains(&named.0)
                 && named != *declared
                 && !unbound_assets::meta::has_importer_override(&asset.file)
             {
@@ -2133,7 +2199,7 @@ fn set_scripted_importers(request: &str) -> Result<String> {
         }
     }
     *s.scripted_extensions.write().unwrap() = Some(registry);
-    Ok(json!({ "stale": stale }).to_string())
+    Ok(json!({ "stale": stale, "native": native }).to_string())
 }
 
 /// An asset's importer settings: the importer section of its `.meta`, as one document whose type
@@ -2438,16 +2504,21 @@ fn extension_importer(request: &str) -> Result<String> {
         .by_path(&path)
         .with_context(|| format!("no asset {path}"))?;
     use unbound_assets::new_meta::NewImporter;
-    // An extension none declares (the project's ScriptedImporters known) gets the DefaultImporter.
+    let importer = native_importer(&asset.path);
+    // The sections measured for a file whose `.meta` names a project's ScriptedImporter that does
+    // not import it (tests/projects/importerpick labels.*): the TextScriptImporter's, and the
+    // DefaultImporter's for an extension no importer has (the project's ScriptedImporters known).
     let known = s.scripted_extensions.read().unwrap().is_some();
-    let kind = unbound_assets::new_meta::importer_for(&asset.file, asset.is_folder)
-        .or_else(|| (known && !asset.is_folder).then_some(NewImporter::Default));
+    let kind = match unbound_assets::new_meta::importer_for(&asset.file, asset.is_folder) {
+        Some(NewImporter::TextScript) => Some(NewImporter::TextScript),
+        None if importer.is_none() && known && !asset.is_folder => Some(NewImporter::Default),
+        _ => None,
+    };
     let section = kind
         .filter(|_| s.new_meta_measured)
-        .filter(|kind| !matches!(kind, NewImporter::Scripted { .. }))
         .map(|kind| meta_section(kind, &asset.file, &s.new_meta))
         .unwrap_or_default();
-    Ok(json!({ "importer": default_importer(&asset.path), "section": section }).to_string())
+    Ok(json!({ "importer": importer.unwrap_or("DefaultImporter"), "section": section }).to_string())
 }
 
 /// The importer whose new-asset section a GUID-only `.meta` of `file` gets when it is written
@@ -3554,12 +3625,15 @@ mod tests {
         let foo = ("aaaa".to_string(), 11500000);
         let bar = ("bbbb".to_string(), 11500000);
         let tree = (unbound_assets::meta::BUILTIN_SCRIPT_GUID.to_string(), 12405);
+        let gone = ("cccc".to_string(), 11500000);
         let registry = super::ScriptedExtensions {
             defaults: [
                 ("foo".to_string(), foo.clone()),
                 ("bar".to_string(), bar.clone()),
             ]
             .into(),
+            keep_meta: ["dllext".to_string()].into(),
+            loaded: ["aaaa".to_string(), "bbbb".to_string()].into(),
         };
         let pick = |named: Option<&(String, i64)>, ext, overridden| {
             super::effective_of(Some(&registry), named.cloned(), ext, overridden)
@@ -3568,6 +3642,15 @@ mod tests {
         assert_eq!(pick(None, "FOO", false), Some(foo.clone()));
         assert_eq!(pick(Some(&foo), "qux", false), None);
         assert_eq!(pick(Some(&foo), "txt", false), None);
+        // An extension two importers declare is in neither list: its files get the native
+        // importer or the DefaultImporter (Unity's RegisterScriptedImporters rejects both).
+        assert_eq!(pick(Some(&foo), "both", false), None);
+        // A plug-in's importer's (or a native) extension: the `.meta` decides.
+        assert_eq!(pick(Some(&foo), "dllext", false), Some(foo.clone()));
+        assert_eq!(pick(None, "dllext", false), None);
+        // A project script that is no loaded ScriptedImporter keeps the `.meta`'s importer.
+        assert_eq!(pick(Some(&gone), "qux", false), Some(gone.clone()));
+        assert_eq!(pick(Some(&gone), "foo", false), Some(foo.clone()));
         // An importer override keeps the named importer (importselfload).
         assert_eq!(pick(Some(&bar), "foo", true), Some(bar.clone()));
         assert_eq!(pick(Some(&foo), "qux", true), Some(foo.clone()));
@@ -3576,6 +3659,20 @@ mod tests {
             super::effective_of(None, Some(foo.clone()), "qux", false),
             Some(foo.clone())
         );
+    }
+
+    /// The importer an extension has natively is named from one table: the measured importers of
+    /// existing assets, else of new `.meta` files.
+    #[test]
+    fn the_native_importer_is_named_from_one_table() {
+        assert_eq!(super::native_importer("Assets/a.png"), Some("TextureImporter"));
+        assert_eq!(super::native_importer("Assets/a.hlsl"), Some("ShaderIncludeImporter"));
+        assert_eq!(super::native_importer("Assets/a.flac"), Some("AudioImporter"));
+        assert_eq!(super::native_importer("Assets/a.uss"), Some("ScriptedImporter"));
+        assert_eq!(super::native_importer("Assets/a.unity"), Some("DefaultImporter"));
+        assert_eq!(super::native_importer("Assets/a.qux"), None);
+        assert!(super::has_native_importer("txt") && super::has_native_importer("cginc"));
+        assert!(!super::has_native_importer("unity") && !super::has_native_importer("foo"));
     }
 
     /// The importer settings read for a file are its importer's: a section naming another

@@ -24,6 +24,18 @@ namespace UnityEngine.Tests
             public override void OnImportAsset(AssetImportContext ctx) { }
         }
 
+        [ScriptedImporter(1, new[] { "dup", "only1" }, new[] { "ovr2", "gen" })]
+        sealed class DupOneImporter : ScriptedImporter
+        {
+            public override void OnImportAsset(AssetImportContext ctx) { }
+        }
+
+        [ScriptedImporter(1, new[] { ".dup", "" })]
+        sealed class DupTwoImporter : ScriptedImporter
+        {
+            public override void OnImportAsset(AssetImportContext ctx) { }
+        }
+
         sealed class NoAttributeImporter : ScriptedImporter
         {
             public override void OnImportAsset(AssetImportContext ctx) { }
@@ -40,6 +52,36 @@ namespace UnityEngine.Tests
             var single = new ScriptedImporterAttribute(3, "gen");
             Assert.Equal(new[] { "gen" }, single.fileExtensions);
             Assert.Null(single.overrideFileExtensions);
+        }
+
+        /// <summary>An extension two importers declare is rejected for both, with the error Unity's
+        /// ScriptedImporter.RegisterScriptedImporters logs (its published C#); an override extension
+        /// is no default; a plug-in's importer is listed apart.</summary>
+        [Fact]
+        public void AnExtensionTwoImportersDeclareIsRejectedForBoth()
+        {
+            var selection = ScriptedImports.Select(
+                new[] { typeof(DupTwoImporter), typeof(GenImporter), typeof(DupOneImporter), typeof(OverImporter) },
+                type => type != typeof(OverImporter));
+            Assert.Equal(new[] { "gen", "only1" }, Sorted(selection.ByExtension.Keys));
+            Assert.Equal(typeof(GenImporter), selection.ByExtension["gen"]);
+            Assert.Equal(typeof(DupOneImporter), selection.ByExtension["only1"]);
+            var error = Assert.Single(selection.Errors);
+            var module = typeof(DupOneImporter).Module.FullyQualifiedName;
+            Assert.Equal("Multiple scripted importers are targeting the extension 'dup' and have all been rejected: "
+                + $"{typeof(DupOneImporter).FullName} (assembly: {module}), {typeof(DupTwoImporter).FullName} (assembly: {module}) ", error);
+            // OverImporter is a plug-in's here: its default extension apart, its overrides not offered.
+            Assert.Equal(typeof(OverImporter), Assert.Single(selection.Plugin).Value);
+            Assert.Equal("over", Assert.Single(selection.Plugin).Key);
+            Assert.Equal(new[] { "gen", "ovr2" }, Sorted(selection.Overrides.Keys));
+            Assert.Equal(new[] { typeof(DupOneImporter) }, selection.Overrides["ovr2"]);
+        }
+
+        static string[] Sorted(System.Collections.Generic.IEnumerable<string> keys)
+        {
+            var list = new System.Collections.Generic.List<string>(keys);
+            list.Sort(System.StringComparer.Ordinal);
+            return list.ToArray();
         }
 
         [Fact]
