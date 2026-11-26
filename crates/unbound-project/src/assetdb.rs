@@ -498,12 +498,13 @@ mod db_tests {
         let dir = std::env::temp_dir().join(format!("unbound-db-header-{}", std::process::id()));
         std::fs::create_dir_all(&dir).unwrap();
         let meta = dir.join("T.png.meta");
-        std::fs::write(&meta, "fileFormatVersion: 2\nguid: 00000000000000000000000000000001\nTextureImporter:\n  serializedVersion: 13\n  userData: \n  assetBundleName: ui\n  assetBundleVariant: hd\n").unwrap();
+        std::fs::write(&meta, "fileFormatVersion: 2\nguid: 00000000000000000000000000000001\nlabels:\n- Keep\nTextureImporter:\n  serializedVersion: 13\n  userData: \n  assetBundleName: ui\n  assetBundleVariant: hd\n").unwrap();
         let mut db = AssetDb::default();
         db.insert(asset(1, "Assets/T.png"));
         let header = read_meta_header(&meta);
         let asset = db.set_header("assets/t.png", header.clone()).unwrap();
         assert_eq!(asset.importer.as_deref(), Some("TextureImporter"));
+        assert_eq!(asset.labels, ["Keep"]);
         assert_eq!(
             asset.bundle,
             Bundle {
