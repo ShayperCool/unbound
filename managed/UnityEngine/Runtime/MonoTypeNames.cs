@@ -131,7 +131,7 @@ namespace Unbound
         }
 
         /// <summary>Whether an assembly is .NET's class library: a framework assembly (System.*,
-        /// Microsoft.*, netstandard, mscorlib) loaded into the default context, from the runtime's
+        /// Microsoft.*, netstandard, mscorlib) the host loads into the default context, from the runtime's
         /// directory or Unbound's (its full BinaryFormatter and CodeDom builds). A game plugin of a
         /// framework name (a System.Buffers.dll in the project) loads into the game's context and
         /// keeps its own names.</summary>
@@ -184,7 +184,7 @@ namespace Unbound
                 var md = pe.GetMetadataReader();
                 if (!md.IsAssembly) return;
                 var assemblyName = md.GetAssemblyDefinition().GetAssemblyName();
-#pragma warning disable SYSLIB0044 // CodeBase: what Mono's AssemblyName holds
+#pragma warning disable SYSLIB0044 // CodeBase: the Mono file read (what Mono reports is unmeasured)
                 assemblyName.CodeBase = new Uri(Path.GetFullPath(file)).AbsoluteUri;
 #pragma warning restore SYSLIB0044
                 var assembly = assemblyName.FullName;

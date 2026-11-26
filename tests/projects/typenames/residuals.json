@@ -19,7 +19,7 @@
     "rigidbody.assemblyToString",
     "binaryFormatter.assemblyToString"
   ],
-  "A .NET class library assembly holding types of several Mono assemblies keeps its .NET name (Assembly.FullName/GetName of System.Linq, System.Private.Uri, System.Private.Xml; HashSet's assembly is .NET's core library, named mscorlib): the Editor names System.Core, System, System.Xml": [
+  "A .NET class library assembly holding types of several Mono assemblies keeps its .NET name (Assembly.FullName/GetName of System.Linq, System.Private.Uri, System.Private.Xml, System.Runtime.Serialization.Formatters; HashSet's assembly is .NET's core library, named mscorlib): the Editor names System.Core, System, System.Xml, mscorlib": [
     "enumerable.assembly",
     "enumerable.assemblyName",
     "enumerable.assemblyNameFull",
