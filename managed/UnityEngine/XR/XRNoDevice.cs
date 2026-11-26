@@ -430,7 +430,10 @@ namespace UnityEngine
         [global::Unbound.Stub] public void Start() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.IntegratedSubsystem.Start"); }
         [global::Unbound.Stub] public void Stop() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.IntegratedSubsystem.Stop"); }
         [global::Unbound.Stub] public void Destroy() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.IntegratedSubsystem.Destroy"); }
-        public bool running { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.IntegratedSubsystem.running"); return default; } }
+        /// <summary>Unity's C# answers <c>valid &amp;&amp; IsRunning()</c>, valid being a native object; no
+        /// integrated subsystem has one here (one made with new has none in the Editor either).</summary>
+        [Unbound.EditorFaithful("Unity's C# answers valid && IsRunning(); without an XR provider no integrated subsystem has a native object (tests/projects/xr)")]
+        public bool running => false;
     }
     public partial class IntegratedSubsystem<TSubsystemDescriptor> : IntegratedSubsystem where TSubsystemDescriptor : ISubsystemDescriptor { }
     public abstract partial class IntegratedSubsystemDescriptor : ISubsystemDescriptorImpl, ISubsystemDescriptor

@@ -93,6 +93,11 @@ namespace UnityEngine.UIElements
             UaLayout.SyncStyle(this, computedValues);
         }
 
+        // Unity's VisualElement declares a finalizer (it frees its layout node there), so a
+        // subclass's finalizer compiled against Unity's assemblies calls VisualElement.Finalize.
+        // This layout keeps no native node: nothing to free.
+        ~VisualElement() { }
+
         // ---- identity ----
 
         [CreateProperty]
