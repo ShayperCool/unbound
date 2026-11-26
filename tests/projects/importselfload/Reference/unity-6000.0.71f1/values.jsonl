@@ -2,12 +2,21 @@
 {"k":"first/all Assets/Data/Override.ovr2","v":"texture null main DefaultAsset all 0 errors 0"}
 {"k":"first/all Assets/Data/Own.over","v":"texture null main TextAsset all 1 errors 0"}
 {"k":"first/all Assets/Data/Plain.ovr2","v":"texture null main DefaultAsset all 0 errors 0"}
+{"k":"first/all Assets/Data/Preset.ovr2","v":"texture null main TextAsset all 1 errors 0"}
+{"k":"first/all Assets/Data/Second.ovr2","v":"texture null main DefaultAsset all 0 errors 0"}
 {"k":"first/all Assets/Data/Thing.gen","v":"texture Thing main Texture2D all 1 errors 0"}
+{"k":"first/all Assets/Quiet/Quiet.gen","v":"quiet"}
+{"k":"first/all Assets/Quiet/Quiet.png","v":"quiet"}
 {"k":"first/all Assets/Textures/Sprite.png","v":"texture Sprite main Texture2D all 2 errors 0"}
 {"k":"first/import Assets/Data/Thing.gen","v":"texture null main null all 0 errors 0"}
+{"k":"first/import Assets/Quiet/Quiet.gen","v":"quiet"}
 {"k":"first/post Assets/Data/Thing.gen","v":"texture null main null all 0 errors 0"}
+{"k":"first/post Assets/Quiet/Quiet.gen","v":"quiet"}
+{"k":"first/post Assets/Quiet/Quiet.png","v":"quiet"}
 {"k":"first/post Assets/Textures/Sprite.png","v":"texture null main null all 0 errors 0"}
+{"k":"first/pre Assets/Quiet/Quiet.png","v":"quiet"}
 {"k":"first/pre Assets/Textures/Sprite.png","v":"texture null main null all 0 errors 0"}
+{"k":"first/sprites Assets/Quiet/Quiet.png","v":"quiet"}
 {"k":"first/sprites Assets/Textures/Sprite.png","v":"texture null main null all 0 errors 0"}
 {"k":"asset/Assets/Textures/Sprite.png","v":"main Texture2D Sprite importer TextureImporter"}
 {"k":"asset/Assets/Data/Thing.gen","v":"main Texture2D Thing importer GenImporter"}
@@ -15,18 +24,127 @@
 {"k":"asset/Assets/Data/Override.ovr2","v":"main DefaultAsset Override importer AssetImporter"}
 {"k":"asset/Assets/Data/Plain.ovr2","v":"main DefaultAsset Plain importer AssetImporter"}
 {"k":"asset/Assets/Data/Own.over","v":"main TextAsset Own importer OverImporter"}
+{"k":"asset/Assets/Data/Second.ovr2","v":"main DefaultAsset Second importer AssetImporter"}
+{"k":"asset/Assets/Data/Preset.ovr2","v":"main TextAsset Preset importer OverImporter"}
+{"k":"meta/Assets/Data/Preset.ovr2","v":"fileFormatVersion: 2\nguid: (guid)\nimporterOverride:\n  nativeImporterType: 2089858483\n  scriptedImporterType:\n    serializedVersion: 2\n    Hash: 104ddd7902d5b6bcff8d6316c3d1f5bc\nDefaultImporter:\n  externalObjects: {}\n  userData: \n  assetBundleName: \n  assetBundleVariant: \n"}
+{"k":"importers/Assets/Textures/Sprite.png","v":"default UnityEditor.TextureImporter available [UnityEditor.TextureImporter] override null"}
+{"k":"importers/Assets/Data/Thing.gen","v":"default GenImporter available [GenImporter] override null"}
+{"k":"importers/Assets/Data/Mismatch.json","v":"default UnityEditor.TextScriptImporter available [UnityEditor.TextScriptImporter] override null"}
+{"k":"importers/Assets/Data/Override.ovr2","v":"default null available [OverImporter,ProbeImporters.SpacedImporter] override null"}
+{"k":"importers/Assets/Data/Plain.ovr2","v":"default null available [OverImporter,ProbeImporters.SpacedImporter] override null"}
+{"k":"importers/Assets/Data/Own.over","v":"default OverImporter available [OverImporter] override null"}
+{"k":"importers/Assets/Data/Second.ovr2","v":"default null available [OverImporter,ProbeImporters.SpacedImporter] override null"}
+{"k":"importers/Assets/Data/Preset.ovr2","v":"default null available [OverImporter,ProbeImporters.SpacedImporter] override OverImporter"}
+{"k":"plain/all Assets/Data/Thing.gen","v":"texture Thing main Texture2D all 1 errors 0"}
+{"k":"plain/all Assets/Quiet/Quiet.gen","v":"quiet"}
+{"k":"plain/all Assets/Quiet/Quiet.png","v":"quiet"}
+{"k":"plain/all Assets/Textures/Sprite.png","v":"texture Sprite main Texture2D all 2 errors 0"}
+{"k":"plain/import Assets/Data/Thing.gen","v":"texture null main null all 0 errors 0"}
+{"k":"plain/import Assets/Quiet/Quiet.gen","v":"quiet"}
+{"k":"plain/post Assets/Data/Thing.gen","v":"texture null main null all 0 errors 0"}
+{"k":"plain/post Assets/Quiet/Quiet.gen","v":"quiet"}
+{"k":"plain/post Assets/Quiet/Quiet.png","v":"quiet"}
+{"k":"plain/post Assets/Textures/Sprite.png","v":"texture null main null all 0 errors 0"}
+{"k":"plain/pre Assets/Quiet/Quiet.png","v":"quiet"}
+{"k":"plain/pre Assets/Textures/Sprite.png","v":"texture null main null all 0 errors 0"}
+{"k":"plain/sprites Assets/Quiet/Quiet.png","v":"quiet"}
+{"k":"plain/sprites Assets/Textures/Sprite.png","v":"texture null main null all 0 errors 0"}
+{"k":"plain/lines","v":"14"}
+{"k":"plain/logs","v":""}
 {"k":"reimport/all Assets/Data/Thing.gen","v":"texture Thing main Texture2D all 1 errors 0"}
+{"k":"reimport/all Assets/Quiet/Quiet.gen","v":"quiet"}
+{"k":"reimport/all Assets/Quiet/Quiet.png","v":"quiet"}
 {"k":"reimport/all Assets/Textures/Sprite.png","v":"texture Sprite main Texture2D all 2 errors 0"}
 {"k":"reimport/import Assets/Data/Thing.gen","v":"texture null main null all 0 errors 0"}
+{"k":"reimport/import Assets/Quiet/Quiet.gen","v":"quiet"}
 {"k":"reimport/post Assets/Data/Thing.gen","v":"texture null main null all 0 errors 0"}
+{"k":"reimport/post Assets/Quiet/Quiet.gen","v":"quiet"}
+{"k":"reimport/post Assets/Quiet/Quiet.png","v":"quiet"}
 {"k":"reimport/post Assets/Textures/Sprite.png","v":"texture null main null all 0 errors 0"}
+{"k":"reimport/pre Assets/Quiet/Quiet.png","v":"quiet"}
 {"k":"reimport/pre Assets/Textures/Sprite.png","v":"texture null main null all 0 errors 0"}
+{"k":"reimport/sprites Assets/Quiet/Quiet.png","v":"quiet"}
 {"k":"reimport/sprites Assets/Textures/Sprite.png","v":"texture null main null all 0 errors 0"}
 {"k":"reimport/logs","v":""}
+{"k":"reimport/count Assets/Textures/Sprite.png","v":"2 -> 2"}
+{"k":"kept/Assets/Textures/Sprite.png Sprite Sprite","v":"alive True equal True same False id same"}
+{"k":"kept/Assets/Textures/Sprite.png Texture2D Sprite","v":"alive True equal True same False id same"}
+{"k":"reimport/count Assets/Data/Thing.gen","v":"1 -> 1"}
+{"k":"kept/Assets/Data/Thing.gen Texture2D Thing","v":"alive True equal True same False id same"}
+{"k":"reimport/count Assets/Quiet/Quiet.png","v":"2 -> 2"}
+{"k":"kept/Assets/Quiet/Quiet.png Sprite Quiet","v":"alive True equal True same False id same"}
+{"k":"kept/Assets/Quiet/Quiet.png Texture2D Quiet","v":"alive True equal True same False id same"}
+{"k":"reimport/count Assets/Quiet/Quiet.gen","v":"1 -> 1"}
+{"k":"kept/Assets/Quiet/Quiet.gen Texture2D Quiet","v":"alive True equal True same False id same"}
+{"k":"kept/Assets/Data/Thing.gen width","v":"before 8 old 16 fresh 16"}
+{"k":"reimport/meta Assets/Textures/Sprite.png","v":"unchanged"}
+{"k":"plain2/all Assets/Quiet/Quiet.gen","v":"quiet"}
+{"k":"plain2/all Assets/Quiet/Quiet.png","v":"quiet"}
+{"k":"plain2/import Assets/Quiet/Quiet.gen","v":"quiet"}
+{"k":"plain2/post Assets/Quiet/Quiet.gen","v":"quiet"}
+{"k":"plain2/post Assets/Quiet/Quiet.png","v":"quiet"}
+{"k":"plain2/pre Assets/Quiet/Quiet.png","v":"quiet"}
+{"k":"plain2/sprites Assets/Quiet/Quiet.png","v":"quiet"}
+{"k":"plain2/lines","v":"7"}
 {"k":"forced/Assets/Data/Override.ovr2","v":"main DefaultAsset Override importer AssetImporter"}
 {"k":"forced/Assets/Data/Mismatch.json","v":"main TextAsset Mismatch importer TextScriptImporter"}
+{"k":"forced/lines/all Assets/Data/Mismatch.json","v":"texture null main TextAsset all 1 errors 0"}
+{"k":"forced/lines/all Assets/Data/Override.ovr2","v":"texture null main DefaultAsset all 0 errors 0"}
+{"k":"forced/logs","v":""}
 {"k":"set_override/main","v":"TextAsset Plain"}
 {"k":"set_override/importer","v":"OverImporter"}
 {"k":"set_override/get","v":"OverImporter"}
 {"k":"set_override/meta","v":"fileFormatVersion: 2\nguid: (guid)\nimporterOverride:\n  nativeImporterType: 2089858483\n  scriptedImporterType:\n    serializedVersion: 2\n    Hash: 104ddd7902d5b6bcff8d6316c3d1f5bc\nDefaultImporter:\n  externalObjects: {}\n  userData: \n  assetBundleName: \n  assetBundleVariant: \n"}
+{"k":"set_override/lines/all Assets/Data/Plain.ovr2","v":"texture null main TextAsset all 1 errors 0"}
+{"k":"set_override/logs","v":""}
+{"k":"set_override/importers","v":"default null available [OverImporter,ProbeImporters.SpacedImporter] override OverImporter"}
+{"k":"spaced/main","v":"TextAsset Second"}
+{"k":"spaced/importer","v":"SpacedImporter"}
+{"k":"spaced/get","v":"ProbeImporters.SpacedImporter"}
+{"k":"spaced/meta","v":"fileFormatVersion: 2\nguid: (guid)\nimporterOverride:\n  nativeImporterType: 2089858483\n  scriptedImporterType:\n    serializedVersion: 2\n    Hash: 7f3acfa06d31e57fb7a5b8b20dd8aa20\nDefaultImporter:\n  externalObjects: {}\n  userData: \n  assetBundleName: \n  assetBundleVariant: \n"}
+{"k":"spaced/lines/all Assets/Data/Second.ovr2","v":"texture null main TextAsset all 1 errors 0"}
+{"k":"spaced/logs","v":""}
+{"k":"again/main","v":"TextAsset Plain"}
+{"k":"again/importer","v":"OverImporter"}
+{"k":"again/get","v":"OverImporter"}
+{"k":"again/meta","v":"fileFormatVersion: 2\nguid: (guid)\nimporterOverride:\n  nativeImporterType: 2089858483\n  scriptedImporterType:\n    serializedVersion: 2\n    Hash: 104ddd7902d5b6bcff8d6316c3d1f5bc\nScriptedImporter:\n  internalIDToNameTable: []\n  externalObjects: {}\n  serializedVersion: 2\n  userData: \n  assetBundleName: \n  assetBundleVariant: \n  script: {fileID: 11500000, guid: 21242676002f4e71b99bfb1abfbd22b6, type: 3}\n"}
+{"k":"again/lines/all Assets/Data/Plain.ovr2","v":"texture null main TextAsset all 1 errors 0"}
+{"k":"again/logs","v":""}
+{"k":"invalid/main","v":"TextAsset Mismatch"}
+{"k":"invalid/importer","v":"TextScriptImporter"}
+{"k":"invalid/get","v":"null"}
+{"k":"invalid/meta","v":"fileFormatVersion: 2\nguid: (guid)\nScriptedImporter:\n  internalIDToNameTable: []\n  externalObjects: {}\n  serializedVersion: 2\n  userData: \n  assetBundleName: \n  assetBundleVariant: \n  script: {fileID: 11500000, guid: e5ae4dd2909f4dce9253f01b4d21ef89, type: 3}\n"}
+{"k":"invalid/logs","v":"Error: Cannot set Importer override at Assets/Data/Mismatch.json because OverImporter is not a valid Importer for this asset."}
+{"k":"missing/logs","v":"Error: Cannot set Importer override at \"Assets/Data/Missing.ovr2\". No Asset found at that path."}
+{"k":"missing/get","v":"null"}
+{"k":"own_default/main","v":"TextAsset Own"}
+{"k":"own_default/importer","v":"OverImporter"}
+{"k":"own_default/get","v":"OverImporter"}
+{"k":"own_default/meta","v":"fileFormatVersion: 2\nguid: (guid)\nimporterOverride:\n  nativeImporterType: 2089858483\n  scriptedImporterType:\n    serializedVersion: 2\n    Hash: 104ddd7902d5b6bcff8d6316c3d1f5bc\nScriptedImporter:\n  internalIDToNameTable: []\n  externalObjects: {}\n  serializedVersion: 2\n  userData: \n  assetBundleName: \n  assetBundleVariant: \n  script: {fileID: 11500000, guid: 21242676002f4e71b99bfb1abfbd22b6, type: 3}\n"}
+{"k":"own_default/lines/all Assets/Data/Own.over","v":"texture null main TextAsset all 1 errors 0"}
+{"k":"own_default/logs","v":""}
+{"k":"clear/main","v":"DefaultAsset Second"}
+{"k":"clear/importer","v":"AssetImporter"}
+{"k":"clear/get","v":"null"}
+{"k":"clear/meta","v":"fileFormatVersion: 2\nguid: (guid)\nDefaultImporter:\n  externalObjects: {}\n  userData: \n  assetBundleName: \n  assetBundleVariant: \n"}
+{"k":"clear/lines/all Assets/Data/Second.ovr2","v":"texture null main DefaultAsset all 0 errors 0"}
+{"k":"clear/logs","v":""}
+{"k":"clear_plain/main","v":"DefaultAsset Plain"}
+{"k":"clear_plain/importer","v":"AssetImporter"}
+{"k":"clear_plain/get","v":"null"}
+{"k":"clear_plain/meta","v":"fileFormatVersion: 2\nguid: (guid)\nScriptedImporter:\n  internalIDToNameTable: []\n  externalObjects: {}\n  serializedVersion: 2\n  userData: \n  assetBundleName: \n  assetBundleVariant: \n  script: {fileID: 11500000, guid: 21242676002f4e71b99bfb1abfbd22b6, type: 3}\n"}
+{"k":"clear_plain/lines/all Assets/Data/Plain.ovr2","v":"texture null main DefaultAsset all 0 errors 0"}
+{"k":"clear_plain/logs","v":""}
+{"k":"clear_none/main","v":"TextAsset Own"}
+{"k":"clear_none/importer","v":"OverImporter"}
+{"k":"clear_none/get","v":"null"}
+{"k":"clear_none/meta","v":"fileFormatVersion: 2\nguid: (guid)\nScriptedImporter:\n  internalIDToNameTable: []\n  externalObjects: {}\n  serializedVersion: 2\n  userData: \n  assetBundleName: \n  assetBundleVariant: \n  script: {fileID: 11500000, guid: 21242676002f4e71b99bfb1abfbd22b6, type: 3}\n"}
+{"k":"clear_none/lines/all Assets/Data/Own.over","v":"texture null main TextAsset all 1 errors 0"}
+{"k":"clear_none/logs","v":""}
+{"k":"clear_preset/main","v":"DefaultAsset Preset"}
+{"k":"clear_preset/importer","v":"AssetImporter"}
+{"k":"clear_preset/get","v":"null"}
+{"k":"clear_preset/meta","v":"fileFormatVersion: 2\nguid: (guid)\nDefaultImporter:\n  externalObjects: {}\n  userData: \n  assetBundleName: \n  assetBundleVariant: \n"}
+{"k":"clear_preset/lines/all Assets/Data/Preset.ovr2","v":"texture null main DefaultAsset all 0 errors 0"}
+{"k":"clear_preset/logs","v":""}
 {"k":"complete","v":true}

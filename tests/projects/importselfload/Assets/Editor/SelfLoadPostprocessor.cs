@@ -19,6 +19,14 @@ public class SelfLoadPostprocessor : AssetPostprocessor
         File.AppendAllText(Path.Combine(dir, "imports.txt"), line + "\n");
     }
 
+    /// <summary>How many lines noted so far start with <paramref name="prefix"/>.</summary>
+    internal static int Count(string prefix)
+    {
+        var dir = Environment.GetEnvironmentVariable("IMPORTSELFLOAD_OUT");
+        var file = string.IsNullOrEmpty(dir) ? null : Path.Combine(dir, "imports.txt");
+        return file != null && File.Exists(file) ? File.ReadAllLines(file).Count(l => l.StartsWith(prefix, StringComparison.Ordinal)) : 0;
+    }
+
     /// <summary>What the three loads give, and how many errors they log.</summary>
     internal static string Loads(string assetPath)
     {
@@ -38,13 +46,19 @@ public class SelfLoadPostprocessor : AssetPostprocessor
 
     static bool Probed(string path) => path.StartsWith("Assets/Textures/", StringComparison.Ordinal) || path.StartsWith("Assets/Data/", StringComparison.Ordinal);
 
-    void OnPreprocessTexture() { if (Probed(assetPath)) Note("pre " + assetPath + " | " + Loads(assetPath)); }
-    void OnPostprocessTexture(Texture2D texture) { if (Probed(assetPath)) Note("post " + assetPath + " | " + Loads(assetPath)); }
-    void OnPostprocessSprites(Texture2D texture, Sprite[] sprites) { if (Probed(assetPath)) Note("sprites " + assetPath + " | " + Loads(assetPath)); }
+    /// <summary>Assets in Assets/Quiet/ are noted without loading them.</summary>
+    internal static bool Quiet(string path) => path.StartsWith("Assets/Quiet/", StringComparison.Ordinal);
+
+    /// <summary>What the loads give, or "quiet" for an asset noted without loading it.</summary>
+    internal static string Observe(string path) => Quiet(path) ? "quiet" : Loads(path);
+
+    void OnPreprocessTexture() { if (Probed(assetPath) || Quiet(assetPath)) Note("pre " + assetPath + " | " + Observe(assetPath)); }
+    void OnPostprocessTexture(Texture2D texture) { if (Probed(assetPath) || Quiet(assetPath)) Note("post " + assetPath + " | " + Observe(assetPath)); }
+    void OnPostprocessSprites(Texture2D texture, Sprite[] sprites) { if (Probed(assetPath) || Quiet(assetPath)) Note("sprites " + assetPath + " | " + Observe(assetPath)); }
 
     static void OnPostprocessAllAssets(string[] imported, string[] deleted, string[] moved, string[] from)
     {
-        foreach (var path in imported.Where(Probed).OrderBy(p => p, StringComparer.Ordinal))
-            Note("all " + path + " | " + Loads(path));
+        foreach (var path in imported.Where(p => Probed(p) || Quiet(p)).OrderBy(p => p, StringComparer.Ordinal))
+            Note("all " + path + " | " + Observe(path));
     }
 }
