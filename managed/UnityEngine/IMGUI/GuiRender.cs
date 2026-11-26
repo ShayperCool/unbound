@@ -738,7 +738,7 @@ namespace Unbound.Runtime
                 foreach (var mb in RepaintOrder())
                 {
                     LoadRepaintMatrices();
-                    Call(mb, repaint, layout: false);
+                    Call(mb, repaint);
                 }
                 if (!s_AtlasRebuilt) break;
             }
@@ -769,7 +769,7 @@ namespace Unbound.Runtime
                 {
                     if (e.type == EventType.Used) break;
                     if (mb == null || !mb.isActiveAndEnabled) continue;
-                    Call(mb, e, layout: false);
+                    Call(mb, e);
                 }
                 if (type == EventType.MouseDown && e.type != EventType.Used)
                     GUIUtility.keyboardControl = 0;
@@ -829,15 +829,13 @@ namespace Unbound.Runtime
             return c != 0 ? c : s_InputPosition[a].CompareTo(s_InputPosition[b]);
         };
 
-        /// <summary>One OnGUI call for an event, with the Layout pass before it when the behaviour
-        /// uses GUILayout (input events; a Repaint's Layout passes all run first, <see cref="RunFrame"/>).</summary>
-        static void Call(MonoBehaviour mb, Event e, bool layout = true)
+        /// <summary>One OnGUI call for an event; the Layouts run before it (<see cref="RunFrame"/>,
+        /// <see cref="SendQueuedEvents"/>).</summary>
+        static void Call(MonoBehaviour mb, Event e)
         {
             var onGui = ScriptMessages.For(mb.GetType()).OnGUI;
             if (onGui == null) return;
-            int id = mb.GetInstanceID();
-            if (layout) Layout(mb, e);
-            Invoke(mb, onGui, id, e, mb.useGUILayout);
+            Invoke(mb, onGui, mb.GetInstanceID(), e, mb.useGUILayout);
         }
 
         /// <summary>The Layout pass of a behaviour that uses GUILayout, for the event that follows

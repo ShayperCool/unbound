@@ -268,15 +268,16 @@ namespace Unbound.Tests
             {
                 if (Set.HasValue) GUI.depth = Set.Value;
                 var e = Event.current;
-                s_Passes.Add(Tag + ":" + (e.type == EventType.Layout ? "L" : e.type == EventType.MouseDown ? "D" : e.type == EventType.Used ? "U" : e.type.ToString()));
+                s_Passes.Add(Tag + ":" + (e.type == EventType.Layout ? "L" : e.type == EventType.MouseDown ? "D" : e.type == EventType.MouseUp ? "Up" : e.type == EventType.Used ? "U" : e.type.ToString()));
                 if (UseMouseDown && e.type == EventType.MouseDown) e.Use();
             }
         }
 
-        static void SendInput()
+        static void SendInput(bool mouseUp = false)
         {
             GuiEvents.Clear();
             GuiEvents.Queue(new Event { type = EventType.MouseDown, button = 0 });
+            if (mouseUp) GuiEvents.Queue(new Event { type = EventType.MouseUp, button = 0 });
             GuiDispatch.SendQueuedEvents();
             GuiEvents.Clear();
         }
@@ -301,8 +302,9 @@ namespace Unbound.Tests
                 Assert.Equal(new[] { "x:L", "y:L", "y:D", "x:D" }, s_Passes);
                 y.UseMouseDown = true;
                 s_Passes.Clear();
-                SendInput();
-                Assert.Equal(new[] { "x:L", "y:L", "y:D" }, s_Passes);
+                SendInput(mouseUp: true);
+                // The used MouseDown reaches no one after y; the next event reaches both again.
+                Assert.Equal(new[] { "x:L", "y:L", "y:D", "x:L", "y:L", "y:Up", "x:Up" }, s_Passes);
             }
             finally
             {
