@@ -26,7 +26,9 @@ mode starts at the first level offered (index 0), neither the default level nor 
 level's neighbour (`excludedmiddle`: Low, not Medium, Very High or Ultra). Levels excluding
 another platform are offered (`excludedandroid`).
 
-Inferred, not measured: the other members that take a level index (`GetRenderPipelineAssetAt`,
+Inferred, not measured: an offered current level after an excluded one (renumbered among the
+offered levels, as `names` are); the members that list the levels' pipelines
+(`allConfiguredRenderPipelines`) and the other members that take a level index (`GetRenderPipelineAssetAt`,
 `SetQualityLevel`, `count`) number the offered levels as `names` does (the probe's built-in
 project has no pipeline assets); iOS and WebGL behave as Standalone and Android (their levels are
 excluded as `iPhone` and `WebGL`); a project whose levels all exclude the platform; a current level

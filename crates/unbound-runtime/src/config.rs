@@ -462,9 +462,11 @@ fn tier_settings(settings: &unbound_project::settings::Settings) -> Vec<Json> {
 /// `excludedTargetPlatforms` do not name its platform, in order) and the index among them of the
 /// level Play mode starts with: the current level (`m_CurrentQuality`) when it is offered, else the
 /// first one; the platform's default level plays no part (measured in Unity 6000.0.71f1:
-/// tests/projects/qualitystartup, Standalone and Android). With no level offered (unmeasured) every
-/// level is, as for a target no level excludes; a current level past the last level (unmeasured)
-/// starts at the last offered one, as SetQualityLevel clamps it.
+/// tests/projects/qualitystartup, Standalone and Android). Unmeasured: an offered current level after
+/// an excluded one (renumbered among the offered levels, as names are); iOS and WebGL (their levels
+/// exclude `iPhone` and `WebGL`, the names the Editor writes); with no level offered every level is,
+/// as for a target no level excludes; a current level past the last level starts at the last offered
+/// one, as SetQualityLevel clamps it.
 fn offered_quality_levels<'a>(quality: &'a Value, target: &str) -> (Vec<&'a Value>, usize) {
     let platform = if target == "iOS" { "iPhone" } else { target };
     let levels: &[Value] = quality
