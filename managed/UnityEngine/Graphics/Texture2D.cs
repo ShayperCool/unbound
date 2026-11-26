@@ -1062,21 +1062,40 @@ namespace UnityEngine
             return true;
         }
 
-        /// <summary>The import <paramref name="fresh"/> (a new import of the same asset, destroyed next)
-        /// made, taken under this texture's renderer handle as <see cref="ReloadImported"/> takes its
-        /// file's: a generated texture takes the new texels, and the copy the old ones, which it
-        /// releases. False, with nothing changed, as <see cref="ReloadImported"/>.</summary>
-        internal bool TakeImport(Texture2D fresh)
+        /// <summary>A generated texture's (TextureGenerator): its texels are the native side's only copy.</summary>
+        internal bool IsGenerated => m_ImportedFrom != null && m_ImportedFrom.StartsWith(UnityEditor.AssetImporters.TextureGenerator.KeyPrefix, StringComparison.Ordinal);
+
+        /// <summary>Takes <paramref name="fresh"/>, a new import of the same asset (destroyed next):
+        /// one made under this texture's renderer handle (an asset texture read again in place, with
+        /// what its postprocessors set) by trading their state, the copy giving up the handle;
+        /// a generated one's new texels under this handle, the copy taking the old ones, which it
+        /// releases. Null when taken, else what is not (nothing changed when its import is not a
+        /// 2D texture). The caller counts the update.</summary>
+        internal string TakeImport(Texture2D fresh)
         {
+            if (fresh.m_NativeHandle != 0 && fresh.m_NativeHandle == m_NativeHandle)
+            {
+                uint count = updateCount;
+                Unbound.Runtime.AssetDatabaseRuntime.SwapContent(fresh, this);
+                fresh.m_NativeHandle = 0;
+                // The caller's count, and what the new import's postprocessors applied since it.
+                uint applied = updateCount - m_ImportUpdateCount;
+                m_ImportUpdateCount = count;
+                SetUpdateCount(count + applied);
+                return null;
+            }
             var own = m_ImportedFrom;
             m_ImportedFrom = fresh.m_ImportedFrom ?? own;
             if (!ReloadImported())
             {
                 m_ImportedFrom = own;
-                return false;
+                return "keeps its old content (its new import is not a 2D texture)";
             }
             fresh.m_ImportedFrom = own;
-            return true;
+            // Texels the postprocessors set on the copy after its import are in its handle only.
+            return fresh.updateCount != fresh.m_ImportUpdateCount
+                ? "takes the new import without what its postprocessors applied to it (not supported for a generated texture)"
+                : null;
         }
 
         /// <summary>A texture serialized in an asset file (TextMeshPro atlases, package editor icons): its
@@ -1172,8 +1191,7 @@ namespace UnityEngine
             Native.ReleaseTexture(m_NativeHandle);
             m_NativeHandle = 0;
             // A generated texture's texels exist nowhere else.
-            if (m_ImportedFrom != null && m_ImportedFrom.StartsWith(UnityEditor.AssetImporters.TextureGenerator.KeyPrefix, StringComparison.Ordinal))
-                UnityEditor.AssetImporters.TextureGenerator.Release(m_ImportedFrom);
+            if (IsGenerated) UnityEditor.AssetImporters.TextureGenerator.Release(m_ImportedFrom);
         }
     }
 }

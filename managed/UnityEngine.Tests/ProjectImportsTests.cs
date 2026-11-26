@@ -701,7 +701,7 @@ namespace UnityEngine.Tests
             var fresh = Texture2D.FromImport(9102, "generated:00000000000000000000000000000a02", "Thing", larger);
             try
             {
-                Assert.True(old.TakeImport(fresh));
+                Assert.Null(old.TakeImport(fresh));
                 Assert.Equal(new[] { (9101UL, "generated:00000000000000000000000000000a02") }, calls);
                 Assert.Equal(8, old.width);
                 Assert.Equal(9101UL, old.m_NativeHandle);
@@ -711,7 +711,7 @@ namespace UnityEngine.Tests
 
                 succeed = false;
                 var other = Texture2D.FromImport(9103, "generated:00000000000000000000000000000a03", "Thing", Square4);
-                Assert.False(old.TakeImport(other));
+                Assert.NotNull(old.TakeImport(other));
                 Assert.Equal("generated:00000000000000000000000000000a02", old.m_ImportedFrom);
                 Assert.Equal("generated:00000000000000000000000000000a03", other.m_ImportedFrom);
                 Assert.Equal(8, old.width);
@@ -728,6 +728,46 @@ namespace UnityEngine.Tests
             }
         }
 
+        /// <summary>A texture imported again under its own renderer handle takes the new import's
+        /// state whole, what its postprocessors changed included (OnPostprocessTexture edits the
+        /// import, Scripting API 6000.0): size, sampler, texels not as imported; the copy gives the
+        /// handle up, so destroying it keeps the texture drawn. Nothing is read from the file again.</summary>
+        [Fact]
+        public void ATextureImportedAgainUnderItsHandleTakesWhatItsPostprocessorsSet()
+        {
+            var larger = Square4;
+            larger.Width = larger.Height = 8;
+            var previous = Texture2D.Reimport;
+            var reimports = new List<string>();
+            Texture2D.Reimport = (handle, key) => { reimports.Add(key); return (true, Square4); };
+            const string guid = "c0de00000000000000000000000000a5";
+            var old = Texture2D.FromImport(9121, guid, "Plain", Square4);
+            var fresh = Texture2D.FromImport(9121, guid, "Plain", larger);
+            try
+            {
+                // As a postprocessor of the new import leaves it.
+                fresh.filterMode = FilterMode.Point;
+                fresh.IncrementUpdateCount();
+                old.IncrementUpdateCount();
+                uint counted = old.updateCount;
+                Assert.Null(old.TakeImport(fresh));
+                Assert.Empty(reimports);
+                Assert.Equal(8, old.width);
+                Assert.Equal(FilterMode.Point, old.filterMode);
+                Assert.Equal(9121UL, old.m_NativeHandle);
+                Assert.Equal(0UL, fresh.m_NativeHandle);
+                Assert.Equal(counted + 1, old.updateCount);
+                Assert.False(old.TexelsAsImported);
+                Assert.True(old.IsImported);
+            }
+            finally
+            {
+                Texture2D.Reimport = previous;
+                Object.DestroyImmediate(fresh, true);
+                Object.DestroyImmediate(old, true);
+            }
+        }
+
         /// <summary>A loaded texture and its sprite take a new import in place: the texture its
         /// texels, the sprite the new rect and pivot, still drawing the loaded texture, not the new
         /// import's (importselfload kept.Sprite.png: both keep their instance ids).</summary>
@@ -739,7 +779,8 @@ namespace UnityEngine.Tests
             Texture2D.Reimport = (handle, key) => { reimports.Add(key); return (true, Square4); };
             const string guid = "c0de00000000000000000000000000b1";
             var texture = Texture2D.FromImport(9111, guid, "Sprite", Square4);
-            var copyTexture = Texture2D.FromImport(9112, guid, "Sprite", Square4);
+            // The new import is made under the loaded texture's handle.
+            var copyTexture = Texture2D.FromImport(9111, guid, "Sprite", Square4);
             var sprite = Sprite.Create(texture, new Rect(0, 0, 4, 4), new Vector2(0.5f, 0.5f), 100, 0, SpriteMeshType.FullRect);
             var copySprite = Sprite.Create(copyTexture, new Rect(0, 0, 2, 4), Vector2.zero, 50, 0, SpriteMeshType.FullRect);
             int spriteId = sprite.GetInstanceID();
@@ -751,7 +792,8 @@ namespace UnityEngine.Tests
                     [copyTexture] = texture,
                     [copySprite] = sprite,
                 }, "Assets/Sprite.png");
-                Assert.Equal(new[] { guid }, reimports);
+                Assert.Empty(reimports);
+                Assert.Equal(9111UL, texture.m_NativeHandle);
                 Assert.Equal(new Rect(0, 0, 2, 4), sprite.rect);
                 Assert.Equal(50f, sprite.pixelsPerUnit);
                 Assert.Equal(Vector2.zero, sprite.pivot);
@@ -867,6 +909,50 @@ namespace UnityEngine.Tests
                 AssetDatabase.Invalidate();
                 Object.DestroyImmediate(mesh, true);
                 Object.DestroyImmediate(material, true);
+            }
+        }
+
+        /// <summary>ImportAsset of an asset changed on disk and not loaded yet imports it during the
+        /// call, as one unchanged (importselfload plain.*, toolapis imported.during): an asset an
+        /// importer makes, with or without ForceUpdate; a native-format one only when forced (else
+        /// its next load reads it).</summary>
+        [Fact]
+        public void AChangedAssetNotLoadedIsImportedDuringTheCall()
+        {
+            Write("Assets/M/U.png", "u");
+            Write("Assets/M/U.png.meta", "guid: u1\n");
+            var assets = Initial();
+            assets.AddRange(Assets(("Assets/M/U.png", "c0de00000000000000000000000000d1")));
+            ProjectImports.Scan(assets, Record, out var start);
+            var before = ProjectInfo.ProjectPath;
+            ProjectImports.ResetForTests();
+            ProjectImports.SessionForTests(start);
+            ProjectInfo.ProjectPath = m_Root;
+            AssetDatabase.List("[{\"guid\":\"c0de00000000000000000000000000d1\",\"path\":\"Assets/M/U.png\",\"kind\":\"texture\"},"
+                + "{\"guid\":\"c1\",\"path\":\"Assets/M/C.mat\",\"kind\":\"yaml\"}]");
+            var previous = Debug.unityLogger.logHandler;
+            Debug.unityLogger.logHandler = new LogCapture();
+            try
+            {
+                Write("Assets/M/U.png", "u changed outside");
+                Write("Assets/M/C.mat", "c changed outside");
+                AssetDatabase.ImportAsset("Assets/M/U.png");
+                AssetDatabase.ImportAsset("Assets/M/C.mat");
+                // Read during the call (without the native side the read fails, its entry stays).
+                Assert.True(AssetDatabaseRuntime.IsLoaded("c0de00000000000000000000000000d1"));
+                Assert.False(AssetDatabaseRuntime.IsLoaded("c1"));
+                Write("Assets/M/C.mat", "c changed again");
+                AssetDatabase.ImportAsset("Assets/M/C.mat", ImportAssetOptions.ForceUpdate);
+                Assert.True(AssetDatabaseRuntime.IsLoaded("c1"));
+            }
+            finally
+            {
+                Debug.unityLogger.logHandler = previous;
+                ProjectInfo.ProjectPath = before;
+                ProjectImports.ResetForTests();
+                AssetDatabaseRuntime.Invalidate("c0de00000000000000000000000000d1");
+                AssetDatabaseRuntime.Invalidate("c1");
+                AssetDatabase.Invalidate();
             }
         }
 

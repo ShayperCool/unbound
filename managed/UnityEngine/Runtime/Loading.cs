@@ -1607,7 +1607,14 @@ namespace Unbound.Runtime
             }
             ImportedInSession(guid);
             UnityEditor.AssetPostprocessing.ForgetPreprocessed(loaded.Path);
-            var (fresh, registered) = ReadFileAgain(guid);
+            // A loaded imported 2D texture: the new import (its texels, what its postprocessors set)
+            // is made under its renderer handle, which materials and sprites bind.
+            var texture = ImportedTextureOf(loaded);
+            if (texture != null) s_ReimportTextureHandles[guid] = texture.m_NativeHandle;
+            LoadedFile fresh;
+            Dictionary<(string, long), Object> registered;
+            try { (fresh, registered) = ReadFileAgain(guid); }
+            finally { s_ReimportTextureHandles.Remove(guid); }
             var kept = new Dictionary<Object, Object>(ReferenceEqualityComparer.Instance);
             string refused = fresh == null ? "its file no longer imports" : null;
             if (fresh != null)
@@ -1625,12 +1632,49 @@ namespace Unbound.Runtime
             }
             if (refused != null)
             {
-                Debug.LogWarning($"Unbound: {loaded.Path} was imported again; its loaded objects keep their old content: {refused}");
+                // The new import is in the texture's renderer handle already: the texture takes it.
+                string shared = texture != null && fresh != null ? TakeSharedTexture(texture, fresh) : null;
+                Debug.LogWarning($"Unbound: {loaded.Path} was imported again; its loaded objects keep their old content{shared}: {refused}");
                 if (fresh != null) DestroyFresh(fresh, registered);
                 return;
             }
             TakeInPlace(kept, loaded.Path);
             DestroyFresh(fresh, registered);
+        }
+
+        /// <summary>The renderer handle each asset read again in place makes its new 2D texture
+        /// import under: its loaded texture's (<see cref="ReimportInPlace"/>).</summary>
+        static readonly Dictionary<string, ulong> s_ReimportTextureHandles = new Dictionary<string, ulong>(StringComparer.OrdinalIgnoreCase);
+
+        /// <summary>The renderer handle an import of the asset's texture file makes its texture
+        /// under: the loaded texture's when the asset is read again in place, else a new one.</summary>
+        internal static ulong TextureImportHandle(string guid) =>
+            guid != null && s_ReimportTextureHandles.TryGetValue(guid, out var handle) ? handle : RenderHandles.Next();
+
+        /// <summary>The loaded 2D texture an asset's texture file made (its main texture object,
+        /// alive, under a renderer handle), or null.</summary>
+        static Texture2D ImportedTextureOf(LoadedFile loaded) =>
+            loaded.Objects.TryGetValue(AssetImporters.Texture2DFileId, out var o) && o is Texture2D t && !t.m_Destroyed
+                && t.m_NativeHandle != 0 && t.IsImported && !t.IsGenerated ? t : null;
+
+        /// <summary>A refused reimport whose new import was made under the loaded texture's handle:
+        /// the texture takes it (its renderer data is the new import's already); an object of
+        /// another type in its place leaves the handle to it. What to add to the warning.</summary>
+        static string TakeSharedTexture(Texture2D texture, LoadedFile fresh)
+        {
+            fresh.Objects.TryGetValue(AssetImporters.Texture2DFileId, out var copy);
+            if (copy is Texture2D t && t.m_NativeHandle == texture.m_NativeHandle)
+            {
+                texture.IncrementUpdateCount();
+                return texture.TakeImport(t) is string why ? $" (its texture takes the new import, but {why})" : " (its texture takes the new import)";
+            }
+            foreach (var o in fresh.Objects.Values)
+                if (o is Texture other && other.m_NativeHandle == texture.m_NativeHandle)
+                {
+                    other.m_NativeHandle = 0;
+                    return $" (its texture's renderer data is the new import's {other.GetType().Name})";
+                }
+            return null;
         }
 
         /// <summary>Each loaded object takes its new import's copy (<paramref name="kept"/>: copy to
@@ -1652,8 +1696,8 @@ namespace Unbound.Runtime
                 {
                     // Counted as updated once, then the import's count is the one it now has.
                     texture.IncrementUpdateCount();
-                    if (!texture.TakeImport((Texture2D)pair.Key))
-                        Debug.LogWarning($"Unbound: {path} was imported again; its texture '{texture.name}' keeps its old content (its new import is not a 2D texture)");
+                    if (texture.TakeImport((Texture2D)pair.Key) is string why)
+                        Debug.LogWarning($"Unbound: {path} was imported again; its texture '{texture.name}' {why}");
                 }
                 else
                 {

@@ -251,7 +251,8 @@ namespace Unbound.Runtime
         {
             var name = System.IO.Path.GetFileNameWithoutExtension(info.Path);
             UnityEditor.AssetPostprocessing.EnsurePreprocessed(info.Path, "texture", info.Guid);
-            ulong handle = RenderHandles.Next();
+            // Imported again in place: under the loaded texture's handle.
+            ulong handle = AssetDatabaseRuntime.TextureImportHandle(info.Guid);
             if (!Native.ImportTexture(handle, info.Guid, out var imported))
                 throw new InvalidOperationException("the texture could not be imported");
             if (imported.Dimension == 4)

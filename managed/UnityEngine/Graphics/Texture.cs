@@ -173,6 +173,9 @@ namespace UnityEngine
 
         public void IncrementUpdateCount() => m_UpdateCount++;
 
+        /// <summary>The update count a texture taking a new import in place carries on with.</summary>
+        internal void SetUpdateCount(uint count) => m_UpdateCount = count;
+
         [global::System.@ObsoleteAttribute("masterTextureLimit has been deprecated. Use globalMipmapLimit instead (UnityUpgradable) -> globalMipmapLimit", false)] public static int masterTextureLimit { get; set; }
         [global::System.@ObsoleteAttribute("globalMipmapLimit is not supported. Use QualitySettings.globalTextureMipmapLimit or Mipmap Limit Groups instead.", false)] public static int globalMipmapLimit { get; set; }
         static AnisotropicFiltering s_Anisotropic = AnisotropicFiltering.Enable;

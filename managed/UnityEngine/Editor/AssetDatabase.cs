@@ -560,21 +560,23 @@ namespace UnityEditor
             // kept (tests/projects/scenesave refresh-changes import); held back by StartAssetEditing
             // like the other imports (Scripting API 6000.0, AssetDatabase.StartAssetEditing: no
             // imports until StopAssetEditing).
+            bool imports = !IsValidFolder(existing) && !CompilesScripts(existing);
             if (changed)
             {
                 if (Editing) s_PendingReimports.Add(existing);
+                // Not loaded yet: imported during the call, as an unchanged one (any asset when
+                // forced, tests/projects/toolapis imported.during).
+                else if (!IsValidFolder(existing) && !AssetDatabaseRuntime.IsLoaded(guid) && (force || (imports && !NativeFormat(existing)))) ImportNow(guid);
                 else ReimportChanged(new[] { existing });
                 return;
             }
-            if (IsValidFolder(existing) || CompilesScripts(existing) || NativeFormat(existing))
+            if (!imports || NativeFormat(existing))
             {
-                // Imported now: its import's messages are logged now.
+                // A forced import of one not loaded yet imports it now (tests/projects/toolapis
+                // imported.during).
                 if (force && !IsValidFolder(existing) && !AssetDatabaseRuntime.IsLoaded(guid))
                 {
-                    AssetDatabaseRuntime.ImportedInSession(guid);
-                    AssetDatabaseRuntime.LoadFile(guid);
-                    ProjectImports.Wrote(GUIDToAssetPath(guid));
-                    SessionImports.Imported(GUIDToAssetPath(guid));
+                    ImportNow(guid);
                     return;
                 }
                 // Reported imported whether or not it changed (tests/projects/scenesave
@@ -611,14 +613,24 @@ namespace UnityEditor
                 Stubs.Ignored("AssetDatabase.ImportAsset from an asset's own import", $"does not import it again ({path})");
             else if (!AssetDatabaseRuntime.IsLoaded(guid))
             {
-                AssetDatabaseRuntime.ImportedInSession(guid);
-                AssetDatabaseRuntime.LoadFile(guid);
+                ImportNow(guid);
+                return;
             }
             else if (AssetDatabaseRuntime.LoadedRefusal(guid) is string why)
                 Stubs.Ignored("AssetDatabase.ImportAsset of " + (Kind(path) ?? "an") + " asset", $"does not import a loaded asset again ({path}: {why})");
             else AssetDatabaseRuntime.ReimportInPlace(guid);
-            ProjectImports.Wrote(path);
-            SessionImports.Imported(path);
+            ProjectImports.Wrote(GUIDToAssetPath(guid));
+            SessionImports.Imported(GUIDToAssetPath(guid));
+        }
+
+        /// <summary>An asset not loaded yet imported now, its import's messages logged now, and
+        /// reported imported.</summary>
+        static void ImportNow(string guid)
+        {
+            AssetDatabaseRuntime.ImportedInSession(guid);
+            AssetDatabaseRuntime.LoadFile(guid);
+            ProjectImports.Wrote(GUIDToAssetPath(guid));
+            SessionImports.Imported(GUIDToAssetPath(guid));
         }
 
         [Unbound.EditorFaithful("Unbound keeps no asset files open")]
