@@ -752,27 +752,29 @@ namespace Unbound.Runtime
             finally { FinishQuit(s_EditorExit, PlayerPrefs.SaveOnQuit, NativePlugins.Shutdown, () => ReportedExitSave(() => AssetFiles.SaveDirty()), leavesPlayMode); }
         }
 
-        /// <summary>The callbacks of the session's end before the Editor quits: leaving Play mode
-        /// (ExitingPlayMode, OnApplicationQuit, Application.quitting with Play mode still on;
-        /// tests/projects/tmpatlas quit.*) when the session ends with Play mode on. The Editor's exit
-        /// raises no Application.quitting: in Edit mode (tests/projects/tmpatlas quit.*;
-        /// Application.unloading is raised as before, unmeasured), nor with Play mode on, which raises
-        /// neither Application.quitting nor Application.unloading nor Play mode's messages (matches the
-        /// Unity 6000.0.71f1 Editor, tests/projects/unchangedsaves leaving).</summary>
+        /// <summary>The callbacks of the session's end before the Editor quits. Leaving Play mode
+        /// (the session ends with Play mode on) raises ExitingPlayMode, OnApplicationQuit and
+        /// Application.quitting with Play mode still on and <c>isPlayingOrWillChangePlaymode</c>
+        /// false (tests/projects/tmpatlas quit.*, tests/projects/unchangedsaves open4.leaving). The
+        /// Editor's exit, in Edit mode or with Play mode on, raises no Application.quitting and no
+        /// Play mode message; no end raises Application.unloading (matches the Unity 6000.0.71f1
+        /// Editor, tests/projects/unchangedsaves leaving). Other release families: quitting and
+        /// unloading at every end (unmeasured).</summary>
         internal static void RaiseQuitCallbacks(bool editorExit)
         {
             bool leavesPlayMode = EditorSession.IsPlaying && !editorExit;
+            if (leavesPlayMode) EditorSession.BeginLeavingPlayMode();
             if (leavesPlayMode && Compat.QuitCallbacksMeasured) UnityEditor.EditorApplication.Internal_PlayModeStateChanged(UnityEditor.PlayModeStateChange.ExitingPlayMode);
             if (leavesPlayMode) Lifecycle.Broadcast(m => m.OnApplicationQuit, null);
-            if (!Compat.QuitCallbacksMeasured || leavesPlayMode) Application.Internal_Quitting();
-            else if (EditorSession.IsPlaying) Application.Internal_Exiting();
-            else Application.Internal_Unloading();
+            if (!Compat.QuitCallbacksMeasured) Application.Internal_Quitting();
+            else if (leavesPlayMode) Application.Internal_PlayModeQuitting();
+            else Application.Internal_Exiting();
         }
 
         /// <summary>The exit's save, reported as the Editor imports what it writes: one
         /// OnPostprocessAllAssets call after EditorApplication.quitting (matches the Unity 6000.0.71f1
-        /// Editor, tests/projects/unchangedsaves leaving: the exit with Play mode on; the save after
-        /// leaving Play mode, in Edit mode, is unmeasured).</summary>
+        /// Editor, tests/projects/unchangedsaves leaving: the exit with Play mode on, and in Edit mode
+        /// after leaving Play mode).</summary>
         internal static void ReportedExitSave(Action save)
         {
             using (UnityEditor.SessionImports.Write()) save();
@@ -802,7 +804,7 @@ namespace Unbound.Runtime
                     SceneRegistry.ResetToUntitled();
                     if (Compat.QuitCallbacksMeasured && leftPlayMode)
                     {
-                        EditorSession.IsPlaying = false;
+                        EditorSession.EndLeavingPlayMode();
                         UnityEditor.EditorApplication.Internal_PlayModeStateChanged(UnityEditor.PlayModeStateChange.EnteredEditMode);
                         UnityEditor.EditorApplication.Internal_Quitting();
                     }

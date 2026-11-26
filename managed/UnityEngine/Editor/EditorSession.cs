@@ -32,7 +32,21 @@ namespace Unbound.Runtime
         // Requests from an update are applied before the next Edit mode update starts.
         internal static void BeginEditModeFrame() => s_SingleSceneOpenedThisEditorUpdate = false;
 
-        internal static bool WillChange => s_Request != 0 || s_EnteringPlayMode;
+        internal static bool WillChange => s_Request != 0 || s_EnteringPlayMode || s_LeavingPlayMode;
+
+        /// <summary>Play mode is being left: `isPlaying` is still true and
+        /// `isPlayingOrWillChangePlaymode` already false, from ExitingPlayMode until Edit mode
+        /// (matches the Unity 6000.0.71f1 Editor, tests/projects/unchangedsaves open4.leaving:
+        /// Application.quitting sees it false).</summary>
+        static bool s_LeavingPlayMode;
+
+        internal static void BeginLeavingPlayMode() => s_LeavingPlayMode = IsPlaying;
+
+        internal static void EndLeavingPlayMode()
+        {
+            IsPlaying = false;
+            s_LeavingPlayMode = false;
+        }
 
         /// <summary>The editor domain is loading for Play mode: `isPlaying` is still false and
         /// `isPlayingOrWillChangePlaymode` already true, until the runtime initialization starts
@@ -188,11 +202,12 @@ namespace Unbound.Runtime
 
         static void ExitPlayMode()
         {
+            BeginLeavingPlayMode();
             EditorApplication.Internal_PlayModeStateChanged(PlayModeStateChange.ExitingPlayMode);
             Lifecycle.Broadcast(m => m.OnApplicationQuit, null);
             if (Compat.QuitCallbacksMeasured) Application.Internal_PlayModeQuitting();
             DestroyPlayModeObjects();
-            IsPlaying = false;
+            EndLeavingPlayMode();
             SceneRegistry.ResetToUntitled();
             EditorApplication.Internal_PlayModeStateChanged(PlayModeStateChange.EnteredEditMode);
         }

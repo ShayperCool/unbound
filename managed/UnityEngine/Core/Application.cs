@@ -147,17 +147,10 @@ namespace UnityEngine
         }
 
         /// <summary>The session's end without Application.quitting or Application.unloading (the
-        /// Editor's exit with Play mode on).</summary>
+        /// Editor's exit).</summary>
         internal static void Internal_Exiting()
         {
             try { s_ExitCancellation.Cancel(); } catch (Exception e) { Debug.LogException(e); }
-        }
-
-        /// <summary>The session's end without Application.quitting (the Editor's exit in Edit mode).</summary>
-        internal static void Internal_Unloading()
-        {
-            try { s_ExitCancellation.Cancel(); } catch (Exception e) { Debug.LogException(e); }
-            unloading?.Invoke();
         }
 
         internal static void Internal_DeepLink(string url)

@@ -7,10 +7,11 @@ using Xunit;
 namespace UnityEngine.Tests
 {
     /// <summary>
-    /// The Editor's exit with Play mode on (EditorApplication.Exit): no Application.quitting, no
-    /// Application.unloading and no Play mode message, and its save reported to
-    /// OnPostprocessAllAssets (tests/projects/unchangedsaves leaving); leaving Play mode first raises
-    /// them (tests/projects/tmpatlas quit.*).
+    /// The Editor's exit (EditorApplication.Exit), with Play mode on or in Edit mode: no
+    /// Application.quitting, no Application.unloading and no Play mode message, and its save
+    /// reported to OnPostprocessAllAssets; leaving Play mode first raises ExitingPlayMode and
+    /// Application.quitting with isPlayingOrWillChangePlaymode false, and no unloading
+    /// (tests/projects/unchangedsaves leaving, tests/projects/tmpatlas quit.*).
     /// </summary>
     [Collection("EditorState")]
     public sealed class EditorExitTests
@@ -18,7 +19,8 @@ namespace UnityEngine.Tests
         static List<string> Raised(bool editorExit, bool playing)
         {
             var calls = new List<string>();
-            Action quitting = () => calls.Add("quitting:" + (EditorSession.IsPlaying ? "play" : "edit"));
+            Action quitting = () => calls.Add("quitting:" + (EditorApplication.isPlaying ? "play" : "edit")
+                + (EditorApplication.isPlayingOrWillChangePlaymode ? "" : ":leaving"));
             Action unloading = () => calls.Add("unloading");
             Action<PlayModeStateChange> playMode = change => calls.Add(change.ToString());
             Application.quitting += quitting;
@@ -32,6 +34,7 @@ namespace UnityEngine.Tests
             }
             finally
             {
+                EditorSession.EndLeavingPlayMode();
                 EditorSession.IsPlaying = wasPlaying;
                 Application.quitting -= quitting;
                 Application.unloading -= unloading;
@@ -51,13 +54,14 @@ namespace UnityEngine.Tests
         [Fact]
         public void LeavingPlayModeRaisesItsMessagesAndApplicationQuittingInPlayMode()
         {
-            Assert.Equal(new[] { "ExitingPlayMode", "quitting:play", "unloading" }, Raised(editorExit: false, playing: true));
+            Assert.Equal(new[] { "ExitingPlayMode", "quitting:play:leaving" }, Raised(editorExit: false, playing: true));
+            Assert.True(EditorApplication.isPlayingOrWillChangePlaymode == EditorSession.IsPlaying);
         }
 
         [Fact]
         public void TheEditorsExitInEditModeRaisesNoApplicationQuitting()
         {
-            Assert.Equal(new[] { "unloading" }, Raised(editorExit: true, playing: false));
+            Assert.Empty(Raised(editorExit: true, playing: false));
         }
 
         [Fact]
