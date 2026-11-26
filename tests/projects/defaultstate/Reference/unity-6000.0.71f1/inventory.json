@@ -1750,6 +1750,12 @@
       "type": "UnityEditor.GlobalObjectId"
     },
     {
+      "category": "scriptable",
+      "module": "UnityEditor.TilemapModule",
+      "status": "candidate",
+      "type": "UnityEditor.GridPalette"
+    },
+    {
       "category": "class",
       "module": "UnityEditor.CoreModule",
       "status": "candidate",
@@ -4517,6 +4523,12 @@
     },
     {
       "category": "class",
+      "module": "UnityEngine.TilemapModule",
+      "status": "candidate",
+      "type": "UnityEngine.CustomGridBrushAttribute"
+    },
+    {
+      "category": "class",
       "module": "UnityEngine.CoreModule",
       "status": "no-public-parameterless-constructor",
       "type": "UnityEngine.CustomRenderTexture"
@@ -5066,6 +5078,12 @@
       "module": "UnityEngine.GridModule",
       "status": "candidate",
       "type": "UnityEngine.Grid"
+    },
+    {
+      "category": "scriptable",
+      "module": "UnityEngine.TilemapModule",
+      "status": "abstract",
+      "type": "UnityEngine.GridBrushBase"
     },
     {
       "category": "component",

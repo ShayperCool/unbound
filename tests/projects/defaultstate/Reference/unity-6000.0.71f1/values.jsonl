@@ -848,6 +848,12 @@
 {"key":"UnityEditor.GlobalObjectId/Property/UnityEditor.GlobalObjectId/identifierType","status":"value","value":"0"}
 {"key":"UnityEditor.GlobalObjectId/Property/UnityEditor.GlobalObjectId/targetObjectId","status":"value","value":"0"}
 {"key":"UnityEditor.GlobalObjectId/Property/UnityEditor.GlobalObjectId/targetPrefabId","status":"value","value":"0"}
+{"key":"UnityEditor.GridPalette/@factory","status":"value","value":"scriptable"}
+{"key":"UnityEditor.GridPalette/Field/UnityEditor.GridPalette/cellSizing","status":"value","value":"enum:0"}
+{"key":"UnityEditor.GridPalette/Property/UnityEditor.GridPalette/transparencySortAxis","status":"value","value":"UnityEngine.Vector3{x=0;y=0;z=1}"}
+{"key":"UnityEditor.GridPalette/Property/UnityEditor.GridPalette/transparencySortMode","status":"value","value":"enum:0"}
+{"key":"UnityEditor.GridPalette/Property/UnityEngine.Object/hideFlags","status":"value","value":"enum:0"}
+{"key":"UnityEditor.GridPalette/Property/UnityEngine.Object/name","status":"value","value":"string:"}
 {"key":"UnityEditor.HandleUtility/@factory","status":"value","value":"class"}
 {"key":"UnityEditor.Handles/@factory","status":"value","value":"class"}
 {"key":"UnityEditor.Handles/Property/UnityEditor.Handles/currentCamera","status":"value","value":"null"}
@@ -4241,6 +4247,12 @@
 {"key":"UnityEngine.CullingGroupEvent/Property/UnityEngine.CullingGroupEvent/previousDistance","status":"value","value":"0"}
 {"key":"UnityEngine.CullingGroupEvent/Property/UnityEngine.CullingGroupEvent/wasVisible","status":"value","value":"false"}
 {"key":"UnityEngine.Cursor/@factory","status":"value","value":"class"}
+{"key":"UnityEngine.CustomGridBrushAttribute/@factory","status":"value","value":"class"}
+{"key":"UnityEngine.CustomGridBrushAttribute/Property/System.Attribute/TypeId","status":"value","value":"type:UnityEngine.CustomGridBrushAttribute"}
+{"key":"UnityEngine.CustomGridBrushAttribute/Property/UnityEngine.CustomGridBrushAttribute/defaultBrush","status":"value","value":"false"}
+{"key":"UnityEngine.CustomGridBrushAttribute/Property/UnityEngine.CustomGridBrushAttribute/defaultName","status":"value","value":"string:"}
+{"key":"UnityEngine.CustomGridBrushAttribute/Property/UnityEngine.CustomGridBrushAttribute/hideAssetInstances","status":"value","value":"false"}
+{"key":"UnityEngine.CustomGridBrushAttribute/Property/UnityEngine.CustomGridBrushAttribute/hideDefaultInstance","status":"value","value":"false"}
 {"key":"UnityEngine.CustomRenderTexture/@factory","status":"excluded","value":"no-public-parameterless-constructor"}
 {"key":"UnityEngine.CustomRenderTextureManager/@factory","status":"excluded","value":"static"}
 {"key":"UnityEngine.CustomRenderTextureUpdateZone/@factory","status":"value","value":"struct"}
@@ -4863,6 +4875,7 @@
 {"key":"UnityEngine.Grid/Property/UnityEngine.Grid/cellSwizzle","status":"value","value":"enum:0"}
 {"key":"UnityEngine.Grid/Property/UnityEngine.Object/hideFlags","status":"value","value":"enum:0"}
 {"key":"UnityEngine.Grid/Property/UnityEngine.Object/name","status":"value","value":"string:default-UnityEngine.Grid"}
+{"key":"UnityEngine.GridBrushBase/@factory","status":"excluded","value":"abstract"}
 {"key":"UnityEngine.GridLayout/@factory","status":"factory-null","value":""}
 {"key":"UnityEngine.Gyroscope/@factory","status":"excluded","value":"no-public-parameterless-constructor"}
 {"key":"UnityEngine.HDROutputSettings/@factory","status":"excluded","value":"no-public-parameterless-constructor"}
