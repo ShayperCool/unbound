@@ -12,10 +12,13 @@ public sealed class VfxWritesSaveLog : AssetModificationProcessor
     /// line per call), for the Editor's exit.</summary>
     internal static string ExitFile;
 
+    /// <summary>While set, scene paths are dropped from what is returned.</summary>
+    internal static bool DropScenes;
+
     static string[] OnWillSaveAssets(string[] paths)
     {
         Calls.Add(string.Join(", ", paths));
         if (ExitFile != null) System.IO.File.AppendAllText(ExitFile, string.Join(", ", paths) + "\n");
-        return paths;
+        return DropScenes ? System.Array.FindAll(paths, p => !p.EndsWith(".unity", System.StringComparison.Ordinal)) : paths;
     }
 }

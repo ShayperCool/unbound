@@ -51,7 +51,11 @@ the step, when there was one).
   `SaveAssetIfDirty` by GUID of `ProjectSettings/TagManager.asset` after a tag added through a
   `SerializedObject` (whether its file changed); `exit/dirty before`: a
   setting left unsaved, and `exit/initialEventName`, which `run.py` adds after the run: that setting
-  as the file holds it once the Editor (or Unbound) has exited; `several save assets/will save`: two
+  as the file holds it once the Editor (or Unbound) has exited; `scene new additive/...`: a new
+  scene added beside the batch Editor's untitled one (refused); `scene save new|edited|open|dropped/...`:
+  a new scene saved at a path, edited and saved, saved through `SaveOpenScenes`, then saved while the
+  processor drops scene paths (result, the paths the processors got, the file, the dirty flag);
+  `several save assets/will save`: two
   materials and the graph made dirty against their path order (the tag manager still edited), then
   `SaveAssets` (paths compared as a set: the Editor's order differs from run to run);
   `exit/will save` (`run.py`, from the processor's calls after the probe): what the exit's save
@@ -77,8 +81,8 @@ settings file; `SaveAssets` offers a changed material `CreateAsset` made; the Ed
 whose resource or model alone was left dirty.
 
 Unbound matches every row. Not measured: a graph whose objects
-change other than one block added and removed, a block subgraph's contents, several dirty assets at once (their order in `OnWillSaveAssets`), scene
-saves' `OnWillSaveAssets`, and class library types other than the primitive types and string in an
+change other than one block added and removed, a block subgraph's contents, a titled scene saved to
+another path, and class library types other than the primitive types and string in an
 added object's type names (Unbound refuses them: .NET names them otherwise than the Editor's Mono,
 which could not read .NET's names back).
 

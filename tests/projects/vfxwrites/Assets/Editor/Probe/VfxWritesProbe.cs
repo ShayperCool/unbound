@@ -278,6 +278,46 @@ public static class VfxWritesProbe
             // (The Editor's order differs from run to run: the paths are compared as a set.)
             Row("several save assets/will save", string.Join(" | ", VfxWritesSaveLog.Calls.Select(c => string.Join(", ", c.Split(", ").OrderBy(x => x, StringComparer.Ordinal)))));
 
+            // Scene saves: a new scene added beside the untitled one (refused while it is
+            // untitled), then a new scene in its place saved at a path, edited and saved, saved
+            // through SaveOpenScenes, then saved while the processor drops scene paths.
+            var untitled = UnityEngine.SceneManagement.SceneManager.GetActiveScene();
+            Row("scene new additive/untitled path", untitled.path);
+            Row("scene new additive/untitled dirty", untitled.isDirty);
+            Row("scene new additive/scenes", UnityEngine.SceneManagement.SceneManager.sceneCount);
+            try
+            {
+                var extra = UnityEditor.SceneManagement.EditorSceneManager.NewScene(UnityEditor.SceneManagement.NewSceneSetup.EmptyScene, UnityEditor.SceneManagement.NewSceneMode.Additive);
+                Row("scene new additive/error", "<none>");
+                UnityEditor.SceneManagement.EditorSceneManager.CloseScene(extra, true);
+            }
+            catch (Exception e) { Row("scene new additive/error", e.GetType().Name + ": " + e.Message); }
+            var scene = UnityEditor.SceneManagement.EditorSceneManager.NewScene(UnityEditor.SceneManagement.NewSceneSetup.EmptyScene, UnityEditor.SceneManagement.NewSceneMode.Single);
+            const string scenePath = "Assets/Probe.unity";
+            VfxWritesSaveLog.Calls.Clear();
+            Row("scene save new/result", UnityEditor.SceneManagement.EditorSceneManager.SaveScene(scene, scenePath));
+            Row("scene save new/will save", string.Join(" | ", VfxWritesSaveLog.Calls));
+            var sceneObject = new GameObject("Added");
+            UnityEngine.SceneManagement.SceneManager.MoveGameObjectToScene(sceneObject, scene);
+            VfxWritesSaveLog.Calls.Clear();
+            Row("scene save edited/result", UnityEditor.SceneManagement.EditorSceneManager.SaveScene(scene));
+            Row("scene save edited/will save", string.Join(" | ", VfxWritesSaveLog.Calls));
+            sceneObject.name = "Renamed";
+            UnityEditor.SceneManagement.EditorSceneManager.MarkSceneDirty(scene);
+            VfxWritesSaveLog.Calls.Clear();
+            Row("scene save open/result", UnityEditor.SceneManagement.EditorSceneManager.SaveOpenScenes());
+            Row("scene save open/will save", string.Join(" | ", VfxWritesSaveLog.Calls));
+            sceneObject.name = "Dropped";
+            UnityEditor.SceneManagement.EditorSceneManager.MarkSceneDirty(scene);
+            var sceneBefore = File.ReadAllText(scenePath);
+            VfxWritesSaveLog.DropScenes = true;
+            VfxWritesSaveLog.Calls.Clear();
+            Row("scene save dropped/result", UnityEditor.SceneManagement.EditorSceneManager.SaveScene(scene));
+            VfxWritesSaveLog.DropScenes = false;
+            Row("scene save dropped/will save", string.Join(" | ", VfxWritesSaveLog.Calls));
+            Row("scene save dropped/file changed", File.ReadAllText(scenePath) != sceneBefore);
+            Row("scene save dropped/dirty", scene.isDirty);
+
             // The created graph's model edited (an operator added) and left for the exit; run.py
             // counts the file's documents after the run (exit/created documents).
             var createdGraph = VisualEffectResource.GetResourceAtPath(Created).GetOrCreateGraph();

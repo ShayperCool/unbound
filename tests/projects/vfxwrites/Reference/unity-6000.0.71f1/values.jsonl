@@ -121,6 +121,20 @@
 {"k":"editing write/shadows after","v":"Off"}
 {"k":"editing write/dirty","v":"False"}
 {"k":"several save assets/will save","v":"Assets/Graphs/BoundsAuto.vfx, Assets/Probe.mat, Assets/Second.mat, ProjectSettings/TagManager.asset"}
+{"k":"scene new additive/untitled path","v":""}
+{"k":"scene new additive/untitled dirty","v":"False"}
+{"k":"scene new additive/scenes","v":"1"}
+{"k":"scene new additive/error","v":"InvalidOperationException: Cannot create a new scene additively with an untitled scene unsaved."}
+{"k":"scene save new/result","v":"True"}
+{"k":"scene save new/will save","v":""}
+{"k":"scene save edited/result","v":"True"}
+{"k":"scene save edited/will save","v":"Assets/Probe.unity"}
+{"k":"scene save open/result","v":"True"}
+{"k":"scene save open/will save","v":"Assets/Probe.unity"}
+{"k":"scene save dropped/result","v":"False"}
+{"k":"scene save dropped/will save","v":"Assets/Probe.unity"}
+{"k":"scene save dropped/file changed","v":"False"}
+{"k":"scene save dropped/dirty","v":"True"}
 {"k":"exit/created graph dirty before","v":"True"}
 {"k":"exit/created resource dirty before","v":"False"}
 {"k":"exit/created documents before","v":"7"}
