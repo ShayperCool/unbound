@@ -40,6 +40,7 @@ namespace UssValidationProbe
             ("trans-short", s => Join(s.transitionProperty.Select(p => p.ToString())) + " / " + Join(s.transitionTimingFunction.Select(e => e.mode.ToString()))),
             ("var-ok", s => F(s.width)), ("var-fallback", s => F(s.width)),
             ("trailing-delim", s => F(s.width)), ("trailing-word", s => F(s.width)), ("trailing-open", s => F(s.width)), ("trailing-never", s => F(s.width)),
+            ("trailing-value", s => F(s.width)), ("trailing-nosemi", s => F(s.width)), ("trailing-empty-a", s => F(s.width)), ("trailing-empty", s => F(s.width)),
             ("unknown", s => C(s.color)), ("int-bad", s => s.unitySliceLeft.ToString(Inv)), ("num-bad", s => F(s.opacity)),
             ("font-bad", s => s.unityFontStyleAndWeight.ToString()),
             ("many-colors", s => C(s.borderTopColor) + " " + C(s.borderLeftColor)),
@@ -92,7 +93,7 @@ namespace UssValidationProbe
             Put("import.logs", TakeLogs());
             // Sheets that end in text no rule takes (a stray character, a word, an unclosed block).
             var trailing = new List<StyleSheet>();
-            foreach (var name in new[] { "TrailingDelim", "TrailingWord", "TrailingOpen" })
+            foreach (var name in new[] { "TrailingDelim", "TrailingWord", "TrailingOpen", "TrailingValue", "TrailingEmpty" })
             {
                 Import(name);
                 Application.logMessageReceived += OnImportLog;

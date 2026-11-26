@@ -5,6 +5,10 @@
 {"k":"TrailingWord.loaded","v":true}
 {"k":"TrailingOpen.import.logs","v":""}
 {"k":"TrailingOpen.loaded","v":true}
+{"k":"TrailingValue.import.logs","v":""}
+{"k":"TrailingValue.loaded","v":true}
+{"k":"TrailingEmpty.import.logs","v":""}
+{"k":"TrailingEmpty.loaded","v":true}
 {"k":"broken.loaded","v":true}
 {"k":"errors.loaded","v":true}
 {"k":"start.logs","v":""}
@@ -56,6 +60,14 @@
 {"k":"style.trailing-open.logs","v":""}
 {"k":"style.trailing-never","v":"1"}
 {"k":"style.trailing-never.logs","v":""}
+{"k":"style.trailing-value","v":"34"}
+{"k":"style.trailing-value.logs","v":""}
+{"k":"style.trailing-nosemi","v":"2"}
+{"k":"style.trailing-nosemi.logs","v":""}
+{"k":"style.trailing-empty-a","v":"35"}
+{"k":"style.trailing-empty-a.logs","v":""}
+{"k":"style.trailing-empty","v":"20"}
+{"k":"style.trailing-empty.logs","v":""}
 {"k":"style.unknown","v":"(0.105882354, 0.105882354, 0.105882354, 1)"}
 {"k":"style.unknown.logs","v":""}
 {"k":"style.int-bad","v":"1"}
