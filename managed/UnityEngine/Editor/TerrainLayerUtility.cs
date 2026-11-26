@@ -25,12 +25,7 @@ namespace UnityEditor
         static Styles s_Styles;
         static Styles styles => s_Styles ??= new Styles();
 
-        public static void ValidateDiffuseTextureUI(Texture2D texture)
-        {
-            if (texture == null) EditorGUILayout.HelpBox(styles.textureAssign);
-            if (texture != null && texture.wrapMode != TextureWrapMode.Repeat) EditorGUILayout.HelpBox(styles.textureMustHaveRepeatWrapMode);
-            if (texture != null && texture.mipmapCount <= 1) EditorGUILayout.HelpBox(styles.textureMustHaveMips);
-        }
+        public static void ValidateDiffuseTextureUI(Texture2D texture) => DiffuseTextureWarnings(texture, s_ShowWarning);
 
         /// <summary>Whether the texture is imported as a normal map; a texture that is no asset
         /// counts as one.</summary>
@@ -41,17 +36,33 @@ namespace UnityEditor
             return AssetImporter.GetAtPath(assetPath) is TextureImporter importer && importer.textureType == TextureImporterType.NormalMap;
         }
 
-        public static void ValidateNormalMapTextureUI(Texture2D texture, bool normalMapTextureType)
+        public static void ValidateNormalMapTextureUI(Texture2D texture, bool normalMapTextureType) =>
+            NormalMapTextureWarnings(texture, normalMapTextureType, s_ShowWarning);
+
+        public static void ValidateMaskMapTextureUI(Texture2D texture) => MaskMapTextureWarnings(texture, s_ShowWarning);
+
+        static readonly System.Action<GUIContent> s_ShowWarning = content => EditorGUILayout.HelpBox(content);
+
+        /// <summary>The warnings a diffuse texture's check shows, in order.</summary>
+        internal static void DiffuseTextureWarnings(Texture2D texture, System.Action<GUIContent> show)
         {
-            if (texture != null && texture.wrapMode != TextureWrapMode.Repeat) EditorGUILayout.HelpBox(styles.textureMustHaveRepeatWrapMode);
-            if (texture != null && texture.mipmapCount <= 1) EditorGUILayout.HelpBox(styles.textureMustHaveMips);
-            if (!normalMapTextureType) EditorGUILayout.HelpBox(styles.normalMapIncorrectTextureType);
+            if (texture == null) show(styles.textureAssign);
+            TilingTextureWarnings(texture, show);
         }
 
-        public static void ValidateMaskMapTextureUI(Texture2D texture)
+        internal static void NormalMapTextureWarnings(Texture2D texture, bool normalMapTextureType, System.Action<GUIContent> show)
         {
-            if (texture != null && texture.wrapMode != TextureWrapMode.Repeat) EditorGUILayout.HelpBox(styles.textureMustHaveRepeatWrapMode);
-            if (texture != null && texture.mipmapCount <= 1) EditorGUILayout.HelpBox(styles.textureMustHaveMips);
+            TilingTextureWarnings(texture, show);
+            if (!normalMapTextureType) show(styles.normalMapIncorrectTextureType);
+        }
+
+        internal static void MaskMapTextureWarnings(Texture2D texture, System.Action<GUIContent> show) => TilingTextureWarnings(texture, show);
+
+        /// <summary>A texture that does not repeat, then one without mip maps.</summary>
+        static void TilingTextureWarnings(Texture2D texture, System.Action<GUIContent> show)
+        {
+            if (texture != null && texture.wrapMode != TextureWrapMode.Repeat) show(styles.textureMustHaveRepeatWrapMode);
+            if (texture != null && texture.mipmapCount <= 1) show(styles.textureMustHaveMips);
         }
 
         public static void TilingSettingsUI(TerrainLayer terrainLayer)

@@ -1,5 +1,12 @@
 # Default state of implemented API types
 
+The Tile Palette and terrain layer slice adds 17 rows: GridBrushBase (abstract), CustomGridBrushAttribute
+and GridPalette written by hand (13), the static TerrainLayerUtility (1), and AssetPreview, Help and
+PresetType (3, type rows only), which an earlier commit wrote by hand without rows. All come from
+two macOS Editor batch captures that agree on them (their values depend on neither the OS nor the
+graphics device); earlier rows are unchanged. The queued text-asset identity rows move by the shift
+measured on macOS.
+
 The creation-defaults slice (Q813) resolves 37 queued rows with the controls of
 tests/projects/defaultcontrols (two identical macOS Editor batch captures; the values depend on
 neither the OS nor the graphics device): command buffer names, render texture and attachment
