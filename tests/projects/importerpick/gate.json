@@ -1,0 +1,14 @@
+{
+  "commands": [
+    "python3 tests/projects/importerpick/run.py gate"
+  ],
+  "summary": "importerpick: .*",
+  "engine_paths": [
+    "crates/unbound-runtime/src/state.rs",
+    "managed/UnityEngine/Editor/AssetDatabaseFiles.cs",
+    "managed/UnityEngine/Editor/AssetImporterLookup.cs",
+    "managed/UnityEngine/Editor/AssetImporterQueries.cs",
+    "managed/UnityEngine/Editor/ScriptedImporter.cs",
+    "managed/UnityEngine/Runtime/GameDomain.cs"
+  ]
+}
