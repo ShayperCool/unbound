@@ -831,6 +831,8 @@ namespace UnityEngine
             var pixels = Pixels("Texture2DArray.Apply");
             if (updateMipmaps) pixels.BuildMips();
             if (m_NativeHandle == 0) m_NativeHandle = RenderHandles.Next();
+            // Unreadable, it is not uploaded again: it keeps the mips this upload drops.
+            if (makeNoLongerReadable) m_FrozenMipmapLimit = activeMipmapLimit;
             pixels.Upload(m_NativeHandle, m_Linear, filterMode, wrapModeU, wrapModeV, wrapModeW, anisoLevel);
             SyncMipmapLimit();
             if (m_AstcMemoryPendingUpload) RecordUploadedAstcMemory(m_Format);
@@ -855,6 +857,7 @@ namespace UnityEngine
             m_Linear = !read.Srgb;
             m_MipCount = read.Mips;
             m_Readable = read.Readable;
+            m_FrozenMipmapLimit = -1;
             m_IgnoreMipmapLimit = body.Bool("m_IgnoreMipmapLimit", body.Bool("m_IgnoreMasterTextureLimit"));
             m_Pixels?.Release();
             m_Pixels = null;

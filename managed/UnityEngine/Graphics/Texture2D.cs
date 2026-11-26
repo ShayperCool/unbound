@@ -149,6 +149,7 @@ namespace UnityEngine
             m_MipCount = mipCount <= 0 ? fullMips : mipCount;
             m_Linear = linear;
             m_IsReadable = true;
+            m_FrozenMipmapLimit = -1;
             m_Raw = null;
             m_MipPixels = null;
             m_MipHdr = null;
@@ -206,6 +207,7 @@ namespace UnityEngine
             m_Format = format;
             m_Linear = linear;
             m_IsReadable = true;
+            m_FrozenMipmapLimit = -1;
             m_Name = "";
         }
 
@@ -253,11 +255,7 @@ namespace UnityEngine
         /// (tests/projects/mipmaplimit).</summary>
         public int activeMipmapLimit => Math.Min(ActiveMipmapLimit, MipmapLimitMaxDrop);
 
-        /// <summary>The mips dropped when Apply made the texture unreadable (-1: it follows the
-        /// limit).</summary>
-        int m_FrozenMipmapLimit = -1;
 
-        internal override int FrozenMipmapLimit => m_FrozenMipmapLimit;
 
         public static Texture2D whiteTexture => DefaultTextures.White;
         public static Texture2D blackTexture => DefaultTextures.Black;
@@ -1013,6 +1011,7 @@ namespace UnityEngine
             m_MipCount = info.MipCount;
             m_GpuMipCount = Math.Max(1, info.MipCount);
             m_IsReadable = info.Readable != 0;
+            m_FrozenMipmapLimit = -1;
             m_Linear = info.Srgb == 0 || info.Format == 2;
             m_Format = PixelFormats.ImportedFormat(info);
             m_UsageMode = info.UsageMode;
@@ -1134,6 +1133,7 @@ namespace UnityEngine
             m_BlockCellsDirty = false;
             m_SourceRaw = encoded.Length > 0 ? Convert.FromHexString(encoded) : null;
             m_IsReadable = body.Bool("m_IsReadable");
+            m_FrozenMipmapLimit = -1;
             // Files written before the setting's rename keep its former name.
             m_IgnoreMipmapLimit = body.Bool("m_IgnoreMipmapLimit", body.Bool("m_IgnoreMasterTextureLimit"));
             // m_ColorSpace 0 is linear data (TextMeshPro's Alpha8 atlases, terrain splat maps).

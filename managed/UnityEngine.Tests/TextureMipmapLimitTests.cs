@@ -166,6 +166,52 @@ namespace Unbound.Tests
         }
 
         [Fact]
+        public void ATextureWithPixelsAgainFollowsTheLimitAgain()
+        {
+            var texture = new Texture2D(64, 64, TextureFormat.RGBA32, true) { ignoreMipmapLimit = false };
+            try
+            {
+                WithLimit(3, () =>
+                {
+                    texture.Apply(false, true);
+                    Assert.Equal(3, texture.FrozenMipmapLimit);
+                    // LoadImage replaces the image whatever its readability (here with the blank
+                    // 8x8 image of data it cannot read): pixels of its own again.
+                    Assert.False(texture.LoadImage(new byte[] { 1, 2, 3 }, false));
+                    Assert.True(texture.isReadable);
+                    Assert.Equal(-1, texture.FrozenMipmapLimit);
+                    Assert.False(texture.UnderMipmapLimit);
+                });
+            }
+            finally
+            {
+                Object.DestroyImmediate(texture);
+            }
+        }
+
+        [Fact]
+        public void AnArrayMadeUnreadableKeepsTheMipsItsLastUploadDropped()
+        {
+            var array = new Texture2DArray(64, 64, 2, TextureFormat.RGBA32, true);
+            try
+            {
+                WithLimit(2, () =>
+                {
+                    array.ignoreMipmapLimit = false;
+                    array.Apply(false, true);
+                    Assert.Equal(2, array.FrozenMipmapLimit);
+                    QualitySettings.globalTextureMipmapLimit = 0;
+                    Assert.Equal(0, array.activeMipmapLimit);
+                    Assert.True(array.UnderMipmapLimit);
+                });
+            }
+            finally
+            {
+                Object.DestroyImmediate(array);
+            }
+        }
+
+        [Fact]
         public void AGeneratedTexturesMetaKeepsItsIgnoreFlag()
         {
             var settings = new UnityEditor.AssetImporters.TextureGenerationSettings(UnityEditor.TextureImporterType.Default);

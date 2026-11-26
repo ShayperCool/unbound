@@ -160,10 +160,14 @@ namespace UnityEngine
         /// (0 for the kinds it leaves whole and for a texture that ignores it).</summary>
         internal virtual int MipmapLimitMaxDrop => 0;
 
-        /// <summary>The top mips a texture that keeps no CPU copy dropped when it was last uploaded
+        /// <summary>The top mips a texture whose CPU copy Apply discarded dropped in that upload
         /// (-1: it follows the limit). Such a texture is not uploaded again when the limit changes
-        /// (matches the Unity 6000.0.71f1 Editor, tests/projects/mipmaplimit scriptLocked.*).</summary>
-        internal virtual int FrozenMipmapLimit => -1;
+        /// (matches the Unity 6000.0.71f1 Editor, tests/projects/mipmaplimit scriptLocked.*; the
+        /// Scripting API's Texture2D.Apply and Texture2DArray.Apply say so for both); it follows the
+        /// limit again once it has pixels of its own again (Init, a reload).</summary>
+        internal int m_FrozenMipmapLimit = -1;
+
+        internal int FrozenMipmapLimit => m_FrozenMipmapLimit;
 
         /// <summary>Whether the renderer samples fewer mips of this texture than it holds.</summary>
         internal bool UnderMipmapLimit => FrozenMipmapLimit > 0 || (FrozenMipmapLimit < 0 && Math.Min(s_ActiveMipmapLimit, MipmapLimitMaxDrop) > 0);
@@ -173,9 +177,14 @@ namespace UnityEngine
         /// Texture2D.activeMipmapLimit). Said once.</summary>
         internal static void WarnCopyUnderMipmapLimit(string api, Texture texture)
         {
-            if (texture != null && texture.UnderMipmapLimit)
-                Unbound.Runtime.Stubs.Ignored(api + " of a texture under the texture mipmap limit", "addresses the texture's whole mip chain, not the mips the limit keeps");
+            if (texture == null || !texture.UnderMipmapLimit) return;
+            // Said once per API, without building its message again.
+            lock (s_CopyWarnings)
+                if (!s_CopyWarnings.Add(api)) return;
+            Unbound.Runtime.Stubs.Ignored(api + " of a texture under the texture mipmap limit", "addresses the texture's whole mip chain, not the mips the limit keeps");
         }
+
+        static readonly System.Collections.Generic.HashSet<string> s_CopyWarnings = new System.Collections.Generic.HashSet<string>();
 
         /// <summary>What the renderer holds for <see cref="m_SentMipmapLimitHandle"/>: the most mips
         /// it drops and whether that is a fixed count.</summary>
