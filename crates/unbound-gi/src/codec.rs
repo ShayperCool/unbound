@@ -26,10 +26,7 @@ impl<'a> Reader<'a> {
     }
 
     pub(crate) fn finished(&self) -> Result<()> {
-        ensure!(
-            self.at == self.bytes.len(),
-            "cached data longer than its contents"
-        );
+        ensure!(self.at == self.bytes.len(), "cached data longer than its contents");
         Ok(())
     }
 }
@@ -140,11 +137,7 @@ impl<T: Codec> Codec for Option<T> {
         }
     }
     fn read(r: &mut Reader) -> Result<Self> {
-        Ok(if bool::read(r)? {
-            Some(T::read(r)?)
-        } else {
-            None
-        })
+        Ok(if bool::read(r)? { Some(T::read(r)?) } else { None })
     }
 }
 
@@ -162,11 +155,7 @@ impl<T: Codec> Codec for std::result::Result<T, String> {
         }
     }
     fn read(r: &mut Reader) -> Result<Self> {
-        Ok(if bool::read(r)? {
-            Ok(T::read(r)?)
-        } else {
-            Err(String::read(r)?)
-        })
+        Ok(if bool::read(r)? { Ok(T::read(r)?) } else { Err(String::read(r)?) })
     }
 }
 

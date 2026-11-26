@@ -745,10 +745,7 @@ mod tests {
         let at = spot.arriving_around(&tables, [1.0; 3], below).unwrap();
         assert!(lit.color[0] > 0.0 && at.color[0] > 0.0);
         // At right angles to its axis (level with it): no light, not a number.
-        assert!(
-            spot.arriving_around(&tables, [1.0; 3], [2.0, 2.0, 0.0])
-                .is_none()
-        );
+        assert!(spot.arriving_around(&tables, [1.0; 3], [2.0, 2.0, 0.0]).is_none());
         // Beyond the square: dark.
         assert!(
             spot.arriving_around(&tables, [1.0; 3], [2.5, 0.0, 0.0])
