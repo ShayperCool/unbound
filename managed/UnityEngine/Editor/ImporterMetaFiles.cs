@@ -160,9 +160,13 @@ namespace Unbound.Runtime
             var root = UnityYamlText.ParseTopLevel(text);
             var section = root.Get(type);
             if (section == null || section.Kind != YKind.Map) return null;
-            // An oldest-layout sprite section keeps the file's platform entries, after which its
-            // layout adds the others (ImporterLayout.Arrange).
-            if (type == "TextureImporter" && !(layout != null && ImporterLayout.IsOldestSprite(section))) MatchPlatforms(section, settings);
+            // An oldest-layout sprite section whose only change is its first import's (the measured
+            // slice; what the importer added itself on loading, the platforms, is no change) keeps
+            // the file's platform entries, after which its layout adds the others
+            // (ImporterLayout.Arrange); any other change of such a section keeps its layout.
+            bool oldest = type == "TextureImporter" && layout != null && ImporterLayout.IsOldestSprite(section)
+                && ImporterLayout.OnlyFirstImportChanges(section, saved ?? settings);
+            if (type == "TextureImporter" && !oldest) MatchPlatforms(section, settings);
             Patch(section, settings, "", unwritten);
             SetCommonScalars(section, common);
             var original = text.Replace("\r\n", "\n");
@@ -176,7 +180,7 @@ namespace Unbound.Runtime
                 // (tests/projects/importermeta, tests/projects/scenesave label-metas); a file of a
                 // structure that is not measured keeps its layout (ImporterMeta.LayOut).
                 var missing = new List<string>(unwritten);
-                older = LayOut(root, type, layout, settings, s => SetCommonScalars(s, common), unwritten);
+                older = LayOut(root, type, layout, settings, s => SetCommonScalars(s, common), unwritten, oldest);
                 if (older.Count > 0)
                 {
                     if (written == original) return null;
@@ -375,11 +379,13 @@ namespace Unbound.Runtime
         /// neither the release's nor a measured older one, or none, a missing key other than the
         /// measured ones, a value of another kind, no platform list): the section then stays as it
         /// is, and what was found is returned.</summary>
-        internal static List<string> LayOut(YText root, string importerType, ImporterLayout layout, YNode settings, Action<YText> common, List<string> unwritten)
+        /// <param name="oldest">The section is an oldest-layout sprite's written for its first
+        /// import (<see cref="ImporterLayout.IsOldestSprite"/>, <see cref="ImporterLayout.OnlyFirstImportChanges"/>).</param>
+        internal static List<string> LayOut(YText root, string importerType, ImporterLayout layout, YNode settings, Action<YText> common, List<string> unwritten,
+            bool oldest = false)
         {
             var older = new List<string>();
-            bool oldest = importerType == "TextureImporter" && ImporterLayout.IsOldestSprite(root.Get(importerType));
-            var arranged = layout.Arrange(root.Get(importerType).Clone(), older);
+            var arranged = layout.Arrange(root.Get(importerType).Clone(), older, oldest);
             var placed = new List<string>();
             // The oldest layout's settings are written as the Editor converts them.
             Patch(arranged, oldest ? ImporterLayout.ReadAsOldest(importerType, settings) : settings, "", placed);
@@ -504,7 +510,7 @@ namespace Unbound.Runtime
         /// missing key other than the measured ones of a file of the release's version, among
         /// them a missing serialized version or platform list, a value of another kind than the
         /// release's), as "at: what".</summary>
-        internal YText Arrange(YText file, List<string> unmeasured)
+        internal YText Arrange(YText file, List<string> unmeasured, bool oldestSprite = false)
         {
             bool current = file.Get("serializedVersion") is { Kind: YKind.Scalar } version && m_Section.Get("serializedVersion") is { } own
                 && version.Text == own.Text;
@@ -513,7 +519,7 @@ namespace Unbound.Runtime
             // textureSettings without their own version as defaults, and a default platform entry
             // added after the file's (matches the Unity 6000.0.71f1 Editor, tests/projects/spritemeta
             // Bare, BareWrap, BarePpu, BareFull). Another such section keeps its layout (unmeasured).
-            bool oldest = m_Importer == "TextureImporter" && IsOldestSprite(file);
+            bool oldest = oldestSprite && m_Importer == "TextureImporter" && IsOldestSprite(file);
             var arranged = Arrange(file, m_Section, null, "", current, unmeasured, oldest);
             if (oldest && m_PlatformEntry != null && arranged.Get("platformSettings") is { Kind: YKind.Seq } platforms)
             {
@@ -540,6 +546,46 @@ namespace Unbound.Runtime
                 foreach (var key in settings.Keys)
                     if (key is not ("wrapU" or "wrapV" or "wrapW")) return false;
             return true;
+        }
+
+        /// <summary>Whether the importer's <paramref name="settings"/> differ from an oldest-layout
+        /// section's keys only by what a sprite's first import sets (its sprite ID and NPOT
+        /// scaling, tests/projects/spritemeta Bare*): the change whose write is measured.</summary>
+        internal static bool OnlyFirstImportChanges(YText section, YNode settings)
+        {
+            if (section == null || settings == null) return false;
+            // The settings with the first import's keys put back as the file has them, patched into
+            // the file as a save patches them: no text change, and nothing but those keys unwritten.
+            var probe = MetaSettings.Clone(settings);
+            foreach (var key in FirstImportKeys)
+            {
+                var dot = key.IndexOf('.');
+                var own = dot < 0 ? section.Get(key) : section.Get(key.Substring(0, dot))?.Get(key.Substring(dot + 1));
+                if (own != null && own.Kind == YKind.Scalar) MetaSettings.Set(probe, key, own.Text);
+            }
+            var copy = section.Clone();
+            var unwritten = new List<string>();
+            ImporterMeta.Patch(copy, probe, "", unwritten);
+            if (UnityYamlText.WriteTopLevel(Wrap(copy)) != UnityYamlText.WriteTopLevel(Wrap(section))) return false;
+            foreach (var path in unwritten)
+            {
+                if (System.Array.IndexOf(FirstImportKeys, path) >= 0) continue;
+                // A sprite sheet the file lacks, holding only the sprite ID.
+                if (path == "spriteSheet" && MetaSettings.Find(settings, "spriteSheet") is { Kind: YKind.Map } sheet
+                    && sheet.Keys.All(k => k == "spriteID")) continue;
+                return false;
+            }
+            return true;
+        }
+
+        /// <summary>What a sprite's first import sets: its sprite ID and NPOT scaling.</summary>
+        static readonly string[] FirstImportKeys = { "spriteSheet.spriteID", "nPOTScale" };
+
+        static YText Wrap(YText section)
+        {
+            var root = YText.Map();
+            root.Add("TextureImporter", section);
+            return root;
         }
 
         /// <summary>A platform entry the oldest texture layout gets: the release's entry for

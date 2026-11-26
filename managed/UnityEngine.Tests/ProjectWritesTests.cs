@@ -279,6 +279,22 @@ namespace UnityEngine.Tests
                 Assert.False(ImporterLayout.IsOldestSprite(UnityYamlText.ParseTopLevel(head + "  textureType: 0\n").Get("TextureImporter")));
                 Assert.False(ImporterLayout.IsOldestSprite(UnityYamlText.ParseTopLevel(head + "  textureType: 8\n  textureSettings:\n    filterMode: 0\n").Get("TextureImporter")));
                 Assert.False(ImporterLayout.IsOldestSprite(UnityYamlText.ParseTopLevel(head + "  serializedVersion: 13\n  textureType: 8\n").Get("TextureImporter")));
+                // Another change of an oldest sprite section (a script's filter mode beside the first
+                // import's ID): its layout kept, said, nothing of the change lost.
+                var spriteText = head + "  textureType: 8\n  spriteMode: 1\n  textureSettings:\n    filterMode: 1\n";
+                var spriteSection = UnityYamlText.ParseTopLevel(spriteText).Get("TextureImporter");
+                var firstImport = spriteSection.ToNode();
+                MetaSettings.Set(firstImport, "spriteSheet.spriteID", "5e97eb03825dee720800000000000000");
+                MetaSettings.SetInt(firstImport, "nPOTScale", 0);
+                Assert.True(ImporterLayout.OnlyFirstImportChanges(spriteSection, firstImport));
+                var changed = MetaSettings.Clone(firstImport);
+                MetaSettings.SetInt(changed, "textureSettings.filterMode", 0);
+                Assert.False(ImporterLayout.OnlyFirstImportChanges(spriteSection, changed));
+                Assert.True(ImporterLayout.IsOldestSprite(UnityYamlText.ParseTopLevel(head + "  textureType: 8\n  textureSettings:\n    wrapU: 1\n").Get("TextureImporter")));
+                var unwrittenSprite = new List<string>();
+                var keptSprite = ImporterMeta.Rewritten(spriteText, "TextureImporter", MetaSettings.Clone(changed), changed, ("", "", ""), TextureTemplate(), unwrittenSprite);
+                Assert.True(keptSprite == null || keptSprite.Contains("    filterMode: 0\n"));
+                Assert.DoesNotContain("applyGammaDecoding: 1", keptSprite ?? "");
                 // A change of a Default texture's: the file's layout kept (the older settings' place
                 // in the release's is not measured), patched in place.
                 var defaultText = head + "  textureType: 0\n  maxTextureSize: 2048\n";
