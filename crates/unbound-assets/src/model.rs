@@ -944,7 +944,8 @@ impl Importer for ModelImporter {
     const KIND: &'static str = "models";
     // 60: `addColliders` gives every mesh node a MeshCollider.
     // 61: the nodes' FBX user properties, the root node's name and the fileID table are kept.
-    const VERSION: u32 = 61;
+    // 62: OBJ bindings a missing or incomplete material library does not resolve are dropped.
+    const VERSION: u32 = 62;
 
     fn dependencies(&self, source: &Path) -> Result<Vec<std::path::PathBuf>> {
         if !source
@@ -1077,6 +1078,73 @@ fn obj_material_library(source: &Path, bytes: &[u8]) -> Option<std::path::PathBu
         .last()
 }
 
+/// The keyword of an OBJ or MTL statement and the rest of its line, without a trailing comment.
+fn obj_statement(line: &str) -> Option<(&str, &str)> {
+    let line = line.trim().trim_start_matches('\u{feff}');
+    let (keyword, rest) = line.split_once(char::is_whitespace)?;
+    let end = rest
+        .char_indices()
+        .find_map(|(i, c)| {
+            (c == '#' && (i == 0 || rest[..i].ends_with(char::is_whitespace))).then_some(i)
+        })
+        .unwrap_or(rest.len());
+    Some((keyword, rest[..end].trim()))
+}
+
+/// Whether an OBJ file that names a material library (`library`) loses its material bindings: its
+/// faces bind materials (`usemtl`) and the library is missing or does not define every one of
+/// them. The Unity 6000.0.71f1 Editor then imports every face without a material: one submesh with
+/// the mesh group's default material (tests/projects/objmissingmtl Missing*, Derived, Undefined1;
+/// Mixed1: one undefined binding drops the defined one too). Measured in a file of one mesh; that
+/// the bindings of a file with several meshes go together is unmeasured, as are names that differ
+/// only in case. A file without a library keeps its bindings (unmeasured).
+fn obj_bindings_dropped(bytes: &[u8], library: Option<&Path>) -> Result<bool> {
+    let Some(library) = library else {
+        return Ok(false);
+    };
+    let text = String::from_utf8_lossy(bytes);
+    let bound: Vec<&str> = text
+        .lines()
+        .filter_map(obj_statement)
+        .filter(|(keyword, _)| *keyword == "usemtl")
+        .map(|(_, name)| name)
+        .collect();
+    if bound.is_empty() {
+        return Ok(false);
+    }
+    let defined = match std::fs::read(library) {
+        Ok(bytes) => String::from_utf8_lossy(&bytes)
+            .lines()
+            .filter_map(|line| {
+                obj_statement(line)
+                    .filter(|(keyword, _)| *keyword == "newmtl")
+                    .map(|(_, name)| name.to_string())
+            })
+            .collect::<std::collections::HashSet<_>>(),
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => Default::default(),
+        Err(e) => {
+            return Err(anyhow!(
+                "reading the material library {}: {e}",
+                library.display()
+            ));
+        }
+    };
+    Ok(bound.iter().any(|name| !defined.contains(*name)))
+}
+
+/// An OBJ file's text with its `usemtl` statements made comments (lines and their places kept).
+fn obj_without_bindings(bytes: &[u8]) -> Vec<u8> {
+    let mut out = Vec::with_capacity(bytes.len() + 64);
+    for line in bytes.split_inclusive(|b| *b == b'\n') {
+        let text = String::from_utf8_lossy(line);
+        if obj_statement(&text).is_some_and(|(keyword, _)| keyword == "usemtl") {
+            out.push(b'#');
+        }
+        out.extend_from_slice(line);
+    }
+    out
+}
+
 /// Imports a model with `mtl`'s rules, its siblings ordered as this OS's Editor orders them.
 pub fn import_model(
     source: &Path,
@@ -1112,6 +1180,14 @@ fn import_with(
     let library = is_obj
         .then(|| obj_material_library(source, bytes))
         .flatten();
+    // Bindings the library does not resolve are dropped with it (see `obj_bindings_dropped`).
+    let unbound = if obj_bindings_dropped(bytes, library.as_deref())? {
+        Some(obj_without_bindings(bytes))
+    } else {
+        None
+    };
+    let library = if unbound.is_some() { None } else { library };
+    let bytes = unbound.as_deref().unwrap_or(bytes);
     let library_name = library.as_ref().map(|p| p.to_string_lossy());
     // Calculated normals that honour smoothing groups need the FBX's own smoothing masks.
     let reads_fbx_smoothing = !is_obj

@@ -1121,9 +1121,25 @@ fn obj_material_cache_tracks_library_content_and_missing_inputs() {
         Some(0.2)
     );
     std::fs::remove_file(&library).unwrap();
-    assert!(
-        load().is_err(),
+    // A missing library drops the bindings (tests/projects/objmissingmtl): the face takes the
+    // group's default material, not the cached colors.
+    let (model, outcome) = load().unwrap();
+    assert_eq!(
+        outcome,
+        Outcome::Imported,
         "missing authored MTL must not reuse the cached colors"
+    );
+    assert_eq!(
+        model
+            .materials
+            .iter()
+            .map(|m| m.name.as_str())
+            .collect::<Vec<_>>(),
+        ["defaultMat"]
+    );
+    assert_eq!(
+        model.materials[0].description.vector("DiffuseColor"),
+        Some([0.8, 0.8, 0.8, 1.0])
     );
     std::fs::write(&library, "newmtl Paint\nmap_Kd Tint.png\n").unwrap();
     let material = &load().unwrap().0.materials[0].description;
@@ -2218,4 +2234,28 @@ fn hierarchy_ids_follow_the_paths_postprocessors_leave() {
             8_393_032_865_733_188_997
         ]
     );
+}
+
+/// tests/projects/objmissingmtl: a library that is missing or leaves a bound material undefined
+/// drops every binding; a complete library, a file without bindings and one without a library keep
+/// theirs (the last unmeasured).
+#[test]
+fn obj_bindings_a_library_does_not_resolve_are_dropped() {
+    let dir = std::env::temp_dir().join(format!("unbound-objbind-{}", std::process::id()));
+    std::fs::create_dir_all(&dir).unwrap();
+    let library = dir.join("Lib.mtl");
+    std::fs::write(&library, "newmtl Red\nKd 1 0 0\nnewmtl Green # a comment\n").unwrap();
+    let missing = dir.join("Absent.mtl");
+    let obj = b"mtllib Lib.mtl\nusemtl Red\nf 1 2 3\nusemtl Green\nf 1 3 4\n";
+    let undefined = b"mtllib Lib.mtl\nusemtl Red\nf 1 2 3\nusemtl Blue\nf 1 3 4\n";
+    assert!(!obj_bindings_dropped(obj, Some(&library)).unwrap());
+    assert!(obj_bindings_dropped(undefined, Some(&library)).unwrap());
+    assert!(obj_bindings_dropped(obj, Some(&missing)).unwrap());
+    assert!(!obj_bindings_dropped(b"mtllib Absent.mtl\nf 1 2 3\n", Some(&missing)).unwrap());
+    assert!(!obj_bindings_dropped(obj, None).unwrap());
+    assert_eq!(
+        obj_without_bindings(b"o A\r\nusemtl Red\r\nf 1 2 3\n  usemtl Green\nf 1 3 4"),
+        b"o A\r\n#usemtl Red\r\nf 1 2 3\n#  usemtl Green\nf 1 3 4".to_vec()
+    );
+    std::fs::remove_dir_all(&dir).unwrap();
 }

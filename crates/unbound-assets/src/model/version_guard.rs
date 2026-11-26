@@ -47,6 +47,7 @@ const PROJECTS: &[&str] = &[
     "modelimport",
     "modelroot",
     "modeltoproot",
+    "objmissingmtl",
 ];
 
 fn models(dir: &Path, out: &mut Vec<std::path::PathBuf>) {
