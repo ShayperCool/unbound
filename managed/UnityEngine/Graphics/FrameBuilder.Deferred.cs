@@ -132,6 +132,12 @@ namespace Unbound.Runtime
             var gbuffer1 = Temporary(new RenderTextureDescriptor(width, height, RenderTextureFormat.ARGB32, 0) { sRGB = QualitySettings.activeColorSpace == ColorSpace.Linear });
             var gbuffer2 = Temporary(TenBit(width, height));
             var lightBuffer = hdr ? light : Temporary(TenBit(width, height));
+            // A light mixed with a shadow mask: the Deferred passes write the mask into a fifth
+            // target (SV_Target4, _CameraGBufferTexture4) that its light pass reads (Unity's
+            // UnityStandardCore and UnityDeferredLibrary; tests/projects/shadowmaskmix deferred_*).
+            bool shadowmask = BakedLighting.MixesShadowmask(ForwardLights.Main) || ForwardLights.Lights.Exists(BakedLighting.MixesShadowmask);
+            var gbuffer4 = shadowmask ? Temporary(new RenderTextureDescriptor(width, height, RenderTextureFormat.ARGB32, 0) { sRGB = false }) : null;
+            ulong g4 = shadowmask ? TextureHandles.Of(gbuffer4) : 0;
             ulong g0 = TextureHandles.Of(gbuffer0), g1 = TextureHandles.Of(gbuffer1), g2 = TextureHandles.Of(gbuffer2);
             ulong targetHandle = TextureHandles.Of(light), lightHandle = TextureHandles.Of(lightBuffer), depthHandle = depthAttachment;
             ulong sampledHandle = TextureHandles.Of(depth);
@@ -140,7 +146,10 @@ namespace Unbound.Runtime
             // light buffer to black), then the Deferred passes.
             var background = camera.clearFlags is CameraClearFlags.Skybox or CameraClearFlags.SolidColor ? camera.backgroundColor : Color.black;
             if (QualitySettings.activeColorSpace == ColorSpace.Linear) background = background.linear;
-            foreach (var handle in hdr ? new[] { g0, g1, g2 } : new[] { g0, g1, g2, lightHandle })
+            var cleared = new List<ulong> { g0, g1, g2 };
+            if (!hdr) cleared.Add(lightHandle);
+            if (shadowmask) cleared.Add(g4);
+            foreach (var handle in cleared)
             {
                 GfxStream.SetTarget(handle, GfxStream.NoTexture);
                 GfxStream.Viewport(viewport);
@@ -151,12 +160,13 @@ namespace Unbound.Runtime
             byte clear = camera.clearFlags == CameraClearFlags.Nothing ? (byte)0 : (byte)(GfxStream.ClearDepth | GfxStream.ClearStencil);
             if (hdr && camera.clearFlags is CameraClearFlags.Skybox or CameraClearFlags.SolidColor) clear |= GfxStream.ClearColor;
             if (clear != 0) GfxStream.Clear(clear, background);
-            GfxStream.SetTargets(new[] { g0, g1, g2, lightHandle }, depthHandle);
+            var gbufferTargets = shadowmask ? new[] { g0, g1, g2, lightHandle, g4 } : new[] { g0, g1, g2, lightHandle };
+            GfxStream.SetTargets(gbufferTargets, depthHandle);
             GfxStream.Viewport(viewport);
             GfxStream.Camera(context.View, context.Projection, GfxStream.CameraProperties);
             if (hdr) GfxStream.Keyword("UNITY_HDR_ON", true);
             RunEvent(camera, CameraEvent.BeforeGBuffer, light);
-            GfxStream.SetTargets(new[] { g0, g1, g2, lightHandle }, depthHandle);
+            GfxStream.SetTargets(gbufferTargets, depthHandle);
             GfxStream.Viewport(viewport);
             if (s_MaterialHandles.Length < s_Items.Count) Array.Resize(ref s_MaterialHandles, Math.Max(s_Items.Count, s_MaterialHandles.Length * 2));
             GfxStream.StateOverride(s_GBufferStencil);
@@ -164,7 +174,7 @@ namespace Unbound.Runtime
             {
                 var (item, pass) = deferred[i];
                 if (item.Material.shader != null && item.Material.shader.IsLodHidden) continue;
-                EmitDraw(item, item.Material.Sync(), pass);
+                EmitDraw(item, item.Material.Sync(), pass, extraKeyword: shadowmask ? "SHADOWS_SHADOWMASK" : null);
             }
             GfxStream.StateOverride(null);
             RunEvent(camera, CameraEvent.AfterGBuffer, light);
@@ -182,6 +192,7 @@ namespace Unbound.Runtime
             GfxStream.GlobalTexture("_CameraGBufferTexture0", g0);
             GfxStream.GlobalTexture("_CameraGBufferTexture1", g1);
             GfxStream.GlobalTexture("_CameraGBufferTexture2", g2);
+            if (shadowmask) GfxStream.GlobalTexture("_CameraGBufferTexture4", g4);
             GfxStream.GlobalTexture("_CameraDepthTexture", sampledHandle);
 
             // Shadows: collected against the G-buffer's depth. The camera's depth texture is the
@@ -277,6 +288,11 @@ namespace Unbound.Runtime
                 foreach (var k in s_DeferredLightKeywords) GfxStream.Keyword(k, k == keyword);
                 if (shadowKeyword != null) GfxStream.Keyword(shadowKeyword, true);
                 if (softKeyword != null) GfxStream.Keyword(softKeyword, true);
+                // The light pass keywords of a light mixed with a shadow mask (UnityShadowLibrary.cginc's table).
+                bool masked = shadowmask && BakedLighting.MixesShadowmask(l);
+                bool mixing = masked && QualitySettings.shadowmaskMode == ShadowmaskMode.Shadowmask;
+                if (masked) GfxStream.Keyword("SHADOWS_SHADOWMASK", true);
+                if (mixing) GfxStream.Keyword("LIGHTMAP_SHADOW_MIXING", true);
                 if (kind == VolumeKind.View)
                 {
                     GfxStream.StateOverride(s_LightStencil);
@@ -296,6 +312,8 @@ namespace Unbound.Runtime
                 }
                 if (shadowKeyword != null) GfxStream.Keyword(shadowKeyword, false);
                 if (softKeyword != null) GfxStream.Keyword(softKeyword, false);
+                if (masked) GfxStream.Keyword("SHADOWS_SHADOWMASK", false);
+                if (mixing) GfxStream.Keyword("LIGHTMAP_SHADOW_MIXING", false);
             }
             if (lights.Count > 0) GfxStream.StateOverride(null);
             foreach (var k in s_DeferredLightKeywords) GfxStream.Keyword(k, false);

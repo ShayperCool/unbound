@@ -328,6 +328,7 @@ namespace Unbound.Runtime
             {
                 if (!renderer || !(IsMeshLike(renderer) || renderer is LineRenderer || renderer is TrailRenderer) || renderer.forceRenderingOff) continue;
                 if (!renderer.enabled || !renderer.m_GameObject.activeInHierarchy || renderer.shadowCastingMode == ShadowCastingMode.Off) continue;
+                if (!BakedLighting.CastsRealtimeShadow(light, renderer)) continue;
                 // Only what the camera's layers show casts shadows (measured:
                 // tests/projects/messages, a caster outside the culling mask is not visible).
                 int layer = 1 << renderer.m_GameObject.m_Layer;

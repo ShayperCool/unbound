@@ -244,6 +244,54 @@ namespace UnityEngine
         /// <summary>A lightmap index that names a lightmap (0xFFFE and 0xFFFF name none).</summary>
         internal static bool IsLightmapIndex(int index) => index >= 0 && index < 0xFFFE;
 
+        /// <summary>A mixed light baked in the Shadowmask Lighting Mode: the built-in pipeline mixes
+        /// its baked shadow mask with its realtime shadows.</summary>
+        internal static bool MixesShadowmask(Light light) =>
+            light != null && GraphicsSettings.currentRenderPipeline == null
+            && light.bakingOutput is { isBaked: true, lightmapBakeType: LightmapBakeType.Mixed, mixedLightingMode: MixedLightingMode.Shadowmask };
+
+        static bool Lightmapped(Renderer renderer) =>
+            renderer != null && IsLightmapIndex(renderer.lightmapIndex) && LightmapSettings.Of(renderer.lightmapIndex)?.m_Light != null;
+
+        /// <summary>
+        /// The built-in pipeline's shadowmask keywords of a forward pass lit by <paramref name="light"/>,
+        /// as Unity's UnityShadowLibrary.cginc lists them: a lightmapped renderer takes
+        /// SHADOWS_SHADOWMASK, with LIGHTMAP_SHADOW_MIXING in the Shadowmask mode (not in Distance
+        /// Shadowmask); any other renderer takes LIGHTMAP_SHADOW_MIXING in the Shadowmask mode. A
+        /// pass without the lightmap (ForwardAdd) gets the renderer's shadow mask and lightmap scale
+        /// and offset (tests/projects/shadowmaskmix forward_*).
+        /// </summary>
+        internal static Dictionary<int, object> ApplyShadowmask(Renderer renderer, Light light, bool lightmaps, Dictionary<int, object> properties, List<string> keywords)
+        {
+            if (!MixesShadowmask(light)) return properties;
+            bool shadowmaskMode = QualitySettings.shadowmaskMode == ShadowmaskMode.Shadowmask;
+            if (Lightmapped(renderer))
+            {
+                if (!lightmaps)
+                {
+                    properties = DrawPropertyPool.Copy(properties);
+                    properties[s_ShadowMask] = LightmapSettings.Of(renderer.lightmapIndex).m_ShadowMask ?? DefaultTextures.White;
+                    properties[s_LightmapST] = renderer.lightmapScaleOffset;
+                }
+                keywords.Add("SHADOWS_SHADOWMASK");
+            }
+            if (shadowmaskMode) keywords.Add("LIGHTMAP_SHADOW_MIXING");
+            return properties;
+        }
+
+        /// <summary>Whether a renderer casts <paramref name="light"/>'s realtime shadows: a light
+        /// mixed with a shadow mask leaves lightmapped renderers out under NonLightmappedOnly, and
+        /// Default is NonLightmappedOnly in the Shadowmask mode and Everything in Distance Shadowmask
+        /// (Light.lightShadowCasterMode; tests/projects/shadowmaskmix *_default, *_nonlightmappedonly).</summary>
+        internal static bool CastsRealtimeShadow(Light light, Renderer renderer)
+        {
+            if (!MixesShadowmask(light)) return true;
+            var mode = light.lightShadowCasterMode;
+            if (mode == LightShadowCasterMode.Default)
+                mode = QualitySettings.shadowmaskMode == ShadowmaskMode.Shadowmask ? LightShadowCasterMode.NonLightmappedOnly : LightShadowCasterMode.Everything;
+            return mode == LightShadowCasterMode.Everything || !Lightmapped(renderer);
+        }
+
         internal static int RealtimeContributors(JsonElement root)
         {
             int count = 0;
@@ -418,16 +466,11 @@ namespace UnityEngine
                 if (!realtimeDirectional) keywords.Add("DIRLIGHTMAP_COMBINED");
             }
             else if (realtimeDirectional) properties[s_LightmapInd] = FlatDirection;
-            if (map?.m_ShadowMask != null)
-            {
-                properties[s_ShadowMask] = map.m_ShadowMask;
-                // Mixed lighting's shadow masks are bound. A render pipeline mixes them with
-                // its realtime shadows itself (URP sets their keywords: tests/projects/urp
-                // lightmap_shadowmask, lightmap_distance_shadowmask); the built-in one does not yet.
-                if (GraphicsSettings.currentRenderPipeline == null)
-                    Unbound.Runtime.Stubs.Ignored("QualitySettings.shadowmaskMode",
-                    "baked shadow masks are not mixed with realtime shadows yet (shadowmaskMode and Light.lightShadowCasterMode have no effect)");
-            }
+            // Mixed lighting's shadow masks are bound. A render pipeline mixes them with its
+            // realtime shadows itself (URP sets their keywords: tests/projects/urp
+            // lightmap_shadowmask, lightmap_distance_shadowmask); the built-in pipeline's forward
+            // passes take the keywords of their light (ApplyShadowmask).
+            if (map?.m_ShadowMask != null) properties[s_ShadowMask] = map.m_ShadowMask;
         }
 
         /// <summary>A BatchRendererGroup draw's lightmap (its command's index, the legacy lightmaps

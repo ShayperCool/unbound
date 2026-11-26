@@ -1251,6 +1251,9 @@ namespace Unbound.Runtime
             || renderer is BillboardRenderer;
 
         static readonly List<string> s_DrawKeywords = new List<string>();
+        /// <summary>The light of the built-in forward pass being drawn (the base pass's light, a
+        /// ForwardAdd pass's), whose shadow mask mixing picks the pass's keywords; null otherwise.</summary>
+        static Light s_ShadowmaskLight;
         static readonly int s_RenderingLayerId = Shader.PropertyToID("unity_RenderingLayer");
         /// <summary>The renderingLayerMask the renderer's draws get without one of their own: the
         /// native draw's unity_RenderingLayer default.</summary>
@@ -1291,6 +1294,8 @@ namespace Unbound.Runtime
             if (IsMeshLike(item.Renderer))
             {
                 properties = BakedLighting.Apply(item.Renderer, properties, s_DrawKeywords, lightmaps, probes, proxyVolumes);
+                if (s_ShadowmaskLight != null)
+                    properties = BakedLighting.ApplyShadowmask(item.Renderer, s_ShadowmaskLight, lightmaps, properties, s_DrawKeywords);
                 properties = ReflectionProbe.Apply(item.Renderer, properties, srp);
                 properties = SpeedTreeWindSystem.Apply(item.Renderer, properties);
             }
@@ -2601,7 +2606,9 @@ namespace Unbound.Runtime
                 extra[Shader.PropertyToID("unity_SHBb")] = bb;
                 extra[Shader.PropertyToID("unity_SHC")] = c;
             }
-            EmitForward(item, s_MaterialHandles[i], true, true, extra, keyword, shadowKeyword, dispatch);
+            s_ShadowmaskLight = baseLight;
+            try { EmitForward(item, s_MaterialHandles[i], true, true, extra, keyword, shadowKeyword, dispatch); }
+            finally { s_ShadowmaskLight = null; }
             if (s_ObjectLights.Pixel.Count == 0) return;
             int addPass = ForwardAddPass(item.Material.shader);
             if (addPass < 0 || item.Material.PassDisabled("ForwardAdd")) return;
@@ -2613,7 +2620,9 @@ namespace Unbound.Runtime
                 string lightKeyword = ForwardLights.AddPassProperties(light, s_ObjectLights.PixelScale(p), properties);
                 AddPassShadow(light, receives, properties, out var shadowDepth, out var shadowSoft);
                 Unbound.Runtime.Profiling.RenderStats.NextDrawLight(light);
-                EmitDraw(item, s_MaterialHandles[i], addPass, false, false, properties, lightKeyword, shadowDepth, shadowSoft, dispatch);
+                s_ShadowmaskLight = light;
+                try { EmitDraw(item, s_MaterialHandles[i], addPass, false, false, properties, lightKeyword, shadowDepth, shadowSoft, dispatch); }
+                finally { s_ShadowmaskLight = null; }
             }
         }
 
