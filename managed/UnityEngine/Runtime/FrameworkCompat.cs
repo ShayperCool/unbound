@@ -141,6 +141,34 @@ namespace Unbound
     }
 
     /// <summary>
+    /// <c>Assembly.Location</c> and <c>Assembly.CodeBase</c> as the Editor answers them for the
+    /// game's assemblies: a precompiled plugin's own file in the project, which Editor code walks
+    /// from to find its package's other files, and a script assembly's
+    /// <c>Library/ScriptAssemblies/&lt;name&gt;.dll</c> under the project (matches the Unity
+    /// 6000.0.71f1 Editor, tests/projects/compilesetup location.*), never a file in Unbound's own
+    /// directory, where it loads them from (<see cref="Unbound.Runtime.GameDomain.ShownFile"/>);
+    /// other assemblies answer as loaded. Game assemblies' uses of these members are redirected
+    /// here when they load (Unbound.Host.FrameworkShims).
+    /// </summary>
+    public static class AssemblyFiles
+    {
+        public static string get_Location(Assembly assembly)
+        {
+            if (assembly is null) throw new NullReferenceException();
+            return Unbound.Runtime.GameDomain.ShownFile(assembly) ?? assembly.Location;
+        }
+
+#pragma warning disable SYSLIB0012 // Mono's CodeBase, which Unity's code reads.
+        public static string get_CodeBase(Assembly assembly)
+        {
+            if (assembly is null) throw new NullReferenceException();
+            var file = Unbound.Runtime.GameDomain.ShownFile(assembly);
+            return file == null ? assembly.CodeBase : "file://" + file;
+        }
+#pragma warning restore SYSLIB0012
+    }
+
+    /// <summary>
     /// .NET Framework / Mono members that .NET lacks, as static methods taking the instance first.
     /// Assemblies calling them are redirected here when they load (Unbound.Host.FrameworkShims).
     /// </summary>

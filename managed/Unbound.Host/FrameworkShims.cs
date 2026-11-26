@@ -33,7 +33,8 @@ static class FrameworkShims
 
     /// <summary>Members .NET has that must answer as in the Editor's process instead: the
     /// command line is Unity's (the Test Framework reads -runTests from it), Stopwatch counts
-    /// Mono's 100 ns ticks, and types and assemblies have Mono's names. Parameterless members only; an instance member's replacement takes
+    /// Mono's 100 ns ticks, types and assemblies have Mono's names, and a game assembly names the file
+    /// the game sees. Parameterless members only; an instance member's replacement takes
     /// the instance.</summary>
     static readonly Dictionary<(string Type, string Name), System.Reflection.MethodInfo> s_Replaced = new()
     {
@@ -46,6 +47,9 @@ static class FrameworkShims
         [("System.Type", "get_FullName")] = typeof(Unbound.MonoTypeNames).GetMethod(nameof(Unbound.MonoTypeNames.get_FullName), new[] { typeof(Type) })!,
         [("System.Reflection.Assembly", "get_FullName")] = typeof(Unbound.MonoTypeNames).GetMethod(nameof(Unbound.MonoTypeNames.get_FullName), new[] { typeof(System.Reflection.Assembly) })!,
         [("System.Reflection.Assembly", "GetName")] = typeof(Unbound.MonoTypeNames).GetMethod(nameof(Unbound.MonoTypeNames.GetName))!,
+        // The file a game assembly names as its own (tests/projects/compilesetup location.*).
+        [("System.Reflection.Assembly", "get_Location")] = typeof(Unbound.AssemblyFiles).GetMethod(nameof(Unbound.AssemblyFiles.get_Location))!,
+        [("System.Reflection.Assembly", "get_CodeBase")] = typeof(Unbound.AssemblyFiles).GetMethod(nameof(Unbound.AssemblyFiles.get_CodeBase))!,
     };
 
     /// <summary>Virtual members of <see cref="s_Replaced"/>: only their virtual calls are redirected; a
@@ -54,6 +58,7 @@ static class FrameworkShims
     {
         ("System.Type", "get_AssemblyQualifiedName"), ("System.Type", "get_FullName"),
         ("System.Reflection.Assembly", "get_FullName"), ("System.Reflection.Assembly", "GetName"),
+        ("System.Reflection.Assembly", "get_Location"), ("System.Reflection.Assembly", "get_CodeBase"),
     };
 
     /// <summary>Members .NET has, with parameters, that must answer as the Editor's Mono does: the

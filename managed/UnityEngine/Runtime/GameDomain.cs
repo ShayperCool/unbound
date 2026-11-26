@@ -50,6 +50,40 @@ namespace Unbound.Runtime
     {
         /// <summary>The release's .NET Framework directory (Mono's lib/mono/4.5).</summary>
         internal static string FrameworkDir;
+
+        static readonly System.Runtime.CompilerServices.ConditionalWeakTable<Assembly, string> s_ShownFiles = new();
+
+        /// <summary>The file a game assembly names as its own (Assembly.Location), as in the Editor
+        /// (tests/projects/compilesetup location.*): a precompiled plugin's file in the project
+        /// (through the project view), a script assembly's `Library/ScriptAssemblies/<name>.dll`
+        /// under the project, a link to the image Unbound loaded; null for other assemblies and
+        /// where the loaded file is already the one shown.</summary>
+        internal static string ShownFile(Assembly assembly) => s_ShownFiles.TryGetValue(assembly, out var file) ? file : null;
+
+        internal static void Show(Assembly assembly, string file) => s_ShownFiles.AddOrUpdate(assembly, file);
+
+        /// <summary>Links a script assembly's `Library/ScriptAssemblies/<name>.dll` of the project the
+        /// game sees (the project view's Library/, Unbound's own) to the image loaded; null (with a
+        /// warning) when the link cannot be made.</summary>
+        internal static string ShowScriptAssembly(string name, string loadedFrom)
+        {
+            if (string.IsNullOrEmpty(ProjectInfo.ProjectPath)) return null;
+            var shown = Path.Combine(ProjectInfo.ProjectPath, "Library", "ScriptAssemblies", name + ".dll");
+            try
+            {
+                Directory.CreateDirectory(Path.GetDirectoryName(shown));
+                var existing = new FileInfo(shown);
+                if (existing.LinkTarget == loadedFrom) return shown;
+                if (existing.Exists || existing.LinkTarget != null) existing.Delete();
+                File.CreateSymbolicLink(shown, loadedFrom);
+                return shown;
+            }
+            catch (Exception e) when (e is IOException || e is UnauthorizedAccessException)
+            {
+                Debug.LogWarning($"Unbound: {name}.dll names its file in Unbound's own directory: {shown} cannot be linked ({e.Message}).");
+                return null;
+            }
+        }
         /// <summary>The project's native libraries the Editor would load here.</summary>
         internal static IReadOnlyList<string> NativePlugins = Array.Empty<string>();
         /// <summary>The native plugins whose importer loads them on startup.</summary>
@@ -543,8 +577,13 @@ namespace Unbound.Runtime
                     }
                     WriteAtomically(record, System.Text.Encoding.UTF8.GetBytes(path));
                 }
-                if (path.Length == 0) return LoadFromAssemblyPath(game.Dll);
-                return LoadFromAssemblyPath(path);
+                var file = path.Length == 0 ? game.Dll : path;
+                var loaded = LoadFromAssemblyPath(file);
+                // The image loaded is Unbound's: the game sees a plugin's own file, a script
+                // assembly's file where the Editor compiles it.
+                var shown = game.PluginGuid != null ? (path.Length == 0 ? null : game.Dll) : ShowScriptAssembly(game.Name, file);
+                if (shown != null) Show(loaded, shown);
+                return loaded;
             }
 
             /// <summary>A generated assembly, from LibraryUnbound/AdaptedAssemblies like adapted ones.</summary>
