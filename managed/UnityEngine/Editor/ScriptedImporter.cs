@@ -363,17 +363,6 @@ namespace Unbound.Runtime
         /// dot); the first by type name where two declare one (not measured).</summary>
         static Dictionary<string, Type> s_ByExtension = new Dictionary<string, Type>(StringComparer.Ordinal);
 
-        /// <summary>The ScriptedImporters that are overrides for an extension (their
-        /// overrideFileExtensions): a `.meta` naming one keeps it (the 2D PSD importer's `.psd`).</summary>
-        static Dictionary<string, List<Type>> s_Overrides = new Dictionary<string, List<Type>>(StringComparer.Ordinal);
-
-        /// <summary>The override importers a path's extension has (by type name).</summary>
-        internal static IReadOnlyList<Type> OverridesFor(string path)
-        {
-            var ext = System.IO.Path.GetExtension(path ?? "").TrimStart('.').ToLowerInvariant();
-            return ext.Length > 0 && s_Overrides.TryGetValue(ext, out var types) ? types : (IReadOnlyList<Type>)Array.Empty<Type>();
-        }
-
         /// <summary>The ScriptedImporter class the project declares for a path's extension, or null.</summary>
         internal static Type ForExtension(string path)
         {
@@ -381,20 +370,20 @@ namespace Unbound.Runtime
             return ext.Length > 0 && s_ByExtension.TryGetValue(ext, out var type) ? type : null;
         }
 
+
         /// <summary>Collects the extensions the loaded ScriptedImporter classes declare and gives
         /// them to the native side, which then picks a file's importer by its extension, as the Editor
         /// does (tests/projects/importerpick); the first time, the `.meta` files naming another
         /// ScriptedImporter than their extension's are written with that importer's section at its
-        /// defaults, as the Editor writes them when the project opens (importerpick open.*). An
-        /// override importer (overrideFileExtensions) imports a file of such an extension whose
-        /// `.meta` names it, as SetImporterOverride leaves it (SetImporterOverride itself is not
-        /// supported).</summary>
+        /// defaults, as the Editor writes them when the project opens (importerpick open.*); a
+        /// `.meta` setting an importer override keeps its importer (<see cref="ImportsAsset(string, long, string, bool)"/>).
+        /// For the measured release families only (Compat.ScriptedImporterSelectionMeasured):
+        /// elsewhere the `.meta` decides, as before.</summary>
         internal static void RegisterExtensions(bool rewriteStale)
         {
+            if (!Compat.ScriptedImporterSelectionMeasured) return;
             var byExtension = new Dictionary<string, Type>(StringComparer.Ordinal);
-            var overrides = new Dictionary<string, List<Type>>(StringComparer.Ordinal);
             var scripts = new Dictionary<string, object>(StringComparer.Ordinal);
-            var overrideScripts = new Dictionary<string, List<object>>(StringComparer.Ordinal);
             var types = new List<Type>();
             foreach (var assembly in GameDomain.Assemblies())
             {
@@ -423,23 +412,10 @@ namespace Unbound.Runtime
                     byExtension[ext] = type;
                     if (script is { } s) scripts[ext] = new { guid = s.Guid, fileId = s.FileId };
                 }
-                foreach (var raw in attribute.overrideFileExtensions ?? Array.Empty<string>())
-                {
-                    var ext = (raw ?? "").TrimStart('.').ToLowerInvariant();
-                    if (ext.Length == 0) continue;
-                    if (!overrides.TryGetValue(ext, out var list)) overrides[ext] = list = new List<Type>();
-                    list.Add(type);
-                    if (script is { } s)
-                    {
-                        if (!overrideScripts.TryGetValue(ext, out var scriptList)) overrideScripts[ext] = scriptList = new List<object>();
-                        scriptList.Add(new { guid = s.Guid, fileId = s.FileId });
-                    }
-                }
             }
             s_ByExtension = byExtension;
-            s_Overrides = overrides;
             string reply;
-            try { reply = Native.Call("scripted-importers", System.Text.Json.JsonSerializer.Serialize(new { extensions = scripts, overrides = overrideScripts })); }
+            try { reply = Native.Call("scripted-importers", System.Text.Json.JsonSerializer.Serialize(new { extensions = scripts })); }
             catch (InvalidOperationException) { return; } // No native side (tests).
             if (!rewriteStale) return;
             using var json = System.Text.Json.JsonDocument.Parse(reply);

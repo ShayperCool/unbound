@@ -1997,43 +1997,44 @@ fn model_documents(guid: Guid) -> Result<Vec<unbound_yaml::Document>> {
 fn effective_scripted_importer(s: &RuntimeState, file: &Path) -> Option<(String, i64)> {
     let named = unbound_assets::meta::scripted_importer_of(file);
     let ext = file.extension().and_then(|e| e.to_str()).unwrap_or("");
-    effective_of(s.scripted_extensions.read().unwrap().as_ref(), named, ext)
+    let overridden = named.is_some() && unbound_assets::meta::has_importer_override(file);
+    effective_of(
+        s.scripted_extensions.read().unwrap().as_ref(),
+        named,
+        ext,
+        overridden,
+    )
 }
 
 /// [`effective_scripted_importer`] of a file of extension `ext` whose `.meta` names the
-/// ScriptedImporter `named`, the project's ScriptedImporters `registry` (None: not yet known).
+/// ScriptedImporter `named` (and sets an importer override: `overridden`), the project's
+/// ScriptedImporters `registry` (None: not yet known).
 fn effective_of(
     registry: Option<&ScriptedExtensions>,
     named: Option<(String, i64)>,
     ext: &str,
+    overridden: bool,
 ) -> Option<(String, i64)> {
     let named = named.map(|(guid, file_id)| (guid.to_ascii_lowercase(), file_id));
     let Some(registry) = registry else {
         return named;
     };
-    let ext = ext.to_ascii_lowercase();
-    // An override importer for the extension the `.meta` names keeps it (the 2D PSD importer's
-    // `.psd`, as SetImporterOverride leaves it).
-    if let Some(named) = &named
-        && registry
-            .overrides
-            .get(&ext)
-            .is_some_and(|scripts| scripts.contains(named))
-    {
-        return Some(named.clone());
+    // An importer override (`importerOverride:`, which SetImporterOverride writes) keeps the
+    // importer the `.meta` names (matches the Unity 6000.0.71f1 Editor, tests/projects/importselfload).
+    if overridden && named.is_some() {
+        return named;
     }
-    if let Some(entry) = registry.defaults.get(&ext) {
+    if let Some(entry) = registry.defaults.get(&ext.to_ascii_lowercase()) {
         return Some(entry.clone());
     }
     named.filter(|(guid, _)| guid == unbound_assets::meta::BUILTIN_SCRIPT_GUID)
 }
 
-/// The project's ScriptedImporters by the extensions they declare (lowercase, no dot): each
-/// extension's importer, and the override importers for it, by their script `(guid, file id)`.
+/// The project's ScriptedImporters by the extensions they declare (lowercase, no dot), by their
+/// script `(guid, file id)`.
 #[derive(Default)]
 struct ScriptedExtensions {
     defaults: HashMap<String, (String, i64)>,
-    overrides: HashMap<String, Vec<(String, i64)>>,
 }
 
 /// `meta` with the section of the importer that imports its file
@@ -2095,8 +2096,6 @@ fn set_scripted_importers(request: &str) -> Result<String> {
     #[derive(Deserialize)]
     struct Request {
         extensions: HashMap<String, Script>,
-        #[serde(default)]
-        overrides: HashMap<String, Vec<Script>>,
     }
     let r: Request = serde_json::from_str(request)?;
     let key = |ext: &str| ext.trim_start_matches('.').to_ascii_lowercase();
@@ -2106,11 +2105,6 @@ fn set_scripted_importers(request: &str) -> Result<String> {
             .extensions
             .into_iter()
             .map(|(ext, s)| (key(&ext), script(s)))
-            .collect(),
-        overrides: r
-            .overrides
-            .into_iter()
-            .map(|(ext, list)| (key(&ext), list.into_iter().map(script).collect()))
             .collect(),
     };
     let s = state();
@@ -2132,10 +2126,7 @@ fn set_scripted_importers(request: &str) -> Result<String> {
                 .map(|(guid, file_id)| (guid.to_ascii_lowercase(), file_id))
                 && named.0 != unbound_assets::meta::BUILTIN_SCRIPT_GUID
                 && named != *declared
-                && !registry
-                    .overrides
-                    .get(&ext)
-                    .is_some_and(|scripts| scripts.contains(&named))
+                && !unbound_assets::meta::has_importer_override(&asset.file)
             {
                 stale.push(asset.path.clone());
             }
@@ -3562,7 +3553,6 @@ mod tests {
     fn the_extension_picks_the_scripted_importer() {
         let foo = ("aaaa".to_string(), 11500000);
         let bar = ("bbbb".to_string(), 11500000);
-        let psd = ("cccc".to_string(), 11500000);
         let tree = (unbound_assets::meta::BUILTIN_SCRIPT_GUID.to_string(), 12405);
         let registry = super::ScriptedExtensions {
             defaults: [
@@ -3570,20 +3560,20 @@ mod tests {
                 ("bar".to_string(), bar.clone()),
             ]
             .into(),
-            overrides: [("psd".to_string(), vec![psd.clone()])].into(),
         };
-        let pick = |named: Option<&(String, i64)>, ext| {
-            super::effective_of(Some(&registry), named.cloned(), ext)
+        let pick = |named: Option<&(String, i64)>, ext, overridden| {
+            super::effective_of(Some(&registry), named.cloned(), ext, overridden)
         };
-        assert_eq!(pick(Some(&bar), "foo"), Some(foo.clone()));
-        assert_eq!(pick(None, "FOO"), Some(foo.clone()));
-        assert_eq!(pick(Some(&foo), "qux"), None);
-        assert_eq!(pick(Some(&foo), "txt"), None);
-        assert_eq!(pick(Some(&psd), "psd"), Some(psd.clone()));
-        assert_eq!(pick(None, "psd"), None);
-        assert_eq!(pick(Some(&tree), "st9"), Some(tree.clone()));
+        assert_eq!(pick(Some(&bar), "foo", false), Some(foo.clone()));
+        assert_eq!(pick(None, "FOO", false), Some(foo.clone()));
+        assert_eq!(pick(Some(&foo), "qux", false), None);
+        assert_eq!(pick(Some(&foo), "txt", false), None);
+        // An importer override keeps the named importer (importselfload).
+        assert_eq!(pick(Some(&bar), "foo", true), Some(bar.clone()));
+        assert_eq!(pick(Some(&foo), "qux", true), Some(foo.clone()));
+        assert_eq!(pick(Some(&tree), "st9", false), Some(tree.clone()));
         assert_eq!(
-            super::effective_of(None, Some(foo.clone()), "qux"),
+            super::effective_of(None, Some(foo.clone()), "qux", false),
             Some(foo.clone())
         );
     }

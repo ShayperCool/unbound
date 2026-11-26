@@ -8,9 +8,10 @@ namespace UnityEditor
     /// Which importer imports an asset: its extension's, whatever its `.meta` names (a project's
     /// ScriptedImporter declaring the extension, else the extension's native importer, else the
     /// DefaultImporter, whose class is AssetImporter), as the Unity 6000.0.71f1 Editor answers
-    /// (tests/projects/importerpick type.*, default.*, available.*, override.*); an override importer
-    /// for its extension (overrideFileExtensions) its `.meta` names imports it instead and is its
-    /// override (SetImporterOverride itself is not supported; overrides unmeasured).
+    /// (tests/projects/importerpick type.*, default.*, available.*, override.*); a `.meta` that sets an
+    /// importer override (`importerOverride:`) keeps the importer it names, which is then its override
+    /// (tests/projects/importselfload; the queries' answers for an override, and SetImporterOverride
+    /// itself, not measured or supported).
     /// </summary>
     public sealed partial class AssetDatabase
     {
@@ -45,27 +46,18 @@ namespace UnityEditor
                 ?? typeof(AssetImporter).Assembly.GetType("UnityEditor.AssetImporters." + name);
         }
 
-        public static Type[] GetAvailableImporters(string path)
-        {
-            var available = new System.Collections.Generic.List<Type>();
-            if (GetDefaultImporter(path) is { } importer) available.Add(importer);
-            if (!string.IsNullOrEmpty(path) && !string.IsNullOrEmpty(AssetPathToGUID(path)))
-                foreach (var type in ScriptedImports.OverridesFor(path))
-                    if (!available.Contains(type)) available.Add(type);
-            return available.ToArray();
-        }
+        public static Type[] GetAvailableImporters(string path) =>
+            GetDefaultImporter(path) is { } importer ? new[] { importer } : Array.Empty<Type>();
 
-        [Obsolete("GetAvailableImporterTypes() has been deprecated. Use GetAvailableImporters() instead (UnityUpgradable) -> GetAvailableImporters(*)")]
+        [Obsolete("GetAvailableImporterTypes() has been deprecated. Use GetAvailableImporters() instead (UnityUpgradable) -> GetAvailableImporters(*)", true)]
         public static Type[] GetAvailableImporterTypes(string path) => GetAvailableImporters(path);
 
-        /// <summary>The override importer its `.meta` names, or null.</summary>
+        /// <summary>The importer a `.meta` setting an importer override names, or null.</summary>
         public static Type GetImporterOverride(string path)
         {
-            if (string.IsNullOrEmpty(path) || string.IsNullOrEmpty(AssetPathToGUID(path))) return null;
-            var type = GetImporterType(path);
-            foreach (var candidate in ScriptedImports.OverridesFor(path))
-                if (candidate == type) return type;
-            return null;
+            var guid = string.IsNullOrEmpty(path) ? null : AssetPathToGUID(path);
+            if (string.IsNullOrEmpty(guid) || !AssetDatabaseRuntime.Info(guid).ImporterOverride) return null;
+            return GetImporterType(path);
         }
 
         /// <summary>The importer an asset's extension has natively and that importer's section of a
