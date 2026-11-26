@@ -1,0 +1,9 @@
+{
+  "commands": [
+    "python3 tests/projects/spriteutility/run.py gate"
+  ],
+  "summary": "spriteutility: .*",
+  "engine_paths": [
+    "managed/UnityEngine/Editor/SpriteUtility.cs"
+  ]
+}
