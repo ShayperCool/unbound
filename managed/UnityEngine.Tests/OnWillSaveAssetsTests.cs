@@ -274,13 +274,17 @@ namespace UnityEngine.Tests
         {
             var body = YText.Map();
             body.Set("m_Graph", YText.Scalar("{fileID: 114350483966674976}"));
-            VisualEffectWrites.WriteResource(body, new UnityEditor.VFX.VisualEffectResource(), "Assets/A.vfx");
+            var resource = new UnityEditor.VFX.VisualEffectResource();
+            resource.initialEventName = "Before First Write";
+            VisualEffectWrites.WriteResource(body, resource, "Assets/A.vfx");
             Assert.Equal(new[] { "m_ObjectHideFlags", "m_CorrespondingSourceObject", "m_PrefabInstance", "m_PrefabAsset", "m_Name", "m_Graph", "m_Infos" }, body.Keys);
             Assert.Equal("{fileID: 114350483966674976}", body.Get("m_Graph").Raw);
             var infos = body.Get("m_Infos");
             Assert.Equal(new[] { "m_RendererSettings", "m_CullingFlags", "m_UpdateMode", "m_PreWarmDeltaTime", "m_PreWarmStepCount", "m_InitialEventName", "m_InstancingMode", "m_InstancingCapacity" }, infos.Keys);
-            Assert.Equal(new[] { "3", "0", "0.05", "0", "OnPlay", "0", "64" }, infos.Values.GetRange(1, 7).ConvertAll(v => v.Raw));
+            // The settings come from the resource (one set before the first write), not constants.
+            Assert.Equal(new[] { "3", "0", "0.05", "0", "Before First Write", "0", "64" }, infos.Values.GetRange(1, 7).ConvertAll(v => v.Raw));
             Assert.Equal(new[] { "motionVectorGenerationMode", "shadowCastingMode", "rayTracingMode", "receiveShadows", "reflectionProbeUsage", "lightProbeUsage" }, infos.Get("m_RendererSettings").Keys);
+            Assert.All(infos.Get("m_RendererSettings").Values, v => Assert.Equal("0", v.Raw));
         }
 
         [Fact]
