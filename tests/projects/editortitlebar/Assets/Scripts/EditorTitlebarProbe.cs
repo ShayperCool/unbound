@@ -129,7 +129,10 @@ public sealed class EditorTitlebarProbe : MonoBehaviour
             Try(() => AssetPreview.GetMiniThumbnail(functions.AddComponent<GameManager>()) is Texture2D t ? t.name + " " + t.width + "x" + t.height : "null"),
             Try(() => AssetPreview.GetMiniThumbnail(functions.AddComponent<UnityEngine.UI.Image>()) is Texture2D t ? t.name + " " + t.width + "x" + t.height : "null"),
             Try(() => EditorGUIUtility.ObjectContent(null, typeof(GameManager)).image is Texture2D t ? t.name + " " + t.width + "x" + t.height : "null"),
-            Try(() => EditorGUIUtility.ObjectContent(null, typeof(TitlebarTarget)).image is Texture2D t ? t.name + " " + t.width + "x" + t.height : "null"));
+            Try(() => EditorGUIUtility.ObjectContent(null, typeof(TitlebarTarget)).image is Texture2D t ? t.name + " " + t.width + "x" + t.height : "null"),
+            Try(() => AssetPreview.GetMiniThumbnail(ScriptableObject.CreateInstance<UnityEngine.Timeline.SignalAsset>()) is Texture2D t ? t.name + " " + t.width + "x" + t.height : "null"),
+            Try(() => AssetPreview.GetMiniThumbnail(ScriptableObject.CreateInstance<TitlebarSignal>()) is Texture2D t ? t.name + " " + t.width + "x" + t.height : "null"),
+            Try(() => AssetPreview.GetMiniThumbnail(functions.AddComponent<TitlebarImage>()) is Texture2D t ? t.name + " " + t.width + "x" + t.height : "null"));
         // Icons whose names several Editor resources share.
         Application.logMessageReceived += (message, stack, type) => m_Logs.Add(type + ": " + message.Split('\n')[0]);
         var iconNames = new[] { "Refresh", "d_Refresh", "Warning", "VerticalLayoutGroup Icon", "d_VerticalLayoutGroup Icon", "toggle on",

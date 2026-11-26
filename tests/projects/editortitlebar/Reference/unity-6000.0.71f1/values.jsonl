@@ -9,7 +9,7 @@
 {"k":"presetValid/more","v":["throws ArgumentNullException: Value cannot be null.\nParameter name: target",false,false]}
 {"k":"hasHelp/more","v":[false,true]}
 {"k":"thumbnails/more","v":["Probe Texture 2x2","null","Custom Icon 4x4"]}
-{"k":"thumbnails/scripts","v":["d_cs Script Icon 256x256","d_Image Icon 32x32","d_cs Script Icon 256x256","d_cs Script Icon 256x256"]}
+{"k":"thumbnails/scripts","v":["d_cs Script Icon 256x256","d_Image Icon 32x32","d_cs Script Icon 256x256","d_cs Script Icon 256x256","d_SignalAsset Icon 64x64","d_SignalAsset Icon 64x64","d_cs Script Icon 256x256"]}
 {"k":"icons","v":["d_Refresh 16x16","d_Refresh 16x16","null","d_VerticalLayoutGroup Icon 32x32","d_VerticalLayoutGroup Icon 32x32","null","null","null","d_cs Script Icon 256x256","d__Help 16x16","d_Folder Icon 256x256"]}
 {"k":"icons/content","v":["d_Refresh 16x16","d_Refresh 16x16","Warning 16x16","d_VerticalLayoutGroup Icon 32x32","d_VerticalLayoutGroup Icon 32x32","toggle on 16x15","d_MeshRenderer Icon 64x64","d_MeshRenderer Icon 64x64","d_cs Script Icon 256x256","d__Help 16x16","d_Folder Icon 256x256"]}
 {"k":"icons/logs","v":[]}

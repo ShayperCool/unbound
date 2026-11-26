@@ -12,8 +12,9 @@ measures, in a game's `OnGUI`:
   one of 33 event functions each, one inheriting one, an inactive GameObject and the child of one),
   `PresetType.IsValid` (also of null and of `[ExcludeFromPreset]` classes), `Help.HasHelpForObject`
   (also of a folder and a texture), `AssetPreview.GetMiniThumbnail` (also of a texture, null, a
-  GameObject with an icon set and script classes `GameManager` and `UnityEngine.UI.Image`, named as
-  classes with Editor icons) and `ObjectNames.GetInspectorTitle`, and the "IN Title" style;
+  GameObject with an icon set, script classes `GameManager`, `UnityEngine.UI.Image` and
+  `UnityEngine.Timeline.SignalAsset`, named as classes with Editor icons, and subclasses of the last
+  two) and `ObjectNames.GetInspectorTitle`, and the "IN Title" style;
 - `EditorGUIUtility.FindTexture` and `IconContent` of icon names, some of which several Editor
   resources share;
 - a scripted sequence of mouse and keyboard events, one per frame in place of the frame's
