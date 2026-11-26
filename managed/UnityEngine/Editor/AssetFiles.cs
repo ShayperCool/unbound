@@ -40,15 +40,8 @@ namespace Unbound.Runtime
             foreach (var id in dirty)
             {
                 var o = ObjectRegistry.FindById(id);
-                if (o == null || !o.IsPersistentAsset) continue;
-                // An asset CreateAsset made is written by SaveCreated, which reports one it cannot write.
-                if (AssetDatabase.CreatedThisSession(o)) continue;
-                // A V2 sprite atlas is an imported object (SpriteAtlasImporter); SaveAssets writes
-                // neither the .spriteatlasv2 nor its .meta and leaves the object dirty (matches the
-                // Unity 6000.0.71f1 Editor, tests/projects/spriteatlaseditor v2include).
-                if (o is UnityEngine.U2D.SpriteAtlas sa && sa.IsFromImporter) continue;
+                if (!Saved(o, out var guid)) continue;
                 if (only is not null && !ReferenceEquals(o, only)) continue;
-                if (!AssetDatabaseRuntime.TryGetLocation(o, out var guid, out _) || guid.StartsWith("0000000000000000", StringComparison.Ordinal)) continue;
                 if (onlyFiles != null && !onlyFiles.Contains(guid)) continue;
                 if (!byGuid.TryGetValue(guid, out var list)) byGuid[guid] = list = new List<Object>();
                 list.Add(o);
@@ -89,6 +82,54 @@ namespace Unbound.Runtime
             {
                 VisualEffectWrites.RefusedInSave = null;
             }
+        }
+
+        /// <summary>Whether a dirty object is one a save writes, and its file's GUID.</summary>
+        static bool Saved(Object o, out string guid)
+        {
+            guid = null;
+            if (o == null || !o.IsPersistentAsset) return false;
+            // An asset CreateAsset made is written by SaveCreated, which reports one it cannot write.
+            if (AssetDatabase.CreatedThisSession(o)) return false;
+            // A V2 sprite atlas is an imported object (SpriteAtlasImporter); SaveAssets writes
+            // neither the .spriteatlasv2 nor its .meta and leaves the object dirty (matches the
+            // Unity 6000.0.71f1 Editor, tests/projects/spriteatlaseditor v2include).
+            if (o is UnityEngine.U2D.SpriteAtlas sa && sa.IsFromImporter) return false;
+            return AssetDatabaseRuntime.TryGetLocation(o, out guid, out _) && !guid.StartsWith("0000000000000000", StringComparison.Ordinal);
+        }
+
+        /// <summary>AssetDatabase.SaveAssetIfDirty of a file: when the file has something to save
+        /// (any of its objects dirty, not only the one asked about), the processors'
+        /// OnWillSaveAssets get its path, and the file is saved when they return it; with nothing
+        /// to save they are not called (matches the Unity 6000.0.71f1 Editor, tests/projects/vfxwrites
+        /// model save if dirty asset: a graph saved through its asset for its dirty model;
+        /// material save if dirty: a material CreateAsset made).</summary>
+        internal static void SaveFileIfDirty(string guid)
+        {
+            Undo.FlushDirtiness();
+            if (!HasChanges(guid)) return;
+            var path = AssetDatabaseRuntime.PathOf(guid);
+            try
+            {
+                VisualEffectWrites.RefusedInSave = new HashSet<UnityEditor.VFX.VisualEffectResource>(ReferenceEqualityComparer.Instance);
+                // A package the project does not hold is not offered (as in SaveAssets).
+                if (!AssetDatabase.IsImmutablePackagePath(path)
+                    && Array.IndexOf(AssetModificationProcessorInternal.OnWillSaveAssets(new[] { path }), path) < 0) return;
+                SaveDirty(onlyFiles: new HashSet<string>(StringComparer.OrdinalIgnoreCase) { guid });
+            }
+            finally
+            {
+                VisualEffectWrites.RefusedInSave = null;
+            }
+        }
+
+        static bool HasChanges(string guid)
+        {
+            if (string.IsNullOrEmpty(guid)) return false;
+            if (AssetDatabase.CreatedHasChanges(guid)) return true;
+            foreach (var id in EditorUtility.DirtyIds)
+                if (Saved(ObjectRegistry.FindById(id), out var g) && string.Equals(g, guid, StringComparison.OrdinalIgnoreCase)) return true;
+            return false;
         }
 
         /// <summary>The documents of an asset file in the text serialization holding a document for

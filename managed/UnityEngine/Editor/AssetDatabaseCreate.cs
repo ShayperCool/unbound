@@ -287,6 +287,12 @@ namespace UnityEditor
             return false;
         }
 
+        /// <summary>Whether the asset CreateAsset made at a GUID has changes to save.</summary>
+        internal static bool CreatedHasChanges(string guid) => s_Created.TryGetValue(guid, out var created) && HasChanges(created);
+
+        /// <summary>Objects added or removed since the file was written, or one of them dirty.</summary>
+        static bool HasChanges(CreatedAsset created) => created.Unsaved || created.Objects.Keys.Any(o => o != null && EditorUtility.IsDirty(o));
+
         /// <summary>The assets CreateAsset made in this session, by GUID.</summary>
         static readonly Dictionary<string, CreatedAsset> s_Created = new Dictionary<string, CreatedAsset>(StringComparer.OrdinalIgnoreCase);
 
@@ -343,7 +349,7 @@ namespace UnityEditor
                 }
                 if (only is not null && !created.Objects.ContainsKey(only)) continue;
                 if (onlyFiles != null && !onlyFiles.Contains(pair.Key)) continue;
-                if (!created.Unsaved && !created.Objects.Keys.Any(o => o != null && EditorUtility.IsDirty(o))) continue;
+                if (!HasChanges(created)) continue;
                 string text;
                 try { text = created.Text(); }
                 catch (NotSupportedException e)
