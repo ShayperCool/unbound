@@ -2523,12 +2523,44 @@ fn a_png_gamma_within_five_percent_of_the_screens_is_left_out() {
     assert_eq!(png_gamma_exponent(100_000), Some(0.45455));
     assert_eq!(png_gamma_exponent(220_000), Some(0.20661));
     assert_eq!(png_gamma_exponent(43_000), Some(1.05708));
-    for none in [47_000, 45_455, 0] {
+    // Nor for one libpng rejects (gamma.Gamma10).
+    for none in [47_000, 45_455, 0, 10] {
         assert_eq!(png_gamma_exponent(none), None, "{none}");
     }
     // gamma.Gamma43000's first texel: 240, 15, 144 read 239, 13, 139.
     let png = png_with_chunks(&[240, 15, 144, 208], false, false, Some(43_000));
     assert_eq!(decoded(&png, true), [239, 13, 139, 208]);
+}
+
+/// A gAMA chunk after the palette is out of place and ignored (gamma.Gamma100000Late); before it,
+/// it applies (240, 15, 144 read 248, 70, 197 at gamma 1.0, gamma.Gamma100000Palette).
+#[test]
+fn a_png_gamma_after_the_palette_is_ignored() {
+    fn chunk(kind: &[u8; 4], data: &[u8]) -> Vec<u8> {
+        let mut out = (data.len() as u32).to_be_bytes().to_vec();
+        out.extend(kind);
+        out.extend(data);
+        out.extend(crc32fast::hash(&out[4..]).to_be_bytes());
+        out
+    }
+    let gama = chunk(b"gAMA", &100_000u32.to_be_bytes());
+    let plte = chunk(b"PLTE", &[240, 15, 144]);
+    let mut z = flate2::write::ZlibEncoder::new(Vec::new(), flate2::Compression::default());
+    std::io::Write::write_all(&mut z, &[0, 0]).unwrap();
+    let data = chunk(b"IDAT", &z.finish().unwrap());
+    let header = chunk(b"IHDR", &[0, 0, 0, 1, 0, 0, 0, 1, 8, 3, 0, 0, 0]);
+    let file = |chunks: &[&[u8]]| {
+        let mut out = b"\x89PNG\r\n\x1a\n".to_vec();
+        out.extend(&header);
+        for c in chunks {
+            out.extend(*c);
+        }
+        out.extend(&data);
+        out.extend(chunk(b"IEND", &[]));
+        out
+    };
+    assert_eq!(decoded(&file(&[&plte, &gama]), true), [240, 15, 144, 255]);
+    assert_eq!(decoded(&file(&[&gama, &plte]), true), [248, 70, 197, 255]);
 }
 
 /// A 16-bit PNG is corrected at 16 bits, then narrowed (gamma.Gamma100000Deep's first texel:

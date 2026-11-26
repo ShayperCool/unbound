@@ -2561,15 +2561,18 @@ const PNG_FP_1: f64 = 100_000.0;
 /// How far from one (in the fixed point) the product of the file's and the screen's gamma must be
 /// for a correction to apply: 5%.
 const PNG_GAMMA_THRESHOLD: f64 = 5_000.0;
+/// The gAMA values libpng accepts (x 100000); others are ignored (gamma.Gamma0, gamma.Gamma10).
+const PNG_GAMMA_RANGE: std::ops::RangeInclusive<u32> = 16..=625_000_000;
 
 /// The exponent a PNG's samples are raised to for its gamma `file_gamma` (the gAMA value x 100000;
-/// an sRGB chunk stands for 45455), or `None` where none applies: no gamma, a zero one, or one whose
-/// correction for the 2.2 screen gamma is within 5% of none. The exponent is 1 / (file x screen),
-/// rounded in the PNG fixed point, as libpng computes it (matches the Unity 6000.0.71f1 Editor for
-/// every 8-bit value at the gammas 1.0, 0.5, 2.2, 0.43, 0.47, 0.45455, 0, and with an sRGB chunk,
-/// tests/projects/textureplatforms gamma.*).
+/// an sRGB chunk stands for 45455), or `None` where none applies: a gamma libpng rejects
+/// ([`PNG_GAMMA_RANGE`]), or one whose correction for the 2.2 screen gamma is within 5% of none.
+/// The exponent is 1 / (file x screen), rounded in the PNG fixed point, as libpng computes it
+/// (matches the Unity 6000.0.71f1 Editor for every 8-bit value at the gammas 1.0, 0.5, 2.2, 0.43,
+/// 0.47, 0.45455, 0, 0.0001, and with an sRGB chunk, tests/projects/textureplatforms gamma.*; the
+/// range's upper end is libpng's, unmeasured).
 fn png_gamma_exponent(file_gamma: u32) -> Option<f64> {
-    if file_gamma == 0 {
+    if !PNG_GAMMA_RANGE.contains(&file_gamma) {
         return None;
     }
     let product = (PNG_SCREEN_GAMMA * f64::from(file_gamma) / PNG_FP_1 + 0.5).floor();
@@ -2583,8 +2586,10 @@ fn png_gamma_exponent(file_gamma: u32) -> Option<f64> {
 /// The gamma an sRGB chunk stands for (1 / 2.2 in the PNG fixed point).
 const PNG_SRGB_GAMMA: u32 = 45_455;
 
-/// The gamma a PNG file declares before its image data (x 100000): an sRGB chunk's, which wins
-/// over a gAMA chunk wherever it is, else the first gAMA chunk's value.
+/// The gamma a PNG file declares before its palette and image data (x 100000): an sRGB chunk's,
+/// which wins over a gAMA chunk on either side of it, else the first gAMA chunk's value. A chunk
+/// after the palette is out of place and ignored, as libpng ignores it (gamma.Gamma100000Late;
+/// an sRGB chunk there unmeasured).
 fn png_file_gamma(bytes: &[u8]) -> Option<u32> {
     const SIGNATURE: usize = 8;
     let mut at = SIGNATURE;
@@ -2592,7 +2597,7 @@ fn png_file_gamma(bytes: &[u8]) -> Option<u32> {
     while let Some(header) = bytes.get(at..at + 8) {
         let len = u32::from_be_bytes(header[..4].try_into().unwrap()) as usize;
         let kind = &header[4..8];
-        if kind == b"IDAT" || kind == b"IEND" {
+        if kind == b"PLTE" || kind == b"IDAT" || kind == b"IEND" {
             break;
         }
         let data = bytes.get(at + 8..(at + 8).checked_add(len)?)?;
@@ -2629,11 +2634,14 @@ fn png_with_gamma(image: image::DynamicImage, exponent: f64) -> Vec<u8> {
         image,
         ImageLuma16(_) | ImageLumaA16(_) | ImageRgb16(_) | ImageRgba16(_)
     ) {
+        let table: Vec<u8> = (0..=u16::MAX)
+            .map(|v| gamma_corrected(v, u16::MAX, exponent))
+            .collect();
         let deep = image.into_rgba16().into_raw();
         let mut data = Vec::with_capacity(deep.len());
         for pixel in deep.chunks_exact(4) {
             for &c in &pixel[..3] {
-                data.push(gamma_corrected(c, u16::MAX, exponent));
+                data.push(table[usize::from(c)]);
             }
             data.push(narrow_u16(pixel[3]));
         }
