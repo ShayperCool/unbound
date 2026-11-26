@@ -1,0 +1,15 @@
+{
+  "commands": [
+    "python3 tests/projects/eventstacks/run.py gate"
+  ],
+  "summary": "eventstacks: .*",
+  "engine_paths": [
+    "managed/UnityEngine/Core/Events.cs",
+    "managed/UnityEngine/Core/InvokableCalls.cs",
+    "managed/UnityEngine/Core/ExceptionStackTraces.cs",
+    "managed/UnityEngine/Core/StackTraces.cs",
+    "managed/UnityEngine/Core/StackTraceUtility.cs",
+    "managed/UnityEngine/Core/PortablePdb.cs",
+    "managed/UnityEngine/Editor/UnityEventTools.cs"
+  ]
+}
