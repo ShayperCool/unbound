@@ -2213,14 +2213,15 @@ fn is_plain_folder(asset: &unbound_project::assetdb::Asset) -> bool {
     asset.is_folder && !unbound_assets::new_meta::is_folder_plugin(&asset.file)
 }
 
-/// The importer of a listed asset: a plain folder's is the DefaultImporter; a file's is the one the
-/// Editor picks by its extension, or for an extension the list does not know, the one its `.meta`
-/// names (a native-format kind of a package, for one).
 /// Whether the asset's `.meta` sets an importer override, of any importer it names: a project
 /// script's, or a precompiled one's that Unbound does not run as a scripted import itself.
 fn importer_override_set(asset: &unbound_project::assetdb::Asset) -> bool {
     !asset.is_folder && unbound_assets::meta::has_importer_override(&asset.file)
 }
+
+/// The importer of a listed asset: a plain folder's is the DefaultImporter; a file's is the one the
+/// Editor picks by its extension, or for an extension the list does not know, the one its `.meta`
+/// names (a native-format kind of a package, for one).
 
 fn asset_importer(asset: &unbound_project::assetdb::Asset) -> &str {
     if is_plain_folder(asset) {
