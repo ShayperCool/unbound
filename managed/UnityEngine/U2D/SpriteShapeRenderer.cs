@@ -86,7 +86,13 @@ namespace UnityEngine.U2D
         SpriteMaskInteraction m_MaskInteraction;
         Texture m_ShapeTexture;
         Sprite[] m_Sprites = Array.Empty<Sprite>();
-        Bounds m_LocalAABB;
+        /// <summary>The half size of the box a renderer without geometry answers: 2^20 each way about
+        /// its origin (Unity 6000.0.71f1, tests/projects/defaultcontrols spriteShape.*: also moved and
+        /// scaled, the world box following the object; other releases unmeasured, an empty box).</summary>
+        const float UnpreparedExtent = 1048576f;
+
+        Bounds m_LocalAABB = Compat.DefaultConstructorStateMeasured
+            ? new Bounds(Vector3.zero, Vector3.one * (2f * UnpreparedExtent)) : default;
         SpriteSortPoint m_SpriteSortPoint;
 
         /// <summary>The buffers the generator writes: indices, the vertices interleaved (position,

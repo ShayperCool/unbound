@@ -235,6 +235,51 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
+        public void TilemapWithoutAGridHasNoBounds()
+        {
+            var loose = Make("Loose", Vector3.zero).AddComponent<UnityEngine.Tilemaps.Tilemap>();
+            var renderer = loose.gameObject.AddComponent<UnityEngine.Tilemaps.TilemapRenderer>();
+            loose.SetTile(new Vector3Int(2, 1, 0), ScriptableObject.CreateInstance<UnityEngine.Tilemaps.Tile>());
+            Assert.Equal(new Bounds(Vector3.zero, Vector3.zero), loose.localBounds);
+            Assert.Equal(new Bounds(Vector3.zero, Vector3.zero), renderer.localBounds);
+            var grid = Make("Grid", Vector3.zero).AddComponent<Grid>();
+            loose.transform.SetParent(grid.transform, false);
+            Assert.Equal(new Bounds(new Vector3(1.5f, 1f, 0.5f), new Vector3(3f, 2f, 1f)), loose.localBounds);
+        }
+
+        [Fact]
+        public void SpriteShapeWithoutGeometrySpansTwoToTheTwenty()
+        {
+            var shape = Make("Shape", new Vector3(5f, 0f, 0f)).AddComponent<UnityEngine.U2D.SpriteShapeRenderer>();
+            shape.transform.localScale = new Vector3(2f, 2f, 2f);
+            Assert.Equal(new Vector3(1048576f, 1048576f, 1048576f), shape.localBounds.extents);
+            Assert.Equal(new Vector3(5f, 0f, 0f), shape.bounds.center);
+            Assert.Equal(new Vector3(2097152f, 2097152f, 2097152f), shape.bounds.extents);
+        }
+
+        [Fact]
+        public void BillboardHasNoMaterialInstances()
+        {
+            var billboard = Make("Billboard", Vector3.zero).AddComponent<BillboardRenderer>();
+            var mine = new Material(Shader.Create("Q813 test/billboard", 2000)) { name = "Mine" };
+            billboard.sharedMaterial = mine;
+            Assert.Empty(billboard.materials);
+            Assert.Same(mine, billboard.sharedMaterial);
+            // The default material's instance, as a mesh renderer's empty slot gets it (the
+            // default material is the installation's: only its identity is compared here).
+            var mesh = Make("Mesh", Vector3.zero).AddComponent<MeshRenderer>();
+            mesh.sharedMaterials = new Material[] { null };
+            var expected = mesh.material;
+            var instance = billboard.material;
+            Assert.NotSame(mine, billboard.sharedMaterial);
+            Assert.Same(instance, billboard.sharedMaterial);
+            Assert.Same(instance, billboard.material);
+            Assert.Equal(expected == null ? null : expected.name, instance == null ? null : instance.name);
+            Assert.Single(mesh.materials);
+            Object.DestroyImmediate(mine);
+        }
+
+        [Fact]
         public void TrailWithoutPointsSpansTheOriginAndTheObject()
         {
             var away = Make("Away", new Vector3(-10f, 5f, 2f)).AddComponent<TrailRenderer>();

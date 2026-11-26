@@ -1,13 +1,14 @@
 # Default state of implemented API types
 
-The creation-defaults slice (Q813) resolves 31 queued rows with the controls of
+The creation-defaults slice (Q813) resolves 37 queued rows with the controls of
 tests/projects/defaultcontrols (two identical macOS Editor batch captures; the values depend on
 neither the OS nor the graphics device): command buffer names, render texture and attachment
 formats, scene culling masks, default readbacks and culling results, the deprecated terrain
 detail flag, light probe group positions, light layer cull distances, Animator feet pivot,
 target and recorder values, NavMeshAgent queries off the NavMesh, trail bounds without points
 and a world-space canvas's display size. Its second part resolves two more: NavMeshObstacle's
-height and a 2D physics scene's sub-step count. No reference row changes.
+height and a 2D physics scene's sub-step count; its third six: tilemap and sprite shape bounds and
+a billboard's materials. No reference row changes.
 
 The Editor Play-mode API additions retain 108 rows for 14 types from two independent
 Unity 6000.0.71f1 GPU Editor captures, both normal NVIDIA RTX 4060 exits. The repeated

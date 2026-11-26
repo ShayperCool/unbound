@@ -79,6 +79,11 @@ namespace UnityEngine
 
         public BillboardRenderer() { InitializeBillboardDefaults(); }
 
+        /// <summary>Its materials are none and its material an instance of the default material,
+        /// also when a material is set (Unity 6000.0.71f1, tests/projects/defaultcontrols
+        /// materials.billboard*; other releases unmeasured, the shared materials' instances).</summary>
+        internal override bool NoMaterialInstances => Compat.DefaultConstructorStateMeasured;
+
         /// <summary>The asset; its material becomes the renderer's when it has one.</summary>
         public BillboardAsset billboard
         {

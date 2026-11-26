@@ -1472,19 +1472,6 @@
       }
     },
     {
-      "key": "UnityEngine.BillboardRenderer/Property/UnityEngine.Renderer/materials",
-      "module": "UnityEngine.CoreModule",
-      "reason": "BillboardRenderer material-array ownership remains queued. An empty constructor array was ruled out because sharedMaterials retains one null slot, while materials is empty and the singular material getter creates the default instance. The material count and asset association need independent controls.",
-      "expected": {
-        "status": "value",
-        "value": "[]"
-      },
-      "actual": {
-        "status": "value",
-        "value": "[object:UnityEngine.Material:Default-Material (Instance)]"
-      }
-    },
-    {
       "key": "UnityEngine.BoxCollider/Property/UnityEngine.Collider/GeometryHolder",
       "module": "UnityEngine.PhysicsModule",
       "reason": "Q411 typed collider geometry remains unimplemented. Correct factory and material state do not supply its dimensions and shape payload; returning only the fresh type enum would conceal the missing mechanism. Keep this exact discrepancy for typed geometry and assignment controls.",
@@ -1824,71 +1811,6 @@
       "actual": {
         "status": "value",
         "value": "-23682"
-      }
-    },
-    {
-      "key": "UnityEngine.Tilemaps.Tilemap/Property/UnityEngine.Tilemaps.Tilemap/localBounds",
-      "module": "UnityEngine.TilemapModule",
-      "reason": "The bounds follow renderable tile geometry, not logical cellBounds: independent controls remain empty after resizing the map and after adding a tile without a sprite. The cached sprite-geometry bounds and renderer propagation still need implementation; do not substitute a zero constant for populated maps.",
-      "expected": {
-        "status": "value",
-        "value": "UnityEngine.Bounds{center=UnityEngine.Vector3{x=0;y=0;z=0};extents=UnityEngine.Vector3{x=0;y=0;z=0};max=UnityEngine.Vector3{x=0;y=0;z=0};min=UnityEngine.Vector3{x=0;y=0;z=0};size=UnityEngine.Vector3{x=0;y=0;z=0}}"
-      },
-      "actual": {
-        "status": "value",
-        "value": "UnityEngine.Bounds{center=UnityEngine.Vector3{x=0;y=0;z=0.5};extents=UnityEngine.Vector3{x=0;y=0;z=0.5};max=UnityEngine.Vector3{x=0;y=0;z=1};min=UnityEngine.Vector3{x=0;y=0;z=0};size=UnityEngine.Vector3{x=0;y=0;z=1}}"
-      }
-    },
-    {
-      "key": "UnityEngine.Tilemaps.TilemapRenderer/Property/UnityEngine.Renderer/bounds",
-      "module": "UnityEngine.TilemapModule",
-      "reason": "The bounds follow renderable tile geometry, not logical cellBounds: independent controls remain empty after resizing the map and after adding a tile without a sprite. The cached sprite-geometry bounds and renderer propagation still need implementation; do not substitute a zero constant for populated maps.",
-      "expected": {
-        "status": "value",
-        "value": "UnityEngine.Bounds{center=UnityEngine.Vector3{x=0;y=0;z=0};extents=UnityEngine.Vector3{x=0;y=0;z=0};max=UnityEngine.Vector3{x=0;y=0;z=0};min=UnityEngine.Vector3{x=0;y=0;z=0};size=UnityEngine.Vector3{x=0;y=0;z=0}}"
-      },
-      "actual": {
-        "status": "value",
-        "value": "UnityEngine.Bounds{center=UnityEngine.Vector3{x=0;y=0;z=0.5};extents=UnityEngine.Vector3{x=0;y=0;z=0.5};max=UnityEngine.Vector3{x=0;y=0;z=1};min=UnityEngine.Vector3{x=0;y=0;z=0};size=UnityEngine.Vector3{x=0;y=0;z=1}}"
-      }
-    },
-    {
-      "key": "UnityEngine.Tilemaps.TilemapRenderer/Property/UnityEngine.Renderer/localBounds",
-      "module": "UnityEngine.TilemapModule",
-      "reason": "The bounds follow renderable tile geometry, not logical cellBounds: independent controls remain empty after resizing the map and after adding a tile without a sprite. The cached sprite-geometry bounds and renderer propagation still need implementation; do not substitute a zero constant for populated maps.",
-      "expected": {
-        "status": "value",
-        "value": "UnityEngine.Bounds{center=UnityEngine.Vector3{x=0;y=0;z=0};extents=UnityEngine.Vector3{x=0;y=0;z=0};max=UnityEngine.Vector3{x=0;y=0;z=0};min=UnityEngine.Vector3{x=0;y=0;z=0};size=UnityEngine.Vector3{x=0;y=0;z=0}}"
-      },
-      "actual": {
-        "status": "value",
-        "value": "UnityEngine.Bounds{center=UnityEngine.Vector3{x=0;y=0;z=0.5};extents=UnityEngine.Vector3{x=0;y=0;z=0.5};max=UnityEngine.Vector3{x=0;y=0;z=1};min=UnityEngine.Vector3{x=0;y=0;z=0};size=UnityEngine.Vector3{x=0;y=0;z=1}}"
-      }
-    },
-    {
-      "key": "UnityEngine.U2D.SpriteShapeRenderer/Property/UnityEngine.Renderer/bounds",
-      "module": "UnityEngine.SpriteShapeModule",
-      "reason": "The unprepared renderer retains conservative bounds before geometry is supplied. Explicit local-bounds storage and immediate reset are separate measured contexts; geometry preparation and reset timing remain unresolved. Returning only the fresh extent would hide the missing geometry-bound transition.",
-      "expected": {
-        "status": "value",
-        "value": "UnityEngine.Bounds{center=UnityEngine.Vector3{x=0;y=0;z=0};extents=UnityEngine.Vector3{x=1048576;y=1048576;z=1048576};max=UnityEngine.Vector3{x=1048576;y=1048576;z=1048576};min=UnityEngine.Vector3{x=-1048576;y=-1048576;z=-1048576};size=UnityEngine.Vector3{x=2097152;y=2097152;z=2097152}}"
-      },
-      "actual": {
-        "status": "value",
-        "value": "UnityEngine.Bounds{center=UnityEngine.Vector3{x=0;y=0;z=0};extents=UnityEngine.Vector3{x=0;y=0;z=0};max=UnityEngine.Vector3{x=0;y=0;z=0};min=UnityEngine.Vector3{x=0;y=0;z=0};size=UnityEngine.Vector3{x=0;y=0;z=0}}"
-      }
-    },
-    {
-      "key": "UnityEngine.U2D.SpriteShapeRenderer/Property/UnityEngine.Renderer/localBounds",
-      "module": "UnityEngine.SpriteShapeModule",
-      "reason": "The unprepared renderer retains conservative bounds before geometry is supplied. Explicit local-bounds storage and immediate reset are separate measured contexts; geometry preparation and reset timing remain unresolved. Returning only the fresh extent would hide the missing geometry-bound transition.",
-      "expected": {
-        "status": "value",
-        "value": "UnityEngine.Bounds{center=UnityEngine.Vector3{x=0;y=0;z=0};extents=UnityEngine.Vector3{x=1048576;y=1048576;z=1048576};max=UnityEngine.Vector3{x=1048576;y=1048576;z=1048576};min=UnityEngine.Vector3{x=-1048576;y=-1048576;z=-1048576};size=UnityEngine.Vector3{x=2097152;y=2097152;z=2097152}}"
-      },
-      "actual": {
-        "status": "value",
-        "value": "UnityEngine.Bounds{center=UnityEngine.Vector3{x=0;y=0;z=0};extents=UnityEngine.Vector3{x=0;y=0;z=0};max=UnityEngine.Vector3{x=0;y=0;z=0};min=UnityEngine.Vector3{x=0;y=0;z=0};size=UnityEngine.Vector3{x=0;y=0;z=0}}"
       }
     },
     {

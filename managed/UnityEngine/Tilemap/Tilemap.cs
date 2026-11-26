@@ -137,7 +137,13 @@ namespace UnityEngine.Tilemaps
 
         public BoundsInt cellBounds => new BoundsInt(m_Origin, m_Size);
 
-        public Bounds localBounds
+        /// <summary>The cells' box in the grid's space; a tilemap without a Grid has none (Unity
+        /// 6000.0.71f1, tests/projects/defaultcontrols tilemap.loose.*: empty, resized and with
+        /// tiles; other releases unmeasured, the cells' box).</summary>
+        public Bounds localBounds =>
+            Compat.DefaultConstructorStateMeasured && layoutGrid == null ? default : CellsLocalBounds;
+
+        Bounds CellsLocalBounds
         {
             get
             {
@@ -151,7 +157,7 @@ namespace UnityEngine.Tilemaps
             }
         }
 
-        internal Bounds localFrameBounds => localBounds;
+        internal Bounds localFrameBounds => CellsLocalBounds;
 
         public float animationFrameRate
         {
