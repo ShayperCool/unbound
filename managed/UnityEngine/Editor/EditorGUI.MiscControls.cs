@@ -19,8 +19,20 @@ namespace UnityEditor
         static readonly int s_FoldoutHeaderHash = "FoldoutHeader".GetHashCode();
         static int s_FoldoutHeaderGroupActive;
 
-        public static void ProgressBar(Rect position, float value, string text) =>
+        /// <summary>Whether the controls of this file are measured for the release family; other
+        /// families keep the unmeasured answer (not implemented, said once, the value given back).</summary>
+        internal static bool MiscMeasured(string member)
+        {
+            if (Compat.EditorValueFieldsMeasured) return true;
+            Stubs.NotImplemented(member);
+            return false;
+        }
+
+        public static void ProgressBar(Rect position, float value, string text)
+        {
+            if (!MiscMeasured("UnityEditor.EditorGUI.ProgressBar")) return;
             ProgressBar(position, value, GUIContent.Temp(text), false, EditorStyles.progressBarBack, EditorStyles.progressBarBar, EditorStyles.progressBarText);
+        }
 
         /// <summary>A progress bar: the background, the bar's part (an animated bar for -1) and the
         /// text, shortened with "..." in the middle to fit; true for a mouse down on it.</summary>
@@ -99,8 +111,11 @@ namespace UnityEditor
         public static void IntPopup(Rect position, SerializedProperty property, GUIContent[] displayedOptions, int[] optionValues) =>
             IntPopup(position, property, displayedOptions, optionValues, null);
 
-        public static void IntPopup(Rect position, SerializedProperty property, GUIContent[] displayedOptions, int[] optionValues, GUIContent label) =>
+        public static void IntPopup(Rect position, SerializedProperty property, GUIContent[] displayedOptions, int[] optionValues, GUIContent label)
+        {
+            if (!MiscMeasured("UnityEditor.EditorGUI.IntPopup")) return;
             IntPopupInternal(position, property, displayedOptions, optionValues, label);
+        }
 
         internal static void IntPopupInternal(Rect position, SerializedProperty property, GUIContent[] displayedOptions, int[] optionValues, GUIContent label)
         {
@@ -114,7 +129,11 @@ namespace UnityEditor
 
         public static void DelayedIntField(Rect position, SerializedProperty property) => DelayedIntField(position, property, null);
 
-        public static void DelayedIntField(Rect position, SerializedProperty property, GUIContent label) => DelayedIntFieldInternal(position, property, label);
+        public static void DelayedIntField(Rect position, SerializedProperty property, GUIContent label)
+        {
+            if (!MiscMeasured("UnityEditor.EditorGUI.DelayedIntField")) return;
+            DelayedIntFieldInternal(position, property, label);
+        }
 
         internal static void DelayedIntFieldInternal(Rect position, SerializedProperty property, GUIContent label)
         {
@@ -128,7 +147,11 @@ namespace UnityEditor
 
         public static void DelayedFloatField(Rect position, SerializedProperty property) => DelayedFloatField(position, property, null);
 
-        public static void DelayedFloatField(Rect position, SerializedProperty property, GUIContent label) => DelayedFloatFieldInternal(position, property, label);
+        public static void DelayedFloatField(Rect position, SerializedProperty property, GUIContent label)
+        {
+            if (!MiscMeasured("UnityEditor.EditorGUI.DelayedFloatField")) return;
+            DelayedFloatFieldInternal(position, property, label);
+        }
 
         internal static void DelayedFloatFieldInternal(Rect position, SerializedProperty property, GUIContent label)
         {
@@ -142,8 +165,11 @@ namespace UnityEditor
 
         public static void DelayedTextField(Rect position, SerializedProperty property) => DelayedTextField(position, property, null);
 
-        public static void DelayedTextField(Rect position, SerializedProperty property, GUIContent label) =>
+        public static void DelayedTextField(Rect position, SerializedProperty property, GUIContent label)
+        {
+            if (!MiscMeasured("UnityEditor.EditorGUI.DelayedTextField")) return;
             DelayedTextFieldHelper(position, property, label, EditorStyles.textField);
+        }
 
         internal static void DelayedTextFieldHelper(Rect position, SerializedProperty property, GUIContent label, GUIStyle style)
         {
@@ -163,6 +189,7 @@ namespace UnityEditor
 
         public static bool DropdownButton(Rect position, GUIContent content, FocusType focusType)
         {
+            if (!MiscMeasured("UnityEditor.EditorGUI.DropdownButton")) return false;
             // Outside OnGUI there is no event: Unity's read of it throws (measured).
             RequireGUI();
             return DropdownButton(position, content, focusType, EditorStyles.miniPullDown);
@@ -176,6 +203,7 @@ namespace UnityEditor
         /// a header inside another shows an error box instead and answers false.</summary>
         public static bool BeginFoldoutHeaderGroup(Rect position, bool foldout, GUIContent content, GUIStyle style = null, Action<Rect> menuAction = null, GUIStyle menuIcon = null)
         {
+            if (!MiscMeasured("UnityEditor.EditorGUI.BeginFoldoutHeaderGroup")) return foldout;
             // Without the inspector's default margins.
             if (EditorGUIUtility.hierarchyMode)
             {
@@ -185,13 +213,13 @@ namespace UnityEditor
             if (style == null)
                 style = EditorStyles.foldoutHeader;
             s_FoldoutHeaderGroupActive++;
-            // Outside OnGUI there is no event: Unity's read of it throws, the group counted (measured).
-            RequireGUI();
             if (s_FoldoutHeaderGroupActive > 1)
             {
                 HelpBox(position, L10n.Tr("You can't nest Foldout Headers, end it with EndFoldoutHeaderGroup."), MessageType.Error);
                 return false;
             }
+            // Outside OnGUI there is no event: Unity's read of it throws, the group counted (measured).
+            RequireGUI();
             const float iconSize = 16;
             Rect menuRect = new Rect
             {
@@ -228,7 +256,11 @@ namespace UnityEditor
             return foldout;
         }
 
-        public static void EndFoldoutHeaderGroup() => s_FoldoutHeaderGroupActive--;
+        public static void EndFoldoutHeaderGroup()
+        {
+            if (!MiscMeasured("UnityEditor.EditorGUI.EndFoldoutHeaderGroup")) return;
+            s_FoldoutHeaderGroupActive--;
+        }
 
         /// <summary>Disables the controls until <see cref="EndDisabled"/> (GUI.enabled kept on a stack).</summary>
         internal static void BeginDisabled(bool disabled)
@@ -250,8 +282,11 @@ namespace UnityEditor
         public static int LogarithmicIntSlider(Rect position, string label, int sliderValue, int leftValue, int rightValue, int logbase, int textFieldMin, int textFieldMax) =>
             LogarithmicIntSlider(position, EditorGUIUtility.TempContent(label), sliderValue, leftValue, rightValue, logbase, textFieldMin, textFieldMax);
 
-        public static int LogarithmicIntSlider(Rect position, GUIContent label, int sliderValue, int leftValue, int rightValue, int logbase, int textFieldMin, int textFieldMax) =>
-            LogarithmicIntSlider(position, label, sliderValue, leftValue, rightValue, EditorStyles.numberField, logbase, textFieldMin, textFieldMax);
+        public static int LogarithmicIntSlider(Rect position, GUIContent label, int sliderValue, int leftValue, int rightValue, int logbase, int textFieldMin, int textFieldMax)
+        {
+            if (!MiscMeasured("UnityEditor.EditorGUI.LogarithmicIntSlider")) return sliderValue;
+            return LogarithmicIntSlider(position, label, sliderValue, leftValue, rightValue, EditorStyles.numberField, logbase, textFieldMin, textFieldMax);
+        }
 
         /// <summary>An int slider on a logarithmic scale (Unity's C# passes no text field style on).</summary>
         internal static int LogarithmicIntSlider(Rect position, GUIContent label, int sliderValue, int leftValue, int rightValue, GUIStyle textfieldStyle, int logbase, int textFieldMin, int textFieldMax)
@@ -265,7 +300,8 @@ namespace UnityEditor
 
     public sealed partial class EditorGUILayout
     {
-        /// <summary>The rect of the last control these layout forms made (Unity's field).</summary>
+        /// <summary>The rect of the last control the layout forms of EditorGUI.MiscControls.cs made
+        /// (Unity's field, which its other layout forms set too; Unbound's do not yet).</summary>
         internal static Rect s_LastRect;
 
         public static void IntPopup(SerializedProperty property, GUIContent[] displayedOptions, int[] optionValues, params GUILayoutOption[] options) =>
@@ -273,6 +309,7 @@ namespace UnityEditor
 
         public static void IntPopup(SerializedProperty property, GUIContent[] displayedOptions, int[] optionValues, GUIContent label, params GUILayoutOption[] options)
         {
+            if (!EditorGUI.MiscMeasured("UnityEditor.EditorGUILayout.IntPopup")) return;
             Rect r = s_LastRect = GetControlRect(true, EditorGUI.kSingleLineHeight, EditorStyles.popup, options);
             EditorGUI.IntPopup(r, property, displayedOptions, optionValues, label);
         }
@@ -285,15 +322,20 @@ namespace UnityEditor
 
         public static void DelayedIntField(SerializedProperty property, GUIContent label, params GUILayoutOption[] options)
         {
+            if (!EditorGUI.MiscMeasured("UnityEditor.EditorGUILayout.DelayedIntField")) return;
             Rect r = s_LastRect = GetControlRect(EditorGUI.LabelHasContent(label), EditorGUI.kSingleLineHeight, EditorStyles.numberField, options);
             EditorGUI.DelayedIntField(r, property, label);
         }
 
-        public static bool DropdownButton(GUIContent content, FocusType focusType, params GUILayoutOption[] options) =>
-            DropdownButton(content, focusType, "MiniPullDown", options);
+        public static bool DropdownButton(GUIContent content, FocusType focusType, params GUILayoutOption[] options)
+        {
+            if (!EditorGUI.MiscMeasured("UnityEditor.EditorGUILayout.DropdownButton")) return false;
+            return DropdownButton(content, focusType, "MiniPullDown", options);
+        }
 
         public static bool DropdownButton(GUIContent content, FocusType focusType, GUIStyle style, params GUILayoutOption[] options)
         {
+            if (!EditorGUI.MiscMeasured("UnityEditor.EditorGUILayout.DropdownButton")) return false;
             s_LastRect = GUILayoutUtility.GetRect(content, style, options);
             return EditorGUI.DropdownButton(s_LastRect, content, focusType, style);
         }
@@ -303,6 +345,7 @@ namespace UnityEditor
 
         public static bool BeginFoldoutHeaderGroup(bool foldout, GUIContent content, GUIStyle style = null, Action<Rect> menuAction = null, GUIStyle menuIcon = null)
         {
+            if (!EditorGUI.MiscMeasured("UnityEditor.EditorGUILayout.BeginFoldoutHeaderGroup")) return foldout;
             if (style == null) style = EditorStyles.foldoutHeader;
             var backgroundRect = GUILayoutUtility.GetRect(content, style);
             return EditorGUI.BeginFoldoutHeaderGroup(backgroundRect, foldout, content, style, menuAction, menuIcon);
@@ -316,9 +359,12 @@ namespace UnityEditor
         /// draw), with the link cursor.</summary>
         public static bool LinkButton(GUIContent label, params GUILayoutOption[] options)
         {
+            if (!EditorGUI.MiscMeasured("UnityEditor.EditorGUILayout.LinkButton")) return false;
             var position = s_LastRect = GUILayoutUtility.GetRect(label, EditorStyles.linkLabel, options);
             Handles.color = EditorStyles.linkLabel.normal.textColor;
             Handles.DrawLine(new Vector3(position.xMin + EditorStyles.linkLabel.padding.left, position.yMax), new Vector3(position.xMax - EditorStyles.linkLabel.padding.right, position.yMax));
+            if (Event.current.type == EventType.Repaint)
+                Stubs.Ignored("UnityEditor.EditorGUILayout.LinkButton underline", "the link's underline is not drawn (Unbound draws no handles)");
             Handles.color = Color.white;
             EditorGUIUtility.AddCursorRect(position, MouseCursor.Link);
             return GUI.Button(position, label, EditorStyles.linkLabel);
@@ -327,13 +373,15 @@ namespace UnityEditor
 
     public sealed partial class EditorGUIUtility
     {
-        /// <summary>An ExecuteCommand event of a command name (the other values a new event's).</summary>
+        /// <summary>An ExecuteCommand event of a command name (the other values a new event's; Unity
+        /// also copies the current input state into it: measured only outside OnGUI, where it has
+        /// none, tests/projects/editorcontrolsb2 commandEvent).</summary>
         public static Event CommandEvent(string commandName) => new Event { type = EventType.ExecuteCommand, commandName = commandName };
 
         /// <summary>Unity's mouse jumping for a drag past the screen's edge: Unbound's mouse does not
         /// wrap (the Editor answers nothing either way, measured).</summary>
-        [Unbound.EditorFaithful("measured: tests/projects/editorcontrolsb2 mouseJumping (the Editor answers nothing; Unbound's mouse does not wrap)")]
-        public static void SetWantsMouseJumping(int wantz) { }
+        public static void SetWantsMouseJumping(int wantz) =>
+            Stubs.Ignored("UnityEditor.EditorGUIUtility.SetWantsMouseJumping", "the cursor does not wrap at the screen's edges while dragging");
 
         /// <summary>The object the object picker shows: none, as Unbound shows no picker window
         /// (the Editor's answer without an open picker, measured).</summary>

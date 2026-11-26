@@ -51,16 +51,9 @@ namespace UnityEditor
             return changed;
         }
 
-        public static void BeginDisabledGroup(bool disabled)
-        {
-            s_EnabledStack.Push(GUI.enabled);
-            GUI.enabled &= !disabled;
-        }
+        public static void BeginDisabledGroup(bool disabled) => BeginDisabled(disabled);
 
-        public static void EndDisabledGroup()
-        {
-            if (s_EnabledStack.Count > 0) GUI.enabled = s_EnabledStack.Pop();
-        }
+        public static void EndDisabledGroup() => EndDisabled();
 
         public static Rect IndentedRect(Rect source)
         {

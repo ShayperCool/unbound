@@ -147,5 +147,34 @@ namespace UnityEngine.Tests
             Assert.Null(EditorGUIUtility.GetObjectPickerObject());
             Assert.Equal(0, EditorGUIUtility.GetObjectPickerControlID());
         }
+
+        sealed class Capture : ILogHandler
+        {
+            internal readonly List<string> Lines = new List<string>();
+            public void LogException(Exception exception, Object context) => Lines.Add(exception.Message);
+            public void LogFormat(LogType logType, Object context, string format, params object[] args) => Lines.Add(string.Format(format, args));
+        }
+
+        [Fact]
+        public void OtherFamiliesReportTheControlsNotImplemented()
+        {
+            var capture = new Capture();
+            var previous = Debug.unityLogger.logHandler;
+            Debug.unityLogger.logHandler = capture;
+            try
+            {
+                using var release = TestRelease.Pin(TestRelease.Unmeasured);
+                var e = Mouse(EventType.MouseDown, Bar.center);
+                Pass(e, () => { EditorGUI.ProgressBar(Bar, 0.5f, "Half"); return 0; });
+                Assert.Equal(EventType.MouseDown, e.type);
+                Assert.False(Pass(Mouse(EventType.MouseUp, Header.center), () => EditorGUI.BeginFoldoutHeaderGroup(Header, false, "Header")));
+                Assert.Equal(0, ActiveHeaders());
+                Assert.Equal(7, Pass(new Event { type = EventType.Repaint }, () => EditorGUI.LogarithmicIntSlider(Bar, GUIContent.none, 7, 1, 100, 10, 1, 100)));
+            }
+            finally { Debug.unityLogger.logHandler = previous; }
+            Assert.Contains(capture.Lines, line => line.Contains("EditorGUI.ProgressBar is not implemented"));
+            Assert.Contains(capture.Lines, line => line.Contains("EditorGUI.BeginFoldoutHeaderGroup is not implemented"));
+            Assert.Contains(capture.Lines, line => line.Contains("EditorGUI.LogarithmicIntSlider is not implemented"));
+        }
     }
 }
