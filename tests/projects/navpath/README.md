@@ -149,9 +149,17 @@ coincidence of the probe's placement, not a rule; the same box 0.1 m lower, or t
 root, is avoided. Unbound's boxes are a cover of circles (`NavMeshObstacle.cs` C5), so every box
 value is listed (reported, not gated).
 
-A lying or tilted capsule pushes agents to its radius plus theirs from its shaft seen from above
-(along +x when they stand on it); Unbound matches every capsule contact value. Every probe capsule's shaft lies within the agent's height; one reaching above or below it is unmeasured, and Unbound meets it at its center as an upright shaft. Walking past one,
-Unity keeps 1 to 2 cm more clearance alongside the shaft; those steering values are listed.
+A lying or tilted capsule clips its shaft against the agent's height span with the horizontal cap
+margin `(1 - |axis.y|) * radius`, keeping full radius while the shaft overlaps the agent's height
+and clipped cap radius `sqrt(r^2 - dy^2)` when the entire shaft lies above or below it (collapsing
+to a single inward-pushing cap circle only when `|axis.y| > 0.99`, measured by `cap5low`/`cap5high`
+vs `cap10low`/`cap10high`), and ranks as a neighbour by the half-diagonal of its horizontal extents
+(`caprank`). Unbound matches every capsule contact value across upright, tilted, lying, clipped,
+sunk, raised, flipped and scaled capsules (including `cap45h382`/`cap45h384`, `cap30h6`, `cap60h8`,
+`cap5h6`, `cap45sunk`, `cap45raised`, `cap135sunk`, `cap45scaled`, `cap5low`/`cap5high`,
+`cap10low`/`cap10high`, `caplyinglow`/`caplyinghigh`/`caplyingabove`, and `caprank`). Walking past
+a lying or tilted capsule, Unity keeps 1 to 2 cm more clearance alongside the shaft; those steering
+values are listed.
 
     UNBOUND_PROBE_UNITY_VERSION=6000.0.71f1 python3 tests/projects/navpath/run.py editor --profile obstacle-shapes --label L
     UNBOUND_PROBE_UNITY_VERSION=6000.0.71f1 python3 tests/projects/navpath/run.py publish --profile obstacle-shapes --label L
