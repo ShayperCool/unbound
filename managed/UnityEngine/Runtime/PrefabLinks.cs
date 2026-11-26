@@ -91,8 +91,10 @@ namespace Unbound.Runtime
             {
                 if (m_Handle is null)
                 {
+                    // The engine's own object (a plain Object made with new has none behind it).
                     using (InAsset ? ObjectRegistry.AsAssets() : default)
-                        m_Handle = new Object { IsPersistentAsset = InAsset };
+                        m_Handle = ObjectConstruction.CreateWithBacking(typeof(Object));
+                    m_Handle.IsPersistentAsset = InAsset;
                 }
                 return m_Handle;
             }

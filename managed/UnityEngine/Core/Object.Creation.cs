@@ -18,7 +18,7 @@ namespace UnityEngine
             new System.Collections.Concurrent.ConcurrentDictionary<Type, bool>();
 
         /// <summary>Whether the nearest engine class of <paramref name="type"/> is Object itself.</summary>
-        static bool HasNoEngineClass(Type type)
+        internal static bool HasNoEngineClass(Type type)
         {
             if (type == typeof(Object)) return true;
             if (type.Assembly == typeof(Object).Assembly) return false;

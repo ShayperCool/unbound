@@ -30,6 +30,26 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
+        public void TheEnginesOwnPlainObjectsAreLive()
+        {
+            // PrefabUtility.GetPrefabInstanceHandle's object (tests/projects/editorcallbacks: a live
+            // handle) and ObjectFactory's plain Object are made by the engine.
+            foreach (bool inAsset in new[] { false, true })
+            {
+                var handle = new Unbound.Runtime.PrefabInstanceData { InAsset = inAsset }.Handle;
+                Assert.False(handle == null);
+                Assert.NotEqual(0, handle.GetInstanceID());
+                Assert.Equal(inAsset, handle.GetInstanceID() > 0);
+                Assert.Equal("", handle.name);
+                Object.DestroyImmediate(handle, true);
+            }
+            var made = UnityEditor.ObjectFactory.CreateInstance(typeof(Object));
+            Assert.False(made == null);
+            Assert.Equal("", made.name);
+            Object.DestroyImmediate(made);
+        }
+
+        [Fact]
         public void EngineObjectsAreStillCreated()
         {
             var material = new Material(Shader.Find("Hidden/InternalErrorShader")) { name = "made" };
