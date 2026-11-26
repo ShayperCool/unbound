@@ -320,15 +320,15 @@ namespace UnityEngine
             bool blended = renderer.lightProbeUsage is LightProbeUsage.BlendProbes or LightProbeUsage.CustomProvided
                 || (renderer.lightProbeUsage == LightProbeUsage.UseProxyVolume && LightProbeProxyVolume.Of(renderer) == null);
             if (!blended) return Vector4.one;
-            if (renderer.m_ProbeOcclusionFrame == Time.frameCount) return renderer.m_ProbeOcclusion;
+            var anchor = renderer.probeAnchor;
+            var position = anchor != null ? anchor.position : renderer.bounds.center;
+            if (renderer.m_ProbeOcclusionFrame == Time.frameCount && renderer.m_ProbeOcclusionAt == position) return renderer.m_ProbeOcclusion;
             var lightProbes = LightmapSettings.lightProbes;
             if (lightProbes == null || lightProbes.count == 0) return Vector4.one;
-            var anchor = renderer.probeAnchor;
             int cell = renderer.m_ProbeCell;
-            if (!lightProbes.Interpolate(anchor != null ? anchor.position : renderer.bounds.center, ref cell, out _, out var occlusion)) return Vector4.one;
+            if (!lightProbes.Interpolate(position, ref cell, out _, out var occlusion)) return Vector4.one;
             renderer.m_ProbeCell = cell;
-            renderer.m_ProbeOcclusion = occlusion;
-            renderer.m_ProbeOcclusionFrame = Time.frameCount;
+            KeepOcclusion(renderer, occlusion, position);
             return occlusion;
         }
 
@@ -519,10 +519,16 @@ namespace UnityEngine
             int cell = renderer.m_ProbeCell;
             if (!lightProbes.Interpolate(position, ref cell, out var sh, out var occlusion)) return properties;
             renderer.m_ProbeCell = cell;
-            renderer.m_ProbeOcclusion = occlusion;
-            renderer.m_ProbeOcclusionFrame = Time.frameCount;
+            KeepOcclusion(renderer, occlusion, position);
             properties = WithProbe(sh, properties, owner: renderer);
             return WithOcclusion(renderer, occlusion, properties);
+        }
+
+        static void KeepOcclusion(Renderer renderer, Vector4 occlusion, Vector3 position)
+        {
+            renderer.m_ProbeOcclusion = occlusion;
+            renderer.m_ProbeOcclusionFrame = Time.frameCount;
+            renderer.m_ProbeOcclusionAt = position;
         }
 
         /// <summary>A built-in pipeline draw's unity_ProbesOcclusion: the probes' occlusion (a

@@ -175,10 +175,14 @@ namespace UnityEngine
 
         /// <summary>As <see cref="Interpolate(Vector3, ref int, out SphericalHarmonicsL2)"/>, with
         /// the probes' occlusion blended the same way (same cell, same fallbacks). Outside the
-        /// probes' bounds the occlusion is 1, as <see cref="Evaluate"/> answers it: measured on the
-        /// Unity 6000.0.71f1 Editor, tests/projects/shadowmaskmix, a renderer centred on a probe
-        /// whose baked occlusion is 0, just outside the stored bounds, is lit unoccluded and
-        /// LightProbes.CalculateInterpolatedLightAndOcclusionProbes answers 1 there.</summary>
+        /// probes' bounds the occlusion is 1, as <see cref="Evaluate"/> answers it; inside them an
+        /// outer cell blends it as it blends the lighting. Both match the Unity 6000.0.71f1 Editor,
+        /// tests/projects/shadowmaskmix: a renderer centred on a probe whose baked occlusion is 0,
+        /// just outside the stored bounds, is lit unoccluded and
+        /// LightProbes.CalculateInterpolatedLightAndOcclusionProbes answers 1 there; a renderer
+        /// outside the hull but inside the bounds takes its outer cell's blend (0.13, forward_outer).
+        /// Where no cell takes the point (degenerate cells) the nearest probe's occlusion stands in,
+        /// unmeasured.</summary>
         internal bool Interpolate(Vector3 p, ref int cell, out SphericalHarmonicsL2 sh, out Vector4 occlusion)
         {
             sh = default;

@@ -296,9 +296,11 @@ namespace UnityEngine
         /// <summary>The light probe cell the renderer was last in (where the next lookup starts).</summary>
         internal int m_ProbeCell = -1;
         /// <summary>The probes' occlusion blended at the renderer with its spherical harmonics, and
-        /// the frame it was blended in (the built-in pipeline's shadow mask mixing reads it).</summary>
+        /// the frame and position it was blended for (the built-in pipeline's shadow mask mixing
+        /// reads it).</summary>
         internal Vector4 m_ProbeOcclusion = Vector4.one;
         internal int m_ProbeOcclusionFrame = -1;
+        internal Vector3 m_ProbeOcclusionAt;
         internal BoxedVectors m_OcclusionBox;
         /// <summary>The probe constants its draws were last given, boxed (see <see cref="BoxedVectors"/>).</summary>
         internal BoxedVectors m_ProbeBoxes;

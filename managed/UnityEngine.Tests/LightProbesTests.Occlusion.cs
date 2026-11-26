@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text.Json;
 using UnityEngine;
+using UnityEngine.Rendering;
 using Xunit;
 
 namespace Unbound.Tests
@@ -9,6 +10,13 @@ namespace Unbound.Tests
     public partial class LightProbesTests
     {
         static ProbeSet SparseOcclusion()
+        {
+            var set = ProbeSet.FromJson(JsonDocument.Parse(SparseOcclusionJson()).RootElement);
+            ProbeTetrahedralization.Build(set);
+            return set;
+        }
+
+        static string SparseOcclusionJson()
         {
             var positions = new[] { Vector3.zero, Vector3.right, Vector3.up, Vector3.forward };
             var json = JsonSerializer.Serialize(new
@@ -25,9 +33,7 @@ namespace Unbound.Tests
                     new { lights = new[] { -1, -1, -1, -1 }, values = new float[4], channels = new[] { -1, -1, -1, -1 } },
                 },
             });
-            var set = ProbeSet.FromJson(JsonDocument.Parse(json).RootElement);
-            ProbeTetrahedralization.Build(set);
-            return set;
+            return json;
         }
 
         [Fact]
@@ -76,6 +82,55 @@ namespace Unbound.Tests
             hint = -1;
             Assert.False(set.Evaluate(outside, ref hint, out _, out readOcc));
             Assert.Equal(Vector4.one, readOcc);
+        }
+
+        /// <summary>LightProbeUsage.CustomProvided (Scripting API 6000.0): "Property
+        /// unity_ProbesOcclusion will be calculated as in normal lighting if it is not part of the
+        /// MaterialPropertyBlock"; a block that holds one wins.</summary>
+        [Fact]
+        public void ACustomProvidedRendererWithoutOcclusionInItsBlockTakesTheProbes()
+        {
+            var saved = LightmapSettings.lightProbes;
+            var go = new GameObject("Custom occlusion");
+            var lightObject = new GameObject("Mixed light");
+            try
+            {
+                var probes = LightProbes.FromJson(JsonDocument.Parse(SparseOcclusionJson()).RootElement);
+                ProbeTetrahedralization.Build(probes.m_Self);
+                LightmapSettings.lightProbes = probes;
+                go.transform.position = new Vector3(0.25f, 0.25f, 0.25f);
+                var renderer = go.AddComponent<MeshRenderer>();
+                renderer.lightProbeUsage = LightProbeUsage.CustomProvided;
+                renderer.probeAnchor = go.transform;
+                var light = lightObject.AddComponent<Light>();
+                light.bakingOutput = new LightBakingOutput
+                {
+                    isBaked = true, lightmapBakeType = LightmapBakeType.Mixed, mixedLightingMode = MixedLightingMode.Shadowmask,
+                    occlusionMaskChannel = 1, probeOcclusionLightIndex = 1,
+                };
+                int occlusionId = Shader.PropertyToID("unity_ProbesOcclusion");
+
+                // SH only: the occlusion is the probes', blended at the renderer.
+                var block = new MaterialPropertyBlock();
+                block.CopySHCoefficientArraysFrom(new SphericalHarmonicsL2[1], 0, 0, 1);
+                renderer.SetPropertyBlock(block);
+                var properties = BakedLighting.Apply(renderer, null, new List<string>());
+                Assert.Equal(new Vector4(0.25f, 0.125f, 1f, 1f), (Vector4)properties[occlusionId]);
+                Assert.Equal(0.125f, BakedLighting.ProbeOcclusion(renderer, light));
+
+                // Its own occlusion wins over the probes'.
+                block.CopyProbeOcclusionArrayFrom(new[] { new Vector4(0.75f, 0.5f, 1f, 1f) });
+                renderer.SetPropertyBlock(block);
+                properties = BakedLighting.Apply(renderer, null, new List<string>());
+                Assert.Equal(new Vector4(0.75f, 0.5f, 1f, 1f), (Vector4)properties[occlusionId]);
+                Assert.Equal(0.5f, BakedLighting.ProbeOcclusion(renderer, light));
+            }
+            finally
+            {
+                LightmapSettings.lightProbes = saved;
+                UnityEngine.Object.DestroyImmediate(go);
+                UnityEngine.Object.DestroyImmediate(lightObject);
+            }
         }
 
         [Fact]
