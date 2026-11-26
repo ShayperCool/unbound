@@ -369,6 +369,9 @@ namespace Unbound.Runtime
         /// the native importer's, the ScriptedImporter imports them through an override only.</summary>
         static HashSet<string> s_NativeDeclared = new HashSet<string>(StringComparer.Ordinal);
 
+        internal static void SetNativeDeclared(IEnumerable<string> extensions) =>
+            s_NativeDeclared = new HashSet<string>(extensions, StringComparer.Ordinal);
+
         static string ExtensionOf(string path) => System.IO.Path.GetExtension(path ?? "").TrimStart('.').ToLowerInvariant();
 
         /// <summary>The ScriptedImporter class the project declares for a path's extension, or null.</summary>
@@ -423,8 +426,13 @@ namespace Unbound.Runtime
         internal static void RegisterExtensions(bool rewriteStale)
         {
             if (!Compat.ScriptedImporterSelectionMeasured) return;
+            // The Editor's own ScriptedImporters (SpeedTree9Importer) take part as Unity's TypeCache
+            // lists them: an extension a project's importer declares too is rejected for both.
             var types = new List<Type>();
+            var assemblies = new List<System.Reflection.Assembly> { typeof(ScriptedImporter).Assembly };
             foreach (var assembly in GameDomain.Assemblies())
+                if (!assemblies.Contains(assembly)) assemblies.Add(assembly);
+            foreach (var assembly in assemblies)
             {
                 Type[] all;
                 try { all = assembly.GetTypes(); }
@@ -437,7 +445,8 @@ namespace Unbound.Runtime
             var selection = Select(types, type => GameDomain.ScriptOf(type) is { FileId: 11500000 });
             foreach (var error in selection.Errors) Debug.LogError(error);
             foreach (var (ext, type) in selection.Plugin)
-                Debug.LogWarning($"{Log.DiagnosticPrefix}the ScriptedImporter {type.FullName} declares the extension '.{ext}' from a plug-in assembly: Unbound does not pick it by the extension (an asset's .meta decides)");
+                if (type.Assembly != typeof(ScriptedImporter).Assembly)
+                    Debug.LogWarning($"{Log.DiagnosticPrefix}the ScriptedImporter {type.FullName} declares the extension '.{ext}' from a plug-in assembly: Unbound does not pick it by the extension (an asset's .meta decides)");
             var byExtension = selection.ByExtension;
             var overrides = selection.Overrides;
             var unsupported = new SortedSet<string>(selection.Plugin.Keys, StringComparer.Ordinal);
@@ -453,7 +462,7 @@ namespace Unbound.Runtime
             {
                 s_ByExtension = byExtension;
                 s_OverridesByExtension = overrides;
-                s_NativeDeclared = new HashSet<string>(StringComparer.Ordinal);
+                SetNativeDeclared(Array.Empty<string>());
                 return;
             }
             using var json = System.Text.Json.JsonDocument.Parse(reply);
@@ -467,7 +476,7 @@ namespace Unbound.Runtime
             }
             s_ByExtension = byExtension;
             s_OverridesByExtension = overrides;
-            s_NativeDeclared = nativeDeclared;
+            SetNativeDeclared(nativeDeclared);
             if (!rewriteStale) return;
             foreach (var path in json.RootElement.GetProperty("stale").EnumerateArray())
                 WriteOwnSection(path.GetString());

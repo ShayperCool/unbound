@@ -36,6 +36,12 @@ namespace UnityEngine.Tests
             public override void OnImportAsset(AssetImportContext ctx) { }
         }
 
+        [ScriptedImporter(1, "json")]
+        sealed class JsonImporter : ScriptedImporter
+        {
+            public override void OnImportAsset(AssetImportContext ctx) { }
+        }
+
         sealed class NoAttributeImporter : ScriptedImporter
         {
             public override void OnImportAsset(AssetImportContext ctx) { }
@@ -76,6 +82,44 @@ namespace UnityEngine.Tests
             Assert.Equal("over", Assert.Single(selection.Plugin).Key);
             Assert.Equal(new[] { "gen", "ovr2" }, Sorted(selection.Overrides.Keys));
             Assert.Equal(new[] { typeof(DupOneImporter) }, selection.Overrides["ovr2"]);
+        }
+
+        /// <summary>An extension Unity imports natively that a project's importer declares stays the
+        /// native importer's ("Scripted importers can't handle a file extension that Unity already
+        /// natively handles", Unity 6000.0 Manual, ScriptedImporters), unless an override is set.</summary>
+        [Fact]
+        public void ANativeExtensionAnImporterDeclaresIsNotImportedByIt()
+        {
+            Assert.True(ScriptedImports.ImportsAsset(typeof(JsonImporter), "Assets/Data/a.json", overridden: false));
+            ScriptedImports.SetNativeDeclared(new[] { "json" });
+            try
+            {
+                Assert.False(ScriptedImports.ImportsAsset(typeof(JsonImporter), "Assets/Data/a.JSON", overridden: false));
+                Assert.True(ScriptedImports.ImportsAsset(typeof(JsonImporter), "Assets/Data/a.json", overridden: true));
+                Assert.True(ScriptedImports.ImportsAsset(typeof(GenImporter), "Assets/Data/Thing.gen", overridden: false));
+            }
+            finally
+            {
+                ScriptedImports.SetNativeDeclared(System.Array.Empty<string>());
+            }
+        }
+
+        /// <summary>The Editor's own SpeedTree9Importer is one of the declarers: a project's importer
+        /// declaring `.st9` too is rejected with it.</summary>
+        [Fact]
+        public void TheEditorsOwnImporterCollidesWithAProjectsOne()
+        {
+            var selection = ScriptedImports.Select(
+                new[] { typeof(UnityEditor.SpeedTree.Importer.SpeedTree9Importer), typeof(St9Importer) },
+                type => type == typeof(St9Importer));
+            Assert.Equal(new[] { "st9" }, Sorted(selection.Rejected));
+            Assert.Empty(selection.ByExtension);
+        }
+
+        [ScriptedImporter(1, "st9")]
+        sealed class St9Importer : ScriptedImporter
+        {
+            public override void OnImportAsset(AssetImportContext ctx) { }
         }
 
         static string[] Sorted(System.Collections.Generic.IEnumerable<string> keys)
