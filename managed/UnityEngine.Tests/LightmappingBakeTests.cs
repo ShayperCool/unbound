@@ -219,7 +219,8 @@ namespace UnityEngine.Tests
                 RealtimeGI.s_Warned.Clear();
                 RealtimeGI.ForgetEnvironment(data.Path);
                 RealtimeGI.SceneUnloaded(data.Handle.Value);
-                UnityEngine.SceneManagement.SceneManager.UnloadSceneAsync(scene);
+                // Closed now: a queued unload would leave the scene open for the next tests.
+                UnityEngine.SceneManagement.SceneManagerInternal.Close(data, remove: true);
             }
         }
 
