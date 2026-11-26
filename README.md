@@ -129,7 +129,7 @@ are still open. **[ ]** means it has not started or is only a stub. The open det
   - [x] First-run import pass, session re-imports, importer overrides, forced re-imports, GUID-only
     `.meta` files
   - [ ] 🚧 `Refresh` of some asset kinds, prefab saves after their source changed in the same session
-  - [ ] `.dae`, `.3ds`, `.blend`, `.max` models
+  - [ ] 🚧 `.dae`, `.3ds`, `.max` models (`.blend` imported through Blender, as the Editor does)
 - [ ] 🚧 **Networking and services**
   - [x] UnityWebRequest, Localization, XR without a device
   - [ ] 🚧 Netcode for GameObjects: host and client on one machine; Multiplayer Play Mode virtual
