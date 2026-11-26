@@ -77,12 +77,13 @@ static class SceneReloadFrames
             switch (++s_Frames)
             {
                 case 3:
+                    // The scene's roots, inactive ones included (GameObject.Find sees active ones only).
+                    var roots = UnityEngine.SceneManagement.SceneManager.GetActiveScene().GetRootGameObjects();
                     foreach (var name in new[] { "Always", "Plain", "AlwaysInactive", "AlwaysDisabled" })
                     {
-                        // Find sees active objects only: an inactive template is found through its parent.
-                        var parent = GameObject.Find(name);
+                        var parent = Array.Find(roots, r => r.name == name);
                         var t = parent != null ? parent.transform.Find(name + "Template") : null;
-                        SceneReloadProbe.Line("template", name, parent == null ? "parentInactive" : t == null ? "missing" : t.gameObject.activeSelf ? "active" : "inactive");
+                        SceneReloadProbe.Line("template", name, parent == null ? "noRoot" : t == null ? "missing" : t.gameObject.activeSelf ? "active" : "inactive");
                     }
                     break;
                 case 5:

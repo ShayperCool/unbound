@@ -11,10 +11,11 @@ setting (see README.md).
 Each capture runs every profile on a fresh copy of the project with
 ProjectSettings/EditorSettings.asset's Enter Play Mode Options set: `none` (options on, nothing
 disabled), `scene` (scene reload disabled), `both` (domain and scene reload disabled). Rows: per
-profile, the probe's lines in order (`<profile>.events`: domain loads, Play mode state changes,
-each object's callbacks with Edit or Play mode and the instance's count) until the probe leaves,
-the callbacks after it sorted (`<profile>.leaving`: their order changes between Editor runs), and
-each template's state at Play mode's third frame (`<profile>.template.<object>`).
+profile and object, its callbacks with Edit or Play mode and the instance's count in order, with the
+domain loads and Play mode state changes among them, until the probe leaves
+(`<profile>.events.<object>`; the order of different objects' callbacks is not compared), its
+callbacks after that (`<profile>.leaving.<object>`), and its template's state at Play mode's third
+frame (`<profile>.template.<object>`).
 """
 import argparse
 import json
@@ -30,6 +31,7 @@ ROOT = Path(__file__).resolve().parent
 REPO = ROOT.parents[2]
 sys.path.insert(0, str(REPO/'tests'))
 import editor_runner  # noqa: E402
+import residuals as residual_lists  # noqa: E402
 from file_writes import PARTS  # noqa: E402
 from probe_paths import reference_file, run_root  # noqa: E402
 
@@ -51,10 +53,17 @@ def copy(project, options):
     settings.write_text(text.replace('  m_EnterPlayModeOptions: 0\n', f'  m_EnterPlayModeOptions: {options}\n'))
 
 
+OBJECTS = ('Always', 'Plain', 'AlwaysInactive', 'AlwaysDisabled')
+
+
 def rows(name, raw):
-    """The profile's rows from the probe's lines. The objects' teardown as the Editor leaves comes in
-    an order that changes between runs (unspecified): the events after `exit` are sorted."""
-    events, leaving, out = [], None, []
+    """The profile's rows from the probe's lines, one row of events per object: its callbacks in
+    order with the domain loads and Play mode state changes among them (the order of different
+    objects' Awake is not specified: MonoBehaviour.Awake, Scripting API 6000.0). The callbacks after
+    the probe leaves come in an object order that changes between runs: each object's are kept in
+    their own order, in `<profile>.leaving.<object>`."""
+    lines, out = [], []
+    leaving = None
     for line in raw.read_text().splitlines() if raw.is_file() else []:
         fields = line.split('\t')
         if fields[0] == 'template':
@@ -64,11 +73,14 @@ def rows(name, raw):
         elif fields[0] == 'exit':
             leaving = []
         elif leaving is not None:
-            leaving.append('/'.join(fields))
+            leaving.append(fields)
         else:
-            events.append('/'.join(fields))
-    out.insert(0, {'key': f'{name}.events', 'value': ' | '.join(events)})
-    out.insert(1, {'key': f'{name}.leaving', 'value': ' | '.join(sorted(leaving or []))})
+            lines.append(fields)
+    for obj in OBJECTS:
+        events = ['/'.join(f) if f[0] in ('domain', 'playmode') else '/'.join(f[1:]) for f in lines
+                  if f[0] in ('domain', 'playmode') or f[0] == obj]
+        out.append({'key': f'{name}.events.{obj}', 'value': ' | '.join(events)})
+        out.append({'key': f'{name}.leaving.{obj}', 'value': ' | '.join('/'.join(f[1:]) for f in leaving or [] if f[0] == obj)})
     return out
 
 
@@ -138,7 +150,9 @@ def create():
     result = editor_runner.run(editor_job(project, out/'editor', ['-executeMethod', 'SceneReloadProbe.Create', '-quit'],
                                           {}, 'scenereloadoff-create'))
     print(editor_runner.summary(result))
-    if result.get('exit_code') != 0 or result.get('forced_exit'):
+    # The Editor's batch quit after authoring may crash at its shutdown (exit 139) once the scene
+    # is written and imported: the files are taken when the scene exists.
+    if result.get('forced_exit') or not (project/SCENE).is_file() or not (project/(SCENE + '.meta')).is_file():
         return 1
     if (ROOT/'Assets/Scenes').exists():
         shutil.rmtree(ROOT/'Assets/Scenes')
@@ -184,30 +198,32 @@ def publish(labels):
     return 0
 
 
-def residuals():
-    path = ROOT/'residuals.json'
-    return {key: reason for reason, keys in json.loads(path.read_text()).items() for key in keys} if path.is_file() else {}
-
-
 def compare(candidate):
-    """Every row exactly; rows residuals.json names are printed with their cause and do not fail."""
+    """Every row exactly; a differing row passes only as a recorded residual (tests/residuals.py)
+    whose `actual` is the value Unbound gives now; every difference is printed with both values."""
     expected, actual = read(reference_file(ROOT, 'jsonl')), read(candidate)
-    known = residuals()
-    failed = residual = 0
-    for key in sorted(expected.keys() | actual.keys()):
-        if key in expected and key in actual and expected[key] == actual[key]:
-            if key in known:
-                print('residual resolved (remove it from residuals.json):', key)
-            continue
-        if key in known:
-            residual += 1
-            print('RESIDUAL', key, '-', known[key])
-            continue
-        failed += 1
-        print('FAIL', key, 'expected', json.dumps(expected.get(key))[:600], 'actual', json.dumps(actual.get(key))[:600])
+    path = ROOT/'residuals.json'
+    gate = residual_lists.Gate(residual_lists.load(path if path.is_file() else None))
+    for key in sorted(expected):
+        if key not in actual:
+            gate.missing(key, 'missing from the run')
+        elif actual[key] == expected[key]:
+            gate.exact_key(key)
+        elif not gate.differs(key, {'actual': actual[key]}):
+            pass
+    for key in sorted(set(actual) - set(expected)):
+        gate.missing(key, f'not in the reference: {json.dumps(actual[key])}')
+    gate.finish(expected.keys())
+    for key, measured, entry in gate.recorded:
+        print('expected', key, json.dumps(expected[key]))
+    for key, measured, entry, text in gate.failed:
+        if key in expected:
+            print('expected', key, json.dumps(expected[key]))
+    for line in gate.lines():
+        print(line)
     matched = sum(key in actual and actual[key] == value for key, value in expected.items())
-    print(f'scenereloadoff: {matched}/{len(expected)} rows match; {failed} differ; {residual} known residuals')
-    return int(failed != 0)
+    print(f'scenereloadoff: {matched}/{len(expected)} rows match; {len(gate.failed)} differ; {len(gate.recorded)} known residuals')
+    return int(not gate.ok)
 
 
 def main():

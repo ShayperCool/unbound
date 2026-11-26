@@ -17,7 +17,10 @@ its template): `Always` (`[ExecuteAlways]`), `Plain` (Play mode only), `AlwaysIn
 inactive object) and `AlwaysDisabled` (the behaviour disabled). `Assets/Editor/SceneReloadProbe.cs`
 (`-executeMethod SceneReloadProbe.Record`) opens the scene in Edit mode and enters Play mode
 (`unbound run --scene` plays it); it records domain loads and Play mode state changes, the templates'
-state at Play mode's third frame, and leaves the Editor at the fifth. `run.py` runs three profiles on
+state at Play mode's third frame (found through the scene's roots, inactive ones included), and
+leaves the Editor at the fifth. The rows give each object's own callbacks in order with the domain
+loads and Play mode state changes among them (the order of different objects' Awake is not
+specified: MonoBehaviour.Awake, Scripting API 6000.0), and its callbacks after the probe leaves. `run.py` runs three profiles on
 fresh copies, with `ProjectSettings/EditorSettings.asset`'s options: `none` (on, nothing disabled),
 `scene` (scene reload disabled), `both` (domain and scene reload disabled).
 
@@ -27,14 +30,16 @@ in Play mode OnEnable again (the same instances) without a second Awake, then St
 behaviour wakes in Play mode; so the `[ExecuteAlways]` objects' templates stay active. With domain
 reload on (`scene`) the reload adds an OnEnable/OnDisable pair in Edit mode before Play mode's
 OnEnable. With the options on and nothing disabled (`none`) the scene's Edit-mode objects get their
-Edit-mode callbacks and are torn down as the domain reloads, and the reloaded scene's objects wake
-in Play mode (every template hidden).
+Edit-mode callbacks and, after the domain reload, are torn down as the scene reloads, and the
+reloaded scene's objects wake in Play mode (every template hidden). The inactive object's template
+stays active in every profile (no callback runs on it).
 
-Residuals (`residuals.json`): Unbound loads the start scene in Play mode (queue row Q811), and folds
-the Editor's Edit-mode start and Play mode's reload into one domain load.
+Residuals (`residuals.json`, tests/residuals.py: each pins the value Unbound gives now): Unbound
+loads the start scene in Play mode (queue row Q811), and folds the Editor's Edit-mode start and Play
+mode's reload into one domain load.
 
-Create (once; the Editor's batch quit after authoring may crash at shutdown, the files are written
-before it), record, publish and check:
+Create (once; the Editor's batch quit after authoring may crash at its shutdown once the scene is
+written, which `create` accepts), record, publish and check:
 
     python3 tests/projects/scenereloadoff/run.py create
     python3 tests/projects/scenereloadoff/run.py native --label a
