@@ -87,10 +87,16 @@ namespace UnityEditor
         /// (entering Play mode) [InitializeOnEnterPlayMode] methods, [InitializeOnLoadMethod]
         /// methods, (entering Play mode) ExitingEditMode, [DidReloadScripts] methods, and
         /// afterAssemblyReload.</summary>
+        static bool s_ExtensionsRegistered;
+
         internal static void LoadEditorDomain(bool enteringPlayMode = false)
         {
             // A new domain orders its OnPostprocessAllAssets callbacks anew, as Unity's does.
             AssetPostprocessing.ForgetOrder();
+            // The project's ScriptedImporters pick their files by extension; the first load writes
+            // the `.meta` files that name another one, as the Editor's import as the project opens.
+            Unbound.Runtime.ScriptedImports.RegisterExtensions(rewriteStale: !s_ExtensionsRegistered);
+            s_ExtensionsRegistered = true;
             MainView.Open();
             DomainLoading = true;
             try

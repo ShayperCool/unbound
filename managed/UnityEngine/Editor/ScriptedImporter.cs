@@ -359,6 +359,130 @@ namespace Unbound.Runtime
     /// </summary>
     internal static class ScriptedImports
     {
+        /// <summary>The project's ScriptedImporters by the extensions they declare (lowercase, no
+        /// dot); the first by type name where two declare one (not measured).</summary>
+        static Dictionary<string, Type> s_ByExtension = new Dictionary<string, Type>(StringComparer.Ordinal);
+
+        /// <summary>The ScriptedImporters that are overrides for an extension (their
+        /// overrideFileExtensions): a `.meta` naming one keeps it (the 2D PSD importer's `.psd`).</summary>
+        static Dictionary<string, List<Type>> s_Overrides = new Dictionary<string, List<Type>>(StringComparer.Ordinal);
+
+        /// <summary>The override importers a path's extension has (by type name).</summary>
+        internal static IReadOnlyList<Type> OverridesFor(string path)
+        {
+            var ext = System.IO.Path.GetExtension(path ?? "").TrimStart('.').ToLowerInvariant();
+            return ext.Length > 0 && s_Overrides.TryGetValue(ext, out var types) ? types : (IReadOnlyList<Type>)Array.Empty<Type>();
+        }
+
+        /// <summary>The ScriptedImporter class the project declares for a path's extension, or null.</summary>
+        internal static Type ForExtension(string path)
+        {
+            var ext = System.IO.Path.GetExtension(path ?? "").TrimStart('.').ToLowerInvariant();
+            return ext.Length > 0 && s_ByExtension.TryGetValue(ext, out var type) ? type : null;
+        }
+
+        /// <summary>Collects the extensions the loaded ScriptedImporter classes declare and gives
+        /// them to the native side, which then picks a file's importer by its extension, as the Editor
+        /// does (tests/projects/importerpick); the first time, the `.meta` files naming another
+        /// ScriptedImporter than their extension's are written with that importer's section at its
+        /// defaults, as the Editor writes them when the project opens (importerpick open.*). An
+        /// override importer (overrideFileExtensions) imports a file of such an extension whose
+        /// `.meta` names it, as SetImporterOverride leaves it (SetImporterOverride itself is not
+        /// supported).</summary>
+        internal static void RegisterExtensions(bool rewriteStale)
+        {
+            var byExtension = new Dictionary<string, Type>(StringComparer.Ordinal);
+            var overrides = new Dictionary<string, List<Type>>(StringComparer.Ordinal);
+            var scripts = new Dictionary<string, object>(StringComparer.Ordinal);
+            var overrideScripts = new Dictionary<string, List<object>>(StringComparer.Ordinal);
+            var types = new List<Type>();
+            foreach (var assembly in GameDomain.Assemblies())
+            {
+                Type[] all;
+                try { all = assembly.GetTypes(); }
+                catch (System.Reflection.ReflectionTypeLoadException e) { all = Array.FindAll(e.Types, t => t != null); }
+                foreach (var type in all)
+                    if (!type.IsAbstract && typeof(ScriptedImporter).IsAssignableFrom(type)
+                        && type.GetCustomAttributes(typeof(ScriptedImporterAttribute), false).Length > 0)
+                        types.Add(type);
+            }
+            types.Sort((a, b) => string.CompareOrdinal(a.FullName, b.FullName));
+            foreach (var type in types)
+            {
+                var attribute = (ScriptedImporterAttribute)type.GetCustomAttributes(typeof(ScriptedImporterAttribute), false)[0];
+                var script = GameDomain.ScriptOf(type);
+                foreach (var raw in attribute.fileExtensions ?? Array.Empty<string>())
+                {
+                    var ext = (raw ?? "").TrimStart('.').ToLowerInvariant();
+                    if (ext.Length == 0) continue;
+                    if (byExtension.TryGetValue(ext, out var first))
+                    {
+                        Debug.LogWarning($"{Log.DiagnosticPrefix}ScriptedImporters {first.FullName} and {type.FullName} both declare the extension '.{ext}': Unbound uses {first.FullName} (which the Editor picks is not measured)");
+                        continue;
+                    }
+                    byExtension[ext] = type;
+                    if (script is { } s) scripts[ext] = new { guid = s.Guid, fileId = s.FileId };
+                }
+                foreach (var raw in attribute.overrideFileExtensions ?? Array.Empty<string>())
+                {
+                    var ext = (raw ?? "").TrimStart('.').ToLowerInvariant();
+                    if (ext.Length == 0) continue;
+                    if (!overrides.TryGetValue(ext, out var list)) overrides[ext] = list = new List<Type>();
+                    list.Add(type);
+                    if (script is { } s)
+                    {
+                        if (!overrideScripts.TryGetValue(ext, out var scriptList)) overrideScripts[ext] = scriptList = new List<object>();
+                        scriptList.Add(new { guid = s.Guid, fileId = s.FileId });
+                    }
+                }
+            }
+            s_ByExtension = byExtension;
+            s_Overrides = overrides;
+            string reply;
+            try { reply = Native.Call("scripted-importers", System.Text.Json.JsonSerializer.Serialize(new { extensions = scripts, overrides = overrideScripts })); }
+            catch (InvalidOperationException) { return; } // No native side (tests).
+            if (!rewriteStale) return;
+            using var json = System.Text.Json.JsonDocument.Parse(reply);
+            foreach (var path in json.RootElement.GetProperty("stale").EnumerateArray())
+                WriteOwnSection(path.GetString());
+        }
+
+        /// <summary>The `.meta` of <paramref name="path"/> written with its importer's section at
+        /// its defaults (the ScriptedImporter its extension's).</summary>
+        static void WriteOwnSection(string path)
+        {
+            UnityEditor.AssetImporter.Evict(path);
+            if (UnityEditor.AssetImporter.GetAtPath(path) is not ScriptedImporter importer || !UnityEditor.AssetDatabase.Editable(path)) return;
+            var meta = UnityEditor.AssetDatabase.FileOf(path) + ".meta";
+            try
+            {
+                var text = System.IO.File.ReadAllText(meta);
+                var written = AssetPaths.WithImporterSection(text, FreshSection(importer));
+                if (written == text) return;
+                System.IO.File.WriteAllText(meta, written);
+                UnityEditor.ProjectImports.Wrote(meta);
+            }
+            catch (Exception e) when (e is System.IO.IOException || e is UnauthorizedAccessException)
+            {
+                Debug.LogError($"Unbound: writing the .meta of {path}: {e.Message}");
+            }
+            UnityEditor.AssetImporter.Evict(path);
+        }
+
+        /// <summary>A ScriptedImporter's section of a `.meta` as the Editor writes it for an importer
+        /// whose file's `.meta` names another one: the ScriptedImporter keys, its script, its fields
+        /// (importerpick open.Other.foo, labels.Default.foo).</summary>
+        internal static string FreshSection(ScriptedImporter importer)
+        {
+            var script = GameDomain.ScriptOf(importer.GetType());
+            if (script == null) return null;
+            var section = UnityYamlText.ParseTopLevel("ScriptedImporter:\n  internalIDToNameTable: []\n  externalObjects: {}\n  serializedVersion: 2\n"
+                + "  userData: \n  assetBundleName: \n  assetBundleVariant: \n  script: {fileID: " + script.Value.FileId + ", guid: " + script.Value.Guid + ", type: 3}\n");
+            var body = section.Get("ScriptedImporter");
+            importer.WriteCustomMeta(body);
+            return UnityYamlText.WriteTopLevel(section);
+        }
+
         /// <summary>True while a project's importer runs: the engine's own import, not the game,
         /// is asking (members that warn when a game relies on them stay quiet then).</summary>
         [ThreadStatic] static int s_Importing;

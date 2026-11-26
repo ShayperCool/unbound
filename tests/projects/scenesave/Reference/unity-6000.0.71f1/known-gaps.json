@@ -193,39 +193,7 @@
     "actual": [
       "AssetImporter"
     ],
-    "reason": "Unbound picks a ScriptedImporter (and so the importer of a file no native importer claims) from the .meta's section, not from the extensions the importers declare: a .meta holding the GUID alone of a style sheet answers AssetImporter where the Editor answers StyleSheetImporter, and of an unclaimed extension gets only its labels written where the Editor writes the DefaultImporter's section (Unbound cannot tell that no package's ScriptedImporter claims it): follow-up"
-  },
-  {
-    "case": "label-metas",
-    "key": "cleared.Other.xyz.meta",
-    "reference": [
-      "same as cleared.Other.xyz.meta"
-    ],
-    "actual": [
-      "same as start.Other.xyz.meta"
-    ],
-    "reason": "Unbound picks a ScriptedImporter (and so the importer of a file no native importer claims) from the .meta's section, not from the extensions the importers declare: a .meta holding the GUID alone of a style sheet answers AssetImporter where the Editor answers StyleSheetImporter, and of an unclaimed extension gets only its labels written where the Editor writes the DefaultImporter's section (Unbound cannot tell that no package's ScriptedImporter claims it): follow-up"
-  },
-  {
-    "case": "label-metas",
-    "key": "file:Assets/Labels/Other.xyz.meta",
-    "reference": "written",
-    "actual": "differs",
-    "reason": "Unbound picks a ScriptedImporter (and so the importer of a file no native importer claims) from the .meta's section, not from the extensions the importers declare: a .meta holding the GUID alone of a style sheet answers AssetImporter where the Editor answers StyleSheetImporter, and of an unclaimed extension gets only its labels written where the Editor writes the DefaultImporter's section (Unbound cannot tell that no package's ScriptedImporter claims it): follow-up"
-  },
-  {
-    "case": "label-metas",
-    "key": "file:snapshot:cleared.Other.xyz.meta",
-    "reference": "written",
-    "actual": "differs",
-    "reason": "Unbound picks a ScriptedImporter (and so the importer of a file no native importer claims) from the .meta's section, not from the extensions the importers declare: a .meta holding the GUID alone of a style sheet answers AssetImporter where the Editor answers StyleSheetImporter, and of an unclaimed extension gets only its labels written where the Editor writes the DefaultImporter's section (Unbound cannot tell that no package's ScriptedImporter claims it): follow-up"
-  },
-  {
-    "case": "label-metas",
-    "key": "file:snapshot:labelled.Other.xyz.meta",
-    "reference": "written",
-    "actual": "differs",
-    "reason": "Unbound picks a ScriptedImporter (and so the importer of a file no native importer claims) from the .meta's section, not from the extensions the importers declare: a .meta holding the GUID alone of a style sheet answers AssetImporter where the Editor answers StyleSheetImporter, and of an unclaimed extension gets only its labels written where the Editor writes the DefaultImporter's section (Unbound cannot tell that no package's ScriptedImporter claims it): follow-up"
+    "reason": "The Editor's StyleSheetImporter (a .uss file's importer) has no class in Unbound, which imports style sheets itself: a style sheet's GUID-only .meta answers AssetImporter where the Editor answers StyleSheetImporter (follow-up; tests/projects/importerpick Guid.uss)"
   },
   {
     "case": "refresh-changes",

@@ -701,6 +701,13 @@ namespace UnityEditor
                 // (tests/projects/scenesave label-metas labelled.*), where that is measured; one
                 // with other lines (a folder's folderAsset, a timeCreated) keeps them as they are.
                 if (string.IsNullOrEmpty(section) && AssetPaths.HoldsGuidAlone(text)) section = LabelMetaSection(path);
+                // A `.meta` naming another importer than its file's (or none, where no new-asset
+                // section is known) is written with its importer's own section (importerpick labels.*).
+                if (string.IsNullOrEmpty(section) && OwnImporterSection(path, text) is { } own)
+                {
+                    if (AssetPaths.HoldsGuidAlone(text)) section = own;
+                    else text = AssetPaths.WithImporterSection(text, own);
+                }
                 if (string.IsNullOrEmpty(section) && !AssetPaths.HasImporterSection(text))
                     Debug.LogWarning($"Unbound: {path}.meta is written without its importer's settings: Unbound does not know the settings the Editor writes there yet.");
                 File.WriteAllText(meta, AssetPaths.WithLabels(text, labels, section));

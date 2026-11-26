@@ -38,6 +38,9 @@ pub struct RuntimeState {
     /// Whether each texture whose `.meta` holds its GUID alone takes its oldest settings
     /// ([`guid_only_cube`]), decided once a session (a warning for each that does not).
     guid_only_cubes: std::sync::Mutex<HashMap<Guid, bool>>,
+    /// The project's ScriptedImporters by the extensions they declare (lowercase, no dot): their
+    /// script `(guid, file id)`, known once the editor domain loaded ([`effective_scripted_importer`]).
+    scripted_extensions: RwLock<Option<ScriptedExtensions>>,
     /// The project's release (for what is measured in another one).
     release: String,
     /// TextCore's COLR layers select native hinting in the measured release family.
@@ -414,6 +417,7 @@ pub fn initialize(project: &Project) -> Result<&'static RuntimeState> {
             .collect(),
         new_meta_measured: unbound_compat::MeasuredFamily::of(project.version).is_some(),
         guid_only_cubes: Default::default(),
+        scripted_extensions: RwLock::new(None),
         release: project.version.to_string(),
         font_colr_native_hinting: project.version.measured_family()
             == Some(unbound_compat::MeasuredFamily::Unity6000_0),
@@ -443,7 +447,7 @@ pub fn initialize(project: &Project) -> Result<&'static RuntimeState> {
                     if is_speedtree8 {
                         return Some(crate::imported_prefabs::documents(guid));
                     }
-                    return unbound_assets::meta::scripted_importer_of(file)
+                    return effective_scripted_importer(state(), file)
                         .map(|_| crate::imported_prefabs::documents(guid));
                 }
                 let data = std::fs::read(file).ok()?;
@@ -845,7 +849,7 @@ pub fn dispatch(method: &str, request: &str) -> Result<String> {
                 )
             })?;
             let importer = (!asset.is_folder)
-                .then(|| unbound_assets::meta::scripted_importer_of(&asset.file))
+                .then(|| effective_scripted_importer(s, &asset.file))
                 .flatten();
             let kind = if importer.is_some() {
                 "scripted"
@@ -1854,6 +1858,12 @@ pub fn dispatch(method: &str, request: &str) -> Result<String> {
         // The importer section the Editor writes into a `.meta` that holds a GUID alone when it
         // writes the file again (its labels set); "" where that is not measured.
         "label-meta-section" => label_meta_section(request),
+        "scripted-importers" => set_scripted_importers(request),
+        // The importer the Editor gives an asset's extension (its native importer, the
+        // DefaultImporter for an extension none declares), and that importer's section of a new
+        // asset where it is measured ("" where not): what a `.meta` naming another importer is
+        // written with (tests/projects/importerpick labels.*).
+        "extension-importer" => extension_importer(request),
         // A texture's importer section at the Editor's defaults, the installed platforms listed:
         // the order and the values of the settings a texture's section lacks.
         "texture-meta-template" => Ok(json!({
@@ -1978,6 +1988,163 @@ fn model_documents(guid: Guid) -> Result<Vec<unbound_yaml::Document>> {
     Ok(crate::models::documents(guid, path, &model, &s.db()))
 }
 
+/// The ScriptedImporter that imports `file`, as its script `(guid, file id)`: the extension
+/// decides, not the `.meta` (matches the Unity 6000.0.71f1 Editor, tests/projects/importerpick):
+/// the project's ScriptedImporter that declares the extension, whatever importer the `.meta` names;
+/// for another extension the Editor's own scripted importer the `.meta` names (a SpeedTree 9 tree),
+/// none for a project's ScriptedImporter the `.meta` names (the extension's native importer, or the
+/// DefaultImporter, imports the file). Before the editor domain loaded, the `.meta` decides.
+fn effective_scripted_importer(s: &RuntimeState, file: &Path) -> Option<(String, i64)> {
+    let named = unbound_assets::meta::scripted_importer_of(file);
+    let ext = file.extension().and_then(|e| e.to_str()).unwrap_or("");
+    effective_of(s.scripted_extensions.read().unwrap().as_ref(), named, ext)
+}
+
+/// [`effective_scripted_importer`] of a file of extension `ext` whose `.meta` names the
+/// ScriptedImporter `named`, the project's ScriptedImporters `registry` (None: not yet known).
+fn effective_of(
+    registry: Option<&ScriptedExtensions>,
+    named: Option<(String, i64)>,
+    ext: &str,
+) -> Option<(String, i64)> {
+    let named = named.map(|(guid, file_id)| (guid.to_ascii_lowercase(), file_id));
+    let Some(registry) = registry else {
+        return named;
+    };
+    let ext = ext.to_ascii_lowercase();
+    // An override importer for the extension the `.meta` names keeps it (the 2D PSD importer's
+    // `.psd`, as SetImporterOverride leaves it).
+    if let Some(named) = &named
+        && registry
+            .overrides
+            .get(&ext)
+            .is_some_and(|scripts| scripts.contains(named))
+    {
+        return Some(named.clone());
+    }
+    if let Some(entry) = registry.defaults.get(&ext) {
+        return Some(entry.clone());
+    }
+    named.filter(|(guid, _)| guid == unbound_assets::meta::BUILTIN_SCRIPT_GUID)
+}
+
+/// The project's ScriptedImporters by the extensions they declare (lowercase, no dot): each
+/// extension's importer, and the override importers for it, by their script `(guid, file id)`.
+#[derive(Default)]
+struct ScriptedExtensions {
+    defaults: HashMap<String, (String, i64)>,
+    overrides: HashMap<String, Vec<(String, i64)>>,
+}
+
+/// `meta` with the section of the importer that imports its file
+/// ([`effective_scripted_importer`]): a ScriptedImporter's own section kept, another importer's
+/// section replaced by that ScriptedImporter's with its defaults (its script alone); a project
+/// ScriptedImporter's section left out where none imports the file (the extension's importer then
+/// reads its defaults).
+fn with_effective_importer(meta: &mut unbound_yaml::Value, effective: Option<(String, i64)>) {
+    let Some(map) = meta.as_map_mut() else { return };
+    let named = map.get("ScriptedImporter").and_then(|section| {
+        let script = section.get("script")?;
+        Some((
+            script.get("guid")?.as_str()?.to_ascii_lowercase(),
+            script.get("fileID")?.as_str()?.parse::<i64>().ok()?,
+        ))
+    });
+    match effective {
+        Some((guid, file_id)) => {
+            if named.as_ref() == Some(&(guid.to_ascii_lowercase(), file_id)) {
+                return;
+            }
+            let importers: Vec<String> = map
+                .iter()
+                .filter(|(k, _)| k.ends_with("Importer"))
+                .map(|(k, _)| k.to_string())
+                .collect();
+            for key in importers {
+                map.remove(&key);
+            }
+            let section = format!(
+                "ScriptedImporter:\n  script: {{fileID: {file_id}, guid: {guid}, type: 3}}\n"
+            );
+            if let Some(fresh) = unbound_yaml::parse_value(&section)
+                .ok()
+                .and_then(|v| v.get("ScriptedImporter").cloned())
+            {
+                map.insert("ScriptedImporter", fresh);
+            }
+        }
+        None => {
+            if named.is_some_and(|(guid, _)| guid != unbound_assets::meta::BUILTIN_SCRIPT_GUID) {
+                map.remove("ScriptedImporter");
+            }
+        }
+    }
+}
+
+/// The project's ScriptedImporters by their extensions, from the editor domain
+/// ([`effective_scripted_importer`]); answers the assets whose `.meta` names another
+/// ScriptedImporter than their extension's, which the Editor writes again as the project opens
+/// (tests/projects/importerpick open.*).
+fn set_scripted_importers(request: &str) -> Result<String> {
+    #[derive(Deserialize)]
+    struct Script {
+        guid: String,
+        #[serde(rename = "fileId")]
+        file_id: i64,
+    }
+    #[derive(Deserialize)]
+    struct Request {
+        extensions: HashMap<String, Script>,
+        #[serde(default)]
+        overrides: HashMap<String, Vec<Script>>,
+    }
+    let r: Request = serde_json::from_str(request)?;
+    let key = |ext: &str| ext.trim_start_matches('.').to_ascii_lowercase();
+    let script = |s: Script| (s.guid.to_ascii_lowercase(), s.file_id);
+    let registry = ScriptedExtensions {
+        defaults: r
+            .extensions
+            .into_iter()
+            .map(|(ext, s)| (key(&ext), script(s)))
+            .collect(),
+        overrides: r
+            .overrides
+            .into_iter()
+            .map(|(ext, list)| (key(&ext), list.into_iter().map(script).collect()))
+            .collect(),
+    };
+    let s = state();
+    let mut stale = Vec::new();
+    {
+        let db = s.db();
+        for asset in db.iter() {
+            if asset.is_folder {
+                continue;
+            }
+            let Some(ext) = asset.file.extension().and_then(|e| e.to_str()) else {
+                continue;
+            };
+            let ext = ext.to_ascii_lowercase();
+            let Some(declared) = registry.defaults.get(&ext) else {
+                continue;
+            };
+            if let Some(named) = unbound_assets::meta::scripted_importer_of(&asset.file)
+                .map(|(guid, file_id)| (guid.to_ascii_lowercase(), file_id))
+                && named.0 != unbound_assets::meta::BUILTIN_SCRIPT_GUID
+                && named != *declared
+                && !registry
+                    .overrides
+                    .get(&ext)
+                    .is_some_and(|scripts| scripts.contains(&named))
+            {
+                stale.push(asset.path.clone());
+            }
+        }
+    }
+    *s.scripted_extensions.write().unwrap() = Some(registry);
+    Ok(json!({ "stale": stale }).to_string())
+}
+
 /// An asset's importer settings: the importer section of its `.meta`, as one document whose type
 /// name is the importer's (`ScriptedImporter`, `TextureImporter`, ...).
 fn load_importer_settings(guid: &str) -> Result<Vec<u8>> {
@@ -2000,6 +2167,9 @@ fn load_importer_settings(guid: &str) -> Result<Vec<u8>> {
         if let (Some(body), Some(map)) = (guid_only_body(s, asset, name), meta.as_map_mut()) {
             map.insert(name, body);
         }
+    }
+    if !asset.is_folder {
+        with_effective_importer(&mut meta, effective_scripted_importer(s, &asset.file));
     }
     // The maps of SpeedTree 9 trees: the settings the trees give them, which the Editor saves into
     // their .meta files (the texture import reads the same).
@@ -2029,8 +2199,14 @@ fn load_importer_settings(guid: &str) -> Result<Vec<u8>> {
                 .map(|(k, v)| (k.to_string(), v.clone()))
         })
         .unwrap_or_else(|| {
+            // A ScriptedImporter's name without its section: none imports the file
+            // (`with_effective_importer`), the DefaultImporter does.
+            let name = match asset_importer(asset) {
+                "ScriptedImporter" => "DefaultImporter",
+                name => name,
+            };
             (
-                asset_importer(asset).to_string(),
+                name.to_string(),
                 unbound_yaml::Value::Map(Default::default()),
             )
         });
@@ -2257,6 +2433,30 @@ fn note_guid_only_texture(s: &RuntimeState, asset: &unbound_project::assetdb::As
     } else {
         s.guid_only_cubes.lock().unwrap().insert(asset.guid, true);
     }
+}
+
+fn extension_importer(request: &str) -> Result<String> {
+    #[derive(Deserialize)]
+    struct Request {
+        path: String,
+    }
+    let Request { path } = serde_json::from_str(request)?;
+    let s = state();
+    let db = s.db();
+    let asset = db
+        .by_path(&path)
+        .with_context(|| format!("no asset {path}"))?;
+    use unbound_assets::new_meta::NewImporter;
+    // An extension none declares (the project's ScriptedImporters known) gets the DefaultImporter.
+    let known = s.scripted_extensions.read().unwrap().is_some();
+    let kind = unbound_assets::new_meta::importer_for(&asset.file, asset.is_folder)
+        .or_else(|| (known && !asset.is_folder).then_some(NewImporter::Default));
+    let section = kind
+        .filter(|_| s.new_meta_measured)
+        .filter(|kind| !matches!(kind, NewImporter::Scripted { .. }))
+        .map(|kind| meta_section(kind, &asset.file, &s.new_meta))
+        .unwrap_or_default();
+    Ok(json!({ "importer": default_importer(&asset.path), "section": section }).to_string())
 }
 
 /// The importer whose new-asset section a GUID-only `.meta` of `file` gets when it is written
@@ -3352,6 +3552,80 @@ mod tests {
                 .is_none()
         );
         std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    /// The extension picks a file's ScriptedImporter, whatever its `.meta` names
+    /// (tests/projects/importerpick): the extension's, an override for it the `.meta` names, the
+    /// Editor's own the `.meta` names, none for a project's of another extension; before the
+    /// project's importers are known, the `.meta`'s.
+    #[test]
+    fn the_extension_picks_the_scripted_importer() {
+        let foo = ("aaaa".to_string(), 11500000);
+        let bar = ("bbbb".to_string(), 11500000);
+        let psd = ("cccc".to_string(), 11500000);
+        let tree = (unbound_assets::meta::BUILTIN_SCRIPT_GUID.to_string(), 12405);
+        let registry = super::ScriptedExtensions {
+            defaults: [
+                ("foo".to_string(), foo.clone()),
+                ("bar".to_string(), bar.clone()),
+            ]
+            .into(),
+            overrides: [("psd".to_string(), vec![psd.clone()])].into(),
+        };
+        let pick = |named: Option<&(String, i64)>, ext| {
+            super::effective_of(Some(&registry), named.cloned(), ext)
+        };
+        assert_eq!(pick(Some(&bar), "foo"), Some(foo.clone()));
+        assert_eq!(pick(None, "FOO"), Some(foo.clone()));
+        assert_eq!(pick(Some(&foo), "qux"), None);
+        assert_eq!(pick(Some(&foo), "txt"), None);
+        assert_eq!(pick(Some(&psd), "psd"), Some(psd.clone()));
+        assert_eq!(pick(None, "psd"), None);
+        assert_eq!(pick(Some(&tree), "st9"), Some(tree.clone()));
+        assert_eq!(
+            super::effective_of(None, Some(foo.clone()), "qux"),
+            Some(foo.clone())
+        );
+    }
+
+    /// The importer settings read for a file are its importer's: a section naming another
+    /// ScriptedImporter replaced by the right one's at its defaults (its script alone), the
+    /// file's own kept, a project ScriptedImporter's left out where none imports the file.
+    #[test]
+    fn the_settings_read_are_the_effective_importers() {
+        let meta = |text: &str| unbound_yaml::parse_value(text).unwrap();
+        let other = "fileFormatVersion: 2\nguid: 1\nScriptedImporter:\n  script: {fileID: 11500000, guid: bbbb, type: 3}\n  setting: 7\n";
+        let mut read = meta(other);
+        super::with_effective_importer(&mut read, Some(("aaaa".into(), 11500000)));
+        let section = read.get("ScriptedImporter").unwrap();
+        assert_eq!(
+            section
+                .get("script")
+                .and_then(|s| s.get("guid"))
+                .and_then(|g| g.as_str()),
+            Some("aaaa")
+        );
+        assert!(section.get("setting").is_none());
+        let mut own = meta(other);
+        super::with_effective_importer(&mut own, Some(("BBBB".into(), 11500000)));
+        assert_eq!(
+            own.get("ScriptedImporter")
+                .and_then(|s| s.get("setting"))
+                .and_then(|v| v.as_str()),
+            Some("7")
+        );
+        let mut native = meta("fileFormatVersion: 2\nguid: 1\nDefaultImporter:\n  userData: \n");
+        super::with_effective_importer(&mut native, Some(("aaaa".into(), 11500000)));
+        assert!(
+            native.get("DefaultImporter").is_none() && native.get("ScriptedImporter").is_some()
+        );
+        let mut none = meta(other);
+        super::with_effective_importer(&mut none, None);
+        assert!(none.get("ScriptedImporter").is_none());
+        let builtin = "fileFormatVersion: 2\nguid: 1\nScriptedImporter:\n  script: {fileID: 12405, guid: 0000000000000000e000000000000000, type: 0}\n";
+        let mut tree = meta(builtin);
+        super::with_effective_importer(&mut tree, None);
+        assert!(tree.get("ScriptedImporter").is_some());
     }
 
     #[test]
