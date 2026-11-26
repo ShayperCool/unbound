@@ -473,6 +473,26 @@ namespace UnityEditor
             else s_DirtyCounts.Remove(id);
         }
 
+        /// <summary>Runs an asset file's load callbacks (Awake, OnEnable, OnValidate of its objects):
+        /// what they mark dirty among <paramref name="objects"/>, the file's own, is not a change, and
+        /// those objects stay as clean as they were, whatever the callbacks set (matches the Unity
+        /// 6000.0.71f1 Editor, tests/projects/urprendererwrites: a URP renderer whose OnEnable reloads
+        /// a missing resource, script assets that call SetDirty from Awake, OnEnable or OnValidate,
+        /// with a field changed or not, are clean after their load and not written). Objects of other
+        /// files the callbacks mark keep their dirtiness (unmeasured).</summary>
+        internal static void LoadCallbacks(ICollection<Object> objects, Action callbacks)
+        {
+            var before = new Dictionary<Object, (bool Dirty, int Count)>(objects.Count, ReferenceEqualityComparer.Instance);
+            foreach (var o in objects)
+                if (o is not null) before[o] = (IsDirty(o.GetInstanceID()), GetDirtyCount(o.GetInstanceID()));
+            try { callbacks(); }
+            finally
+            {
+                foreach (var (o, state) in before)
+                    if (o != null && !state.Dirty && GetDirtyCount(o.GetInstanceID()) > state.Count) RestoreClean(o, state.Count);
+            }
+        }
+
         public static int GetDirtyCount(int instanceID) => s_DirtyCounts.TryGetValue(instanceID, out var n) ? n : 0;
 
         public static int GetDirtyCount(Object target) => target != null ? GetDirtyCount(target.GetInstanceID()) : 0;

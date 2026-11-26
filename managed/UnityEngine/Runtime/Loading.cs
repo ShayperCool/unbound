@@ -317,8 +317,14 @@ namespace Unbound.Runtime
                 if (c is Rigidbody rb) rb.CaptureInactivePose();
 
             SetMainObject(file, kind, assets);
-            foreach (var (asset, _) in assets)
-                if (asset is ScriptableObject so) so.RunCreationCallbacks();
+            void Created()
+            {
+                foreach (var (asset, _) in assets)
+                    if (asset is ScriptableObject so) so.RunCreationCallbacks();
+            }
+            // An asset's own load: what its Awake and OnEnable mark dirty in it is no change.
+            if (isAsset) UnityEditor.EditorUtility.LoadCallbacks(file.Objects.Values, Created);
+            else Created();
             return file;
         }
 
@@ -1226,10 +1232,16 @@ namespace Unbound.Runtime
                 // their shaders' editors (a model's, as it imports: ModelMaterialImport).
                 if (info.Kind == "prefab" || info.Kind == "yaml")
                     MaterialValidation.ValidateLoaded(file);
-                // As the Editor: a loaded asset's behaviours and scriptable objects get OnValidate.
+                // As the Editor: a loaded asset's behaviours and scriptable objects get OnValidate;
+                // what it marks dirty in the file is no change (a prefab's behaviours: unmeasured).
                 if (file != null && (info.Kind == "prefab" || info.Kind == "yaml"))
-                    foreach (var o in new List<Object>(file.Objects.Values))
-                        ScriptMessages.Validate(o);
+                {
+                    var objects = new List<Object>(file.Objects.Values);
+                    UnityEditor.EditorUtility.LoadCallbacks(objects, () =>
+                    {
+                        foreach (var o in objects) ScriptMessages.Validate(o);
+                    });
+                }
                 read = true;
                 return file;
             }
