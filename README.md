@@ -134,7 +134,7 @@ are still open. **[ ]** means it has not started or is only a stub. The open det
   - [x] UnityWebRequest, Localization, XR without a device
   - [ ] 🚧 Netcode for GameObjects: host and client on one machine; Multiplayer Play Mode virtual
     players in progress
-  - [ ] Unity Transport TLS
+  - [ ] 🚧 Unity Transport TLS: the TLS binding on Mbed TLS (measured); Transport over it unmeasured
 - [ ] 🚧 **Editor API in Play mode**
   - [x] Undo, Selection, EditorSceneManager, compilation queries, ShaderUtil
   - [x] Editor UI API: IMGUI editors and fields, property drawers, TreeView, ReorderableList
