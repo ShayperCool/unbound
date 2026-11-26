@@ -79,6 +79,31 @@
 {"k":"save if dirty asset/dirty","v":"False"}
 {"k":"save if dirty asset/will save","v":"Assets/Graphs/BoundsAuto.vfx"}
 {"k":"save if dirty asset/file","v":"-     m_InitialEventName: IfDirtyResource\n+     m_InitialEventName: IfDirtyAsset\nlines 2086 -> 2086"}
+{"k":"model edit/dirty","v":"False"}
+{"k":"model edit/file","v":"unchanged"}
+{"k":"model edit/graph dirty","v":"True"}
+{"k":"model edit/asset dirty","v":"False"}
+{"k":"model save if dirty asset/dirty","v":"False"}
+{"k":"model save if dirty asset/will save","v":"Assets/Graphs/BoundsAuto.vfx"}
+{"k":"model save if dirty asset/file","v":"-       m_SerializableObject: 9\n+       m_SerializableObject: 4\nlines 2086 -> 2086"}
+{"k":"model save if dirty asset/graph dirty","v":"False"}
+{"k":"model save if dirty resource/dirty","v":"False"}
+{"k":"model save if dirty resource/file","v":"unchanged"}
+{"k":"model save if dirty resource/graph dirty","v":"False"}
+{"k":"model save if dirty graph/dirty","v":"False"}
+{"k":"model save if dirty graph/file","v":"unchanged"}
+{"k":"model save if dirty graph/graph dirty","v":"False"}
+{"k":"model save assets/dirty","v":"False"}
+{"k":"model save assets/will save","v":""}
+{"k":"model save assets/file","v":"unchanged"}
+{"k":"model save assets/graph dirty","v":"False"}
+{"k":"material save if dirty/dirty before","v":"True"}
+{"k":"material save if dirty/will save","v":"Assets/Probe.mat"}
+{"k":"material save if dirty/dirty","v":"False"}
+{"k":"exit/created graph dirty before","v":"True"}
+{"k":"exit/created resource dirty before","v":"False"}
+{"k":"exit/created documents before","v":"7"}
 {"k":"exit/dirty before","v":"True"}
 {"k": "exit/initialEventName", "v": "AtExit"}
+{"k": "exit/created documents", "v": "11"}
 {"k": "complete", "v": true}

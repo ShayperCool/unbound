@@ -185,6 +185,41 @@ public static class VfxWritesProbe
             s_Last = File.ReadAllText(Graph);
             Step("save if dirty resource", resource, () => { resource.initialEventName = "IfDirtyResource"; AssetDatabase.SaveAssetIfDirty(resource); });
             Step("save if dirty asset", resource, () => { resource.initialEventName = "IfDirtyAsset"; AssetDatabase.SaveAssetIfDirty(resource.asset); });
+
+            // A model edited (a block's input set through the graph, which leaves the resource
+            // clean), then AssetDatabase.SaveAssetIfDirty of the asset, the resource and the graph
+            // model in turn, then SaveAssets; the model's dirty flag after each.
+            graph = resource.GetOrCreateGraph();
+            var countNow = graph.children.OfType<VFXBasicSpawner>().First().children.First().inputSlots.First(s => s.name == "Count");
+            Step("model edit", resource, () => countNow.value = 4f);
+            Row("model edit/graph dirty", EditorUtility.IsDirty(graph));
+            Row("model edit/asset dirty", EditorUtility.IsDirty(resource.asset));
+            Step("model save if dirty asset", resource, () => AssetDatabase.SaveAssetIfDirty(resource.asset));
+            Row("model save if dirty asset/graph dirty", EditorUtility.IsDirty(graph));
+            Step("model save if dirty resource", resource, () => AssetDatabase.SaveAssetIfDirty(resource));
+            Row("model save if dirty resource/graph dirty", EditorUtility.IsDirty(graph));
+            Step("model save if dirty graph", resource, () => AssetDatabase.SaveAssetIfDirty(graph));
+            Row("model save if dirty graph/graph dirty", EditorUtility.IsDirty(graph));
+            Step("model save assets", resource, () => AssetDatabase.SaveAssets());
+            Row("model save assets/graph dirty", EditorUtility.IsDirty(graph));
+
+            // SaveAssetIfDirty of an asset that is not a graph: which paths the processor gets.
+            var material = new Material(Shader.Find("Universal Render Pipeline/Lit"));
+            AssetDatabase.CreateAsset(material, "Assets/Probe.mat");
+            material.renderQueue = 2100;
+            Row("material save if dirty/dirty before", EditorUtility.IsDirty(material));
+            VfxWritesSaveLog.Calls.Clear();
+            AssetDatabase.SaveAssetIfDirty(material);
+            Row("material save if dirty/will save", string.Join(" | ", VfxWritesSaveLog.Calls));
+            Row("material save if dirty/dirty", EditorUtility.IsDirty(material));
+
+            // The created graph's model edited (an operator added) and left for the exit; run.py
+            // counts the file's documents after the run (exit/created documents).
+            var createdGraph = VisualEffectResource.GetResourceAtPath(Created).GetOrCreateGraph();
+            createdGraph.AddChild(ScriptableObject.CreateInstance<UnityEditor.VFX.Operator.Add>());
+            Row("exit/created graph dirty before", EditorUtility.IsDirty(createdGraph));
+            Row("exit/created resource dirty before", EditorUtility.IsDirty(VisualEffectResource.GetResourceAtPath(Created)));
+            Row("exit/created documents before", File.ReadAllText(Created).Split('\n').Count(l => l.StartsWith("--- ", StringComparison.Ordinal)));
             resource.initialEventName = "AtExit";
             Row("exit/dirty before", EditorUtility.IsDirty(resource));
             s_Out.Append("{\"k\": \"complete\", \"v\": true}\n");

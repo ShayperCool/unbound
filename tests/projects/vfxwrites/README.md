@@ -36,9 +36,15 @@ the step, when there was one).
   the operator subgraph with an Add operator added and written; `subgraph setting/dirty`,
   `subgraph setting save/...`: its `initialEventName` set, then `SaveAssets`.
 - `save if dirty resource`, `save if dirty asset`: a setting set, then `AssetDatabase.SaveAssetIfDirty`
-  of the resource and of its asset (not dirty itself); `exit/dirty before`: a setting left unsaved,
-  and `exit/initialEventName`, which `run.py` adds after the run: that setting as the file holds it
-  once the Editor (or Unbound) has exited.
+  of the resource and of its asset (not dirty itself); `model edit`, `model save if dirty
+  asset|resource|graph`, `model save assets`: a block's input set through the graph (the graph model
+  dirty, the resource clean), then `SaveAssetIfDirty` of the asset, the resource and the graph model
+  and `SaveAssets`, with the model's dirty flag after each; `material save if dirty/...`:
+  `SaveAssetIfDirty` of a material `CreateAsset` made and then changed; `exit/dirty before`: a
+  setting left unsaved, and `exit/initialEventName`, which `run.py` adds after the run: that setting
+  as the file holds it once the Editor (or Unbound) has exited; `exit/created ... before`: an
+  operator added to the created graph's model and left unsaved, and `exit/created documents`
+  (`run.py`, after the run): that file's document count.
 
 Measured in the Unity 6000.0.71f1 Editor (Linux, batch mode; two identical captures): an import
 writes nothing; `WriteAsset` with nothing changed leaves the bytes as they were; every resource
@@ -51,8 +57,10 @@ them gives the original bytes back; `GetContents`
 lists the resource itself beside the graph's objects; `CreateNewAsset` writes the package's
 nine-line file and its .meta; that new graph, built and written, gets its resource's fields whole and
 its documents in file id order; subgraphs are created with the same file and .meta and written as
-graphs are; `SaveAssetIfDirty` of the resource or of its asset writes the dirty graph through
-`OnWillSaveAssets` with its path, and the Editor's exit writes a graph left dirty.
+graphs are; `SaveAssetIfDirty` saves the file of the object it is given when any object of that
+file is dirty, through `OnWillSaveAssets` with its path (a graph whose model alone is dirty, through
+its asset; a material), and calls nothing when nothing is dirty; the Editor's exit writes a graph
+whose resource or model alone was left dirty.
 
 Unbound matches every row. Not measured: a graph whose objects
 change other than one block added and removed, a block subgraph's contents, `rendererSettings`, several dirty assets at once (their order in `OnWillSaveAssets`), scene
