@@ -5,7 +5,7 @@ reads them: `UnityEditor.ShortcutManagement.KeyCombination`, `ShortcutBinding`, 
 `ClutchShortcutAttribute`, `ReserveModifiersAttribute`, the internal `FormerlyPrefKeyAsAttribute`
 and `Identifier`, `ShortcutArguments` and the event arguments. Unity 6000.0.71f1, recorded with the
 macOS Editor in batch mode (two identical captures). Only values that depend on neither the OS nor
-the graphics device are recorded: the Editor names keys and modifiers by OS (symbols on macOS,
+the graphics device are recorded: the Editor names keys and modifiers by OS (glyphs on macOS,
 "Ctrl+Alt+Shift+" and key words elsewhere) and compares the action and control modifiers as one
 outside macOS, so the probe leaves out text with modifiers or with the keys those name tables
 hold, and equality of that pair.
@@ -15,7 +15,7 @@ hold, and equality of that pair.
 
 * `key.<key>.keyCode`, `.text`, `.menu.<m>`, `.hash.<m>`: a combination's key code, its text
   without modifiers, its menu hotkey string and hash with each of the 16 modifier sets, for
-  letters, digits, symbols, navigation and function keys (F16 and F24 too), keypad, mouse and
+  letters, digits, punctuation, navigation and function keys (F16 and F24 too), keypad, mouse and
   modifier keys, keys the shortcut system does not support (joystick buttons, an undefined code,
   -1). `flags.*`, `default.*`: the modifier flags, the default combination.
 * `equals.*`: equality and hashes of pairs without the action/control pair.

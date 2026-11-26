@@ -93,7 +93,7 @@ public class ShortcutTypesProbe : MonoBehaviour
         KeyCode.Joystick8Button19, (KeyCode)999, (KeyCode)(-1),
     };
 
-    // OS name tables (macOS symbols, other platforms' words): text with these keys depends on the OS.
+    // OS name tables (macOS glyphs, other platforms' words): text with these keys depends on the OS.
     static readonly HashSet<KeyCode> OsNamedKeys = new HashSet<KeyCode>
     {
         KeyCode.Backspace, KeyCode.Tab, KeyCode.Return, KeyCode.Escape, KeyCode.Delete, KeyCode.UpArrow,

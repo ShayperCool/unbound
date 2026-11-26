@@ -9,7 +9,7 @@ namespace UnityEditor.ShortcutManagement
     /// <summary>
     /// A key and its modifiers, as Unity's own C# writes it: the key code reads None for a key the
     /// shortcut system does not support; the text names the modifiers and the key in the Editor's
-    /// platform style (symbols on macOS, "Ctrl+Alt+Shift+" elsewhere, where the action and control
+    /// platform style (key glyphs on macOS, "Ctrl+Alt+Shift+" elsewhere, where the action and control
     /// modifiers also compare equal); the menu string is a menu item's hotkey suffix.
     /// </summary>
     [Serializable]
