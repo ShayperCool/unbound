@@ -1,0 +1,181 @@
+{"k": "bool.aqn", "v": "System.Boolean, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089"}
+{"k": "bool.fullName", "v": "System.Boolean"}
+{"k": "bool.toString", "v": "System.Boolean"}
+{"k": "bool.assembly", "v": "mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089"}
+{"k": "bool.assemblyName", "v": "mscorlib"}
+{"k": "bool.assemblyNameFull", "v": "mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089"}
+{"k": "bool.assemblyToString", "v": "mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089"}
+{"k": "bool.roundTrip", "v": true}
+{"k": "string.aqn", "v": "System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089"}
+{"k": "string.fullName", "v": "System.String"}
+{"k": "string.toString", "v": "System.String"}
+{"k": "string.assembly", "v": "mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089"}
+{"k": "string.assemblyName", "v": "mscorlib"}
+{"k": "string.assemblyNameFull", "v": "mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089"}
+{"k": "string.assemblyToString", "v": "mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089"}
+{"k": "string.roundTrip", "v": true}
+{"k": "intArray.aqn", "v": "System.Int32[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089"}
+{"k": "intArray.fullName", "v": "System.Int32[]"}
+{"k": "intArray.toString", "v": "System.Int32[]"}
+{"k": "intArray.assembly", "v": "mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089"}
+{"k": "intArray.assemblyName", "v": "mscorlib"}
+{"k": "intArray.assemblyNameFull", "v": "mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089"}
+{"k": "intArray.assemblyToString", "v": "mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089"}
+{"k": "intArray.roundTrip", "v": true}
+{"k": "intArray2.aqn", "v": "System.Int32[,], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089"}
+{"k": "intArray2.fullName", "v": "System.Int32[,]"}
+{"k": "intArray2.toString", "v": "System.Int32[,]"}
+{"k": "intArray2.assembly", "v": "mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089"}
+{"k": "intArray2.assemblyName", "v": "mscorlib"}
+{"k": "intArray2.assemblyNameFull", "v": "mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089"}
+{"k": "intArray2.assemblyToString", "v": "mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089"}
+{"k": "intArray2.roundTrip", "v": true}
+{"k": "listInt.aqn", "v": "System.Collections.Generic.List`1[[System.Int32, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089]], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089"}
+{"k": "listInt.fullName", "v": "System.Collections.Generic.List`1[[System.Int32, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089]]"}
+{"k": "listInt.toString", "v": "System.Collections.Generic.List`1[System.Int32]"}
+{"k": "listInt.assembly", "v": "mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089"}
+{"k": "listInt.assemblyName", "v": "mscorlib"}
+{"k": "listInt.assemblyNameFull", "v": "mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089"}
+{"k": "listInt.assemblyToString", "v": "mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089"}
+{"k": "listInt.roundTrip", "v": true}
+{"k": "dictStringListInt.aqn", "v": "System.Collections.Generic.Dictionary`2[[System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089],[System.Collections.Generic.List`1[[System.Int32, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089]], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089]], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089"}
+{"k": "dictStringListInt.fullName", "v": "System.Collections.Generic.Dictionary`2[[System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089],[System.Collections.Generic.List`1[[System.Int32, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089]], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089]]"}
+{"k": "dictStringListInt.toString", "v": "System.Collections.Generic.Dictionary`2[System.String,System.Collections.Generic.List`1[System.Int32]]"}
+{"k": "dictStringListInt.assembly", "v": "mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089"}
+{"k": "dictStringListInt.assemblyName", "v": "mscorlib"}
+{"k": "dictStringListInt.assemblyNameFull", "v": "mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089"}
+{"k": "dictStringListInt.assemblyToString", "v": "mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089"}
+{"k": "dictStringListInt.roundTrip", "v": true}
+{"k": "hashSetInt.aqn", "v": "System.Collections.Generic.HashSet`1[[System.Int32, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089]], System.Core, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089"}
+{"k": "hashSetInt.fullName", "v": "System.Collections.Generic.HashSet`1[[System.Int32, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089]]"}
+{"k": "hashSetInt.toString", "v": "System.Collections.Generic.HashSet`1[System.Int32]"}
+{"k": "hashSetInt.assembly", "v": "System.Core, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089"}
+{"k": "hashSetInt.assemblyName", "v": "System.Core"}
+{"k": "hashSetInt.assemblyNameFull", "v": "System.Core, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089"}
+{"k": "hashSetInt.assemblyToString", "v": "System.Core, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089"}
+{"k": "hashSetInt.roundTrip", "v": true}
+{"k": "uri.aqn", "v": "System.Uri, System, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089"}
+{"k": "uri.fullName", "v": "System.Uri"}
+{"k": "uri.toString", "v": "System.Uri"}
+{"k": "uri.assembly", "v": "System, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089"}
+{"k": "uri.assemblyName", "v": "System"}
+{"k": "uri.assemblyNameFull", "v": "System, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089"}
+{"k": "uri.assemblyToString", "v": "System, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089"}
+{"k": "uri.roundTrip", "v": true}
+{"k": "xmlDocument.aqn", "v": "System.Xml.XmlDocument, System.Xml, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089"}
+{"k": "xmlDocument.fullName", "v": "System.Xml.XmlDocument"}
+{"k": "xmlDocument.toString", "v": "System.Xml.XmlDocument"}
+{"k": "xmlDocument.assembly", "v": "System.Xml, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089"}
+{"k": "xmlDocument.assemblyName", "v": "System.Xml"}
+{"k": "xmlDocument.assemblyNameFull", "v": "System.Xml, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089"}
+{"k": "xmlDocument.assemblyToString", "v": "System.Xml, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089"}
+{"k": "xmlDocument.roundTrip", "v": true}
+{"k": "specialFolder.aqn", "v": "System.Environment+SpecialFolder, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089"}
+{"k": "specialFolder.fullName", "v": "System.Environment+SpecialFolder"}
+{"k": "specialFolder.toString", "v": "System.Environment+SpecialFolder"}
+{"k": "specialFolder.assembly", "v": "mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089"}
+{"k": "specialFolder.assemblyName", "v": "mscorlib"}
+{"k": "specialFolder.assemblyNameFull", "v": "mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089"}
+{"k": "specialFolder.assemblyToString", "v": "mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089"}
+{"k": "specialFolder.roundTrip", "v": true}
+{"k": "nullableInt.aqn", "v": "System.Nullable`1[[System.Int32, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089]], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089"}
+{"k": "nullableInt.fullName", "v": "System.Nullable`1[[System.Int32, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089]]"}
+{"k": "nullableInt.toString", "v": "System.Nullable`1[System.Int32]"}
+{"k": "nullableInt.assembly", "v": "mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089"}
+{"k": "nullableInt.assemblyName", "v": "mscorlib"}
+{"k": "nullableInt.assemblyNameFull", "v": "mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089"}
+{"k": "nullableInt.assemblyToString", "v": "mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089"}
+{"k": "nullableInt.roundTrip", "v": true}
+{"k": "funcInt.aqn", "v": "System.Func`1[[System.Int32, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089]], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089"}
+{"k": "funcInt.fullName", "v": "System.Func`1[[System.Int32, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089]]"}
+{"k": "funcInt.toString", "v": "System.Func`1[System.Int32]"}
+{"k": "funcInt.assembly", "v": "mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089"}
+{"k": "funcInt.assemblyName", "v": "mscorlib"}
+{"k": "funcInt.assemblyNameFull", "v": "mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089"}
+{"k": "funcInt.assemblyToString", "v": "mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089"}
+{"k": "funcInt.roundTrip", "v": true}
+{"k": "enumerable.aqn", "v": "System.Linq.Enumerable, System.Core, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089"}
+{"k": "enumerable.fullName", "v": "System.Linq.Enumerable"}
+{"k": "enumerable.toString", "v": "System.Linq.Enumerable"}
+{"k": "enumerable.assembly", "v": "System.Core, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089"}
+{"k": "enumerable.assemblyName", "v": "System.Core"}
+{"k": "enumerable.assemblyNameFull", "v": "System.Core, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089"}
+{"k": "enumerable.assemblyToString", "v": "System.Core, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089"}
+{"k": "enumerable.roundTrip", "v": true}
+{"k": "listOpen.aqn", "v": "System.Collections.Generic.List`1, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089"}
+{"k": "listOpen.fullName", "v": "System.Collections.Generic.List`1"}
+{"k": "listOpen.toString", "v": "System.Collections.Generic.List`1[T]"}
+{"k": "listOpen.assembly", "v": "mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089"}
+{"k": "listOpen.assemblyName", "v": "mscorlib"}
+{"k": "listOpen.assemblyNameFull", "v": "mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089"}
+{"k": "listOpen.assemblyToString", "v": "mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089"}
+{"k": "listOpen.roundTrip", "v": true}
+{"k": "game.aqn", "v": "TypeNamesProbe, Assembly-CSharp, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null"}
+{"k": "game.fullName", "v": "TypeNamesProbe"}
+{"k": "game.toString", "v": "TypeNamesProbe"}
+{"k": "game.assembly", "v": "Assembly-CSharp, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null"}
+{"k": "game.assemblyName", "v": "Assembly-CSharp"}
+{"k": "game.assemblyNameFull", "v": "Assembly-CSharp, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null"}
+{"k": "game.assemblyToString", "v": "Assembly-CSharp, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null"}
+{"k": "game.roundTrip", "v": true}
+{"k": "gameNested.aqn", "v": "TypeNamesProbe+Nested, Assembly-CSharp, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null"}
+{"k": "gameNested.fullName", "v": "TypeNamesProbe+Nested"}
+{"k": "gameNested.toString", "v": "TypeNamesProbe+Nested"}
+{"k": "gameNested.assembly", "v": "Assembly-CSharp, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null"}
+{"k": "gameNested.assemblyName", "v": "Assembly-CSharp"}
+{"k": "gameNested.assemblyNameFull", "v": "Assembly-CSharp, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null"}
+{"k": "gameNested.assemblyToString", "v": "Assembly-CSharp, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null"}
+{"k": "gameNested.roundTrip", "v": true}
+{"k": "listGame.aqn", "v": "System.Collections.Generic.List`1[[TypeNamesProbe, Assembly-CSharp, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null]], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089"}
+{"k": "listGame.fullName", "v": "System.Collections.Generic.List`1[[TypeNamesProbe, Assembly-CSharp, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null]]"}
+{"k": "listGame.toString", "v": "System.Collections.Generic.List`1[TypeNamesProbe]"}
+{"k": "listGame.assembly", "v": "mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089"}
+{"k": "listGame.assemblyName", "v": "mscorlib"}
+{"k": "listGame.assemblyNameFull", "v": "mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089"}
+{"k": "listGame.assemblyToString", "v": "mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089"}
+{"k": "listGame.roundTrip", "v": true}
+{"k": "vector3.aqn", "v": "UnityEngine.Vector3, UnityEngine.CoreModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null"}
+{"k": "vector3.fullName", "v": "UnityEngine.Vector3"}
+{"k": "vector3.toString", "v": "UnityEngine.Vector3"}
+{"k": "vector3.assembly", "v": "UnityEngine.CoreModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null"}
+{"k": "vector3.assemblyName", "v": "UnityEngine.CoreModule"}
+{"k": "vector3.assemblyNameFull", "v": "UnityEngine.CoreModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null"}
+{"k": "vector3.assemblyToString", "v": "UnityEngine.CoreModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null"}
+{"k": "vector3.roundTrip", "v": true}
+{"k": "rigidbody.aqn", "v": "UnityEngine.Rigidbody, UnityEngine.PhysicsModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null"}
+{"k": "rigidbody.fullName", "v": "UnityEngine.Rigidbody"}
+{"k": "rigidbody.toString", "v": "UnityEngine.Rigidbody"}
+{"k": "rigidbody.assembly", "v": "UnityEngine.PhysicsModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null"}
+{"k": "rigidbody.assemblyName", "v": "UnityEngine.PhysicsModule"}
+{"k": "rigidbody.assemblyNameFull", "v": "UnityEngine.PhysicsModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null"}
+{"k": "rigidbody.assemblyToString", "v": "UnityEngine.PhysicsModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null"}
+{"k": "rigidbody.roundTrip", "v": true}
+{"k": "listVector3.aqn", "v": "System.Collections.Generic.List`1[[UnityEngine.Vector3, UnityEngine.CoreModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null]], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089"}
+{"k": "listVector3.fullName", "v": "System.Collections.Generic.List`1[[UnityEngine.Vector3, UnityEngine.CoreModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null]]"}
+{"k": "listVector3.toString", "v": "System.Collections.Generic.List`1[UnityEngine.Vector3]"}
+{"k": "listVector3.assembly", "v": "mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089"}
+{"k": "listVector3.assemblyName", "v": "mscorlib"}
+{"k": "listVector3.assemblyNameFull", "v": "mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089"}
+{"k": "listVector3.assemblyToString", "v": "mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089"}
+{"k": "listVector3.roundTrip", "v": true}
+{"k": "lookup0.name", "v": "System.Boolean, mscorlib"}
+{"k": "lookup0.found", "v": "System.Boolean"}
+{"k": "lookup1.name", "v": "System.Boolean, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089"}
+{"k": "lookup1.found", "v": "System.Boolean"}
+{"k": "lookup2.name", "v": "System.Boolean, System.Private.CoreLib"}
+{"k": "lookup2.found", "v": "null"}
+{"k": "lookup3.name", "v": "System.Boolean"}
+{"k": "lookup3.found", "v": "System.Boolean"}
+{"k": "lookup4.name", "v": "System.Collections.Generic.HashSet`1[[System.Int32, mscorlib]], System.Core"}
+{"k": "lookup4.found", "v": "System.Collections.Generic.HashSet`1[[System.Int32, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089]]"}
+{"k": "lookup5.name", "v": "System.Collections.Generic.HashSet`1[[System.Int32, mscorlib]], mscorlib"}
+{"k": "lookup5.found", "v": "null"}
+{"k": "lookup6.name", "v": "System.Uri, System"}
+{"k": "lookup6.found", "v": "System.Uri"}
+{"k": "lookup7.name", "v": "UnityEngine.Rigidbody, UnityEngine.PhysicsModule"}
+{"k": "lookup7.found", "v": "UnityEngine.Rigidbody"}
+{"k": "lookup8.name", "v": "UnityEngine.Rigidbody, UnityEngine.CoreModule"}
+{"k": "lookup8.found", "v": "null"}
+{"k": "lookup9.name", "v": "TypeNamesProbe, Assembly-CSharp"}
+{"k": "lookup9.found", "v": "TypeNamesProbe"}
+{"k": "complete", "v": true}

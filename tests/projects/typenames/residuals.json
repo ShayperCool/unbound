@@ -1,0 +1,44 @@
+{
+  "Assembly.ToString() is a call to Object.ToString, which Unbound does not redirect: a class library or engine assembly prints its .NET name": [
+    "bool.assemblyToString",
+    "dictStringListInt.assemblyToString",
+    "funcInt.assemblyToString",
+    "hashSetInt.assemblyToString",
+    "intArray.assemblyToString",
+    "intArray2.assemblyToString",
+    "listGame.assemblyToString",
+    "listInt.assemblyToString",
+    "listOpen.assemblyToString",
+    "listVector3.assemblyToString",
+    "nullableInt.assemblyToString",
+    "specialFolder.assemblyToString",
+    "string.assemblyToString",
+    "enumerable.assemblyToString",
+    "uri.assemblyToString",
+    "xmlDocument.assemblyToString",
+    "rigidbody.assemblyToString"
+  ],
+  "A .NET class library assembly holding types of several Mono assemblies keeps its .NET name (Assembly.FullName/GetName of System.Linq, System.Private.Uri, System.Private.Xml; HashSet's assembly is .NET's core library, named mscorlib): the Editor names System.Core, System, System.Xml": [
+    "enumerable.assembly",
+    "enumerable.assemblyName",
+    "enumerable.assemblyNameFull",
+    "uri.assembly",
+    "uri.assemblyName",
+    "uri.assemblyNameFull",
+    "xmlDocument.assembly",
+    "xmlDocument.assemblyName",
+    "xmlDocument.assemblyNameFull",
+    "hashSetInt.assembly",
+    "hashSetInt.assemblyName",
+    "hashSetInt.assemblyNameFull"
+  ],
+  "Unbound builds every Unity module into UnityEngine.CoreModule: an engine type's Assembly names it, where the Editor names the type's module (its AssemblyQualifiedName is mapped)": [
+    "rigidbody.assembly",
+    "rigidbody.assemblyName",
+    "rigidbody.assemblyNameFull"
+  ],
+  "Type.GetType resolves names the Editor does not: .NET's System.Private.CoreLib, an engine type under UnityEngine.CoreModule": [
+    "lookup2.found",
+    "lookup8.found"
+  ]
+}
