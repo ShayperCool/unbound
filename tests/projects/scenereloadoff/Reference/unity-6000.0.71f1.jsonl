@@ -1,0 +1,19 @@
+{"key": "none.events", "value": "domain/1/edit | Always/Awake1/edit | Always/OnEnable1/edit | AlwaysDisabled/Awake1/edit | playmode/ExitingEditMode | Always/OnDisable0/edit | domain/1/play | Always/OnEnable1/edit | Always/OnDisable0/edit | Always/OnDestroy0/edit | AlwaysDisabled/OnDestroy0/edit | Always/Awake1/play | Always/OnEnable1/play | AlwaysDisabled/Awake1/play | Plain/Awake1/play | Plain/OnEnable1/play | Always/Start1/play | Plain/Start1/play | Always/Update1/play | Plain/Update1/play | playmode/EnteredPlayMode"}
+{"key": "none.leaving", "value": "Always/OnDestroy0/play | Always/OnDisable0/play | AlwaysDisabled/OnDestroy0/play | Plain/OnDestroy0/play | Plain/OnDisable0/play"}
+{"key": "none.template.Always", "value": "inactive"}
+{"key": "none.template.Plain", "value": "inactive"}
+{"key": "none.template.AlwaysInactive", "value": "parentInactive"}
+{"key": "none.template.AlwaysDisabled", "value": "inactive"}
+{"key": "scene.events", "value": "domain/1/edit | Always/Awake1/edit | Always/OnEnable1/edit | AlwaysDisabled/Awake1/edit | playmode/ExitingEditMode | Always/OnDisable0/edit | domain/1/play | Always/OnEnable1/edit | Always/OnDisable0/edit | Always/OnEnable2/play | Plain/Awake1/play | Plain/OnEnable1/play | Always/Start1/play | Plain/Start1/play | Always/Update1/play | Plain/Update1/play | playmode/EnteredPlayMode"}
+{"key": "scene.leaving", "value": "Always/OnDestroy0/play | Always/OnDisable0/play | AlwaysDisabled/OnDestroy0/play | Plain/OnDestroy0/play | Plain/OnDisable0/play"}
+{"key": "scene.template.Always", "value": "active"}
+{"key": "scene.template.Plain", "value": "inactive"}
+{"key": "scene.template.AlwaysInactive", "value": "parentInactive"}
+{"key": "scene.template.AlwaysDisabled", "value": "active"}
+{"key": "both.events", "value": "domain/1/edit | Always/Awake1/edit | Always/OnEnable1/edit | AlwaysDisabled/Awake1/edit | playmode/ExitingEditMode | Always/OnDisable0/edit | Always/OnEnable2/play | Plain/Awake1/play | Plain/OnEnable1/play | Always/Start1/play | Plain/Start1/play | Always/Update1/play | Plain/Update1/play | playmode/EnteredPlayMode"}
+{"key": "both.leaving", "value": "Always/OnDestroy0/play | Always/OnDisable0/play | AlwaysDisabled/OnDestroy0/play | Plain/OnDestroy0/play | Plain/OnDisable0/play"}
+{"key": "both.template.Always", "value": "active"}
+{"key": "both.template.Plain", "value": "inactive"}
+{"key": "both.template.AlwaysInactive", "value": "parentInactive"}
+{"key": "both.template.AlwaysDisabled", "value": "active"}
+{"key": "complete", "value": "1"}
