@@ -138,15 +138,23 @@ namespace Unbound.Runtime
         static void EnterPlayMode()
         {
             Application.Internal_PlayModeStarting();
-            LeaveEditModeForPlay();
-            // [InitializeOnEnterPlayMode] in Edit mode, then, with the options keeping the scenes,
-            // their objects stop in Edit mode (matches the Unity 6000.0.71f1 Editor,
-            // tests/projects/scenereloadoff both.events: the probe enters Play mode from Edit mode).
-            EditorInitialization.EnterPlayModeMethods();
-            bool keep = KeepsScenesForPlay;
-            if (keep) StopOpenScenesForPlay();
-            UnityEngine.U2D.SpriteAtlasPacking.PackV1ForPlayMode();
-            IsPlaying = true;
+            // As Direct Play enters it with the domain kept (EditorInitialization.LoadForPlayMode):
+            // isPlaying false and isPlayingOrWillChangePlaymode true from here, Play mode's atlases
+            // packed, ExitingEditMode, [InitializeOnEnterPlayMode] in Edit mode (matches the Unity
+            // 6000.0.71f1 Editor, tests/projects/editorcallbacks: willPlay true, playing false), then,
+            // with the options keeping the scenes, their objects stop in Edit mode
+            // (tests/projects/scenereloadoff both.events: the probe enters Play mode from Edit mode).
+            BeginEnteringPlayMode();
+            bool keep;
+            try
+            {
+                UnityEngine.U2D.SpriteAtlasPacking.PackV1ForPlayMode();
+                LeaveEditModeForPlay();
+                EditorInitialization.EnterPlayModeMethodsKeepingTheDomain();
+                keep = KeepsScenesForPlay;
+                if (keep) StopOpenScenesForPlay();
+            }
+            finally { EndEnteringPlayMode(); }
             FixPlayModeBuildList();
             Time.ResetForPlayMode();
             RuntimeInitializers.Run(RuntimeInitializeLoadType.SubsystemRegistration);

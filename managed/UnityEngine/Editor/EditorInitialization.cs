@@ -73,9 +73,7 @@ namespace UnityEditor
                 {
                     EditorApplication.Internal_PlayModeStateChanged(PlayModeStateChange.ExitingEditMode);
                     // [InitializeOnEnterPlayMode] runs as Play mode is entered, as on the reload path.
-                    PlayModeDomainLoading = true;
-                    try { EnterPlayModeMethods(); }
-                    finally { PlayModeDomainLoading = false; }
+                    EnterPlayModeMethodsKeepingTheDomain();
                     // Then the Edit-mode start ends (matches the Unity 6000.0.71f1 Editor,
                     // tests/projects/scenereloadoff domain.events, both.events).
                     EditorSession.EndEditModeStart();
@@ -336,6 +334,15 @@ namespace UnityEditor
         internal static bool PlayModeDomainLoading { get; private set; }
 
         /// <summary>[InitializeOnEnterPlayMode] methods, as Play mode is entered.</summary>
+        /// <summary>[InitializeOnEnterPlayMode] as Play mode is entered with the domain kept: as on
+        /// the reload path, a Lightmapping bake from them is Play mode's (PlayModeDomainLoading).</summary>
+        internal static void EnterPlayModeMethodsKeepingTheDomain()
+        {
+            PlayModeDomainLoading = true;
+            try { EnterPlayModeMethods(); }
+            finally { PlayModeDomainLoading = false; }
+        }
+
         internal static void EnterPlayModeMethods()
         {
             ForEachStaticMethod(InitializeOnEnterPlayMode, method =>

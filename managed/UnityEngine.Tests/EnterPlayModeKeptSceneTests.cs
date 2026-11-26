@@ -28,7 +28,8 @@ namespace UnityEngine.Tests
         [InitializeOnEnterPlayMode]
         static void Entering(EnterPlayModeOptions options)
         {
-            if (Active) KeptSceneCounter.Calls.Add("enterPlayMode " + (int)options + " " + (Application.isPlaying ? "play" : "edit"));
+            if (Active) KeptSceneCounter.Calls.Add("enterPlayMode " + (int)options + " " + (Application.isPlaying ? "play" : "edit")
+                + (EditorApplication.isPlayingOrWillChangePlaymode ? " willPlay" : ""));
         }
     }
 
@@ -162,7 +163,7 @@ namespace UnityEngine.Tests
                 EditorSession.ApplyRequest();
                 Assert.Equal(new[]
                 {
-                    "ExitingEditMode", "enterPlayMode 3 edit", "Always OnDisable edit",
+                    "ExitingEditMode", "enterPlayMode 3 edit willPlay", "Always OnDisable edit",
                     "Always OnEnable play", "Plain Awake play", "Plain OnEnable play",
                 }, KeptSceneCounter.Calls);
                 Assert.Empty(setup.Loaded);
