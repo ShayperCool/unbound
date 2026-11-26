@@ -1,0 +1,11 @@
+{
+  "commands": [
+    "python3 tests/projects/shadowmaskmix/run.py gate"
+  ],
+  "summary": "shadowmaskmix: .*",
+  "engine_paths": [
+    "managed/UnityEngine/Graphics/Lightmapping.cs",
+    "managed/UnityEngine/Graphics/FrameBuilder.Shadows.cs",
+    "tests/projects/shadowmaskmix/"
+  ]
+}

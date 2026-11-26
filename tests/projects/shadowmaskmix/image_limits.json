@@ -1,0 +1,80 @@
+{
+ "deferred_distance_default.png": {
+  "mean": 0.06,
+  "worst": 5,
+  "over8": 0,
+  "reason": "The Editor's image within rounding (no pixel over 8/255), measured on one machine: an NVIDIA driver, the Linux Editor on OpenGL Core, Unbound's OpenGL Core device. Another GPU, driver or device is unmeasured."
+ },
+ "deferred_distance_everything.png": {
+  "mean": 0.06,
+  "worst": 5,
+  "over8": 0,
+  "reason": "The Editor's image within rounding (no pixel over 8/255), measured on one machine: an NVIDIA driver, the Linux Editor on OpenGL Core, Unbound's OpenGL Core device. Another GPU, driver or device is unmeasured."
+ },
+ "deferred_distance_nonlightmappedonly.png": {
+  "mean": 0.06,
+  "worst": 5,
+  "over8": 0,
+  "reason": "The Editor's image within rounding (no pixel over 8/255), measured on one machine: an NVIDIA driver, the Linux Editor on OpenGL Core, Unbound's OpenGL Core device. Another GPU, driver or device is unmeasured."
+ },
+ "deferred_shadowmask_default.png": {
+  "mean": 0.06,
+  "worst": 5,
+  "over8": 0,
+  "reason": "The Editor's image within rounding (no pixel over 8/255), measured on one machine: an NVIDIA driver, the Linux Editor on OpenGL Core, Unbound's OpenGL Core device. Another GPU, driver or device is unmeasured."
+ },
+ "deferred_shadowmask_everything.png": {
+  "mean": 0.06,
+  "worst": 5,
+  "over8": 0,
+  "reason": "The Editor's image within rounding (no pixel over 8/255), measured on one machine: an NVIDIA driver, the Linux Editor on OpenGL Core, Unbound's OpenGL Core device. Another GPU, driver or device is unmeasured."
+ },
+ "deferred_shadowmask_nonlightmappedonly.png": {
+  "mean": 0.06,
+  "worst": 5,
+  "over8": 0,
+  "reason": "The Editor's image within rounding (no pixel over 8/255), measured on one machine: an NVIDIA driver, the Linux Editor on OpenGL Core, Unbound's OpenGL Core device. Another GPU, driver or device is unmeasured."
+ },
+ "forward_distance_default.png": {
+  "mean": 0.06,
+  "worst": 5,
+  "over8": 0,
+  "reason": "The Editor's image within rounding (no pixel over 8/255), measured on one machine: an NVIDIA driver, the Linux Editor on OpenGL Core, Unbound's OpenGL Core device. Another GPU, driver or device is unmeasured."
+ },
+ "forward_distance_everything.png": {
+  "mean": 0.06,
+  "worst": 5,
+  "over8": 0,
+  "reason": "The Editor's image within rounding (no pixel over 8/255), measured on one machine: an NVIDIA driver, the Linux Editor on OpenGL Core, Unbound's OpenGL Core device. Another GPU, driver or device is unmeasured."
+ },
+ "forward_distance_nonlightmappedonly.png": {
+  "mean": 0.06,
+  "worst": 5,
+  "over8": 0,
+  "reason": "The Editor's image within rounding (no pixel over 8/255), measured on one machine: an NVIDIA driver, the Linux Editor on OpenGL Core, Unbound's OpenGL Core device. Another GPU, driver or device is unmeasured."
+ },
+ "forward_shadowmask_default.png": {
+  "mean": 0.06,
+  "worst": 5,
+  "over8": 0,
+  "reason": "The Editor's image within rounding (no pixel over 8/255), measured on one machine: an NVIDIA driver, the Linux Editor on OpenGL Core, Unbound's OpenGL Core device. Another GPU, driver or device is unmeasured."
+ },
+ "forward_shadowmask_everything.png": {
+  "mean": 0.06,
+  "worst": 5,
+  "over8": 0,
+  "reason": "The Editor's image within rounding (no pixel over 8/255), measured on one machine: an NVIDIA driver, the Linux Editor on OpenGL Core, Unbound's OpenGL Core device. Another GPU, driver or device is unmeasured."
+ },
+ "forward_shadowmask_nonlightmappedonly.png": {
+  "mean": 0.06,
+  "worst": 5,
+  "over8": 0,
+  "reason": "The Editor's image within rounding (no pixel over 8/255), measured on one machine: an NVIDIA driver, the Linux Editor on OpenGL Core, Unbound's OpenGL Core device. Another GPU, driver or device is unmeasured."
+ },
+ "forward_shadowmask_noshadows.png": {
+  "mean": 0.06,
+  "worst": 5,
+  "over8": 0,
+  "reason": "The Editor's image within rounding (no pixel over 8/255), measured on one machine: an NVIDIA driver, the Linux Editor on OpenGL Core, Unbound's OpenGL Core device. Another GPU, driver or device is unmeasured."
+ }
+}

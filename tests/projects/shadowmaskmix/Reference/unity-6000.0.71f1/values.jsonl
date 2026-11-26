@@ -1,0 +1,24 @@
+{"k":"light/Sun","v":"bake=Mixed mixed=Shadowmask channel=0 probeChannel=1 baked=True caster=Default"}
+{"k":"light/Point Light","v":"bake=Mixed mixed=Shadowmask channel=1 probeChannel=0 baked=True caster=Default"}
+{"k":"renderer/Ground","v":"lightmap=0 st=0.6953125,0.6953125,0,0.03515625"}
+{"k":"renderer/Near Block","v":"lightmap=0 st=0.0511597134,0.0511597134,-0.000207491845,0.800573766"}
+{"k":"renderer/Near Column","v":"lightmap=0 st=0.039353624,0.039353624,-0.0001596091,-0.0001596091"}
+{"k":"renderer/Far Block","v":"lightmap=0 st=0.106254786,0.106254786,0.08550656,0.7378503"}
+{"k":"renderer/Far Column","v":"lightmap=0 st=0.07870725,0.07870725,-0.0003192182,0.737962"}
+{"k":"renderer/Near Sphere","v":"lightmap=-1 st=1,1,0,0"}
+{"k":"renderer/Far Sphere","v":"lightmap=-1 st=1,1,0,0"}
+{"k":"lightmaps","v":"1 shadowmask=True"}
+{"k":"shot/forward_shadowmask_default","v":"forward_shadowmask_default.png"}
+{"k":"shot/forward_shadowmask_nonlightmappedonly","v":"forward_shadowmask_nonlightmappedonly.png"}
+{"k":"shot/forward_shadowmask_everything","v":"forward_shadowmask_everything.png"}
+{"k":"shot/forward_distance_default","v":"forward_distance_default.png"}
+{"k":"shot/forward_distance_nonlightmappedonly","v":"forward_distance_nonlightmappedonly.png"}
+{"k":"shot/forward_distance_everything","v":"forward_distance_everything.png"}
+{"k":"shot/deferred_shadowmask_default","v":"deferred_shadowmask_default.png"}
+{"k":"shot/deferred_shadowmask_nonlightmappedonly","v":"deferred_shadowmask_nonlightmappedonly.png"}
+{"k":"shot/deferred_shadowmask_everything","v":"deferred_shadowmask_everything.png"}
+{"k":"shot/deferred_distance_default","v":"deferred_distance_default.png"}
+{"k":"shot/deferred_distance_nonlightmappedonly","v":"deferred_distance_nonlightmappedonly.png"}
+{"k":"shot/deferred_distance_everything","v":"deferred_distance_everything.png"}
+{"k":"shot/forward_shadowmask_noshadows","v":"forward_shadowmask_noshadows.png"}
+{"k": "complete", "v": true}
