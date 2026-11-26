@@ -1,0 +1,5 @@
+{
+  "Resources.LoadAll(\"Models/Derived\") also returns Derived.mtl (a DefaultAsset) where the Editor returns the model's objects only; Resources matching of two files with one name, not the OBJ import (queue row from Q788)": [
+    "Derived.objects"
+  ]
+}
