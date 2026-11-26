@@ -20,6 +20,10 @@ namespace Unbound.Runtime
     {
         static readonly ConditionalWeakTable<LoadedFile, Dictionary<Object, long>> s_Stripped = new ConditionalWeakTable<LoadedFile, Dictionary<Object, long>>();
 
+        /// <summary>The loaded prefabs that could not take a prefab they hold instances of as it was
+        /// written (<see cref="RefreshDependents"/>), with that prefab's path: they are not written.</summary>
+        static readonly ConditionalWeakTable<LoadedFile, string> s_StaleSince = new ConditionalWeakTable<LoadedFile, string>();
+
         /// <summary>The loaded prefab of an asset path (null: none).</summary>
         internal static LoadedFile FileAt(string assetPath)
         {
@@ -41,6 +45,13 @@ namespace Unbound.Runtime
             if (file?.MainObject is not GameObject root || root == null)
             {
                 Debug.LogError($"Unbound: {file?.Path} is not saved: the prefab has no root GameObject.");
+                return false;
+            }
+            // Its objects still hold a prefab's values from before that prefab was written: writing
+            // them would put overrides of old values into the file, which the Editor does not write.
+            if (s_StaleSince.TryGetValue(file, out var source))
+            {
+                Debug.LogWarning($"Unbound: {file.Path} is not saved: {source}, which it holds instances of, was saved while it had changes of its own, and Unbound does not load it again as the Editor does (its file is left as it is).");
                 return false;
             }
             root.m_Name = Path.GetFileNameWithoutExtension(file.Path);
@@ -92,6 +103,98 @@ namespace Unbound.Runtime
             {
                 try { Native.Call("prefab-written", System.Text.Json.JsonSerializer.Serialize(new { guid = file.Guid })); }
                 catch (Exception e) { Debug.LogWarning($"Unbound: {file.Path}: the prefabs nesting it keep their earlier expansion: {e.Message}"); }
+            }
+            RefreshDependents(file, new HashSet<string>(StringComparer.OrdinalIgnoreCase) { file.Guid });
+            return true;
+        }
+
+        /// <summary>
+        /// The loaded prefabs holding instances of <paramref name="written"/> (its variants, the
+        /// prefabs nesting it) take it as it was written, as the Editor imports them again: each
+        /// instance takes its source's values and its file's modifications, its unsaved changes
+        /// dropped, and the prefab is no longer dirty (matches the Unity 6000.0.71f1 Editor,
+        /// tests/projects/scenesave prefab-dirty-saves dependent.*, dependentOwn.*, nesting.*); their
+        /// scene instances and their own dependents follow. One that holds unsaved changes outside
+        /// those instances, modifications changed since it was read, or instances whose objects the
+        /// written prefab no longer matches cannot be loaded again so: it keeps its objects and is
+        /// not written (<see cref="Save"/>), with a warning.
+        /// </summary>
+        static void RefreshDependents(LoadedFile written, HashSet<string> seen)
+        {
+            foreach (var dependent in AssetDatabaseRuntime.LoadedFiles())
+            {
+                if (dependent == null || dependent.Guid == null || seen.Contains(dependent.Guid)) continue;
+                if (dependent.MainObject is not GameObject root || root == null) continue;
+                if (dependent.Path == null || !dependent.Path.EndsWith(".prefab", StringComparison.OrdinalIgnoreCase)) continue;
+                var instances = InstancesIn(root, written.Guid);
+                if (instances.Count == 0) continue;
+                seen.Add(dependent.Guid);
+                var members = new HashSet<Object>(ReferenceEqualityComparer.Instance);
+                foreach (var (data, instanceRoot) in instances)
+                    foreach (var o in PrefabInstances.ObjectsOf(data, instanceRoot)) members.Add(o);
+                string why = null;
+                foreach (var o in dependent.Objects.Values)
+                    if (o is not null && !o.m_Destroyed && EditorUtility.IsDirty(o) && !members.Contains(o)) why ??= "it has unsaved changes of its own";
+                foreach (var (data, instanceRoot) in instances)
+                {
+                    if (data.Edited) why ??= "its modifications were changed since it was read";
+                    else if (!MatchesSource(data, instanceRoot)) why ??= "the objects of its instances changed";
+                }
+                if (why != null)
+                {
+                    s_StaleSince.AddOrUpdate(dependent, written.Path);
+                    Debug.LogWarning($"Unbound: {dependent.Path} keeps the values it had before {written.Path} was saved ({why}): Unbound does not load it again as the Editor does, and does not save it.");
+                    continue;
+                }
+                var change = new Change(dependent);
+                var refs = new ValueReferences();
+                foreach (var (data, instanceRoot) in instances)
+                    PrefabInstances.Merge(data, PrefabInstances.Capture(data, refs, liveDifferences: false, root: instanceRoot), instanceRoot);
+                foreach (var o in dependent.Objects.Values)
+                    if (o is not null && !o.m_Destroyed) EditorUtility.ClearDirty(o);
+                change.MergeInstances();
+                RefreshDependents(dependent, seen);
+            }
+        }
+
+        /// <summary>Marks a loaded prefab as one that could not take a prefab it holds instances of.</summary>
+        internal static void MarkStaleForTests(LoadedFile file, string sourcePath) => s_StaleSince.AddOrUpdate(file, sourcePath);
+
+        /// <summary>The instances of the prefab <paramref name="guid"/> inside a prefab asset's
+        /// hierarchy, with their roots.</summary>
+        static List<(PrefabInstanceData Data, GameObject Root)> InstancesIn(GameObject root, string guid)
+        {
+            var found = new List<(PrefabInstanceData, GameObject)>();
+            var seen = new HashSet<PrefabInstanceData>();
+            void Walk(Transform t)
+            {
+                if (PrefabLinks.Of(t.m_GameObject)?.Instance is PrefabInstanceData data && data.InAsset
+                    && string.Equals(data.SourceGuid, guid, StringComparison.OrdinalIgnoreCase) && seen.Add(data))
+                    found.Add((data, t.m_GameObject));
+                foreach (var child in t.m_Children) Walk(child);
+            }
+            Walk(root.transform);
+            return found;
+        }
+
+        /// <summary>Whether an instance's objects still stand for its source's: each GameObject and
+        /// component has its source, and each source component and child its counterpart (a merge
+        /// would only change values).</summary>
+        static bool MatchesSource(PrefabInstanceData data, GameObject instanceRoot)
+        {
+            foreach (var o in PrefabInstances.ObjectsOf(data, instanceRoot))
+            {
+                if (PrefabLinks.Source(o) == null) return false;
+                if (o is not GameObject go || PrefabLinks.Source(go) is not GameObject sourceGo) continue;
+                foreach (var sc in sourceGo.m_Components)
+                    if (sc != null && !sc.m_Destroyed && PrefabInstances.Counterpart(go, sc, data) == null) return false;
+                foreach (var sourceChild in sourceGo.transform.m_Children)
+                {
+                    bool present = false;
+                    foreach (var child in go.transform.m_Children)
+                        if (PrefabLinks.Of(child.m_GameObject)?.Instance == data && ReferenceEquals(PrefabLinks.Source(child.m_GameObject), sourceChild.m_GameObject)) present = true;
+                    if (!present) return false;
+                }
             }
             return true;
         }
@@ -290,6 +393,14 @@ namespace Unbound.Runtime
             {
                 if (!Save(File)) return false;
                 saved?.Invoke();
+                MergeInstances();
+                return true;
+            }
+
+            /// <summary>The scene instances take the asset as it is now, keeping their overrides,
+            /// and are told.</summary>
+            internal void MergeInstances()
+            {
                 var updated = new List<GameObject>();
                 foreach (var (data, root, snapshot) in m_Instances)
                 {
@@ -298,7 +409,6 @@ namespace Unbound.Runtime
                     updated.Add(root);
                 }
                 Updated(updated);
-                return true;
             }
         }
 

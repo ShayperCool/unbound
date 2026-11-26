@@ -215,12 +215,14 @@ namespace Unbound.Runtime
         /// values the instance was last merged from, when the source changed since (else its values now).</summary>
         /// <param name="liveDifferences">Whether values that differ from the source's are overrides
         /// (false: only the stored modifications are, for an instance being made).</param>
+        /// <param name="root">The instance's root, for one inside a prefab asset (else found in the
+        /// loaded scenes).</param>
         internal static Snapshot Capture(PrefabInstanceData data, ValueReferences refs, Func<Object, Dictionary<string, YText>> baseline = null,
-            bool liveDifferences = true)
+            bool liveDifferences = true, GameObject root = null)
         {
             var snapshot = new Snapshot { Refs = refs };
             var toSource = ToSource(data);
-            foreach (var o in ObjectsOf(data))
+            foreach (var o in root != null ? ObjectsOf(data, root) : ObjectsOf(data))
             {
                 var link = PrefabLinks.Of(o);
                 var source = PrefabLinks.Source(o);
@@ -287,10 +289,10 @@ namespace Unbound.Runtime
         /// source is gone is destroyed; then each object takes its source's values (references to
         /// the prefab's objects as the instance's), its overrides over them.
         /// </summary>
-        internal static void Merge(PrefabInstanceData data, Snapshot snapshot)
+        internal static void Merge(PrefabInstanceData data, Snapshot snapshot, GameObject root = null)
         {
             var refs = snapshot.Refs;
-            foreach (var o in ObjectsOf(data))
+            foreach (var o in root != null ? ObjectsOf(data, root) : ObjectsOf(data))
             {
                 if (o is not GameObject go || go == null) continue;
                 if (PrefabLinks.Source(go) is not GameObject sourceGo)
@@ -327,7 +329,7 @@ namespace Unbound.Runtime
 
             var locations = new AssetDatabaseRuntime.Locations();
             var counterparts = new Dictionary<(string, long), Object>();
-            var objects = ObjectsOf(data);
+            var objects = root != null ? ObjectsOf(data, root) : ObjectsOf(data);
             foreach (var o in objects)
                 if (PrefabLinks.Of(o) is PrefabLink link) counterparts[(link.SourceGuid.ToLowerInvariant(), link.SourceFileId)] = o;
             Object ToInstance(Object x)

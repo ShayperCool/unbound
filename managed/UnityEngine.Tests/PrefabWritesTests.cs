@@ -524,6 +524,54 @@ namespace UnityEngine.Tests
             }
         }
 
+        /// <summary>A prefab that could not take a source prefab it holds instances of as that
+        /// was saved is not written, by any save, and says so naming both.</summary>
+        [Fact]
+        public void APrefabLeftBehindByItsSourceIsNotWritten()
+        {
+            var before = FileText();
+            var warnings = new List<string>();
+            var logger = Debug.unityLogger;
+            var previous = logger.logHandler;
+            logger.logHandler = new WarningCapture(previous, warnings);
+            try
+            {
+                PrefabAssets.MarkStaleForTests(m_File, "Assets/Base.prefab");
+                var holder = m_Asset.GetComponent<PrefabTestHolder>();
+                holder.label = "stale";
+                EditorUtility.SetDirty(holder);
+                PrefabUtility.SavePrefabAsset(m_Asset, out var saved);
+                Assert.False(saved);
+                AssetDatabase.SaveAssets();
+                Assert.Equal(before, FileText());
+                Assert.Contains(warnings, w => w.Contains(AssetPath + " is not saved: Assets/Base.prefab, which it holds instances of, was saved while it had changes of its own"));
+            }
+            finally
+            {
+                logger.logHandler = previous;
+            }
+        }
+
+        sealed class WarningCapture : ILogHandler
+        {
+            readonly ILogHandler m_Inner;
+            readonly List<string> m_Warnings;
+
+            internal WarningCapture(ILogHandler inner, List<string> warnings)
+            {
+                m_Inner = inner;
+                m_Warnings = warnings;
+            }
+
+            public void LogFormat(LogType type, Object context, string format, params object[] args)
+            {
+                if (type == LogType.Warning) m_Warnings.Add(args == null || args.Length == 0 ? format : string.Format(format, args));
+                m_Inner.LogFormat(type, context, format, args);
+            }
+
+            public void LogException(Exception exception, Object context) => m_Inner.LogException(exception, context);
+        }
+
         /// <summary>A component added to a prefab asset's GameObject makes it dirty (matches the
         /// Unity 6000.0.71f1 Editor, tests/projects/scenesave prefab-dirty-saves structure.*), not
         /// one an import's postprocessor adds.</summary>

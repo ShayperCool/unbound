@@ -231,5 +231,26 @@
       false
     ],
     "reason": "A Transform's localPosition set on a prefab asset's object: the Editor answers it not dirty at once and dirty later in the step (after SaveAssetIfDirty of another prefab; when its change is taken is not measured); Unbound does not make the Transform dirty: follow-up"
+  },
+  {
+    "case": "prefab-dirty-saves",
+    "key": "file:Assets/PrefabSaves/Nesting.prefab",
+    "reference": "written",
+    "actual": "lines 85-85: reference ['      value: Inner2'], actual ['      value: Thing']",
+    "reason": "A prefab whose root's name in its file is not its file's name (here copies of Thing.prefab): the Editor loads its root named after the file, so an instance of it, nested in a new prefab by SaveAsPrefabAsset, is written with that name (Inner2); Unbound keeps the file's name (Thing) and writes it: follow-up"
+  },
+  {
+    "case": "prefab-dirty-saves",
+    "key": "file:snapshot:nesting.file",
+    "reference": "written",
+    "actual": "lines 85-85: reference ['      value: Inner2'], actual ['      value: Thing']",
+    "reason": "A prefab whose root's name in its file is not its file's name (here copies of Thing.prefab): the Editor loads its root named after the file, so an instance of it, nested in a new prefab by SaveAsPrefabAsset, is written with that name (Inner2); Unbound keeps the file's name (Thing) and writes it: follow-up"
+  },
+  {
+    "case": "prefab-dirty-saves",
+    "key": "file:snapshot:nesting.made",
+    "reference": "written",
+    "actual": "lines 85-85: reference ['      value: Inner2'], actual ['      value: Thing']",
+    "reason": "A prefab whose root's name in its file is not its file's name (here copies of Thing.prefab): the Editor loads its root named after the file, so an instance of it, nested in a new prefab by SaveAsPrefabAsset, is written with that name (Inner2); Unbound keeps the file's name (Thing) and writes it: follow-up"
   }
 ]

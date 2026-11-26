@@ -1091,6 +1091,9 @@ namespace Unbound.Runtime
 
         static IDisposable ImportMessages(string guid) => Unbound.Runtime.Log.EarlierImport(!s_ImportedInSession.Contains(guid));
 
+        /// <summary>The files loaded now.</summary>
+        internal static List<LoadedFile> LoadedFiles() => new List<LoadedFile>(s_Files.Values);
+
         internal static LoadedFile LoadFile(string guid)
         {
             if (s_Files.TryGetValue(guid, out var loaded)) return loaded;
