@@ -237,7 +237,7 @@ namespace UnityEngine.Tests
             var importer = (UnityEditor.TextureImporter)UnityEditor.AssetImporter.FromMeta("Assets/Textures/" + name + ".png",
                 "0123456789abcdef0123456789abcdef", "TextureImporter", UnityYamlText.ParseTopLevel(text).Get("TextureImporter").ToNode());
             change(importer);
-            var written = ImporterMeta.Rewritten(text, "TextureImporter", importer.m_Settings, importer.SavedSettings(),
+            var written = ImporterMeta.Rewritten(text, "TextureImporter", importer.WrittenSettings(), importer.SavedSettings(),
                 (importer.userData, importer.assetBundleName?.ToLowerInvariant(), importer.assetBundleVariant?.ToLowerInvariant()),
                 ImporterLayout.ForTexture(TextureTemplate()), unwritten, out older, out laidOut, importer.ReadAsOldestChanged);
             modules = null;
@@ -405,6 +405,28 @@ namespace UnityEngine.Tests
                 Assert.False(laidOut);
                 Assert.NotEmpty(older);
             }
+        }
+
+        /// <summary>A save of another setting leaves texture settings of version 1 as the file holds
+        /// them (their reading as version 2 is no change to write), twice in a row.</summary>
+        [Fact]
+        public void ASaveOfAnotherSettingKeepsVersionOneTextureSettings()
+        {
+            using var platforms = SpriteMetaPlatforms();
+            var unwritten = new List<string>();
+            var written = RewriteSpriteMeta("CurrentWrap", i => i.filterMode = FilterMode.Trilinear, out var older, out bool laidOut, unwritten, out _);
+            Assert.False(laidOut);
+            Assert.NotEmpty(older);
+            Assert.Contains("  textureSettings:\n    filterMode: 2\n    wrapU: 1\n", written);
+            Assert.DoesNotContain(unwritten, u => u.StartsWith("textureSettings", StringComparison.Ordinal));
+
+            var text = File.ReadAllText(Path.Combine(Repo(), "tests", "projects", "spritemeta", "Assets", "Textures", "CurrentWrapMode.png.meta"));
+            var importer = (UnityEditor.TextureImporter)UnityEditor.AssetImporter.FromMeta("Assets/Textures/CurrentWrapMode.png",
+                "0123456789abcdef0123456789abcdef", "TextureImporter", UnityYamlText.ParseTopLevel(text).Get("TextureImporter").ToNode());
+            importer.SettingsWritten();
+            Assert.Equal(TextureWrapMode.Clamp, importer.wrapModeV);
+            Assert.Null(ImporterMeta.Rewritten(text, "TextureImporter", importer.WrittenSettings(), importer.SavedSettings(), ("", "", ""),
+                ImporterLayout.ForTexture(TextureTemplate()), new List<string>(), out _, out _, importer.ReadAsOldestChanged));
         }
 
         /// <summary>A sprite's oldest-layout section whose platform list has no default entry is read

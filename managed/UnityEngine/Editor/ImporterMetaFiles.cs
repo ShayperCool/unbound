@@ -104,7 +104,7 @@ namespace Unbound.Runtime
             var unwritten = new List<string>();
             bool texture = importer.m_SettingsType == "TextureImporter";
             var layout = texture ? ImporterLayout.ForTexture(TextureTemplate()) : ImporterLayout.Of(importer.m_SettingsType);
-            var written = Rewritten(text, importer.m_SettingsType, importer.m_Settings, importer.SavedSettings(), common, layout, unwritten,
+            var written = Rewritten(text, importer.m_SettingsType, importer.WrittenSettings(), importer.SavedSettings(), common, layout, unwritten,
                 out var older, out bool laidOut, importer is TextureImporter oldestRead && oldestRead.ReadAsOldestChanged);
             importer.m_ImportedSettings = MetaSettings.ToJson(importer.m_Settings);
             if (older.Count > 0)
@@ -690,16 +690,16 @@ namespace Unbound.Runtime
             return entry;
         }
 
-        /// <summary>The default platform entry the importer reads a sprite's section of the oldest
-        /// layout (no serialized version) with when its platform list holds none: the one it adds,
-        /// uncompressed (<see cref="OldestEntry"/>; matches the Unity 6000.0.71f1 Editor,
-        /// tests/projects/spritemeta platform/Save*, KeepWrap*, texture/ of them: RGB24), as the
+        /// <summary>The default platform entry the importer reads a section of the oldest layout (no
+        /// serialized version) with when its platform list holds none: the one it adds, uncompressed
+        /// (<see cref="OldestEntry"/>; matches the Unity 6000.0.71f1 Editor, tests/projects/spritemeta
+        /// platform/Save*, KeepWrap*, BareDefault, KeepDefaultWrap and texture/ of them), as the
         /// texture import reads it (crates/unbound-assets/src/texture.rs platform_compression). Null
-        /// for another section (the oldest layout of other types is not measured so).</summary>
+        /// for another section.</summary>
         internal YNode OldestReadEntry(YNode settings)
         {
             if (m_PlatformEntry == null || settings == null || settings.Kind != YKind.Map || settings.Get("serializedVersion") != null
-                || MetaSettings.Int(settings, "textureType", -1) != 8 || FindEntry(settings, TextureImporterPlatformSettings.DefaultPlatformName) != null)
+                || FindEntry(settings, TextureImporterPlatformSettings.DefaultPlatformName) != null)
                 return null;
             return OldestEntry(ImporterMeta.FromNode(settings)).ToNode();
         }

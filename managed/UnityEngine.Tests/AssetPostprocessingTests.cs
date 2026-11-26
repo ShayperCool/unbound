@@ -145,10 +145,11 @@ namespace UnityEngine.Tests
         [Fact]
         public void ATypeChangeOnASparseMetaKeepsTheWrapModeAsked()
         {
-            // A sprite without wrap keys clamps; made Default it keeps clamping (the type change
-            // does not set wrap), and a Default texture made a Sprite repeats when asked to.
+            // A sprite of an older serialized version without wrap keys clamps; made Default it keeps
+            // clamping (the type change does not set wrap), and a Default texture made a Sprite
+            // repeats when asked to.
             var sprite = (TextureImporter)AssetImporter.FromMeta("Assets/W.png", "7123456789abcdef0123456789abcdef", "TextureImporter",
-                TestYaml.DocumentBody("TextureImporter:\n  textureType: 8\n  spriteMode: 1\n  userData: \n"));
+                TestYaml.DocumentBody("TextureImporter:\n  serializedVersion: 12\n  textureType: 8\n  spriteMode: 1\n  userData: \n"));
             Assert.Equal(TextureWrapMode.Clamp, sprite.wrapModeU);
             sprite.textureType = TextureImporterType.Default;
             Assert.Equal(TextureWrapMode.Clamp, sprite.wrapModeU);
@@ -156,7 +157,7 @@ namespace UnityEngine.Tests
 
             var plain = (TextureImporter)AssetImporter.FromMeta("Assets/V.png", "8123456789abcdef0123456789abcdef", "TextureImporter",
                 TestYaml.DocumentBody("TextureImporter:\n  textureType: 0\n  textureSettings:\n    wrapMode: 1\n  userData: \n"));
-            // The older per-texture wrap mode is read for missing axes.
+            // The older per-texture wrap mode (settings of version 1) is every axis's.
             Assert.Equal(TextureWrapMode.Clamp, plain.wrapModeV);
             var settings = new TextureImporterSettings();
             plain.ReadTextureSettings(settings);
@@ -170,9 +171,10 @@ namespace UnityEngine.Tests
         [Fact]
         public void MissingKeysReadAsTheTypesDefaults()
         {
-            // A sprite clamps; an older linear .meta is not sRGB; a -1 wrap is the type's default.
+            // A sprite of an older version clamps; an older linear .meta is not sRGB; a -1 wrap is
+            // the type's default.
             var sprite = (TextureImporter)AssetImporter.FromMeta("Assets/Q.png", "6123456789abcdef0123456789abcdef", "TextureImporter",
-                TestYaml.DocumentBody("TextureImporter:\n  mipmaps:\n    linearTexture: 1\n  textureSettings:\n    wrapV: -1\n  textureType: 8\n  userData: \n"));
+                TestYaml.DocumentBody("TextureImporter:\n  serializedVersion: 12\n  mipmaps:\n    linearTexture: 1\n  textureSettings:\n    serializedVersion: 2\n    wrapV: -1\n  textureType: 8\n  userData: \n"));
             var settings = new TextureImporterSettings();
             sprite.ReadTextureSettings(settings);
             Assert.Equal(TextureWrapMode.Clamp, settings.wrapModeU);
@@ -188,10 +190,10 @@ namespace UnityEngine.Tests
         [Fact]
         public void MinusOneReadsAsTheTypesDefaultAndAMissingWrapKeyAsTheOlderWrapMode()
         {
-            // As the import reads them: a -1 is the type's default even beside an older wrapMode
-            // (here Clamp), a missing wrap key takes that wrapMode.
+            // As the import reads settings of version 2: a -1 is the type's default even beside an
+            // older wrapMode (here Clamp), a missing wrap key takes that wrapMode.
             var plain = (TextureImporter)AssetImporter.FromMeta("Assets/R.png", "7123456789abcdef0123456789abcdef", "TextureImporter",
-                TestYaml.DocumentBody("TextureImporter:\n  textureSettings:\n    filterMode: -1\n    aniso: -1\n    wrapMode: 1\n    wrapU: -1\n    wrapV: 2\n" +
+                TestYaml.DocumentBody("TextureImporter:\n  textureSettings:\n    serializedVersion: 2\n    filterMode: -1\n    aniso: -1\n    wrapMode: 1\n    wrapU: -1\n    wrapV: 2\n" +
                     "  mipmaps:\n    mipMapsPreserveCoverage: 1\n    alphaTestReferenceValue: 0.1\n  textureType: 0\n  userData: \n"));
             Assert.Equal(FilterMode.Bilinear, plain.filterMode);
             Assert.Equal(1, plain.anisoLevel);

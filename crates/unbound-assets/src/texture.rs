@@ -27,7 +27,7 @@ use unbound_yaml::Value;
 
 /// The TextureImporter's serialized version in the 6000.0 Editor's .meta files
 /// (crates/unbound-assets/src/new_meta/texture_importer.yaml).
-const CURRENT_SERIALIZED_VERSION: i64 = 13;
+pub(crate) const CURRENT_SERIALIZED_VERSION: i64 = 13;
 
 /// File extensions Unity's TextureImporter handles that this importer decodes.
 pub const EXTENSIONS: &[&str] = &[
@@ -273,7 +273,15 @@ impl TextureSettings {
     /// Reads the settings of a `.meta` (any layout from Unity 5.x on), with Unity's defaults for
     /// missing fields. `build_target` selects the platform override (`Standalone`, `Android`,
     /// `iPhone`, ...) applied when that platform is `overridden`.
+    /// The settings a `.meta` gives the import, as a release outside the measured families reads
+    /// them ([`Self::read_measured`]).
     pub fn read(meta: &Value, build_target: &str) -> Self {
+        Self::read_measured(meta, build_target, false)
+    }
+
+    /// The settings a `.meta` gives the import; `oldest_measured`: the release reads a section of
+    /// no serialized version as its measured family does ([`platform_compression`]).
+    pub fn read_measured(meta: &Value, build_target: &str, oldest_measured: bool) -> Self {
         let imp = importer(meta, "TextureImporter");
         let texture_type = TextureType::from_meta(int(imp, "textureType").unwrap_or(0));
         let shape = match int(imp, "textureShape").unwrap_or(1) {
@@ -312,9 +320,9 @@ impl TextureSettings {
             }
         };
         let (max_size, resize_algorithm) = platform_max_size(imp, build_target);
-        let uncompressed = platform_uncompressed(imp, build_target);
+        let uncompressed = platform_uncompressed(imp, build_target, oldest_measured);
         let entry = platform_entry(imp, build_target);
-        let compression = platform_compression(imp, build_target) as i32;
+        let compression = platform_compression(imp, build_target, oldest_measured) as i32;
         let crunched = entry
             .and_then(|e| boolean(e, "crunchedCompression"))
             .or_else(|| boolean(imp, "crunchedCompression"))
@@ -522,35 +530,33 @@ fn format_has_alpha(format: i64) -> bool {
 /// Whether the build target stores the texture without loss: a TextureImporterFormat that is no
 /// block compression (Alpha8, RGB24, RGBA32, RGBAHalf, R8, ...), or `Automatic` with compression
 /// None.
-fn platform_uncompressed(imp: &Value, build_target: &str) -> bool {
+fn platform_uncompressed(imp: &Value, build_target: &str, oldest_measured: bool) -> bool {
     if let Some(format) = platform_format(imp, build_target) {
         // DXT, BC4-7, PVRTC, ETC/EAC, ASTC (and their crunched forms).
         return !matches!(format, 10 | 12 | 24..=61 | 64..=71);
     }
-    platform_compression(imp, build_target) == 0
+    platform_compression(imp, build_target, oldest_measured) == 0
 }
 
 /// The build target's TextureImporterCompression: its entry's, else the default entry's, else the
-/// section's, else Compressed. A sprite's section of no serialized version (the oldest layout)
-/// whose platform list holds neither entry reads the default entry its importer adds: uncompressed
-/// (matches the Unity 6000.0.71f1 Editor, tests/projects/spritemeta texture/SaveKeep, KeepWrap*:
-/// RGB24; platform/Save*). The oldest layout of other types is not measured that way (a Default
-/// texture's reads as another type, spritemeta importer/BareDefault).
-fn platform_compression(imp: &Value, build_target: &str) -> i64 {
+/// section's, else Compressed. A section of no serialized version (the oldest layout) whose
+/// platform list holds neither entry reads the default entry its importer adds: uncompressed
+/// (matches the Unity 6000.0.71f1 Editor, tests/projects/spritemeta platform/ and texture/ of
+/// SaveKeep, KeepWrap*, RGB24, and of BareDefault, KeepDefaultWrap, whose SingleChannel reading
+/// is not implemented), in the measured families (`oldest_measured`); elsewhere not measured.
+fn platform_compression(imp: &Value, build_target: &str, oldest_measured: bool) -> i64 {
     match platform_entry(imp, build_target) {
         Some(entry) => int(entry, "textureCompression")
             .or_else(|| int(imp, "textureCompression"))
             .unwrap_or(1),
-        None if is_oldest_sprite_section(imp) => 0,
+        None if oldest_measured && is_oldest_section(imp) => 0,
         None => int(imp, "textureCompression").unwrap_or(1),
     }
 }
 
-/// Whether a texture section is a sprite's of the oldest layout: no serialized version.
-fn is_oldest_sprite_section(imp: &Value) -> bool {
-    imp.as_map().is_some()
-        && imp.get("serializedVersion").is_none()
-        && int(imp, "textureType") == Some(8)
+/// Whether a texture section is of the oldest layout: one of no serialized version.
+fn is_oldest_section(imp: &Value) -> bool {
+    imp.as_map().is_some() && imp.get("serializedVersion").is_none()
 }
 
 /// One mip level, rows bottom-up.
@@ -1317,9 +1323,10 @@ pub struct TextureImporter {
     /// (stored RGB24 or RGBA32, matches the Unity 6000.0.71f1 Editor,
     /// tests/projects/assetpostprocessors Plain.png and Sprite.png), the rest as imported.
     pub before_compression: bool,
-    /// A `.meta` that names no importer imports with the texture importer's oldest settings
-    /// ([`crate::new_meta::guid_only_section`]): the release families where that is measured.
-    pub guid_only_section: bool,
+    /// The release families where the oldest settings are measured: a `.meta` that names no
+    /// importer imports with them ([`crate::new_meta::guid_only_section`]), and a section of no
+    /// serialized version reads its importer's added default entry ([`TextureSettings::read_measured`]).
+    pub oldest_settings_measured: bool,
 }
 
 impl Default for TextureImporter {
@@ -1333,7 +1340,7 @@ impl Default for TextureImporter {
             lighting: unbound_compat::LightingEncodings::default(),
             tree_textures: Default::default(),
             before_compression: false,
-            guid_only_section: false,
+            oldest_settings_measured: false,
         }
     }
 }
@@ -1344,7 +1351,7 @@ impl TextureImporter {
     /// ([`crate::new_meta::with_guid_only_section`]) and the cube map they make has a measured
     /// layout for the image ([`guid_only_cube_measured`]), where that is measured; `None` otherwise.
     fn oldest(&self, source: &Path, bytes: &[u8], meta: &Value) -> Option<Value> {
-        if !self.guid_only_section {
+        if !self.oldest_settings_measured {
             return None;
         }
         let oldest = crate::new_meta::with_guid_only_section(
@@ -1356,7 +1363,8 @@ impl TextureImporter {
     }
 
     pub fn settings(&self, meta: &Value) -> TextureSettings {
-        let mut settings = TextureSettings::read(meta, &self.build_target);
+        let mut settings =
+            TextureSettings::read_measured(meta, &self.build_target, self.oldest_settings_measured);
         if self.before_compression {
             settings.uncompressed = true;
             settings.explicit_format = None;
@@ -1580,7 +1588,7 @@ impl Importer for TextureImporter {
     // 56: a normal map carries its usage mode (DXT5nm or plain).
     // 57: textureSettings without their own serialized version wrap by their wrapMode alone, and a
     //     wrap no settings hold reads Repeat in the oldest layout too (a sprite's was Clamp); an
-    //     oldest sprite section without a default entry is uncompressed.
+    //     oldest section without a default entry is uncompressed.
     const VERSION: u32 = 57;
 
     fn import(&self, source: &Path, bytes: &[u8], meta: &Value) -> Result<ImportedTexture> {
@@ -1605,7 +1613,7 @@ impl Importer for TextureImporter {
         format!(
             "{}{}{}{}{}{}+workers{}+{}+{:?}",
             self.build_target,
-            if self.guid_only_section {
+            if self.oldest_settings_measured {
                 "+guid-only-section"
             } else {
                 ""

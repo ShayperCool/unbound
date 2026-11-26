@@ -150,6 +150,11 @@ namespace UnityEditor
         /// importer added itself on loading them (<see cref="TextureImporter"/>'s platforms).</summary>
         internal virtual YNode SavedSettings() => m_Settings;
 
+        /// <summary>The settings a save writes: the importer's, but for what it reads differently
+        /// from the file without a change since (<see cref="TextureImporter"/>'s version-1 sampler
+        /// settings), which keeps the file's.</summary>
+        internal virtual YNode WrittenSettings() => m_Settings;
+
         /// <summary>The settings were written into the .meta whole.</summary>
         internal virtual void SettingsWritten() { }
 

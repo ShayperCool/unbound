@@ -79,8 +79,8 @@ of 3 also makes `alphaUsage` 0 (`BareLegacy`), and an entry of no `serializedVer
 defaults (`BarePlat`: compressed, `forceMaximumCompressionQuality_BC6H_BC7` 1). A script's save of such
 a section that has its sprite ID writes it the same way with the change (a cleared entry left out, a
 missing `nPOTScale` as 0, the bundle name in lower case); a save of no change writes nothing
-(`save/*`). A Default texture's is left as it is (`BareDefault`), and read as an uncompressed
-SingleChannel texture (imported Alpha8; `KeepDefaultWrap` too). Texture settings without their own
+(`save/*`). A Default texture's is left as it is (`BareDefault`), and read as a SingleChannel
+texture with the same uncompressed default entry (imported Alpha8; `KeepDefaultWrap` too). Texture settings without their own
 `serializedVersion` are of version 1 in a section of any version and type: their `wrapMode` is every
 axis's, their `wrapU`, `wrapV` and `wrapW` are not read, their `filterMode` is (`KeepWrap`,
 `KeepWrapMode`, `KeepDefaultWrap`, `CurrentWrap`, `CurrentWrapMode`); those of version 2 are read axis by

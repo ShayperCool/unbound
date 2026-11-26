@@ -2653,7 +2653,7 @@ fn a_guid_only_texture_imports_as_a_cube_map_where_its_layout_is_measured() {
         unbound_yaml::parse_value("fileFormatVersion: 2\nguid: 0123456789abcdef0123456789abcdef\n")
             .unwrap();
     let importer = TextureImporter {
-        guid_only_section: true,
+        oldest_settings_measured: true,
         ..TextureImporter::default()
     };
     let cube = importer
@@ -2741,24 +2741,35 @@ fn the_mipmap_limit_flag_reads_its_former_name_too() {
     assert!(!flag(""));
 }
 
-/// A sprite's section of no serialized version whose platform list has no default entry reads the
-/// uncompressed one its importer adds (tests/projects/spritemeta texture/SaveKeep, KeepWrap*:
-/// RGB24); one with a default entry reads it (SaveClear: DXT1); other sections keep the platform
+/// A section of no serialized version whose platform list has no default entry reads the
+/// uncompressed one its importer adds in the measured families (tests/projects/spritemeta
+/// texture/SaveKeep, KeepWrap*: RGB24; platform/BareDefault: uncompressed); one with a default
+/// entry reads it (SaveClear: DXT1); other sections, and other families, keep the platform
 /// settings' default, compressed.
 #[test]
-fn an_oldest_sprite_section_without_a_default_entry_is_uncompressed() {
+fn an_oldest_section_without_a_default_entry_is_uncompressed() {
+    let measured = |meta: &str| {
+        TextureSettings::read_measured(
+            &unbound_yaml::parse_value(meta).unwrap(),
+            "Standalone",
+            true,
+        )
+    };
     let sprite = "TextureImporter:\n  textureType: 8\n  spriteMode: 1\n";
-    let s = settings(sprite, "Standalone");
+    let s = measured(sprite);
     assert!(s.uncompressed);
     assert_eq!(s.compression, 0);
+    assert!(!settings(sprite, "Standalone").uncompressed);
+    assert!(measured("TextureImporter:\n  textureType: 0\n").uncompressed);
     let entry = format!(
         "{sprite}  platformSettings:\n  - serializedVersion: 4\n    buildTarget: DefaultTexturePlatform\n    textureCompression: 1\n"
     );
-    assert!(!settings(&entry, "Standalone").uncompressed);
-    assert!(!settings("TextureImporter:\n  textureType: 0\n", "Standalone").uncompressed);
+    assert!(!measured(&entry).uncompressed);
     let current = sprite.replace(
         "TextureImporter:\n",
         "TextureImporter:\n  serializedVersion: 13\n",
     );
-    assert!(!settings(&current, "Standalone").uncompressed);
+    assert!(!measured(&current).uncompressed);
+    // A .meta without the section (its GUID alone) keeps the new asset's defaults.
+    assert!(!measured("fileFormatVersion: 2\n").uncompressed);
 }

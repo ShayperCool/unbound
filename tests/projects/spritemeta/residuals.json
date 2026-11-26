@@ -1,9 +1,7 @@
 {
- "A Default texture's .meta of the oldest layout (no serializedVersion, textureType 0, BareDefault, KeepDefaultWrap) is not written, and the Editor's importer reads it as an uncompressed SingleChannel texture scaled to the nearest power of two (imported Alpha8); Unbound reads it as a compressed Default texture (the oldest layout's reading of other types is not measured)": [
+ "A Default texture's .meta of the oldest layout (no serializedVersion, textureType 0, BareDefault, KeepDefaultWrap) is not written, and the Editor's importer reads it as a SingleChannel texture scaled to the nearest power of two (imported Alpha8); Unbound reads it as a Default texture, uncompressed like the Editor's (RGB24; the oldest layout's reading of other types is not measured)": [
   "importer/BareDefault",
   "importer/KeepDefaultWrap",
-  "platform/BareDefault",
-  "platform/KeepDefaultWrap",
   "texture/BareDefault",
   "texture/KeepDefaultWrap"
  ],

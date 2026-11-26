@@ -201,7 +201,7 @@ fn run(
         tree_textures: tree_textures.clone(),
         before_compression: false,
         // As the engine imports for a release of the measured family (it asks the project's).
-        guid_only_section: true,
+        oldest_settings_measured: true,
     };
     let audio = AudioImporter {
         build_target: target.to_string(),

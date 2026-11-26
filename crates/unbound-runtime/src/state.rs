@@ -491,7 +491,7 @@ pub fn initialize(project: &Project) -> Result<&'static RuntimeState> {
             gamma: project_in_gamma_space(project),
             project: unbound_assets::texture::ProjectCompression::read(&project.root),
             tree_textures,
-            guid_only_section: unbound_compat::MeasuredFamily::of(project.version).is_some(),
+            oldest_settings_measured: unbound_compat::MeasuredFamily::of(project.version).is_some(),
             ..TextureImporter::default()
         }),
         model_importer: unbound_assets::ModelImporter::for_release(&project.version)

@@ -99,7 +99,16 @@ impl TreeTextures {
             return None;
         }
         let mut meta = meta.clone();
+        let created = !matches!(meta.get("TextureImporter"), Some(Value::Map(_)));
         let importer = child(&mut meta, "TextureImporter");
+        if created {
+            // A .meta without the section reads the new asset's settings, not the oldest layout's.
+            set(
+                importer,
+                "serializedVersion",
+                &crate::texture::CURRENT_SERIALIZED_VERSION.to_string(),
+            );
+        }
         if roles.color {
             set(importer, "alphaIsTransparency", "1");
             let mipmaps = child(importer, "mipmaps");

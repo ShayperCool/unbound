@@ -38,16 +38,18 @@ namespace UnityEditor
         {
             m_AddedPlatforms.Clear();
             m_ReadAsOldest.Clear();
-            void ReadAs(List<(string Path, string Value)> values)
+            m_ReadAsVersionOne.Clear();
+            void ReadAs(List<(string Path, string Value)> values, bool versionOne = false)
             {
                 foreach (var (path, value) in values)
                 {
                     m_ReadAsOldest[path] = (MetaSettings.Clone(MetaSettings.Find(m_Settings, path)), value);
                     MetaSettings.Set(m_Settings, path, value);
+                    if (versionOne) m_ReadAsVersionOne.Add(path);
                 }
             }
             if (ImporterMeta.TextureLayout is { } layout && m_Settings != null) ReadAs(layout.OldestReadValues(m_Settings));
-            if (m_Settings != null) ReadAs(ImporterLayout.VersionOneReadValues(m_Settings));
+            if (m_Settings != null) ReadAs(ImporterLayout.VersionOneReadValues(m_Settings), versionOne: true);
             m_CreatedList = false;
             if (ImporterMeta.TextureLayout?.OldestReadEntry(m_Settings) is { } oldestDefault)
             {
@@ -83,13 +85,33 @@ namespace UnityEditor
                 if (kept.Count == 0 && m_CreatedList) MetaSettings.Remove(copy, PlatformList);
                 else SetList(copy, kept.ToArray());
             }
-            // What was read as an oldest section reads and is unchanged: the file's own.
-            foreach (var (path, (file, read)) in m_ReadAsOldest)
-                if (MetaSettings.Find(copy, path) is { Kind: YKind.Scalar } now && now.Scalar == read)
+            Unread(copy, m_ReadAsOldest.Keys);
+            return copy;
+        }
+
+        /// <summary>The paths of <see cref="m_ReadAsOldest"/> read so from settings of version 1
+        /// (<see cref="ImporterLayout.VersionOneReadValues"/>): a section the layout keeps.</summary>
+        readonly HashSet<string> m_ReadAsVersionOne = new HashSet<string>(StringComparer.Ordinal);
+
+        /// <summary>The settings with what was read differently from the file and is unchanged since
+        /// back at the file's own (removed where the file lacks it), at <paramref name="paths"/>.</summary>
+        void Unread(YNode settings, IEnumerable<string> paths)
+        {
+            foreach (var path in paths)
+                if (m_ReadAsOldest.TryGetValue(path, out var entry) && MetaSettings.Find(settings, path) is { Kind: YKind.Scalar } now && now.Scalar == entry.Read)
                 {
-                    if (file is { Kind: YKind.Scalar }) MetaSettings.Set(copy, path, file.Scalar);
-                    else MetaSettings.Remove(copy, path);
+                    if (entry.File is { Kind: YKind.Scalar }) MetaSettings.Set(settings, path, entry.File.Scalar);
+                    else MetaSettings.Remove(settings, path);
                 }
+        }
+
+        /// <summary>The settings with the version-1 sampler settings read and unchanged since at the
+        /// file's own: a save of another setting does not write them.</summary>
+        internal override YNode WrittenSettings()
+        {
+            if (m_Settings == null || m_ReadAsVersionOne.Count == 0) return m_Settings;
+            var copy = MetaSettings.Clone(m_Settings);
+            Unread(copy, m_ReadAsVersionOne);
             return copy;
         }
 
@@ -109,7 +131,10 @@ namespace UnityEditor
         {
             m_AddedPlatforms.Clear();
             m_CreatedList = false;
-            m_ReadAsOldest.Clear();
+            // Settings of version 1 stay in the file as they were (such a section keeps its layout):
+            // still read so.
+            foreach (var path in new List<string>(m_ReadAsOldest.Keys))
+                if (!m_ReadAsVersionOne.Contains(path)) m_ReadAsOldest.Remove(path);
         }
 
         /// <summary>Adds to <paramref name="settings"/> the entries its platform list lacks of the
