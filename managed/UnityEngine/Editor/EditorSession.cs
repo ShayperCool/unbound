@@ -139,14 +139,16 @@ namespace Unbound.Runtime
         {
             Application.Internal_PlayModeStarting();
             LeaveEditModeForPlay();
-            // Options that keep the scenes: their objects stop in Edit mode, then play.
+            // [InitializeOnEnterPlayMode] in Edit mode, then, with the options keeping the scenes,
+            // their objects stop in Edit mode (matches the Unity 6000.0.71f1 Editor,
+            // tests/projects/scenereloadoff both.events: the probe enters Play mode from Edit mode).
+            EditorInitialization.EnterPlayModeMethods();
             bool keep = KeepsScenesForPlay;
             if (keep) StopOpenScenesForPlay();
             UnityEngine.U2D.SpriteAtlasPacking.PackV1ForPlayMode();
             IsPlaying = true;
             FixPlayModeBuildList();
             Time.ResetForPlayMode();
-            EditorInitialization.EnterPlayModeMethods();
             RuntimeInitializers.Run(RuntimeInitializeLoadType.SubsystemRegistration);
             RuntimeInitializers.Run(RuntimeInitializeLoadType.AfterAssembliesLoaded);
             RuntimeInitializers.Run(RuntimeInitializeLoadType.BeforeSplashScreen);
@@ -202,8 +204,20 @@ namespace Unbound.Runtime
                 return;
             }
             s_EditModeStartRoots = null;
+            // Roots a scene load keeps (DontSaveInEditor, as an [ExecuteAlways] script's helper
+            // object) stay: the reload moves them out of the scene, as for any Single load.
             foreach (var root in roots)
-                if (root != null) Object.DestroyImmediate(root);
+                if (root != null && !SceneManagerInternal.KeptBySingleLoad(root)) Object.DestroyImmediate(root);
+        }
+
+        /// <summary>The components of the open scenes' active objects, in hierarchy order.</summary>
+        static List<Component> OpenSceneComponents()
+        {
+            var components = new List<Component>();
+            foreach (var scene in SceneRegistry.Loaded.ToArray())
+                foreach (var root in scene.Roots.ToArray())
+                    if (root != null) Collect(root.m_Transform, components);
+            return components;
         }
 
         /// <summary>Entering Play mode with the open scenes kept: in Edit mode their enabled scripts
@@ -211,14 +225,7 @@ namespace Unbound.Runtime
         /// ExitingEditMode, then OnEnable on the same instances in Play mode and no second Awake).
         /// Their engine components stop too, so that Play mode starts them as a loaded scene's
         /// (Play On Awake, for one); that part is Unbound's mechanism, not measured.</summary>
-        internal static void StopOpenScenesForPlay()
-        {
-            var components = new List<Component>();
-            foreach (var scene in SceneRegistry.Loaded.ToArray())
-                foreach (var root in scene.Roots.ToArray())
-                    if (root != null) Collect(root.m_Transform, components);
-            Lifecycle.Deactivate(components);
-        }
+        internal static void StopOpenScenesForPlay() => Lifecycle.Deactivate(OpenSceneComponents());
 
         /// <summary>The open scenes play, after the BeforeSceneLoad initializers: their objects wake
         /// up as a loaded scene's do (the scripts awake in Edit mode get only OnEnable), are
@@ -232,10 +239,7 @@ namespace Unbound.Runtime
         {
             s_EditModeStartRoots = null;
             DisabledModules.PruneOpenScenes();
-            var components = new List<Component>();
-            foreach (var scene in SceneRegistry.Loaded.ToArray())
-                foreach (var root in scene.Roots.ToArray())
-                    if (root != null) Collect(root.m_Transform, components);
+            var components = OpenSceneComponents();
             foreach (var scene in SceneRegistry.Loaded.ToArray())
                 foreach (var root in scene.Roots.ToArray())
                     if (root != null) Unlink(root.m_Transform);

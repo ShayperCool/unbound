@@ -20,6 +20,18 @@ namespace UnityEngine.Tests
     [ExecuteAlways] public class KeptSceneAlways : KeptSceneCounter { }
     public class KeptScenePlain : KeptSceneCounter { }
 
+    /// <summary>[InitializeOnEnterPlayMode] of this assembly's editor code (only while a test asks).</summary>
+    static class KeptSceneEnterPlayMode
+    {
+        internal static bool Active;
+
+        [InitializeOnEnterPlayMode]
+        static void Entering(EnterPlayModeOptions options)
+        {
+            if (Active) KeptSceneCounter.Calls.Add("enterPlayMode " + (int)options + " " + (Application.isPlaying ? "play" : "edit"));
+        }
+    }
+
     /// <summary>Entering Play mode with Enter Play Mode Options that keep the domain or the open
     /// scene (tests/projects/scenereloadoff): the Edit-mode start's end and the kept scene's play.</summary>
     [Collection("Frames")]
@@ -42,7 +54,7 @@ namespace UnityEngine.Tests
                 EditorSettings.enterPlayModeOptionsEnabled = true;
                 EditorSettings.enterPlayModeOptions = options;
                 KeptSceneCounter.Calls.Clear();
-                m_Scenes.Loaded("Main", "Assets/Main.unity");
+                m_Scenes.Loaded("Main");
                 EditorSession.IsPlaying = false;
                 Roots.Add(Make<KeptSceneAlways>("Always", enabled: true));
                 Roots.Add(Make<KeptScenePlain>("Plain", enabled: true));
@@ -111,6 +123,62 @@ namespace UnityEngine.Tests
             KeptSceneCounter.Calls.Clear();
             EditorSession.EndEditModeStart();
             Assert.Empty(KeptSceneCounter.Calls);
+        }
+
+        [Fact]
+        public void WithTheSceneReloadedARootTheLoadKeepsIsNotDestroyed()
+        {
+            // A DontSave object an Edit-mode script made: a scene load keeps it (moves it out).
+            using var setup = new Setup(EnterPlayModeOptions.DisableDomainReload);
+            var helper = new GameObject("Helper") { hideFlags = HideFlags.DontSave };
+            setup.Roots.Add(helper);
+            s_StartRoots.SetValue(null, new List<GameObject>(setup.Roots));
+            KeptSceneCounter.Calls.Clear();
+            EditorSession.EndEditModeStart();
+            Assert.True(helper != null);
+            Assert.True(setup.Roots[0] == null && setup.Roots[1] == null && setup.Roots[2] == null);
+        }
+
+        [Fact]
+        public void EnteringPlayModeFromEditModeRunsEnterPlayModeMethodsBeforeStoppingAKeptScene()
+        {
+            // As the probe's Editor capture enters Play mode (EditorApplication.isPlaying = true):
+            // ExitingEditMode, [InitializeOnEnterPlayMode] in Edit mode, then OnDisable in Edit mode.
+            var assemblies = (List<Assembly>)typeof(GameDomain).GetField("s_Assemblies", BindingFlags.Static | BindingFlags.NonPublic).GetValue(null);
+            var own = typeof(KeptSceneEnterPlayMode).Assembly;
+            bool added = !assemblies.Contains(own);
+            bool startedInEditMode = EditorSession.StartedInEditMode;
+            using var setup = new Setup(EnterPlayModeOptions.DisableDomainReload | EnterPlayModeOptions.DisableSceneReload);
+            s_StartRoots.SetValue(null, null);
+            Action<PlayModeStateChange> state = change => KeptSceneCounter.Calls.Add(change.ToString());
+            EditorApplication.playModeStateChanged += state;
+            if (added) assemblies.Add(own);
+            KeptSceneEnterPlayMode.Active = true;
+            try
+            {
+                EditorSession.StartedInEditMode = true;
+                KeptSceneCounter.Calls.Clear();
+                EditorSession.Request(true);
+                EditorSession.ApplyRequest();
+                Assert.Equal(new[]
+                {
+                    "ExitingEditMode", "enterPlayMode 3 edit", "Always OnDisable edit",
+                    "Always OnEnable play", "Plain Awake play", "Plain OnEnable play",
+                }, KeptSceneCounter.Calls);
+                Assert.Empty(setup.Loaded);
+            }
+            finally
+            {
+                KeptSceneEnterPlayMode.Active = false;
+                if (added) assemblies.Remove(own);
+                EditorApplication.playModeStateChanged -= state;
+                if (EditorSession.IsPlaying)
+                {
+                    EditorSession.Request(false);
+                    EditorSession.ApplyRequest();
+                }
+                EditorSession.StartedInEditMode = startedInEditMode;
+            }
         }
 
         [Fact]
