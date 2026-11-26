@@ -1,0 +1,16 @@
+{
+  "commands": [
+    "python3 tests/projects/mppmclones/run.py check"
+  ],
+  "summary": "mppmclones: .*",
+  "engine_paths": [
+    "crates/unbound-project/src/lib.rs",
+    "crates/unbound-runtime/src/view.rs",
+    "crates/unbound-runtime/src/config.rs",
+    "crates/unbound-runtime/src/game.rs",
+    "crates/unbound/src/main.rs",
+    "crates/unbound/src/commands.rs",
+    "crates/unbound/src/editor_launch.rs",
+    "managed/UnityEngine/Editor/VirtualPlayerActivation.cs"
+  ]
+}
