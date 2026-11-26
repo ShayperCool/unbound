@@ -187,5 +187,49 @@
       "AssetImporter"
     ],
     "reason": "The Editor's StyleSheetImporter (a .uss file's importer) has no class in Unbound, which imports style sheets itself: a style sheet's GUID-only .meta answers AssetImporter where the Editor answers StyleSheetImporter (follow-up; tests/projects/importerpick Guid.uss)"
+  },
+  {
+    "case": "prefab-dirty-saves",
+    "key": "fields.changed.collider",
+    "reference": [
+      true
+    ],
+    "actual": [
+      false
+    ],
+    "reason": "An engine component's property set through its API on a prefab asset's object (a BoxCollider's size): the Editor makes the component dirty at once; Unbound marks an asset's objects dirty through EditorUtility.SetDirty, AddComponent and the APIs measured for native assets only, so a prefab changed through such setters alone is not written by SaveAssets (here the script's SetDirty writes the file, identical): follow-up"
+  },
+  {
+    "case": "prefab-dirty-saves",
+    "key": "fields.marked.collider",
+    "reference": [
+      true
+    ],
+    "actual": [
+      false
+    ],
+    "reason": "An engine component's property set through its API on a prefab asset's object (a BoxCollider's size): the Editor makes the component dirty at once; Unbound marks an asset's objects dirty through EditorUtility.SetDirty, AddComponent and the APIs measured for native assets only, so a prefab changed through such setters alone is not written by SaveAssets (here the script's SetDirty writes the file, identical): follow-up"
+  },
+  {
+    "case": "prefab-dirty-saves",
+    "key": "fields.afterSingle.collider",
+    "reference": [
+      true
+    ],
+    "actual": [
+      false
+    ],
+    "reason": "An engine component's property set through its API on a prefab asset's object (a BoxCollider's size): the Editor makes the component dirty at once; Unbound marks an asset's objects dirty through EditorUtility.SetDirty, AddComponent and the APIs measured for native assets only, so a prefab changed through such setters alone is not written by SaveAssets (here the script's SetDirty writes the file, identical): follow-up"
+  },
+  {
+    "case": "prefab-dirty-saves",
+    "key": "fields.afterSingle.transform",
+    "reference": [
+      true
+    ],
+    "actual": [
+      false
+    ],
+    "reason": "A Transform's localPosition set on a prefab asset's object: the Editor answers it not dirty at once and dirty later in the step (after SaveAssetIfDirty of another prefab; when its change is taken is not measured); Unbound does not make the Transform dirty: follow-up"
   }
 ]

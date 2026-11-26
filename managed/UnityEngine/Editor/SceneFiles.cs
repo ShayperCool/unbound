@@ -961,8 +961,11 @@ namespace Unbound.Runtime
             void Modifications(InstanceState state, Object o, PrefabLink link)
             {
                 bool script = o is MonoBehaviour;
-                // A script's values count as the queries count them (PrefabInstances.Considered).
-                if (script && !PrefabInstances.Considered(o)) return;
+                // A script's values count as the queries count them (PrefabInstances.Considered); a
+                // prefab asset's own (a variant's objects) count as they are when the asset is written
+                // (matches the Unity 6000.0.71f1 Editor, tests/projects/scenesave prefab-dirty-saves
+                // variant.file: a value set and SetDirty, no record).
+                if (script && !o.IsPersistentAsset && !PrefabInstances.Considered(o)) return;
                 if (o is Component c && !script && !Writable(c.GetType()) && Enabled(c) == null) return;
                 var source = PrefabLinks.Source(o);
                 if (source == null) return;

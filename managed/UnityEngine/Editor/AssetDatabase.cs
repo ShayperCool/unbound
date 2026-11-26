@@ -488,9 +488,13 @@ namespace UnityEditor
         public static void SaveAssets()
         {
             using var write = SessionImports.Write();
-            AssetFiles.SaveDirty(willSave: true, settings: true);
+            AssetFiles.SaveDirty(willSave: true, settings: true, writePrefabs: true);
         }
 
+        /// <summary>Writes the asset of <paramref name="obj"/> when it is dirty. A prefab asset is
+        /// one: its file is written when any of its objects is dirty, whichever of them is given
+        /// (matches the Unity 6000.0.71f1 Editor, tests/projects/scenesave prefab-dirty-saves
+        /// single.*: the root given, its script dirty).</summary>
         public static void SaveAssetIfDirty(Object obj)
         {
             // As Unity's own C# does: the file of the object, by its GUID, found by instance id (so

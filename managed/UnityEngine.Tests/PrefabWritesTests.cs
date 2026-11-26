@@ -450,6 +450,34 @@ namespace UnityEngine.Tests
             Assert.Throws<ArgumentException>(() => PrefabUtility.SavePrefabAsset(m_AssetPart));
         }
 
+        /// <summary>A dirty prefab asset is written by SaveAssetIfDirty of any of its objects and
+        /// by SaveAssets, and is then no longer dirty; the Editor's exit save leaves it dirty and
+        /// unwritten; a script's field set alone writes nothing (matches the Unity 6000.0.71f1
+        /// Editor, tests/projects/scenesave prefab-dirty-saves single.*, fields.*, exit.*,
+        /// unmarked.*).</summary>
+        [Fact]
+        public void ADirtyPrefabAssetIsWrittenBySavesAndNotAtExit()
+        {
+            var holder = m_Asset.GetComponent<PrefabTestHolder>();
+            holder.label = "unmarked";
+            AssetDatabase.SaveAssets();
+            Assert.DoesNotContain("label: unmarked", FileText());
+            holder.label = "at exit";
+            EditorUtility.SetDirty(holder);
+            AssetFiles.SaveDirty();
+            Assert.DoesNotContain("label: at exit", FileText());
+            Assert.True(EditorUtility.IsDirty(holder));
+            holder.label = "saved alone";
+            AssetDatabase.SaveAssetIfDirty(m_Asset);
+            Assert.Contains("label: saved alone", FileText());
+            Assert.False(EditorUtility.IsDirty(holder));
+            holder.label = "saved";
+            EditorUtility.SetDirty(holder);
+            AssetDatabase.SaveAssets();
+            Assert.Contains("label: saved", FileText());
+            Assert.False(EditorUtility.IsDirty(holder));
+        }
+
         [Fact]
         public void ApplyingOnAPlainObjectOrSavingToABadPathThrowsAsTheEditor()
         {

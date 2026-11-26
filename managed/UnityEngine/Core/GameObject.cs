@@ -271,11 +271,16 @@ namespace UnityEngine
 
         // ------------------------------------------------------------------ components
 
+        /// <summary>A component added to an asset's GameObject (a prefab asset's) makes the
+        /// GameObject dirty, so SaveAssets writes it (matches the Unity 6000.0.71f1 Editor,
+        /// tests/projects/scenesave prefab-dirty-saves structure.*).</summary>
         public Component AddComponent(Type componentType)
         {
             MainThreadCheck.Check("Internal_AddComponentWithType");
             ThrowIfDestroyed();
-            return ComponentFactory.Add(this, componentType);
+            var component = ComponentFactory.Add(this, componentType);
+            if (component != null && IsPersistentAsset) UnityEditor.EditorUtility.SetDirty(this);
+            return component;
         }
 
         public T AddComponent<T>() where T : Component => (T)AddComponent(typeof(T));
