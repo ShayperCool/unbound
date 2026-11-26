@@ -1,0 +1,59 @@
+{"k":"settings/mode","v":"\"Visible Meta Files\""}
+{"k":"provider/enabled","v":"False"}
+{"k":"provider/isActive","v":"False"}
+{"k":"provider/onlineState","v":"Offline"}
+{"k":"provider/offlineReason","v":"\"\""}
+{"k":"provider/requiresNetwork","v":"False"}
+{"k":"provider/hasCheckoutSupport","v":"False"}
+{"k":"provider/hasLockingSupport","v":"False"}
+{"k":"provider/isVersioningFolders","v":"False"}
+{"k":"provider/activeTask","v":"null"}
+{"k":"provider/plugin","v":"null"}
+{"k":"provider/preCheckoutCallback","v":"null"}
+{"k":"get/a","v":"path \"Assets/Data/A.txt\" name \"A\" fullName \"A.txt\" assetPath \"Assets/Data/A.txt\" isFolder False isMeta False state Updating locked False readOnly False isInCurrentProject True"}
+{"k":"new/a","v":"path \"Assets/Data/A.txt\" name \"A\" fullName \"A.txt\" assetPath \"Assets/Data/A.txt\" isFolder False isMeta False state None locked False readOnly False isInCurrentProject True"}
+{"k":"versioned/a","v":"True"}
+{"k":"get/data","v":"path \"Assets/Data/\" name \"\" fullName \"\" assetPath \"Assets/Data/\" isFolder True isMeta False state Updating locked False readOnly False isInCurrentProject False"}
+{"k":"new/data","v":"path \"Assets/Data/\" name \"\" fullName \"\" assetPath \"Assets/Data/\" isFolder True isMeta False state None locked False readOnly False isInCurrentProject False"}
+{"k":"versioned/data","v":"True"}
+{"k":"get/missing","v":"null"}
+{"k":"new/missing","v":"path \"Assets/Data/Missing.txt\" name \"Missing\" fullName \"Missing.txt\" assetPath \"Assets/Data/Missing.txt\" isFolder False isMeta False state None locked False readOnly False isInCurrentProject False"}
+{"k":"versioned/missing","v":"True"}
+{"k":"get/meta","v":"path \"Assets/Data/A.txt.meta\" name \"A.txt\" fullName \"A.txt.meta\" assetPath \"Assets/Data/A.txt\" isFolder False isMeta True state Updating locked False readOnly False isInCurrentProject True"}
+{"k":"new/meta","v":"path \"Assets/Data/A.txt.meta\" name \"A.txt\" fullName \"A.txt.meta\" assetPath \"Assets/Data/A.txt\" isFolder False isMeta True state MetaFile locked False readOnly False isInCurrentProject True"}
+{"k":"versioned/meta","v":"True"}
+{"k":"get/settings","v":"path \"ProjectSettings/ProjectSettings.asset\" name \"ProjectSettings\" fullName \"ProjectSettings.asset\" assetPath \"ProjectSettings/ProjectSettings.asset\" isFolder False isMeta False state Updating locked False readOnly False isInCurrentProject True"}
+{"k":"new/settings","v":"path \"ProjectSettings/ProjectSettings.asset\" name \"ProjectSettings\" fullName \"ProjectSettings.asset\" assetPath \"ProjectSettings/ProjectSettings.asset\" isFolder False isMeta False state None locked False readOnly False isInCurrentProject True"}
+{"k":"versioned/settings","v":"True"}
+{"k":"get/empty","v":"null"}
+{"k":"new/empty","v":"path \"\" name \"\" fullName \"\" assetPath \"\" isFolder False isMeta False state None locked False readOnly False isInCurrentProject False"}
+{"k":"versioned/empty","v":"False"}
+{"k":"get/null","v":"null"}
+{"k":"new/null","v":"path \"\" name \"\" fullName \"\" assetPath \"\" isFolder False isMeta False state None locked False readOnly False isInCurrentProject False"}
+{"k":"versioned/null","v":"False"}
+{"k":"versioned/packages","v":"True"}
+{"k":"versioned/library","v":"False"}
+{"k":"versioned/user","v":"False"}
+{"k":"versioned/other","v":"False"}
+{"k":"versioned/absolute","v":"False"}
+{"k":"isopen/asset","v":"True"}
+{"k":"isopen/new","v":"True"}
+{"k":"checkout/path","v":"success False resultCode 2 text \"\" description \"\" messages [Error: Cannot check out files in offline mode\nAssets/Data/A.txt] assets []"}
+{"k":"checkout/path.logs","v":"Error: Version Control: Cannot check out files in offline mode\nAssets/Data/A.txt"}
+{"k":"checkout/asset","v":"success False resultCode 2 text \"\" description \"\" messages [Error: Cannot check out files in offline mode\nAssets/Data/A.txt] assets []"}
+{"k":"checkout/asset.logs","v":"Error: Version Control: Cannot check out files in offline mode\nAssets/Data/A.txt"}
+{"k":"checkout/object","v":"success False resultCode 2 text \"\" description \"\" messages [Error: Cannot check out files in offline mode\nAssets/Data/A.txt] assets []"}
+{"k":"checkout/object.logs","v":"Error: Version Control: Cannot check out files in offline mode\nAssets/Data/A.txt"}
+{"k":"checkout/list","v":"count 2 success False resultCode 2 text \"\" description \"\" messages [Error: Cannot check out files in offline mode\nAssets/Data/A.txt\nAssets/Data/B.txt] assets []"}
+{"k":"checkout/list.logs","v":"Error: Version Control: Cannot check out files in offline mode\nAssets/Data/A.txt\nAssets/Data/B.txt"}
+{"k":"checkout/valid","v":"False"}
+{"k":"status/path","v":"success False resultCode 2 text \"\" description \"\" messages [] assets []"}
+{"k":"status/asset","v":"success False resultCode 2 text \"\" description \"\" messages [] assets []"}
+{"k":"getlatest","v":"success False resultCode 2 text \"\" description \"\" messages [Error: Cannot get latest files in offline mode\nAssets/Data/A.txt] assets []"}
+{"k":"getlatest.logs","v":"Error: Version Control: Cannot get latest files in offline mode\nAssets/Data/A.txt"}
+{"k":"clearcache","v":"done"}
+{"k":"precheckout/set","v":"set"}
+{"k":"assetlist/empty","v":"count 0"}
+{"k":"assetlist/filter","v":"folders 1 False,True"}
+{"k":"files","v":"a\n"}
+{"k":"complete","v":true}
