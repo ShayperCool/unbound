@@ -478,8 +478,11 @@ namespace UnityEditor
         /// those objects stay as clean as they were, whatever the callbacks set (matches the Unity
         /// 6000.0.71f1 Editor, tests/projects/urprendererwrites: a URP renderer whose OnEnable reloads
         /// a missing resource, script assets that call SetDirty from Awake, OnEnable or OnValidate,
-        /// with a field changed or not, are clean after their load and not written). Objects of other
-        /// files the callbacks mark keep their dirtiness (unmeasured).</summary>
+        /// with a field changed or not, and a prefab's behaviour from OnValidate, are clean after their
+        /// load, at a first open and in a later session, and not written). Unmeasured: objects of
+        /// other files the callbacks mark (they keep their dirtiness), loads in Edit mode, the
+        /// dirty count (left as it was), and the other users of the same load (asset bundles,
+        /// serialized files read and forgotten, a VFX graph's models), which are treated alike.</summary>
         internal static void LoadCallbacks(ICollection<Object> objects, Action callbacks)
         {
             var before = new Dictionary<Object, (bool Dirty, int Count)>(objects.Count, ReferenceEqualityComparer.Instance);

@@ -1233,7 +1233,8 @@ namespace Unbound.Runtime
                 if (info.Kind == "prefab" || info.Kind == "yaml")
                     MaterialValidation.ValidateLoaded(file);
                 // As the Editor: a loaded asset's behaviours and scriptable objects get OnValidate;
-                // what it marks dirty in the file is no change (a prefab's behaviours: unmeasured).
+                // what it marks dirty in the file is no change (tests/projects/urprendererwrites, also a prefab's
+                // behaviour).
                 if (file != null && (info.Kind == "prefab" || info.Kind == "yaml"))
                 {
                     var objects = new List<Object>(file.Objects.Values);
