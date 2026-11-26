@@ -52,6 +52,12 @@ namespace Unbound.Runtime
         // native-saves). Elsewhere only assets made this session are dirtied and written.
         internal static bool ReadAssetSavesMeasured => Family == ReleaseFamily.Unity6000_0;
 
+        /// <summary>A Single sprite's first import: the Editor gives a sprite without an ID its ID
+        /// and writes its .meta without NPOT scaling, and a sprite's NPOT scaling reads as none
+        /// (tests/projects/spritemeta on Unity 6000.0.71f1). Other releases keep the .meta as it
+        /// is and read the scaling it holds (unmeasured).</summary>
+        internal static bool SpriteFirstImportMeasured => Family == ReleaseFamily.Unity6000_0;
+
         // A rename of an asset, a texture's sampler settings and Texture2D.Reinitialize are edits
         // that dirty it, measured on 6000.0.71f1 (tests/projects/tmpatlas op.*). Elsewhere they
         // leave it clean, as before.

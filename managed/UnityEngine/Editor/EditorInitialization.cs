@@ -160,6 +160,9 @@ namespace UnityEditor
             // start in Edit mode before Play mode, whose reload lists nothing of it (matches the
             // Unity 6000.0.71f1 Editor, tests/projects/firstimport).
             var start = ProjectImports.TakeStart();
+            // The textures the import found give their sprites their IDs (written into their
+            // .meta) before anything postprocesses them.
+            if (start != null) SpriteImports.Imported(start.Imported);
             if (start == null) AssetPostprocessing.DomainLoaded(deferred);
             else if (!enteringPlayMode) ProjectOpened(start, deferred);
             else

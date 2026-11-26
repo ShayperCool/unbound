@@ -138,12 +138,15 @@ pub fn is_folder_plugin(path: &Path) -> bool {
         .is_some_and(|e| FOLDER_PLUGIN_EXTENSIONS.contains(&e.to_ascii_lowercase().as_str()))
 }
 
-/// What a new `.meta` depends on beyond the asset: the Editor installation's platform modules.
+/// What a new `.meta` depends on beyond the asset: the Editor installation's platform modules and
+/// the project's default behaviour mode.
 #[derive(Debug, Clone, Default)]
 pub struct MetaContext {
     /// The installed platform modules other than the standalone players, in the build settings'
     /// order, by the names texture settings give them (`Android`, `iOS`, `WebGL`).
     pub platforms: Vec<String>,
+    /// `EditorSettings.m_DefaultBehaviorMode` is 2D: a new texture imports as sprites.
+    pub mode_2d: bool,
 }
 
 impl MetaContext {
@@ -161,7 +164,16 @@ impl MetaContext {
             .filter(|(folder, _)| playback_engines.iter().any(|dir| dir.join(folder).is_dir()))
             .map(|(_, name)| name.to_string())
             .collect();
-        MetaContext { platforms }
+        MetaContext {
+            platforms,
+            mode_2d: false,
+        }
+    }
+
+    /// The context with the project's default behaviour mode (`TierDefaults::mode_2d`).
+    pub fn with_mode_2d(mut self, mode_2d: bool) -> Self {
+        self.mode_2d = mode_2d;
+        self
     }
 }
 
@@ -254,9 +266,13 @@ pub fn text(importer: NewImporter, guid: Guid, asset: &Path, context: &MetaConte
                 .chain(context.platforms.iter().map(String::as_str))
                 .map(texture_platform_entry)
                 .collect();
-            out.push_str(
-                &include_str!("new_meta/texture_importer.yaml").replace("{platforms}", &platforms),
-            );
+            let section =
+                include_str!("new_meta/texture_importer.yaml").replace("{platforms}", &platforms);
+            out.push_str(&if context.mode_2d {
+                sprites_2d(section, asset)
+            } else {
+                section
+            });
         }
         NewImporter::Model => out.push_str(include_str!("new_meta/model_importer.yaml")),
         NewImporter::Audio => out.push_str(include_str!("new_meta/audio_importer.yaml")),
@@ -289,6 +305,74 @@ pub fn text(importer: NewImporter, guid: Guid, asset: &Path, context: &MetaConte
     }
     out
 }
+
+/// A new texture's section in a project of the 2D default behaviour mode: the Editor imports it
+/// as sprites (`Multiple`), sliced automatically, clamped, without mipmaps or NPOT scaling, its
+/// alpha transparency (matches the Unity 6000.0.71f1 Editor, tests/projects/spritemeta New,
+/// NewNpot). A texture of no transparent pixel is one sprite `<name>_0` of the whole texture,
+/// whose file id and sprite ID are the Editor's hashes; the slicing of one with transparent pixels
+/// is not known yet: it keeps the Default texture's section, with a warning.
+fn sprites_2d(section: String, asset: &Path) -> String {
+    let opaque = std::fs::read(asset)
+        .ok()
+        .and_then(|bytes| crate::image_io::decode(&bytes).ok())
+        .filter(|image| image.rgba.chunks_exact(4).all(|pixel| pixel[3] > 0));
+    let Some(image) = opaque else {
+        tracing::warn!(
+            "{}: in a 2D project the Editor slices a new texture into sprites; Unbound does not slice one with transparent pixels (or that it cannot read) yet, so it imports as a Default texture",
+            asset.display()
+        );
+        return section;
+    };
+    let stem = asset
+        .file_stem()
+        .map(|s| s.to_string_lossy().into_owned())
+        .unwrap_or_default();
+    let name = format!("{stem}_0");
+    let id = crate::meta::hashed_file_id("Sprite", &name, 0);
+    let sprite_id = crate::meta::sprite_id(id);
+    let (width, height) = (image.width, image.height);
+    let mut text = section;
+    for (from, to) in [
+        (
+            "  internalIDToNameTable: []\n".to_string(),
+            format!(
+                "  internalIDToNameTable:\n  - first:\n      {SPRITE_CLASS_ID}: {id}\n    second: {name}\n"
+            ),
+        ),
+        (
+            "    enableMipMap: 1\n".into(),
+            "    enableMipMap: 0\n".into(),
+        ),
+        (
+            "    wrapU: 0\n    wrapV: 0\n    wrapW: 0\n  nPOTScale: 1\n".into(),
+            "    wrapU: 1\n    wrapV: 1\n    wrapW: 1\n  nPOTScale: 0\n".into(),
+        ),
+        ("  spriteMode: 0\n".into(), "  spriteMode: 2\n".into()),
+        (
+            "  alphaIsTransparency: 0\n".into(),
+            "  alphaIsTransparency: 1\n".into(),
+        ),
+        ("  textureType: 0\n".into(), "  textureType: 8\n".into()),
+        (
+            "    sprites: []\n".into(),
+            format!(
+                "    sprites:\n    - serializedVersion: 2\n      name: {name}\n      rect:\n        serializedVersion: 2\n        x: 0\n        y: 0\n        width: {width}\n        height: {height}\n      alignment: 0\n      pivot: {{x: 0, y: 0}}\n      border: {{x: 0, y: 0, z: 0, w: 0}}\n      customData: \n      outline: []\n      physicsShape: []\n      tessellationDetail: -1\n      bones: []\n      spriteID: {sprite_id}\n      internalID: {id}\n      vertices: []\n      indices: \n      edges: []\n      weights: []\n"
+            ),
+        ),
+        (
+            "    nameFileIdTable: {}\n".into(),
+            format!("    nameFileIdTable:\n      {name}: {id}\n"),
+        ),
+    ] {
+        debug_assert!(text.contains(&from), "the texture template has no {from:?}");
+        text = text.replacen(&from, &to, 1);
+    }
+    text
+}
+
+/// Unity's class id of Sprite, the key of a texture's internal id table.
+const SPRITE_CLASS_ID: u32 = 213;
 
 /// Writes the new `.meta` of the file or folder at `asset` unless it has one. Returns the GUID
 /// written, `Ok(None)` when it had one, and an error naming the extension when its importer has
@@ -493,10 +577,63 @@ mod tests {
         std::fs::remove_dir_all(&root).unwrap();
     }
 
+    fn png(path: &Path, width: u32, height: u32, alpha: impl Fn(u32, u32) -> u8) {
+        let mut rgba = Vec::new();
+        for y in 0..height {
+            for x in 0..width {
+                rgba.extend_from_slice(&[200, 100, 50, alpha(x, y)]);
+            }
+        }
+        let bytes =
+            crate::image_io::encode_rgba8(crate::image_io::Encoding::Png, width, height, &rgba)
+                .unwrap();
+        std::fs::write(path, bytes).unwrap();
+    }
+
+    /// The `.meta` of a new opaque texture in a 2D project, as the Editor writes it
+    /// (tests/projects/spritemeta Reference open/NewNpot): sprites of the whole texture.
+    #[test]
+    fn a_new_opaque_texture_of_a_2d_project_is_one_sprite_of_its_whole_size() {
+        let dir = std::env::temp_dir().join(format!("unbound-sprites-2d-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let opaque = dir.join("NewNpot.png");
+        png(&opaque, 6, 5, |_, _| 255);
+        let context = MetaContext::default().with_mode_2d(true);
+        let sprites = text(NewImporter::Texture, Guid(1), &opaque, &context);
+        for line in [
+            "  internalIDToNameTable:\n  - first:\n      213: 5218904635955191541\n    second: NewNpot_0\n",
+            "    enableMipMap: 0\n",
+            "    wrapU: 1\n    wrapV: 1\n    wrapW: 1\n  nPOTScale: 0\n",
+            "  spriteMode: 2\n",
+            "  alphaIsTransparency: 1\n",
+            "  textureType: 8\n",
+            "      name: NewNpot_0\n      rect:\n        serializedVersion: 2\n        x: 0\n        y: 0\n        width: 6\n        height: 5\n      alignment: 0\n      pivot: {x: 0, y: 0}\n",
+            "      spriteID: 5fe9fbe8d164d6840800000000000000\n      internalID: 5218904635955191541\n",
+            "    nameFileIdTable:\n      NewNpot_0: 5218904635955191541\n",
+        ] {
+            assert!(sprites.contains(line), "{line:?} not in\n{sprites}");
+        }
+        // In a 3D project, and for a texture with a transparent pixel (whose slicing is not
+        // known), the Default texture's section.
+        let default = text(
+            NewImporter::Texture,
+            Guid(1),
+            &opaque,
+            &MetaContext::default(),
+        );
+        let gaps = dir.join("Gaps.png");
+        png(&gaps, 4, 4, |x, _| if x == 0 { 0 } else { 255 });
+        let transparent = text(NewImporter::Texture, Guid(1), &gaps, &context);
+        assert!(default.contains("  textureType: 0\n  textureShape"));
+        assert_eq!(transparent, default);
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+
     #[test]
     fn a_texture_lists_the_installed_platform_modules_after_default_and_standalone() {
         let context = MetaContext {
             platforms: vec!["Android".into(), "iOS".into()],
+            ..Default::default()
         };
         let text = text(NewImporter::Texture, Guid(1), Path::new("a.png"), &context);
         let targets: Vec<_> = text

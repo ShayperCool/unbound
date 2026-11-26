@@ -317,7 +317,11 @@ namespace UnityEditor
 
         public TextureImporterNPOTScale npotScale
         {
-            get { CheckImporterState("get_npotScale"); return (TextureImporterNPOTScale)Read(m_Settings, "nPOTScale"); }
+            get
+            {
+                CheckImporterState("get_npotScale");
+                return SpriteImports.NpotScaleOf((TextureImporterType)Read(m_Settings, "textureType"), (TextureImporterNPOTScale)Read(m_Settings, "nPOTScale"));
+            }
             set { CheckImporterState("set_npotScale"); SetI("nPOTScale", (int)value); }
         }
 
@@ -419,6 +423,7 @@ namespace UnityEditor
         {
             if (dest == null) throw new ArgumentNullException(nameof(dest));
             foreach (var (path, read, _) in s_SettingsFields) read(dest, m_Settings, path);
+            dest.npotScale = SpriteImports.NpotScaleOf(dest.textureType, dest.npotScale);
         }
 
         /// <summary>Writes the settings that differ from the importer's own (a sparse .meta keeps

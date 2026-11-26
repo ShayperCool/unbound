@@ -406,7 +406,8 @@ pub fn initialize(project: &Project) -> Result<&'static RuntimeState> {
             == Some(unbound_compat::MeasuredFamily::Unity6000_0),
         new_meta: unbound_assets::new_meta::MetaContext::for_install(
             &unbound_project::install::playback_engines(&project.install.data),
-        ),
+        )
+        .with_mode_2d(project.settings.tier_defaults.mode_2d),
         db: RwLock::new(db),
         loader: DocumentLoader::new(locator)
             .with_synthesizer(Box::new(|guid, file| {
@@ -3061,7 +3062,7 @@ mod tests {
         let snapshots = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join(
             "../../tests/projects/scenesave/Reference/unity-6000.0.71f1/label-metas/snapshots",
         );
-        let context = unbound_assets::new_meta::MetaContext { platforms: vec![] };
+        let context = unbound_assets::new_meta::MetaContext::default();
         for name in [
             "Notes.txt",
             "Data.json",

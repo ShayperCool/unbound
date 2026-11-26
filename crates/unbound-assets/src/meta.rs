@@ -288,6 +288,20 @@ pub fn hashed_file_id(class_name: &str, name: &str, index: u32) -> i64 {
     twox_hash::XxHash64::oneshot(0, format!("Type:{class_name}->{name}{index}").as_bytes()) as i64
 }
 
+/// The `spriteID` the Editor gives a sprite whose file id is `file_id`: a GUID of the id's low and
+/// high 32 bits and the word 0x80, in Unity's GUID text (each word's hex digits lowest first)
+/// (matches the Unity 6000.0.71f1 Editor, tests/projects/spritemeta).
+pub fn sprite_id(file_id: i64) -> String {
+    let id = file_id as u64;
+    [id as u32, (id >> 32) as u32, SPRITE_ID_WORD, 0]
+        .iter()
+        .map(|word| format!("{word:08x}").chars().rev().collect::<String>())
+        .collect()
+}
+
+/// The third word of an Editor-made sprite ID.
+const SPRITE_ID_WORD: u32 = 0x80;
+
 impl<'a> FileIdAllocator<'a> {
     pub fn new(table: &'a FileIdTable) -> Self {
         Self {
@@ -341,6 +355,27 @@ impl<'a> FileIdAllocator<'a> {
 
 #[cfg(test)]
 mod tests {
+    /// The sprite IDs the Editor gave a single sprite (any texture: its sprite's name is empty)
+    /// and a 2D project's new texture's sprite `New_0` (tests/projects/spritemeta).
+    #[test]
+    fn sprite_ids_are_the_editors() {
+        assert_eq!(
+            super::sprite_id(super::hashed_file_id("Sprite", "", 0)),
+            "5e97eb03825dee720800000000000000"
+        );
+        assert_eq!(
+            super::hashed_file_id("Sprite", "New_0", 0),
+            7349830768230865535
+        );
+        assert_eq!(
+            super::sprite_id(7349830768230865535),
+            "f7a13a38428dff560800000000000000"
+        );
+        assert_eq!(
+            super::sprite_id(-2708432719997058213),
+            "b53c7828ac6b96ad0800000000000000"
+        );
+    }
 
     #[test]
     fn main_object_file_id_comes_from_the_native_format_importer() {

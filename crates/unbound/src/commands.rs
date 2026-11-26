@@ -96,7 +96,8 @@ fn open_in_editor(args: &ProjectArgs) -> Result<Project> {
     write_package_lock(&project);
     let context = unbound_assets::new_meta::MetaContext::for_install(
         &unbound_project::install::playback_engines(&project.install.data),
-    );
+    )
+    .with_mode_2d(project.settings.tier_defaults.mode_2d);
     let imported = unbound_assets::new_meta::import_roots(
         &project.editable_roots(),
         &context,

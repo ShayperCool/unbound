@@ -1,0 +1,16 @@
+{
+ "In a 2D project the Editor slices a new texture with transparent pixels into a sprite per opaque region (each rect one pixel larger, clamped); Unbound does not slice yet and imports it as a Default texture, with a warning (2D automatic slicing follow-up)": [
+  "end/NewGaps",
+  "importer/NewGaps",
+  "open/NewGaps",
+  "sprites/NewGaps"
+ ],
+ "A .meta of the TextureImporter without serializedVersion and most keys: the Editor writes the whole section in the release's layout (applyGammaDecoding 1, cookieLightType 1, platforms without compression) and reads a missing wrap key as Repeat; Unbound keeps such an older layout and warns (Q765's unmeasured older layouts), so the sprite keeps no ID": [
+  "end/Bare",
+  "end/Bare.platforms",
+  "importer/Bare",
+  "open/Bare",
+  "open/Bare.platforms",
+  "sprites/Bare"
+ ]
+}
