@@ -236,37 +236,9 @@ namespace UnityEditor.SceneManagement
         {
             if (UnityEngine.Application.isPlaying) throw new InvalidOperationException(PlayModeRefusal);
             Undo.FlushDirtiness();
-            var data = scene.Data;
-            if (data == null) return false;
+            if (scene.Data == null) return false;
             using var write = SessionImports.Write();
-            var path = string.IsNullOrEmpty(dstScenePath) ? data.Path : dstScenePath;
-            if (string.IsNullOrEmpty(path))
-            {
-                // An untitled scene saved without a path asks where with the save panel, cancelled
-                // as the batch-mode Editor cancels it (matches the Unity 6000.0.71f1 Editor,
-                // tests/projects/scenesave build-scenes untitled.*, SaveScenes and SaveOpenScenes too).
-                EditorUtility.Cancelled("FileDialog", "Save Scene ");
-                return false;
-            }
-            if (!SceneFiles.CanSave(data, path)) return false;
-            path = SceneFiles.ProjectRelative(path);
-            // A scene saved to its own path goes through the processors' OnWillSaveAssets and is
-            // written only when they return its path (else not saved, still dirty, false); an
-            // untitled scene's first save does not (matches the Unity 6000.0.71f1 Editor,
-            // tests/projects/vfxwrites scene save new|edited|open|dropped; a titled scene saved
-            // to another path is unmeasured and goes without them).
-            if (!string.IsNullOrEmpty(data.Path) && string.Equals(SceneFiles.ProjectRelative(data.Path), path, StringComparison.Ordinal)
-                && Array.IndexOf(AssetModificationProcessorInternal.OnWillSaveAssets(new[] { path }), path) < 0) return false;
-            sceneSaving?.Invoke(scene, path);
-            if (!SceneFiles.Save(data, path)) return false;
-            if (!saveAsCopy)
-            {
-                data.Path = path;
-                data.Name = System.IO.Path.GetFileNameWithoutExtension(path);
-                data.IsDirty = false;
-            }
-            sceneSaved?.Invoke(scene);
-            return true;
+            return Save(new[] { (scene, dstScenePath) }, saveAsCopy);
         }
 
         const string PlayModeRefusal = "This cannot be used during play mode.";
@@ -278,9 +250,66 @@ namespace UnityEditor.SceneManagement
             if (scenes == null) throw new ArgumentNullException(nameof(scenes));
             if (UnityEngine.Application.isPlaying) throw new InvalidOperationException(PlayModeRefusal);
             Undo.FlushDirtiness();
-            bool all = true;
+            var dirty = new List<(Scene, string)>();
             foreach (var s in scenes)
-                if (s.Data is SceneData data && data.IsDirty) all &= SaveScene(s);
+                if (s.Data is SceneData data && data.IsDirty) dirty.Add((s, ""));
+            return dirty.Count == 0 || Save(dirty, false);
+        }
+
+        /// <summary>One save of scenes (SaveScene: one; SaveScenes: the dirty ones), each to its
+        /// destination or its own path. The processors' OnWillSaveAssets get, in one call, the
+        /// paths of the scenes saved to their own path, and a scene among them is written only when
+        /// they return its path (else not saved, still dirty, false); an untitled scene's first save
+        /// hands them nothing and is written. Then sceneSaving for each scene, the files, and
+        /// sceneSaved for each (matches the Unity 6000.0.71f1 Editor, tests/projects/vfxwrites
+        /// scene save new|edited|open|dropped|two open: one call for two scenes, their order in it
+        /// differing from run to run; a titled scene saved to another path is unmeasured: as the
+        /// untitled one here).</summary>
+        static bool Save(IReadOnlyList<(Scene Scene, string Destination)> scenes, bool saveAsCopy)
+        {
+            bool all = true;
+            var planned = new List<(Scene Scene, SceneData Data, string Path, bool Own)>();
+            foreach (var (scene, destination) in scenes)
+            {
+                var data = scene.Data;
+                var path = string.IsNullOrEmpty(destination) ? data.Path : destination;
+                if (string.IsNullOrEmpty(path))
+                {
+                    // An untitled scene saved without a path asks where with the save panel, cancelled
+                    // as the batch-mode Editor cancels it (matches the Unity 6000.0.71f1 Editor,
+                    // tests/projects/scenesave build-scenes untitled.*, SaveScenes and SaveOpenScenes too).
+                    EditorUtility.Cancelled("FileDialog", "Save Scene ");
+                    all = false;
+                    continue;
+                }
+                if (!SceneFiles.CanSave(data, path)) { all = false; continue; }
+                path = SceneFiles.ProjectRelative(path);
+                bool own = !string.IsNullOrEmpty(data.Path) && string.Equals(SceneFiles.ProjectRelative(data.Path), path, StringComparison.Ordinal);
+                planned.Add((scene, data, path, own));
+            }
+            if (planned.Count == 0) return false;
+            var offered = planned.Where(p => p.Own).Select(p => p.Path).ToArray();
+            var returned = AssetModificationProcessorInternal.OnWillSaveAssets(offered);
+            var saving = new List<(Scene Scene, SceneData Data, string Path)>();
+            foreach (var p in planned)
+            {
+                if (p.Own && Array.IndexOf(returned, p.Path) < 0) { all = false; continue; }
+                saving.Add((p.Scene, p.Data, p.Path));
+            }
+            foreach (var p in saving) sceneSaving?.Invoke(p.Scene, p.Path);
+            var saved = new List<Scene>();
+            foreach (var p in saving)
+            {
+                if (!SceneFiles.Save(p.Data, p.Path)) { all = false; continue; }
+                if (!saveAsCopy)
+                {
+                    p.Data.Path = p.Path;
+                    p.Data.Name = System.IO.Path.GetFileNameWithoutExtension(p.Path);
+                    p.Data.IsDirty = false;
+                }
+                saved.Add(p.Scene);
+            }
+            foreach (var scene in saved) sceneSaved?.Invoke(scene);
             return all;
         }
 

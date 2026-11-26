@@ -20,7 +20,8 @@ namespace UnityEditor
     /// editability callbacks (IsOpenForEdit and CanOpenForEdit, each in a list and a single-path
     /// form, and MakeEditable) are called by the AssetDatabase queries as the Editor calls them
     /// (tests/projects/openforedithooks, openforeditorder). OnWillSaveAssets is called by
-    /// AssetDatabase.SaveAssets (<see cref="OnWillSaveAssets"/>). The other callbacks are not called yet.
+    /// AssetDatabase.SaveAssets, SaveAssetIfDirty, the Editor's exit save and scene saves
+    /// (<see cref="OnWillSaveAssets"/>). The other callbacks are not called yet.
     /// </summary>
     internal partial class AssetModificationProcessorInternal
     {
