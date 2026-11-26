@@ -402,6 +402,16 @@ namespace Unbound.Runtime
             }
         }
 
+        /// <summary>The edited settings files a save would write (none in Play mode).</summary>
+        internal static List<SettingsFile> Unsaved()
+        {
+            var files = new List<SettingsFile>();
+            if (EditorApplication.isPlaying) return files;
+            foreach (var f in s_Files?.Values ?? Enumerable.Empty<SettingsFile>())
+                if (f.Dirty && f.Documents != null) files.Add(f);
+            return files;
+        }
+
         /// <summary>AssetDatabase.SaveAssets: edited settings files written as the Editor writes them
         /// — in Edit mode only (in Play mode the Editor keeps them unsaved).</summary>
         internal static void Save(SettingsFile only = null)

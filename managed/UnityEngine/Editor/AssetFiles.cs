@@ -29,9 +29,14 @@ namespace Unbound.Runtime
 
         /// <summary>Writes the files of the dirty asset objects (<paramref name="only"/>: of that
         /// object only, when it is dirty); with <paramref name="unchangedStays"/>, a file whose text
-        /// would not change is left untouched.</summary>
-        internal static void SaveDirty(Object only = null, bool unchangedStays = false, ICollection<string> onlyFiles = null, bool willSave = false)
+        /// would not change is left untouched. With <paramref name="willSave"/> the processors'
+        /// OnWillSaveAssets get the paths first (with <paramref name="callWhenNone"/> false, only
+        /// when there are any); with <paramref name="settings"/> the edited settings files are saved
+        /// too, offered with the assets when <paramref name="willSave"/>.</summary>
+        internal static void SaveDirty(Object only = null, bool unchangedStays = false, ICollection<string> onlyFiles = null, bool willSave = false,
+            bool settings = false, bool callWhenNone = true)
         {
+            if (settings && !willSave) SettingsAssets.Save();
             Undo.FlushDirtiness();
             // The assets CreateAsset made are written from their objects (and so no longer dirty);
             // with willSave, once the processors have returned their paths.
@@ -49,10 +54,12 @@ namespace Unbound.Runtime
                 list.Add(o);
             }
             // AssetDatabase.SaveAssets first hands the processors' OnWillSaveAssets the paths of the
-            // dirty assets, those CreateAsset made included (in path order; the Editor's order for
-            // several is unmeasured; matches the Unity 6000.0.71f1 Editor, tests/projects/vfxwrites
-            // material save assets) and saves the paths they return; a processor may have saved some
-            // itself (the VFX package writes its graphs).
+            // dirty assets, those CreateAsset made and the edited settings files included, and saves
+            // the paths they return; a processor may have saved some itself (the VFX package writes
+            // its graphs). The Editor's exit does the same with the assets left dirty. The Editor's
+            // order of several paths differs from run to run; Unbound gives them in path order
+            // (matches the Unity 6000.0.71f1 Editor as a set, tests/projects/vfxwrites material save
+            // assets, several save assets, exit/will save).
             try
             {
                 if (willSave)
@@ -64,11 +71,17 @@ namespace Unbound.Runtime
                     var paths = new List<string>();
                     foreach (var guid in offered)
                         if (!AssetDatabase.IsImmutablePackagePath(AssetDatabaseRuntime.PathOf(guid)) && !paths.Contains(AssetDatabaseRuntime.PathOf(guid))) paths.Add(AssetDatabaseRuntime.PathOf(guid));
+                    var dirtySettings = settings ? SettingsAssets.Unsaved() : new List<SettingsFile>();
+                    foreach (var f in dirtySettings) paths.Add(f.AssetPath);
                     paths.Sort(StringComparer.Ordinal);
                     VisualEffectWrites.RefusedInSave = new HashSet<UnityEditor.VFX.VisualEffectResource>(ReferenceEqualityComparer.Instance);
-                    var save = new HashSet<string>(AssetModificationProcessorInternal.OnWillSaveAssets(paths.ToArray()), StringComparer.Ordinal);
+                    // The exit calls no processor when it has no path to hand over (whether the
+                    // Editor's exit calls them then is unmeasured).
+                    var save = new HashSet<string>(paths.Count == 0 && !callWhenNone ? Array.Empty<string>() : AssetModificationProcessorInternal.OnWillSaveAssets(paths.ToArray()), StringComparer.Ordinal);
                     created.RemoveAll(guid => !save.Contains(AssetDatabaseRuntime.PathOf(guid)) && !AssetDatabase.IsImmutablePackagePath(AssetDatabaseRuntime.PathOf(guid)));
                     if (created.Count > 0) AssetDatabase.SaveCreated(only, new HashSet<string>(created, StringComparer.OrdinalIgnoreCase));
+                    foreach (var f in dirtySettings)
+                        if (save.Contains(f.AssetPath)) SettingsAssets.Save(f);
                     foreach (var guid in new List<string>(byGuid.Keys))
                     {
                         var path = AssetDatabaseRuntime.PathOf(guid);

@@ -488,8 +488,7 @@ namespace UnityEditor
         public static void SaveAssets()
         {
             using var write = SessionImports.Write();
-            SettingsAssets.Save();
-            AssetFiles.SaveDirty(willSave: true);
+            AssetFiles.SaveDirty(willSave: true, settings: true);
         }
 
         public static void SaveAssetIfDirty(Object obj)
