@@ -138,8 +138,9 @@ namespace Unbound.Runtime
         internal static string Refusal(LoadedFile file)
         {
             if (file == null) return null;
-            // A prefab a hierarchy is replacing holds what the hierarchy holds, not what its file did.
-            if (s_Replacing.Contains(file)) return file.MainObject is GameObject root ? CreateRefusal(root) : null;
+            // A prefab a hierarchy is being written over was judged before its objects were
+            // replaced (<see cref="ReplaceRefusal"/>): what it holds then is the hierarchy's.
+            if (s_Replacing.Contains(file)) return null;
             if (s_StaleSince.TryGetValue(file, out var mark))
                 return $"{mark.Source}, which it holds instances of, was saved in this session";
             return file.Guid == null ? null : ChainRefusal(Chain(file.Guid));
@@ -173,15 +174,30 @@ namespace Unbound.Runtime
             return ChainRefusal(chain);
         }
 
-        /// <summary>Writes a prefab whose objects a hierarchy replaced (<see cref="PrefabContents.Replace"/>):
-        /// it holds nothing from before, so it is no longer stale, and what decides its write is
-        /// what the hierarchy holds, as <see cref="CreateRefusal"/> checked before the objects were
-        /// replaced (its file's nesting is the one it is leaving).</summary>
+        /// <summary>Why a hierarchy is not written over a prefab (null: it is): as
+        /// <see cref="CreateRefusal"/> for the prefabs the hierarchy holds and for the prefab the
+        /// target's root comes from (a variant's root keeps its base), which is what the prefab holds
+        /// once its objects are the hierarchy's; its file's nesting is the one it is leaving.</summary>
+        internal static string ReplaceRefusal(GameObject hierarchy, LoadedFile file)
+        {
+            if (CreateRefusal(hierarchy) is string reason) return reason;
+            if (file.MainObject is GameObject root && PrefabLinks.Of(root)?.Instance?.SourceGuid is string source)
+            {
+                var chain = Chain(source);
+                chain.Add(source);
+                return ChainRefusal(chain);
+            }
+            return null;
+        }
+
+        /// <summary>Writes a prefab whose objects a hierarchy replaced (<see cref="PrefabContents.Replace"/>),
+        /// judged before by <see cref="ReplaceRefusal"/>: it holds nothing from before, so it is no
+        /// longer stale, and its save is not judged again by the file it is leaving.</summary>
         internal static bool CommitReplaced(Change change)
         {
             s_StaleSince.Remove(change.File);
             s_Replacing.Add(change.File);
-            try { return change.Commit(); }
+            try { return change.Commit(() => s_Replacing.Remove(change.File)); }
             finally { s_Replacing.Remove(change.File); }
         }
 
@@ -821,7 +837,7 @@ namespace Unbound.Runtime
             // Its objects are replaced by the hierarchy's (the root and its Transform take their
             // values): what it held before a save of a prefab it held does not matter, the prefabs
             // the hierarchy holds do.
-            if (PrefabAssets.CreateRefusal(root) is string reason)
+            if (PrefabAssets.ReplaceRefusal(root, file) is string reason)
             {
                 Debug.LogWarning($"Unbound: {file.Path} is not saved: {reason}, and Unbound does not write a prefab after a prefab it holds was saved (the Editor loads it again).");
                 return false;

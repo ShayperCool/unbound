@@ -911,6 +911,23 @@ namespace UnityEngine.Tests
             Assert.DoesNotContain(warnings, w => w.Contains("is not saved"));
         }
 
+        /// <summary>A hierarchy saved over a variant whose base is held with what its refresh kept
+        /// is refused before the variant's objects change: the variant's root keeps its base.</summary>
+        [Fact]
+        public void AHierarchyOverAVariantOfAnIncompletelyRefreshedBaseIsRefusedFirst()
+        {
+            var (variant, root) = Dependent(NewDependentFile("Over"), m_File, m_Asset, null, 9950);
+            Loaded(variant);
+            PrefabAssets.MarkStaleForTests(m_File, "Assets/Base.prefab", incomplete: true);
+            var plain = new GameObject("Plain");
+            m_Made.Add(plain);
+            var warnings = CaptureWarnings(() => Assert.False(PrefabContents.Replace(plain, variant)));
+            Assert.NotNull(root.GetComponent<PrefabTestHolder>());
+            Assert.Equal(1, root.transform.childCount);
+            Assert.Equal(m_Seeds[variant], TextOf(variant));
+            Assert.Contains(warnings, w => w.Contains("Assets/Over.prefab is not saved: " + AssetPath + ", which it holds instances of, is held as it was before Assets/Base.prefab was saved in this session"));
+        }
+
         /// <summary>A prefab held stale is refused before an apply changes anything: the instance
         /// keeps its override, the prefab its value and its file.</summary>
         [Fact]

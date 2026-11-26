@@ -275,7 +275,7 @@ namespace UnityEngine
         /// SaveAssets writes it (matches the Unity 6000.0.71f1 Editor, tests/projects/scenesave
         /// prefab-dirty-saves structure.*); not one an import's postprocessor adds (the import's
         /// result is not the asset's source: unmeasured), nor one added to an imported model's
-        /// GameObject (unmeasured).</summary>
+        /// GameObject or to a GameObject of an .asset file (unmeasured).</summary>
         public Component AddComponent(Type componentType)
         {
             MainThreadCheck.Check("Internal_AddComponentWithType");
