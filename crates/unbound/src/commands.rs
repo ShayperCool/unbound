@@ -1304,6 +1304,9 @@ pub struct RunArgs {
     pub forced_device: Option<unbound_compat::GraphicsDevice>,
     /// `--force-gfx-mt`: multithreaded rendering, as the Editor's `-force-gfx-mt` asks for it.
     pub force_gfx_mt: bool,
+    /// The Editor's arguments after `--` (a virtual player's): its command line as editor code
+    /// reads it, after the Editor's executable.
+    pub editor_args: Vec<String>,
 }
 
 fn parse_taps(taps: &[String]) -> Result<Vec<(u64, f32, f32)>> {
@@ -1593,6 +1596,15 @@ fn run_session(args: &ProjectArgs, run: RunArgs) -> Result<()> {
     }
     let script = parse_script(&run)?;
     let project = open_in_editor(args)?;
+    // The game's launches of the Editor's executable (crate::editor_launch).
+    crate::editor_launch::install(&project.install.editor_executable());
+    let command_line: Vec<String> = if run.editor_args.is_empty() {
+        Vec::new()
+    } else {
+        std::iter::once(project.install.editor_executable().display().to_string())
+            .chain(run.editor_args.iter().cloned())
+            .collect()
+    };
     let (width, height) = match &run.size {
         Some(size) => parse_size(size)?,
         None => project.settings.default_screen_for(&args.target),
@@ -1609,8 +1621,8 @@ fn run_session(args: &ProjectArgs, run: RunArgs) -> Result<()> {
         scene: run.scene,
         simulate_touch: run.simulate_touch,
         edit_mode: false,
-        command_line: Vec::new(),
-        code_optimization: unbound_project::CodeOptimization::at_startup(&[]),
+        code_optimization: unbound_project::CodeOptimization::at_startup(&command_line),
+        command_line,
         player_prefs: run
             .player_prefs
             .as_deref()

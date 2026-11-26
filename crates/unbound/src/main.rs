@@ -2,6 +2,7 @@
 mod commands;
 mod declarations;
 mod doctor;
+mod editor_launch;
 
 use clap::{Parser, Subcommand};
 use std::path::PathBuf;
@@ -176,6 +177,11 @@ enum Command {
         /// thread); refused where it is not measured.
         #[arg(long)]
         force_gfx_mt: bool,
+        /// The Editor's command line as editor code reads it (`Environment.GetCommandLineArgs`),
+        /// after the Editor's executable: how a Multiplayer Play Mode virtual player that Unbound
+        /// starts gets its arguments (after `--`).
+        #[arg(last = true)]
+        editor_args: Vec<String>,
     },
     /// Compile the project's script assemblies.
     Compile {
@@ -390,6 +396,7 @@ fn main() -> anyhow::Result<()> {
             force_vulkan,
             force_glcore,
             force_gfx_mt,
+            editor_args,
         } => exit_after(commands::run(
             &project,
             commands::RunArgs {
@@ -427,6 +434,7 @@ fn main() -> anyhow::Result<()> {
                     None
                 },
                 force_gfx_mt,
+                editor_args,
             },
         )),
         Command::Facades { project } => commands::facades(&project),
