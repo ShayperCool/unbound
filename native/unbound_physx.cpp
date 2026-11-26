@@ -2830,6 +2830,18 @@ UA3_API void ua3_d6_set_swing_limit( uint64_t id, float yAngle, float zAngle, fl
 
 // Drives: 0 x, 1 y, 2 z, 3 swing, 4 twist, 5 slerp. acceleration: bit 0 an acceleration drive; on
 // the twist drive, bit 1 extends the solver limits beyond (-pi, pi], bit 2 enables free spin.
+// Unity's joint projection (ConfigurableJoint.projectionMode, CharacterJoint.enableProjection):
+// the joint's projection flag with its distance and angle (radians) as PhysX's tolerances.
+UA3_API void ua3_d6_set_projection( uint64_t id, int enabled, float linearTolerance, float angularTolerance )
+{
+	if ( PxD6Joint* d6 = d6_of( id ) )
+	{
+		d6->setProjectionLinearTolerance( PxMax( linearTolerance, 0.0f ) );
+		d6->setProjectionAngularTolerance( PxClamp( angularTolerance, 0.0f, PxPi ) );
+		d6->setConstraintFlag( PxConstraintFlag::ePROJECTION, enabled != 0 );
+	}
+}
+
 UA3_API void ua3_d6_set_drive( uint64_t id, int index, float stiffness, float damping, float forceLimit, int acceleration )
 {
 	if ( PxD6Joint* d6 = d6_of( id ) )

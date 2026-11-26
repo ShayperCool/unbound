@@ -275,7 +275,7 @@ namespace UnityEngine
         {
             var t = transform;
             var worldAnchor = t.TransformPoint(m_Anchor);
-            var worldFrame = t.rotation * Frame(m_Axis, SecondaryAxis);
+            var worldFrame = (FrameInWorldSpace ? Quaternion.identity : t.rotation) * Frame(m_Axis, SecondaryAxis);
             var bodyPose = rb.transform;
             p0 = Quaternion.Inverse(bodyPose.rotation) * (worldAnchor - bodyPose.position);
             q0 = Quaternion.Inverse(bodyPose.rotation) * worldFrame;
@@ -294,6 +294,9 @@ namespace UnityEngine
                 q1 = worldFrame;
             }
         }
+
+        /// <summary>Whether the axes are world directions rather than the transform's.</summary>
+        internal virtual bool FrameInWorldSpace => false;
 
         /// <summary>The joint type's own settings on the native joint.</summary>
         internal virtual void Configure()
@@ -605,6 +608,8 @@ namespace UnityEngine
                 Mathf.Clamp01(m_LowTwistLimit.bounciness), BounceThreshold(0f), DefaultedContact(m_LowTwistLimit.contactDistance));
             B3.ua3_d6_set_swing_limit(m_Joint, Rad(Mathf.Max(m_Swing1Limit.limit, 0.01f)), Rad(Mathf.Max(m_Swing2Limit.limit, 0.01f)), m_SwingLimitSpring.spring, m_SwingLimitSpring.damper,
                 Mathf.Clamp01(m_Swing1Limit.bounciness), BounceThreshold(0f), DefaultedContact(m_Swing1Limit.contactDistance));
+            // Projection: PhysX's, the distance and angle its tolerances (tests/projects/jointprojection).
+            B3.ua3_d6_set_projection(m_Joint, m_EnableProjection ? 1 : 0, m_ProjectionDistance, Rad(m_ProjectionAngle));
         }
 
         internal override void CopyFrom(Component source, Func<Object, Object> remap)
@@ -716,7 +721,14 @@ namespace UnityEngine
             SetDrive(m_Joint, 4, slerp ? default : m_AngularXDrive);
             SetDrive(m_Joint, 5, slerp ? m_SlerpDrive : default);
             B3.ua3_d6_set_drive_target(m_Joint, m_TargetPosition, m_TargetRotation, m_TargetVelocity, m_TargetAngularVelocity);
+            // Projection: PhysX's, the distance and angle its tolerances (tests/projects/jointprojection).
+            B3.ua3_d6_set_projection(m_Joint, m_ProjectionMode == JointProjectionMode.PositionAndRotation ? 1 : 0, m_ProjectionDistance, Rad(m_ProjectionAngle));
         }
+
+        /// <summary>configuredInWorldSpace: the axis and secondary axis are world directions
+        /// (tests/projects/jointprojection frame/world: a body turned 90 degrees slides along world
+        /// x). Drive targets in world space are unmeasured.</summary>
+        internal override bool FrameInWorldSpace => m_ConfiguredInWorldSpace;
 
         internal override void CopyFrom(Component source, Func<Object, Object> remap)
         {

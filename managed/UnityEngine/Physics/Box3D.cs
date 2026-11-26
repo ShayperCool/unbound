@@ -329,6 +329,7 @@ namespace Unbound.Box3D
         [LibraryImport(Library)] internal static partial void ua3_d6_set_twist_limit(ulong joint, float lower, float upper, float stiffness, float damping, float restitution, float bounceThreshold, float contactDistance);
         [LibraryImport(Library)] internal static partial void ua3_d6_set_swing_limit(ulong joint, float yAngle, float zAngle, float stiffness, float damping, float restitution, float bounceThreshold, float contactDistance);
         [LibraryImport(Library)] internal static partial void ua3_d6_set_drive(ulong joint, int index, float stiffness, float damping, float forceLimit, int acceleration);
+        [LibraryImport(Library)] internal static partial void ua3_d6_set_projection(ulong joint, int enabled, float linearTolerance, float angularTolerance);
         [LibraryImport(Library)] internal static partial void ua3_d6_set_drive_target(ulong joint, Vector3 position, Quaternion rotation, Vector3 linear, Vector3 angular);
         [LibraryImport(Library)] internal static partial void ua3_d6_twist(ulong joint, out float angle, out float velocity);
         [LibraryImport(Library)] internal static partial void ua3_distance_set(ulong joint, float minDistance, float maxDistance, float tolerance, float stiffness, float damping);

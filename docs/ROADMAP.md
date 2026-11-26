@@ -307,8 +307,9 @@ In dependency order; each item ends with an Editor-reference probe.
       (hinge, fixed, spring, character, configurable) as Unity builds them (`tests/projects/joints`:
       26/27 records match); CharacterController on PhysX's character controller
       (`tests/projects/controller`: all records match). Physics probe: every 3D scenario but the
-      resting stack matches. Left: joint projection, configuredInWorldSpace/swapBodies, the
-      stack's resting jitter.
+      resting stack matches; joint projection and configuredInWorldSpace
+      (`tests/projects/jointprojection`). Left: what swapBodies changes, the stack's resting
+      jitter.
 - [x] Cloth on NvCloth 1.1.6 (the solver Unity runs; vendored, unmodified), set up as Unity sets
       it up: welded particles, geodesic tethers, stiffness phases, inertia, max distance and
       collision sphere distance constraints, virtual particles, sphere, cone and capsule colliders,
