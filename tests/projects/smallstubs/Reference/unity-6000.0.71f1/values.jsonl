@@ -36,6 +36,6 @@
 {"k":"palette.empty","v":"throws ArgumentNullException: Value cannot be null.\nParameter name: palette"}
 {"k":"palette.null","v":"throws ArgumentNullException: Value cannot be null.\nParameter name: palette"}
 {"k":"shader.hardwareSupportsRectRenderTexture","v":"True"}
-{"k":"shader.clearCachedData","v":"done"}
+{"k":"shader.clearCachedData","v":"compiled before True; after clearing True"}
 {"k":"shader.clearCachedData.null","v":"throws ArgumentNullException: Value cannot be null.\nParameter name: s"}
 {"k":"complete","v":true}

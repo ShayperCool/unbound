@@ -123,7 +123,15 @@ public class SmallStubsProbe : MonoBehaviour
             Try("palette." + key, () => { var colors = new Color[length]; int n = UnityEngine.Accessibility.VisionUtility.GetColorBlindSafePalette(colors, min, max); return Colors(colors, n); });
         Try("palette.null", () => UnityEngine.Accessibility.VisionUtility.GetColorBlindSafePalette(null, 0f, 1f).ToString());
         Try("shader.hardwareSupportsRectRenderTexture", () => ShaderUtil.hardwareSupportsRectRenderTexture.ToString());
-        Try("shader.clearCachedData", () => { ShaderUtil.ClearCachedData(Shader.Find("Unlit/Color")); return "done"; });
+        Try("shader.clearCachedData", () =>
+        {
+            var unlit = Shader.Find("Unlit/Color");
+            var material = new Material(unlit);
+            ShaderUtil.CompilePass(material, 0, true);
+            var before = ShaderUtil.IsPassCompiled(material, 0);
+            ShaderUtil.ClearCachedData(unlit);
+            return "compiled before " + before + "; after clearing " + ShaderUtil.IsPassCompiled(material, 0);
+        });
         Try("shader.clearCachedData.null", () => { ShaderUtil.ClearCachedData(null); return "done"; });
     }
 }

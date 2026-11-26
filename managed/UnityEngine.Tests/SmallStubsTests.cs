@@ -47,6 +47,10 @@ namespace UnityEngine.Tests
             Assert.Equal(0, UnityEngine.Accessibility.VisionUtility.GetColorBlindSafePalette(none, 2f, 3f));
             Assert.Equal(default(Color), none[0]);
             Assert.Throws<ArgumentNullException>(() => UnityEngine.Accessibility.VisionUtility.GetColorBlindSafePalette(new Color[0], 0f, 1f));
+            var bytes = new Color32[4];
+            Assert.Equal(3, UnityEngine.Accessibility.VisionUtility.GetColorBlindSafePalette(bytes, 0.8f, 1f));
+            Assert.Equal(new Color32(36, 255, 36, 255), bytes[0]);
+            Assert.Equal(new Color32(36, 255, 36, 255), bytes[3]);
             Assert.Equal("s", Assert.Throws<ArgumentNullException>(() => ShaderUtil.ClearCachedData(null)).ParamName);
         }
     }

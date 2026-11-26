@@ -26,11 +26,12 @@ namespace UnityEditor
         }
 
         /// <summary>True, as the Unity 6000.0.71f1 Editor answers on the measured GPU (tests/projects/smallstubs).</summary>
-        [Unbound.EditorFaithful("every GPU Unbound runs on supports rectangle render textures (measured: tests/projects/smallstubs shader.hardwareSupportsRectRenderTexture)")]
+        [Unbound.EditorFaithful("true on the measured Linux GPU Editor (tests/projects/smallstubs shader.hardwareSupportsRectRenderTexture); the macOS Metal Editor's answer is unmeasured")]
         public static bool hardwareSupportsRectRenderTexture => true;
 
-        /// <summary>Unbound keeps no per-shader compilation cache to clear; no shader:
-        /// ArgumentNullException (matches the Unity 6000.0.71f1 Editor, tests/projects/smallstubs).</summary>
+        /// <summary>Changes nothing Unbound answers: a pass compiled through CompilePass stays
+        /// compiled (IsPassCompiled true after it); no shader: ArgumentNullException (matches the
+        /// Unity 6000.0.71f1 Editor, tests/projects/smallstubs shader.clearCachedData*).</summary>
         public static void ClearCachedData(Shader s)
         {
             if (s == null) throw new ArgumentNullException(nameof(s));
