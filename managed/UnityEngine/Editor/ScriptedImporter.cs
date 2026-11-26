@@ -464,7 +464,8 @@ namespace Unbound.Runtime
                     if (OverrideHash(type) is { } hash)
                     {
                         byHash[hash] = type;
-                        hashes[hash] = new { guid = own.Guid, fileId = own.FileId };
+                        // Any of the class's script files a `.meta` names stands for it.
+                        hashes[hash] = new { guid = own.Guid, fileId = own.FileId, scripts = GameDomain.ScriptGuidsOf(type) };
                     }
                 }
             foreach (var (ext, type) in byExtension)

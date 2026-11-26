@@ -447,6 +447,17 @@ namespace Unbound.Runtime
 
         internal static string GuidOfScript(Type type) => s_GuidByScript.TryGetValue(type, out var guid) ? guid : null;
 
+        /// <summary>Every script file standing for <paramref name="type"/> (a class of several
+        /// files of its name has one each), lowercase GUIDs.</summary>
+        internal static List<string> ScriptGuidsOf(Type type)
+        {
+            var guids = new List<string>();
+            foreach (var (guid, scripted) in s_ScriptsByGuid)
+                if (scripted == type) guids.Add(guid.ToLowerInvariant());
+            guids.Sort(StringComparer.Ordinal);
+            return guids;
+        }
+
         internal static Type FindTypeByName(string className)
         {
             foreach (var assembly in s_Assemblies)

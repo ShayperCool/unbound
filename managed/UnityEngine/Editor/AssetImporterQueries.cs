@@ -66,13 +66,14 @@ namespace UnityEditor
         public static Type[] GetAvailableImporterTypes(string path) => GetAvailableImporters(path);
 
         /// <summary>The importer a `.meta` setting an importer override names, or null: the loaded
-        /// ScriptedImporter of its type hash (null for one no loaded importer has), else, for an
-        /// override without a hash, the asset's importer.</summary>
+        /// ScriptedImporter of its type hash, else (a hash no registered importer has, an override
+        /// without one) the asset's importer, which the `.meta`'s section names.</summary>
         public static Type GetImporterOverride(string path)
         {
             var guid = string.IsNullOrEmpty(path) ? null : AssetPathToGUID(path);
             if (string.IsNullOrEmpty(guid) || !AssetDatabaseRuntime.Info(guid).ImporterOverride) return null;
-            if (MetaText(path) is { } text && AssetPaths.ImporterOverrideHash(text) is { } hash) return ScriptedImports.ForOverrideHash(hash);
+            if (MetaText(path) is { } text && AssetPaths.ImporterOverrideHash(text) is { } hash && ScriptedImports.ForOverrideHash(hash) is { } type)
+                return type;
             return GetImporterType(path);
         }
 
@@ -152,7 +153,11 @@ namespace UnityEditor
             var meta = FileOf(path) + ".meta";
             var text = MetaText(path) ?? "";
             var written = AssetPaths.WithImporterOverride(text, hash);
-            if (hash != null && OwnImporterSection(path, written) is { } section) written = AssetPaths.WithImporterSection(written, section);
+            // The section of the importer the asset has now, unless the section stands for its class
+            // already (any of a class's script files).
+            bool own = NamedScript(written) is { } named && AssetImporter.GetAtPath(path) is { } current
+                && GameDomain.ResolveScript(named.Guid, named.FileId) == current.GetType();
+            if (hash != null && !own && OwnImporterSection(path, written) is { } section) written = AssetPaths.WithImporterSection(written, section);
             if (written != text)
             {
                 try { System.IO.File.WriteAllText(meta, written); }

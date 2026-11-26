@@ -21,13 +21,15 @@ namespace UnityEngine.Tests
         static string Override(string hash) =>
             "importerOverride:\n  nativeImporterType: 2089858483\n  scriptedImporterType:\n    serializedVersion: 2\n    Hash: " + hash + "\n";
 
-        /// <summary>The type hash is Hash128 of "assembly:namespace:class": the two measured hashes
-        /// (an importer without a namespace, one in a namespace) are those of their names.</summary>
+        /// <summary>The type hash is Hash128 of "assembly:namespace:class": the measured hashes (an
+        /// importer without a namespace, one in a namespace, a package's) are those of their names.</summary>
         [Fact]
         public void TheMeasuredTypeHashesAreTheirNamesHashes()
         {
             Assert.Equal(OverHash, Hash128.Compute("Assembly-CSharp-Editor::OverImporter").ToString());
             Assert.Equal("7f3acfa06d31e57fb7a5b8b20dd8aa20", Hash128.Compute("Assembly-CSharp-Editor:ProbeImporters:SpacedImporter").ToString());
+            // A package's importer, a dotted namespace (tests/projects/toolapis Layers.psd.meta, the PSD importer's).
+            Assert.Equal("b10b55a1aa6a1aa32521bc0cab59632e", Hash128.Compute("Unity.2D.Psdimporter.Editor:UnityEditor.U2D.PSD:PSDImporter").ToString());
             var type = typeof(TopLevelOverrideImporter);
             Assert.Equal(Hash128.Compute(type.Assembly.GetName().Name + ":" + type.Namespace + ":" + type.Name).ToString(), ScriptedImports.OverrideHash(type));
             // Nested and generic classes: their form is not measured.

@@ -1999,21 +1999,38 @@ fn effective_scripted_importer(s: &RuntimeState, file: &Path) -> Option<(String,
     // An override naming a project ScriptedImporter by its type hash (what SetImporterOverride
     // writes beside the importer's section) imports with that importer (matches the Unity
     // 6000.0.71f1 Editor, tests/projects/importselfload asset.Preset.ovr2, set_override.*).
-    if let Some(script) = registry
-        .as_ref()
-        .and_then(|r| override_of(r, unbound_assets::meta::importer_override_hash(file)))
-    {
+    let named = unbound_assets::meta::scripted_importer_of(file);
+    if let Some(script) = registry.as_ref().and_then(|r| {
+        override_of(
+            r,
+            unbound_assets::meta::importer_override_hash(file),
+            named.as_ref(),
+        )
+    }) {
         return Some(script);
     }
-    let named = unbound_assets::meta::scripted_importer_of(file);
     let ext = file.extension().and_then(|e| e.to_str()).unwrap_or("");
     let overridden = named.is_some() && unbound_assets::meta::has_importer_override(file);
     effective_of(registry.as_ref(), named, ext, overridden)
 }
 
-/// The script of the loaded ScriptedImporter whose type hash an override names, if any.
-fn override_of(registry: &ScriptedExtensions, hash: Option<String>) -> Option<(String, i64)> {
-    registry.overrides.get(&hash?.to_ascii_lowercase()).cloned()
+/// The script of the loaded ScriptedImporter whose type hash an override names, if any: the one
+/// the `.meta`'s section names when it stands for that class (a class of several files of its
+/// name), else the class's own.
+fn override_of(
+    registry: &ScriptedExtensions,
+    hash: Option<String>,
+    named: Option<&(String, i64)>,
+) -> Option<(String, i64)> {
+    let (own, scripts) = registry.overrides.get(&hash?.to_ascii_lowercase())?;
+    match named {
+        Some((guid, file_id))
+            if *file_id == own.1 && scripts.contains(&guid.to_ascii_lowercase()) =>
+        {
+            Some((guid.to_ascii_lowercase(), *file_id))
+        }
+        _ => Some(own.clone()),
+    }
 }
 
 /// [`effective_scripted_importer`] of a file of extension `ext` whose `.meta` names the
@@ -2068,9 +2085,9 @@ struct ScriptedExtensions {
     keep_meta: HashSet<String>,
     rejected: HashSet<String>,
     loaded: HashSet<String>,
-    /// The loaded importers' scripts by their type hash (lowercase hex), which an importer
-    /// override names.
-    overrides: HashMap<String, (String, i64)>,
+    /// The loaded importers by their type hash (lowercase hex), which an importer override
+    /// names: the class's script, and the GUIDs of every script file standing for the class.
+    overrides: HashMap<String, ((String, i64), HashSet<String>)>,
 }
 
 /// The importer the Editor has natively for a path by its extension (the measured lists of
@@ -2191,6 +2208,14 @@ fn set_scripted_importers(request: &str) -> Result<String> {
         file_id: i64,
     }
     #[derive(Deserialize)]
+    struct Override {
+        guid: String,
+        #[serde(rename = "fileId")]
+        file_id: i64,
+        #[serde(default)]
+        scripts: Vec<String>,
+    }
+    #[derive(Deserialize)]
     struct Request {
         extensions: HashMap<String, Script>,
         #[serde(default)]
@@ -2201,7 +2226,7 @@ fn set_scripted_importers(request: &str) -> Result<String> {
         loaded: Vec<String>,
         /// Type hash -> script of each loaded importer an override can name.
         #[serde(default)]
-        overrides: HashMap<String, Script>,
+        overrides: HashMap<String, Override>,
     }
     let r: Request = serde_json::from_str(request)?;
     let (mut registry, native) = scripted_registry(
@@ -2215,10 +2240,11 @@ fn set_scripted_importers(request: &str) -> Result<String> {
     registry.overrides = r
         .overrides
         .into_iter()
-        .map(|(hash, s)| {
+        .map(|(hash, o)| {
+            let scripts = o.scripts.iter().map(|g| g.to_ascii_lowercase()).collect();
             (
                 hash.to_ascii_lowercase(),
-                (s.guid.to_ascii_lowercase(), s.file_id),
+                ((o.guid.to_ascii_lowercase(), o.file_id), scripts),
             )
         })
         .collect();
@@ -3772,27 +3798,38 @@ mod tests {
         let registry = super::ScriptedExtensions {
             overrides: [(
                 "104ddd7902d5b6bcff8d6316c3d1f5bc".to_string(),
-                ("aaaa".to_string(), 11500000),
+                (
+                    ("aaaa".to_string(), 11500000),
+                    ["aaaa".to_string(), "cccc".to_string()].into(),
+                ),
             )]
             .into(),
             ..Default::default()
         };
         let over = Some(("aaaa".to_string(), 11500000));
+        let hash = || Some("104DDD7902D5B6BCFF8D6316C3D1F5BC".to_string());
+        assert_eq!(super::override_of(&registry, hash(), None), over);
+        // The `.meta` names another script file of the class: kept; one of another class: the
+        // class's own.
+        let other_file = ("CCCC".to_string(), 11500000);
         assert_eq!(
-            super::override_of(
-                &registry,
-                Some("104DDD7902D5B6BCFF8D6316C3D1F5BC".to_string())
-            ),
+            super::override_of(&registry, hash(), Some(&other_file)),
+            Some(("cccc".to_string(), 11500000))
+        );
+        let other_class = ("dddd".to_string(), 11500000);
+        assert_eq!(
+            super::override_of(&registry, hash(), Some(&other_class)),
             over
         );
         assert_eq!(
             super::override_of(
                 &registry,
-                Some("7f3acfa06d31e57fb7a5b8b20dd8aa20".to_string())
+                Some("7f3acfa06d31e57fb7a5b8b20dd8aa20".to_string()),
+                None
             ),
             None
         );
-        assert_eq!(super::override_of(&registry, None), None);
+        assert_eq!(super::override_of(&registry, None, Some(&other_file)), None);
     }
 
     /// The registry the editor domain's ScriptedImporters give: a native importer's extension is
