@@ -15,7 +15,12 @@ namespace UnityEngine
         /// light.layerShadowCullDistances*). Setting them is not implemented yet.</summary>
         public float[] layerShadowCullDistances
         {
-            get => Compat.DefaultConstructorStateMeasured ? new float[LayerCount] : Array.Empty<float>();
+            get
+            {
+                if (Compat.DefaultConstructorStateMeasured) return new float[LayerCount];
+                Stubs.NotImplemented("UnityEngine.Light.layerShadowCullDistances");
+                return Array.Empty<float>();
+            }
             [Unbound.Stub] set => Stubs.NotImplemented("UnityEngine.Light.layerShadowCullDistances");
         }
 

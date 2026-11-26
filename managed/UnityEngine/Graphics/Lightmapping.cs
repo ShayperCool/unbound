@@ -141,6 +141,7 @@ namespace UnityEngine
         internal override void CopyFrom(Component source, Func<Object, Object> remap)
         {
             var s = (LightProbeGroup)source;
+            m_Enabled = s.m_Enabled;
             m_SourcePositions = (Vector3[])s.m_SourcePositions.Clone();
             m_Dering = s.m_Dering;
         }

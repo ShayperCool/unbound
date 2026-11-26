@@ -133,6 +133,33 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
+        public void AgentPlacedOnANavMeshAddedLaterAnswersWhateverIsReadFirst()
+        {
+            var center = new Vector3(6000f, 0f, 6000f);
+            var agent = Make("Later", center).AddComponent<NavMeshAgent>();
+            var sources = new List<NavMeshBuildSource>
+            {
+                new NavMeshBuildSource { shape = NavMeshBuildSourceShape.Box, size = new Vector3(10f, 1f, 10f), transform = Matrix4x4.Translate(center + new Vector3(0f, -0.5f, 0f)), area = 0 },
+            };
+            var data = NavMeshBuilder.BuildNavMeshData(NavMesh.GetSettingsByID(0), sources, new Bounds(center, new Vector3(12f, 4f, 12f)), Vector3.zero, Quaternion.identity);
+            var instance = NavMesh.AddNavMeshData(data);
+            try
+            {
+                m_Logs.Clear();
+                Assert.Equal(NavMeshPathStatus.PathComplete, agent.pathStatus);
+                Assert.NotEqual(Vector3.positiveInfinity, agent.destination);
+                Assert.Equal(0f, agent.remainingDistance);
+                Assert.True(agent.isOnNavMesh);
+                Assert.Empty(m_Logs);
+            }
+            finally
+            {
+                NavMesh.RemoveNavMeshData(instance);
+                Object.DestroyImmediate(data);
+            }
+        }
+
+        [Fact]
         public void TrailWithoutPointsSpansTheOriginAndTheObject()
         {
             var away = Make("Away", new Vector3(-10f, 5f, 2f)).AddComponent<TrailRenderer>();
@@ -176,6 +203,14 @@ namespace UnityEngine.Tests
             Assert.Equal(new float[32], distances);
             distances[0] = 5f;
             Assert.Equal(0f, light.layerShadowCullDistances[0]);
+            Stubs.Forget("UnityEngine.Light.layerShadowCullDistances");
+            using (TestRelease.Pin(TestRelease.Unmeasured))
+            {
+                m_Logs.Clear();
+                Assert.Empty(light.layerShadowCullDistances);
+                Assert.Equal(new[] { "Warning: Unbound: UnityEngine.Light.layerShadowCullDistances is not implemented yet" }, m_Logs);
+            }
+            Stubs.Forget("UnityEngine.Light.layerShadowCullDistances");
         }
 
         [Fact]
@@ -188,9 +223,11 @@ namespace UnityEngine.Tests
             m_Objects.Add(copy);
             Assert.Equal(new[] { new Vector3(7f, 8f, 9f) }, copy.GetComponent<LightProbeGroup>().probePositions);
             group.probePositions = new Vector3[0];
+            group.enabled = false;
             var empty = Object.Instantiate(source);
             m_Objects.Add(empty);
             Assert.Empty(empty.GetComponent<LightProbeGroup>().probePositions);
+            Assert.False(empty.GetComponent<LightProbeGroup>().enabled);
         }
 
         [Fact]

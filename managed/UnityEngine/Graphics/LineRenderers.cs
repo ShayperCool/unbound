@@ -751,8 +751,12 @@ namespace UnityEngine
 
         internal override Bounds GetWorldBounds()
         {
-            if (LocalBoundsOverride == null && Compat.DefaultConstructorStateMeasured && DrawPoints().Count == 0)
-                return PointlessWorldBounds();
+            if (LocalBoundsOverride == null && Compat.DefaultConstructorStateMeasured)
+            {
+                // What DrawPoints would find, without building the strip.
+                TrackMovement();
+                if (m_Points.Count == 0) return PointlessWorldBounds();
+            }
             return base.GetWorldBounds();
         }
 

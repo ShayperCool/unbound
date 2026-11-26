@@ -953,8 +953,17 @@ namespace UnityEngine.AI
         /// <summary>An active agent not placed on a NavMesh: its destination and remaining distance
         /// read as infinity, its path as invalid, and reading the remaining distance logs the error
         /// a disabled agent's does (Unity 6000.0.71f1, tests/projects/defaultcontrols agent.off*;
-        /// other releases keep the previous, unmeasured answers).</summary>
-        bool Unplaced => Compat.DefaultConstructorStateMeasured && !Disabled && !m_OnNavMesh;
+        /// other releases keep the previous, unmeasured answers). An agent not placed yet is placed
+        /// first, as isOnNavMesh places it, so a NavMesh added since answers whatever is read first.</summary>
+        bool Unplaced
+        {
+            get
+            {
+                if (!Compat.DefaultConstructorStateMeasured || Disabled || m_OnNavMesh) return false;
+                AgentSystem.Sync(this, followTransform: false);
+                return !m_OnNavMesh;
+            }
+        }
 
         internal override void OnEngineDestroy() => AgentSystem.Remove(this);
 
