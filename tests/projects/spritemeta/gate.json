@@ -1,0 +1,13 @@
+{
+  "commands": [
+    "python3 tests/projects/spritemeta/run.py gate"
+  ],
+  "summary": "spritemeta: .*",
+  "engine_paths": [
+    "crates/unbound-assets/src/new_meta.rs",
+    "crates/unbound-assets/src/new_meta/",
+    "crates/unbound-runtime/src/state.rs",
+    "managed/UnityEngine/Editor/ImporterMetaFiles.cs",
+    "managed/UnityEngine/Editor/ImporterSettings.cs"
+  ]
+}
