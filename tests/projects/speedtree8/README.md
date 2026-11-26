@@ -40,11 +40,12 @@ tree's passes. It adds `Card_Wind2` (the card tree with its wind's leading word 
 (the card tree with its `.meta` and copies of its maps whose `.meta` files lack those settings).
 
 Import behaviour does not depend on the graphics device, and on the OS only in float arithmetic: the
-probe may record with the macOS Editor in batch mode; the references are the Linux Editor's (batch mode on the GPU), which give a
-collision capsule's rotation 1 ulp off the macOS Editor's in two components. Measured: the imported
-tree's children are in the Editor's hierarchy name order (the model importer's) (`card-tree-sample`'s levels before
-`CollisionObject0`, `Field_Embedded`'s after it), while OnPostprocessSpeedTree sees them in the
-order they were made (levels first). `residuals.json` and `residuals-fresh.json` list the values Unbound does not
+probe may record with the macOS Editor in batch mode. The references are the Linux Editor's (batch mode
+on the GPU), whose collision capsule rotations are 1 ulp off the macOS Editor's in two components.
+Measured: the imported tree's children are in the Editor's hierarchy name order, the model importer's:
+`card-tree-sample`'s levels before `CollisionObject0`, `Field_Embedded`'s after it;
+OnPostprocessSpeedTree sees them in the order they were made (levels first).
+`residuals.json` and `residuals-fresh.json` list the values Unbound does not
 reproduce yet with their causes.
 
     python3 tests/projects/speedtree8/run.py record --label A     # Editor capture (--profile fresh too)
