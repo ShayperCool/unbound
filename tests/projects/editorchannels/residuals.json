@@ -1,8 +1,5 @@
 {
   "The Editor runs a channel server on a free port; Unbound runs none (no client can connect, as none does in the capture), so it reports no port (0) with a warning": [
     "mpe.port"
-  ],
-  "The Linux reference is the batch-mode Editor's, which answers enableEditorLocalization false; Unbound answers as the windowed Editor, which says true (tests/projects/editorlocalization, Q785)": [
-    "localization.enableEditorLocalization"
   ]
 }

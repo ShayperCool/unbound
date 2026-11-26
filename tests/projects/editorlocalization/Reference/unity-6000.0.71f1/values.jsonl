@@ -1,6 +1,6 @@
 {"k": "batchMode", "v": "False"}
 {"k": "currentEditorLanguage", "v": "English"}
-{"k": "enableEditorLocalization", "v": "True"}
+{"k": "enableEditorLocalization", "v": "False"}
 {"k": "GetDefaultEditorLanguage", "v": "English"}
 {"k": "GetAvailableEditorLanguages", "v": "English"}
 {"k": "GetLocalizationResourceFolder", "v": "<contents>/Localization"}

@@ -241,16 +241,20 @@ namespace UnityEditor.MPE
 namespace UnityEditor
 {
     /// <summary>The Editor's interface language settings as the Unity 6000.0.71f1 Editor answers them
-    /// in Play mode (tests/projects/editorlocalization, the windowed Linux Editor, which Unbound is:
-    /// Application.isBatchMode false): English, the only language installed; localization enabled
-    /// (the batch-mode Linux Editor answers false, tests/projects/editorchannels; the macOS batch
-    /// Editor true); every string its own translation; each language's culture code. Unmeasured:
-    /// the languages a macOS installation offers (English here), null strings (returned as they
-    /// are), the setters' effects beyond the value read back, and context groups set by code.</summary>
+    /// in Play mode (tests/projects/editorlocalization, the windowed Linux Editor with clean
+    /// preferences; tests/projects/editorchannels in batch mode): English, the only language
+    /// installed; every string its own translation; each language's culture code. Localization is
+    /// enabled when the machine's EditorPrefs say so (`Editor.kEnableEditorLocalization`: absent or 0
+    /// gives false, 1 true, windowed and batch alike, measured with private preferences); Unbound
+    /// answers the value without the key (false; true on macOS, its batch Editor's answer) and does
+    /// not read the preference, which packages write themselves (the tutorial framework turns it on).
+    /// Installed language packs (files in the installation's Localization folder) are not read: a
+    /// notice says so. Unmeasured: macOS's languages, null strings, the setters' effects beyond the
+    /// value read back, context groups set by code, GetLocalizedStringWithGroupNameInLang.</summary>
     internal partial class LocalizationDatabase
     {
         static SystemLanguage s_EditorLanguage = SystemLanguage.English;
-        static bool s_EnableEditorLocalization = true;
+        static bool s_EnableEditorLocalization = OperatingSystem.IsMacOS();
 
         static readonly Dictionary<SystemLanguage, string> s_Cultures = new Dictionary<SystemLanguage, string>
         {
@@ -299,9 +303,22 @@ namespace UnityEditor
             [SystemLanguage.Hindi] = "hi",
         };
 
+        static bool s_PacksChecked;
+
         static bool Measured(string member)
         {
-            if (Unbound.Runtime.Compat.EditorChannelServiceMeasured) return true;
+            if (Unbound.Runtime.Compat.EditorChannelServiceMeasured)
+            {
+                if (!s_PacksChecked)
+                {
+                    s_PacksChecked = true;
+                    var folder = System.IO.Path.Combine(UnityInstallInfo.DataPath ?? "", "Localization");
+                    if (System.IO.Directory.Exists(folder) && System.IO.Directory.EnumerateFileSystemEntries(folder).GetEnumerator().MoveNext())
+                        Unbound.Runtime.Stubs.Ignored("UnityEditor.LocalizationDatabase language packs",
+                            "are not read: the Editor's interface stays English and strings untranslated (" + folder + ")");
+                }
+                return true;
+            }
             Unbound.Runtime.Stubs.NotImplemented("UnityEditor.LocalizationDatabase." + member);
             return false;
         }

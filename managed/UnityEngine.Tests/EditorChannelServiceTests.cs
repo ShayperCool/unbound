@@ -54,12 +54,50 @@ namespace UnityEngine.Tests
                 Assert.Null(ChannelService.GetOrCreateChannel("tests.unmeasured", (client, data) => { }));
                 Assert.Null(UnityEditor.Collaboration.Collab.instance);
                 Assert.False(UnityEditor.LocalizationDatabase.enableEditorLocalization);
+                Assert.Null(UnityEditor.LocalizationDatabase.GetCulture(SystemLanguage.German));
+                Assert.Null(UnityEditor.LocalizationDatabase.GetLocalizedString("Play"));
             }
             finally { Debug.unityLogger.logHandler = previous; }
             foreach (var member in new[] { "ChannelService.ChannelNameToId", "ChannelService.Start", "ChannelService.IsRunning",
                          "ChannelService.GetChannelList", "ChannelService.GetOrCreateChannel", "Collab.instance",
-                         "LocalizationDatabase.enableEditorLocalization" })
+                         "LocalizationDatabase.enableEditorLocalization", "LocalizationDatabase.GetCulture", "LocalizationDatabase.GetLocalizedString" })
                 Assert.Contains(capture.Lines, line => line.Contains(member + " is not implemented"));
+        }
+
+        /// <summary>tests/projects/editorlocalization (windowed Linux Editor, clean preferences): the
+        /// culture codes, identity translations and the localization folder; an installation with
+        /// files in its Localization folder (language packs) gets a notice.</summary>
+        [Fact]
+        public void LocalizationAnswersAsTheEditorAndNamesLanguagePacks()
+        {
+            var dataPath = UnityEditor.UnityInstallInfo.DataPath;
+            var dir = System.IO.Directory.CreateTempSubdirectory("unbound-l10n-");
+            var capture = new Capture();
+            var previous = Debug.unityLogger.logHandler;
+            try
+            {
+                using var release = TestRelease.Pin(TestRelease.Measured);
+                System.IO.Directory.CreateDirectory(System.IO.Path.Combine(dir.FullName, "Localization"));
+                System.IO.File.WriteAllText(System.IO.Path.Combine(dir.FullName, "Localization", "ja.po"), "");
+                UnityEditor.UnityInstallInfo.DataPath = dir.FullName;
+                typeof(UnityEditor.LocalizationDatabase).GetField("s_PacksChecked", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static).SetValue(null, false);
+                Unbound.Runtime.Stubs.Forget("UnityEditor.LocalizationDatabase language packs");
+                Debug.unityLogger.logHandler = capture;
+                Assert.Equal("zh-hans", UnityEditor.LocalizationDatabase.GetCulture(SystemLanguage.ChineseSimplified));
+                Assert.Equal("hu", UnityEditor.LocalizationDatabase.GetCulture(SystemLanguage.Hungarian));
+                Assert.Equal("", UnityEditor.LocalizationDatabase.GetCulture(SystemLanguage.Unknown));
+                Assert.Equal("Play", UnityEditor.LocalizationDatabase.GetLocalizedStringInLang(SystemLanguage.Japanese, "Play"));
+                Assert.Equal(new[] { SystemLanguage.English }, UnityEditor.LocalizationDatabase.GetAvailableEditorLanguages());
+                Assert.Equal(dir.FullName + "/Localization", UnityEditor.LocalizationDatabase.GetLocalizationResourceFolder());
+                Assert.Equal(".", UnityEditor.LocalizationDatabase.noLocalizationGroupName);
+                Assert.Contains(capture.Lines, line => line.Contains("language packs are not read"));
+            }
+            finally
+            {
+                Debug.unityLogger.logHandler = previous;
+                UnityEditor.UnityInstallInfo.DataPath = dataPath;
+                try { dir.Delete(true); } catch (System.IO.IOException) { }
+            }
         }
     }
 }
