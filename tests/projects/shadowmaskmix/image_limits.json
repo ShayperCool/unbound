@@ -17,6 +17,12 @@
   "over8": 0,
   "reason": "The Editor's image within rounding (no pixel over 8/255), measured on one machine: an NVIDIA driver, the Linux Editor on OpenGL Core, Unbound's OpenGL Core device. Another GPU, driver or device is unmeasured."
  },
+ "deferred_outer.png": {
+  "mean": 3.3,
+  "worst": 45,
+  "over8": 4950,
+  "reason": "The close, grazing Deferred view: the ground and the spheres' rims a few levels darker than the Editor's almost everywhere (93% of the pixels within 10/255, 222 pixels over 20/255, worst 45/255 in the point light's shadowed strip on the right), the same view in Forward within rounding; the outer sphere's face within 3/255. Cause not resolved (the Deferred lighting or reflection passes at grazing angles, not the probe occlusion). NVIDIA driver, OpenGL Core."
+ },
  "deferred_shadowmask_default.png": {
   "mean": 0.06,
   "worst": 7,
@@ -52,6 +58,12 @@
   "worst": 5,
   "over8": 0,
   "reason": "The Editor's image within rounding (no pixel over 8/255), measured on one machine: an NVIDIA driver, the Linux Editor on OpenGL Core, Unbound's OpenGL Core device. Another GPU, driver or device is unmeasured."
+ },
+ "forward_outer.png": {
+  "mean": 0.02,
+  "worst": 36,
+  "over8": 1,
+  "reason": "One pixel (146,126) at the edge of the outer sphere's realtime shadow on the ground up to 36/255 darker than the Editor's; the sphere itself, lit with the occlusion its outer cell blends (0.13), within rounding. NVIDIA driver, OpenGL Core."
  },
  "forward_shadowmask_default.png": {
   "mean": 0.06,

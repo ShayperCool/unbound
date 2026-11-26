@@ -26,4 +26,9 @@
 {"k":"shot/deferred_distance_nonlightmappedonly","v":"deferred_distance_nonlightmappedonly.png"}
 {"k":"shot/deferred_distance_everything","v":"deferred_distance_everything.png"}
 {"k":"shot/forward_shadowmask_noshadows","v":"forward_shadowmask_noshadows.png"}
+{"k":"occlusion/Outer Sphere","v":"0.128642142,1,1,1"}
+{"k":"sh/Outer Sphere/readout","v":"0.100258037,0.103006043,0.112125069"}
+{"k":"sh/Outer Sphere/renderer","v":"0.100258037,0.103006043,0.112125069"}
+{"k":"shot/forward_outer","v":"forward_outer.png"}
+{"k":"shot/deferred_outer","v":"deferred_outer.png"}
 {"k": "complete", "v": true}

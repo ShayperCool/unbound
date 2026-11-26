@@ -1,5 +1,10 @@
 {
  "LightProbes.CalculateInterpolatedLightAndOcclusionProbes at a probe's own position: the occlusion differs from the Editor's in the third significant digit (0.0019045 against 0.0019114; the blend weights at a probe, not traced)": [
   "occlusion/Shadowed Sphere"
+ ],
+ "The outer sphere's interpolated occlusion and probe lighting (LightProbes.CalculateInterpolatedLightAndOcclusionProbes, LightProbes.GetInterpolatedProbe) in their last single-precision digits (occlusion 0.128642127 against 0.128642142, SH 0.103006035 against 0.103006043): the order of the blend's float operations, not traced": [
+  "occlusion/Outer Sphere",
+  "sh/Outer Sphere/readout",
+  "sh/Outer Sphere/renderer"
  ]
 }

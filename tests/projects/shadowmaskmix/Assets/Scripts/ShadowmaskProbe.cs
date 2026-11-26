@@ -91,6 +91,36 @@ public sealed class ShadowmaskProbe : MonoBehaviour
         yield return Shot("forward_shadowmask_noshadows");
         QualitySettings.shadows = ShadowQuality.HardOnly;
 
+        // A dynamic sphere inside the probes' bounds but outside their hull, beside the probes in
+        // the wall's shadow: the occlusion an outer cell gives a renderer. Close up, in the
+        // Shadowmask mode (the static wall casts no realtime shadow there).
+        var outer = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+        outer.name = "Outer Sphere";
+        outer.transform.position = new Vector3(-4.25f, 0.25f, 2f);
+        outer.transform.localScale = Vector3.one * 0.2f;
+        var outerRenderer = outer.GetComponent<MeshRenderer>();
+        outerRenderer.sharedMaterial = GameObject.Find("Shadowed Sphere").GetComponent<Renderer>().sharedMaterial;
+        {
+            var at = new[] { outer.transform.position };
+            var sh = new SphericalHarmonicsL2[1];
+            var occlusion = new Vector4[1];
+            LightProbes.CalculateInterpolatedLightAndOcclusionProbes(at, sh, occlusion);
+            Rec("occlusion/Outer Sphere", F(occlusion[0].x) + "," + F(occlusion[0].y) + "," + F(occlusion[0].z) + "," + F(occlusion[0].w));
+            Rec("sh/Outer Sphere/readout", F(sh[0][0, 0]) + "," + F(sh[0][1, 0]) + "," + F(sh[0][2, 0]));
+            LightProbes.GetInterpolatedProbe(outer.transform.position, outerRenderer, out var probe);
+            Rec("sh/Outer Sphere/renderer", F(probe[0, 0]) + "," + F(probe[1, 0]) + "," + F(probe[2, 0]));
+        }
+        var view = camera.transform;
+        var (viewPosition, viewRotation) = (view.position, view.rotation);
+        view.SetPositionAndRotation(new Vector3(-4.25f, 0.35f, 1.2f), Quaternion.LookRotation(new Vector3(0f, -0.1f, 0.8f)));
+        foreach (var path in new[] { RenderingPath.Forward, RenderingPath.DeferredShading })
+        {
+            camera.renderingPath = path;
+            yield return Shot((path == RenderingPath.Forward ? "forward" : "deferred") + "_outer");
+        }
+        camera.renderingPath = RenderingPath.Forward;
+        view.SetPositionAndRotation(viewPosition, viewRotation);
+
         m_Out.Append("{\"k\": \"complete\", \"v\": true}\n");
         File.WriteAllText(Path.Combine(m_Dir, "values.jsonl"), m_Out.ToString());
 #if UNITY_EDITOR

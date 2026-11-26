@@ -16,7 +16,13 @@ distance 12, one cascade, hard shadows) and writes PNGs, with each light's bakin
 renderer's lightmap as keyed values: forward and deferred, each Shadowmask Mode (Shadowmask,
 Distance Shadowmask) with the lights' shadow caster mode Default, NonLightmappedOnly and
 Everything (`<path>_<mode>_<caster>.png`), and the Shadowmask mode with realtime shadows off
-(`forward_shadowmask_noshadows.png`). The reference is two byte-identical Editor captures.
+(`forward_shadowmask_noshadows.png`). Two dynamic spheres sit in the sun's shadow of a static
+wall (near) and block (far), each with a light probe at its centre; their interpolated occlusion
+is recorded (`occlusion/*`). Last, a small dynamic sphere made at runtime outside the probes'
+hull but inside their bounds, beside the probes in the wall's shadow, is recorded close up in
+forward and deferred (`<path>_outer.png`) with its interpolated occlusion and lighting
+(`occlusion/Outer Sphere`, `sh/Outer Sphere/*`). The reference is two byte-identical Editor
+captures.
 
 ```sh
 python3 tests/projects/shadowmaskmix/run.py setup --label setup1   # only to remake and bake the scene
