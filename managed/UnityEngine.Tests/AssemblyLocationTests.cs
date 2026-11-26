@@ -72,21 +72,37 @@ public static class Probe
             finally { Directory.Delete(directory, true); }
         }
 
+        /// <summary>A project root with its view in Unbound's directory, whose Library/ links to
+        /// Unbound's own (as the host builds it, crates/unbound-runtime/src/view.rs).</summary>
+        static (string Root, string View, string OwnLibrary) Project(string directory)
+        {
+            var root = Path.Combine(directory, "project");
+            var view = Path.Combine(root, ProjectInfo.UnboundFolder, ProjectInfo.ViewFolder);
+            var own = Path.Combine(root, ProjectInfo.UnboundFolder, "Library");
+            Directory.CreateDirectory(view);
+            Directory.CreateDirectory(own);
+            Directory.CreateSymbolicLink(Path.Combine(view, "Library"), own);
+            return (root, view, own);
+        }
+
         [Fact]
-        public void AScriptAssemblyIsLinkedUnderTheProjectsLibraryAndRelinkedToANewImage()
+        public void AScriptAssemblyIsLinkedUnderTheViewsLibraryAndRelinkedToANewImage()
         {
             var directory = TempDirectory();
             var before = ProjectInfo.ProjectPath;
             try
             {
-                ProjectInfo.ProjectPath = Path.Combine(directory, "view");
+                var (_, view, own) = Project(directory);
+                ProjectInfo.ProjectPath = view;
                 var first = Path.Combine(directory, "first.dll");
                 var second = Path.Combine(directory, "second.dll");
                 File.WriteAllText(first, "first");
                 File.WriteAllText(second, "second");
                 var shown = GameDomain.ShowScriptAssembly("Assembly-CSharp", first);
-                Assert.Equal(Path.Combine(directory, "view", "Library", "ScriptAssemblies", "Assembly-CSharp.dll"), shown);
+                Assert.Equal(Path.Combine(view, "Library", "ScriptAssemblies", "Assembly-CSharp.dll"), shown);
                 Assert.Equal("first", File.ReadAllText(shown));
+                // The link lives in Unbound's own Library/.
+                Assert.True(File.Exists(Path.Combine(own, "ScriptAssemblies", "Assembly-CSharp.dll")));
                 Assert.Equal(shown, GameDomain.ShowScriptAssembly("Assembly-CSharp", first));
                 // A reload's new image: the link follows it.
                 Assert.Equal(shown, GameDomain.ShowScriptAssembly("Assembly-CSharp", second));
@@ -94,6 +110,70 @@ public static class Probe
                 // No project (the engine's own tests): nothing is linked.
                 ProjectInfo.ProjectPath = "";
                 Assert.Null(GameDomain.ShowScriptAssembly("Assembly-CSharp", first));
+            }
+            finally
+            {
+                ProjectInfo.ProjectPath = before;
+                Directory.Delete(directory, true);
+            }
+        }
+
+        [Fact]
+        public void AProjectsOwnLibraryIsNeverWritten()
+        {
+            var directory = TempDirectory();
+            var before = ProjectInfo.ProjectPath;
+            try
+            {
+                // A doctor run loads the game's code with the project's own root as its path.
+                var (root, _, _) = Project(directory);
+                var unity = Path.Combine(root, "Library", "ScriptAssemblies");
+                Directory.CreateDirectory(unity);
+                File.WriteAllText(Path.Combine(unity, "Assembly-CSharp.dll"), "unity-built");
+                var image = Path.Combine(directory, "image.dll");
+                File.WriteAllText(image, "image");
+                ProjectInfo.ProjectPath = root;
+                Assert.Null(GameDomain.ShowScriptAssembly("Assembly-CSharp", image));
+                Assert.Null(GameDomain.ShowScriptAssembly("Other", image));
+                Assert.Equal("unity-built", File.ReadAllText(Path.Combine(unity, "Assembly-CSharp.dll")));
+                Assert.Equal(new[] { Path.Combine(unity, "Assembly-CSharp.dll") }, Directory.GetFiles(unity));
+                // A view whose Library/ is a folder of its own (not Unbound's): nothing either.
+                var other = Path.Combine(directory, "other");
+                Directory.CreateDirectory(Path.Combine(other, "Library"));
+                ProjectInfo.ProjectPath = other;
+                Assert.Null(GameDomain.ShowScriptAssembly("Assembly-CSharp", image));
+                Assert.Empty(Directory.GetFileSystemEntries(Path.Combine(other, "Library")));
+            }
+            finally
+            {
+                ProjectInfo.ProjectPath = before;
+                Directory.Delete(directory, true);
+            }
+        }
+
+        [Fact]
+        public void APluginWithOrWithoutAMetaNamesItsOwnFileAndAScriptAssemblyItsLink()
+        {
+            var directory = TempDirectory();
+            var before = ProjectInfo.ProjectPath;
+            try
+            {
+                var (_, view, _) = Project(directory);
+                ProjectInfo.ProjectPath = view;
+                var dll = Path.Combine(view, "Assets", "Plugins", "Foo.dll");
+                var adapted = Path.Combine(directory, "adapted", "Foo.dll");
+                var withMeta = new GameAssembly { Name = "Foo", Dll = dll, PluginGuid = "0123456789abcdef0123456789abcdef" };
+                var withoutMeta = new GameAssembly { Name = "Foo", Dll = dll };
+                // Loaded from its own file: nothing to show; from an adapted image: its own file.
+                Assert.Null(GameDomain.ShownFileOf(withMeta, dll));
+                Assert.Equal(dll, GameDomain.ShownFileOf(withMeta, adapted));
+                Assert.Null(GameDomain.ShownFileOf(withoutMeta, dll));
+                Assert.Equal(dll, GameDomain.ShownFileOf(withoutMeta, adapted));
+                // A compiled script assembly: Library/ScriptAssemblies of the view.
+                var compiled = Path.Combine(directory, "Assembly-CSharp.dll");
+                File.WriteAllText(compiled, "compiled");
+                var scripts = new GameAssembly { Name = "Assembly-CSharp", Dll = compiled, Sources = new[] { "Assets/Probe.cs" } };
+                Assert.Equal(Path.Combine(view, "Library", "ScriptAssemblies", "Assembly-CSharp.dll"), GameDomain.ShownFileOf(scripts, compiled));
             }
             finally
             {

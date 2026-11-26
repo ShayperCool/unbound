@@ -31,6 +31,9 @@ namespace Unbound.Runtime
         internal string[] References = Array.Empty<string>();
         /// <summary>Precompiled DLLs referenced.</summary>
         internal string[] CompiledReferences = Array.Empty<string>();
+        /// <summary>A script assembly Unbound compiled from the project's sources (not a
+        /// precompiled plugin, with or without a .meta).</summary>
+        internal bool IsCompiledScripts => PluginGuid == null && Sources.Length > 0;
         /// <summary>The asmdef's Unity path, "" for a predefined assembly.</summary>
         internal string Asmdef = "";
         internal string RootNamespace = "";
@@ -62,13 +65,31 @@ namespace Unbound.Runtime
 
         internal static void Show(Assembly assembly, string file) => s_ShownFiles.AddOrUpdate(assembly, file);
 
+        /// <summary>The file <paramref name="game"/> loaded from <paramref name="loadedFrom"/> names as
+        /// its own: a precompiled plugin (with or without a .meta) its project file when Unbound
+        /// loaded an adapted image (null when it loaded the file itself), a script assembly its
+        /// <see cref="ShowScriptAssembly"/> link.</summary>
+        internal static string ShownFileOf(GameAssembly game, string loadedFrom) =>
+            !game.IsCompiledScripts ? (PathsEqual(loadedFrom, game.Dll) ? null : game.Dll) : ShowScriptAssembly(game.Name, loadedFrom);
+
+        static bool PathsEqual(string a, string b) => string.Equals(Path.GetFullPath(a), Path.GetFullPath(b), StringComparison.Ordinal);
+
         /// <summary>Links a script assembly's `Library/ScriptAssemblies/<name>.dll` of the project the
-        /// game sees (the project view's Library/, Unbound's own) to the image loaded; null (with a
-        /// warning) when the link cannot be made.</summary>
+        /// game sees to the image loaded, and returns it. Only in the project view, whose
+        /// `Library/` is a link into Unbound's own directory: never under a project's own root,
+        /// whose `Library/` is Unity's (a doctor run loads the game's code there); null then, and
+        /// the assembly names the file it was loaded from. Null (with a warning) when the link
+        /// cannot be made.</summary>
         internal static string ShowScriptAssembly(string name, string loadedFrom)
         {
             if (string.IsNullOrEmpty(ProjectInfo.ProjectPath)) return null;
-            var shown = Path.Combine(ProjectInfo.ProjectPath, "Library", "ScriptAssemblies", name + ".dll");
+            var library = Path.Combine(ProjectInfo.ProjectPath, "Library");
+            var own = Path.TrimEndingDirectorySeparator(Path.GetFullPath(ProjectInfo.UnboundDirectory(ProjectInfo.ProjectPath))) + Path.DirectorySeparatorChar;
+            string linked;
+            try { linked = new DirectoryInfo(library).LinkTarget; }
+            catch (IOException) { linked = null; }
+            if (linked == null || !Path.GetFullPath(linked, ProjectInfo.ProjectPath).StartsWith(own, StringComparison.Ordinal)) return null;
+            var shown = Path.Combine(library, "ScriptAssemblies", name + ".dll");
             try
             {
                 Directory.CreateDirectory(Path.GetDirectoryName(shown));
@@ -581,8 +602,7 @@ namespace Unbound.Runtime
                 var loaded = LoadFromAssemblyPath(file);
                 // The image loaded is Unbound's: the game sees a plugin's own file, a script
                 // assembly's file where the Editor compiles it.
-                var shown = game.PluginGuid != null ? (path.Length == 0 ? null : game.Dll) : ShowScriptAssembly(game.Name, file);
-                if (shown != null) Show(loaded, shown);
+                if (ShownFileOf(game, file) is string shown) Show(loaded, shown);
                 return loaded;
             }
 
