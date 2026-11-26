@@ -48,11 +48,29 @@ namespace UnityEngine.Video
 
         /// <summary>The rate the pictures move at: the playback speed, scaled by Time.timeScale unless
         /// the player follows unscaled time.</summary>
-        float EffectiveAudioSpeed => m_TimeUpdateMode == VideoTimeUpdateMode.UnscaledGameTime ? m_PlaybackSpeed : m_PlaybackSpeed * Time.timeScale;
+        internal float EffectiveAudioSpeed => m_TimeUpdateMode == VideoTimeUpdateMode.UnscaledGameTime ? m_PlaybackSpeed : m_PlaybackSpeed * Time.timeScale;
+
+        /// <summary>A track's sound plays through a source: it reports itself playing from then on.</summary>
+        internal void ClaimAudioSource(AudioSource source)
+        {
+            if (source.m_VideoAudioClaimed) return;
+            source.m_VideoAudioClaimed = true;
+            if (!m_ClaimedSources.Contains(source)) m_ClaimedSources.Add(source);
+        }
+
+        /// <summary>What the decoder is told this update: a new decoder starts at the pictures'
+        /// time and a seek or loop starts it again at its time (restart); a start, and the periodic
+        /// check while playing, sync it to the pictures (video.rs AudioStream: decoding again only
+        /// when the sound drifted).</summary>
+        internal static (double? Restart, double? Sync) AudioControlTimes(bool opened, double? restart, bool sync, bool check, double time)
+        {
+            double? again = opened ? time : restart;
+            return (again, again == null && (sync || check) ? time : (double?)null);
+        }
 
         /// <summary>The sources this player's sound played through stop reporting themselves playing
         /// when it is destroyed (unmeasured: the Editor's answer then).</summary>
-        void ReleaseAudioClaims()
+        internal void ReleaseAudioClaims()
         {
             foreach (var source in m_ClaimedSources)
                 if (source != null) source.m_VideoAudioClaimed = false;
@@ -138,24 +156,14 @@ namespace UnityEngine.Video
                 if (source.m_HasFilter != hasFilter) source.m_HasFilter = hasFilter;
                 float volume = m_AudioOutputMode == VideoAudioOutputMode.Direct ? (settings.Mute ? 0f : settings.Volume) : source.m_Volume;
                 source.SendPacket(track.Voice, track.Clip, volume, false);
-                // A seek or loop starts the voice again too: what the mixer read ahead is dropped
-                // and the streamed clip's frames count from 0 again.
-                if (restart.HasValue) StopVoice(track);
-                if (!track.VoicePlaying && playing && source.isActiveAndEnabled)
-                {
-                    AudioBackend.Current.Command(track.Voice, new AudioSourceCommand { Kind = AudioCommandKind.Play });
-                    track.VoicePlaying = true;
-                    if (m_AudioOutputMode == VideoAudioOutputMode.AudioSource && !source.m_VideoAudioClaimed)
-                    {
-                        source.m_VideoAudioClaimed = true;
-                        if (!m_ClaimedSources.Contains(source)) m_ClaimedSources.Add(source);
-                    }
-                }
-                // A new decoder starts at the pictures' time, a seek or loop starts it again at its
-                // time; a start, and every 0.25 s of playing, syncs it to the pictures, which
-                // starts decoding again only when the sound has drifted (video.rs AudioStream).
-                double? again = opened ? m_Time : restart;
-                double? syncTo = again == null && (sync || check) ? m_Time : (double?)null;
+                // A target's pitch (its own, Doppler, its mixer group's) changes how fast the voice
+                // reads the track (unmeasured in the Editor): the sound drifts and is brought back.
+                if (source.m_Pitch != 1f)
+                    Stubs.Ignored("UnityEngine.Video.VideoPlayer sound through a source of pitch other than 1", "the video's sound is read at the source's pitch and kept in step by waits and restarts");
+                // The decoder is told first (a seek or loop starts it over, so the voice reads no
+                // earlier sound), then a seek or loop starts the voice again too: what the mixer read
+                // ahead is dropped and the streamed clip's frames count from 0 again.
+                var (again, syncTo) = AudioControlTimes(opened, restart, sync, check, m_Time);
                 if (again.HasValue || syncTo.HasValue || playing != track.Playing || speed != track.Speed)
                 {
                     AudioCall("video-audio-control", new
@@ -168,6 +176,13 @@ namespace UnityEngine.Video
                     });
                     track.Playing = playing;
                     track.Speed = speed;
+                }
+                if (restart.HasValue) StopVoice(track);
+                if (!track.VoicePlaying && playing && source.isActiveAndEnabled)
+                {
+                    AudioBackend.Current.Command(track.Voice, new AudioSourceCommand { Kind = AudioCommandKind.Play });
+                    track.VoicePlaying = true;
+                    if (m_AudioOutputMode == VideoAudioOutputMode.AudioSource) ClaimAudioSource(source);
                 }
             }
             for (int k = m_AudioPlayback.Count - 1; k >= 0; k--)

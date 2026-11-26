@@ -81,6 +81,71 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
+        public void TheSoundsSpeedIsThePicturesTimeScaledSpeedUnlessTheyFollowUnscaledTime()
+        {
+            var go = new GameObject("video");
+            float scale = Time.timeScale;
+            try
+            {
+                var player = go.AddComponent<VideoPlayer>();
+                player.playbackSpeed = 2f;
+                player.timeUpdateMode = VideoTimeUpdateMode.GameTime;
+                Time.timeScale = 0.25f;
+                Assert.Equal(0.5f, player.EffectiveAudioSpeed);
+                Time.timeScale = 0f;
+                Assert.Equal(0f, player.EffectiveAudioSpeed);
+                player.timeUpdateMode = VideoTimeUpdateMode.UnscaledGameTime;
+                Assert.Equal(2f, player.EffectiveAudioSpeed);
+            }
+            finally
+            {
+                Time.timeScale = scale;
+                Object.DestroyImmediate(go);
+            }
+        }
+
+        [Fact]
+        public void ASeekOrLoopRestartsTheDecoderAndAStartSyncsIt()
+        {
+            // A new decoder starts at the pictures' time.
+            Assert.Equal(((double?)1.5, (double?)null), VideoPlayer.AudioControlTimes(true, null, true, true, 1.5));
+            // A seek of 0.1 s while playing restarts it, whatever the drift check would say.
+            Assert.Equal(((double?)0.9, (double?)null), VideoPlayer.AudioControlTimes(false, 0.9, false, true, 0.9));
+            // A start, and the periodic check, sync to the pictures.
+            Assert.Equal(((double?)null, (double?)1.0), VideoPlayer.AudioControlTimes(false, null, true, false, 1.0));
+            Assert.Equal(((double?)null, (double?)2.0), VideoPlayer.AudioControlTimes(false, null, false, true, 2.0));
+            // Otherwise nothing.
+            Assert.Equal(((double?)null, (double?)null), VideoPlayer.AudioControlTimes(false, null, false, false, 2.0));
+        }
+
+        [Fact]
+        public void AClaimedSourceReportsPlayingUntilItsOwnStopOrPauseOrThePlayersDestruction()
+        {
+            var go = new GameObject("video");
+            try
+            {
+                var source = go.AddComponent<AudioSource>();
+                var player = go.AddComponent<VideoPlayer>();
+                // A new source with Play On Awake reports a pending play: stop it first.
+                source.playOnAwake = false;
+                source.Stop();
+                Assert.False(source.isPlaying);
+                player.ClaimAudioSource(source);
+                Assert.True(source.isPlaying);
+                source.Stop();
+                Assert.False(source.isPlaying);
+                player.ClaimAudioSource(source);
+                source.Pause();
+                Assert.False(source.isPlaying);
+                player.ClaimAudioSource(source);
+                Assert.True(source.isPlaying);
+                Object.DestroyImmediate(player);
+                Assert.False(source.isPlaying);
+            }
+            finally { Object.DestroyImmediate(go); }
+        }
+
+        [Fact]
         public void InstantiateCopiesTheTracksWithTheirTargetsRemapped()
         {
             var go = new GameObject("video");
