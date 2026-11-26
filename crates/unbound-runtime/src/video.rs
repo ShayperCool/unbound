@@ -27,7 +27,12 @@ fn rate(text: &str) -> f64 {
 /// A clip's properties: size, frame rate (as a fraction too), frame count, length, audio tracks
 /// (their count, and per track its channels, sample rate and language), pixel aspect ratio.
 pub fn probe(path: &str) -> Result<Json> {
-    let output = Command::new("ffprobe")
+    let mut command = Command::new("ffprobe");
+    // A network source gives up after 15 s without data (a stalled server), as an error.
+    if path.contains("://") {
+        command.args(["-rw_timeout", "15000000"]);
+    }
+    let output = command
         .args(["-v", "error", "-count_packets", "-show_entries"])
         .arg(
             "stream=codec_type,codec_name,pix_fmt,width,height,r_frame_rate,nb_read_packets,sample_aspect_ratio,channels,sample_rate\

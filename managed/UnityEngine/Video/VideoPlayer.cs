@@ -574,7 +574,8 @@ namespace UnityEngine.Video
             }
             catch (Exception e)
             {
-                return Fail(m_Source == VideoSource.Url ? UrlError() : $"VideoPlayer cannot play {m_File}: {e.Message}");
+                if (m_Source == VideoSource.Url && IsRemote(m_Url)) return UrlFailed(e.Message);
+                return Fail($"VideoPlayer cannot play {m_File}: {e.Message}");
             }
         }
 
@@ -599,8 +600,7 @@ namespace UnityEngine.Video
             m_UrlProbe = 0;
             if (!root.TryGetProperty("result", out var result))
             {
-                m_Preparing = false;
-                Fail(UrlError());
+                UrlFailed(root.TryGetProperty("error", out var error) ? error.GetString() : null);
                 return true;
             }
             try
@@ -610,12 +610,22 @@ namespace UnityEngine.Video
                 DestroyImmediate(probed, true);
                 OpenDecoder();
             }
-            catch (Exception)
+            catch (Exception e)
             {
-                m_Preparing = false;
-                Fail(UrlError());
+                UrlFailed(e.Message);
             }
             return true;
+        }
+
+        /// <summary>A network source that cannot be played: the Editor's error, Unbound's own reason
+        /// warned beside it (a missing ffmpeg, a decoder's failure: unmeasured), and the player
+        /// neither preparing nor playing, as a failed Prepare leaves it.</summary>
+        bool UrlFailed(string reason)
+        {
+            m_Preparing = false;
+            m_Playing = m_Paused = m_StartPending = false;
+            if (!string.IsNullOrEmpty(reason)) Debug.LogWarning($"Unbound: {m_Url} cannot be read: {reason}");
+            return Fail(UrlError());
         }
 
         void OpenDecoder()

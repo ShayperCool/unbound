@@ -6,6 +6,7 @@
   "engine_paths": [
     "managed/UnityEngine/Video/",
     "crates/unbound-runtime/src/video.rs",
+    "crates/unbound-runtime/src/state.rs",
     "tests/projects/videourl/",
     "tests/projects/video/",
     "tests/projects/videoaudio/Assets/Video/"

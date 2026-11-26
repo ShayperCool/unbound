@@ -20,7 +20,7 @@ SERVED = {'clip.webm': PROBE.parent/'video/Assets/Video/clip.webm',
 
 
 class Clips(SimpleHTTPRequestHandler):
-    """Serves the clips by name (with Range requests); anything else is 404."""
+    """Serves the clips by name (whole files: no Range requests); anything else is 404."""
 
     def translate_path(self, path):
         name = path.split('?')[0].lstrip('/')
