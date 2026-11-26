@@ -234,24 +234,6 @@ namespace UnityEngine
             return sub.PassNames;
         }
 
-        /// <summary>
-        /// The SubShader Shader.passCount, Shader.renderQueue and Material.GetTag without
-        /// fallbacks answer from: the first of its own then its Fallback chain's SubShaders that
-        /// runs under the pipeline tag (<see cref="Unbound.Runtime.ShaderDeclarations.RunsUnder"/>)
-        /// and whose LOD is at most this shader's limit (<see cref="maximumLOD"/>, else
-        /// <see cref="globalMaximumLOD"/>; the Fallback's own limit does not apply); when none is,
-        /// the first SubShader, whatever its tag. Matches the Unity 6000.0.71f1 Editor:
-        /// tests/projects/shaderpasscount (the built-in pipeline's LOD cells) and
-        /// tests/projects/graphicsgaps select.* (under URP and other pipeline tags, a Fallback's
-        /// SubShader, tagged first SubShaders when none is in reach). A SubShader the device runs
-        /// none of the passes of is passed over, one that lost some of them answers with the rest,
-        /// and one with geometry or tessellation stages counts as the Editor's device runs them
-        /// (tests/projects/graphicsgaps select.restricted.*, OpenGL Core and Vulkan). Null
-        /// (unknown, warned once per <paramref name="api"/> and condition) for a negative limit, a
-        /// SubShader the device may run or not (not known: <see
-        /// cref="Unbound.Runtime.ShaderDeclarations.SubShader.Runs"/>) or an older-host answer; the
-        /// caller then keeps its renderer-based answer.
-        /// </summary>
         /// <summary>Whether a pass of the active SubShader declares procedural instancing
         /// (<c>#pragma instancing_options procedural:...</c>), for <paramref name="api"/>: false,
         /// noticed, where Unbound cannot read the SubShaders or a pass (matches the Unity
@@ -278,6 +260,24 @@ namespace UnityEngine
             return false;
         }
 
+        /// <summary>
+        /// The SubShader Shader.passCount, Shader.renderQueue and Material.GetTag without
+        /// fallbacks answer from: the first of its own then its Fallback chain's SubShaders that
+        /// runs under the pipeline tag (<see cref="Unbound.Runtime.ShaderDeclarations.RunsUnder"/>)
+        /// and whose LOD is at most this shader's limit (<see cref="maximumLOD"/>, else
+        /// <see cref="globalMaximumLOD"/>; the Fallback's own limit does not apply); when none is,
+        /// the first SubShader, whatever its tag. Matches the Unity 6000.0.71f1 Editor:
+        /// tests/projects/shaderpasscount (the built-in pipeline's LOD cells) and
+        /// tests/projects/graphicsgaps select.* (under URP and other pipeline tags, a Fallback's
+        /// SubShader, tagged first SubShaders when none is in reach). A SubShader the device runs
+        /// none of the passes of is passed over, one that lost some of them answers with the rest,
+        /// and one with geometry or tessellation stages counts as the Editor's device runs them
+        /// (tests/projects/graphicsgaps select.restricted.*, OpenGL Core and Vulkan). Null
+        /// (unknown, warned once per <paramref name="api"/> and condition) for a negative limit, a
+        /// SubShader the device may run or not (not known: <see
+        /// cref="Unbound.Runtime.ShaderDeclarations.SubShader.Runs"/>) or an older-host answer; the
+        /// caller then keeps its renderer-based answer.
+        /// </summary>
         internal Unbound.Runtime.ShaderDeclarations.SubShader ActiveSubShader(string api, string keeps)
         {
             var d = Unbound.Runtime.ShaderDeclarations.Of(this);

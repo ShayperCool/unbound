@@ -49,7 +49,7 @@ namespace UnityEditor
             if (!ValidPass(material, pass)) return false;
             if (material.shader != null && s_CompiledPasses.Contains(Variant(material, pass))) return true;
             Stubs.Ignored("ShaderUtil.IsPassCompiled of a pass variant not compiled through ShaderUtil.CompilePass",
-                "answers false: the variants Unbound compiles for rendering are not counted");
+                "answers false for a variant not compiled on request; one the Editor compiled for rendering may answer true there (unmeasured)");
             return false;
         }
 
