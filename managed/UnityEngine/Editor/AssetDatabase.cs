@@ -618,7 +618,7 @@ namespace UnityEditor
             }
             else if (AssetDatabaseRuntime.LoadedRefusal(guid) is string why)
                 Stubs.Ignored("AssetDatabase.ImportAsset of " + (Kind(path) ?? "an") + " asset", $"does not import a loaded asset again ({path}: {why})");
-            else AssetDatabaseRuntime.ReimportInPlace(guid);
+            else AssetDatabaseRuntime.ReimportInPlace(guid, changed: false);
             ProjectImports.Wrote(GUIDToAssetPath(guid));
             SessionImports.Imported(GUIDToAssetPath(guid));
         }

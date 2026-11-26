@@ -331,6 +331,11 @@ namespace UnityEngine.Tests
                 // The document a UIDocument shows: its elements stay, with a warning.
                 Assert.Contains(warnings, w => w.Contains(path + " changed on disk; the UIDocument of 'Shown' keeps the elements made from it"));
                 Assert.Contains(warnings, w => w.Contains(path + " changed on disk; the UIDocument of 'Cloned' keeps the elements made from it"));
+                // The file imported again unchanged (ImportAsset): the same tree, nothing said.
+                warnings.Clear();
+                Unbound.UIElements.UxmlImporter.Adopt(kept, copy, path, changed: false);
+                Assert.Empty(warnings);
+                Assert.Equal("first", UnityEngine.UIElements.UQueryExtensions.Q<UnityEngine.UIElements.Label>(kept.CloneTree()).text);
             }
             finally
             {

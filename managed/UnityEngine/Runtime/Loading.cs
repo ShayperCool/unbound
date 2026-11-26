@@ -1598,7 +1598,7 @@ namespace Unbound.Runtime
         /// objects, keeps its loaded objects
         /// as they are, with a warning: not measured. Nothing loaded: the next load reads the file.
         /// </summary>
-        internal static void ReimportInPlace(string guid)
+        internal static void ReimportInPlace(string guid, bool changed = true)
         {
             if (!s_Files.TryGetValue(guid, out var loaded) || loaded == null)
             {
@@ -1645,7 +1645,7 @@ namespace Unbound.Runtime
                 if (fresh != null) DestroyFresh(fresh, registered);
                 return;
             }
-            TakeInPlace(kept, loaded.Path);
+            TakeInPlace(kept, loaded.Path, changed);
             DestroyFresh(fresh, registered);
         }
 
@@ -1691,8 +1691,10 @@ namespace Unbound.Runtime
         }
 
         /// <summary>Each loaded object takes its new import's copy (<paramref name="kept"/>: copy to
-        /// loaded object); references to the copies become references to the loaded objects.</summary>
-        internal static void TakeInPlace(Dictionary<Object, Object> kept, string path)
+        /// loaded object); references to the copies become references to the loaded objects.
+        /// <paramref name="changed"/>: the file changed on disk (an unchanged one imports to what its
+        /// loaded objects hold, so nothing shown from them is stale).</summary>
+        internal static void TakeInPlace(Dictionary<Object, Object> kept, string path, bool changed = true)
         {
             Object Kept(Object o) => o != null && kept.TryGetValue(o, out var mine) ? mine : o;
             var copier = new SerializedCopier(Kept);
@@ -1701,7 +1703,7 @@ namespace Unbound.Runtime
                 // A UI Toolkit document's tree is state its serialized values do not hold: the
                 // loaded document takes the new import's (clones made after show the new content).
                 if (pair.Value.GetType() == typeof(UnityEngine.UIElements.VisualTreeAsset))
-                    Unbound.UIElements.UxmlImporter.Adopt((UnityEngine.UIElements.VisualTreeAsset)pair.Value, (UnityEngine.UIElements.VisualTreeAsset)pair.Key, path);
+                    Unbound.UIElements.UxmlImporter.Adopt((UnityEngine.UIElements.VisualTreeAsset)pair.Value, (UnityEngine.UIElements.VisualTreeAsset)pair.Key, path, changed);
                 else if (pair.Value is ScriptableObject) copier.CopyScriptObject(pair.Key, pair.Value);
                 // As a material unloaded reads its file again (it draws the new values).
                 else if (pair.Value is Material material) material.RevertTo((Material)pair.Key);

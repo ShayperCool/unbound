@@ -356,8 +356,9 @@ namespace Unbound.UIElements
         /// it naming <paramref name="kept"/>; the copy, destroyed next, the old content. An enabled
         /// UIDocument showing elements made from it (its document, a template the document
         /// instances, a clone a script added) keeps them, with a warning (the Editor's live reload of
-        /// its panel is not measured).</summary>
-        internal static void Adopt(VisualTreeAsset kept, VisualTreeAsset copy, string path)
+        /// its panel is not measured); none for a file imported again unchanged
+        /// (<paramref name="changed"/> false: its tree is the one they were made from).</summary>
+        internal static void Adopt(VisualTreeAsset kept, VisualTreeAsset copy, string path, bool changed = true)
         {
             Unbound.Runtime.AssetDatabaseRuntime.SwapContent(copy, kept);
             void Repoint(UxmlNode node)
@@ -373,6 +374,8 @@ namespace Unbound.UIElements
                 foreach (var child in node.Children) Repoint(child);
             }
             Repoint(kept.m_UaRoot);
+            // An unchanged file imports to the tree the elements were made from: nothing is stale.
+            if (!changed) return;
             foreach (var document in Object.FindObjectsByType<UIDocument>(FindObjectsInactive.Exclude, FindObjectsSortMode.None))
                 if (document.isActiveAndEnabled && (ReferenceEquals(document.visualTreeAsset, kept) || MadeFrom(document.rootVisualElement, kept)))
                     Debug.LogWarning($"Unbound: {path} changed on disk; the UIDocument of '{document.gameObject.name}' keeps the elements made from it (the Editor's live reload of its panel is not measured)");
