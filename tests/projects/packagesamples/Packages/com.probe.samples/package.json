@@ -1,0 +1,12 @@
+{
+  "name": "com.probe.samples",
+  "version": "1.2.3",
+  "displayName": "Probe: Samples",
+  "description": "Samples for tests/projects/packagesamples.",
+  "unity": "6000.0",
+  "samples": [
+    { "displayName": "Basic Sample", "description": "The basic one", "path": "Samples~/Basic" },
+    { "displayName": "Inter: Active?", "description": "", "path": "Samples~/Inter", "interactiveImport": true },
+    { "displayName": "Gone", "description": "Its folder is missing", "path": "Samples~/Gone" }
+  ]
+}

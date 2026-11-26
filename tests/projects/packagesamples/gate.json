@@ -1,0 +1,12 @@
+{
+  "commands": [
+    "python3 tests/projects/packagesamples/run.py gate"
+  ],
+  "summary": "packagesamples: .*",
+  "engine_paths": [
+    "managed/UnityEngine/Editor/PackageSamples.cs",
+    "managed/UnityEngine/Editor/PackageManager.cs",
+    "managed/UnityEngine/Editor/AssetDatabaseFiles.cs",
+    "crates/unbound-project/src/packages.rs"
+  ]
+}
