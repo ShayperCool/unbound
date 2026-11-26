@@ -194,6 +194,11 @@
 {"k":"remove_variant/meta","v":"fileFormatVersion: 2\nguid: 6bbcc4ececcc440fb0ffa55d3523870d\nTextScriptImporter:\n  externalObjects: {}\n  userData: \n  assetBundleName: bundle-b\n  assetBundleVariant: hd\n"}
 {"k":"remove_variant/all","v":"[\"folder-bundle.sd\", \"mat-bundle\", \"mixed-case\", \"shader-bundle\"]"}
 {"k":"remove_variant/unused","v":"[]"}
+{"k":"importer/upper","v":"\"mixed-case\" \"\""}
+{"k":"set_both/name","v":"\"both-bundle\" \"hd\" meta fileFormatVersion: 2\nguid: 7b67be48ed8441e8bf9f5545e0410b63\nTextScriptImporter:\n  externalObjects: {}\n  userData: \n  assetBundleName: both-bundle\n  assetBundleVariant: hd\n"}
+{"k":"set_both/all","v":"[\"both-bundle.hd\", \"folder-bundle.sd\", \"mat-bundle\", \"mixed-case\", \"shader-bundle\"]"}
+{"k":"set_both/unused","v":"[]"}
+{"k":"set_both/paths","v":"[\"Assets/Data/Plain.txt\"]"}
 {"k":"workers/default","v":"desired 3 user 3 standby 2 processors 12"}
 {"k":"workers/set","v":"desired 3 user 3"}
 {"k":"workers/user_set","v":"desired 3 user 2"}
