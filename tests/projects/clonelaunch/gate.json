@@ -1,0 +1,12 @@
+{
+  "commands": [
+    "python3 tests/projects/clonelaunch/run.py check"
+  ],
+  "summary": "clonelaunch: .*",
+  "engine_paths": [
+    "crates/unbound/src/editor_launch.rs",
+    "crates/unbound/src/commands.rs",
+    "crates/unbound/src/main.rs",
+    "crates/unbound/build.rs"
+  ]
+}
