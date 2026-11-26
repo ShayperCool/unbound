@@ -431,6 +431,8 @@ pub struct ImportedTextureInfo {
     /// Unity's `TextureUsageMode` of HDR radiance stored as bytes (lightmaps, HDR cubemaps), 0
     /// otherwise (`NativeApi` 79).
     pub usage_mode: i32,
+    /// The importer's `ignoreMipmapLimit` (`NativeApi` 97).
+    pub ignore_mipmap_limit: i32,
 }
 
 #[repr(C)]
@@ -860,6 +862,9 @@ pub trait RenderBackend: Send + Sync {
     /// Sampler metadata delivered separately from the ABI-stable texture packet.
     fn texture_mip_bias(&self, _handle: u64, _bias: f32) {}
     fn texture_sampler(&self, _handle: u64, _properties: [i32; 5]) {}
+    /// How many top mips of a texture the quality level's mipmap limit may drop at most (0: it
+    /// keeps them all).
+    fn texture_mip_limit(&self, _handle: u64, _max_drop: u32) {}
     fn release_texture(&self, handle: u64);
     fn update_material(&self, handle: u64, material: owned::Material);
     fn release_material(&self, handle: u64);

@@ -616,6 +616,19 @@ pub fn dispatch(method: &str, request: &str) -> Result<String> {
             );
             Ok("true".to_owned())
         }
+        "texture-mipmap-limit" => {
+            #[derive(Deserialize)]
+            #[serde(rename_all = "camelCase")]
+            struct Request {
+                handle: u64,
+                max_drop: u32,
+            }
+            let r: Request = serde_json::from_str(request)?;
+            handle::plain(r.handle, method).map_err(anyhow::Error::msg)?;
+            anyhow::ensure!(r.handle != 0, "a mipmap limit requires a texture handle");
+            backend().texture_mip_limit(r.handle, r.max_drop);
+            Ok("true".to_owned())
+        }
         "texture-sampler-state" => {
             #[derive(Deserialize)]
             #[serde(rename_all = "camelCase")]
@@ -3517,6 +3530,7 @@ fn upload_imported(
         wrap_w: wrap(texture.wrap_w),
         texture_format,
         usage_mode: texture.usage_mode,
+        ignore_mipmap_limit: texture.settings.ignore_mipmap_limit as i32,
     })
 }
 

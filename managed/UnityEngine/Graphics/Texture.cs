@@ -137,6 +137,47 @@ namespace UnityEngine
                 packet->RenderTarget |= TexturePacket.BlueFirst;
             Unbound.Runtime.Native.UploadTexture(m_NativeHandle, packet);
             if (m_MipMapBias != 0f) EmitSamplerMetadata();
+            SyncMipmapLimit();
+        }
+
+        /// <summary>The smallest side a texture keeps under the quality level's mipmap limit.</summary>
+        const int MipmapLimitMinimumSide = 8;
+
+        /// <summary>How many top mips the quality level's texture mipmap limit
+        /// (QualitySettings.globalTextureMipmapLimit) may drop from a texture of this size and mip
+        /// count: never its last mip, nor so many that its smaller side falls below 8 texels
+        /// (matches the Unity 6000.0.71f1 Editor, tests/projects/mipmaplimit: 64x64 drops at most
+        /// 3, 16x16 1, 8x8, 64x8 and 8x64 none, 64x64 with 3 mips 2; sides that are not powers of
+        /// two are not measured).</summary>
+        internal static int MaxMipmapLimit(int width, int height, int mipCount)
+        {
+            int side = Math.Min(width, height), drop = 0;
+            while (drop < mipCount - 1 && (side >> (drop + 1)) >= MipmapLimitMinimumSide) drop++;
+            return drop;
+        }
+
+        /// <summary>The most top mips the quality level's mipmap limit drops from this texture
+        /// (0 for the kinds it leaves whole and for a texture that ignores it).</summary>
+        internal virtual int MipmapLimitMaxDrop => 0;
+
+        /// <summary>What the renderer holds as <see cref="MipmapLimitMaxDrop"/> for
+        /// <see cref="m_SentMipmapLimitHandle"/>.</summary>
+        int m_SentMipmapLimit;
+        ulong m_SentMipmapLimitHandle;
+
+        /// <summary>Tells the renderer the most top mips this texture drops under the quality
+        /// level's limit, when that changed (the renderer applies the global limit to it).</summary>
+        internal void SyncMipmapLimit()
+        {
+            if (m_NativeHandle == 0 || !Unbound.Runtime.Native.IsReady) return;
+            int drop = MipmapLimitMaxDrop;
+            int sent = m_SentMipmapLimitHandle == m_NativeHandle ? m_SentMipmapLimit : 0;
+            m_SentMipmapLimitHandle = m_NativeHandle;
+            m_SentMipmapLimit = drop;
+            if (drop == sent) return;
+            Unbound.Runtime.GfxStream.Flush();
+            Unbound.Runtime.Native.Call("texture-mipmap-limit", System.Text.Json.JsonSerializer.Serialize(
+                new { handle = m_NativeHandle, maxDrop = drop }));
         }
 
         internal void EmitSamplerMetadata()

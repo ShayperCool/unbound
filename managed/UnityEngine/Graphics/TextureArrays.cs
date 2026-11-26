@@ -726,6 +726,31 @@ namespace UnityEngine
         public override bool isReadable => m_Readable;
         internal override int MipmapCount() => m_MipCount;
         public override TextureDimension dimension { get => TextureDimension.Tex2DArray; set => throw new NotImplementedException(); }
+
+        /// <summary>A script's array ignores the quality level's mipmap limit (Unity's
+        /// Texture2DArray C#: its constructors pass a default MipmapLimitDescriptor); an asset's
+        /// flag is its file's or importer's.</summary>
+        bool m_IgnoreMipmapLimit = true;
+
+        /// <summary>Whether the quality level's mipmap limit leaves the array whole; only a readable
+        /// array's flag can be set, as a Texture2D's (Unity's Texture2DArray C#).</summary>
+        public bool ignoreMipmapLimit
+        {
+            get => m_IgnoreMipmapLimit;
+            set
+            {
+                if (!isReadable)
+                    throw new UnityException($"Failed to toggle ignoreMipmapLimit, Texture '{name}' is not readable. You can make the texture readable in the Texture Import Settings.");
+                m_IgnoreMipmapLimit = value;
+                SyncMipmapLimit();
+            }
+        }
+
+        internal override int MipmapLimitMaxDrop => m_IgnoreMipmapLimit ? 0 : MaxMipmapLimit(m_Width, m_Height, m_MipCount);
+
+        /// <summary>The top mips the quality level's limit drops from every slice
+        /// (tests/projects/mipmaplimit array.*).</summary>
+        public int activeMipmapLimit => Math.Min(QualitySettings.globalTextureMipmapLimit, MipmapLimitMaxDrop);
         internal override GraphicsFormat GraphicsFormatOf() => GraphicsFormatUtility.GetGraphicsFormat(m_Format, !m_Linear && QualitySettings.activeColorSpace == ColorSpace.Linear);
 
         LayeredPixels Pixels(string api)
@@ -807,6 +832,7 @@ namespace UnityEngine
             if (updateMipmaps) pixels.BuildMips();
             if (m_NativeHandle == 0) m_NativeHandle = RenderHandles.Next();
             pixels.Upload(m_NativeHandle, m_Linear, filterMode, wrapModeU, wrapModeV, wrapModeW, anisoLevel);
+            SyncMipmapLimit();
             if (m_AstcMemoryPendingUpload) RecordUploadedAstcMemory(m_Format);
             if (mipMapBias != 0f) EmitSamplerMetadata();
             IncrementUpdateCount();
@@ -829,12 +855,14 @@ namespace UnityEngine
             m_Linear = !read.Srgb;
             m_MipCount = read.Mips;
             m_Readable = read.Readable;
+            m_IgnoreMipmapLimit = body.Bool("m_IgnoreMipmapLimit");
             m_Pixels?.Release();
             m_Pixels = null;
             if (read.Data == null) return;
             var pixels = new LayeredPixels(m_Width, m_Height, m_Depth, m_MipCount, false, m_Format, read.Data);
             if (m_NativeHandle == 0) m_NativeHandle = RenderHandles.Next();
             pixels.Upload(m_NativeHandle, m_Linear, filterMode, wrapModeU, wrapModeV, wrapModeW, anisoLevel);
+            SyncMipmapLimit();
             if (mipMapBias != 0f) EmitSamplerMetadata();
             m_Pixels = m_Readable ? pixels : null;
         }
@@ -865,6 +893,8 @@ namespace UnityEngine
             texture.SetSamplerQuietly((FilterMode)info.FilterMode, (TextureWrapMode)info.WrapU, (TextureWrapMode)info.WrapV,
                 (TextureWrapMode)info.WrapW, info.AnisoLevel, mipBias);
             texture.ReadSamplerMetadata();
+            texture.m_IgnoreMipmapLimit = info.IgnoreMipmapLimit != 0;
+            texture.SyncMipmapLimit();
             return texture;
         }
 

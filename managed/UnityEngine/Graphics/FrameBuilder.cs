@@ -2701,7 +2701,24 @@ namespace UnityEngine
         public static float shadowNearPlaneOffset { get; set; } = 3f;
         public static float shadowCascade2Split { get; set; } = 1f / 3f;
         public static Vector3 shadowCascade4Split { get; set; } = new Vector3(0.06666667f, 0.2f, 0.46666667f);
-        public static int globalTextureMipmapLimit { get; set; }
+        static int s_GlobalTextureMipmapLimit;
+
+        /// <summary>How many top mips the textures that follow the limit drop (each at most its
+        /// own <see cref="Texture2D.activeMipmapLimit"/>). A negative limit reads 0, and a limit a
+        /// script sets is kept by the active level: selecting that level again gives it back
+        /// (matches the Unity 6000.0.71f1 Editor, tests/projects/mipmaplimit limitNeg,
+        /// afterSetLevel1; other settings' setters are not measured so).</summary>
+        public static int globalTextureMipmapLimit
+        {
+            get => s_GlobalTextureMipmapLimit;
+            set
+            {
+                s_GlobalTextureMipmapLimit = Math.Max(0, value);
+                if (s_LevelSettings != null && s_Level >= 0 && s_Level < s_LevelSettings.Count && s_LevelSettings[s_Level] is { } level)
+                    level["globalTextureMipmapLimit"] = System.Text.Json.JsonSerializer.SerializeToElement(s_GlobalTextureMipmapLimit);
+                Unbound.Runtime.GfxStream.MipmapLimit(s_GlobalTextureMipmapLimit);
+            }
+        }
 
         [global::System.@ObsoleteAttribute("masterTextureLimit has been deprecated. Use globalTextureMipmapLimit instead (UnityUpgradable) -> globalTextureMipmapLimit", false)]
         public static int masterTextureLimit { get => globalTextureMipmapLimit; set => globalTextureMipmapLimit = value; }

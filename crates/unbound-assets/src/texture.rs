@@ -250,6 +250,9 @@ pub struct TextureSettings {
     /// `ignorePngGamma`: a PNG's gamma (its gAMA chunk) is left out ([`png_gamma_exponent`]).
     #[serde(default)]
     pub ignore_png_gamma: bool,
+    /// `ignoreMipmapLimit`: the quality level's texture mipmap limit leaves the texture whole.
+    #[serde(default)]
+    pub ignore_mipmap_limit: bool,
 }
 
 fn default_compression_quality() -> i32 {
@@ -411,6 +414,7 @@ impl TextureSettings {
             flip_green: normal_map && boolean(imp, "bumpmap.flipGreenChannel").unwrap_or(false),
             format_alpha,
             is_readable: boolean(imp, "isReadable").unwrap_or(false),
+            ignore_mipmap_limit: boolean(imp, "ignoreMipmapLimit").unwrap_or(false),
             wrap_u: wrap("wrapU"),
             wrap_v: wrap("wrapV"),
             wrap_w: wrap("wrapW"),
@@ -1545,7 +1549,8 @@ impl Importer for TextureImporter {
     // 52: a PNG's gamma (gAMA) applies unless ignorePngGamma.
     // 53: a .meta that names no importer imports with the oldest settings (a cube map).
     // 54: that .meta's image size is read for the format the decoder takes it as.
-    const VERSION: u32 = 54;
+    // 55: the settings keep the importer's ignoreMipmapLimit.
+    const VERSION: u32 = 55;
 
     fn import(&self, source: &Path, bytes: &[u8], meta: &Value) -> Result<ImportedTexture> {
         // A GUID-only .meta reads its oldest settings before the trees' settings apply.

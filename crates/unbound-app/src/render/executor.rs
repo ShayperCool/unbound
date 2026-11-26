@@ -94,6 +94,8 @@ pub enum Upload {
     UploadTexture(u64, owned::Texture),
     TextureMipBias(u64, f32),
     TextureSampler(u64, [i32; 5]),
+    /// The most top mips the mipmap limit may drop from a texture (`texture-mipmap-limit`).
+    TextureMipLimit(u64, u32),
     ReleaseTexture(u64),
     UpdateMaterial(u64, owned::Material),
     ReleaseMaterial(u64),
@@ -1189,6 +1191,10 @@ pub struct UnityRenderer {
     /// Scaled images are textures of their own here.
     full_resolution: HashMap<u64, FullResolution>,
     texture_mip_biases: HashMap<u64, f32>,
+    /// Per texture, the most top mips the quality level's mipmap limit may drop (absent: none).
+    texture_mip_limits: HashMap<u64, u32>,
+    /// `QualitySettings.globalTextureMipmapLimit` ([`Command::MipmapLimit`]).
+    mipmap_limit: u32,
     defaults: HashMap<&'static str, GpuTexture>,
     /// Default textures of other dimensions (cube, 3D, array): views by (dimension, default).
     dim_defaults: HashMap<(unbound_shaders::TextureDim, String), wgpu::TextureView>,
@@ -1377,6 +1383,8 @@ impl UnityRenderer {
             zero_extra: None,
             textures: HashMap::default(),
             texture_mip_biases: HashMap::default(),
+            texture_mip_limits: HashMap::default(),
+            mipmap_limit: 0,
             defaults: defaults.into_iter().collect(),
             dim_defaults: HashMap::default(),
             error_program: None,
@@ -1593,6 +1601,7 @@ impl UnityRenderer {
                 }));
             }
         }
+        gpu.set_mip_base(self.mip_base(handle));
         self.textures.insert(handle, gpu);
     }
 
@@ -1786,6 +1795,7 @@ impl UnityRenderer {
                 }
                 self.release_plugin_texture(handle);
                 self.texture_mip_biases.remove(&handle);
+                self.texture_mip_limits.remove(&handle);
                 self.bit_views.retain(|(h, _), _| *h != handle);
                 self.depth_main_groups.retain(|(h, _), _| *h != handle);
                 self.feedback_copies.remove(&handle);
@@ -1809,6 +1819,14 @@ impl UnityRenderer {
                     texture.generation = self.generation;
                     texture.bind_groups = [None, None];
                 }
+            }
+            Upload::TextureMipLimit(handle, max_drop) => {
+                if max_drop == 0 {
+                    self.texture_mip_limits.remove(&handle);
+                } else {
+                    self.texture_mip_limits.insert(handle, max_drop);
+                }
+                self.apply_mip_base(handle);
             }
             Upload::TextureSampler(handle, [filter, wrap_u, wrap_v, wrap_w, aniso]) => {
                 self.evict_texture_groups(handle);
@@ -1840,6 +1858,29 @@ impl UnityRenderer {
             Upload::ReleaseMaterial(handle) => {
                 self.materials.remove(&handle);
             }
+        }
+    }
+
+    /// The top mips a texture drops: the quality level's limit, at most the texture's own.
+    fn mip_base(&self, handle: u64) -> u32 {
+        self.texture_mip_limits
+            .get(&handle)
+            .map_or(0, |&max| max.min(self.mipmap_limit))
+    }
+
+    /// Makes a texture's sampled views start at its [`Self::mip_base`]; the bind groups holding
+    /// its old views are dropped.
+    fn apply_mip_base(&mut self, handle: u64) {
+        let base = self.mip_base(handle);
+        let Some(texture) = self.textures.get_mut(&handle) else {
+            return;
+        };
+        if texture.set_mip_base(base) {
+            self.generation += 1;
+            texture.generation = self.generation;
+            let storage = texture.texture.clone();
+            self.compute_bindings.release_texture(&storage);
+            self.evict_texture_groups(handle);
         }
     }
 
@@ -2881,6 +2922,7 @@ impl UnityRenderer {
                             format,
                             dimension: Some(wgpu::TextureViewDimension::D2Array),
                             usage: resources::view_usage(&t.texture, format),
+                            base_mip_level: t.mip_base,
                             ..Default::default()
                         }))
                     }
@@ -4650,6 +4692,17 @@ impl UnityRenderer {
                     }
                     Command::StateOverride(o) => self.state.state_override = o,
                     Command::ColorSpace(space) => self.color_space = space.clamp(0, 1),
+                    Command::MipmapLimit(limit) => {
+                        let limit = limit.max(0) as u32;
+                        if limit != self.mipmap_limit {
+                            self.mipmap_limit = limit;
+                            let limited: Vec<u64> =
+                                self.texture_mip_limits.keys().copied().collect();
+                            for handle in limited {
+                                self.apply_mip_base(handle);
+                            }
+                        }
+                    }
                     Command::Anisotropy {
                         mode,
                         forced_min,

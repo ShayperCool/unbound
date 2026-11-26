@@ -592,6 +592,10 @@ pub struct GpuTexture {
     pub packed: u8,
     pub format: i32,
     pub mip_count: u32,
+    /// The top mips the quality level's texture mipmap limit drops: `view` and `srgb_view` start
+    /// at this mip, so shaders sample (and size) the texture as if those mips were never
+    /// uploaded; copies still address the whole chain ([`GpuTexture::set_mip_base`]).
+    pub mip_base: u32,
     pub render_target: bool,
     /// Kernels may write it (a storage binding).
     pub random_write: bool,
@@ -605,6 +609,40 @@ pub struct GpuTexture {
 }
 
 impl GpuTexture {
+    /// Makes the sampled views start at mip `base` (at most the last mip): the texture as the
+    /// Editor uploads it under a mipmap limit. False when they already do.
+    pub fn set_mip_base(&mut self, base: u32) -> bool {
+        let base = base.min(self.mip_count.saturating_sub(1));
+        if base == self.mip_base || self.depth_only {
+            return false;
+        }
+        let dimension = if self.cube {
+            Some(wgpu::TextureViewDimension::Cube)
+        } else if self.cube_array {
+            Some(wgpu::TextureViewDimension::CubeArray)
+        } else {
+            None
+        };
+        self.view = self.texture.create_view(&wgpu::TextureViewDescriptor {
+            dimension,
+            base_mip_level: base,
+            ..Default::default()
+        });
+        if self.srgb_view.is_some() {
+            let format = self.texture.format().add_srgb_suffix();
+            self.srgb_view = Some(self.texture.create_view(&wgpu::TextureViewDescriptor {
+                format: Some(format),
+                dimension,
+                usage: view_usage(&self.texture, Some(format)),
+                base_mip_level: base,
+                ..Default::default()
+            }));
+        }
+        self.mip_base = base;
+        self.bind_groups = [None, None];
+        true
+    }
+
     /// The format of the render target's depth buffer, if it has one.
     pub fn depth_format(&self) -> Option<wgpu::TextureFormat> {
         self.depth_texture.as_ref().map(|t| t.format())
@@ -2062,6 +2100,7 @@ pub fn upload_texture_with(
                 packed: t.packed,
                 format: t.format,
                 mip_count,
+                mip_base: 0,
                 render_target,
                 random_write: t.random_write,
                 auto_generate_mips: t.auto_generate_mips,

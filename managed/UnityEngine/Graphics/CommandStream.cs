@@ -38,7 +38,9 @@ namespace Unbound.Runtime
             // NativeApi 85.
             DrawShapeOp = 37,
             // NativeApi 94.
-            ResolveFramebufferOp = 38;
+            ResolveFramebufferOp = 38,
+            // NativeApi 97.
+            MipmapLimitOp = 39;
 
         /// <summary><see cref="DrawShape"/>'s topology byte for the drawn submesh's own.</summary>
         const byte DrawShapeMeshTopology = 0xFF;
@@ -281,6 +283,14 @@ namespace Unbound.Runtime
             I32(mode);
             I32(forcedMin);
             I32(globalMax);
+        }
+
+        /// <summary>The quality level's texture mipmap limit
+        /// (QualitySettings.globalTextureMipmapLimit) for the textures drawn after it.</summary>
+        internal static void MipmapLimit(int limit)
+        {
+            U8(MipmapLimitOp);
+            I32(limit);
         }
 
         /// <summary>Ends the frame (the screen is shown) and hands it over.</summary>

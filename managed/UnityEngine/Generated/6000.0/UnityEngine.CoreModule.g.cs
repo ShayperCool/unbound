@@ -1953,8 +1953,6 @@ namespace UnityEngine
         [global::Unbound.Stub] public void CopyPixels(global::UnityEngine.Texture src, int srcElement, int srcMip, int dstElement, int dstMip) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Texture2DArray.CopyPixels"); }
         [global::Unbound.Stub] public void CopyPixels(global::UnityEngine.Texture src, int srcElement, int srcMip, int srcX, int srcY, int srcWidth, int srcHeight, int dstElement, int dstMip, int dstX, int dstY) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Texture2DArray.CopyPixels"); }
         public string mipmapLimitGroup { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Texture2DArray.mipmapLimitGroup"); return default; } }
-        public int activeMipmapLimit { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Texture2DArray.activeMipmapLimit"); return default; } }
-        public bool ignoreMipmapLimit { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Texture2DArray.ignoreMipmapLimit"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Texture2DArray.ignoreMipmapLimit"); } }
     }
     unsafe partial class Texture3D
     {

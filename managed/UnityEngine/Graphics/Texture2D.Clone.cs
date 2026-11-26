@@ -41,7 +41,7 @@ namespace UnityEngine
                 m_Raw = Copy(m_Raw ?? m_UnreadableRaw),
                 m_UnreadableRaw = Copy(m_UnreadableRaw),
                 alphaIsTransparency = alphaIsTransparency,
-                ignoreMipmapLimit = ignoreMipmapLimit,
+                m_IgnoreMipmapLimit = m_IgnoreMipmapLimit,
                 requestedMipmapLevel = requestedMipmapLevel,
                 minimumMipmapLevel = minimumMipmapLevel,
                 m_PixelsDirty = true,

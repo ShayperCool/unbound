@@ -586,6 +586,10 @@ impl RenderBackend for GpuBackend {
         self.0.upload(Upload::TextureSampler(handle, properties));
     }
 
+    fn texture_mip_limit(&self, handle: u64, max_drop: u32) {
+        self.0.upload(Upload::TextureMipLimit(handle, max_drop));
+    }
+
     fn update_material(&self, handle: u64, material: owned::Material) {
         self.0.upload(Upload::UpdateMaterial(handle, material));
     }

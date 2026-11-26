@@ -362,6 +362,10 @@ pub enum Command {
         forced_min: i32,
         global_max: i32,
     },
+    /// The quality level's texture mipmap limit (`QualitySettings.globalTextureMipmapLimit`,
+    /// never negative): how many top mips the textures that follow it drop, each at most its own
+    /// limit (`texture-mipmap-limit`).
+    MipmapLimit(i32),
     Draw(Box<Draw>),
     /// A buffer (GraphicsBuffer, ComputeBuffer) of `size` bytes, zeroed; [`buffer`] usage flags.
     MeshBuffers(Box<MeshBuffers>),
@@ -512,6 +516,8 @@ mod op {
     pub const DRAW_SHAPE: u8 = 37;
     // NativeApi 94.
     pub const RESOLVE_FRAMEBUFFER: u8 = 38;
+    // NativeApi 97.
+    pub const MIPMAP_LIMIT: u8 = 39;
     pub const MESH_BUFFERS: u8 = 31;
 }
 
@@ -833,6 +839,7 @@ pub fn parse(bytes: &[u8]) -> Result<Vec<Command>, String> {
                 forced_min: r.i32()?,
                 global_max: r.i32()?,
             },
+            op::MIPMAP_LIMIT => Command::MipmapLimit(r.i32()?),
             op::DEPTH_BIAS => Command::DepthBias {
                 bias: r.f32()?,
                 slope: r.f32()?,
@@ -1314,6 +1321,10 @@ impl Writer {
                 self.bytes.push(op::COLOR_SPACE);
                 self.bytes.extend_from_slice(&space.to_le_bytes());
             }
+            Command::MipmapLimit(limit) => {
+                self.bytes.push(op::MIPMAP_LIMIT);
+                self.bytes.extend_from_slice(&limit.to_le_bytes());
+            }
             Command::StateOverride(None) => self.bytes.extend_from_slice(&[op::STATE_OVERRIDE, 0]),
             Command::StateOverride(Some(s)) => {
                 self.bytes.extend_from_slice(&[op::STATE_OVERRIDE, 1]);
@@ -1722,6 +1733,7 @@ mod tests {
                 forced_min: 9,
                 global_max: 16,
             },
+            Command::MipmapLimit(2),
             Command::Draw(Box::new(Draw {
                 mesh: 7,
                 submesh: 1,
@@ -2103,7 +2115,7 @@ mod tests {
     /// 41 the native plugin calls, 42 glyph bearings, 43 zone startup and 44 Pitch Shifter Max channels, 45 precomputed realtime GI, 46 driver capabilities, 48 the realtime GI update threshold, 49 realtime GI light probes, 50 the screen's stand-in, 51 the realtime GI environment, 52 directional realtime lightmaps, 53 the realtime GI lights' falloff, 60 BatchRendererGroup draws, 63 TextCore glyph loads, 65 mesh instances' call counts, 73 BatchRendererGroup indirect draws, 81 a texture's size before dynamic scaling, 82 screen-ordered textures, 83 the virtual audio clock's frame-start advance, 84 the scripted frame step, 85 a draw's topology and base vertex (`DrawShape`), 86 a target binding nothing, 87 packed targets' channel bits, 88 a draw's renderer color flags, 89 generated textures, 90 the engine's stencil bits in a state override, 91 B8G8R8A8 textures' flag, 92 the job system, 93 automatic realtime UV ways, 94 the frame input's known pointer and 95 resolving the framebuffer.
     #[test]
     fn draw_indices_need_native_api_18() {
-        assert_eq!(crate::native_api::NATIVE_API_VERSION, 96);
+        assert_eq!(crate::native_api::NATIVE_API_VERSION, 97);
         assert!(parse(&draw_indices_bytes(7, 2, 0, 3)).is_ok());
         let wide = draw_indices_bytes(7, 4, 2, 3);
         let commands = parse(&wide).unwrap();

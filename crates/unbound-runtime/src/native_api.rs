@@ -110,7 +110,9 @@ use std::ffi::c_void;
 /// tracks explicit sRGB writes to the Gamma window framebuffer.
 /// 96: texture readback flag bit 2 selects reciprocal multiplication for normalized
 /// 16-bit color channels.
-pub const NATIVE_API_VERSION: u32 = 96;
+/// 97: the `MipmapLimit` command and `texture-mipmap-limit` call; `ImportedTextureInfo` ends with
+/// the importer's `ignore_mipmap_limit`.
+pub const NATIVE_API_VERSION: u32 = 97;
 
 /// A legacy glyph bitmap in pixels, with its logical top after bitmap synthesis.
 #[repr(C)]

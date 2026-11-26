@@ -49,7 +49,7 @@ namespace UnityEngine
 
         public Texture2D(int width, int height)
         {
-            ignoreMipmapLimit = ScriptTextureIgnoresMipmapLimit;
+            m_IgnoreMipmapLimit = ScriptTextureIgnoresMipmapLimit;
             if (width == 0 && height == 0)
             {
                 m_ScriptTextureStorage = true;
@@ -62,19 +62,19 @@ namespace UnityEngine
 
         public Texture2D(int width, int height, TextureFormat textureFormat, bool mipChain, bool linear)
         {
-            ignoreMipmapLimit = ScriptTextureIgnoresMipmapLimit;
+            m_IgnoreMipmapLimit = ScriptTextureIgnoresMipmapLimit;
             Init(width, height, textureFormat, mipChain ? -1 : 1, linear);
         }
 
         public Texture2D(int width, int height, TextureFormat textureFormat, int mipCount, bool linear)
         {
-            ignoreMipmapLimit = ScriptTextureIgnoresMipmapLimit;
+            m_IgnoreMipmapLimit = ScriptTextureIgnoresMipmapLimit;
             Init(width, height, textureFormat, mipCount, linear);
         }
 
         public Texture2D(int width, int height, TextureFormat textureFormat, bool mipChain, bool linear, bool createUninitialized)
         {
-            ignoreMipmapLimit = ScriptTextureIgnoresMipmapLimit;
+            m_IgnoreMipmapLimit = ScriptTextureIgnoresMipmapLimit;
             Init(width, height, textureFormat, mipChain ? -1 : 1, linear, createUninitialized: createUninitialized);
         }
 
@@ -88,7 +88,7 @@ namespace UnityEngine
 
         public Texture2D(int width, int height, GraphicsFormat format, int mipCount, TextureCreationFlags flags)
         {
-            ignoreMipmapLimit = ScriptTextureIgnoresMipmapLimit;
+            m_IgnoreMipmapLimit = ScriptTextureIgnoresMipmapLimit;
             // A format the device cannot sample is refused: the texture is left destroyed (== null),
             // as the Editor's (measured for A2B10G10R10_UNormPack32 and integer formats on its
             // OpenGLCore device, tests/projects/textureformats .new).
@@ -230,20 +230,28 @@ namespace UnityEngine
         public int desiredMipmapLevel { get { Stubs.Ignored("Texture2D.desiredMipmapLevel", "is not simulated: every mip of every texture is loaded"); return 0; } }
         public int loadingMipmapLevel { get { Stubs.Ignored("Texture2D.loadingMipmapLevel", "is not simulated: every mip of every texture is loaded"); return 0; } }
         public int loadedMipmapLevel { get { Stubs.Ignored("Texture2D.loadedMipmapLevel", "is not simulated: every mip of every texture is loaded"); return 0; } }
-        public bool ignoreMipmapLimit { get; set; }
+        internal bool m_IgnoreMipmapLimit;
 
-        /// <summary>The mips the quality level's limit drops from the top (none for a texture that
-        /// ignores it or has no mips). Unbound still samples the full texture: it warns once.</summary>
-        public int activeMipmapLimit
+        /// <summary>Whether the quality level's mipmap limit leaves the texture whole. Only a
+        /// readable texture's flag can be set (matches the Unity 6000.0.71f1 Editor,
+        /// tests/projects/mipmaplimit ignoreFlipped.*.set); the change applies at once.</summary>
+        public bool ignoreMipmapLimit
         {
-            get
+            get => m_IgnoreMipmapLimit;
+            set
             {
-                if (ignoreMipmapLimit || MipmapCount() <= 1) return 0;
-                int limit = Math.Min(QualitySettings.globalTextureMipmapLimit, MipmapCount() - 1);
-                if (limit > 0) Unbound.Runtime.Stubs.Ignored("QualitySettings.globalTextureMipmapLimit", "textures are sampled from their first mip whatever the limit");
-                return limit;
+                if (!isReadable)
+                    throw new UnityException($"Failed to toggle ignoreMipmapLimit, Texture '{name}' is not readable. You can make the texture readable in the Texture Import Settings.");
+                m_IgnoreMipmapLimit = value;
+                SyncMipmapLimit();
             }
         }
+
+        internal override int MipmapLimitMaxDrop => m_IgnoreMipmapLimit ? 0 : MaxMipmapLimit(m_Width, m_Height, MipmapCount());
+
+        /// <summary>The top mips the quality level's limit drops: what the renderer samples
+        /// (tests/projects/mipmaplimit).</summary>
+        public int activeMipmapLimit => Math.Min(QualitySettings.globalTextureMipmapLimit, MipmapLimitMaxDrop);
 
         public static Texture2D whiteTexture => DefaultTextures.White;
         public static Texture2D blackTexture => DefaultTextures.Black;
@@ -1013,6 +1021,8 @@ namespace UnityEngine
             wrapModeV = (TextureWrapMode)info.WrapV;
             anisoLevel = info.AnisoLevel;
             ReadSamplerMetadata();
+            m_IgnoreMipmapLimit = info.IgnoreMipmapLimit != 0;
+            SyncMipmapLimit();
         }
 
         /// <summary>
@@ -1116,6 +1126,7 @@ namespace UnityEngine
             m_BlockCellsDirty = false;
             m_SourceRaw = encoded.Length > 0 ? Convert.FromHexString(encoded) : null;
             m_IsReadable = body.Bool("m_IsReadable");
+            m_IgnoreMipmapLimit = body.Bool("m_IgnoreMipmapLimit");
             // m_ColorSpace 0 is linear data (TextMeshPro's Alpha8 atlases, terrain splat maps).
             m_Linear = body.Int("m_ColorSpace", 1) == 0;
             m_UsageMode = body.Int("m_LightmapFormat");

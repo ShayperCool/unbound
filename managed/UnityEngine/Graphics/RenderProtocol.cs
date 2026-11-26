@@ -110,6 +110,8 @@ namespace Unbound.Runtime
         /// <summary>Unity's TextureUsageMode of HDR radiance stored as bytes (lightmaps, HDR
         /// cubemaps; NativeApi 79), 0 otherwise.</summary>
         internal int UsageMode;
+        /// <summary>The importer's ignoreMipmapLimit (NativeApi 97).</summary>
+        internal int IgnoreMipmapLimit;
     }
 
     [StructLayout(LayoutKind.Sequential)]
