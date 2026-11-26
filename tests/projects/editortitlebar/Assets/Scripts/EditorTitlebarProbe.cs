@@ -124,6 +124,12 @@ public sealed class EditorTitlebarProbe : MonoBehaviour
         EditorGUIUtility.SetIconForObject(iconed, icon);
         Put("thumbnails/more", new Func<Object>[] { () => texture, () => null, () => iconed }
             .Select(o => Try(() => AssetPreview.GetMiniThumbnail(o()) is Texture2D t ? t.name + " " + t.width + "x" + t.height : "null")).ToArray());
+        // Script classes named as classes with icons: a global one and one in a namespace.
+        Put("thumbnails/scripts",
+            Try(() => AssetPreview.GetMiniThumbnail(functions.AddComponent<GameManager>()) is Texture2D t ? t.name + " " + t.width + "x" + t.height : "null"),
+            Try(() => AssetPreview.GetMiniThumbnail(functions.AddComponent<UnityEngine.UI.Image>()) is Texture2D t ? t.name + " " + t.width + "x" + t.height : "null"),
+            Try(() => EditorGUIUtility.ObjectContent(null, typeof(GameManager)).image is Texture2D t ? t.name + " " + t.width + "x" + t.height : "null"),
+            Try(() => EditorGUIUtility.ObjectContent(null, typeof(TitlebarTarget)).image is Texture2D t ? t.name + " " + t.width + "x" + t.height : "null"));
         // Icons whose names several Editor resources share.
         Application.logMessageReceived += (message, stack, type) => m_Logs.Add(type + ": " + message.Split('\n')[0]);
         var iconNames = new[] { "Refresh", "d_Refresh", "Warning", "VerticalLayoutGroup Icon", "d_VerticalLayoutGroup Icon", "toggle on",
