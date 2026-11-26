@@ -16,13 +16,14 @@ namespace UnityEngine.Tests
         [Fact]
         public void TheVersionIncludesCachedDisplayAndImeFrameVersions()
         {
-            Assert.Equal(96u, NativeApi.CurrentVersion);
+            Assert.Equal(97u, NativeApi.CurrentVersion);
             Assert.Equal(5, AudioCallbackKind.PrepareRenderBuffer);
             Assert.Equal(6, AudioCallbackKind.RenderBufferScope);
             Assert.Equal(7, AudioCallbackKind.ReleaseRenderBuffers);
-            Assert.Equal(60, System.Runtime.InteropServices.Marshal.SizeOf<ImportedTextureInfo>());
+            Assert.Equal(64, System.Runtime.InteropServices.Marshal.SizeOf<ImportedTextureInfo>());
             Assert.Equal(52, (int)System.Runtime.InteropServices.Marshal.OffsetOf<ImportedTextureInfo>("TextureFormat"));
             Assert.Equal(56, (int)System.Runtime.InteropServices.Marshal.OffsetOf<ImportedTextureInfo>("UsageMode"));
+            Assert.Equal(60, (int)System.Runtime.InteropServices.Marshal.OffsetOf<ImportedTextureInfo>("IgnoreMipmapLimit"));
             Assert.Equal(128, System.Runtime.InteropServices.Marshal.SizeOf<FrameInput>());
             Assert.Equal(120, (int)System.Runtime.InteropServices.Marshal.OffsetOf<FrameInput>("PointerKnown"));
             Assert.Equal(112, (int)System.Runtime.InteropServices.Marshal.OffsetOf<FrameInput>("FixedStep"));
