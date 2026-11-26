@@ -10,7 +10,7 @@ measured on macOS.
 The creation-defaults slice (Q813) resolves 37 queued rows with the controls of
 The channel client slice adds one row: `UnityEditor.MPE.ChannelClient`, now written by hand, is excluded (no public parameterless constructor), from two independent Linux GPU captures that agree on it; earlier rows are unchanged.
 
-The creation-defaults slice (Q813) resolves 29 queued rows with the controls of
+The creation-defaults slice (Q813) resolves 37 queued rows with the controls of
 tests/projects/defaultcontrols (two identical macOS Editor batch captures; the values depend on
 neither the OS nor the graphics device): command buffer names, render texture and attachment
 formats, scene culling masks, default readbacks and culling results, the deprecated terrain
