@@ -61,6 +61,11 @@ public class RealtimeGIProbe : MonoBehaviour
             yield return Pipeline();
             yield break;
         }
+        if (GraphicsSettings.lightsUseLinearIntensity)
+        {
+            yield return LinearIntensity();
+            yield break;
+        }
         if (QualitySettings.activeColorSpace == ColorSpace.Gamma)
         {
             yield return WithoutLightingData();
@@ -954,6 +959,50 @@ public class RealtimeGIProbe : MonoBehaviour
         RenderSettings.ambientMode = AmbientMode.Flat;
         DynamicGI.UpdateEnvironment();
         yield return Directionality(false);
+        Finish();
+    }
+
+    /// <summary>The built-in pipeline with GraphicsSettings.lightsUseLinearIntensity (run.py's
+    /// `--linear-intensity`): the Room's lights, their colors and color temperature, the spot and a
+    /// directional light, then the directional scene.</summary>
+    IEnumerator LinearIntensity()
+    {
+        yield return Load("Room");
+        var s = Scene();
+        yield return Converge();
+        Capture("linear-base", s);
+        s.point.transform.position = new Vector3(1.5f, 2.5f, -1.5f);
+        yield return Converge();
+        Capture("linear-moved", s);
+        s.point.intensity = 4f;
+        yield return Converge();
+        Capture("linear-intensity", s);
+        s.point.bounceIntensity = 3f;
+        yield return Converge();
+        Capture("linear-bounce", s);
+        s.point.bounceIntensity = 1f;
+        // A colored light: its linear color is scaled, not its gamma color.
+        s.point.color = new Color(1f, 0.5f, 0.2f);
+        yield return Converge();
+        Capture("linear-color", s);
+        // The light's color temperature (applied with linear intensity).
+        s.point.color = Color.white;
+        s.point.useColorTemperature = true;
+        s.point.colorTemperature = 3000f;
+        yield return Converge();
+        Capture("linear-temperature", s);
+        s.point.useColorTemperature = false;
+        // The spot light alone, then a directional light.
+        s.point.enabled = false;
+        s.spot.enabled = true;
+        yield return Converge();
+        Capture("linear-spot", s);
+        s.spot.enabled = false;
+        var sun = Sun(LightShadows.Hard, 40f, 25f);
+        yield return Converge();
+        Capture("linear-directional", s);
+        Destroy(sun.gameObject);
+        yield return Directionality(true);
         Finish();
     }
 

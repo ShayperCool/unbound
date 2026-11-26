@@ -273,6 +273,15 @@ captures). It is recorded but not part of gate.json: Unbound's run has one value
 comparator's bounds there, the corner texel (16,41) of `pipeline-directional`
 (docs/REALTIME_GI.md, Open).
 
+With `--linear-intensity` the project's GraphicsSettings take light intensity in linear space
+(`m_LightsUseLinearIntensity: 1`, the built-in pipeline) and the probe records the lights alone
+in `Room`, lightmaps, values and frames: `linear-base`, `linear-moved`, `linear-intensity` (4),
+`linear-bounce` (bounce intensity 3), `linear-color` (the point light's color (1, 0.5, 0.2)),
+`linear-temperature` (white, color temperature 3000 K), `linear-spot` (the spot light alone),
+`linear-directional` (a directional light with shadows), then `RoomDirectional`'s three cases.
+That set is its own reference, `Reference/unity-<version>/linear-intensity` (two byte-identical
+captures).
+
 With `--bake` the capture opens `RoomBake` instead (`run.py setup-bake` adds it and
 `RoomBakeLoaded`: the Room saved without lighting data, its LightmapSettings asking for a bake
 when the Editor opens it, `Lightmapping.bakeOnSceneLoad` IfMissingLightingData), waits in Edit
@@ -543,6 +552,7 @@ python3 tests/projects/realtimegi/run.py gate --label gate1       # the land gat
 python3 tests/projects/realtimegi/run.py gate --pipeline urp --label gate-urp1   # and its URP part
 python3 tests/projects/realtimegi/run.py gate --color-space gamma --label gate-gamma1   # and its gamma part
 python3 tests/projects/realtimegi/run.py gate --bake --label gate-bake1   # and its bake-on-load part
+python3 tests/projects/realtimegi/run.py gate --linear-intensity --label gate-linear1   # and its linear-intensity part
 ```
 A script's bake (`script_bake.py`, its own reference `Reference/unity-6000.0.71f1/scriptbake`):
 `RoomScriptBake` is `RoomBake` without the bake on load (`script_bake.py setup` writes it); editor

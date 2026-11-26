@@ -17,6 +17,7 @@
     run.py record|publish|gate --pipeline urp # the same project drawn by URP: its own reference set, Reference/unity-<version>/urp
     run.py record|publish|gate --color-space gamma # the same project in the gamma color space: Reference/unity-<version>/gamma
     run.py record|publish|gate --pipeline urp --color-space gamma # URP's sequence in a gamma-space project: Reference/unity-<version>/urp-gamma
+    run.py record|publish|gate --linear-intensity # built-in, lights in linear intensity: Reference/unity-<version>/linear-intensity
     run.py setup-bake                         # Editor: add the RoomBake and RoomBakeLoaded scenes (no lighting data, bake on load)
     run.py record|publish|gate --bake         # RoomBake opened (baked when it opens), then RoomBakeLoaded loaded: Reference/unity-<version>/bake
 
@@ -61,18 +62,27 @@ COLOR_SPACES = {'gamma': 0}
 # is, in its own realtime lightmap UV space (`.rlm`).
 BAKE = 'bake'
 
+# The built-in pipeline with GraphicsSettings' lightsUseLinearIntensity (`--linear-intensity`): the
+# light cases alone (RealtimeGIProbe.LinearIntensity), Reference/unity-<version>/linear-intensity.
+LINEAR_INTENSITY = 'linear-intensity'
 
-def variant(pipeline=None, color_space=None, bake=False):
+
+def variant(pipeline=None, color_space=None, bake=False, linear_intensity=False):
     """How a run's project or sequence differs from the committed one, if it does: a pipeline, a
-    color space, both ('urp-gamma': the pipeline's sequence in that color space), or the bake."""
+    color space, both ('urp-gamma': the pipeline's sequence in that color space), the bake, or
+    linear light intensity."""
     if bake and (pipeline or color_space):
         raise SystemExit('--bake with --pipeline or --color-space is not recorded')
+    if linear_intensity:
+        if pipeline or color_space or bake:
+            raise SystemExit('--linear-intensity is recorded alone (a render pipeline sets it itself)')
+        return LINEAR_INTENSITY
     return '-'.join(part for part in (pipeline, color_space) if part) or (BAKE if bake else None)
 
 
 def parts(variant):
     """The pipeline and color space of a variant (None for what it does not change)."""
-    names = variant.split('-') if variant and variant != BAKE else []
+    names = variant.split('-') if variant and variant not in (BAKE, LINEAR_INTENSITY) else []
     return (next((name for name in names if name in PIPELINES), None),
             next((name for name in names if name in COLOR_SPACES), None))
 
@@ -84,6 +94,13 @@ def copy_project(target, variant=None):
         shutil.copytree(PROBE/folder, target/folder)
     (target/'ProjectSettings/ProjectVersion.txt').write_text('m_EditorVersion: '+unity_version()+'\n')
     pipeline, color_space = parts(variant)
+    if variant == LINEAR_INTENSITY:
+        graphics = target/'ProjectSettings/GraphicsSettings.asset'
+        text = graphics.read_text()
+        off = '  m_LightsUseLinearIntensity: 0\n'
+        if text.count(off) != 1:
+            raise SystemExit(f'{graphics}: expected one m_LightsUseLinearIntensity: 0')
+        graphics.write_text(text.replace(off, '  m_LightsUseLinearIntensity: 1\n'))
     if color_space:
         settings = target/'ProjectSettings/ProjectSettings.asset'
         text = settings.read_text()
@@ -258,10 +275,12 @@ def main():
                         help='record, publish or gate the project drawn by this render pipeline (its own reference set)')
     parser.add_argument('--color-space', choices=sorted(COLOR_SPACES),
                         help='record, publish or gate the project in this color space (its own reference set)')
+    parser.add_argument('--linear-intensity', action='store_true',
+                        help="record, publish or gate the built-in pipeline with GraphicsSettings' lights in linear intensity (its own reference set)")
     parser.add_argument('--bake', action='store_true',
                         help='record, publish or gate RoomBake opened and baked when it opens (its own reference set)')
     args = parser.parse_args()
-    made = variant(args.pipeline, args.color_space, args.bake)
+    made = variant(args.pipeline, args.color_space, args.bake, args.linear_intensity)
     if args.mode == 'setup':
         return setup(args.label)
     if args.mode in ADDED:
