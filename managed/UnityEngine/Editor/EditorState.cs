@@ -512,10 +512,11 @@ namespace UnityEditor
         public static int DisplayDialogComplex(string title, string message, string ok, string cancel, string alt) => 1;
 
         /// <summary>An object's enabled state as its inspector toggle shows it: 1 or 0, or -1 when it
-        /// has no toggle. A script's behaviour has one only when it (or a base class) has Start,
-        /// Update, FixedUpdate, LateUpdate, OnGUI, OnEnable or OnDisable; a GameObject answers
-        /// whether it is active itself. Matches the Unity 6000.0.71f1 Editor
-        /// (tests/projects/editortitlebar objectEnabled; an inactive GameObject unmeasured).</summary>
+        /// has no toggle. A script's behaviour has one only when it (or a script base class) has
+        /// Start (a coroutine too), Update, FixedUpdate, LateUpdate, OnGUI, OnEnable, OnDisable,
+        /// OnRenderImage or OnAudioFilterRead; a GameObject answers whether it is active in the
+        /// hierarchy. Matches the Unity 6000.0.71f1 Editor (tests/projects/editortitlebar
+        /// objectEnabled, objectEnabled/functions with 33 event functions, objectEnabled/gameObjects).</summary>
         public static int GetObjectEnabled(Object target) => target switch
         {
             // Other families keep the unmeasured answer: every behaviour's enabled state, none for a GameObject.
@@ -530,18 +531,25 @@ namespace UnityEditor
             Behaviour b => b.enabled ? 1 : 0,
             Renderer r => r.enabled ? 1 : 0,
             Collider c => c.enabled ? 1 : 0,
-            GameObject g => g.activeSelf ? 1 : 0,
+            GameObject g => g.activeInHierarchy ? 1 : 0,
             _ => -1,
         };
 
-        /// <summary>Whether a script's behaviours have the enabled toggle: the messages enabling
-        /// changes the effect of (measured: Awake, OnDestroy, OnValidate, Reset, OnDrawGizmos,
-        /// OnRenderObject, OnBecameVisible and OnApplicationQuit give none).</summary>
+        static readonly Dictionary<Type, bool> s_HasEnabledToggle = new Dictionary<Type, bool>();
+        static readonly Type[] s_AudioFilterParameters = { typeof(float[]), typeof(int) };
+
+        /// <summary>Whether a script's behaviours have the enabled toggle (measured: none for Awake,
+        /// OnDestroy, OnValidate, Reset, the gizmo, camera, visibility, application, animator,
+        /// mouse and hierarchy messages).</summary>
         static bool HasEnabledToggle(Type type)
         {
+            if (s_HasEnabledToggle.TryGetValue(type, out bool has)) return has;
             var m = Unbound.Runtime.ScriptMessages.For(type);
-            return m.Start != null || m.StartCoroutine != null || m.Update != null || m.FixedUpdate != null
-                || m.LateUpdate != null || m.OnGUI != null || m.OnEnable != null || m.OnDisable != null;
+            has = m.Start != null || m.StartCoroutine != null || m.Update != null || m.FixedUpdate != null
+                || m.LateUpdate != null || m.OnGUI != null || m.OnEnable != null || m.OnDisable != null
+                || m.OnRenderImage != null
+                || Unbound.Runtime.ScriptMessages.Find(type, "OnAudioFilterRead", s_AudioFilterParameters) != null;
+            return s_HasEnabledToggle[type] = has;
         }
 
         public static void SetObjectEnabled(Object target, bool enabled)
@@ -549,7 +557,7 @@ namespace UnityEditor
             switch (target)
             {
                 case Behaviour b: b.enabled = enabled; break;
-                // As GetObjectEnabled reads it (setting is unmeasured).
+                // Its own active state (tests/projects/editortitlebar script/gameObject.up).
                 case GameObject g when Compat.EditorTitlebarMeasured: g.SetActive(enabled); break;
                 case Renderer r: r.enabled = enabled; break;
                 case Collider c: c.enabled = enabled; break;

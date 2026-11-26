@@ -1067,8 +1067,8 @@ pub fn dispatch(method: &str, request: &str) -> Result<String> {
             struct Request {
                 path: Option<String>,
                 path_id: Option<i64>,
-                // An icon by its name.
-                icon: Option<String>,
+                // A resource by its bare name (no folder, no extension).
+                name: Option<String>,
                 // An object of a built-in resource file by `{guid, fileId}`.
                 guid: Option<String>,
                 file_id: Option<i64>,
@@ -1093,8 +1093,8 @@ pub fn dispatch(method: &str, request: &str) -> Result<String> {
                 )
             } else if let Some(path) = r.path {
                 Ok(crate::editor_resources::find(&s.unity_data, &path)?.to_string())
-            } else if let Some(icon) = r.icon {
-                Ok(crate::editor_resources::find_icon(&s.unity_data, &icon)?.to_string())
+            } else if let Some(name) = r.name {
+                Ok(crate::editor_resources::find_by_name(&s.unity_data, &name)?.to_string())
             } else {
                 let id = r
                     .path_id

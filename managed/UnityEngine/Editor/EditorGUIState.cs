@@ -1401,7 +1401,7 @@ namespace UnityEditor
 
         internal static GUIContent IconContent(string name, bool logError) => new GUIContent { image = EditorIcons.Load(name, logError) };
 
-        public static Texture2D FindTexture(string name) => EditorIcons.Load(name, logError: false);
+        public static Texture2D FindTexture(string name) => EditorIcons.Find(name);
 
         public static Vector2 GetIconSize() => s_IconSize;
 
@@ -1432,18 +1432,22 @@ namespace UnityEditor
                 s_ObjectContent.text = (obj is Component || obj is ScriptableObject)
                     ? $"{obj.name} ({ObjectNames.NicifyVariableName(objType.Name)})"
                     : obj.name;
-                // A texture is its own small picture (tests/projects/searchobjectfield
-                // texture.display); other objects show their class's icon.
-                s_ObjectContent.image = obj is Texture2D texture
-                    ? texture
-                    : EditorIcons.Load(objType.Name + " Icon", logError: false) ?? EditorIcons.Placeholder;
+                // Unity's C#: the object's mini thumbnail (a texture is its own picture,
+                // tests/projects/searchobjectfield texture.display); other families keep the class
+                // icon by name.
+                s_ObjectContent.image = Compat.EditorTitlebarMeasured
+                    ? AssetPreview.MiniThumbnail(obj) ?? EditorIcons.Placeholder
+                    : obj is Texture2D texture
+                        ? texture
+                        : EditorIcons.Load(objType.Name + " Icon", logError: false) ?? EditorIcons.Placeholder;
             }
             else if (type != null)
             {
                 var prefix = instanceID != 0 ? "Missing (" : "None (";
                 s_ObjectContent.text = prefix + ObjectNames.NicifyVariableName(type.Name) + ")";
                 s_ObjectContent.image = showNullIcon
-                    ? (EditorIcons.Load(type.Name + " Icon", logError: false) ?? EditorIcons.Placeholder)
+                    ? ((Compat.EditorTitlebarMeasured ? AssetPreview.MiniTypeThumbnail(type) : EditorIcons.Load(type.Name + " Icon", logError: false))
+                        ?? EditorIcons.Placeholder)
                     : null;
             }
             else
@@ -1476,14 +1480,24 @@ namespace UnityEditor
         }
     }
 
-    /// <summary>The Editor's built-in icons, by the names its resources have
-    /// (Editor/Data/editor-icons-&lt;family&gt;.txt, from `unity editor resources`): the textures of
-    /// the installation's Editor resources, or a placeholder of one transparent texel without an
-    /// installation (managed tests) or for a texture that cannot be read (reported).</summary>
+    /// <summary>
+    /// The Editor's built-in icons, the textures of the installation's `unity editor resources`, as
+    /// the Unity 6000.0.71f1 Editor finds them (tests/projects/editortitlebar icons, icons/content,
+    /// thumbnails): a name is the skin's "d_" variant first, then the name; each is looked for as
+    /// `icons/processed/&lt;name&gt;.asset`, then `icons/&lt;name&gt;.png`; IconContent then takes a
+    /// resource of that bare name anywhere in the resources ("toggle on", "Warning"), FindTexture
+    /// does not. A class's icon is `icons/processed/&lt;namespace&gt;/&lt;Class&gt; Icon.asset`. Without
+    /// an installation (managed tests) a name of Editor/Data/editor-icons-&lt;family&gt;.txt gives a
+    /// placeholder of one transparent texel. Results are kept per name and skin.
+    /// </summary>
     internal static class EditorIcons
     {
         static HashSet<string> s_Names;
-        static readonly Dictionary<string, Texture2D> s_Loaded = new Dictionary<string, Texture2D>();
+        static readonly Dictionary<string, Texture2D>[] s_Found =
+            { new Dictionary<string, Texture2D>(StringComparer.Ordinal), new Dictionary<string, Texture2D>(StringComparer.Ordinal),
+              new Dictionary<string, Texture2D>(StringComparer.Ordinal), new Dictionary<string, Texture2D>(StringComparer.Ordinal) };
+        static readonly Dictionary<Type, Texture2D>[] s_ClassIcons = { new Dictionary<Type, Texture2D>(), new Dictionary<Type, Texture2D>() };
+        static readonly Dictionary<string, Texture2D> s_Placeholders = new Dictionary<string, Texture2D>(StringComparer.Ordinal);
         static Texture2D s_Placeholder;
 
         internal static Texture2D Placeholder => s_Placeholder ??= new Texture2D(1, 1) { name = "Unbound Icon" };
@@ -1507,38 +1521,79 @@ namespace UnityEditor
         }
 
         /// <summary>The icon of exactly this name (a skin's prefix included), or null.</summary>
-        internal static Texture2D LoadNamed(string name)
-        {
-            if (string.IsNullOrEmpty(name) || !Names.Contains(name)) return null;
-            if (!s_Loaded.TryGetValue(name, out var tex)) s_Loaded[name] = tex = Make(name);
-            return tex;
-        }
+        internal static Texture2D LoadNamed(string name) => string.IsNullOrEmpty(name) ? null : Inner(name, byName: true);
 
-        /// <summary>The installation's icon, else a placeholder: one transparent texel.</summary>
-        static Texture2D Make(string name)
-        {
-            var icon = Unbound.UIElements.UiResources.EditorLoadIcon(name);
-            if (icon != null) return icon;
-            if (Unbound.Runtime.Native.IsReady)
-                Debug.LogWarning($"Unbound: the Editor icon '{name}' is not readable from this installation's Editor resources; a transparent placeholder stands in for it.");
-            var tex = new Texture2D(1, 1, TextureFormat.RGBA32, false) { name = name };
-            tex.SetPixel(0, 0, Color.clear);
-            tex.Apply();
-            return tex;
-        }
+        /// <summary>FindTexture's icon: the skin's at the icon paths only.</summary>
+        internal static Texture2D Find(string name) => Lookup(name, byName: false);
 
+        /// <summary>IconContent's icon: the skin's at the icon paths, else a resource of that bare
+        /// name; a name nothing has logs an error.</summary>
         internal static Texture2D Load(string name, bool logError)
         {
+            var icon = Lookup(name, byName: true);
+            if (icon == null && logError && !string.IsNullOrEmpty(name))
+                Debug.LogError($"Unable to load the icon: '{name}'.\nNote that either full project path should be used (with extension) or just the icon name if the icon is located in the following location: 'Assets/Editor Default Resources/Icons/' (without extension, since png is assumed)");
+            return icon;
+        }
+
+        static Texture2D Lookup(string name, bool byName)
+        {
             if (string.IsNullOrEmpty(name)) return null;
-            var candidates = EditorGUIUtility.isProSkin ? new[] { "d_" + name, name } : new[] { name };
-            foreach (var c in candidates)
+            bool dark = EditorGUIUtility.isProSkin;
+            var found = s_Found[(dark ? 2 : 0) + (byName ? 1 : 0)];
+            if (found.TryGetValue(name, out var icon)) return icon;
+            icon = dark ? Inner(DarkName(name), byName) ?? Inner(name, byName) : Inner(name, byName);
+            found[name] = icon;
+            return icon;
+        }
+
+        /// <summary>The dark skin's name: "d_" before the file name.</summary>
+        static string DarkName(string name)
+        {
+            int slash = name.LastIndexOf('/');
+            return slash < 0 ? "d_" + name : name.Substring(0, slash + 1) + "d_" + name.Substring(slash + 1);
+        }
+
+        static Texture2D Inner(string name, bool byName)
+        {
+            if (!Unbound.Runtime.Native.IsReady) return Names.Contains(name) ? PlaceholderNamed(name) : null;
+            return Unbound.UIElements.UiResources.EditorLoad("icons/processed/" + name + ".asset") as Texture2D
+                ?? Unbound.UIElements.UiResources.EditorLoad("icons/" + name + ".png") as Texture2D
+                ?? (byName ? Unbound.UIElements.UiResources.EditorLoadByName(name) as Texture2D : null);
+        }
+
+        /// <summary>The icon of a class or of its nearest engine base class that has one (script
+        /// classes have none of their own), the skin's first; null when none has.</summary>
+        internal static Texture2D ClassIcon(Type type)
+        {
+            bool dark = EditorGUIUtility.isProSkin;
+            var icons = s_ClassIcons[dark ? 1 : 0];
+            if (icons.TryGetValue(type, out var icon)) return icon;
+            for (var t = type; icon == null && t != null && t != typeof(Object); t = t.BaseType)
             {
-                if (!Names.Contains(c)) continue;
-                if (!s_Loaded.TryGetValue(c, out var tex)) s_Loaded[c] = tex = Make(c);
-                return tex;
+                if (t.Assembly != typeof(Object).Assembly) continue;
+                string name = t.Name + " Icon";
+                string folder = t.Namespace == null ? "" : t.Namespace.ToLowerInvariant().Replace('.', '/') + "/";
+                if (!Unbound.Runtime.Native.IsReady)
+                {
+                    icon = Names.Contains(dark ? "d_" + name : name) ? PlaceholderNamed(dark ? "d_" + name : name) : null;
+                    continue;
+                }
+                if (dark) icon = Unbound.UIElements.UiResources.EditorLoad("icons/processed/" + folder + "d_" + name + ".asset") as Texture2D;
+                icon ??= Unbound.UIElements.UiResources.EditorLoad("icons/processed/" + folder + name + ".asset") as Texture2D;
             }
-            if (logError) Debug.LogError($"Unable to load the icon: '{name}'.\nNote that either full project path should be used (with extension) or just the icon name if the icon is located in the following location: 'Assets/Editor Default Resources/Icons/' (without extension, since png is assumed)");
-            return null;
+            icons[type] = icon;
+            return icon;
+        }
+
+        /// <summary>One transparent texel (managed tests, which have no installation).</summary>
+        static Texture2D PlaceholderNamed(string name)
+        {
+            if (s_Placeholders.TryGetValue(name, out var tex)) return tex;
+            tex = new Texture2D(1, 1, TextureFormat.RGBA32, false) { name = name };
+            tex.SetPixel(0, 0, Color.clear);
+            tex.Apply();
+            return s_Placeholders[name] = tex;
         }
     }
 }

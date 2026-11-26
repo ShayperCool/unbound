@@ -24,8 +24,8 @@ struct EditorResources {
     file: SerializedFile<'static>,
     /// Lower-case container path → path id.
     container: HashMap<String, i64>,
-    /// Lower-case icon name (an `icons/` path's file name without its extension) → path id.
-    icons: OnceLock<HashMap<String, i64>>,
+    /// Lower-case file name without its extension → path id (the first path in sorted order).
+    names: OnceLock<HashMap<String, i64>>,
 }
 
 fn resources(unity_data: &Path) -> Result<&'static EditorResources> {
@@ -62,36 +62,33 @@ fn load(unity_data: &Path) -> Result<EditorResources> {
     Ok(EditorResources {
         file,
         container,
-        icons: OnceLock::new(),
+        names: OnceLock::new(),
     })
 }
 
-/// The icons by name: every `icons/` path's file name without its extension, the Editor's icon
-/// names (`d_MeshRenderer Icon` is `icons/processed/unityengine/d_meshrenderer icon.asset`, `_Help`
-/// is `icons/_help.png`). A name two paths share takes the first path in sorted order.
-fn icon_index(r: &EditorResources) -> &HashMap<String, i64> {
-    r.icons.get_or_init(|| {
-        let mut paths: Vec<(&String, &i64)> = r
-            .container
-            .iter()
-            .filter(|(key, _)| key.starts_with("icons/"))
-            .collect();
+/// The resources by bare name: every path's file name without its extension, as the Editor's
+/// `EditorGUIUtility.Load` finds a resource named without its folder (`toggle on` is
+/// `builtin skins/darkskin/images/toggle on.png`). A name several paths share takes the first path
+/// in sorted order (which of them the Editor takes is unmeasured).
+fn name_index(r: &EditorResources) -> &HashMap<String, i64> {
+    r.names.get_or_init(|| {
+        let mut paths: Vec<(&String, &i64)> = r.container.iter().collect();
         paths.sort();
-        let mut icons = HashMap::new();
+        let mut names = HashMap::new();
         for (path, &id) in paths {
             let file = path.rsplit('/').next().unwrap_or(path);
             let stem = file.rsplit_once('.').map_or(file, |(stem, _)| stem);
-            icons.entry(stem.to_string()).or_insert(id);
+            names.entry(stem.to_string()).or_insert(id);
         }
-        icons
+        names
     })
 }
 
-/// The icon of the Editor's resources an icon name names (case-insensitively, a skin's `d_`
-/// prefix and `@2x` suffix included): `{pathId, classId}` or null.
-pub fn find_icon(unity_data: &Path, name: &str) -> Result<Json> {
+/// The resource a bare name names (case-insensitively, without folder or extension):
+/// `{pathId, classId}` or null.
+pub fn find_by_name(unity_data: &Path, name: &str) -> Result<Json> {
     let r = resources(unity_data)?;
-    Ok(match icon_index(r).get(&name.to_lowercase()) {
+    Ok(match name_index(r).get(&name.to_lowercase()) {
         Some(&id) => {
             let class_id = r.file.info(id).map(|o| o.class_id).unwrap_or(0);
             json!({ "pathId": id, "classId": class_id })
@@ -370,19 +367,12 @@ mod tests {
         }
     }
 
-    /// Icons are found by their names, whatever the case, as textures.
+    /// Resources are found by their bare names, whatever the case: icons and skin images.
     #[test]
-    fn icons_are_found_by_name() {
+    fn resources_are_found_by_bare_name() {
         let Some(data) = installed() else { return };
-        for name in [
-            "d_MeshRenderer Icon",
-            "_Help",
-            "d__Help",
-            "cs Script Icon",
-            "Preset.Context",
-            "_Popup@2x",
-        ] {
-            let found = find_icon(&data, name).unwrap();
+        for name in ["d_MeshRenderer Icon", "Warning", "toggle on", "_Help"] {
+            let found = find_by_name(&data, name).unwrap();
             assert_eq!(found["classId"], 28, "{name}: {found}");
             let texture = object(&data, found["pathId"].as_i64().unwrap()).unwrap();
             assert_eq!(
@@ -391,7 +381,7 @@ mod tests {
                 "{name}"
             );
         }
-        assert_eq!(find_icon(&data, "no such icon").unwrap(), Json::Null);
+        assert_eq!(find_by_name(&data, "no such icon").unwrap(), Json::Null);
     }
 
     /// The Editor's resources by GUID answer exactly what the path-id request answers.

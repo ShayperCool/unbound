@@ -1,3 +1,5 @@
+// [Icon] is an Editor-only (conditional) attribute: this file applies it as Editor code does.
+#define UNITY_EDITOR
 using System;
 using System.Linq;
 using UnityEditor;
@@ -32,6 +34,18 @@ namespace UnityEngine.Tests
         public class WithOnDisable : MonoBehaviour { void OnDisable() { } }
 
         public sealed class Derived : WithOnDisable { }
+
+        public sealed class WithRenderImage : MonoBehaviour { void OnRenderImage(RenderTexture source, RenderTexture destination) { } }
+
+        public sealed class WithAudioFilter : MonoBehaviour { void OnAudioFilterRead(float[] data, int channels) { } }
+
+        public sealed class WithMouseDown : MonoBehaviour { void OnMouseDown() { } }
+
+        [ExcludeFromPreset]
+        public sealed class Excluded : MonoBehaviour { }
+
+        [Icon("Assets/Icon.png")]
+        public sealed class Iconed : MonoBehaviour { }
 
         public sealed class Asset : ScriptableObject { }
 
@@ -86,8 +100,18 @@ namespace UnityEngine.Tests
                 Assert.Equal(-1, EditorUtility.GetObjectEnabled(go.AddComponent<WithAwake>()));
                 Assert.Equal(1, EditorUtility.GetObjectEnabled(go.AddComponent<WithUpdate>()));
                 Assert.Equal(1, EditorUtility.GetObjectEnabled(go.AddComponent<Derived>()));
+                Assert.Equal(1, EditorUtility.GetObjectEnabled(go.AddComponent<WithRenderImage>()));
+                Assert.Equal(1, EditorUtility.GetObjectEnabled(go.AddComponent<WithAudioFilter>()));
+                Assert.Equal(-1, EditorUtility.GetObjectEnabled(go.AddComponent<WithMouseDown>()));
                 Assert.Equal(-1, EditorUtility.GetObjectEnabled(go.transform));
                 Assert.Equal(1, EditorUtility.GetObjectEnabled(go));
+                // objectEnabled/gameObjects: active in the hierarchy, not only itself.
+                var child = new GameObject("Child");
+                child.transform.SetParent(go.transform, false);
+                go.SetActive(false);
+                Assert.Equal(0, EditorUtility.GetObjectEnabled(child));
+                Assert.Equal(0, EditorUtility.GetObjectEnabled(go));
+                go.SetActive(true);
                 var disabled = go.AddComponent<WithUpdate>();
                 disabled.enabled = false;
                 Assert.Equal(0, EditorUtility.GetObjectEnabled(disabled));
@@ -107,7 +131,8 @@ namespace UnityEngine.Tests
                 Assert.True(new PresetType(go.transform).IsValid());
                 Assert.True(new PresetType(asset).IsValid());
                 Assert.False(new PresetType(go).IsValid());
-                Assert.False(new PresetType((Object)null).IsValid());
+                Assert.Throws<ArgumentNullException>(() => new PresetType((Object)null));
+                Assert.False(new PresetType(go.AddComponent<Excluded>()).IsValid());
                 Assert.Equal(new PresetType(go.transform), new PresetType(new GameObject("Other").transform));
                 Assert.NotEqual(new PresetType(go.transform), new PresetType(asset));
                 Assert.True(Help.HasHelpForObject(go));
@@ -228,6 +253,37 @@ namespace UnityEngine.Tests
             {
                 Event.current = previous;
                 Object.DestroyImmediate(go);
+            }
+        }
+
+        [Fact]
+        public void AMiniThumbnailIsATexturesOwnAnIconSetOrTheClassIcon()
+        {
+            var go = new GameObject("Titlebar");
+            var texture = new Texture2D(2, 2) { name = "Probe Texture" };
+            var icon = new Texture2D(4, 4) { name = "Custom Icon" };
+            try
+            {
+                // thumbnails, thumbnails/more.
+                Assert.Same(texture, AssetPreview.GetMiniThumbnail(texture));
+                Assert.Null(AssetPreview.GetMiniThumbnail(null));
+                Assert.EndsWith("cs Script Icon", AssetPreview.GetMiniThumbnail(go.AddComponent<Plain>()).name);
+                Assert.EndsWith("GameObject Icon", AssetPreview.GetMiniThumbnail(go).name);
+                EditorGUIUtility.SetIconForObject(go, icon);
+                Assert.Same(icon, AssetPreview.GetMiniThumbnail(go));
+                // The object field's picture is the same thumbnail.
+                Assert.EndsWith("cs Script Icon", EditorGUIUtility.ObjectContent(go.GetComponent<Plain>(), typeof(Plain)).image.name);
+                // An [Icon] class's icon is not used, which is said.
+                int said = Hits("UnityEditor.AssetPreview.GetMiniThumbnail of an [Icon] class");
+                Assert.EndsWith("cs Script Icon", AssetPreview.GetMiniThumbnail(go.AddComponent<Iconed>()).name);
+                Assert.Equal(said + 1, Hits("UnityEditor.AssetPreview.GetMiniThumbnail of an [Icon] class"));
+            }
+            finally
+            {
+                EditorGUIUtility.SetIconForObject(go, null);
+                Object.DestroyImmediate(go);
+                Object.DestroyImmediate(texture);
+                Object.DestroyImmediate(icon);
             }
         }
 

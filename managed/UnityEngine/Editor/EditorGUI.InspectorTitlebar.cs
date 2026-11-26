@@ -460,25 +460,41 @@ namespace UnityEditor
 
     public sealed partial class AssetPreview
     {
-        /// <summary>An object's small icon: a user script's for a MonoBehaviour, the ScriptableObject
-        /// icon for a ScriptableObject of a script, else the icon of its class or the nearest base
-        /// class that has one (the skin's "d_" variant in the dark theme). Measured: a behaviour, a
-        /// renderer, a Transform, a GameObject and a ScriptableObject; unmeasured: textures (which
-        /// may show themselves), objects with an icon set, null and destroyed objects (null).</summary>
+        static readonly Dictionary<Type, bool> s_HasIconAttribute = new Dictionary<Type, bool>();
+
+        /// <summary>An object's small icon (Scripting API: a Texture2D is its own thumbnail, an
+        /// object with a custom icon has that icon): measured on Unity 6000.0.71f1
+        /// (tests/projects/editortitlebar thumbnails, thumbnails/more): a texture, null, a GameObject
+        /// with an icon set, a behaviour of a script ("cs Script Icon"), a renderer, a Transform, a
+        /// GameObject and a ScriptableObject (their class icons).</summary>
         public static Texture2D GetMiniThumbnail(Object obj)
         {
             if (!Compat.EditorTitlebarMeasured) { Stubs.NotImplemented("UnityEditor.AssetPreview.GetMiniThumbnail"); return null; }
+            return MiniThumbnail(obj);
+        }
+
+        internal static Texture2D MiniThumbnail(Object obj)
+        {
             if (obj == null) return null;
-            if (obj is MonoBehaviour) return EditorIcons.Load("cs Script Icon", logError: false);
-            for (var type = obj.GetType(); type != null && type != typeof(Object); type = type.BaseType)
-            {
-                if (type == typeof(ScriptableObject) || type.Assembly == typeof(Object).Assembly || type.Assembly == typeof(AssetPreview).Assembly)
-                {
-                    var icon = EditorIcons.Load(type.Name + " Icon", logError: false);
-                    if (icon != null) return icon;
-                }
-            }
-            return EditorIcons.Load("DefaultAsset Icon", logError: false);
+            if (obj is Texture2D texture) return texture;
+            if ((obj is GameObject || obj is ScriptableObject) && EditorGUIUtility.GetIconForObject(obj) is Texture2D custom) return custom;
+            var type = obj.GetType();
+            if (!s_HasIconAttribute.TryGetValue(type, out bool attributed))
+                s_HasIconAttribute[type] = attributed = Attribute.IsDefined(type, typeof(IconAttribute), true);
+            if (attributed)
+                Stubs.Ignored("UnityEditor.AssetPreview.GetMiniThumbnail of an [Icon] class", "an [Icon] attribute's icon is not used: the class's default icon stands for it");
+            return MiniTypeThumbnail(type);
+        }
+
+        /// <summary>A class's icon: a script's behaviours "cs Script Icon", else the icon of the class
+        /// or its nearest engine base class (a script's ScriptableObject "ScriptableObject Icon").
+        /// Icons a script's MonoScript is given (packages' scripts among them) are unmeasured.</summary>
+        internal static Texture2D MiniTypeThumbnail(Type type)
+        {
+            if (type == null) return null;
+            if (typeof(MonoBehaviour).IsAssignableFrom(type) && type.Assembly != typeof(Object).Assembly)
+                return EditorIcons.Find("cs Script Icon");
+            return EditorIcons.ClassIcon(type);
         }
     }
 
@@ -557,13 +573,15 @@ namespace UnityEditor
 
     public partial class Help
     {
-        /// <summary>Whether an object has a reference page: every live object has one, its class's
-        /// or the scripting manual's MonoBehaviour page (matches the Unity 6000.0.71f1 Editor with
-        /// its online documentation, tests/projects/editortitlebar hasHelp).</summary>
+        /// <summary>Whether an object has a reference page: every live object but a DefaultAsset has
+        /// one, its class's or the scripting manual's MonoBehaviour page (matches the Unity
+        /// 6000.0.71f1 Editor with its online documentation, tests/projects/editortitlebar hasHelp,
+        /// hasHelp/more). Unmeasured: [HelpURL] classes, a local documentation module.</summary>
         public static bool HasHelpForObject(Object obj)
         {
             if (!Compat.EditorTitlebarMeasured) { Stubs.NotImplemented("UnityEditor.Help.HasHelpForObject"); return false; }
-            return obj != null;
+            // Unity's C#: a DefaultAsset (a folder) has no page name (hasHelp/more).
+            return obj != null && obj is not DefaultAsset;
         }
     }
 }
@@ -579,12 +597,17 @@ namespace UnityEditor.Presets
         /// ScriptableObjects, editors included), importers and settings, not of GameObjects
         /// (Unity 6000.0 Manual, Presets; measured: a behaviour, a renderer, a Transform, a
         /// ScriptableObject and an Editor have one, a GameObject none, tests/projects/editortitlebar
-        /// presetValid).</summary>
+        /// presetValid). Unmeasured: assets and importers (valid here).</summary>
         public PresetType(Object o)
         {
             m_Type = null;
             if (!Compat.EditorTitlebarMeasured) { Stubs.NotImplemented("UnityEditor.Presets.PresetType.ctor"); return; }
-            m_Type = o != null && o is not GameObject ? o.GetType() : null;
+            // A [NotNull] binding argument: null throws (presetValid/more).
+            if (!o) throw ObjectErrors.Argument(o, "target");
+            var type = o.GetType();
+            // Scripting API: a class excluded with [ExcludeFromPreset] has no valid preset type
+            // (measured for a behaviour and a ScriptableObject).
+            m_Type = o is GameObject || Attribute.IsDefined(type, typeof(ExcludeFromPresetAttribute), false) ? null : type;
         }
 
         public bool IsValid() => m_Type != null;
