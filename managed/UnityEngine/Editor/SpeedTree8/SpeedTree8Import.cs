@@ -125,8 +125,8 @@ namespace Unbound.SpeedTree
             foreach (var material in materials)
             {
                 if (material is null) continue;
-                foreach (int id in material.GetTexturePropertyNameIDs())
-                    if (material.GetTexture(id) is Texture texture && replaced.TryGetValue(texture, out var fresh))
+                foreach (int id in material.SlotIds())
+                    if (material.SlotTexture(id) is Texture texture && replaced.TryGetValue(texture, out var fresh))
                         material.SetTexture(id, fresh);
             }
         }

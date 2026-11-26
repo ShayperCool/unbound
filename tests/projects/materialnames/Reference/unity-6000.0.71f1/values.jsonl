@@ -1,4 +1,4 @@
-{"k":"shaders","v":"True True"}
+{"k":"shaders","v":"True True True"}
 {"k":"order/early_ids","v":"stencil<count True cutoff<glossiness True tintColor<color False tintColor<mainTexST False"}
 {"k":"order/ids","v":"pre<post True preColor<postColor True mainTexST<color True mainTex<color True color<glossiness True glossiness<count True saved<fresh True freshColor<freshTexST True"}
 {"k":"order/names/Float","v":"_Cutoff _Glossiness _Pre _Post"}
@@ -19,9 +19,9 @@
 {"k":"fresh/texture_names","v":"_MainTex"}
 {"k":"set/names/Float","v":"_Glossiness _Zf _Af _Li _Fa _Mix"}
 {"k":"set/names/Int","v":"_Count _Zi"}
-{"k":"set/names/Vector","v":"_MainTex_ST _MainTex_TexelSize _MainTex_HDR _Color _Zc _Av _Zt_ST _Zt_TexelSize _Zt_HDR _At_ST _At_TexelSize _At_HDR _Mix _Sc_ST _Sc_TexelSize _Sc_HDR _Va"}
+{"k":"set/names/Vector","v":"_MainTex_ST _MainTex_TexelSize _MainTex_HDR _Color _Zc _Av _Zt_ST _Zt_TexelSize _Zt_HDR _At_ST _At_TexelSize _At_HDR _Mix _Sc_ST _Sc_TexelSize _Sc_HDR _Of_ST _Of_TexelSize _Of_HDR _Va"}
 {"k":"set/names/Matrix","v":"_Zm _Ma"}
-{"k":"set/names/Texture","v":"_MainTex _Zt _At _Sc"}
+{"k":"set/names/Texture","v":"_MainTex _Zt _At _Sc _Of"}
 {"k":"set/names/ConstantBuffer","v":""}
 {"k":"set/names/ComputeBuffer","v":""}
 {"k":"set/texture_names","v":"_MainTex"}
@@ -36,6 +36,7 @@
 {"k":"set/has/_Fa","v":"property True float True integer False color False texture False matrix False"}
 {"k":"set/has/_Mix","v":"property True float True integer False color True texture False matrix False"}
 {"k":"set/has/_Sc","v":"property True float False integer False color False texture True matrix False"}
+{"k":"set/has/_Of","v":"property True float False integer False color False texture True matrix False"}
 {"k":"set/has/_Va","v":"property True float False integer False color True texture False matrix False"}
 {"k":"set/has/_Ma","v":"property True float False integer False color False texture False matrix True"}
 {"k":"set/get/_Mix","v":"float 1 color 0.5 0.5 0.5 1"}
@@ -46,6 +47,8 @@
 {"k":"set/get/_MainTex","v":"UnityWhite"}
 {"k":"set/get/_Sc","v":"3 null"}
 {"k":"set/get/_Sc.logs","v":"Error: Material 'Scripted' with Shader 'Probe/Names' doesn't have a texture property '_Sc'"}
+{"k":"set/get/_Of","v":"0.5 1 null"}
+{"k":"set/get/_Of.logs","v":"Error: Material 'Scripted' with Shader 'Probe/Names' doesn't have a texture property '_Of'"}
 {"k":"set/get/_Fa","v":"1 array 2"}
 {"k":"set/get/_Zm","v":"1"}
 {"k":"set/get/_Va","v":"5 6 7 8 array 2"}
@@ -63,6 +66,7 @@
 {"k":"copy/has/_Zt","v":"property False float False integer False color False texture False matrix False"}
 {"k":"copy/has/_Zm","v":"property False float False integer False color False texture False matrix False"}
 {"k":"copy/has/_Fa","v":"property False float False integer False color False texture False matrix False"}
+{"k":"copy/has/_Of","v":"property False float False integer False color False texture False matrix False"}
 {"k":"copy/get","v":"zf 0 zc 0 0 0 0 zm 1 fa -1"}
 {"k":"copy/get.logs","v":"Error: Material 'Scripted' with Shader 'Probe/Names' doesn't have a float or range property '_Zf'\n---\nError: Material 'Scripted' with Shader 'Probe/Names' doesn't have a color property '_Zc'\n---\nError: Material 'Scripted' with Shader 'Probe/Names' doesn't have a matrix property '_Zm'"}
 {"k":"instantiate/names/Float","v":"_Glossiness"}
@@ -76,18 +80,18 @@
 {"k":"instantiate/has/_Zf","v":"property False float False integer False color False texture False matrix False"}
 {"k":"renderer_material/names/Float","v":"_Glossiness _Zf _Af _Li _Fa _Mix"}
 {"k":"renderer_material/names/Int","v":"_Count _Zi"}
-{"k":"renderer_material/names/Vector","v":"_MainTex_ST _MainTex_TexelSize _MainTex_HDR _Color _Zc _Av _Zt_ST _Zt_TexelSize _Zt_HDR _At_ST _At_TexelSize _At_HDR _Mix _Sc_ST _Sc_TexelSize _Sc_HDR _Va"}
+{"k":"renderer_material/names/Vector","v":"_MainTex_ST _MainTex_TexelSize _MainTex_HDR _Color _Zc _Av _Zt_ST _Zt_TexelSize _Zt_HDR _At_ST _At_TexelSize _At_HDR _Mix _Sc_ST _Sc_TexelSize _Sc_HDR _Of_ST _Of_TexelSize _Of_HDR _Va"}
 {"k":"renderer_material/names/Matrix","v":"_Zm _Ma"}
-{"k":"renderer_material/names/Texture","v":"_MainTex _Zt _At _Sc"}
+{"k":"renderer_material/names/Texture","v":"_MainTex _Zt _At _Sc _Of"}
 {"k":"renderer_material/names/ConstantBuffer","v":""}
 {"k":"renderer_material/names/ComputeBuffer","v":""}
 {"k":"renderer_material/texture_names","v":"_MainTex"}
 {"k":"renderer_material/has/_Zf","v":"property True float True integer False color False texture False matrix False"}
 {"k":"copy_properties/names/Float","v":"_Glossiness _Zf _Af _Li _Fa _Mix"}
 {"k":"copy_properties/names/Int","v":"_Count _Zi"}
-{"k":"copy_properties/names/Vector","v":"_MainTex_ST _MainTex_TexelSize _MainTex_HDR _Color _Zc _Av _Zt_ST _Zt_TexelSize _Zt_HDR _At_ST _At_TexelSize _At_HDR _Mix _Sc_ST _Sc_TexelSize _Sc_HDR _Va"}
+{"k":"copy_properties/names/Vector","v":"_MainTex_ST _MainTex_TexelSize _MainTex_HDR _Color _Zc _Av _Zt_ST _Zt_TexelSize _Zt_HDR _At_ST _At_TexelSize _At_HDR _Mix _Sc_ST _Sc_TexelSize _Sc_HDR _Of_ST _Of_TexelSize _Of_HDR _Va"}
 {"k":"copy_properties/names/Matrix","v":"_Zm _Ma"}
-{"k":"copy_properties/names/Texture","v":"_MainTex _Zt _At _Sc"}
+{"k":"copy_properties/names/Texture","v":"_MainTex _Zt _At _Sc _Of"}
 {"k":"copy_properties/names/ConstantBuffer","v":""}
 {"k":"copy_properties/names/ComputeBuffer","v":""}
 {"k":"copy_properties/texture_names","v":"_MainTex"}
@@ -108,6 +112,11 @@
 {"k":"switched_back/names/ConstantBuffer","v":""}
 {"k":"switched_back/names/ComputeBuffer","v":""}
 {"k":"switched_back/texture_names","v":"_MainTex _FreshTex"}
+{"k":"declared_float_texture","v":"has True get null names _MainTex _Glossiness texture_names _MainTex"}
+{"k":"declared_float_texture.logs","v":"Error: Material 'Declared' with Shader 'Probe/Names' doesn't have a texture property '_Glossiness'"}
+{"k":"serialized/apply","v":"True"}
+{"k":"serialized/after","v":"queue 2001 matrix False 1 array False -1 float False names _Glossiness | "}
+{"k":"serialized/after.logs","v":"Error: Material 'Applied' with Shader 'Probe/Names' doesn't have a matrix property '_Sm'"}
 {"k":"save_if_dirty/dirty_loaded","v":"False"}
 {"k":"save_if_dirty/dirty_set","v":"True"}
 {"k":"save_if_dirty/before/has/_Saved","v":"property True float True integer False color False texture False matrix False"}
@@ -279,6 +288,10 @@
 {"k":"not_dirty/file","v":"%YAML 1.1\n%TAG !u! tag:unity3d.com,2011:\n--- !u!21 &2100000\nMaterial:\n  serializedVersion: 8\n  m_ObjectHideFlags: 0\n  m_CorrespondingSourceObject: {fileID: 0}\n  m_PrefabInstance: {fileID: 0}\n  m_PrefabAsset: {fileID: 0}\n  m_Name: not_dirty\n  m_Shader: {fileID: 4800000, guid: 03dc6eba615f4aa19d21a9b521558453, type: 3}\n  m_Parent: {fileID: 0}\n  m_ModifiedSerializedProperties: 0\n  m_ValidKeywords: []\n  m_InvalidKeywords: []\n  m_LightmapFlags: 4\n  m_EnableInstancingVariants: 0\n  m_DoubleSidedGI: 0\n  m_CustomRenderQueue: -1\n  stringTagMap: {}\n  disabledShaderPasses: []\n  m_LockedProperties: \n  m_SavedProperties:\n    serializedVersion: 3\n    m_TexEnvs:\n    - _MainTex:\n        m_Texture: {fileID: 0}\n        m_Scale: {x: 1, y: 1}\n        m_Offset: {x: 0, y: 0}\n    m_Ints:\n    - _Count: 4\n    m_Floats:\n    - _Glossiness: 0.75\n    - _Saved: 2\n    m_Colors:\n    - _Color: {r: 0.5, g: 0.25, b: 0.75, a: 1}\n  m_BuildTextureStacks: []\n  m_AllowLocking: 1\n"}
 {"k":"not_dirty/other","v":"saved 2 fresh 8 color 0 1 0 1 tex null"}
 {"k":"not_dirty/back","v":"has saved False fresh False glossiness 0.75"}
+{"k":"kinds/save","v":"saved"}
+{"k":"kinds/file","v":"%YAML 1.1\n%TAG !u! tag:unity3d.com,2011:\n--- !u!21 &2100000\nMaterial:\n  serializedVersion: 8\n  m_ObjectHideFlags: 0\n  m_CorrespondingSourceObject: {fileID: 0}\n  m_PrefabInstance: {fileID: 0}\n  m_PrefabAsset: {fileID: 0}\n  m_Name: kinds\n  m_Shader: {fileID: 4800000, guid: 03dc6eba615f4aa19d21a9b521558453, type: 3}\n  m_Parent: {fileID: 0}\n  m_ModifiedSerializedProperties: 0\n  m_ValidKeywords: []\n  m_InvalidKeywords: []\n  m_LightmapFlags: 4\n  m_EnableInstancingVariants: 0\n  m_DoubleSidedGI: 0\n  m_CustomRenderQueue: -1\n  stringTagMap: {}\n  disabledShaderPasses: []\n  m_LockedProperties: \n  m_SavedProperties:\n    serializedVersion: 3\n    m_TexEnvs:\n    - _MainTex:\n        m_Texture: {fileID: 0}\n        m_Scale: {x: 1, y: 1}\n        m_Offset: {x: 0, y: 0}\n    m_Ints:\n    - _Count: 4\n    m_Floats:\n    - _Glossiness: 0.25\n    - _Saved: 7\n    m_Colors:\n    - _Color: {r: 0.5, g: 0.25, b: 0.75, a: 1}\n  m_BuildTextureStacks: []\n  m_AllowLocking: 1\n"}
+{"k":"kinds/color","v":"0 0 1 1"}
+{"k":"kinds/float","v":"7"}
 {"k":"create/save","v":"created"}
 {"k":"create/after/has/_Saved","v":"property False float False integer False color False texture False matrix False"}
 {"k":"create/after/has/_Fresh","v":"property False float False integer False color False texture False matrix False"}

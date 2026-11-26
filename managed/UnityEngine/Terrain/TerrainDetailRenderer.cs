@@ -226,7 +226,7 @@ namespace UnityEngine
                     {
                         PrototypeMesh(prototype.prototype, out var materials);
                         var material = materials != null && materials.Length > 0 ? materials[0] : null;
-                        if (material != null && material.HasProperty("_MainTex")) texture = material.GetTexture("_MainTex") as Texture2D;
+                        if (material != null && material.HasProperty("_MainTex")) texture = material.SlotTexture(s_MainTexId) as Texture2D;
                         result[i].MeshTexture = texture != null;
                     }
                 }

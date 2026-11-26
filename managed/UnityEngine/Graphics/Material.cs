@@ -837,8 +837,8 @@ namespace UnityEngine
             ScriptSet(nameID);
         }
 
-        /// <summary>A texture's scale or offset set from script (measured: the scale; the offset by
-        /// the same rule); a variant then overrides it.</summary>
+        /// <summary>A texture's scale or offset set from script (tests/projects/materialnames
+        /// set.get._Sc, set.get._Of); a variant then overrides it.</summary>
         void ScriptSetScaleOffset(int nameID)
         {
             if (Compat.MaterialScriptNamesMeasured) ScriptSetTexture(nameID);
@@ -1249,9 +1249,10 @@ namespace UnityEngine
                     }
                 }
             List<int> scripted = null;
+            // A declared name set as another kind is listed for that kind too (a declared float
+            // given a texture: tests/projects/materialnames declared_float_texture).
             foreach (var id in Compat.MaterialScriptNamesMeasured ? m_ScriptSet : s_NoIds)
             {
-                if (Declared(id) != null) continue;
                 switch (type)
                 {
                     case MaterialPropertyType.Float when m_Floats.ContainsKey(id) || ScriptArray(id) is float[]:
@@ -1288,49 +1289,52 @@ namespace UnityEngine
         /// A copy (<c>new Material(source)</c>, Object.Instantiate) and a save of the material asset
         /// (AssetDatabase.SaveAssetIfDirty, SaveAssets, CreateAsset): the names set from script for
         /// which the shader has no property stop being the material's, of every kind, arrays and
-        /// matrices too; a value its saved property sheet lists stays as saved data, unseen as a
-        /// loaded material's is, and the others are gone (matches the Unity 6000.0.71f1 Editor,
-        /// tests/projects/materialnames copy.*, instantiate.*, save_*, create.*; the renderer's own
-        /// material and CopyPropertiesFromMaterial keep them). Not measured: a material variant
-        /// (kept as it is), buffers (kept), and whether a copy keeps the values of the names it
-        /// drops (dropped, as a save does).
+        /// matrices too; a value its data holds (its shader declares it or its saved property sheet
+        /// lists it as that kind) stays, unseen as a loaded material's is, and the others are gone,
+        /// also a value set for a declared name as another kind (matches the Unity 6000.0.71f1
+        /// Editor, tests/projects/materialnames copy.*, instantiate.*, save_*, create.*, kinds.*;
+        /// the renderer's own material and CopyPropertiesFromMaterial keep them). Not measured: a
+        /// material variant (kept as it is), buffers (kept), and whether a copy keeps the values of
+        /// the names it drops (dropped, as a save does).
         /// </summary>
         internal void ForgetScriptNamesOutsideShader()
         {
-            if (m_Parent != null || !Compat.MaterialScriptNamesMeasured) return;
-            List<int> gone = null;
+            if (m_Parent != null || m_ScriptSet.Count == 0 || !Compat.MaterialScriptNamesMeasured) return;
+            List<int> ids = null;
             foreach (var id in m_ScriptSet)
-                if (Declared(id) == null && !m_Buffers.ContainsKey(id)) (gone ??= new List<int>()).Add(id);
-            if (gone == null) return;
-            foreach (var id in gone)
+                if (!m_Buffers.ContainsKey(id)) (ids ??= new List<int>()).Add(id);
+            if (ids == null) return;
+            foreach (var id in ids)
             {
-                m_ScriptSet.Remove(id);
                 m_Arrays.Remove(id);
                 m_Matrices.Remove(id);
-                if (SheetLists(id)) continue;
-                m_Floats.Remove(id);
-                m_Ints.Remove(id);
-                m_Vectors.Remove(id);
-                m_State.m_ValidatedFloats?.Remove(id);
-                m_RawBindings.Remove(id);
-                m_VectorsAfterTexture.Remove(id);
-                if (!m_TextureNames.Contains(id) && m_Textures.Remove(id, out var slot))
+                if (!Keeps(id, SheetKind.Floats))
+                {
+                    m_Floats.Remove(id);
+                    m_State.m_ValidatedFloats?.Remove(id);
+                    m_RawBindings.Remove(id);
+                }
+                if (!Keeps(id, SheetKind.Ints)) m_Ints.Remove(id);
+                if (!Keeps(id, SheetKind.Colors))
+                {
+                    m_Vectors.Remove(id);
+                    m_VectorsAfterTexture.Remove(id);
+                }
+                if (!Keeps(id, SheetKind.Textures) && !m_TextureNames.Contains(id) && m_Textures.Remove(id, out var slot))
                 {
                     slot.Texture = null;
                     (m_State.m_SpareSlots ??= new List<TextureSlot>()).Add(slot);
                 }
+                if (Declared(id) == null) m_ScriptSet.Remove(id);
             }
             MarkChanged();
         }
 
-        /// <summary>Whether the saved property sheet lists a name, of any kind.</summary>
-        bool SheetLists(int id)
-        {
-            var sheet = m_Sheet;
-            if (sheet == null) return Declared(id) != null;
-            return sheet.List(SheetKind.Floats).Contains(id) || sheet.List(SheetKind.Ints).Contains(id)
-                || sheet.List(SheetKind.Colors).Contains(id) || sheet.List(SheetKind.Textures).Contains(id);
-        }
+        /// <summary>Whether the material's data holds a name's value of a kind: its shader declares
+        /// it so, or its saved property sheet lists it so (a colour set for a name the data saves
+        /// as a float is not kept: tests/projects/materialnames kinds.*).</summary>
+        bool Keeps(int id, SheetKind kind) =>
+            Declared(id) is ShaderPropertyType type && KindOf(type) == kind || m_Sheet != null && m_Sheet.List(kind).Contains(id);
 
         public void SetFloat(string name, float value) => SetFloat(Shader.PropertyToID(name), value);
 
@@ -1551,13 +1555,29 @@ namespace UnityEngine
             return slot.Texture ? slot.Texture : null;
         }
 
-        /// <summary>A texture set from script for a name the shader does not declare and the
-        /// material's data does not list: HasTexture, GetTextureScale and GetTextureOffset answer
-        /// for it, GetTexture and GetTexturePropertyNames do not (matches the Unity 6000.0.71f1
-        /// Editor, tests/projects/materialnames set.get._Zt, set.texture_names).</summary>
+        /// <summary>A texture, scale or offset set from script for a name the shader does not declare
+        /// as a texture and the material's data does not list: HasTexture, GetTextureScale and
+        /// GetTextureOffset answer for it, GetTexture and GetTexturePropertyNames do not (matches the
+        /// Unity 6000.0.71f1 Editor, tests/projects/materialnames set.get._Zt, set.get._Of,
+        /// set.texture_names, declared_float_texture).</summary>
         bool ScriptOnlyTexture(int nameID) =>
             m_ScriptSet.Contains(nameID) && !m_TextureNames.Contains(nameID) && Declared(nameID) != ShaderPropertyType.Texture
             && Compat.MaterialScriptNamesMeasured;
+
+        /// <summary>The texture a slot holds, without the API's checks and logs: what Unbound's own
+        /// readers draw with, a texture set from script for a name the shader lacks too.</summary>
+        internal Texture SlotTexture(int nameID)
+        {
+            Inherit();
+            return m_Textures.TryGetValue(nameID, out var slot) && slot.Texture ? slot.Texture : null;
+        }
+
+        /// <summary>Every name the material has a texture slot for (a new list).</summary>
+        internal List<int> SlotIds()
+        {
+            Inherit();
+            return new List<int>(m_Textures.Keys);
+        }
 
         TextureSlot Slot(int nameID)
         {
@@ -2071,7 +2091,8 @@ namespace UnityEngine
         /// passes, tags, locks, queue and flags it holds replace the material's, so values a script
         /// set for names the sheet does not list are gone and a declared property the sheet leaves
         /// out reads its shader's default (measured: tests/projects/toolapis matx.edit, mat.after).
-        /// Values the sheet never holds (matrices, buffers, arrays) and the parent stay.
+        /// Matrices and arrays set from script are gone too (tests/projects/materialnames
+        /// serialized.*); buffers (unmeasured) and the parent stay.
         /// </summary>
         internal void ApplySerialized(YNode body, IReferenceResolver resolver)
         {
@@ -2085,6 +2106,13 @@ namespace UnityEngine
             m_Keywords.Clear(); m_KeywordExtras.Clear(); m_Tags.Clear(); m_TextureNames.Clear();
             m_DisabledPasses = null;
             m_Locked = null;
+            // Matrices and arrays, which the sheet never holds, go too (tests/projects/materialnames
+            // serialized.after); other releases keep them (unmeasured).
+            if (Compat.MaterialScriptNamesMeasured)
+            {
+                m_Matrices.Clear();
+                m_Arrays.Clear();
+            }
             m_ScriptSet.RemoveWhere(id => !m_Matrices.ContainsKey(id) && !m_Buffers.ContainsKey(id) && !m_Arrays.ContainsKey(id));
             foreach (var p in m_Textures)
             {

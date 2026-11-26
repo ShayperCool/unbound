@@ -126,7 +126,8 @@ public class MaterialNamesProbe : MonoBehaviour
     {
         var names = Shader.Find("Probe/Names");
         var other = Shader.Find("Probe/Other");
-        Try("shaders", () => (names != null) + " " + (other != null));
+        var kinds = Shader.Find("Probe/Kinds");
+        Try("shaders", () => (names != null) + " " + (other != null) + " " + (kinds != null));
 
         // Whether names are listed in the order they were set or by property id: _Pre gets its
         // id before _Post, and is set after it.
@@ -176,10 +177,11 @@ public class MaterialNamesProbe : MonoBehaviour
         m.SetColor("_Mix", new Color(0.5f, 0.5f, 0.5f, 1f));
         m.SetTexture("_MainTex", Texture2D.whiteTexture);
         m.SetTextureScale("_Sc", new Vector2(2, 3));
+        m.SetTextureOffset("_Of", new Vector2(0.5f, 0.25f));
         m.SetVectorArray("_Va", new[] { new Vector4(5, 6, 7, 8), Vector4.one });
         m.SetMatrixArray("_Ma", new[] { Matrix4x4.Scale(new Vector3(9, 9, 9)), Matrix4x4.identity });
         Names("set", m);
-        foreach (var n in new[] { "_Zf", "_Zi", "_Li", "_Zc", "_Av", "_Zt", "_At", "_Zm", "_Fa", "_Mix", "_Sc", "_Va", "_Ma" })
+        foreach (var n in new[] { "_Zf", "_Zi", "_Li", "_Zc", "_Av", "_Zt", "_At", "_Zm", "_Fa", "_Mix", "_Sc", "_Of", "_Va", "_Ma" })
             Try("set/has/" + n, () => Has(m, n));
         Try("set/get/_Mix", () => "float " + F(m.GetFloat("_Mix")) + " color " + C(m.GetColor("_Mix")));
         Try("set/get/_Av", () => V(m.GetVector("_Av")));
@@ -187,6 +189,7 @@ public class MaterialNamesProbe : MonoBehaviour
         Try("set/get/_Zt_scale", () => F(m.GetTextureScale("_Zt").x));
         Try("set/get/_MainTex", () => T(m.GetTexture("_MainTex")));
         Try("set/get/_Sc", () => F(m.GetTextureScale("_Sc").y) + " " + T(m.GetTexture("_Sc")));
+        Try("set/get/_Of", () => F(m.GetTextureOffset("_Of").x) + " " + F(m.GetTextureScale("_Of").x) + " " + T(m.GetTexture("_Of")));
         Try("set/get/_Fa", () => F(m.GetFloat("_Fa")) + " array " + (m.GetFloatArray("_Fa")?.Length ?? -1));
         Try("set/get/_Zm", () => F(m.GetMatrix("_Zm").m00));
         Try("set/get/_Va", () => V(m.GetVector("_Va")) + " array " + (m.GetVectorArray("_Va")?.Length ?? -1));
@@ -195,7 +198,7 @@ public class MaterialNamesProbe : MonoBehaviour
         // A copy, and a material given the scripted one's properties.
         var copy = new Material(m);
         Names("copy", copy);
-        foreach (var n in new[] { "_Zf", "_Zc", "_Zt", "_Zm", "_Fa" })
+        foreach (var n in new[] { "_Zf", "_Zc", "_Zt", "_Zm", "_Fa", "_Of" })
             Try("copy/has/" + n, () => Has(copy, n));
         Try("copy/get", () => "zf " + F(copy.GetFloat("_Zf")) + " zc " + C(copy.GetColor("_Zc")) + " zm " + F(copy.GetMatrix("_Zm").m00)
             + " fa " + (copy.GetFloatArray("_Fa")?.Length ?? -1));
@@ -217,6 +220,31 @@ public class MaterialNamesProbe : MonoBehaviour
         Names("switched", switched);
         switched.shader = names;
         Names("switched_back", switched);
+
+        // A name the shader declares as a float, given a texture.
+        {
+            var declared = new Material(names) { name = "Declared" };
+            declared.SetTexture("_Glossiness", Texture2D.whiteTexture);
+            Try("declared_float_texture", () => "has " + declared.HasTexture("_Glossiness") + " get " + T(declared.GetTexture("_Glossiness"))
+                + " names " + string.Join(" ", declared.GetPropertyNames(MaterialPropertyType.Texture))
+                + " texture_names " + string.Join(" ", declared.GetTexturePropertyNames()));
+        }
+
+        // A SerializedObject over a material given a matrix, an array and a float from script,
+        // applied after a change of its queue.
+        {
+            var applied = new Material(names) { name = "Applied" };
+            applied.SetMatrix("_Sm", Matrix4x4.Scale(new Vector3(2, 2, 2)));
+            applied.SetFloatArray("_Sa", new[] { 3f, 4f });
+            applied.SetFloat("_Sf", 5);
+            var so = new SerializedObject(applied);
+            so.FindProperty("m_CustomRenderQueue").intValue = 2001;
+            Try("serialized/apply", () => so.ApplyModifiedPropertiesWithoutUndo().ToString());
+            Try("serialized/after", () => "queue " + applied.renderQueue + " matrix " + applied.HasMatrix("_Sm") + " " + F(applied.GetMatrix("_Sm").m00)
+                + " array " + applied.HasFloat("_Sa") + " " + (applied.GetFloatArray("_Sa")?.Length ?? -1)
+                + " float " + applied.HasFloat("_Sf") + " names " + string.Join(" ", applied.GetPropertyNames(MaterialPropertyType.Float))
+                + " | " + string.Join(" ", applied.GetPropertyNames(MaterialPropertyType.Matrix)));
+        }
 
         // Saves of a material asset (copies of Base.mat, which saves _Saved: 7 beside its shader's
         // properties).
@@ -240,6 +268,24 @@ public class MaterialNamesProbe : MonoBehaviour
             State(saveName + "/after", mat);
             Try(saveName + "/file", () => File.ReadAllText(path));
             Switched(saveName, mat, names, other);
+        }
+
+        // A colour set for a name the material's data saves as a float, saved: what a shader
+        // declaring it as a colour, and one declaring it as a float, read.
+        {
+            string path = "Assets/Out/kinds.mat";
+            if (AssetDatabase.CopyAsset("Assets/Materials/Base.mat", path))
+            {
+                var mat = AssetDatabase.LoadAssetAtPath<Material>(path);
+                mat.SetColor("_Saved", new Color(1f, 0.5f, 0.25f, 1f));
+                Try("kinds/save", () => { EditorUtility.SetDirty(mat); AssetDatabase.SaveAssetIfDirty(mat); return "saved"; });
+                Try("kinds/file", () => File.ReadAllText(path));
+                mat.shader = kinds;
+                Try("kinds/color", () => C(mat.GetColor("_Saved")));
+                mat.shader = other;
+                Try("kinds/float", () => F(mat.GetFloat("_Saved")));
+            }
+            else Row("kinds", "not copied");
         }
 
         // A new material given the values, then made an asset.

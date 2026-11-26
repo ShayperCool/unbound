@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using Unbound.Runtime;
 using UnityEditor;
 using Xunit;
@@ -112,19 +113,32 @@ namespace UnityEngine.Tests
         {
             var m = Own(new Material(Names()) { name = "Scripted" });
             var white = Texture2D.whiteTexture;
-            string tex = Unique("_T"), scaled = Unique("_Sc");
+            string tex = Unique("_T"), scaled = Unique("_Sc"), offset = Unique("_Of");
             m.SetTexture(tex, white);
             m.SetTexture("_MainTex", white);
             m.SetTextureScale(scaled, new Vector2(2, 3));
+            m.SetTextureOffset(offset, new Vector2(0.5f, 0.25f));
+            // A name the shader declares as a float, given a texture.
+            m.SetTexture("_Glossiness", white);
 
             Assert.True(m.HasTexture(tex));
             Assert.True(m.HasTexture(scaled));
+            Assert.True(m.HasTexture(offset));
+            Assert.True(m.HasTexture("_Glossiness"));
             Assert.Equal(new Vector2(2, 3), m.GetTextureScale(scaled));
+            Assert.Equal(new Vector2(0.5f, 0.25f), m.GetTextureOffset(offset));
             Assert.Same(white, m.GetTexture("_MainTex"));
+            // The shader's texture, then the others by property id (_Glossiness's may come first).
+            Assert.Equal(new[] { "_MainTex" }.Concat(new[] { tex, scaled, offset, "_Glossiness" }.OrderBy(Shader.PropertyToID)),
+                m.GetPropertyNames(MaterialPropertyType.Texture));
             Assert.Empty(m_Logs.Errors);
             Assert.Null(m.GetTexture(tex));
             Assert.Equal($"Material 'Scripted' with Shader '{m.shader.name}' doesn't have a texture property '{tex}'", Assert.Single(m_Logs.Errors));
+            Assert.Null(m.GetTexture("_Glossiness"));
+            Assert.Equal(2, m_Logs.Errors.Count);
             Assert.Equal(new[] { "_MainTex" }, m.GetTexturePropertyNames());
+            // Unbound's own readers draw with the slot.
+            Assert.Same(white, m.SlotTexture(Shader.PropertyToID(tex)));
         }
 
         [Fact]
@@ -183,6 +197,8 @@ namespace UnityEngine.Tests
 "), new One(names));
             m.name = "Saved";
             m.SetFloat("_Saved", 2);
+            // A colour for the name the data saves as a float: not kept.
+            m.SetColor("_Saved", Color.red);
             m.SetFloat("_Fresh", 3);
             m.SetMatrix("_FreshM", Matrix4x4.Scale(new Vector3(2, 3, 4)));
             m.SetFloat("_Glossiness", 0.75f);
@@ -201,6 +217,30 @@ namespace UnityEngine.Tests
             m.shader = other;
             Assert.Equal(2f, m.GetFloat("_Saved"));
             Assert.Equal(8f, m.GetFloat("_Fresh"));
+            var colour = Own(ShaderUtil.CreateShaderAsset("Shader \"Tests/MaterialScriptNames/Colour" + (++s_Made) + "\" {\nProperties { "
+                + "_Saved (\"Saved\", Color) = (0, 0, 1, 1) }\nSubShader { Pass { } } }"));
+            m.shader = colour;
+            Assert.Equal(new Color(0, 0, 1, 1), m.GetColor("_Saved"));
+        }
+
+        [Fact]
+        public void ASerializedObjectApplyDropsMatricesAndArraysSetFromScript()
+        {
+            var m = Own(new Material(Names()) { name = "Applied" });
+            string matrix = Unique("_Sm"), array = Unique("_Sa"), single = Unique("_Sf");
+            m.SetMatrix(matrix, Matrix4x4.Scale(new Vector3(2, 2, 2)));
+            m.SetFloatArray(array, new[] { 3f, 4f });
+            m.SetFloat(single, 5);
+            var so = new SerializedObject(m);
+            so.FindProperty("m_CustomRenderQueue").intValue = 2001;
+            Assert.True(so.ApplyModifiedPropertiesWithoutUndo());
+            Assert.Equal(2001, m.renderQueue);
+            Assert.False(m.HasMatrix(matrix));
+            Assert.False(m.HasFloat(array));
+            Assert.Null(m.GetFloatArray(array));
+            Assert.False(m.HasFloat(single));
+            Assert.Equal(new[] { "_Glossiness" }, m.GetPropertyNames(MaterialPropertyType.Float));
+            Assert.Empty(m.GetPropertyNames(MaterialPropertyType.Matrix));
         }
 
         [Fact]

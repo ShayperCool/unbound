@@ -287,9 +287,10 @@ namespace UnityEngine.Tests
             renderer.UpdateMaterials(terrain, data);
             Assert.Same(pass, renderer.PassesForTest[0]);
             Assert.Equal(Color.green, pass.color);
-            // The splat values the terrain sets are set again over the template's.
-            Assert.Same(data.terrainLayers[0].diffuseTexture, pass.GetTexture("_Splat0"));
-            var holes = pass.GetTexture("_TerrainHolesTexture");
+            // The splat values the terrain sets are set again over the template's (read from the
+            // slots: the template's shader declares none of them, so GetTexture does not answer).
+            Assert.Same(data.terrainLayers[0].diffuseTexture, pass.SlotTexture(Shader.PropertyToID("_Splat0")));
+            var holes = pass.SlotTexture(Shader.PropertyToID("_TerrainHolesTexture"));
             Assert.NotNull(holes);
             Assert.True(pass.IsKeywordEnabled("_ALPHATEST_ON"));
 
@@ -306,14 +307,14 @@ namespace UnityEngine.Tests
             }
             Assert.Equal(0, GC.GetAllocatedBytesForCurrentThread() - before);
             Assert.Same(pass, renderer.PassesForTest[0]);
-            Assert.Same(holes, pass.GetTexture("_TerrainHolesTexture"));
+            Assert.Same(holes, pass.SlotTexture(Shader.PropertyToID("_TerrainHolesTexture")));
 
             // New holes: the map is made again.
             var pixels = ((Texture2D)holes).GetPixels32();
             data.SetHoles(4, 4, new bool[,] { { false } });
             template.color = Color.white;
             renderer.UpdateMaterials(terrain, data);
-            Assert.NotEqual(pixels, ((Texture2D)renderer.PassesForTest[0].GetTexture("_TerrainHolesTexture")).GetPixels32());
+            Assert.NotEqual(pixels, ((Texture2D)renderer.PassesForTest[0].SlotTexture(Shader.PropertyToID("_TerrainHolesTexture"))).GetPixels32());
 
             // Another template makes the passes again.
             terrain.materialTemplate = new Material { color = Color.blue };

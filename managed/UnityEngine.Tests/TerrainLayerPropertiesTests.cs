@@ -62,10 +62,11 @@ namespace UnityEngine.Tests
                 TerrainRenderer.SetLayers(second, data, layers, 4, null);
 
                 Assert.True(first.IsKeywordEnabled("_MASKMAP"));
-                // Layers without a map get the flat normal and black textures.
-                Assert.Same(mask, first.GetTexture("_Mask0"));
-                Assert.Same(Texture2D.blackTexture, first.GetTexture("_Mask1"));
-                Assert.Same(Texture2D.normalTexture, first.GetTexture("_Normal0"));
+                // Layers without a map get the flat normal and black textures (read from the slots:
+                // the stand-in shader declares none, so GetTexture does not answer).
+                Assert.Same(mask, first.SlotTexture(Shader.PropertyToID("_Mask0")));
+                Assert.Same(Texture2D.blackTexture, first.SlotTexture(Shader.PropertyToID("_Mask1")));
+                Assert.Same(Texture2D.normalTexture, first.SlotTexture(Shader.PropertyToID("_Normal0")));
                 Assert.Equal(new[] { 1f, 0f, 1f, 0f }, new[] { first.GetFloat("_LayerHasMask0"), first.GetFloat("_LayerHasMask1"), first.GetFloat("_LayerHasMask2"), first.GetFloat("_LayerHasMask3") });
                 // The smoothness from the diffuse alpha, unless the layer's source is a constant.
                 Assert.Equal(new[] { 1f, 0f, 1f, 1f }, new[] { first.GetFloat("_DiffuseHasAlpha0"), first.GetFloat("_DiffuseHasAlpha1"), first.GetFloat("_DiffuseHasAlpha2"), first.GetFloat("_DiffuseHasAlpha3") });
