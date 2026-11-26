@@ -1,0 +1,11 @@
+{
+  "commands": [
+    "python3 tests/projects/unitytls/run.py gate"
+  ],
+  "summary": "unitytls: .*",
+  "engine_paths": [
+    "native/unbound_tls.c",
+    "native/mbedtls/source.py",
+    "managed/UnityEngine/TLS/Binding.cs"
+  ]
+}
