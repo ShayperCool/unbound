@@ -662,8 +662,9 @@ namespace Unbound.Runtime
     /// <summary>
     /// Runs OnGUI as Unity does: each of the frame's input events (each preceded by Layout) at
     /// PreUpdate, from the lowest GUI.depth up, an event a behaviour uses reaching the rest as
-    /// <c>Used</c>; after the scene renders a Repaint (preceded by Layout) for every behaviour
-    /// with OnGUI, from the highest GUI.depth to the lowest. Its draws go on top of the frame.
+    /// <c>Used</c> (the order of input events across behaviours is unmeasured); after the scene
+    /// renders, every behaviour's Layout from the lowest GUI.depth up, then their Repaints in the
+    /// reverse order (ties of equal depth reversed too: measured). Its draws go on top of the frame.
     /// </summary>
     internal sealed class GuiDispatch : FrameBuilder.IDrawSource
     {
@@ -718,10 +719,19 @@ namespace Unbound.Runtime
                 s_AtlasRebuilt = false;
                 GuiRender.Clear();
                 var repaint = new Event { type = EventType.Repaint, mousePosition = MousePosition() };
-                foreach (var mb in Sorted(descending: true))
+                // Every behaviour's Layout first, front to back, then the Repaints back to front:
+                // the same order reversed, ties included (measured with two behaviours of equal
+                // GUI.depth, tests/projects/imguicontrolids order: L main, L second, R second, R main).
+                var order = Sorted(descending: false);
+                foreach (var mb in order)
                 {
                     LoadRepaintMatrices();
-                    Call(mb, repaint);
+                    Layout(mb, repaint);
+                }
+                for (int i = order.Count - 1; i >= 0; i--)
+                {
+                    LoadRepaintMatrices();
+                    Call(order[i], repaint, layout: false);
                 }
                 if (!s_AtlasRebuilt) break;
             }
@@ -775,19 +785,24 @@ namespace Unbound.Runtime
         }
 
         /// <summary>One OnGUI call for an event, with the Layout pass before it when the behaviour
-        /// uses GUILayout.</summary>
-        static void Call(MonoBehaviour mb, Event e)
+        /// uses GUILayout (input events; a Repaint's Layout passes all run first, <see cref="RunFrame"/>).</summary>
+        static void Call(MonoBehaviour mb, Event e, bool layout = true)
         {
             var onGui = ScriptMessages.For(mb.GetType()).OnGUI;
             if (onGui == null) return;
             int id = mb.GetInstanceID();
-            if (mb.useGUILayout)
-            {
-                var layout = new Event(e) { type = EventType.Layout };
-                Invoke(mb, onGui, id, layout, useLayout: true);
-            }
+            if (layout) Layout(mb, e);
             Invoke(mb, onGui, id, e, mb.useGUILayout);
             s_Depth[mb] = GUI.depth;
+        }
+
+        /// <summary>The Layout pass of a behaviour that uses GUILayout, for the event that follows.</summary>
+        static void Layout(MonoBehaviour mb, Event e)
+        {
+            if (!mb.useGUILayout || !mb.isActiveAndEnabled) return;
+            var onGui = ScriptMessages.For(mb.GetType()).OnGUI;
+            if (onGui == null) return;
+            Invoke(mb, onGui, mb.GetInstanceID(), new Event(e) { type = EventType.Layout }, useLayout: true);
         }
 
         static void Invoke(MonoBehaviour mb, Action<MonoBehaviour> onGui, int id, Event e, bool useLayout)
