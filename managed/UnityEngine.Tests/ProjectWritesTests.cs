@@ -231,15 +231,15 @@ namespace UnityEngine.Tests
         /// it: the GUID line and the Android entry left out; <paramref name="modules"/> says whether
         /// that entry was a copy of the first default entry (the probe's `.modules` row).</summary>
         static string RewriteSpriteMeta(string name, Action<UnityEditor.TextureImporter> change,
-            out List<string> older, out bool laidOut, List<string> unwritten, out string modules)
+            out List<string> older, out bool laidOut, List<string> unwritten, out string modules, string extra = "")
         {
-            var text = File.ReadAllText(Path.Combine(Repo(), "tests", "projects", "spritemeta", "Assets", "Textures", name + ".png.meta"));
+            var text = File.ReadAllText(Path.Combine(Repo(), "tests", "projects", "spritemeta", "Assets", "Textures", name + ".png.meta")) + extra;
             var importer = (UnityEditor.TextureImporter)UnityEditor.AssetImporter.FromMeta("Assets/Textures/" + name + ".png",
                 "0123456789abcdef0123456789abcdef", "TextureImporter", UnityYamlText.ParseTopLevel(text).Get("TextureImporter").ToNode());
             change(importer);
             var written = ImporterMeta.Rewritten(text, "TextureImporter", importer.m_Settings, importer.SavedSettings(),
                 (importer.userData, importer.assetBundleName?.ToLowerInvariant(), importer.assetBundleVariant?.ToLowerInvariant()),
-                ImporterLayout.ForTexture(TextureTemplate()), unwritten, out older, out laidOut);
+                ImporterLayout.ForTexture(TextureTemplate()), unwritten, out older, out laidOut, importer.ReadAsOldestChanged);
             modules = null;
             if (written == null) return null;
             written = System.Text.RegularExpressions.Regex.Replace(written, "(?m)^guid: .*$", "guid: (guid)");
@@ -350,6 +350,12 @@ namespace UnityEngine.Tests
             }, out var older, out bool laidOut, new List<string>(), out _);
             Assert.True(laidOut);
             Assert.Contains("    wrapU: 1\n    wrapV: 0\n    wrapW: 0\n", clamped);
+            // The same set as the only change, of a section with its sprite ID (no first import):
+            // written too (inferred from importer.BareWrap's reading and save.Save*'s writes).
+            var only = RewriteSpriteMeta("SaveKeep", importer => importer.wrapModeU = TextureWrapMode.Clamp,
+                out var onlyOlder, out bool onlyLaidOut, new List<string>(), out _, "  textureSettings:\n    wrapU: 1\n");
+            Assert.True(onlyLaidOut);
+            Assert.Contains("    wrapU: 1\n    wrapV: 0\n", only);
             // A gamma decoding a script turns off, which BareFull's file holds off: written so.
             var gamma = RewriteSpriteMeta("BareFull", importer =>
             {

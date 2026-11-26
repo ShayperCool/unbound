@@ -105,7 +105,7 @@ namespace Unbound.Runtime
             bool texture = importer.m_SettingsType == "TextureImporter";
             var layout = texture ? ImporterLayout.ForTexture(TextureTemplate()) : ImporterLayout.Of(importer.m_SettingsType);
             var written = Rewritten(text, importer.m_SettingsType, importer.m_Settings, importer.SavedSettings(), common, layout, unwritten,
-                out var older, out bool laidOut);
+                out var older, out bool laidOut, importer is TextureImporter oldestRead && oldestRead.ReadAsOldestChanged);
             importer.m_ImportedSettings = MetaSettings.ToJson(importer.m_Settings);
             if (older.Count > 0)
                 Debug.LogWarning($"Unbound saves the {importer.m_SettingsType} settings of '{path}' in the layout the file has ({string.Join(", ", older)}): "
@@ -141,13 +141,15 @@ namespace Unbound.Runtime
         /// measured); in <paramref name="older"/> what kept the file's layout, whether the section
         /// was laid out.</summary>
         internal static string Rewritten(string text, string type, YNode settings, YNode saved, (string UserData, string Bundle, string Variant) common,
-            ImporterLayout layout, List<string> unwritten, out List<string> older, out bool laidOut)
+            ImporterLayout layout, List<string> unwritten, out List<string> older, out bool laidOut, bool readChanged = false)
         {
             older = new List<string>();
             laidOut = false;
             // What the importer added itself on loading its settings (a texture's platforms) is no
             // change: without one the file is not written (tests/projects/importermeta same.*).
-            if (saved != null && !ReferenceEquals(saved, settings))
+            // A change of what it read as the Editor reads an oldest section (readChanged) is one,
+            // even to the file's own value.
+            if (saved != null && !ReferenceEquals(saved, settings) && !readChanged)
             {
                 var unchanged = new List<string>();
                 if (Rewritten(text, type, saved, null, common, layout, unchanged, out older, out _) == null)
@@ -175,7 +177,7 @@ namespace Unbound.Runtime
             var written = UnityYamlText.WriteTopLevel(root);
             // Settings that did not change write nothing (tests/projects/projectwrites 06.crlf
             // unchanged), and neither do settings the file lacks where it is not laid out.
-            if (written == original && !(layout != null && unwritten.Count > 0)) return null;
+            if (written == original && !(layout != null && (unwritten.Count > 0 || readChanged))) return null;
             if (layout != null)
             {
                 // A save writes the importer's settings whole in the release's layout
@@ -191,7 +193,7 @@ namespace Unbound.Runtime
                 else
                 {
                     laidOut = true;
-                    if (written == original)
+                    if (written == original && !readChanged)
                     {
                         // A missing setting given the value its default reads is no change (unmeasured).
                         var plain = UnityYamlText.ParseTopLevel(text);

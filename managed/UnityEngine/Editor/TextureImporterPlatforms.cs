@@ -75,6 +75,18 @@ namespace UnityEditor
             return copy;
         }
 
+        /// <summary>Whether a setting read as the Editor reads an oldest section was changed since,
+        /// to whatever value (the file's own among them).</summary>
+        internal bool ReadAsOldestChanged
+        {
+            get
+            {
+                foreach (var (path, (_, read)) in m_ReadAsOldest)
+                    if (MetaSettings.Find(m_Settings, path)?.Scalar != read) return true;
+                return false;
+            }
+        }
+
         internal override void SettingsWritten()
         {
             m_AddedPlatforms.Clear();
