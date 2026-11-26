@@ -247,8 +247,9 @@ namespace UnityEditor
     /// enabled when the EditorPrefs say so (`Editor.kEnableEditorLocalization`: absent or 0 gives
     /// false, 1 true, windowed and batch alike: tests/projects/editorlocalization profiles), read
     /// once: a later write of the preference does not change it, and the setter changes it without
-    /// writing the preference (afterPrefWrite, afterSet). Without the key macOS answers true (its
-    /// batch Editor's answer, tests/projects/editorchannels metal). Packages write the preference
+    /// writing the preference (afterPrefWrite, afterSet). Without the key macOS answers true (the
+    /// macOS batch Editor's answer with its own preferences, tests/projects/editorchannels metal;
+    /// without the key, and the key on macOS: unmeasured). Packages write the preference
     /// themselves (the tutorial framework turns it on). Unmeasured: the preference written in Play
     /// mode before the first read (Unbound reads it then; the Editor presumably at its start).
     /// Installed language packs (.po files in the installation's Localization folder) are not read: a

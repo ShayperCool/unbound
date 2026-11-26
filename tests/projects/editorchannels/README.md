@@ -16,7 +16,9 @@ recorded); `GetOrCreateChannel` opens a channel and gives an action that unregis
 second registration of the handler and one on an unknown channel throw Unity's messages, broadcasts
 with no client connected send nothing, the address is `127.0.0.1` and the port positive.
 `currentEditorLanguage` is English, `enableEditorLocalization` true on the macOS Editor and false
-on the Linux Editor (the only row the two references differ in; Unbound answers by the host OS), `Collab.instance` a `Collab`,
+on the Linux Editor (the only row the two references differ in; the EditorPrefs key
+`Editor.kEnableEditorLocalization` decides, and without it the host OS: tests/projects/editorlocalization;
+the Linux Editor and the engine see preferences without the key), `Collab.instance` a `Collab`,
 and a handler can be added to and removed from the toolbar event.
 
 Residual (`residuals.json`): Unbound runs no channel server and reports no port (0, with a warning).
