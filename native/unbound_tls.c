@@ -302,11 +302,13 @@ static int would_block(int ret) {
 }
 
 // The peer certificate's verification flags (measured: not trusted, name mismatch), or "not done"
-// while none was verified: Mbed TLS's "not available" (all bits set) is the binding's "not done"
-// (measured: a server whose client gave up before its certificate).
+// when there was none to verify: Mbed TLS's "not available" (all bits set) and its missing
+// certificate flag are the binding's "not done" (measured: a server whose client gave up before
+// its certificate, and one whose client sent none).
 static uint64_t verification(tls_context *tls) {
     const mbedtls_ssl_session *session = tls->ssl.session_negotiate != NULL ? tls->ssl.session_negotiate : tls->ssl.session;
-    if (session == NULL || session->verify_result == 0xFFFFFFFFu) return X509_VERIFY_NOT_DONE;
+    if (session == NULL || session->verify_result == 0xFFFFFFFFu || (session->verify_result & MBEDTLS_X509_BADCERT_MISSING))
+        return X509_VERIFY_NOT_DONE;
     return session->verify_result;
 }
 

@@ -7,8 +7,7 @@
 
 namespace Unity.TLS.LowLevel
 {
-    [global::Unbound.Stub]
-    internal unsafe static partial class Binding
+    unsafe static partial class Binding
     {
         public const int UNITYTLS_SUCCESS = 0;
         public const int UNITYTLS_INVALID_ARGUMENT = 1;
@@ -80,75 +79,11 @@ namespace Unity.TLS.LowLevel
         public const int UnityTLSClientState_Handshake = 2;
         public const int UnityTLSClientState_Messaging = 3;
         public const int UnityTLSClientState_Fail = 64;
-        [global::Unbound.Stub] public static uint unitytls_client_send_data(global::Unity.TLS.LowLevel.Binding.unitytls_client* clientInstance, byte* data, global::System.UIntPtr dataLen) { global::Unbound.Runtime.Stubs.NotImplemented("Unity.TLS.LowLevel.Binding.unitytls_client_send_data"); return default; }
-        [global::Unbound.Stub] public static uint unitytls_client_read_data(global::Unity.TLS.LowLevel.Binding.unitytls_client* clientInstance, byte* buffer, global::System.UIntPtr bufferLen, global::System.UIntPtr* bytesRead) { global::Unbound.Runtime.Stubs.NotImplemented("Unity.TLS.LowLevel.Binding.unitytls_client_read_data"); return default; }
-        [global::Unbound.Stub] public static void unitytls_client_add_ciphersuite(global::Unity.TLS.LowLevel.Binding.unitytls_client* clientInstance, uint suite) { global::Unbound.Runtime.Stubs.NotImplemented("Unity.TLS.LowLevel.Binding.unitytls_client_add_ciphersuite"); }
-        [global::Unbound.Stub] public static uint unitytls_client_get_ciphersuite(global::Unity.TLS.LowLevel.Binding.unitytls_client* clientInstance, int ndx) { global::Unbound.Runtime.Stubs.NotImplemented("Unity.TLS.LowLevel.Binding.unitytls_client_get_ciphersuite"); return default; }
-        [global::Unbound.Stub] public static int unitytls_client_get_ciphersuite_cnt(global::Unity.TLS.LowLevel.Binding.unitytls_client* clientInstance) { global::Unbound.Runtime.Stubs.NotImplemented("Unity.TLS.LowLevel.Binding.unitytls_client_get_ciphersuite_cnt"); return default; }
-        [global::Unbound.Stub] public static void unitytls_client_init_config(global::Unity.TLS.LowLevel.Binding.unitytls_client_config* config) { global::Unbound.Runtime.Stubs.NotImplemented("Unity.TLS.LowLevel.Binding.unitytls_client_init_config"); }
-        [global::Unbound.Stub] public static global::Unity.TLS.LowLevel.Binding.unitytls_client* unitytls_client_create(uint role, global::Unity.TLS.LowLevel.Binding.unitytls_client_config* config) { global::Unbound.Runtime.Stubs.NotImplemented("Unity.TLS.LowLevel.Binding.unitytls_client_create"); return default; }
-        [global::Unbound.Stub] public static void unitytls_client_destroy(global::Unity.TLS.LowLevel.Binding.unitytls_client* clientInstance) { global::Unbound.Runtime.Stubs.NotImplemented("Unity.TLS.LowLevel.Binding.unitytls_client_destroy"); }
-        [global::Unbound.Stub] public static int unitytls_client_init(global::Unity.TLS.LowLevel.Binding.unitytls_client* clientInstance) { global::Unbound.Runtime.Stubs.NotImplemented("Unity.TLS.LowLevel.Binding.unitytls_client_init"); return default; }
-        [global::Unbound.Stub] public static uint unitytls_client_handshake(global::Unity.TLS.LowLevel.Binding.unitytls_client* clientInstance) { global::Unbound.Runtime.Stubs.NotImplemented("Unity.TLS.LowLevel.Binding.unitytls_client_handshake"); return default; }
-        [global::Unbound.Stub] public static uint unitytls_client_set_cookie_info(global::Unity.TLS.LowLevel.Binding.unitytls_client* clientInstance, byte* peerIdDataPtr, int peerIdDataLen) { global::Unbound.Runtime.Stubs.NotImplemented("Unity.TLS.LowLevel.Binding.unitytls_client_set_cookie_info"); return default; }
-        [global::Unbound.Stub] public static uint unitytls_client_get_handshake_state(global::Unity.TLS.LowLevel.Binding.unitytls_client* clientInstance) { global::Unbound.Runtime.Stubs.NotImplemented("Unity.TLS.LowLevel.Binding.unitytls_client_get_handshake_state"); return default; }
-        [global::Unbound.Stub] public static uint unitytls_client_get_errorsState(global::Unity.TLS.LowLevel.Binding.unitytls_client* clientInstance, ulong* reserved) { global::Unbound.Runtime.Stubs.NotImplemented("Unity.TLS.LowLevel.Binding.unitytls_client_get_errorsState"); return default; }
-        [global::Unbound.Stub] public static uint unitytls_client_get_state(global::Unity.TLS.LowLevel.Binding.unitytls_client* clientInstance) { global::Unbound.Runtime.Stubs.NotImplemented("Unity.TLS.LowLevel.Binding.unitytls_client_get_state"); return default; }
-        [global::Unbound.Stub] public static uint unitytls_client_get_role(global::Unity.TLS.LowLevel.Binding.unitytls_client* clientInstance) { global::Unbound.Runtime.Stubs.NotImplemented("Unity.TLS.LowLevel.Binding.unitytls_client_get_role"); return default; }
-        [global::Unbound.Stub]
-        public unsafe partial struct unitytls_errorstate
-        {
-            [global::Unbound.Stub] public uint magic;
-            [global::Unbound.Stub] public uint code;
-            [global::Unbound.Stub] public ulong reserved;
-        }
-        [global::Unbound.Stub]
-        public unsafe partial struct unitytls_dataRef
-        {
-            [global::Unbound.Stub] public byte* dataPtr;
-            [global::Unbound.Stub] public global::System.UIntPtr dataLen;
-        }
         public unsafe delegate void unitytls_client_on_data_callback(global::System.IntPtr arg0, byte* arg1, global::System.UIntPtr arg2, uint arg3);
         public unsafe delegate int unitytls_client_data_send_callback(global::System.IntPtr arg0, byte* arg1, global::System.UIntPtr arg2, uint arg3);
         public unsafe delegate int unitytls_client_data_receive_callback(global::System.IntPtr arg0, byte* arg1, global::System.UIntPtr arg2, uint arg3);
         public unsafe delegate int unitytls_client_data_receive_timeout_callback(global::System.IntPtr arg0, byte* arg1, global::System.UIntPtr arg2, uint arg3, uint arg4);
         public unsafe delegate void unitytls_client_log_callback(int arg0, byte* arg1, global::System.UIntPtr arg2, byte* arg3, byte* arg4, global::System.UIntPtr arg5);
-        [global::Unbound.Stub]
-        public unsafe partial struct unitytls_client_config
-        {
-            [global::Unbound.Stub] public global::Unity.TLS.LowLevel.Binding.unitytls_dataRef caPEM;
-            [global::Unbound.Stub] public global::Unity.TLS.LowLevel.Binding.unitytls_dataRef serverPEM;
-            [global::Unbound.Stub] public global::Unity.TLS.LowLevel.Binding.unitytls_dataRef privateKeyPEM;
-            [global::Unbound.Stub] public uint clientAuth;
-            [global::Unbound.Stub] public uint transportProtocol;
-            [global::Unbound.Stub] public global::Unity.TLS.LowLevel.Binding.unitytls_dataRef psk;
-            [global::Unbound.Stub] public global::Unity.TLS.LowLevel.Binding.unitytls_dataRef pskIdentity;
-            [global::Unbound.Stub] public global::System.IntPtr onDataCB;
-            [global::Unbound.Stub] public global::System.IntPtr dataSendCB;
-            [global::Unbound.Stub] public global::System.IntPtr dataReceiveCB;
-            [global::Unbound.Stub] public global::System.IntPtr dataReceiveTimeoutCB;
-            [global::Unbound.Stub] public global::System.IntPtr transportUserData;
-            [global::Unbound.Stub] public global::System.IntPtr applicationUserData;
-            [global::Unbound.Stub] public int handshakeReturnsOnStep;
-            [global::Unbound.Stub] public int handshakeReturnsIfWouldBlock;
-            [global::Unbound.Stub] public uint ssl_read_timeout_ms;
-            [global::Unbound.Stub] public byte* hostname;
-            [global::Unbound.Stub] public uint tracelevel;
-            [global::Unbound.Stub] public global::System.IntPtr logCallback;
-            [global::Unbound.Stub] public uint ssl_handshake_timeout_min;
-            [global::Unbound.Stub] public uint ssl_handshake_timeout_max;
-            [global::Unbound.Stub] public ushort mtu;
-        }
-        [global::Unbound.Stub]
-        public unsafe partial struct unitytls_client
-        {
-            [global::Unbound.Stub] public uint role;
-            [global::Unbound.Stub] public uint state;
-            [global::Unbound.Stub] public uint handshakeState;
-            [global::Unbound.Stub] public global::System.IntPtr ctx;
-            [global::Unbound.Stub] public global::Unity.TLS.LowLevel.Binding.unitytls_client_config* config;
-            [global::Unbound.Stub] public global::System.IntPtr internalCtx;
-        }
         public unsafe delegate int unitytls_tlsctx_handshake_on_blocking_callback(global::Unity.TLS.LowLevel.Binding.unitytls_client* arg0, global::System.IntPtr arg1, int arg2);
     }
 }

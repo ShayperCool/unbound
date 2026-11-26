@@ -124,7 +124,8 @@ fn sources(dir: &Path, extension: &str, into: &mut Vec<PathBuf>) {
 /// into static archives and links them with the flat C shims (`native/unbound_physx.cpp`,
 /// `native/unbound_cloth.cpp`) into the `unbound_physx` library next to the managed engine, with
 /// libtess2 (`native/libtess2`) and its shim for UI Toolkit's Painter2D fills
-/// (`native/unbound_tess.c`).
+/// (`native/unbound_tess.c`), and Mbed TLS (`native/mbedtls`) with the Unity TLS binding's shim
+/// (`native/unbound_tls.c`).
 fn build_physx(root: &Path, out_dir: &Path) -> bool {
     let native = root.join("native");
     let physx = native.join("physx");
@@ -212,6 +213,29 @@ fn build_physx(root: &Path, out_dir: &Path) -> bool {
         nvcloth_flags,
     );
 
+    // Mbed TLS 3.6 (native/mbedtls/source.py: a pinned release), the library the Unity TLS binding
+    // is a layer over, with its shim (native/unbound_tls.c, the binding's unitytls_ functions).
+    let mbedtls = prepare_mbedtls(&native);
+    let mbedtls_includes = vec![mbedtls.join("include"), mbedtls.join("library")];
+    let mut mbedtls_sources = Vec::new();
+    sources(&mbedtls.join("library"), "c", &mut mbedtls_sources);
+    let mut mbedtls_headers = Vec::new();
+    sources(&mbedtls.join("include"), "h", &mut mbedtls_headers);
+    sources(&mbedtls.join("library"), "h", &mut mbedtls_headers);
+    let mbedtls_archive = archive_language(
+        &out,
+        "mbedtls",
+        &mbedtls_sources,
+        &mbedtls_headers,
+        &mbedtls_includes,
+        &[],
+        &[],
+        false,
+    );
+    let mut tls_build = cc::Build::new();
+    configure_language(&mut tls_build, &mbedtls_includes, &[], &[], false);
+    let tls_compiler = tls_build.get_compiler();
+
     println!("cargo:rerun-if-changed={}", native.display());
     let mut build = cc::Build::new();
     configure(&mut build, &physx_includes, physx_defines, &[]);
@@ -249,6 +273,7 @@ fn build_physx(root: &Path, out_dir: &Path) -> bool {
     let mut link_sources = vec![
         (&compiler, native.join("unbound_physx.cpp")),
         (&cloth_compiler, native.join("unbound_cloth.cpp")),
+        (&tls_compiler, native.join("unbound_tls.c")),
     ];
     link_sources.extend(
         tess_sources
@@ -272,8 +297,12 @@ fn build_physx(root: &Path, out_dir: &Path) -> bool {
     let key = if std::env::var("UNBOUND_NATIVE_CACHE").as_deref() == Ok("0") {
         None
     } else {
-        native_cache::key(&link_inputs, &[&physx_archive, &nvcloth_archive], &library)
-            .unwrap_or_else(|error| panic!("fingerprinting native link inputs: {error}"))
+        native_cache::key(
+            &link_inputs,
+            &[&physx_archive, &nvcloth_archive, &mbedtls_archive],
+            &library,
+        )
+        .unwrap_or_else(|error| panic!("fingerprinting native link inputs: {error}"))
     };
     let reused = key
         .as_ref()
@@ -308,6 +337,11 @@ fn build_physx(root: &Path, out_dir: &Path) -> bool {
             .compile_intermediates(),
     );
     objects.extend(tess_build.files(&tess_sources).compile_intermediates());
+    objects.extend(
+        tls_build
+            .file(native.join("unbound_tls.c"))
+            .compile_intermediates(),
+    );
     phase("shim-compile", started, "built");
 
     std::fs::create_dir_all(out_dir)
@@ -318,6 +352,7 @@ fn build_physx(root: &Path, out_dir: &Path) -> bool {
             .args(&objects)
             .arg(&physx_archive)
             .arg(&nvcloth_archive)
+            .arg(&mbedtls_archive)
             .arg(format!("/Fe{}", library.display()));
     } else {
         link.arg(if target_os == "macos" {
@@ -329,7 +364,8 @@ fn build_physx(root: &Path, out_dir: &Path) -> bool {
         .arg(&library)
         .args(&objects)
         .arg(&physx_archive)
-        .arg(&nvcloth_archive);
+        .arg(&nvcloth_archive)
+        .arg(&mbedtls_archive);
         if target_os != "macos" {
             link.args(["-lpthread", "-ldl", "-lm"]);
         }
@@ -341,8 +377,12 @@ fn build_physx(root: &Path, out_dir: &Path) -> bool {
     assert!(status.success(), "linking {} failed", library.display());
     phase("native-link", started, "built");
     if let Some(key) = key {
-        let after = native_cache::key(&link_inputs, &[&physx_archive, &nvcloth_archive], &library)
-            .unwrap_or_else(|error| panic!("rechecking native link inputs: {error}"));
+        let after = native_cache::key(
+            &link_inputs,
+            &[&physx_archive, &nvcloth_archive, &mbedtls_archive],
+            &library,
+        )
+        .unwrap_or_else(|error| panic!("rechecking native link inputs: {error}"));
         assert_eq!(
             Some(key),
             after,
@@ -354,6 +394,35 @@ fn build_physx(root: &Path, out_dir: &Path) -> bool {
     false
 }
 
+/// The prepared Mbed TLS tree of native/mbedtls/source.py (fetched once into Unbound's
+/// dependency cache, checked against its SHA-256).
+fn prepare_mbedtls(native: &Path) -> PathBuf {
+    let prepare = native.join("mbedtls/source.py");
+    println!("cargo:rerun-if-changed={}", prepare.display());
+    println!(
+        "cargo:rerun-if-changed={}",
+        native.join("pinned_source.py").display()
+    );
+    for key in [
+        "XDG_CACHE_HOME",
+        "UNBOUND_MBEDTLS_ARCHIVE",
+        "UNBOUND_OFFLINE",
+        "CARGO_NET_OFFLINE",
+    ] {
+        println!("cargo:rerun-if-env-changed={key}");
+    }
+    let output = std::process::Command::new("python3")
+        .arg(&prepare)
+        .output()
+        .expect("running the Mbed TLS dependency preparation");
+    assert!(
+        output.status.success(),
+        "{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    PathBuf::from(String::from_utf8(output.stdout).unwrap().trim())
+}
+
 /// The C++ settings of the native code: as PhysX's CMake for Linux, plus no fused multiply-add
 /// (determinism) and only the shims' functions exported.
 fn configure(
@@ -362,8 +431,19 @@ fn configure(
     defines: &[(&str, Option<&str>)],
     flags: &[&str],
 ) {
+    configure_language(build, includes, defines, flags, true);
+}
+
+/// [`configure`] for C++ or C sources (C: C99, without the C++-only flags).
+fn configure_language(
+    build: &mut cc::Build,
+    includes: &[PathBuf],
+    defines: &[(&str, Option<&str>)],
+    flags: &[&str],
+    cpp: bool,
+) {
     build
-        .cpp(true)
+        .cpp(cpp)
         .includes(includes)
         .opt_level(2)
         .debug(false)
@@ -376,14 +456,19 @@ fn configure(
         build.define(name, *value);
     }
     if build.get_compiler().is_like_msvc() {
-        build.flag("/std:c++14");
-    } else {
+        build.flag(if cpp { "/std:c++14" } else { "/std:c11" });
+    } else if cpp {
         build
             .flag("-std=c++14")
             .flag("-fno-rtti")
             .flag("-fno-exceptions")
             .flag("-fno-strict-aliasing")
             .flag("-ffp-contract=off")
+            .flag("-fvisibility=hidden");
+    } else {
+        build
+            .flag("-std=c99")
+            .flag("-fno-strict-aliasing")
             .flag("-fvisibility=hidden");
     }
     for flag in flags {
@@ -402,9 +487,24 @@ fn archive(
     defines: &[(&str, Option<&str>)],
     flags: &[&str],
 ) -> PathBuf {
+    archive_language(out, name, files, headers, includes, defines, flags, true)
+}
+
+/// [`archive`] of C++ or C sources.
+#[allow(clippy::too_many_arguments)]
+fn archive_language(
+    out: &Path,
+    name: &str,
+    files: &[PathBuf],
+    headers: &[PathBuf],
+    includes: &[PathBuf],
+    defines: &[(&str, Option<&str>)],
+    flags: &[&str],
+    cpp: bool,
+) -> PathBuf {
     let started = Instant::now();
     let mut build = cc::Build::new();
-    configure(&mut build, includes, defines, flags);
+    configure_language(&mut build, includes, defines, flags, cpp);
     let compiler = build.get_compiler();
     let mut fingerprint = blake3::Hasher::new();
     fingerprint.update(b"unbound-sdk-archive-v2\0");
