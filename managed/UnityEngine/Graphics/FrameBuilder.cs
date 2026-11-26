@@ -2793,6 +2793,8 @@ namespace UnityEngine
             shadowmaskMode = (ShadowmaskMode)I("shadowmaskMode", (int)shadowmaskMode);
             skinWeights = (SkinWeights)I("skinWeights", (int)skinWeights);
             globalTextureMipmapLimit = I("globalTextureMipmapLimit", globalTextureMipmapLimit);
+            if (d.TryGetValue("textureMipmapLimitSettings", out var groups) && groups.ValueKind == System.Text.Json.JsonValueKind.Array && groups.GetArrayLength() > 0)
+                Unbound.Runtime.Stubs.Ignored("QualitySettings texture mipmap limit groups", "are not modelled: a texture of a group follows the global texture mipmap limit");
             anisotropicFiltering = (AnisotropicFiltering)I("anisotropicTextures", (int)anisotropicFiltering);
             antiAliasing = I("antiAliasing", antiAliasing);
             softParticles = B("softParticles", softParticles);
