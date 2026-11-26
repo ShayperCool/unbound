@@ -250,7 +250,9 @@ namespace UnityEngine
             if (m_Joint == 0)
             {
                 Frames(rb, connected, out var p0, out var q0, out var p1, out var q1);
-                m_Joint = B3.ua3_joint_create(W.World, Kind, rb.m_Body, p0, q0, body1, p1, q1);
+                m_Joint = Swapped(body1)
+                    ? B3.ua3_joint_create(W.World, Kind, body1, p1, q1, rb.m_Body, p0, q0)
+                    : B3.ua3_joint_create(W.World, Kind, rb.m_Body, p0, q0, body1, p1, q1);
                 if (m_Joint == 0) return;
                 m_Body0 = rb.m_Body;
                 m_Body1 = body1;
@@ -260,10 +262,13 @@ namespace UnityEngine
             else if (m_FramesDirty)
             {
                 Frames(rb, connected, out var p0, out var q0, out var p1, out var q1);
-                B3.ua3_joint_set_frames(m_Joint, p0, q0, p1, q1);
+                if (Swapped(body1)) B3.ua3_joint_set_frames(m_Joint, p1, q1, p0, q0);
+                else B3.ua3_joint_set_frames(m_Joint, p0, q0, p1, q1);
                 m_FramesDirty = false;
             }
-            B3.ua3_joint_set_common(m_Joint, Native(m_BreakForce), Native(m_BreakTorque), m_EnableCollision ? 1 : 0, m_EnablePreprocessing ? 1 : 0, m_MassScale, m_ConnectedMassScale);
+            bool swapped = Swapped(body1);
+            B3.ua3_joint_set_common(m_Joint, Native(m_BreakForce), Native(m_BreakTorque), m_EnableCollision ? 1 : 0, m_EnablePreprocessing ? 1 : 0,
+                swapped ? m_ConnectedMassScale : m_MassScale, swapped ? m_MassScale : m_ConnectedMassScale);
             Configure();
             m_Dirty = false;
         }
@@ -294,6 +299,13 @@ namespace UnityEngine
                 q1 = worldFrame;
             }
         }
+
+        /// <summary>Whether the connected body is the native joint's first actor (swapBodies), the
+        /// joint's own body its second: the actors' order the solver takes them in
+        /// (tests/projects/jointprojection frame/pairswapped). A joint to the world is not swapped.</summary>
+        internal virtual bool SwapActors => false;
+
+        bool Swapped(ulong connectedBody) => SwapActors && connectedBody != 0;
 
         /// <summary>Whether the axes are world directions rather than the transform's.</summary>
         internal virtual bool FrameInWorldSpace => false;
@@ -722,13 +734,21 @@ namespace UnityEngine
             SetDrive(m_Joint, 5, slerp ? m_SlerpDrive : default);
             B3.ua3_d6_set_drive_target(m_Joint, m_TargetPosition, m_TargetRotation, m_TargetVelocity, m_TargetAngularVelocity);
             // Projection: PhysX's, the distance and angle its tolerances (tests/projects/jointprojection).
+            // PositionOnly (2, obsolete: "no longer supported") from old assets is not projected
+            // (Unity's handling unmeasured).
+            if ((int)m_ProjectionMode == 2)
+                Unbound.Runtime.Stubs.Ignored("ConfigurableJoint.projectionMode PositionOnly",
+                    "(obsolete, no longer supported) is not projected; Unity's handling of it is unmeasured");
             B3.ua3_d6_set_projection(m_Joint, m_ProjectionMode == JointProjectionMode.PositionAndRotation ? 1 : 0, m_ProjectionDistance, Rad(m_ProjectionAngle));
         }
 
-        /// <summary>configuredInWorldSpace: the axis and secondary axis are world directions
-        /// (tests/projects/jointprojection frame/world: a body turned 90 degrees slides along world
-        /// x). Drive targets in world space are unmeasured.</summary>
+        /// <summary>configuredInWorldSpace: the axis and secondary axis are world directions, and the
+        /// drive targets act in that frame (tests/projects/jointprojection frame/world*: a body
+        /// turned 90 degrees slides along the axis as a world direction, also with the connected
+        /// body turned; target positions and rotations as the Editor's).</summary>
         internal override bool FrameInWorldSpace => m_ConfiguredInWorldSpace;
+
+        internal override bool SwapActors => m_SwapBodies;
 
         internal override void CopyFrom(Component source, Func<Object, Object> remap)
         {

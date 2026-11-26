@@ -87,21 +87,24 @@ namespace UnityEngine.Tests
         }
 
         [Theory]
-        [InlineData(false)]
-        [InlineData(true)]
-        public void ConfiguredInWorldSpaceTakesTheAxesAsWorldDirections(bool world)
+        [InlineData(false, false)]
+        [InlineData(true, false)]
+        [InlineData(false, true)]
+        [InlineData(true, true)]
+        public void ConfiguredInWorldSpaceTakesTheAxesAsWorldDirections(bool world, bool axisZ)
         {
             // A body turned 90 degrees about y, free to move 0.3 m along the joint's x axis, pushed
-            // along world x and z: the Editor's body ends 0.3 m along world z (its own x) or, in
-            // world space, along world x.
-            var at = Origin + new Vector3(0f, 0f, 10f + (world ? 5f : 0f));
+            // along world x and z: the Editor's body ends 0.3 m along the axis turned with the body
+            // (axis x: world z; axis z: world x) or, in world space, along the axis itself
+            // (frame/local, frame/world, frame/localaxis, frame/worldaxis).
+            var at = Origin + new Vector3(0f, 0f, 10f + (world ? 5f : 0f) + (axisZ ? 10f : 0f));
             var anchor = Body(at, 1f, true);
             var body = Body(at + Vector3.right, 2f);
             body.transform.rotation = Quaternion.Euler(0f, 90f, 0f);
             var j = body.gameObject.AddComponent<ConfigurableJoint>();
             j.connectedBody = anchor;
             j.anchor = Vector3.zero;
-            j.axis = Vector3.right;
+            j.axis = axisZ ? Vector3.forward : Vector3.right;
             j.secondaryAxis = Vector3.up;
             j.xMotion = ConfigurableJointMotion.Limited;
             j.yMotion = j.zMotion = ConfigurableJointMotion.Locked;
@@ -113,7 +116,9 @@ namespace UnityEngine.Tests
             body.angularVelocity = new Vector3(0f, 0f, 3f);
             for (int i = 0; i < 50; i++) Physics.Simulate(Dt);
             var moved = body.position - (at + Vector3.right);
-            var expected = world ? new Vector3(0.3f, 0f, 0f) : new Vector3(0f, 0f, 0.3f);
+            // The limit is reached on the side the push takes it to.
+            var direction = world ? j.axis : Quaternion.Euler(0f, 90f, 0f) * j.axis;
+            var expected = 0.3f * Mathf.Sign(Vector3.Dot(new Vector3(2f, 1f, 0.5f), direction)) * direction;
             Assert.True((moved - expected).magnitude < 2e-3f, $"moved {moved}, expected {expected}");
         }
     }
