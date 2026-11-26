@@ -1617,6 +1617,13 @@ namespace Unbound.Runtime
             finally { s_ReimportTextureHandles.Remove(guid); }
             var kept = new Dictionary<Object, Object>(ReferenceEqualityComparer.Instance);
             string refused = fresh == null ? "its file no longer imports" : null;
+            // A failed import may have uploaded into the texture's handle: the texture takes what its
+            // file imports to again, without postprocessors (said).
+            if (fresh == null && texture != null)
+            {
+                texture.IncrementUpdateCount();
+                if (texture.ReloadImported()) refused += " (its texture takes the file's import again, without its postprocessors)";
+            }
             if (fresh != null)
             {
                 foreach (var pair in loaded.Objects)
@@ -1651,6 +1658,11 @@ namespace Unbound.Runtime
         internal static ulong TextureImportHandle(string guid) =>
             guid != null && s_ReimportTextureHandles.TryGetValue(guid, out var handle) ? handle : RenderHandles.Next();
 
+        /// <summary>Whether <paramref name="handle"/> is a loaded texture's, lent to the asset's
+        /// import (<see cref="TextureImportHandle"/>): an import that fails gives it back.</summary>
+        internal static bool LentTextureHandle(string guid, ulong handle) =>
+            guid != null && s_ReimportTextureHandles.TryGetValue(guid, out var lent) && lent == handle;
+
         /// <summary>The loaded 2D texture an asset's texture file made (its main texture object,
         /// alive, under a renderer handle), or null.</summary>
         static Texture2D ImportedTextureOf(LoadedFile loaded) =>
@@ -1666,7 +1678,8 @@ namespace Unbound.Runtime
             if (copy is Texture2D t && t.m_NativeHandle == texture.m_NativeHandle)
             {
                 texture.IncrementUpdateCount();
-                return texture.TakeImport(t) is string why ? $" (its texture takes the new import, but {why})" : " (its texture takes the new import)";
+                texture.TakeImport(t);
+                return " (its texture takes the new import)";
             }
             foreach (var o in fresh.Objects.Values)
                 if (o is Texture other && other.m_NativeHandle == texture.m_NativeHandle)

@@ -441,6 +441,9 @@ namespace UnityEditor
         /// <summary>The asset is imported again: its preprocessors run again before that import.</summary>
         internal static void ForgetPreprocessed(string path) => s_Preprocessed.Remove(path);
 
+        /// <summary>Whether the asset's preprocessors ran for its import this session (tests).</summary>
+        internal static bool Preprocessed(string path) => s_Preprocessed.Contains(path);
+
         /// <summary>Runs an asset's preprocessors once per session, before its import.</summary>
         internal static void EnsurePreprocessed(string path, string kind, string guid = null)
         {

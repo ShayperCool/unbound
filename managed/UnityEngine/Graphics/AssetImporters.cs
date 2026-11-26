@@ -255,9 +255,28 @@ namespace Unbound.Runtime
             ulong handle = AssetDatabaseRuntime.TextureImportHandle(info.Guid);
             if (!Native.ImportTexture(handle, info.Guid, out var imported))
                 throw new InvalidOperationException("the texture could not be imported");
+            Texture made = null;
+            var sprites = new List<Sprite>();
+            try { return MakeTexture(info, name, handle, imported, ref made, sprites); }
+            catch when (made != null && AssetDatabaseRuntime.LentTextureHandle(info.Guid, handle))
+            {
+                // A failed import gives the loaded texture's handle back: destroying what it made
+                // does not release it.
+                made.m_NativeHandle = 0;
+                foreach (var sprite in sprites) Object.DestroyImmediate(sprite, true);
+                Object.DestroyImmediate(made, true);
+                throw;
+            }
+        }
+
+        /// <summary>The objects of a texture file's import under <paramref name="handle"/>
+        /// (<paramref name="made"/> and <paramref name="sprites"/> hold them as they are made).</summary>
+        static LoadedFile MakeTexture(AssetDatabaseRuntime.AssetInfo info, string name, ulong handle, in ImportedTextureInfo imported, ref Texture made, List<Sprite> sprites)
+        {
             if (imported.Dimension == 4)
             {
                 var cube = Cubemap.FromImport(handle, info.Guid, name, imported);
+                made = cube;
                 var cubeFile = new LoadedFile { MainObject = cube };
                 cubeFile.Objects[CubemapFileId] = cube;
                 UnityEditor.AssetPostprocessing.PostprocessCubemap(info.Path, cube);
@@ -274,9 +293,9 @@ namespace Unbound.Runtime
                 return layeredFile;
             }
             var texture = Texture2D.FromImport(handle, info.Guid, name, imported);
+            made = texture;
             var file = new LoadedFile { MainObject = texture };
             file.Objects[Texture2DFileId] = texture;
-            var sprites = new List<Sprite>();
             if (imported.SpriteCount > 0)
                 foreach (var (fileId, sprite) in ImportedSprites(texture, info.Guid, name))
                 {

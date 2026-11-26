@@ -934,9 +934,15 @@ namespace UnityEngine.Tests
             Debug.unityLogger.logHandler = new LogCapture();
             try
             {
+                // Its preprocessors ran for an earlier import (ImportAsset of the new file), which
+                // loaded nothing: they run again for this one.
+                AssetPostprocessing.EnsurePreprocessed("Assets/M/U.png", "texture");
+                Assert.True(AssetPostprocessing.Preprocessed("Assets/M/U.png"));
                 Write("Assets/M/U.png", "u changed outside");
                 Write("Assets/M/C.mat", "c changed outside");
                 AssetDatabase.ImportAsset("Assets/M/U.png");
+                // (Without the native side the read fails before the preprocessors run again.)
+                Assert.False(AssetPostprocessing.Preprocessed("Assets/M/U.png"));
                 AssetDatabase.ImportAsset("Assets/M/C.mat");
                 // Read during the call (without the native side the read fails, its entry stays).
                 Assert.True(AssetDatabaseRuntime.IsLoaded("c0de00000000000000000000000000d1"));
@@ -948,6 +954,7 @@ namespace UnityEngine.Tests
             finally
             {
                 Debug.unityLogger.logHandler = previous;
+                AssetPostprocessing.ForgetPreprocessed("Assets/M/U.png");
                 ProjectInfo.ProjectPath = before;
                 ProjectImports.ResetForTests();
                 AssetDatabaseRuntime.Invalidate("c0de00000000000000000000000000d1");

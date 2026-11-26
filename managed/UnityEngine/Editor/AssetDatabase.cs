@@ -623,11 +623,13 @@ namespace UnityEditor
             SessionImports.Imported(GUIDToAssetPath(guid));
         }
 
-        /// <summary>An asset not loaded yet imported now, its import's messages logged now, and
-        /// reported imported.</summary>
+        /// <summary>An asset not loaded yet imported now, its preprocessors run again (they run
+        /// before every import, Scripting API 6000.0 AssetPostprocessor.OnPreprocessTexture), its
+        /// import's messages logged now, and reported imported.</summary>
         static void ImportNow(string guid)
         {
             AssetDatabaseRuntime.ImportedInSession(guid);
+            AssetPostprocessing.ForgetPreprocessed(GUIDToAssetPath(guid));
             AssetDatabaseRuntime.LoadFile(guid);
             ProjectImports.Wrote(GUIDToAssetPath(guid));
             SessionImports.Imported(GUIDToAssetPath(guid));
