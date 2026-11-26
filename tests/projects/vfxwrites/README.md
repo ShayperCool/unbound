@@ -35,16 +35,19 @@ writes nothing; `WriteAsset` with nothing changed leaves the bytes as they were;
 setting marks the resource dirty, and `SaveAssets` hands `OnWillSaveAssets` the graph's path and
 writes its file, where only that setting's line changes (`cullingFlags` set to its value changes
 no line); with nothing dirty `OnWillSaveAssets` gets an empty list; a block's input edited marks
-nothing dirty and is written by `WriteAssetWithSubAssets`, its one line changed; `GetContents`
+nothing dirty and is written by `WriteAssetWithSubAssets`, its one line changed; an added block and its two slots
+are written after the other objects with the file ids following the file's largest, and removing
+them gives the original bytes back; `GetContents`
 lists the resource itself beside the graph's objects; `CreateNewAsset` writes the package's
 nine-line file and its .meta.
 
 Unbound matches every row. Not measured: a graph whose objects
-change (models added or removed: Unbound refuses to write it), subgraphs (`.vfxoperator`,
-`.vfxblock`: refused too), `rendererSettings`, `SaveAssetIfDirty` and the Editor's exit for a dirty graph (the
+change other than one block added and removed, subgraphs (`.vfxoperator`,
+`.vfxblock`: refused), `rendererSettings`, `SaveAssetIfDirty` and the Editor's exit for a dirty graph (the
 file is left as it is), several dirty assets at once (their order in `OnWillSaveAssets`), scene
-saves' `OnWillSaveAssets`, and a type that a graph's models name newly (Unbound refuses a .NET class
-library name, which the Editor's Mono could not read back).
+saves' `OnWillSaveAssets`, and class library types other than the primitive types and string in an
+added object's type names (Unbound refuses them: .NET names them otherwise than the Editor's Mono,
+which could not read .NET's names back).
 
 ```bash
 python3 tests/projects/vfxwrites/run.py record --label a
