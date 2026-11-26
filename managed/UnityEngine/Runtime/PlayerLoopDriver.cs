@@ -783,18 +783,29 @@ namespace Unbound.Runtime
         /// <param name="saveAssets">The Editor's exit writes the assets still dirty (measured:
         /// tests/projects/scenesave, Edit and Play mode edits), after EditorApplication.quitting:
         /// after Play mode has ended when the session leaves it first (tests/projects/tmpatlas
-        /// quit.*, exit.*), with Play mode on at the Editor's exit (tests/projects/unchangedsaves
-        /// leaving).</param>
+        /// quit.*, exit.*), with Play mode on at the Editor's exit before its scenes close
+        /// (tests/projects/unchangedsaves leaving).</param>
         /// <param name="leftPlayMode">The session ended with Play mode: EnteredEditMode follows its
         /// teardown, in Edit mode.</param>
         internal static void FinishQuit(bool editorExit, Action savePreferences, Action shutdownPlugins, Action saveAssets = null, bool leftPlayMode = false)
         {
+            bool saved = false;
             try
             {
                 if (editorExit)
                 {
-                    // The Editor's exit: EditorApplication.quitting while its scenes are open.
+                    // The Editor's exit: EditorApplication.quitting while its scenes are open. With
+                    // Play mode on it saves before it closes them: the scene objects' OnDisable and
+                    // OnDestroy come after the save and its report (matches the Unity 6000.0.71f1
+                    // Editor, tests/projects/unchangedsaves leaving; an exit in Edit mode keeps the
+                    // save after closing them, unmeasured).
                     if (Compat.QuitCallbacksMeasured) UnityEditor.EditorApplication.Internal_Quitting();
+                    if (Compat.QuitCallbacksMeasured && EditorSession.IsPlaying)
+                    {
+                        saved = true;
+                        try { saveAssets?.Invoke(); }
+                        catch (Exception e) { Debug.LogException(e); }
+                    }
                     SceneManagerInternal.CloseEditorScenes();
                 }
                 else
@@ -812,8 +823,11 @@ namespace Unbound.Runtime
             }
             finally
             {
-                try { saveAssets?.Invoke(); }
-                catch (Exception e) { Debug.LogException(e); }
+                if (!saved)
+                {
+                    try { saveAssets?.Invoke(); }
+                    catch (Exception e) { Debug.LogException(e); }
+                }
                 try
                 {
                     SettingsAssets.SaveOnQuit();

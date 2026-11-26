@@ -121,6 +121,44 @@ namespace UnityEngine.Tests
             }
         }
 
+        /// <summary>The Editor's exit with Play mode on saves before it closes its scenes; in Edit mode
+        /// after (tests/projects/unchangedsaves leaving: the scene objects' OnDisable and OnDestroy
+        /// come after the save's report).</summary>
+        [Theory]
+        [InlineData(true)]
+        [InlineData(false)]
+        public void TheEditorsExitWithPlayModeOnSavesBeforeItClosesItsScenes(bool playing)
+        {
+            using var release = TestRelease.Pin(TestRelease.Measured);
+            using var scenes = new Unbound.Tests.LightProbesTests.Scenes();
+            var persistent = SceneRegistry.DontDestroyOnLoad;
+            var previousRoots = persistent.Roots.ToArray();
+            persistent.Roots.Clear();
+            bool wasPlaying = EditorSession.IsPlaying;
+            var calls = new List<string>();
+            UnityEngine.Events.UnityAction<Scene> unloaded = scene => calls.Add("closed " + scene.name);
+            Action quitting = () => calls.Add("quitting");
+            SceneManager.sceneUnloaded += unloaded;
+            UnityEditor.EditorApplication.quitting += quitting;
+            try
+            {
+                scenes.Loaded("ExitOpen");
+                EditorSession.IsPlaying = playing;
+                PlayerLoopDriver.FinishQuit(true, () => calls.Add("preferences"), () => calls.Add("plugins"), () => calls.Add("save"));
+                Assert.Equal(playing
+                    ? new[] { "quitting", "save", "closed ExitOpen", "preferences", "plugins" }
+                    : new[] { "quitting", "closed ExitOpen", "save", "preferences", "plugins" }, calls);
+            }
+            finally
+            {
+                SceneManager.sceneUnloaded -= unloaded;
+                UnityEditor.EditorApplication.quitting -= quitting;
+                EditorSession.IsPlaying = wasPlaying;
+                persistent.Roots.Clear();
+                persistent.Roots.AddRange(previousRoots);
+            }
+        }
+
         /// <summary>A quitting handler that throws is logged and stops the handlers after it (one
         /// invoke, as Unity's Application.Internal_ApplicationQuit), and Play mode still ends.</summary>
         [Fact]
