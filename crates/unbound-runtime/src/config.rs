@@ -358,8 +358,8 @@ pub fn prepare(
         "packages": crate::view::package_infos(project),
         "unityDataPath": project.install.data,
         "frameworkDir": project.install.data.join("MonoBleedingEdge/lib/mono/4.5"),
-        "vSyncCount": vsync_count(project),
-        "renderPipeline": render_pipeline(project),
+        "vSyncCount": vsync_count(project, &options.target),
+        "renderPipeline": render_pipeline(project, &options.target),
 
     });
     // The project's own folder and Unbound's directory for it, as resolved here: the managed
@@ -458,20 +458,65 @@ fn tier_settings(settings: &unbound_project::settings::Settings) -> Vec<Json> {
     table
 }
 
-/// `vSyncCount` of the quality level the Editor has selected (`m_CurrentQuality`); 1 without one.
-fn vsync_count(project: &Project) -> i64 {
-    let Some(quality) = read_settings(project, "QualitySettings.asset") else {
-        return 1;
-    };
+/// The quality levels the Editor offers with build target group `target` active (those whose
+/// `excludedTargetPlatforms` do not name its platform, in order) and the index among them of the
+/// level Play mode starts with: the current level (`m_CurrentQuality`) when it is offered, else the
+/// first one; the platform's default level plays no part (measured in Unity 6000.0.71f1:
+/// tests/projects/qualitystartup, Standalone and Android). With no level offered (unmeasured) every
+/// level is, as for a target no level excludes; a current level past the last level (unmeasured)
+/// starts at the last offered one, as SetQualityLevel clamps it.
+fn offered_quality_levels<'a>(quality: &'a Value, target: &str) -> (Vec<&'a Value>, usize) {
+    let platform = if target == "iOS" { "iPhone" } else { target };
+    let levels: &[Value] = quality
+        .get("m_QualitySettings")
+        .and_then(Value::as_seq)
+        .map_or(&[], |l| l);
     let current = quality
         .get("m_CurrentQuality")
         .and_then(Value::as_i64)
         .unwrap_or(0)
         .max(0) as usize;
-    quality
-        .get("m_QualitySettings")
-        .and_then(Value::as_seq)
-        .and_then(|levels| levels.get(current))
+    let offered = |level: &Value| {
+        !level
+            .get("excludedTargetPlatforms")
+            .and_then(Value::as_seq)
+            .is_some_and(|excluded| excluded.iter().any(|p| p.as_str() == Some(platform)))
+    };
+    let filtered: Vec<(usize, &Value)> = levels
+        .iter()
+        .enumerate()
+        .filter(|(_, l)| offered(l))
+        .collect();
+    if filtered.is_empty() {
+        if !levels.is_empty() {
+            tracing::warn!(
+                "every quality level excludes the {platform} platform; Unbound offers them all (the Editor's choice is not measured)"
+            );
+        }
+        return (levels.iter().collect(), current);
+    }
+    let start = if current >= levels.len() {
+        filtered.len() - 1
+    } else {
+        filtered
+            .iter()
+            .position(|(index, _)| *index == current)
+            .unwrap_or(0)
+    };
+    (
+        filtered.into_iter().map(|(_, level)| level).collect(),
+        start,
+    )
+}
+
+/// `vSyncCount` of the quality level Play mode starts with ([`offered_quality_levels`]); 1 without one.
+fn vsync_count(project: &Project, target: &str) -> i64 {
+    let Some(quality) = read_settings(project, "QualitySettings.asset") else {
+        return 1;
+    };
+    let (levels, current) = offered_quality_levels(&quality, target);
+    levels
+        .get(current)
         .and_then(|level| level.get("vSyncCount"))
         .and_then(Value::as_i64)
         .unwrap_or(1)
@@ -488,27 +533,24 @@ fn asset_ref(v: Option<&Value>) -> Json {
 }
 
 /// The scriptable render pipeline settings: GraphicsSettings' default pipeline, each quality
-/// level's override (and the current level) and the pipelines' global settings assets.
-fn render_pipeline(project: &Project) -> Json {
+/// level the Editor offers with build target group `target` active, its override, the level Play
+/// mode starts with ([`offered_quality_levels`]) and the pipelines' global settings assets.
+fn render_pipeline(project: &Project, target: &str) -> Json {
     let graphics = read_settings(project, "GraphicsSettings.asset");
     let quality = read_settings(project, "QualitySettings.asset");
-    let levels: Vec<Json> = quality
+    let (offered, current) = quality
         .as_ref()
-        .and_then(|q| q.get("m_QualitySettings"))
-        .and_then(Value::as_seq)
-        .map(|levels| {
-            levels
-                .iter()
-                .map(|l| {
-                    json!({
-                        "name": l.get("name").and_then(Value::as_str).unwrap_or(""),
-                        "pipeline": asset_ref(l.get("customRenderPipeline")),
-                        "settings": level_settings(l),
-                    })
-                })
-                .collect()
+        .map_or((Vec::new(), 0), |q| offered_quality_levels(q, target));
+    let levels: Vec<Json> = offered
+        .iter()
+        .map(|l| {
+            json!({
+                "name": l.get("name").and_then(Value::as_str).unwrap_or(""),
+                "pipeline": asset_ref(l.get("customRenderPipeline")),
+                "settings": level_settings(l),
+            })
         })
-        .unwrap_or_default();
+        .collect();
     let global_settings: serde_json::Map<String, Json> = graphics
         .as_ref()
         .and_then(|g| g.get("m_RenderPipelineGlobalSettingsMap"))
@@ -574,7 +616,7 @@ fn render_pipeline(project: &Project) -> Json {
         "lightsUseLinearIntensity": flag("m_LightsUseLinearIntensity"),
         "lightsUseColorTemperature": flag("m_LightsUseColorTemperature"),
         "qualityLevels": levels,
-        "currentQuality": quality.as_ref().and_then(|q| q.get("m_CurrentQuality")).and_then(Value::as_i64).unwrap_or(0),
+        "currentQuality": current,
         "globalSettings": global_settings,
     })
 }
@@ -780,8 +822,8 @@ fn time_and_color(project: &Project) -> Json {
 /// Run startup's data readers without compiling scripts, creating a game or writing a view.
 pub fn read_settings_inputs(project: &Project) {
     let _ = time_and_color(project);
-    let _ = render_pipeline(project);
-    let _ = vsync_count(project);
+    let _ = render_pipeline(project, "Standalone");
+    let _ = vsync_count(project, "Standalone");
     let _ = sorting_layers(project);
     let _ = rendering_layers(project);
     let _ = input_axes(project);
@@ -791,6 +833,97 @@ pub fn read_settings_inputs(project: &Project) {
 /// Script execution order, shared by startup and importer diagnostics.
 pub fn execution_order(meta: &Value) -> Option<i64> {
     meta.get("MonoImporter")?.get("executionOrder")?.as_i64()
+}
+
+#[cfg(test)]
+mod quality_level_tests {
+    use super::*;
+
+    /// Six levels; `excluded` names, per level, the platforms it excludes.
+    fn quality(current: i64, excluded: [&[&str]; 6]) -> Value {
+        let mut text = format!("m_CurrentQuality: {current}\nm_QualitySettings:\n");
+        for (index, platforms) in excluded.iter().enumerate() {
+            text += &format!("- name: L{index}\n  vSyncCount: {index}\n");
+            if platforms.is_empty() {
+                text += "  excludedTargetPlatforms: []\n";
+            } else {
+                text += "  excludedTargetPlatforms:\n";
+                for p in *platforms {
+                    text += &format!("  - {p}\n");
+                }
+            }
+        }
+        unbound_yaml::parse_value(&text).unwrap()
+    }
+
+    fn offered(quality: &Value, target: &str) -> (Vec<String>, usize) {
+        let (levels, current) = offered_quality_levels(quality, target);
+        (
+            levels
+                .iter()
+                .map(|l| l.get("name").and_then(Value::as_str).unwrap().to_string())
+                .collect(),
+            current,
+        )
+    }
+
+    /// tests/projects/qualitystartup: levels excluding the active platform are not offered, the
+    /// current level keeps its place among the others, an excluded current level gives way to the
+    /// first offered one (not its neighbour), and a level excluding another platform stays.
+    #[test]
+    fn levels_excluding_the_target_are_not_offered() {
+        let none: &[&str] = &[];
+        let standalone: &[&str] = &["Standalone"];
+        let q = quality(1, [none, none, none, none, none, none]);
+        assert_eq!(
+            offered(&q, "Standalone"),
+            (
+                vec!["L0", "L1", "L2", "L3", "L4", "L5"]
+                    .into_iter()
+                    .map(String::from)
+                    .collect(),
+                1
+            )
+        );
+        let q = quality(1, [none, standalone, none, standalone, none, none]);
+        assert_eq!(
+            offered(&q, "Standalone"),
+            (
+                vec!["L0", "L2", "L4", "L5"]
+                    .into_iter()
+                    .map(String::from)
+                    .collect(),
+                0
+            )
+        );
+        assert_eq!(offered(&q, "Android").1, 1);
+        let q = quality(3, [standalone, none, none, standalone, none, none]);
+        assert_eq!(
+            offered(&q, "Standalone"),
+            (
+                vec!["L1", "L2", "L4", "L5"]
+                    .into_iter()
+                    .map(String::from)
+                    .collect(),
+                0
+            )
+        );
+        let q = quality(4, [none, none, standalone, none, none, none]);
+        assert_eq!(offered(&q, "Standalone").1, 3);
+        // iOS levels are excluded as iPhone, the name the Editor writes.
+        let q = quality(0, [&["iPhone"], none, none, none, none, none]);
+        assert_eq!(offered(&q, "iOS").0.len(), 5);
+        // Unmeasured: every level excluded offers them all; a current level past the end, the last.
+        let q = quality(
+            2,
+            [
+                standalone, standalone, standalone, standalone, standalone, standalone,
+            ],
+        );
+        assert_eq!(offered(&q, "Standalone").0.len(), 6);
+        let q = quality(9, [none, none, none, none, none, standalone]);
+        assert_eq!(offered(&q, "Standalone").1, 4);
+    }
 }
 
 #[cfg(test)]
