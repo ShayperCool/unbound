@@ -40,7 +40,10 @@ the step, when there was one).
   asset|resource|graph`, `model save assets`: a block's input set through the graph (the graph model
   dirty, the resource clean), then `SaveAssetIfDirty` of the asset, the resource and the graph model
   and `SaveAssets`, with the model's dirty flag after each; `material save if dirty/...`:
-  `SaveAssetIfDirty` of a material `CreateAsset` made and then changed; `exit/dirty before`: a
+  `SaveAssetIfDirty` of a material `CreateAsset` made and then changed; `material save assets/...`:
+  the same for another material through `SaveAssets`; `settings save if dirty guid/...`:
+  `SaveAssetIfDirty` by GUID of `ProjectSettings/TagManager.asset` after a tag added through a
+  `SerializedObject` (whether its file changed); `exit/dirty before`: a
   setting left unsaved, and `exit/initialEventName`, which `run.py` adds after the run: that setting
   as the file holds it once the Editor (or Unbound) has exited; `exit/created ... before`: an
   operator added to the created graph's model and left unsaved, and `exit/created documents`
@@ -59,7 +62,8 @@ nine-line file and its .meta; that new graph, built and written, gets its resour
 its documents in file id order; subgraphs are created with the same file and .meta and written as
 graphs are; `SaveAssetIfDirty` saves the file of the object it is given when any object of that
 file is dirty, through `OnWillSaveAssets` with its path (a graph whose model alone is dirty, through
-its asset; a material), and calls nothing when nothing is dirty; the Editor's exit writes a graph
+its asset; a material), and calls nothing when nothing is dirty; it does not write a project
+settings file; `SaveAssets` offers a changed material `CreateAsset` made; the Editor's exit writes a graph
 whose resource or model alone was left dirty.
 
 Unbound matches every row. Not measured: a graph whose objects

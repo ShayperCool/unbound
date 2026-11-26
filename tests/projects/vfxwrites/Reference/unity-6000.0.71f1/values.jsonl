@@ -100,6 +100,13 @@
 {"k":"material save if dirty/dirty before","v":"True"}
 {"k":"material save if dirty/will save","v":"Assets/Probe.mat"}
 {"k":"material save if dirty/dirty","v":"False"}
+{"k":"material save assets/dirty before","v":"True"}
+{"k":"material save assets/will save","v":"Assets/Second.mat"}
+{"k":"material save assets/dirty","v":"False"}
+{"k":"material save assets/queue in file","v":"True"}
+{"k":"settings save if dirty guid/guid empty","v":"False"}
+{"k":"settings save if dirty guid/will save","v":""}
+{"k":"settings save if dirty guid/file changed","v":"False"}
 {"k":"exit/created graph dirty before","v":"True"}
 {"k":"exit/created resource dirty before","v":"False"}
 {"k":"exit/created documents before","v":"7"}

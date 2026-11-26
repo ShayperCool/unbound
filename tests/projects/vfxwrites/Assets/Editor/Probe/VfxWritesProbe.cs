@@ -212,6 +212,31 @@ public static class VfxWritesProbe
             AssetDatabase.SaveAssetIfDirty(material);
             Row("material save if dirty/will save", string.Join(" | ", VfxWritesSaveLog.Calls));
             Row("material save if dirty/dirty", EditorUtility.IsDirty(material));
+            // The same through AssetDatabase.SaveAssets, for another material CreateAsset made.
+            var second = new Material(Shader.Find("Universal Render Pipeline/Lit"));
+            AssetDatabase.CreateAsset(second, "Assets/Second.mat");
+            second.renderQueue = 2200;
+            Row("material save assets/dirty before", EditorUtility.IsDirty(second));
+            VfxWritesSaveLog.Calls.Clear();
+            AssetDatabase.SaveAssets();
+            Row("material save assets/will save", string.Join(" | ", VfxWritesSaveLog.Calls));
+            Row("material save assets/dirty", EditorUtility.IsDirty(second));
+            Row("material save assets/queue in file", File.ReadAllText("Assets/Second.mat").Contains("m_CustomRenderQueue: 2200"));
+
+            // SaveAssetIfDirty by GUID of a project settings file edited through a SerializedObject.
+            const string tagManager = "ProjectSettings/TagManager.asset";
+            var settingsGuid = AssetDatabase.GUIDFromAssetPath(tagManager);
+            Row("settings save if dirty guid/guid empty", settingsGuid.Empty());
+            var tags = new SerializedObject(AssetDatabase.LoadAllAssetsAtPath(tagManager)[0]);
+            var tagList = tags.FindProperty("tags");
+            tagList.InsertArrayElementAtIndex(tagList.arraySize);
+            tagList.GetArrayElementAtIndex(tagList.arraySize - 1).stringValue = "ProbeTag";
+            tags.ApplyModifiedProperties();
+            var settingsBefore = File.ReadAllText(tagManager);
+            VfxWritesSaveLog.Calls.Clear();
+            AssetDatabase.SaveAssetIfDirty(settingsGuid);
+            Row("settings save if dirty guid/will save", string.Join(" | ", VfxWritesSaveLog.Calls));
+            Row("settings save if dirty guid/file changed", File.ReadAllText(tagManager) != settingsBefore);
 
             // The created graph's model edited (an operator added) and left for the exit; run.py
             // counts the file's documents after the run (exit/created documents).
