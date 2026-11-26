@@ -1,0 +1,16 @@
+{
+  "commands": [
+    "python3 tests/projects/audiotracker/run.py gate"
+  ],
+  "summary": "audiotracker: [0-9]+/[0-9]+ values match.*",
+  "engine_paths": [
+    "crates/unbound-assets/src/audio.rs",
+    "crates/unbound-assets/src/audio_download.rs",
+    "crates/unbound-assets/src/tracker.rs",
+    "crates/unbound-runtime/src/audio/",
+    "crates/unbound-runtime/src/state.rs",
+    "managed/UnityEngine/Audio/",
+    "tests/projects/audiotracker/",
+    "tests/projects/video/"
+  ]
+}

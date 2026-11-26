@@ -1,0 +1,31 @@
+{
+  "Synthesizer song-length convention: the Unity 6000.0.71f1 Editor reports one extra tracker tick on AudioClip.samples and AudioClip.length (93120 vs 92160 frames at 48 kHz / 125 BPM, 77600 vs 76800 at 48 kHz / 150 BPM, 85554 vs 84672 at 44.1 kHz / 125 BPM; 0.02 s / 0.017 s). Unbound's libxmp-lite decoder stops at the musical loop boundary so looped playback has no extra tick": [
+    "dl.it_exact.len",
+    "dl.it_unknown.len",
+    "dl.mod_exact.len",
+    "dl.mod_unknown.len",
+    "dl.s3m_exact.len",
+    "dl.s3m_unknown.len",
+    "dl.xm_exact.len",
+    "dl.xm_unknown.len",
+    "meta.tone.it.len",
+    "meta.tone.mod.len",
+    "meta.tone.s3m.len",
+    "meta.tone.xm.len",
+    "meta.xm_bg_nopreload.xm.len",
+    "meta.xm_bpm150.xm.len",
+    "meta.xm_compressed.xm.len",
+    "meta.xm_mono_rate.xm.len",
+    "meta.xm_pcm.xm.len",
+    "meta.xm_streaming.xm.len",
+    "reset.44100.dl.len"
+  ],
+  "Impulse Tracker mix-volume baseline: the Unity 6000.0.71f1 Editor attenuates IT files with header mix volume 48 relative to 128 (RMS 0.10), whereas libxmp-lite uses Impulse Tracker's baseline of 48 (RMS 0.26). Notes, stereo panning and duration match": [
+    "play.tone.it.rms"
+  ],
+  "Compressed tracker download sentinel: with DownloadHandlerAudioClip.compressed = true on a tracker module, the Unity 6000.0.71f1 Editor returns samples = -1, length = 4294967.5 and plays without stopping naturally (timeout 3.61 s). Unbound keeps GetData returning false (dl.xm_compressed.props matches) while exposing the decoded finite length (92160 frames, 1.92 s) and stopping at song end": [
+    "dl.xm_compressed.len",
+    "dl.xm_compressed.play",
+    "dl.xm_compressed.play.dur"
+  ]
+}
