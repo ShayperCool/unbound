@@ -4,7 +4,7 @@
     "loop.a",
     "play.endGap"
   ],
-  "The Editor's first sound comes within 0.05 s of Play by its filter's AudioSettings.dspTime; Unbound's reads 0 to 0.2 s, its DSP clock not moving within a frame (see the dspTime row of docs/COMPATIBILITY_GAPS.md).": [
+  "The Editor's first sound comes within 0.05 s of Play by its filter's AudioSettings.dspTime; Unbound's reads 0 to 0.3 s, its DSP clock not moving within a frame (see the dspTime row of docs/COMPATIBILITY_GAPS.md).": [
     "play.start",
     "volume.start",
     "speed2.start",
