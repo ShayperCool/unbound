@@ -36,8 +36,12 @@ namespace UnityEngine.Tests
             }
             finally { ChannelService.Stop(); }
             Assert.False(ChannelService.IsRunning());
-            // tests/projects/uvmetrics collab.IsCollabEnabledForCurrentProject.
+            // tests/projects/uvmetrics collab.IsCollabEnabledForCurrentProject; Unity's C#
+            // (CollabToUVCSBridge.cs) answers false: no notice in the measured family.
+            const string member = "UnityEditor.Collaboration.Collab.IsCollabEnabledForCurrentProject";
+            int hits = Unbound.Runtime.Stubs.HitReport().FirstOrDefault(h => h.Key == member).Value;
             Assert.False(UnityEditor.Collaboration.Collab.instance.IsCollabEnabledForCurrentProject());
+            Assert.Equal(hits, Unbound.Runtime.Stubs.HitReport().FirstOrDefault(h => h.Key == member).Value);
         }
 
         [Fact]

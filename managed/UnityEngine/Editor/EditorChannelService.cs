@@ -400,8 +400,9 @@ namespace UnityEditor.Collaboration
     /// project (tests/projects/uvmetrics collab.*); its other members are not implemented.</summary>
     internal partial class Collab
     {
-        /// <summary>False: the Unity 6000.0.71f1 Editor answers so for a project with its default
-        /// services settings (tests/projects/uvmetrics collab.IsCollabEnabledForCurrentProject).</summary>
+        /// <summary>False, as Unity's C# answers for any project (6000.0
+        /// Editor/Mono/Collab/CollabToUVCSBridge.cs: Collaborate was retired) and the Unity
+        /// 6000.0.71f1 Editor answers (tests/projects/uvmetrics collab.IsCollabEnabledForCurrentProject).</summary>
         public bool IsCollabEnabledForCurrentProject()
         {
             if (Unbound.Runtime.Compat.EditorChannelServiceMeasured) return false;
