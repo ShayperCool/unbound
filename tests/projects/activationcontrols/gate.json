@@ -1,0 +1,10 @@
+{
+  "commands": [
+    "python3 tests/projects/activationcontrols/run.py gate"
+  ],
+  "summary": "activationcontrols: .*",
+  "engine_paths": [
+    "managed/UnityEngine/Runtime/Lifecycle.cs",
+    "managed/UnityEngine/Core/GameObject.cs"
+  ]
+}

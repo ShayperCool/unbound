@@ -1,0 +1,15 @@
+{"k":"add.off","v":"G:D+- C1:D+- C2:D+- P:D--"}
+{"k":"add.on","v":"C2:E++ C1:E++ P:E++ G:E++"}
+{"k":"addHierarchy.off","v":"G:D+- C1:D+- C2:D+- P:D--"}
+{"k":"addHierarchy.on","v":"P:E++ C1:E++ G:E++ C2:E++"}
+{"k":"reenabled.off","v":"G:D+- C1:D+- C2:D+- P:D--"}
+{"k":"reenabled.on","v":"C2:E++ C1:E++ P:E++ G:E++"}
+{"k":"reactivated.off","v":"G:D+- C1:D+- C2:D+- P:D--"}
+{"k":"reactivated.on","v":"C2:E++ C1:E++ P:E++ G:E++"}
+{"k":"two.off","v":"G:D+- C1:D+- C2:D+- P.a:D-- P.b:D--"}
+{"k":"two.on","v":"P.a:E++ C2:E++ C1:E++ G:E++ P.b:E++"}
+{"k":"late.off","v":"G:D+- C1:D+- C1.late:D+- C2:D+- P:D--"}
+{"k":"late.on","v":"C2:E++ C1:E++ P:E++ G:E++ C1.late:E++"}
+{"k":"created.off","v":"G:D+- C1:D+- C2:D+- P:D--"}
+{"k":"created.on","v":"P:E++ C1:E++ G:E++ C2:E++"}
+{"k":"complete","v":true}
