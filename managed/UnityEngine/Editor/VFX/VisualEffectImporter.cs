@@ -195,7 +195,7 @@ namespace Unbound.Runtime
             if (s_NoReimport > 0) return true;
             if (AssetDatabase.Editing)
             {
-                if (!s_Pending.Contains(path)) s_Pending.Add(path);
+                if (!s_Pending.Contains(guid)) s_Pending.Add(guid);
                 return true;
             }
             if (resource.m_Object is VisualEffectAsset asset)
@@ -203,13 +203,22 @@ namespace Unbound.Runtime
                 var removed = new List<long>();
                 Build(resource, asset, file, removed);
                 AssetDatabaseRuntime.RefreshObjects(file, removed);
-                foreach (var effect in Object.FindObjectsByType<VisualEffect>(FindObjectsInactive.Include, FindObjectsSortMode.None))
-                    if (effect.visualEffectAsset == asset) effect.AssetRebuilt();
+                RestartEffects(asset);
             }
             return true;
         }
 
-        /// <summary>The graphs whose re-import StartAssetEditing held back, in request order.</summary>
+        /// <summary>Every live effect playing <paramref name="asset"/> (hidden or DontSave ones too,
+        /// not components of assets) starts over on its new compile: none keeps the shaders and
+        /// materials the import replaced.</summary>
+        internal static void RestartEffects(VisualEffectAsset asset)
+        {
+            foreach (var o in ObjectRegistry.All(typeof(VisualEffect)))
+                if (o is VisualEffect effect && !effect.IsPersistentAsset && effect.visualEffectAsset == asset) effect.AssetRebuilt();
+        }
+
+        /// <summary>The graphs (GUIDs: one moved meanwhile is found) whose re-import StartAssetEditing
+        /// held back, in request order.</summary>
         static readonly List<string> s_Pending = new List<string>();
         static int s_NoReimport;
 
@@ -218,7 +227,12 @@ namespace Unbound.Runtime
         {
             var pending = new List<string>(s_Pending);
             s_Pending.Clear();
-            foreach (var path in pending) Reimport(path);
+            foreach (var guid in pending)
+            {
+                // One graph's failure leaves the others' imports (and the rest of StopAssetEditing).
+                try { Reimport(AssetDatabase.GUIDToAssetPath(guid)); }
+                catch (Exception e) { Debug.LogException(e); }
+            }
         }
 
         /// <summary>A scope in which a written graph is not imported again: the Editor's exit save
