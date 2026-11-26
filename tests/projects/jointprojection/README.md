@@ -22,7 +22,8 @@ position and rotation:
   and rotation (`frame/*rotdrive`) act in that frame. `frame/pair` and `frame/pairswapped`: a
   joint between two dynamic bodies with a drive and a limit, and the same with `swapBodies`:
   swapped, the solver takes the connected body as the joint's first body, which moves the pair
-  slightly otherwise (1e-3 by step 20).
+  visibly otherwise (about 0.05 in rotation from step 5). A swapped joint to the world is
+  unmeasured (Unbound does not swap it).
 
 Unbound passes projection to PhysX's own (the joint's projection flag, the distance and the
 angle in radians as its linear and angular tolerances), builds a world-space joint's frame from

@@ -302,7 +302,8 @@ namespace UnityEngine
 
         /// <summary>Whether the connected body is the native joint's first actor (swapBodies), the
         /// joint's own body its second: the actors' order the solver takes them in
-        /// (tests/projects/jointprojection frame/pairswapped). A joint to the world is not swapped.</summary>
+        /// (tests/projects/jointprojection frame/pairswapped). A joint to the world is not swapped
+        /// (unmeasured).</summary>
         internal virtual bool SwapActors => false;
 
         bool Swapped(ulong connectedBody) => SwapActors && connectedBody != 0;

@@ -2655,8 +2655,9 @@ UA3_API int ua3_shapes_penetration( uint64_t a, ua3_vec3 positionAIn, ua3_quat r
 // -------------------------------------------------------------------------------------- joints
 
 // Joints as Unity builds them: the joint's own body is actor0 (its frame at the anchor, x along
-// the axis), the connected body (or the world, 0) actor1. Kinds: 0 D6 (hinge, character,
-// configurable, fixed), 1 distance (spring). Drive limits are forces.
+// the axis), the connected body (or the world, 0) actor1; a ConfigurableJoint with swapBodies
+// passes them the other way round. Kinds: 0 D6 (hinge, character, configurable, fixed), 1
+// distance (spring). Drive limits are forces.
 UA3_API uint64_t ua3_joint_create( uint32_t id, int kind, uint64_t body0, ua3_vec3 position0In, ua3_quat rotation0In, uint64_t body1,
 								   ua3_vec3 position1In, ua3_quat rotation1In )
 {
@@ -2730,7 +2731,8 @@ UA3_API void ua3_joint_set_common( uint64_t id, float breakForce, float breakTor
 	joint->setInvInertiaScale1( inv1 );
 }
 
-// The force and torque the joint last applied to its own body.
+// The force and torque the joint last applied to actor0 (the joint's own body, or the connected
+// body of a swapped joint).
 UA3_API void ua3_joint_force( uint64_t id, ua3_vec3* force, ua3_vec3* torque )
 {
 	PxJoint* joint = joint_of( id );
