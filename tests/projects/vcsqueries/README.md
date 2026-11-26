@@ -23,7 +23,7 @@ and `new Asset(path)` state `None` (`MetaFile` for a `.meta`); a folder's path e
 empty names; paths under `Assets`, `Packages` and `ProjectSettings` are versioned, others not.
 
 Unbound (`managed/UnityEngine/Editor/VersionControl.cs`) answers the same; a project whose settings
-choose a provider is answered as without one, with a warning.
+choose a provider is not supported (NotSupportedException).
 
 Record and gate:
 

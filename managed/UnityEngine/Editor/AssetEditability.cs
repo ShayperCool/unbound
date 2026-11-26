@@ -139,7 +139,7 @@ namespace UnityEditor
         /// the project is not): only those reach the processors' IsOpenForEdit and CanOpenForEdit
         /// callbacks; the others are always editable (tests/projects/openforedithooks; the
         /// release's MakeEditable page names Library and Temp).</summary>
-        static bool IsVersionedPath(string path) =>
+        internal static bool IsVersionedPath(string path) =>
             InFolder(path, AssetsFolder) || InFolder(path, "Packages") || InFolder(path, "ProjectSettings");
 
         static bool InFolder(string path, string folder) =>
@@ -196,14 +196,7 @@ namespace UnityEditor
         {
             if (s_EditSettingsLoaded) return;
             s_EditSettingsLoaded = true;
-            string path = Path.Combine(ProjectInfo.ProjectPath, "ProjectSettings", "VersionControlSettings.asset");
-            if (!Native.IsReady || !File.Exists(path)) return;
-            foreach (var document in Native.LoadDocuments(path))
-            {
-                string mode = document.Body.Str("m_Mode");
-                s_ExternalVersionControl = !string.IsNullOrEmpty(mode) && mode != "Visible Meta Files"
-                    && mode != "Hidden Meta Files" && mode != "Generic";
-            }
+            s_ExternalVersionControl = VersionControlSettings.ChoosesProvider;
         }
     }
 }

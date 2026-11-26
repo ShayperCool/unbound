@@ -25,6 +25,7 @@ namespace UnityEngine.Tests
             File.WriteAllText(Path.Combine(m_Root, "Assets", "Data", "A.txt"), "a\n");
             File.WriteAllText(Path.Combine(m_Root, "Assets", "Data", "A.txt.meta"), "fileFormatVersion: 2\n");
             ProjectInfo.ProjectPath = m_Root;
+            SettingsAssets.Reset();
             Debug.unityLogger.logHandler = m_Logs;
         }
 
@@ -32,6 +33,7 @@ namespace UnityEngine.Tests
         {
             Debug.unityLogger.logHandler = m_Handler;
             ProjectInfo.ProjectPath = m_ProjectPath;
+            SettingsAssets.Reset();
             try { Directory.Delete(m_Root, true); } catch (IOException) { }
         }
 
@@ -104,6 +106,7 @@ namespace UnityEngine.Tests
         [InlineData("Library/ArtifactDB", false)]
         [InlineData("UserSettings/x", false)]
         [InlineData("Other/A.txt", false)]
+        [InlineData("Assets\\Data\\A.txt", false)]
         [InlineData("", false)]
         [InlineData(null, false)]
         public void APathIsVersionedInTheProjectsVersionedFolders(string path, bool versioned) =>
@@ -112,6 +115,42 @@ namespace UnityEngine.Tests
         [Fact]
         public void AnAbsolutePathIsNotVersioned() =>
             Assert.False(VersionControlUtils.IsPathVersioned(Path.Combine(m_Root, "Assets", "Data", "A.txt")));
+
+        /// <summary>A message shows as Unity's C# shows it: information, "Version control:" and a new line.</summary>
+        [Fact]
+        public void AMessageShowsAsInformation()
+        {
+            var message = Assert.Single(Provider.Checkout("Assets/Data/A.txt", CheckoutMode.Both).messages);
+            m_Logs.Lines.Clear();
+            message.Show();
+            Assert.Equal(new[] { "Log: Version control:\nCannot check out files in offline mode\nAssets/Data/A.txt" }, m_Logs.Lines);
+        }
+
+        /// <summary>A pre-checkout callback is not run: said.</summary>
+        [Fact]
+        public void APreCheckoutCallbackIsSaid()
+        {
+            bool ran = false;
+            Stubs.Forget("UnityEditor.VersionControl.Provider.preCheckoutCallback");
+            Provider.preCheckoutCallback = (AssetList list, ref string id, ref string description) => ran = true;
+            try { Provider.Checkout("Assets/Data/A.txt", CheckoutMode.Both); }
+            finally { Provider.preCheckoutCallback = null; }
+            Assert.False(ran);
+            Assert.Contains(m_Logs.Lines, l => l.Contains("preCheckoutCallback is not run by a checkout yet"));
+        }
+
+        /// <summary>A project whose settings choose a provider is not supported, as AssetDatabase's
+        /// editability queries.</summary>
+        [Fact]
+        public void AProviderModeIsNotSupported()
+        {
+            Directory.CreateDirectory(Path.Combine(m_Root, "ProjectSettings"));
+            File.WriteAllText(Path.Combine(m_Root, "ProjectSettings", "VersionControlSettings.asset"),
+                "%YAML 1.1\n%TAG !u! tag:unity3d.com,2011:\n--- !u!890905787 &1\nVersionControlSettings:\n  m_ObjectHideFlags: 0\n  m_Mode: Perforce\n  m_CollabEditorSettings:\n    inProgressEnabled: 1\n");
+            SettingsAssets.Reset();
+            Assert.Equal("Perforce", UnityEditor.VersionControlSettings.mode);
+            Assert.Throws<NotSupportedException>(() => Provider.isActive);
+        }
 
         [Fact]
         public void FilterChildrenLeavesOutTheAssetsOfAFolderInTheList()

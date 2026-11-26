@@ -245,15 +245,9 @@ namespace UnityEditor.VersionControl
             m_Message = message ?? "";
         }
 
-        /// <summary>Logs the message as the Editor does ("Version Control: " and the message, an error
-        /// or a warning by its severity, vcsqueries checkout.path.logs).</summary>
-        public void Show()
-        {
-            var text = "Version Control: " + m_Message;
-            if (m_Severity == Severity.Error) Debug.LogError(text);
-            else if (m_Severity == Severity.Warning) Debug.LogWarning(text);
-            else Debug.Log(text);
-        }
+        /// <summary>Logs the message as Unity's published C# does: "Version control:", a new line and
+        /// the message, as information whatever its severity.</summary>
+        public void Show() => Debug.Log("Version control:\n" + m_Message);
 
         [Unbound.EditorFaithful(VersionControlFacts.NoProvider)]
         public void Dispose() { }
@@ -309,6 +303,11 @@ namespace UnityEditor.VersionControl
 
     public partial class Provider
     {
+        public delegate bool PreCheckoutCallback(AssetList list, ref string changesetID, ref string changesetDescription);
+
+        /// <summary>Kept, not run (<see cref="Checkout(AssetList, CheckoutMode)"/>).</summary>
+        public static PreCheckoutCallback preCheckoutCallback;
+
         /// <summary>The result code of a task the provider refuses (vcsqueries checkout.*, status.*).</summary>
         const int FailedResult = 2;
 
@@ -357,12 +356,12 @@ namespace UnityEditor.VersionControl
             return null;
         }
 
-        /// <summary>False: there is no provider; a project whose settings choose one is said, once.</summary>
+        /// <summary>False: there is no provider. A project whose settings choose one is not supported
+        /// (as AssetDatabase's editability queries, AssetEditability).</summary>
         static bool NoProvider()
         {
-            var mode = VersionControlSettings.mode;
-            if (mode is not ("Visible Meta Files" or "Hidden Meta Files" or ""))
-                Stubs.Ignored("UnityEditor.VersionControl.Provider", "has no '" + mode + "' integration: Unbound answers as the Editor does without a provider");
+            if (VersionControlSettings.ChoosesProvider)
+                throw new NotSupportedException("UnityEditor.VersionControl.Provider with an active version control provider ('" + VersionControlSettings.mode + "') is not supported.");
             return false;
         }
 
@@ -392,7 +391,14 @@ namespace UnityEditor.VersionControl
 
         // ------------------------------------------------------------------ checkout
 
-        public static Task Checkout(AssetList assets, CheckoutMode mode) => Refused("check out", Paths(assets, mode));
+        public static Task Checkout(AssetList assets, CheckoutMode mode)
+        {
+            // Unity's C# runs a pre-checkout callback before the checkout (with the list
+            // consolidated, as an exact checkout): not done here, said (not measured).
+            if (preCheckoutCallback != null)
+                Stubs.Ignored("UnityEditor.VersionControl.Provider.preCheckoutCallback", "is not run by a checkout yet (Unbound has no provider): the checkout is refused as offline without it");
+            return Refused("check out", Paths(assets, mode));
+        }
 
         public static Task Checkout(AssetList assets, CheckoutMode mode, ChangeSet changeset) => Checkout(assets, mode);
 
@@ -469,7 +475,8 @@ namespace UnityEditor.VersionControl
         {
             NoProvider();
             var message = new Message(Message.Severity.Error, "Cannot " + verb + " files in offline mode" + (paths.Count > 0 ? "\n" + string.Join("\n", paths) : ""));
-            message.Show();
+            // The Editor logs the refusal as it makes the task (vcsqueries checkout.*.logs).
+            Debug.LogError("Version Control: " + message.message);
             return new Task(false, FailedResult, message);
         }
 
@@ -504,17 +511,9 @@ namespace UnityEditor.VersionControl
     public static partial class VersionControlUtils
     {
         /// <summary>Whether a project-relative path is under version control: one in Assets, Packages
-        /// or ProjectSettings (vcsqueries versioned.*); others, and absolute paths, are not.</summary>
-        public static bool IsPathVersioned(string path)
-        {
-            if (string.IsNullOrEmpty(path)) return false;
-            path = path.Replace('\\', '/');
-            foreach (var root in s_VersionedRoots)
-                if (path == root || path.StartsWith(root + "/", StringComparison.Ordinal)) return true;
-            return false;
-        }
-
-        static readonly string[] s_VersionedRoots = { "Assets", "Packages", "ProjectSettings" };
+        /// or ProjectSettings (vcsqueries versioned.*; AssetEditability's rule); others, and absolute
+        /// paths, are not.</summary>
+        public static bool IsPathVersioned(string path) => !string.IsNullOrEmpty(path) && AssetDatabase.IsVersionedPath(path);
     }
 }
 
@@ -522,27 +521,23 @@ namespace UnityEditor
 {
     public sealed partial class VersionControlSettings : Object
     {
-        static string s_Mode;
+        /// <summary>A mode a script set this session (not written to the settings).</summary>
+        static string s_SetMode;
 
         /// <summary>The project's version control mode (ProjectSettings/VersionControlSettings.asset
-        /// m_Mode; "Visible Meta Files" without it, vcsqueries settings.mode).</summary>
+        /// m_Mode as the settings hold it; "Visible Meta Files" without it, vcsqueries settings.mode).</summary>
         public static string mode
         {
-            get
-            {
-                if (s_Mode != null) return s_Mode;
-                s_Mode = "Visible Meta Files";
-                var path = Path.Combine(ProjectInfo.ProjectPath ?? "", "ProjectSettings", "VersionControlSettings.asset");
-                if (Native.IsReady && File.Exists(path))
-                    foreach (var document in Native.LoadDocuments(path))
-                        if (document.Body.Str("m_Mode") is { Length: > 0 } mode) s_Mode = mode;
-                return s_Mode;
-            }
+            get => s_SetMode ?? (SettingsAssets.ReadBody("VersionControlSettings")?.Get("m_Mode")?.Text is { Length: > 0 } mode ? mode : "Visible Meta Files");
             set
             {
                 Stubs.Ignored("UnityEditor.VersionControlSettings.mode setter", "keeps the mode for the session: Unbound does not write it into ProjectSettings yet");
-                s_Mode = value ?? "";
+                s_SetMode = value ?? "";
             }
         }
+
+        /// <summary>Whether the mode chooses a version control provider (not one of the modes without
+        /// one), which Unbound does not support.</summary>
+        internal static bool ChoosesProvider => mode is not ("" or "Visible Meta Files" or "Hidden Meta Files" or "Generic");
     }
 }

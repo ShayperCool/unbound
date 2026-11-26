@@ -45052,7 +45052,6 @@ namespace UnityEditor.VersionControl
     unsafe partial class Provider
     {
         [global::Unbound.Stub] public static global::UnityEditor.VersionControl.Provider.PreSubmitCallback preSubmitCallback;
-        [global::Unbound.Stub] public static global::UnityEditor.VersionControl.Provider.PreCheckoutCallback preCheckoutCallback;
         [global::Unbound.Stub] internal static global::UnityEditor.VersionControl.Asset CacheStatus(string assetPath) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.VersionControl.Provider.CacheStatus"); return default; }
         [global::Unbound.Stub] public static global::UnityEditor.VersionControl.Task Move(string from, string to) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.VersionControl.Provider.Move"); return default; }
         [global::Unbound.Stub] internal static global::UnityEditor.VersionControl.AssetList ConsolidateAssetList(global::UnityEditor.VersionControl.AssetList assets, global::UnityEditor.VersionControl.CheckoutMode mode) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.VersionControl.Provider.ConsolidateAssetList"); return default; }
@@ -45118,7 +45117,6 @@ namespace UnityEditor.VersionControl
         internal static global::UnityEngine.Texture2D overlayAtlas { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.VersionControl.Provider.overlayAtlas"); return default; } }
         internal static global::UnityEditor.VersionControl.CustomCommand[] customCommands { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.VersionControl.Provider.customCommands"); return global::System.Array.Empty<global::UnityEditor.VersionControl.CustomCommand>(); } }
         public unsafe delegate bool PreSubmitCallback(global::UnityEditor.VersionControl.AssetList list, ref string changesetID, ref string changesetDescription);
-        public unsafe delegate bool PreCheckoutCallback(global::UnityEditor.VersionControl.AssetList list, ref string changesetID, ref string changesetDescription);
     }
     [global::System.Flags]
     public enum ResolveMethod
