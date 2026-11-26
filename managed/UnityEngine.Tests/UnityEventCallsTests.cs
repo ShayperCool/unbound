@@ -165,6 +165,44 @@ namespace UnityEngine.Tests
             Assert.DoesNotContain("UnityEngine.Events.InvokableCall", trace);
         }
 
+        // With Unity's places known (here the engine's own assembly and .pdb stand for Unity's
+        // UnityEngine.CoreModule), the event's frame in Debug.LogException's caller lines still has
+        // none, while the listener's ExtractStackTrace gives it one (tests/projects/eventstacks
+        // log_exception_inside, extract.*).
+        [Fact]
+        public void TheEventsFrameCallingAnInvokableCallHasNoPlaceInLogExceptionCallerLines()
+        {
+            var data = UnityEditor.UnityInstallInfo.DataPath;
+            var root = Path.Combine(Path.GetTempPath(), "unbound-eventplaces-" + Guid.NewGuid().ToString("N"));
+            var managed = Path.Combine(root, "Managed", "UnityEngine");
+            Directory.CreateDirectory(managed);
+            var engine = typeof(UnityEvent).Assembly.Location;
+            var pdb = Path.ChangeExtension(engine, ".pdb");
+            File.Copy(engine, Path.Combine(managed, "UnityEngine.CoreModule.dll"));
+            File.Copy(pdb, Path.Combine(managed, Path.GetFileName(pdb)), true);
+            File.Copy(pdb, Path.Combine(managed, "UnityEngine.CoreModule.pdb"), true);
+            UnityEditor.UnityInstallInfo.DataPath = root;
+            try
+            {
+                string logged = null, extracted = null;
+                var e = new UnityEvent();
+                e.AddListener(() =>
+                {
+                    extracted = StackTraceUtility.ExtractStackTrace();
+                    try { throw new InvalidOperationException("Caught."); }
+                    catch (Exception caught) { logged = UnityStackTrace.ExceptionText(caught).Trace; }
+                });
+                e.Invoke();
+                Assert.Matches(@"\nUnityEngine\.Events\.UnityEvent:Invoke \(\) \(at [^)]*Events\.cs:\d+\)\n", extracted);
+                Assert.Contains("\nUnityEngine.Events.UnityEvent:Invoke()\n", logged);
+            }
+            finally
+            {
+                UnityEditor.UnityInstallInfo.DataPath = data;
+                Directory.Delete(root, true);
+            }
+        }
+
         [Fact]
         public void AListenerOfADestroyedObjectDoesNotRun()
         {
