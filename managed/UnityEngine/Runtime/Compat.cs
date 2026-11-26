@@ -58,6 +58,12 @@ namespace Unbound.Runtime
         /// is and read the scaling it holds (unmeasured).</summary>
         internal static bool SpriteFirstImportMeasured => Family == ReleaseFamily.Unity6000_0;
 
+        /// <summary>A .meta naming a ScriptedImporter that neither imports the file's extension nor
+        /// is set as an override: the extension's own importer imports the file
+        /// (tests/projects/importselfload on Unity 6000.0.71f1). Other releases use the .meta's
+        /// importer (unmeasured).</summary>
+        internal static bool ScriptedImporterSelectionMeasured => Family == ReleaseFamily.Unity6000_0;
+
         // A rename of an asset, a texture's sampler settings and Texture2D.Reinitialize are edits
         // that dirty it, measured on 6000.0.71f1 (tests/projects/tmpatlas op.*). Elsewhere they
         // leave it clean, as before.

@@ -161,20 +161,39 @@ namespace UnityEditor
 
 namespace UnityEditor.AssetImporters
 {
-    /// <summary>Names the file extensions a ScriptedImporter class imports and its version.</summary>
+    /// <summary>Names the file extensions a ScriptedImporter class imports, those it may override
+    /// the importer of, its version and its place in the import queue (Unity's own C#,
+    /// Modules/AssetPipelineEditor/Public/ScriptedImporter.cs).</summary>
     [AttributeUsage(AttributeTargets.Class, Inherited = false)]
     public partial class ScriptedImporterAttribute : Attribute
     {
         public bool AllowCaching;
 
-        public ScriptedImporterAttribute(int version, string ext)
+        public ScriptedImporterAttribute(int version, string ext) => Init(version, new[] { ext }, null, 0);
+
+        public ScriptedImporterAttribute(int version, string ext, int importQueueOffset) => Init(version, new[] { ext }, null, importQueueOffset);
+
+        public ScriptedImporterAttribute(int version, string[] exts) => Init(version, exts, null, 0);
+
+        public ScriptedImporterAttribute(int version, string[] exts, string[] overrideExts) => Init(version, exts, overrideExts, 0);
+
+        public ScriptedImporterAttribute(int version, string[] exts, int importQueueOffset) => Init(version, exts, null, importQueueOffset);
+
+        public ScriptedImporterAttribute(int version, string[] exts, string[] overrideExts, int importQueueOffset) =>
+            Init(version, exts, overrideExts, importQueueOffset);
+
+        void Init(int version, string[] exts, string[] overrideExts, int importQueueOffset)
         {
             this.version = version;
-            fileExtensions = new[] { ext };
+            importQueuePriority = importQueueOffset;
+            fileExtensions = exts;
+            overrideFileExtensions = overrideExts;
         }
 
         public int version { get; private set; }
+        public int importQueuePriority { get; private set; }
         public string[] fileExtensions { get; private set; }
+        public string[] overrideFileExtensions { get; private set; }
     }
 
     /// <summary>A project importer written in C#; Unbound runs it when an asset it imports loads.</summary>
@@ -357,6 +376,31 @@ namespace Unbound.Runtime
             public void Dispose() => s_Importing--;
         }
 
+        /// <summary>
+        /// Whether the ScriptedImporter a .meta names imports the asset at <paramref name="path"/>:
+        /// when its class names the file's extension among those it imports, or when the .meta sets
+        /// an importer override (<paramref name="overridden"/>); otherwise the extension's own
+        /// importer imports it, the .meta as it is (matches the Unity 6000.0.71f1 Editor,
+        /// tests/projects/importselfload Mismatch.json: a TextAsset, Override.ovr2: an override
+        /// extension without an override set, a DefaultAsset). A class that cannot be resolved, or
+        /// without the attribute, keeps the .meta's importer (its import then says why it fails).
+        /// Other releases keep the .meta's importer (Compat.ScriptedImporterSelectionMeasured).
+        /// </summary>
+        internal static bool ImportsAsset(string script, long scriptFileId, string path, bool overridden) =>
+            overridden || !Compat.ScriptedImporterSelectionMeasured || string.IsNullOrEmpty(script)
+            || ImportsAsset(GameDomain.ResolveScript(script, scriptFileId), path, overridden: false);
+
+        /// <summary><see cref="ImportsAsset(string, long, string, bool)"/> of an importer class.</summary>
+        internal static bool ImportsAsset(Type type, string path, bool overridden)
+        {
+            if (overridden || !Compat.ScriptedImporterSelectionMeasured) return true;
+            if (type?.GetCustomAttributes(typeof(ScriptedImporterAttribute), false) is not { Length: > 0 } attributes) return true;
+            var extension = System.IO.Path.GetExtension(path ?? "").TrimStart('.');
+            foreach (var declared in ((ScriptedImporterAttribute)attributes[0]).fileExtensions ?? Array.Empty<string>())
+                if (string.Equals(declared?.Trim('.'), extension, StringComparison.OrdinalIgnoreCase)) return true;
+            return false;
+        }
+
         /// <summary>An instance of a ScriptedImporter class with the settings its .meta stores.</summary>
         internal static ScriptedImporter CreateImporter(string script, long scriptFileId, string path, string guid, YNode settings)
         {
@@ -389,10 +433,15 @@ namespace Unbound.Runtime
             {
                 // Every asset's import starts with OnPreprocessAsset (matches the Unity 6000.0.71f1
                 // Editor, tests/projects/assetpostprocessors Calm.st9), on the importer that imports it.
+                // Loading the asset from its own import (OnImportAsset, the postprocessors of the
+                // textures it generates) gives nothing, without an error (tests/projects/importselfload
+                // first.import, first.post: a PSD importer's sprite postprocessors load the PSD).
                 using (AssetDatabaseRuntime.ImportCallbacks(info.Guid))
+                {
                     AssetPostprocessorHooks.Run(UnityEditor.AssetPostprocessing.Hooks("OnPreprocessAsset"),
                         new ImportSession(info.Path, ctx, importer), Array.Empty<object>());
-                importer.OnImportAsset(ctx);
+                    importer.OnImportAsset(ctx);
+                }
             }
             foreach (var (_, obj) in ctx.m_Objects) MarkImported(obj);
             var file = new LoadedFile { MainObject = ctx.mainObject, UnknownFileIds = true };

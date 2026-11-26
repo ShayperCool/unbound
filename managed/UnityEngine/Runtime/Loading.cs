@@ -891,6 +891,10 @@ namespace Unbound.Runtime
             public long ImporterFileId { get; set; }
             /// <summary>For a plug-in: whether it is a managed assembly.</summary>
             public bool Managed { get; set; }
+            /// <summary>The asset's kind without its ScriptedImporter (for kind "scripted").</summary>
+            public string ListedKind { get; set; }
+            /// <summary>Whether the .meta sets an importer override (<c>importerOverride:</c>).</summary>
+            public bool ImporterOverride { get; set; }
         }
 
         static readonly JsonSerializerOptions s_Json = new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
@@ -1106,6 +1110,10 @@ namespace Unbound.Runtime
                     s_Files[guid] = null;
                     return null;
                 }
+                // A .meta naming a ScriptedImporter that does not import the file: the
+                // extension's own importer imports it (ScriptedImports.ImportsAsset).
+                if (info.Kind == "scripted" && !ScriptedImports.ImportsAsset(info.Importer, info.ImporterFileId, info.Path, info.ImporterOverride))
+                    info.Kind = info.ListedKind;
                 LoadedFile file = null;
                 // Published as soon as its objects exist, so cyclic references between assets
                 // resolve (to objects whose data is read right after).

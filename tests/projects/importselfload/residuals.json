@@ -1,0 +1,15 @@
+{
+ "AssetDatabase.ImportAsset with ForceUpdate does not import an asset Unbound already imported again (its texture callbacks and a ScriptedImporter's OnImportAsset do not run again; forced reimport follow-up)": [
+  "reimport/import Assets/Data/Thing.gen",
+  "reimport/post Assets/Data/Thing.gen",
+  "reimport/post Assets/Textures/Sprite.png",
+  "reimport/pre Assets/Textures/Sprite.png",
+  "reimport/sprites Assets/Textures/Sprite.png"
+ ],
+ "AssetDatabase.SetImporterOverride and GetImporterOverride are not implemented (they warn); the Editor writes importerOverride into the .meta and imports with the override": [
+  "set_override/get",
+  "set_override/importer",
+  "set_override/main",
+  "set_override/meta"
+ ]
+}

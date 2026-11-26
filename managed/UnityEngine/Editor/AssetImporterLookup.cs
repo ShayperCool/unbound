@@ -90,7 +90,18 @@ namespace UnityEditor
                 return FromMeta(path, guid, "NativeFormatImporter", new YNode { Kind = YKind.Map, Keys = Array.Empty<string>(), Values = Array.Empty<YNode>() });
             var settings = Native.LoadDocuments("meta:" + guid);
             if (settings.Count == 0) return null;
-            return FromMeta(path, guid, settings[0].TypeName, settings[0].Body);
+            var typeName = settings[0].TypeName;
+            // A ScriptedImporter that does not import the file: the extension's own importer is
+            // the asset's (tests/projects/importselfload asset.Mismatch.json).
+            if (typeName == "ScriptedImporter" && settings[0].Body.Ref("script") is var script
+                && !ScriptedImports.ImportsAsset(script.Guid, script.FileId, path, AssetDatabaseRuntime.Info(guid).ImporterOverride))
+            {
+                // The extension's importer; an extension no importer knows is the DefaultImporter's
+                // (asset.Override.ovr2: the Editor's AssetImporter).
+                var own = AssetDatabase.ImporterOf(path);
+                typeName = own == null || own == "ScriptedImporter" ? "DefaultImporter" : own;
+            }
+            return FromMeta(path, guid, typeName, settings[0].Body);
         }
 
         /// <summary>The importer a .meta's importer section (<paramref name="typeName"/>:

@@ -259,6 +259,10 @@ namespace UnityEditor.AssetImporters
             var output = new TextureGenerationOutput(texture, Thumbnail(source, texels, linearColor), sprites);
             if (settings.enablePostProcessor)
             {
+                // The asset's own import callbacks: loading the asset from them gives nothing,
+                // without an error (matches the Unity 6000.0.71f1 Editor, tests/projects/importselfload
+                // first.Thing.gen; a PSD importer's sprite postprocessors load the PSD so).
+                using var callbacks = AssetDatabaseRuntime.ImportCallbacks(string.IsNullOrEmpty(settings.assetPath) ? null : AssetDatabase.AssetPathToGUID(settings.assetPath));
                 AssetPostprocessorHooks.Run(AssetPostprocessing.Hooks("OnPostprocessTexture", typeof(Texture2D)), settings.assetPath, null, new object[] { texture });
                 if (sprites.Length > 0)
                     AssetPostprocessorHooks.Run(AssetPostprocessing.Hooks("OnPostprocessSprites", typeof(Texture2D), typeof(Sprite[])), settings.assetPath, null, new object[] { texture, sprites });

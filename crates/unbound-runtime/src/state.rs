@@ -863,6 +863,11 @@ pub fn dispatch(method: &str, request: &str) -> Result<String> {
                 "mainFileId": main,
                 "importer": importer.as_ref().map(|(guid, _)| guid),
                 "importerFileId": importer.as_ref().map_or(0, |(_, id)| *id),
+                // What the asset is without its ScriptedImporter, and whether its .meta sets an
+                // importer override (the managed side decides whether that importer imports it).
+                "listedKind": listed_kind(asset),
+                "importerOverride": importer.is_some()
+                    && unbound_assets::meta::has_importer_override(&asset.file),
                 "managed": kind == "plugin" && unbound_project::plugins::is_managed_assembly(&asset.file),
             })
             .to_string())

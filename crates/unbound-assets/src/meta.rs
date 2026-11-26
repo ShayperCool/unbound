@@ -87,6 +87,15 @@ pub fn scripted_importer_of(file: &std::path::Path) -> Option<(String, i64)> {
     runs_as_scripted_importer(&guid, file_id).then_some((guid, file_id))
 }
 
+/// Whether the asset's `.meta` sets an importer override (`importerOverride:`, which
+/// `AssetDatabase.SetImporterOverride` writes beside the importer's section; matches the Unity
+/// 6000.0.71f1 Editor, tests/projects/importselfload set_override.meta).
+pub fn has_importer_override(file: &std::path::Path) -> bool {
+    let mut path = file.as_os_str().to_owned();
+    path.push(".meta");
+    std::fs::read_to_string(path).is_ok_and(|meta| meta.lines().any(|l| l == "importerOverride:"))
+}
+
 /// The main object's file id a native-format asset's `.meta` names (`NativeFormatImporter`'s
 /// `mainObjectFileID`): Unity's main object of a `.controller`, `.asset`, `.mat`, ... whatever
 /// the order of the file's documents (a controller's sub-objects have random, often smaller,
