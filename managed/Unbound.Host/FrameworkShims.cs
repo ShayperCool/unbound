@@ -32,8 +32,8 @@ static class FrameworkShims
     }
 
     /// <summary>Members .NET has that must answer as in the Editor's process instead: the
-    /// command line is Unity's (the Test Framework reads -runTests from it), and Stopwatch counts
-    /// Mono's 100 ns ticks. Parameterless members only; an instance member's replacement takes
+    /// command line is Unity's (the Test Framework reads -runTests from it), Stopwatch counts
+    /// Mono's 100 ns ticks, and types and assemblies have Mono's names. Parameterless members only; an instance member's replacement takes
     /// the instance.</summary>
     static readonly Dictionary<(string Type, string Name), System.Reflection.MethodInfo> s_Replaced = new()
     {
@@ -41,6 +41,11 @@ static class FrameworkShims
         [("System.Environment", "get_CommandLine")] = typeof(Unbound.EditorProcess).GetMethod(nameof(Unbound.EditorProcess.get_CommandLine))!,
         [("System.Diagnostics.Stopwatch", "GetTimestamp")] = typeof(Unbound.MonoStopwatch).GetMethod(nameof(Unbound.MonoStopwatch.GetTimestamp))!,
         [("System.Diagnostics.Stopwatch", "get_ElapsedTicks")] = typeof(Unbound.MonoStopwatch).GetMethod(nameof(Unbound.MonoStopwatch.get_ElapsedTicks))!,
+        // Type and assembly names as the Editor's Mono gives them (tests/projects/typenames).
+        [("System.Type", "get_AssemblyQualifiedName")] = typeof(Unbound.MonoTypeNames).GetMethod(nameof(Unbound.MonoTypeNames.get_AssemblyQualifiedName))!,
+        [("System.Type", "get_FullName")] = typeof(Unbound.MonoTypeNames).GetMethod(nameof(Unbound.MonoTypeNames.get_FullName), new[] { typeof(Type) })!,
+        [("System.Reflection.Assembly", "get_FullName")] = typeof(Unbound.MonoTypeNames).GetMethod(nameof(Unbound.MonoTypeNames.get_FullName), new[] { typeof(System.Reflection.Assembly) })!,
+        [("System.Reflection.Assembly", "GetName")] = typeof(Unbound.MonoTypeNames).GetMethod(nameof(Unbound.MonoTypeNames.GetName))!,
     };
 
     /// <summary>Members .NET has, with parameters, that must answer as the Editor's Mono does: the

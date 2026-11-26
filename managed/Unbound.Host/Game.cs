@@ -387,6 +387,7 @@ public static unsafe class Game
         UnityEditor.UnityInstallInfo.DataPath = c.UnityDataPath;
         DisabledModules.Configure(c.DisabledModules);
         GameDomain.FrameworkDir = c.FrameworkDir;
+        Unbound.MonoTypeNames.FacadeDir = c.FacadeDir;
         GameDomain.NativePlugins = c.NativePlugins;
         GameDomain.PreloadedNativePlugins = c.PreloadedNativePlugins;
         UnityEditor.PlayerSettings.s_PreloadedRefs = c.PreloadedAssets.Select(p => (p.Guid, p.FileId)).ToList();
