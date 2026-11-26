@@ -96,6 +96,45 @@ pub fn has_importer_override(file: &std::path::Path) -> bool {
     std::fs::read_to_string(path).is_ok_and(|meta| meta.lines().any(|l| l == "importerOverride:"))
 }
 
+/// `nativeImporterType` of an importer override naming a ScriptedImporter (the ScriptedImporter
+/// class id).
+pub const SCRIPTED_IMPORTER_CLASS_ID: i64 = 2089858483;
+
+/// The type hash of the ScriptedImporter an asset's `.meta` sets as its override
+/// (`importerOverride:` with `nativeImporterType` [`SCRIPTED_IMPORTER_CLASS_ID`] and
+/// `scriptedImporterType` `Hash`, which `AssetDatabase.SetImporterOverride` writes; matches the
+/// Unity 6000.0.71f1 Editor, tests/projects/importselfload set_override.meta), lowercase; `None`
+/// without one, or for an override of another importer type.
+pub fn importer_override_hash(file: &std::path::Path) -> Option<String> {
+    let mut path = file.as_os_str().to_owned();
+    path.push(".meta");
+    override_hash_in(&std::fs::read_to_string(path).ok()?)
+}
+
+/// [`importer_override_hash`] of a `.meta`'s text.
+pub fn override_hash_in(meta: &str) -> Option<String> {
+    let mut lines = meta
+        .lines()
+        .skip_while(|l| l.trim_end() != "importerOverride:")
+        .skip(1);
+    let (mut native, mut hash) = (None, None);
+    for line in lines.by_ref() {
+        if !line.starts_with(' ') {
+            break;
+        }
+        if let Some(v) = line.strip_prefix("  nativeImporterType:") {
+            native = v.trim().parse::<i64>().ok();
+        } else if let Some(v) = line.strip_prefix("    Hash:") {
+            hash = Some(v.trim().to_ascii_lowercase());
+        }
+    }
+    hash.filter(|h| {
+        native == Some(SCRIPTED_IMPORTER_CLASS_ID)
+            && h.len() == 32
+            && h.bytes().all(|b| b.is_ascii_hexdigit())
+    })
+}
+
 /// The main object's file id a native-format asset's `.meta` names (`NativeFormatImporter`'s
 /// `mainObjectFileID`): Unity's main object of a `.controller`, `.asset`, `.mat`, ... whatever
 /// the order of the file's documents (a controller's sub-objects have random, often smaller,
@@ -408,6 +447,39 @@ mod tests {
         assert!(!super::has_importer_override(&asset));
         assert!(!super::has_importer_override(&dir.join("Missing.ovr2")));
         std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    /// The ScriptedImporter an override names, by its type hash (importselfload set_override.meta,
+    /// spaced.meta); none for another importer type or without the hash.
+    #[test]
+    fn an_importer_overrides_type_hash_is_read() {
+        let meta = |native: &str, hash: &str| {
+            format!(
+                "fileFormatVersion: 2\nguid: 1\nimporterOverride:\n  nativeImporterType: {native}\n  scriptedImporterType:\n    serializedVersion: 2\n    Hash: {hash}\nDefaultImporter:\n  userData: \n"
+            )
+        };
+        assert_eq!(
+            super::override_hash_in(&meta("2089858483", "104DDD7902d5b6bcff8d6316c3d1f5bc"))
+                .as_deref(),
+            Some("104ddd7902d5b6bcff8d6316c3d1f5bc")
+        );
+        assert_eq!(
+            super::override_hash_in(&meta("1055", "104ddd7902d5b6bcff8d6316c3d1f5bc")),
+            None
+        );
+        assert_eq!(super::override_hash_in(&meta("2089858483", "nothex")), None);
+        assert_eq!(
+            super::override_hash_in(
+                "fileFormatVersion: 2\nguid: 1\nimporterOverride:\n  nativeImporterType: 2089858483\nDefaultImporter:\n    Hash: 104ddd7902d5b6bcff8d6316c3d1f5bc\n"
+            ),
+            None
+        );
+        assert_eq!(
+            super::override_hash_in(
+                "fileFormatVersion: 2\nguid: 1\nDefaultImporter:\n  userData: \n"
+            ),
+            None
+        );
     }
 
     #[test]

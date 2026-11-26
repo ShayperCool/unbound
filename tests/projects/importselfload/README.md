@@ -56,6 +56,9 @@ section that `SetImporterOverride` writes into the `.meta`, the importer's own s
 importer loaded before the call has it; the asset then imports with it, also from a `.meta` that
 has it from the start. `ClearImporterOverride` removes the section.
 
+The override's `Hash` is Hash128 of "assembly:namespace:class" (`Assembly-CSharp-Editor::OverImporter`,
+`Assembly-CSharp-Editor:ProbeImporters:SpacedImporter`).
+
 Not covered: `ImportAsset` in Edit mode, assets of other kinds imported again, two importers
 claiming one extension, nested importer classes.
 

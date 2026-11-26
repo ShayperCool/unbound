@@ -1995,15 +1995,25 @@ fn model_documents(guid: Guid) -> Result<Vec<unbound_yaml::Document>> {
 /// none for a project's ScriptedImporter the `.meta` names (the extension's native importer, or the
 /// DefaultImporter, imports the file). Before the editor domain loaded, the `.meta` decides.
 fn effective_scripted_importer(s: &RuntimeState, file: &Path) -> Option<(String, i64)> {
+    let registry = s.scripted_extensions.read().unwrap();
+    // An override naming a project ScriptedImporter by its type hash (what SetImporterOverride
+    // writes beside the importer's section) imports with that importer (matches the Unity
+    // 6000.0.71f1 Editor, tests/projects/importselfload asset.Preset.ovr2, set_override.*).
+    if let Some(script) = registry
+        .as_ref()
+        .and_then(|r| override_of(r, unbound_assets::meta::importer_override_hash(file)))
+    {
+        return Some(script);
+    }
     let named = unbound_assets::meta::scripted_importer_of(file);
     let ext = file.extension().and_then(|e| e.to_str()).unwrap_or("");
     let overridden = named.is_some() && unbound_assets::meta::has_importer_override(file);
-    effective_of(
-        s.scripted_extensions.read().unwrap().as_ref(),
-        named,
-        ext,
-        overridden,
-    )
+    effective_of(registry.as_ref(), named, ext, overridden)
+}
+
+/// The script of the loaded ScriptedImporter whose type hash an override names, if any.
+fn override_of(registry: &ScriptedExtensions, hash: Option<String>) -> Option<(String, i64)> {
+    registry.overrides.get(&hash?.to_ascii_lowercase()).cloned()
 }
 
 /// [`effective_scripted_importer`] of a file of extension `ext` whose `.meta` names the
@@ -2058,6 +2068,9 @@ struct ScriptedExtensions {
     keep_meta: HashSet<String>,
     rejected: HashSet<String>,
     loaded: HashSet<String>,
+    /// The loaded importers' scripts by their type hash (lowercase hex), which an importer
+    /// override names.
+    overrides: HashMap<String, (String, i64)>,
 }
 
 /// The importer the Editor has natively for a path by its extension (the measured lists of
@@ -2186,9 +2199,12 @@ fn set_scripted_importers(request: &str) -> Result<String> {
         rejected: Vec<String>,
         #[serde(default)]
         loaded: Vec<String>,
+        /// Type hash -> script of each loaded importer an override can name.
+        #[serde(default)]
+        overrides: HashMap<String, Script>,
     }
     let r: Request = serde_json::from_str(request)?;
-    let (registry, native) = scripted_registry(
+    let (mut registry, native) = scripted_registry(
         r.extensions
             .into_iter()
             .map(|(ext, s)| (ext, (s.guid, s.file_id))),
@@ -2196,6 +2212,16 @@ fn set_scripted_importers(request: &str) -> Result<String> {
         &r.rejected,
         &r.loaded,
     );
+    registry.overrides = r
+        .overrides
+        .into_iter()
+        .map(|(hash, s)| {
+            (
+                hash.to_ascii_lowercase(),
+                (s.guid.to_ascii_lowercase(), s.file_id),
+            )
+        })
+        .collect();
     let s = state();
     let mut stale = Vec::new();
     {
@@ -3705,6 +3731,7 @@ mod tests {
             keep_meta: ["dllext".to_string()].into(),
             rejected: ["both".to_string()].into(),
             loaded: ["aaaa".to_string(), "bbbb".to_string()].into(),
+            ..Default::default()
         };
         let pick = |named: Option<&(String, i64)>, ext, overridden| {
             super::effective_of(Some(&registry), named.cloned(), ext, overridden)
@@ -3736,6 +3763,36 @@ mod tests {
             super::effective_of(None, Some(foo.clone()), "qux", false),
             Some(foo.clone())
         );
+    }
+
+    /// An override's type hash names a loaded importer (any case); an unknown hash or none names
+    /// none (the `.meta`'s sections then decide).
+    #[test]
+    fn an_override_hash_names_a_loaded_importer() {
+        let registry = super::ScriptedExtensions {
+            overrides: [(
+                "104ddd7902d5b6bcff8d6316c3d1f5bc".to_string(),
+                ("aaaa".to_string(), 11500000),
+            )]
+            .into(),
+            ..Default::default()
+        };
+        let over = Some(("aaaa".to_string(), 11500000));
+        assert_eq!(
+            super::override_of(
+                &registry,
+                Some("104DDD7902D5B6BCFF8D6316C3D1F5BC".to_string())
+            ),
+            over
+        );
+        assert_eq!(
+            super::override_of(
+                &registry,
+                Some("7f3acfa06d31e57fb7a5b8b20dd8aa20".to_string())
+            ),
+            None
+        );
+        assert_eq!(super::override_of(&registry, None), None);
     }
 
     /// The registry the editor domain's ScriptedImporters give: a native importer's extension is

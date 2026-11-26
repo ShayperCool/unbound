@@ -364,6 +364,24 @@ namespace Unbound.Runtime
         /// override (overrideFileExtensions) in <see cref="s_OverridesByExtension"/>.</summary>
         static Dictionary<string, Type> s_ByExtension = new Dictionary<string, Type>(StringComparer.Ordinal);
         static Dictionary<string, List<Type>> s_OverridesByExtension = new Dictionary<string, List<Type>>(StringComparer.Ordinal);
+        /// <summary>The loaded project importers by the type hash an importer override names
+        /// (<see cref="OverrideHash"/>).</summary>
+        static Dictionary<string, Type> s_ByOverrideHash = new Dictionary<string, Type>(StringComparer.Ordinal);
+
+        /// <summary>The hash an importer override (<c>importerOverride:</c> <c>scriptedImporterType</c>)
+        /// names a ScriptedImporter class by: Hash128 of "assembly:namespace:class" (matches the Unity
+        /// 6000.0.71f1 Editor, tests/projects/importselfload set_override.meta "Assembly-CSharp-Editor::OverImporter",
+        /// spaced.meta "Assembly-CSharp-Editor:ProbeImporters:SpacedImporter"). Null for a nested or
+        /// generic class, whose form is not measured.</summary>
+        internal static string OverrideHash(Type type)
+        {
+            if (type == null || type.IsNested || type.IsGenericType) return null;
+            return Hash128.Compute(type.Assembly.GetName().Name + ":" + (type.Namespace ?? "") + ":" + type.Name).ToString();
+        }
+
+        /// <summary>The loaded project importer an override's type hash names, or null.</summary>
+        internal static Type ForOverrideHash(string hash) =>
+            hash != null && s_ByOverrideHash.TryGetValue(hash.ToLowerInvariant(), out var type) ? type : null;
 
         /// <summary>The extensions a project's ScriptedImporter declares that Unity imports natively:
         /// the native importer's, the ScriptedImporter imports them through an override only.</summary>
@@ -437,16 +455,27 @@ namespace Unbound.Runtime
             var unsupported = new SortedSet<string>(selection.Plugin.Keys, StringComparer.Ordinal);
             var scripts = new Dictionary<string, object>(StringComparer.Ordinal);
             var loaded = new SortedSet<string>(StringComparer.Ordinal);
+            var byHash = new Dictionary<string, Type>(StringComparer.Ordinal);
+            var hashes = new Dictionary<string, object>(StringComparer.Ordinal);
             foreach (var type in types)
-                if (GameDomain.ScriptOf(type) is { FileId: 11500000 } own) loaded.Add(own.Guid);
+                if (GameDomain.ScriptOf(type) is { FileId: 11500000 } own)
+                {
+                    loaded.Add(own.Guid);
+                    if (OverrideHash(type) is { } hash)
+                    {
+                        byHash[hash] = type;
+                        hashes[hash] = new { guid = own.Guid, fileId = own.FileId };
+                    }
+                }
             foreach (var (ext, type) in byExtension)
                 if (GameDomain.ScriptOf(type) is { } own) scripts[ext] = new { guid = own.Guid, fileId = own.FileId };
             string reply;
-            try { reply = Native.Call("scripted-importers", System.Text.Json.JsonSerializer.Serialize(new { extensions = scripts, unsupported, rejected = selection.Rejected, loaded })); }
+            try { reply = Native.Call("scripted-importers", System.Text.Json.JsonSerializer.Serialize(new { extensions = scripts, unsupported, rejected = selection.Rejected, loaded, overrides = hashes })); }
             catch (InvalidOperationException) // No native side (tests).
             {
                 s_ByExtension = byExtension;
                 s_OverridesByExtension = overrides;
+                s_ByOverrideHash = byHash;
                 SetNativeDeclared(Array.Empty<string>());
                 return;
             }
@@ -461,6 +490,7 @@ namespace Unbound.Runtime
             }
             s_ByExtension = byExtension;
             s_OverridesByExtension = overrides;
+            s_ByOverrideHash = byHash;
             SetNativeDeclared(nativeDeclared);
             if (!rewriteStale) return;
             foreach (var path in json.RootElement.GetProperty("stale").EnumerateArray())

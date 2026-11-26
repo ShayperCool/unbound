@@ -116,10 +116,46 @@ namespace Unbound.Runtime
         {
             var text = meta.Replace("\r\n", "\n");
             foreach (Match match in s_ImporterSection.Matches(text))
-                if (!match.Value.StartsWith("labels:", StringComparison.Ordinal)) return text.Substring(0, match.Index) + section;
+                if (!match.Value.StartsWith("labels:", StringComparison.Ordinal) && !match.Value.StartsWith(ImporterOverrideKey, StringComparison.Ordinal))
+                    return text.Substring(0, match.Index) + section;
             if (text.Length > 0 && !text.EndsWith("\n", StringComparison.Ordinal)) text += "\n";
             return text + section;
         }
+
+        /// <summary>The top-level key of an importer override's block in a <c>.meta</c>.</summary>
+        internal const string ImporterOverrideKey = "importerOverride:";
+
+        static readonly Regex s_OverrideBlock = new Regex("^importerOverride:[ \\t]*\\r?\\n(?:[ \\t]+[^\\r\\n]*\\r?\\n)*", RegexOptions.Multiline);
+        static readonly Regex s_OverrideHash = new Regex("^    Hash: ([0-9a-fA-F]{32})[ \\t]*\\r?$", RegexOptions.Multiline);
+
+        /// <summary>The <c>.meta</c> text with its importer override set to the ScriptedImporter of
+        /// <paramref name="hash"/> (null: without one): the block <c>AssetDatabase.SetImporterOverride</c>
+        /// writes before the importer's section (matches the Unity 6000.0.71f1 Editor,
+        /// tests/projects/importselfload set_override.meta, spaced.meta, clear.meta), LF endings.</summary>
+        internal static string WithImporterOverride(string meta, string hash)
+        {
+            var text = s_OverrideBlock.Replace(meta.Replace("\r\n", "\n"), "", 1);
+            if (text.Length > 0 && !text.EndsWith("\n", StringComparison.Ordinal)) text += "\n";
+            if (hash == null) return text;
+            var block = ImporterOverrideKey + "\n  nativeImporterType: " + ScriptedImporterClassId + "\n  scriptedImporterType:\n    serializedVersion: 2\n    Hash: " + hash + "\n";
+            foreach (Match match in s_ImporterSection.Matches(text))
+                if (!match.Value.StartsWith("labels:", StringComparison.Ordinal)) return text.Insert(match.Index, block);
+            return text + block;
+        }
+
+        /// <summary>The type hash of the ScriptedImporter a <c>.meta</c>'s importer override names
+        /// (lowercase), or null.</summary>
+        internal static string ImporterOverrideHash(string meta)
+        {
+            var block = s_OverrideBlock.Match(meta ?? "");
+            if (!block.Success || !block.Value.Contains("  nativeImporterType: " + ScriptedImporterClassId, StringComparison.Ordinal)) return null;
+            var hash = s_OverrideHash.Match(block.Value);
+            return hash.Success ? hash.Groups[1].Value.ToLowerInvariant() : null;
+        }
+
+        /// <summary>The class id an importer override names for a ScriptedImporter (its
+        /// <c>nativeImporterType</c>: importselfload set_override.meta).</summary>
+        const int ScriptedImporterClassId = 2089858483;
 
         /// <summary>A <c>.meta</c> text with these labels: after its GUID line, as written (the
         /// Editor writes them unquoted), in ordinal order, repeats kept; none: no labels block. The

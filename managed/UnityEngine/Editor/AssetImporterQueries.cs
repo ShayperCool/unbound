@@ -1,6 +1,7 @@
 using System;
 using Unbound.Runtime;
 using UnityEditor.AssetImporters;
+using Debug = UnityEngine.Debug;
 
 namespace UnityEditor
 {
@@ -10,8 +11,8 @@ namespace UnityEditor
     /// DefaultImporter, whose class is AssetImporter), as the Unity 6000.0.71f1 Editor answers
     /// (tests/projects/importerpick type.*, default.*, available.*, override.*); a `.meta` that sets an
     /// importer override (`importerOverride:`) keeps the importer it names, which is then its override
-    /// (tests/projects/importselfload; the queries' answers for an override, and SetImporterOverride
-    /// itself, not measured or supported).
+    /// (tests/projects/importselfload), and one naming a ScriptedImporter by its type hash imports
+    /// with that importer, which SetImporterOverride sets and ClearImporterOverride removes.
     /// </summary>
     public sealed partial class AssetDatabase
     {
@@ -64,12 +65,115 @@ namespace UnityEditor
         [Obsolete("GetAvailableImporterTypes() has been deprecated. Use GetAvailableImporters() instead (UnityUpgradable) -> GetAvailableImporters(*)", true)]
         public static Type[] GetAvailableImporterTypes(string path) => GetAvailableImporters(path);
 
-        /// <summary>The importer a `.meta` setting an importer override names, or null.</summary>
+        /// <summary>The importer a `.meta` setting an importer override names, or null: the loaded
+        /// ScriptedImporter of its type hash (null for one no loaded importer has), else, for an
+        /// override without a hash, the asset's importer.</summary>
         public static Type GetImporterOverride(string path)
         {
             var guid = string.IsNullOrEmpty(path) ? null : AssetPathToGUID(path);
             if (string.IsNullOrEmpty(guid) || !AssetDatabaseRuntime.Info(guid).ImporterOverride) return null;
+            if (MetaText(path) is { } text && AssetPaths.ImporterOverrideHash(text) is { } hash) return ScriptedImports.ForOverrideHash(hash);
             return GetImporterType(path);
+        }
+
+        /// <summary>An existing asset's GUID, empty for a path without one.</summary>
+        internal static GUID GUIDFromExistingAssetPath(string path) => new GUID(string.IsNullOrEmpty(path) ? "" : AssetPathToGUID(path));
+
+        // Unity's own C# (UnityCsReference 6000.0, Modules/AssetDatabase/Editor/ScriptBindings/AssetDatabase.bindings.cs).
+        public static void SetImporterOverride<T>(string path)
+            where T : AssetImporter
+        {
+            if (GUIDFromExistingAssetPath(path).Empty())
+            {
+                Debug.LogError(
+                    $"Cannot set Importer override at \"{path}\". No Asset found at that path.");
+                return;
+            }
+
+            var availableImporters = GetAvailableImporters(path);
+            if (Array.IndexOf(availableImporters, typeof(T)) >= 0)
+            {
+                SetImporterOverrideInternal(path, typeof(T));
+            }
+            else
+            {
+                if (GetDefaultImporter(path) == typeof(T))
+                {
+                    ClearImporterOverride(path);
+                    Debug.LogWarning("This usage is deprecated. Use ClearImporterOverride to revert to the default Importer instead.");
+                }
+                else
+                {
+                    Debug.LogError(
+                        $"Cannot set Importer override at {path} because {typeof(T).Name} is not a valid Importer for this asset.");
+                }
+            }
+        }
+
+        /// <summary>Sets <paramref name="importer"/> (a project ScriptedImporter) as the asset's
+        /// override and imports it with it: the `.meta` gets the override's block, and the
+        /// importer's own section as the importer the asset has now holds it (matches the Unity
+        /// 6000.0.71f1 Editor, tests/projects/importselfload set_override.*, spaced.*, again.*,
+        /// own_default.*). A native importer, or a class whose hash is not measured (nested,
+        /// generic), is not set (said).</summary>
+        internal static void SetImporterOverrideInternal(string path, Type importer)
+        {
+            var guid = string.IsNullOrEmpty(path) ? null : AssetPathToGUID(path);
+            if (string.IsNullOrEmpty(guid) || importer == null) return;
+            var hash = typeof(ScriptedImporter).IsAssignableFrom(importer) ? ScriptedImports.OverrideHash(importer) : null;
+            if (hash == null || ScriptedImports.ForOverrideHash(hash) != importer)
+            {
+                Stubs.Ignored("AssetDatabase.SetImporterOverride", $"sets only a project ScriptedImporter of a top-level class as an override, not {importer.FullName} ({path})");
+                return;
+            }
+            WriteImporterOverride(path, guid, hash);
+        }
+
+        /// <summary>Removes the asset's importer override, its importer's section left as it is, and
+        /// imports it again (importselfload clear.*, clear_plain.*, clear_preset.*). An asset without
+        /// one is left alone (not measured).</summary>
+        public static void ClearImporterOverride(string path)
+        {
+            var guid = string.IsNullOrEmpty(path) ? null : AssetPathToGUID(path);
+            if (string.IsNullOrEmpty(guid) || MetaText(path) is not { } text || !text.Contains(AssetPaths.ImporterOverrideKey, StringComparison.Ordinal)) return;
+            WriteImporterOverride(path, guid, null);
+        }
+
+        /// <summary>The asset's `.meta` with its override set to the importer of <paramref name="hash"/>
+        /// (null: removed), written, then the asset imported again during the call.</summary>
+        static void WriteImporterOverride(string path, string guid, string hash)
+        {
+            if (!Editable(path))
+            {
+                Refused(hash != null ? "AssetDatabase.SetImporterOverride" : "AssetDatabase.ClearImporterOverride", path);
+                return;
+            }
+            using var write = SessionImports.Write();
+            var meta = FileOf(path) + ".meta";
+            var text = MetaText(path) ?? "";
+            var written = AssetPaths.WithImporterOverride(text, hash);
+            if (hash != null && OwnImporterSection(path, written) is { } section) written = AssetPaths.WithImporterSection(written, section);
+            if (written != text)
+            {
+                try { System.IO.File.WriteAllText(meta, written); }
+                catch (Exception e) when (e is System.IO.IOException || e is UnauthorizedAccessException)
+                {
+                    Debug.LogError($"Unbound: writing the .meta of {path}: {e.Message}");
+                    return;
+                }
+            }
+            // Imported again with its new importer: the objects loaded with the old one are dropped.
+            AssetImporter.Evict(path);
+            AssetDatabaseRuntime.Invalidate(guid);
+            ImportNow(guid);
+        }
+
+        /// <summary>The asset's `.meta` text, or null without one.</summary>
+        static string MetaText(string path)
+        {
+            var meta = FileOf(path) + ".meta";
+            try { return System.IO.File.Exists(meta) ? System.IO.File.ReadAllText(meta) : null; }
+            catch (Exception e) when (e is System.IO.IOException || e is UnauthorizedAccessException) { return null; }
         }
 
         /// <summary>The importer an asset's extension has natively and that importer's section of a
