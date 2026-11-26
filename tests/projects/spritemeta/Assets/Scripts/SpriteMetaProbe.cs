@@ -97,7 +97,8 @@ public class SpriteMetaProbe : MonoBehaviour
         "SliceThin", "SliceFlat", "SliceAlone3", "SliceAlone4", "SliceTwoBigDot", "SliceBigNear", "SliceBigGap2", "SliceSmallBetween", "SliceAreaSmall",
         "SliceRowMerge", "SliceTopDot", "SliceEmpty", "SliceChain", "SliceMany",
         "OrderRows", "OrderRowsDot", "OrderStair", "OrderStairDot", "NearChebyshev", "NearCentre", "NearTieRow",
-        "OrderTall", "OrderGrid1", "OrderGrid2", "OrderGrid3", "NearGrown", "OrderClamp" };
+        "OrderTall", "OrderGrid1", "OrderGrid2", "OrderGrid3", "NearGrown", "OrderClamp",
+        "NearChain", "OrderAnchorJoin", "OrderTieJoin" };
 
     /// <summary>Textures written in Play mode into Assets/Session and imported by ImportAsset (their
     /// sources' bytes), the last by Refresh.</summary>

@@ -13,6 +13,7 @@
     "managed/UnityEngine/Editor/SpriteImports.cs",
     "managed/UnityEngine/Editor/EditorInitialization.cs",
     "managed/UnityEngine/Runtime/Compat.cs",
-    "managed/UnityEngine/Editor/AssetDatabase.cs"
+    "managed/UnityEngine/Editor/AssetDatabase.cs",
+    "crates/unbound-assets/src/sprite_slice.rs"
   ]
 }

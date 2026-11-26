@@ -4,14 +4,16 @@
 //!
 //! The measured rule: the regions of pixels whose alpha is not 0, 8-connected, listed as a scan
 //! from the bottom row up, each row left to right, meets them; a region narrower or lower than
-//! [`MIN_SIZE`] is small and joins the nearest region that is not (the rect around both), nearest
-//! by the squared gap between the regions as found (not as earlier joins grew them), of equal ones
-//! the first listed (spritemeta sprites.NearChebyshev, NearCentre, NearTieRow, NearGrown,
-//! SliceSmallBetween); without any such region the texture is one sprite of its whole size. Each
-//! rect grows by one pixel on every side, within the texture. The sprites come in rows: the last
-//! listed rect left and every rect whose rows touch its rows form a row, ordered left to right, of
-//! equal left the higher first; then the next row of what is left (OrderRows, OrderStair,
-//! OrderTall, OrderGrid1-3, OrderClamp, SliceChain and the others: 39 textures).
+//! [`MIN_SIZE`] is small: the small ones, from the last listed back, each join the nearest region
+//! that is not small (the rect around both), nearest by the squared gap to that region as earlier
+//! joins grew it, of equal ones the first listed (spritemeta sprites.NearChebyshev, NearCentre,
+//! NearTieRow, NearGrown, NearChain, SliceSmallBetween); without any region that is not small the
+//! texture is one sprite of its whole size. Each rect grows by one pixel on every side, within the
+//! texture. The sprites come in rows: the last listed rect left and every rect whose rows touch its
+//! rows form a row, ordered left to right, of equal left the one of the higher top first; then the
+//! next row of what is left (OrderRows, OrderStair, OrderTall, OrderGrid1-3, OrderClamp,
+//! OrderAnchorJoin, OrderTieJoin, SliceChain and the others: 42 textures). Not told apart by them:
+//! for equal left, the higher top first or the later listed first.
 
 /// The size under which a region is small (in either direction).
 pub const MIN_SIZE: u32 = 4;
@@ -42,11 +44,11 @@ pub fn slice(width: u32, height: u32, alpha: impl Fn(u32, u32) -> u8) -> Vec<Rec
     if regions.iter().all(small) {
         return whole;
     }
-    // Each small region joins the nearest region that is not small, as found; of equal ones the
-    // first listed.
+    // The small regions, from the last listed back, each join the nearest region that is not
+    // small as earlier joins grew it; of equal ones the first listed.
     let mut grown = regions.clone();
     let mut kept = vec![true; regions.len()];
-    for (i, s) in regions.iter().enumerate() {
+    for (i, s) in regions.iter().enumerate().rev() {
         if !small(s) {
             continue;
         }
@@ -55,7 +57,7 @@ pub fn slice(width: u32, height: u32, alpha: impl Fn(u32, u32) -> u8) -> Vec<Rec
             if small(r) {
                 continue;
             }
-            let d = gap(s, r);
+            let d = gap(s, &grown[j]);
             if best.is_none_or(|(_, b)| d < b) {
                 best = Some((j, d));
             }
@@ -86,7 +88,7 @@ pub fn slice(width: u32, height: u32, alpha: impl Fn(u32, u32) -> u8) -> Vec<Rec
         })
         .collect();
     // Rows: the last listed rect and every rect whose rows touch its rows, left to right, of equal
-    // left the higher first.
+    // left the one of the higher top first.
     let mut rects = Vec::with_capacity(left.len());
     while let Some(last) = left.last().copied() {
         let (lo, hi) = (last.y, last.y + last.height);
@@ -98,7 +100,7 @@ pub fn slice(width: u32, height: u32, alpha: impl Fn(u32, u32) -> u8) -> Vec<Rec
             }
             !touches
         });
-        row.sort_by_key(|r| (r.x, std::cmp::Reverse(r.y)));
+        row.sort_by_key(|r| (r.x, std::cmp::Reverse(r.y + r.height)));
         rects.extend(row);
     }
     rects
@@ -239,7 +241,7 @@ mod tests {
             [rect(0, 3, 9, 12), rect(9, 9, 6, 6)]
         );
         // OrderTall: the last listed rect starts the row; OrderGrid2: of equal left the higher
-        // first; NearGrown: a pixel joins by the gaps to the regions as found.
+        // first; NearGrown: the later pixel joins first.
         assert_eq!(
             s(&[(0, 3, 1, 4), (6, 9, 0, 15), (12, 15, 10, 13)]),
             [rect(5, 0, 6, 16), rect(11, 9, 5, 6), rect(0, 0, 5, 6)]
@@ -260,6 +262,26 @@ mod tests {
                 image(&[(0, 3, 0, 3), (12, 15, 0, 3), (6, 6, 0, 0), (9, 9, 0, 0)])
             ),
             [rect(0, 0, 8, 5), rect(8, 0, 8, 5)]
+        );
+        // NearChain: pixels join from the last listed back, to the regions as grown;
+        // OrderTieJoin: of equal left the higher top first.
+        assert_eq!(
+            slice(
+                16,
+                8,
+                image(&[
+                    (0, 3, 0, 3),
+                    (12, 15, 0, 3),
+                    (5, 5, 0, 0),
+                    (7, 7, 0, 0),
+                    (9, 9, 0, 0)
+                ])
+            ),
+            [rect(0, 0, 7, 5), rect(6, 0, 10, 5)]
+        );
+        assert_eq!(
+            s(&[(0, 12, 8, 11), (0, 3, 2, 5), (12, 12, 0, 0)]),
+            [rect(0, 0, 14, 13), rect(0, 1, 5, 6)]
         );
         // SliceNpot: a 10x6 texture of small regions.
         assert_eq!(

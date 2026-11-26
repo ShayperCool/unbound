@@ -22,7 +22,7 @@ installed modules).
 | `BareWrap`, `BarePpu` | as `Bare` with `textureSettings: wrapU: 1`, with `spritePixelsToUnits: 50` |
 | `BareDefault` | only `textureType: 0` |
 | `BareFull` | `Control`'s keys as a Single sprite, without `serializedVersion` |
-| `Order*`, `Near*` | none; 16x16 (`NearGrown` 16x8) blocks whose rows touch (side by side, a staircase, a tall block, padded grids of 2x2 and 3x3, tops at the edge), and pixels between big blocks at different gaps, on one row, two in a row |
+| `Order*`, `Near*` | none; 16x16 (`NearGrown` 16x8) blocks whose rows touch (side by side, a staircase, a tall block, padded grids of 2x2 and 3x3, tops at the edge), and pixels between big blocks at different gaps, on one row, two and three in a row, and joins that move a rect within its row |
 | `Slice*` | none; 16x16 (`SliceNpot` 10x6) of opaque blocks on a transparent ground: an L, blocks touching at a corner, a pixel beside a block, blocks at the edges, faint ones (alpha 1, 50), five 3x3 blocks, 3-wide blocks a pixel apart, a ring, narrow, flat and 5x2 blocks beside a big one, lone 3x3 and 4x4 blocks, two big blocks with pixels between or near them, a chain of overlapping rows, an empty texture |
 
 `Assets/Scripts/SpriteMetaProbe.cs` records in Play mode into values.jsonl in `$SPRITEMETA_OUT`
@@ -48,11 +48,13 @@ opaque texture is one sprite `<name>_0` of the whole texture (pivot written as 0
 alignment), whose file id is the xxHash64 of `Type:Sprite-><name>_00` and whose sprite ID holds that
 id (`New`, `NewNpot`); one with transparent pixels is sliced (`NewGaps`, `Slice*`): the 8-connected
 regions of non-zero alpha; a region narrower or lower than 4 pixels joins the nearest larger one
-(the rect around both; nearest by the squared gap to the regions as found, of equal gaps the one a
-scan from the bottom row up meets first), and a texture without any larger region, or without any
+(the rect around both; the small ones from the last a scan from the bottom row up meets back, each
+by the squared gap to the regions as earlier joins grew them, of equal gaps the one that scan meets
+first), and a texture without any larger region, or without any
 opaque pixel, is one sprite of its whole size; each rect is a pixel larger on every side, clamped.
 The sprites are numbered in rows: the rect that scan meets last of those left and every rect whose
-rows touch its rows, left to right (of equal left the higher first), then the next row of the rest. A new texture ImportAsset or Refresh imports during the session gets
+rows touch its rows, left to right (of equal left the one of the higher top first), then the next
+row of the rest. A new texture ImportAsset or Refresh imports during the session gets
 the same `.meta` (`session/*`). A sprite's `.meta` without `serializedVersion` is written whole in the
 release's layout, its top-level keys kept, its `textureSettings` keys read as defaults (`BareWrap`,
 `BarePpu`, `BareFull`); a Default texture's is left as it is (`BareDefault`). A Default texture is
