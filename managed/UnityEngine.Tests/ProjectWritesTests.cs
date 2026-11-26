@@ -235,15 +235,11 @@ namespace UnityEngine.Tests
             {
                 var project = Path.Combine(Repo(), "tests", "projects", "spritemeta");
                 var text = File.ReadAllText(Path.Combine(project, "Assets", "Textures", name + ".png.meta"));
-                var saved = ImporterLayout.ReadAsOldest("TextureImporter", UnityYamlText.ParseTopLevel(text).Get("TextureImporter").ToNode());
-                if (name == "BareWrap") Assert.Null(saved.Get("textureSettings"));
-                Assert.Equal("1", saved.Get("applyGammaDecoding").Scalar);
+                // The importer's settings as the file holds them.
+                var saved = UnityYamlText.ParseTopLevel(text).Get("TextureImporter").ToNode();
                 // The sprite's ID and NPOT scaling given, as the first import gives them.
-                foreach (var node in new[] { saved })
-                {
-                    MetaSettings.Set(node, "spriteSheet.spriteID", "5e97eb03825dee720800000000000000");
-                    MetaSettings.SetInt(node, "nPOTScale", 0);
-                }
+                MetaSettings.Set(saved, "spriteSheet.spriteID", "5e97eb03825dee720800000000000000");
+                MetaSettings.SetInt(saved, "nPOTScale", 0);
                 var settings = MetaSettings.Clone(saved);
                 var unwritten = new List<string>();
                 var written = ImporterMeta.Rewritten(text, "TextureImporter", settings, saved, ("", "", ""), TextureTemplate(), unwritten);
@@ -256,6 +252,40 @@ namespace UnityEngine.Tests
                     if (line.StartsWith("{\"k\":\"end/" + name + "\",", StringComparison.Ordinal))
                         expected = System.Text.Json.JsonDocument.Parse(line).RootElement.GetProperty("v").GetString();
                 Assert.Equal(expected, written);
+            }
+            finally { ImporterMeta.s_TextureImportPlatformsForTests = previous; }
+        }
+
+        /// <summary>The oldest layout is converted only where it is measured, a sprite's whose
+        /// textureSettings are of their own version or of the wrap keys alone, and only for a
+        /// change: an unchanged importer writes nothing; a Default texture's section (spritemeta
+        /// BareDefault, which the Editor reads as another type) and one of other older
+        /// textureSettings keys keep their layout, said.</summary>
+        [Fact]
+        public void TheOldestLayoutIsConvertedOnlyForAChangeOfAMeasuredSpriteSection()
+        {
+            var previous = ImporterMeta.s_TextureImportPlatformsForTests;
+            ImporterMeta.s_TextureImportPlatformsForTests = new[] { "Standalone", "Android" };
+            try
+            {
+                const string head = "fileFormatVersion: 2\nguid: 0c118e8ca72b420ea96177cff6d779f0\nTextureImporter:\n";
+                foreach (var body in new[] { "  textureType: 8\n  spriteMode: 1\n", "  textureType: 0\n  applyGammaDecoding: 0\n" })
+                {
+                    var text = head + body;
+                    var saved = UnityYamlText.ParseTopLevel(text).Get("TextureImporter").ToNode();
+                    Assert.Null(ImporterMeta.Rewritten(text, "TextureImporter", MetaSettings.Clone(saved), saved, ("", "", ""), TextureTemplate(), new List<string>()));
+                }
+                Assert.True(ImporterLayout.IsOldestSprite(UnityYamlText.ParseTopLevel(head + "  textureType: 8\n  textureSettings:\n    wrapU: 1\n").Get("TextureImporter")));
+                Assert.False(ImporterLayout.IsOldestSprite(UnityYamlText.ParseTopLevel(head + "  textureType: 0\n").Get("TextureImporter")));
+                Assert.False(ImporterLayout.IsOldestSprite(UnityYamlText.ParseTopLevel(head + "  textureType: 8\n  textureSettings:\n    filterMode: 0\n").Get("TextureImporter")));
+                Assert.False(ImporterLayout.IsOldestSprite(UnityYamlText.ParseTopLevel(head + "  serializedVersion: 13\n  textureType: 8\n").Get("TextureImporter")));
+                // A change of a Default texture's: the file's layout kept (the older settings' place
+                // in the release's is not measured), patched in place.
+                var defaultText = head + "  textureType: 0\n  maxTextureSize: 2048\n";
+                var defaultSaved = UnityYamlText.ParseTopLevel(defaultText).Get("TextureImporter").ToNode();
+                MetaSettings.SetInt(defaultSaved, "maxTextureSize", 512);
+                var written = ImporterMeta.Rewritten(defaultText, "TextureImporter", MetaSettings.Clone(defaultSaved), defaultSaved, ("", "", ""), TextureTemplate(), new List<string>());
+                Assert.Equal(head + "  textureType: 0\n  maxTextureSize: 512\n", written);
             }
             finally { ImporterMeta.s_TextureImportPlatformsForTests = previous; }
         }
