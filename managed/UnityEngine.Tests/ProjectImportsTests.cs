@@ -935,7 +935,7 @@ namespace UnityEngine.Tests
             try
             {
                 // Its preprocessors ran for an earlier import (ImportAsset of the new file), which
-                // loaded nothing: they run again for this one.
+                // loaded nothing: this import forgets that, so its read runs them again.
                 AssetPostprocessing.EnsurePreprocessed("Assets/M/U.png", "texture");
                 Assert.True(AssetPostprocessing.Preprocessed("Assets/M/U.png"));
                 Write("Assets/M/U.png", "u changed outside");
