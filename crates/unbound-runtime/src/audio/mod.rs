@@ -26,7 +26,7 @@ pub mod spatial;
 pub(crate) mod wavetable;
 
 use anyhow::Result;
-pub use mixer::{Clip, Mixer, MixerConfig, SourceParams};
+pub use mixer::{Clip, Mixer, MixerConfig, SourceParams, StreamProvider};
 use protocol::{AudioFramePacket, AudioStatus, Callback, frame_flags};
 use serde::{Deserialize, Serialize};
 use std::{

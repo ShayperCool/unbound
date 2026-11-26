@@ -464,6 +464,17 @@ fn input_matrix(
     (matrix, entries)
 }
 
+/// A streamed clip's data from the native side (a video's audio track): fills interleaved frames
+/// in place of the managed PCM reader.
+#[derive(Clone)]
+pub struct StreamProvider(pub std::sync::Arc<dyn Fn(&mut [f32]) + Send + Sync>);
+
+impl std::fmt::Debug for StreamProvider {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str("StreamProvider")
+    }
+}
+
 /// Decoded (or user-made) audio data.
 #[derive(Debug, Clone, Default)]
 pub struct Clip {
@@ -473,6 +484,8 @@ pub struct Clip {
     /// Interleaved; empty for a streamed clip, whose data comes from its PCM reader.
     pub samples: Vec<f32>,
     pub stream: bool,
+    /// A streamed clip's native source of data, read instead of its PCM reader.
+    pub provider: Option<StreamProvider>,
 }
 
 impl Clip {
@@ -484,6 +497,7 @@ impl Clip {
             rate,
             samples,
             stream: false,
+            provider: None,
         }
     }
 
@@ -1879,6 +1893,17 @@ impl Mixer {
     }
 
     /// The clips held and the bytes of their samples (for the memory trace).
+    /// Gives a streamed clip a native source of data; false for a missing or unstreamed clip.
+    pub fn set_clip_provider(&mut self, handle: u64, provider: StreamProvider) -> bool {
+        match self.clips.get_mut(&handle) {
+            Some(clip) if clip.stream => {
+                clip.provider = Some(provider);
+                true
+            }
+            _ => false,
+        }
+    }
+
     pub fn clip_memory(&self) -> (usize, usize) {
         let bytes = self
             .clips
@@ -3946,7 +3971,9 @@ impl StreamState {
             let chunk = STREAM_CHUNK.min(clip.frames - self.cursor).max(1);
             let len = self.buffer.len();
             self.buffer.resize(len + chunk * channels, 0.0);
-            if let Some(cb) = callback {
+            if let Some(provider) = &clip.provider {
+                (provider.0)(&mut self.buffer[len..]);
+            } else if let Some(cb) = callback {
                 cb(
                     callback::PCM_READ,
                     handle,

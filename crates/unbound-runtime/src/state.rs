@@ -817,6 +817,47 @@ pub fn dispatch(method: &str, request: &str) -> Result<String> {
             let r: Request = serde_json::from_str(request)?;
             Ok(json!({ "id": crate::video::open(&r.path, r.width, r.height, r.fps) }).to_string())
         }
+        "video-audio-open" => {
+            // A video's audio track as the data of streamed clip `clip` (made by the managed side).
+            #[derive(serde::Deserialize)]
+            struct Request {
+                clip: u64,
+                path: String,
+                track: usize,
+                channels: usize,
+                rate: u32,
+            }
+            let r: Request = serde_json::from_str(request)?;
+            let (id, stream) = crate::video::audio_open(&r.path, r.track, r.channels, r.rate);
+            let provider = crate::audio::StreamProvider(std::sync::Arc::new(move |out: &mut [f32]| stream.provide(out)));
+            if !state().audio.mixer().set_clip_provider(r.clip, provider) {
+                crate::video::audio_close(id);
+                anyhow::bail!("no streamed clip {} for a video's audio", r.clip);
+            }
+            Ok(json!({ "id": id }).to_string())
+        }
+        "video-audio-control" => {
+            #[derive(serde::Deserialize)]
+            struct Request {
+                id: u64,
+                playing: Option<bool>,
+                speed: Option<f64>,
+                restart: Option<f64>,
+                sync: Option<f64>,
+            }
+            let r: Request = serde_json::from_str(request)?;
+            crate::video::audio_control(r.id, r.playing, r.speed, r.restart, r.sync)?;
+            Ok("{}".into())
+        }
+        "video-audio-close" => {
+            #[derive(serde::Deserialize)]
+            struct Request {
+                id: u64,
+            }
+            let r: Request = serde_json::from_str(request)?;
+            crate::video::audio_close(r.id);
+            Ok("{}".into())
+        }
         "video-close" => {
             #[derive(serde::Deserialize)]
             struct Request {

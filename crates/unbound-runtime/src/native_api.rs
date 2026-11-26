@@ -1275,6 +1275,7 @@ extern "C" fn audio_create_clip(
             frames,
             samples: Vec::new(),
             stream: true,
+            provider: None,
         }
     } else {
         Clip::new(

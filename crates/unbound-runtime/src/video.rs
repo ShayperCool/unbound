@@ -372,3 +372,274 @@ mod tests {
         assert!(error.to_string().contains("has no video stream"), "{error}");
     }
 }
+
+/// A video's audio track decoded by ffmpeg into interleaved floats at the track's rate and
+/// channel count, read by the mixer as a streamed clip's data (see [`AudioStream::provide`]). The
+/// player keeps it in step with its pictures: it plays or stays silent, starts again at a time
+/// (start, seek, loop), and at a playback speed above 1 skips what the faster pictures leave
+/// behind, so the sound keeps its pitch (measured: tests/projects/videoaudio).
+pub struct AudioStream {
+    path: String,
+    track: usize,
+    channels: usize,
+    rate: u32,
+    state: Mutex<AudioState>,
+}
+
+#[derive(Default)]
+struct AudioState {
+    playing: bool,
+    speed: f64,
+    /// Decoded samples not read yet, shared with the reading thread of `generation`.
+    queue: std::sync::Arc<Mutex<std::collections::VecDeque<f32>>>,
+    process: Option<Child>,
+    /// Bumped at each restart, so an earlier reading thread stops adding to the queue.
+    generation: std::sync::Arc<std::sync::atomic::AtomicU64>,
+    /// Samples a speed above 1 still has to skip.
+    skip: f64,
+    /// The track time (in frames) of the next frame given out: where decoding started plus what
+    /// was given out or skipped since.
+    position: f64,
+}
+
+/// At most this many seconds are decoded ahead.
+const AUDIO_AHEAD_SECONDS: f64 = 2.0;
+/// How far the sound may be from the pictures before it starts again at their time.
+const AUDIO_DRIFT_SECONDS: f64 = 0.2;
+
+impl AudioStream {
+    /// Starts decoding again at `time` seconds, dropping what was decoded.
+    fn restart(&self, state: &mut AudioState, time: f64) -> Result<()> {
+        if let Some(mut child) = state.process.take() {
+            let _ = child.kill();
+            let _ = child.wait();
+        }
+        let generation = state
+            .generation
+            .fetch_add(1, std::sync::atomic::Ordering::SeqCst)
+            + 1;
+        state.queue.lock().unwrap().clear();
+        state.skip = 0.0;
+        state.position = time.max(0.0) * self.rate as f64;
+        let mut child = Command::new("ffmpeg")
+            .args(["-v", "error", "-nostdin", "-ss", &format!("{:.6}", time.max(0.0)), "-i", &self.path])
+            .args(["-vn", "-map", &format!("0:a:{}", self.track), "-f", "f32le"])
+            .args(["-ac", &self.channels.to_string(), "-ar", &self.rate.to_string(), "-"])
+            .stdin(Stdio::null())
+            .stdout(Stdio::piped())
+            .stderr(Stdio::null())
+            .spawn()
+            .context("Unbound plays a video's sound through ffmpeg; `ffmpeg` could not be run (is ffmpeg installed?)")?;
+        let mut stdout = child.stdout.take().context("no ffmpeg output")?;
+        state.process = Some(child);
+        let queue = state.queue.clone();
+        let current = state.generation.clone();
+        let limit = (AUDIO_AHEAD_SECONDS * self.rate as f64) as usize * self.channels;
+        std::thread::spawn(move || {
+            let mut bytes = vec![0u8; 4096];
+            let mut carry = Vec::<u8>::new();
+            loop {
+                if current.load(std::sync::atomic::Ordering::SeqCst) != generation {
+                    return;
+                }
+                if queue.lock().unwrap().len() >= limit {
+                    std::thread::sleep(std::time::Duration::from_millis(5));
+                    continue;
+                }
+                let n = match stdout.read(&mut bytes) {
+                    Ok(0) | Err(_) => return,
+                    Ok(n) => n,
+                };
+                carry.extend_from_slice(&bytes[..n]);
+                let whole = carry.len() / 4 * 4;
+                let mut q = queue.lock().unwrap();
+                if current.load(std::sync::atomic::Ordering::SeqCst) != generation {
+                    return;
+                }
+                q.extend(
+                    carry[..whole]
+                        .chunks_exact(4)
+                        .map(|b| f32::from_le_bytes([b[0], b[1], b[2], b[3]])),
+                );
+                drop(q);
+                carry.drain(..whole);
+            }
+        });
+        Ok(())
+    }
+
+    /// Fills `out` (interleaved frames) for the mixer: silence while not playing or before the
+    /// decoder has caught up; at a speed above 1 the frames the pictures skip are dropped after.
+    pub fn provide(&self, out: &mut [f32]) {
+        out.fill(0.0);
+        let mut state = self.state.lock().unwrap();
+        if !state.playing {
+            return;
+        }
+        let mut queue = state.queue.lock().unwrap();
+        let n = out.len().min(queue.len());
+        for (slot, sample) in out[..n].iter_mut().zip(queue.drain(..n)) {
+            *slot = sample;
+        }
+        drop(queue);
+        let frames = out.len() / self.channels.max(1);
+        state.position += frames as f64;
+        if state.speed > 1.0 {
+            state.skip += (state.speed - 1.0) * frames as f64;
+            let whole = state.skip.floor() as usize;
+            state.skip -= whole as f64;
+            {
+                let mut queue = state.queue.lock().unwrap();
+                let drop_samples = (whole * self.channels).min(queue.len());
+                queue.drain(..drop_samples);
+            }
+            state.position += whole as f64;
+        }
+    }
+
+    /// The player's state: playing or not, its speed, a time to start decoding again at, and the
+    /// pictures' time, which starts decoding again there when the sound is more than
+    /// [`AUDIO_DRIFT_SECONDS`] away from it.
+    pub fn control(
+        &self,
+        playing: Option<bool>,
+        speed: Option<f64>,
+        restart: Option<f64>,
+        sync: Option<f64>,
+    ) -> Result<()> {
+        let mut state = self.state.lock().unwrap();
+        if let Some(time) = restart {
+            self.restart(&mut state, time)?;
+        } else if let Some(time) = sync {
+            if (state.position / self.rate as f64 - time).abs() > AUDIO_DRIFT_SECONDS {
+                self.restart(&mut state, time)?;
+            }
+        }
+        if let Some(playing) = playing {
+            state.playing = playing;
+        }
+        if let Some(speed) = speed {
+            state.speed = speed;
+        }
+        Ok(())
+    }
+}
+
+impl Drop for AudioStream {
+    fn drop(&mut self) {
+        let state = self.state.get_mut().unwrap();
+        state
+            .generation
+            .fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+        if let Some(mut child) = state.process.take() {
+            let _ = child.kill();
+            let _ = child.wait();
+        }
+    }
+}
+
+fn audio_streams() -> &'static Mutex<HashMap<u64, std::sync::Arc<AudioStream>>> {
+    static STREAMS: OnceLock<Mutex<HashMap<u64, std::sync::Arc<AudioStream>>>> = OnceLock::new();
+    STREAMS.get_or_init(|| Mutex::new(HashMap::new()))
+}
+
+/// A decoder of track `track` of a video for the mixer's streamed clip; its id and the clip's
+/// data source.
+pub fn audio_open(
+    path: &str,
+    track: usize,
+    channels: usize,
+    rate: u32,
+) -> (u64, std::sync::Arc<AudioStream>) {
+    static NEXT: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(1);
+    let id = NEXT.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+    let stream = std::sync::Arc::new(AudioStream {
+        path: path.to_string(),
+        track,
+        channels: channels.max(1),
+        rate: rate.max(1),
+        state: Mutex::new(AudioState {
+            speed: 1.0,
+            ..AudioState::default()
+        }),
+    });
+    audio_streams().lock().unwrap().insert(id, stream.clone());
+    (id, stream)
+}
+
+pub fn audio_control(
+    id: u64,
+    playing: Option<bool>,
+    speed: Option<f64>,
+    restart: Option<f64>,
+    sync: Option<f64>,
+) -> Result<()> {
+    let stream = audio_streams()
+        .lock()
+        .unwrap()
+        .get(&id)
+        .cloned()
+        .context("no such video audio stream")?;
+    stream.control(playing, speed, restart, sync)
+}
+
+pub fn audio_close(id: u64) {
+    audio_streams().lock().unwrap().remove(&id);
+}
+
+#[cfg(test)]
+mod audio_stream_tests {
+    use super::*;
+
+    fn stream(samples: &[f32], playing: bool, speed: f64) -> AudioStream {
+        let state = AudioState {
+            playing,
+            speed,
+            ..AudioState::default()
+        };
+        state.queue.lock().unwrap().extend(samples.iter().copied());
+        AudioStream {
+            path: String::new(),
+            track: 0,
+            channels: 2,
+            rate: 10,
+            state: Mutex::new(state),
+        }
+    }
+
+    #[test]
+    fn a_playing_stream_gives_its_frames_and_counts_them() {
+        let samples: Vec<f32> = (1..=8).map(|v| v as f32).collect();
+        let s = stream(&samples, true, 1.0);
+        let mut out = [0.0; 6];
+        s.provide(&mut out);
+        assert_eq!(out, [1.0, 2.0, 3.0, 4.0, 5.0, 6.0]);
+        // Past what was decoded: silence for the rest.
+        s.provide(&mut out);
+        assert_eq!(out, [7.0, 8.0, 0.0, 0.0, 0.0, 0.0]);
+        assert_eq!(s.state.lock().unwrap().position, 6.0);
+    }
+
+    #[test]
+    fn a_paused_stream_is_silent_and_keeps_its_place() {
+        let s = stream(&[1.0, 2.0, 3.0, 4.0], false, 1.0);
+        let mut out = [9.0; 4];
+        s.provide(&mut out);
+        assert_eq!(out, [0.0; 4]);
+        assert_eq!(s.state.lock().unwrap().queue.lock().unwrap().len(), 4);
+        assert_eq!(s.state.lock().unwrap().position, 0.0);
+    }
+
+    #[test]
+    fn at_double_speed_the_frames_after_each_read_are_skipped() {
+        // Two-channel frames 1..=8: a read of two frames gives frames 1-2 and skips 3-4.
+        let samples: Vec<f32> = (1..=8).flat_map(|f| [f as f32, -(f as f32)]).collect();
+        let s = stream(&samples, true, 2.0);
+        let mut out = [0.0; 4];
+        s.provide(&mut out);
+        assert_eq!(out, [1.0, -1.0, 2.0, -2.0]);
+        s.provide(&mut out);
+        assert_eq!(out, [5.0, -5.0, 6.0, -6.0]);
+        assert_eq!(s.state.lock().unwrap().position, 8.0);
+    }
+}
