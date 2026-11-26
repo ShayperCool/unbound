@@ -30,10 +30,25 @@ namespace UnityEditor.ShortcutManagement
 
         [Unbound.EditorFaithful(NoShortcuts)]
         public static void UnregisterTag(Enum e) { }
+
+        // A tool context only decides which shortcuts its keys reach, as tags do.
+        const string NoContexts = "no key reaches a shortcut (as in the batch-mode Editor); a tool context has no other observable effect";
+
+        [Unbound.EditorFaithful(NoContexts)]
+        public static void RegisterContext(IShortcutContext context) { }
+
+        [Unbound.EditorFaithful(NoContexts)]
+        public static void UnregisterContext(IShortcutContext context) { }
     }
 
     public partial interface IShortcutManager
     {
+    }
+
+    /// <summary>A tool's shortcut context: its shortcuts apply while it is active.</summary>
+    public partial interface IShortcutContext
+    {
+        bool active { get; }
     }
 
     /// <summary>The default profile alone, no shortcuts.</summary>
