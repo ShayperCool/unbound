@@ -336,7 +336,12 @@ namespace UnityEngine
         }
 
         /// <summary>The pixels for the engine's own use (a terrain's detail atlas), readable or not.</summary>
-        internal Color32[] EnginePixels32()
+        internal Color32[] EnginePixels32() => EnginePixels32OrNull() ?? new Color32[m_Width * m_Height];
+
+        /// <summary>The engine's texels as <see cref="EnginePixels32"/> gives them, or null for an
+        /// imported texture whose texels Unbound could not read (no pixels kept, and none fetched
+        /// from its import): a caller that must not treat them as black says so.</summary>
+        internal Color32[] EnginePixels32OrNull()
         {
             DecodeRaw();
             SyncFromStore();
@@ -369,7 +374,7 @@ namespace UnityEngine
                 for (int i = 0; i < result.Length; i++) result[i] = m_Hdr[i];
                 return result;
             }
-            return new Color32[m_Width * m_Height];
+            return m_AssetGuid != null ? null : new Color32[m_Width * m_Height];
         }
 
         void FetchImportedPixels()

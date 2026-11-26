@@ -719,7 +719,12 @@ namespace UnityEngine
             if ((kind == 0 || kind == 2) && light.cookie is Texture2D flat)
             {
                 (width, height, slices) = (flat.width, flat.height, 1);
-                var texels = flat.EnginePixels32();
+                var texels = flat.EnginePixels32OrNull();
+                if (texels == null)
+                {
+                    warn("light-cookie:" + path + fileId, $"{path}: '{light.name}' has a cookie whose texels Unbound cannot read, which its bake (Lightmapping.Bake) does not apply.");
+                    return null;
+                }
                 alpha = new byte[texels.Length];
                 for (int i = 0; i < texels.Length; i++) alpha[i] = texels[i].a;
             }
