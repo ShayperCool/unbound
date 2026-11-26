@@ -866,8 +866,7 @@ pub fn dispatch(method: &str, request: &str) -> Result<String> {
                 // What the asset is without its ScriptedImporter, and whether its .meta sets an
                 // importer override (the managed side decides whether that importer imports it).
                 "listedKind": listed_kind(asset),
-                "importerOverride": importer.is_some()
-                    && unbound_assets::meta::has_importer_override(&asset.file),
+                "importerOverride": importer_override_set(asset),
                 "managed": kind == "plugin" && unbound_project::plugins::is_managed_assembly(&asset.file),
             })
             .to_string())
@@ -2217,6 +2216,12 @@ fn is_plain_folder(asset: &unbound_project::assetdb::Asset) -> bool {
 /// The importer of a listed asset: a plain folder's is the DefaultImporter; a file's is the one the
 /// Editor picks by its extension, or for an extension the list does not know, the one its `.meta`
 /// names (a native-format kind of a package, for one).
+/// Whether the asset's `.meta` sets an importer override, of any importer it names: a project
+/// script's, or a precompiled one's that Unbound does not run as a scripted import itself.
+fn importer_override_set(asset: &unbound_project::assetdb::Asset) -> bool {
+    !asset.is_folder && unbound_assets::meta::has_importer_override(&asset.file)
+}
+
 fn asset_importer(asset: &unbound_project::assetdb::Asset) -> &str {
     if is_plain_folder(asset) {
         return "DefaultImporter";
@@ -3069,6 +3074,33 @@ fn json_to_yaml(value: &serde_json::Value) -> unbound_yaml::Value {
 
 #[cfg(test)]
 mod tests {
+    /// An importer override is set for a precompiled importer too (tests/projects/importselfload:
+    /// the Editor imports with the override its `.meta` sets).
+    #[test]
+    fn an_override_of_a_precompiled_importer_is_set() {
+        let dir = std::env::temp_dir().join(format!("unbound-dll-override-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let file = dir.join("Art.png");
+        std::fs::write(
+            dir.join("Art.png.meta"),
+            "fileFormatVersion: 2\nguid: 1\nimporterOverride:\n  nativeImporterType: 2089858483\nScriptedImporter:\n  script: {fileID: -1234567, guid: 0123456789abcdef0123456789abcdef, type: 3}\n",
+        )
+        .unwrap();
+        let asset = unbound_project::assetdb::Asset {
+            guid: Guid::parse("00000000000000000000000000000001").unwrap(),
+            path: "Assets/Art.png".into(),
+            file: file.clone(),
+            is_folder: false,
+            labels: vec![],
+            importer: Some("ScriptedImporter".into()),
+        };
+        // Unbound does not run a precompiled importer as a scripted import of its own, yet the
+        // override is set.
+        assert!(unbound_assets::meta::scripted_importer_of(&file).is_none());
+        assert!(super::importer_override_set(&asset));
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+
     /// A GUID-only `.meta` written again gets the section the Editor writes (the reference's
     /// `labelled.*` files after their GUID and labels); the texture, audio and unknown kinds none.
     #[test]

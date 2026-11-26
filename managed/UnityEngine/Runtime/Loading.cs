@@ -853,6 +853,10 @@ namespace Unbound.Runtime
         /// loading the asset meanwhile gives what it has published, else nothing.</summary>
         internal static ImportCallbackScope ImportCallbacks(string guid) => new ImportCallbackScope(guid);
 
+        /// <summary>Whether the asset is being imported (its file read, or its import's callbacks running).</summary>
+        internal static bool Importing(string guid) =>
+            !string.IsNullOrEmpty(guid) && (s_Loading.Contains(guid) || s_InImportCallbacks.Contains(guid));
+
         internal readonly struct ImportCallbackScope : IDisposable
         {
             readonly string m_Guid;
