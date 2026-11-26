@@ -5,6 +5,8 @@
   "summary": "shortcuttypes: .*",
   "engine_paths": [
     "managed/UnityEngine/Editor/ShortcutAttributes.cs",
-    "managed/UnityEngine/Editor/ShortcutBindings.cs"
+    "managed/UnityEngine/Editor/ShortcutBindings.cs",
+    "managed/UnityEngine/Editor/ShortcutRegistry.cs",
+    "managed/UnityEngine/Editor/Shortcuts.cs"
   ]
 }

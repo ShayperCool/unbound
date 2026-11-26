@@ -1861,7 +1861,7 @@
 {"k":"context.deregistered","v":"2"}
 {"k":"context.conflicts","v":"True,True,False,True,True"}
 {"k":"context.enumTagFormat","v":"ProbeMode.Second"}
-{"k":"context.tags","v":"probe-a;probe-b/2/True/False probe-a;probe-b;ProbeMode.Second/5 /8 True"}
+{"k":"context.tags","v":"probe-a;probe-b/2/True/False probe-a;probe-b;ProbeMode.Second/5 /8 True True/True/2 False/False/4"}
 {"k":"entry.Probe/Registry/ActionMouse","v":"Probe/Registry/ActionMouse|Probe/Registry/ActionMouse|Mouse1+0|ShortcutTypesProbe+ProbeTool|null|Action|1000|0|null|False"}
 {"k":"entry.Probe/Registry/Chord","v":"Probe/Registry/Chord|Probe/Registry/Chord|T+1|UnityEditor.ShortcutManagement.ContextManager+GlobalContext|null|Action|1000000|0|null|False"}
 {"k":"entry.Probe/Clutch","v":"Probe/Clutch|Probe/Clutch||UnityEditor.ShortcutManagement.ContextManager+GlobalContext|null|Clutch|1000000|0|null|False"}

@@ -15,24 +15,23 @@ namespace UnityEditor.ShortcutManagement
 
         public static IShortcutManager instance { get; } = (IShortcutManager)DispatchProxy.Create(typeof(IShortcutManager), typeof(DefaultShortcutManager));
 
-        // Tags only choose which shortcuts are active; no key reaches a shortcut in Unbound's
-        // Editor (as in the batch-mode one), and the active tags are not observable otherwise.
-        const string NoShortcuts = "no key reaches a shortcut (as in the batch-mode Editor); tags have no other observable effect";
+        // The Editor routes these to its shortcut controller's context manager. The tags are the
+        // Editor-wide set every context manager shares (an Editor singleton), so any manager
+        // registers them as the Editor's does; the shortcut controller is not written by hand yet.
+        static ContextManager s_TagContextManager;
+        static ContextManager tagContextManager => s_TagContextManager ??= new ContextManager();
 
-        [Unbound.EditorFaithful(NoShortcuts)]
-        public static void RegisterTag(string tag) { }
+        public static void RegisterTag(string tag) => tagContextManager.RegisterTag(tag);
 
-        [Unbound.EditorFaithful(NoShortcuts)]
-        public static void RegisterTag(Enum e) { }
+        public static void RegisterTag(Enum e) => tagContextManager.RegisterTag(e);
 
-        [Unbound.EditorFaithful(NoShortcuts)]
-        public static void UnregisterTag(string tag) { }
+        public static void UnregisterTag(string tag) => tagContextManager.UnregisterTag(tag);
 
-        [Unbound.EditorFaithful(NoShortcuts)]
-        public static void UnregisterTag(Enum e) { }
+        public static void UnregisterTag(Enum e) => tagContextManager.UnregisterTag(e);
 
-        // A tool context only decides which shortcuts its keys reach, as tags do.
-        const string NoContexts = "no key reaches a shortcut (as in the batch-mode Editor); a tool context has no other observable effect";
+        // A tool context is the Editor's shortcut controller's own (not one shared set, as the
+        // tags are), and it only decides which shortcuts the keys reach.
+        const string NoContexts = "no key reaches a shortcut (as in the batch-mode Editor), and the shortcut controller whose context manager would hold the context is not written by hand yet";
 
         [Unbound.EditorFaithful(NoContexts)]
         public static void RegisterContext(IShortcutContext context) { }

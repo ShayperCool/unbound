@@ -220,6 +220,29 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
+        public void ThePublicTagsAreTheContextManagersSharedSet()
+        {
+            int changes = 0;
+            var previous = ContextManager.onTagChange;
+            ContextManager.onTagChange = () => changes++;
+            try
+            {
+                ShortcutManager.RegisterTag("probe-unit-public");
+                ShortcutManager.RegisterTag(ShortcutStage.End);
+                var manager = new ContextManager();
+                Assert.True(manager.HasTag("probe-unit-public"));
+                Assert.True(manager.HasTag("ShortcutStage.End"));
+                ShortcutManager.RegisterTag(ShortcutStage.Begin);
+                Assert.False(manager.HasTag("ShortcutStage.End"));
+                ShortcutManager.UnregisterTag("probe-unit-public");
+                ShortcutManager.UnregisterTag(ShortcutStage.Begin);
+                Assert.False(manager.HasTag("probe-unit-public"));
+                Assert.Equal(6, changes);
+            }
+            finally { ContextManager.onTagChange = previous; }
+        }
+
+        [Fact]
         public void AnActionAndAClutchOnOneMouseButtonDoNotConflict()
         {
             var mouse = new KeyCombination(KeyCode.Mouse1);

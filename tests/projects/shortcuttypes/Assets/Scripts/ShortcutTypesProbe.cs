@@ -395,6 +395,14 @@ public class ShortcutTypesProbe : MonoBehaviour
                 Call(manager, "RegisterTag", "probe-shared");
                 steps.Add(Call(Activator.CreateInstance(managerType), "HasTag", "probe-shared").ToString());
                 Call(manager, "UnregisterTag", "probe-shared");
+                // The public ShortcutManager's tags are that set too.
+                int before = changes;
+                ShortcutManager.RegisterTag("probe-public");
+                ShortcutManager.RegisterTag(ProbeMode.Second);
+                steps.Add(Call(manager, "HasTag", "probe-public") + "/" + Call(manager, "HasTag", "ProbeMode.Second") + "/" + (changes - before));
+                ShortcutManager.UnregisterTag("probe-public");
+                ShortcutManager.UnregisterTag(ProbeMode.Second);
+                steps.Add(Call(manager, "HasTag", "probe-public") + "/" + Call(manager, "HasTag", "ProbeMode.Second") + "/" + (changes - before));
             }
             finally { onTagChange.SetValue(null, previous); }
             return string.Join(" ", steps.ToArray());
