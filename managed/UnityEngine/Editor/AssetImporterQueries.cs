@@ -77,8 +77,9 @@ namespace UnityEditor
             return GetImporterType(path);
         }
 
-        /// <summary>An existing asset's GUID, empty for a path without one (a deleted asset's
-        /// included, as AssetPathToGUID with OnlyExistingAssets answers: Unity's C# goes through it).</summary>
+        /// <summary>An existing asset's GUID, empty for a path without an existing asset (a recently
+        /// deleted asset's path included), as AssetPathToGUID with OnlyExistingAssets answers: Unity's
+        /// C# goes through it.</summary>
         internal static GUID GUIDFromExistingAssetPath(string path) => new GUID(ExistingAssetGuid(path));
 
         static string ExistingAssetGuid(string path) =>

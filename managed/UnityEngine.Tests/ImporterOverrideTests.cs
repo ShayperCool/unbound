@@ -97,7 +97,6 @@ namespace UnityEngine.Tests
                 Assert.Equal("c0de00000000000000000000000000e2", AssetDatabase.AssetPathToGUID("Assets/Data/Gone.ovr2"));
                 AssetDatabase.SetImporterOverride<TopLevelOverrideImporter>("Assets/Data/Gone.ovr2");
                 Assert.Equal(new[] { "Error: Cannot set Importer override at \"Assets/Data/Gone.ovr2\". No Asset found at that path." }, logs);
-                AssetDatabase.ClearImporterOverride("Assets/Data/Gone.ovr2");
                 AssetDatabase.SetImporterOverrideInternal("Assets/Data/Gone.ovr2", typeof(TopLevelOverrideImporter));
                 Assert.Single(logs);
                 // A class registered as no project importer is not set: said.

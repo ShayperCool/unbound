@@ -440,7 +440,17 @@ mod tests {
         )
         .unwrap();
         assert!(super::has_importer_override(&asset));
-        // A `.meta` of CRLF endings, as both readers take it.
+        // A `.meta` of CRLF endings, and a key with trailing spaces, as both readers take them.
+        std::fs::write(
+            &meta,
+            "fileFormatVersion: 2\nguid: 1\nimporterOverride:  \n  nativeImporterType: 2089858483\n  scriptedImporterType:\n    serializedVersion: 2\n    Hash: 104ddd7902d5b6bcff8d6316c3d1f5bc\nDefaultImporter:\n  userData: \n",
+        )
+        .unwrap();
+        assert!(super::has_importer_override(&asset));
+        assert_eq!(
+            super::importer_override_hash(&asset).as_deref(),
+            Some("104ddd7902d5b6bcff8d6316c3d1f5bc")
+        );
         std::fs::write(
             &meta,
             "fileFormatVersion: 2\r\nguid: 1\r\nimporterOverride:\r\n  nativeImporterType: 2089858483\r\n  scriptedImporterType:\r\n    serializedVersion: 2\r\n    Hash: 104ddd7902d5b6bcff8d6316c3d1f5bc\r\nDefaultImporter:\r\n  userData: \r\n",
