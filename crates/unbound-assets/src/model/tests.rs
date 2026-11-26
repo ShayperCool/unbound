@@ -2308,7 +2308,7 @@ fn model_formats_not_imported_say_why() {
 }
 
 #[test]
-fn every_model_format_is_imported_or_reported() {
+fn the_model_kinds_formats_are_imported_or_reported() {
     for format in [
         "fbx", "obj", "blend", "dae", "3ds", "dxf", "max", "ma", "mb",
     ] {
