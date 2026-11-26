@@ -351,6 +351,32 @@ namespace Unbound.UIElements
         internal const long VisualTreeAssetFileId = 9197481963319205126;
         internal const long InlineStyleSheetFileId = 3466183405998542844;
 
+        /// <summary>A loaded document takes a new import's tree in place (its file changed on disk):
+        /// <paramref name="kept"/> holds <paramref name="copy"/>'s content, the overrides written in
+        /// it naming <paramref name="kept"/>; the copy, destroyed next, the old content. An enabled
+        /// UIDocument showing it keeps the elements it cloned, with a warning (the Editor's live
+        /// reload of its panel is not measured).</summary>
+        internal static void Adopt(VisualTreeAsset kept, VisualTreeAsset copy, string path)
+        {
+            Unbound.Runtime.AssetDatabaseRuntime.SwapContent(copy, kept);
+            void Repoint(UxmlNode node)
+            {
+                if (node == null) return;
+                if (node.Overrides != null)
+                    for (int i = 0; i < node.Overrides.Count; i++)
+                        if (ReferenceEquals(node.Overrides[i].Source, copy))
+                        {
+                            var o = node.Overrides[i];
+                            node.Overrides[i] = new UxmlAttributeOverride(o.ElementName, o.AttributeName, o.Value, kept);
+                        }
+                foreach (var child in node.Children) Repoint(child);
+            }
+            Repoint(kept.m_UaRoot);
+            foreach (var document in Object.FindObjectsByType<UIDocument>(FindObjectsInactive.Exclude, FindObjectsSortMode.None))
+                if (document.isActiveAndEnabled && ReferenceEquals(document.visualTreeAsset, kept))
+                    Debug.LogWarning($"Unbound: {path} changed on disk; the UIDocument of '{document.gameObject.name}' keeps the elements it made from it (the Editor's live reload of its panel is not measured)");
+        }
+
         internal static LoadedFileHandle Import(string assetPath, string text, VisualTreeAsset asset)
         {
             var doc = new XmlDocument { PreserveWhitespace = false };

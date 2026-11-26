@@ -246,6 +246,26 @@ namespace UnityEngine.Tests
             }
         }
 
+        sealed class WarningCapture : ILogHandler
+        {
+            readonly ILogHandler m_Inner;
+            readonly System.Collections.Generic.List<string> m_Warnings;
+
+            internal WarningCapture(ILogHandler inner, System.Collections.Generic.List<string> warnings)
+            {
+                m_Inner = inner;
+                m_Warnings = warnings;
+            }
+
+            public void LogFormat(LogType type, Object context, string format, params object[] args)
+            {
+                if (type == LogType.Warning) m_Warnings.Add(args == null || args.Length == 0 ? format : string.Format(format, args));
+                m_Inner.LogFormat(type, context, format, args);
+            }
+
+            public void LogException(System.Exception exception, Object context) => m_Inner.LogException(exception, context);
+        }
+
         /// <summary>A loaded UI Toolkit document takes its changed file's tree: a clone made after
         /// shows the new content, the copy the old (matches the Unity 6000.0.71f1 Editor,
         /// tests/projects/scenesave refresh-changes document.after).</summary>
@@ -255,17 +275,28 @@ namespace UnityEngine.Tests
             const string path = "Assets/Doc.uxml";
             var kept = ScriptableObject.CreateInstance<UnityEngine.UIElements.VisualTreeAsset>();
             var copy = ScriptableObject.CreateInstance<UnityEngine.UIElements.VisualTreeAsset>();
+            var shown = new GameObject("Shown").AddComponent<UnityEngine.UIElements.UIDocument>();
+            // Unbound's diagnostics bypass Application.logMessageReceived: captured at the handler.
+            var warnings = new System.Collections.Generic.List<string>();
+            var logger = Debug.unityLogger;
+            var previous = logger.logHandler;
+            logger.logHandler = new WarningCapture(previous, warnings);
             try
             {
                 Unbound.UIElements.UxmlImporter.Import(path, "<ui:UXML xmlns:ui=\"UnityEngine.UIElements\"><ui:Label text=\"first\" /></ui:UXML>\n", kept);
                 Unbound.UIElements.UxmlImporter.Import(path, "<ui:UXML xmlns:ui=\"UnityEngine.UIElements\"><ui:Label text=\"second\" /></ui:UXML>\n", copy);
+                shown.visualTreeAsset = kept;
                 Assert.Null(AssetDatabaseRuntime.InPlaceRefusal(kept, copy));
-                AssetDatabaseRuntime.SwapContent(copy, kept);
+                Unbound.UIElements.UxmlImporter.Adopt(kept, copy, path);
                 Assert.Equal("second", UnityEngine.UIElements.UQueryExtensions.Q<UnityEngine.UIElements.Label>(kept.CloneTree()).text);
                 Assert.Equal("first", UnityEngine.UIElements.UQueryExtensions.Q<UnityEngine.UIElements.Label>(copy.CloneTree()).text);
+                // The document a UIDocument shows: its elements stay, with a warning.
+                Assert.Contains(warnings, w => w.Contains(path + " changed on disk; the UIDocument of 'Shown' keeps the elements it made from it"));
             }
             finally
             {
+                logger.logHandler = previous;
+                Object.DestroyImmediate(shown.gameObject);
                 Object.DestroyImmediate(kept);
                 Object.DestroyImmediate(copy);
             }

@@ -1614,7 +1614,8 @@ namespace Unbound.Runtime
             {
                 // A UI Toolkit document's tree is state its serialized values do not hold: the
                 // loaded document takes the new import's (clones made after show the new content).
-                if (pair.Value.GetType() == typeof(UnityEngine.UIElements.VisualTreeAsset)) SwapContent(pair.Key, pair.Value);
+                if (pair.Value.GetType() == typeof(UnityEngine.UIElements.VisualTreeAsset))
+                    Unbound.UIElements.UxmlImporter.Adopt((UnityEngine.UIElements.VisualTreeAsset)pair.Value, (UnityEngine.UIElements.VisualTreeAsset)pair.Key, loaded.Path);
                 else if (pair.Value is ScriptableObject) copier.CopyScriptObject(pair.Key, pair.Value);
                 // As a material unloaded reads its file again (it draws the new values).
                 else if (pair.Value is Material material) material.RevertTo((Material)pair.Key);
@@ -1656,7 +1657,8 @@ namespace Unbound.Runtime
             || o.GetType() == typeof(Material)
             || (o.GetType() == typeof(Texture2D) && ((Texture2D)o).IsImported);
 
-        /// <summary>The fields a text asset's own classes declare (everything below Object)
+        /// <summary>The fields a text asset's or a UI Toolkit document's own classes declare
+        /// (everything below Object, ScriptableObject's enabled state too, which both hold)
         /// traded between a new import's copy and the loaded object, which then holds the new
         /// content; the copy, destroyed next, takes the old one.</summary>
         internal static void SwapContent(Object copy, Object kept)
