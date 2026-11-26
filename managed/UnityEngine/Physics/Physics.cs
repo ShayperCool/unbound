@@ -18,7 +18,9 @@ namespace UnityEngine
         /// 6000.0.71f1 Editor's warnings (tests/projects/bakemesh): a null id, an id of no living
         /// object, an id of something else than a mesh; a mesh, also empty or not readable, is
         /// taken without a word.</summary>
-        public static void BakeMesh(int meshID, bool convex) => BakeMesh(meshID, convex, (MeshColliderCookingOptions)30);
+        public static void BakeMesh(int meshID, bool convex) => BakeMesh(meshID, convex,
+            MeshColliderCookingOptions.CookForFasterSimulation | MeshColliderCookingOptions.EnableMeshCleaning
+            | MeshColliderCookingOptions.WeldColocatedVertices | MeshColliderCookingOptions.UseFastMidphase);
 
         public static void BakeMesh(int meshID, bool convex, MeshColliderCookingOptions cookingOptions)
         {

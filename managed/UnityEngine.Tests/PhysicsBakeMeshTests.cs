@@ -62,13 +62,13 @@ namespace UnityEngine.Tests
             int id = gone.GetInstanceID();
             Object.DestroyImmediate(gone);
             Assert.Equal(new[] { "Warning: Failed to resolve instance id: " }, Logged(() => Physics.BakeMesh(id, false)));
-            var material = new Texture2D(2, 2) { name = "named texture" };
+            var texture = new Texture2D(2, 2) { name = "named texture" };
             try
             {
                 Assert.Equal(new[] { "Warning: Resolved the instance id to a valid object, but that object is not a Mesh: " },
-                    Logged(() => Physics.BakeMesh(material.GetInstanceID(), true)));
+                    Logged(() => Physics.BakeMesh(texture.GetInstanceID(), true)));
             }
-            finally { Object.DestroyImmediate(material); }
+            finally { Object.DestroyImmediate(texture); }
         }
     }
 }
