@@ -258,6 +258,18 @@
 {"k":"geom.terrainEmpty.new","v":"Invalid"}
 {"k":"geom.terrain.new","v":"Terrain"}
 {"k":"geom.wheel.new","v":"Invalid"}
+{"k":"geom.capsule.y312.new","v":"Capsule:1.5,1.5"}
+{"k":"geom.capsule.y123.new","v":"Capsule:1.5,1.5"}
+{"k":"geom.capsule.x123.new","v":"Capsule:1.5,1.5"}
+{"k":"geom.capsule.z312.new","v":"Capsule:1.5,1.5"}
+{"k":"geom.capsule.x321.new","v":"Capsule:1.5,1.5"}
+{"k":"geom.capsule.z111.new","v":"Capsule:0.5,1"}
+{"k":"geom.capsuleShort.new","v":"Capsule:1,5E-06"}
+{"k":"geom.controllerBig.new","v":"Capsule:0.8,0.8"}
+{"k":"geom.controllerSkin.new","v":"Capsule:0.4,0.4"}
+{"k":"geom.controllerScaled.new","v":"Capsule:0.8,0.8"}
+{"k":"geom.boxMirrored.new","v":"Box:1,1.5,2"}
+{"k":"geom.sphereMirrored.new","v":"Sphere:2.8"}
 {"k":"agent.on.new","v":"on=True;dest=0,0.08333337,0;status=PathComplete;remaining=0;hasPath=False;pending=False;next=0,0.08333337,0;end=0,0.08333337,0"}
 {"k":"agent.off.new","v":"on=False;dest=Infinity,Infinity,Infinity;status=PathInvalid;remaining=Infinity;hasPath=False;pending=False;next=100,0,100;end=100,0,100"}
 {"k":"agent.off.new.log","v":"Error: \"GetRemainingDistance\" can only be called on an active agent that has been placed on a NavMesh."}
@@ -269,6 +281,18 @@
 {"k":"obstacle.new.new","v":"Box:height=0.5;radius=0.5;size=1,1,1;center=0,0,0"}
 {"k":"obstacle.capsule.new","v":"Capsule:height=1;radius=0.5;size=1,2,1;center=0,0,0"}
 {"k":"obstacle.setHeight.new","v":"Box:height=1.5;radius=0.5;size=1,3,1;center=0,0,0 -> Capsule:height=1;radius=0.5;size=1,2,1;center=0,0,0 -> Box:height=0.5;radius=0.5;size=1,1,1;center=0,0,0"}
+{"k":"obstacle.Box.height3.new","v":"Box:height=1.5;radius=0.5;size=1,3,1;center=0,0,0"}
+{"k":"obstacle.Box.radius2.new","v":"Box:height=0.5;radius=2;size=4,1,4;center=0,0,0"}
+{"k":"obstacle.Box.size246.new","v":"Box:height=2;radius=1;size=2,4,6;center=0,0,0"}
+{"k":"obstacle.Box.center.new","v":"Box:height=0.5;radius=0.5;size=1,1,1;center=1,2,3"}
+{"k":"obstacle.Box.size246.switch.new","v":"Capsule:height=1;radius=0.5;size=1,2,1;center=0,0,0"}
+{"k":"obstacle.Box.same.new","v":"Box:height=2;radius=1;size=2,4,6;center=0,0,0"}
+{"k":"obstacle.Capsule.height3.new","v":"Capsule:height=1.5;radius=0.5;size=1,3,1;center=0,0,0"}
+{"k":"obstacle.Capsule.radius2.new","v":"Capsule:height=1;radius=2;size=4,2,4;center=0,0,0"}
+{"k":"obstacle.Capsule.size246.new","v":"Capsule:height=2;radius=1;size=2,4,6;center=0,0,0"}
+{"k":"obstacle.Capsule.center.new","v":"Capsule:height=1;radius=0.5;size=1,2,1;center=1,2,3"}
+{"k":"obstacle.Capsule.size246.switch.new","v":"Box:height=0.5;radius=0.5;size=1,1,1;center=0,0,0"}
+{"k":"obstacle.Capsule.same.new","v":"Capsule:height=2;radius=1;size=2,4,6;center=0,0,0"}
 {"k":"trail.still.new","v":"world=15,0,0/15.5,0.5,0.5;local=-15,0,0/15.5,0.5,0.5"}
 {"k":"trail.notEmitting.new","v":"world=20,0,0/20.5,0.5,0.5;local=-20,0,0/20.5,0.5,0.5"}
 {"k":"trail.away.new","v":"world=-5,2.5,1/5.5,3,1.5;local=5,-2.5,-1/5.5,3,1.5"}
@@ -287,6 +311,10 @@
 {"k":"physics2d.local.subStepCount.new","v":"0"}
 {"k":"physics2d.local.simulated.new","v":"0"}
 {"k":"physics2d.script.new","v":"local=0;default=0;subStepping=0"}
+{"k":"physics2d.body.subStepCount.new","v":"0"}
+{"k":"physics2d.body.simulated.new","v":"fixed=1;script=1;subStepping=3"}
+{"k":"physics2d.static.simulated.new","v":"1"}
+{"k":"physics2d.kinematic.simulated.new","v":"1"}
 {"k":"terrainData.heightmapTexture.new","v":"RenderTexture:TerrainHeightMap:33x33"}
 {"k":"terrainData.holesTexture.new","v":"RenderTexture:TerrainHolesMap:32x32"}
 {"k":"terrainData.new.heightmapTexture.new","v":"RenderTexture:TerrainHeightMap:33x33"}
@@ -307,6 +335,18 @@
 {"k":"geom.terrainEmpty.fixed","v":"Invalid"}
 {"k":"geom.terrain.fixed","v":"Terrain"}
 {"k":"geom.wheel.fixed","v":"Invalid"}
+{"k":"geom.capsule.y312.fixed","v":"Capsule:1.5,1.5"}
+{"k":"geom.capsule.y123.fixed","v":"Capsule:1.5,1.5"}
+{"k":"geom.capsule.x123.fixed","v":"Capsule:1.5,1.5"}
+{"k":"geom.capsule.z312.fixed","v":"Capsule:1.5,1.5"}
+{"k":"geom.capsule.x321.fixed","v":"Capsule:1.5,1.5"}
+{"k":"geom.capsule.z111.fixed","v":"Capsule:0.5,1"}
+{"k":"geom.capsuleShort.fixed","v":"Capsule:1,5E-06"}
+{"k":"geom.controllerBig.fixed","v":"Capsule:0.8,0.8"}
+{"k":"geom.controllerSkin.fixed","v":"Capsule:0.4,0.4"}
+{"k":"geom.controllerScaled.fixed","v":"Capsule:0.8,0.8"}
+{"k":"geom.boxMirrored.fixed","v":"Box:1,1.5,2"}
+{"k":"geom.sphereMirrored.fixed","v":"Sphere:2.8"}
 {"k":"agent.on.fixed","v":"on=True;dest=0,0.08333337,0;status=PathComplete;remaining=0;hasPath=False;pending=False;next=0,0.08333337,0;end=0,0.08333337,0"}
 {"k":"agent.off.fixed","v":"on=False;dest=Infinity,Infinity,Infinity;status=PathInvalid;remaining=Infinity;hasPath=False;pending=False;next=100,0,100;end=100,0,100"}
 {"k":"agent.off.fixed.log","v":"Error: \"GetRemainingDistance\" can only be called on an active agent that has been placed on a NavMesh."}
@@ -318,6 +358,18 @@
 {"k":"obstacle.new.fixed","v":"Box:height=0.5;radius=0.5;size=1,1,1;center=0,0,0"}
 {"k":"obstacle.capsule.fixed","v":"Capsule:height=1;radius=0.5;size=1,2,1;center=0,0,0"}
 {"k":"obstacle.setHeight.fixed","v":"Box:height=1.5;radius=0.5;size=1,3,1;center=0,0,0 -> Capsule:height=1;radius=0.5;size=1,2,1;center=0,0,0 -> Box:height=0.5;radius=0.5;size=1,1,1;center=0,0,0"}
+{"k":"obstacle.Box.height3.fixed","v":"Box:height=1.5;radius=0.5;size=1,3,1;center=0,0,0"}
+{"k":"obstacle.Box.radius2.fixed","v":"Box:height=0.5;radius=2;size=4,1,4;center=0,0,0"}
+{"k":"obstacle.Box.size246.fixed","v":"Box:height=2;radius=1;size=2,4,6;center=0,0,0"}
+{"k":"obstacle.Box.center.fixed","v":"Box:height=0.5;radius=0.5;size=1,1,1;center=1,2,3"}
+{"k":"obstacle.Box.size246.switch.fixed","v":"Capsule:height=1;radius=0.5;size=1,2,1;center=0,0,0"}
+{"k":"obstacle.Box.same.fixed","v":"Box:height=2;radius=1;size=2,4,6;center=0,0,0"}
+{"k":"obstacle.Capsule.height3.fixed","v":"Capsule:height=1.5;radius=0.5;size=1,3,1;center=0,0,0"}
+{"k":"obstacle.Capsule.radius2.fixed","v":"Capsule:height=1;radius=2;size=4,2,4;center=0,0,0"}
+{"k":"obstacle.Capsule.size246.fixed","v":"Capsule:height=2;radius=1;size=2,4,6;center=0,0,0"}
+{"k":"obstacle.Capsule.center.fixed","v":"Capsule:height=1;radius=0.5;size=1,2,1;center=1,2,3"}
+{"k":"obstacle.Capsule.size246.switch.fixed","v":"Box:height=0.5;radius=0.5;size=1,1,1;center=0,0,0"}
+{"k":"obstacle.Capsule.same.fixed","v":"Capsule:height=2;radius=1;size=2,4,6;center=0,0,0"}
 {"k":"trail.still.fixed","v":"world=15,0,0/15.5,0.5,0.5;local=-15,0,0/15.5,0.5,0.5"}
 {"k":"trail.notEmitting.fixed","v":"world=20,0,0/20.5,0.5,0.5;local=-20,0,0/20.5,0.5,0.5"}
 {"k":"trail.away.fixed","v":"world=-5,2.5,1/5.5,3,1.5;local=5,-2.5,-1/5.5,3,1.5"}
@@ -336,6 +388,10 @@
 {"k":"physics2d.local.subStepCount.fixed","v":"0"}
 {"k":"physics2d.local.simulated.fixed","v":"0"}
 {"k":"physics2d.script.fixed","v":"local=0;default=0;subStepping=0"}
+{"k":"physics2d.body.subStepCount.fixed","v":"3"}
+{"k":"physics2d.body.simulated.fixed","v":"fixed=1;script=1;subStepping=3"}
+{"k":"physics2d.static.simulated.fixed","v":"1"}
+{"k":"physics2d.kinematic.simulated.fixed","v":"1"}
 {"k":"terrainData.heightmapTexture.fixed","v":"RenderTexture:TerrainHeightMap:33x33"}
 {"k":"terrainData.holesTexture.fixed","v":"RenderTexture:TerrainHolesMap:32x32"}
 {"k":"terrainData.new.heightmapTexture.fixed","v":"RenderTexture:TerrainHeightMap:33x33"}
@@ -356,6 +412,18 @@
 {"k":"geom.terrainEmpty.frame","v":"Invalid"}
 {"k":"geom.terrain.frame","v":"Terrain"}
 {"k":"geom.wheel.frame","v":"Invalid"}
+{"k":"geom.capsule.y312.frame","v":"Capsule:1.5,1.5"}
+{"k":"geom.capsule.y123.frame","v":"Capsule:1.5,1.5"}
+{"k":"geom.capsule.x123.frame","v":"Capsule:1.5,1.5"}
+{"k":"geom.capsule.z312.frame","v":"Capsule:1.5,1.5"}
+{"k":"geom.capsule.x321.frame","v":"Capsule:1.5,1.5"}
+{"k":"geom.capsule.z111.frame","v":"Capsule:0.5,1"}
+{"k":"geom.capsuleShort.frame","v":"Capsule:1,5E-06"}
+{"k":"geom.controllerBig.frame","v":"Capsule:0.8,0.8"}
+{"k":"geom.controllerSkin.frame","v":"Capsule:0.4,0.4"}
+{"k":"geom.controllerScaled.frame","v":"Capsule:0.8,0.8"}
+{"k":"geom.boxMirrored.frame","v":"Box:1,1.5,2"}
+{"k":"geom.sphereMirrored.frame","v":"Sphere:2.8"}
 {"k":"agent.on.frame","v":"on=True;dest=0,0.08333337,0;status=PathComplete;remaining=0;hasPath=False;pending=False;next=0,0.08333337,0;end=0,0.08333337,0"}
 {"k":"agent.off.frame","v":"on=False;dest=Infinity,Infinity,Infinity;status=PathInvalid;remaining=Infinity;hasPath=False;pending=False;next=100,0,100;end=100,0,100"}
 {"k":"agent.off.frame.log","v":"Error: \"GetRemainingDistance\" can only be called on an active agent that has been placed on a NavMesh."}
@@ -367,6 +435,18 @@
 {"k":"obstacle.new.frame","v":"Box:height=0.5;radius=0.5;size=1,1,1;center=0,0,0"}
 {"k":"obstacle.capsule.frame","v":"Capsule:height=1;radius=0.5;size=1,2,1;center=0,0,0"}
 {"k":"obstacle.setHeight.frame","v":"Box:height=1.5;radius=0.5;size=1,3,1;center=0,0,0 -> Capsule:height=1;radius=0.5;size=1,2,1;center=0,0,0 -> Box:height=0.5;radius=0.5;size=1,1,1;center=0,0,0"}
+{"k":"obstacle.Box.height3.frame","v":"Box:height=1.5;radius=0.5;size=1,3,1;center=0,0,0"}
+{"k":"obstacle.Box.radius2.frame","v":"Box:height=0.5;radius=2;size=4,1,4;center=0,0,0"}
+{"k":"obstacle.Box.size246.frame","v":"Box:height=2;radius=1;size=2,4,6;center=0,0,0"}
+{"k":"obstacle.Box.center.frame","v":"Box:height=0.5;radius=0.5;size=1,1,1;center=1,2,3"}
+{"k":"obstacle.Box.size246.switch.frame","v":"Capsule:height=1;radius=0.5;size=1,2,1;center=0,0,0"}
+{"k":"obstacle.Box.same.frame","v":"Box:height=2;radius=1;size=2,4,6;center=0,0,0"}
+{"k":"obstacle.Capsule.height3.frame","v":"Capsule:height=1.5;radius=0.5;size=1,3,1;center=0,0,0"}
+{"k":"obstacle.Capsule.radius2.frame","v":"Capsule:height=1;radius=2;size=4,2,4;center=0,0,0"}
+{"k":"obstacle.Capsule.size246.frame","v":"Capsule:height=2;radius=1;size=2,4,6;center=0,0,0"}
+{"k":"obstacle.Capsule.center.frame","v":"Capsule:height=1;radius=0.5;size=1,2,1;center=1,2,3"}
+{"k":"obstacle.Capsule.size246.switch.frame","v":"Box:height=0.5;radius=0.5;size=1,1,1;center=0,0,0"}
+{"k":"obstacle.Capsule.same.frame","v":"Capsule:height=2;radius=1;size=2,4,6;center=0,0,0"}
 {"k":"trail.still.frame","v":"world=15,0,0/15.5,0.5,0.5;local=-15,0,0/15.5,0.5,0.5"}
 {"k":"trail.notEmitting.frame","v":"world=20,0,0/20.5,0.5,0.5;local=-20,0,0/20.5,0.5,0.5"}
 {"k":"trail.away.frame","v":"world=-5,2.5,1/5.5,3,1.5;local=5,-2.5,-1/5.5,3,1.5"}
@@ -385,6 +465,10 @@
 {"k":"physics2d.local.subStepCount.frame","v":"0"}
 {"k":"physics2d.local.simulated.frame","v":"0"}
 {"k":"physics2d.script.frame","v":"local=0;default=0;subStepping=0"}
+{"k":"physics2d.body.subStepCount.frame","v":"3"}
+{"k":"physics2d.body.simulated.frame","v":"fixed=1;script=1;subStepping=3"}
+{"k":"physics2d.static.simulated.frame","v":"1"}
+{"k":"physics2d.kinematic.simulated.frame","v":"1"}
 {"k":"terrainData.heightmapTexture.frame","v":"RenderTexture:TerrainHeightMap:33x33"}
 {"k":"terrainData.holesTexture.frame","v":"RenderTexture:TerrainHolesMap:32x32"}
 {"k":"terrainData.new.heightmapTexture.frame","v":"RenderTexture:TerrainHeightMap:33x33"}
@@ -409,6 +493,18 @@
 {"k":"geom.terrainEmpty.destination","v":"Invalid"}
 {"k":"geom.terrain.destination","v":"Terrain"}
 {"k":"geom.wheel.destination","v":"Invalid"}
+{"k":"geom.capsule.y312.destination","v":"Capsule:1.5,1.5"}
+{"k":"geom.capsule.y123.destination","v":"Capsule:1.5,1.5"}
+{"k":"geom.capsule.x123.destination","v":"Capsule:1.5,1.5"}
+{"k":"geom.capsule.z312.destination","v":"Capsule:1.5,1.5"}
+{"k":"geom.capsule.x321.destination","v":"Capsule:1.5,1.5"}
+{"k":"geom.capsule.z111.destination","v":"Capsule:0.5,1"}
+{"k":"geom.capsuleShort.destination","v":"Capsule:1,5E-06"}
+{"k":"geom.controllerBig.destination","v":"Capsule:0.8,0.8"}
+{"k":"geom.controllerSkin.destination","v":"Capsule:0.4,0.4"}
+{"k":"geom.controllerScaled.destination","v":"Capsule:0.8,0.8"}
+{"k":"geom.boxMirrored.destination","v":"Box:1,1.5,2"}
+{"k":"geom.sphereMirrored.destination","v":"Sphere:2.8"}
 {"k":"agent.on.destination","v":"on=True;dest=0,0.08333337,0;status=PathComplete;remaining=0;hasPath=False;pending=False;next=0,0.08333337,0;end=0,0.08333337,0"}
 {"k":"agent.off.destination","v":"on=False;dest=Infinity,Infinity,Infinity;status=PathInvalid;remaining=Infinity;hasPath=False;pending=False;next=100,0,100;end=100,0,100"}
 {"k":"agent.off.destination.log","v":"Error: \"GetRemainingDistance\" can only be called on an active agent that has been placed on a NavMesh."}
@@ -420,6 +516,18 @@
 {"k":"obstacle.new.destination","v":"Box:height=0.5;radius=0.5;size=1,1,1;center=0,0,0"}
 {"k":"obstacle.capsule.destination","v":"Capsule:height=1;radius=0.5;size=1,2,1;center=0,0,0"}
 {"k":"obstacle.setHeight.destination","v":"Box:height=1.5;radius=0.5;size=1,3,1;center=0,0,0 -> Capsule:height=1;radius=0.5;size=1,2,1;center=0,0,0 -> Box:height=0.5;radius=0.5;size=1,1,1;center=0,0,0"}
+{"k":"obstacle.Box.height3.destination","v":"Box:height=1.5;radius=0.5;size=1,3,1;center=0,0,0"}
+{"k":"obstacle.Box.radius2.destination","v":"Box:height=0.5;radius=2;size=4,1,4;center=0,0,0"}
+{"k":"obstacle.Box.size246.destination","v":"Box:height=2;radius=1;size=2,4,6;center=0,0,0"}
+{"k":"obstacle.Box.center.destination","v":"Box:height=0.5;radius=0.5;size=1,1,1;center=1,2,3"}
+{"k":"obstacle.Box.size246.switch.destination","v":"Capsule:height=1;radius=0.5;size=1,2,1;center=0,0,0"}
+{"k":"obstacle.Box.same.destination","v":"Box:height=2;radius=1;size=2,4,6;center=0,0,0"}
+{"k":"obstacle.Capsule.height3.destination","v":"Capsule:height=1.5;radius=0.5;size=1,3,1;center=0,0,0"}
+{"k":"obstacle.Capsule.radius2.destination","v":"Capsule:height=1;radius=2;size=4,2,4;center=0,0,0"}
+{"k":"obstacle.Capsule.size246.destination","v":"Capsule:height=2;radius=1;size=2,4,6;center=0,0,0"}
+{"k":"obstacle.Capsule.center.destination","v":"Capsule:height=1;radius=0.5;size=1,2,1;center=1,2,3"}
+{"k":"obstacle.Capsule.size246.switch.destination","v":"Box:height=0.5;radius=0.5;size=1,1,1;center=0,0,0"}
+{"k":"obstacle.Capsule.same.destination","v":"Capsule:height=2;radius=1;size=2,4,6;center=0,0,0"}
 {"k":"trail.still.destination","v":"world=15,0,0/15.5,0.5,0.5;local=-15,0,0/15.5,0.5,0.5"}
 {"k":"trail.notEmitting.destination","v":"world=20,0,0/20.5,0.5,0.5;local=-20,0,0/20.5,0.5,0.5"}
 {"k":"trail.away.destination","v":"world=-5,2.5,1/5.5,3,1.5;local=5,-2.5,-1/5.5,3,1.5"}
@@ -438,6 +546,10 @@
 {"k":"physics2d.local.subStepCount.destination","v":"0"}
 {"k":"physics2d.local.simulated.destination","v":"0"}
 {"k":"physics2d.script.destination","v":"local=0;default=0;subStepping=0"}
+{"k":"physics2d.body.subStepCount.destination","v":"3"}
+{"k":"physics2d.body.simulated.destination","v":"fixed=1;script=1;subStepping=3"}
+{"k":"physics2d.static.simulated.destination","v":"1"}
+{"k":"physics2d.kinematic.simulated.destination","v":"1"}
 {"k":"terrainData.heightmapTexture.destination","v":"RenderTexture:TerrainHeightMap:33x33"}
 {"k":"terrainData.holesTexture.destination","v":"RenderTexture:TerrainHolesMap:32x32"}
 {"k":"terrainData.new.heightmapTexture.destination","v":"RenderTexture:TerrainHeightMap:33x33"}
@@ -458,6 +570,18 @@
 {"k":"geom.terrainEmpty.destinationFrame","v":"Invalid"}
 {"k":"geom.terrain.destinationFrame","v":"Terrain"}
 {"k":"geom.wheel.destinationFrame","v":"Invalid"}
+{"k":"geom.capsule.y312.destinationFrame","v":"Capsule:1.5,1.5"}
+{"k":"geom.capsule.y123.destinationFrame","v":"Capsule:1.5,1.5"}
+{"k":"geom.capsule.x123.destinationFrame","v":"Capsule:1.5,1.5"}
+{"k":"geom.capsule.z312.destinationFrame","v":"Capsule:1.5,1.5"}
+{"k":"geom.capsule.x321.destinationFrame","v":"Capsule:1.5,1.5"}
+{"k":"geom.capsule.z111.destinationFrame","v":"Capsule:0.5,1"}
+{"k":"geom.capsuleShort.destinationFrame","v":"Capsule:1,5E-06"}
+{"k":"geom.controllerBig.destinationFrame","v":"Capsule:0.8,0.8"}
+{"k":"geom.controllerSkin.destinationFrame","v":"Capsule:0.4,0.4"}
+{"k":"geom.controllerScaled.destinationFrame","v":"Capsule:0.8,0.8"}
+{"k":"geom.boxMirrored.destinationFrame","v":"Box:1,1.5,2"}
+{"k":"geom.sphereMirrored.destinationFrame","v":"Sphere:2.8"}
 {"k":"agent.on.destinationFrame","v":"on=True;dest=0,0.08333337,0;status=PathComplete;remaining=0;hasPath=False;pending=False;next=0,0.08333337,0;end=0,0.08333337,0"}
 {"k":"agent.off.destinationFrame","v":"on=False;dest=Infinity,Infinity,Infinity;status=PathInvalid;remaining=Infinity;hasPath=False;pending=False;next=100,0,100;end=100,0,100"}
 {"k":"agent.off.destinationFrame.log","v":"Error: \"GetRemainingDistance\" can only be called on an active agent that has been placed on a NavMesh."}
@@ -468,6 +592,18 @@
 {"k":"obstacle.new.destinationFrame","v":"Box:height=0.5;radius=0.5;size=1,1,1;center=0,0,0"}
 {"k":"obstacle.capsule.destinationFrame","v":"Capsule:height=1;radius=0.5;size=1,2,1;center=0,0,0"}
 {"k":"obstacle.setHeight.destinationFrame","v":"Box:height=1.5;radius=0.5;size=1,3,1;center=0,0,0 -> Capsule:height=1;radius=0.5;size=1,2,1;center=0,0,0 -> Box:height=0.5;radius=0.5;size=1,1,1;center=0,0,0"}
+{"k":"obstacle.Box.height3.destinationFrame","v":"Box:height=1.5;radius=0.5;size=1,3,1;center=0,0,0"}
+{"k":"obstacle.Box.radius2.destinationFrame","v":"Box:height=0.5;radius=2;size=4,1,4;center=0,0,0"}
+{"k":"obstacle.Box.size246.destinationFrame","v":"Box:height=2;radius=1;size=2,4,6;center=0,0,0"}
+{"k":"obstacle.Box.center.destinationFrame","v":"Box:height=0.5;radius=0.5;size=1,1,1;center=1,2,3"}
+{"k":"obstacle.Box.size246.switch.destinationFrame","v":"Capsule:height=1;radius=0.5;size=1,2,1;center=0,0,0"}
+{"k":"obstacle.Box.same.destinationFrame","v":"Box:height=2;radius=1;size=2,4,6;center=0,0,0"}
+{"k":"obstacle.Capsule.height3.destinationFrame","v":"Capsule:height=1.5;radius=0.5;size=1,3,1;center=0,0,0"}
+{"k":"obstacle.Capsule.radius2.destinationFrame","v":"Capsule:height=1;radius=2;size=4,2,4;center=0,0,0"}
+{"k":"obstacle.Capsule.size246.destinationFrame","v":"Capsule:height=2;radius=1;size=2,4,6;center=0,0,0"}
+{"k":"obstacle.Capsule.center.destinationFrame","v":"Capsule:height=1;radius=0.5;size=1,2,1;center=1,2,3"}
+{"k":"obstacle.Capsule.size246.switch.destinationFrame","v":"Box:height=0.5;radius=0.5;size=1,1,1;center=0,0,0"}
+{"k":"obstacle.Capsule.same.destinationFrame","v":"Capsule:height=2;radius=1;size=2,4,6;center=0,0,0"}
 {"k":"trail.still.destinationFrame","v":"world=15,0,0/15.5,0.5,0.5;local=-15,0,0/15.5,0.5,0.5"}
 {"k":"trail.notEmitting.destinationFrame","v":"world=20,0,0/20.5,0.5,0.5;local=-20,0,0/20.5,0.5,0.5"}
 {"k":"trail.away.destinationFrame","v":"world=-5,2.5,1/5.5,3,1.5;local=5,-2.5,-1/5.5,3,1.5"}
@@ -486,6 +622,10 @@
 {"k":"physics2d.local.subStepCount.destinationFrame","v":"0"}
 {"k":"physics2d.local.simulated.destinationFrame","v":"0"}
 {"k":"physics2d.script.destinationFrame","v":"local=0;default=0;subStepping=0"}
+{"k":"physics2d.body.subStepCount.destinationFrame","v":"3"}
+{"k":"physics2d.body.simulated.destinationFrame","v":"fixed=1;script=1;subStepping=3"}
+{"k":"physics2d.static.simulated.destinationFrame","v":"1"}
+{"k":"physics2d.kinematic.simulated.destinationFrame","v":"1"}
 {"k":"terrainData.heightmapTexture.destinationFrame","v":"RenderTexture:TerrainHeightMap:33x33"}
 {"k":"terrainData.holesTexture.destinationFrame","v":"RenderTexture:TerrainHolesMap:32x32"}
 {"k":"terrainData.new.heightmapTexture.destinationFrame","v":"RenderTexture:TerrainHeightMap:33x33"}

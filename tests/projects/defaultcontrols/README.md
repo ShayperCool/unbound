@@ -33,22 +33,24 @@ At once:
 Then staged: objects made at once and read new, after the next physics step, after two more
 frames, after a destination is set and two frames later (`<key>.<stage>`).
 
-* `geom.*`: Collider.GeometryHolder of box, capsule (three directions), sphere, controller,
-  mesh (none, triangles, convex), terrain (empty and with data) and wheel colliders, scaled
-  objects, a disabled and an inactive collider.
+* `geom.*`: Collider.GeometryHolder of box, capsule (three directions, and every direction on
+  non-uniformly scaled objects, one shorter than its width), sphere, controllers (default, larger,
+  thicker skin, scaled), mesh (none, triangles, convex), terrain (empty and with data) and wheel
+  colliders, scaled and mirrored objects, a disabled and an inactive collider.
 * `agent.*`: NavMeshAgent on, off and disabled on a NavMesh built at run time, and with a
   destination set on and off it (the moving agent is not read two frames later: its position
   follows the frame times).
-* `obstacle.*`: NavMeshObstacle height, radius, size and center of a box and a capsule, and
-  through a height set and shape changes.
+* `obstacle.*`: NavMeshObstacle height, radius, size and center of a box and a capsule, with
+  the height, radius, size or center set, through shape changes and a shape set to itself.
 * `trail.*`, `line.new`: bounds of trails without points (at, away from the origin, wider,
   scaled) and of a new line.
 * `tilemap.*`: cell and local bounds of an empty tilemap and with a tile without and with a
   sprite.
 * `canvas.*`: Canvas.renderingDisplaySize of overlay, camera without camera, world space, a
   resized world-space canvas and a new canvas (with its render mode).
-* `physics2d.*`: PhysicsScene2D.subStepCount of the default and a local scene, after their
-  simulations, in Script mode and with sub-stepping.
+* `physics2d.*`: PhysicsScene2D.subStepCount of the default and of local scenes (empty, with a
+  dynamic body, a static collider alone, a kinematic body alone), after their simulations, in
+  Script mode and with sub-stepping.
 * `terrainData.*`: TerrainData.heightmapTexture and holesTexture.
 
 What it shows: a command buffer is named "Unnamed command buffer" until named (empty and null
@@ -67,10 +69,14 @@ playback time warns. An agent not placed on a NavMesh reads an infinite destinat
 distance and an invalid path, and reading the remaining distance logs an error, as a disabled
 agent's does. A trail without points spans the world origin and the object, widened by the
 width multiplier. A world-space canvas's display size is its rectangle, the others' the game
-view.
+view. A NavMeshObstacle keeps one box of extents for both shapes: its height reads half the
+size's height and setting it sets that height, its radius reads half the size's width and setting
+it sets the width and depth, and a shape change puts the new shape's default size (a capsule's is
+1 x 2 x 1) and a zero center back. A 2D physics world without bodies or colliders reports 0
+sub-steps after a step; with any it reports the step's.
 
-`residuals.json` lists the differences still open: collider geometry holders, obstacle sizes,
-2D sub-step counts of an empty world and terrain textures.
+`residuals.json` lists the differences still open: collider geometry holders (the measured rule is
+in the entry) and terrain textures.
 
 Record and gate:
 

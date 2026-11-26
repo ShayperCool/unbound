@@ -183,6 +183,38 @@ public class DefaultControlsProbe : MonoBehaviour
         var wheel = wheelObject.AddComponent<WheelCollider>();
         Staged("geom.wheel", () => Geometry(wheel));
 
+        // Capsules on non-uniformly scaled objects, controllers and boxes and spheres on mirrored ones.
+        foreach (var (name, direction, scale) in new[]
+        {
+            ("y312", 1, new Vector3(3, 2, 1)), ("y123", 1, new Vector3(1, 2, 3)), ("x123", 0, new Vector3(1, 2, 3)),
+            ("z312", 2, new Vector3(3, 2, 1)), ("x321", 0, new Vector3(3, 2, 1)), ("z111", 2, Vector3.one),
+        })
+        {
+            var capsule = Make("GeomCapsule." + name, new Vector3(-40, 40 + direction * 6, scale.x * 10 + scale.z), scale).AddComponent<CapsuleCollider>();
+            capsule.radius = 0.5f;
+            capsule.height = 3f;
+            capsule.direction = direction;
+            Staged("geom.capsule." + name, () => Geometry(capsule));
+        }
+        var capsuleShort = Make("GeomCapsuleShort", new Vector3(-46, 40, 0), new Vector3(1, 2, 1)).AddComponent<CapsuleCollider>();
+        capsuleShort.radius = 1f;
+        capsuleShort.height = 1f;
+        Staged("geom.capsuleShort", () => Geometry(capsuleShort));
+        var controllerBig = Make("GeomControllerBig", new Vector3(-40, 70, 0), Vector3.one).AddComponent<CharacterController>();
+        controllerBig.radius = 1f;
+        controllerBig.height = 4f;
+        Staged("geom.controllerBig", () => Geometry(controllerBig));
+        var controllerSkin = Make("GeomControllerSkin", new Vector3(-44, 70, 0), Vector3.one).AddComponent<CharacterController>();
+        controllerSkin.skinWidth = 0.2f;
+        Staged("geom.controllerSkin", () => Geometry(controllerSkin));
+        var controllerScaled = Make("GeomControllerScaled", new Vector3(-48, 70, 0), new Vector3(2, 2, 2)).AddComponent<CharacterController>();
+        Staged("geom.controllerScaled", () => Geometry(controllerScaled));
+        var boxMirrored = Make("GeomBoxMirrored", new Vector3(-40, 80, 0), new Vector3(-2, 3, 4)).AddComponent<BoxCollider>();
+        Staged("geom.boxMirrored", () => Geometry(boxMirrored));
+        var sphereMirrored = Make("GeomSphereMirrored", new Vector3(-44, 80, 0), new Vector3(2, -3, 4)).AddComponent<SphereCollider>();
+        sphereMirrored.radius = 0.7f;
+        Staged("geom.sphereMirrored", () => Geometry(sphereMirrored));
+
         // A NavMesh of a 20 x 20 box, and agents on it, off it and disabled.
         var sources = new List<NavMeshBuildSource>
         {
@@ -216,6 +248,29 @@ public class DefaultControlsProbe : MonoBehaviour
             var back = Obstacle(o, destroy: true);
             return asBox + " -> " + asCapsule + " -> " + back;
         });
+
+        foreach (var shape in new[] { NavMeshObstacleShape.Box, NavMeshObstacleShape.Capsule })
+        {
+            Staged("obstacle." + shape + ".height3", () => { var o = NewObstacle(shape); o.height = 3f; return Obstacle(o, destroy: true); });
+            Staged("obstacle." + shape + ".radius2", () => { var o = NewObstacle(shape); o.radius = 2f; return Obstacle(o, destroy: true); });
+            Staged("obstacle." + shape + ".size246", () => { var o = NewObstacle(shape); o.size = new Vector3(2, 4, 6); return Obstacle(o, destroy: true); });
+            Staged("obstacle." + shape + ".center", () => { var o = NewObstacle(shape); o.center = new Vector3(1, 2, 3); return Obstacle(o, destroy: true); });
+            Staged("obstacle." + shape + ".size246.switch", () =>
+            {
+                var o = NewObstacle(shape);
+                o.size = new Vector3(2, 4, 6);
+                o.center = new Vector3(1, 2, 3);
+                o.shape = shape == NavMeshObstacleShape.Box ? NavMeshObstacleShape.Capsule : NavMeshObstacleShape.Box;
+                return Obstacle(o, destroy: true);
+            });
+            Staged("obstacle." + shape + ".same", () =>
+            {
+                var o = NewObstacle(shape);
+                o.size = new Vector3(2, 4, 6);
+                o.shape = shape;
+                return Obstacle(o, destroy: true);
+            });
+        }
 
         // Renderers whose bounds follow their geometry.
         var trail = Make("Trail", new Vector3(30, 0, 0), Vector3.one).AddComponent<TrailRenderer>();
@@ -295,6 +350,50 @@ public class DefaultControlsProbe : MonoBehaviour
             Physics2D.simulationMode = mode;
             return r;
         });
+        var bodyScene = SceneManager.CreateScene("Physics2DBody", new CreateSceneParameters(LocalPhysicsMode.Physics2D));
+        var body2d = new GameObject("Body2D");
+        SceneManager.MoveGameObjectToScene(body2d, bodyScene);
+        body2d.AddComponent<Rigidbody2D>();
+        body2d.AddComponent<BoxCollider2D>();
+        Staged("physics2d.body.subStepCount", () => bodyScene.GetPhysicsScene2D().subStepCount.ToString(CultureInfo.InvariantCulture));
+        Staged("physics2d.body.simulated", () =>
+        {
+            var scene = bodyScene.GetPhysicsScene2D();
+            scene.Simulate(0.02f);
+            var r = "fixed=" + scene.subStepCount;
+            var mode = Physics2D.simulationMode;
+            Physics2D.simulationMode = SimulationMode2D.Script;
+            scene.Simulate(0.02f);
+            r += ";script=" + scene.subStepCount;
+            var stepping = Physics2D.useSubStepping;
+            Physics2D.useSubStepping = true;
+            scene.Simulate(0.1f);
+            r += ";subStepping=" + scene.subStepCount;
+            Physics2D.useSubStepping = stepping;
+            Physics2D.simulationMode = mode;
+            return r;
+        });
+        var staticScene = SceneManager.CreateScene("Physics2DStatic", new CreateSceneParameters(LocalPhysicsMode.Physics2D));
+        var static2d = new GameObject("Static2D");
+        SceneManager.MoveGameObjectToScene(static2d, staticScene);
+        static2d.AddComponent<BoxCollider2D>();
+        Staged("physics2d.static.simulated", () =>
+        {
+            var scene = staticScene.GetPhysicsScene2D();
+            scene.Simulate(0.02f);
+            return scene.subStepCount.ToString(CultureInfo.InvariantCulture);
+        });
+        var sleepingScene = SceneManager.CreateScene("Physics2DSleeping", new CreateSceneParameters(LocalPhysicsMode.Physics2D));
+        var sleeping2d = new GameObject("Sleeping2D");
+        SceneManager.MoveGameObjectToScene(sleeping2d, sleepingScene);
+        var sleepingBody = sleeping2d.AddComponent<Rigidbody2D>();
+        sleepingBody.bodyType = RigidbodyType2D.Kinematic;
+        Staged("physics2d.kinematic.simulated", () =>
+        {
+            var scene = sleepingScene.GetPhysicsScene2D();
+            scene.Simulate(0.02f);
+            return scene.subStepCount.ToString(CultureInfo.InvariantCulture);
+        });
         Staged("terrainData.heightmapTexture", () => TextureName(terrainData.heightmapTexture));
         Staged("terrainData.holesTexture", () => TextureName(terrainData.holesTexture));
         Staged("terrainData.new.heightmapTexture", () => TextureName(new TerrainData().heightmapTexture));
@@ -330,6 +429,13 @@ public class DefaultControlsProbe : MonoBehaviour
     static string Agent(NavMeshAgent agent) =>
         "on=" + agent.isOnNavMesh + ";dest=" + V(agent.destination) + ";status=" + agent.pathStatus + ";remaining=" + F(agent.remainingDistance)
         + ";hasPath=" + agent.hasPath + ";pending=" + agent.pathPending + ";next=" + V(agent.nextPosition) + ";end=" + V(agent.pathEndPosition);
+
+    static NavMeshObstacle NewObstacle(NavMeshObstacleShape shape)
+    {
+        var o = Make("ObstacleControl", new Vector3(-8, 0, -8), Vector3.one).AddComponent<NavMeshObstacle>();
+        if (shape != NavMeshObstacleShape.Box) o.shape = shape;
+        return o;
+    }
 
     static string Obstacle(NavMeshObstacle o, bool destroy)
     {

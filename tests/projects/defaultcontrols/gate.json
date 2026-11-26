@@ -5,8 +5,9 @@
   "summary": "defaultcontrols: .*",
   "engine_paths": [
     "managed/UnityEngine/AI/NavMeshAgent.cs",
-    "managed/UnityEngine/Animation/Animator.cs",
+    "managed/UnityEngine/AI/NavMeshObstacle.cs",
     "managed/UnityEngine/Animation/Animator.Recorder.cs",
+    "managed/UnityEngine/Animation/Animator.cs",
     "managed/UnityEngine/Core/GameObject.cs",
     "managed/UnityEngine/Graphics/AsyncReadback.cs",
     "managed/UnityEngine/Graphics/CommandBuffer.cs",
@@ -16,6 +17,7 @@
     "managed/UnityEngine/Graphics/LineRenderers.cs",
     "managed/UnityEngine/Graphics/RenderTexture.cs",
     "managed/UnityEngine/Graphics/Srp/",
+    "managed/UnityEngine/Physics2D/Physics2DWorld.cs",
     "managed/UnityEngine/UI/Canvas.cs"
   ]
 }
