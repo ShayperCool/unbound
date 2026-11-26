@@ -24,4 +24,5 @@ UNBOUND_PROBE_UNITY_VERSION=6000.0.71f1 python3 tests/projects/reorderableinput/
 ```
 
 The probe uses the imguiskin project's scene, packages and settings. Unmeasured: the macOS keys
-(Command-Backspace), the left and right arrows on serialized elements, rows of other heights.
+(Command-Backspace), the left and right arrows (any list), the rows' layout and sliding while one
+is dragged, rows of other heights, nested serialized lists.
