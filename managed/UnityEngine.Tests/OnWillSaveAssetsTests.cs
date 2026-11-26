@@ -220,7 +220,9 @@ namespace UnityEngine.Tests
             written.Set("m_Operands", operands);
             VisualEffectWrites.KeepTypeNames(old, written, "Assets/A.vfx");
             Assert.Equal(MonoSingle, written.Get("m_Operands").Items[0].Get("type").Get("m_SerializableType").Raw);
-            Assert.StartsWith("System.Single, mscorlib, Version=4.0.0.0", written.Get("m_Operands").Items[1].Get("type").Get("m_SerializableType").Raw);
+            // At the item's type's level (3): continued at 8 spaces, as 05_Head_Trail.vfx has it.
+            Assert.Equal("System.Single, mscorlib, Version=4.0.0.0, Culture=neutral,\n        PublicKeyToken=b77a5c561934e089",
+                written.Get("m_Operands").Items[1].Get("type").Get("m_SerializableType").Raw);
         }
 
         [Fact]

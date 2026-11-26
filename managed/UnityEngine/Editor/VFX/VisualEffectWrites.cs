@@ -105,8 +105,9 @@ namespace Unbound.Runtime
             }
             if (unlocated > 0)
                 Debug.LogWarning($"Unbound: {info.Path} is written with {unlocated} references to assets Unbound cannot name written as none.");
-            // The Editor writes a file's objects in file id order (a new graph's skeleton holds its
-            // graph before its resource).
+            // The Editor writes a file's objects in file id order (tests/projects/vfx's authored
+            // graphs, built from the package's graph-first skeleton, start with the resource); an
+            // unsorted file with nothing changed is written again sorted (unmeasured).
             docs.Sort((a, b) => a.FileId.CompareTo(b.FileId));
             var written = UnityYamlText.Write(docs);
             // The same text again leaves the file as it is (and unimported).
@@ -159,7 +160,9 @@ namespace Unbound.Runtime
         /// type's AssemblyQualifiedName). Unbound runs on .NET, whose class library names its types
         /// differently from the Editor's Mono (System.Single, mscorlib, Version=4.0.0.0 there), and
         /// the Editor's Mono cannot find .NET's names. A written name that stands for the same type
-        /// as the file's keeps the file's text; a new .NET class-library name is refused.</summary>
+        /// as the file's keeps the file's text; another name, and every name in a part the file did
+        /// not hold, is translated (<see cref="Translate"/>: Mono's name for the primitive types and
+        /// string, another class library name refused).</summary>
         internal static void KeepTypeNames(YText old, YText written, string path, int level = 1)
         {
             if (written == null) return;
