@@ -23,6 +23,11 @@ namespace Unbound.Box2D.Dynamics.Contacts
 
         internal ContactFlag Flags;
 
+        /// <summary>Unbound: this step the contact moves body A (B) not at all, its impulses still
+        /// computed with both bodies' masses (Collider2D force send and receive layers); set in the
+        /// pre-solve.</summary>
+        internal bool NoResponseA, NoResponseB;
+
         internal float Friction;
 
         /// <summary>

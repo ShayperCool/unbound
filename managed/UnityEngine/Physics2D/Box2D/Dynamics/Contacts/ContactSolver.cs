@@ -82,6 +82,8 @@ namespace Unbound.Box2D.Dynamics.Contacts
                 pc.LocalCenterB = bodyB.Sweep.LocalCenter;
                 pc.InvIa = bodyA.InverseInertia;
                 pc.InvIb = bodyB.InverseInertia;
+                pc.NoResponseA = contact.NoResponseA;
+                pc.NoResponseB = contact.NoResponseB;
                 pc.LocalNormal = manifold.LocalNormal;
                 pc.LocalPoint = manifold.LocalPoint;
                 pc.PointCount = pointCount;
@@ -264,6 +266,12 @@ namespace Unbound.Box2D.Dynamics.Contacts
                         vc.PointCount = 1;
                     }
                 }
+
+                // Unbound: a body the contact gives no force to (Collider2D force layers) keeps the
+                // effective masses above but takes none of the impulses.
+                var contact = _contacts[vc.ContactIndex];
+                if (contact.NoResponseA) { vc.InvMassA = 0f; vc.InvIa = 0f; }
+                if (contact.NoResponseB) { vc.InvMassB = 0f; vc.InvIb = 0f; }
             }
         }
 
@@ -788,11 +796,17 @@ namespace Unbound.Box2D.Dynamics.Contacts
 
                     var P = impulse * normal;
 
-                    cA -= pc.InvMassAxesA * P;
-                    aA -= iA * MathUtils.Cross(rA, P);
+                    if (!pc.NoResponseA)
+                    {
+                        cA -= pc.InvMassAxesA * P;
+                        aA -= iA * MathUtils.Cross(rA, P);
+                    }
 
-                    cB += pc.InvMassAxesB * P;
-                    aB += iB * MathUtils.Cross(rB, P);
+                    if (!pc.NoResponseB)
+                    {
+                        cB += pc.InvMassAxesB * P;
+                        aB += iB * MathUtils.Cross(rB, P);
+                    }
                 }
 
                 positions[indexA].Center = cA;
@@ -887,11 +901,17 @@ namespace Unbound.Box2D.Dynamics.Contacts
 
                     var P = impulse * normal;
 
-                    cA -= massAxesA * P;
-                    aA -= iA * MathUtils.Cross(rA, P);
+                    if (!pc.NoResponseA)
+                    {
+                        cA -= massAxesA * P;
+                        aA -= iA * MathUtils.Cross(rA, P);
+                    }
 
-                    cB += massAxesB * P;
-                    aB += iB * MathUtils.Cross(rB, P);
+                    if (!pc.NoResponseB)
+                    {
+                        cB += massAxesB * P;
+                        aB += iB * MathUtils.Cross(rB, P);
+                    }
                 }
 
                 _positions[indexA].Center = cA;

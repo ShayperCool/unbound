@@ -17,6 +17,9 @@ namespace Unbound.Box2D.Dynamics.Contacts
 
         public float InvIa, InvIb;
 
+        /// <summary>Unbound: the body takes no correction from the contact (force layers).</summary>
+        public bool NoResponseA, NoResponseB;
+
         public float InvMassA, InvMassB;
 
         public Vector2 InvMassAxesA, InvMassAxesB;

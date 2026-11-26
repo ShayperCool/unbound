@@ -76,32 +76,55 @@ namespace UnityEngine.Tests
             Assert.Equal(0f, c.linearVelocity.x);
         }
 
-        const string ForceLayers = "Collider2D.forceSendLayers / forceReceiveLayers";
-
-        static int Hits() => Unbound.Runtime.Stubs.HitReport().FirstOrDefault(h => h.Key == ForceLayers).Value;
-
-        /// <summary>Force layers that leave layers out are kept but not applied to contacts: setting
-        /// or reading them is reported; Everything (the default) is not.</summary>
-        [Fact]
-        public void ForceLayersLeavingLayersOutAreReported()
+        /// <summary>A circle of layer <paramref name="layer"/>, radius 0.5.</summary>
+        Rigidbody2D Circle(string name, Vector2 at, int layer, float gravity)
         {
-            var collider = Make("Forces", new Vector2(0f, 3100f), LayerA).AddComponent<CircleCollider2D>();
-            int before = Hits();
-            collider.forceReceiveLayers = -1;
-            collider.forceSendLayers = -1;
-            Assert.Equal(before, Hits());
-            collider.forceReceiveLayers = ~(1 << EffectorLayer);
-            Assert.Equal(before + 1, Hits());
-            Assert.Equal(~(1 << EffectorLayer), collider.forceReceiveLayers.value);
+            var go = Make(name, at, layer);
+            go.AddComponent<CircleCollider2D>().radius = 0.5f;
+            var body = go.AddComponent<Rigidbody2D>();
+            body.gravityScale = gravity;
+            return body;
+        }
 
-            var read = Make("Read", new Vector2(0f, 3200f), LayerA).AddComponent<CircleCollider2D>();
-            Unbound.Runtime.ObjectGraphBuilder.ReadComponent(read, TestYaml.DocumentBody(
-                "CircleCollider2D:\n  m_ForceSendLayers:\n    serializedVersion: 2\n    m_Bits: 4294967295\n  m_ForceReceiveLayers:\n    serializedVersion: 2\n    m_Bits: 4294967295\n"), new Unbound.Runtime.LoadedFile());
-            Assert.Equal(before + 1, Hits());
-            Unbound.Runtime.ObjectGraphBuilder.ReadComponent(read, TestYaml.DocumentBody(
-                "CircleCollider2D:\n  m_ForceSendLayers:\n    serializedVersion: 2\n    m_Bits: 4294966271\n"), new Unbound.Runtime.LoadedFile());
-            Assert.Equal(before + 2, Hits());
-            Assert.Equal(~(1 << LayerB), read.forceSendLayers.value);
+        /// <summary>Force layers, as the Unity 6000.0.71f1 Editor applies them
+        /// (tests/projects/forcelayers2d): a circle that receives no force from the ground's layer
+        /// falls through it, touching it as it goes; one the ground sends no force to likewise.</summary>
+        [Theory]
+        [InlineData(false, false, false)]
+        [InlineData(true, false, true)]
+        [InlineData(false, true, true)]
+        public void ABodyThatTakesNoForceFromTheGroundFallsThroughIt(bool circleReceivesNot, bool groundSendsNot, bool fallsThrough)
+        {
+            var at = new Vector2(0f, 3300f + (circleReceivesNot ? 20f : 0f) + (groundSendsNot ? 40f : 0f));
+            var ground = Make("Ground", at, EffectorLayer).AddComponent<BoxCollider2D>();
+            ground.size = new Vector2(4f, 1f);
+            var circle = Circle("Circle", at + new Vector2(0f, 1.2f), LayerA, 1f);
+            if (circleReceivesNot) circle.GetComponent<Collider2D>().forceReceiveLayers = ~(1 << EffectorLayer);
+            if (groundSendsNot) ground.forceSendLayers = ~(1 << LayerA);
+            for (int i = 0; i < 30; i++) Physics2D.Simulate(Dt);
+            // The Editor at step 30: resting at 1.0 above the ground's center, or fallen to -0.62.
+            Assert.Equal(fallsThrough ? -0.62f : 1f, circle.position.y - at.y, 2);
+            Assert.True(circle.GetComponent<Collider2D>().IsTouching(ground));
+        }
+
+        /// <summary>One circle at 3 m/s hits another at rest: one that takes no force from the
+        /// other is immovable for it, so the other stops against it (B takes none) or carries it
+        /// along at its own speed (A takes none); taking none either way, they pass through.</summary>
+        [Theory]
+        [InlineData("all", 1.5f, 1.5f)]
+        [InlineData("aSendsNotB", 0f, 0f)]
+        [InlineData("bSendsNotA", 3f, 3f)]
+        public void ABodyThatTakesNoForceFromAnotherIsImmovableForIt(string variant, float vA, float vB)
+        {
+            var at = new Vector2(0f, 3500f + variant.Length * 10f);
+            var a = Circle("A", at, LayerA, 0f);
+            var b = Circle("B", at + new Vector2(1.5f, 0f), LayerB, 0f);
+            a.linearVelocity = new Vector2(3f, 0f);
+            if (variant == "aSendsNotB") a.GetComponent<Collider2D>().forceSendLayers = ~(1 << LayerB);
+            if (variant == "bSendsNotA") b.GetComponent<Collider2D>().forceSendLayers = ~(1 << LayerA);
+            for (int i = 0; i < 50; i++) Physics2D.Simulate(Dt);
+            Assert.Equal(vA, a.linearVelocity.x, 1);
+            Assert.Equal(vB, b.linearVelocity.x, 1);
         }
     }
 }

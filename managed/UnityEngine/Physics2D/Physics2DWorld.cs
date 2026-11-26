@@ -1511,12 +1511,26 @@ namespace Unbound.Runtime
                 pair.RemovalExit = s_Removing;
             }
 
+            /// <summary>Collider2D force layers (tests/projects/forcelayers2d, Unity 6000.0.71f1): a
+            /// body takes the contact's impulses only when the other collider sends to its layer and
+            /// its own collider receives from the other's. The contact is solved with both bodies'
+            /// masses and stays, touching and reporting; a body that takes none is not moved by it
+            /// (a body falls through the ground; one circle stops against another that takes none,
+            /// its approach halving each solver iteration, or carries along one it takes none from).</summary>
+            static void ApplyForceLayers(Contact contact, Collider2D a, Collider2D b)
+            {
+                int layerA = a.gameObject.layer, layerB = b.gameObject.layer;
+                contact.NoResponseA = (b.m_ForceSendLayers & (1 << layerA)) == 0 || (a.m_ForceReceiveLayers & (1 << layerB)) == 0;
+                contact.NoResponseB = (a.m_ForceSendLayers & (1 << layerB)) == 0 || (b.m_ForceReceiveLayers & (1 << layerA)) == 0;
+            }
+
             public void PreSolve(Contact contact, in Manifold oldManifold)
             {
                 using var scope = Enter(m_Owner);
                 var a = contact.FixtureA.UserData as Collider2D;
                 var b = contact.FixtureB.UserData as Collider2D;
                 if (a == null || b == null) return;
+                ApplyForceLayers(contact, a, b);
                 Physics2DEffectors.PreSolve(contact, a, b);
                 if (!s_ContactObservations.TryGetValue(contact, out var observation))
                     s_ContactObservations[contact] = observation = new ContactObservation();

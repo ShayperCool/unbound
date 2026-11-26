@@ -389,7 +389,6 @@ namespace UnityEngine
             set
             {
                 m_ForceSendLayers = value;
-                ReportForceLayers();
             }
         }
 
@@ -399,20 +398,7 @@ namespace UnityEngine
             set
             {
                 m_ForceReceiveLayers = value;
-                ReportForceLayers();
             }
-        }
-
-        /// <summary>Force layers that leave layers out are kept but not applied: in the Unity
-        /// 6000.0.71f1 Editor a body that receives no force from a surface's layer falls through it
-        /// while its contact stays (tests/projects/cookingforcesvideo effector.surface.receiveB and
-        /// sendNotB), which Unbound's contacts do not do yet. Effectors' own forces do not read them
-        /// (the same rows for the area, point and buoyancy effectors).</summary>
-        void ReportForceLayers()
-        {
-            if (m_ForceSendLayers != -1 || m_ForceReceiveLayers != -1)
-                Unbound.Runtime.Stubs.Ignored("Collider2D.forceSendLayers / forceReceiveLayers",
-                    "are kept but not applied: contacts exchange forces whatever these layers say");
         }
 
         public LayerMask contactCaptureLayers
@@ -621,7 +607,6 @@ namespace UnityEngine
             m_LayerOverridePriority = body.Int("m_LayerOverridePriority");
             m_ForceSendLayers = ReadMask(body, "m_ForceSendLayers", -1);
             m_ForceReceiveLayers = ReadMask(body, "m_ForceReceiveLayers", -1);
-            ReportForceLayers();
             m_ContactCaptureLayers = ReadMask(body, "m_ContactCaptureLayers", -1);
             m_CallbackLayers = ReadMask(body, "m_CallbackLayers", -1);
             m_IsTrigger = body.Bool("m_IsTrigger");

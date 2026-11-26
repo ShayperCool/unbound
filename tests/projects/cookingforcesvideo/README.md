@@ -51,5 +51,5 @@ The clips were made with ffmpeg 8 (libvpx, libvorbis):
 
 Values compare exactly. Unbound on macOS, 2026-11-19: before 444/482 (the welding-only bounds,
 the mask against include layers, the controlled track count, and the clips without .meta files),
-after 480/482 with 2 recorded residuals: force send and receive layers are not applied to
-contacts (reported through Stubs.Ignored).
+after 480/482 with 2 recorded residuals: force send and receive layers were not applied to
+contacts. Since they are (tests/projects/forcelayers2d), 482/482.
