@@ -474,14 +474,6 @@ namespace UnityEditor
             return false;
         }
 
-        public static string[] GetDependencies(string pathName) => GetDependencies(pathName, true);
-
-        public static string[] GetDependencies(string pathName, bool recursive) => new[] { pathName };
-
-        public static string[] GetDependencies(string[] pathNames) => pathNames;
-
-        public static string[] GetDependencies(string[] pathNames, bool recursive) => pathNames;
-
         static readonly Dictionary<string, string> s_ScriptOfAsset = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
 
         /// <summary>The script class of a native-format asset's scriptable object (the file's first

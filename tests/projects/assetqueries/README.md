@@ -35,8 +35,7 @@ as the user setting (a quarter of the logical processors, 3 of 12) and is set ap
 negative one read back; an `AllowAutoRefresh` without its `DisallowAutoRefresh` asserts while the
 count is below zero; V2 is enabled.
 
-`residuals.json` names the open differences: `GetAssetBundleDependencies` (it needs
-`GetDependencies`' references), and the user settings file the Editor writes.
+`residuals.json` names the open difference: the user settings file the Editor writes.
 
 Record and gate:
 

@@ -245,6 +245,28 @@ namespace UnityEditor
             return paths.ToArray();
         }
 
+        /// <summary>The AssetBundles the assets of <paramref name="assetBundleName"/> depend on: the
+        /// names, with their variants, of their dependencies (<see cref="GetDependencies(string[], bool)"/>,
+        /// recursive or direct alike), but its own, in ordinal order (matches the Unity 6000.0.71f1
+        /// Editor, tests/projects/assetdependencies bundles.*, tests/projects/assetqueries
+        /// dependencies.*).</summary>
+        public static string[] GetAssetBundleDependencies(string assetBundleName, bool recursive)
+        {
+            var names = new SortedSet<string>(StringComparer.Ordinal);
+            var folders = new Dictionary<string, (string, string)>(StringComparer.OrdinalIgnoreCase);
+            foreach (var path in GetDependencies(GetAssetPathsFromAssetBundle(assetBundleName), recursive))
+            {
+                if (DependencyAsset(path) is not { } e) continue;
+                var (name, variant) = ImplicitBundle(e, folders);
+                if (name.Length == 0) continue;
+                var full = FullBundleName(name, variant);
+                if (full != assetBundleName) names.Add(full);
+            }
+            var answer = new string[names.Count];
+            names.CopyTo(answer);
+            return answer;
+        }
+
         public static string GetImplicitAssetBundleName(string assetPath) => ImplicitBundle(BundleAsset(assetPath)).Name;
 
         public static string GetImplicitAssetBundleVariantName(string assetPath) => ImplicitBundle(BundleAsset(assetPath)).Variant;

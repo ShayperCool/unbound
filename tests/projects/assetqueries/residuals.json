@@ -1,8 +1,4 @@
 {
- "AssetDatabase.GetDependencies does not read an asset's references yet (it answers the asset alone), so GetAssetBundleDependencies is not implemented (a material's bundle does not list its shader's)": [
-  "dependencies/mat-bundle/False",
-  "dependencies/mat-bundle/True"
- ],
  "Unbound never writes the user's UserSettings/EditorUserSettings.asset, which the Editor writes when it opens a project (the import worker counts among its keys)": [
   "workers/user_settings_file"
  ]

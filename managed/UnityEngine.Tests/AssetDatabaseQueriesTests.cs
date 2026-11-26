@@ -9,6 +9,8 @@ namespace UnityEngine.Tests
     /// AssetDatabase's path, folder, AssetBundle name, worker and auto-refresh answers over a listing
     /// (matches the Unity 6000.0.71f1 Editor, tests/projects/assetqueries).
     /// </summary>
+    // The listing is global: with the other tests that replace it (AssetDependenciesTests).
+    [Collection("EditorState")]
     public sealed class AssetDatabaseQueriesTests : IDisposable
     {
         readonly ILogHandler m_Handler = Debug.unityLogger.logHandler;
