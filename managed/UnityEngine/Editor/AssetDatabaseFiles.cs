@@ -36,6 +36,9 @@ namespace UnityEditor
         {
             public string Path { get; set; }
             public long? Main { get; set; }
+            /// <summary>A bake's image, whose importer the bake sets next: a Default texture's
+            /// section in a 2D project too (unmeasured there).</summary>
+            public bool Baked { get; set; }
         }
 
         sealed class Imported
@@ -150,7 +153,7 @@ namespace UnityEditor
             File.WriteAllBytes(FileOf(path), bytes);
             ProjectImports.Wrote(path);
             // (A bake's files are not reported to OnPostprocessAllAssets: not measured.)
-            using (SessionImports.Muted()) return ImportOne(path, main);
+            using (SessionImports.Muted()) return Import(new[] { new ImportRequest { Path = path, Main = main, Baked = true } }).FirstOrDefault() ?? "";
         }
 
         internal static string ImportOne(string path, long? main = null) =>

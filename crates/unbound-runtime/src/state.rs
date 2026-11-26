@@ -245,19 +245,27 @@ impl RuntimeState {
                     },
                 )?,
             };
-            if self.new_meta.mode_2d && importer == unbound_assets::new_meta::NewImporter::Texture {
+            if request.baked
+                && self.new_meta.mode_2d
+                && importer == unbound_assets::new_meta::NewImporter::Texture
+            {
                 tracing::warn!(
-                    "{}: in a 2D project the Editor imports a new texture as sprites; what it writes for one an API imports (ImportAsset, a bake) is not measured, so Unbound gives it a Default texture's .meta",
+                    "{}: in a 2D project the Editor imports a new texture as sprites; what it writes for a bake's image is not measured, so Unbound gives it a Default texture's .meta",
                     request.path
                 );
             }
             let guid = unbound_assets::new_meta::new_guid();
+            // A new texture ImportAsset or a Refresh imports gets the sprites of the 2D mode as at
+            // the project's import (matches the Unity 6000.0.71f1 Editor, tests/projects/spritemeta
+            // session.*); a bake's image a Default texture's section (unmeasured in the 2D mode).
+            let context = if request.baked {
+                self.new_meta.in_3d()
+            } else {
+                self.new_meta.clone()
+            };
             std::fs::write(
                 &meta,
-                // A file an API imports (ImportAsset, a bake's lightmaps and reflections) gets a
-                // Default texture's section in the 2D mode too: what the Editor gives it is not
-                // measured (tests/projects/spritemeta measures the project's own import).
-                unbound_assets::new_meta::text(importer, guid, &file, &self.new_meta.in_3d()),
+                unbound_assets::new_meta::text(importer, guid, &file, &context),
             )?;
         }
         let (guid, labels, importer) = unbound_project::assetdb::read_meta_header(&meta);
@@ -329,7 +337,11 @@ impl RuntimeState {
         let requests: Vec<ImportPath> = changed
             .into_iter()
             .chain(gone.iter().map(|asset| asset.path.clone()))
-            .map(|path| ImportPath { path, main: None })
+            .map(|path| ImportPath {
+                path,
+                main: None,
+                baked: false,
+            })
             .collect();
         let results = self.import_paths(&requests);
         let gone: HashMap<&str, Guid> = gone
@@ -370,6 +382,9 @@ struct ImportPath {
     path: String,
     #[serde(default)]
     main: Option<i64>,
+    /// A bake's image (a lightmap's, a reflection's), whose importer the bake sets next.
+    #[serde(default)]
+    baked: bool,
 }
 
 pub fn set_texture_mip_bias(handle: u64, bias: f32) {
