@@ -413,6 +413,20 @@ namespace UnityEngine
         /// <summary>The Ribbon trails of the last <see cref="RenderTrails"/> call, reused (with
         /// their lists) by the next one.</summary>
         readonly List<Trail> m_RibbonTrails = new List<Trail>();
+        readonly List<int> m_RibbonOrder = new List<int>();
+        Comparison<int> m_RibbonComparison;
+
+        /// <summary>A ribbon joins its particles youngest first by their age in hundredths of a
+        /// second, the age percentage over the inverse start lifetime in single precision, equal
+        /// ages in index order, so the oldest particle ends the ribbon (6000.0.71f1,
+        /// tests/projects/particletrails ribbon/*: a burst's particles, of different lifetimes,
+        /// are a float step apart in that quotient).</summary>
+        int CompareRibbonAge(int a, int b)
+        {
+            float ageA = m_Particles[a].m_AgePercent / m_Particles[a].m_InvStartLifetime;
+            float ageB = m_Particles[b].m_AgePercent / m_Particles[b].m_InvStartLifetime;
+            return ageA < ageB ? -1 : ageA > ageB ? 1 : a.CompareTo(b);
+        }
 
         /// <summary>Fills <paramref name="into"/> with the trails to draw. Per-particle trails come
         /// in the order of the particles holding them (live, or dead and carrying a fading trail), as
@@ -446,7 +460,10 @@ namespace UnityEngine
                 var trail = m_RibbonTrails[used];
                 trail.Points.Clear(); trail.Times.Clear(); trail.Widths.Clear(); trail.Colors.Clear();
                 trail.Lifetime = float.PositiveInfinity;
-                for (int i = group; i < m_Count; i += ribbons)
+                m_RibbonOrder.Clear();
+                for (int i = group; i < m_Count; i += ribbons) m_RibbonOrder.Add(i);
+                m_RibbonOrder.Sort(m_RibbonComparison ??= CompareRibbonAge);
+                foreach (int i in m_RibbonOrder)
                 {
                     UpdateTrailHead(ref m_Particles[i], trail);
                     trail.Points.Add(trail.Head); trail.Times.Add(m_TrailTime);
