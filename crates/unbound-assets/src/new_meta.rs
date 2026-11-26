@@ -175,6 +175,11 @@ impl MetaContext {
         self.mode_2d = mode_2d;
         self
     }
+
+    /// The context in the 3D mode: a new texture gets the Default texture's section.
+    pub fn in_3d(&self) -> Self {
+        self.clone().with_mode_2d(false)
+    }
 }
 
 /// The importer section the Editor writes into a C# script's `.meta` when it writes the file
@@ -309,17 +314,21 @@ pub fn text(importer: NewImporter, guid: Guid, asset: &Path, context: &MetaConte
 /// A new texture's section in a project of the 2D default behaviour mode: the Editor imports it
 /// as sprites (`Multiple`), sliced automatically, clamped, without mipmaps or NPOT scaling, its
 /// alpha transparency (matches the Unity 6000.0.71f1 Editor, tests/projects/spritemeta New,
-/// NewNpot). A texture of no transparent pixel is one sprite `<name>_0` of the whole texture,
-/// whose file id and sprite ID are the Editor's hashes; the slicing of one with transparent pixels
-/// is not known yet: it keeps the Default texture's section, with a warning.
+/// NewNpot): a PNG of no transparent pixel is one sprite `<name>_0` of the whole texture, whose
+/// file id and sprite ID are the Editor's hashes. The slicing of one with transparent pixels, and
+/// other formats, are not measured: they keep the Default texture's section, with a warning.
 fn sprites_2d(section: String, asset: &Path) -> String {
-    let opaque = std::fs::read(asset)
-        .ok()
+    let png = asset
+        .extension()
+        .is_some_and(|e| e.eq_ignore_ascii_case("png"));
+    let opaque = png
+        .then(|| std::fs::read(asset).ok())
+        .flatten()
         .and_then(|bytes| crate::image_io::decode(&bytes).ok())
         .filter(|image| image.rgba.chunks_exact(4).all(|pixel| pixel[3] > 0));
     let Some(image) = opaque else {
         tracing::warn!(
-            "{}: in a 2D project the Editor slices a new texture into sprites; Unbound does not slice one with transparent pixels (or that it cannot read) yet, so it imports as a Default texture",
+            "{}: in a 2D project the Editor imports a new texture as sprites, sliced automatically; Unbound does so for an opaque PNG only (not one with transparent pixels, another format or one it cannot read) yet, so this one imports as a Default texture",
             asset.display()
         );
         return section;
@@ -626,6 +635,21 @@ mod tests {
         let transparent = text(NewImporter::Texture, Guid(1), &gaps, &context);
         assert!(default.contains("  textureType: 0\n  textureShape"));
         assert_eq!(transparent, default);
+        assert_eq!(
+            text(NewImporter::Texture, Guid(1), &opaque, &context.in_3d()),
+            default
+        );
+        // Another format is not measured: an opaque JPG keeps the Default texture's section.
+        let jpg = dir.join("Opaque.jpg");
+        let rgb = vec![200u8; 4 * 4 * 4];
+        let bytes =
+            crate::image_io::encode_rgba8(crate::image_io::Encoding::Jpg(90), 4, 4, &rgb).unwrap();
+        std::fs::write(&jpg, bytes).unwrap();
+        let jpg_default = text(NewImporter::Texture, Guid(1), &jpg, &MetaContext::default());
+        assert_eq!(
+            text(NewImporter::Texture, Guid(1), &jpg, &context),
+            jpg_default
+        );
         std::fs::remove_dir_all(&dir).unwrap();
     }
 

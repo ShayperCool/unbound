@@ -51,18 +51,29 @@ namespace UnityEditor
             if (!Compat.SpriteFirstImportMeasured) return;
             foreach (var path in imported)
             {
-                // A texture's main asset is its Texture2D (asked without loading it).
-                if (AssetDatabase.IsImmutablePackagePath(path) || AssetDatabase.GetMainAssetTypeAtPath(path) != typeof(UnityEngine.Texture2D)) continue;
+                // Chosen by the .meta alone: no asset is loaded (a first open lists every asset,
+                // whose loads would run scripts' callbacks; tests/projects/assetloaded).
+                if (AssetDatabase.IsImmutablePackagePath(path)) continue;
+                // A settings file or a built-in asset has no .meta of its own.
+                var file = AssetDatabase.FileOf(path);
+                if (string.IsNullOrEmpty(file) || !System.IO.File.Exists(file + ".meta")) continue;
+                var guid = AssetDatabase.AssetPathToGUID(path);
+                if (string.IsNullOrEmpty(guid)) continue;
+                var meta = Native.LoadDocuments("meta:" + guid);
+                if (meta.Count == 0 || meta[0].TypeName != "TextureImporter" || !NeedsSpriteId(meta[0].Body)) continue;
                 if (AssetImporter.GetAtPath(path) is not TextureImporter importer || importer.m_Settings == null) continue;
-                if (MetaSettings.Int(importer.m_Settings, "textureType") != (int)TextureImporterType.Sprite
-                    || MetaSettings.Int(importer.m_Settings, "spriteMode") != (int)SpriteImportMode.Single) continue;
-                if (!string.IsNullOrEmpty(MetaSettings.Find(importer.m_Settings, "spriteSheet.spriteID")?.AsString())) continue;
                 MetaSettings.Set(importer.m_Settings, "spriteSheet.spriteID", SingleSpriteId);
                 MetaSettings.SetInt(importer.m_Settings, "nPOTScale", (int)TextureImporterNPOTScale.None);
                 importer.Changed();
                 ImporterMeta.Write(importer);
             }
         }
+
+        /// <summary>Whether a texture importer's settings are a Single sprite's without a sprite ID.</summary>
+        internal static bool NeedsSpriteId(YNode settings) =>
+            MetaSettings.Int(settings, "textureType") == (int)TextureImporterType.Sprite
+            && MetaSettings.Int(settings, "spriteMode") == (int)SpriteImportMode.Single
+            && string.IsNullOrEmpty(MetaSettings.Find(settings, "spriteSheet.spriteID")?.AsString());
 
         /// <summary>The NPOT scaling a texture's settings read as: none for a sprite, whatever its
         /// .meta holds (tests/projects/spritemeta importer.IdNpot).</summary>

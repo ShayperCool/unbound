@@ -8,6 +8,10 @@
     "crates/unbound-assets/src/new_meta/",
     "crates/unbound-runtime/src/state.rs",
     "managed/UnityEngine/Editor/ImporterMetaFiles.cs",
-    "managed/UnityEngine/Editor/ImporterSettings.cs"
+    "managed/UnityEngine/Editor/ImporterSettings.cs",
+    "crates/unbound-assets/src/meta.rs",
+    "managed/UnityEngine/Editor/SpriteImports.cs",
+    "managed/UnityEngine/Editor/EditorInitialization.cs",
+    "managed/UnityEngine/Runtime/Compat.cs"
   ]
 }

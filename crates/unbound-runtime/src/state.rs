@@ -242,7 +242,10 @@ impl RuntimeState {
             let guid = unbound_assets::new_meta::new_guid();
             std::fs::write(
                 &meta,
-                unbound_assets::new_meta::text(importer, guid, &file, &self.new_meta),
+                // A file an API imports (ImportAsset, a bake's lightmaps and reflections) gets a
+                // Default texture's section in the 2D mode too: what the Editor gives it is not
+                // measured (tests/projects/spritemeta measures the project's own import).
+                unbound_assets::new_meta::text(importer, guid, &file, &self.new_meta.in_3d()),
             )?;
         }
         let (guid, labels, importer) = unbound_project::assetdb::read_meta_header(&meta);
@@ -1835,7 +1838,7 @@ pub fn dispatch(method: &str, request: &str) -> Result<String> {
         // the order and the values of the settings a texture's section lacks.
         "texture-meta-template" => Ok(json!({
             "section": if s.new_meta_measured {
-                meta_section(unbound_assets::new_meta::NewImporter::Texture, Path::new("Texture.png"), &s.new_meta)
+                meta_section(unbound_assets::new_meta::NewImporter::Texture, Path::new("Texture.png"), &s.new_meta.in_3d())
             } else {
                 String::new()
             }

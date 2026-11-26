@@ -24,13 +24,21 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
+        public void OnlyASingleSpriteWithoutAnIdIsGivenOne()
+        {
+            YNode Body(string text) => TestYaml.DocumentBody("TextureImporter:\n" + text);
+            Assert.True(SpriteImports.NeedsSpriteId(Body("  textureType: 8\n  spriteMode: 1\n  spriteSheet:\n    spriteID: \n")));
+            Assert.True(SpriteImports.NeedsSpriteId(Body("  textureType: 8\n  spriteMode: 1\n")));
+            Assert.False(SpriteImports.NeedsSpriteId(Body("  textureType: 8\n  spriteMode: 1\n  spriteSheet:\n    spriteID: 5e97eb03825dee720800000000000000\n")));
+            Assert.False(SpriteImports.NeedsSpriteId(Body("  textureType: 8\n  spriteMode: 2\n")));
+            Assert.False(SpriteImports.NeedsSpriteId(Body("  textureType: 0\n  spriteMode: 1\n")));
+        }
+
+        [Fact]
         public void ASpritesNpotScalingReadsAsNone()
         {
             var sprite = Sprite("1");
             Assert.Equal(TextureImporterNPOTScale.None, sprite.npotScale);
-            var settings = new TextureImporterSettings();
-            sprite.ReadTextureSettings(settings);
-            Assert.Equal(TextureImporterNPOTScale.None, settings.npotScale);
             // A Default texture reads what its .meta holds.
             var texture = (TextureImporter)AssetImporter.FromMeta("Assets/D.png", "7123456789abcdef0123456789abcdef", "TextureImporter",
                 TestYaml.DocumentBody("TextureImporter:\n  textureType: 0\n  nPOTScale: 1\n"));

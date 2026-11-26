@@ -423,7 +423,6 @@ namespace UnityEditor
         {
             if (dest == null) throw new ArgumentNullException(nameof(dest));
             foreach (var (path, read, _) in s_SettingsFields) read(dest, m_Settings, path);
-            dest.npotScale = SpriteImports.NpotScaleOf(dest.textureType, dest.npotScale);
         }
 
         /// <summary>Writes the settings that differ from the importer's own (a sparse .meta keeps
