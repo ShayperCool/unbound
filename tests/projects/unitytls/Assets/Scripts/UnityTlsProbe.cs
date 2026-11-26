@@ -124,11 +124,15 @@ Yw9/lfUAAH9G6yFFq+MFu8nHlfYVqEI0zigLYuz7AiBnnIeyviQS8FEZzYeAi6gB
     static readonly Dictionary<long, int> s_Sent = new Dictionary<long, int>();
     static long Peer(long side) => side ^ 1;
 
+    static bool s_NullUser;
+    static readonly Dictionary<long, byte[]> s_FirstSend = new Dictionary<long, byte[]>();
+
     static int Send(IntPtr user, byte* data, UIntPtr length, uint status)
     {
         long side = (long)user;
         var bytes = new byte[(int)length.ToUInt32()];
         Marshal.Copy((IntPtr)data, bytes, 0, bytes.Length);
+        if (!s_FirstSend.ContainsKey(side)) s_FirstSend[side] = bytes;
         s_Inbound[Peer(side)].Enqueue(bytes);
         s_Sent[side] = s_Sent.TryGetValue(side, out var n) ? n + 1 : 1;
         return bytes.Length;
@@ -212,6 +216,43 @@ Yw9/lfUAAH9G6yFFq+MFu8nHlfYVqEI0zigLYuz7AiBnnIeyviQS8FEZzYeAi6gB
         return config;
     }
 
+    /// <summary>A ClientHello record's version, cipher suites and extensions (with the curves and
+    /// signature algorithms they list); the random, session id and key shares are left out.</summary>
+    static string Hello(byte[] b, bool datagram)
+    {
+        if (b == null) return "none";
+        int i = datagram ? 13 + 12 : 5 + 4;
+        if (b.Length < i + 34) return "short " + I(b.Length);
+        string version = ((b[i] << 8) | b[i + 1]).ToString("x4");
+        i += 2 + 32;
+        i += 1 + b[i];
+        if (datagram) i += 1 + b[i];
+        int cs = (b[i] << 8) | b[i + 1];
+        i += 2;
+        var suites = new List<string>();
+        for (int k = 0; k < cs; k += 2) suites.Add(((b[i + k] << 8) | b[i + k + 1]).ToString("x4"));
+        i += cs;
+        i += 1 + b[i];
+        int end = i + 2 + ((b[i] << 8) | b[i + 1]);
+        i += 2;
+        var exts = new List<string>();
+        while (i + 4 <= end && i + 4 <= b.Length)
+        {
+            int t = (b[i] << 8) | b[i + 1];
+            int l = (b[i + 2] << 8) | b[i + 3];
+            string detail = "";
+            if (t == 10 || t == 13)
+            {
+                var v = new List<string>();
+                for (int k = 2; k + 1 < l; k += 2) v.Add(((b[i + 4 + k] << 8) | b[i + 4 + k + 1]).ToString("x4"));
+                detail = "[" + string.Join(" ", v.ToArray()) + "]";
+            }
+            exts.Add(I(t) + detail);
+            i += 4 + l;
+        }
+        return "version " + version + " suites " + string.Join(" ", suites.ToArray()) + " | extensions " + string.Join(",", exts.ToArray());
+    }
+
     struct Side { public IntPtr Client; public long Id; }
 
     static string Fields(IntPtr client) =>
@@ -228,6 +269,7 @@ Yw9/lfUAAH9G6yFFq+MFu8nHlfYVqEI0zigLYuz7AiBnnIeyviQS8FEZzYeAi6gB
         Marshal.WriteIntPtr(config, Offset("transportUserData"), (IntPtr)id);
         Marshal.WriteInt32(config, Offset("handshakeReturnsOnStep"), steps ? 1 : 0);
         configure(config);
+        if (s_NullUser && role == 2) Marshal.WriteIntPtr(config, Offset("transportUserData"), IntPtr.Zero);
         s_Inbound[id] = new Queue<byte[]>();
         s_Datagram[id] = datagram;
         s_Sent[id] = 0;
@@ -316,6 +358,8 @@ Yw9/lfUAAH9G6yFFq+MFu8nHlfYVqEI0zigLYuz7AiBnnIeyviQS8FEZzYeAi6gB
         if (sv.Client != IntPtr.Zero && cl.Client != IntPtr.Zero)
         {
             Handshake(key, cl, sv);
+            if (key.EndsWith(".cert"))
+                Row(key + ".client.hello", Hello(s_FirstSend.TryGetValue(cl.Id, out var hello) ? hello : null, datagram));
             if (echo)
             {
                 Echo(key + ".toServer", cl, sv, "hello server");
@@ -325,6 +369,7 @@ Yw9/lfUAAH9G6yFFq+MFu8nHlfYVqEI0zigLYuz7AiBnnIeyviQS8FEZzYeAi6gB
         Destroy(cl);
         Destroy(sv);
         s_Shook.Clear();
+        s_FirstSend.Clear();
     }
 
     static void Run()
@@ -349,6 +394,18 @@ Yw9/lfUAAH9G6yFFq+MFu8nHlfYVqEI0zigLYuz7AiBnnIeyviQS8FEZzYeAi6gB
             Scenario(p + ".noCa", datagram, false, serverCert, c => Marshal.WriteIntPtr(c, Offset("hostname"), Text("localhost", true)), false);
             Scenario(p + ".garbledCert", datagram, false, c => { SetRef(c, "serverPEM", ServerPem.Replace("MII", "XXX")); SetRef(c, "privateKeyPEM", ServerKey); }, clientCa, false);
             Scenario(p + ".clientAuthRequired", datagram, false, c => { serverCert(c); SetRef(c, "caPEM", CaPem); Marshal.WriteInt32(c, Offset("clientAuth"), 2); }, clientCa, false);
+            // A client without transport user data (its callbacks then get none).
+            Scenario(p + ".nullUser", datagram, false, serverCert, c => { clientCa(c); s_NullUser = true; }, false);
+            s_NullUser = false;
+            // The client's own clientAuth: none, optional and required, without a CA and with the
+            // wrong one (whether the client then verifies the server). A client without a host
+            // name is left out: the Editor's answer varies between runs.
+            foreach (var (name, auth) in new[] { ("None", 0), ("Optional", 1), ("Required", 2) })
+            {
+                int a = auth;
+                Scenario(p + ".clientAuth" + name + ".noCa", datagram, false, serverCert, c => { Marshal.WriteInt32(c, Offset("clientAuth"), a); Marshal.WriteIntPtr(c, Offset("hostname"), Text("localhost", true)); }, true);
+                Scenario(p + ".clientAuth" + name + ".wrongCa", datagram, false, serverCert, c => { Marshal.WriteInt32(c, Offset("clientAuth"), a); SetRef(c, "caPEM", OtherCaPem); Marshal.WriteIntPtr(c, Offset("hostname"), Text("localhost", true)); }, false);
+            }
         }
         var psk = new byte[] { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16 };
         Action<IntPtr> pskConfig = c =>

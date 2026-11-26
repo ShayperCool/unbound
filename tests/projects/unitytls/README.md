@@ -22,20 +22,31 @@ the script.
   `.packets`: the sends of each side.
 * `.toServer.*`, `.toClient.*`: a message sent, read, and read again.
 
-Cases: `cert` (a trusted server), `steps` (one handshake step a call), `wrongCa`, `wrongHost`,
-`noCa`, `garbledCert` (a server certificate that does not parse), `clientAuthRequired` (a client
-without a certificate), and `dtls.psk` (a pre-shared key without certificates).
+Cases: `cert` (a trusted server; `.client.hello` is the client's ClientHello: version, cipher
+suites, extensions with their curves and signature algorithms), `steps` (one handshake step a
+call), `wrongCa`, `wrongHost`, `noCa`, `garbledCert` (a server certificate that does not parse),
+`clientAuthRequired` (a client without a certificate), `nullUser` (a client without transport
+user data), `clientAuth<None|Optional|Required>.<noCa|wrongCa>` (the client's own clientAuth), and
+`dtls.psk` (a pre-shared key without certificates). A client without a host name is not recorded:
+the Editor's answer varies between runs (two runs out of three succeeded, one failed as a name
+mismatch).
 
 What it shows: the binding is a layer over Mbed TLS 3 (its handshake states, TLS 1.2's, end at
 27). `init` makes the context: before it the binding's queries read nothing valid (asking the
 role or state before `init` crashes the Editor, so the probe does not). A failed `init` leaves the
 side failed without a context, its error the parse error (a certificate) or "invalid argument" (a
 server without its certificate and key, even with a pre-shared key). Every client verifies the
-server (no CA: not trusted). A failed handshake reports "internal error" with the peer
+server whatever its own clientAuth; without a CA it verifies against the system's trusted roots
+(measured once over the network, not recorded: a client without a CA completes handshakes with
+www.google.com and github.com, one with another CA fails as not trusted), so the probe's server,
+signed by its own CA, is not trusted. A transport without user data fails at once, its callbacks
+not called. The ClientHello offers Mbed TLS 3's default cipher suites and signature algorithms
+SHA-512 first. A failed handshake reports "internal error" with the peer
 certificate's verification flags (8 not trusted, 4 name mismatch), or 0x80000000 ("not done")
 when none was verified. In steps, the step that finishes the handshake returns a step, the next
-call finishes it. DTLS sends one record a datagram and needs no hello verification. Not recorded:
-cookies (`unitytls_client_set_cookie_info`), the log callback, timeouts and retransmission, MTU,
+call finishes it. DTLS sends one record a datagram and needs no hello verification. Residual (residuals.json): the
+handshake state of a DTLS client without user data. Not recorded: the system's trusted roots on
+Linux (Unbound reads the system's PEM bundle there), cookies (`unitytls_client_set_cookie_info`), the log callback, timeouts and retransmission, MTU,
 added cipher suites, and Unity Transport itself.
 
 Record and gate:

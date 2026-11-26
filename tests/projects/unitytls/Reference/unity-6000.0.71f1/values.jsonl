@@ -41,6 +41,7 @@
 {"k":"tls.cert.client.final","v":"3:27 errors 0/0"}
 {"k":"tls.cert.server.final","v":"3:27 errors 0/0"}
 {"k":"tls.cert.packets","v":"5,7"}
+{"k":"tls.cert.client.hello","v":"version 0303 suites cca8 cca9 ccaa c02c c030 009f c0ad c09f c024 c028 006b c00a c014 0039 c0af c0a3 c087 c08b c07d c073 c077 00c4 0088 c05d c061 c053 c049 c04d c045 c02b c02f 009e c0ac c09e c023 c027 0067 c009 c013 0033 c0ae c0a2 c086 c08a c07c c072 c076 00be 0045 c05c c060 c052 c048 c04c c044 009d c09d 003d 0035 c032 c02a c00f c02e c026 c005 c0a1 c07b 00c0 0084 c08d c079 c089 c075 c05f c063 c051 c04b c04f c03d 009c c09c 003c 002f c031 c029 c00e c02d c025 c004 c0a0 c07a 00ba 0041 c08c c078 c088 c074 c05e c062 c050 c04a c04e c03c 00ff | extensions 0,10[001d 0017 0018 001e 0019 001a 001b 001c],13[0603 0601 0503 0501 0403 0401],11,22,23,35"}
 {"k":"tls.cert.toServer.send","v":"0"}
 {"k":"tls.cert.toServer.read","v":"0/12/hello server"}
 {"k":"tls.cert.toServer.readAgain","v":"1048577/0"}
@@ -161,6 +162,157 @@
 {"k":"tls.clientAuthRequired.client.final","v":"2:12 errors 0/0"}
 {"k":"tls.clientAuthRequired.server.final","v":"64:7 errors 7/2147483648"}
 {"k":"tls.clientAuthRequired.packets","v":"5,5"}
+{"k":"tls.nullUser.server.created","v":"set"}
+{"k":"tls.nullUser.server.fields.created","v":"1,0,noctx"}
+{"k":"tls.nullUser.server.init","v":"0"}
+{"k":"tls.nullUser.server.fields.init","v":"1,1,ctx"}
+{"k":"tls.nullUser.server.role","v":"1"}
+{"k":"tls.nullUser.server.state.init","v":"1"}
+{"k":"tls.nullUser.server.ciphersuites","v":"0:"}
+{"k":"tls.nullUser.client.created","v":"set"}
+{"k":"tls.nullUser.client.fields.created","v":"2,0,noctx"}
+{"k":"tls.nullUser.client.init","v":"0"}
+{"k":"tls.nullUser.client.fields.init","v":"2,1,ctx"}
+{"k":"tls.nullUser.client.role","v":"2"}
+{"k":"tls.nullUser.client.state.init","v":"1"}
+{"k":"tls.nullUser.client.ciphersuites","v":"0:"}
+{"k":"tls.nullUser.client.steps","v":"13@64:2"}
+{"k":"tls.nullUser.server.steps","v":"1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1"}
+{"k":"tls.nullUser.client.final","v":"64:2 errors 7/2147483648"}
+{"k":"tls.nullUser.server.final","v":"2:1 errors 0/0"}
+{"k":"tls.nullUser.packets","v":"0,0"}
+{"k":"tls.clientAuthNone.noCa.server.created","v":"set"}
+{"k":"tls.clientAuthNone.noCa.server.fields.created","v":"1,0,noctx"}
+{"k":"tls.clientAuthNone.noCa.server.init","v":"0"}
+{"k":"tls.clientAuthNone.noCa.server.fields.init","v":"1,1,ctx"}
+{"k":"tls.clientAuthNone.noCa.server.role","v":"1"}
+{"k":"tls.clientAuthNone.noCa.server.state.init","v":"1"}
+{"k":"tls.clientAuthNone.noCa.server.ciphersuites","v":"0:"}
+{"k":"tls.clientAuthNone.noCa.client.created","v":"set"}
+{"k":"tls.clientAuthNone.noCa.client.fields.created","v":"2,0,noctx"}
+{"k":"tls.clientAuthNone.noCa.client.init","v":"0"}
+{"k":"tls.clientAuthNone.noCa.client.fields.init","v":"2,1,ctx"}
+{"k":"tls.clientAuthNone.noCa.client.role","v":"2"}
+{"k":"tls.clientAuthNone.noCa.client.state.init","v":"1"}
+{"k":"tls.clientAuthNone.noCa.client.ciphersuites","v":"0:"}
+{"k":"tls.clientAuthNone.noCa.client.steps","v":"1048577@2:2 13@64:3"}
+{"k":"tls.clientAuthNone.noCa.server.steps","v":"1048577@2:7 13@64:7"}
+{"k":"tls.clientAuthNone.noCa.client.final","v":"64:3 errors 7/8"}
+{"k":"tls.clientAuthNone.noCa.server.final","v":"64:7 errors 7/2147483648"}
+{"k":"tls.clientAuthNone.noCa.packets","v":"2,5"}
+{"k":"tls.clientAuthNone.noCa.toServer.send","v":"1048581"}
+{"k":"tls.clientAuthNone.noCa.toServer.read","v":"1048580/0/"}
+{"k":"tls.clientAuthNone.noCa.toServer.readAgain","v":"1048580/0"}
+{"k":"tls.clientAuthNone.noCa.toClient.send","v":"1048581"}
+{"k":"tls.clientAuthNone.noCa.toClient.read","v":"1048580/0/"}
+{"k":"tls.clientAuthNone.noCa.toClient.readAgain","v":"1048580/0"}
+{"k":"tls.clientAuthNone.wrongCa.server.created","v":"set"}
+{"k":"tls.clientAuthNone.wrongCa.server.fields.created","v":"1,0,noctx"}
+{"k":"tls.clientAuthNone.wrongCa.server.init","v":"0"}
+{"k":"tls.clientAuthNone.wrongCa.server.fields.init","v":"1,1,ctx"}
+{"k":"tls.clientAuthNone.wrongCa.server.role","v":"1"}
+{"k":"tls.clientAuthNone.wrongCa.server.state.init","v":"1"}
+{"k":"tls.clientAuthNone.wrongCa.server.ciphersuites","v":"0:"}
+{"k":"tls.clientAuthNone.wrongCa.client.created","v":"set"}
+{"k":"tls.clientAuthNone.wrongCa.client.fields.created","v":"2,0,noctx"}
+{"k":"tls.clientAuthNone.wrongCa.client.init","v":"0"}
+{"k":"tls.clientAuthNone.wrongCa.client.fields.init","v":"2,1,ctx"}
+{"k":"tls.clientAuthNone.wrongCa.client.role","v":"2"}
+{"k":"tls.clientAuthNone.wrongCa.client.state.init","v":"1"}
+{"k":"tls.clientAuthNone.wrongCa.client.ciphersuites","v":"0:"}
+{"k":"tls.clientAuthNone.wrongCa.client.steps","v":"1048577@2:2 13@64:3"}
+{"k":"tls.clientAuthNone.wrongCa.server.steps","v":"1048577@2:7 13@64:7"}
+{"k":"tls.clientAuthNone.wrongCa.client.final","v":"64:3 errors 7/8"}
+{"k":"tls.clientAuthNone.wrongCa.server.final","v":"64:7 errors 7/2147483648"}
+{"k":"tls.clientAuthNone.wrongCa.packets","v":"2,5"}
+{"k":"tls.clientAuthOptional.noCa.server.created","v":"set"}
+{"k":"tls.clientAuthOptional.noCa.server.fields.created","v":"1,0,noctx"}
+{"k":"tls.clientAuthOptional.noCa.server.init","v":"0"}
+{"k":"tls.clientAuthOptional.noCa.server.fields.init","v":"1,1,ctx"}
+{"k":"tls.clientAuthOptional.noCa.server.role","v":"1"}
+{"k":"tls.clientAuthOptional.noCa.server.state.init","v":"1"}
+{"k":"tls.clientAuthOptional.noCa.server.ciphersuites","v":"0:"}
+{"k":"tls.clientAuthOptional.noCa.client.created","v":"set"}
+{"k":"tls.clientAuthOptional.noCa.client.fields.created","v":"2,0,noctx"}
+{"k":"tls.clientAuthOptional.noCa.client.init","v":"0"}
+{"k":"tls.clientAuthOptional.noCa.client.fields.init","v":"2,1,ctx"}
+{"k":"tls.clientAuthOptional.noCa.client.role","v":"2"}
+{"k":"tls.clientAuthOptional.noCa.client.state.init","v":"1"}
+{"k":"tls.clientAuthOptional.noCa.client.ciphersuites","v":"0:"}
+{"k":"tls.clientAuthOptional.noCa.client.steps","v":"1048577@2:2 13@64:3"}
+{"k":"tls.clientAuthOptional.noCa.server.steps","v":"1048577@2:7 13@64:7"}
+{"k":"tls.clientAuthOptional.noCa.client.final","v":"64:3 errors 7/8"}
+{"k":"tls.clientAuthOptional.noCa.server.final","v":"64:7 errors 7/2147483648"}
+{"k":"tls.clientAuthOptional.noCa.packets","v":"2,5"}
+{"k":"tls.clientAuthOptional.noCa.toServer.send","v":"1048581"}
+{"k":"tls.clientAuthOptional.noCa.toServer.read","v":"1048580/0/"}
+{"k":"tls.clientAuthOptional.noCa.toServer.readAgain","v":"1048580/0"}
+{"k":"tls.clientAuthOptional.noCa.toClient.send","v":"1048581"}
+{"k":"tls.clientAuthOptional.noCa.toClient.read","v":"1048580/0/"}
+{"k":"tls.clientAuthOptional.noCa.toClient.readAgain","v":"1048580/0"}
+{"k":"tls.clientAuthOptional.wrongCa.server.created","v":"set"}
+{"k":"tls.clientAuthOptional.wrongCa.server.fields.created","v":"1,0,noctx"}
+{"k":"tls.clientAuthOptional.wrongCa.server.init","v":"0"}
+{"k":"tls.clientAuthOptional.wrongCa.server.fields.init","v":"1,1,ctx"}
+{"k":"tls.clientAuthOptional.wrongCa.server.role","v":"1"}
+{"k":"tls.clientAuthOptional.wrongCa.server.state.init","v":"1"}
+{"k":"tls.clientAuthOptional.wrongCa.server.ciphersuites","v":"0:"}
+{"k":"tls.clientAuthOptional.wrongCa.client.created","v":"set"}
+{"k":"tls.clientAuthOptional.wrongCa.client.fields.created","v":"2,0,noctx"}
+{"k":"tls.clientAuthOptional.wrongCa.client.init","v":"0"}
+{"k":"tls.clientAuthOptional.wrongCa.client.fields.init","v":"2,1,ctx"}
+{"k":"tls.clientAuthOptional.wrongCa.client.role","v":"2"}
+{"k":"tls.clientAuthOptional.wrongCa.client.state.init","v":"1"}
+{"k":"tls.clientAuthOptional.wrongCa.client.ciphersuites","v":"0:"}
+{"k":"tls.clientAuthOptional.wrongCa.client.steps","v":"1048577@2:2 13@64:3"}
+{"k":"tls.clientAuthOptional.wrongCa.server.steps","v":"1048577@2:7 13@64:7"}
+{"k":"tls.clientAuthOptional.wrongCa.client.final","v":"64:3 errors 7/8"}
+{"k":"tls.clientAuthOptional.wrongCa.server.final","v":"64:7 errors 7/2147483648"}
+{"k":"tls.clientAuthOptional.wrongCa.packets","v":"2,5"}
+{"k":"tls.clientAuthRequired.noCa.server.created","v":"set"}
+{"k":"tls.clientAuthRequired.noCa.server.fields.created","v":"1,0,noctx"}
+{"k":"tls.clientAuthRequired.noCa.server.init","v":"0"}
+{"k":"tls.clientAuthRequired.noCa.server.fields.init","v":"1,1,ctx"}
+{"k":"tls.clientAuthRequired.noCa.server.role","v":"1"}
+{"k":"tls.clientAuthRequired.noCa.server.state.init","v":"1"}
+{"k":"tls.clientAuthRequired.noCa.server.ciphersuites","v":"0:"}
+{"k":"tls.clientAuthRequired.noCa.client.created","v":"set"}
+{"k":"tls.clientAuthRequired.noCa.client.fields.created","v":"2,0,noctx"}
+{"k":"tls.clientAuthRequired.noCa.client.init","v":"0"}
+{"k":"tls.clientAuthRequired.noCa.client.fields.init","v":"2,1,ctx"}
+{"k":"tls.clientAuthRequired.noCa.client.role","v":"2"}
+{"k":"tls.clientAuthRequired.noCa.client.state.init","v":"1"}
+{"k":"tls.clientAuthRequired.noCa.client.ciphersuites","v":"0:"}
+{"k":"tls.clientAuthRequired.noCa.client.steps","v":"1048577@2:2 13@64:3"}
+{"k":"tls.clientAuthRequired.noCa.server.steps","v":"1048577@2:7 13@64:7"}
+{"k":"tls.clientAuthRequired.noCa.client.final","v":"64:3 errors 7/8"}
+{"k":"tls.clientAuthRequired.noCa.server.final","v":"64:7 errors 7/2147483648"}
+{"k":"tls.clientAuthRequired.noCa.packets","v":"2,5"}
+{"k":"tls.clientAuthRequired.noCa.toServer.send","v":"1048581"}
+{"k":"tls.clientAuthRequired.noCa.toServer.read","v":"1048580/0/"}
+{"k":"tls.clientAuthRequired.noCa.toServer.readAgain","v":"1048580/0"}
+{"k":"tls.clientAuthRequired.noCa.toClient.send","v":"1048581"}
+{"k":"tls.clientAuthRequired.noCa.toClient.read","v":"1048580/0/"}
+{"k":"tls.clientAuthRequired.noCa.toClient.readAgain","v":"1048580/0"}
+{"k":"tls.clientAuthRequired.wrongCa.server.created","v":"set"}
+{"k":"tls.clientAuthRequired.wrongCa.server.fields.created","v":"1,0,noctx"}
+{"k":"tls.clientAuthRequired.wrongCa.server.init","v":"0"}
+{"k":"tls.clientAuthRequired.wrongCa.server.fields.init","v":"1,1,ctx"}
+{"k":"tls.clientAuthRequired.wrongCa.server.role","v":"1"}
+{"k":"tls.clientAuthRequired.wrongCa.server.state.init","v":"1"}
+{"k":"tls.clientAuthRequired.wrongCa.server.ciphersuites","v":"0:"}
+{"k":"tls.clientAuthRequired.wrongCa.client.created","v":"set"}
+{"k":"tls.clientAuthRequired.wrongCa.client.fields.created","v":"2,0,noctx"}
+{"k":"tls.clientAuthRequired.wrongCa.client.init","v":"0"}
+{"k":"tls.clientAuthRequired.wrongCa.client.fields.init","v":"2,1,ctx"}
+{"k":"tls.clientAuthRequired.wrongCa.client.role","v":"2"}
+{"k":"tls.clientAuthRequired.wrongCa.client.state.init","v":"1"}
+{"k":"tls.clientAuthRequired.wrongCa.client.ciphersuites","v":"0:"}
+{"k":"tls.clientAuthRequired.wrongCa.client.steps","v":"1048577@2:2 13@64:3"}
+{"k":"tls.clientAuthRequired.wrongCa.server.steps","v":"1048577@2:7 13@64:7"}
+{"k":"tls.clientAuthRequired.wrongCa.client.final","v":"64:3 errors 7/8"}
+{"k":"tls.clientAuthRequired.wrongCa.server.final","v":"64:7 errors 7/2147483648"}
+{"k":"tls.clientAuthRequired.wrongCa.packets","v":"2,5"}
 {"k":"dtls.cert.server.created","v":"set"}
 {"k":"dtls.cert.server.fields.created","v":"1,0,noctx"}
 {"k":"dtls.cert.server.init","v":"0"}
@@ -180,6 +332,7 @@
 {"k":"dtls.cert.client.final","v":"3:27 errors 0/0"}
 {"k":"dtls.cert.server.final","v":"3:27 errors 0/0"}
 {"k":"dtls.cert.packets","v":"5,7"}
+{"k":"dtls.cert.client.hello","v":"version fefd suites cca8 cca9 ccaa c02c c030 009f c0ad c09f c024 c028 006b c00a c014 0039 c0af c0a3 c087 c08b c07d c073 c077 00c4 0088 c05d c061 c053 c049 c04d c045 c02b c02f 009e c0ac c09e c023 c027 0067 c009 c013 0033 c0ae c0a2 c086 c08a c07c c072 c076 00be 0045 c05c c060 c052 c048 c04c c044 009d c09d 003d 0035 c032 c02a c00f c02e c026 c005 c0a1 c07b 00c0 0084 c08d c079 c089 c075 c05f c063 c051 c04b c04f c03d 009c c09c 003c 002f c031 c029 c00e c02d c025 c004 c0a0 c07a 00ba 0041 c08c c078 c088 c074 c05e c062 c050 c04a c04e c03c 00ff | extensions 0,10[001d 0017 0018 001e 0019 001a 001b 001c],13[0603 0601 0503 0501 0403 0401],11,22,23,35"}
 {"k":"dtls.cert.toServer.send","v":"0"}
 {"k":"dtls.cert.toServer.read","v":"0/12/hello server"}
 {"k":"dtls.cert.toServer.readAgain","v":"1048577/0"}
@@ -300,6 +453,157 @@
 {"k":"dtls.clientAuthRequired.client.final","v":"2:12 errors 0/0"}
 {"k":"dtls.clientAuthRequired.server.final","v":"64:7 errors 7/2147483648"}
 {"k":"dtls.clientAuthRequired.packets","v":"5,5"}
+{"k":"dtls.nullUser.server.created","v":"set"}
+{"k":"dtls.nullUser.server.fields.created","v":"1,0,noctx"}
+{"k":"dtls.nullUser.server.init","v":"0"}
+{"k":"dtls.nullUser.server.fields.init","v":"1,1,ctx"}
+{"k":"dtls.nullUser.server.role","v":"1"}
+{"k":"dtls.nullUser.server.state.init","v":"1"}
+{"k":"dtls.nullUser.server.ciphersuites","v":"0:"}
+{"k":"dtls.nullUser.client.created","v":"set"}
+{"k":"dtls.nullUser.client.fields.created","v":"2,0,noctx"}
+{"k":"dtls.nullUser.client.init","v":"0"}
+{"k":"dtls.nullUser.client.fields.init","v":"2,1,ctx"}
+{"k":"dtls.nullUser.client.role","v":"2"}
+{"k":"dtls.nullUser.client.state.init","v":"1"}
+{"k":"dtls.nullUser.client.ciphersuites","v":"0:"}
+{"k":"dtls.nullUser.client.steps","v":"13@64:1"}
+{"k":"dtls.nullUser.server.steps","v":"1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1 1048577@2:1"}
+{"k":"dtls.nullUser.client.final","v":"64:1 errors 7/2147483648"}
+{"k":"dtls.nullUser.server.final","v":"2:1 errors 0/0"}
+{"k":"dtls.nullUser.packets","v":"0,0"}
+{"k":"dtls.clientAuthNone.noCa.server.created","v":"set"}
+{"k":"dtls.clientAuthNone.noCa.server.fields.created","v":"1,0,noctx"}
+{"k":"dtls.clientAuthNone.noCa.server.init","v":"0"}
+{"k":"dtls.clientAuthNone.noCa.server.fields.init","v":"1,1,ctx"}
+{"k":"dtls.clientAuthNone.noCa.server.role","v":"1"}
+{"k":"dtls.clientAuthNone.noCa.server.state.init","v":"1"}
+{"k":"dtls.clientAuthNone.noCa.server.ciphersuites","v":"0:"}
+{"k":"dtls.clientAuthNone.noCa.client.created","v":"set"}
+{"k":"dtls.clientAuthNone.noCa.client.fields.created","v":"2,0,noctx"}
+{"k":"dtls.clientAuthNone.noCa.client.init","v":"0"}
+{"k":"dtls.clientAuthNone.noCa.client.fields.init","v":"2,1,ctx"}
+{"k":"dtls.clientAuthNone.noCa.client.role","v":"2"}
+{"k":"dtls.clientAuthNone.noCa.client.state.init","v":"1"}
+{"k":"dtls.clientAuthNone.noCa.client.ciphersuites","v":"0:"}
+{"k":"dtls.clientAuthNone.noCa.client.steps","v":"1048577@2:2 13@64:3"}
+{"k":"dtls.clientAuthNone.noCa.server.steps","v":"1048577@2:7 13@64:7"}
+{"k":"dtls.clientAuthNone.noCa.client.final","v":"64:3 errors 7/8"}
+{"k":"dtls.clientAuthNone.noCa.server.final","v":"64:7 errors 7/2147483648"}
+{"k":"dtls.clientAuthNone.noCa.packets","v":"2,5"}
+{"k":"dtls.clientAuthNone.noCa.toServer.send","v":"1048581"}
+{"k":"dtls.clientAuthNone.noCa.toServer.read","v":"1048580/0/"}
+{"k":"dtls.clientAuthNone.noCa.toServer.readAgain","v":"1048580/0"}
+{"k":"dtls.clientAuthNone.noCa.toClient.send","v":"1048581"}
+{"k":"dtls.clientAuthNone.noCa.toClient.read","v":"1048580/0/"}
+{"k":"dtls.clientAuthNone.noCa.toClient.readAgain","v":"1048580/0"}
+{"k":"dtls.clientAuthNone.wrongCa.server.created","v":"set"}
+{"k":"dtls.clientAuthNone.wrongCa.server.fields.created","v":"1,0,noctx"}
+{"k":"dtls.clientAuthNone.wrongCa.server.init","v":"0"}
+{"k":"dtls.clientAuthNone.wrongCa.server.fields.init","v":"1,1,ctx"}
+{"k":"dtls.clientAuthNone.wrongCa.server.role","v":"1"}
+{"k":"dtls.clientAuthNone.wrongCa.server.state.init","v":"1"}
+{"k":"dtls.clientAuthNone.wrongCa.server.ciphersuites","v":"0:"}
+{"k":"dtls.clientAuthNone.wrongCa.client.created","v":"set"}
+{"k":"dtls.clientAuthNone.wrongCa.client.fields.created","v":"2,0,noctx"}
+{"k":"dtls.clientAuthNone.wrongCa.client.init","v":"0"}
+{"k":"dtls.clientAuthNone.wrongCa.client.fields.init","v":"2,1,ctx"}
+{"k":"dtls.clientAuthNone.wrongCa.client.role","v":"2"}
+{"k":"dtls.clientAuthNone.wrongCa.client.state.init","v":"1"}
+{"k":"dtls.clientAuthNone.wrongCa.client.ciphersuites","v":"0:"}
+{"k":"dtls.clientAuthNone.wrongCa.client.steps","v":"1048577@2:2 13@64:3"}
+{"k":"dtls.clientAuthNone.wrongCa.server.steps","v":"1048577@2:7 13@64:7"}
+{"k":"dtls.clientAuthNone.wrongCa.client.final","v":"64:3 errors 7/8"}
+{"k":"dtls.clientAuthNone.wrongCa.server.final","v":"64:7 errors 7/2147483648"}
+{"k":"dtls.clientAuthNone.wrongCa.packets","v":"2,5"}
+{"k":"dtls.clientAuthOptional.noCa.server.created","v":"set"}
+{"k":"dtls.clientAuthOptional.noCa.server.fields.created","v":"1,0,noctx"}
+{"k":"dtls.clientAuthOptional.noCa.server.init","v":"0"}
+{"k":"dtls.clientAuthOptional.noCa.server.fields.init","v":"1,1,ctx"}
+{"k":"dtls.clientAuthOptional.noCa.server.role","v":"1"}
+{"k":"dtls.clientAuthOptional.noCa.server.state.init","v":"1"}
+{"k":"dtls.clientAuthOptional.noCa.server.ciphersuites","v":"0:"}
+{"k":"dtls.clientAuthOptional.noCa.client.created","v":"set"}
+{"k":"dtls.clientAuthOptional.noCa.client.fields.created","v":"2,0,noctx"}
+{"k":"dtls.clientAuthOptional.noCa.client.init","v":"0"}
+{"k":"dtls.clientAuthOptional.noCa.client.fields.init","v":"2,1,ctx"}
+{"k":"dtls.clientAuthOptional.noCa.client.role","v":"2"}
+{"k":"dtls.clientAuthOptional.noCa.client.state.init","v":"1"}
+{"k":"dtls.clientAuthOptional.noCa.client.ciphersuites","v":"0:"}
+{"k":"dtls.clientAuthOptional.noCa.client.steps","v":"1048577@2:2 13@64:3"}
+{"k":"dtls.clientAuthOptional.noCa.server.steps","v":"1048577@2:7 13@64:7"}
+{"k":"dtls.clientAuthOptional.noCa.client.final","v":"64:3 errors 7/8"}
+{"k":"dtls.clientAuthOptional.noCa.server.final","v":"64:7 errors 7/2147483648"}
+{"k":"dtls.clientAuthOptional.noCa.packets","v":"2,5"}
+{"k":"dtls.clientAuthOptional.noCa.toServer.send","v":"1048581"}
+{"k":"dtls.clientAuthOptional.noCa.toServer.read","v":"1048580/0/"}
+{"k":"dtls.clientAuthOptional.noCa.toServer.readAgain","v":"1048580/0"}
+{"k":"dtls.clientAuthOptional.noCa.toClient.send","v":"1048581"}
+{"k":"dtls.clientAuthOptional.noCa.toClient.read","v":"1048580/0/"}
+{"k":"dtls.clientAuthOptional.noCa.toClient.readAgain","v":"1048580/0"}
+{"k":"dtls.clientAuthOptional.wrongCa.server.created","v":"set"}
+{"k":"dtls.clientAuthOptional.wrongCa.server.fields.created","v":"1,0,noctx"}
+{"k":"dtls.clientAuthOptional.wrongCa.server.init","v":"0"}
+{"k":"dtls.clientAuthOptional.wrongCa.server.fields.init","v":"1,1,ctx"}
+{"k":"dtls.clientAuthOptional.wrongCa.server.role","v":"1"}
+{"k":"dtls.clientAuthOptional.wrongCa.server.state.init","v":"1"}
+{"k":"dtls.clientAuthOptional.wrongCa.server.ciphersuites","v":"0:"}
+{"k":"dtls.clientAuthOptional.wrongCa.client.created","v":"set"}
+{"k":"dtls.clientAuthOptional.wrongCa.client.fields.created","v":"2,0,noctx"}
+{"k":"dtls.clientAuthOptional.wrongCa.client.init","v":"0"}
+{"k":"dtls.clientAuthOptional.wrongCa.client.fields.init","v":"2,1,ctx"}
+{"k":"dtls.clientAuthOptional.wrongCa.client.role","v":"2"}
+{"k":"dtls.clientAuthOptional.wrongCa.client.state.init","v":"1"}
+{"k":"dtls.clientAuthOptional.wrongCa.client.ciphersuites","v":"0:"}
+{"k":"dtls.clientAuthOptional.wrongCa.client.steps","v":"1048577@2:2 13@64:3"}
+{"k":"dtls.clientAuthOptional.wrongCa.server.steps","v":"1048577@2:7 13@64:7"}
+{"k":"dtls.clientAuthOptional.wrongCa.client.final","v":"64:3 errors 7/8"}
+{"k":"dtls.clientAuthOptional.wrongCa.server.final","v":"64:7 errors 7/2147483648"}
+{"k":"dtls.clientAuthOptional.wrongCa.packets","v":"2,5"}
+{"k":"dtls.clientAuthRequired.noCa.server.created","v":"set"}
+{"k":"dtls.clientAuthRequired.noCa.server.fields.created","v":"1,0,noctx"}
+{"k":"dtls.clientAuthRequired.noCa.server.init","v":"0"}
+{"k":"dtls.clientAuthRequired.noCa.server.fields.init","v":"1,1,ctx"}
+{"k":"dtls.clientAuthRequired.noCa.server.role","v":"1"}
+{"k":"dtls.clientAuthRequired.noCa.server.state.init","v":"1"}
+{"k":"dtls.clientAuthRequired.noCa.server.ciphersuites","v":"0:"}
+{"k":"dtls.clientAuthRequired.noCa.client.created","v":"set"}
+{"k":"dtls.clientAuthRequired.noCa.client.fields.created","v":"2,0,noctx"}
+{"k":"dtls.clientAuthRequired.noCa.client.init","v":"0"}
+{"k":"dtls.clientAuthRequired.noCa.client.fields.init","v":"2,1,ctx"}
+{"k":"dtls.clientAuthRequired.noCa.client.role","v":"2"}
+{"k":"dtls.clientAuthRequired.noCa.client.state.init","v":"1"}
+{"k":"dtls.clientAuthRequired.noCa.client.ciphersuites","v":"0:"}
+{"k":"dtls.clientAuthRequired.noCa.client.steps","v":"1048577@2:2 13@64:3"}
+{"k":"dtls.clientAuthRequired.noCa.server.steps","v":"1048577@2:7 13@64:7"}
+{"k":"dtls.clientAuthRequired.noCa.client.final","v":"64:3 errors 7/8"}
+{"k":"dtls.clientAuthRequired.noCa.server.final","v":"64:7 errors 7/2147483648"}
+{"k":"dtls.clientAuthRequired.noCa.packets","v":"2,5"}
+{"k":"dtls.clientAuthRequired.noCa.toServer.send","v":"1048581"}
+{"k":"dtls.clientAuthRequired.noCa.toServer.read","v":"1048580/0/"}
+{"k":"dtls.clientAuthRequired.noCa.toServer.readAgain","v":"1048580/0"}
+{"k":"dtls.clientAuthRequired.noCa.toClient.send","v":"1048581"}
+{"k":"dtls.clientAuthRequired.noCa.toClient.read","v":"1048580/0/"}
+{"k":"dtls.clientAuthRequired.noCa.toClient.readAgain","v":"1048580/0"}
+{"k":"dtls.clientAuthRequired.wrongCa.server.created","v":"set"}
+{"k":"dtls.clientAuthRequired.wrongCa.server.fields.created","v":"1,0,noctx"}
+{"k":"dtls.clientAuthRequired.wrongCa.server.init","v":"0"}
+{"k":"dtls.clientAuthRequired.wrongCa.server.fields.init","v":"1,1,ctx"}
+{"k":"dtls.clientAuthRequired.wrongCa.server.role","v":"1"}
+{"k":"dtls.clientAuthRequired.wrongCa.server.state.init","v":"1"}
+{"k":"dtls.clientAuthRequired.wrongCa.server.ciphersuites","v":"0:"}
+{"k":"dtls.clientAuthRequired.wrongCa.client.created","v":"set"}
+{"k":"dtls.clientAuthRequired.wrongCa.client.fields.created","v":"2,0,noctx"}
+{"k":"dtls.clientAuthRequired.wrongCa.client.init","v":"0"}
+{"k":"dtls.clientAuthRequired.wrongCa.client.fields.init","v":"2,1,ctx"}
+{"k":"dtls.clientAuthRequired.wrongCa.client.role","v":"2"}
+{"k":"dtls.clientAuthRequired.wrongCa.client.state.init","v":"1"}
+{"k":"dtls.clientAuthRequired.wrongCa.client.ciphersuites","v":"0:"}
+{"k":"dtls.clientAuthRequired.wrongCa.client.steps","v":"1048577@2:2 13@64:3"}
+{"k":"dtls.clientAuthRequired.wrongCa.server.steps","v":"1048577@2:7 13@64:7"}
+{"k":"dtls.clientAuthRequired.wrongCa.client.final","v":"64:3 errors 7/8"}
+{"k":"dtls.clientAuthRequired.wrongCa.server.final","v":"64:7 errors 7/2147483648"}
+{"k":"dtls.clientAuthRequired.wrongCa.packets","v":"2,5"}
 {"k":"dtls.psk.server.created","v":"set"}
 {"k":"dtls.psk.server.fields.created","v":"1,0,noctx"}
 {"k":"dtls.psk.server.init","v":"13"}
