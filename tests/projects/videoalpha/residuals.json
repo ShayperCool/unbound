@@ -1,0 +1,5 @@
+{
+  "A half-float target's blue reads 132 where the Editor's reads 133 (every sample; the alpha matches): the linear-space colour conversion's rounding into ARGBHalf, the same without alpha before this change, not chased (one step of 255).": [
+    "rtHalf.samples"
+  ]
+}
