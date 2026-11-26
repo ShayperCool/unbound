@@ -99,11 +99,13 @@ pub fn state() -> &'static RuntimeState {
     STATE.get().expect("the runtime state is not initialized")
 }
 
-/// The `Resources` keys of every asset of `db`.
+/// The `Resources` keys of every asset of `db`. A file the DefaultImporter imports (a
+/// `DefaultAsset`: a kind the Editor does not know) is not one of them, whatever its name shares
+/// with other files (matches the Unity 6000.0.71f1 Editor, tests/projects/resourcesnames).
 fn resources_of(db: &AssetDb) -> HashMap<String, Vec<Guid>> {
     let mut resources: HashMap<String, Vec<Guid>> = HashMap::new();
     for asset in db.iter() {
-        if asset.is_folder {
+        if asset.is_folder || asset_importer(asset) == "DefaultImporter" {
             continue;
         }
         for key in resources_keys(&asset.path) {
@@ -917,9 +919,13 @@ pub fn dispatch(method: &str, request: &str) -> Result<String> {
                 found.extend(guids.iter().copied());
             }
             let db = s.db();
-            let list: Vec<_> = found
+            let mut assets: Vec<_> = found.into_iter().filter_map(|g| db.by_guid(g)).collect();
+            // In the ordinal order of their paths: `Load` takes the first that loads, `LoadAll`
+            // lists them so (matches the Unity 6000.0.71f1 Editor, tests/projects/resourcesnames;
+            // several Resources folders and letter case are not measured).
+            assets.sort_by(|a, b| a.path.cmp(&b.path));
+            let list: Vec<_> = assets
                 .into_iter()
-                .filter_map(|g| db.by_guid(g))
                 .map(|a| json!({ "guid": a.guid.to_string(), "path": a.path }))
                 .collect();
             Ok(serde_json::Value::Array(list).to_string())
@@ -4236,6 +4242,36 @@ mod tests {
             ["b/resources/c", "c"]
         );
         assert!(resources_keys("Assets/Textures/a.png").is_empty());
+    }
+
+    /// A file of a kind the DefaultImporter imports is no Resources asset, alone or beside a
+    /// file of the same name; one a `.meta` gives another importer is
+    /// (tests/projects/resourcesnames).
+    #[test]
+    fn default_assets_are_no_resources() {
+        let mut db = AssetDb::default();
+        for (guid, path, importer) in [
+            (1, "Assets/Resources/pair/a.txt", None),
+            (2, "Assets/Resources/pair/b.mtl", None),
+            (3, "Assets/Resources/pair/d.txt", None),
+            (4, "Assets/Resources/pair/d.mtl", None),
+            (5, "Assets/Resources/pair/s.xyz", Some("ScriptedImporter")),
+            (6, "Assets/Resources/pair/c.xyz", Some("DefaultImporter")),
+        ] {
+            db.insert(unbound_project::assetdb::Asset {
+                guid: Guid(guid),
+                path: path.into(),
+                file: path.into(),
+                is_folder: false,
+                labels: Vec::new(),
+                importer: importer.map(str::to_owned),
+            });
+        }
+        let resources = resources_of(&db);
+        let mut keys: Vec<_> = resources.keys().cloned().collect();
+        keys.sort();
+        assert_eq!(keys, ["pair/a", "pair/d", "pair/s"]);
+        assert_eq!(resources["pair/d"], [Guid(3)]);
     }
 
     /// One triangle, as the importer gets it from a file.
