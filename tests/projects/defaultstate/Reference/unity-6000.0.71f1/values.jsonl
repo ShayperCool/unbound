@@ -484,6 +484,7 @@
 {"key":"UnityEditor.AssetPostprocessor/Property/UnityEditor.AssetPostprocessor/assetPath","status":"value","value":"null"}
 {"key":"UnityEditor.AssetPostprocessor/Property/UnityEditor.AssetPostprocessor/context","status":"value","value":"null"}
 {"key":"UnityEditor.AssetPostprocessor/Property/UnityEditor.AssetPostprocessor/preview","status":"value","value":"null"}
+{"key":"UnityEditor.AssetPreview/@factory","status":"value","value":"class"}
 {"key":"UnityEditor.AudioImporter/@factory","status":"value","value":"class"}
 {"key":"UnityEditor.AudioImporter/Property/UnityEditor.AssetImporter/assetBundleName","status":"getter-threw","value":"System.NullReferenceException"}
 {"key":"UnityEditor.AudioImporter/Property/UnityEditor.AssetImporter/assetBundleVariant","status":"getter-threw","value":"System.NullReferenceException"}
@@ -860,6 +861,7 @@
 {"key":"UnityEditor.Handles+DrawingScope/@factory","status":"value","value":"struct"}
 {"key":"UnityEditor.Handles+DrawingScope/Property/UnityEditor.Handles+DrawingScope/originalColor","status":"value","value":"UnityEngine.Color{r=0;g=0;b=0;a=0}"}
 {"key":"UnityEditor.Handles+DrawingScope/Property/UnityEditor.Handles+DrawingScope/originalMatrix","status":"value","value":"UnityEngine.Matrix4x4{m00=0;m10=0;m20=0;m30=0;m01=0;m11=0;m21=0;m31=0;m02=0;m12=0;m22=0;m32=0;m03=0;m13=0;m23=0;m33=0}"}
+{"key":"UnityEditor.Help/@factory","status":"value","value":"class"}
 {"key":"UnityEditor.HyperLinkClickedEventArgs/@factory","status":"excluded","value":"no-public-parameterless-constructor"}
 {"key":"UnityEditor.IMGUI.Controls.MultiColumnHeader/@factory","status":"excluded","value":"no-public-parameterless-constructor"}
 {"key":"UnityEditor.IMGUI.Controls.MultiColumnHeader+DefaultGUI/@factory","status":"excluded","value":"static"}
@@ -1158,6 +1160,7 @@
 {"key":"UnityEditor.PrefabUtility+EditPrefabContentsScope/Field/UnityEditor.PrefabUtility+EditPrefabContentsScope/assetPath","status":"value","value":"null"}
 {"key":"UnityEditor.PrefabUtility+EditPrefabContentsScope/Field/UnityEditor.PrefabUtility+EditPrefabContentsScope/prefabContentsRoot","status":"value","value":"null"}
 {"key":"UnityEditor.PreferenceItem/@factory","status":"excluded","value":"no-public-parameterless-constructor"}
+{"key":"UnityEditor.Presets.PresetType/@factory","status":"value","value":"struct"}
 {"key":"UnityEditor.Progress/@factory","status":"excluded","value":"static"}
 {"key":"UnityEditor.ProjectWindowCallback.DoCreateAssetWithContent/@factory","status":"value","value":"scriptable"}
 {"key":"UnityEditor.ProjectWindowCallback.DoCreateAssetWithContent/Field/UnityEditor.ProjectWindowCallback.DoCreateAssetWithContent/filecontent","status":"value","value":"null"}
