@@ -267,8 +267,9 @@ namespace UnityEngine.Tests
             billboard.sharedMaterial = mine;
             Assert.Empty(billboard.materials);
             Assert.Same(mine, billboard.sharedMaterial);
-            // Its material stays an instance of the shared one (the Editor's default-material
-            // instance is a residual: how the billboard draws then is not measured).
+            // Pins Unbound's answer while it is a residual: the Editor puts a default-material
+            // instance in the slot (defaultcontrols materials.billboardSet.*), and how the billboard
+            // then draws is not measured. Change this with the residual.
             Assert.Equal("Mine (Instance)", billboard.material.name);
             var mesh = Make("Mesh", Vector3.zero).AddComponent<MeshRenderer>();
             mesh.sharedMaterials = new Material[] { null };

@@ -157,7 +157,6 @@ namespace UnityEngine.Tilemaps
             }
         }
 
-
         public float animationFrameRate
         {
             get => m_AnimationFrameRate;

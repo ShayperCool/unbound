@@ -86,7 +86,7 @@ the default material put in its slot, also over a material set (Unbound does not
 a residual).
 
 `residuals.json` lists the differences still open: collider geometry holders (the measured rule is
-in the entry) and terrain textures.
+in the entry), terrain textures and a billboard's material over a material set.
 
 Record and gate:
 
