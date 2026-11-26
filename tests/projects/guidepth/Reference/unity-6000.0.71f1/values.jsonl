@@ -1,0 +1,135 @@
+{"k": "awake.depth", "v": "1"}
+{"k": "start.depth", "v": "1"}
+{"k": "f1.update.depth", "v": "1"}
+{"k": "f1.B.Layout.entry", "v": "1"}
+{"k": "f1.B.Layout.exit", "v": "1"}
+{"k": "f1.A.Layout.entry", "v": "1"}
+{"k": "f1.A.Layout.exit", "v": "1"}
+{"k": "f1.A.repaint.entry", "v": "1"}
+{"k": "f1.A.repaint.exit", "v": "1"}
+{"k": "f1.B.repaint.entry", "v": "1"}
+{"k": "f1.B.repaint.exit", "v": "1"}
+{"k": "f1.order", "v": "BL AL AR BR "}
+{"k": "f2.update.depth", "v": "1"}
+{"k": "f2.B.Layout.entry", "v": "1"}
+{"k": "f2.B.Layout.exit", "v": "1"}
+{"k": "f2.A.Layout.entry", "v": "1"}
+{"k": "f2.A.Layout.exit", "v": "1"}
+{"k": "f2.A.repaint.entry", "v": "1"}
+{"k": "f2.A.repaint.exit", "v": "1"}
+{"k": "f2.B.repaint.entry", "v": "1"}
+{"k": "f2.B.repaint.exit", "v": "1"}
+{"k": "f2.order", "v": "BL AL AR BR "}
+{"k": "f3.update.depth", "v": "1"}
+{"k": "f3.B.Layout.entry", "v": "1"}
+{"k": "f3.B.Layout.exit", "v": "1"}
+{"k": "f3.A.Layout.entry", "v": "1"}
+{"k": "f3.A.Layout.exit", "v": "-3"}
+{"k": "f3.B.repaint.entry", "v": "1"}
+{"k": "f3.B.repaint.exit", "v": "1"}
+{"k": "f3.A.repaint.entry", "v": "1"}
+{"k": "f3.A.repaint.exit", "v": "-3"}
+{"k": "f3.order", "v": "BL AL BR AR "}
+{"k": "f4.update.depth", "v": "1"}
+{"k": "f4.B.Layout.entry", "v": "1"}
+{"k": "f4.B.Layout.exit", "v": "1"}
+{"k": "f4.A.Layout.entry", "v": "1"}
+{"k": "f4.A.Layout.exit", "v": "-3"}
+{"k": "f4.B.repaint.entry", "v": "1"}
+{"k": "f4.B.repaint.exit", "v": "1"}
+{"k": "f4.A.repaint.entry", "v": "1"}
+{"k": "f4.A.repaint.exit", "v": "-3"}
+{"k": "f4.order", "v": "BL AL BR AR "}
+{"k": "f5.update.depth", "v": "1"}
+{"k": "f5.B.Layout.entry", "v": "1"}
+{"k": "f5.B.Layout.exit", "v": "1"}
+{"k": "f5.A.Layout.entry", "v": "1"}
+{"k": "f5.A.Layout.exit", "v": "-3"}
+{"k": "f5.B.repaint.entry", "v": "1"}
+{"k": "f5.B.repaint.exit", "v": "1"}
+{"k": "f5.A.repaint.entry", "v": "1"}
+{"k": "f5.A.repaint.exit", "v": "-3"}
+{"k": "f5.order", "v": "BL AL BR AR "}
+{"k": "f6.update.depth", "v": "1"}
+{"k": "f6.update.afterSet", "v": "7"}
+{"k": "f6.B.Layout.entry", "v": "1"}
+{"k": "f6.B.Layout.exit", "v": "1"}
+{"k": "f6.A.Layout.entry", "v": "1"}
+{"k": "f6.A.Layout.exit", "v": "1"}
+{"k": "f6.A.repaint.entry", "v": "1"}
+{"k": "f6.A.repaint.exit", "v": "1"}
+{"k": "f6.B.repaint.entry", "v": "1"}
+{"k": "f6.B.repaint.exit", "v": "1"}
+{"k": "f6.order", "v": "BL AL AR BR "}
+{"k": "f7.update.depth", "v": "1"}
+{"k": "f7.B.Layout.entry", "v": "1"}
+{"k": "f7.B.Layout.exit", "v": "1"}
+{"k": "f7.A.Layout.entry", "v": "1"}
+{"k": "f7.A.Layout.exit", "v": "1"}
+{"k": "f7.A.repaint.entry", "v": "1"}
+{"k": "f7.A.repaint.exit", "v": "1"}
+{"k": "f7.B.repaint.entry", "v": "1"}
+{"k": "f7.B.repaint.exit", "v": "5"}
+{"k": "f7.order", "v": "BL AL AR BR "}
+{"k": "f8.update.depth", "v": "1"}
+{"k": "f8.B.Layout.entry", "v": "1"}
+{"k": "f8.B.Layout.exit", "v": "1"}
+{"k": "f8.A.Layout.entry", "v": "1"}
+{"k": "f8.A.Layout.exit", "v": "1"}
+{"k": "f8.A.repaint.entry", "v": "1"}
+{"k": "f8.A.repaint.exit", "v": "1"}
+{"k": "f8.B.repaint.entry", "v": "1"}
+{"k": "f8.B.repaint.exit", "v": "1"}
+{"k": "f8.order", "v": "BL AL AR BR "}
+{"k": "f9.update.depth", "v": "1"}
+{"k": "f9.B.Layout.entry", "v": "1"}
+{"k": "f9.B.Layout.exit", "v": "-3"}
+{"k": "f9.A.Layout.entry", "v": "1"}
+{"k": "f9.A.Layout.exit", "v": "1"}
+{"k": "f9.A.repaint.entry", "v": "1"}
+{"k": "f9.A.repaint.exit", "v": "1"}
+{"k": "f9.B.repaint.entry", "v": "1"}
+{"k": "f9.B.repaint.exit", "v": "-3"}
+{"k": "f9.order", "v": "BL AL AR BR "}
+{"k": "f10.update.depth", "v": "1"}
+{"k": "f10.B.Layout.entry", "v": "1"}
+{"k": "f10.B.Layout.exit", "v": "-3"}
+{"k": "f10.A.Layout.entry", "v": "1"}
+{"k": "f10.A.Layout.exit", "v": "1"}
+{"k": "f10.A.repaint.entry", "v": "1"}
+{"k": "f10.A.repaint.exit", "v": "1"}
+{"k": "f10.B.repaint.entry", "v": "1"}
+{"k": "f10.B.repaint.exit", "v": "-3"}
+{"k": "f10.order", "v": "BL AL AR BR "}
+{"k": "f11.update.depth", "v": "1"}
+{"k": "f11.B.Layout.entry", "v": "1"}
+{"k": "f11.B.Layout.exit", "v": "-3"}
+{"k": "f11.A.Layout.entry", "v": "1"}
+{"k": "f11.A.Layout.exit", "v": "1"}
+{"k": "f11.A.repaint.entry", "v": "1"}
+{"k": "f11.A.repaint.exit", "v": "1"}
+{"k": "f11.B.repaint.entry", "v": "1"}
+{"k": "f11.B.repaint.exit", "v": "-3"}
+{"k": "f11.order", "v": "BL AL AR BR "}
+{"k": "f12.update.depth", "v": "1"}
+{"k": "f12.B.Layout.entry", "v": "1"}
+{"k": "f12.B.Layout.exit", "v": "1"}
+{"k": "f12.A.Layout.entry", "v": "1"}
+{"k": "f12.A.Layout.exit", "v": "1"}
+{"k": "f12.A.repaint.entry", "v": "1"}
+{"k": "f12.A.repaint.exit", "v": "1"}
+{"k": "f12.B.repaint.entry", "v": "1"}
+{"k": "f12.B.repaint.exit", "v": "1"}
+{"k": "f12.order", "v": "BL AL AR BR "}
+{"k": "f13.update.depth", "v": "1"}
+{"k": "f13.B.Layout.entry", "v": "1"}
+{"k": "f13.B.Layout.exit", "v": "1"}
+{"k": "f13.A.Layout.entry", "v": "1"}
+{"k": "f13.A.Layout.exit", "v": "1"}
+{"k": "f13.A.repaint.entry", "v": "1"}
+{"k": "f13.A.repaint.exit", "v": "1"}
+{"k": "f13.B.repaint.entry", "v": "1"}
+{"k": "f13.B.repaint.exit", "v": "1"}
+{"k": "f13.order", "v": "BL AL AR BR "}
+{"k": "f14.update.depth", "v": "1"}
+{"k": "complete", "v": true}
