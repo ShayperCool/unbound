@@ -1,0 +1,178 @@
+using System;
+using System.Collections.Generic;
+using Unbound.Runtime;
+using UnityEditor;
+using Xunit;
+
+namespace UnityEngine.Tests
+{
+    /// <summary>
+    /// AssetDatabase.SaveAssets' OnWillSaveAssets step as Unity's published C# runs it
+    /// (AssetModificationProcessorInternal.OnWillSaveAssets): each processor in turn gets the paths
+    /// still to save, a non-null result replaces them, blank paths are dropped with a warning and a
+    /// callback of another shape is skipped with one; and a graph file's type names kept as the
+    /// file holds them where they name the same type (VisualEffectWrites, tests/projects/vfxwrites).
+    /// </summary>
+    public sealed class OnWillSaveAssetsTests : IDisposable
+    {
+        static readonly List<string> s_Calls = new List<string>();
+        readonly List<string> m_Logs = new List<string>();
+        readonly ILogger m_Logger = Debug.unityLogger;
+        readonly ILogHandler m_PreviousHandler;
+
+        public OnWillSaveAssetsTests()
+        {
+            s_Calls.Clear();
+            m_PreviousHandler = m_Logger.logHandler;
+            m_Logger.logHandler = new CaptureHandler(m_PreviousHandler, m_Logs);
+        }
+
+        public void Dispose()
+        {
+            AssetModificationProcessorInternal.ProcessorsForTests = null;
+            m_Logger.logHandler = m_PreviousHandler;
+            s_Calls.Clear();
+        }
+
+        sealed class CaptureHandler : ILogHandler
+        {
+            readonly ILogHandler m_Inner;
+            readonly List<string> m_Logs;
+            internal CaptureHandler(ILogHandler inner, List<string> logs) { m_Inner = inner; m_Logs = logs; }
+            public void LogFormat(LogType type, Object context, string format, params object[] args)
+            {
+                if (type != LogType.Log)
+                    m_Logs.Add($"{type}: {(args == null || args.Length == 0 ? format : string.Format(System.Globalization.CultureInfo.InvariantCulture, format, args))}");
+                m_Inner.LogFormat(type, context, format, args);
+            }
+            public void LogException(Exception exception, Object context) => m_Inner.LogException(exception, context);
+        }
+
+        /// <summary>Adds a path to what it is given.</summary>
+        public sealed class Adding : AssetModificationProcessor
+        {
+            static string[] OnWillSaveAssets(string[] paths)
+            {
+                s_Calls.Add("adding[" + string.Join(",", paths) + "]");
+                var result = new List<string>(paths) { "Assets/Added.asset" };
+                return result.ToArray();
+            }
+        }
+
+        /// <summary>Returns null: the paths stay as they were.</summary>
+        public sealed class Keeping : AssetModificationProcessor
+        {
+            static string[] OnWillSaveAssets(string[] paths)
+            {
+                s_Calls.Add("keeping[" + string.Join(",", paths) + "]");
+                return null;
+            }
+        }
+
+        /// <summary>Keeps one path only.</summary>
+        public sealed class Filtering : AssetModificationProcessor
+        {
+            static string[] OnWillSaveAssets(string[] paths)
+            {
+                s_Calls.Add("filtering[" + string.Join(",", paths) + "]");
+                return Array.FindAll(paths, p => p.EndsWith(".vfx", StringComparison.Ordinal));
+            }
+        }
+
+        /// <summary>A callback of another shape.</summary>
+        public sealed class WrongShape : AssetModificationProcessor
+        {
+            static string[] OnWillSaveAssets(List<string> paths)
+            {
+                s_Calls.Add("wrong");
+                return null;
+            }
+        }
+
+        public sealed class Silent : AssetModificationProcessor { }
+
+        [Fact]
+        public void EachProcessorGetsThePathsTheOneBeforeReturned()
+        {
+            AssetModificationProcessorInternal.ProcessorsForTests = new[] { typeof(Silent), typeof(Adding), typeof(Keeping), typeof(Filtering) };
+            var saved = AssetModificationProcessorInternal.OnWillSaveAssets(new[] { "Assets/A.vfx", "Assets/B.mat" });
+            Assert.Equal(new[] { "adding[Assets/A.vfx,Assets/B.mat]", "keeping[Assets/A.vfx,Assets/B.mat,Assets/Added.asset]", "filtering[Assets/A.vfx,Assets/B.mat,Assets/Added.asset]" }, s_Calls);
+            Assert.Equal(new[] { "Assets/A.vfx" }, saved);
+            Assert.Empty(m_Logs);
+        }
+
+        [Fact]
+        public void NoneDirtyStillCallsWithAnEmptyList()
+        {
+            AssetModificationProcessorInternal.ProcessorsForTests = new[] { typeof(Keeping) };
+            var saved = AssetModificationProcessorInternal.OnWillSaveAssets(Array.Empty<string>());
+            Assert.Equal(new[] { "keeping[]" }, s_Calls);
+            Assert.Empty(saved);
+        }
+
+        [Fact]
+        public void BlankPathsAreDroppedWithAWarning()
+        {
+            AssetModificationProcessorInternal.ProcessorsForTests = new[] { typeof(Keeping) };
+            var saved = AssetModificationProcessorInternal.OnWillSaveAssets(new[] { "Assets/A.vfx", " ", null });
+            Assert.Equal(new[] { "keeping[Assets/A.vfx]" }, s_Calls);
+            Assert.Equal(new[] { "Assets/A.vfx" }, saved);
+            Assert.Equal(new[] { "Warning: OnWillSaveAssets: Skipped 2 null or empty path(s)." }, m_Logs);
+        }
+
+        [Fact]
+        public void ACallbackOfAnotherShapeIsSkippedWithAWarning()
+        {
+            AssetModificationProcessorInternal.ProcessorsForTests = new[] { typeof(WrongShape), typeof(Keeping) };
+            var saved = AssetModificationProcessorInternal.OnWillSaveAssets(new[] { "Assets/A.vfx" });
+            Assert.Equal(new[] { "keeping[Assets/A.vfx]" }, s_Calls);
+            Assert.Equal(new[] { "Assets/A.vfx" }, saved);
+            Assert.Single(m_Logs);
+            Assert.StartsWith("Warning: Parameter type mismatch at parameter 0. Expected: System.String[] Got: System.Collections.Generic.List`1[System.String]", m_Logs[0]);
+        }
+
+        static YText TypeMap(string raw)
+        {
+            var map = YText.Map();
+            map.Set("m_SerializableType", YText.Scalar(raw));
+            return map;
+        }
+
+        const string MonoSingle = "System.Single, mscorlib, Version=4.0.0.0, Culture=neutral,\n    PublicKeyToken=b77a5c561934e089";
+
+        [Fact]
+        public void AGraphTypeNameOfTheSameTypeKeepsTheFilesText()
+        {
+            var written = TypeMap(typeof(float).AssemblyQualifiedName);
+            VisualEffectWrites.KeepTypeNames(TypeMap(MonoSingle), written, "Assets/A.vfx");
+            Assert.Equal(MonoSingle, written.Get("m_SerializableType").Raw);
+        }
+
+        [Fact]
+        public void ANewClassLibraryTypeNameIsRefused()
+        {
+            var written = TypeMap(typeof(int).AssemblyQualifiedName);
+            var e = Assert.Throws<NotSupportedException>(() => VisualEffectWrites.KeepTypeNames(TypeMap(MonoSingle), written, "Assets/A.vfx"));
+            Assert.Contains("System.Int32, System.Private.CoreLib", e.Message);
+        }
+
+        [Fact]
+        public void ANewTypeNameOutsideTheClassLibraryIsWritten()
+        {
+            var written = TypeMap("UnityEngine.Vector3, UnityEngine.CoreModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null");
+            VisualEffectWrites.KeepTypeNames(TypeMap(MonoSingle), written, "Assets/A.vfx");
+            Assert.StartsWith("UnityEngine.Vector3", written.Get("m_SerializableType").Raw);
+        }
+
+        [Fact]
+        public void NestedTypeNamesAreKeptToo()
+        {
+            var old = YText.Map();
+            old.Set("m_Property", TypeMap(MonoSingle));
+            var written = YText.Map();
+            written.Set("m_Property", TypeMap(typeof(float).AssemblyQualifiedName));
+            VisualEffectWrites.KeepTypeNames(old, written, "Assets/A.vfx");
+            Assert.Equal(MonoSingle, written.Get("m_Property").Get("m_SerializableType").Raw);
+        }
+    }
+}

@@ -489,7 +489,7 @@ namespace UnityEditor
         {
             using var write = SessionImports.Write();
             SettingsAssets.Save();
-            AssetFiles.SaveDirty();
+            AssetFiles.SaveDirty(willSave: true);
         }
 
         public static void SaveAssetIfDirty(Object obj)

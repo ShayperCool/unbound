@@ -30,7 +30,7 @@ namespace Unbound.Runtime
         /// <summary>Writes the files of the dirty asset objects (<paramref name="only"/>: of that
         /// object only, when it is dirty); with <paramref name="unchangedStays"/>, a file whose text
         /// would not change is left untouched.</summary>
-        internal static void SaveDirty(Object only = null, bool unchangedStays = false, ICollection<string> onlyFiles = null)
+        internal static void SaveDirty(Object only = null, bool unchangedStays = false, ICollection<string> onlyFiles = null, bool willSave = false)
         {
             Undo.FlushDirtiness();
             // The assets CreateAsset made are written from their objects (and so no longer dirty).
@@ -53,9 +53,29 @@ namespace Unbound.Runtime
                 if (!byGuid.TryGetValue(guid, out var list)) byGuid[guid] = list = new List<Object>();
                 list.Add(o);
             }
+            // AssetDatabase.SaveAssets first hands the processors' OnWillSaveAssets the paths of the
+            // dirty assets (in path order; the Editor's order for several is unmeasured; assets
+            // CreateAsset made, written above, are not among them: unmeasured) and saves the paths
+            // they return; a processor may have saved some itself (the VFX package writes its graphs).
+            if (willSave)
+            {
+                // A package the project does not hold is not the project's to save: its paths are
+                // not offered, and Save leaves them as before.
+                var paths = new List<string>();
+                foreach (var guid in byGuid.Keys)
+                    if (!AssetDatabase.IsImmutablePackagePath(AssetDatabaseRuntime.PathOf(guid))) paths.Add(AssetDatabaseRuntime.PathOf(guid));
+                paths.Sort(StringComparer.Ordinal);
+                var save = new HashSet<string>(AssetModificationProcessorInternal.OnWillSaveAssets(paths.ToArray()), StringComparer.Ordinal);
+                foreach (var guid in new List<string>(byGuid.Keys))
+                {
+                    var path = AssetDatabaseRuntime.PathOf(guid);
+                    byGuid[guid].RemoveAll(o => o == null || !EditorUtility.IsDirty(o));
+                    if (byGuid[guid].Count == 0 || (!save.Contains(path) && !AssetDatabase.IsImmutablePackagePath(path))) byGuid.Remove(guid);
+                }
+            }
             foreach (var pair in byGuid)
             {
-                try { Save(pair.Key, pair.Value, unchangedStays); }
+                try { Save(pair.Key, pair.Value, unchangedStays, willSave); }
                 catch (Exception e) when (e is IOException || e is NotSupportedException || e is UnauthorizedAccessException)
                 {
                     Debug.LogError($"Unbound: {AssetDatabaseRuntime.PathOf(pair.Key)} is not saved: {e.Message}");
@@ -77,11 +97,25 @@ namespace Unbound.Runtime
             return docs;
         }
 
-        static void Save(string guid, List<Object> dirty, bool unchangedStays)
+        static void Save(string guid, List<Object> dirty, bool unchangedStays, bool savingAssets)
         {
             var info = AssetDatabaseRuntime.Info(guid);
             var loaded = AssetDatabaseRuntime.LoadFile(guid);
             if (info == null || loaded == null || string.IsNullOrEmpty(info.File)) return;
+            // AssetDatabase.SaveAssets writes a graph file from its resource's objects
+            // (VisualEffectResource.WriteAsset; tests/projects/vfxwrites). Other saves of a graph
+            // (SaveAssetIfDirty, the Editor's exit) are unmeasured and keep the file as it is.
+            if (info.Kind == "vfx" && savingAssets)
+            {
+                // A package's own graphs (its templates) are read only: they stay as they are.
+                if (AssetDatabase.IsImmutablePackagePath(info.Path)) return;
+                foreach (var o in loaded.Objects.Values)
+                    if (o is UnityEditor.VFX.VisualEffectResource resource)
+                    {
+                        VisualEffectWrites.Write(resource);
+                        return;
+                    }
+            }
             if (info.Kind != "yaml")
             {
                 // An imported asset's objects come from its source file, which the Editor does not

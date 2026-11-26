@@ -19,7 +19,8 @@ namespace UnityEditor
     /// tests/projects/projectwindowutil create.*), not yet for the .meta files of a refresh. The
     /// editability callbacks (IsOpenForEdit and CanOpenForEdit, each in a list and a single-path
     /// form, and MakeEditable) are called by the AssetDatabase queries as the Editor calls them
-    /// (tests/projects/openforedithooks, openforeditorder). The other callbacks are not called yet.
+    /// (tests/projects/openforedithooks, openforeditorder). OnWillSaveAssets is called by
+    /// AssetDatabase.SaveAssets (<see cref="OnWillSaveAssets"/>). The other callbacks are not called yet.
     /// </summary>
     internal partial class AssetModificationProcessorInternal
     {
@@ -110,6 +111,53 @@ namespace UnityEditor
 
         /// <summary>Calls each processor's static OnWillCreateAsset(string); one with other
         /// parameters is skipped with a warning.</summary>
+        /// <summary>
+        /// Unity's OnWillSaveAssets step of AssetDatabase.SaveAssets (its published C#,
+        /// AssetModificationProcessorInternal.OnWillSaveAssets, without the Editor's save dialog,
+        /// which a human enables): each processor's static OnWillSaveAssets(string[]) is called in
+        /// turn with the paths still to be saved and its non-null result replaces them (null or blank
+        /// paths dropped with a warning first); then the paths not open for edit are made editable
+        /// (a failed checkout is reported as unmodelled and the paths saved). Returns the paths to save. Called with the dirty assets' paths,
+        /// an empty list when there are none (tests/projects/vfxwrites `... save/will save`).
+        /// </summary>
+        internal static string[] OnWillSaveAssets(string[] assets)
+        {
+            var save = assets;
+            foreach (var processor in Processors)
+            {
+                const string name = "OnWillSaveAssets";
+                var method = processor.GetMethod(name, CallbackFlags);
+                if (method == null) continue;
+                if (Array.Exists(save, string.IsNullOrWhiteSpace))
+                {
+                    int count = save.Length;
+                    save = Array.FindAll(save, s => !string.IsNullOrWhiteSpace(s));
+                    Debug.LogWarning($"OnWillSaveAssets: Skipped {count - save.Length} null or empty path(s).");
+                }
+                var parameters = method.GetParameters();
+                if (parameters.Length != 1)
+                {
+                    Debug.LogWarning("Parameter count did not match. Expected: 1 Got: " + parameters.Length + " in " + method.DeclaringType + "." + method.Name);
+                    continue;
+                }
+                if (parameters[0].ParameterType != typeof(string[]))
+                {
+                    Debug.LogWarning("Parameter type mismatch at parameter 0. Expected: " + typeof(string[]) + " Got: " + parameters[0].ParameterType + " in " + method.DeclaringType + "." + method.Name);
+                    continue;
+                }
+                if (method.Invoke(null, new object[] { save }) is string[] result) save = result;
+            }
+            var notOpened = new List<string>();
+            AssetDatabase.IsOpenForEdit(save, notOpened, StatusQueryOptions.ForceUpdate);
+            var notEditable = new List<string>();
+            // A failed checkout keeps those paths out unless the user overwrites them
+            // (EditorUserSettings.overwriteFailedCheckoutAssets, which Unbound does not model: it
+            // says so, and saves them).
+            if (notOpened.Count != 0 && !AssetDatabase.MakeEditable(notOpened.ToArray(), null, notEditable))
+                Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorUserSettings.overwriteFailedCheckoutAssets");
+            return save;
+        }
+
         internal static void OnWillCreateAsset(string path) => OnWillCreateAsset(path, Processors);
 
         internal static void OnWillCreateAsset(string path, System.Collections.Generic.IEnumerable<Type> processors)
