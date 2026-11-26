@@ -368,6 +368,9 @@ fn build_physx(root: &Path, out_dir: &Path) -> bool {
         .arg(&mbedtls_archive);
         if target_os != "macos" {
             link.args(["-lpthread", "-ldl", "-lm"]);
+        } else {
+            // The TLS shim reads the system's trusted roots from the keychain.
+            link.args(["-framework", "Security", "-framework", "CoreFoundation"]);
         }
     }
     let started = Instant::now();

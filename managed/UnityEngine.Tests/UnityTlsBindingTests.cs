@@ -222,6 +222,20 @@ Yw9/lfUAAH9G6yFFq+MFu8nHlfYVqEI0zigLYuz7AiBnnIeyviQS8FEZzYeAi6gB
         }
 
         [Fact]
+        public void ATransportWithoutUserDataFailsAtOnce()
+        {
+            Scenario(0, CaPem, "localhost", (c, s) =>
+            {
+                var client = (Binding.unitytls_client*)c;
+                client->config->transportUserData = IntPtr.Zero;
+                int before = s_Inbound[2].Count;
+                Assert.Equal((uint)Binding.UNITYTLS_SSL_ERROR, Binding.unitytls_client_handshake(client));
+                Assert.Equal((uint)Binding.UnityTLSClientState_Fail, Binding.unitytls_client_get_state(client));
+                Assert.Equal(before, s_Inbound[2].Count);
+            });
+        }
+
+        [Fact]
         public void AServerWithoutItsCertificateDoesNotStart()
         {
             Scenario(1, CaPem, "localhost", (c, s) =>

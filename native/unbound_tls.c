@@ -9,6 +9,7 @@
 // (the code and its detail: the peer certificate's verification flags, or Mbed TLS's error).
 #define MBEDTLS_ALLOW_PRIVATE_ACCESS
 #include <mbedtls/ctr_drbg.h>
+#include <mbedtls/debug.h>
 #include <mbedtls/entropy.h>
 #include <mbedtls/error.h>
 #include <mbedtls/pk.h>
@@ -18,9 +19,13 @@
 #if defined(MBEDTLS_PSA_CRYPTO_C)
 #include <psa/crypto.h>
 #endif
+#include <pthread.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
+#if defined(__APPLE__)
+#include <Security/Security.h>
+#endif
 
 #define UNITYTLS_API __attribute__((visibility("default")))
 
@@ -99,6 +104,7 @@ typedef struct {
     mbedtls_entropy_context entropy;
     mbedtls_ctr_drbg_context drbg;
     mbedtls_timing_delay_context timer;
+    int *suites; // the client's added cipher suites when init ran (Mbed TLS keeps the pointer)
 } tls_context;
 
 // The client's own records (its `internalCtx`).
@@ -146,15 +152,19 @@ UNITYTLS_API unitytls_client *unitytls_client_create(uint32_t role, unitytls_cli
     return client;
 }
 
+// A transport without user data fails without its callbacks being called (measured: the first
+// handshake call fails, no record sent).
 static int bio_send(void *user, const unsigned char *data, size_t length) {
     unitytls_client *client = user;
-    if (client->config->dataSendCB == NULL) return MBEDTLS_ERR_SSL_INTERNAL_ERROR;
+    if (client->config->dataSendCB == NULL || client->config->transportUserData == NULL)
+        return MBEDTLS_ERR_SSL_INTERNAL_ERROR;
     return client->config->dataSendCB(client->config->transportUserData, (uint8_t *)data, length, 0);
 }
 
 static int bio_receive(void *user, unsigned char *data, size_t length) {
     unitytls_client *client = user;
-    if (client->config->dataReceiveCB == NULL) return MBEDTLS_ERR_SSL_INTERNAL_ERROR;
+    if (client->config->dataReceiveCB == NULL || client->config->transportUserData == NULL)
+        return MBEDTLS_ERR_SSL_INTERNAL_ERROR;
     return client->config->dataReceiveCB(client->config->transportUserData, data, length, 0);
 }
 
@@ -191,6 +201,42 @@ static int parse_key(mbedtls_pk_context *target, unitytls_dataRef data, mbedtls_
     return ret;
 }
 
+// The system's trusted roots, which a client without a CA verifies its server against (measured:
+// such a client verifies public servers, and an explicit CA replaces them). Read once: the
+// keychain's anchors on macOS, the system's PEM bundle elsewhere.
+static mbedtls_x509_crt s_system_roots;
+static pthread_once_t s_system_roots_once = PTHREAD_ONCE_INIT;
+
+static void load_system_roots(void) {
+    mbedtls_x509_crt_init(&s_system_roots);
+#if defined(__APPLE__)
+    CFArrayRef anchors = NULL;
+    if (SecTrustCopyAnchorCertificates(&anchors) != errSecSuccess || anchors == NULL) return;
+    for (CFIndex i = 0; i < CFArrayGetCount(anchors); i++) {
+        CFDataRef der = SecCertificateCopyData((SecCertificateRef)CFArrayGetValueAtIndex(anchors, i));
+        if (der == NULL) continue;
+        mbedtls_x509_crt_parse_der(&s_system_roots, CFDataGetBytePtr(der), (size_t)CFDataGetLength(der));
+        CFRelease(der);
+    }
+    CFRelease(anchors);
+#else
+    static const char *bundles[] = {"/etc/ssl/certs/ca-certificates.crt", "/etc/pki/tls/certs/ca-bundle.crt",
+                                    "/etc/ssl/ca-bundle.pem", "/etc/pki/tls/cacert.pem", "/etc/ssl/cert.pem"};
+    for (size_t i = 0; i < sizeof(bundles) / sizeof(bundles[0]); i++)
+        if (mbedtls_x509_crt_parse_file(&s_system_roots, bundles[i]) >= 0 && s_system_roots.version != 0) break;
+#endif
+}
+
+#if defined(MBEDTLS_PSA_CRYPTO_C)
+static psa_status_t s_psa_status = PSA_ERROR_BAD_STATE;
+static pthread_once_t s_psa_once = PTHREAD_ONCE_INIT;
+static void init_psa(void) { s_psa_status = psa_crypto_init(); }
+#endif
+
+// The signature algorithms a ClientHello offers, in the binding's order (measured: SHA-512, then
+// SHA-384, then SHA-256; ECDSA before RSA).
+static const uint16_t s_sig_algs[] = {0x0603, 0x0601, 0x0503, 0x0501, 0x0403, 0x0401, MBEDTLS_TLS1_3_SIG_NONE};
+
 static void free_context(tls_context *tls) {
     if (tls == NULL) return;
     mbedtls_ssl_free(&tls->ssl);
@@ -200,6 +246,7 @@ static void free_context(tls_context *tls) {
     mbedtls_pk_free(&tls->key);
     mbedtls_ctr_drbg_free(&tls->drbg);
     mbedtls_entropy_free(&tls->entropy);
+    free(tls->suites);
     free(tls);
 }
 
@@ -212,10 +259,13 @@ static int init_failed(unitytls_client *client, tls_context *tls, uint32_t code,
 
 UNITYTLS_API int unitytls_client_init(unitytls_client *client) {
     if (client == NULL || client->config == NULL) return UNITYTLS_INVALID_ARGUMENT;
+    // A client is made once (unmeasured: a second init is refused, the first context kept).
+    if (client->ctx != NULL) return UNITYTLS_INVALID_STATE;
     unitytls_client_config *config = client->config;
     int server = client->role == ROLE_SERVER;
 #if defined(MBEDTLS_PSA_CRYPTO_C)
-    if (psa_crypto_init() != PSA_SUCCESS) return init_failed(client, NULL, UNITYTLS_INTERNAL_ERROR, 0);
+    pthread_once(&s_psa_once, init_psa);
+    if (s_psa_status != PSA_SUCCESS) return init_failed(client, NULL, UNITYTLS_INTERNAL_ERROR, 0);
 #endif
     // A server needs its certificate and key (measured: a PSK server without them does not start).
     if (server && !(has(config->serverPEM) && has(config->privateKeyPEM)))
@@ -249,7 +299,13 @@ UNITYTLS_API int unitytls_client_init(unitytls_client *client) {
     mbedtls_ssl_conf_max_tls_version(&tls->conf, MBEDTLS_SSL_VERSION_TLS1_2);
     mbedtls_ssl_conf_min_tls_version(&tls->conf, MBEDTLS_SSL_VERSION_TLS1_2);
     mbedtls_ssl_conf_rng(&tls->conf, mbedtls_ctr_drbg_random, &tls->drbg);
-    mbedtls_ssl_conf_dbg(&tls->conf, debug, client);
+    mbedtls_ssl_conf_sig_algs(&tls->conf, s_sig_algs);
+    // The log callback gets Mbed TLS's messages up to the configuration's trace level (unmeasured:
+    // the binding's own messages and their function names; Mbed TLS's threshold is process-wide).
+    if (config->logCallback != NULL) {
+        mbedtls_ssl_conf_dbg(&tls->conf, debug, client);
+        mbedtls_debug_set_threshold((int)config->tracelevel);
+    }
     // A client always verifies the server (measured: without a CA it fails as not trusted); a
     // server asks for the client's certificate as the configuration says.
     int authmode = MBEDTLS_SSL_VERIFY_REQUIRED;
@@ -258,7 +314,12 @@ UNITYTLS_API int unitytls_client_init(unitytls_client *client) {
                    : config->clientAuth == 2 ? MBEDTLS_SSL_VERIFY_REQUIRED
                                              : MBEDTLS_SSL_VERIFY_OPTIONAL;
     mbedtls_ssl_conf_authmode(&tls->conf, authmode);
-    mbedtls_ssl_conf_ca_chain(&tls->conf, &tls->ca, NULL);
+    if (!server && !has(config->caPEM)) {
+        pthread_once(&s_system_roots_once, load_system_roots);
+        mbedtls_ssl_conf_ca_chain(&tls->conf, &s_system_roots, NULL);
+    } else {
+        mbedtls_ssl_conf_ca_chain(&tls->conf, &tls->ca, NULL);
+    }
     if (has(config->serverPEM) && (ret = mbedtls_ssl_conf_own_cert(&tls->conf, &tls->own, &tls->key)) != 0)
         return init_failed(client, tls, UNITYTLS_INTERNAL_ERROR, ret);
     if (has(config->psk) &&
@@ -267,19 +328,27 @@ UNITYTLS_API int unitytls_client_init(unitytls_client *client) {
                                     has(config->pskIdentity) ? config->pskIdentity.dataLen : 0)) != 0)
         return init_failed(client, tls, UNITYTLS_INVALID_ARGUMENT, ret);
     client_records *own = records(client);
-    if (own->suite_count > 0) mbedtls_ssl_conf_ciphersuites(&tls->conf, own->suites);
+    if (own->suite_count > 0) {
+        tls->suites = malloc(sizeof(int) * (size_t)(own->suite_count + 1));
+        if (tls->suites == NULL) return init_failed(client, tls, UNITYTLS_OUT_OF_MEMORY, 0);
+        memcpy(tls->suites, own->suites, sizeof(int) * (size_t)(own->suite_count + 1));
+        mbedtls_ssl_conf_ciphersuites(&tls->conf, tls->suites);
+    }
     if (datagram) {
         mbedtls_ssl_conf_handshake_timeout(&tls->conf, config->ssl_handshake_timeout_min,
                                            config->ssl_handshake_timeout_max);
 #if defined(MBEDTLS_SSL_DTLS_HELLO_VERIFY) && defined(MBEDTLS_SSL_SRV_C)
-        // No hello verification (cookies) unless a client's transport id is set (set_cookie_info).
+        // No hello verification (measured: a DTLS server answers a first ClientHello); cookies are
+        // not set up, so set_cookie_info only gives the server its client's transport id.
         if (server) mbedtls_ssl_conf_dtls_cookies(&tls->conf, NULL, NULL, NULL);
 #endif
     }
     mbedtls_ssl_conf_read_timeout(&tls->conf, config->ssl_read_timeout_ms);
     if ((ret = mbedtls_ssl_setup(&tls->ssl, &tls->conf)) != 0)
         return init_failed(client, tls, UNITYTLS_INTERNAL_ERROR, ret);
-    if (!server && config->hostname != NULL && (ret = mbedtls_ssl_set_hostname(&tls->ssl, config->hostname)) != 0)
+    // The server's name is checked against the host name; without one it is not (unmeasured: the
+    // Editor's answer varies between runs), which Mbed TLS asks to be said explicitly.
+    if (!server && (ret = mbedtls_ssl_set_hostname(&tls->ssl, config->hostname)) != 0)
         return init_failed(client, tls, UNITYTLS_INVALID_ARGUMENT, ret);
     mbedtls_ssl_set_bio(&tls->ssl, client, bio_send, bio_receive, NULL);
     if (datagram) {
