@@ -131,7 +131,9 @@ namespace UnityEditor
                 {
                     using (ScriptedImports.Scope())
                         dropped = model ? RunModel(file, root, session) : RunPrefab(file, root, session);
-                    // Undo's records make their objects dirty when flushed: the callbacks' too.
+                    // Undo's records make their objects dirty when flushed: the callbacks' too. The flush
+                    // takes every pending record, those made before the load included, so their
+                    // instances' modifications are recorded at the load (unmeasured).
                     Undo.FlushDirtiness();
                 }
                 finally

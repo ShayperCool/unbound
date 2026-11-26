@@ -894,6 +894,23 @@ namespace UnityEngine.Tests
             Assert.Null(PrefabAssets.Refusal(m_File));
         }
 
+        /// <summary>A hierarchy saved over a prefab whose file nests a prefab held with what its
+        /// refresh kept is written: what decides is what the hierarchy holds, not the file it
+        /// replaces.</summary>
+        [Fact]
+        public void AHierarchyOverAPrefabIsJudgedByWhatItHolds()
+        {
+            var (x, _) = Dependent(NewDependentFile("X"), m_File, m_Asset, null, 9800);
+            Loaded(x);
+            PrefabAssets.MarkStaleForTests(x, "Assets/Base.prefab", incomplete: true);
+            File.AppendAllText(Path.Combine(m_Project, AssetPath), InstanceDocument(9900, x.Guid, Array.Empty<(long, string, string)>()));
+            Assert.NotNull(PrefabAssets.Refusal(m_File));
+            var plain = new GameObject("Plain");
+            m_Made.Add(plain);
+            var warnings = CaptureWarnings(() => Assert.True(PrefabContents.Replace(plain, m_File)));
+            Assert.DoesNotContain(warnings, w => w.Contains("is not saved"));
+        }
+
         /// <summary>A prefab held stale is refused before an apply changes anything: the instance
         /// keeps its override, the prefab its value and its file.</summary>
         [Fact]
@@ -999,6 +1016,28 @@ namespace UnityEngine.Tests
             m_AssetPart.AddComponent<UnityEngine.SphereCollider>();
             Assert.True(EditorUtility.IsDirty(m_AssetPart));
             EditorUtility.ClearDirty(m_AssetPart);
+            // An imported model's GameObject is not made dirty (unmeasured).
+            var model = new LoadedFile { Path = "Assets/Model.fbx", Guid = Guid.NewGuid().ToString("N") };
+            GameObject modelRoot;
+            using (ObjectRegistry.AsAssets())
+            {
+                modelRoot = new GameObject("Model", bare: true) { m_IsPrefabAsset = true, IsPersistentAsset = true };
+                var t = (Transform)ComponentFactory.Create(typeof(Transform), modelRoot, deserializing: true);
+                t.IsPersistentAsset = true;
+                modelRoot.m_Transform = t;
+                modelRoot.m_Components.Add(t);
+            }
+            m_Made.Add(modelRoot);
+            model.Objects[1] = modelRoot;
+            model.MainObject = modelRoot;
+            model.Roots.Add(modelRoot);
+            AssetDatabaseRuntime.AddLoaded(model);
+            try
+            {
+                modelRoot.AddComponent<UnityEngine.SphereCollider>();
+                Assert.False(EditorUtility.IsDirty(modelRoot));
+            }
+            finally { AssetDatabaseRuntime.Invalidate(model.Guid); }
         }
 
         [Fact]

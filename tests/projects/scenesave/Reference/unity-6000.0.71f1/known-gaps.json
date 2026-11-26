@@ -258,14 +258,14 @@
     "key": "file:Assets/PrefabSaves/Outer7.prefab",
     "reference": "written",
     "actual": "lines 85-85: reference ['      value: Inner7'], actual ['      value: Thing']",
-    "reason": "A prefab whose root's name in its file is not its file's name (here copies of Thing.prefab): the Editor loads its root named after the file, so an instance of it, nested in a new prefab by SaveAsPrefabAsset, is written with that name (Inner2); Unbound keeps the file's name (Thing) and writes it: follow-up"
+    "reason": "A prefab whose root's name in its file is not its file's name (here copies of Thing.prefab): the Editor loads its root named after the file, so an instance of it, nested in a new prefab by SaveAsPrefabAsset, is written with that name (Inner7); Unbound keeps the file's name (Thing) and writes it: follow-up"
   },
   {
     "case": "prefab-dirty-saves",
     "key": "file:Assets/PrefabSaves/Nest8.prefab",
     "reference": "written",
     "actual": "lines 85-85: reference ['      value: Base8'], actual ['      value: Thing']",
-    "reason": "A prefab whose root's name in its file is not its file's name (here copies of Thing.prefab): the Editor loads its root named after the file, so an instance of it, nested in a new prefab by SaveAsPrefabAsset, is written with that name (Inner2); Unbound keeps the file's name (Thing) and writes it: follow-up"
+    "reason": "A prefab whose root's name in its file is not its file's name (here copies of Thing.prefab): the Editor loads its root named after the file, so an instance of it, nested in a new prefab by SaveAsPrefabAsset, is written with that name (Base8); Unbound keeps the file's name (Thing) and writes it: follow-up"
   },
   {
     "case": "prefab-dirty-saves",

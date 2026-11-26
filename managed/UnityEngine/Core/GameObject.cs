@@ -271,20 +271,26 @@ namespace UnityEngine
 
         // ------------------------------------------------------------------ components
 
-        /// <summary>A component added to an asset's GameObject (a prefab asset's) makes the
-        /// GameObject dirty, so SaveAssets writes it (matches the Unity 6000.0.71f1 Editor,
-        /// tests/projects/scenesave prefab-dirty-saves structure.*); not one an import's
-        /// postprocessor adds (the import's result is not the asset's source: unmeasured).</summary>
+        /// <summary>A component added to a prefab asset's GameObject makes the GameObject dirty, so
+        /// SaveAssets writes it (matches the Unity 6000.0.71f1 Editor, tests/projects/scenesave
+        /// prefab-dirty-saves structure.*); not one an import's postprocessor adds (the import's
+        /// result is not the asset's source: unmeasured), nor one added to an imported model's
+        /// GameObject (unmeasured).</summary>
         public Component AddComponent(Type componentType)
         {
             MainThreadCheck.Check("Internal_AddComponentWithType");
             ThrowIfDestroyed();
             var component = ComponentFactory.Add(this, componentType);
-            if (component != null && IsPersistentAsset && !Unbound.Runtime.ScriptedImports.Importing) UnityEditor.EditorUtility.SetDirty(this);
+            if (component != null && IsPersistentAsset && !Unbound.Runtime.ScriptedImports.Importing && InPrefabFile()) UnityEditor.EditorUtility.SetDirty(this);
             return component;
         }
 
         public T AddComponent<T>() where T : Component => (T)AddComponent(typeof(T));
+
+        /// <summary>Whether this asset GameObject is one of a .prefab file's.</summary>
+        bool InPrefabFile() =>
+            Unbound.Runtime.AssetDatabaseRuntime.TryGetLocation(this, out var guid, out _)
+            && Unbound.Runtime.AssetDatabaseRuntime.PathOf(guid)?.EndsWith(".prefab", StringComparison.OrdinalIgnoreCase) == true;
 
         [global::System.@ObsoleteAttribute("GameObject.AddComponent with string argument has been deprecated. Use GameObject.AddComponent<T>() instead. (UnityUpgradable).", true)] [global::System.ComponentModel.@EditorBrowsableAttribute((global::System.ComponentModel.EditorBrowsableState)1)]
         public Component AddComponent(string className) => throw new NotSupportedException("AddComponent(string) is not supported.");

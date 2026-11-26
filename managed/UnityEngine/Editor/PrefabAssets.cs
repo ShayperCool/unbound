@@ -138,10 +138,15 @@ namespace Unbound.Runtime
         internal static string Refusal(LoadedFile file)
         {
             if (file == null) return null;
+            // A prefab a hierarchy is replacing holds what the hierarchy holds, not what its file did.
+            if (s_Replacing.Contains(file)) return file.MainObject is GameObject root ? CreateRefusal(root) : null;
             if (s_StaleSince.TryGetValue(file, out var mark))
                 return $"{mark.Source}, which it holds instances of, was saved in this session";
             return file.Guid == null ? null : ChainRefusal(Chain(file.Guid));
         }
+
+        /// <summary>The prefabs a hierarchy is being written over (<see cref="PrefabContents.Replace"/>).</summary>
+        static readonly HashSet<LoadedFile> s_Replacing = new HashSet<LoadedFile>(ReferenceEqualityComparer.Instance);
 
         /// <summary>Why a prefab holding instances of the prefabs <paramref name="chain"/> names is
         /// not written (null: it is).</summary>
@@ -165,15 +170,20 @@ namespace Unbound.Runtime
             foreach (var t in source.GetComponentsInChildren<Transform>(true))
                 if (PrefabLinks.Of(t.m_GameObject)?.Instance is PrefabInstanceData data && data.SourceGuid != null && chain.Add(data.SourceGuid))
                     chain.UnionWith(Chain(data.SourceGuid));
-            foreach (var guid in chain)
-                if (AssetDatabaseRuntime.LoadedOrNull(guid) is LoadedFile held && s_StaleSince.TryGetValue(held, out var mark) && mark.Incomplete)
-                    return $"{held.Path}, which it holds instances of, is held as it was before {mark.Source} was saved in this session";
             return ChainRefusal(chain);
         }
 
-        /// <summary>A prefab whose objects a hierarchy replaced (<see cref="PrefabContents.Replace"/>)
-        /// holds nothing from before: it is no longer stale.</summary>
-        internal static void Replaced(LoadedFile file) => s_StaleSince.Remove(file);
+        /// <summary>Writes a prefab whose objects a hierarchy replaced (<see cref="PrefabContents.Replace"/>):
+        /// it holds nothing from before, so it is no longer stale, and what decides its write is
+        /// what the hierarchy holds, as <see cref="CreateRefusal"/> checked before the objects were
+        /// replaced (its file's nesting is the one it is leaving).</summary>
+        internal static bool CommitReplaced(Change change)
+        {
+            s_StaleSince.Remove(change.File);
+            s_Replacing.Add(change.File);
+            try { return change.Commit(); }
+            finally { s_Replacing.Remove(change.File); }
+        }
 
         /// <summary>Says a write is refused (<see cref="Refusal"/>); true when it is.</summary>
         internal static bool Refused(LoadedFile file, string path = null)
@@ -281,6 +291,8 @@ namespace Unbound.Runtime
             foreach (var o in HierarchyObjects(root)) EditorUtility.ClearDirty(o);
             foreach (var o in dependent.Objects.Values)
                 if (o is not null && !o.m_Destroyed) EditorUtility.ClearDirty(o);
+            // Its scene instances follow it as it is held, what the refresh kept included (the Editor's
+            // follow the prefab as loaded from its file: unmeasured, said in the warnings below).
             change.MergeInstances();
             if (kept.Count > 0 || unsavedInstances.Count > 0 || unsavedObjects > 0 || unsavedChanges)
                 if (s_StaleSince.TryGetValue(dependent, out var mark)) mark.Incomplete = true;
@@ -816,8 +828,7 @@ namespace Unbound.Runtime
             }
             var change = new PrefabAssets.Change(file);
             Sync(root, assetRoot, map, change.Refs);
-            PrefabAssets.Replaced(file);
-            return change.Commit();
+            return PrefabAssets.CommitReplaced(change);
         }
 
         /// <summary>A prefab asset's new GameObject with its transform (a <paramref name="transformType"/>).</summary>
