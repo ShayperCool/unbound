@@ -30,7 +30,8 @@ others keep theirs; triangles whose UV area is under the threshold are skipped, 
 the metric is 1; changing the vertices keeps the metric until it is recalculated. Ratios that
 differ do not give their average: 1 and 4 give 4 (whatever their areas); 1..n give values near the
 mean plus a standard deviation of the ratios kept after a cut that depends on the triangles' areas
-(Unbound does not compute the metric: residuals). `IsCollabEnabledForCurrentProject` answers false (Unity's C#, CollabToUVCSBridge.cs, answers false
+(Unbound does not compute the metric: residuals). `IsCollabEnabledForCurrentProject` answers false
+(Unity's C#, CollabToUVCSBridge.cs, answers false
 for any project).
 
 Record and gate:
