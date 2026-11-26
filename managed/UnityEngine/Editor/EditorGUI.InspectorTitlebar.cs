@@ -484,10 +484,12 @@ namespace UnityEditor
         static readonly Dictionary<Type, Texture2D>[] s_ScriptIcons = { new Dictionary<Type, Texture2D>(), new Dictionary<Type, Texture2D>() };
 
         /// <summary>A class's icon: a script's behaviours its class's own icon (a script class in a
-        /// namespace that has one), else "cs Script Icon"; other classes the icon of the class or
-        /// its nearest base class (a script's ScriptableObject "ScriptableObject Icon"). An [Icon]
-        /// class's icon is not used, which is said. Unmeasured: a class with no icon in its chain
-        /// (none here), script base classes of a behaviour.</summary>
+        /// namespace that has one), else "cs Script Icon", whatever its script base classes have;
+        /// other classes the icon of the class or its nearest base class with one (a script
+        /// ScriptableObject in a namespace or a subclass of one: that class's; a script's
+        /// ScriptableObject "ScriptableObject Icon"). Measured: tests/projects/editortitlebar
+        /// thumbnails, thumbnails/scripts. An [Icon] class's icon is not used, which is said.
+        /// Unmeasured: a class with no icon in its chain (none here).</summary>
         internal static Texture2D MiniTypeThumbnail(Type type)
         {
             if (type == null) return null;

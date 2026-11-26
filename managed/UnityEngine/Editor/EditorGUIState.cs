@@ -1566,7 +1566,8 @@ namespace UnityEditor
         /// null when none has. An engine class, or a script class in a namespace, has the icon
         /// `icons/processed/&lt;namespace&gt;/&lt;Class&gt; Icon.asset` (measured: a script class
         /// UnityEngine.UI.Image has the Image icon, a script class GameManager without a namespace
-        /// not the GameManager one, tests/projects/editortitlebar thumbnails/scripts).</summary>
+        /// not the GameManager one, a script ScriptableObject UnityEngine.Timeline.SignalAsset and a
+        /// subclass of it the SignalAsset one, tests/projects/editortitlebar thumbnails/scripts).</summary>
         internal static Texture2D ClassIcon(Type type)
         {
             bool dark = EditorGUIUtility.isProSkin;

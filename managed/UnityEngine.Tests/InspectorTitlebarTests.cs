@@ -44,6 +44,10 @@ namespace UnityEngine.Tests
         [ExcludeFromPreset]
         public sealed class Excluded : MonoBehaviour { }
 
+        public sealed class DerivedSignal : global::UnityEngine.Timeline.SignalAsset { }
+
+        public sealed class DerivedImage : global::UnityEngine.UI.Image { }
+
         [Icon("Assets/Icon.png")]
         public sealed class Iconed : MonoBehaviour { }
 
@@ -278,10 +282,22 @@ namespace UnityEngine.Tests
                 Assert.EndsWith("Image Icon", AssetPreview.GetMiniThumbnail(go.AddComponent<global::UnityEngine.UI.Image>()).name);
                 Assert.EndsWith("cs Script Icon", AssetPreview.GetMiniThumbnail(go.AddComponent<global::GameManager>()).name);
                 Assert.EndsWith("cs Script Icon", EditorGUIUtility.ObjectContent(null, typeof(global::GameManager)).image.name);
+                // A script ScriptableObject in such a namespace has its class icon, a subclass its
+                // script base's; a behaviour subclassing a script behaviour with an icon has none.
+                var signal = ScriptableObject.CreateInstance<global::UnityEngine.Timeline.SignalAsset>();
+                var derivedSignal = ScriptableObject.CreateInstance<DerivedSignal>();
+                Assert.EndsWith("SignalAsset Icon", AssetPreview.GetMiniThumbnail(signal).name);
+                Assert.EndsWith("SignalAsset Icon", AssetPreview.GetMiniThumbnail(derivedSignal).name);
+                Assert.EndsWith("cs Script Icon", AssetPreview.GetMiniThumbnail(go.AddComponent<DerivedImage>()).name);
+                Object.DestroyImmediate(signal);
+                Object.DestroyImmediate(derivedSignal);
                 // An [Icon] class's icon is not used, which is said.
                 int said = Hits("UnityEditor.AssetPreview.GetMiniThumbnail of an [Icon] class");
                 Assert.EndsWith("cs Script Icon", AssetPreview.GetMiniThumbnail(go.AddComponent<Iconed>()).name);
                 Assert.Equal(said + 1, Hits("UnityEditor.AssetPreview.GetMiniThumbnail of an [Icon] class"));
+                // ...also when an object field shows the class of a null reference.
+                EditorGUIUtility.ObjectContent(null, typeof(Iconed));
+                Assert.Equal(said + 2, Hits("UnityEditor.AssetPreview.GetMiniThumbnail of an [Icon] class"));
             }
             finally
             {
@@ -338,7 +354,13 @@ namespace UnityEngine.Tests
 namespace UnityEngine.UI
 {
     /// <summary>A script class in a namespace the Editor has class icons for (InspectorTitlebarTests).</summary>
-    public sealed class Image : MonoBehaviour { }
+    public class Image : MonoBehaviour { }
+}
+
+namespace UnityEngine.Timeline
+{
+    /// <summary>A script ScriptableObject class in a namespace the Editor has class icons for (InspectorTitlebarTests).</summary>
+    public class SignalAsset : ScriptableObject { }
 }
 
 /// <summary>A script class without a namespace named as an Editor class icon (InspectorTitlebarTests).</summary>
