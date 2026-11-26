@@ -99,6 +99,11 @@ fn texture_meta(texture: &Value, platforms: &[Value]) -> Value {
     map(vec![(
         "TextureImporter",
         map(vec![
+            // Of the release's layout, not the oldest one (whose added default entry is uncompressed).
+            (
+                "serializedVersion",
+                scalar(crate::texture::CURRENT_SERIALIZED_VERSION),
+            ),
             ("textureType", scalar(0)),
             ("textureShape", scalar(1)),
             (
@@ -269,6 +274,25 @@ mod tests {
         assert_eq!(settings.wrap_u, crate::texture::WrapMode::Clamp);
         let settings = crate::texture::TextureSettings::read(&atlas.texture_meta, "Standalone");
         assert_eq!((settings.max_size, settings.compression), (2048, 0));
+    }
+
+    /// An atlas without a default platform entry keeps its own compression for the other targets,
+    /// as the measured family's import reads its pages (Unity 6000.0.71f1,
+    /// tests/projects/spriteatlaseditor v1platformset Master.spriteatlas.setPlatform.initial:
+    /// Compressed).
+    #[test]
+    fn an_atlas_without_a_default_entry_keeps_its_compression() {
+        let atlas = read_v1(&V1.replace("textureCompression: 0", "textureCompression: 1")).unwrap();
+        for measured in [false, true] {
+            let settings = crate::texture::TextureSettings::read_measured(
+                &atlas.texture_meta,
+                "Standalone",
+                measured,
+            );
+            assert_eq!(settings.compression, 1);
+            assert!(!settings.uncompressed);
+            assert_eq!(settings.wrap_u, crate::texture::WrapMode::Clamp);
+        }
     }
 
     #[test]

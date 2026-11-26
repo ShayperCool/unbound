@@ -417,6 +417,8 @@ namespace UnityEngine.Tests
             var written = RewriteSpriteMeta("CurrentWrap", i => i.filterMode = FilterMode.Trilinear, out var older, out bool laidOut, unwritten, out _);
             Assert.False(laidOut);
             Assert.NotEmpty(older);
+            // (The kept layout is Unbound's warned fallback, not a measured write: the file's own
+            // wrapU stays, the change is patched in.)
             Assert.Contains("  textureSettings:\n    filterMode: 2\n    wrapU: 1\n", written);
             Assert.DoesNotContain(unwritten, u => u.StartsWith("textureSettings", StringComparison.Ordinal));
 
@@ -429,7 +431,7 @@ namespace UnityEngine.Tests
                 ImporterLayout.ForTexture(TextureTemplate()), new List<string>(), out _, out _, importer.ReadAsOldestChanged));
         }
 
-        /// <summary>A sprite's oldest-layout section whose platform list has no default entry is read
+        /// <summary>An oldest-layout section (a sprite's, a Default texture's) whose platform list has no default entry is read
         /// with the one its importer adds, uncompressed, of the section's maximum size and
         /// compression quality, the platforms it lacks copies of it (spritemeta platform/ rows, the
         /// texture/ rows RGB24); reading so is no change (save.SaveKeep writes nothing).</summary>
@@ -441,6 +443,8 @@ namespace UnityEngine.Tests
         [InlineData("BareLegacy")]
         [InlineData("BarePlat")]
         [InlineData("SaveClear")]
+        [InlineData("BareDefault")]
+        [InlineData("KeepDefaultWrap")]
         public void AnOldestSpriteSectionReadsTheDefaultEntryItsImporterAdds(string name)
         {
             using var platforms = SpriteMetaPlatforms();

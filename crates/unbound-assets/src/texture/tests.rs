@@ -2770,6 +2770,6 @@ fn an_oldest_section_without_a_default_entry_is_uncompressed() {
         "TextureImporter:\n  serializedVersion: 13\n",
     );
     assert!(!measured(&current).uncompressed);
-    // A .meta without the section (its GUID alone) keeps the new asset's defaults.
+    // Settings without a texture section (no section to read) keep the platform settings' default.
     assert!(!measured("fileFormatVersion: 2\n").uncompressed);
 }
