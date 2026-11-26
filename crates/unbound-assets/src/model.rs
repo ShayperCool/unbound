@@ -955,7 +955,7 @@ impl Importer for ModelImporter {
             return Ok(Vec::new());
         }
         let bytes = std::fs::read(source)?;
-        Ok(obj_material_library(source, &bytes).into_iter().collect())
+        Ok(obj_material_libraries(source, &bytes))
     }
 
     fn import(&self, source: &Path, bytes: &[u8], meta: &Value) -> Result<ImportedModel> {
@@ -1056,26 +1056,29 @@ fn hierarchy_name_order(a: &str, b: &str) -> std::cmp::Ordering {
     difference.cmp(&0)
 }
 
-/// Select the same authored library for dependency hashing and ufbx loading.
-fn obj_material_library(source: &Path, bytes: &[u8]) -> Option<std::path::PathBuf> {
+/// The material libraries an OBJ file names, in order, for dependency hashing and loading: every
+/// file of every `mtllib` statement (measured, tests/projects/objmissingmtl TwoLib1 and MultiLine1:
+/// the Editor reads them all). A statement's files are separated by whitespace, unless the whole
+/// rest of the line names a file that exists (a name with spaces; unmeasured).
+fn obj_material_libraries(source: &Path, bytes: &[u8]) -> Vec<std::path::PathBuf> {
+    let dir = source.parent().unwrap_or(Path::new("."));
     let text = String::from_utf8_lossy(bytes);
-    text.lines()
-        .filter_map(|line| {
-            let line = line.trim().trim_start_matches('\u{feff}');
-            let (keyword, rest) = line.split_once(char::is_whitespace)?;
-            if keyword != "mtllib" {
-                return None;
-            }
-            let end = rest
-                .char_indices()
-                .find_map(|(i, c)| {
-                    (c == '#' && (i == 0 || rest[..i].ends_with(char::is_whitespace))).then_some(i)
-                })
-                .unwrap_or(rest.len());
-            let path = rest[..end].trim().replace('\\', "/");
-            Some(source.parent().unwrap_or(Path::new(".")).join(path))
-        })
-        .last()
+    let mut libraries = Vec::new();
+    for (keyword, rest) in text.lines().filter_map(obj_statement) {
+        if keyword != "mtllib" || rest.is_empty() {
+            continue;
+        }
+        let whole = dir.join(rest.replace('\\', "/"));
+        if whole.is_file() {
+            libraries.push(whole);
+            continue;
+        }
+        libraries.extend(
+            rest.split_whitespace()
+                .map(|name| dir.join(name.replace('\\', "/"))),
+        );
+    }
+    libraries
 }
 
 /// The keyword of an OBJ or MTL statement and the rest of its line, without a trailing comment.
@@ -1091,45 +1094,55 @@ fn obj_statement(line: &str) -> Option<(&str, &str)> {
     Some((keyword, rest[..end].trim()))
 }
 
-/// Whether an OBJ file that names a material library (`library`) loses its material bindings: its
-/// faces bind materials (`usemtl`) and the library is missing or does not define every one of
-/// them. The Unity 6000.0.71f1 Editor then imports every face without a material: one submesh with
-/// the mesh group's default material (tests/projects/objmissingmtl Missing*, Derived, Undefined1;
-/// Mixed1: one undefined binding drops the defined one too). Measured in a file of one mesh; that
-/// the bindings of a file with several meshes go together is unmeasured, as are names that differ
-/// only in case. A file without a library keeps its bindings (unmeasured).
-fn obj_bindings_dropped(bytes: &[u8], library: Option<&Path>) -> Result<bool> {
-    let Some(library) = library else {
-        return Ok(false);
-    };
+/// The material names `libraries` define (files that do not exist define none), each with the
+/// text of its first definition: the Editor takes a name's first definition (measured,
+/// tests/projects/objmissingmtl TwoLib1 and MultiLine1: Red keeps the first library's color).
+fn obj_library_definitions(libraries: &[std::path::PathBuf]) -> Result<Vec<(String, String)>> {
+    let mut definitions: Vec<(String, String)> = Vec::new();
+    for library in libraries {
+        let bytes = match std::fs::read(library) {
+            Ok(bytes) => bytes,
+            Err(e) if e.kind() == std::io::ErrorKind::NotFound => continue,
+            Err(e) => {
+                return Err(anyhow!(
+                    "reading the material library {}: {e}",
+                    library.display()
+                ));
+            }
+        };
+        let text = String::from_utf8_lossy(&bytes);
+        let mut current: Option<usize> = None;
+        for line in text.lines() {
+            if let Some(("newmtl", name)) = obj_statement(line) {
+                current = if definitions.iter().any(|(n, _)| n == name) {
+                    None
+                } else {
+                    definitions.push((name.to_string(), String::new()));
+                    Some(definitions.len() - 1)
+                };
+            }
+            if let Some(index) = current {
+                definitions[index].1.push_str(line);
+                definitions[index].1.push('\n');
+            }
+        }
+    }
+    Ok(definitions)
+}
+
+/// Whether an OBJ file that names material libraries loses its material bindings: its faces bind
+/// materials (`usemtl`) and its libraries (`defined`: the names they define) do not define every one
+/// of them, a missing library defining none. The Unity 6000.0.71f1 Editor then imports every face
+/// without a material, each mesh with its group's default material (tests/projects/objmissingmtl
+/// Missing*, Derived, Undefined1; Mixed1: one undefined binding drops the defined one too; Groups1:
+/// for every mesh of the file). Names that differ only in case are unmeasured; a file without a
+/// library keeps its bindings (unmeasured).
+fn obj_bindings_dropped(bytes: &[u8], defined: &[(String, String)]) -> bool {
     let text = String::from_utf8_lossy(bytes);
-    let bound: Vec<&str> = text
-        .lines()
+    text.lines()
         .filter_map(obj_statement)
         .filter(|(keyword, _)| *keyword == "usemtl")
-        .map(|(_, name)| name)
-        .collect();
-    if bound.is_empty() {
-        return Ok(false);
-    }
-    let defined = match std::fs::read(library) {
-        Ok(bytes) => String::from_utf8_lossy(&bytes)
-            .lines()
-            .filter_map(|line| {
-                obj_statement(line)
-                    .filter(|(keyword, _)| *keyword == "newmtl")
-                    .map(|(_, name)| name.to_string())
-            })
-            .collect::<std::collections::HashSet<_>>(),
-        Err(e) if e.kind() == std::io::ErrorKind::NotFound => Default::default(),
-        Err(e) => {
-            return Err(anyhow!(
-                "reading the material library {}: {e}",
-                library.display()
-            ));
-        }
-    };
-    Ok(bound.iter().any(|name| !defined.contains(*name)))
+        .any(|(_, name)| !defined.iter().any(|(n, _)| n == name))
 }
 
 /// An OBJ file's text with its `usemtl` statements made comments (lines and their places kept).
@@ -1169,6 +1182,17 @@ fn import_with(
         .extension()
         .is_some_and(|e| e.eq_ignore_ascii_case("obj"));
     let filename = source.to_string_lossy();
+    // An OBJ file's material libraries (see `obj_material_libraries`); bindings they do not resolve
+    // are dropped (see `obj_bindings_dropped`), decided on the file as written.
+    let libraries = if is_obj {
+        obj_material_libraries(source, bytes)
+    } else {
+        Vec::new()
+    };
+    let definitions = obj_library_definitions(&libraries)?;
+    let unbound = (is_obj && !libraries.is_empty() && obj_bindings_dropped(bytes, &definitions))
+        .then(|| obj_without_bindings(bytes));
+    let bytes = unbound.as_deref().unwrap_or(bytes);
     // An OBJ file is read as the meshes its `g` statements name (see `obj_groups`).
     let (regrouped, group_warning) = if is_obj {
         let (text, warning) = obj_groups::regroup(bytes);
@@ -1177,18 +1201,23 @@ fn import_with(
         (None, None)
     };
     let bytes = regrouped.as_deref().unwrap_or(bytes);
-    let library = is_obj
-        .then(|| obj_material_library(source, bytes))
-        .flatten();
-    // Bindings the library does not resolve are dropped with it (see `obj_bindings_dropped`).
-    let unbound = if obj_bindings_dropped(bytes, library.as_deref())? {
-        Some(obj_without_bindings(bytes))
-    } else {
-        None
+    // ufbx is given the libraries that exist: one by its path, as before; several as one text of
+    // each name's first definition; none (or dropped bindings) as nothing to open.
+    let existing: Vec<&std::path::PathBuf> = libraries.iter().filter(|l| l.is_file()).collect();
+    let (library_name, library_data) = match existing.as_slice() {
+        _ if unbound.is_some() => (None, None),
+        [] => (None, None),
+        [one] => (Some(one.to_string_lossy()), None),
+        _ => (
+            None,
+            Some(
+                definitions
+                    .iter()
+                    .map(|(_, text)| text.as_str())
+                    .collect::<String>(),
+            ),
+        ),
     };
-    let library = if unbound.is_some() { None } else { library };
-    let bytes = unbound.as_deref().unwrap_or(bytes);
-    let library_name = library.as_ref().map(|p| p.to_string_lossy());
     // Calculated normals that honour smoothing groups need the FBX's own smoothing masks.
     let reads_fbx_smoothing = !is_obj
         && settings.normals != NormalMode::None
@@ -1215,6 +1244,11 @@ fn import_with(
                 filename: filename.as_ref().into(),
                 // Explicit selection keeps the loader's inputs identical to the cache dependencies.
                 obj_mtl_path: library_name.as_deref().unwrap_or("").into(),
+                obj_mtl_data: library_data
+                    .as_deref()
+                    .map(str::as_bytes)
+                    .unwrap_or(&[])
+                    .into(),
                 ..Default::default()
             },
         )

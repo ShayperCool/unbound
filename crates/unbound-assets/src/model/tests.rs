@@ -2236,23 +2236,54 @@ fn hierarchy_ids_follow_the_paths_postprocessors_leave() {
     );
 }
 
-/// tests/projects/objmissingmtl: a library that is missing or leaves a bound material undefined
-/// drops every binding; a complete library, a file without bindings and one without a library keep
-/// theirs (the last unmeasured).
+/// tests/projects/objmissingmtl: every file of every `mtllib` statement is a library; a name's first
+/// definition is taken; bindings the libraries (missing ones defining nothing) leave undefined drop
+/// every binding; a file without bindings keeps its (missing) libraries out of ufbx.
 #[test]
 fn obj_bindings_a_library_does_not_resolve_are_dropped() {
     let dir = std::env::temp_dir().join(format!("unbound-objbind-{}", std::process::id()));
     std::fs::create_dir_all(&dir).unwrap();
-    let library = dir.join("Lib.mtl");
-    std::fs::write(&library, "newmtl Red\nKd 1 0 0\nnewmtl Green # a comment\n").unwrap();
-    let missing = dir.join("Absent.mtl");
-    let obj = b"mtllib Lib.mtl\nusemtl Red\nf 1 2 3\nusemtl Green\nf 1 3 4\n";
-    let undefined = b"mtllib Lib.mtl\nusemtl Red\nf 1 2 3\nusemtl Blue\nf 1 3 4\n";
-    assert!(!obj_bindings_dropped(obj, Some(&library)).unwrap());
-    assert!(obj_bindings_dropped(undefined, Some(&library)).unwrap());
-    assert!(obj_bindings_dropped(obj, Some(&missing)).unwrap());
-    assert!(!obj_bindings_dropped(b"mtllib Absent.mtl\nf 1 2 3\n", Some(&missing)).unwrap());
-    assert!(!obj_bindings_dropped(obj, None).unwrap());
+    std::fs::write(
+        dir.join("Lib.mtl"),
+        "newmtl Red\nKd 1 0 0\nnewmtl Green # a comment\n",
+    )
+    .unwrap();
+    std::fs::write(
+        dir.join("Other.mtl"),
+        "newmtl Red\nKd 0.5 0 0\nnewmtl Blue\nKd 0 0 1\n",
+    )
+    .unwrap();
+    std::fs::write(dir.join("with space.mtl"), "newmtl Red\n").unwrap();
+    let source = dir.join("Model.obj");
+    let libraries = |text: &str| obj_material_libraries(&source, text.as_bytes());
+    assert_eq!(
+        libraries("mtllib Lib.mtl\nmtllib Other.mtl Absent.mtl # c\n"),
+        [
+            dir.join("Lib.mtl"),
+            dir.join("Other.mtl"),
+            dir.join("Absent.mtl")
+        ]
+    );
+    assert_eq!(
+        libraries("mtllib with space.mtl\n"),
+        [dir.join("with space.mtl")]
+    );
+    let two = obj_library_definitions(&libraries("mtllib Lib.mtl Other.mtl Absent.mtl\n")).unwrap();
+    assert_eq!(
+        two.iter().map(|(n, _)| n.as_str()).collect::<Vec<_>>(),
+        ["Red", "Green", "Blue"]
+    );
+    assert_eq!(two[0].1, "newmtl Red\nKd 1 0 0\n");
+    let lib = obj_library_definitions(&libraries("mtllib Lib.mtl\n")).unwrap();
+    let missing = obj_library_definitions(&libraries("mtllib Absent.mtl\n")).unwrap();
+    assert!(missing.is_empty());
+    let obj = b"usemtl Red\nf 1 2 3\nusemtl Green\nf 1 3 4\n";
+    let undefined = b"usemtl Red\nf 1 2 3\nusemtl Blue\nf 1 3 4\n";
+    assert!(!obj_bindings_dropped(obj, &lib));
+    assert!(obj_bindings_dropped(undefined, &lib));
+    assert!(!obj_bindings_dropped(undefined, &two));
+    assert!(obj_bindings_dropped(obj, &missing));
+    assert!(!obj_bindings_dropped(b"f 1 2 3\n", &missing));
     assert_eq!(
         obj_without_bindings(b"o A\r\nusemtl Red\r\nf 1 2 3\n  usemtl Green\nf 1 3 4"),
         b"o A\r\n#usemtl Red\r\nf 1 2 3\n#  usemtl Green\nf 1 3 4".to_vec()

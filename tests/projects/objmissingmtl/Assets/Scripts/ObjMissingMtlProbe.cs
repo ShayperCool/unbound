@@ -8,7 +8,7 @@ using UnityEngine;
 /// <summary>What OBJ models whose material library is missing import as; see README.md.</summary>
 public class ObjMissingMtlProbe : MonoBehaviour
 {
-    static readonly string[] Models = { "Missing0", "Missing1", "Missing2", "Present0", "Present1", "Present2", "Derived", "Undefined1", "Mixed1" };
+    static readonly string[] Models = { "Missing0", "Missing1", "Missing2", "Present0", "Present1", "Present2", "Derived", "Undefined1", "Mixed1", "NoBind1", "TwoLib1", "MultiLine1", "Groups1" };
     readonly List<string> m_Lines = new List<string>();
 
     void Add(string key, object value)
