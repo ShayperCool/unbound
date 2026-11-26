@@ -187,16 +187,5 @@
       "AssetImporter"
     ],
     "reason": "The Editor's StyleSheetImporter (a .uss file's importer) has no class in Unbound, which imports style sheets itself: a style sheet's GUID-only .meta answers AssetImporter where the Editor answers StyleSheetImporter (follow-up; tests/projects/importerpick Guid.uss)"
-  },
-  {
-    "case": "refresh-changes",
-    "key": "document.after",
-    "reference": [
-      "second"
-    ],
-    "actual": [
-      "first"
-    ],
-    "reason": "A UI Toolkit document (VisualTreeAsset) loaded before its file changed: the Editor reimports it in place and a clone shows the new content; Unbound builds a document's tree in state its serialized values do not hold and takes no new import into the engine's own script objects, so the loaded document keeps its old content, with a warning (follow-up)"
   }
 ]

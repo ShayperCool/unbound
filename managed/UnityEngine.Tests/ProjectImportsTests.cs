@@ -214,7 +214,8 @@ namespace UnityEngine.Tests
 
         /// <summary>A loaded text asset takes a new import's content (the copy, destroyed next, the
         /// old one); what is kept in place: text assets, imported textures (not one a script made)
-        /// materials and game scripts' objects, not the engine's own script objects or meshes.</summary>
+        /// materials, UI Toolkit documents and game scripts' objects, not the engine's other script
+        /// objects (a style sheet) or meshes.</summary>
         [Fact]
         public void WhatTakesANewImportInPlace()
         {
@@ -225,7 +226,8 @@ namespace UnityEngine.Tests
             Assert.Equal("notes", copy.text);
             Assert.True(AssetDatabaseRuntime.TakesContentInPlace(kept));
             var game = ScriptableObject.CreateInstance<GameData>();
-            var engine = ScriptableObject.CreateInstance<UnityEngine.UIElements.VisualTreeAsset>();
+            var engine = ScriptableObject.CreateInstance<UnityEngine.UIElements.StyleSheet>();
+            var document = ScriptableObject.CreateInstance<UnityEngine.UIElements.VisualTreeAsset>();
             var texture = new Texture2D(4, 4);
             var material = new Material(Shader.Find("Hidden/InternalErrorShader"));
             var mesh = new Mesh();
@@ -233,13 +235,39 @@ namespace UnityEngine.Tests
             {
                 Assert.True(AssetDatabaseRuntime.TakesContentInPlace(game));
                 Assert.False(AssetDatabaseRuntime.TakesContentInPlace(engine));
+                Assert.True(AssetDatabaseRuntime.TakesContentInPlace(document));
                 Assert.False(AssetDatabaseRuntime.TakesContentInPlace(texture));
                 Assert.True(AssetDatabaseRuntime.TakesContentInPlace(material));
                 Assert.False(AssetDatabaseRuntime.TakesContentInPlace(mesh));
             }
             finally
             {
-                foreach (var o in new Object[] { game, engine, texture, material, mesh }) Object.DestroyImmediate(o);
+                foreach (var o in new Object[] { game, engine, document, texture, material, mesh }) Object.DestroyImmediate(o);
+            }
+        }
+
+        /// <summary>A loaded UI Toolkit document takes its changed file's tree: a clone made after
+        /// shows the new content, the copy the old (matches the Unity 6000.0.71f1 Editor,
+        /// tests/projects/scenesave refresh-changes document.after).</summary>
+        [Fact]
+        public void ALoadedDocumentTakesItsNewTree()
+        {
+            const string path = "Assets/Doc.uxml";
+            var kept = ScriptableObject.CreateInstance<UnityEngine.UIElements.VisualTreeAsset>();
+            var copy = ScriptableObject.CreateInstance<UnityEngine.UIElements.VisualTreeAsset>();
+            try
+            {
+                Unbound.UIElements.UxmlImporter.Import(path, "<ui:UXML xmlns:ui=\"UnityEngine.UIElements\"><ui:Label text=\"first\" /></ui:UXML>\n", kept);
+                Unbound.UIElements.UxmlImporter.Import(path, "<ui:UXML xmlns:ui=\"UnityEngine.UIElements\"><ui:Label text=\"second\" /></ui:UXML>\n", copy);
+                Assert.Null(AssetDatabaseRuntime.InPlaceRefusal(kept, copy));
+                AssetDatabaseRuntime.SwapContent(copy, kept);
+                Assert.Equal("second", UnityEngine.UIElements.UQueryExtensions.Q<UnityEngine.UIElements.Label>(kept.CloneTree()).text);
+                Assert.Equal("first", UnityEngine.UIElements.UQueryExtensions.Q<UnityEngine.UIElements.Label>(copy.CloneTree()).text);
+            }
+            finally
+            {
+                Object.DestroyImmediate(kept);
+                Object.DestroyImmediate(copy);
             }
         }
 
