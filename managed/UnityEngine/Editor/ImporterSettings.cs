@@ -282,6 +282,13 @@ namespace UnityEditor
             set { CheckImporterState("set_streamingMipmaps"); SetB("streamingMipmaps", value); }
         }
 
+        /// <summary>Mipmap streaming's priority (the .meta's streamingMipmapsPriority).</summary>
+        public int streamingMipmapsPriority
+        {
+            get { CheckImporterState("get_streamingMipmapsPriority"); return I("streamingMipmapsPriority"); }
+            set { CheckImporterState("set_streamingMipmapsPriority"); SetI("streamingMipmapsPriority", value); }
+        }
+
         public int anisoLevel
         {
             get { CheckImporterState("get_anisoLevel"); return Read(m_Settings, "textureSettings.aniso"); }

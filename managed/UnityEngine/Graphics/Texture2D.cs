@@ -223,15 +223,8 @@ namespace UnityEngine
         internal override int MipmapCount() => m_SourceMips > 0 ? m_SourceMips : m_MipCount;
         public bool alphaIsTransparency { get; set; }
         internal bool isPreProcessed => false;
-        public bool streamingMipmaps { get { Stubs.Ignored("Texture2D.streamingMipmaps", "is not read from the import settings: texture streaming is not simulated"); return false; } }
-        public int streamingMipmapsPriority { get { Stubs.Ignored("Texture2D.streamingMipmapsPriority", "is not read from the import settings: texture streaming is not simulated"); return 0; } }
-        public int requestedMipmapLevel { get; set; }
-        public int minimumMipmapLevel { get; set; }
         [Unbound.EditorFaithful("virtual texturing is an HDRP-only, opt-in player setting: no texture of a built-in or URP project is VT-only")]
         public bool vtOnly => false;
-        public int desiredMipmapLevel { get { Stubs.Ignored("Texture2D.desiredMipmapLevel", "is not simulated: every mip of every texture is loaded"); return 0; } }
-        public int loadingMipmapLevel { get { Stubs.Ignored("Texture2D.loadingMipmapLevel", "is not simulated: every mip of every texture is loaded"); return 0; } }
-        public int loadedMipmapLevel { get { Stubs.Ignored("Texture2D.loadedMipmapLevel", "is not simulated: every mip of every texture is loaded"); return 0; } }
         internal bool m_IgnoreMipmapLimit;
 
         /// <summary>Whether the quality level's mipmap limit leaves the texture whole. Only a

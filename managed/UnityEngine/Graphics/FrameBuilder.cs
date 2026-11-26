@@ -2709,6 +2709,14 @@ namespace UnityEngine
         public static int shadowCascades { get; set; } = 4;
         public static ShadowResolution shadowResolution { get; set; } = ShadowResolution.High;
         public static ShadowmaskMode shadowmaskMode { get; set; } = ShadowmaskMode.DistanceShadowmask;
+        // Mipmap streaming's settings of the active quality level (a script's value stays until
+        // the next level is applied; tests/projects/mipstreaming).
+        public static bool streamingMipmapsActive { get; set; }
+        public static float streamingMipmapsMemoryBudget { get; set; } = 512f;
+        public static int streamingMipmapsRenderersPerFrame { get; set; } = 512;
+        public static int streamingMipmapsMaxLevelReduction { get; set; } = 2;
+        public static bool streamingMipmapsAddAllCameras { get; set; } = true;
+        public static int streamingMipmapsMaxFileIORequests { get; set; } = 1024;
         public static float shadowNearPlaneOffset { get; set; } = 3f;
         public static float shadowCascade2Split { get; set; } = 1f / 3f;
         public static Vector3 shadowCascade4Split { get; set; } = new Vector3(0.06666667f, 0.2f, 0.46666667f);
@@ -2802,6 +2810,12 @@ namespace UnityEngine
             if (d.TryGetValue("shadowCascade4Split", out var split) && split.ValueKind == System.Text.Json.JsonValueKind.Array && split.GetArrayLength() == 3)
                 shadowCascade4Split = new Vector3(split[0].GetSingle(), split[1].GetSingle(), split[2].GetSingle());
             shadowmaskMode = (ShadowmaskMode)I("shadowmaskMode", (int)shadowmaskMode);
+            streamingMipmapsActive = B("streamingMipmapsActive", streamingMipmapsActive);
+            streamingMipmapsMemoryBudget = F("streamingMipmapsMemoryBudget", streamingMipmapsMemoryBudget);
+            streamingMipmapsRenderersPerFrame = I("streamingMipmapsRenderersPerFrame", streamingMipmapsRenderersPerFrame);
+            streamingMipmapsMaxLevelReduction = I("streamingMipmapsMaxLevelReduction", streamingMipmapsMaxLevelReduction);
+            streamingMipmapsAddAllCameras = B("streamingMipmapsAddAllCameras", streamingMipmapsAddAllCameras);
+            streamingMipmapsMaxFileIORequests = I("streamingMipmapsMaxFileIORequests", streamingMipmapsMaxFileIORequests);
             skinWeights = (SkinWeights)I("skinWeights", (int)skinWeights);
             globalTextureMipmapLimit = I("globalTextureMipmapLimit", globalTextureMipmapLimit);
             if (d.TryGetValue("textureMipmapLimitSettings", out var groups) && groups.ValueKind == System.Text.Json.JsonValueKind.Array && groups.GetArrayLength() > 0)
