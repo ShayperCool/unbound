@@ -320,7 +320,7 @@ namespace Unbound.Runtime
                         break;
                 }
                 // Names get their ids as the shader is read, as in Unity (ids order texture names).
-                Shader.PropertyToID(info.Name);
+                Shader.RegisterPropertyName(info);
                 list.Add(info);
             }
             layoutKnown &= block.AsSpan(parsedThrough).IsWhiteSpace();

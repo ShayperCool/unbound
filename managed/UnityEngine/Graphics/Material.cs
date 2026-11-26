@@ -1222,10 +1222,10 @@ namespace UnityEngine
         /// The material's properties of a kind, its shader's and the ones set from script for names
         /// the shader does not declare, by property id (the order of <see cref="Shader.PropertyToID"/>:
         /// the engine's names first, then each name as it is first given one, a shader's as it
-        /// loads). A texture brings its _ST, _TexelSize and _HDR vectors; an array set from script is
-        /// a property of its element's kind (matches the Unity 6000.0.71f1 Editor,
-        /// tests/projects/materialnames set.*, order.*; tests/projects/materials). Where the
-        /// engine's names are not measured (<see cref="Compat.EnginePropertyNames"/>), the shader's
+        /// loads, a texture's _ST, _TexelSize and _HDR right after it). A texture brings those
+        /// vectors; an array set from script is a property of its element's kind (matches the Unity
+        /// 6000.0.71f1 Editor, tests/projects/materialnames set.*, order.*; tests/projects/materials). Where the
+        /// engine's names are not measured (<see cref="Shader.EngineOrderMeasured"/>), the shader's
         /// are listed in declaration order before the others.
         /// </summary>
         public string[] GetPropertyNames(MaterialPropertyType type)
@@ -1248,7 +1248,7 @@ namespace UnityEngine
                             break;
                     }
                 }
-            bool byId = Compat.EnginePropertyNames != null;
+            bool byId = Shader.EngineOrderMeasured;
             List<int> scripted = null;
             if (byId)
             {

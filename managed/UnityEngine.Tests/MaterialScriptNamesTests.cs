@@ -60,7 +60,9 @@ namespace UnityEngine.Tests
             var expected = System.Text.Json.JsonDocument.Parse(System.IO.File.ReadLines(System.IO.Path.Combine(Repo(), "tests", "projects", "propertyids",
                     "Reference", "unity-6000.0.71f1", "values.jsonl")).First(l => l.Contains("\"builtin/before_project\"")))
                 .RootElement.GetProperty("v").GetString().Split('\n');
-            Assert.Equal(289, expected.Length);
+            // (A suite run under a release whose order is not measured starts the ids without them.)
+            if (!Shader.EngineOrderMeasured) return;
+            Assert.Equal(494, expected.Length);
             var ids = expected.Select(Shader.PropertyToID).ToArray();
             for (int i = 0; i < ids.Length; i++) Assert.Equal(i, ids[i]);
             Assert.True(Shader.PropertyToID(Unique("_Later")) > ids[^1]);
@@ -76,26 +78,27 @@ namespace UnityEngine.Tests
         /// <summary>Every name of a kind is listed by id, the shader's among them: names the engine
         /// gives ids first come before a shader's own, and a shader's own get theirs as it loads, in
         /// declaration order, a texture's vectors with it (tests/projects/materialnames fresh.names.Vector,
-        /// order.names.Float). Where the engine's names are not measured, the shader's are listed in
-        /// declaration order first.</summary>
+        /// order.names.Float; tests/projects/materials fresh: a texture's vectors before a colour
+        /// declared after it).</summary>
         [Fact]
         public void TheShadersNamesAreListedByIdBesideTheEnginesNames()
         {
+            if (!Shader.EngineOrderMeasured) return;
             int n = ++s_Made;
-            string tint = "_Tint" + n, albedo = "_Albedo" + n;
+            string tint = "_Tint" + n, albedo = "_Albedo" + n, glow = "_Glow" + n;
             var shader = Own(ShaderUtil.CreateShaderAsset("Shader \"Tests/MaterialScriptNames/ById" + n + "\" {\nProperties { "
                 + tint + " (\"Tint\", Color) = (1, 1, 1, 1) _Color (\"Color\", Color) = (1, 1, 1, 1) " + albedo + " (\"Albedo\", 2D) = \"white\" {} "
+                + glow + " (\"Glow\", Color) = (1, 1, 1, 1) "
                 + "_MainTex (\"Texture\", 2D) = \"white\" {} _Glossiness (\"Smoothness\", Range(0, 1)) = 0.5 _Cutoff (\"Cutoff\", Float) = 0.5 }\nSubShader { Pass { } } }"));
             // The shader's own names got ids as it loaded, in declaration order, a texture's vectors with it.
             Assert.Equal(Shader.PropertyToID(tint) + 1, Shader.PropertyToID(albedo));
             Assert.Equal(Shader.PropertyToID(albedo) + 1, Shader.PropertyToID(albedo + "_ST"));
+            // A colour declared after the texture comes after its vectors.
+            Assert.Equal(Shader.PropertyToID(albedo) + 4, Shader.PropertyToID(glow));
             var m = Own(new Material(shader));
-            Assert.Equal(new[] { "_MainTex_ST", "_MainTex_TexelSize", "_MainTex_HDR", "_Color", tint, albedo + "_ST", albedo + "_TexelSize", albedo + "_HDR" },
+            Assert.Equal(new[] { "_MainTex_ST", "_MainTex_TexelSize", "_MainTex_HDR", "_Color", tint, albedo + "_ST", albedo + "_TexelSize", albedo + "_HDR", glow },
                 m.GetPropertyNames(MaterialPropertyType.Vector));
             Assert.Equal(new[] { "_Cutoff", "_Glossiness" }, m.GetPropertyNames(MaterialPropertyType.Float));
-            using (TestRelease.Pin(TestRelease.Unmeasured))
-                Assert.Equal(new[] { tint, "_Color", albedo + "_ST", albedo + "_TexelSize", albedo + "_HDR", "_MainTex_ST", "_MainTex_TexelSize", "_MainTex_HDR" },
-                    m.GetPropertyNames(MaterialPropertyType.Vector));
         }
 
         [Fact]

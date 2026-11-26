@@ -37,11 +37,39 @@ namespace UnityEngine
 
         static int RegisterEngineNames()
         {
-            foreach (var name in Compat.EnginePropertyNames ?? s_UnmeasuredEngineNames) PropertyToID(name);
+            // (Not a static field: this runs from the static initializers, before later ones.)
+            var measured = Compat.EnginePropertyNames;
+            s_EngineOrderMeasured = measured != null;
+            foreach (var name in measured ?? new[] { "_MainTex", "_Color" }) PropertyToID(name);
             return s_PropertyCount;
         }
 
-        static readonly string[] s_UnmeasuredEngineNames = { "_MainTex", "_Color" };
+        static bool s_EngineOrderMeasured;
+
+        /// <summary>Whether the engine's names were given their ids in the release's measured order
+        /// (<see cref="Compat.EnginePropertyNames"/>, read once, when the ids start).</summary>
+        internal static bool EngineOrderMeasured
+        {
+            get
+            {
+                _ = s_EngineNames;
+                return s_EngineOrderMeasured;
+            }
+        }
+
+        /// <summary>How many names have the engine's ids, given before any other
+        /// (<see cref="Compat.EnginePropertyNames"/>).</summary>
+        internal static int EngineNameCount => s_EngineNames;
+
+        /// <summary>Gives a shader's declared name its id, a texture's _ST, _TexelSize and _HDR
+        /// theirs right after it, as the Editor numbers a shader's names when it loads it (names
+        /// given ids before keep theirs; matches the Unity 6000.0.71f1 Editor,
+        /// tests/projects/materials fresh.GetPropertyNames, tests/projects/animmaterialbindings).</summary>
+        internal static void RegisterPropertyName(ShaderPropertyInfo property)
+        {
+            int id = PropertyToID(property.Name);
+            if (property.Type == ShaderPropertyType.Texture) TextureCompanionIds(id);
+        }
         internal static readonly HashSet<string> s_GlobalKeywords = new HashSet<string>();
         internal static readonly Dictionary<int, object> s_Globals = new Dictionary<int, object>();
 
@@ -613,14 +641,9 @@ namespace UnityEngine
         internal void PropertiesChanged(bool layoutKnown = false)
         {
             m_ById = null;
-            // The shader's names get ids as it loads, in declaration order, a texture's _ST,
-            // _TexelSize and _HDR with it (names given ids before keep theirs; matches the Unity
-            // 6000.0.71f1 Editor, tests/projects/propertyids project.*, tests/projects/materialnames order.*).
-            foreach (var property in m_Properties)
-            {
-                int id = PropertyToID(property.Name);
-                if (property.Type == ShaderPropertyType.Texture) TextureCompanionIds(id);
-            }
+            // The shader's names have ids from its load, in declaration order (ShaderLab.Properties
+            // gives a project shader's as it reads them; a built-in shader's defaults get theirs here).
+            foreach (var property in m_Properties) RegisterPropertyName(property);
             ProfilerLayoutVersion++;
             ProfilerPropertyLayout = layoutKnown && Compat.MaterialScalarMemoryMeasured ? MeasureProfilerPropertyLayout() : null;
         }
