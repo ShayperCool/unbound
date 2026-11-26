@@ -396,21 +396,20 @@ pub fn text(importer: NewImporter, guid: Guid, asset: &Path, context: &MetaConte
 /// A new texture's section in a project of the 2D default behaviour mode: the Editor imports it
 /// as sprites (`Multiple`), sliced automatically, clamped, without mipmaps or NPOT scaling, its
 /// alpha transparency (matches the Unity 6000.0.71f1 Editor, tests/projects/spritemeta New,
-/// NewNpot): a PNG of no transparent pixel is one sprite `<name>_0` of the whole texture, whose
-/// file id and sprite ID are the Editor's hashes. The slicing of one with transparent pixels, and
-/// other formats, are not measured: they keep the Default texture's section, with a warning.
+/// NewNpot, NewGaps, Slice*): sprites `<name>_<i>` of the rects [`crate::sprite_slice::slice`]
+/// gives (an opaque PNG: one of the whole texture), whose file ids and sprite IDs are the Editor's
+/// hashes. Other formats are not measured: they keep the Default texture's section, with a warning.
 fn sprites_2d(section: String, asset: &Path) -> String {
     let png = asset
         .extension()
         .is_some_and(|e| e.eq_ignore_ascii_case("png"));
-    let opaque = png
+    let decoded = png
         .then(|| std::fs::read(asset).ok())
         .flatten()
-        .and_then(|bytes| crate::image_io::decode(&bytes).ok())
-        .filter(|image| image.rgba.chunks_exact(4).all(|pixel| pixel[3] > 0));
-    let Some(image) = opaque else {
+        .and_then(|bytes| crate::image_io::decode(&bytes).ok());
+    let Some(image) = decoded else {
         tracing::warn!(
-            "{}: in a 2D project the Editor imports a new texture as sprites, sliced automatically; Unbound does so for an opaque PNG only (not one with transparent pixels, another format or one it cannot read) yet, so this one imports as a Default texture",
+            "{}: in a 2D project the Editor imports a new texture as sprites, sliced automatically; Unbound does so for a PNG only (not another format or one it cannot read) yet, so this one imports as a Default texture",
             asset.display()
         );
         return section;
@@ -419,17 +418,30 @@ fn sprites_2d(section: String, asset: &Path) -> String {
         .file_stem()
         .map(|s| s.to_string_lossy().into_owned())
         .unwrap_or_default();
-    let name = format!("{stem}_0");
-    let id = crate::meta::hashed_file_id("Sprite", &name, 0);
-    let sprite_id = crate::meta::sprite_id(id);
+    // Rows bottom first in the decoded image, as the slicing's y.
     let (width, height) = (image.width, image.height);
+    let rects = crate::sprite_slice::slice(width, height, |x, y| {
+        image.rgba[(y as usize * width as usize + x as usize) * 4 + 3]
+    });
+    let (mut table, mut sprites, mut names) = (String::new(), String::new(), String::new());
+    for (i, r) in rects.iter().enumerate() {
+        let name = format!("{stem}_{i}");
+        let id = crate::meta::hashed_file_id("Sprite", &name, 0);
+        let sprite_id = crate::meta::sprite_id(id);
+        table.push_str(&format!(
+            "  - first:\n      {SPRITE_CLASS_ID}: {id}\n    second: {name}\n"
+        ));
+        sprites.push_str(&format!(
+            "    - serializedVersion: 2\n      name: {name}\n      rect:\n        serializedVersion: 2\n        x: {}\n        y: {}\n        width: {}\n        height: {}\n      alignment: 0\n      pivot: {{x: 0, y: 0}}\n      border: {{x: 0, y: 0, z: 0, w: 0}}\n      customData: \n      outline: []\n      physicsShape: []\n      tessellationDetail: -1\n      bones: []\n      spriteID: {sprite_id}\n      internalID: {id}\n      vertices: []\n      indices: \n      edges: []\n      weights: []\n",
+            r.x, r.y, r.width, r.height
+        ));
+        names.push_str(&format!("      {name}: {id}\n"));
+    }
     let mut text = section;
     for (from, to) in [
         (
             "  internalIDToNameTable: []\n".to_string(),
-            format!(
-                "  internalIDToNameTable:\n  - first:\n      {SPRITE_CLASS_ID}: {id}\n    second: {name}\n"
-            ),
+            format!("  internalIDToNameTable:\n{table}"),
         ),
         (
             "    enableMipMap: 1\n".into(),
@@ -447,13 +459,11 @@ fn sprites_2d(section: String, asset: &Path) -> String {
         ("  textureType: 0\n".into(), "  textureType: 8\n".into()),
         (
             "    sprites: []\n".into(),
-            format!(
-                "    sprites:\n    - serializedVersion: 2\n      name: {name}\n      rect:\n        serializedVersion: 2\n        x: 0\n        y: 0\n        width: {width}\n        height: {height}\n      alignment: 0\n      pivot: {{x: 0, y: 0}}\n      border: {{x: 0, y: 0, z: 0, w: 0}}\n      customData: \n      outline: []\n      physicsShape: []\n      tessellationDetail: -1\n      bones: []\n      spriteID: {sprite_id}\n      internalID: {id}\n      vertices: []\n      indices: \n      edges: []\n      weights: []\n"
-            ),
+            format!("    sprites:\n{sprites}"),
         ),
         (
             "    nameFileIdTable: {}\n".into(),
-            format!("    nameFileIdTable:\n      {name}: {id}\n"),
+            format!("    nameFileIdTable:\n{names}"),
         ),
     ] {
         debug_assert!(text.contains(&from), "the texture template has no {from:?}");
@@ -704,8 +714,8 @@ mod tests {
         ] {
             assert!(sprites.contains(line), "{line:?} not in\n{sprites}");
         }
-        // In a 3D project, and for a texture with a transparent pixel (whose slicing is not
-        // known), the Default texture's section.
+        // In a 3D project the Default texture's section; a texture with transparent pixels is
+        // sliced (crate::sprite_slice: a region too narrow alone gives the whole texture).
         let default = text(
             NewImporter::Texture,
             Guid(1),
@@ -716,7 +726,7 @@ mod tests {
         png(&gaps, 4, 4, |x, _| if x == 0 { 0 } else { 255 });
         let transparent = text(NewImporter::Texture, Guid(1), &gaps, &context);
         assert!(default.contains("  textureType: 0\n  textureShape"));
-        assert_eq!(transparent, default);
+        assert!(transparent.contains("      name: Gaps_0\n      rect:\n        serializedVersion: 2\n        x: 0\n        y: 0\n        width: 4\n        height: 4\n"));
         assert_eq!(
             text(NewImporter::Texture, Guid(1), &opaque, &context.in_3d()),
             default

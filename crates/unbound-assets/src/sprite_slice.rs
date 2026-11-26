@@ -1,0 +1,228 @@
+//! The automatic slicing a 2D project's new texture gets at its first import: the sprite rects the
+//! Editor writes into its `.meta` (matches the Unity 6000.0.71f1 Editor, tests/projects/spritemeta
+//! sprites.New*, sprites.Slice*, sprites.Sess*).
+//!
+//! The measured rule: the regions of pixels whose alpha is not 0, 8-connected; a region narrower or
+//! lower than [`MIN_SIZE`] is small and joins the nearest region that is not (the rect around
+//! both); without any such region the texture is one sprite of its whole size. Each rect grows by
+//! one pixel on every side, within the texture. The sprites come in the order a scan from the top
+//! row down, each row left to right, first meets their regions; when small regions were joined, in
+//! reading order instead: a rect before another whose rows it shares and that lies to its right,
+//! else the higher one first (spritemeta sprites.SliceTwoBigDot, SliceSmallBetween, SliceRowMerge,
+//! SliceTopDot, SliceMany; without joins, SliceChain keeps the scan order).
+
+/// The size under which a region is small (in either direction).
+pub const MIN_SIZE: u32 = 4;
+
+/// A rect in texture pixels, bottom-left origin.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct Rect {
+    pub x: u32,
+    pub y: u32,
+    pub width: u32,
+    pub height: u32,
+}
+
+/// The rects of a `width` x `height` texture's sprites; `alpha(x, y)` (bottom-left origin) the
+/// texel's alpha.
+pub fn slice(width: u32, height: u32, alpha: impl Fn(u32, u32) -> u8) -> Vec<Rect> {
+    let whole = vec![Rect {
+        x: 0,
+        y: 0,
+        width,
+        height,
+    }];
+    if width == 0 || height == 0 {
+        return whole;
+    }
+    let mut regions = regions(width, height, &alpha);
+    let small = |r: &[u32; 4]| r[2] - r[0] + 1 < MIN_SIZE || r[3] - r[1] + 1 < MIN_SIZE;
+    if regions.iter().all(small) {
+        return whole;
+    }
+    let mut joined = false;
+    let mut i = 0;
+    while i < regions.len() {
+        if !small(&regions[i]) {
+            i += 1;
+            continue;
+        }
+        let s = regions[i];
+        // The nearest region that is not small, by the gap between their rects; of equal ones the
+        // last in scan order (spritemeta sprites.SliceSmallBetween).
+        let mut best: Option<(usize, u64)> = None;
+        for (j, r) in regions.iter().enumerate() {
+            if j == i || small(r) {
+                continue;
+            }
+            let d = gap(&s, r);
+            if best.is_none_or(|(_, b)| d <= b) {
+                best = Some((j, d));
+            }
+        }
+        let (j, _) = best.expect("a region that is not small exists");
+        let b = regions[j];
+        regions[j] = [
+            s[0].min(b[0]),
+            s[1].min(b[1]),
+            s[2].max(b[2]),
+            s[3].max(b[3]),
+        ];
+        regions.remove(i);
+        joined = true;
+    }
+    let mut rects: Vec<Rect> = regions
+        .iter()
+        .map(|r| {
+            let (x0, y0) = (r[0].saturating_sub(1), r[1].saturating_sub(1));
+            let (x1, y1) = ((r[2] + 2).min(width), (r[3] + 2).min(height));
+            Rect {
+                x: x0,
+                y: y0,
+                width: x1 - x0,
+                height: y1 - y0,
+            }
+        })
+        .collect();
+    if joined {
+        // Insertion into reading order, from the scan order.
+        for k in 1..rects.len() {
+            let mut m = k;
+            while m > 0 && reads_before(&rects[m], &rects[m - 1]) {
+                rects.swap(m, m - 1);
+                m -= 1;
+            }
+        }
+    }
+    rects
+}
+
+/// Whether `a` comes before `b` in reading order: on shared rows (touching counts), the one to the
+/// left; else the higher one.
+fn reads_before(a: &Rect, b: &Rect) -> bool {
+    let share = a.y <= b.y + b.height && b.y <= a.y + a.height;
+    if share { a.x < b.x } else { a.y > b.y }
+}
+
+/// The squared gap between two inclusive pixel rects (0 when they touch or overlap).
+fn gap(a: &[u32; 4], b: &[u32; 4]) -> u64 {
+    let dx = (a[0].max(b[0]) as i64 - a[2].min(b[2]) as i64 - 1).max(0) as u64;
+    let dy = (a[1].max(b[1]) as i64 - a[3].min(b[3]) as i64 - 1).max(0) as u64;
+    dx * dx + dy * dy
+}
+
+/// The 8-connected regions of non-zero alpha as inclusive rects `[x0, y0, x1, y1]`, in the order a
+/// scan from the top row down, left to right, meets them.
+fn regions(width: u32, height: u32, alpha: &impl Fn(u32, u32) -> u8) -> Vec<[u32; 4]> {
+    let (w, h) = (width as usize, height as usize);
+    let mut seen = vec![false; w * h];
+    let mut out = Vec::new();
+    let mut stack = Vec::new();
+    for y in (0..height).rev() {
+        for x in 0..width {
+            let at = y as usize * w + x as usize;
+            if seen[at] || alpha(x, y) == 0 {
+                continue;
+            }
+            seen[at] = true;
+            stack.push((x, y));
+            let mut r = [x, y, x, y];
+            while let Some((px, py)) = stack.pop() {
+                r = [r[0].min(px), r[1].min(py), r[2].max(px), r[3].max(py)];
+                for dy in -1i64..=1 {
+                    for dx in -1i64..=1 {
+                        let (qx, qy) = (px as i64 + dx, py as i64 + dy);
+                        if qx < 0 || qy < 0 || qx >= w as i64 || qy >= h as i64 {
+                            continue;
+                        }
+                        let q = qy as usize * w + qx as usize;
+                        if !seen[q] && alpha(qx as u32, qy as u32) != 0 {
+                            seen[q] = true;
+                            stack.push((qx as u32, qy as u32));
+                        }
+                    }
+                }
+            }
+            out.push(r);
+        }
+    }
+    out
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{Rect, slice};
+    use std::collections::HashSet;
+
+    fn rect(x: u32, y: u32, width: u32, height: u32) -> Rect {
+        Rect {
+            x,
+            y,
+            width,
+            height,
+        }
+    }
+
+    /// Blocks `(x0, x1, y0, y1)` inclusive, opaque.
+    fn image(blocks: &[(u32, u32, u32, u32)]) -> impl Fn(u32, u32) -> u8 {
+        let set: HashSet<(u32, u32)> = blocks
+            .iter()
+            .flat_map(|&(x0, x1, y0, y1)| {
+                (x0..=x1).flat_map(move |x| (y0..=y1).map(move |y| (x, y)))
+            })
+            .collect();
+        move |x, y| if set.contains(&(x, y)) { 255 } else { 0 }
+    }
+
+    /// The Editor's rects (tests/projects/spritemeta Reference): grown by a pixel, clamped;
+    /// small regions joined to the nearest; all small: the whole texture.
+    #[test]
+    fn the_editors_rects() {
+        let s = |blocks: &[(u32, u32, u32, u32)]| slice(16, 16, image(blocks));
+        // SliceEdge: two far blocks, top first.
+        assert_eq!(
+            s(&[(0, 3, 12, 15), (10, 13, 2, 5)]),
+            [rect(0, 11, 5, 5), rect(9, 1, 6, 6)]
+        );
+        // SliceDiag: blocks touching at a corner are one region.
+        assert_eq!(s(&[(2, 4, 2, 4), (5, 7, 5, 7)]), [rect(1, 1, 8, 8)]);
+        // SliceDot: a pixel joins the block.
+        assert_eq!(s(&[(12, 12, 12, 12), (2, 5, 2, 5)]), [rect(1, 1, 13, 13)]);
+        // SliceAlone3 / SliceAlone4: the threshold.
+        assert_eq!(s(&[(6, 8, 6, 8)]), [rect(0, 0, 16, 16)]);
+        assert_eq!(s(&[(6, 9, 6, 9)]), [rect(5, 5, 6, 6)]);
+        // SliceEmpty.
+        assert_eq!(s(&[]), [rect(0, 0, 16, 16)]);
+        // SliceThin: narrow is small.
+        assert_eq!(s(&[(2, 4, 2, 11), (9, 14, 9, 14)]), [rect(1, 1, 15, 15)]);
+        // SliceChain: no join, scan order.
+        assert_eq!(
+            s(&[(6, 9, 1, 4), (12, 15, 5, 8), (0, 3, 9, 12)]),
+            [rect(0, 8, 5, 6), rect(11, 4, 5, 6), rect(5, 0, 6, 6)]
+        );
+        // SliceTwoBigDot: joined, reading order.
+        assert_eq!(
+            s(&[(1, 5, 1, 5), (10, 14, 10, 14), (12, 12, 7, 7)]),
+            [rect(0, 0, 7, 7), rect(9, 6, 7, 10)]
+        );
+        // SliceSmallBetween: a tie joins the later one in scan order.
+        assert_eq!(
+            s(&[(1, 4, 1, 4), (11, 14, 11, 14), (7, 8, 7, 8)]),
+            [rect(0, 0, 10, 10), rect(10, 10, 6, 6)]
+        );
+        // SliceRowMerge.
+        assert_eq!(
+            s(&[(1, 4, 1, 4), (11, 14, 1, 4), (6, 9, 12, 15), (6, 7, 6, 7)]),
+            [rect(5, 11, 6, 5), rect(0, 0, 9, 9), rect(10, 0, 6, 6)]
+        );
+        // SliceNpot: a 10x6 texture of small regions.
+        assert_eq!(
+            slice(10, 6, image(&[(1, 2, 1, 2), (6, 8, 2, 4)])),
+            [rect(0, 0, 10, 6)]
+        );
+        // An opaque texture: one sprite of its size.
+        assert_eq!(slice(6, 5, |_, _| 255), [rect(0, 0, 6, 5)]);
+        // A faint texel is opaque.
+        assert_eq!(slice(4, 4, |_, _| 1), [rect(0, 0, 4, 4)]);
+    }
+}

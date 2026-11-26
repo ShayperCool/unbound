@@ -47,6 +47,7 @@ mod speedtree_tables;
 pub mod sprite;
 pub mod sprite_atlas;
 pub mod sprite_mesh;
+pub mod sprite_slice;
 pub mod texture;
 
 pub use audio::{AudioImporter, AudioSettings, ImportedAudio};
