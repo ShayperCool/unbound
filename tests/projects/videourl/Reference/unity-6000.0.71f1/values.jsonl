@@ -1,0 +1,14 @@
+{"k":"clip.before","v":["Url","BASE/clip.webm",false,0,0,0,0]}
+{"k":"clip.afterPrepare","v":[false,0]}
+{"k":"clip.prepared","v":[true,1,[],0,30,64,48,3,10,true,true]}
+{"k":"clip.frame5","v":[true,5,[[255,0,0],[1,0,62],[112,26,51]]]}
+{"k":"tone.before","v":["Url","BASE/tone.webm",false,0,0,0,0]}
+{"k":"tone.afterPrepare","v":[false,0]}
+{"k":"tone.prepared","v":[true,1,[],1,30,64,48,3,10,true,true]}
+{"k":"missing.before","v":["Url","BASE/missing.webm",false,0,0,0,0]}
+{"k":"missing.afterPrepare","v":[false,0]}
+{"k":"missing.prepared","v":[false,0,["VideoPlayer cannot play url : BASE/missing.webm\n\nCannot read file."],0,0,0,0,0,0,false,false]}
+{"k":"refused.before","v":["Url","REFUSED/clip.webm",false,0,0,0,0]}
+{"k":"refused.afterPrepare","v":[false,0]}
+{"k":"refused.prepared","v":[false,0,["VideoPlayer cannot play url : REFUSED/clip.webm\n\nCannot read file."],0,0,0,0,0,0,false,false]}
+{"k":"complete","v":true}
