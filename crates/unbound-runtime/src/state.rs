@@ -99,13 +99,19 @@ pub fn state() -> &'static RuntimeState {
     STATE.get().expect("the runtime state is not initialized")
 }
 
+/// A file the Editor imports as a `DefaultAsset`: the DefaultImporter's, of no kind Unbound
+/// loads (a scene, which the DefaultImporter imports too, is not one).
+fn is_default_asset(asset: &unbound_project::assetdb::Asset) -> bool {
+    asset_importer(asset) == "DefaultImporter" && listed_kind(asset) == "unknown"
+}
+
 /// The `Resources` keys of every asset of `db`. A file the DefaultImporter imports (a
 /// `DefaultAsset`: a kind the Editor does not know) is not one of them, whatever its name shares
 /// with other files (matches the Unity 6000.0.71f1 Editor, tests/projects/resourcesnames).
 fn resources_of(db: &AssetDb) -> HashMap<String, Vec<Guid>> {
     let mut resources: HashMap<String, Vec<Guid>> = HashMap::new();
     for asset in db.iter() {
-        if asset.is_folder || asset_importer(asset) == "DefaultImporter" {
+        if asset.is_folder || is_default_asset(asset) {
             continue;
         }
         for key in resources_keys(&asset.path) {
@@ -4245,8 +4251,8 @@ mod tests {
     }
 
     /// A file of a kind the DefaultImporter imports is no Resources asset, alone or beside a
-    /// file of the same name; one a `.meta` gives another importer is
-    /// (tests/projects/resourcesnames).
+    /// file of the same name; one a `.meta` gives another importer is, and so is a kind Unbound
+    /// loads (tests/projects/resourcesnames).
     #[test]
     fn default_assets_are_no_resources() {
         let mut db = AssetDb::default();
@@ -4257,6 +4263,9 @@ mod tests {
             (4, "Assets/Resources/pair/d.mtl", None),
             (5, "Assets/Resources/pair/s.xyz", Some("ScriptedImporter")),
             (6, "Assets/Resources/pair/c.xyz", Some("DefaultImporter")),
+            // Kinds Unbound loads although their .meta names no importer: kept (not measured).
+            (7, "Assets/Resources/pair/v.mp4", None),
+            (8, "Assets/Resources/pair/m.unity", None),
         ] {
             db.insert(unbound_project::assetdb::Asset {
                 guid: Guid(guid),
@@ -4270,7 +4279,7 @@ mod tests {
         let resources = resources_of(&db);
         let mut keys: Vec<_> = resources.keys().cloned().collect();
         keys.sort();
-        assert_eq!(keys, ["pair/a", "pair/d", "pair/s"]);
+        assert_eq!(keys, ["pair/a", "pair/d", "pair/m", "pair/s", "pair/v"]);
         assert_eq!(resources["pair/d"], [Guid(3)]);
     }
 
