@@ -897,7 +897,8 @@ namespace DotRecast.Detour.Crowd
                 RcVec3f p = ag.npos;
                 if (_config.predictNeighbourBounds)
                 {
-                    PredictionBounds(p, ag.vel, GridRadius(ag), _obstacleQueryParams[0].horizTime, out var min, out var max);
+                    HorizontalExtents(ag, out float ex, out float ez);
+                    PredictionBounds(p, ag.vel, ex, ez, _obstacleQueryParams[0].horizTime, out var min, out var max);
                     _grid.AddItem(ag, min.X, min.Z, max.X, max.Z);
                 }
                 else _grid.AddItem(ag, p.X, p.Z, p.X, p.Z);
@@ -907,19 +908,25 @@ namespace DotRecast.Detour.Crowd
         /// The horizontal bounds swept by a neighbour over the prediction time, expanded by
         /// its radius (Unity 6000.0.71f1, tests/projects/navmesh and avoidance).
         public static void PredictionBounds(RcVec3f position, RcVec3f velocity, float radius, float horizon,
+            out RcVec3f min, out RcVec3f max) =>
+            PredictionBounds(position, velocity, radius, radius, horizon, out min, out max);
+
+        /// The horizontal bounds swept by a neighbour over the prediction time, expanded by
+        /// its per-axis horizontal extents (Unity 6000.0.71f1, tests/projects/navpath obstacle-shapes).
+        public static void PredictionBounds(RcVec3f position, RcVec3f velocity, float extentX, float extentZ, float horizon,
             out RcVec3f min, out RcVec3f max)
         {
             float x = position.X + velocity.X * horizon;
             float z = position.Z + velocity.Z * horizon;
             // Keep the previous point insertion for invalid or overflowing stored inputs.
             // They must not turn the cell walk into an unbounded traversal.
-            if (!float.IsFinite(x) || !float.IsFinite(z) || !float.IsFinite(radius))
+            if (!float.IsFinite(x) || !float.IsFinite(z) || !float.IsFinite(extentX) || !float.IsFinite(extentZ))
             {
                 min = max = position;
                 return;
             }
-            min = new RcVec3f(MathF.Min(position.X, x) - radius, 0f, MathF.Min(position.Z, z) - radius);
-            max = new RcVec3f(MathF.Max(position.X, x) + radius, 0f, MathF.Max(position.Z, z) + radius);
+            min = new RcVec3f(MathF.Min(position.X, x) - extentX, 0f, MathF.Min(position.Z, z) - extentZ);
+            max = new RcVec3f(MathF.Max(position.X, x) + extentX, 0f, MathF.Max(position.Z, z) + extentZ);
             if (!float.IsFinite(min.X) || !float.IsFinite(min.Z) || !float.IsFinite(max.X) || !float.IsFinite(max.Z))
                 min = max = position;
         }
@@ -946,13 +953,19 @@ namespace DotRecast.Detour.Crowd
 
         /// Unbound: an agent's share in Unity's grid cell size: its diameter plus how far it goes
         /// within the prediction time along each axis, at <paramref name="vel"/>.
-        public static void AddToGridCell(DtCrowdAgent ag, RcVec3f vel, float horizon, ref float sx, ref float sz) =>
-            AddToGridCell(ag.option.radius, vel, horizon, ref sx, ref sz);
-
-        public static void AddToGridCell(float radius, RcVec3f vel, float horizon, ref float sx, ref float sz)
+        public static void AddToGridCell(DtCrowdAgent ag, RcVec3f vel, float horizon, ref float sx, ref float sz)
         {
-            sx += 2f * radius + horizon * MathF.Abs(vel.X);
-            sz += 2f * radius + horizon * MathF.Abs(vel.Z);
+            HorizontalExtents(ag, out float ex, out float ez);
+            AddToGridCell(ex, ez, vel, horizon, ref sx, ref sz);
+        }
+
+        public static void AddToGridCell(float radius, RcVec3f vel, float horizon, ref float sx, ref float sz) =>
+            AddToGridCell(radius, radius, vel, horizon, ref sx, ref sz);
+
+        public static void AddToGridCell(float extentX, float extentZ, RcVec3f vel, float horizon, ref float sx, ref float sz)
+        {
+            sx += 2f * extentX + horizon * MathF.Abs(vel.X);
+            sz += 2f * extentZ + horizon * MathF.Abs(vel.Z);
         }
 
         /// Unbound: Unity's grid cell along an axis: the agents' mean share, at least MinGridCell.
@@ -1112,8 +1125,8 @@ namespace DotRecast.Detour.Crowd
                     continue;
                 }
 
-                bool uprightCapsule = ag.option.uprightCapsule || ag.option.tiltedCapsule;
-                if (!uprightCapsule && !HeightsOverlap(skip, ag.npos, ag.option.height))
+                bool capsuleObstacle = ag.option.capsuleObstacle;
+                if (!capsuleObstacle && !HeightsOverlap(skip, ag.npos, ag.option.height))
                 {
                     continue;
                 }
@@ -1121,21 +1134,12 @@ namespace DotRecast.Detour.Crowd
                 // In 3D, as Unity's agents measure (a neighbour above or below is farther).
                 RcVec3f diff = RcVec3f.Subtract(ag.npos, pos);
                 float radius = ag.option.radius;
-                if (ag.option.tiltedCapsule)
+                if (capsuleObstacle)
                 {
-                    // Unbound's choice (unmeasured): a tilted capsule whose height misses the
-                    // agent's is no neighbour; one that reaches it ranks by the half-diagonal of
-                    // its horizontal bounds, as an upright one does.
-                    float reachY = MathF.Abs(ag.option.capsuleAxis.Y) + radius;
-                    if (ag.npos.Y - reachY > pos.Y + skip.option.height || ag.npos.Y + reachY < pos.Y) continue;
-                    float ex = radius + MathF.Abs(ag.option.capsuleAxis.X), ez = radius + MathF.Abs(ag.option.capsuleAxis.Z);
+                    // Obstacle admission ranks the center with the horizontal bounds' half-diagonal.
+                    // The clipped capsule section is tested during avoidance and contact.
+                    HorizontalExtents(ag, out float ex, out float ez);
                     radius = MathF.Sqrt(ex * ex + ez * ez);
-                }
-                else if (uprightCapsule)
-                {
-                    // Obstacle admission ranks the center with the horizontal bounds'
-                    // half-diagonal. The capsule section is tested during avoidance and contact.
-                    radius = MathF.Sqrt(radius * radius + radius * radius);
                 }
                 float radii = skip.option.radius + radius;
                 if (moving && RcVec3f.Dot(diff, heading) < -radii)
@@ -1144,9 +1148,9 @@ namespace DotRecast.Detour.Crowd
                 }
 
                 // Both at full speed (an agent standing with both speeds zero: at once if touching).
-                float gap = uprightCapsule ? diff.Length() - radius - skip.option.radius : diff.Length() - radii;
+                float gap = capsuleObstacle ? diff.Length() - radius - skip.option.radius : diff.Length() - radii;
                 float closing = skip.option.reachSpeed + ag.vel.Length();
-                float time = closing > 0f || (uprightCapsule && gap < 0f)
+                float time = closing > 0f || (capsuleObstacle && gap < 0f)
                     ? gap / closing : gap <= 0f ? 0f : float.PositiveInfinity;
                 if (time > horizon)
                 {
@@ -1398,50 +1402,161 @@ namespace DotRecast.Detour.Crowd
             }
         }
 
-        /// <summary>The widest horizontal section of a capsule within the agent's height.</summary>
-        private static bool TryProjectCapsuleRadius(DtCrowdAgent ag, DtCrowdAgent capsule,
-            out float radius, out bool clippedCap)
+        // Axis vertical component above which a shaft wholly beyond the agent's height collapses
+        // to a single clipped cap circle rather than a two-point segment (Unity 6000.0.71f1,
+        // tests/projects/navpath obstacle-shapes: cap5low/cap5high vs cap10low/cap10high).
+        const float UprightCapCosThreshold = 0.99f;
+        const float CapsuleSegmentLengthEpsilon = 1e-5f;
+
+        /// <summary>Per-axis horizontal extents from a crowd participant's center.</summary>
+        public static void HorizontalExtents(DtCrowdAgent ag, out float ex, out float ez)
         {
-            radius = capsule.option.radius;
-            // Translate the center before forming the axis endpoints. The rounding at each
-            // endpoint determines whether the agent sees the shaft, a cap, or no section.
-            float center = capsule.npos.Y - ag.npos.Y;
-            float halfAxis = capsule.option.height * 0.5f - radius;
-            float gap = MathF.Max((center - halfAxis) - ag.option.height, -(center + halfAxis));
-            clippedCap = gap > 0f;
-            if (gap > radius) return false;
-            if (clippedCap) radius = MathF.Sqrt(radius * radius - gap * gap);
-            return true;
+            float r = ag.option.radius;
+            if (ag.option.capsuleObstacle)
+            {
+                ex = MathF.Abs(ag.option.capsuleAxis.X) * ag.option.capsuleHalfShaft + r;
+                ez = MathF.Abs(ag.option.capsuleAxis.Z) * ag.option.capsuleHalfShaft + r;
+                return;
+            }
+            ex = r;
+            ez = r;
         }
 
-        /// Unbound: how far a crowd member reaches from its position in the proximity grid: a tilted
-        /// capsule's radius plus its shaft's half seen from above.
-        public static float GridRadius(DtCrowdAgent ag) => ag.option.tiltedCapsule
-            ? ag.option.radius + MathF.Sqrt(RcMath.Sqr(ag.option.capsuleAxis.X) + RcMath.Sqr(ag.option.capsuleAxis.Z))
-            : ag.option.radius;
-
-        /// Unbound: a tilted capsule as an agent meets it. A shaft wholly within the agent's height:
-        /// the circle of its radius at the point of the shaft nearest the agent seen from above
-        /// (tests/projects/navpath obstacle-shapes caplying, captilt, captiltx: agents are pushed to
-        /// the two radii from the shaft, along +x when on it). Any other shaft (Unbound's choice,
-        /// unmeasured): the circle of its radius at its center, as an upright shaft is met, when its
-        /// height (the shaft's rise plus its radius) reaches the agent's.
-        internal static bool TryProjectTiltedCapsule(DtCrowdAgent ag, DtCrowdAgent capsule,
-            out float radius, out bool clippedCap, out RcVec3f center)
+        /// <summary>Clips a capsule obstacle against the agent's vertical span [0, ag.height] in
+        /// horizontal coordinates relative to the agent's position. Returns 0 (no vertical overlap),
+        /// 1 (single clipped cap circle at p0), or 2 (horizontal segment [p0, p1] of radius capRadius).
+        /// Matches Unity 6000.0.71f1 (tests/projects/navpath obstacle-separation and obstacle-shapes).</summary>
+        internal static int ClipCapsule(DtCrowdAgent ag, DtCrowdAgent capsule,
+            out float p0x, out float p0z, out float p1x, out float p1z, out float capRadius)
         {
-            radius = capsule.option.radius;
-            clippedCap = false;
-            var axis = capsule.option.capsuleAxis;
-            var mid = capsule.npos;
-            center = mid;
-            float bottom = ag.npos.Y, top = ag.npos.Y + ag.option.height;
-            float rise = MathF.Abs(axis.Y);
-            if (mid.Y - rise < bottom || mid.Y + rise > top)
-                return mid.Y - rise - radius <= top && mid.Y + rise + radius >= bottom;
-            float lengthSqr = axis.X * axis.X + axis.Z * axis.Z;
-            float t = lengthSqr > 0f
-                ? Math.Clamp(((ag.npos.X - mid.X) * axis.X + (ag.npos.Z - mid.Z) * axis.Z) / lengthSqr, -1f, 1f) : 0f;
-            center = new RcVec3f(mid.X + axis.X * t, mid.Y + axis.Y * t, mid.Z + axis.Z * t);
+            p0x = p0z = p1x = p1z = 0f;
+            float r = capsule.option.radius;
+            capRadius = r;
+            float halfShaft = capsule.option.capsuleHalfShaft;
+            var u = capsule.option.capsuleAxis;
+            if (u.Y < 0f) u = new RcVec3f(-u.X, -u.Y, -u.Z);
+
+            float rx = capsule.npos.X - ag.npos.X;
+            float ry = capsule.npos.Y - ag.npos.Y;
+            float rz = capsule.npos.Z - ag.npos.Z;
+            float maxY = ag.option.height;
+            if (!float.IsFinite(rx) || !float.IsFinite(ry) || !float.IsFinite(rz)
+                || !float.IsFinite(r) || !float.IsFinite(halfShaft) || !float.IsFinite(maxY)
+                || !float.IsFinite(u.X) || !float.IsFinite(u.Y) || !float.IsFinite(u.Z) || r < 0f)
+                return 0;
+
+            float dyHalf = halfShaft * u.Y;
+            float y0 = ry - dyHalf;
+            float y1 = ry + dyHalf;
+            float ax = halfShaft * u.X;
+            float az = halfShaft * u.Z;
+            float x0 = rx - ax, z0 = rz - az;
+            float x1 = rx + ax, z1 = rz + az;
+
+            // Entire shaft above the agent's head.
+            if (y0 > maxY)
+            {
+                float dy = y0 - maxY;
+                if (dy > r) return 0;
+                p0x = x0;
+                p0z = z0;
+                capRadius = MathF.Sqrt(MathF.Max(0f, r * r - dy * dy));
+                if (u.Y > UprightCapCosThreshold) return 1;
+                if (y1 - maxY < r)
+                {
+                    p1x = x1;
+                    p1z = z1;
+                }
+                else
+                {
+                    float spanY = y1 - y0;
+                    float t = spanY > 0f ? Math.Clamp((dy + (1f - u.Y) * r) / spanY, 0f, 1f) : 1f;
+                    p1x = x0 * (1f - t) + x1 * t;
+                    p1z = z0 * (1f - t) + z1 * t;
+                }
+                return 2;
+            }
+
+            // Entire shaft below the agent's feet.
+            if (y1 < 0f)
+            {
+                float dy = -y1;
+                if (dy > r) return 0;
+                p0x = x1;
+                p0z = z1;
+                capRadius = MathF.Sqrt(MathF.Max(0f, r * r - dy * dy));
+                if (u.Y > UprightCapCosThreshold) return 1;
+                if (-y0 < r)
+                {
+                    p1x = x0;
+                    p1z = z0;
+                }
+                else
+                {
+                    float spanY = y1 - y0;
+                    float t = spanY > 0f ? Math.Clamp((-y0 - (1f - u.Y) * r) / spanY, 0f, 1f) : 1f;
+                    p1x = x0 * (1f - t) + x1 * t;
+                    p1z = z0 * (1f - t) + z1 * t;
+                }
+                return 2;
+            }
+
+            // Shaft intersects [0, maxY]: clip any endpoint extending past the agent's height,
+            // preserving the horizontal cap margin (1 - u.Y) * r.
+            float shaftSpanY = y1 - y0;
+            p0x = x0;
+            p0z = z0;
+            if (y0 < 0f && shaftSpanY > 0f)
+            {
+                float t0 = Math.Clamp((-y0 - (1f - u.Y) * r) / shaftSpanY, 0f, 1f);
+                p0x = x0 * (1f - t0) + x1 * t0;
+                p0z = z0 * (1f - t0) + z1 * t0;
+            }
+            p1x = x1;
+            p1z = z1;
+            if (y1 > maxY && shaftSpanY > 0f)
+            {
+                float t1 = Math.Clamp(((maxY - y0) + (1f - u.Y) * r) / shaftSpanY, 0f, 1f);
+                p1x = x0 * (1f - t1) + x1 * t1;
+                p1z = z0 * (1f - t1) + z1 * t1;
+            }
+            return 2;
+        }
+
+        /// <summary>Projects a capsule obstacle to the nearest point on its clipped horizontal
+        /// section relative to <paramref name="ag"/>.</summary>
+        internal static bool TryProjectCapsule(DtCrowdAgent ag, DtCrowdAgent capsule,
+            out float relX, out float relZ, out float capRadius, out bool singleCap)
+        {
+            int count = ClipCapsule(ag, capsule, out float p0x, out float p0z, out float p1x, out float p1z, out capRadius);
+            if (count == 0)
+            {
+                relX = relZ = 0f;
+                singleCap = false;
+                return false;
+            }
+            if (count == 1)
+            {
+                relX = p0x;
+                relZ = p0z;
+                singleCap = true;
+                return true;
+            }
+            float sx = p1x - p0x, sz = p1z - p0z;
+            float segLen = MathF.Sqrt(sx * sx + sz * sz);
+            if (segLen > CapsuleSegmentLengthEpsilon)
+            {
+                float dx = sx / segLen, dz = sz / segLen;
+                float proj = Math.Clamp(-p0x * dx - p0z * dz, 0f, segLen);
+                relX = p0x + dx * proj;
+                relZ = p0z + dz * proj;
+            }
+            else
+            {
+                relX = p0x;
+                relZ = p0z;
+            }
+            singleCap = false;
             return true;
         }
 
@@ -1475,14 +1590,17 @@ namespace DotRecast.Detour.Crowd
                 {
                     DtCrowdAgent nei = ag.neis[j].agent;
                     float radius = nei.option.radius;
-                    RcVec3f center = nei.npos;
-                    if (nei.option.tiltedCapsule)
+                    RcVec3f rel;
+                    if (nei.option.capsuleObstacle)
                     {
-                        if (!TryProjectTiltedCapsule(ag, nei, out radius, out _, out center)) continue;
+                        if (!TryProjectCapsule(ag, nei, out float relX, out float relZ, out radius, out _)) continue;
+                        rel = new RcVec3f(relX, 0f, relZ);
                     }
-                    else if (nei.option.uprightCapsule && !TryProjectCapsuleRadius(ag, nei, out radius, out _)) continue;
-                    _obstacleQuery.AddCircle(RcVec3f.Subtract(center, ag.npos), radius + ag.option.radius,
-                        nei.vel, AvoidanceShare(ag, nei));
+                    else
+                    {
+                        rel = RcVec3f.Subtract(nei.npos, ag.npos);
+                    }
+                    _obstacleQuery.AddCircle(rel, radius + ag.option.radius, nei.vel, AvoidanceShare(ag, nei));
                 }
 
                 // Append the NavMesh's edges as obstacles.
@@ -1577,18 +1695,12 @@ namespace DotRecast.Detour.Crowd
                         float share = nei.option.avoidancePriority < ag.option.avoidancePriority ? 1.0f : 0.5f;
                         RcVec3f diff = RcVec3f.Subtract(ag.npos, nei.npos);
                         float radius = nei.option.radius;
-                        bool uprightCapsule = nei.option.uprightCapsule || nei.option.tiltedCapsule;
+                        bool capsuleObstacle = nei.option.capsuleObstacle;
                         bool clippedCap = false;
-                        if (nei.option.tiltedCapsule)
+                        if (capsuleObstacle)
                         {
-                            if (!TryProjectTiltedCapsule(ag, nei, out radius, out clippedCap, out var center)) continue;
-                            diff = RcVec3f.Subtract(ag.npos, center);
-                            diff.Y = 0f;
-                        }
-                        else if (uprightCapsule)
-                        {
-                            if (!TryProjectCapsuleRadius(ag, nei, out radius, out clippedCap)) continue;
-                            diff.Y = 0f;
+                            if (!TryProjectCapsule(ag, nei, out float relX, out float relZ, out radius, out clippedCap)) continue;
+                            diff = new RcVec3f(-relX, 0f, -relZ);
                         }
                         else if (!_config.resolveAgentOverlapsIn3D)
                         {
@@ -1598,20 +1710,22 @@ namespace DotRecast.Detour.Crowd
                         float combinedRadius = ag.option.radius + radius;
                         float dist = diff.LengthSquared();
                         float radiusSquared = RcMath.Sqr(combinedRadius);
-                        if (dist > radiusSquared || (uprightCapsule && dist == radiusSquared))
+                        if (dist > radiusSquared || (capsuleObstacle && dist == radiusSquared))
                         {
                             continue;
                         }
 
                         dist = MathF.Sqrt(dist);
                         float pen = combinedRadius - dist;
-                        if (uprightCapsule)
+                        if (capsuleObstacle)
                         {
-                            // A shaft uses the direction from its axis. A clipped cap pushes
-                            // away from the nearest point on its circumference, which points
-                            // inward when the agent is inside that circle.
+                            // A two-point clipped shaft pushes away from its nearest point. A single
+                            // clipped cap (nearly upright shaft beyond the agent's height) pushes
+                            // away from the nearest point on its circumference, which points inward
+                            // when the agent is inside that circle.
                             var direction = new RcVec3f(1f, 0f, 0f);
-                            if (dist > 0f && (!clippedCap || MathF.Abs(dist - radius) > CapsuleSurfaceNormalEpsilon))
+                            float hitDistance = clippedCap ? MathF.Abs(dist - radius) : dist + radius;
+                            if (dist > 0f && hitDistance > CapsuleSurfaceNormalEpsilon)
                             {
                                 float sign = clippedCap && dist < radius ? -1f : 1f;
                                 direction = new RcVec3f(sign * (diff.X / dist), 0f, sign * (diff.Z / dist));

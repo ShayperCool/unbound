@@ -42,14 +42,11 @@ namespace DotRecast.Detour.Crowd
         /// Excludes an obstacle proxy from agent separation steering.
         public bool excludeFromSeparation;
 
-        /// Uses the measured obstacle rules for an upright capsule.
-        public bool uprightCapsule;
-
-        /// Unbound: an obstacle capsule standing other than upright; capsuleAxis is half its shaft
-        /// (center to the center of an end's sphere). Agents meet it at the nearest point of the
-        /// part of its shaft within their height, seen from above.
-        public bool tiltedCapsule;
+        /// Uses the measured obstacle rules for a capsule: capsuleAxis is its unit up axis
+        /// (oriented with Y >= 0) and capsuleHalfShaft is half the distance between its cap centers.
+        public bool capsuleObstacle;
         public RcVec3f capsuleAxis;
+        public float capsuleHalfShaft;
 
         /// the agent path.
         /// Flags that impact steering behavior. (See: #UpdateFlags)

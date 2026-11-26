@@ -695,23 +695,27 @@ namespace Unbound.Runtime
             internal readonly float Height;
             internal readonly Vector3 Velocity;
             internal readonly NavMeshObstacle Owner;
-            internal readonly bool UprightCapsule;
-            /// <summary>A capsule standing other than upright: half its shaft.</summary>
-            internal readonly Vector3? TiltedAxis;
-            /// <summary>How far it reaches from its center, seen from above.</summary>
-            internal float Reach => TiltedAxis is Vector3 a ? Radius + new Vector2(a.x, a.z).magnitude : Radius;
+            internal readonly bool IsCapsule;
+            /// <summary>Unit up axis of a measured capsule obstacle, oriented with y >= 0.</summary>
+            internal readonly Vector3 CapsuleAxis;
+            /// <summary>Half the distance between the cap sphere centers of a measured capsule obstacle.</summary>
+            internal readonly float CapsuleHalfShaft;
+            /// <summary>Horizontal world extents along X and Z from the obstacle center.</summary>
+            internal float ExtentX => IsCapsule ? Radius + Mathf.Abs(CapsuleAxis.x) * CapsuleHalfShaft : Radius;
+            internal float ExtentZ => IsCapsule ? Radius + Mathf.Abs(CapsuleAxis.z) * CapsuleHalfShaft : Radius;
 
             internal Circle(Vector3 center, float radius, float bottom, float top, Vector3 velocity,
-                NavMeshObstacle owner, float? uprightHeight = null, Vector3? tiltedAxis = null)
+                NavMeshObstacle owner, bool isCapsule = false, Vector3 capsuleAxis = default, float capsuleHalfShaft = 0f)
             {
                 Center = center;
                 Radius = radius;
                 Bottom = bottom;
-                Height = uprightHeight ?? Mathf.Max(0f, top - bottom);
+                Height = Mathf.Max(0f, top - bottom);
                 Velocity = velocity;
                 Owner = owner;
-                UprightCapsule = uprightHeight.HasValue;
-                TiltedAxis = tiltedAxis;
+                IsCapsule = isCapsule;
+                CapsuleAxis = capsuleAxis;
+                CapsuleHalfShaft = capsuleHalfShaft;
             }
         }
 
@@ -730,7 +734,7 @@ namespace Unbound.Runtime
             CollectCircles();
             foreach (var circle in s_Circles)
             {
-                DtCrowd.AddToGridCell(circle.Radius, NavMesh.V(circle.Velocity), horizon, ref sx, ref sz);
+                DtCrowd.AddToGridCell(circle.ExtentX, circle.ExtentZ, NavMesh.V(circle.Velocity), horizon, ref sx, ref sz);
                 count++;
             }
         }
@@ -738,11 +742,10 @@ namespace Unbound.Runtime
         static void CollectCircles()
         {
             s_Circles.Clear();
-            bool measuredCapsules = Compat.NavMeshUprightCapsuleAvoidanceMeasured;
-            bool tiltedCapsules = Compat.NavMeshTiltedCapsuleObstaclesMeasured;
+            bool measuredCapsules = Compat.NavMeshCapsuleAvoidanceMeasured;
             foreach (var obstacle in s_Obstacles)
                 if (obstacle != null && obstacle.isActiveAndEnabled && !IsCarved(obstacle))
-                    AddCircles(obstacle, s_Circles, measuredCapsules, tiltedCapsules);
+                    AddCircles(obstacle, s_Circles, measuredCapsules);
         }
 
         /// <summary>Before <paramref name="crowd"/> updates: the enabled obstacles,
@@ -767,7 +770,7 @@ namespace Unbound.Runtime
             s_NearPositions.Clear();
             foreach (var c in s_Circles)
             {
-                var position = new RcVec3f(c.Center.x, c.UprightCapsule || c.TiltedAxis.HasValue ? c.Center.y : c.Bottom, c.Center.z);
+                var position = new RcVec3f(c.Center.x, c.IsCapsule ? c.Center.y : c.Bottom, c.Center.z);
                 if (!NearAWalkingAgent(agents, position, c, cell, prediction, 1f / cellX, 1f / cellZ)) continue;
                 s_Near.Add(c);
                 s_NearPositions.Add(position);
@@ -792,9 +795,9 @@ namespace Unbound.Runtime
                     maxSpeed = 0f,
                     separationWeight = 0f,
                     excludeFromSeparation = excludeFromSeparation,
-                    uprightCapsule = c.UprightCapsule,
-                    tiltedCapsule = c.TiltedAxis.HasValue,
-                    capsuleAxis = c.TiltedAxis is Vector3 axis ? NavMesh.V(axis) : RcVec3f.Zero,
+                    capsuleObstacle = c.IsCapsule,
+                    capsuleAxis = c.IsCapsule ? NavMesh.V(c.CapsuleAxis) : RcVec3f.Zero,
+                    capsuleHalfShaft = c.CapsuleHalfShaft,
                     updateFlags = 0,
                     obstacleAvoidanceType = 0,
                     queryFilterType = 0,
@@ -833,19 +836,20 @@ namespace Unbound.Runtime
                 // Obstacle circles are never walking; agents on links or off the NavMesh do not look
                 // for neighbours.
                 if (ag.state != DtCrowdAgentState.DT_CROWDAGENT_STATE_WALKING) continue;
-                if (!circle.UprightCapsule && !circle.TiltedAxis.HasValue && !DtCrowd.HeightsOverlap(ag, position, height)) continue;
+                if (!circle.IsCapsule && !DtCrowd.HeightsOverlap(ag, position, height)) continue;
                 float reach = DtCrowd.NeighbourReach(ag, horizon);
                 if (prediction)
                 {
                     int x0 = Cell(ag.npos.X - reach, invX), x1 = Cell(ag.npos.X + reach, invX);
                     int z0 = Cell(ag.npos.Z - reach, invZ), z1 = Cell(ag.npos.Z + reach, invZ);
-                    if (InCells(position, NavMesh.V(circle.Velocity), circle.Reach, horizon, true,
+                    if (InCells(position, NavMesh.V(circle.Velocity), circle.ExtentX, circle.ExtentZ, horizon, true,
                         x0, x1, z0, z1, invX, invZ)) return true;
                 }
                 else
                 {
-                    reach += circle.Reach + cell;
-                    if (MathF.Abs(ag.npos.X - position.X) <= reach && MathF.Abs(ag.npos.Z - position.Z) <= reach) return true;
+                    float reachX = reach + circle.ExtentX + cell;
+                    float reachZ = reach + circle.ExtentZ + cell;
+                    if (MathF.Abs(ag.npos.X - position.X) <= reachX && MathF.Abs(ag.npos.Z - position.Z) <= reachZ) return true;
                 }
             }
             return false;
@@ -862,7 +866,10 @@ namespace Unbound.Runtime
                 cell = MathF.Max(cell, 2f * ag.option.radius + horizon * MathF.Max(MathF.Abs(ag.vel.X), MathF.Abs(ag.vel.Z)));
             }
             foreach (var c in circles)
-                cell = MathF.Max(cell, 2f * c.Radius + horizon * Mathf.Max(Mathf.Abs(c.Velocity.x), Mathf.Abs(c.Velocity.z)));
+            {
+                cell = MathF.Max(cell, 2f * c.ExtentX + horizon * Mathf.Abs(c.Velocity.x));
+                cell = MathF.Max(cell, 2f * c.ExtentZ + horizon * Mathf.Abs(c.Velocity.z));
+            }
             return cell;
         }
 
@@ -894,11 +901,11 @@ namespace Unbound.Runtime
                     if (other.option.userData is NavMeshObstacle) continue;
                     var velocity = prediction && other.state == DtCrowdAgentState.DT_CROWDAGENT_STATE_WALKING
                         ? other.NextVelocity(Time.deltaTime) : other.vel;
-                    if (InCells(other.npos, velocity, other.option.radius, horizon, prediction,
+                    if (InCells(other.npos, velocity, other.option.radius, other.option.radius, horizon, prediction,
                         x0, x1, z0, z1, invX, invZ)) candidates++;
                 }
                 for (int j = 0; j < s_Near.Count; j++)
-                    if (InCells(s_NearPositions[j], NavMesh.V(s_Near[j].Velocity), s_Near[j].Reach, horizon, prediction,
+                    if (InCells(s_NearPositions[j], NavMesh.V(s_Near[j].Velocity), s_Near[j].ExtentX, s_Near[j].ExtentZ, horizon, prediction,
                         x0, x1, z0, z1, invX, invZ)) circles++;
                 if (circles == 0 || candidates + circles <= NeighbourCandidates) continue;
                 s_WarnedCandidates = true;
@@ -913,21 +920,18 @@ namespace Unbound.Runtime
         /// <summary>The proximity grid's cell of a coordinate, as the crowd's grid computes it.</summary>
         static int Cell(float v, float inv) => (int)MathF.Floor(v * inv);
 
-        static bool InCells(RcVec3f position, RcVec3f velocity, float radius, float horizon, bool prediction,
+        static bool InCells(RcVec3f position, RcVec3f velocity, float extentX, float extentZ, float horizon, bool prediction,
             int x0, int x1, int z0, int z1, float invX, float invZ)
         {
             var min = position;
             var max = position;
-            if (prediction) DtCrowd.PredictionBounds(position, velocity, radius, horizon, out min, out max);
+            if (prediction) DtCrowd.PredictionBounds(position, velocity, extentX, extentZ, horizon, out min, out max);
             return Cell(max.X, invX) >= x0 && Cell(min.X, invX) <= x1
                 && Cell(max.Z, invZ) >= z0 && Cell(min.Z, invZ) <= z1;
         }
 
-        /// <summary>Horizontal component tolerance for a vertical capsule axis.</summary>
-        const float UprightAxisTolerance = 1e-6f;
-
         /// <summary>The obstacle's shape as circles in the horizontal plane, with its height span.</summary>
-        static void AddCircles(NavMeshObstacle obstacle, List<Circle> into, bool measuredCapsules, bool tiltedCapsules)
+        static void AddCircles(NavMeshObstacle obstacle, List<Circle> into, bool measuredCapsules)
         {
             var t = obstacle.transform;
             var center = t.TransformPoint(obstacle.center);
@@ -937,26 +941,19 @@ namespace Unbound.Runtime
             {
                 float radius = obstacle.ShapeRadius * Mathf.Max(Mathf.Abs(scale.x), Mathf.Abs(scale.z));
                 float half = obstacle.ShapeHeight * Mathf.Abs(scale.y) * 0.5f;
-                bool uprightCapsule = false;
                 if (measuredCapsules)
                 {
                     Vector3 axis = t.rotation * Vector3.up;
-                    uprightCapsule = Mathf.Abs(axis.x) <= UprightAxisTolerance
-                        && Mathf.Abs(axis.z) <= UprightAxisTolerance;
-                    if (uprightCapsule) half = Mathf.Max(half, radius);
-                    else if (tiltedCapsules)
-                    {
-                        // A lying or tilted capsule (C4): its shaft, from the center to each end's
-                        // sphere, at its radius.
-                        var shaft = axis * Mathf.Max(0f, half - radius);
-                        float reachY = Mathf.Abs(shaft.y) + radius;
-                        into.Add(new Circle(center, radius, center.y - reachY, center.y + reachY, velocity,
-                            obstacle, tiltedAxis: shaft));
-                        return;
-                    }
+                    float lenSq = axis.sqrMagnitude;
+                    axis = lenSq > 1e-12f ? axis / Mathf.Sqrt(lenSq) : Vector3.up;
+                    if (axis.y < 0f) axis = -axis;
+                    float halfShaft = Mathf.Max(0f, half - radius);
+                    float reachY = axis.y * halfShaft + radius;
+                    into.Add(new Circle(center, radius, center.y - reachY, center.y + reachY, velocity,
+                        obstacle, isCapsule: true, capsuleAxis: axis, capsuleHalfShaft: halfShaft));
+                    return;
                 }
-                into.Add(new Circle(center, radius, center.y - half, center.y + half, velocity,
-                    obstacle, uprightCapsule ? 2f * half : null));
+                into.Add(new Circle(center, radius, center.y - half, center.y + half, velocity, obstacle));
                 return;
             }
             var rotation = t.rotation;

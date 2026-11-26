@@ -420,14 +420,11 @@ namespace Unbound.Runtime
         /// predicted and actual collisions (navpath, Unity 6000.0.71f1).</summary>
         internal static bool NavMeshObstacleSeparationMeasured => Family == ReleaseFamily.Unity6000_0;
 
-        /// <summary>Upright obstacle capsule admission and horizontal sections for avoidance
-        /// and contact (navpath, Unity 6000.0.71f1).</summary>
-        internal static bool NavMeshUprightCapsuleAvoidanceMeasured => Family == ReleaseFamily.Unity6000_0;
-
-        /// <summary>A lying or tilted obstacle capsule meets agents at the nearest point, seen from
-        /// above, of the part of its shaft within their height (navpath obstacle-shapes, Unity
-        /// 6000.0.71f1); unmeasured releases keep an upright circle at its center.</summary>
-        internal static bool NavMeshTiltedCapsuleObstaclesMeasured => Family == ReleaseFamily.Unity6000_0;
+        /// <summary>A capsule obstacle uses its center and horizontal extents for neighbour admission
+        /// and clips its shaft and end caps against the agent's height for avoidance and contact
+        /// (navpath obstacle-separation and obstacle-shapes, Unity 6000.0.71f1); unmeasured releases
+        /// keep a plain circle at the obstacle's bottom.</summary>
+        internal static bool NavMeshCapsuleAvoidanceMeasured => Family == ReleaseFamily.Unity6000_0;
 
         /// <summary>Movement constrained to a NavMesh wall uses a weighted sum of the edge's
         /// endpoints (navlinks wall movement, Unity 6000.0.71f1).</summary>

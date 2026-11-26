@@ -429,60 +429,151 @@ namespace UnityEngine.Tests
         }
 
         [Theory]
-        // Unbound's choice (unmeasured): a lying capsule whose shaft is not wholly within the
-        // agent's height is met at its center, the circle of its radius there as an upright shaft,
-        // when its height reaches the agent's: sunk 0.1 m below the feet it pushes to the two radii
-        // from the center, 0.6 m above the head (beyond its radius) it does not push.
-        [InlineData(-0.1f, true)]
-        [InlineData(0.6f, false)]
-        public void ALyingCapsuleOutOfTheAgentsHeightIsMetAtItsCenter(float gap, bool pushes)
+        // Unity 6000.0.71f1 (tests/projects/navpath obstacle-shapes: cap45h382, cap45h384, cap30h6,
+        // cap60h8, cap5h6, cap45sunk, cap45raised, cap135sunk, cap5low, cap10low, cap10high,
+        // caplyinglow, caplyinghigh, caplyingabove):
+        // capsules clip their shaft to the agent's height span with the horizontal cap margin
+        // (1 - axis.y) * r; shafts wholly beyond the agent's height use clipped radius sqrt(r^2 - dy^2)
+        // and collapse to a single inward-pushing cap circle only when axis.y > 0.99.
+        [InlineData(45f, 3.82f, 1f, 0f, 0f, 1.9970f, 0f)]      // 45 deg h3.82 (inside height)
+        [InlineData(45f, 3.84f, 1f, 0f, 0f, 2.0041f, 0f)]      // 45 deg h3.84 (4 mm outside: continuous)
+        [InlineData(45f, 3.84f, 1f, 1.5f, 0f, 2.0041f, 0f)]    // 45 deg h3.84 off-center
+        [InlineData(30f, 6f, 1f, -1.05f, 0f, -1.6160f, 0f)]    // 30 deg pole clipped at both ends
+        [InlineData(30f, 6f, 1f, -1.6f, 0f, -1.6160f, 0f)]     // 30 deg pole inside cap-margin reach
+        [InlineData(30f, 6f, 1f, -1.7f, 0f, -1.7f, 0f)]        // 30 deg pole beyond cap-margin reach
+        [InlineData(60f, 8f, 1f, -3.0f, 0f, -3.1651f, 0f)]     // 60 deg pole clipped at both ends
+        [InlineData(45f, 4f, 0f, 0.8f, 0f, 1.1464f, 0f)]       // sunk: bottom clipped, top inside
+        [InlineData(135f, 4f, 0f, 0.8f, 0f, 2.0607f, 0f)]      // flipped axis (axis.y < 0)
+        [InlineData(5f, 3f, -1.25f, 0f, 0f, -1.0179f, 0f)]     // 5 deg (axis.y > 0.99): single cap, inward push
+        [InlineData(10f, 3f, -1.25f, 0f, 0f, 0.7502f, 0f)]     // 10 deg (axis.y <= 0.99): two-point segment, outward
+        [InlineData(10f, 3f, 3.25f, 0f, 0f, -0.7983f, 0f)]     // 10 deg above head: two-point segment
+        [InlineData(90f, 3f, -0.25f, 0.6f, -0.2f, 0.6f, -0.9330f)] // lying below feet: clipped radius 0.433
+        [InlineData(90f, 3f, 2.25f, 0.6f, -0.2f, 0.6f, -0.9330f)]  // lying above head: clipped radius 0.433
+        [InlineData(90f, 3f, 2.6f, 0f, 0f, 0f, 0f)]            // lying beyond radius above head: no contact
+        public void AClippedOrOutOfSpanCapsuleFollowsTheMeasuredClippingRule(float aboutZ, float height,
+            float centerY, float x, float z, float expectedX, float expectedZ)
         {
             using var release = TestRelease.Pin(TestRelease.Measured);
             var standing = new GameObject("agent");
             m_Objects.Add(standing);
-            standing.transform.position = new Vector3(0.3f, 0f, 0.6f);
+            standing.transform.position = new Vector3(x, 0f, z);
             var agent = standing.AddComponent<NavMeshAgent>();
             Assert.True(agent.isOnNavMesh);
             float feet = agent.nextPosition.y;
             var go = new GameObject("obstacle");
             m_Objects.Add(go);
-            go.transform.position = new Vector3(0f, gap < 0f ? feet + gap : feet + agent.height + gap, 0f);
+            go.transform.position = new Vector3(0f, feet + centerY, 0f);
+            go.transform.rotation = Quaternion.Euler(0f, 0f, aboutZ);
+            var obstacle = go.AddComponent<NavMeshObstacle>();
+            obstacle.shape = NavMeshObstacleShape.Capsule;
+            obstacle.radius = 0.5f;
+            obstacle.height = height;
+            obstacle.carving = false;
+            for (int i = 0; i < 20; i++) Step();
+            Assert.True(Mathf.Abs(agent.nextPosition.x - expectedX) < 2e-3f && Mathf.Abs(agent.nextPosition.z - expectedZ) < 2e-3f,
+                $"expected ({expectedX}, {expectedZ}), at {agent.nextPosition}");
+        }
+
+        [Fact]
+        public void ATiltedCapsuleRanksByItsHorizontalExtentsAheadOfCloserObstacles()
+        {
+            // Unity 6000.0.71f1 (tests/projects/navpath obstacle-shapes caprank): 8 upright obstacles
+            // at 1.6 m do not crowd out a lying capsule centered 2.5 m away whose shaft reaches the agent.
+            using var release = TestRelease.Pin(TestRelease.Measured);
+            for (int i = 0; i < 8; i++)
+            {
+                float a = i * Mathf.PI * 0.25f;
+                Capsule(new Vector3(-0.3f + Mathf.Cos(a) * 1.6f, 1f, Mathf.Sin(a) * 1.6f), 0.2f);
+            }
+            var bar = new GameObject("bar");
+            m_Objects.Add(bar);
+            bar.transform.position = new Vector3(2.5f, 1f, 0f);
+            bar.transform.rotation = Quaternion.Euler(0f, 0f, 90f);
+            var ob = bar.AddComponent<NavMeshObstacle>();
+            ob.shape = NavMeshObstacleShape.Capsule;
+            ob.radius = 0.5f;
+            ob.height = 6f;
+            ob.carving = false;
+
+            var standing = new GameObject("agent");
+            m_Objects.Add(standing);
+            standing.transform.position = new Vector3(-0.3f, 0f, 0f);
+            var agent = standing.AddComponent<NavMeshAgent>();
+            for (int i = 0; i < 10; i++) Step();
+            Assert.True(Mathf.Abs(agent.nextPosition.x - (-1f)) < 2e-3f && Mathf.Abs(agent.nextPosition.z) < 2e-3f,
+                $"expected (-1, 0), at {agent.nextPosition}");
+        }
+
+        [Fact]
+        public void UnmeasuredReleaseUsesLegacyCircleForTiltedCapsule()
+        {
+            using var release = TestRelease.Pin(TestRelease.Unmeasured);
+            var go = new GameObject("obstacle");
+            m_Objects.Add(go);
+            go.transform.position = new Vector3(0f, 1f, 0f);
             go.transform.rotation = Quaternion.Euler(0f, 0f, 90f);
             var obstacle = go.AddComponent<NavMeshObstacle>();
             obstacle.shape = NavMeshObstacleShape.Capsule;
             obstacle.radius = 0.5f;
             obstacle.height = 3f;
             obstacle.carving = false;
-            for (int i = 0; i < 20; i++) Step();
-            var flat = new Vector2(agent.nextPosition.x, agent.nextPosition.z);
-            var start = new Vector2(0.3f, 0.6f);
-            if (pushes) Assert.True(Mathf.Abs(flat.magnitude - 1f) < 2e-3f, $"pushed to {agent.nextPosition}");
-            else Assert.True((flat - start).magnitude < 2e-3f, $"moved to {agent.nextPosition}");
+            var standing = new GameObject("agent");
+            m_Objects.Add(standing);
+            standing.transform.position = new Vector3(1.2f, 0f, 0f);
+            var agent = standing.AddComponent<NavMeshAgent>();
+            for (int i = 0; i < 10; i++) Step();
+            // Plain circle at center has combined radius 1.0, so x = 1.2 does not contact.
+            Assert.True(Mathf.Abs(agent.nextPosition.x - 1.2f) < 2e-3f, $"moved to {agent.nextPosition}");
         }
 
         [Fact]
-        public void ASteepCapsuleReachingAboveTheAgentIsMetAtItsCenter()
+        public void ClippedCapsuleHandlesOutOfProbeAngleAndNonFiniteInputs()
         {
-            // A pole tilted 30 degrees from upright, radius 0.5, height 6, its center 1 m up: the
-            // shaft reaches above the agent's head, so the agent meets the circle at its center
-            // (Unbound's choice, unmeasured).
+            // Control outside the probe's exact angles/radii: 20 deg tilt, radius 0.7, height 5.0
+            // at center.y = 1.0. Half-shaft = 1.8, u.y = cos(20 deg) = 0.9396926, u.x = -sin(20 deg) = -0.3420201.
+            // Bottom endpoint y0 = 1 - 1.8 * u.y = -0.69145 (< 0); top y1 = 2.69145 (> 2.0).
+            // Clipped endpoints reach x = +/- (1.0 + (1 - u.y) * 0.7) * tan(20 deg) = +/- 0.37934 m,
+            // so combined radius 0.5 + 0.7 = 1.2 m pushes an agent at x = -1.35 to -1.5793 m.
             using var release = TestRelease.Pin(TestRelease.Measured);
-            var standing = new GameObject("agent");
+            var standing = new GameObject("agent20");
             m_Objects.Add(standing);
-            standing.transform.position = new Vector3(-0.9f, 0f, 0f);
+            standing.transform.position = new Vector3(-1.35f, 0f, 0f);
             var agent = standing.AddComponent<NavMeshAgent>();
-            var go = new GameObject("obstacle");
+            float feet = agent.nextPosition.y;
+
+            var go = new GameObject("ob20");
             m_Objects.Add(go);
-            go.transform.position = new Vector3(0f, agent.nextPosition.y + 1f, 0f);
-            go.transform.rotation = Quaternion.Euler(0f, 0f, 30f);
+            go.transform.position = new Vector3(0f, feet + 1f, 0f);
+            go.transform.rotation = Quaternion.Euler(0f, 0f, 20f);
             var obstacle = go.AddComponent<NavMeshObstacle>();
             obstacle.shape = NavMeshObstacleShape.Capsule;
-            obstacle.radius = 0.5f;
-            obstacle.height = 6f;
+            obstacle.radius = 0.7f;
+            obstacle.height = 5f;
             obstacle.carving = false;
+
             for (int i = 0; i < 20; i++) Step();
-            Assert.True(Mathf.Abs(new Vector2(agent.nextPosition.x, agent.nextPosition.z).magnitude - 1f) < 2e-3f,
-                $"pushed to {agent.nextPosition}");
+            Assert.True(Mathf.Abs(agent.nextPosition.x - (-1.5793f)) < 2e-3f && Mathf.Abs(agent.nextPosition.z) < 2e-3f,
+                $"expected (-1.5793, 0), at {agent.nextPosition}");
+
+            // Non-finite obstacle parameters must never produce NaN displacement.
+            var badAg = new DotRecast.Detour.Crowd.DtCrowdAgent(0)
+            {
+                npos = new DotRecast.Core.Numerics.RcVec3f(0f, 0f, 0f),
+                option = new DotRecast.Detour.Crowd.DtCrowdAgentParams { height = 2f },
+            };
+            var badCap = new DotRecast.Detour.Crowd.DtCrowdAgent(1)
+            {
+                npos = new DotRecast.Core.Numerics.RcVec3f(0f, float.NaN, 0f),
+                option = new DotRecast.Detour.Crowd.DtCrowdAgentParams
+                {
+                    radius = 0.5f,
+                    capsuleObstacle = true,
+                    capsuleAxis = new DotRecast.Core.Numerics.RcVec3f(0f, 1f, 0f),
+                    capsuleHalfShaft = 1f,
+                },
+            };
+            Assert.Equal(0, DotRecast.Detour.Crowd.DtCrowd.ClipCapsule(badAg, badCap,
+                out _, out _, out _, out _, out _));
         }
 
         [Fact]
