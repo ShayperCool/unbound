@@ -1,0 +1,32 @@
+{"k":"first/all Assets/Data/Mismatch.json","v":"texture null main TextAsset all 1 errors 0"}
+{"k":"first/all Assets/Data/Override.ovr2","v":"texture null main DefaultAsset all 0 errors 0"}
+{"k":"first/all Assets/Data/Own.over","v":"texture null main TextAsset all 1 errors 0"}
+{"k":"first/all Assets/Data/Plain.ovr2","v":"texture null main DefaultAsset all 0 errors 0"}
+{"k":"first/all Assets/Data/Thing.gen","v":"texture Thing main Texture2D all 1 errors 0"}
+{"k":"first/all Assets/Textures/Sprite.png","v":"texture Sprite main Texture2D all 2 errors 0"}
+{"k":"first/import Assets/Data/Thing.gen","v":"texture null main null all 0 errors 0"}
+{"k":"first/post Assets/Data/Thing.gen","v":"texture null main null all 0 errors 0"}
+{"k":"first/post Assets/Textures/Sprite.png","v":"texture null main null all 0 errors 0"}
+{"k":"first/pre Assets/Textures/Sprite.png","v":"texture null main null all 0 errors 0"}
+{"k":"first/sprites Assets/Textures/Sprite.png","v":"texture null main null all 0 errors 0"}
+{"k":"asset/Assets/Textures/Sprite.png","v":"main Texture2D Sprite importer TextureImporter"}
+{"k":"asset/Assets/Data/Thing.gen","v":"main Texture2D Thing importer GenImporter"}
+{"k":"asset/Assets/Data/Mismatch.json","v":"main TextAsset Mismatch importer TextScriptImporter"}
+{"k":"asset/Assets/Data/Override.ovr2","v":"main DefaultAsset Override importer AssetImporter"}
+{"k":"asset/Assets/Data/Plain.ovr2","v":"main DefaultAsset Plain importer AssetImporter"}
+{"k":"asset/Assets/Data/Own.over","v":"main TextAsset Own importer OverImporter"}
+{"k":"reimport/all Assets/Data/Thing.gen","v":"texture Thing main Texture2D all 1 errors 0"}
+{"k":"reimport/all Assets/Textures/Sprite.png","v":"texture Sprite main Texture2D all 2 errors 0"}
+{"k":"reimport/import Assets/Data/Thing.gen","v":"texture null main null all 0 errors 0"}
+{"k":"reimport/post Assets/Data/Thing.gen","v":"texture null main null all 0 errors 0"}
+{"k":"reimport/post Assets/Textures/Sprite.png","v":"texture null main null all 0 errors 0"}
+{"k":"reimport/pre Assets/Textures/Sprite.png","v":"texture null main null all 0 errors 0"}
+{"k":"reimport/sprites Assets/Textures/Sprite.png","v":"texture null main null all 0 errors 0"}
+{"k":"reimport/logs","v":""}
+{"k":"forced/Assets/Data/Override.ovr2","v":"main DefaultAsset Override importer AssetImporter"}
+{"k":"forced/Assets/Data/Mismatch.json","v":"main TextAsset Mismatch importer TextScriptImporter"}
+{"k":"set_override/main","v":"TextAsset Plain"}
+{"k":"set_override/importer","v":"OverImporter"}
+{"k":"set_override/get","v":"OverImporter"}
+{"k":"set_override/meta","v":"fileFormatVersion: 2\nguid: (guid)\nimporterOverride:\n  nativeImporterType: 2089858483\n  scriptedImporterType:\n    serializedVersion: 2\n    Hash: 104ddd7902d5b6bcff8d6316c3d1f5bc\nDefaultImporter:\n  externalObjects: {}\n  userData: \n  assetBundleName: \n  assetBundleVariant: \n"}
+{"k":"complete","v":true}

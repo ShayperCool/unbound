@@ -1,0 +1,14 @@
+{
+  "commands": [
+    "python3 tests/projects/importselfload/run.py gate"
+  ],
+  "summary": "importselfload: .*",
+  "engine_paths": [
+    "managed/UnityEngine/Editor/TextureGenerator.cs",
+    "managed/UnityEngine/Editor/ScriptedImporter.cs",
+    "managed/UnityEngine/Editor/AssetImporterLookup.cs",
+    "managed/UnityEngine/Runtime/Loading.cs",
+    "managed/UnityEngine/Editor/AssetPostprocessing.cs",
+    "crates/unbound-assets/src/meta.rs"
+  ]
+}
