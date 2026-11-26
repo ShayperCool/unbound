@@ -103,6 +103,8 @@ namespace UnityEditor
 
         static string[] ReadDirectGuids(Entry asset, string file, string meta)
         {
+            // (A text whose content happens to look like Unity's serialization is a text.)
+            if (asset.Importer != null && s_ImportersWithoutReferences.Contains(asset.Importer)) return Array.Empty<string>();
             try
             {
                 // A text-serialized native asset (a material, a prefab, a scene, a ScriptableObject):
@@ -115,7 +117,10 @@ namespace UnityEditor
             {
                 return Array.Empty<string>();
             }
-            if (asset.Importer != null && !s_ImportersWithoutReferences.Contains(asset.Importer))
+            // A file of the DefaultImporter that is not text-serialized (an unknown format) holds no
+            // object references; a binary-serialized scene is not read.
+            if (asset.Importer == "DefaultImporter" && asset.Kind != "scene") return Array.Empty<string>();
+            if (asset.Importer != null)
                 Stubs.Ignored("AssetDatabase.GetDependencies(" + asset.Importer + ")",
                     "does not read the references of " + asset.Importer + " assets yet (" + asset.Path + "): it answers none of them");
             return Array.Empty<string>();

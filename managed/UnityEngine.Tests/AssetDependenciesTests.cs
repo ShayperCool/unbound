@@ -156,6 +156,22 @@ namespace UnityEngine.Tests
             Assert.Equal(new[] { "Assets/Deps/Custom.shader" }, AssetDatabase.GetDependencies("Assets/Deps/Mat.mat", false));
         }
 
+        /// <summary>A text that reads like Unity's serialization is a text; an unknown file holds no
+        /// references (neither says anything).</summary>
+        [Fact]
+        public void ATextAndAnUnknownFileReferenceNothing()
+        {
+            using var listing = AssetDatabase.ListForTests("[" + Entry("d1e000000000000000000000000000ab", "Assets/Deps/Yaml.txt", "text", "TextScriptImporter", "", "") + ","
+                + Entry("d1e000000000000000000000000000ac", "Assets/Deps/Notes.md", "unknown", "DefaultImporter", "", "") + ","
+                + Entry("d1e00000000000000000000000000004", "Assets/Deps/Mat.mat", "asset", "NativeFormatImporter", "", "") + "]");
+            var yaml = "%YAML 1.1\nrefs: {fileID: 2100000, guid: d1e00000000000000000000000000004, type: 2}\n";
+            File.WriteAllText(Path.Combine(m_Root, "Assets", "Deps", "Yaml.txt"), yaml);
+            File.WriteAllText(Path.Combine(m_Root, "Assets", "Deps", "Notes.md"), "notes {fileID: 2100000, guid: d1e00000000000000000000000000004, type: 2}\n");
+            Assert.Empty(AssetDatabase.GetDependencies("Assets/Deps/Yaml.txt", false));
+            Assert.Empty(AssetDatabase.GetDependencies("Assets/Deps/Notes.md", false));
+            Assert.Empty(m_Logs.Lines);
+        }
+
         /// <summary>The assets of an importer whose references are not read say so, once.</summary>
         [Fact]
         public void AnAssetOfAnImporterNotReadIsSaid()
