@@ -23,6 +23,15 @@ namespace UnityEngine.Tests
             [FormerlySerializedAs("oldList")] public int[] list;
         }
 
+        /// <summary>A type that gives a renamed field's old name to a new field, as UGUI's
+        /// ColorBlock (m_SelectedColor was m_HighlightedColor) and SpriteState do.</summary>
+        public class Reused : ScriptableObject
+        {
+            public int m_Highlighted;
+            [FormerlySerializedAs("m_Highlighted")] public int m_Selected;
+            [FormerlySerializedAs("m_OldRef")] public Asset m_Ref;
+        }
+
         static Asset Read(string yaml, IReferenceResolver resolver = null)
         {
             var asset = ScriptableObject.CreateInstance<Asset>();
@@ -70,6 +79,38 @@ namespace UnityEngine.Tests
             var other = ScriptableObject.CreateInstance<Asset>();
             var asset = Read("MonoBehaviour:\n  target: {fileID: 0}\n  oldTarget: {fileID: 7}\n", new OneObject { Id = 7, Object = other });
             Assert.Same(other, asset.target);
+        }
+
+        [Fact]
+        public void AnOldNameThatIsAnotherFieldsNameIsNoOverride()
+        {
+            var reused = ScriptableObject.CreateInstance<Reused>();
+            new YamlReader(null).ReadScriptObject(reused, TestYaml.DocumentBody("MonoBehaviour:\n  m_Highlighted: 1\n  m_Selected: 2\n"));
+            Assert.Equal(1, reused.m_Highlighted);
+            Assert.Equal(2, reused.m_Selected);
+            // Without its own name the field still reads the old one (a file saved before the rename).
+            new YamlReader(null).ReadScriptObject(reused, TestYaml.DocumentBody("MonoBehaviour:\n  m_Highlighted: 3\n"));
+            Assert.Equal(3, reused.m_Selected);
+        }
+
+        /// <summary>A local reference override over a base reference into another asset replaces
+        /// it whole (no guid of the base's left on the override's file id).</summary>
+        [Fact]
+        public void AReferenceOverrideReplacesTheWholeReference()
+        {
+            var local = ScriptableObject.CreateInstance<Asset>();
+            var foreign = ScriptableObject.CreateInstance<Asset>();
+            var reused = ScriptableObject.CreateInstance<Reused>();
+            new YamlReader(new Refs { Local = local, Foreign = foreign }).ReadScriptObject(reused,
+                TestYaml.DocumentBody("MonoBehaviour:\n  m_Ref: {fileID: 11400000, guid: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa, type: 2}\n  m_OldRef: {fileID: 7}\n"));
+            Assert.Same(local, reused.m_Ref);
+        }
+
+        sealed class Refs : IReferenceResolver
+        {
+            public Object Local, Foreign;
+            public Object Resolve(ObjectRef reference, Type expected) =>
+                reference.FileId == 7 && reference.Guid == null ? Local : reference.Guid != null ? Foreign : null;
         }
 
         sealed class OneObject : IReferenceResolver

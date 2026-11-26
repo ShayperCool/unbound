@@ -66,6 +66,12 @@ namespace Unbound.Runtime
         /// <summary>The names in an importer's .meta settings (see <see cref="SerializationRules.MetaName"/>).</summary>
         internal string MetaName;
         internal string[] FormerMetaNames;
+        /// <summary>The former names that are no other member's current name (in the type's whole
+        /// member chain): only such a name beside the current one can be an override written before
+        /// the rename (a type may give a renamed field's old name to a new field, as UGUI's
+        /// ColorBlock m_SelectedColor does with m_HighlightedColor).</summary>
+        internal string[] OverridingFormerNames;
+        internal string[] OverridingFormerMetaNames;
         internal Shape Shape;
         internal Type ElementType;
         internal Shape ElementShape;
@@ -161,6 +167,18 @@ namespace Unbound.Runtime
                     }
                     members.Add(member);
                 }
+            }
+            var currentNames = new HashSet<string>(StringComparer.Ordinal);
+            var currentMetaNames = new HashSet<string>(StringComparer.Ordinal);
+            foreach (var m in members)
+            {
+                currentNames.Add(m.Name);
+                currentMetaNames.Add(m.MetaName);
+            }
+            foreach (var m in members)
+            {
+                m.OverridingFormerNames = Array.FindAll(m.FormerNames, n => !currentNames.Contains(n));
+                m.OverridingFormerMetaNames = Array.FindAll(m.FormerMetaNames, n => !currentMetaNames.Contains(n));
             }
             return members.ToArray();
         }
@@ -314,24 +332,35 @@ namespace Unbound.Runtime
 
         /// <summary>
         /// The node of a member: its own name's, else a former name's
-        /// ([FormerlySerializedAs]). When both are there, the former name's value lies over the
-        /// current one: the Editor writes only a field's current name, so a former name beside it
-        /// is a prefab instance's override written before the rename (the base object keeps the
+        /// ([FormerlySerializedAs]). A former name that is no other member's current name, beside
+        /// the current one, lies over it: the Editor writes only a field's current name, so it is
+        /// a prefab instance's override written before the rename (the base object keeps the
         /// current name, the override the old one; the Editor applies such an override to the
-        /// renamed field).
+        /// renamed field). A variant that also overrides the current name keeps the old name's
+        /// value here (which of the two the Editor takes is not measured).
         /// </summary>
         YNode MemberNode(YNode map, SerializedMember member)
         {
             var node = map.Get(m_MetaNames ? member.MetaName : member.Name);
-            foreach (var former in m_MetaNames ? member.FormerMetaNames : member.FormerNames)
+            if (node == null)
+            {
+                foreach (var former in m_MetaNames ? member.FormerMetaNames : member.FormerNames)
+                {
+                    node = map.Get(former);
+                    if (node != null) break;
+                }
+                return node;
+            }
+            foreach (var former in m_MetaNames ? member.OverridingFormerMetaNames : member.OverridingFormerNames)
             {
                 var old = map.Get(former);
                 if (old == null) continue;
-                node = node == null ? old : Overlay(node, old);
-                break;
+                return Overlay(node, old);
             }
             return node;
         }
+
+        static bool IsReference(YNode map) => map.Get("fileID") != null || map.Get("rid") != null;
 
         /// <summary>A node with <paramref name="over"/>'s values over <paramref name="under"/>'s:
         /// maps key by key; sequences element by element, an element the override left empty (an
@@ -351,7 +380,9 @@ namespace Unbound.Runtime
                 }
                 return new YNode { Kind = YKind.Seq, Items = items };
             }
-            if (under.Kind != YKind.Map || over.Kind != YKind.Map) return over;
+            // An object reference ({fileID, guid, type}) or a managed reference ({rid}) is replaced
+            // whole, as the prefab flattening sets a modified reference.
+            if (under.Kind != YKind.Map || over.Kind != YKind.Map || IsReference(over) || IsReference(under)) return over;
             var keys = new List<string>(under.Keys);
             var values = new List<YNode>(under.Values);
             for (int i = 0; i < over.Keys.Length; i++)
