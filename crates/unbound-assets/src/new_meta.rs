@@ -404,9 +404,12 @@ fn sprites_2d(section: String, asset: &Path) -> String {
         .extension()
         .is_some_and(|e| e.eq_ignore_ascii_case("png"));
     let bytes = png.then(|| std::fs::read(asset).ok()).flatten();
-    // A PNG of 16-bit channels (its header's bit depth): sliced on its alpha made 8-bit, which
+    // A PNG of 16-bit channels with alpha (its header's bit depth and colour type): sliced on its alpha made 8-bit, which
     // makes the faintest texels transparent (not measured).
-    if bytes.as_ref().is_some_and(|b| b.len() > 24 && b[24] == 16) {
+    if bytes
+        .as_ref()
+        .is_some_and(|b| b.len() > 25 && b[24] == 16 && matches!(b[25], 4 | 6))
+    {
         tracing::warn!(
             "{}: a 16-bit PNG is sliced on its alpha as 8 bits; the Editor's slicing of 16-bit alpha is not measured",
             asset.display()

@@ -5,13 +5,13 @@
 //! The measured rule: the regions of pixels whose alpha is not 0, 8-connected, listed as a scan
 //! from the bottom row up, each row left to right, meets them; a region narrower or lower than
 //! [`MIN_SIZE`] is small and joins the nearest region that is not (the rect around both), nearest
-//! by the squared gap between their rects, of equal ones the first listed (spritemeta
-//! sprites.NearChebyshev, NearCentre, NearTieRow, SliceSmallBetween); without any such region the
-//! texture is one sprite of its whole size. Each rect grows by one pixel on every side, within the
-//! texture. The sprites come in rows from the top: the rect of the highest top and every rect whose
-//! rows its rows touch form a row, left to right, then the next row of what is left (OrderRows,
-//! OrderStair, SliceChain, SliceFaint, SliceTwoBigDot, SliceRowMerge and the others: 33 textures).
-//! Which rect starts a row when two tops tie is not measured (the last listed is taken).
+//! by the squared gap between the regions as found (not as earlier joins grew them), of equal ones
+//! the first listed (spritemeta sprites.NearChebyshev, NearCentre, NearTieRow, NearGrown,
+//! SliceSmallBetween); without any such region the texture is one sprite of its whole size. Each
+//! rect grows by one pixel on every side, within the texture. The sprites come in rows: the last
+//! listed rect left and every rect whose rows touch its rows form a row, ordered left to right, of
+//! equal left the higher first; then the next row of what is left (OrderRows, OrderStair,
+//! OrderTall, OrderGrid1-3, OrderClamp, SliceChain and the others: 39 textures).
 
 /// The size under which a region is small (in either direction).
 pub const MIN_SIZE: u32 = 4;
@@ -42,37 +42,39 @@ pub fn slice(width: u32, height: u32, alpha: impl Fn(u32, u32) -> u8) -> Vec<Rec
     if regions.iter().all(small) {
         return whole;
     }
-    let mut joined: Vec<Option<[u32; 4]>> = regions.drain(..).map(Some).collect();
-    for i in 0..joined.len() {
-        let Some(s) = joined[i].filter(|r| small(r)) else {
+    // Each small region joins the nearest region that is not small, as found; of equal ones the
+    // first listed.
+    let mut grown = regions.clone();
+    let mut kept = vec![true; regions.len()];
+    for (i, s) in regions.iter().enumerate() {
+        if !small(s) {
             continue;
-        };
-        // The nearest region that is not small, by the gap between their rects; of equal ones the
-        // first listed.
+        }
         let mut best: Option<(usize, u64)> = None;
-        for (j, r) in joined.iter().enumerate() {
-            let Some(r) = r.filter(|r| !small(r)) else {
+        for (j, r) in regions.iter().enumerate() {
+            if small(r) {
                 continue;
-            };
-            let d = gap(&s, &r);
+            }
+            let d = gap(s, r);
             if best.is_none_or(|(_, b)| d < b) {
                 best = Some((j, d));
             }
         }
         let (j, _) = best.expect("a region that is not small exists");
-        let b = joined[j].expect("a listed region");
-        joined[j] = Some([
+        let b = grown[j];
+        grown[j] = [
             s[0].min(b[0]),
             s[1].min(b[1]),
             s[2].max(b[2]),
             s[3].max(b[3]),
-        ]);
-        joined[i] = None;
+        ];
+        kept[i] = false;
     }
-    let mut left: Vec<Rect> = joined
+    let mut left: Vec<Rect> = grown
         .iter()
-        .flatten()
-        .map(|r| {
+        .zip(&kept)
+        .filter(|(_, kept)| **kept)
+        .map(|(r, _)| {
             let (x0, y0) = (r[0].saturating_sub(1), r[1].saturating_sub(1));
             let (x1, y1) = ((r[2] + 2).min(width), (r[3] + 2).min(height));
             Rect {
@@ -83,13 +85,11 @@ pub fn slice(width: u32, height: u32, alpha: impl Fn(u32, u32) -> u8) -> Vec<Rec
             }
         })
         .collect();
-    // Rows from the top: the highest rect and every rect whose rows touch its rows, left to right.
+    // Rows: the last listed rect and every rect whose rows touch its rows, left to right, of equal
+    // left the higher first.
     let mut rects = Vec::with_capacity(left.len());
-    while !left.is_empty() {
-        let top = (0..left.len())
-            .max_by_key(|&k| (left[k].y + left[k].height, k))
-            .expect("a rect is left");
-        let (lo, hi) = (left[top].y, left[top].y + left[top].height);
+    while let Some(last) = left.last().copied() {
+        let (lo, hi) = (last.y, last.y + last.height);
         let mut row: Vec<Rect> = Vec::new();
         left.retain(|r| {
             let touches = r.y <= hi && lo <= r.y + r.height;
@@ -98,7 +98,7 @@ pub fn slice(width: u32, height: u32, alpha: impl Fn(u32, u32) -> u8) -> Vec<Rec
             }
             !touches
         });
-        row.sort_by_key(|r| r.x);
+        row.sort_by_key(|r| (r.x, std::cmp::Reverse(r.y)));
         rects.extend(row);
     }
     rects
@@ -237,6 +237,29 @@ mod tests {
         assert_eq!(
             s(&[(0, 3, 10, 13), (10, 13, 10, 13), (6, 7, 4, 4)]),
             [rect(0, 3, 9, 12), rect(9, 9, 6, 6)]
+        );
+        // OrderTall: the last listed rect starts the row; OrderGrid2: of equal left the higher
+        // first; NearGrown: a pixel joins by the gaps to the regions as found.
+        assert_eq!(
+            s(&[(0, 3, 1, 4), (6, 9, 0, 15), (12, 15, 10, 13)]),
+            [rect(5, 0, 6, 16), rect(11, 9, 5, 6), rect(0, 0, 5, 6)]
+        );
+        assert_eq!(
+            s(&[(0, 3, 0, 3), (6, 9, 0, 3), (0, 3, 6, 9), (6, 9, 6, 9)]),
+            [
+                rect(0, 5, 5, 6),
+                rect(0, 0, 5, 5),
+                rect(5, 5, 6, 6),
+                rect(5, 0, 6, 5)
+            ]
+        );
+        assert_eq!(
+            slice(
+                16,
+                8,
+                image(&[(0, 3, 0, 3), (12, 15, 0, 3), (6, 6, 0, 0), (9, 9, 0, 0)])
+            ),
+            [rect(0, 0, 8, 5), rect(8, 0, 8, 5)]
         );
         // SliceNpot: a 10x6 texture of small regions.
         assert_eq!(
