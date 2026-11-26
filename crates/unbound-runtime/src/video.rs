@@ -30,7 +30,7 @@ pub fn probe(path: &str) -> Result<Json> {
     let output = Command::new("ffprobe")
         .args(["-v", "error", "-count_packets", "-show_entries"])
         .arg(
-            "stream=codec_type,codec_name,width,height,r_frame_rate,nb_read_packets,sample_aspect_ratio,channels,sample_rate\
+            "stream=codec_type,codec_name,pix_fmt,width,height,r_frame_rate,nb_read_packets,sample_aspect_ratio,channels,sample_rate\
              :stream_tags=language,alpha_mode:format=duration",
         )
         .args(["-of", "json", path])
@@ -95,10 +95,12 @@ fn clip_properties(path: &str, root: &Json) -> Result<Json> {
         "aspectNumerator": aspect_n,
         "aspectDenominator": aspect_d,
         "audioTrackInfo": audio_track_info,
-        // A VP8/VP9 WebM stream with an alpha channel (Matroska's AlphaMode, which ffprobe gives as
-        // the tag alpha_mode=1): its alpha is decoded with the pictures.
+        // A WebM stream with an alpha channel (Matroska's AlphaMode, which ffprobe gives as the tag
+        // alpha_mode=1): a VP8 one's alpha is decoded with the pictures.
         "alpha": video["tags"]["alpha_mode"].as_str() == Some("1"),
         "codec": video["codec_name"].as_str().unwrap_or(""),
+        // A pixel format with alpha (ProRes 4444, ...): drawn opaque, which the player says.
+        "pixelAlpha": video["pix_fmt"].as_str().is_some_and(|f| f.starts_with("yuva") || f.contains("rgba") || f.contains("argb") || f.contains("bgra") || f.contains("abgr")),
     }))
 }
 
@@ -472,6 +474,7 @@ mod tests {
                     "frameRateNumerator",
                     "height",
                     "length",
+                    "pixelAlpha",
                     "width",
                 ]
             );
@@ -496,6 +499,11 @@ mod tests {
         assert_eq!(clip["alpha"], true);
         assert_eq!(clip["codec"], "vp8");
         assert_eq!(parse(VIDEO_ONLY)["alpha"], false);
+        assert_eq!(clip["pixelAlpha"], false);
+        let prores = r#"{"streams": [{"codec_type": "video", "codec_name": "prores", "pix_fmt": "yuva444p10le", "width": 64, "height": 48,
+            "r_frame_rate": "10/1", "nb_read_packets": "10"}], "format": {"duration": "1"}}"#;
+        assert_eq!(parse(prores)["pixelAlpha"], true);
+        assert_eq!(parse(prores)["alpha"], false);
         assert_eq!(alpha_decoder(true, "vp8"), Some("libvpx"));
         assert_eq!(alpha_decoder(true, "vp9"), None);
         assert_eq!(alpha_decoder(true, "h264"), None);

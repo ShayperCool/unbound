@@ -129,11 +129,15 @@ namespace UnityEngine.Video
             clip.m_AudioTrackInfo = ReadAudioTracks(root);
             clip.m_Alpha = root.TryGetProperty("alpha", out var alpha) && alpha.ValueKind == JsonValueKind.True;
             clip.m_Codec = root.TryGetProperty("codec", out var codec) ? codec.GetString() ?? "" : "";
+            // A source with per-pixel alpha in another codec (ProRes 4444, which the Editor imports
+            // for transcoding with Keep Alpha) is drawn opaque: said once.
+            if (root.TryGetProperty("pixelAlpha", out var pixelAlpha) && pixelAlpha.ValueKind == JsonValueKind.True && !(clip.m_Alpha && clip.m_Codec == "vp8"))
+                Stubs.Ignored("UnityEngine.Video.VideoClip alpha of a non-VP8 source", $"{clip.m_Codec} video with alpha is drawn opaque ({assetPath ?? file})");
             if (guid != null)
             {
                 var importer = ImporterSettings(guid, assetPath ?? file);
                 clip.m_sRGB = ReadSRGB(importer, assetPath ?? file);
-                if (clip.m_Alpha) clip.m_Alpha = KeepsAlpha(importer, assetPath ?? file);
+                if (clip.m_Alpha && clip.m_Codec == "vp8") clip.m_Alpha = KeepsAlpha(importer, assetPath ?? file);
             }
             return clip;
         }
@@ -170,6 +174,45 @@ namespace UnityEngine.Video
             }
         }
 
+        /// <summary>Whether a VP8 source's alpha survives its import: transcoding drops it unless Keep
+        /// Alpha (encodeAlpha) is on (the Manual's Video Clip Importer: "Keep Alpha: Preserve the
+        /// alpha channel and encode it during transcoding"; unmeasured). The default target entry
+        /// (platform -2) decides; another platform's transcoding override and a clip transcoded with
+        /// Keep Alpha (which Unity packs into the colour stream) keep the source's alpha, said once:
+        /// both unmeasured.</summary>
+        internal static bool KeepsAlpha(YNode importer, string asset)
+        {
+            if (importer == null) return true;
+            var (defaultTranscodes, overrideTranscodes) = Transcoding(importer.Get("targetSettings"));
+            if (!defaultTranscodes)
+            {
+                if (overrideTranscodes)
+                    Stubs.Ignored("UnityEngine.Video.VideoClip platform transcoding override", $"the source's alpha is drawn; a platform's own transcoding of {asset} is not applied (unmeasured)");
+                return true;
+            }
+            if (importer.Int("encodeAlpha") == 0) return false;
+            Stubs.Ignored("UnityEngine.Video.VideoClip transcoded with Keep Alpha", $"the source's alpha is drawn as decoded (Unity packs it into the colour stream of {asset}; unmeasured)");
+            return true;
+        }
+
+        /// <summary>Whether an importer's target settings transcode for the default entry (platform
+        /// key -2) and for any other platform (a list of first/second pairs, or a map).</summary>
+        static (bool Default, bool Override) Transcoding(YNode targets)
+        {
+            bool byDefault = false, byOverride = false;
+            void Entry(string platform, YNode settings)
+            {
+                if (settings == null || settings.Kind != YKind.Map || settings.Int("enableTranscoding") == 0) return;
+                if (platform == "-2") byDefault = true;
+                else byOverride = true;
+            }
+            if (targets?.Kind == YKind.Seq)
+                foreach (var item in targets.Items) Entry(item.Str("first"), item.Get("second"));
+            else if (targets?.Kind == YKind.Map)
+                for (int i = 0; i < targets.Keys.Length; i++) Entry(targets.Keys[i], targets.Values[i]);
+            return (byDefault, byOverride);
+        }
+
         /// <summary>
         /// VideoClipImporter.sRGBClip from the importer's settings: the .meta key <c>colorSpace</c>.
         /// 0 is sRGB on: the Editor saved 0 for a clip imported with default settings
@@ -177,36 +220,6 @@ namespace UnityEngine.Video
         /// default. 1 is sRGB off: the setting's other value (Unbound's choice, unmeasured). No key
         /// is the default (on); any other value warns and counts as the default.
         /// </summary>
-        /// <summary>Whether a source's alpha survives its import: transcoding drops it unless Keep
-        /// Alpha (encodeAlpha) is on (the Manual's Video Clip Importer: "Keep Alpha: Preserve the
-        /// alpha channel and encode it during transcoding"; unmeasured). A clip transcoded with Keep
-        /// Alpha, which Unity packs into the colour stream, is drawn with the source's alpha (said
-        /// once: unmeasured).</summary>
-        internal static bool KeepsAlpha(YNode importer, string asset)
-        {
-            if (importer == null || !Transcodes(importer.Get("targetSettings"))) return true;
-            if (importer.Int("encodeAlpha") == 0) return false;
-            Stubs.Ignored("UnityEngine.Video.VideoClip transcoded with Keep Alpha", $"the source's alpha is drawn as decoded (Unity packs it into the colour stream of {asset}; unmeasured)");
-            return true;
-        }
-
-        /// <summary>Whether any of an importer's target settings turns transcoding on.</summary>
-        static bool Transcodes(YNode node)
-        {
-            if (node == null) return false;
-            if (node.Kind == YKind.Map)
-            {
-                for (int i = 0; i < node.Keys.Length; i++)
-                    if (node.Keys[i] == "enableTranscoding" ? node.Values[i].AsLong() != 0 : Transcodes(node.Values[i])) return true;
-            }
-            else if (node.Kind == YKind.Seq)
-            {
-                foreach (var item in node.Items)
-                    if (Transcodes(item)) return true;
-            }
-            return false;
-        }
-
         internal static bool ReadSRGB(YNode importer, string asset)
         {
             if (importer == null || !importer.TryGet("colorSpace", out var node) || node.IsNull) return true;
