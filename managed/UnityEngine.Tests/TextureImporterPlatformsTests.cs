@@ -140,16 +140,44 @@ namespace UnityEngine.Tests
             Assert.Equal(Meta(Entry("DefaultTexturePlatform", 1024), Entry("Android", 1024), Entry("iOS", 128, 50, -1, 1)), written);
         }
 
-        /// <summary>ignorePngGamma is the .meta's (gamma.Gamma100000Ignored) and is set into it
-        /// (gamma.Gamma100000Toggle).</summary>
+        /// <summary>An entry the importer added that changed since is a change: the default it added
+        /// edited through a property, another one edited in its settings tree (as a SerializedObject
+        /// applies an edit).</summary>
+        [Fact]
+        public void AnAddedEntryChangedSinceIsAChange()
+        {
+            var text = Meta(Entry("Standalone", 256), Entry("Android"), Entry("iOS"));
+            var importer = Importer(text);
+            importer.maxTextureSize = 512;
+            var written = ImporterMeta.Rewritten(text, "TextureImporter", importer.m_Settings, importer.SavedSettings(), ("", "", ""), "", new List<string>());
+            Assert.NotNull(written);
+            Assert.EndsWith("    buildTarget: DefaultTexturePlatform\n    maxTextureSize: 512\n", written.Substring(0, written.IndexOf("    resizeAlgorithm", written.IndexOf("buildTarget: DefaultTexturePlatform", StringComparison.Ordinal), StringComparison.Ordinal)));
+
+            var other = Meta(Entry("DefaultTexturePlatform"), Entry("Android"), Entry("iOS"));
+            var edited = Importer(other);
+            Assert.Null(ImporterMeta.Rewritten(other, "TextureImporter", edited.m_Settings, edited.SavedSettings(), ("", "", ""), "", new List<string>()));
+            MetaSettings.SetInt(edited.m_Settings, "platformSettings.[buildTarget=Standalone].maxTextureSize", 64);
+            var saved = ImporterMeta.Rewritten(other, "TextureImporter", edited.m_Settings, edited.SavedSettings(), ("", "", ""), "", new List<string>());
+            Assert.Equal(Meta(Entry("DefaultTexturePlatform"), Entry("Android"), Entry("iOS"), Entry("Standalone", 64)), saved);
+        }
+
+        /// <summary>ignorePngGamma is the .meta's (gamma.Gamma100000Ignored), set into it
+        /// (gamma.Gamma100000Toggle), and carried by TextureImporterSettings both ways
+        /// (gamma.Gamma100000Toggle.settings).</summary>
         [Fact]
         public void IgnorePngGammaIsTheMetas()
         {
             var importer = Importer(Meta(Entry("DefaultTexturePlatform"), Entry("Standalone"), Entry("Android")).Replace("ignorePngGamma: 0", "ignorePngGamma: 1"));
             Assert.True(importer.ignorePngGamma);
-            importer.ignorePngGamma = false;
+            var settings = new TextureImporterSettings();
+            importer.ReadTextureSettings(settings);
+            Assert.True(settings.ignorePngGamma);
+            settings.ignorePngGamma = false;
+            importer.SetTextureSettings(settings);
             Assert.False(importer.ignorePngGamma);
             Assert.Equal("0", MetaSettings.Find(importer.m_Settings, "ignorePngGamma").AsString());
+            importer.ignorePngGamma = true;
+            Assert.Equal("1", MetaSettings.Find(importer.m_Settings, "ignorePngGamma").AsString());
         }
     }
 }

@@ -482,6 +482,7 @@ namespace UnityEditor
             Int("seamlessCubemap", s => s.seamlessCubemap ? 1 : 0, (s, v) => s.seamlessCubemap = v != 0),
             Int("flipbookRows", s => s.flipbookRows, (s, v) => s.flipbookRows = v),
             Int("flipbookColumns", s => s.flipbookColumns, (s, v) => s.flipbookColumns = v),
+            Int("ignorePngGamma", s => s.ignorePngGamma ? 1 : 0, (s, v) => s.ignorePngGamma = v != 0),
             Float("spritePixelsToUnits", 100, s => s.spritePixelsPerUnit, (s, v) => s.spritePixelsPerUnit = v),
             Float("spritePivot.x", DefaultPivot, s => s.spritePivot.x, (s, v) => s.spritePivot = new Vector2(v, s.spritePivot.y)),
             Float("spritePivot.y", DefaultPivot, s => s.spritePivot.y, (s, v) => s.spritePivot = new Vector2(s.spritePivot.x, v)),

@@ -18,28 +18,35 @@ namespace UnityEditor
     {
         const string PlatformList = "platformSettings";
 
-        /// <summary>The entries the importer added itself (not the .meta's): they alone are no change
-        /// to save (tests/projects/importermeta same.*).</summary>
-        readonly HashSet<string> m_AddedPlatforms = new HashSet<string>(StringComparer.Ordinal);
+        /// <summary>The entries the importer added itself (not the .meta's), each as it was added:
+        /// while unchanged they are no change to save (tests/projects/importermeta same.*); one changed
+        /// since (its default edited through a property, any entry through a SerializedObject) is.</summary>
+        readonly Dictionary<string, string> m_AddedPlatforms = new Dictionary<string, string>(StringComparer.Ordinal);
 
         internal override void ReadSettings(YNode body)
         {
             m_AddedPlatforms.Clear();
-            foreach (var name in AddMissingPlatforms(m_Settings, ImporterMeta.TextureImportPlatforms)) m_AddedPlatforms.Add(name);
+            foreach (var name in AddMissingPlatforms(m_Settings, ImporterMeta.TextureImportPlatforms)) Added(name);
             // The settings the asset imported with hold the added entries too (a preprocessor's
             // save compares with them).
             m_ImportedSettings = MetaSettings.ToJson(m_Settings);
         }
 
-        /// <summary>The settings without the entries the importer added itself: what the .meta
-        /// holds unless something changed.</summary>
+        void Added(string name)
+        {
+            if (Find(List(), name) is { } entry) m_AddedPlatforms[name] = MetaSettings.ToJson(entry);
+        }
+
+        /// <summary>The settings without the entries the importer added itself and nothing changed
+        /// since: what the .meta holds unless something changed.</summary>
         internal override YNode SavedSettings()
         {
             if (m_AddedPlatforms.Count == 0 || m_Settings == null || !(m_Settings.Get(PlatformList) is { Kind: YKind.Seq } list)) return m_Settings;
             var copy = MetaSettings.Clone(m_Settings);
             var kept = new List<YNode>();
             foreach (var item in list.Items)
-                if (!m_AddedPlatforms.Contains(NameOf(item))) kept.Add(MetaSettings.Clone(item));
+                if (!(NameOf(item) is { } name && m_AddedPlatforms.TryGetValue(name, out var added) && added == MetaSettings.ToJson(item)))
+                    kept.Add(MetaSettings.Clone(item));
             SetList(copy, kept.ToArray());
             return copy;
         }
@@ -142,7 +149,7 @@ namespace UnityEditor
             {
                 entry = NewEntry(Find(list, TextureImporterPlatformSettings.DefaultPlatformName), platform);
                 list = Append(m_Settings, list, entry);
-                m_AddedPlatforms.Add(platform);
+                Added(platform);
             }
             entry ??= Find(list, TextureImporterPlatformSettings.DefaultPlatformName);
             return entry == null ? new TextureImporterPlatformSettings() : Read(list, entry);
