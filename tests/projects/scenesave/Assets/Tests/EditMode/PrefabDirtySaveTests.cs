@@ -7,8 +7,9 @@ using UnityEngine.TestTools;
 /// Edit mode: prefab assets read from their files (copies of Thing.prefab run.py seeds into
 /// Assets/PrefabSaves), changed through their objects and saved by AssetDatabase.SaveAssets and
 /// SaveAssetIfDirty: fields set through the API and directly, with and without SetDirty; a root
-/// marked dirty with nothing changed; a component added and a child parented; a variant made
-/// in the session and changed; one prefab left untouched; one left dirty for the Editor's exit.
+/// marked dirty with nothing changed; a component added and a child parented; variants made in
+/// the session and changed (their script marked dirty, their root alone, saved by
+/// SavePrefabAsset unmarked); one prefab left untouched; one left dirty for the Editor's exit.
 /// Each row records a dirty flag, a step's result or a file's hash (with a snapshot); run.py
 /// keeps the files on disk after the run.
 /// </summary>
@@ -94,6 +95,24 @@ public class PrefabDirtySaveTests
         EditorUtility.SetDirty(variant.GetComponent<Holder>());
         Dirty("variant.changed", variant);
 
+        // A variant whose root alone is marked dirty, its script's field set directly.
+        var rootInstance = (GameObject)PrefabUtility.InstantiatePrefab(Load("Base"));
+        var variantRoot = PrefabUtility.SaveAsPrefabAsset(rootInstance, Folder + "/VariantRoot.prefab");
+        Object.DestroyImmediate(rootInstance);
+        variantRoot.GetComponent<Holder>().count = 10;
+        EditorUtility.SetDirty(variantRoot);
+        Dirty("variantRoot.changed", variantRoot);
+
+        // A variant saved by SavePrefabAsset, its script's field set directly, nothing marked.
+        var apiInstance = (GameObject)PrefabUtility.InstantiatePrefab(Load("Base"));
+        var variantApi = PrefabUtility.SaveAsPrefabAsset(apiInstance, Folder + "/VariantApi.prefab");
+        Object.DestroyImmediate(apiInstance);
+        variantApi.GetComponent<Holder>().count = 14;
+        Dirty("variantApi.changed", variantApi);
+        ProbeLog.Try("variantApi.save", () => { PrefabUtility.SavePrefabAsset(variantApi, out var saved); return saved; });
+        ProbeLog.Snapshot("variantApi.file", Folder + "/VariantApi.prefab");
+        Dirty("variantApi.saved", variantApi);
+
         // One prefab saved alone: the others stay as they are.
         var single = Load("Single");
         single.GetComponent<Holder>().count = 12;
@@ -105,13 +124,14 @@ public class PrefabDirtySaveTests
         Dirty("fields.afterSingle", fields);
 
         ProbeLog.Try("saveAssets", () => { AssetDatabase.SaveAssets(); return "done"; });
-        foreach (var name in new[] { "Fields", "Unmarked", "Touched", "Untouched", "Structure", "Variant" })
+        foreach (var name in new[] { "Fields", "Unmarked", "Touched", "Untouched", "Structure", "Variant", "VariantRoot" })
             ProbeLog.Snapshot(name.ToLowerInvariant() + ".file", Folder + "/" + name + ".prefab");
         Dirty("fields.saved", fields);
         Dirty("unmarked.saved", unmarked);
         Dirty("touched.saved", touched);
         Dirty("structure.saved", structure);
         Dirty("variant.saved", variant);
+        Dirty("variantRoot.saved", variantRoot);
         // A second SaveAssets with nothing dirty.
         ProbeLog.Try("saveAssets.again", () => { AssetDatabase.SaveAssets(); return "done"; });
         ProbeLog.Row("fields.fileAfterSecondSave", ProbeLog.Hash(Folder + "/Fields.prefab"));
