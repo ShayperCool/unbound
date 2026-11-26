@@ -2627,4 +2627,13 @@ fn a_guid_only_texture_imports_as_a_cube_map_where_its_layout_is_measured() {
     assert!(!guid_only_cube_measured(Path::new("Between.psd"), &psd));
     psd[18..22].copy_from_slice(&100u32.to_be_bytes());
     assert!(guid_only_cube_measured(Path::new("Square.psd"), &psd));
+    // A format its content does not name (TGA) is read by its extension, as the import reads it.
+    let mut tga = Vec::new();
+    image::RgbaImage::from_pixel(16, 16, image::Rgba([1, 2, 3, 255]))
+        .write_to(&mut std::io::Cursor::new(&mut tga), image::ImageFormat::Tga)
+        .unwrap();
+    assert_eq!(
+        guid_only_image_size(Path::new("Sky.tga"), &tga),
+        Some((16, 16))
+    );
 }

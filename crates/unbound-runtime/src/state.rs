@@ -35,9 +35,9 @@ pub struct RuntimeState {
     new_meta: unbound_assets::new_meta::MetaContext,
     /// The project's release family's new `.meta` files are measured (6000.0).
     new_meta_measured: bool,
-    /// The textures whose GUID-only `.meta` this session checked ([`guid_only_cube_measured`]
-    /// warns for each whose oldest settings it does not take, also when its import is cached).
-    guid_only_checked: std::sync::Mutex<std::collections::HashSet<Guid>>,
+    /// Whether each texture whose `.meta` holds its GUID alone takes its oldest settings
+    /// ([`guid_only_cube`]), decided once a session (a warning for each that does not).
+    guid_only_cubes: std::sync::Mutex<HashMap<Guid, bool>>,
     /// The project's release (for what is measured in another one).
     release: String,
     /// TextCore's COLR layers select native hinting in the measured release family.
@@ -413,7 +413,7 @@ pub fn initialize(project: &Project) -> Result<&'static RuntimeState> {
             .map(Path::to_path_buf)
             .collect(),
         new_meta_measured: unbound_compat::MeasuredFamily::of(project.version).is_some(),
-        guid_only_checked: Default::default(),
+        guid_only_cubes: Default::default(),
         release: project.version.to_string(),
         font_colr_native_hinting: project.version.measured_family()
             == Some(unbound_compat::MeasuredFamily::Unity6000_0),
@@ -1122,6 +1122,7 @@ pub fn dispatch(method: &str, request: &str) -> Result<String> {
                 let db = s.db();
                 let asset = db.by_guid(guid).context("no such asset")?;
                 let meta = PathBuf::from(format!("{}.meta", asset.file.display()));
+                note_guid_only_texture(s, asset, &meta);
                 let importer = TextureImporter {
                     before_compression: true,
                     ..texture_importer(s)
@@ -1338,6 +1339,7 @@ pub fn dispatch(method: &str, request: &str) -> Result<String> {
             let db = s.db();
             let asset = db.by_guid(guid).context("no such asset")?;
             let meta = PathBuf::from(format!("{}.meta", asset.file.display()));
+            note_guid_only_texture(s, asset, &meta);
             let texture = s
                 .imports
                 .get_or_import(&texture_importer(s), &asset.file, &meta)?;
@@ -2145,17 +2147,34 @@ fn label_meta_section(request: &str) -> Result<String> {
         .by_path(&path)
         .filter(|_| s.new_meta_measured)
         .and_then(|asset| {
-            let kind = label_meta_importer(&asset.file, asset.is_folder)?;
-            match unbound_assets::new_meta::guid_only_section(kind, &s.new_meta) {
-                // The importers that read a GUID-only .meta with their oldest settings write
-                // those, where the asset reads them (`guid_only_body`: not a streaming asset, nor
-                // a texture whose cube map layout is not measured).
-                Some(section) => guid_only_body(s, asset, asset_importer(asset)).map(|_| section),
-                None => Some(meta_section(kind, &asset.file, &s.new_meta)),
-            }
+            label_section_of(
+                &asset.file,
+                asset.is_folder,
+                asset_importer(asset),
+                &s.new_meta,
+                || guid_only_cube(s, asset),
+            )
         })
         .unwrap_or_default();
     Ok(json!({ "section": section }).to_string())
+}
+
+/// The section a GUID-only `.meta` of `file` (whose importer is `importer`) gets when it is
+/// written again: the oldest settings of the importers that read those there, where the asset
+/// reads them ([`guid_only_body_of`]: not a streaming asset, nor a texture whose cube map layout
+/// is not measured), else a new asset's section where that is measured.
+fn label_section_of(
+    file: &Path,
+    is_folder: bool,
+    importer: &str,
+    context: &unbound_assets::new_meta::MetaContext,
+    cube: impl FnOnce() -> bool,
+) -> Option<String> {
+    let kind = label_meta_importer(file, is_folder)?;
+    match unbound_assets::new_meta::guid_only_section(kind, context) {
+        Some(section) => guid_only_body_of(file, importer, context, cube).map(|_| section),
+        None => Some(meta_section(kind, file, context)),
+    }
 }
 
 /// The oldest settings an importer reads from a `.meta` of `asset` that names none, where they
@@ -2168,30 +2187,76 @@ fn guid_only_body(
     if !s.new_meta_measured || asset.is_folder {
         return None;
     }
-    let kind = unbound_assets::new_meta::importer_for(&asset.file, false)?;
-    let section = unbound_assets::new_meta::guid_only_section(kind, &s.new_meta)?;
+    guid_only_body_of(&asset.file, name, &s.new_meta, || guid_only_cube(s, asset))
+}
+
+/// [`guid_only_body`] of `file`, `cube` telling whether a texture takes its oldest settings.
+fn guid_only_body_of(
+    file: &Path,
+    name: &str,
+    context: &unbound_assets::new_meta::MetaContext,
+    cube: impl FnOnce() -> bool,
+) -> Option<unbound_yaml::Value> {
+    let kind = unbound_assets::new_meta::importer_for(file, false)?;
+    let section = unbound_assets::new_meta::guid_only_section(kind, context)?;
     let body = unbound_yaml::parse_value(&section)
         .ok()?
         .get(name)
         .cloned()?;
     // A texture's only where its import takes them (the same rule, from the image's header).
-    if kind == unbound_assets::new_meta::NewImporter::Texture
-        && !guid_only_cube_measured(&asset.file)
-    {
+    if kind == unbound_assets::new_meta::NewImporter::Texture && !cube() {
         return None;
     }
     Some(body)
 }
 
-/// [`unbound_assets::texture::guid_only_cube_measured`] of an image file, from its header.
-fn guid_only_cube_measured(file: &Path) -> bool {
+/// [`unbound_assets::texture::guid_only_cube_measured`] of the image of a texture whose `.meta`
+/// holds its GUID alone, decided once a session, with a warning where it keeps the new-asset
+/// settings.
+fn guid_only_cube(s: &RuntimeState, asset: &unbound_project::assetdb::Asset) -> bool {
+    if let Some(&cube) = s.guid_only_cubes.lock().unwrap().get(&asset.guid) {
+        return cube;
+    }
     use std::io::Read;
     let mut header = Vec::new();
-    let read = std::fs::File::open(file).and_then(|f| {
-        f.take(unbound_assets::texture::GUID_ONLY_HEADER_BYTES as u64)
-            .read_to_end(&mut header)
-    });
-    read.is_ok() && unbound_assets::texture::guid_only_cube_measured(file, &header)
+    let limit =
+        unbound_assets::texture::guid_only_header_len(&asset.file).map_or(u64::MAX, |n| n as u64);
+    let read =
+        std::fs::File::open(&asset.file).and_then(|f| f.take(limit).read_to_end(&mut header));
+    let size = read
+        .ok()
+        .and_then(|_| unbound_assets::texture::guid_only_image_size(&asset.file, &header));
+    let cube = unbound_assets::texture::guid_only_cube_measured(&asset.file, &header);
+    if !cube {
+        tracing::warn!(
+            "{}: its .meta holds its GUID alone, which the Editor imports as a cube map laid out automatically; that layout is not measured for {}: Unbound keeps the new-asset settings (a 2D texture)",
+            asset.path,
+            size.map_or(
+                "an image whose size its header does not give".into(),
+                |(w, h)| format!("a {w}x{h} image")
+            )
+        );
+    }
+    s.guid_only_cubes.lock().unwrap().insert(asset.guid, cube);
+    cube
+}
+
+/// Decides, once a session, whether a texture whose `.meta` holds its GUID alone takes its oldest
+/// settings ([`guid_only_cube`]): every path that loads a texture's import calls it, so a
+/// texture that does not is reported even when its import is cached.
+fn note_guid_only_texture(s: &RuntimeState, asset: &unbound_project::assetdb::Asset, meta: &Path) {
+    if !s.new_meta_measured || s.guid_only_cubes.lock().unwrap().contains_key(&asset.guid) {
+        return;
+    }
+    let guid_only = std::fs::read_to_string(meta)
+        .ok()
+        .and_then(|text| unbound_yaml::parse_value(&text).ok())
+        .is_some_and(|value| unbound_assets::new_meta::names_no_importer(&value));
+    if guid_only {
+        guid_only_cube(s, asset);
+    } else {
+        s.guid_only_cubes.lock().unwrap().insert(asset.guid, true);
+    }
 }
 
 /// The importer whose new-asset section a GUID-only `.meta` of `file` gets when it is written
@@ -2689,6 +2754,7 @@ pub fn import_texture(handle: u64, guid: &str) -> Result<ImportedTextureInfo> {
     let db = s.db();
     let asset = db.by_guid(guid).context("no such asset")?;
     let meta = PathBuf::from(format!("{}.meta", asset.file.display()));
+    note_guid_only_texture(s, asset, &meta);
     let importer = texture_importer(s);
     let texture = s.imports.get_or_import(&importer, &asset.file, &meta)?;
     // The import is ours alone (the cache is on disk): take its data instead of copying it.
@@ -2894,16 +2960,7 @@ fn imported_texture(
     let db = s.db();
     let asset = db.by_guid(guid).context("no such asset")?;
     let meta = PathBuf::from(format!("{}.meta", asset.file.display()));
-    if s.new_meta_measured && s.guid_only_checked.lock().unwrap().insert(guid) {
-        let guid_only = std::fs::read_to_string(&meta)
-            .ok()
-            .and_then(|text| unbound_yaml::parse_value(&text).ok())
-            .is_some_and(|value| unbound_assets::new_meta::names_no_importer(&value));
-        if guid_only {
-            // Warns for an image whose oldest settings it does not take (a cached import too).
-            guid_only_cube_measured(&asset.file);
-        }
-    }
+    note_guid_only_texture(s, asset, &meta);
     s.imports
         .get_or_import(&texture_importer(s), &asset.file, &meta)
 }
@@ -3244,6 +3301,54 @@ mod tests {
                 "{name}"
             );
         }
+    }
+
+    /// A GUID-only texture's importer settings and written section are the oldest (a cube map's)
+    /// only where its import takes them: a 16x16 image, not a 153x100 one (whose cube map layout is
+    /// not measured), nor a streaming asset (DefaultImporter).
+    #[test]
+    fn guid_only_texture_sections_follow_the_import() {
+        let dir = std::env::temp_dir().join(format!("unbound-guid-only-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let context = unbound_assets::new_meta::MetaContext { platforms: vec![] };
+        let png = |name: &str, width, height| {
+            let file = dir.join(name);
+            let rgba = [1u8, 2, 3, 255].repeat((width * height) as usize);
+            std::fs::write(
+                &file,
+                unbound_assets::png_writer::write(width, height, &rgba),
+            )
+            .unwrap();
+            let bytes = std::fs::read(&file).unwrap();
+            let cube = unbound_assets::texture::guid_only_cube_measured(&file, &bytes);
+            (file, cube)
+        };
+        let (square, square_cube) = png("Square.png", 16, 16);
+        let body =
+            super::guid_only_body_of(&square, "TextureImporter", &context, || square_cube).unwrap();
+        assert_eq!(body.get("textureShape").and_then(|v| v.as_str()), Some("2"));
+        let section =
+            super::label_section_of(&square, false, "TextureImporter", &context, || square_cube)
+                .unwrap();
+        assert!(
+            section.starts_with("TextureImporter:\n") && section.contains("\n  textureShape: 2\n")
+        );
+        let (between, between_cube) = png("Between.png", 153, 100);
+        assert!(
+            super::guid_only_body_of(&between, "TextureImporter", &context, || between_cube)
+                .is_none()
+        );
+        assert_eq!(
+            super::label_section_of(&between, false, "TextureImporter", &context, || {
+                between_cube
+            }),
+            None
+        );
+        assert!(
+            super::guid_only_body_of(&square, "DefaultImporter", &context, || square_cube)
+                .is_none()
+        );
+        std::fs::remove_dir_all(&dir).unwrap();
     }
 
     #[test]

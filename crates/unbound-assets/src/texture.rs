@@ -2582,40 +2582,59 @@ fn narrow_u16(v: u16) -> u8 {
     ((u32::from(v) + 128) / 257) as u8
 }
 
-/// The bytes of an image [`guid_only_cube_measured`] reads its size from.
-pub const GUID_ONLY_HEADER_BYTES: usize = 1 << 20;
+/// How much of an image [`guid_only_image_size`] reads: its first MiB, a TIFF whole (its directory
+/// may follow the image data); `None` for the whole file.
+pub fn guid_only_header_len(source: &Path) -> Option<usize> {
+    let tiff = source
+        .extension()
+        .and_then(|e| e.to_str())
+        .is_some_and(|e| e.eq_ignore_ascii_case("tif") || e.eq_ignore_ascii_case("tiff"));
+    (!tiff).then_some(1 << 20)
+}
+
+/// An image's size from the start of its file ([`guid_only_header_len`]), read for the format
+/// [`decode`] takes it as (its content, else its extension); `None` where the header does not
+/// give it.
+pub fn guid_only_image_size(source: &Path, bytes: &[u8]) -> Option<(u32, u32)> {
+    let bytes = &bytes[..bytes
+        .len()
+        .min(guid_only_header_len(source).unwrap_or(usize::MAX))];
+    if bytes.starts_with(b"8BPS")
+        || source
+            .extension()
+            .is_some_and(|e| e.eq_ignore_ascii_case("psd"))
+    {
+        // A Photoshop file's header: height, then width, big-endian at 14.
+        let at = |i: usize| Some(u32::from_be_bytes(bytes.get(i..i + 4)?.try_into().ok()?));
+        return Some((at(18)?, at(14)?));
+    }
+    let format = image::guess_format(bytes)
+        .ok()
+        .or_else(|| image::ImageFormat::from_path(source).ok())?;
+    if format == image::ImageFormat::OpenExr {
+        // Any channel layout (decode_exr_channels): the first layer's data window.
+        let meta =
+            exr::meta::MetaData::read_from_buffered(std::io::Cursor::new(bytes), false).ok()?;
+        let size = meta.headers.first()?.layer_size;
+        return Some((size.width() as u32, size.height() as u32));
+    }
+    if format == image::ImageFormat::Tiff
+        && let Ok(Some((width, height, _))) = tiff_samples::decode(bytes)
+    {
+        return Some((width, height));
+    }
+    image::ImageReader::with_format(std::io::Cursor::new(bytes), format)
+        .into_dimensions()
+        .ok()
+}
 
 /// Whether an image whose `.meta` holds its GUID alone takes the texture importer's oldest
 /// settings, which make it a cube map laid out automatically: only where that layout is measured
-/// for the image's size ([`cubemap::UnmeasuredAutoCubemap`]); an image whose size its header does
-/// not give, or of another aspect, keeps the new-asset settings, as before, with a warning. One
-/// rule for the import, the importer's settings and the sections written
-/// (tests/projects/guidonlymetas aspect.*).
+/// for its size ([`cubemap::UnmeasuredAutoCubemap`]); one whose size its header does not give, or
+/// of another aspect, keeps the new-asset settings, as before (the runtime warns). One rule for the
+/// import, the importer's settings and the sections written (tests/projects/guidonlymetas aspect.*).
 pub fn guid_only_cube_measured(source: &Path, bytes: &[u8]) -> bool {
-    // The header alone, as the runtime reads it for the importer's settings.
-    let bytes = &bytes[..bytes.len().min(GUID_ONLY_HEADER_BYTES)];
-    let size = if bytes.starts_with(b"8BPS") && bytes.len() >= 22 {
-        // A Photoshop file's header: height, then width, big-endian at 14.
-        let at = |i: usize| u32::from_be_bytes(bytes[i..i + 4].try_into().unwrap());
-        Some((at(18), at(14)))
-    } else {
-        image::ImageReader::new(std::io::Cursor::new(bytes))
-            .with_guessed_format()
-            .ok()
-            .and_then(|reader| reader.into_dimensions().ok())
-    };
-    let measured = size.is_some_and(|(w, h)| cubemap::layout(w, h, 6).is_ok());
-    if !measured {
-        tracing::warn!(
-            "{}: its .meta holds its GUID alone, which the Editor imports as a cube map laid out automatically; that layout is not measured for {}: Unbound keeps the new-asset settings (a 2D texture)",
-            source.display(),
-            size.map_or(
-                "an image whose size its header does not give".into(),
-                |(w, h)| format!("a {w}x{h} image")
-            )
-        );
-    }
-    measured
+    guid_only_image_size(source, bytes).is_some_and(|(w, h)| cubemap::layout(w, h, 6).is_ok())
 }
 
 /// The screen gamma a PNG's gamma is corrected for, 2.2 in the PNG fixed point (gamma x 100000).
