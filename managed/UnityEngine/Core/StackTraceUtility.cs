@@ -95,7 +95,7 @@ namespace UnityEngine
                 var frame = stackFrames.GetFrame(i);
                 var method = frame?.GetMethod();
                 if (method?.DeclaringType == null) continue;
-                string unitySource = UnityStackTrace.UnitySource(method, out bool unity);
+                string unitySource = UnityStackTrace.UnitySource(method, i > 0 ? stackFrames.GetFrame(i - 1)?.GetMethod() : null, out bool unity);
                 if (!unity && !UnityStackTrace.IsGameMethod(method)) continue;
                 UnityStackTrace.AppendManagedMethod(text, method);
                 if (unity)

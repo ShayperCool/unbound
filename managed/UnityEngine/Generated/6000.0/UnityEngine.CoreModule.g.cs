@@ -2627,87 +2627,8 @@ namespace UnityEngine.Diagnostics
 }
 namespace UnityEngine.Events
 {
-    [global::Unbound.Stub]
-    internal unsafe abstract partial class BaseInvokableCall
-    {
-        [global::Unbound.Stub] protected BaseInvokableCall() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Events.BaseInvokableCall.ctor"); }
-        [global::Unbound.Stub] protected BaseInvokableCall(object target, global::System.Reflection.MethodInfo function) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Events.BaseInvokableCall.ctor"); }
-        public abstract void Invoke(object[] args);
-        [global::Unbound.Stub] protected static void ThrowOnInvalidArg<T>(object arg) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Events.BaseInvokableCall.ThrowOnInvalidArg"); }
-        [global::Unbound.Stub] protected static bool AllowInvoke(global::System.Delegate @delegate) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Events.BaseInvokableCall.AllowInvoke"); return default; }
-        public abstract bool Find(object targetObj, global::System.Reflection.MethodInfo method);
-    }
-    [global::Unbound.Stub]
-    internal unsafe partial class CachedInvokableCall<T> : global::UnityEngine.Events.InvokableCall<T>
-    {
-        [global::Unbound.Stub] public CachedInvokableCall(global::UnityEngine.Object target, global::System.Reflection.MethodInfo theFunction, T argument) : base(default(global::UnityEngine.Events.UnityAction<T>)) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Events.CachedInvokableCall<T>.ctor"); }
-        [global::Unbound.Stub] public override void Invoke(object[] args) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Events.CachedInvokableCall<T>.Invoke"); }
-        [global::Unbound.Stub] public override void Invoke(T arg0) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Events.CachedInvokableCall<T>.Invoke"); }
-    }
-    [global::Unbound.Stub]
-    internal unsafe partial class InvokableCall : global::UnityEngine.Events.BaseInvokableCall
-    {
-        [global::Unbound.Stub] public InvokableCall(object target, global::System.Reflection.MethodInfo theFunction) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Events.InvokableCall.ctor"); }
-        [global::Unbound.Stub] public InvokableCall(global::UnityEngine.Events.UnityAction action) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Events.InvokableCall.ctor"); }
-        [global::Unbound.Stub] public override void Invoke(object[] args) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Events.InvokableCall.Invoke"); }
-        [global::Unbound.Stub] public void Invoke() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Events.InvokableCall.Invoke"); }
-        [global::Unbound.Stub] public override bool Find(object targetObj, global::System.Reflection.MethodInfo method) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Events.InvokableCall.Find"); return default; }
-    }
-    [global::Unbound.Stub]
-    internal unsafe partial class InvokableCallList
-    {
-        [global::Unbound.Stub] public void AddPersistentInvokableCall(global::UnityEngine.Events.BaseInvokableCall call) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Events.InvokableCallList.AddPersistentInvokableCall"); }
-        [global::Unbound.Stub] public void AddListener(global::UnityEngine.Events.BaseInvokableCall call) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Events.InvokableCallList.AddListener"); }
-        [global::Unbound.Stub] public void RemoveListener(object targetObj, global::System.Reflection.MethodInfo method) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Events.InvokableCallList.RemoveListener"); }
-        [global::Unbound.Stub] public void Clear() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Events.InvokableCallList.Clear"); }
-        [global::Unbound.Stub] public void ClearPersistent() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Events.InvokableCallList.ClearPersistent"); }
-        [global::Unbound.Stub] public global::System.Collections.Generic.List<global::UnityEngine.Events.BaseInvokableCall> PrepareInvoke() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Events.InvokableCallList.PrepareInvoke"); return new global::System.Collections.Generic.List<global::UnityEngine.Events.BaseInvokableCall>(); }
-        [global::Unbound.Stub] public InvokableCallList() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Events.InvokableCallList.ctor"); }
-        public int Count { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Events.InvokableCallList.Count"); return default; } }
-    }
-    [global::Unbound.Stub]
-    internal unsafe partial class InvokableCall<T1> : global::UnityEngine.Events.BaseInvokableCall
-    {
-        [global::Unbound.Stub] public InvokableCall(object target, global::System.Reflection.MethodInfo theFunction) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Events.InvokableCall<T1>.ctor"); }
-        [global::Unbound.Stub] public InvokableCall(global::UnityEngine.Events.UnityAction<T1> action) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Events.InvokableCall<T1>.ctor"); }
-        [global::Unbound.Stub] public override void Invoke(object[] args) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Events.InvokableCall<T1>.Invoke"); }
-        [global::Unbound.Stub] public virtual void Invoke(T1 args0) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Events.InvokableCall<T1>.Invoke"); }
-        [global::Unbound.Stub] public override bool Find(object targetObj, global::System.Reflection.MethodInfo method) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Events.InvokableCall<T1>.Find"); return default; }
-        protected event global::UnityEngine.Events.UnityAction<T1> Delegate { [global::Unbound.Stub] add { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Events.InvokableCall<T1>.Delegate"); } [global::Unbound.Stub] remove { } }
-    }
-    [global::Unbound.Stub]
-    internal unsafe partial class InvokableCall<T1, T2> : global::UnityEngine.Events.BaseInvokableCall
-    {
-        [global::Unbound.Stub] public InvokableCall(object target, global::System.Reflection.MethodInfo theFunction) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Events.InvokableCall<T1, T2>.ctor"); }
-        [global::Unbound.Stub] public InvokableCall(global::UnityEngine.Events.UnityAction<T1, T2> action) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Events.InvokableCall<T1, T2>.ctor"); }
-        [global::Unbound.Stub] public override void Invoke(object[] args) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Events.InvokableCall<T1, T2>.Invoke"); }
-        [global::Unbound.Stub] public void Invoke(T1 args0, T2 args1) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Events.InvokableCall<T1, T2>.Invoke"); }
-        [global::Unbound.Stub] public override bool Find(object targetObj, global::System.Reflection.MethodInfo method) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Events.InvokableCall<T1, T2>.Find"); return default; }
-        protected event global::UnityEngine.Events.UnityAction<T1, T2> Delegate { [global::Unbound.Stub] add { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Events.InvokableCall<T1, T2>.Delegate"); } [global::Unbound.Stub] remove { } }
-    }
-    [global::Unbound.Stub]
-    internal unsafe partial class InvokableCall<T1, T2, T3> : global::UnityEngine.Events.BaseInvokableCall
-    {
-        [global::Unbound.Stub] public InvokableCall(object target, global::System.Reflection.MethodInfo theFunction) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Events.InvokableCall<T1, T2, T3>.ctor"); }
-        [global::Unbound.Stub] public InvokableCall(global::UnityEngine.Events.UnityAction<T1, T2, T3> action) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Events.InvokableCall<T1, T2, T3>.ctor"); }
-        [global::Unbound.Stub] public override void Invoke(object[] args) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Events.InvokableCall<T1, T2, T3>.Invoke"); }
-        [global::Unbound.Stub] public void Invoke(T1 args0, T2 args1, T3 args2) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Events.InvokableCall<T1, T2, T3>.Invoke"); }
-        [global::Unbound.Stub] public override bool Find(object targetObj, global::System.Reflection.MethodInfo method) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Events.InvokableCall<T1, T2, T3>.Find"); return default; }
-        protected event global::UnityEngine.Events.UnityAction<T1, T2, T3> Delegate { [global::Unbound.Stub] add { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Events.InvokableCall<T1, T2, T3>.Delegate"); } [global::Unbound.Stub] remove { } }
-    }
-    [global::Unbound.Stub]
-    internal unsafe partial class InvokableCall<T1, T2, T3, T4> : global::UnityEngine.Events.BaseInvokableCall
-    {
-        [global::Unbound.Stub] public InvokableCall(object target, global::System.Reflection.MethodInfo theFunction) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Events.InvokableCall<T1, T2, T3, T4>.ctor"); }
-        [global::Unbound.Stub] public InvokableCall(global::UnityEngine.Events.UnityAction<T1, T2, T3, T4> action) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Events.InvokableCall<T1, T2, T3, T4>.ctor"); }
-        [global::Unbound.Stub] public override void Invoke(object[] args) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Events.InvokableCall<T1, T2, T3, T4>.Invoke"); }
-        [global::Unbound.Stub] public void Invoke(T1 args0, T2 args1, T3 args2, T4 args3) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Events.InvokableCall<T1, T2, T3, T4>.Invoke"); }
-        [global::Unbound.Stub] public override bool Find(object targetObj, global::System.Reflection.MethodInfo method) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Events.InvokableCall<T1, T2, T3, T4>.Find"); return default; }
-        protected event global::UnityEngine.Events.UnityAction<T1, T2, T3, T4> Delegate { [global::Unbound.Stub] add { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Events.InvokableCall<T1, T2, T3, T4>.Delegate"); } [global::Unbound.Stub] remove { } }
-    }
     unsafe partial class PersistentCall
     {
-        [global::Unbound.Stub] public global::UnityEngine.Events.BaseInvokableCall GetRuntimeCall(global::UnityEngine.Events.UnityEventBase theEvent) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Events.PersistentCall.GetRuntimeCall"); return default; }
         [global::Unbound.Stub] public void RegisterPersistentListener(global::UnityEngine.Object ttarget, global::System.Type targetType, string mmethodName) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Events.PersistentCall.RegisterPersistentListener"); }
         [global::Unbound.Stub] public void UnregisterPersistentListener() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Events.PersistentCall.UnregisterPersistentListener"); }
     }
@@ -2722,7 +2643,6 @@ namespace UnityEngine.Events
         [global::Unbound.Stub] public void RegisterBoolPersistentListener(int index, global::UnityEngine.Object targetObj, global::System.Type targetObjType, bool argument, string methodName) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Events.PersistentCallGroup.RegisterBoolPersistentListener"); }
         [global::Unbound.Stub] public void UnregisterPersistentListener(int index) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Events.PersistentCallGroup.UnregisterPersistentListener"); }
         [global::Unbound.Stub] public void RemoveListeners(global::UnityEngine.Object target, string methodName) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Events.PersistentCallGroup.RemoveListeners"); }
-        [global::Unbound.Stub] public void Initialize(global::UnityEngine.Events.InvokableCallList invokableList, global::UnityEngine.Events.UnityEventBase unityEventBase) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Events.PersistentCallGroup.Initialize"); }
     }
     [global::Unbound.Stub]
     internal unsafe partial class PropertyHelper<TBase>
@@ -2742,18 +2662,13 @@ namespace UnityEngine.Events
     }
     unsafe partial class UnityEvent
     {
-        [global::Unbound.Stub] internal override global::UnityEngine.Events.BaseInvokableCall GetDelegate(object target, global::System.Reflection.MethodInfo theFunction) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Events.UnityEvent.GetDelegate"); return default; }
         [global::Unbound.Stub] internal void RegisterPersistentListener(int index, global::UnityEngine.Events.UnityAction call) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Events.UnityEvent.RegisterPersistentListener"); }
     }
     unsafe partial class UnityEventBase
     {
         [global::Unbound.Stub] protected global::System.Reflection.MethodInfo FindMethod_Impl(string name, object targetObj) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Events.UnityEventBase.FindMethod_Impl"); return default; }
-        [global::Unbound.Stub] internal virtual global::UnityEngine.Events.BaseInvokableCall GetDelegate(object target, global::System.Reflection.MethodInfo theFunction) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Events.UnityEventBase.GetDelegate"); return default; }
         [global::Unbound.Stub] internal global::System.Reflection.MethodInfo FindMethod(global::UnityEngine.Events.PersistentCall call) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Events.UnityEventBase.FindMethod"); return default; }
         [global::Unbound.Stub] internal global::System.Reflection.MethodInfo FindMethod(string name, global::System.Type listenerType, global::UnityEngine.Events.PersistentListenerMode mode, global::System.Type argumentType) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Events.UnityEventBase.FindMethod"); return default; }
-        [global::Unbound.Stub] internal int GetCallsCount() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Events.UnityEventBase.GetCallsCount"); return default; }
-        [global::Unbound.Stub] internal void AddCall(global::UnityEngine.Events.BaseInvokableCall call) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Events.UnityEventBase.AddCall"); }
-        [global::Unbound.Stub] internal global::System.Collections.Generic.List<global::UnityEngine.Events.BaseInvokableCall> PrepareInvoke() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Events.UnityEventBase.PrepareInvoke"); return new global::System.Collections.Generic.List<global::UnityEngine.Events.BaseInvokableCall>(); }
         [global::Unbound.Stub] protected bool ValidateRegistration(global::System.Reflection.MethodInfo method, object targetObj, global::UnityEngine.Events.PersistentListenerMode mode) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Events.UnityEventBase.ValidateRegistration"); return default; }
         [global::Unbound.Stub] protected bool ValidateRegistration(global::System.Reflection.MethodInfo method, object targetObj, global::UnityEngine.Events.PersistentListenerMode mode, global::System.Type argumentType) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Events.UnityEventBase.ValidateRegistration"); return default; }
         [global::Unbound.Stub] protected void RegisterPersistentListener(int index, object targetObj, global::System.Reflection.MethodInfo method) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Events.UnityEventBase.RegisterPersistentListener"); }
@@ -2775,22 +2690,18 @@ namespace UnityEngine.Events
     }
     unsafe partial class UnityEvent<T0>
     {
-        [global::Unbound.Stub] internal override global::UnityEngine.Events.BaseInvokableCall GetDelegate(object target, global::System.Reflection.MethodInfo theFunction) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Events.UnityEvent<T0>.GetDelegate"); return default; }
         [global::Unbound.Stub] internal void RegisterPersistentListener(int index, global::UnityEngine.Events.UnityAction<T0> call) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Events.UnityEvent<T0>.RegisterPersistentListener"); }
     }
     unsafe partial class UnityEvent<T0, T1>
     {
-        [global::Unbound.Stub] internal override global::UnityEngine.Events.BaseInvokableCall GetDelegate(object target, global::System.Reflection.MethodInfo theFunction) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Events.UnityEvent<T0, T1>.GetDelegate"); return default; }
         [global::Unbound.Stub] internal void RegisterPersistentListener(int index, global::UnityEngine.Events.UnityAction<T0, T1> call) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Events.UnityEvent<T0, T1>.RegisterPersistentListener"); }
     }
     unsafe partial class UnityEvent<T0, T1, T2>
     {
-        [global::Unbound.Stub] internal override global::UnityEngine.Events.BaseInvokableCall GetDelegate(object target, global::System.Reflection.MethodInfo theFunction) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Events.UnityEvent<T0, T1, T2>.GetDelegate"); return default; }
         [global::Unbound.Stub] internal void RegisterPersistentListener(int index, global::UnityEngine.Events.UnityAction<T0, T1, T2> call) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Events.UnityEvent<T0, T1, T2>.RegisterPersistentListener"); }
     }
     unsafe partial class UnityEvent<T0, T1, T2, T3>
     {
-        [global::Unbound.Stub] internal override global::UnityEngine.Events.BaseInvokableCall GetDelegate(object target, global::System.Reflection.MethodInfo theFunction) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Events.UnityEvent<T0, T1, T2, T3>.GetDelegate"); return default; }
         [global::Unbound.Stub] internal void RegisterPersistentListener(int index, global::UnityEngine.Events.UnityAction<T0, T1, T2, T3> call) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Events.UnityEvent<T0, T1, T2, T3>.RegisterPersistentListener"); }
     }
 }

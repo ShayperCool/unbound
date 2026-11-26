@@ -1,0 +1,7 @@
+{
+ "The innermost frame of a throw in a branch (EventListener.Helper's `if (depth == 0) throw`), in every text of it: for some throws in a branch the Editor names the method's last statement instead of the throw's (its JIT places that code after the rest of the method); 12 shapes were measured (tests/projects/apierrors frame_*, game_nested) and no rule over the IL explains all of them; Unbound names the throw's statement": [
+  "persistent_deep.extract",
+  "persistent_deep.log_exception",
+  "persistent_deep.unhandled"
+ ]
+}

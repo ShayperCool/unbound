@@ -155,11 +155,24 @@ namespace Unbound.Runtime
         /// <summary>Where the method <paramref name="typeName"/>.<paramref name="methodName"/> with
         /// <paramref name="parameterCount"/> parameters calls a method named
         /// <paramref name="callee"/> (its first such call): the statement's document and line.</summary>
-        internal bool CallSite(string typeName, string methodName, int parameterCount, string callee, out string document, out int line)
+        internal bool CallSite(string typeName, string methodName, int parameterCount, string callee, out string document, out int line) =>
+            CallSite(typeName, methodName, parameterCount, null, callee, null, -1, out _, out document, out line);
+
+        /// <summary>Where the method <paramref name="typeName"/>.<paramref name="methodName"/> with
+        /// <paramref name="parameterCount"/> parameters calls a method named <paramref name="callee"/>:
+        /// its first such call, or, given the called method's declaring type (a generic one by its
+        /// definition, <c>Namespace.Name`1</c>) and parameter count, the first call of that method
+        /// (the first by name when none is). The method is the one whose parameter types are
+        /// <paramref name="parameterTypes"/> (<see cref="ParameterTypeName"/>), else the first with
+        /// as many parameters. The statement's start, document and line.</summary>
+        internal bool CallSite(string typeName, string methodName, int parameterCount, string[] parameterTypes, string callee, string calleeOwner,
+            int calleeParameters, out int start, out string document, out int line)
         {
+            start = 0;
             document = null;
             line = 0;
             if (m_Image == null) return false;
+            MethodDefinitionHandle found = default;
             foreach (var typeHandle in m_Metadata.TypeDefinitions)
             {
                 var type = m_Metadata.GetTypeDefinition(typeHandle);
@@ -168,17 +181,180 @@ namespace Unbound.Runtime
                 {
                     var method = m_Metadata.GetMethodDefinition(methodHandle);
                     if (m_Metadata.GetString(method.Name) != methodName || method.RelativeVirtualAddress == 0) continue;
-                    if (method.GetParameters().Count < parameterCount) continue;
-                    var il = m_Image.GetMethodBody(method.RelativeVirtualAddress).GetILBytes();
-                    foreach (var (opcode, at, operand) in ILCode.Instructions(il, 0, il.Length))
+                    if (ParameterCount(method.Signature) != parameterCount) continue;
+                    if (parameterTypes != null && !SameTypes(ParameterTypes(method.Signature), parameterTypes))
                     {
-                        if (opcode is not (0x28 or 0x6F)) continue; // call, callvirt
-                        if (TargetName(BitConverter.ToInt32(il, operand)) != callee) continue;
-                        return Statement(MetadataTokens.GetToken(methodHandle), at, out _, out document, out line);
+                        if (found.IsNil) found = methodHandle;
+                        continue;
                     }
+                    found = methodHandle;
+                    break;
                 }
+                if (!found.IsNil) break;
             }
-            return false;
+            if (found.IsNil) return false;
+            var il = m_Image.GetMethodBody(m_Metadata.GetMethodDefinition(found).RelativeVirtualAddress).GetILBytes();
+            int first = -1, chosen = -1;
+            foreach (var (opcode, at, operand) in ILCode.Instructions(il, 0, il.Length))
+            {
+                if (opcode is not (0x28 or 0x6F)) continue; // call, callvirt
+                int token = BitConverter.ToInt32(il, operand);
+                if (TargetName(token) != callee) continue;
+                if (first < 0) first = at;
+                if (calleeOwner == null) break;
+                if (TargetOwner(token) == calleeOwner && TargetParameterCount(token) == calleeParameters) { chosen = at; break; }
+            }
+            if (first < 0) return false;
+            return Statement(MetadataTokens.GetToken(found), chosen >= 0 ? chosen : first, out start, out document, out line);
+        }
+
+        static bool SameTypes(string[] a, string[] b)
+        {
+            if (a == null || a.Length != b.Length) return false;
+            for (int i = 0; i < a.Length; i++)
+                if (a[i] != b[i]) return false;
+            return true;
+        }
+
+        /// <summary>The parameter types of a method signature blob (<see cref="ParameterTypeName"/>),
+        /// null for a form not read here.</summary>
+        string[] ParameterTypes(BlobHandle signature)
+        {
+            try
+            {
+                var reader = m_Metadata.GetBlobReader(signature);
+                var header = reader.ReadSignatureHeader();
+                if (header.IsGeneric) reader.ReadCompressedInteger();
+                int count = reader.ReadCompressedInteger();
+                SignatureTypeName(ref reader); // return type
+                var names = new string[count];
+                for (int i = 0; i < count; i++) names[i] = SignatureTypeName(ref reader);
+                return names;
+            }
+            catch (BadImageFormatException) { return null; }
+        }
+
+        /// <summary>A type of a signature as <see cref="ParameterTypeName"/> names it.</summary>
+        string SignatureTypeName(ref BlobReader reader)
+        {
+            var code = reader.ReadSignatureTypeCode();
+            switch (code)
+            {
+                case SignatureTypeCode.Void: return "System.Void";
+                case SignatureTypeCode.Boolean: return "System.Boolean";
+                case SignatureTypeCode.Char: return "System.Char";
+                case SignatureTypeCode.SByte: return "System.SByte";
+                case SignatureTypeCode.Byte: return "System.Byte";
+                case SignatureTypeCode.Int16: return "System.Int16";
+                case SignatureTypeCode.UInt16: return "System.UInt16";
+                case SignatureTypeCode.Int32: return "System.Int32";
+                case SignatureTypeCode.UInt32: return "System.UInt32";
+                case SignatureTypeCode.Int64: return "System.Int64";
+                case SignatureTypeCode.UInt64: return "System.UInt64";
+                case SignatureTypeCode.Single: return "System.Single";
+                case SignatureTypeCode.Double: return "System.Double";
+                case SignatureTypeCode.String: return "System.String";
+                case SignatureTypeCode.Object: return "System.Object";
+                case SignatureTypeCode.IntPtr: return "System.IntPtr";
+                case SignatureTypeCode.UIntPtr: return "System.UIntPtr";
+                case SignatureTypeCode.TypedReference: return "System.TypedReference";
+                case SignatureTypeCode.SZArray: return SignatureTypeName(ref reader) + "[]";
+                case SignatureTypeCode.Pointer: return SignatureTypeName(ref reader) + "*";
+                case SignatureTypeCode.ByReference: return SignatureTypeName(ref reader) + "&";
+                case SignatureTypeCode.GenericTypeParameter: return "!" + reader.ReadCompressedInteger();
+                case SignatureTypeCode.GenericMethodParameter: return "!!" + reader.ReadCompressedInteger();
+                case SignatureTypeCode.TypeHandle: return TypeName(reader.ReadTypeHandle());
+                case SignatureTypeCode.GenericTypeInstance:
+                {
+                    reader.ReadSignatureTypeCode();
+                    string name = TypeName(reader.ReadTypeHandle());
+                    int arguments = reader.ReadCompressedInteger();
+                    for (int i = 0; i < arguments; i++) SignatureTypeName(ref reader);
+                    return name;
+                }
+                default: throw new BadImageFormatException("a signature form not read here: " + code);
+            }
+        }
+
+        /// <summary>How a parameter type is compared with a signature's: <c>Namespace.Name</c>, a
+        /// constructed generic type by its definition's, arrays <c>[]</c>, pointers <c>*</c>,
+        /// references <c>&amp;</c>, a type's generic parameter <c>!n</c>, a method's <c>!!n</c>.</summary>
+        internal static string ParameterTypeName(Type type)
+        {
+            if (type.IsByRef) return ParameterTypeName(type.GetElementType()) + "&";
+            if (type.IsPointer) return ParameterTypeName(type.GetElementType()) + "*";
+            if (type.IsSZArray) return ParameterTypeName(type.GetElementType()) + "[]";
+            if (type.IsGenericParameter) return (type.DeclaringMethod != null ? "!!" : "!") + type.GenericParameterPosition;
+            if (type.IsConstructedGenericType) type = type.GetGenericTypeDefinition();
+            return string.IsNullOrEmpty(type.Namespace) ? type.Name : type.Namespace + "." + type.Name;
+        }
+
+        /// <summary>The parameter count a method signature blob declares.</summary>
+        int ParameterCount(BlobHandle signature)
+        {
+            var reader = m_Metadata.GetBlobReader(signature);
+            var header = reader.ReadSignatureHeader();
+            if (header.IsGeneric) reader.ReadCompressedInteger();
+            return reader.ReadCompressedInteger();
+        }
+
+        int TargetParameterCount(int token)
+        {
+            var handle = MetadataTokens.EntityHandle(token);
+            switch (handle.Kind)
+            {
+                case HandleKind.MethodDefinition:
+                    return ParameterCount(m_Metadata.GetMethodDefinition((MethodDefinitionHandle)handle).Signature);
+                case HandleKind.MemberReference:
+                    return ParameterCount(m_Metadata.GetMemberReference((MemberReferenceHandle)handle).Signature);
+                case HandleKind.MethodSpecification:
+                    return TargetParameterCount(MetadataTokens.GetToken(m_Metadata.GetMethodSpecification((MethodSpecificationHandle)handle).Method));
+                default:
+                    return -1;
+            }
+        }
+
+        /// <summary>The declaring type of a called method: <c>Namespace.Name</c>, a generic
+        /// instantiation by its definition's name.</summary>
+        string TargetOwner(int token)
+        {
+            var handle = MetadataTokens.EntityHandle(token);
+            switch (handle.Kind)
+            {
+                case HandleKind.MethodDefinition:
+                    return FullName(m_Metadata.GetTypeDefinition(m_Metadata.GetMethodDefinition((MethodDefinitionHandle)handle).GetDeclaringType()));
+                case HandleKind.MemberReference:
+                    return TypeName(m_Metadata.GetMemberReference((MemberReferenceHandle)handle).Parent);
+                case HandleKind.MethodSpecification:
+                    return TargetOwner(MetadataTokens.GetToken(m_Metadata.GetMethodSpecification((MethodSpecificationHandle)handle).Method));
+                default:
+                    return null;
+            }
+        }
+
+        string TypeName(EntityHandle handle)
+        {
+            switch (handle.Kind)
+            {
+                case HandleKind.TypeDefinition:
+                    return FullName(m_Metadata.GetTypeDefinition((TypeDefinitionHandle)handle));
+                case HandleKind.TypeReference:
+                {
+                    var reference = m_Metadata.GetTypeReference((TypeReferenceHandle)handle);
+                    string ns = m_Metadata.GetString(reference.Namespace);
+                    string name = m_Metadata.GetString(reference.Name);
+                    return ns.Length == 0 ? name : ns + "." + name;
+                }
+                case HandleKind.TypeSpecification:
+                {
+                    var reader = m_Metadata.GetBlobReader(m_Metadata.GetTypeSpecification((TypeSpecificationHandle)handle).Signature);
+                    if (reader.ReadSignatureTypeCode() != SignatureTypeCode.GenericTypeInstance) return null;
+                    reader.ReadSignatureTypeCode(); // class or value type
+                    return TypeName(reader.ReadTypeHandle());
+                }
+                default:
+                    return null;
+            }
         }
 
         string FullName(TypeDefinition type)

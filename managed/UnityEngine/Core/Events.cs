@@ -119,8 +119,10 @@ namespace UnityEngine.Events
             m_MethodName = string.Empty;
         }
 
-        /// <summary>A callable for this entry, or null when the target or method is missing.</summary>
-        internal Action<object[]> Resolve(UnityEventBase owner)
+        /// <summary>The invokable call of this entry, or null when it is off, or its target or method
+        /// is missing: the event's own call for its own arguments, a call with no argument, or one that
+        /// passes the entry's argument whatever the event passes.</summary>
+        public BaseInvokableCall GetRuntimeCall(UnityEventBase owner)
         {
             if (m_CallState == UnityEventCallState.Off || !IsValid())
                 return null;
@@ -133,40 +135,29 @@ namespace UnityEngine.Events
             var parameters = UnityEventBase.ParametersOf(m_Mode, owner, argType);
             if (parameters == null) return null;
             var method = UnityEventBase.GetValidMethodInfo(targetType, m_MethodName, parameters);
-            object[] fixedArgs;
-            switch (m_Mode)
-            {
-                case PersistentListenerMode.EventDefined: fixedArgs = null; break;
-                case PersistentListenerMode.Void: fixedArgs = Array.Empty<object>(); break;
-                case PersistentListenerMode.Object:
-                {
-                    var arg = m_Arguments.unityObjectArgument;
-                    fixedArgs = new object[] { arg != null && parameters[0].IsInstanceOfType(arg) ? arg : null };
-                    break;
-                }
-                case PersistentListenerMode.Int: fixedArgs = new object[] { m_Arguments.intArgument }; break;
-                case PersistentListenerMode.Float: fixedArgs = new object[] { m_Arguments.floatArgument }; break;
-                case PersistentListenerMode.String: fixedArgs = new object[] { m_Arguments.stringArgument }; break;
-                default: fixedArgs = new object[] { m_Arguments.boolArgument }; break;
-            }
             if (method == null)
             {
                 Debug.LogWarning($"UnityEvent: {targetType.Name}.{m_MethodName} not found for persistent call.", m_Target);
                 return null;
             }
-            var target = m_Target;
-            return args =>
+            if (!method.IsStatic && m_Target == null) return null;
+            var target = method.IsStatic ? null : m_Target;
+            switch (m_Mode)
             {
-                if (target == null && !method.IsStatic) return;
-                try
+                case PersistentListenerMode.EventDefined: return owner.GetDelegate(target, method);
+                case PersistentListenerMode.Void: return new InvokableCall(target, method);
+                case PersistentListenerMode.Object:
                 {
-                    method.Invoke(method.IsStatic ? null : target, fixedArgs ?? args);
+                    var type = parameters[0];
+                    var arg = m_Arguments.unityObjectArgument;
+                    if (arg != null && !type.IsInstanceOfType(arg)) arg = null;
+                    return (BaseInvokableCall)Activator.CreateInstance(typeof(CachedInvokableCall<>).MakeGenericType(type), target, method, arg);
                 }
-                catch (TargetInvocationException e)
-                {
-                    throw e.InnerException ?? e;
-                }
-            };
+                case PersistentListenerMode.Int: return new CachedInvokableCall<int>(target, method, m_Arguments.intArgument);
+                case PersistentListenerMode.Float: return new CachedInvokableCall<float>(target, method, m_Arguments.floatArgument);
+                case PersistentListenerMode.String: return new CachedInvokableCall<string>(target, method, m_Arguments.stringArgument);
+                default: return new CachedInvokableCall<bool>(target, method, m_Arguments.boolArgument);
+            }
         }
     }
 
@@ -182,6 +173,17 @@ namespace UnityEngine.Events
         public void AddListener(PersistentCall call) => m_Calls.Add(call);
         public void RemoveListener(int index) => m_Calls.RemoveAt(index);
         public void Clear() => m_Calls.Clear();
+
+        /// <summary>Puts the invokable calls of the valid entries into the event's list, in order.</summary>
+        public void Initialize(InvokableCallList invokableList, UnityEventBase unityEventBase)
+        {
+            foreach (var persistentCall in m_Calls)
+            {
+                if (!persistentCall.IsValid()) continue;
+                var call = persistentCall.GetRuntimeCall(unityEventBase);
+                if (call != null) invokableList.AddPersistentInvokableCall(call);
+            }
+        }
     }
 
     [Serializable]
@@ -189,9 +191,8 @@ namespace UnityEngine.Events
     {
         [FormerlySerializedAs("m_PersistentListeners")] [SerializeField] PersistentCallGroup m_PersistentCalls = new PersistentCallGroup();
 
-        [NonSerialized] readonly List<Delegate> m_RuntimeCalls = new List<Delegate>();
-        [NonSerialized] List<Action<object[]>> m_ResolvedPersistent;
-        [NonSerialized] bool m_Dirty = true;
+        readonly InvokableCallList m_Calls = new InvokableCallList();
+        bool m_CallsDirty = true;
 
         protected UnityEventBase() { }
 
@@ -199,7 +200,33 @@ namespace UnityEngine.Events
 
         void ISerializationCallbackReceiver.OnAfterDeserialize() => DirtyPersistentCalls();
 
-        void DirtyPersistentCalls() => m_Dirty = true;
+        void DirtyPersistentCalls()
+        {
+            m_Calls.ClearPersistent();
+            m_CallsDirty = true;
+        }
+
+        void RebuildPersistentCallsIfNeeded()
+        {
+            if (!m_CallsDirty) return;
+            m_PersistentCalls.Initialize(m_Calls, this);
+            m_CallsDirty = false;
+        }
+
+        /// <summary>The calls an Invoke goes over: the persistent calls (made again when they changed),
+        /// then the runtime listeners.</summary>
+        internal List<BaseInvokableCall> PrepareInvoke()
+        {
+            RebuildPersistentCallsIfNeeded();
+            return m_Calls.PrepareInvoke();
+        }
+
+        internal int GetCallsCount() => m_Calls.Count;
+
+        internal void AddCall(BaseInvokableCall call) => m_Calls.AddListener(call);
+
+        /// <summary>The call of a method with the event's own arguments.</summary>
+        internal abstract BaseInvokableCall GetDelegate(object target, MethodInfo theFunction);
 
         /// <summary>The parameter types of the event's own signature.</summary>
         internal abstract Type[] ArgumentTypes();
@@ -222,14 +249,9 @@ namespace UnityEngine.Events
         public UnityEventCallState GetPersistentListenerState(int index) =>
             index >= 0 && index < m_PersistentCalls.Count ? m_PersistentCalls.GetListener(index).callState : UnityEventCallState.Off;
 
-        public void RemoveAllListeners() => m_RuntimeCalls.Clear();
+        public void RemoveAllListeners() => m_Calls.Clear();
 
-        protected void AddListener(object targetObj, MethodInfo method)
-        {
-            m_RuntimeCalls.Add(Delegate.CreateDelegate(ActionTypeFor(method), targetObj, method));
-        }
-
-        internal void AddCall(Delegate call) => m_RuntimeCalls.Add(call);
+        protected void AddListener(object targetObj, MethodInfo method) => m_Calls.AddListener(GetDelegate(targetObj, method));
 
         internal void UaAddPersistentCall(Delegate callback, UnityEventCallState state)
         {
@@ -320,67 +342,19 @@ namespace UnityEngine.Events
         }
 
 
-        protected void RemoveListener(object targetObj, MethodInfo method)
-        {
-            m_RuntimeCalls.RemoveAll(d => d.Target == targetObj && d.Method == method);
-        }
+        protected void RemoveListener(object targetObj, MethodInfo method) => m_Calls.RemoveListener(targetObj, method);
 
         internal void RemoveCall(Delegate call)
         {
             RemoveListener(call.Target, call.Method);
         }
 
-        static Type ActionTypeFor(MethodInfo method)
-        {
-            var parameters = method.GetParameters();
-            switch (parameters.Length)
-            {
-                case 0: return typeof(UnityAction);
-                case 1: return typeof(UnityAction<>).MakeGenericType(parameters[0].ParameterType);
-                case 2: return typeof(UnityAction<,>).MakeGenericType(parameters[0].ParameterType, parameters[1].ParameterType);
-                case 3: return typeof(UnityAction<,,>).MakeGenericType(parameters[0].ParameterType, parameters[1].ParameterType, parameters[2].ParameterType);
-                default: return typeof(UnityAction<,,,>).MakeGenericType(parameters[0].ParameterType, parameters[1].ParameterType, parameters[2].ParameterType, parameters[3].ParameterType);
-            }
-        }
-
-        /// <summary>Runs the persistent calls, then the runtime listeners, over a snapshot.</summary>
+        [Unbound.UnityFrame("Invoke"), System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.NoInlining)]
         protected void Invoke(object[] parameters)
         {
-            if (m_Dirty)
-            {
-                m_ResolvedPersistent = new List<Action<object[]>>();
-                foreach (var call in m_PersistentCalls.GetListeners())
-                {
-                    var resolved = call.Resolve(this);
-                    if (resolved != null) m_ResolvedPersistent.Add(resolved);
-                }
-                m_Dirty = false;
-            }
-            foreach (var call in m_ResolvedPersistent.ToArray())
-                call(parameters);
-            foreach (var call in m_RuntimeCalls.ToArray())
-                call.DynamicInvoke(parameters);
-        }
-
-        internal void InvokeRuntime<TDelegate>(Action<TDelegate> invoke, object[] parameters) where TDelegate : Delegate
-        {
-            if (m_Dirty)
-            {
-                m_ResolvedPersistent = new List<Action<object[]>>();
-                foreach (var call in m_PersistentCalls.GetListeners())
-                {
-                    var resolved = call.Resolve(this);
-                    if (resolved != null) m_ResolvedPersistent.Add(resolved);
-                }
-                m_Dirty = false;
-            }
-            foreach (var call in m_ResolvedPersistent.ToArray())
-                call(parameters);
-            foreach (var call in m_RuntimeCalls.ToArray())
-            {
-                if (call is TDelegate typed) invoke(typed);
-                else call.DynamicInvoke(parameters);
-            }
+            List<BaseInvokableCall> calls = PrepareInvoke();
+            for (var i = 0; i < calls.Count; i++)
+                calls[i].Invoke(parameters);
         }
 
         public override string ToString() => base.ToString() + " " + GetType().FullName;
@@ -418,14 +392,33 @@ namespace UnityEngine.Events
     {
         public UnityEvent() { }
 
-        public void AddListener(UnityAction call) => AddCall(call);
+        object[] m_InvokeArray;
+
+        public void AddListener(UnityAction call) => AddCall(GetDelegate(call));
         public void RemoveListener(UnityAction call) => RemoveCall(call);
+
+        internal override BaseInvokableCall GetDelegate(object target, MethodInfo theFunction) => new InvokableCall(target, theFunction);
+
+        static BaseInvokableCall GetDelegate(UnityAction action) => new InvokableCall(action);
 
         protected override MethodInfo FindMethod_Impl(string name, Type targetObjType) => GetValidMethodInfo(targetObjType, name, Type.EmptyTypes);
 
         internal override Type[] ArgumentTypes() => Type.EmptyTypes;
 
-        public void Invoke() => InvokeRuntime<UnityAction>(a => a(), Array.Empty<object>());
+        [Unbound.UnityFrame("Invoke"), System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.NoInlining)]
+        public void Invoke()
+        {
+            List<BaseInvokableCall> calls = PrepareInvoke();
+            for (var i = 0; i < calls.Count; i++)
+            {
+                if (calls[i] is InvokableCall call) call.Invoke();
+                else
+                {
+                    m_InvokeArray ??= new object[0];
+                    calls[i].Invoke(m_InvokeArray);
+                }
+            }
+        }
 
         internal void AddPersistentListener(UnityAction call) => AddPersistentListener(call, UnityEventCallState.RuntimeOnly);
         internal void AddPersistentListener(UnityAction call, UnityEventCallState callState) => UaAddPersistentCall(call, callState);
@@ -436,7 +429,13 @@ namespace UnityEngine.Events
     {
         public UnityEvent() { }
 
-        public void AddListener(UnityAction<T0> call) => AddCall(call);
+        object[] m_InvokeArray;
+
+        public void AddListener(UnityAction<T0> call) => AddCall(GetDelegate(call));
+
+        internal override BaseInvokableCall GetDelegate(object target, MethodInfo theFunction) => new InvokableCall<T0>(target, theFunction);
+
+        static BaseInvokableCall GetDelegate(UnityAction<T0> action) => new InvokableCall<T0>(action);
 
         internal void AddPersistentListener(UnityAction<T0> call) => AddPersistentListener(call, UnityEventCallState.RuntimeOnly);
         internal void AddPersistentListener(UnityAction<T0> call, UnityEventCallState callState) => UaAddPersistentCall(call, callState);
@@ -446,7 +445,21 @@ namespace UnityEngine.Events
 
         internal override Type[] ArgumentTypes() => new[] { typeof(T0) };
 
-        public void Invoke(T0 arg0) => InvokeRuntime<UnityAction<T0>>(a => a(arg0), new object[] { arg0 });
+        [Unbound.UnityFrame("Invoke"), System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.NoInlining)]
+        public void Invoke(T0 arg0)
+        {
+            List<BaseInvokableCall> calls = PrepareInvoke();
+            for (var i = 0; i < calls.Count; i++)
+            {
+                if (calls[i] is InvokableCall<T0> call) call.Invoke(arg0);
+                else
+                {
+                    m_InvokeArray ??= new object[1];
+                    m_InvokeArray[0] = arg0;
+                    calls[i].Invoke(m_InvokeArray);
+                }
+            }
+        }
     }
 
     [Serializable]
@@ -454,7 +467,13 @@ namespace UnityEngine.Events
     {
         public UnityEvent() { }
 
-        public void AddListener(UnityAction<T0, T1> call) => AddCall(call);
+        object[] m_InvokeArray;
+
+        public void AddListener(UnityAction<T0, T1> call) => AddCall(GetDelegate(call));
+
+        internal override BaseInvokableCall GetDelegate(object target, MethodInfo theFunction) => new InvokableCall<T0, T1>(target, theFunction);
+
+        static BaseInvokableCall GetDelegate(UnityAction<T0, T1> action) => new InvokableCall<T0, T1>(action);
 
         internal void AddPersistentListener(UnityAction<T0, T1> call) => AddPersistentListener(call, UnityEventCallState.RuntimeOnly);
         internal void AddPersistentListener(UnityAction<T0, T1> call, UnityEventCallState callState) => UaAddPersistentCall(call, callState);
@@ -464,7 +483,22 @@ namespace UnityEngine.Events
 
         internal override Type[] ArgumentTypes() => new[] { typeof(T0), typeof(T1) };
 
-        public void Invoke(T0 arg0, T1 arg1) => InvokeRuntime<UnityAction<T0, T1>>(a => a(arg0, arg1), new object[] { arg0, arg1 });
+        [Unbound.UnityFrame("Invoke"), System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.NoInlining)]
+        public void Invoke(T0 arg0, T1 arg1)
+        {
+            List<BaseInvokableCall> calls = PrepareInvoke();
+            for (var i = 0; i < calls.Count; i++)
+            {
+                if (calls[i] is InvokableCall<T0, T1> call) call.Invoke(arg0, arg1);
+                else
+                {
+                    m_InvokeArray ??= new object[2];
+                    m_InvokeArray[0] = arg0;
+                    m_InvokeArray[1] = arg1;
+                    calls[i].Invoke(m_InvokeArray);
+                }
+            }
+        }
     }
 
     [Serializable]
@@ -472,7 +506,13 @@ namespace UnityEngine.Events
     {
         public UnityEvent() { }
 
-        public void AddListener(UnityAction<T0, T1, T2> call) => AddCall(call);
+        object[] m_InvokeArray;
+
+        public void AddListener(UnityAction<T0, T1, T2> call) => AddCall(GetDelegate(call));
+
+        internal override BaseInvokableCall GetDelegate(object target, MethodInfo theFunction) => new InvokableCall<T0, T1, T2>(target, theFunction);
+
+        static BaseInvokableCall GetDelegate(UnityAction<T0, T1, T2> action) => new InvokableCall<T0, T1, T2>(action);
 
         internal void AddPersistentListener(UnityAction<T0, T1, T2> call) => AddPersistentListener(call, UnityEventCallState.RuntimeOnly);
         internal void AddPersistentListener(UnityAction<T0, T1, T2> call, UnityEventCallState callState) => UaAddPersistentCall(call, callState);
@@ -482,7 +522,23 @@ namespace UnityEngine.Events
 
         internal override Type[] ArgumentTypes() => new[] { typeof(T0), typeof(T1), typeof(T2) };
 
-        public void Invoke(T0 arg0, T1 arg1, T2 arg2) => InvokeRuntime<UnityAction<T0, T1, T2>>(a => a(arg0, arg1, arg2), new object[] { arg0, arg1, arg2 });
+        [Unbound.UnityFrame("Invoke"), System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.NoInlining)]
+        public void Invoke(T0 arg0, T1 arg1, T2 arg2)
+        {
+            List<BaseInvokableCall> calls = PrepareInvoke();
+            for (var i = 0; i < calls.Count; i++)
+            {
+                if (calls[i] is InvokableCall<T0, T1, T2> call) call.Invoke(arg0, arg1, arg2);
+                else
+                {
+                    m_InvokeArray ??= new object[3];
+                    m_InvokeArray[0] = arg0;
+                    m_InvokeArray[1] = arg1;
+                    m_InvokeArray[2] = arg2;
+                    calls[i].Invoke(m_InvokeArray);
+                }
+            }
+        }
     }
 
     [Serializable]
@@ -490,7 +546,13 @@ namespace UnityEngine.Events
     {
         public UnityEvent() { }
 
-        public void AddListener(UnityAction<T0, T1, T2, T3> call) => AddCall(call);
+        object[] m_InvokeArray;
+
+        public void AddListener(UnityAction<T0, T1, T2, T3> call) => AddCall(GetDelegate(call));
+
+        internal override BaseInvokableCall GetDelegate(object target, MethodInfo theFunction) => new InvokableCall<T0, T1, T2, T3>(target, theFunction);
+
+        static BaseInvokableCall GetDelegate(UnityAction<T0, T1, T2, T3> action) => new InvokableCall<T0, T1, T2, T3>(action);
 
         internal void AddPersistentListener(UnityAction<T0, T1, T2, T3> call) => AddPersistentListener(call, UnityEventCallState.RuntimeOnly);
         internal void AddPersistentListener(UnityAction<T0, T1, T2, T3> call, UnityEventCallState callState) => UaAddPersistentCall(call, callState);
@@ -500,6 +562,23 @@ namespace UnityEngine.Events
 
         internal override Type[] ArgumentTypes() => new[] { typeof(T0), typeof(T1), typeof(T2), typeof(T3) };
 
-        public void Invoke(T0 arg0, T1 arg1, T2 arg2, T3 arg3) => InvokeRuntime<UnityAction<T0, T1, T2, T3>>(a => a(arg0, arg1, arg2, arg3), new object[] { arg0, arg1, arg2, arg3 });
+        [Unbound.UnityFrame("Invoke"), System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.NoInlining)]
+        public void Invoke(T0 arg0, T1 arg1, T2 arg2, T3 arg3)
+        {
+            List<BaseInvokableCall> calls = PrepareInvoke();
+            for (var i = 0; i < calls.Count; i++)
+            {
+                if (calls[i] is InvokableCall<T0, T1, T2, T3> call) call.Invoke(arg0, arg1, arg2, arg3);
+                else
+                {
+                    m_InvokeArray ??= new object[4];
+                    m_InvokeArray[0] = arg0;
+                    m_InvokeArray[1] = arg1;
+                    m_InvokeArray[2] = arg2;
+                    m_InvokeArray[3] = arg3;
+                    calls[i].Invoke(m_InvokeArray);
+                }
+            }
+        }
     }
 }

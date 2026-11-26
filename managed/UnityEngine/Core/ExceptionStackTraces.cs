@@ -30,13 +30,17 @@ namespace Unbound.Runtime
                 }
                 if (!measured) { text.Append(current.StackTrace ?? ""); continue; }
                 var captured = new StackTrace(current, true);
-                for (int frameIndex = 0; frameIndex < captured.FrameCount; frameIndex++)
+                MethodBase inner = null;
+                for (int frameIndex = 0; frameIndex < captured.FrameCount; inner = captured.GetFrame(frameIndex)?.GetMethod(), frameIndex++)
                 {
                     var frame = captured.GetFrame(frameIndex);
                     var method = frame?.GetMethod();
-                    if (method == null || !IsGameMethod(method)) continue;
+                    if (method == null) continue;
+                    var place = UnityPlace(method, inner, out bool unity);
+                    if (!unity && !IsGameMethod(method)) continue;
                     AppendCapturedMethod(text, method);
-                    AppendSource(text, frame, ProjectFolder);
+                    if (!unity) AppendSource(text, frame, ProjectFolder);
+                    else if (place.Document != null) text.Append(" (at ").Append(place.Document).Append(':').Append(place.Line).Append(')');
                     text.Append('\n');
                 }
             }
@@ -52,6 +56,7 @@ namespace Unbound.Runtime
             }
             if (hasCaller)
             {
+                bool unity = false;
                 for (int i = 0; i < call.FrameCount; i++)
                 {
                     var frame = call.GetFrame(i);
@@ -59,9 +64,11 @@ namespace Unbound.Runtime
                     if (method == null || method.DeclaringType == null) continue;
                     bool game = IsGameMethod(method);
                     bool entry = method.DeclaringType == typeof(UnityEngine.Debug) && method.Name == nameof(UnityEngine.Debug.LogException);
-                    if (!game && !entry) continue;
+                    string unitySource = game || entry ? null : UnitySource(method, i > 0 ? call.GetFrame(i - 1)?.GetMethod() : null, out unity);
+                    if (!game && !entry && !unity) continue;
                     AppendManagedMethod(text, method);
                     if (game) AppendSource(text, frame, ProjectFolder);
+                    else if (unitySource != null) text.Append(" (at ").Append(unitySource).Append(')');
                     text.Append('\n');
                 }
             }
@@ -82,18 +89,21 @@ namespace Unbound.Runtime
             var captured = new StackTrace(exception, true);
             var text = new StringBuilder();
             bool separate = false;
-            for (int i = 0; i < captured.FrameCount; i++)
+            MethodBase inner = null;
+            for (int i = 0; i < captured.FrameCount; inner = captured.GetFrame(i)?.GetMethod(), i++)
             {
                 var frame = captured.GetFrame(i);
                 var method = frame?.GetMethod();
-                if (method != null && IsGameMethod(method))
+                bool unity = false;
+                var unityPlace = method != null ? UnityPlace(method, inner, out unity) : default;
+                if (method != null && (unity || IsGameMethod(method)))
                 {
                     if (text.Length != 0) text.Append('\n');
                     if (separate) text.Append(ForeignStackEnd).Append('\n');
                     separate = false;
                     text.Append("  at ");
                     AppendCapturedMethod(text, method);
-                    var (offset, file, line) = Place(frame, method);
+                    var (offset, file, line) = unity ? (unityPlace.Offset, unityPlace.Document, unityPlace.Line) : Place(frame, method);
                     text.Append(" [0x").Append(Math.Max(offset, 0).ToString("x5")).Append("] in ");
                     if (file == null) text.Append('<').Append(method.Module.ModuleVersionId.ToString("N")).Append('>');
                     else text.Append(AbsoluteSourcePath(file, ProjectInfo.ProjectPath));
@@ -137,27 +147,63 @@ namespace Unbound.Runtime
 
         const string PackageCache = "Library/PackageCache/";
 
-        static readonly ConcurrentDictionary<MethodBase, string> s_UnitySources = new();
+        static readonly ConcurrentDictionary<(MethodBase, string, int), (int, string, int)> s_UnityPlaces = new();
 
         /// <summary>Whether <paramref name="method"/> stands for a managed Unity method
         /// (<see cref="Unbound.UnityFrameAttribute"/>), and that method's source place as
         /// <c>path:line</c> (null without the release's .pdb).</summary>
-        internal static string UnitySource(MethodBase method, out bool unity)
+        internal static string UnitySource(MethodBase method, out bool unity) => UnitySource(method, null, out unity);
+
+        /// <summary><see cref="UnitySource(MethodBase, out bool)"/> of a frame whose callee is
+        /// <paramref name="inner"/> (the next frame inward, null for none).</summary>
+        internal static string UnitySource(MethodBase method, MethodBase inner, out bool unity)
+        {
+            var place = UnityPlace(method, inner, out unity);
+            return place.Document == null ? null : place.Document + ":" + place.Line;
+        }
+
+        /// <summary>Whether <paramref name="method"/> stands for a managed Unity method, and where
+        /// that method makes the call the frame is in: the statement's IL offset, document and line
+        /// in the release's UnityEngine.CoreModule .pdb (no document without it). The call is the
+        /// first to the attribute's callee, or, where the callee is an engine method standing for
+        /// Unity's (<paramref name="inner"/>), the first call of that method (the method its override
+        /// overrides): UnityEvent.Invoke calls an InvokableCall's Invoke() or a call's Invoke(object[])
+        /// at different places (matches the Unity 6000.0.71f1 Editor, tests/projects/eventstacks).</summary>
+        internal static (int Offset, string Document, int Line) UnityPlace(MethodBase method, MethodBase inner, out bool unity)
         {
             unity = false;
-            if (method.Module.Assembly != s_Engine) return null;
+            if (method.Module.Assembly != s_Engine) return default;
             var frame = method.GetCustomAttribute<Unbound.UnityFrameAttribute>();
             unity = frame != null;
-            if (!unity) return null;
+            if (!unity) return default;
             string data = UnityEditor.UnityInstallInfo.DataPath;
-            if (string.IsNullOrEmpty(data)) return null;
-            return s_UnitySources.GetOrAdd(method, m =>
+            if (string.IsNullOrEmpty(data)) return default;
+            string owner = null;
+            int count = -1;
+            if (inner != null && inner.Module.Assembly == s_Engine && inner.IsDefined(typeof(Unbound.UnityFrameAttribute), false))
             {
+                var called = inner is MethodInfo info ? info.GetBaseDefinition() : inner;
+                owner = DefinitionName(called.DeclaringType);
+                count = called.GetParameters().Length;
+            }
+            return s_UnityPlaces.GetOrAdd((method, owner, count), key =>
+            {
+                var (m, calleeOwner, calleeParameters) = key;
                 var pdb = PortablePdb.OfFile(Path.Combine(data, "Managed", "UnityEngine", "UnityEngine.CoreModule.dll"));
-                return pdb != null && pdb.CallSite(m.DeclaringType.FullName, m.Name, m.GetParameters().Length, frame.Callee, out var document, out int line)
-                    ? document + ":" + line
-                    : null;
+                var definition = m.DeclaringType.IsConstructedGenericType ? m.Module.ResolveMethod(m.MetadataToken) : m;
+                var parameters = Array.ConvertAll(definition.GetParameters(), p => PortablePdb.ParameterTypeName(p.ParameterType));
+                return pdb != null && pdb.CallSite(DefinitionName(m.DeclaringType), m.Name, parameters.Length, parameters, frame.Callee,
+                        calleeOwner, calleeParameters, out int start, out var document, out int line)
+                    ? (start, document, line)
+                    : (0, null, 0);
             });
+        }
+
+        /// <summary><c>Namespace.Name</c> of a type, a constructed generic one by its definition's.</summary>
+        static string DefinitionName(Type type)
+        {
+            if (type.IsConstructedGenericType) type = type.GetGenericTypeDefinition();
+            return string.IsNullOrEmpty(type.Namespace) ? type.Name : type.Namespace + "." + type.Name;
         }
 
         static void AppendCapturedMethod(StringBuilder text, MethodBase method)

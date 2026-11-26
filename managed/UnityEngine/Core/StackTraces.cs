@@ -28,7 +28,7 @@ namespace Unbound.Runtime
                 var frame = trace.GetFrame(i);
                 var method = frame?.GetMethod();
                 if (method == null) continue;
-                string unitySource = UnitySource(method, out bool unity);
+                string unitySource = UnitySource(method, i > 0 ? trace.GetFrame(i - 1)?.GetMethod() : null, out bool unity);
                 if (!unity && !IsGameMethod(method)) continue;
                 AppendMethod(text, method);
                 if (unity)
