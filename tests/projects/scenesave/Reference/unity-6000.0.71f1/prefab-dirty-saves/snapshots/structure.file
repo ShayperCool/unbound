@@ -63,7 +63,7 @@ GameObject:
   m_Component:
   - component: {fileID: 2511078877221938635}
   - component: {fileID: 2710480425889320747}
-  - component: {fileID: -3017888840273922860}
+  - component: {fileID: 6573234693171230378}
   m_Layer: 0
   m_Name: Structure
   m_TagString: Untagged
@@ -111,7 +111,7 @@ MonoBehaviour:
   material: {fileID: 0}
   data: {fileID: 0}
   peer: {fileID: 0}
---- !u!135 &-3017888840273922860
+--- !u!135 &6573234693171230378
 SphereCollider:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}

@@ -319,12 +319,28 @@ PREFAB_SAVE_COPIES = {
     'Exit': '7b8c9d0e1f2a47e8596ab1b2c3d4e5f6',
     'Base2': 'a1b2c3d4e5f64a7b8c9d0e1f2a3b4c5d',
     'Inner2': 'b2c3d4e5f6a74b8c9d0e1f2a3b4c5d6e',
+    'Base3': 'c3d4e5f6a7b84c9d0e1f2a3b4c5d6e7f',
+    'Base5': 'd4e5f6a7b8c94d0e1f2a3b4c5d6e7f80',
+    'Base6': 'e5f6a7b8c9d04e1f2a3b4c5d6e7f8091',
+    'Inner7': 'f6a7b8c9d0e14f2a3b4c5d6e7f8091a2',
+    'Base8': '0a7b8c9d0e1f4a2b3c4d5e6f708192a3',
 }
+# Seeded variants (a chain: Chain1 of Base3, Chain2 of Chain1; Middle5 of Base5; Variant8 of Base8),
+# as the Editor writes a variant with its root's name and Transform values: by name, its GUID, its
+# PrefabInstance's file id and its base's name.
+PREFAB_SAVE_VARIANTS = {
+    'Chain1': ('0718293a4b5c4d6e7f8091a2b3c4d5e6', 465912938183332941, 'Base3'),
+    'Chain2': ('18293a4b5c6d4e7f8091a2b3c4d5e6f7', 1792436981765209183, 'Chain1'),
+    'Middle5': ('293a4b5c6d7e4f8091a2b3c4d5e6f708', 3528190547612093421, 'Base5'),
+    'Variant8': ('3a4b5c6d7e8f4091a2b3c4d5e6f70819', 6120934213528190547, 'Base8'),
+}
+# Thing.prefab's root GameObject and its Transform.
+THING_ROOT_IDS = (5150910721065944833, 2511078877221938635)
 
 
 def seed_prefab_saves(project):
     """Copies of Thing.prefab (its .meta's importer section) under Assets/PrefabSaves, each with
-    its own GUID, for `prefab-dirty-saves`."""
+    its own GUID, and variants of them, for `prefab-dirty-saves`."""
     folder = project/'Assets/PrefabSaves'
     folder.mkdir()
     (project/'Assets/PrefabSaves.meta').write_bytes(
@@ -337,6 +353,26 @@ def seed_prefab_saves(project):
         raise SystemExit('scenesave: Thing.prefab.meta does not hold its GUID line')
     for name, guid in PREFAB_SAVE_COPIES.items():
         shutil.copyfile(source, folder/f'{name}.prefab')
+        (folder/f'{name}.prefab.meta').write_bytes(meta.replace(original, b'guid: %s\n' % guid.encode()))
+    ids = {name: THING_ROOT_IDS for name in PREFAB_SAVE_COPIES}
+    guids = dict(PREFAB_SAVE_COPIES)
+    for name, (guid, instance, base) in PREFAB_SAVE_VARIANTS.items():
+        guids[name] = guid
+        root, transform = ids[base]
+        # A variant's objects have the file ids (instance ^ source) & 0x7fffffffffffffff.
+        ids[name] = tuple((instance ^ i) & 0x7fffffffffffffff for i in (root, transform))
+        mods = [(transform, f'm_LocalPosition.{a}', '0') for a in 'xyz']
+        mods += [(transform, 'm_LocalRotation.w', '1')] + [(transform, f'm_LocalRotation.{a}', '0') for a in 'xyz']
+        mods += [(transform, f'm_LocalEulerAnglesHint.{a}', '0') for a in 'xyz'] + [(root, 'm_Name', name)]
+        lines = ['%YAML 1.1', '%TAG !u! tag:unity3d.com,2011:', f'--- !u!1001 &{instance}', 'PrefabInstance:',
+                 '  m_ObjectHideFlags: 0', '  serializedVersion: 2', '  m_Modification:', '    serializedVersion: 3',
+                 '    m_TransformParent: {fileID: 0}', '    m_Modifications:']
+        for target, path, value in mods:
+            lines += [f'    - target: {{fileID: {target}, guid: {guids[base]}, type: 3}}', f'      propertyPath: {path}',
+                      f'      value: {value}', '      objectReference: {fileID: 0}']
+        lines += ['    m_RemovedComponents: []', '    m_RemovedGameObjects: []', '    m_AddedGameObjects: []',
+                  '    m_AddedComponents: []', f'  m_SourcePrefab: {{fileID: 100100000, guid: {guids[base]}, type: 3}}', '']
+        (folder/f'{name}.prefab').write_text('\n'.join(lines), newline='\n')
         (folder/f'{name}.prefab.meta').write_bytes(meta.replace(original, b'guid: %s\n' % guid.encode()))
 
 

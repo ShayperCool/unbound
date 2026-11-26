@@ -38,7 +38,7 @@
 {"key": "structure.changed.holder", "value": false}
 {"key": "structure.changed.part", "value": false}
 {"key": "structure.changed.collider", "value": false}
-{"key": "variant.made", "value": "471bc569779836c5965d2521900ba3dc0faa64dd72c74a12a3bd594fbf3ceb8f"}
+{"key": "variant.made", "value": "5349f734f5ebbfc67f3f9a3e102e64e8b9d6152733c035bed11631d0ba8f6a56"}
 {"key": "variant.isVariant", "value": "Variant"}
 {"key": "variant.changed.root", "value": false}
 {"key": "variant.changed.transform", "value": false}
@@ -56,7 +56,7 @@
 {"key": "variantApi.changed.part", "value": false}
 {"key": "variantApi.changed.collider", "value": false}
 {"key": "variantApi.save", "value": true}
-{"key": "variantApi.file", "value": "517e1ccd6ae36e8cc7a05ab9ce94b49100240085c9bd1ab10e369af0e039f642"}
+{"key": "variantApi.file", "value": "43928c6a497dda359d419d13c074085b0dcce73bd1fd983426b0a331f09dfe11"}
 {"key": "variantApi.saved.root", "value": false}
 {"key": "variantApi.saved.transform", "value": false}
 {"key": "variantApi.saved.holder", "value": false}
@@ -80,9 +80,9 @@
 {"key": "unmarked.file", "value": "7639d2c735d3477a03b5c68ab09a1cbea4f49381978aa08153159043d17bee71"}
 {"key": "touched.file", "value": "7911f9b8e28d0e0c7cd5362c49bf80d2bc5d32d19d68f923b2504108075a11fd"}
 {"key": "untouched.file", "value": "7639d2c735d3477a03b5c68ab09a1cbea4f49381978aa08153159043d17bee71"}
-{"key": "structure.file", "value": "335465506d656854a5837b2a59f5314ef27660921b4ef2c599fd7480339f2014"}
-{"key": "variant.file", "value": "950bf65b43a7b2959d4c1adc1070f2927f8d4b339a338f333a5ad694ee1a36e2"}
-{"key": "variantroot.file", "value": "5ccf186bedcb0a034f830a173a5a6ac5b30f71f31b9114607a99bdc8b4a70bad"}
+{"key": "structure.file", "value": "4de483e834d6c99e0a770b8606aed48172aa3288ddeb3563015701c844c758dc"}
+{"key": "variant.file", "value": "185096acc9dba0792aba62ebd8959604c82d654fea63594b466175c4edfba006"}
+{"key": "variantroot.file", "value": "7c58637846c5ae319063c5f811764b3bed6bc0bb2c134b99e970995d6a5c2b31"}
 {"key": "fields.saved.root", "value": false}
 {"key": "fields.saved.transform", "value": false}
 {"key": "fields.saved.holder", "value": false}
@@ -115,8 +115,8 @@
 {"key": "variantRoot.saved.collider", "value": false}
 {"key": "saveAssets.again", "value": "done"}
 {"key": "fields.fileAfterSecondSave", "value": "c262489a9e4361854d9f746a53f0e93372361550196f9bc3f06113178cf58b5b"}
-{"key": "dependent.made", "value": "9e28111269416c65b7623a0422d15e4f390b0153db0811c4e592d2e92ad1ab6e"}
-{"key": "nesting.made", "value": "0ab7153242d0f0d325b96254550d95216af600c27bd93c1ff73386dcdd811989"}
+{"key": "dependent.made", "value": "e2e8e5142eafa1ea6c39a2cce04de7f2c06b9e969ce0846ab638d4f5210945ee"}
+{"key": "nesting.made", "value": "5d1636bd3393f167f2740c2e9e263f1164e629425c64fbcee4d57d38b3be6149"}
 {"key": "base2.save", "value": true}
 {"key": "inner2.save", "value": true}
 {"key": "dependent.afterBaseSave", "value": "21 base changed"}
@@ -129,14 +129,49 @@
 {"key": "dependent.afterBaseSave.collider", "value": false}
 {"key": "dependentOwn.afterBaseSave.holder", "value": false}
 {"key": "saveAssets.dependents", "value": "done"}
-{"key": "dependent.file", "value": "9e28111269416c65b7623a0422d15e4f390b0153db0811c4e592d2e92ad1ab6e"}
-{"key": "dependentown.file", "value": "a8927f264a88e49fd44404fb71505b777e45b26ae6fe46ebc8893e7a342a699f"}
-{"key": "nesting.file", "value": "0ab7153242d0f0d325b96254550d95216af600c27bd93c1ff73386dcdd811989"}
+{"key": "dependent.file", "value": "e2e8e5142eafa1ea6c39a2cce04de7f2c06b9e969ce0846ab638d4f5210945ee"}
+{"key": "dependentown.file", "value": "e2bfd9f0064ed2ab6b82b85e7c7e05cb266f79a9eb6d60cf87a977f49789eb95"}
+{"key": "nesting.file", "value": "5d1636bd3393f167f2740c2e9e263f1164e629425c64fbcee4d57d38b3be6149"}
 {"key": "base2.file", "value": "7ed61da696eb156f9ee56d3c4ac2a30b79f193ddf4142707d62e5f77fd6053c0"}
 {"key": "inner2.file", "value": "08cab0d736247a60ef37f00e59c1205e5ca6620fd93e14f3d1d6c6978e2d750d"}
 {"key": "dependent.afterSave", "value": "21 base changed"}
 {"key": "dependentOwn.afterSave", "value": "21 base changed"}
 {"key": "nesting.afterSave", "value": 22}
+{"key": "chain.loaded", "value": "5 plain"}
+{"key": "base3.save", "value": true}
+{"key": "chain.afterBaseSave", "value": "24 chain base"}
+{"key": "chain.afterBaseSave.root", "value": false}
+{"key": "chain.afterBaseSave.transform", "value": false}
+{"key": "chain.afterBaseSave.holder", "value": false}
+{"key": "chain.afterBaseSave.part", "value": false}
+{"key": "chain.afterBaseSave.collider", "value": false}
+{"key": "saveAssets.chain", "value": "done"}
+{"key": "chain1.file", "value": "8cb72deacadc9bc9f027b7215da05a0dd173bb35d6286a96c44a4a2b19270a86"}
+{"key": "chain2.file", "value": "01aeff665f0203dfe50c22a7f17a7d53052c9b9da03a7f3bb9447e4ab4fb99e7"}
+{"key": "base3.file", "value": "49ab3a5bfa02b7dca9bb74ec86802ba5e72cc0d1e4002e4cd7e243ffda6da050"}
+{"key": "chain.afterSave", "value": "24 chain base"}
+{"key": "base5.save", "value": true}
+{"key": "diamond.direct", "value": 25}
+{"key": "diamond.throughMiddle", "value": 25}
+{"key": "diamond.middle", "value": 25}
+{"key": "saveAssets.diamond", "value": "done"}
+{"key": "middle5.file", "value": "22d7f101a74175c52571d9380100d63dbd68b6754dfbc37d1180e75eff238480"}
+{"key": "top5.delete", "value": true}
+{"key": "own6.save", "value": true}
+{"key": "own6.saved", "value": "f431948598235bcecc7e905e364d40752cb6a7b457b88860f1675445d368a1fc"}
+{"key": "base6.save", "value": true}
+{"key": "own6.afterBaseSave", "value": "31 own base"}
+{"key": "outer7.addComponent", "value": true}
+{"key": "outer7.child.dirty", "value": true}
+{"key": "inner7.save", "value": true}
+{"key": "outer7.afterInnerSave", "value": "27 False"}
+{"key": "outer7.afterInnerSave.dirty", "value": false}
+{"key": "base8.addComponent", "value": true}
+{"key": "base8.save", "value": true}
+{"key": "variant8.afterBaseSave", "value": "28 True"}
+{"key": "nest8.afterBaseSave", "value": "28 True"}
+{"key": "nest8.rootAfterBaseSave", "value": "0"}
+{"key": "nest8.rootAfterBaseSave.dirty", "value": false}
 {"key": "exit.marked.root", "value": false}
 {"key": "exit.marked.transform", "value": false}
 {"key": "exit.marked.holder", "value": true}

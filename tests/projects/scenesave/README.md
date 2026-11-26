@@ -171,9 +171,14 @@ file the run added, changed or removed.
   with nothing changed, a component added and a GameObject parented under the root, variants of
   one made in the session and changed (the script marked dirty, the root alone, or saved by
   `SavePrefabAsset` with nothing marked); then `SaveAssetIfDirty` of one, `SaveAssets` (twice), and
-  one prefab left dirty for the Editor's exit. Each step logs the objects' dirty flags; the files
-  are snapshotted after the saves and kept as the run leaves them. Recorded in the macOS Editor
-  (batch mode, no graphics: two identical captures).
+  one prefab left dirty for the Editor's exit. Then the dependents of a saved prefab, read after the
+  save and written by a later `SaveAssets`: a variant and a nesting prefab made in the session, a
+  variant of a variant (`run.py` seeds the chain; only the last one is loaded), a prefab nesting a
+  prefab both directly and through its variant, a variant with an override written in the session,
+  a nested instance with a component added and not saved, and a variant and a nesting prefab (its
+  root changed and not saved) after the saved prefab gained a component. Each step logs the
+  objects' dirty flags and values; the files are snapshotted after the saves and kept as the run
+  leaves them. Recorded in the Linux Editor (batch mode, no graphics: two identical captures).
 - `generic-refs` (Edit Mode, `GenericRefTests`): a scriptable object whose [SerializeReference] fields
   hold objects of generic classes (`Box<int>`, `Pair<string, Vector3>`, `Box<Box<float>>`,
   `Box<List<int>>`, a namespaced `Tagged<Circle>`, one shared, one added later) made an asset by
