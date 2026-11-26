@@ -18,6 +18,8 @@ freely, subject to the following restrictions:
 3. This notice may not be removed or altered from any source distribution.
 */
 
+using DotRecast.Core.Numerics;
+
 namespace DotRecast.Detour.Crowd
 {
     /// Configuration parameters for a crowd agent.
@@ -42,6 +44,12 @@ namespace DotRecast.Detour.Crowd
 
         /// Uses the measured obstacle rules for an upright capsule.
         public bool uprightCapsule;
+
+        /// Unbound: an obstacle capsule standing other than upright; capsuleAxis is half its shaft
+        /// (center to the center of an end's sphere). Agents meet it at the nearest point of the
+        /// part of its shaft within their height, seen from above.
+        public bool tiltedCapsule;
+        public RcVec3f capsuleAxis;
 
         /// the agent path.
         /// Flags that impact steering behavior. (See: #UpdateFlags)

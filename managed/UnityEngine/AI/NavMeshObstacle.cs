@@ -296,9 +296,17 @@ namespace Unbound.Runtime
     //   https://docs.unity3d.com/6000.0/Documentation/ScriptReference/AI.NavMeshObstacle-velocity.html)
     //   is a script that moves the object and computes and sets velocity itself. Obstacles moved by
     //   physics or animation are unmeasured.
-    // C4 (Unbound's choice, unmeasured): a capsule is an upright circle of its radius times the
-    //   larger horizontal scale (the Scripting API calls the obstacle "cylindrical in shape").
-    // C5 (Unbound's choice, unmeasured): a box is the rectangle around its horizontal outline, along
+    // C4: a capsule is a circle of its radius times the larger horizontal scale (the Scripting API
+    //   calls the obstacle "cylindrical in shape"). Upright, at its axis (navpath
+    //   obstacle-separation); lying or tilted, on the measured release, at the nearest point, seen
+    //   from above, of the part of its shaft within the agent's height (navpath obstacle-shapes
+    //   caplying, captilt, captiltx: agents are pushed to the two radii from the shaft, along +x
+    //   when on it; walking past, Unity keeps 1 to 2 cm more clearance alongside the shaft, listed).
+    //   Other releases keep an upright circle at the center (unmeasured).
+    // C5 (measured, not reproduced): Unity avoids a box, and pushes agents out of it, by its
+    //   outline (navpath obstacle-shapes box*, listed); the one box it ignores is one spanning the
+    //   agent's height exactly, a float coincidence. Unbound's choice:
+    //   a box is the rectangle around its horizontal outline, along
     //   its turned x axis, cut into ceil(long side / short side) equal pieces along its longer side,
     //   each covered by the circle through its corners. Bound: each circle's radius is at most
     //   sqrt(2) times the box's half-width, so the cover bulges at most (sqrt(2) - 1) times the
@@ -684,9 +692,13 @@ namespace Unbound.Runtime
             internal readonly Vector3 Velocity;
             internal readonly NavMeshObstacle Owner;
             internal readonly bool UprightCapsule;
+            /// <summary>A capsule standing other than upright: half its shaft.</summary>
+            internal readonly Vector3? TiltedAxis;
+            /// <summary>How far it reaches from its center, seen from above.</summary>
+            internal float Reach => TiltedAxis is Vector3 a ? Radius + new Vector2(a.x, a.z).magnitude : Radius;
 
             internal Circle(Vector3 center, float radius, float bottom, float top, Vector3 velocity,
-                NavMeshObstacle owner, float? uprightHeight = null)
+                NavMeshObstacle owner, float? uprightHeight = null, Vector3? tiltedAxis = null)
             {
                 Center = center;
                 Radius = radius;
@@ -695,6 +707,7 @@ namespace Unbound.Runtime
                 Velocity = velocity;
                 Owner = owner;
                 UprightCapsule = uprightHeight.HasValue;
+                TiltedAxis = tiltedAxis;
             }
         }
 
@@ -722,9 +735,10 @@ namespace Unbound.Runtime
         {
             s_Circles.Clear();
             bool measuredCapsules = Compat.NavMeshUprightCapsuleAvoidanceMeasured;
+            bool tiltedCapsules = Compat.NavMeshTiltedCapsuleObstaclesMeasured;
             foreach (var obstacle in s_Obstacles)
                 if (obstacle != null && obstacle.isActiveAndEnabled && !IsCarved(obstacle))
-                    AddCircles(obstacle, s_Circles, measuredCapsules);
+                    AddCircles(obstacle, s_Circles, measuredCapsules, tiltedCapsules);
         }
 
         /// <summary>Before <paramref name="crowd"/> updates: the enabled obstacles,
@@ -749,7 +763,7 @@ namespace Unbound.Runtime
             s_NearPositions.Clear();
             foreach (var c in s_Circles)
             {
-                var position = new RcVec3f(c.Center.x, c.UprightCapsule ? c.Center.y : c.Bottom, c.Center.z);
+                var position = new RcVec3f(c.Center.x, c.UprightCapsule || c.TiltedAxis.HasValue ? c.Center.y : c.Bottom, c.Center.z);
                 if (!NearAWalkingAgent(agents, position, c, cell, prediction, 1f / cellX, 1f / cellZ)) continue;
                 s_Near.Add(c);
                 s_NearPositions.Add(position);
@@ -775,6 +789,8 @@ namespace Unbound.Runtime
                     separationWeight = 0f,
                     excludeFromSeparation = excludeFromSeparation,
                     uprightCapsule = c.UprightCapsule,
+                    tiltedCapsule = c.TiltedAxis.HasValue,
+                    capsuleAxis = c.TiltedAxis is Vector3 axis ? NavMesh.V(axis) : RcVec3f.Zero,
                     updateFlags = 0,
                     obstacleAvoidanceType = 0,
                     queryFilterType = 0,
@@ -813,18 +829,18 @@ namespace Unbound.Runtime
                 // Obstacle circles are never walking; agents on links or off the NavMesh do not look
                 // for neighbours.
                 if (ag.state != DtCrowdAgentState.DT_CROWDAGENT_STATE_WALKING) continue;
-                if (!circle.UprightCapsule && !DtCrowd.HeightsOverlap(ag, position, height)) continue;
+                if (!circle.UprightCapsule && !circle.TiltedAxis.HasValue && !DtCrowd.HeightsOverlap(ag, position, height)) continue;
                 float reach = DtCrowd.NeighbourReach(ag, horizon);
                 if (prediction)
                 {
                     int x0 = Cell(ag.npos.X - reach, invX), x1 = Cell(ag.npos.X + reach, invX);
                     int z0 = Cell(ag.npos.Z - reach, invZ), z1 = Cell(ag.npos.Z + reach, invZ);
-                    if (InCells(position, NavMesh.V(circle.Velocity), circle.Radius, horizon, true,
+                    if (InCells(position, NavMesh.V(circle.Velocity), circle.Reach, horizon, true,
                         x0, x1, z0, z1, invX, invZ)) return true;
                 }
                 else
                 {
-                    reach += circle.Radius + cell;
+                    reach += circle.Reach + cell;
                     if (MathF.Abs(ag.npos.X - position.X) <= reach && MathF.Abs(ag.npos.Z - position.Z) <= reach) return true;
                 }
             }
@@ -907,7 +923,7 @@ namespace Unbound.Runtime
         const float UprightAxisTolerance = 1e-6f;
 
         /// <summary>The obstacle's shape as circles in the horizontal plane, with its height span.</summary>
-        static void AddCircles(NavMeshObstacle obstacle, List<Circle> into, bool measuredCapsules)
+        static void AddCircles(NavMeshObstacle obstacle, List<Circle> into, bool measuredCapsules, bool tiltedCapsules)
         {
             var t = obstacle.transform;
             var center = t.TransformPoint(obstacle.center);
@@ -924,6 +940,16 @@ namespace Unbound.Runtime
                     uprightCapsule = Mathf.Abs(axis.x) <= UprightAxisTolerance
                         && Mathf.Abs(axis.z) <= UprightAxisTolerance;
                     if (uprightCapsule) half = Mathf.Max(half, radius);
+                    else if (tiltedCapsules)
+                    {
+                        // A lying or tilted capsule (C4): its shaft, from the center to each end's
+                        // sphere, at its radius.
+                        var shaft = axis * Mathf.Max(0f, half - radius);
+                        float reachY = Mathf.Abs(shaft.y) + radius;
+                        into.Add(new Circle(center, radius, center.y - reachY, center.y + reachY, velocity,
+                            obstacle, tiltedAxis: shaft));
+                        return;
+                    }
                 }
                 into.Add(new Circle(center, radius, center.y - half, center.y + half, velocity,
                     obstacle, uprightCapsule ? 2f * half : null));

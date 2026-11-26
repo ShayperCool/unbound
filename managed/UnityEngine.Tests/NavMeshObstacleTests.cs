@@ -394,6 +394,40 @@ namespace UnityEngine.Tests
             }
         }
 
+        [Theory]
+        // Unity 6000.0.71f1 (tests/projects/navpath obstacle-shapes caplying, captilt, captiltx):
+        // a lying or tilted capsule pushes an agent to the two radii from its shaft seen from
+        // above, along +x when the agent stands on it.
+        [InlineData(0f, 0f, 0.3f, 0f, 1f, 0f)]          // upright: from its axis (obstacle-separation)
+        [InlineData(90f, 0f, 0.6f, -0.2f, 0.6f, -1f)]   // lying along x, beside the shaft
+        [InlineData(90f, 0f, 0f, 0f, 2f, 0f)]           // on the shaft: along +x past its end
+        [InlineData(90f, 0f, 1.2f, 0.45f, 1.406f, 0.914f)] // beyond the end, towards its sphere
+        [InlineData(45f, 0f, 0f, 0f, 1.7071f, 0f)]      // tilted 45 degrees about z, on the shaft
+        [InlineData(0f, 45f, -0.25f, 0.1f, -1f, 0.1f)]  // tilted 45 degrees about x: the shaft along z
+        public void ALyingOrTiltedCapsulePushesAgentsOutOfItsShaftSeenFromAbove(float aboutZ, float aboutX,
+            float x, float z, float expectedX, float expectedZ)
+        {
+            using var release = TestRelease.Pin(TestRelease.Measured);
+            var go = new GameObject("obstacle");
+            m_Objects.Add(go);
+            go.transform.position = new Vector3(0f, 1f, 0f);
+            go.transform.rotation = Quaternion.Euler(aboutX, 0f, aboutZ);
+            var obstacle = go.AddComponent<NavMeshObstacle>();
+            obstacle.shape = NavMeshObstacleShape.Capsule;
+            obstacle.radius = 0.5f;
+            obstacle.height = 3f;
+            obstacle.carving = false;
+            // Placed with no destination, as the probe's agents are.
+            var standing = new GameObject("agent");
+            m_Objects.Add(standing);
+            standing.transform.position = new Vector3(x, 0f, z);
+            var agent = standing.AddComponent<NavMeshAgent>();
+            Assert.True(agent.isOnNavMesh);
+            for (int i = 0; i < 20; i++) Step();
+            Assert.True(Mathf.Abs(agent.nextPosition.x - expectedX) < 2e-3f && Mathf.Abs(agent.nextPosition.z - expectedZ) < 2e-3f,
+                $"expected ({expectedX}, {expectedZ}), at {agent.nextPosition}");
+        }
+
         [Fact]
         public void DisablingTheObstacleRestoresTheStraightWalk()
         {

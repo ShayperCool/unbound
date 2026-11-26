@@ -128,25 +128,30 @@ The main and stacked-link profiles continue to use their original references.
 ### Obstacle shapes
 
 The `obstacle-shapes` profile (scenario `steer.shapes`, reference
-`Reference/unity-6000.0.71f1/obstacle-shapes.json`, two identical Linux Editor captures) places
-an agent at six points inside and near a non-carving obstacle (`contact.<shape>.s<i>`: its
-position in the first three frames) and walks one past it on two lanes (`steer.<shape>.z<lane>`:
-position and velocity every fifth frame), for boxes (`box` 1 x 2 x 1, `boxlong` 3 x 2 x 1,
-`boxturn` turned 30 degrees about the vertical, `boxscaled`, `boxbig` 4 x 2 x 4, `boxtilt` tilted
-30 degrees about z, `boxtilt1` and `boxtilt10` by 1 and 10 degrees, `boxtiltx` 30 degrees about
-x) and capsules (`caplying`, `captilt` 45 degrees about z, `captiltx` 45 degrees about x), and a
-box crossing the agent's lane (`steer.boxmoving`).
+`Reference/unity-6000.0.71f1/obstacle-shapes.json`, two identical Linux Editor captures per
+round, each round keeping the earlier values) places an agent at six points inside and near a
+non-carving obstacle (`contact.<shape>.s<i>`: its position in the first three frames) and walks
+one past it on two lanes (`steer.<shape>.z<lane>`: position and velocity every fifth frame).
+Boxes: `box` (1 x 2 x 1, spanning the agent's height exactly), `boxlong`, `boxturn` (turned 30
+degrees about the vertical), `boxscaled`, `boxbig`, tilted ones (`boxtilt`, `boxtilt1`,
+`boxtilt10`, `boxtilt001`, `boxtiltx`), at other heights (`boxsunk`, `boxfloor`, `boxraised`,
+`boxinside*`, `boxhead`, `boxfeet`, `boxtall`, `boxabove`), turned as an FBX root (`boxfbx*`);
+capsules `caplying`, `captilt` (45 degrees about z) and `captiltx` (45 degrees about x); and a
+box crossing the lane (`steer.boxmoving*`, carving only while still or not carving, at the
+floor and sunk 0.1 m).
 
-In Unity 6000.0.71f1 an upright box (every `box*` shape but `boxtilt*`, and the moving one) is no
-obstacle at all: agents walk straight through it at full speed, and one placed inside stays where
-it is. The AI Navigation 2.0 Manual
-([AboutObstacles](https://docs.unity3d.com/Packages/com.unity.ai.navigation@2.0/manual/AboutObstacles.html))
-says agents avoid non-carving obstacles; the measured release does not for upright boxes. A box
-tilted by as little as a degree is avoided and pushes agents out, as far as its horizontal outline
-plus the agent's radius, in directions Unbound does not reproduce. A lying or tilted capsule pushes
-agents to its radius plus theirs from its axis projected on the ground (along +x when the agent is
-on it) and steers them round that outline. Unbound matches every upright-box value; the tilted box
-and capsule values are listed in run.py (reported, not gated) until it models those outlines.
+In Unity 6000.0.71f1 boxes are avoided, and push agents out, by their outline: every box that
+overlaps the agent's height, also one carving only while still as it moves. The exceptions
+are a box above the agent (`boxabove`) and boxes spanning the agent's height exactly (`box`,
+`boxlong`, `boxturn`, `boxscaled`, `boxbig`, `steer.boxmoving`), their bottom a float step above
+the agent's feet and their top at its head: agents walk through those. That is a float
+coincidence of the probe's placement, not a rule; the same box 0.1 m lower, or turned as an FBX
+root, is avoided. Unbound's boxes are a cover of circles (`NavMeshObstacle.cs` C5), so every box
+value is listed (reported, not gated).
+
+A lying or tilted capsule pushes agents to its radius plus theirs from its shaft seen from above
+(along +x when they stand on it); Unbound matches every capsule contact value. Walking past one,
+Unity keeps 1 to 2 cm more clearance alongside the shaft; those steering values are listed.
 
     UNBOUND_PROBE_UNITY_VERSION=6000.0.71f1 python3 tests/projects/navpath/run.py editor --profile obstacle-shapes --label L
     UNBOUND_PROBE_UNITY_VERSION=6000.0.71f1 python3 tests/projects/navpath/run.py publish --profile obstacle-shapes --label L

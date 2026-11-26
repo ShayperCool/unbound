@@ -897,7 +897,7 @@ namespace DotRecast.Detour.Crowd
                 RcVec3f p = ag.npos;
                 if (_config.predictNeighbourBounds)
                 {
-                    PredictionBounds(p, ag.vel, ag.option.radius, _obstacleQueryParams[0].horizTime, out var min, out var max);
+                    PredictionBounds(p, ag.vel, GridRadius(ag), _obstacleQueryParams[0].horizTime, out var min, out var max);
                     _grid.AddItem(ag, min.X, min.Z, max.X, max.Z);
                 }
                 else _grid.AddItem(ag, p.X, p.Z, p.X, p.Z);
@@ -1112,7 +1112,7 @@ namespace DotRecast.Detour.Crowd
                     continue;
                 }
 
-                bool uprightCapsule = ag.option.uprightCapsule;
+                bool uprightCapsule = ag.option.uprightCapsule || ag.option.tiltedCapsule;
                 if (!uprightCapsule && !HeightsOverlap(skip, ag.npos, ag.option.height))
                 {
                     continue;
@@ -1121,7 +1121,14 @@ namespace DotRecast.Detour.Crowd
                 // In 3D, as Unity's agents measure (a neighbour above or below is farther).
                 RcVec3f diff = RcVec3f.Subtract(ag.npos, pos);
                 float radius = ag.option.radius;
-                if (uprightCapsule)
+                if (ag.option.tiltedCapsule)
+                {
+                    // Unbound's choice (unmeasured): the half-diagonal of a tilted capsule's
+                    // horizontal bounds, as for an upright one.
+                    float ex = radius + MathF.Abs(ag.option.capsuleAxis.X), ez = radius + MathF.Abs(ag.option.capsuleAxis.Z);
+                    radius = MathF.Sqrt(ex * ex + ez * ez);
+                }
+                else if (uprightCapsule)
                 {
                     // Obstacle admission ranks the center with the horizontal bounds'
                     // half-diagonal. The capsule section is tested during avoidance and contact.
@@ -1404,6 +1411,53 @@ namespace DotRecast.Detour.Crowd
             return true;
         }
 
+        /// Unbound: how far a crowd member reaches from its position in the proximity grid: a tilted
+        /// capsule's radius plus its shaft's half seen from above.
+        public static float GridRadius(DtCrowdAgent ag) => ag.option.tiltedCapsule
+            ? ag.option.radius + MathF.Sqrt(RcMath.Sqr(ag.option.capsuleAxis.X) + RcMath.Sqr(ag.option.capsuleAxis.Z))
+            : ag.option.radius;
+
+        /// Unbound: a tilted capsule as an agent meets it: the circle of its radius at the nearest
+        /// point, seen from above, of the part of its shaft within the agent's height; when no part
+        /// is, the end nearest that height, its radius cut by the height between as for an upright
+        /// capsule's cap (tests/projects/navpath obstacle-shapes caplying, captilt, captiltx: pushed
+        /// to their radii apart from the shaft, along +x when on it).
+        internal static bool TryProjectTiltedCapsule(DtCrowdAgent ag, DtCrowdAgent capsule,
+            out float radius, out bool clippedCap, out RcVec3f center)
+        {
+            radius = capsule.option.radius;
+            clippedCap = false;
+            var axis = capsule.option.capsuleAxis;
+            var mid = capsule.npos;
+            float bottom = ag.npos.Y, top = ag.npos.Y + ag.option.height;
+            float lo = -1f, hi = 1f;
+            if (MathF.Abs(axis.Y) > 1e-9f)
+            {
+                float t0 = (bottom - mid.Y) / axis.Y, t1 = (top - mid.Y) / axis.Y;
+                lo = MathF.Max(-1f, MathF.Min(t0, t1));
+                hi = MathF.Min(1f, MathF.Max(t0, t1));
+            }
+            else if (mid.Y < bottom || mid.Y > top) lo = 2f;
+            if (lo <= hi)
+            {
+                float lengthSqr = axis.X * axis.X + axis.Z * axis.Z;
+                float t = lengthSqr > 0f
+                    ? ((ag.npos.X - mid.X) * axis.X + (ag.npos.Z - mid.Z) * axis.Z) / lengthSqr : lo;
+                t = Math.Clamp(t, lo, hi);
+                center = new RcVec3f(mid.X + axis.X * t, mid.Y + axis.Y * t, mid.Z + axis.Z * t);
+                return true;
+            }
+            // No part of the shaft within the agent's height: the end nearest it.
+            var low = axis.Y >= 0f ? RcVec3f.Subtract(mid, axis) : RcVec3f.Add(mid, axis);
+            var high = axis.Y >= 0f ? RcVec3f.Add(mid, axis) : RcVec3f.Subtract(mid, axis);
+            center = low.Y > top ? low : high;
+            float gap = center.Y > top ? center.Y - top : bottom - center.Y;
+            if (gap > radius) return false;
+            clippedCap = true;
+            radius = MathF.Sqrt(radius * radius - gap * gap);
+            return true;
+        }
+
         private void PlanVelocity(DtCrowdAgentDebugInfo debug, IList<DtCrowdAgent> agents)
         {
             using var timer = _telemetry.ScopedTimer(DtCrowdTimerLabel.PlanVelocity);
@@ -1434,8 +1488,13 @@ namespace DotRecast.Detour.Crowd
                 {
                     DtCrowdAgent nei = ag.neis[j].agent;
                     float radius = nei.option.radius;
-                    if (nei.option.uprightCapsule && !TryProjectCapsuleRadius(ag, nei, out radius, out _)) continue;
-                    _obstacleQuery.AddCircle(RcVec3f.Subtract(nei.npos, ag.npos), radius + ag.option.radius,
+                    RcVec3f center = nei.npos;
+                    if (nei.option.tiltedCapsule)
+                    {
+                        if (!TryProjectTiltedCapsule(ag, nei, out radius, out _, out center)) continue;
+                    }
+                    else if (nei.option.uprightCapsule && !TryProjectCapsuleRadius(ag, nei, out radius, out _)) continue;
+                    _obstacleQuery.AddCircle(RcVec3f.Subtract(center, ag.npos), radius + ag.option.radius,
                         nei.vel, AvoidanceShare(ag, nei));
                 }
 
@@ -1531,9 +1590,15 @@ namespace DotRecast.Detour.Crowd
                         float share = nei.option.avoidancePriority < ag.option.avoidancePriority ? 1.0f : 0.5f;
                         RcVec3f diff = RcVec3f.Subtract(ag.npos, nei.npos);
                         float radius = nei.option.radius;
-                        bool uprightCapsule = nei.option.uprightCapsule;
+                        bool uprightCapsule = nei.option.uprightCapsule || nei.option.tiltedCapsule;
                         bool clippedCap = false;
-                        if (uprightCapsule)
+                        if (nei.option.tiltedCapsule)
+                        {
+                            if (!TryProjectTiltedCapsule(ag, nei, out radius, out clippedCap, out var center)) continue;
+                            diff = RcVec3f.Subtract(ag.npos, center);
+                            diff.Y = 0f;
+                        }
+                        else if (uprightCapsule)
                         {
                             if (!TryProjectCapsuleRadius(ag, nei, out radius, out clippedCap)) continue;
                             diff.Y = 0f;
