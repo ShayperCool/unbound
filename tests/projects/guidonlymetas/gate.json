@@ -1,0 +1,16 @@
+{
+  "commands": [
+    "python3 tests/projects/guidonlymetas/run.py gate"
+  ],
+  "summary": "guidonlymetas: .*",
+  "engine_paths": [
+    "crates/unbound-assets/src/audio.rs",
+    "crates/unbound-assets/src/new_meta.rs",
+    "crates/unbound-assets/src/new_meta/",
+    "crates/unbound-assets/src/texture.rs",
+    "crates/unbound-runtime/src/state.rs",
+    "managed/UnityEngine/Editor/AssetDatabaseFiles.cs",
+    "managed/UnityEngine/Editor/ImporterMetaFiles.cs",
+    "managed/UnityEngine/Editor/ImporterSettings.cs"
+  ]
+}

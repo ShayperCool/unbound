@@ -1,0 +1,9 @@
+{
+  "A model whose .meta holds its GUID alone: the Editor imports it with the model importer's oldest settings (a legacy import that writes its materials into a Materials folder as Standard materials, a Legacy animation); Unbound does not support that import, warns, and imports the model with a new model's settings (follow-up queue row)": [
+    "end/files",
+    "model/Tri",
+    "model/Tri/importer",
+    "model/Tri/renderer",
+    "open/files"
+  ]
+}
