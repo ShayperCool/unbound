@@ -1,0 +1,12 @@
+{
+  "commands": [
+    "python3 tests/projects/channelmessages/run.py gate"
+  ],
+  "summary": "channelmessages: .*",
+  "engine_paths": [
+    "managed/UnityEngine/Editor/EditorChannelService.cs",
+    "managed/UnityEngine/Editor/ChannelClient.cs",
+    "managed/UnityEngine/Editor/ChannelTransport.cs",
+    "managed/UnityEngine/Editor/EditorApplication.cs"
+  ]
+}

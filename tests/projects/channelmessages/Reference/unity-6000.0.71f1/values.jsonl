@@ -1,0 +1,58 @@
+{"k":"service.start","v":"True"}
+{"k":"service.port","v":"positive"}
+{"k":"server.open","v":"ok"}
+{"k":"clients.before","v":"0"}
+{"k":"client.create","v":"probe-channel connected False autoTick False"}
+{"k":"client.start","v":"connected True autoTick False"}
+{"k":"client.connected","v":"True"}
+{"k":"client.list","v":"1 entries; own entry True; clientId matches True; connection positive True; name probe-channel"}
+{"k":"client.info_by_name","v":"True"}
+{"k":"to_server.text.send","v":"ok"}
+{"k":"to_server.text.before_dispatch","v":""}
+{"k":"to_server.text.after_dispatch","v":""}
+{"k":"to_server.text.after_frames","v":""}
+{"k":"to_server.text.after_client_tick","v":""}
+{"k":"to_server.text.after_client_tick_dispatch","v":"client:68 65 6c 6c 6f 20 73 65 72 76 65 72"}
+{"k":"to_server.text.after_client_tick_frames","v":"client:68 65 6c 6c 6f 20 73 65 72 76 65 72"}
+{"k":"to_server.binary.send","v":"ok"}
+{"k":"to_server.binary.before_dispatch","v":""}
+{"k":"to_server.binary.after_dispatch","v":""}
+{"k":"to_server.binary.after_frames","v":""}
+{"k":"to_server.binary.after_client_tick","v":""}
+{"k":"to_server.binary.after_client_tick_dispatch","v":"client:01 02 03"}
+{"k":"to_server.binary.after_client_tick_frames","v":"client:01 02 03"}
+{"k":"to_client.broadcast_text.send","v":"ok"}
+{"k":"to_client.broadcast_text.before_tick","v":""}
+{"k":"to_client.broadcast_text.after_frames","v":""}
+{"k":"to_client.broadcast_text.after_tick","v":"text:to all | binary:74 6f 20 61 6c 6c"}
+{"k":"to_client.broadcast_binary.send","v":"ok"}
+{"k":"to_client.broadcast_binary.before_tick","v":""}
+{"k":"to_client.broadcast_binary.after_frames","v":""}
+{"k":"to_client.broadcast_binary.after_tick","v":"text:\u0004\u0005 | binary:04 05"}
+{"k":"to_client.send_text.send","v":"ok"}
+{"k":"to_client.send_text.before_tick","v":""}
+{"k":"to_client.send_text.after_frames","v":""}
+{"k":"to_client.send_text.after_tick","v":"text:to one | binary:74 6f 20 6f 6e 65"}
+{"k":"to_client.send_binary.send","v":"ok"}
+{"k":"to_client.send_binary.before_tick","v":""}
+{"k":"to_client.send_binary.after_frames","v":""}
+{"k":"to_client.send_binary.after_tick","v":"text:\u0006 | binary:06"}
+{"k":"to_client.broadcast_high_bytes.send","v":"ok"}
+{"k":"to_client.broadcast_high_bytes.before_tick","v":""}
+{"k":"to_client.broadcast_high_bytes.after_frames","v":""}
+{"k":"to_client.broadcast_high_bytes.after_tick","v":"text:é�A | binary:c3 a9 ff 41"}
+{"k":"to_client.broadcast_non_ascii_text.send","v":"ok"}
+{"k":"to_client.broadcast_non_ascii_text.before_tick","v":""}
+{"k":"to_client.broadcast_non_ascii_text.after_frames","v":""}
+{"k":"to_client.broadcast_non_ascii_text.after_tick","v":"text:café | binary:63 61 66 c3 a9"}
+{"k":"second.create","v":"same as first False; connected True"}
+{"k":"second.received","v":"text:other channel | binary:6f 74 68 65 72 20 63 68 61 6e 6e 65 6c"}
+{"k":"second.first_client_received","v":"text:first channel | binary:66 69 72 73 74 20 63 68 61 6e 6e 65 6c"}
+{"k":"echo.create","v":"autoTick True"}
+{"k":"echo.connected","v":"True"}
+{"k":"echo.received","v":"text:ping | binary:70 69 6e 67 | text:\u0007 | binary:07"}
+{"k":"echo.server_handler","v":"client:01 02 03"}
+{"k":"client.close","v":"connected False"}
+{"k":"client.list_after_close","v":"0"}
+{"k":"client.same_after_close","v":"False"}
+{"k":"complete","v":true}
