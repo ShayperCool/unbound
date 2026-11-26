@@ -41,7 +41,8 @@ frames, after a destination is set and two frames later (`<key>.<stage>`).
   destination set on and off it (the moving agent is not read two frames later: its position
   follows the frame times).
 * `obstacle.*`: NavMeshObstacle height, radius, size and center of a box and a capsule, with
-  the height, radius, size or center set, through shape changes and a shape set to itself.
+  the height, radius, size or center set, through shape changes and a shape set to itself, and
+  added to objects with a sphere mesh and an offset, stretched cube mesh, then their shape changed.
 * `trail.*`, `line.new`: bounds of trails without points (at, away from the origin, wider,
   scaled) and of a new line.
 * `tilemap.*`: cell and local bounds of an empty tilemap and with a tile without and with a
@@ -49,8 +50,8 @@ frames, after a destination is set and two frames later (`<key>.<stage>`).
 * `canvas.*`: Canvas.renderingDisplaySize of overlay, camera without camera, world space, a
   resized world-space canvas and a new canvas (with its render mode).
 * `physics2d.*`: PhysicsScene2D.subStepCount of the default and of local scenes (empty, with a
-  dynamic body, a static collider alone, a kinematic body alone), after their simulations, in
-  Script mode and with sub-stepping.
+  dynamic body, a static collider alone, a kinematic body alone, an unsimulated body alone), after
+  their simulations, in Script mode and with sub-stepping (with the lost time).
 * `terrainData.*`: TerrainData.heightmapTexture and holesTexture.
 
 What it shows: a command buffer is named "Unnamed command buffer" until named (empty and null
@@ -71,9 +72,10 @@ agent's does. A trail without points spans the world origin and the object, wide
 width multiplier. A world-space canvas's display size is its rectangle, the others' the game
 view. A NavMeshObstacle keeps one box of extents for both shapes: its height reads half the
 size's height and setting it sets that height, its radius reads half the size's width and setting
-it sets the width and depth, and a shape change puts the new shape's default size (a capsule's is
-1 x 2 x 1) and a zero center back. A 2D physics world without bodies or colliders reports 0
-sub-steps after a step; with any it reports the step's.
+it sets the width and depth, and a shape change fits it again as adding it does: around its
+mesh's bounds (a capsule as wide as their wider side), else the new shape's default size (a
+capsule's is 1 x 2 x 1) about the origin. A 2D physics world without bodies or colliders reports
+0 sub-steps and no lost time after a step; with any it reports the step's.
 
 `residuals.json` lists the differences still open: collider geometry holders (the measured rule is
 in the entry) and terrain textures.

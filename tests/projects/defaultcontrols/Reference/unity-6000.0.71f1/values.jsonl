@@ -293,6 +293,8 @@
 {"k":"obstacle.Capsule.center.new","v":"Capsule:height=1;radius=0.5;size=1,2,1;center=1,2,3"}
 {"k":"obstacle.Capsule.size246.switch.new","v":"Box:height=0.5;radius=0.5;size=1,1,1;center=0,0,0"}
 {"k":"obstacle.Capsule.same.new","v":"Capsule:height=2;radius=1;size=2,4,6;center=0,0,0"}
+{"k":"obstacle.mesh.sphere.new","v":"Box:height=0.5;radius=0.5;size=1,1,1;center=0,0,0 -> Capsule:height=0.5;radius=0.5;size=1,1,1;center=0,0,0 -> Box:height=0.5;radius=0.5;size=1,1,1;center=0,0,0"}
+{"k":"obstacle.mesh.offset.new","v":"Box:height=0.6;radius=0.4;size=0.8,1.2,0.6;center=0,0.6,0 -> Capsule:height=0.6;radius=0.4;size=0.8,1.2,0.8;center=0,0.6,0 -> Box:height=0.6;radius=0.4;size=0.8,1.2,0.6;center=0,0.6,0"}
 {"k":"trail.still.new","v":"world=15,0,0/15.5,0.5,0.5;local=-15,0,0/15.5,0.5,0.5"}
 {"k":"trail.notEmitting.new","v":"world=20,0,0/20.5,0.5,0.5;local=-20,0,0/20.5,0.5,0.5"}
 {"k":"trail.away.new","v":"world=-5,2.5,1/5.5,3,1.5;local=5,-2.5,-1/5.5,3,1.5"}
@@ -315,6 +317,8 @@
 {"k":"physics2d.body.simulated.new","v":"fixed=1;script=1;subStepping=3"}
 {"k":"physics2d.static.simulated.new","v":"1"}
 {"k":"physics2d.kinematic.simulated.new","v":"1"}
+{"k":"physics2d.lostTime.new","v":"empty=0/0;body=4/0.366666675"}
+{"k":"physics2d.unsimulated.simulated.new","v":"1"}
 {"k":"terrainData.heightmapTexture.new","v":"RenderTexture:TerrainHeightMap:33x33"}
 {"k":"terrainData.holesTexture.new","v":"RenderTexture:TerrainHolesMap:32x32"}
 {"k":"terrainData.new.heightmapTexture.new","v":"RenderTexture:TerrainHeightMap:33x33"}
@@ -370,6 +374,8 @@
 {"k":"obstacle.Capsule.center.fixed","v":"Capsule:height=1;radius=0.5;size=1,2,1;center=1,2,3"}
 {"k":"obstacle.Capsule.size246.switch.fixed","v":"Box:height=0.5;radius=0.5;size=1,1,1;center=0,0,0"}
 {"k":"obstacle.Capsule.same.fixed","v":"Capsule:height=2;radius=1;size=2,4,6;center=0,0,0"}
+{"k":"obstacle.mesh.sphere.fixed","v":"Box:height=0.5;radius=0.5;size=1,1,1;center=0,0,0 -> Capsule:height=0.5;radius=0.5;size=1,1,1;center=0,0,0 -> Box:height=0.5;radius=0.5;size=1,1,1;center=0,0,0"}
+{"k":"obstacle.mesh.offset.fixed","v":"Box:height=0.6;radius=0.4;size=0.8,1.2,0.6;center=0,0.6,0 -> Capsule:height=0.6;radius=0.4;size=0.8,1.2,0.8;center=0,0.6,0 -> Box:height=0.6;radius=0.4;size=0.8,1.2,0.6;center=0,0.6,0"}
 {"k":"trail.still.fixed","v":"world=15,0,0/15.5,0.5,0.5;local=-15,0,0/15.5,0.5,0.5"}
 {"k":"trail.notEmitting.fixed","v":"world=20,0,0/20.5,0.5,0.5;local=-20,0,0/20.5,0.5,0.5"}
 {"k":"trail.away.fixed","v":"world=-5,2.5,1/5.5,3,1.5;local=5,-2.5,-1/5.5,3,1.5"}
@@ -392,6 +398,8 @@
 {"k":"physics2d.body.simulated.fixed","v":"fixed=1;script=1;subStepping=3"}
 {"k":"physics2d.static.simulated.fixed","v":"1"}
 {"k":"physics2d.kinematic.simulated.fixed","v":"1"}
+{"k":"physics2d.lostTime.fixed","v":"empty=0/0;body=4/0.366666675"}
+{"k":"physics2d.unsimulated.simulated.fixed","v":"1"}
 {"k":"terrainData.heightmapTexture.fixed","v":"RenderTexture:TerrainHeightMap:33x33"}
 {"k":"terrainData.holesTexture.fixed","v":"RenderTexture:TerrainHolesMap:32x32"}
 {"k":"terrainData.new.heightmapTexture.fixed","v":"RenderTexture:TerrainHeightMap:33x33"}
@@ -447,6 +455,8 @@
 {"k":"obstacle.Capsule.center.frame","v":"Capsule:height=1;radius=0.5;size=1,2,1;center=1,2,3"}
 {"k":"obstacle.Capsule.size246.switch.frame","v":"Box:height=0.5;radius=0.5;size=1,1,1;center=0,0,0"}
 {"k":"obstacle.Capsule.same.frame","v":"Capsule:height=2;radius=1;size=2,4,6;center=0,0,0"}
+{"k":"obstacle.mesh.sphere.frame","v":"Box:height=0.5;radius=0.5;size=1,1,1;center=0,0,0 -> Capsule:height=0.5;radius=0.5;size=1,1,1;center=0,0,0 -> Box:height=0.5;radius=0.5;size=1,1,1;center=0,0,0"}
+{"k":"obstacle.mesh.offset.frame","v":"Box:height=0.6;radius=0.4;size=0.8,1.2,0.6;center=0,0.6,0 -> Capsule:height=0.6;radius=0.4;size=0.8,1.2,0.8;center=0,0.6,0 -> Box:height=0.6;radius=0.4;size=0.8,1.2,0.6;center=0,0.6,0"}
 {"k":"trail.still.frame","v":"world=15,0,0/15.5,0.5,0.5;local=-15,0,0/15.5,0.5,0.5"}
 {"k":"trail.notEmitting.frame","v":"world=20,0,0/20.5,0.5,0.5;local=-20,0,0/20.5,0.5,0.5"}
 {"k":"trail.away.frame","v":"world=-5,2.5,1/5.5,3,1.5;local=5,-2.5,-1/5.5,3,1.5"}
@@ -469,6 +479,8 @@
 {"k":"physics2d.body.simulated.frame","v":"fixed=1;script=1;subStepping=3"}
 {"k":"physics2d.static.simulated.frame","v":"1"}
 {"k":"physics2d.kinematic.simulated.frame","v":"1"}
+{"k":"physics2d.lostTime.frame","v":"empty=0/0;body=4/0.366666675"}
+{"k":"physics2d.unsimulated.simulated.frame","v":"1"}
 {"k":"terrainData.heightmapTexture.frame","v":"RenderTexture:TerrainHeightMap:33x33"}
 {"k":"terrainData.holesTexture.frame","v":"RenderTexture:TerrainHolesMap:32x32"}
 {"k":"terrainData.new.heightmapTexture.frame","v":"RenderTexture:TerrainHeightMap:33x33"}
@@ -528,6 +540,8 @@
 {"k":"obstacle.Capsule.center.destination","v":"Capsule:height=1;radius=0.5;size=1,2,1;center=1,2,3"}
 {"k":"obstacle.Capsule.size246.switch.destination","v":"Box:height=0.5;radius=0.5;size=1,1,1;center=0,0,0"}
 {"k":"obstacle.Capsule.same.destination","v":"Capsule:height=2;radius=1;size=2,4,6;center=0,0,0"}
+{"k":"obstacle.mesh.sphere.destination","v":"Box:height=0.5;radius=0.5;size=1,1,1;center=0,0,0 -> Capsule:height=0.5;radius=0.5;size=1,1,1;center=0,0,0 -> Box:height=0.5;radius=0.5;size=1,1,1;center=0,0,0"}
+{"k":"obstacle.mesh.offset.destination","v":"Box:height=0.6;radius=0.4;size=0.8,1.2,0.6;center=0,0.6,0 -> Capsule:height=0.6;radius=0.4;size=0.8,1.2,0.8;center=0,0.6,0 -> Box:height=0.6;radius=0.4;size=0.8,1.2,0.6;center=0,0.6,0"}
 {"k":"trail.still.destination","v":"world=15,0,0/15.5,0.5,0.5;local=-15,0,0/15.5,0.5,0.5"}
 {"k":"trail.notEmitting.destination","v":"world=20,0,0/20.5,0.5,0.5;local=-20,0,0/20.5,0.5,0.5"}
 {"k":"trail.away.destination","v":"world=-5,2.5,1/5.5,3,1.5;local=5,-2.5,-1/5.5,3,1.5"}
@@ -550,6 +564,8 @@
 {"k":"physics2d.body.simulated.destination","v":"fixed=1;script=1;subStepping=3"}
 {"k":"physics2d.static.simulated.destination","v":"1"}
 {"k":"physics2d.kinematic.simulated.destination","v":"1"}
+{"k":"physics2d.lostTime.destination","v":"empty=0/0;body=4/0.366666675"}
+{"k":"physics2d.unsimulated.simulated.destination","v":"1"}
 {"k":"terrainData.heightmapTexture.destination","v":"RenderTexture:TerrainHeightMap:33x33"}
 {"k":"terrainData.holesTexture.destination","v":"RenderTexture:TerrainHolesMap:32x32"}
 {"k":"terrainData.new.heightmapTexture.destination","v":"RenderTexture:TerrainHeightMap:33x33"}
@@ -604,6 +620,8 @@
 {"k":"obstacle.Capsule.center.destinationFrame","v":"Capsule:height=1;radius=0.5;size=1,2,1;center=1,2,3"}
 {"k":"obstacle.Capsule.size246.switch.destinationFrame","v":"Box:height=0.5;radius=0.5;size=1,1,1;center=0,0,0"}
 {"k":"obstacle.Capsule.same.destinationFrame","v":"Capsule:height=2;radius=1;size=2,4,6;center=0,0,0"}
+{"k":"obstacle.mesh.sphere.destinationFrame","v":"Box:height=0.5;radius=0.5;size=1,1,1;center=0,0,0 -> Capsule:height=0.5;radius=0.5;size=1,1,1;center=0,0,0 -> Box:height=0.5;radius=0.5;size=1,1,1;center=0,0,0"}
+{"k":"obstacle.mesh.offset.destinationFrame","v":"Box:height=0.6;radius=0.4;size=0.8,1.2,0.6;center=0,0.6,0 -> Capsule:height=0.6;radius=0.4;size=0.8,1.2,0.8;center=0,0.6,0 -> Box:height=0.6;radius=0.4;size=0.8,1.2,0.6;center=0,0.6,0"}
 {"k":"trail.still.destinationFrame","v":"world=15,0,0/15.5,0.5,0.5;local=-15,0,0/15.5,0.5,0.5"}
 {"k":"trail.notEmitting.destinationFrame","v":"world=20,0,0/20.5,0.5,0.5;local=-20,0,0/20.5,0.5,0.5"}
 {"k":"trail.away.destinationFrame","v":"world=-5,2.5,1/5.5,3,1.5;local=5,-2.5,-1/5.5,3,1.5"}
@@ -626,6 +644,8 @@
 {"k":"physics2d.body.simulated.destinationFrame","v":"fixed=1;script=1;subStepping=3"}
 {"k":"physics2d.static.simulated.destinationFrame","v":"1"}
 {"k":"physics2d.kinematic.simulated.destinationFrame","v":"1"}
+{"k":"physics2d.lostTime.destinationFrame","v":"empty=0/0;body=4/0.366666675"}
+{"k":"physics2d.unsimulated.simulated.destinationFrame","v":"1"}
 {"k":"terrainData.heightmapTexture.destinationFrame","v":"RenderTexture:TerrainHeightMap:33x33"}
 {"k":"terrainData.holesTexture.destinationFrame","v":"RenderTexture:TerrainHolesMap:32x32"}
 {"k":"terrainData.new.heightmapTexture.destinationFrame","v":"RenderTexture:TerrainHeightMap:33x33"}

@@ -272,6 +272,23 @@ public class DefaultControlsProbe : MonoBehaviour
             });
         }
 
+        // Obstacles added to objects with meshes: a sphere and a cube moved off its pivot and
+        // stretched, fitted when added, then their shape changed.
+        foreach (var kind in new[] { "sphere", "offset" })
+        {
+            Staged("obstacle.mesh." + kind, () =>
+            {
+                var g = MeshObject(kind);
+                var o = g.AddComponent<NavMeshObstacle>();
+                var r = Obstacle(o, destroy: false);
+                o.shape = NavMeshObstacleShape.Capsule;
+                r += " -> " + Obstacle(o, destroy: false);
+                o.shape = NavMeshObstacleShape.Box;
+                r += " -> " + Obstacle(o, destroy: true);
+                return r;
+            });
+        }
+
         // Renderers whose bounds follow their geometry.
         var trail = Make("Trail", new Vector3(30, 0, 0), Vector3.one).AddComponent<TrailRenderer>();
         Staged("trail.still", () => RendererBounds(trail));
@@ -394,6 +411,37 @@ public class DefaultControlsProbe : MonoBehaviour
             scene.Simulate(0.02f);
             return scene.subStepCount.ToString(CultureInfo.InvariantCulture);
         });
+        var lostScene = SceneManager.CreateScene("Physics2DLostTime", new CreateSceneParameters(LocalPhysicsMode.Physics2D));
+        var lost2d = new GameObject("Lost2D");
+        SceneManager.MoveGameObjectToScene(lost2d, lostScene);
+        lost2d.AddComponent<Rigidbody2D>();
+        lost2d.AddComponent<BoxCollider2D>();
+        Staged("physics2d.lostTime", () =>
+        {
+            var mode = Physics2D.simulationMode;
+            var stepping = Physics2D.useSubStepping;
+            Physics2D.simulationMode = SimulationMode2D.Script;
+            Physics2D.useSubStepping = true;
+            var scene = local.GetPhysicsScene2D();
+            scene.Simulate(0.5f);
+            var r = "empty=" + scene.subStepCount + "/" + F(scene.subStepLostTime);
+            var withBody = lostScene.GetPhysicsScene2D();
+            withBody.Simulate(0.5f);
+            r += ";body=" + withBody.subStepCount + "/" + F(withBody.subStepLostTime);
+            Physics2D.useSubStepping = stepping;
+            Physics2D.simulationMode = mode;
+            return r;
+        });
+        var unsimulatedScene = SceneManager.CreateScene("Physics2DUnsimulated", new CreateSceneParameters(LocalPhysicsMode.Physics2D));
+        var unsimulated2d = new GameObject("Unsimulated2D");
+        SceneManager.MoveGameObjectToScene(unsimulated2d, unsimulatedScene);
+        unsimulated2d.AddComponent<Rigidbody2D>().simulated = false;
+        Staged("physics2d.unsimulated.simulated", () =>
+        {
+            var scene = unsimulatedScene.GetPhysicsScene2D();
+            scene.Simulate(0.02f);
+            return scene.subStepCount.ToString(CultureInfo.InvariantCulture);
+        });
         Staged("terrainData.heightmapTexture", () => TextureName(terrainData.heightmapTexture));
         Staged("terrainData.holesTexture", () => TextureName(terrainData.holesTexture));
         Staged("terrainData.new.heightmapTexture", () => TextureName(new TerrainData().heightmapTexture));
@@ -429,6 +477,31 @@ public class DefaultControlsProbe : MonoBehaviour
     static string Agent(NavMeshAgent agent) =>
         "on=" + agent.isOnNavMesh + ";dest=" + V(agent.destination) + ";status=" + agent.pathStatus + ";remaining=" + F(agent.remainingDistance)
         + ";hasPath=" + agent.hasPath + ";pending=" + agent.pathPending + ";next=" + V(agent.nextPosition) + ";end=" + V(agent.pathEndPosition);
+
+    static Mesh s_OffsetCube;
+
+    /// <summary>An object with a sphere mesh, or with a cube mesh whose vertices are moved up by
+    /// 0.6 and scaled to 0.8 x 1.2 x 0.6 (bounds center (0, 0.6, 0), size (0.8, 1.2, 0.6)).</summary>
+    static GameObject MeshObject(string kind)
+    {
+        var g = GameObject.CreatePrimitive(kind == "sphere" ? PrimitiveType.Sphere : PrimitiveType.Cube);
+        DestroyImmediate(g.GetComponent<Collider>());
+        g.transform.position = new Vector3(-12, 0, -12);
+        if (kind == "offset")
+        {
+            if (s_OffsetCube == null)
+            {
+                s_OffsetCube = Instantiate(g.GetComponent<MeshFilter>().sharedMesh);
+                var vertices = s_OffsetCube.vertices;
+                for (int i = 0; i < vertices.Length; i++)
+                    vertices[i] = new Vector3(vertices[i].x * 0.8f, vertices[i].y * 1.2f + 0.6f, vertices[i].z * 0.6f);
+                s_OffsetCube.vertices = vertices;
+                s_OffsetCube.RecalculateBounds();
+            }
+            g.GetComponent<MeshFilter>().sharedMesh = s_OffsetCube;
+        }
+        return g;
+    }
 
     static NavMeshObstacle NewObstacle(NavMeshObstacleShape shape)
     {
