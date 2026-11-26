@@ -7,8 +7,7 @@ using UnityEngine;
 
 /// <summary>
 /// Writes values.jsonl in $PROPERTYIDS_OUT (tests/value_probe.py rows): which of the names
-/// Assets/PropertyIds/Candidates.txt lists (property names of Unity's built-in shaders and engine
-/// globals) have shader property ids before Play mode's first script runs, in the order of their
+/// Assets/PropertyIds/Candidates.txt lists (property names the engine gives ids, and controls) have shader property ids before Play mode's first script runs, in the order of their
 /// ids, and where a project shader's own names come. Values never contain ids, only their order.
 /// </summary>
 public class PropertyIdsProbe : MonoBehaviour
@@ -49,6 +48,9 @@ public class PropertyIdsProbe : MonoBehaviour
         int first = Math.Min(own, other);
         rows.Add(("builtin/before_project", string.Join("\n", before.Where(c => c.id < first).Select(c => c.name))));
         rows.Add(("builtin/after_project", string.Join("\n", before.Where(c => c.id > first).Select(c => c.name))));
+        // How many ids from 0 up to the project's first name no candidate holds (names the list misses).
+        var held = new HashSet<int>(before.Where(c => c.id >= 0 && c.id < first).Select(c => c.id));
+        rows.Add(("builtin/unlisted_before_project", (first - held.Count).ToString()));
     }
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
