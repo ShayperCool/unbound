@@ -2636,4 +2636,28 @@ fn a_guid_only_texture_imports_as_a_cube_map_where_its_layout_is_measured() {
         guid_only_image_size(Path::new("Sky.tga"), &tga),
         Some((16, 16))
     );
+    // An RGB EXR whose data window (64x56) is not its display window (64x64): the display
+    // window, which the decoder (the image crate's) reads it as.
+    use exr::prelude::*;
+    let layer = Layer::new(
+        (64, 56),
+        LayerAttributes::default(),
+        Encoding::UNCOMPRESSED,
+        SpecificChannels::rgb(|_: Vec2<usize>| (0.5f32, 0.5f32, 0.5f32)),
+    );
+    let mut cropped = Image::from_layer(layer);
+    cropped.attributes.display_window = exr::meta::attribute::IntegerBounds::new((0, 0), (64, 64));
+    let mut exr_bytes = std::io::Cursor::new(Vec::new());
+    cropped.write().to_buffered(&mut exr_bytes).unwrap();
+    let exr_bytes = exr_bytes.into_inner();
+    assert_eq!(
+        image::load_from_memory_with_format(&exr_bytes, image::ImageFormat::OpenExr)
+            .map(|i| (i.width(), i.height()))
+            .ok(),
+        Some((64, 64))
+    );
+    assert_eq!(
+        guid_only_image_size(Path::new("Sky.exr"), &exr_bytes),
+        Some((64, 64))
+    );
 }
