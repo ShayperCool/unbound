@@ -26,10 +26,6 @@ namespace UnityEngine.Tilemaps
         public global::UnityEngine.Tilemaps.TileFlags flags { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Tilemaps.TileDataNative.flags"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Tilemaps.TileDataNative.flags"); } }
         public global::UnityEngine.Tilemaps.Tile.ColliderType colliderType { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Tilemaps.TileDataNative.colliderType"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Tilemaps.TileDataNative.colliderType"); } }
     }
-    unsafe partial class Tilemap
-    {
-        internal global::UnityEngine.Bounds localFrameBounds { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Tilemaps.Tilemap.localFrameBounds"); return default; } }
-    }
     unsafe partial class TilemapRenderer
     {
         [global::Unbound.Stub] internal void RegisterSpriteAtlasRegistered() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Tilemaps.TilemapRenderer.RegisterSpriteAtlasRegistered"); }
