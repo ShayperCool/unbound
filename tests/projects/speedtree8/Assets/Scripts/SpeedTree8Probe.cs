@@ -194,6 +194,8 @@ public sealed class SpeedTree8Probe : MonoBehaviour
         Rec(p, (go.activeSelf ? "active" : "inactive") + " layer " + go.layer + " tag " + go.tag + " static " + go.isStatic + " hide " + go.hideFlags);
         Rec(p + "/transform", V(tr.localPosition) + " " + Q(tr.localRotation) + " " + V(tr.localScale));
         Rec(p + "/components", string.Join(" ", go.GetComponents<Component>().Select(c => c == null ? "missing" : c.GetType().Name)));
+        // The children in their order (GetChild).
+        if (tr.childCount > 0) Rec(p + "/children", string.Join(" ", Enumerable.Range(0, tr.childCount).Select(i => tr.GetChild(i).name)));
         foreach (var c in go.GetComponents<Component>())
         {
             switch (c)

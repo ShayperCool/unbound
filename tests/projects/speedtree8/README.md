@@ -24,8 +24,8 @@ no smooth transitions), `Card_Custom` (a custom scale), `Card_Dangling` (a mater
 (the leaves, bark and billboard materials embedded, cross-fading not animated with both widths set).
 
 `Assets/Scripts/SpeedTree8Probe.cs` records, in Play mode, for each tree the importer's public settings,
-every object of the asset (class, name, local file id, hide flags), the main object's hierarchy with its
-components (transforms, LODGroup levels, renderers' materials and lighting, Tree wind assets, colliders,
+every object of the asset (class, name, local file id, hide flags), the main object's hierarchy (each
+object's children in their order: `children`) with its components (transforms, LODGroup levels, renderers' materials and lighting, Tree wind assets, colliders,
 Rigidbody), each mesh (layout, sub-meshes and their bounds, a hash of every vertex channel and of the
 indices) and each material it draws with (shader, keywords, queue, every shader property); the SpeedTree
 callbacks each tree's import made (`Assets/Editor/SpeedTree8Events.cs`), the trees' textures' import
@@ -39,8 +39,12 @@ and the maps' `alphaIsTransparency` and `sRGBTexture` in their `.meta` files, wi
 tree's passes. It adds `Card_Wind2` (the card tree with its wind's leading word 2) and `AlphaCheck/`
 (the card tree with its `.meta` and copies of its maps whose `.meta` files lack those settings).
 
-Import behaviour does not depend on the OS or the graphics device, so the probe records with the macOS
-Editor in batch mode. `residuals.json` and `residuals-fresh.json` list the values Unbound does not
+Import behaviour does not depend on the OS or the graphics device, so the probe may record with the
+macOS Editor in batch mode; the references are the Linux Editor's (batch mode on the GPU), which give a
+collision capsule's rotation 1 ulp off the macOS Editor's in two components. Measured: the imported
+tree's children are in name order, letters without case (`card-tree-sample`'s levels before
+`CollisionObject0`, `Field_Embedded`'s after it), while OnPostprocessSpeedTree sees them in the
+order they were made (levels first). `residuals.json` and `residuals-fresh.json` list the values Unbound does not
 reproduce yet with their causes.
 
     python3 tests/projects/speedtree8/run.py record --label A     # Editor capture (--profile fresh too)

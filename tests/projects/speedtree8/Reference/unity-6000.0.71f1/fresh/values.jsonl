@@ -74,6 +74,7 @@
 {"k":"v8/AlphaCheck/Card_Alpha.st/go/Card_Alpha","v":"active layer 0 tag Untagged static False hide NotEditable"}
 {"k":"v8/AlphaCheck/Card_Alpha.st/go/Card_Alpha/transform","v":"00000000 00000000 00000000 00000000 00000000 00000000 3f800000 3f800000 3f800000 3f800000"}
 {"k":"v8/AlphaCheck/Card_Alpha.st/go/Card_Alpha/components","v":"Transform LODGroup Rigidbody"}
+{"k":"v8/AlphaCheck/Card_Alpha.st/go/Card_Alpha/children","v":"Card_Alpha_LOD0 Card_Alpha_LOD1 Card_Alpha_LOD2 CollisionObject0 CollisionObject1"}
 {"k":"v8/AlphaCheck/Card_Alpha.st/go/Card_Alpha/LODGroup","v":"SpeedTree animate True billboard False size 41d1fdb9 ref 3f2cfc80 414d4019 bdfcddc0 count 3 enabled True"}
 {"k":"v8/AlphaCheck/Card_Alpha.st/go/Card_Alpha/LODGroup/lod0","v":"3f000000 fade 00000000 renderers Card_Alpha_LOD0"}
 {"k":"v8/AlphaCheck/Card_Alpha.st/go/Card_Alpha/LODGroup/lod1","v":"3e800000 fade 00000000 renderers Card_Alpha_LOD1"}
@@ -235,6 +236,7 @@
 {"k":"v8/AlphaCheck2/Card_Alpha2.st/go/Card_Alpha2","v":"active layer 0 tag Untagged static False hide NotEditable"}
 {"k":"v8/AlphaCheck2/Card_Alpha2.st/go/Card_Alpha2/transform","v":"00000000 00000000 00000000 00000000 00000000 00000000 3f800000 3f800000 3f800000 3f800000"}
 {"k":"v8/AlphaCheck2/Card_Alpha2.st/go/Card_Alpha2/components","v":"Transform LODGroup Rigidbody"}
+{"k":"v8/AlphaCheck2/Card_Alpha2.st/go/Card_Alpha2/children","v":"Card_Alpha2_LOD0 Card_Alpha2_LOD1 Card_Alpha2_LOD2 CollisionObject0 CollisionObject1"}
 {"k":"v8/AlphaCheck2/Card_Alpha2.st/go/Card_Alpha2/LODGroup","v":"SpeedTree animate True billboard False size 41d1fdb9 ref 3f2cfc80 414d4019 bdfcddc0 count 3 enabled True"}
 {"k":"v8/AlphaCheck2/Card_Alpha2.st/go/Card_Alpha2/LODGroup/lod0","v":"3f000000 fade 00000000 renderers Card_Alpha2_LOD0"}
 {"k":"v8/AlphaCheck2/Card_Alpha2.st/go/Card_Alpha2/LODGroup/lod1","v":"3e800000 fade 00000000 renderers Card_Alpha2_LOD1"}
@@ -404,6 +406,7 @@
 {"k":"v8/Broadleaf_Desktop_Field.st/go/Broadleaf_Desktop_Field","v":"active layer 0 tag Untagged static False hide NotEditable"}
 {"k":"v8/Broadleaf_Desktop_Field.st/go/Broadleaf_Desktop_Field/transform","v":"00000000 00000000 00000000 00000000 00000000 00000000 3f800000 3f800000 3f800000 3f800000"}
 {"k":"v8/Broadleaf_Desktop_Field.st/go/Broadleaf_Desktop_Field/components","v":"Transform LODGroup Rigidbody"}
+{"k":"v8/Broadleaf_Desktop_Field.st/go/Broadleaf_Desktop_Field/children","v":"Broadleaf_Desktop_Field_LOD0 Broadleaf_Desktop_Field_LOD1 Broadleaf_Desktop_Field_LOD2 Broadleaf_Desktop_Field_LOD3 CollisionObject0 CollisionObject1"}
 {"k":"v8/Broadleaf_Desktop_Field.st/go/Broadleaf_Desktop_Field/LODGroup","v":"SpeedTree animate True billboard True size 4197114f ref 3f4e7810 410e5323 be8918f0 count 4 enabled True"}
 {"k":"v8/Broadleaf_Desktop_Field.st/go/Broadleaf_Desktop_Field/LODGroup/lod0","v":"3f000000 fade 00000000 renderers Broadleaf_Desktop_Field_LOD0"}
 {"k":"v8/Broadleaf_Desktop_Field.st/go/Broadleaf_Desktop_Field/LODGroup/lod1","v":"3e800000 fade 00000000 renderers Broadleaf_Desktop_Field_LOD1"}
@@ -439,7 +442,7 @@
 {"k":"v8/Broadleaf_Desktop_Field.st/go/Broadleaf_Desktop_Field/CollisionObject0/components","v":"Transform CapsuleCollider"}
 {"k":"v8/Broadleaf_Desktop_Field.st/go/Broadleaf_Desktop_Field/CollisionObject0/CapsuleCollider","v":"409d8549 height 411e0222 direction 0 center 00000000 00000000 00000000 trigger False enabled True"}
 {"k":"v8/Broadleaf_Desktop_Field.st/go/Broadleaf_Desktop_Field/CollisionObject1","v":"active layer 0 tag Untagged static False hide NotEditable"}
-{"k":"v8/Broadleaf_Desktop_Field.st/go/Broadleaf_Desktop_Field/CollisionObject1/transform","v":"3d70176f 40429347 bc0051b8 80000000 3b1dde3a 3f35a2cf 3f34664a 3f800000 3f800000 3f800000"}
+{"k":"v8/Broadleaf_Desktop_Field.st/go/Broadleaf_Desktop_Field/CollisionObject1/transform","v":"3d70176f 40429347 bc0051b8 80000000 3b1dde39 3f35a2cf 3f346649 3f800000 3f800000 3f800000"}
 {"k":"v8/Broadleaf_Desktop_Field.st/go/Broadleaf_Desktop_Field/CollisionObject1/components","v":"Transform CapsuleCollider"}
 {"k":"v8/Broadleaf_Desktop_Field.st/go/Broadleaf_Desktop_Field/CollisionObject1/CapsuleCollider","v":"3e44a205 height 40cd9b22 direction 0 center 00000000 00000000 00000000 trigger False enabled True"}
 {"k":"v8/Broadleaf_Desktop_Field.st/mesh/Broadleaf_Desktop_Field_LOD0","v":"vertices 13888 submeshes 2 index UInt16 readable True bounds 3f573290 410d0250 bebf2a48 40c65f4c 4115c038 40b7a8e0 streams 1"}
@@ -633,6 +636,7 @@
 {"k":"v8/Broadleaf_Desktop_Field_OptionsOff.st/go/Broadleaf_Desktop_Field_OptionsOff","v":"active layer 0 tag Untagged static False hide NotEditable"}
 {"k":"v8/Broadleaf_Desktop_Field_OptionsOff.st/go/Broadleaf_Desktop_Field_OptionsOff/transform","v":"00000000 00000000 00000000 00000000 00000000 00000000 3f800000 3f800000 3f800000 3f800000"}
 {"k":"v8/Broadleaf_Desktop_Field_OptionsOff.st/go/Broadleaf_Desktop_Field_OptionsOff/components","v":"Transform LODGroup Rigidbody"}
+{"k":"v8/Broadleaf_Desktop_Field_OptionsOff.st/go/Broadleaf_Desktop_Field_OptionsOff/children","v":"Broadleaf_Desktop_Field_OptionsOff_LOD0 Broadleaf_Desktop_Field_OptionsOff_LOD1 Broadleaf_Desktop_Field_OptionsOff_LOD2 Broadleaf_Desktop_Field_OptionsOff_LOD3 CollisionObject0 CollisionObject1"}
 {"k":"v8/Broadleaf_Desktop_Field_OptionsOff.st/go/Broadleaf_Desktop_Field_OptionsOff/LODGroup","v":"SpeedTree animate True billboard True size 4197114f ref 3f4e7810 410e5323 be8918f0 count 4 enabled True"}
 {"k":"v8/Broadleaf_Desktop_Field_OptionsOff.st/go/Broadleaf_Desktop_Field_OptionsOff/LODGroup/lod0","v":"3f000000 fade 00000000 renderers Broadleaf_Desktop_Field_OptionsOff_LOD0"}
 {"k":"v8/Broadleaf_Desktop_Field_OptionsOff.st/go/Broadleaf_Desktop_Field_OptionsOff/LODGroup/lod1","v":"3e800000 fade 00000000 renderers Broadleaf_Desktop_Field_OptionsOff_LOD1"}
@@ -668,7 +672,7 @@
 {"k":"v8/Broadleaf_Desktop_Field_OptionsOff.st/go/Broadleaf_Desktop_Field_OptionsOff/CollisionObject0/components","v":"Transform CapsuleCollider"}
 {"k":"v8/Broadleaf_Desktop_Field_OptionsOff.st/go/Broadleaf_Desktop_Field_OptionsOff/CollisionObject0/CapsuleCollider","v":"409d8549 height 411e0222 direction 0 center 00000000 00000000 00000000 trigger False enabled True"}
 {"k":"v8/Broadleaf_Desktop_Field_OptionsOff.st/go/Broadleaf_Desktop_Field_OptionsOff/CollisionObject1","v":"active layer 0 tag Untagged static False hide NotEditable"}
-{"k":"v8/Broadleaf_Desktop_Field_OptionsOff.st/go/Broadleaf_Desktop_Field_OptionsOff/CollisionObject1/transform","v":"3d70176f 40429347 bc0051b8 80000000 3b1dde3a 3f35a2cf 3f34664a 3f800000 3f800000 3f800000"}
+{"k":"v8/Broadleaf_Desktop_Field_OptionsOff.st/go/Broadleaf_Desktop_Field_OptionsOff/CollisionObject1/transform","v":"3d70176f 40429347 bc0051b8 80000000 3b1dde39 3f35a2cf 3f346649 3f800000 3f800000 3f800000"}
 {"k":"v8/Broadleaf_Desktop_Field_OptionsOff.st/go/Broadleaf_Desktop_Field_OptionsOff/CollisionObject1/components","v":"Transform CapsuleCollider"}
 {"k":"v8/Broadleaf_Desktop_Field_OptionsOff.st/go/Broadleaf_Desktop_Field_OptionsOff/CollisionObject1/CapsuleCollider","v":"3e44a205 height 40cd9b22 direction 0 center 00000000 00000000 00000000 trigger False enabled True"}
 {"k":"v8/Broadleaf_Desktop_Field_OptionsOff.st/mesh/Broadleaf_Desktop_Field_OptionsOff_LOD0","v":"vertices 13888 submeshes 2 index UInt16 readable True bounds 3f573290 410d0250 bebf2a48 40c65f4c 4115c038 40b7a8e0 streams 1"}
@@ -862,6 +866,7 @@
 {"k":"v8/Broadleaf_Desktop_Field_OptionsOn.st/go/Broadleaf_Desktop_Field_OptionsOn","v":"active layer 0 tag Untagged static False hide NotEditable"}
 {"k":"v8/Broadleaf_Desktop_Field_OptionsOn.st/go/Broadleaf_Desktop_Field_OptionsOn/transform","v":"00000000 00000000 00000000 00000000 00000000 00000000 3f800000 3f800000 3f800000 3f800000"}
 {"k":"v8/Broadleaf_Desktop_Field_OptionsOn.st/go/Broadleaf_Desktop_Field_OptionsOn/components","v":"Transform LODGroup Rigidbody"}
+{"k":"v8/Broadleaf_Desktop_Field_OptionsOn.st/go/Broadleaf_Desktop_Field_OptionsOn/children","v":"Broadleaf_Desktop_Field_OptionsOn_LOD0 Broadleaf_Desktop_Field_OptionsOn_LOD1 Broadleaf_Desktop_Field_OptionsOn_LOD2 Broadleaf_Desktop_Field_OptionsOn_LOD3 CollisionObject0 CollisionObject1"}
 {"k":"v8/Broadleaf_Desktop_Field_OptionsOn.st/go/Broadleaf_Desktop_Field_OptionsOn/LODGroup","v":"SpeedTree animate True billboard True size 4197114f ref 3f4e7810 410e5323 be8918f0 count 4 enabled True"}
 {"k":"v8/Broadleaf_Desktop_Field_OptionsOn.st/go/Broadleaf_Desktop_Field_OptionsOn/LODGroup/lod0","v":"3f000000 fade 00000000 renderers Broadleaf_Desktop_Field_OptionsOn_LOD0"}
 {"k":"v8/Broadleaf_Desktop_Field_OptionsOn.st/go/Broadleaf_Desktop_Field_OptionsOn/LODGroup/lod1","v":"3e800000 fade 00000000 renderers Broadleaf_Desktop_Field_OptionsOn_LOD1"}
@@ -897,7 +902,7 @@
 {"k":"v8/Broadleaf_Desktop_Field_OptionsOn.st/go/Broadleaf_Desktop_Field_OptionsOn/CollisionObject0/components","v":"Transform CapsuleCollider"}
 {"k":"v8/Broadleaf_Desktop_Field_OptionsOn.st/go/Broadleaf_Desktop_Field_OptionsOn/CollisionObject0/CapsuleCollider","v":"409d8549 height 411e0222 direction 0 center 00000000 00000000 00000000 trigger False enabled True"}
 {"k":"v8/Broadleaf_Desktop_Field_OptionsOn.st/go/Broadleaf_Desktop_Field_OptionsOn/CollisionObject1","v":"active layer 0 tag Untagged static False hide NotEditable"}
-{"k":"v8/Broadleaf_Desktop_Field_OptionsOn.st/go/Broadleaf_Desktop_Field_OptionsOn/CollisionObject1/transform","v":"3d70176f 40429347 bc0051b8 80000000 3b1dde3a 3f35a2cf 3f34664a 3f800000 3f800000 3f800000"}
+{"k":"v8/Broadleaf_Desktop_Field_OptionsOn.st/go/Broadleaf_Desktop_Field_OptionsOn/CollisionObject1/transform","v":"3d70176f 40429347 bc0051b8 80000000 3b1dde39 3f35a2cf 3f346649 3f800000 3f800000 3f800000"}
 {"k":"v8/Broadleaf_Desktop_Field_OptionsOn.st/go/Broadleaf_Desktop_Field_OptionsOn/CollisionObject1/components","v":"Transform CapsuleCollider"}
 {"k":"v8/Broadleaf_Desktop_Field_OptionsOn.st/go/Broadleaf_Desktop_Field_OptionsOn/CollisionObject1/CapsuleCollider","v":"3e44a205 height 40cd9b22 direction 0 center 00000000 00000000 00000000 trigger False enabled True"}
 {"k":"v8/Broadleaf_Desktop_Field_OptionsOn.st/mesh/Broadleaf_Desktop_Field_OptionsOn_LOD0","v":"vertices 13888 submeshes 2 index UInt16 readable True bounds 3f573290 410d0250 bebf2a48 40c65f4c 4115c038 40b7a8e0 streams 1"}
@@ -1083,6 +1088,7 @@
 {"k":"v8/Card_Tree_Sample/Card_Wind2.st/go/Card_Wind2","v":"active layer 0 tag Untagged static False hide NotEditable"}
 {"k":"v8/Card_Tree_Sample/Card_Wind2.st/go/Card_Wind2/transform","v":"00000000 00000000 00000000 00000000 00000000 00000000 3f800000 3f800000 3f800000 3f800000"}
 {"k":"v8/Card_Tree_Sample/Card_Wind2.st/go/Card_Wind2/components","v":"Transform LODGroup Rigidbody"}
+{"k":"v8/Card_Tree_Sample/Card_Wind2.st/go/Card_Wind2/children","v":"Card_Wind2_LOD0 Card_Wind2_LOD1 Card_Wind2_LOD2 CollisionObject0 CollisionObject1"}
 {"k":"v8/Card_Tree_Sample/Card_Wind2.st/go/Card_Wind2/LODGroup","v":"SpeedTree animate True billboard False size 41d1fdb9 ref 3f2cfc80 414d4019 bdfcddc0 count 3 enabled True"}
 {"k":"v8/Card_Tree_Sample/Card_Wind2.st/go/Card_Wind2/LODGroup/lod0","v":"3f000000 fade 00000000 renderers Card_Wind2_LOD0"}
 {"k":"v8/Card_Tree_Sample/Card_Wind2.st/go/Card_Wind2/LODGroup/lod1","v":"3e800000 fade 00000000 renderers Card_Wind2_LOD1"}
@@ -1244,6 +1250,7 @@
 {"k":"v8/Card_Tree_Sample/card-tree-sample.st/go/card-tree-sample","v":"active layer 0 tag Untagged static False hide NotEditable"}
 {"k":"v8/Card_Tree_Sample/card-tree-sample.st/go/card-tree-sample/transform","v":"00000000 00000000 00000000 00000000 00000000 00000000 3f800000 3f800000 3f800000 3f800000"}
 {"k":"v8/Card_Tree_Sample/card-tree-sample.st/go/card-tree-sample/components","v":"Transform LODGroup Rigidbody"}
+{"k":"v8/Card_Tree_Sample/card-tree-sample.st/go/card-tree-sample/children","v":"card-tree-sample_LOD0 card-tree-sample_LOD1 card-tree-sample_LOD2 CollisionObject0 CollisionObject1"}
 {"k":"v8/Card_Tree_Sample/card-tree-sample.st/go/card-tree-sample/LODGroup","v":"SpeedTree animate True billboard False size 41d1fdb9 ref 3f2cfc80 414d4019 bdfcddc0 count 3 enabled True"}
 {"k":"v8/Card_Tree_Sample/card-tree-sample.st/go/card-tree-sample/LODGroup/lod0","v":"3f000000 fade 00000000 renderers card-tree-sample_LOD0"}
 {"k":"v8/Card_Tree_Sample/card-tree-sample.st/go/card-tree-sample/LODGroup/lod1","v":"3e800000 fade 00000000 renderers card-tree-sample_LOD1"}
