@@ -413,6 +413,7 @@ namespace Unbound.Runtime
 
             // Renderers that changed canvas lose their depth at once (tests/projects/uidepth).
             Unbound.Runtime.CanvasSystem.ReleaseDepths(t);
+            UnityEngine.Rendering.SortingGroup.ParentChanged(t, parent);
             // The subtree's activity follows its new parent before the parent messages: OnDisable
             // comes before OnTransformParentChanged under an inactive parent, in the new scene
             // (matches the Unity 6000.0.71f1 Editor, tests/projects/localphysics reparent.*).

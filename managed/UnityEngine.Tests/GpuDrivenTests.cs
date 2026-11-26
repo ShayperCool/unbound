@@ -108,6 +108,42 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
+        public void ASortingGroupComingAboveARendererChangesItAndOneGoingAwayDoesNot()
+        {
+            // tests/projects/residentdrawer controls HeldGroup*: the drawer drops a held renderer a
+            // group comes above (so the renderer is reported changed) and does not take it back
+            // when the group goes away.
+            m_Dispatcher.EnableTypeTracking<MeshRenderer>();
+            var added = Renderer("group added", m_Dots);
+            var parented = Renderer("group on parent", m_Dots);
+            var parent = Keep(new GameObject("parent"));
+            parented.transform.SetParent(parent.transform, true);
+            var enabled = Renderer("group enabled", m_Dots);
+            var disabledGroup = enabled.gameObject.AddComponent<SortingGroup>();
+            disabledGroup.enabled = false;
+            var moved = Renderer("moved", m_Dots);
+            var grouped = Keep(new GameObject("grouped"));
+            grouped.AddComponent<SortingGroup>();
+            var plain = Renderer("plain", m_Dots);
+            Changed<MeshRenderer>();
+
+            int[] ids = { added.GetInstanceID(), parented.GetInstanceID(), enabled.GetInstanceID(), moved.GetInstanceID() };
+            var group = added.gameObject.AddComponent<SortingGroup>();
+            parent.AddComponent<SortingGroup>();
+            disabledGroup.enabled = true;
+            moved.transform.SetParent(grouped.transform, true);
+            var changed = Changed<MeshRenderer>();
+            foreach (int id in ids) Assert.Contains(id, changed);
+            Assert.DoesNotContain(plain.GetInstanceID(), changed);
+
+            Object.DestroyImmediate(group);
+            disabledGroup.enabled = false;
+            changed = Changed<MeshRenderer>();
+            Assert.DoesNotContain(added.GetInstanceID(), changed);
+            Assert.DoesNotContain(enabled.GetInstanceID(), changed);
+        }
+
+        [Fact]
         public void ChangesMoveToTheEndAndDestroyedObjectsLeaveTheChangedQueue()
         {
             m_Dispatcher.EnableTypeTracking<MeshRenderer>();

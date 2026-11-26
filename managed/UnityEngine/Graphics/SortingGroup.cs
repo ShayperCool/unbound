@@ -33,6 +33,42 @@ namespace UnityEngine.Rendering
         internal override void OnEngineEnable()
         {
             if (m_Index != InvalidIndex) return;
+            RegisterGroups();
+            // The renderers below a group that comes into force change: the GPU Resident Drawer
+            // drops those it held (measured: tests/projects/residentdrawer controls HeldGroupAdded,
+            // HeldGroupEnabled, HeldGroupOnParent). A group going away changes none of them: the
+            // drawer does not take them back.
+            RenderersChanged(m_GameObject.m_Transform);
+        }
+
+        /// <summary>Marks the renderers of <paramref name="root"/>'s subtree changed for object
+        /// dispatchers (nothing when none tracks).</summary>
+        static void RenderersChanged(Transform root)
+        {
+            if (ObjectDispatch.s_Tracking == 0 || root == null) return;
+            using var lease = UnityEngine.Pool.ListPool<Transform>.Get(out var pending);
+            pending.Add(root);
+            while (pending.Count != 0)
+            {
+                var node = pending[pending.Count - 1];
+                pending.RemoveAt(pending.Count - 1);
+                foreach (var component in node.m_GameObject.m_Components)
+                    if (component is Renderer renderer && !renderer.m_Destroyed) renderer.Dirty();
+                pending.AddRange(node.m_Children);
+            }
+        }
+
+        /// <summary>A subtree moved under a parent a sorting group encloses: its renderers change, as
+        /// the drawer drops those it held (measured: tests/projects/residentdrawer controls
+        /// HeldGroupReparented).</summary>
+        internal static void ParentChanged(Transform moved, Transform parent)
+        {
+            if (ObjectDispatch.s_Tracking == 0 || parent == null || NearestFrom(parent) == null) return;
+            RenderersChanged(moved);
+        }
+
+        void RegisterGroups()
+        {
             // Registration follows the hierarchy from descendants to parents. The guard above
             // keeps later enable hooks for the registered descendants from walking them again.
             using var lease = UnityEngine.Pool.ListPool<(Transform Node, bool Visited)>.Get(out var pending);
