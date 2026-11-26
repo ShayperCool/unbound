@@ -15,7 +15,7 @@
 {"key": "open1.dirty.beforeExit.ExitChanged", "value": "1"}
 {"key": "open1.exit", "value": "1"}
 {"key": "open1.dispatches", "value": "edit/1/Assets/P/Changed.mat|Assets/P/Crlf.mat|Assets/P/Data.asset|Assets/P/ExitChanged.mat|Assets/P/ExitDirty.mat|Assets/P/IfDirty.mat|Assets/P/PostChanged.mat|Assets/P/PostDirty.mat|Assets/P/Reverted.mat|Assets/P/SameValue.mat|Assets/P/SetDirty.mat|Assets/P/Untouched.mat || edit/0/Assets/P/PostChanged.mat|Assets/P/PostDirty.mat || play/0/Assets/P/Changed.mat|Assets/P/Crlf.mat|Assets/P/Data.asset|Assets/P/Reverted.mat|Assets/P/SetDirty.mat || play/0/Assets/P/IfDirty.mat || play/0/Assets/P/ExitChanged.mat|Assets/P/ExitDirty.mat"}
-{"key": "open1.leaving", "value": "quitting:play dispatch:play=Assets/P/ExitChanged.mat|Assets/P/ExitDirty.mat"}
+{"key": "open1.leaving", "value": "quitting:play dispatch:play=Assets/P/ExitChanged.mat|Assets/P/ExitDirty.mat ondisable:play ondestroy:play"}
 {"key": "open1.time.Assets/Editor.meta", "value": "kept"}
 {"key": "open1.time.Assets/Editor/UnchangedSavesProbe.cs", "value": "kept"}
 {"key": "open1.time.Assets/Editor/UnchangedSavesProbe.cs.meta", "value": "kept"}
@@ -151,7 +151,7 @@
 {"key": "open2.dirty.beforeExit.ExitChanged", "value": "1"}
 {"key": "open2.exit", "value": "1"}
 {"key": "open2.dispatches", "value": "play/0/Assets/P/Changed.mat|Assets/P/Crlf.mat|Assets/P/Data.asset|Assets/P/Reverted.mat|Assets/P/SetDirty.mat || play/0/Assets/P/IfDirty.mat || play/0/Assets/P/ExitChanged.mat|Assets/P/ExitDirty.mat"}
-{"key": "open2.leaving", "value": "quitting:play dispatch:play=Assets/P/ExitChanged.mat|Assets/P/ExitDirty.mat"}
+{"key": "open2.leaving", "value": "quitting:play dispatch:play=Assets/P/ExitChanged.mat|Assets/P/ExitDirty.mat ondisable:play ondestroy:play"}
 {"key": "open2.time.Assets/Editor.meta", "value": "kept"}
 {"key": "open2.time.Assets/Editor/UnchangedSavesProbe.cs", "value": "kept"}
 {"key": "open2.time.Assets/Editor/UnchangedSavesProbe.cs.meta", "value": "kept"}
@@ -272,7 +272,7 @@
 {"key": "open2.exit.ProjectSettings/VersionControlSettings.asset", "value": "unchanged"}
 {"key": "open3.exit", "value": "1"}
 {"key": "open3.dispatches", "value": ""}
-{"key": "open3.leaving", "value": "quitting:play"}
+{"key": "open3.leaving", "value": "quitting:play ondisable:play ondestroy:play"}
 {"key": "open3.time.Assets/Editor.meta", "value": "kept"}
 {"key": "open3.time.Assets/Editor/UnchangedSavesProbe.cs", "value": "kept"}
 {"key": "open3.time.Assets/Editor/UnchangedSavesProbe.cs.meta", "value": "kept"}
@@ -408,7 +408,7 @@
 {"key": "open4.dirty.beforeExit.ExitChanged", "value": "1"}
 {"key": "open4.exit", "value": "1"}
 {"key": "open4.dispatches", "value": "play/0/Assets/P/Changed.mat|Assets/P/Crlf.mat|Assets/P/Data.asset|Assets/P/Reverted.mat|Assets/P/SetDirty.mat || play/0/Assets/P/IfDirty.mat || edit/0/Assets/P/ExitChanged.mat|Assets/P/ExitDirty.mat"}
-{"key": "open4.leaving", "value": "playmode:ExitingPlayMode onapplicationquit:play appquitting:edit playmode:EnteredEditMode quitting:edit dispatch:edit=Assets/P/ExitChanged.mat|Assets/P/ExitDirty.mat"}
+{"key": "open4.leaving", "value": "playmode:ExitingPlayMode onapplicationquit:play appquitting:edit ondisable:play ondestroy:play playmode:EnteredEditMode quitting:edit dispatch:edit=Assets/P/ExitChanged.mat|Assets/P/ExitDirty.mat"}
 {"key": "open4.time.Assets/Editor.meta", "value": "kept"}
 {"key": "open4.time.Assets/Editor/UnchangedSavesProbe.cs", "value": "kept"}
 {"key": "open4.time.Assets/Editor/UnchangedSavesProbe.cs.meta", "value": "kept"}

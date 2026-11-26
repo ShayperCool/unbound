@@ -2,7 +2,8 @@ using System;
 using System.IO;
 using UnityEngine;
 
-/// <summary>Records OnApplicationQuit for tests/projects/unchangedsaves (UNCHANGEDSAVES_OUT).</summary>
+/// <summary>Records OnApplicationQuit, OnDisable and OnDestroy of a scene object for
+/// tests/projects/unchangedsaves (UNCHANGEDSAVES_OUT).</summary>
 public class ProbeQuit : MonoBehaviour
 {
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
@@ -12,5 +13,9 @@ public class ProbeQuit : MonoBehaviour
         new GameObject("ProbeQuit").AddComponent<ProbeQuit>();
     }
 
-    void OnApplicationQuit() => File.AppendAllText(Environment.GetEnvironmentVariable("UNCHANGEDSAVES_OUT"), "onapplicationquit\tplay\n");
+    static void Line(string kind) => File.AppendAllText(Environment.GetEnvironmentVariable("UNCHANGEDSAVES_OUT"), kind + "\tplay\n");
+
+    void OnApplicationQuit() => Line("onapplicationquit");
+    void OnDisable() => Line("ondisable");
+    void OnDestroy() => Line("ondestroy");
 }

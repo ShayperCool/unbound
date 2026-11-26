@@ -24,8 +24,8 @@ At the first open the start's `OnPostprocessAllAssets` marks `PostDirty` and cha
 `PostChanged`. `Untouched` is never touched. Each object's dirtiness before and after each save
 is recorded (`dirty.*`), every dispatch listing the probe's assets (`dispatches`), and the
 callbacks after the probe asks the Editor to leave (`leaving`: `Application.quitting`,
-`Application.unloading`, `EditorApplication.quitting`, Play mode state changes,
-`OnApplicationQuit`, dispatches).
+`Application.unloading`, `EditorApplication.quitting`, Play mode state changes, a scene object's
+`OnApplicationQuit`, `OnDisable` and `OnDestroy`, dispatches).
 
 `run.py` opens one copy of the project four times (the Editor with `-executeMethod
 UnchangedSavesProbe.Record`, which enters Play mode; `unbound run`): `open1` with nothing imported,
@@ -45,10 +45,10 @@ Setting a material property to the value it holds does not mark it dirty (`SameV
 as it is). A CRLF file is written with LF. A session that changes nothing writes no file
 (`open3`), settings and the package lock included. The Editor's exit with Play mode on raises
 `EditorApplication.quitting` (Play mode still on) and then reports its save to
-`OnPostprocessAllAssets` in one call; it raises no `Application.quitting`, no
-`OnApplicationQuit` and no Play mode state change. Leaving Play mode raises ExitingPlayMode,
-`OnApplicationQuit`, `Application.quitting` (with `isPlayingOrWillChangePlaymode` already false)
-and EnteredEditMode; the exit in Edit mode then raises `EditorApplication.quitting` and reports its
+`OnPostprocessAllAssets` in one call, and then the scene objects' `OnDisable` and `OnDestroy`; it
+raises no `Application.quitting`, no `OnApplicationQuit` and no Play mode state change. Leaving Play mode raises ExitingPlayMode,
+`OnApplicationQuit`, `Application.quitting` (with `isPlayingOrWillChangePlaymode` already false),
+the scene objects' `OnDisable` and `OnDestroy` and EnteredEditMode; the exit in Edit mode then raises `EditorApplication.quitting` and reports its
 save in one call, in Edit mode. No end raises `Application.unloading`.
 
 Unmeasured: other asset kinds.

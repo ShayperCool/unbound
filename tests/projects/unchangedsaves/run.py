@@ -73,7 +73,7 @@ def line_rows(raw):
         fields = line.split('\t')
         if fields[0] == 'exit':
             leaving = []
-        if leaving is not None and fields[0] in ('appquitting', 'unloading', 'quitting', 'playmode', 'onapplicationquit', 'dispatch'):
+        if leaving is not None and fields[0] in ('appquitting', 'unloading', 'quitting', 'playmode', 'onapplicationquit', 'ondisable', 'ondestroy', 'dispatch'):
             leaving.append(fields[0] + ':' + fields[1] + (f'={fields[3]}' if fields[0] == 'dispatch' and len(fields) > 3 else ''))
         if fields[0] == 'dirty':
             rows.append({'key': f'dirty.{fields[1]}.{fields[2]}', 'value': fields[3]})
