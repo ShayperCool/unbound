@@ -819,7 +819,8 @@ pub fn dispatch(method: &str, request: &str) -> Result<String> {
                 codec: String,
             }
             let r: Request = serde_json::from_str(request)?;
-            Ok(json!({ "id": crate::video::open(&r.path, r.width, r.height, r.fps, r.alpha, &r.codec) }).to_string())
+            let (id, alpha) = crate::video::open(&r.path, r.width, r.height, r.fps, r.alpha, &r.codec);
+            Ok(json!({ "id": id, "alpha": alpha }).to_string())
         }
         "video-audio-open" => {
             // A video's audio track as the data of streamed clip `clip` (made by the managed side).

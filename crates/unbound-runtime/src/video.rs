@@ -167,52 +167,60 @@ impl Decoder {
     /// The decoded frame's planes as ffmpeg writes them: Y, then U and V at half the size (rounded
     /// up), then A at full size for a stream with alpha.
     fn planes(&self) -> Vec<(usize, usize)> {
-        let chroma = (self.width.div_ceil(2), self.height.div_ceil(2));
-        let mut planes = vec![(self.width, self.height), chroma, chroma];
-        if self.alpha.is_some() {
-            planes.push((self.width, self.height));
-        }
-        planes
+        frame_planes(self.width, self.height, self.alpha.is_some())
     }
 
     /// The three textures Unity's Hidden/VideoDecode reads, each plane's rows top first: Y, U and
     /// V as decoded; with alpha (its YCbCrA passes) the Y texture twice as wide with A in its
     /// right half, and U and V twice as wide with the chroma in their left halves.
-    fn textures(&self, data: &[u8]) -> Vec<(usize, usize, Vec<u8>)> {
-        let mut planes = Vec::new();
-        let mut at = 0;
-        for (w, h) in self.planes() {
-            planes.push((w, h, &data[at..at + w * h]));
-            at += w * h;
-        }
-        if self.alpha.is_none() {
-            return planes
-                .into_iter()
-                .map(|(w, h, p)| (w, h, p.to_vec()))
-                .collect();
-        }
-        let side_by_side = |left: &[u8], right: Option<&[u8]>, w: usize, h: usize| {
-            let mut out = vec![0u8; 2 * w * h];
-            for row in 0..h {
-                out[row * 2 * w..row * 2 * w + w].copy_from_slice(&left[row * w..row * w + w]);
-                if let Some(right) = right {
-                    out[row * 2 * w + w..(row + 1) * 2 * w]
-                        .copy_from_slice(&right[row * w..row * w + w]);
-                }
-            }
-            (2 * w, h, out)
-        };
-        let (yw, yh, y) = planes[0];
-        let (cw, ch, u) = planes[1];
-        let v = planes[2].2;
-        let a = planes[3].2;
-        vec![
-            side_by_side(y, Some(a), yw, yh),
-            side_by_side(u, None, cw, ch),
-            side_by_side(v, None, cw, ch),
-        ]
+    fn textures<'a>(&self, data: &'a [u8]) -> Vec<(usize, usize, std::borrow::Cow<'a, [u8]>)> {
+        plane_textures(self.width, self.height, self.alpha.is_some(), data)
     }
+}
 
+/// [`Decoder::textures`] of a frame of `width` x `height` (with alpha or not); a frame without
+/// alpha is not copied.
+fn plane_textures<'a>(
+    width: usize,
+    height: usize,
+    alpha: bool,
+    data: &'a [u8],
+) -> Vec<(usize, usize, std::borrow::Cow<'a, [u8]>)> {
+    let mut planes = Vec::new();
+    let mut at = 0;
+    for (w, h) in frame_planes(width, height, alpha) {
+        planes.push((w, h, &data[at..at + w * h]));
+        at += w * h;
+    }
+    if !alpha {
+        return planes
+            .into_iter()
+            .map(|(w, h, p)| (w, h, std::borrow::Cow::Borrowed(p)))
+            .collect();
+    }
+    let side_by_side = |left: &[u8], right: Option<&[u8]>, w: usize, h: usize| {
+        let mut out = vec![0u8; 2 * w * h];
+        for row in 0..h {
+            out[row * 2 * w..row * 2 * w + w].copy_from_slice(&left[row * w..row * w + w]);
+            if let Some(right) = right {
+                out[row * 2 * w + w..(row + 1) * 2 * w]
+                    .copy_from_slice(&right[row * w..row * w + w]);
+            }
+        }
+        (2 * w, h, std::borrow::Cow::Owned(out))
+    };
+    let (yw, yh, y) = planes[0];
+    let (cw, ch, u) = planes[1];
+    let v = planes[2].2;
+    let a = planes[3].2;
+    vec![
+        side_by_side(y, Some(a), yw, yh),
+        side_by_side(u, None, cw, ch),
+        side_by_side(v, None, cw, ch),
+    ]
+}
+
+impl Decoder {
     /// Frame `n`'s Y, U and V planes one after the other, top rows first; None past the end.
     fn frame(&mut self, n: i64) -> Result<Option<Vec<u8>>> {
         let ahead = n - self.next;
@@ -246,16 +254,58 @@ fn decoders() -> &'static Mutex<HashMap<u64, Decoder>> {
     DECODERS.get_or_init(|| Mutex::new(HashMap::new()))
 }
 
-/// The libvpx decoder of a codec with alpha (`None`: no alpha, or a codec without one).
+/// [`Decoder::planes`] of a frame of `width` x `height` (with alpha or not).
+fn frame_planes(width: usize, height: usize, alpha: bool) -> Vec<(usize, usize)> {
+    let chroma = (width.div_ceil(2), height.div_ceil(2));
+    let mut planes = vec![(width, height), chroma, chroma];
+    if alpha {
+        planes.push((width, height));
+    }
+    planes
+}
+
+/// The libvpx decoder of a codec whose alpha is decoded (`None`: no alpha, or a codec Unbound does
+/// not decode alpha for: only VP8, the WebM codec the Editor imports).
 fn alpha_decoder(alpha: bool, codec: &str) -> Option<&'static str> {
     match (alpha, codec) {
         (true, "vp8") => Some("libvpx"),
-        (true, "vp9") => Some("libvpx-vp9"),
         _ => None,
     }
 }
 
-pub fn open(path: &str, width: usize, height: usize, fps: f64, alpha: bool, codec: &str) -> u64 {
+/// Whether this machine's ffmpeg has libvpx's VP8 decoder (ffmpeg's own drops the alpha); said once
+/// when it has not.
+fn libvpx_available() -> bool {
+    static AVAILABLE: OnceLock<bool> = OnceLock::new();
+    *AVAILABLE.get_or_init(|| {
+        let found = Command::new("ffmpeg")
+            .args(["-hide_banner", "-decoders"])
+            .output()
+            .map(|o| {
+                String::from_utf8_lossy(&o.stdout)
+                    .lines()
+                    .any(|l| l.split_whitespace().nth(1) == Some("libvpx"))
+            })
+            .unwrap_or(false);
+        if !found {
+            tracing::warn!(
+                "this ffmpeg has no libvpx decoder: VP8 videos with alpha are drawn opaque"
+            );
+        }
+        found
+    })
+}
+
+/// A decoder of a video; its id and whether it decodes the stream's alpha.
+pub fn open(
+    path: &str,
+    width: usize,
+    height: usize,
+    fps: f64,
+    alpha: bool,
+    codec: &str,
+) -> (u64, bool) {
+    let decoder = alpha_decoder(alpha, codec).filter(|_| libvpx_available());
     static NEXT: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(1);
     let id = NEXT.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
     decoders().lock().unwrap().insert(
@@ -265,12 +315,12 @@ pub fn open(path: &str, width: usize, height: usize, fps: f64, alpha: bool, code
             width,
             height,
             fps,
-            alpha: alpha_decoder(alpha, codec),
+            alpha: decoder,
             process: None,
             next: 0,
         },
     );
-    id
+    (id, decoder.is_some())
 }
 
 pub fn close(id: u64) {
@@ -288,9 +338,13 @@ pub fn frame(id: u64, n: i64, handles: [u64; 3]) -> Result<bool> {
         let Some(data) = decoder.frame(n)? else {
             return Ok(false);
         };
-        decoder.textures(&data)
+        (data, decoder.width, decoder.height, decoder.alpha.is_some())
     };
-    for ((width, height, plane), handle) in data.into_iter().zip(handles) {
+    let (data, frame_width, frame_height, alpha) = data;
+    for ((width, height, plane), handle) in plane_textures(frame_width, frame_height, alpha, &data)
+        .into_iter()
+        .zip(handles)
+    {
         let mut flipped = Vec::with_capacity(plane.len());
         for row in plane.chunks_exact(width).rev() {
             flipped.extend_from_slice(row);
@@ -443,7 +497,7 @@ mod tests {
         assert_eq!(clip["codec"], "vp8");
         assert_eq!(parse(VIDEO_ONLY)["alpha"], false);
         assert_eq!(alpha_decoder(true, "vp8"), Some("libvpx"));
-        assert_eq!(alpha_decoder(true, "vp9"), Some("libvpx-vp9"));
+        assert_eq!(alpha_decoder(true, "vp9"), None);
         assert_eq!(alpha_decoder(true, "h264"), None);
         assert_eq!(alpha_decoder(false, "vp8"), None);
     }
@@ -463,7 +517,11 @@ mod tests {
         let mut data: Vec<u8> = (1..=8).collect();
         data.extend([20, 21, 30, 31]);
         data.extend(40..48);
-        let textures = decoder.textures(&data);
+        let textures: Vec<_> = decoder
+            .textures(&data)
+            .into_iter()
+            .map(|(w, h, p)| (w, h, p.into_owned()))
+            .collect();
         assert_eq!(
             textures[0],
             (
@@ -483,7 +541,16 @@ mod tests {
             process: None,
             next: 0,
         };
-        assert_eq!(plain.textures(&data[..12])[0], (4, 2, (1..=8).collect()));
+        let plain_textures = plain.textures(&data[..12]);
+        assert!(matches!(plain_textures[0].2, std::borrow::Cow::Borrowed(_)));
+        assert_eq!(
+            (
+                plain_textures[0].0,
+                plain_textures[0].1,
+                plain_textures[0].2.to_vec()
+            ),
+            (4, 2, (1..=8).collect::<Vec<u8>>())
+        );
     }
 
     #[test]
