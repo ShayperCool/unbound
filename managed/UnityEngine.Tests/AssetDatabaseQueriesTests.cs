@@ -118,9 +118,9 @@ namespace UnityEngine.Tests
         public void ANameStaysInTheDatabaseUntilRemovedAndRemovingLeavesTheAssets()
         {
             // A name given to an asset, then taken away: unused until removed.
-            AssetDatabase.BundleNameSet("Assets/Data/Plain.txt", "temp-bundle", "");
+            AssetDatabase.BundleNameSet("Assets/Data/Plain.txt", "temp-bundle", "", written: false);
             Assert.Equal(new[] { "Assets/Data/Plain.txt" }, AssetDatabase.GetAssetPathsFromAssetBundle("temp-bundle"));
-            AssetDatabase.BundleNameSet("Assets/Data/Plain.txt", "", "");
+            AssetDatabase.BundleNameSet("Assets/Data/Plain.txt", "", "", written: false);
             Assert.Contains("temp-bundle", AssetDatabase.GetAllAssetBundleNames());
             Assert.Equal(new[] { "temp-bundle" }, AssetDatabase.GetUnusedAssetBundleNames());
             AssetDatabase.RemoveUnusedAssetBundleNames();
@@ -140,11 +140,32 @@ namespace UnityEngine.Tests
             Assert.Equal(new[] { "folder-bundle.sd" }, AssetDatabase.GetAllAssetBundleNames());
         }
 
+        /// <summary>A name an asset brings when the listing is taken again (an import of a .meta that
+        /// names one), not a name removed whose asset did not change.</summary>
+        [Fact]
+        public void ANameAListedAssetBringsJoinsTheDatabase()
+        {
+            Assert.True(AssetDatabase.RemoveAssetBundleName("bundle-b.hd", true));
+            AssetDatabase.List("""
+                [
+                  {"guid":"10000000000000000000000000000003","path":"Assets/Data/B.txt","kind":"text","importer":"TextScriptImporter","labels":[],"bundle":"bundle-b","variant":"hd"},
+                  {"guid":"10000000000000000000000000000004","path":"Assets/Data/Plain.txt","kind":"text","importer":"TextScriptImporter","labels":[],"bundle":"new-bundle","variant":""}
+                ]
+                """);
+            Assert.Equal(new[] { "bundle-a", "folder-bundle.sd", "new-bundle" }, AssetDatabase.GetAllAssetBundleNames());
+        }
+
         [Fact]
         public void TheDesiredWorkerCountIsTheSessionsOwnFromTheUserSetting()
         {
+            // A quarter of 12 processors is 3 (the Editor's on the measured machine); the user
+            // settings file's values come first.
+            Assert.Equal(3, EditorUserSettings.DefaultDesiredImportWorkerCount(12));
+            const string file = "%YAML 1.1\n--- !u!162 &1\nEditorUserSettings:\n  m_ObjectHideFlags: 0\n  m_DesiredImportWorkerCount: 8\n  m_StandbyImportWorkerCount: 2\n";
+            Assert.Equal(8, EditorUserSettings.WorkerSetting(file, "m_DesiredImportWorkerCount"));
+            Assert.Null(EditorUserSettings.WorkerSetting(file, "m_IdleImportWorkerShutdownDelay"));
+            Assert.Null(EditorUserSettings.WorkerSetting(null, "m_DesiredImportWorkerCount"));
             int user = EditorUserSettings.desiredImportWorkerCount;
-            Assert.Equal(Math.Max(1, SystemInfo.processorCount / 4), user);
             Assert.Equal(2, EditorUserSettings.standbyImportWorkerCount);
             try
             {

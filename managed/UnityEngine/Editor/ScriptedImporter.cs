@@ -60,22 +60,52 @@ namespace UnityEditor
             {
                 CheckImporterState("set_assetBundleName");
                 // In lower case, as the Editor holds AssetBundle names (tests/projects/assetqueries set.name).
-                var name = NormalizeString(value)?.ToLowerInvariant();
-                var changed = name != m_AssetBundleName;
+                var name = BundleName(NormalizeString(value));
+                if (name == m_AssetBundleName) return;
                 m_AssetBundleName = name;
-                // A new AssetBundle name is saved into the .meta at once, with the importer's other
-                // changes (tests/projects/projectwrites 08.importer.bundle).
-                if (changed && !string.IsNullOrEmpty(m_AssetPath)) Unbound.Runtime.ImporterMeta.Write(this);
-                if (changed && !string.IsNullOrEmpty(m_AssetPath)) AssetDatabase.BundleNameSet(m_AssetPath, m_AssetBundleName, m_AssetBundleVariant);
+                BundleChanged(write: true);
             }
+        }
+
+        /// <summary>An AssetBundle name in lower case (ASCII letters: the measured names are ASCII;
+        /// the asset listing lowers them alike).</summary>
+        static string BundleName(string value)
+        {
+            if (value == null) return null;
+            var chars = value.ToCharArray();
+            for (int i = 0; i < chars.Length; i++)
+                if (chars[i] is >= 'A' and <= 'Z') chars[i] = (char)(chars[i] + ('a' - 'A'));
+            return new string(chars);
+        }
+
+        /// <summary>A new AssetBundle name is saved into the .meta at once, with the importer's
+        /// other changes (tests/projects/projectwrites 08.importer.bundle), and the database has it
+        /// (tests/projects/assetqueries set.*).</summary>
+        void BundleChanged(bool write)
+        {
+            if (string.IsNullOrEmpty(m_AssetPath)) return;
+            bool written = write && Unbound.Runtime.ImporterMeta.Write(this);
+            AssetDatabase.BundleNameSet(m_AssetPath, m_AssetBundleName, m_AssetBundleVariant, written);
+        }
+
+        /// <summary>Both at once: one .meta write and one name, the name with its variant
+        /// (tests/projects/assetqueries set_both.*).</summary>
+        internal void SetBundle(string name, string variant)
+        {
+            name = BundleName(NormalizeString(name));
+            variant = BundleName(NormalizeString(variant));
+            if (name == m_AssetBundleName && variant == m_AssetBundleVariant) return;
+            m_AssetBundleName = name;
+            m_AssetBundleVariant = variant;
+            BundleChanged(write: true);
         }
 
         /// <summary>The AssetBundle name and variant a .meta's section gives, in lower case as the
         /// Editor holds them (tests/projects/assetqueries bundles.all), without writing it.</summary>
         internal void ReadBundle(YNode body)
         {
-            m_AssetBundleName = (body?.Str("assetBundleName") ?? "").ToLowerInvariant();
-            m_AssetBundleVariant = (body?.Str("assetBundleVariant") ?? "").ToLowerInvariant();
+            m_AssetBundleName = BundleName(body?.Str("assetBundleName") ?? "");
+            m_AssetBundleVariant = BundleName(body?.Str("assetBundleVariant") ?? "");
         }
 
         public string assetBundleVariant
@@ -84,8 +114,11 @@ namespace UnityEditor
             set
             {
                 CheckImporterState("set_assetBundleVariant");
-                m_AssetBundleVariant = NormalizeString(value)?.ToLowerInvariant();
-                if (!string.IsNullOrEmpty(m_AssetPath)) AssetDatabase.BundleNameSet(m_AssetPath, m_AssetBundleName, m_AssetBundleVariant);
+                var variant = BundleName(NormalizeString(value));
+                if (variant == m_AssetBundleVariant) return;
+                m_AssetBundleVariant = variant;
+                // (Whether a variant alone is saved into the .meta at once is not measured: it is not.)
+                BundleChanged(write: false);
             }
         }
 

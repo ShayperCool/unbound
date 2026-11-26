@@ -25,8 +25,7 @@ namespace UnityEditor
         public void SetAssetBundleNameAndVariant(string assetBundleName, string assetBundleVariant)
         {
             CheckImporterState("SetAssetBundleNameAndVariant");
-            this.assetBundleName = assetBundleName;
-            this.assetBundleVariant = assetBundleVariant;
+            SetBundle(assetBundleName, assetBundleVariant);
         }
     }
 

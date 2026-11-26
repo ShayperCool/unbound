@@ -145,6 +145,7 @@ namespace UnityEditor
             s_Entries.Add(entry);
             s_ByPath[path] = entry;
             s_ByGuid[asset.Guid] = entry;
+            BundleListed(entry);
         }
 
         /// <summary>Writes a file a bake makes at <paramref name="path"/> (one there is replaced,

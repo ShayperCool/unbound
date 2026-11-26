@@ -335,7 +335,8 @@ pub fn read_meta_header(meta: &Path) -> MetaHeader {
 
 /// The importer section's `assetBundleName` and `assetBundleVariant` (the keys every importer's
 /// section ends with), in lower case as the Editor reads them (tests/projects/assetqueries
-/// bundles.all: `Mixed-Case` lists as `mixed-case`).
+/// bundles.all: `Mixed-Case` lists as `mixed-case`; ASCII letters, as the managed importer lowers
+/// them: other letters are not measured).
 fn bundle(text: &str) -> Bundle {
     let value = |key: &str| {
         text.lines()
@@ -344,7 +345,7 @@ fn bundle(text: &str) -> Bundle {
                     .strip_prefix(key)?
                     .strip_prefix(':')
             })
-            .map(|value| value.trim().trim_matches(['\'', '"']).to_lowercase())
+            .map(|value| value.trim().trim_matches(['\'', '"']).to_ascii_lowercase())
             .unwrap_or_default()
     };
     Bundle {

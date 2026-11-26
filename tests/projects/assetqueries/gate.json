@@ -4,6 +4,13 @@
   ],
   "summary": "assetqueries: .*",
   "engine_paths": [
-    "managed/UnityEngine/Editor/AssetDatabaseQueries.cs"
+    "managed/UnityEngine/Editor/AssetDatabaseQueries.cs",
+    "crates/unbound-project/src/assetdb.rs",
+    "managed/UnityEngine/Editor/ScriptedImporter.cs",
+    "managed/UnityEngine/Editor/AssetImporterLookup.cs",
+    "managed/UnityEngine/Editor/AssetEditability.cs",
+    "managed/UnityEngine/Editor/AssetDatabase.cs",
+    "managed/UnityEngine/Editor/AssetDatabaseFiles.cs",
+    "managed/UnityEngine/Editor/EditorUserSettings.cs"
   ]
 }

@@ -47,6 +47,7 @@ namespace UnityEditor
         /// <summary>The listing taken from the engine's answer to <c>asset-list</c>.</summary>
         internal static void List(string json)
         {
+            var previous = s_ByPath;
             s_Entries = JsonSerializer.Deserialize<List<Entry>>(json, s_Json) ?? new List<Entry>();
             s_ByGuid = new Dictionary<string, Entry>(StringComparer.OrdinalIgnoreCase);
             s_ByPath = new Dictionary<string, Entry>(StringComparer.OrdinalIgnoreCase);
@@ -54,6 +55,9 @@ namespace UnityEditor
             {
                 s_ByGuid[e.Guid] = e;
                 s_ByPath[e.Path] = e;
+                // An asset listed anew, or whose name changed since, brings its name (AssetBundle names).
+                if (previous == null || !previous.TryGetValue(e.Path, out var was) || was.Bundle != e.Bundle || was.Variant != e.Variant)
+                    BundleListed(e);
             }
         }
 

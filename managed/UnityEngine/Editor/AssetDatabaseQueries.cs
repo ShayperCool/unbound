@@ -108,10 +108,14 @@ namespace UnityEditor
 
         /// <summary>An importer was given an AssetBundle name (in lower case): its listing entry has
         /// it, and the database the name.</summary>
-        internal static void BundleNameSet(string path, string name, string variant)
+        internal static void BundleNameSet(string path, string name, string variant, bool written)
         {
             if (string.IsNullOrEmpty(path)) return;
             _ = BundleNames;
+            // The engine's listing reads the .meta written again, as after SetLabels (a later
+            // Refresh finds nothing changed); not reported to OnPostprocessAllAssets (not measured).
+            if (written)
+                using (SessionImports.Muted()) ImportOne(path);
             if (s_ByPath.TryGetValue(path, out var entry))
             {
                 entry.Bundle = name ?? "";
@@ -123,16 +127,34 @@ namespace UnityEditor
         /// <summary>The full AssetBundle name an asset has of its own ("" for none).</summary>
         static string OwnBundle(Entry e) => string.IsNullOrEmpty(e.Bundle) ? "" : FullBundleName(e.Bundle, e.Variant);
 
-        /// <summary>The asset's own AssetBundle name and variant, else its nearest folder's.</summary>
-        static (string Name, string Variant) ImplicitBundle(Entry e)
+        /// <summary>An asset newly listed (an import, a refresh, the listing taken again) brings its
+        /// name to the database (a name it has that the database lacks).</summary>
+        static void BundleListed(Entry e)
         {
-            for (var path = e.Path; ; )
+            if (s_BundleNames != null && !string.IsNullOrEmpty(e.Bundle)) s_BundleNames.Add(FullBundleName(e.Bundle, e.Variant));
+        }
+
+        /// <summary>The asset's own AssetBundle name and variant, else its nearest folder's
+        /// (<paramref name="folders"/>: the folders' answers so far, for a pass over many assets).</summary>
+        static (string Name, string Variant) ImplicitBundle(Entry e, Dictionary<string, (string, string)> folders = null)
+        {
+            if (!string.IsNullOrEmpty(e.Bundle)) return (e.Bundle, e.Variant ?? "");
+            int slash = e.Path.LastIndexOf('/');
+            return slash <= 0 ? ("", "") : FolderBundle(e.Path.Substring(0, slash), folders);
+        }
+
+        static (string, string) FolderBundle(string folder, Dictionary<string, (string, string)> folders)
+        {
+            if (folders != null && folders.TryGetValue(folder, out var known)) return known;
+            (string, string) found;
+            if (s_ByPath.TryGetValue(folder, out var at) && !string.IsNullOrEmpty(at.Bundle)) found = (at.Bundle, at.Variant ?? "");
+            else
             {
-                if (s_ByPath.TryGetValue(path, out var at) && !string.IsNullOrEmpty(at.Bundle)) return (at.Bundle, at.Variant ?? "");
-                int slash = path.LastIndexOf('/');
-                if (slash <= 0) return ("", "");
-                path = path.Substring(0, slash);
+                int slash = folder.LastIndexOf('/');
+                found = slash <= 0 ? ("", "") : FolderBundle(folder.Substring(0, slash), folders);
             }
+            if (folders != null) folders[folder] = found;
+            return found;
         }
 
         public static string[] GetAllAssetBundleNames()
@@ -190,10 +212,11 @@ namespace UnityEditor
         {
             if (string.IsNullOrEmpty(assetBundleName)) return Array.Empty<string>();
             var paths = new List<string>();
+            var folders = new Dictionary<string, (string, string)>(StringComparer.OrdinalIgnoreCase);
             foreach (var e in Entries)
             {
                 if (e.Kind == "folder") continue;
-                var (name, variant) = ImplicitBundle(e);
+                var (name, variant) = ImplicitBundle(e, folders);
                 if (name.Length != 0 && FullBundleName(name, variant) == assetBundleName) paths.Add(e.Path);
             }
             paths.Sort(StringComparer.Ordinal);
@@ -230,7 +253,7 @@ namespace UnityEditor
         /// own process; the count starts no workers.</summary>
         public static int DesiredWorkerCount
         {
-            get => s_DesiredWorkerCount ??= EditorUserSettings.desiredImportWorkerCount;
+            get => s_DesiredWorkerCount ??= EditorUserSettings.InitialDesiredImportWorkerCount;
             set => s_DesiredWorkerCount = value;
         }
 
@@ -260,28 +283,58 @@ namespace UnityEditor
         static int? s_StandbyImportWorkerCount;
         static int? s_IdleImportWorkerShutdownDelay;
 
-        /// <summary>The user's import worker count: a quarter of the logical processors (12 gave 3,
-        /// assetqueries workers.default; the rounding of other counts and a floor are not
-        /// measured: at least one). Kept for the session.</summary>
+        /// <summary>The user's import worker count: the user settings file's
+        /// (<c>m_DesiredImportWorkerCount</c>), else what the Editor starts a project with, a
+        /// quarter of the logical processors (<see cref="DefaultDesiredImportWorkerCount"/>). Kept
+        /// for the session (not saved: Unbound never writes the user's file).</summary>
         public static int desiredImportWorkerCount
         {
-            get => s_DesiredImportWorkerCount ??= Math.Max(1, SystemInfo.processorCount / 4);
+            get => s_DesiredImportWorkerCount ??= InitialDesiredImportWorkerCount;
             set => s_DesiredImportWorkerCount = value;
         }
 
-        /// <summary>Workers kept waiting: 2 (assetqueries workers.default). Kept for the session.</summary>
+        /// <summary>The count the session starts with (AssetDatabase.DesiredWorkerCount's first).</summary>
+        internal static int InitialDesiredImportWorkerCount =>
+            WorkerSetting("m_DesiredImportWorkerCount") ?? DefaultDesiredImportWorkerCount(SystemInfo.processorCount);
+
+        /// <summary>A quarter of the logical processors: 12 gave 3 (assetqueries workers.default and
+        /// the user settings file the Editor wrote). Its rounding of other counts, and a floor, are
+        /// not measured (here: rounded down, at least one).</summary>
+        internal static int DefaultDesiredImportWorkerCount(int processors) => Math.Max(1, processors / 4);
+
+        /// <summary>Workers kept waiting: the user settings file's, else 2 (assetqueries workers.default).</summary>
         public static int standbyImportWorkerCount
         {
-            get => s_StandbyImportWorkerCount ??= 2;
+            get => s_StandbyImportWorkerCount ??= WorkerSetting("m_StandbyImportWorkerCount") ?? 2;
             set => s_StandbyImportWorkerCount = value;
         }
 
-        /// <summary>A worker's idle time before it stops: 60000 ms (the Editor's user settings file,
-        /// assetqueries workers.user_settings_file). Kept for the session.</summary>
+        /// <summary>A worker's idle time before it stops: the user settings file's, else 60000 ms
+        /// (the file the Editor wrote, assetqueries workers.user_settings_file).</summary>
         public static int idleImportWorkerShutdownDelayMilliseconds
         {
-            get => s_IdleImportWorkerShutdownDelay ??= 60000;
+            get => s_IdleImportWorkerShutdownDelay ??= WorkerSetting("m_IdleImportWorkerShutdownDelay") ?? 60000;
             set => s_IdleImportWorkerShutdownDelay = value;
+        }
+
+        /// <summary>A top-level integer of the user settings file (UserSettings/EditorUserSettings.asset), if it has it.</summary>
+        static int? WorkerSetting(string key)
+        {
+            try { return WorkerSetting(File.Exists(UnityFile) ? File.ReadAllText(UnityFile) : null, key); }
+            catch (IOException) { return null; }
+        }
+
+        internal static int? WorkerSetting(string text, string key)
+        {
+            if (text == null) return null;
+            foreach (var raw in text.Split('\n'))
+            {
+                var line = raw.Trim();
+                if (line.StartsWith(key + ":", StringComparison.Ordinal)
+                    && int.TryParse(line.Substring(key.Length + 1).Trim(), System.Globalization.NumberStyles.Integer, System.Globalization.CultureInfo.InvariantCulture, out int value))
+                    return value;
+            }
+            return null;
         }
     }
 }
