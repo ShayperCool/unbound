@@ -118,11 +118,11 @@ public class TexturePlatformsProbe : MonoBehaviour
             return Describe(importer.GetPlatformTextureSettings("Android"));
         });
         // The default entry changed through a property, before a save: what a platform without an
-        // entry reads then.
+        // entry (and without a module) reads then.
         Try("get/afterProperty", () =>
         {
             importer.maxTextureSize = 8192;
-            return Describe(importer.GetPlatformTextureSettings("iOS")) + " | " + Describe(importer.GetPlatformTextureSettings("Standalone"));
+            return Describe(importer.GetPlatformTextureSettings("tvOS")) + " | " + Describe(importer.GetPlatformTextureSettings("Standalone"));
         });
         Meta("get/meta", Path("Get"));
     }
@@ -313,8 +313,8 @@ public class TexturePlatformsProbe : MonoBehaviour
     {
         foreach (var name in new[]
                  {
-                     "GammaNone", "Gamma100000", "Gamma45455", "Gamma50000", "Gamma220000", "Gamma47000", "Gamma43000", "Gamma0", "Gamma100000Srgb",
-                     "Gamma100000Ignored", "Gamma100000Linear", "Gamma100000Rgb", "Gamma100000Gray", "Gamma100000Palette", "Gamma100000Deep",
+                     "GammaNone", "Gamma100000", "Gamma45455", "Gamma50000", "Gamma220000", "Gamma47000", "Gamma43000", "Gamma0", "Gamma10", "Gamma100000Srgb",
+                     "Gamma100000Ignored", "Gamma100000Linear", "Gamma100000Rgb", "Gamma100000Gray", "Gamma100000Palette", "Gamma100000Late", "Gamma100000Deep",
                      "GammaNoneDeep", "Gamma100000Toggle",
                  })
         {
@@ -329,5 +329,19 @@ public class TexturePlatformsProbe : MonoBehaviour
             return Pixels("Gamma100000Toggle");
         });
         Meta("gamma/Gamma100000Toggle/meta", Path("Gamma100000Toggle"));
+        // Through TextureImporterSettings: read, then set back off and saved.
+        Try("gamma/Gamma100000Toggle/settings", () =>
+        {
+            var importer = Importer("Gamma100000Toggle");
+            var settings = new TextureImporterSettings();
+            importer.ReadTextureSettings(settings);
+            string read = "read " + settings.ignorePngGamma;
+            settings.ignorePngGamma = false;
+            importer.SetTextureSettings(settings);
+            read += " | property " + importer.ignorePngGamma;
+            importer.SaveAndReimport();
+            return read + " | " + Pixels("Gamma100000Toggle");
+        });
+        Meta("gamma/Gamma100000Toggle/settings/meta", Path("Gamma100000Toggle"));
     }
 }

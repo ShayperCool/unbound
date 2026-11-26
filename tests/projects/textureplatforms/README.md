@@ -19,7 +19,7 @@ texture's settings with these platform entries:
 | `ClearDefault`, `DefaultProps`, `LoadCopy` | no Android (the default 1024 and quality 20; at its defaults; 512, 60, crunched) |
 | `LoadOrder`, `LoadNoDefault` | no Android and no Standalone; no default |
 | `Size` | Standalone not overridden at 32 |
-| `Gamma*` | uncompressed, readable, no mip maps: a ramp (every 8-bit value once in red), a gAMA chunk of 1.0, 0.45455, 0.5, 2.2, 0.47, 0.43 or 0, an sRGB chunk with 1.0, `ignorePngGamma` set, sRGB off, RGB, grey, palette and 16-bit images |
+| `Gamma*` | uncompressed, readable, no mip maps: a ramp (every 8-bit value once in red), a gAMA chunk of 1.0, 0.45455, 0.5, 2.2, 0.47, 0.43, 0 or 0.0001, an sRGB chunk with 1.0, `ignorePngGamma` set, sRGB off, RGB, grey, palette (a gAMA chunk before and after the palette) and 16-bit images |
 
 `Assets/Scripts/TexturePlatformsProbe.cs` records in Play mode into values.jsonl in
 `$TEXTUREPLATFORMS_OUT` (tests/value_probe.py), each `.meta` with its GUID line read `guid: (guid)`:
@@ -39,7 +39,7 @@ texture's settings with these platform entries:
 * `size/*`: the imported size with Standalone (the active platform) not overridden at 32,
   overridden, then cleared.
 * `gamma/<texture>`: `ignorePngGamma` and the imported pixels; `gamma/Gamma100000Toggle/set` after
-  setting it and saving.
+  setting it and saving, `.../settings` read through `TextureImporterSettings` and set back off.
 
 What it shows: a read gives a copy of the platform's entry under the platform's serialization name
 (`iPhone` reads `iOS`, every desktop target `Standalone`); a platform without one reads the
@@ -54,15 +54,17 @@ none. Reads do not make it dirty. A save writes the entries as the importer hold
 added on loading alone is no change. The imported size follows the active platform's entry only
 when that is overridden. A PNG's gamma corrects its colour for a 2.2 screen (alpha left), with
 libpng's fixed-point exponent and table, unless the correction is within 5% of none, the gamma is
-0, an sRGB chunk is present or `ignorePngGamma` is set; 16-bit samples are corrected before they
-are narrowed.
+one libpng rejects (0, 0.0001), the gAMA chunk follows the palette, an sRGB chunk is present or
+`ignorePngGamma` is set (which `TextureImporterSettings` reads and sets too); 16-bit samples are
+corrected before they are narrowed.
 
 Not covered: a default and another platform both missing on load (Unbound adds the default
 last), a read adding an entry after the default changed (Unbound copies the default as it is
-then), a save after reads alone added entries (Unbound writes nothing), values a platform
+then), a save after reads alone added entries or after only an added entry was cleared (Unbound
+writes nothing), values a platform
 validates (sizes, formats, qualities out of range), the format quality a platform reads for BC6H
 and BC7 (the sprite atlas importer's rule is not applied), files of older serialized versions,
-PNGs with an iCCP chunk, the rounding of 16-bit samples between the 256 measured ones, and the
+PNGs with an iCCP chunk, gAMA values above libpng's range, an sRGB chunk after the palette, the rounding of 16-bit samples between the 256 measured ones, and the
 runtime's `ImageConversion.LoadImage` (Unbound keeps a PNG's samples there).
 
 Record and gate:
