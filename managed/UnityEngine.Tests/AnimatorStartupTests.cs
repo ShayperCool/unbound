@@ -16,6 +16,8 @@ namespace UnityEngine.Tests
         public void LeavingPlayModeBeforeItsFirstFrameEndsTheEntry()
         {
             bool playing = EditorSession.IsPlaying;
+            var version = ProjectInfo.UnityVersion;
+            ProjectInfo.UnityVersion = "6000.0.71f1";
             try
             {
                 AnimationSystem.BeginPlayMode();
@@ -28,6 +30,7 @@ namespace UnityEngine.Tests
             {
                 AnimationSystem.EndPlayModeEntry();
                 EditorSession.IsPlaying = playing;
+                ProjectInfo.UnityVersion = version;
             }
         }
 
