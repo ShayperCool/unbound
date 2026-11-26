@@ -251,10 +251,15 @@ pub fn guid_only_section(importer: NewImporter, context: &MetaContext) -> Option
     }
 }
 
-/// Whether a `.meta` (parsed) names no importer: it holds its GUID (and perhaps labels) alone.
+/// Whether a `.meta` (parsed) holds its format version and GUID and nothing else but labels (as
+/// the managed side's `AssetPaths.HoldsGuidAlone` reads its text); one with other lines (a
+/// `timeCreated`, a `folderAsset`) is not measured and keeps reading the new-asset defaults.
 pub fn names_no_importer(meta: &unbound_yaml::Value) -> bool {
-    meta.as_map()
-        .is_some_and(|m| !m.iter().any(|(k, _)| k.ends_with("Importer")))
+    meta.as_map().is_some_and(|m| {
+        m.iter().any(|(k, _)| k == "guid")
+            && m.iter()
+                .all(|(k, _)| matches!(k, "fileFormatVersion" | "guid" | "labels"))
+    })
 }
 
 /// `meta` as its importer reads it: a `.meta` that names no importer with the

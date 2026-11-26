@@ -723,9 +723,9 @@ namespace UnityEditor
         static string PluginMetaSection(string path) =>
             JsonDocument.Parse(Native.Call("plugin-meta-section", JsonSerializer.Serialize(new { path }))).RootElement.GetProperty("section").GetString() ?? "";
 
-        /// <summary>The section the Editor writes into a .meta that holds the GUID alone ("" where
-        /// it is not measured: the texture and audio importers write their oldest version's values
-        /// there).</summary>
+        /// <summary>The section the Editor writes into a .meta that holds the GUID alone: a new
+        /// asset's, or the texture and audio importers' oldest settings ("" where it is not
+        /// measured).</summary>
         internal static string LabelMetaSection(string path) =>
             JsonDocument.Parse(Native.Call("label-meta-section", JsonSerializer.Serialize(new { path }))).RootElement.GetProperty("section").GetString() ?? "";
 

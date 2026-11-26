@@ -1310,17 +1310,25 @@ impl Default for TextureImporter {
 impl TextureImporter {
     /// The settings a `.meta` imports with for this importer's build target and project.
     pub fn settings(&self, meta: &Value) -> TextureSettings {
-        let oldest = if self.guid_only_section {
-            crate::new_meta::with_guid_only_section(
-                meta,
-                crate::new_meta::NewImporter::Texture,
-                "TextureImporter",
-            )
-        } else {
-            None
-        };
-        let mut settings =
-            TextureSettings::read(oldest.as_ref().unwrap_or(meta), &self.build_target);
+        let oldest = self.oldest(meta);
+        self.settings_of(oldest.as_ref().unwrap_or(meta))
+    }
+
+    /// `meta` with the oldest settings where it names no importer
+    /// ([`crate::new_meta::with_guid_only_section`]), where that is measured; `None` otherwise.
+    fn oldest(&self, meta: &Value) -> Option<Value> {
+        if !self.guid_only_section {
+            return None;
+        }
+        crate::new_meta::with_guid_only_section(
+            meta,
+            crate::new_meta::NewImporter::Texture,
+            "TextureImporter",
+        )
+    }
+
+    fn settings_of(&self, meta: &Value) -> TextureSettings {
+        let mut settings = TextureSettings::read(meta, &self.build_target);
         if self.before_compression {
             settings.uncompressed = true;
             settings.explicit_format = None;
@@ -1542,10 +1550,29 @@ impl Importer for TextureImporter {
     const VERSION: u32 = 53;
 
     fn import(&self, source: &Path, bytes: &[u8], meta: &Value) -> Result<ImportedTexture> {
-        let tree_meta = self.tree_textures.apply(source, meta);
-        let meta = tree_meta.as_ref().unwrap_or(meta);
-        let settings = self.settings(meta);
-        let mut texture = import_texture(source, bytes, meta, settings)?;
+        // A GUID-only .meta reads its oldest settings before the trees' settings apply.
+        let oldest = self.oldest(meta);
+        let read = |meta: &Value| {
+            let tree_meta = self.tree_textures.apply(source, meta);
+            let meta = tree_meta.as_ref().unwrap_or(meta);
+            let settings = self.settings_of(meta);
+            import_texture(source, bytes, meta, settings)
+        };
+        let mut texture = match &oldest {
+            Some(oldest) => match read(oldest) {
+                // Those settings make a cube map, whose layout for this aspect is not measured:
+                // the texture imports as the file's settings say, as before (loudly).
+                Err(e) if e.chain().any(|c| c.is::<cubemap::UnmeasuredAutoCubemap>()) => {
+                    tracing::warn!(
+                        "{}: its .meta holds its GUID alone, which the Editor imports as a cube map; {e:#}; Unbound imports it as a 2D texture",
+                        source.display()
+                    );
+                    read(meta)?
+                }
+                other => other?,
+            },
+            None => read(meta)?,
+        };
         self.store(&mut texture)?;
         Ok(texture)
     }

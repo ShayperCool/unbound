@@ -77,10 +77,11 @@ namespace Unbound.Runtime
             var meta = AssetDatabase.FileOf(path) + ".meta";
             if (!File.Exists(meta)) return false;
             var text = File.ReadAllText(meta);
-            // A .meta holding its GUID alone is written with the section its importer reads there
-            // (a texture's and a sound's oldest settings, tests/projects/guidonlymetas save.*), the
-            // change patched in, where that section is measured.
-            if (AssetPaths.HoldsGuidAlone(text) && AssetDatabase.LabelMetaSection(path) is { Length: > 0 } added)
+            // A texture's or a sound's .meta holding its GUID alone is written with the oldest
+            // settings its importer reads there (tests/projects/guidonlymetas save.*), the change
+            // patched in; the other importers' saves of such a file are not measured (not written).
+            if ((importer.m_SettingsType == "TextureImporter" || importer.m_SettingsType == "AudioImporter")
+                && AssetPaths.HoldsGuidAlone(text) && AssetDatabase.LabelMetaSection(path) is { Length: > 0 } added)
                 text = AssetPaths.WithImporterSection(text, added);
             var root = UnityYamlText.ParseTopLevel(text);
             var section = root.Get(importer.m_SettingsType);

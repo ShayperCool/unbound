@@ -42,19 +42,43 @@ fn exact(w: u64, h: u64) -> Option<Layout> {
 /// What AutoCubemap makes of an image of no exact layout, by its aspect (width / height,
 /// inclusive bounds as fractions): each layout takes images near its own aspect, within the
 /// bands every measured image of the Unity 6000.0.71f1 Editor falls in (tests/projects/
-/// cubemapimport Aspect*, Wide*, Square*, Tall*); between a layout's last measured image and the
-/// next layout's first, the choice is not measured, so it is not taken there.
+/// cubemapimport Aspect*, Wide*, Square*, Tall*; tests/projects/guidonlymetas aspect.*, whose face
+/// sizes tell the layout: 1:16, 1:4, 0.68, 1.22, 2.85, 8:1, 16:1 and 256:1 the corner square, 1.13
+/// a sphere map, 1.4 a horizontal cross); between a layout's last measured image and the next
+/// layout's first, the choice is not measured, so it is not taken there.
 const AUTO_BANDS: &[((u64, u64), (u64, u64), Layout)] = &[
-    ((1, 2), (2, 3), Layout::Corner),
+    ((1, 16), (17, 25), Layout::Corner),
     ((100, 143), (4, 5), Layout::VerticalCross),
     ((50, 59), (50, 59), Layout::Corner),
-    ((9, 10), (28, 25), Layout::SphereMap),
-    ((23, 20), (6, 5), Layout::Corner),
-    ((5, 4), (4, 3), Layout::HorizontalCross),
+    ((9, 10), (113, 100), Layout::SphereMap),
+    ((23, 20), (61, 50), Layout::Corner),
+    ((5, 4), (7, 5), Layout::HorizontalCross),
     ((29, 20), (38, 25), Layout::Corner),
     ((31, 20), (14, 5), Layout::LatLong),
-    ((29, 10), (5, 1), Layout::Corner),
+    ((57, 20), (256, 1), Layout::Corner),
 ];
+
+/// An image whose AutoCubemap layout is not measured ([`AUTO_BANDS`]).
+#[derive(Debug)]
+pub struct UnmeasuredAutoCubemap {
+    pub width: u32,
+    pub height: u32,
+}
+
+impl std::fmt::Display for UnmeasuredAutoCubemap {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "AutoCubemap's mapping of a {}x{} image is not measured (aspects measured: 1/16-0.68, \
+             50:59, 1.15-1.22, 1.45-1.52 and 2.85-256 the corner square, 0.7-0.8 a vertical cross, \
+             0.9-1.13 a sphere map, 1.25-1.4 a horizontal cross, 1.55-2.8 a panorama, and the exact \
+             strips); set the texture's Mapping",
+            self.width, self.height
+        )
+    }
+}
+
+impl std::error::Error for UnmeasuredAutoCubemap {}
 
 /// The layout `generateCubemap` gives an image: Spheremap (1) and Cylindrical (2) whatever its
 /// aspect; FullCubemap (5) a strip or cross by exact aspect, else the corner square;
@@ -77,14 +101,7 @@ pub(super) fn layout(width: u32, height: u32, mode: i32) -> Result<Layout> {
         .iter()
         .find(|((ln, ld), (hn, hd), _)| ln * h <= w * ld && w * hd <= hn * h)
         .map(|&(_, _, layout)| layout)
-        .ok_or_else(|| {
-            anyhow::anyhow!(
-                "AutoCubemap's mapping of a {width}x{height} image is not measured (aspects \
-                 measured: 0.5-0.67, 50:59, 1.15-1.2, 1.45-1.52 and 2.9-5 the corner square, 0.7-0.8 a \
-                 vertical cross, 0.9-1.12 a sphere map, 1.25-1.33 a horizontal cross, 1.55-2.8 a \
-                 panorama, and the exact strips); set the texture's Mapping"
-            )
-        })
+        .ok_or_else(|| UnmeasuredAutoCubemap { width, height }.into())
 }
 
 /// A cross's cells: whole texels across and down (its columns and rows of the image).
@@ -348,7 +365,24 @@ mod tests {
         assert!(layout(100, 117, 6).is_err());
         assert!(layout(500, 300, 6).is_ok());
         assert!(layout(600, 100, 6).is_ok());
-        assert!(layout(700, 100, 6).is_err());
+        // tests/projects/guidonlymetas aspect.*: long and tall images and the bands' neighbours.
+        for (w, h) in [
+            (256, 16),
+            (128, 16),
+            (256, 1),
+            (16, 64),
+            (16, 256),
+            (68, 100),
+            (122, 100),
+            (285, 100),
+            (700, 100),
+        ] {
+            assert_eq!(layout(w, h, 6).unwrap(), Layout::Corner, "{w}x{h}");
+        }
+        assert_eq!(layout(113, 100, 6).unwrap(), Layout::SphereMap);
+        assert_eq!(layout(140, 100, 6).unwrap(), Layout::HorizontalCross);
+        assert!(layout(153, 100, 6).is_err());
+        assert!(layout(1, 256, 6).unwrap_err().is::<UnmeasuredAutoCubemap>());
         // Cylindrical and Spheremap whatever the aspect; FullCubemap the corner square.
         assert_eq!(layout(128, 128, 2).unwrap(), Layout::LatLong);
         assert_eq!(layout(192, 32, 2).unwrap(), Layout::LatLong);

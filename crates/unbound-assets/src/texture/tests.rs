@@ -2571,3 +2571,34 @@ fn a_deep_png_gamma_corrects_before_narrowing() {
     assert_eq!(decoded(&png, true), [248, 72, 248, 252]);
     assert_eq!(decoded(&png, false), [239, 16, 240, 252]);
 }
+
+/// A texture whose .meta holds its GUID alone imports as a cube map (tests/projects/guidonlymetas
+/// texture.Square); one of an aspect whose AutoCubemap layout is not measured (1.53) imports as a
+/// 2D texture, as before, rather than failing.
+#[test]
+fn a_guid_only_texture_imports_as_a_cube_map_where_its_layout_is_measured() {
+    use crate::Importer;
+    let png = |width, height| {
+        let image = image::RgbaImage::from_pixel(width, height, image::Rgba([10, 20, 30, 255]));
+        let mut bytes = Vec::new();
+        image
+            .write_to(&mut std::io::Cursor::new(&mut bytes), image::ImageFormat::Png)
+            .unwrap();
+        bytes
+    };
+    let meta =
+        unbound_yaml::parse_value("fileFormatVersion: 2\nguid: 0123456789abcdef0123456789abcdef\n")
+            .unwrap();
+    let importer = TextureImporter {
+        guid_only_section: true,
+        ..TextureImporter::default()
+    };
+    let cube = importer
+        .import(Path::new("Square.png"), &png(16, 16), &meta)
+        .unwrap();
+    assert_eq!((cube.settings.shape, cube.width), (TextureShape::Cube, 8));
+    let flat = importer
+        .import(Path::new("Between.png"), &png(153, 100), &meta)
+        .unwrap();
+    assert_eq!(flat.settings.shape, TextureShape::Texture2D);
+}

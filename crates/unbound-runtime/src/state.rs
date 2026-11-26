@@ -2018,7 +2018,9 @@ fn load_importer_settings(guid: &str) -> Result<Vec<u8>> {
         })
         .unwrap_or_else(|| {
             let name = asset_importer(asset);
-            let body = guid_only_body(s, asset, name)
+            let body = unbound_assets::new_meta::names_no_importer(&meta)
+                .then(|| guid_only_body(s, asset, name))
+                .flatten()
                 .unwrap_or_else(|| unbound_yaml::Value::Map(Default::default()));
             (name.to_string(), body)
         });
