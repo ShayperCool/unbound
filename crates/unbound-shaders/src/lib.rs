@@ -509,6 +509,11 @@ impl Pragmas {
                     if !rest.iter().any(|w| w == "noshadow") {
                         p.keyword_sets.push((words(&["SHADOWS_SCREEN"]), true));
                     }
+                    // Mixed lighting: the shadow mask, and its mixing with realtime shadows
+                    // (UnityShadowLibrary.cginc's table; tests/projects/shadowmaskmix).
+                    p.keyword_sets.push((words(&["SHADOWS_SHADOWMASK"]), true));
+                    p.keyword_sets
+                        .push((words(&["LIGHTMAP_SHADOW_MIXING"]), true));
                 }
                 "multi_compile_prepassfinal" => {
                     // A Deferred pass: ambient from light probes or a lightmap, as a forward base
@@ -559,6 +564,10 @@ impl Pragmas {
                             true,
                         ));
                         p.keyword_sets.push((words(&["SHADOWS_SOFT"]), true));
+                        // A mixed light's shadow mask (UnityShadowLibrary.cginc's table).
+                        p.keyword_sets.push((words(&["SHADOWS_SHADOWMASK"]), true));
+                        p.keyword_sets
+                            .push((words(&["LIGHTMAP_SHADOW_MIXING"]), true));
                     }
                 }
                 other => {
@@ -2113,6 +2122,46 @@ mod tests {
         assert!(both.contains(&"LIGHTMAP_ON".to_string()));
         assert!(both.contains(&"DYNAMICLIGHTMAP_ON".to_string()));
         assert!(!both.contains(&"LIGHTPROBE_SH".to_string()));
+    }
+
+    #[test]
+    fn forward_passes_select_the_shadow_mask_keywords() {
+        // tests/projects/shadowmaskmix: the forward base and full-shadow add passes have the
+        // shadow mask and its mixing as variants of their own.
+        for pass in ["multi_compile_fwdbase", "multi_compile_fwdadd_fullshadows"] {
+            let lines = vec![preprocess::Pragma {
+                words: words(&[pass]),
+            }];
+            let p = Pragmas::read(&lines);
+            let selected = p.select(&words(&[
+                "POINT",
+                "LIGHTMAP_ON",
+                "SHADOWS_SHADOWMASK",
+                "LIGHTMAP_SHADOW_MIXING",
+            ]));
+            assert!(
+                selected.contains(&"SHADOWS_SHADOWMASK".to_string()),
+                "{pass}"
+            );
+            assert!(
+                selected.contains(&"LIGHTMAP_SHADOW_MIXING".to_string()),
+                "{pass}"
+            );
+            assert!(
+                !p.select(&words(&["POINT"]))
+                    .contains(&"SHADOWS_SHADOWMASK".to_string()),
+                "{pass}"
+            );
+        }
+        // The plain add pass has no shadows, so no mask.
+        let lines = vec![preprocess::Pragma {
+            words: words(&["multi_compile_fwdadd"]),
+        }];
+        let p = Pragmas::read(&lines);
+        assert!(
+            !p.select(&words(&["POINT", "SHADOWS_SHADOWMASK"]))
+                .contains(&"SHADOWS_SHADOWMASK".to_string())
+        );
     }
 
     #[test]
