@@ -1414,6 +1414,8 @@ pub fn test(args: &ProjectArgs, test: TestArgs) -> Result<()> {
         other => anyhow::bail!("--platform {other}: expected EditMode or PlayMode"),
     };
     let project = open_in_editor(args)?;
+    // The game's launches of the Editor's executable (crate::editor_launch).
+    crate::editor_launch::install(&project.install.editor_executable());
     let results = match test.results {
         Some(path) => from_current_dir(&path)?,
         None => project
