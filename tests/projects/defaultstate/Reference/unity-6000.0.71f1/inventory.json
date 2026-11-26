@@ -4846,6 +4846,36 @@
       "type": "UnityEngine.Experimental.GlobalIllumination.SpotLightPyramidShape"
     },
     {
+      "category": "struct",
+      "module": "UnityEngine.CoreModule",
+      "status": "candidate",
+      "type": "UnityEngine.Experimental.Playables.CameraPlayable"
+    },
+    {
+      "category": "struct",
+      "module": "UnityEngine.CoreModule",
+      "status": "candidate",
+      "type": "UnityEngine.Experimental.Playables.MaterialEffectPlayable"
+    },
+    {
+      "category": "struct",
+      "module": "UnityEngine.CoreModule",
+      "status": "candidate",
+      "type": "UnityEngine.Experimental.Playables.TextureMixerPlayable"
+    },
+    {
+      "category": "class",
+      "module": "UnityEngine.CoreModule",
+      "status": "static",
+      "type": "UnityEngine.Experimental.Playables.TexturePlayableBinding"
+    },
+    {
+      "category": "struct",
+      "module": "UnityEngine.CoreModule",
+      "status": "candidate",
+      "type": "UnityEngine.Experimental.Playables.TexturePlayableOutput"
+    },
+    {
       "category": "class",
       "module": "UnityEngine.CoreModule",
       "status": "candidate",

@@ -1,5 +1,10 @@
 # Default state of implemented API types
 
+The experimental texture playables slice adds 5 type rows for the hand-written CameraPlayable,
+MaterialEffectPlayable, TextureMixerPlayable and TexturePlayableOutput (structs) and the static
+TexturePlayableBinding (their `@factory` kinds only; they have no default-state values), from two
+macOS Editor batch captures that agree on them; earlier rows are unchanged.
+
 The vision utility slice adds one row: the static `UnityEngine.Accessibility.VisionUtility`, now written by hand, is excluded, from two independent Linux GPU captures that agree on it; earlier rows are unchanged.
 
 The Tile Palette and terrain layer slice adds 17 rows: GridBrushBase (abstract), CustomGridBrushAttribute
