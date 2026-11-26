@@ -527,10 +527,13 @@ namespace UnityEngine.Tests
 
         /// <summary>A loaded prefab asset holding, under <paramref name="parent"/> (null: as its
         /// root, a variant), an instance of <paramref name="source"/>'s hierarchy: each object linked
-        /// to its source object, with its values; its file written on disk as "as made".</summary>
-        (LoadedFile File, GameObject InstanceRoot) Dependent(LoadedFile file, LoadedFile source, GameObject sourceRoot, Transform parent, long baseId)
+        /// to its source object, with its values; its file on disk given the instance's PrefabInstance
+        /// document (with <paramref name="modifications"/>: source file id, property path, value).</summary>
+        (LoadedFile File, GameObject InstanceRoot) Dependent(LoadedFile file, LoadedFile source, GameObject sourceRoot, Transform parent, long baseId,
+            params (long Target, string Path, string Value)[] modifications)
         {
             var data = new PrefabInstanceData { InAsset = true, SourceGuid = source.Guid, FileId = baseId };
+            File.AppendAllText(Path.Combine(m_Project, file.Path), InstanceDocument(baseId, source.Guid, modifications));
             var ids = new Dictionary<Object, long>(ReferenceEqualityComparer.Instance);
             foreach (var pair in source.Objects) if (pair.Value is not null) ids[pair.Value] = pair.Key;
             long next = baseId;
@@ -581,10 +584,38 @@ namespace UnityEngine.Tests
         LoadedFile NewDependentFile(string name)
         {
             var file = new LoadedFile { Path = "Assets/" + name + ".prefab", Guid = Guid.NewGuid().ToString("N") };
-            File.WriteAllText(Path.Combine(m_Project, file.Path), "as made");
+            File.WriteAllText(Path.Combine(m_Project, file.Path), UnityYamlText.Preamble);
             m_Dependents.Add(file);
             return file;
         }
+
+        /// <summary>A PrefabInstance document as a prefab's file holds it.</summary>
+        static string InstanceDocument(long id, string sourceGuid, (long Target, string Path, string Value)[] modifications)
+        {
+            var text = new System.Text.StringBuilder();
+            text.Append("--- !u!1001 &").Append(id).Append("\nPrefabInstance:\n  m_ObjectHideFlags: 0\n  serializedVersion: 2\n  m_Modification:\n")
+                .Append("    serializedVersion: 3\n    m_TransformParent: {fileID: 0}\n");
+            if (modifications.Length == 0) text.Append("    m_Modifications: []\n");
+            else
+            {
+                text.Append("    m_Modifications:\n");
+                foreach (var (target, path, value) in modifications)
+                    text.Append("    - target: {fileID: ").Append(target).Append(", guid: ").Append(sourceGuid).Append(", type: 3}\n      propertyPath: ")
+                        .Append(path).Append("\n      value: ").Append(value).Append("\n      objectReference: {fileID: 0}\n");
+            }
+            text.Append("    m_RemovedComponents: []\n    m_RemovedGameObjects: []\n    m_AddedGameObjects: []\n    m_AddedComponents: []\n")
+                .Append("  m_SourcePrefab: {fileID: 100100000, guid: ").Append(sourceGuid).Append(", type: 3}\n");
+            return text.ToString();
+        }
+
+        /// <summary>A dependent made loaded, its file's text kept as it is then.</summary>
+        void Loaded(LoadedFile file)
+        {
+            AssetDatabaseRuntime.AddLoaded(file);
+            m_Seeds[file] = TextOf(file);
+        }
+
+        readonly Dictionary<LoadedFile, string> m_Seeds = new Dictionary<LoadedFile, string>();
 
         readonly List<LoadedFile> m_Dependents = new List<LoadedFile>();
 
@@ -609,7 +640,7 @@ namespace UnityEngine.Tests
         public void AVariantIsNotWrittenAfterItsBaseIsSaved()
         {
             var (variant, root) = Dependent(NewDependentFile("Variant"), m_File, m_Asset, null, 1000);
-            AssetDatabaseRuntime.AddLoaded(variant);
+            Loaded(variant);
             var own = root.GetComponent<PrefabTestHolder>();
             own.count = 30;
             EditorUtility.SetDirty(own);
@@ -628,7 +659,7 @@ namespace UnityEngine.Tests
                 PrefabUtility.SavePrefabAsset(root, out var saved);
                 Assert.False(saved);
             });
-            Assert.Equal("as made", TextOf(variant));
+            Assert.Equal(m_Seeds[variant], TextOf(variant));
             Assert.Contains(warnings, w => w.Contains("Assets/Variant.prefab is not saved: " + AssetPath + ", which it holds instances of, was saved in this session")
                 && w.Contains("its changes since are not saved either"));
         }
@@ -640,7 +671,7 @@ namespace UnityEngine.Tests
         public void PrefabsHoldingTheSavedPrefabByAnyPathAreNotWritten()
         {
             var (middle, middleRoot) = Dependent(NewDependentFile("Middle"), m_File, m_Asset, null, 2000);
-            AssetDatabaseRuntime.AddLoaded(middle);
+            Loaded(middle);
             var top = NewDependentFile("Top");
             GameObject topRoot;
             using (ObjectRegistry.AsAssets())
@@ -658,20 +689,205 @@ namespace UnityEngine.Tests
             top.Roots.Add(topRoot);
             var (_, direct) = Dependent(top, m_File, m_Asset, topRoot.transform, 3100);
             var (_, throughMiddle) = Dependent(top, middle, middleRoot, topRoot.transform, 3200);
-            AssetDatabaseRuntime.AddLoaded(top);
+            Loaded(top);
             var (added, addedRoot) = Dependent(NewDependentFile("Added"), m_File, m_Asset, null, 4000);
-            AssetDatabaseRuntime.AddLoaded(added);
+            Loaded(added);
             addedRoot.AddComponent<SphereCollider>();
             m_Asset.GetComponent<PrefabTestHolder>().label = "saved";
-            Assert.True(PrefabUtility.SavePrefabAsset(m_Asset) != null);
+            var refreshWarnings = CaptureWarnings(() => Assert.True(PrefabUtility.SavePrefabAsset(m_Asset) != null));
             Assert.Equal("saved", middleRoot.GetComponent<PrefabTestHolder>().label);
             Assert.Equal("saved", direct.GetComponent<PrefabTestHolder>().label);
             Assert.Equal("saved", throughMiddle.GetComponent<PrefabTestHolder>().label);
+            // The component added to an instance and not saved is kept, and said.
+            Assert.Contains(refreshWarnings, w => w.Contains("Assets/Added.prefab keeps 1 object added to it and not saved after " + AssetPath + " was saved"));
+            Assert.DoesNotContain(refreshWarnings, w => w.Contains("Assets/Top.prefab keeps") || w.Contains("Assets/Middle.prefab keeps"));
+            // A prefab loaded since, holding the one whose refresh kept something, is not written;
+            // one holding a prefab refreshed in full is.
+            Object.DestroyImmediate(addedRoot.GetComponent<SphereCollider>(), true);
+            var (onAdded, _) = Dependent(NewDependentFile("OnAdded"), added, addedRoot, null, 4500);
+            Loaded(onAdded);
+            Assert.Contains("Assets/Added.prefab, which it holds instances of, is held as it was before " + AssetPath + " was saved in this session", PrefabAssets.Refusal(onAdded));
+            var (onMiddle, _) = Dependent(NewDependentFile("OnMiddle"), middle, middleRoot, null, 4700);
+            Loaded(onMiddle);
+            Assert.Null(PrefabAssets.Refusal(onMiddle));
             foreach (var root in new[] { middleRoot, topRoot, addedRoot }) EditorUtility.SetDirty(root);
-            CaptureWarnings(() => AssetDatabase.SaveAssets());
-            Assert.Equal("as made", TextOf(middle));
-            Assert.Equal("as made", TextOf(top));
-            Assert.Equal("as made", TextOf(added));
+            var warnings = CaptureWarnings(() => AssetDatabase.SaveAssets());
+            Assert.Equal(m_Seeds[middle], TextOf(middle));
+            Assert.Equal(m_Seeds[top], TextOf(top));
+            Assert.Equal(m_Seeds[added], TextOf(added));
+            foreach (var name in new[] { "Middle", "Top", "Added" })
+                Assert.Contains(warnings, w => w.Contains("Assets/" + name + ".prefab is not saved: " + AssetPath + ", which it holds instances of, was saved in this session"));
+        }
+
+        /// <summary>The prefab file of a variant of the test's prefab, not loaded: a
+        /// PrefabInstance document naming it, listed by the asset database.</summary>
+        LoadedFile UnloadedVariantFile(string name, out LoadedFile asLoaded, out GameObject asLoadedRoot)
+        {
+            // Its objects, to make the instances of it a loaded prefab holds; never published.
+            (asLoaded, asLoadedRoot) = Dependent(NewDependentFile(name), m_File, m_Asset, null, 6000);
+            AssetDatabase.List("[{\"guid\":\"" + asLoaded.Guid + "\",\"path\":\"" + asLoaded.Path + "\",\"kind\":\"prefab\"},"
+                + "{\"guid\":\"" + m_Guid + "\",\"path\":\"" + AssetPath + "\",\"kind\":\"prefab\"}]");
+            return asLoaded;
+        }
+
+        /// <summary>A prefab holding instances of the saved prefab only through a prefab that is not
+        /// loaded (its variant's variant) is found through the files, and is not written in the
+        /// session, by any save, with a warning; finding it loads nothing.</summary>
+        [Fact]
+        public void APrefabHoldingTheSavedPrefabThroughAnUnloadedOneIsNotWritten()
+        {
+            try
+            {
+                var v1 = UnloadedVariantFile("V1", out var v1File, out var v1Root);
+                var (v2, v2Root) = Dependent(NewDependentFile("V2"), v1File, v1Root, null, 7000);
+                Loaded(v2);
+                var chain = PrefabAssets.Chain(v2.Guid);
+                Assert.Contains(v1.Guid, chain);
+                Assert.Contains(m_Guid, chain);
+                Assert.False(AssetDatabaseRuntime.IsLoaded(v1.Guid));
+                m_Asset.GetComponent<PrefabTestHolder>().count = 21;
+                CaptureWarnings(() => Assert.True(PrefabUtility.SavePrefabAsset(m_Asset) != null));
+                EditorUtility.SetDirty(v2Root);
+                var warnings = CaptureWarnings(() =>
+                {
+                    AssetDatabase.SaveAssets();
+                    PrefabUtility.SavePrefabAsset(v2Root, out var saved);
+                    Assert.False(saved);
+                });
+                Assert.Equal(m_Seeds[v2], TextOf(v2));
+                Assert.Contains(warnings, w => w.Contains("Assets/V2.prefab is not saved: " + AssetPath + ", which it holds instances of, was saved in this session"));
+            }
+            finally
+            {
+                AssetDatabase.Invalidate();
+            }
+        }
+
+        /// <summary>One SaveAssets with the prefab and a prefab holding it through a clean prefab not
+        /// loaded both dirty writes the prefab first, whatever their paths' order, then refuses the
+        /// other: the order follows the files' nesting.</summary>
+        [Fact]
+        public void SaveAssetsOrdersThroughPrefabsNotLoaded()
+        {
+            try
+            {
+                UnloadedVariantFile("V1", out var v1File, out var v1Root);
+                var (v2, v2Root) = Dependent(NewDependentFile("A_V2"), v1File, v1Root, null, 7000);
+                Loaded(v2);
+                var holder = m_Asset.GetComponent<PrefabTestHolder>();
+                holder.count = 45;
+                EditorUtility.SetDirty(holder);
+                EditorUtility.SetDirty(v2Root);
+                var warnings = CaptureWarnings(() => AssetDatabase.SaveAssets());
+                Assert.Contains("count: 45", FileText());
+                Assert.Equal(m_Seeds[v2], TextOf(v2));
+                Assert.Contains(warnings, w => w.Contains("Assets/A_V2.prefab is not saved: " + AssetPath + ", which it holds instances of, was saved in this session"));
+            }
+            finally
+            {
+                AssetDatabase.Invalidate();
+            }
+        }
+
+        /// <summary>A variant whose file holds an override written earlier in the session reads it
+        /// after its base is saved (matches the Unity 6000.0.71f1 Editor, tests/projects/scenesave
+        /// prefab-dirty-saves own6.afterBaseSave): its instance takes its file's modifications.</summary>
+        [Fact]
+        public void ADependentKeepsTheOverridesItsFileHasAfterItsSourceIsSaved()
+        {
+            var (own, root) = Dependent(NewDependentFile("Own"), m_File, m_Asset, null, 8000, (102, "count", "31"));
+            Loaded(own);
+            var holder = root.GetComponent<PrefabTestHolder>();
+            // As written earlier in the session: the file has the override, the loaded instance's
+            // modifications are those it was read with.
+            holder.count = 31;
+            m_Asset.GetComponent<PrefabTestHolder>().count = 26;
+            m_Asset.GetComponent<PrefabTestHolder>().label = "own base";
+            CaptureWarnings(() => Assert.True(PrefabUtility.SavePrefabAsset(m_Asset) != null));
+            Assert.Equal(31, holder.count);
+            Assert.Equal("own base", holder.label);
+        }
+
+        /// <summary>A component the saved prefab gained is made in its loaded variant, and the
+        /// variant's own values are kept: the refresh takes the components the variant removes from
+        /// its file, not from what it lacks now.</summary>
+        [Fact]
+        public void ADependentTakesAComponentItsSourceGained()
+        {
+            var (variant, root) = Dependent(NewDependentFile("Gains"), m_File, m_Asset, null, 9000);
+            Loaded(variant);
+            var gained = (SphereCollider)AssetComponent(m_Asset, typeof(SphereCollider), 150);
+            m_Asset.GetComponent<PrefabTestHolder>().count = 27;
+            var warnings = CaptureWarnings(() => Assert.True(PrefabUtility.SavePrefabAsset(m_Asset) != null));
+            Assert.NotNull(root.GetComponent<SphereCollider>());
+            Assert.Equal(27, root.GetComponent<PrefabTestHolder>().count);
+            Assert.DoesNotContain(warnings, w => w.Contains("Assets/Gains.prefab keeps"));
+            Object.DestroyImmediate(gained, true);
+        }
+
+        /// <summary>A prefab loaded after the save of a prefab it holds is written as usual.</summary>
+        [Fact]
+        public void APrefabLoadedAfterItsSourceIsSavedIsWritten()
+        {
+            m_Asset.GetComponent<PrefabTestHolder>().count = 28;
+            Assert.True(PrefabUtility.SavePrefabAsset(m_Asset) != null);
+            var (later, root) = Dependent(NewDependentFile("Later"), m_File, m_Asset, null, 9500);
+            Loaded(later);
+            var warnings = CaptureWarnings(() =>
+            {
+                PrefabUtility.SavePrefabAsset(root, out var saved);
+                Assert.True(saved);
+            });
+            Assert.DoesNotContain(warnings, w => w.Contains("is not saved"));
+            Assert.NotEqual(m_Seeds[later], TextOf(later));
+        }
+
+        /// <summary>A prefab loaded after a save, or a new prefab, holding instances of a prefab
+        /// whose refresh could not give all its reload gives is not written, and says so; one whose
+        /// held prefab was refreshed in full is.</summary>
+        [Fact]
+        public void APrefabHoldingAnIncompletelyRefreshedOneIsNotWritten()
+        {
+            var (later, root) = Dependent(NewDependentFile("Later"), m_File, m_Asset, null, 9600);
+            Loaded(later);
+            PrefabAssets.MarkStaleForTests(m_File, "Assets/Base.prefab", incomplete: true);
+            var warnings = CaptureWarnings(() =>
+            {
+                PrefabUtility.SavePrefabAsset(root, out var saved);
+                Assert.False(saved);
+                var inst = Instance();
+                Assert.Null(PrefabAssets.Create("Assets/New.prefab", inst));
+            });
+            Assert.Equal(m_Seeds[later], TextOf(later));
+            Assert.False(File.Exists(Path.Combine(m_Project, "Assets/New.prefab")));
+            Assert.Contains(warnings, w => w.Contains("Assets/Later.prefab is not saved: " + AssetPath + ", which it holds instances of, is held as it was before Assets/Base.prefab was saved in this session"));
+            Assert.Contains(warnings, w => w.Contains("Assets/New.prefab is not saved: " + AssetPath + ", which it holds instances of, is held as it was before Assets/Base.prefab was saved in this session"));
+            PrefabAssets.MarkStaleForTests(m_File, "Assets/Base.prefab", incomplete: false);
+            warnings = CaptureWarnings(() =>
+            {
+                PrefabUtility.SavePrefabAsset(root, out var saved);
+                Assert.True(saved);
+            });
+            Assert.DoesNotContain(warnings, w => w.Contains("is not saved"));
+        }
+
+        /// <summary>A prefab held stale is refused before an apply changes anything: the instance
+        /// keeps its override, the prefab its value and its file.</summary>
+        [Fact]
+        public void AnApplyToAStalePrefabChangesNothing()
+        {
+            var scene = Instance();
+            var before = FileText();
+            PrefabAssets.MarkStaleForTests(m_File, "Assets/Base.prefab");
+            var instance = scene.GetComponent<PrefabTestHolder>();
+            instance.count = 77;
+            PrefabUtility.RecordPrefabInstancePropertyModifications(instance);
+            var warnings = CaptureWarnings(() => PrefabUtility.ApplyPropertyOverride(new SerializedObject(instance).FindProperty("count"), AssetPath, InteractionMode.AutomatedAction));
+            Assert.Equal(3, m_Asset.GetComponent<PrefabTestHolder>().count);
+            Assert.Equal(77, instance.count);
+            Assert.Contains(PrefabUtility.GetPropertyModifications(scene), m => m.propertyPath == "count" && m.value == "77");
+            Assert.Equal(before, FileText());
+            Assert.Contains(warnings, w => w.Contains(AssetPath + " is not saved: Assets/Base.prefab, which it holds instances of, was saved in this session"));
         }
 
         /// <summary>One SaveAssets with a prefab and its variant both dirty writes the prefab first,
@@ -681,14 +897,14 @@ namespace UnityEngine.Tests
         public void SaveAssetsWritesAPrefabBeforeThoseHoldingIt()
         {
             var (variant, root) = Dependent(NewDependentFile("A_Variant"), m_File, m_Asset, null, 5000);
-            AssetDatabaseRuntime.AddLoaded(variant);
+            Loaded(variant);
             var holder = m_Asset.GetComponent<PrefabTestHolder>();
             holder.count = 44;
             EditorUtility.SetDirty(holder);
             EditorUtility.SetDirty(root);
             CaptureWarnings(() => AssetDatabase.SaveAssets());
             Assert.Contains("count: 44", FileText());
-            Assert.Equal("as made", TextOf(variant));
+            Assert.Equal(m_Seeds[variant], TextOf(variant));
             var held = new Dictionary<string, string[]>
             {
                 ["top"] = new[] { "s", "middle" },

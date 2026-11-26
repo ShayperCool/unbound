@@ -94,6 +94,8 @@ namespace UnityEditor
 
         static void Apply(PrefabInstanceData data, LoadedFile file, ApplyPlan plan, InteractionMode mode, string name)
         {
+            // Refused before anything changes, so the instance keeps its overrides.
+            if (PrefabAssets.Refused(file)) return;
             var change = new PrefabAssets.Change(file);
             var refs = change.Refs;
             var snapshot = change.SnapshotOf(data) ?? new PrefabInstances.Snapshot { Refs = refs };
@@ -192,6 +194,7 @@ namespace UnityEditor
             var after = snapshot.Copy();
             void Swap(List<(Object, ObjectState)> states, List<(ObjectRef, string, string, ObjectRef)> stored, bool edited, PrefabInstances.Snapshot overrides)
             {
+                if (PrefabAssets.Refused(file)) return;
                 var undoChange = new PrefabAssets.Change(file);
                 undoChange.Replace(data, overrides.Copy());
                 foreach (var (asset, state) in states) if (asset != null) state.Restore(asset);

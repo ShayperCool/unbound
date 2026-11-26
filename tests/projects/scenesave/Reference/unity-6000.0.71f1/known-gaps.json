@@ -252,5 +252,41 @@
     "reference": "written",
     "actual": "lines 85-85: reference ['      value: Inner2'], actual ['      value: Thing']",
     "reason": "A prefab whose root's name in its file is not its file's name (here copies of Thing.prefab): the Editor loads its root named after the file, so an instance of it, nested in a new prefab by SaveAsPrefabAsset, is written with that name (Inner2); Unbound keeps the file's name (Thing) and writes it: follow-up"
+  },
+  {
+    "case": "prefab-dirty-saves",
+    "key": "file:Assets/PrefabSaves/Outer7.prefab",
+    "reference": "written",
+    "actual": "lines 85-85: reference ['      value: Inner7'], actual ['      value: Thing']",
+    "reason": "A prefab whose root's name in its file is not its file's name (here copies of Thing.prefab): the Editor loads its root named after the file, so an instance of it, nested in a new prefab by SaveAsPrefabAsset, is written with that name (Inner2); Unbound keeps the file's name (Thing) and writes it: follow-up"
+  },
+  {
+    "case": "prefab-dirty-saves",
+    "key": "file:Assets/PrefabSaves/Nest8.prefab",
+    "reference": "written",
+    "actual": "lines 85-85: reference ['      value: Base8'], actual ['      value: Thing']",
+    "reason": "A prefab whose root's name in its file is not its file's name (here copies of Thing.prefab): the Editor loads its root named after the file, so an instance of it, nested in a new prefab by SaveAsPrefabAsset, is written with that name (Inner2); Unbound keeps the file's name (Thing) and writes it: follow-up"
+  },
+  {
+    "case": "prefab-dirty-saves",
+    "key": "outer7.afterInnerSave",
+    "reference": [
+      "27 False"
+    ],
+    "actual": [
+      "27 True"
+    ],
+    "reason": "A component added to a nested instance's GameObject in a prefab asset and not saved: after the nested prefab's save the Editor loads the nesting prefab again from its file, without the component; Unbound refreshes the loaded prefab in place and keeps the unsaved component, with a warning naming the prefab, and does not write that prefab again in the session (follow-up)"
+  },
+  {
+    "case": "prefab-dirty-saves",
+    "key": "nest8.rootAfterBaseSave",
+    "reference": [
+      "0"
+    ],
+    "actual": [
+      "5"
+    ],
+    "reason": "An unsaved change of a nesting prefab's own root (outside its nested instance): after the nested prefab's save the Editor loads the nesting prefab again from its file, without the change; Unbound refreshes the loaded prefab in place and keeps the change, with a warning naming the prefab, and does not write that prefab again in the session (follow-up)"
   }
 ]

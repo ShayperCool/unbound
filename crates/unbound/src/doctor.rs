@@ -22,7 +22,7 @@ const RENDERING_LIMITATIONS: &[&str] = &[
 ];
 
 const ASSET_WRITE_LIMITATIONS: &[&str] = &[
-    "A prefab holding instances of a prefab saved in the same session (a variant of it, a prefab nesting it) is not written again in that session, its own changes since included: the Editor loads such a prefab again from its file, Unbound does not (it warns at each save it skips).",
+    "A prefab loaded when a prefab its nesting reaches (a variant of it, a prefab nesting it, through every file between them) is saved in the same session is not written again in that session, its own changes since included, and neither is a prefab holding instances of such a prefab whose refresh kept what the Editor's load from its file drops (objects or instances added and not saved, unsaved changes outside its instances): the Editor loads such prefabs again from their files, Unbound refreshes them in place (it warns at each refresh that keeps something and at each save it skips).",
 ];
 
 const AUDIO_LIMITATIONS: &[&str] = &[

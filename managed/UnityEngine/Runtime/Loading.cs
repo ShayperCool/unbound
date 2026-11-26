@@ -1094,6 +1094,9 @@ namespace Unbound.Runtime
         /// <summary>The files loaded now.</summary>
         internal static List<LoadedFile> LoadedFiles() => new List<LoadedFile>(s_Files.Values);
 
+        /// <summary>The loaded file of a GUID, without loading it (null: not loaded).</summary>
+        internal static LoadedFile LoadedOrNull(string guid) => guid != null && s_Files.TryGetValue(guid, out var f) ? f : null;
+
         internal static LoadedFile LoadFile(string guid)
         {
             if (s_Files.TryGetValue(guid, out var loaded)) return loaded;
