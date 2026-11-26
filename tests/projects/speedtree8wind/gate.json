@@ -2,7 +2,7 @@
   "commands": [
     "python3 tests/projects/speedtree8wind/run.py gate --if-staged"
   ],
-  "summary": "speedtree8wind: .*",
+  "summary": "speedtree8wind( \\w+)?: .*",
   "engine_paths": [
     "managed/UnityEngine/Terrain/SpeedTreeWind.cs",
     "managed/UnityEngine/Terrain/SpeedTreeWindSimulation.cs",

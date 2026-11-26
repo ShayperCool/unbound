@@ -74,7 +74,8 @@ global value until the tree draws with wind and then neither the global nor the 
 (the engine's buffer holds something else there, not repeatable). The imported variant's children
 come in name order in the Editor (its collision objects first): a recorded residual.
 
-Not measured: gusts (the release never turns them on), palm wind (no sample uses it; its
+Not measured: gusts (the release never turns them on), the directional options set one at a time
+(the staged copy sets both; Unbound scales each option's own level), palm wind (no sample uses it; its
 turbulence reads `_ST_WindAnimation.x` as its time, which Unbound binds as zero once a tree draws
 with wind), a local wind becoming its asset's wind again (no capture reaches it: Unbound gives it
 up when every phase, current and previous, is within 5e-4 of the asset's), the GPU Resident Drawer's SpeedTree 8
