@@ -451,7 +451,7 @@ fn spawn_decoder(
     // not decode plays as silence, and the first lines say why once, when its output ends.
     let errors = Arc::new(Mutex::new(String::new()));
     let collected = errors.clone();
-    std::thread::spawn(move || {
+    let error_reader = std::thread::spawn(move || {
         let mut text = String::new();
         let mut buffer = [0u8; 4096];
         while let Ok(n) = stderr.read(&mut buffer) {
@@ -493,7 +493,7 @@ fn spawn_decoder(
             drop(q);
             carry.drain(..whole);
         }
-        std::thread::sleep(std::time::Duration::from_millis(50));
+        let _ = error_reader.join();
         let message = errors.lock().unwrap().clone();
         if generation.load(Ordering::SeqCst) == mine && !message.trim().is_empty() {
             tracing::warn!(
@@ -753,7 +753,8 @@ mod audio_stream_tests {
     fn a_restart_drops_the_earlier_sound_before_its_decoder_starts() {
         let s = stream(&[1.0, 2.0, 3.0, 4.0], true, 1.0, 10);
         s.state.lock().unwrap().hold = 3.0;
-        // The decoder may not start here (no file); the stream has started over regardless.
+        // The decoder may not start here (no file); the stream has started over regardless. (This
+        // covers the reset only: that it happens before the process starts is the code's order.)
         let _ = s.restart(2.0);
         let state = s.state.lock().unwrap();
         assert_eq!(state.queue.lock().unwrap().len(), 0);
