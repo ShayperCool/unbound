@@ -180,7 +180,10 @@ namespace Unbound.Runtime
 
         /// <summary>A forced re-import of a loaded graph file (<c>AssetDatabase.ImportAsset</c>
         /// with <c>ForceUpdate</c>): the graph compiles again into the same asset object. False
-        /// for a path that is not a loaded graph (it compiles when it loads).</summary>
+        /// for a path that is not a loaded graph (it compiles when it loads).
+        /// While StartAssetEditing holds imports back it runs at the last StopAssetEditing
+        /// (Scripting API 6000.0, AssetDatabase.StartAssetEditing: no imports until then); the
+        /// effects playing the graph start over with the new compile, as when their asset is set.</summary>
         internal static bool Reimport(string path)
         {
             if (string.IsNullOrEmpty(path) || !IsGraphPath(path)) return false;
@@ -189,13 +192,48 @@ namespace Unbound.Runtime
             var file = AssetDatabaseRuntime.LoadFile(guid);
             var resource = file != null ? FindResource(file) : null;
             if (resource == null) return false;
+            if (s_NoReimport > 0) return true;
+            if (AssetDatabase.Editing)
+            {
+                if (!s_Pending.Contains(path)) s_Pending.Add(path);
+                return true;
+            }
             if (resource.m_Object is VisualEffectAsset asset)
             {
                 var removed = new List<long>();
                 Build(resource, asset, file, removed);
                 AssetDatabaseRuntime.RefreshObjects(file, removed);
+                foreach (var effect in Object.FindObjectsByType<VisualEffect>(FindObjectsInactive.Include, FindObjectsSortMode.None))
+                    if (effect.visualEffectAsset == asset) effect.AssetRebuilt();
             }
             return true;
+        }
+
+        /// <summary>The graphs whose re-import StartAssetEditing held back, in request order.</summary>
+        static readonly List<string> s_Pending = new List<string>();
+        static int s_NoReimport;
+
+        /// <summary>At the last StopAssetEditing: the held-back re-imports run.</summary>
+        internal static void ReimportPending()
+        {
+            var pending = new List<string>(s_Pending);
+            s_Pending.Clear();
+            foreach (var path in pending) Reimport(path);
+        }
+
+        /// <summary>A scope in which a written graph is not imported again: the Editor's exit save
+        /// (whether the Editor imports what its exit writes is unmeasured; nothing is left to
+        /// use the import).</summary>
+        internal static IDisposable NoReimport()
+        {
+            s_NoReimport++;
+            return new Scope();
+        }
+
+        sealed class Scope : IDisposable
+        {
+            bool m_Done;
+            public void Dispose() { if (!m_Done) { m_Done = true; s_NoReimport--; } }
         }
 
         /// <summary>Compiles the resource's graph and gives the asset the result: steps 2 to 5 of

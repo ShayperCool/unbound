@@ -127,6 +127,10 @@ namespace UnityEngine.VFX
             }
         }
 
+        /// <summary>Its asset compiled again (a re-import): a new sheet and new systems from the new
+        /// compile, its overrides kept, as when the asset is set.</summary>
+        internal void AssetRebuilt() => visualEffectAsset = m_Asset;
+
         public bool pause
         {
             get => m_Pause;

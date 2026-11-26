@@ -356,6 +356,7 @@ namespace UnityEditor
                 var again = s_PendingImportsAgain.Distinct(StringComparer.Ordinal).ToList();
                 s_PendingImportsAgain.Clear();
                 foreach (var path in again) ImportAgain(path);
+                VisualEffectImports.ReimportPending();
                 if (s_PendingRefresh)
                 {
                     s_PendingRefresh = false;

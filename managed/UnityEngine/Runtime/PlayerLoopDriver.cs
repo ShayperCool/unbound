@@ -749,7 +749,7 @@ namespace Unbound.Runtime
             // A session that ends with Play mode ends it as the Editor leaves it, then the Editor quits.
             bool leavesPlayMode = EditorSession.IsPlaying && !s_EditorExit;
             try { RaiseQuitCallbacks(s_EditorExit); }
-            finally { FinishQuit(s_EditorExit, PlayerPrefs.SaveOnQuit, NativePlugins.Shutdown, () => ReportedExitSave(() => AssetFiles.SaveDirty()), leavesPlayMode); }
+            finally { FinishQuit(s_EditorExit, PlayerPrefs.SaveOnQuit, NativePlugins.Shutdown, () => ReportedExitSave(() => { using (VisualEffectImports.NoReimport()) AssetFiles.SaveDirty(); }), leavesPlayMode); }
         }
 
         /// <summary>The callbacks of the session's end before the Editor quits. Leaving Play mode
