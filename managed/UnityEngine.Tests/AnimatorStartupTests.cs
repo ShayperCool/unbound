@@ -10,6 +10,27 @@ namespace UnityEngine.Tests
     [Collection("Animation")]
     public sealed class AnimatorStartupTests
     {
+        /// <summary>Play mode left before its first frame (an entry the first frame never ended)
+        /// ends the entry: automatic animation steps take the frame's time again.</summary>
+        [Fact]
+        public void LeavingPlayModeBeforeItsFirstFrameEndsTheEntry()
+        {
+            bool playing = EditorSession.IsPlaying;
+            try
+            {
+                AnimationSystem.BeginPlayMode();
+                Assert.Equal(0.0, AnimationSystem.AutomaticFrameDelta(0.1));
+                EditorSession.BeginLeavingPlayMode();
+                EditorSession.EndLeavingPlayMode();
+                Assert.Equal(0.1, AnimationSystem.AutomaticFrameDelta(0.1));
+            }
+            finally
+            {
+                AnimationSystem.EndPlayModeEntry();
+                EditorSession.IsPlaying = playing;
+            }
+        }
+
         static Animator Create(out GameObject root)
         {
             var file = ObjectGraphBuilder.Build(UnityYaml.Parse(AnimationFixtures.RootMotion),

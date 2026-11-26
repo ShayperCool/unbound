@@ -46,6 +46,9 @@ namespace Unbound.Runtime
         {
             IsPlaying = false;
             s_LeavingPlayMode = false;
+            // A Play mode left before its first frame has ended its entry too: Edit mode's
+            // animation clocks are not held at the entry's zero step.
+            AnimationSystem.EndPlayModeEntry();
         }
 
         /// <summary>The editor domain is loading for Play mode: `isPlaying` is still false and
