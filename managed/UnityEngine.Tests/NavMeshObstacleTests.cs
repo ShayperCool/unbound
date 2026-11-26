@@ -430,7 +430,7 @@ namespace UnityEngine.Tests
 
         [Theory]
         // Unbound's choice (unmeasured): a lying capsule whose shaft is not wholly within the
-        // agent's height is met as before the measurement, the circle of its radius at its center,
+        // agent's height is met at its center, the circle of its radius there as an upright shaft,
         // when its height reaches the agent's: sunk 0.1 m below the feet it pushes to the two radii
         // from the center, 0.6 m above the head (beyond its radius) it does not push.
         [InlineData(-0.1f, true)]

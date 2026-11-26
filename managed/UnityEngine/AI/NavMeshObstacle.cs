@@ -303,9 +303,10 @@ namespace Unbound.Runtime
     //   shafts within the agent's height: agents are pushed to the two radii from the shaft, along
     //   +x when on it; walking past, Unity keeps 1 to 2 cm more clearance alongside the shaft,
     //   listed), when its shaft lies wholly within the agent's height. Unbound's choice
-    //   (unmeasured) for any other shaft: the circle at its center, as before the measurement,
-    //   when its height reaches the agent's; a capsule whose height misses the agent's is no
-    //   neighbour. Other releases keep an upright circle at the center.
+    //   (unmeasured) for any other shaft: the circle of its radius at its center, met as an
+    //   upright shaft is, when its height (the shaft's rise plus its radius) reaches the agent's;
+    //   a capsule whose height misses the agent's is no neighbour. Other releases keep an upright
+    //   circle at the center.
     // C5 (measured, not reproduced): Unity avoids a box, and pushes agents out of it, by its
     //   outline (navpath obstacle-shapes box*, listed); the one box it ignores is one spanning the
     //   agent's height exactly, a float coincidence. Unbound's choice:

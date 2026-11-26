@@ -1423,9 +1423,9 @@ namespace DotRecast.Detour.Crowd
         /// Unbound: a tilted capsule as an agent meets it. A shaft wholly within the agent's height:
         /// the circle of its radius at the point of the shaft nearest the agent seen from above
         /// (tests/projects/navpath obstacle-shapes caplying, captilt, captiltx: agents are pushed to
-        /// the two radii from the shaft, along +x when on it). Any other shaft, unmeasured, is met as
-        /// before the measurement: the circle of its radius at its center, when its height reaches
-        /// the agent's.
+        /// the two radii from the shaft, along +x when on it). Any other shaft (Unbound's choice,
+        /// unmeasured): the circle of its radius at its center, as an upright shaft is met, when its
+        /// height (the shaft's rise plus its radius) reaches the agent's.
         internal static bool TryProjectTiltedCapsule(DtCrowdAgent ag, DtCrowdAgent capsule,
             out float radius, out bool clippedCap, out RcVec3f center)
         {
