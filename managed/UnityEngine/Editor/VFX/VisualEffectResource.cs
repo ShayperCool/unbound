@@ -35,8 +35,8 @@ namespace UnityEditor.VFX
     /// The object of a graph file that owns the graph (the package's models) and the asset's
     /// settings. The package's compiler hands it the compiled graph
     /// (<see cref="SetRuntimeData"/>); the import copies that to the file's asset
-    /// (<see cref="VisualEffectImports"/>). Unbound never writes a graph file: the members that
-    /// save one are not implemented.
+    /// (<see cref="VisualEffectImports"/>). <see cref="WriteAsset"/> writes the file again from its
+    /// objects; the settings' setters mark the resource dirty (tests/projects/vfxwrites).
     /// </summary>
     [ClassId(2058629511)]
     internal partial class VisualEffectResource : Object
@@ -102,43 +102,43 @@ namespace UnityEditor.VFX
         public VFXUpdateMode updateMode
         {
             get => m_Settings.UpdateMode;
-            set => m_Settings.UpdateMode = value;
+            set { m_Settings.UpdateMode = value; EditorUtility.SetDirty(this); }
         }
 
         public float preWarmDeltaTime
         {
             get => m_Settings.PreWarmDeltaTime;
-            set => m_Settings.PreWarmDeltaTime = value;
+            set { m_Settings.PreWarmDeltaTime = value; EditorUtility.SetDirty(this); }
         }
 
         public uint preWarmStepCount
         {
             get => m_Settings.PreWarmStepCount;
-            set => m_Settings.PreWarmStepCount = value;
+            set { m_Settings.PreWarmStepCount = value; EditorUtility.SetDirty(this); }
         }
 
         public string initialEventName
         {
             get => m_Settings.InitialEventName;
-            set => m_Settings.InitialEventName = value;
+            set { m_Settings.InitialEventName = value; EditorUtility.SetDirty(this); }
         }
 
         public VFXCullingFlags cullingFlags
         {
             get => m_Settings.CullingFlags;
-            set => m_Settings.CullingFlags = value;
+            set { m_Settings.CullingFlags = value; EditorUtility.SetDirty(this); }
         }
 
         public VFXInstancingMode instancingMode
         {
             get => m_Settings.InstancingMode;
-            set => m_Settings.InstancingMode = value;
+            set { m_Settings.InstancingMode = value; EditorUtility.SetDirty(this); }
         }
 
         public uint instancingCapacity
         {
             get => m_Settings.InstancingCapacity;
-            set => m_Settings.InstancingCapacity = value;
+            set { m_Settings.InstancingCapacity = value; EditorUtility.SetDirty(this); }
         }
 
         public VFXShaderSourceDesc[] shaderSources
@@ -161,10 +161,27 @@ namespace UnityEditor.VFX
 
         public static VisualEffectResource GetResourceAtPath(string path) => VisualEffectImports.ResourceAtPath(path);
 
-        public Object[] GetContents() => (Object[])m_Contents.Clone();
+        /// <summary>The file's objects: the graph's and the resource itself (as the Unity 6000.0.71f1
+        /// Editor lists them, tests/projects/vfxwrites import/contents).</summary>
+        public Object[] GetContents()
+        {
+            var contents = new Object[m_Contents.Length + 1];
+            Array.Copy(m_Contents, contents, m_Contents.Length);
+            contents[m_Contents.Length] = this;
+            return contents;
+        }
 
-        /// <summary>Makes a set of objects the file's contents. They become part of the asset
-        /// in memory; the file on disk stays as it is (Unbound writes no graph file).</summary>
+        /// <summary>Writes the graph's file from its objects (<see cref="VisualEffectWrites"/>).</summary>
+        public void WriteAsset()
+        {
+            // What Unbound cannot write yet is reported, and the file left as it is (the package
+            // calls this from AssetDatabase.SaveAssets' OnWillSaveAssets, which must go on).
+            try { VisualEffectWrites.Write(this); }
+            catch (NotSupportedException e) { Debug.LogError($"Unbound: {AssetDatabase.GetAssetPath(this)} is not written: {e.Message}"); }
+        }
+
+        /// <summary>Makes a set of objects the file's contents (the resource itself is not one of
+        /// them here); <see cref="WriteAsset"/> writes them.</summary>
         public void SetContents(Object[] dependencies)
         {
             var contents = new List<Object>();

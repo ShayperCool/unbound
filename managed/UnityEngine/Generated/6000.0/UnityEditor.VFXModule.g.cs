@@ -90,7 +90,6 @@ namespace UnityEditor.VFX
     {
         [global::Unbound.Stub] public void SetValueSheet(global::UnityEditor.VFX.VFXExpressionValueContainerDesc[] values) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.VFX.VisualEffectResource.SetValueSheet"); }
         [global::Unbound.Stub] public void ValidateAsset() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.VFX.VisualEffectResource.ValidateAsset"); }
-        [global::Unbound.Stub] public void WriteAsset() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.VFX.VisualEffectResource.WriteAsset"); }
         [global::Unbound.Stub] public static void DeleteAtPath(string path) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.VFX.VisualEffectResource.DeleteAtPath"); }
         [global::Unbound.Stub] public void SetAssetPath(string path) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.VFX.VisualEffectResource.SetAssetPath"); }
         [global::Unbound.Stub] public void ShowGeneratedShaderFile(int index, int line = 0) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.VFX.VisualEffectResource.ShowGeneratedShaderFile"); }
