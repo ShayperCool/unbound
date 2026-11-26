@@ -97,8 +97,17 @@ namespace UnityEngine
     [ClassId(220)]
     public sealed partial class LightProbeGroup : Behaviour
     {
-        Vector3[] m_SourcePositions = Array.Empty<Vector3>();
+        Vector3[] m_SourcePositions = Compat.DefaultConstructorStateMeasured ? NewGroupPositions() : Array.Empty<Vector3>();
         bool m_Dering = true;
+
+        /// <summary>The probes a group added in the Editor starts with: the corners of a cube of
+        /// half-size 1, x then y then z from + to - (Unity 6000.0.71f1, tests/projects/defaultcontrols
+        /// lpg.added; a loaded group keeps its own, also none; other releases unmeasured, none).</summary>
+        static Vector3[] NewGroupPositions() => new[]
+        {
+            new Vector3(1, 1, 1), new Vector3(1, 1, -1), new Vector3(1, -1, 1), new Vector3(1, -1, -1),
+            new Vector3(-1, 1, 1), new Vector3(-1, 1, -1), new Vector3(-1, -1, 1), new Vector3(-1, -1, -1),
+        };
 
         public LightProbeGroup() { }
 

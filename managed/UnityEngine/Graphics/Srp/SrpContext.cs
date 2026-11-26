@@ -149,21 +149,41 @@ namespace UnityEngine.Rendering
 
         internal CullingData Data => Culling.Get(ptr);
 
-        public NativeArray<VisibleLight> visibleLights => Data?.Lights ?? default;
-        public NativeArray<VisibleLight> visibleOffscreenVertexLights => Data?.OffscreenVertexLights ?? default;
-        public NativeArray<VisibleReflectionProbe> visibleReflectionProbes => Data?.Probes ?? default;
+        /// <summary>A default instance has no results: its lists throw NullReferenceException and
+        /// its other members InvalidOperationException, as in Unity 6000.0.71f1 (its C# validates
+        /// the results pointer; tests/projects/defaultcontrols culling.default.*; other releases
+        /// unmeasured, empty results).</summary>
+        void ThrowIfInvalid()
+        {
+            if (ptr == IntPtr.Zero && Compat.DefaultConstructorStateMeasured)
+                throw new InvalidOperationException("The CullingResults instance is invalid. This can happen if you construct an instance using the default constructor.");
+        }
 
-        public int lightIndexCount { get { Unbound.Runtime.Stubs.Ignored("CullingResults.lightIndexCount", "is not honoured yet: per-object light and reflection probe index lists are not built"); return 0; } }
-        public int reflectionProbeIndexCount { get { Unbound.Runtime.Stubs.Ignored("CullingResults.reflectionProbeIndexCount", "is not honoured yet: per-object light and reflection probe index lists are not built"); return 0; } }
-        public int lightAndReflectionProbeIndexCount { get { Unbound.Runtime.Stubs.Ignored("CullingResults.lightAndReflectionProbeIndexCount", "is not honoured yet: per-object light and reflection probe index lists are not built"); return 0; } }
+        CullingData Lists => ptr != IntPtr.Zero || !Compat.DefaultConstructorStateMeasured ? Data : throw new NullReferenceException();
 
-        public void FillLightAndReflectionProbeIndices(ComputeBuffer computeBuffer) =>
+        public NativeArray<VisibleLight> visibleLights => Lists?.Lights ?? default;
+        public NativeArray<VisibleLight> visibleOffscreenVertexLights => Lists?.OffscreenVertexLights ?? default;
+        public NativeArray<VisibleReflectionProbe> visibleReflectionProbes => Lists?.Probes ?? default;
+
+        public int lightIndexCount { get { ThrowIfInvalid(); Unbound.Runtime.Stubs.Ignored("CullingResults.lightIndexCount", "is not honoured yet: per-object light and reflection probe index lists are not built"); return 0; } }
+        public int reflectionProbeIndexCount { get { ThrowIfInvalid(); Unbound.Runtime.Stubs.Ignored("CullingResults.reflectionProbeIndexCount", "is not honoured yet: per-object light and reflection probe index lists are not built"); return 0; } }
+        public int lightAndReflectionProbeIndexCount { get { ThrowIfInvalid(); Unbound.Runtime.Stubs.Ignored("CullingResults.lightAndReflectionProbeIndexCount", "is not honoured yet: per-object light and reflection probe index lists are not built"); return 0; } }
+
+        public void FillLightAndReflectionProbeIndices(ComputeBuffer computeBuffer)
+        {
+            ThrowIfInvalid();
             Unbound.Runtime.Stubs.Ignored("CullingResults.FillLightAndReflectionProbeIndices", "is not honoured yet: per-object light and reflection probe index lists are not built");
-        public void FillLightAndReflectionProbeIndices(GraphicsBuffer buffer) =>
+        }
+
+        public void FillLightAndReflectionProbeIndices(GraphicsBuffer buffer)
+        {
+            ThrowIfInvalid();
             Unbound.Runtime.Stubs.Ignored("CullingResults.FillLightAndReflectionProbeIndices", "is not honoured yet: per-object light and reflection probe index lists are not built");
+        }
 
         public NativeArray<int> GetLightIndexMap(Allocator allocator)
         {
+            ThrowIfInvalid();
             var data = Data;
             int n = data?.Lights.Length ?? 0;
             var map = new NativeArray<int>(n, allocator);
@@ -173,12 +193,14 @@ namespace UnityEngine.Rendering
 
         public void SetLightIndexMap(NativeArray<int> lightIndexMap)
         {
+            ThrowIfInvalid();
             var data = Data;
             if (data != null) data.LightIndexMap = lightIndexMap.ToArray();
         }
 
         public NativeArray<int> GetReflectionProbeIndexMap(Allocator allocator)
         {
+            ThrowIfInvalid();
             var data = Data;
             int n = data?.Probes.Length ?? 0;
             var map = new NativeArray<int>(n, allocator);
@@ -188,6 +210,7 @@ namespace UnityEngine.Rendering
 
         public void SetReflectionProbeIndexMap(NativeArray<int> lightIndexMap)
         {
+            ThrowIfInvalid();
             Unbound.Runtime.Stubs.Ignored("CullingResults.SetReflectionProbeIndexMap", "is stored but not honoured yet: per-object reflection probes do not follow it");
             var data = Data;
             if (data != null) data.ProbeIndexMap = lightIndexMap.ToArray();
@@ -197,6 +220,7 @@ namespace UnityEngine.Rendering
         /// (see <see cref="ShadowCasterCulling"/>).</summary>
         public bool GetShadowCasterBounds(int lightIndex, out Bounds outBounds)
         {
+            ThrowIfInvalid();
             outBounds = default;
             var data = Data;
             if (data == null || lightIndex < 0 || lightIndex >= data.Lights.Length) return false;
@@ -211,6 +235,7 @@ namespace UnityEngine.Rendering
         /// </summary>
         public bool ComputeSpotShadowMatricesAndCullingPrimitives(int activeLightIndex, out Matrix4x4 viewMatrix, out Matrix4x4 projMatrix, out ShadowSplitData shadowSplitData)
         {
+            ThrowIfInvalid();
             viewMatrix = projMatrix = Matrix4x4.identity;
             shadowSplitData = default;
             if (!LocalLight(activeLightIndex, LightType.Spot, out var light, out float near)) return false;
@@ -232,6 +257,7 @@ namespace UnityEngine.Rendering
         /// </summary>
         public bool ComputePointShadowMatricesAndCullingPrimitives(int activeLightIndex, CubemapFace cubemapFace, float fovBias, out Matrix4x4 viewMatrix, out Matrix4x4 projMatrix, out ShadowSplitData shadowSplitData)
         {
+            ThrowIfInvalid();
             viewMatrix = projMatrix = Matrix4x4.identity;
             shadowSplitData = default;
             if (!LocalLight(activeLightIndex, LightType.Point, out var light, out float near)) return false;
@@ -302,6 +328,7 @@ namespace UnityEngine.Rendering
         public bool ComputeDirectionalShadowMatricesAndCullingPrimitives(int activeLightIndex, int splitIndex, int splitCount, Vector3 splitRatio, int shadowResolution,
             float shadowNearPlaneOffset, out Matrix4x4 viewMatrix, out Matrix4x4 projMatrix, out ShadowSplitData shadowSplitData)
         {
+            ThrowIfInvalid();
             viewMatrix = projMatrix = Matrix4x4.identity;
             shadowSplitData = default;
             var data = Data;
@@ -583,7 +610,7 @@ namespace UnityEngine.Rendering
         }
 
         [global::System.Diagnostics.Conditional("ENABLE_UNITY_COLLECTIONS_CHECKS")]
-        internal void Validate() { }
+        internal void Validate() => ThrowIfInvalid();
 
         public bool Equals(CullingResults other) => ptr == other.ptr;
         public override bool Equals(object obj) => obj is CullingResults other && Equals(other);

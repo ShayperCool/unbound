@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using Unity.Collections;
+using Unbound.Runtime;
 using UnityEngine.Experimental.Rendering;
 
 namespace UnityEngine.Rendering
@@ -708,7 +709,7 @@ namespace UnityEngine.Rendering
         }
 
         public AttachmentDescriptor(RenderTextureFormat format)
-            : this(GraphicsFormatUtility.GetGraphicsFormat(format, RenderTextureReadWrite.Default)) { }
+            : this(AdjustedFormat(format)) { }
 
         public AttachmentDescriptor(RenderTextureFormat format, RenderTargetIdentifier target, bool loadExistingContents = false, bool storeResults = false, bool resolve = false)
             : this(format)
@@ -720,7 +721,21 @@ namespace UnityEngine.Rendering
         public RenderBufferLoadAction loadAction { get => m_LoadAction; set => m_LoadAction = value; }
         public RenderBufferStoreAction storeAction { get => m_StoreAction; set => m_StoreAction = value; }
         public GraphicsFormat graphicsFormat { get => m_Format; set => m_Format = value; }
-        public RenderTextureFormat format { get => GraphicsFormatUtility.GetRenderTextureFormat(m_Format); set => m_Format = GraphicsFormatUtility.GetGraphicsFormat(value, RenderTextureReadWrite.Default); }
+        /// <summary>A depth or stencil attachment is Depth; and a Depth or Shadowmap format is the
+        /// device's default depth-stencil or shadow format, as Unity 6000.0.71f1's own descriptor
+        /// (tests/projects/defaultcontrols attach.*; other releases keep the previous mapping,
+        /// unmeasured).</summary>
+        public RenderTextureFormat format
+        {
+            get => Compat.DefaultConstructorStateMeasured && GraphicsFormatUtility.IsDepthStencilFormat(m_Format)
+                ? RenderTextureFormat.Depth : GraphicsFormatUtility.GetRenderTextureFormat(m_Format);
+            set => m_Format = AdjustedFormat(value);
+        }
+
+        static GraphicsFormat AdjustedFormat(RenderTextureFormat format) =>
+            Compat.DefaultConstructorStateMeasured && (format == RenderTextureFormat.Depth || format == RenderTextureFormat.Shadowmap)
+                ? SystemInfo.GetGraphicsFormat(format == RenderTextureFormat.Depth ? DefaultFormat.DepthStencil : DefaultFormat.Shadow)
+                : GraphicsFormatUtility.GetGraphicsFormat(format, RenderTextureReadWrite.Default);
         public RenderTargetIdentifier loadStoreTarget { get => m_LoadStoreTarget; set => m_LoadStoreTarget = value; }
         public RenderTargetIdentifier resolveTarget { get => m_ResolveTarget; set => m_ResolveTarget = value; }
         public Color clearColor { get => m_ClearColor; set => m_ClearColor = value; }

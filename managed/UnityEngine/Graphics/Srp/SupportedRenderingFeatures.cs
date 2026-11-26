@@ -71,8 +71,15 @@ namespace UnityEngine.Rendering
         public bool supportsHDR { get; set; }
         public bool supportsClouds { get; set; }
         public string overridesLightProbeSystemWarningMessage { get; set; } = "Light Probe Groups are unavailable as Probe Volumes have been enabled by the current Render Pipeline.";
+        /// <summary>Deprecated: always true, and setting it does nothing, as Unity 6000.0.71f1's own
+        /// SupportedRenderingFeatures (other releases keep the stored value, unmeasured).</summary>
         [Obsolete("terrainDetailUnsupported is deprecated.")]
-        public bool terrainDetailUnsupported { get; set; }
+        public bool terrainDetailUnsupported
+        {
+            get => Unbound.Runtime.Compat.DefaultConstructorStateMeasured || m_TerrainDetailUnsupported;
+            set => m_TerrainDetailUnsupported = value;
+        }
+        bool m_TerrainDetailUnsupported;
 
         internal static bool IsMixedLightingModeSupported(MixedLightingMode mixedMode)
         {

@@ -247,7 +247,10 @@ namespace UnityEngine.Rendering
         /// <summary>Every scene's objects until set.</summary>
         public ulong sceneCullingMask
         {
-            get => m_isSceneCullingMaskSet != 0 ? m_sceneCullingMask : ulong.MaxValue;
+            // Until set, the Editor's default scene culling mask (Unity 6000.0.71f1;
+            // tests/projects/defaultcontrols bfs.*; other releases unmeasured).
+            get => m_isSceneCullingMaskSet != 0 ? m_sceneCullingMask
+                : Unbound.Runtime.Compat.DefaultConstructorStateMeasured ? UnityEditor.SceneManagement.SceneCullingMasks.DefaultSceneCullingMask : ulong.MaxValue;
             set { m_isSceneCullingMaskSet = 1; m_sceneCullingMask = value; }
         }
     }

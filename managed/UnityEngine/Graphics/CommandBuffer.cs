@@ -137,7 +137,10 @@ namespace UnityEngine.Rendering
         internal static readonly Dictionary<int, RenderTexture> NamedTemporaries = new Dictionary<int, RenderTexture>();
 
         readonly List<Action<Context>> m_Commands = new List<Action<Context>>();
-        string m_Name = "";
+        /// <summary>The name a new buffer has in Unity 6000.0.71f1 (tests/projects/defaultcontrols
+        /// cmd.*; other releases unmeasured, empty).</summary>
+        const string DefaultName = "Unnamed command buffer";
+        string m_Name = Compat.DefaultConstructorStateMeasured ? DefaultName : "";
         // What a camera's halos depend on (Unbound.Runtime.Halos): the color-only and other
         // ClearRenderTarget commands and the SetGlobalFloat commands recorded.
         int m_ColorClears, m_OtherClears, m_GlobalFloats;

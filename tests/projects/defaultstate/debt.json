@@ -1677,19 +1677,6 @@
       }
     },
     {
-      "key": "UnityEngine.GameObject/Property/UnityEngine.GameObject/sceneCullingMask",
-      "module": "UnityEngine.CoreModule",
-      "reason": "Q403 UnityEngine.CoreModule default-state migration: queued value versus value row; measure and fix the module default or getter behavior before removing this exact entry.",
-      "expected": {
-        "status": "value",
-        "value": "16140901064495857664"
-      },
-      "actual": {
-        "status": "value",
-        "value": "18446744073709551615"
-      }
-    },
-    {
       "key": "UnityEngine.HingeJoint/Property/UnityEngine.HingeJoint/limits",
       "module": "UnityEngine.PhysicsModule",
       "reason": "Q403 variable creation state: independent GPU Editor repeats differ in this value. The raw row remains visible; only the named numeric leaves are variable. Queue an initialized-context or relational control; this entry does not establish a default contract.",
@@ -1706,19 +1693,6 @@
       "expected": {
         "status": "value",
         "value": "[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]"
-      },
-      "actual": {
-        "status": "value",
-        "value": "[]"
-      }
-    },
-    {
-      "key": "UnityEngine.LightProbeGroup/Property/UnityEngine.LightProbeGroup/probePositions",
-      "module": "UnityEngine.CoreModule",
-      "reason": "Q403 UnityEngine.CoreModule default-state migration: queued value versus value row; measure and fix the module default or getter behavior before removing this exact entry.",
-      "expected": {
-        "status": "value",
-        "value": "[UnityEngine.Vector3{x=1;y=1;z=1},UnityEngine.Vector3{x=1;y=1;z=-1},UnityEngine.Vector3{x=1;y=-1;z=1},UnityEngine.Vector3{x=1;y=-1;z=-1},UnityEngine.Vector3{x=-1;y=1;z=1},UnityEngine.Vector3{x=-1;y=1;z=-1},UnityEngine.Vector3{x=-1;y=-1;z=1},UnityEngine.Vector3{x=-1;y=-1;z=-1}]"
       },
       "actual": {
         "status": "value",
@@ -1835,32 +1809,6 @@
       }
     },
     {
-      "key": "UnityEngine.RenderTextureDescriptor/Property/UnityEngine.RenderTextureDescriptor/colorFormat",
-      "module": "UnityEngine.CoreModule",
-      "reason": "Q403 UnityEngine.CoreModule default-state migration: queued value versus value row; measure and fix the module default or getter behavior before removing this exact entry.",
-      "expected": {
-        "status": "value",
-        "value": "enum:3"
-      },
-      "actual": {
-        "status": "value",
-        "value": "enum:1"
-      }
-    },
-    {
-      "key": "UnityEngine.Rendering.AsyncGPUReadbackRequest/Property/UnityEngine.Rendering.AsyncGPUReadbackRequest/done",
-      "module": "UnityEngine.CoreModule",
-      "reason": "Q403 UnityEngine.CoreModule default-state migration: queued value versus value row; measure and fix the module default or getter behavior before removing this exact entry.",
-      "expected": {
-        "status": "value",
-        "value": "true"
-      },
-      "actual": {
-        "status": "value",
-        "value": "false"
-      }
-    },
-    {
       "key": "UnityEngine.Rendering.AttachmentDescriptor/Property/UnityEngine.Rendering.AttachmentDescriptor/format",
       "module": "UnityEngine.CoreModule",
       "reason": "Q403 UnityEngine.CoreModule default-state migration: queued value versus value row; measure and fix the module default or getter behavior before removing this exact entry.",
@@ -1871,162 +1819,6 @@
       "actual": {
         "status": "value",
         "value": "enum:1"
-      }
-    },
-    {
-      "key": "UnityEngine.Rendering.BatchDrawRange/Field/UnityEngine.Rendering.BatchDrawRange/filterSettings",
-      "module": "UnityEngine.CoreModule",
-      "reason": "Q403 UnityEngine.CoreModule default-state migration: queued value versus value row; measure and fix the module default or getter behavior before removing this exact entry.",
-      "expected": {
-        "status": "value",
-        "value": "UnityEngine.Rendering.BatchFilterSettings{layer=0;rendererPriority=0;renderingLayerMask=0;allDepthSorted=false;batchLayer=0;motionMode=enum:0;receiveShadows=false;sceneCullingMask=16140901064495857664;shadowCastingMode=enum:0;staticShadowCaster=false}"
-      },
-      "actual": {
-        "status": "value",
-        "value": "UnityEngine.Rendering.BatchFilterSettings{layer=0;rendererPriority=0;renderingLayerMask=0;allDepthSorted=false;batchLayer=0;motionMode=enum:0;receiveShadows=false;sceneCullingMask=18446744073709551615;shadowCastingMode=enum:0;staticShadowCaster=false}"
-      }
-    },
-    {
-      "key": "UnityEngine.Rendering.BatchFilterSettings/Property/UnityEngine.Rendering.BatchFilterSettings/sceneCullingMask",
-      "module": "UnityEngine.CoreModule",
-      "reason": "Q403 UnityEngine.CoreModule default-state migration: queued value versus value row; measure and fix the module default or getter behavior before removing this exact entry.",
-      "expected": {
-        "status": "value",
-        "value": "16140901064495857664"
-      },
-      "actual": {
-        "status": "value",
-        "value": "18446744073709551615"
-      }
-    },
-    {
-      "key": "UnityEngine.Rendering.CommandBuffer/Property/UnityEngine.Rendering.CommandBuffer/name",
-      "module": "UnityEngine.CoreModule",
-      "reason": "Q403 UnityEngine.CoreModule default-state migration: queued value versus value row; measure and fix the module default or getter behavior before removing this exact entry.",
-      "expected": {
-        "status": "value",
-        "value": "string:Unnamed command buffer"
-      },
-      "actual": {
-        "status": "value",
-        "value": "string:"
-      }
-    },
-    {
-      "key": "UnityEngine.Rendering.CullingResults/Property/UnityEngine.Rendering.CullingResults/lightAndReflectionProbeIndexCount",
-      "module": "UnityEngine.CoreModule",
-      "reason": "Q403 UnityEngine.CoreModule default-state migration: queued getter-threw versus value row; measure and fix the module default or getter behavior before removing this exact entry.",
-      "expected": {
-        "status": "getter-threw",
-        "value": "System.InvalidOperationException"
-      },
-      "actual": {
-        "status": "value",
-        "value": "0"
-      }
-    },
-    {
-      "key": "UnityEngine.Rendering.CullingResults/Property/UnityEngine.Rendering.CullingResults/lightIndexCount",
-      "module": "UnityEngine.CoreModule",
-      "reason": "Q403 UnityEngine.CoreModule default-state migration: queued getter-threw versus value row; measure and fix the module default or getter behavior before removing this exact entry.",
-      "expected": {
-        "status": "getter-threw",
-        "value": "System.InvalidOperationException"
-      },
-      "actual": {
-        "status": "value",
-        "value": "0"
-      }
-    },
-    {
-      "key": "UnityEngine.Rendering.CullingResults/Property/UnityEngine.Rendering.CullingResults/reflectionProbeIndexCount",
-      "module": "UnityEngine.CoreModule",
-      "reason": "Q403 UnityEngine.CoreModule default-state migration: queued getter-threw versus value row; measure and fix the module default or getter behavior before removing this exact entry.",
-      "expected": {
-        "status": "getter-threw",
-        "value": "System.InvalidOperationException"
-      },
-      "actual": {
-        "status": "value",
-        "value": "0"
-      }
-    },
-    {
-      "key": "UnityEngine.Rendering.CullingResults/Property/UnityEngine.Rendering.CullingResults/visibleLights",
-      "module": "UnityEngine.CoreModule",
-      "reason": "Q403 UnityEngine.CoreModule default-state migration: queued getter-threw versus value row; measure and fix the module default or getter behavior before removing this exact entry.",
-      "expected": {
-        "status": "getter-threw",
-        "value": "System.NullReferenceException"
-      },
-      "actual": {
-        "status": "value",
-        "value": "[]"
-      }
-    },
-    {
-      "key": "UnityEngine.Rendering.CullingResults/Property/UnityEngine.Rendering.CullingResults/visibleOffscreenVertexLights",
-      "module": "UnityEngine.CoreModule",
-      "reason": "Q403 UnityEngine.CoreModule default-state migration: queued getter-threw versus value row; measure and fix the module default or getter behavior before removing this exact entry.",
-      "expected": {
-        "status": "getter-threw",
-        "value": "System.NullReferenceException"
-      },
-      "actual": {
-        "status": "value",
-        "value": "[]"
-      }
-    },
-    {
-      "key": "UnityEngine.Rendering.CullingResults/Property/UnityEngine.Rendering.CullingResults/visibleReflectionProbes",
-      "module": "UnityEngine.CoreModule",
-      "reason": "Q403 UnityEngine.CoreModule default-state migration: queued getter-threw versus value row; measure and fix the module default or getter behavior before removing this exact entry.",
-      "expected": {
-        "status": "getter-threw",
-        "value": "System.NullReferenceException"
-      },
-      "actual": {
-        "status": "value",
-        "value": "[]"
-      }
-    },
-    {
-      "key": "UnityEngine.Rendering.RendererListParams/Field/UnityEngine.Rendering.RendererListParams/cullingResults",
-      "module": "UnityEngine.CoreModule",
-      "reason": "Q403 UnityEngine.CoreModule default-state migration: queued value versus value row; measure and fix the module default or getter behavior before removing this exact entry.",
-      "expected": {
-        "status": "value",
-        "value": "UnityEngine.Rendering.CullingResults{lightAndReflectionProbeIndexCount=<System.InvalidOperationException>;lightIndexCount=<System.InvalidOperationException>;reflectionProbeIndexCount=<System.InvalidOperationException>;visibleLights=<System.NullReferenceException>;visibleOffscreenVertexLights=<System.NullReferenceException>;visibleReflectionProbes=<System.NullReferenceException>}"
-      },
-      "actual": {
-        "status": "value",
-        "value": "UnityEngine.Rendering.CullingResults{lightAndReflectionProbeIndexCount=0;lightIndexCount=0;reflectionProbeIndexCount=0;visibleLights=[];visibleOffscreenVertexLights=[];visibleReflectionProbes=[]}"
-      }
-    },
-    {
-      "key": "UnityEngine.Rendering.ShadowDrawingSettings/Property/UnityEngine.Rendering.ShadowDrawingSettings/cullingResults",
-      "module": "UnityEngine.CoreModule",
-      "reason": "Q403 UnityEngine.CoreModule default-state migration: queued value versus value row; measure and fix the module default or getter behavior before removing this exact entry.",
-      "expected": {
-        "status": "value",
-        "value": "UnityEngine.Rendering.CullingResults{lightAndReflectionProbeIndexCount=<System.InvalidOperationException>;lightIndexCount=<System.InvalidOperationException>;reflectionProbeIndexCount=<System.InvalidOperationException>;visibleLights=<System.NullReferenceException>;visibleOffscreenVertexLights=<System.NullReferenceException>;visibleReflectionProbes=<System.NullReferenceException>}"
-      },
-      "actual": {
-        "status": "value",
-        "value": "UnityEngine.Rendering.CullingResults{lightAndReflectionProbeIndexCount=0;lightIndexCount=0;reflectionProbeIndexCount=0;visibleLights=[];visibleOffscreenVertexLights=[];visibleReflectionProbes=[]}"
-      }
-    },
-    {
-      "key": "UnityEngine.Rendering.SupportedRenderingFeatures/Property/UnityEngine.Rendering.SupportedRenderingFeatures/terrainDetailUnsupported",
-      "module": "UnityEngine.CoreModule",
-      "reason": "Q403 UnityEngine.CoreModule default-state migration: queued value versus value row; measure and fix the module default or getter behavior before removing this exact entry.",
-      "expected": {
-        "status": "value",
-        "value": "true"
-      },
-      "actual": {
-        "status": "value",
-        "value": "false"
       }
     },
     {

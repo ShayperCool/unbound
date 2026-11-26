@@ -229,7 +229,11 @@ namespace UnityEngine
             }
         }
 
-        public ulong sceneCullingMask => ulong.MaxValue;
+        /// <summary>The Editor's default scene culling mask: an object of a scene, a new one, an inactive
+        /// one, one in DontDestroyOnLoad or in a created scene (Unity 6000.0.71f1,
+        /// tests/projects/defaultcontrols go.*; Unbound has no preview scene with a mask of its own;
+        /// other releases unmeasured, every bit).</summary>
+        public ulong sceneCullingMask => Compat.DefaultConstructorStateMeasured ? UnityEditor.SceneManagement.SceneCullingMasks.DefaultSceneCullingMask : ulong.MaxValue;
 
         public void SetActive(bool value)
         {

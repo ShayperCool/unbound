@@ -678,7 +678,9 @@ namespace UnityEngine.Rendering
             if (m_Ptr != IntPtr.Zero) AsyncReadbacks.Wait(m_Ptr);
         }
 
-        public bool done => m_Ptr != IntPtr.Zero && (Result?.Done ?? true);
+        /// <summary>Done once completed or released; a default request is done in Unity 6000.0.71f1
+        /// (tests/projects/defaultcontrols readback.default.done; other releases unmeasured).</summary>
+        public bool done => m_Ptr != IntPtr.Zero ? Result?.Done ?? true : Compat.DefaultConstructorStateMeasured;
         public bool hasError => Result is not { } r || r.HasError;
         public int layerCount => Available ? Result.Layers.Length : 0;
         public int layerDataSize => Available && Result.Layers.Length > 0 ? Result.Layers[0].Length : 0;

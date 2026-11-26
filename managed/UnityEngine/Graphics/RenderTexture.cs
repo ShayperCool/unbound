@@ -995,13 +995,22 @@ namespace UnityEngine
         }
         public GraphicsFormat depthStencilFormat { readonly get => m_DepthStencilFormat; set => m_DepthStencilFormat = value; }
 
-        /// <summary>The color format; a depth-only target is Depth, or Shadowmap when it compares
-        /// (measured: tests/projects/builtinrp rt.ProbeShadow).</summary>
+        /// <summary>The color format; without a color format, Depth, or Shadowmap when it samples
+        /// depth (compared or raw), whether it has a depth format or not, and setting it also sets
+        /// the depth format for the sampling mode, as Unity 6000.0.71f1's own descriptor
+        /// (tests/projects/builtinrp rt.ProbeShadow, tests/projects/defaultcontrols rtd.*; other
+        /// releases keep the previous rule, unmeasured).</summary>
         public RenderTextureFormat colorFormat
         {
-            get => m_GraphicsFormat == GraphicsFormat.None && m_DepthStencilFormat != GraphicsFormat.None
-                ? (shadowSamplingMode == ShadowSamplingMode.CompareDepths ? RenderTextureFormat.Shadowmap : RenderTextureFormat.Depth)
-                : GraphicsFormatUtility.GetRenderTextureFormat(m_GraphicsFormat);
+            get
+            {
+                if (m_GraphicsFormat != GraphicsFormat.None) return GraphicsFormatUtility.GetRenderTextureFormat(m_GraphicsFormat);
+                if (Compat.DefaultConstructorStateMeasured)
+                    return shadowSamplingMode == ShadowSamplingMode.None ? RenderTextureFormat.Depth : RenderTextureFormat.Shadowmap;
+                return m_DepthStencilFormat != GraphicsFormat.None
+                    ? (shadowSamplingMode == ShadowSamplingMode.CompareDepths ? RenderTextureFormat.Shadowmap : RenderTextureFormat.Depth)
+                    : GraphicsFormatUtility.GetRenderTextureFormat(m_GraphicsFormat);
+            }
             // The format in the descriptor's own encoding, as the device can render it; only a
             // Shadowmap compares (Unity 6000.0.71f1's RenderTextureDescriptor.colorFormat).
             set
@@ -1009,8 +1018,17 @@ namespace UnityEngine
                 shadowSamplingMode = value == RenderTextureFormat.Shadowmap ? ShadowSamplingMode.CompareDepths : ShadowSamplingMode.None;
                 var format = GraphicsFormatUtility.GetGraphicsFormat(value, sRGB);
                 graphicsFormat = SystemInfo.GetCompatibleFormat(format, GraphicsFormatUsage.Render);
+                if (Compat.DefaultConstructorStateMeasured) m_DepthStencilFormat = DepthFormatForBits(depthBufferBits);
             }
         }
+
+        /// <summary>The depth format of a bit count for the descriptor's sampling: one that samples
+        /// depth (compared or raw) takes a shadow map's (Unity 6000.0.71f1's descriptor; other
+        /// releases unmeasured, the depth-stencil format of the bits whatever the sampling).</summary>
+        GraphicsFormat DepthFormatForBits(int bits) =>
+            Compat.DefaultConstructorStateMeasured && shadowSamplingMode != ShadowSamplingMode.None
+                ? GraphicsFormatUtility.ShadowmapDepthFormatForBits(bits)
+                : GraphicsFormatUtility.DepthStencilFormatForBits(bits);
 
         public bool sRGB
         {
@@ -1024,7 +1042,7 @@ namespace UnityEngine
         public int depthBufferBits
         {
             get => GraphicsFormatUtility.GetDepthBits(m_DepthStencilFormat);
-            set => m_DepthStencilFormat = GraphicsFormatUtility.DepthStencilFormatForBits(value);
+            set => m_DepthStencilFormat = DepthFormatForBits(value);
         }
 
         void SetFlag(RenderTextureCreationFlags flag, bool on)
