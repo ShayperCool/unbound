@@ -44,4 +44,11 @@
 {"k":"codedom.type","v":"System.Int32"}
 {"k":"call.tarball","v":"tarball package"}
 {"k":"call.converter","v":"UnityEditor.Rendering.Universal.U2DToURPPixelPerfectConverter"}
+{"k":"location.plugin.self","v":"<project>/Assets/Plugins/Location/LocationProbe.dll"}
+{"k":"codebase.plugin.self","v":"file://<project>/Assets/Plugins/Location/LocationProbe.dll"}
+{"k":"location.plugin","v":"<project>/Assets/Plugins/Location/LocationProbe.dll"}
+{"k":"codebase.plugin","v":"file://<project>/Assets/Plugins/Location/LocationProbe.dll"}
+{"k":"location.package_plugin","v":"<project>/Packages/com.probe.setup/Plugins/ProbeDup.dll"}
+{"k":"location.scripts","v":"<project>/Library/ScriptAssemblies/Assembly-CSharp.dll"}
+{"k":"codebase.scripts","v":"file://<project>/Library/ScriptAssemblies/Assembly-CSharp.dll"}
 {"k":"complete","v":true}

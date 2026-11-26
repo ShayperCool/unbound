@@ -10,7 +10,8 @@ Plugins sharing an assembly name (README.md): ProbeDup 1.0.0.0 in Assets/Plugins
 in the embedded package, whose `.meta` has no importer settings; ProbeSame 1.0.0.0 in
 Assets/Plugins/Same and in the embedded package; ProbeOrder 1.0.0.0 in Assets/Plugins/Order1
 (GUID ff...) and Assets/Plugins/Order2 (GUID 00...); ProbeAlias 1.0.0.0 as Assets/Plugins/Alias/ProbeAlias.dll
-and 2.0.0.0 as the package's ProbeAliasNew.dll, both with Auto Reference off."""
+and 2.0.0.0 as the package's ProbeAliasNew.dll, both with Auto Reference off. LocationProbe (x86) in
+Assets/Plugins/Location reads its own Location and CodeBase."""
 import gzip
 import hashlib
 import io
@@ -40,7 +41,12 @@ PLUGINS = [
     # only where an assembly names them: both in one assembly do not compile (CS1704).
     ('ProbeAlias.v1.cs', HERE/'Assets/Plugins/Alias/ProbeAlias.dll', None, 'explicit'),
     ('ProbeAlias.v2.cs', PACKAGE/'Plugins/ProbeAliasNew.dll', None, 'explicit'),
+    # A plugin that reads its own Location and CodeBase, built for x86 (32-bit required), as older
+    # plugins are: Unbound loads such an image from an adapted copy.
+    ('LocationProbe.cs', HERE/'Assets/Plugins/Location/LocationProbe.dll', None, True),
 ]
+# Plugins built for one platform.
+PLATFORMS = {'LocationProbe.cs': 'x86'}
 
 PLUGIN_IMPORTER = '''PluginImporter:
   externalObjects: {}
@@ -111,14 +117,15 @@ def csc():
     return [dotnet, str(sdk/'Roslyn/bincore/csc.dll')]
 
 
-def build(source, output):
+def build(source, output, platform='anycpu'):
     """Compiles `source` into `output`; the assembly is named after the source's first part (the
     file can be named otherwise: ProbeAliasNew.dll holds ProbeAlias)."""
     output.parent.mkdir(parents=True, exist_ok=True)
     with tempfile.TemporaryDirectory() as tmp:
         built = Path(tmp)/(source.name.split('.')[0]+'.dll')
         subprocess.run(csc() + ['-nologo', '-noconfig', '-nostdlib', '-deterministic', '-optimize+', '-debug-',
-                                '-target:library', f'-out:{built}', f'-r:{netstandard()}', str(source)], check=True)
+                                '-target:library', f'-platform:{platform}', f'-out:{built}', f'-r:{netstandard()}',
+                                str(source)], check=True)
         shutil.copyfile(built, output)
 
 
@@ -168,7 +175,7 @@ def main():
             meta.unlink()
     plugin_files = set()
     for source, output, guid, settings in PLUGINS:
-        build(HERE/'PluginSources'/source, output)
+        build(HERE/'PluginSources'/source, output, PLATFORMS.get(source, 'anycpu'))
         relative = str(output.relative_to(HERE))
         importer = PLUGIN_IMPORTER if settings else ''
         if settings == 'explicit':

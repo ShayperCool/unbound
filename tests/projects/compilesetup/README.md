@@ -39,6 +39,12 @@ plugins, the local tarball package and the `.meta` files from `PluginSources/` a
 * `call.editor_only`, `codedom.*`: a runtime script calls the Editor-only package assembly under
   `#if UNITY_EDITOR`; that assembly uses `CSharpCodeProvider` and `CodeTypeReference`.
 * `call.tarball`: the tarball package's runtime assembly.
+* `location.*`, `codebase.*`: `Assembly.Location` and `Assembly.CodeBase` of `LocationProbe`
+  (`Assets/Plugins/Location`, built for x86, so Unbound loads an adapted image) as its own code and a
+  script read them, of the package's `ProbeDup` and of `Assembly-CSharp`, with the project's path as
+  `<project>` (a file outside it as `<outside>/<name>`). Measured: a plugin names its own file in the
+  project, a script assembly `<project>/Library/ScriptAssemblies/<name>.dll`; CodeBase is `file://`
+  and the path.
 * `call.converter`: `com.unity.2d.pixel-perfect` 5.0.3 with URP 17.0.4. Its Editor assembly names
   URP's `PixelPerfectCamera` through `UnityEngine.Experimental.Rendering.Universal`, where the type
   was before it moved (`[MovedFrom]`): the Editor's script updater rewrites the package's scripts

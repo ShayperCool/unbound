@@ -51,6 +51,7 @@ public class CompileSetupProbe : MonoBehaviour
         Plugins();
         Assemblies();
         Calls();
+        Locations();
         output.Write("{\"k\":\"complete\",\"v\":true}\n");
         output.Close();
 #if UNITY_EDITOR
@@ -101,6 +102,32 @@ public class CompileSetupProbe : MonoBehaviour
             Row("assembly." + a.name + ".plugins", string.Join(",", a.compiledAssemblyReferences.Where(OurPlugin).Select(Plugin).OrderBy(n => n, StringComparer.Ordinal)));
         }
 #endif
+    }
+
+    /// <summary>Assembly.Location and CodeBase: of a plugin as its own code and a script read them,
+    /// of a package's plugin and of the scripts' assembly, the project's path as `<project>` (a
+    /// path outside the project as `<outside>/` and the file name).</summary>
+    static void Locations()
+    {
+        var project = Path.GetDirectoryName(Application.dataPath).Replace('\\', '/') + "/";
+        string Normal(string path)
+        {
+            if (path == null) return "null";
+            path = path.Replace('\\', '/');
+            var scheme = path.StartsWith("file://", StringComparison.Ordinal) ? "file://" : "";
+            path = path.Substring(scheme.Length);
+            if (path.StartsWith(project, StringComparison.Ordinal)) return scheme + "<project>/" + path.Substring(project.Length);
+            return scheme + (path.Length == 0 ? "" : "<outside>/" + Path.GetFileName(path));
+        }
+#pragma warning disable SYSLIB0012
+        Try("location.plugin.self", () => Normal(LocationProbe.Marker.Location()));
+        Try("codebase.plugin.self", () => Normal(LocationProbe.Marker.CodeBase()));
+        Try("location.plugin", () => Normal(typeof(LocationProbe.Marker).Assembly.Location));
+        Try("codebase.plugin", () => Normal(typeof(LocationProbe.Marker).Assembly.CodeBase));
+        Try("location.package_plugin", () => Normal(typeof(ProbeDup.Marker).Assembly.Location));
+        Try("location.scripts", () => Normal(typeof(CompileSetupProbe).Assembly.Location));
+        Try("codebase.scripts", () => Normal(typeof(CompileSetupProbe).Assembly.CodeBase));
+#pragma warning restore SYSLIB0012
     }
 
     static void Calls()
