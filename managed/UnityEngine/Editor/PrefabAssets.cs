@@ -20,8 +20,9 @@ namespace Unbound.Runtime
     {
         static readonly ConditionalWeakTable<LoadedFile, Dictionary<Object, long>> s_Stripped = new ConditionalWeakTable<LoadedFile, Dictionary<Object, long>>();
 
-        /// <summary>The loaded prefabs that could not take a prefab they hold instances of as it was
-        /// written (<see cref="RefreshDependents"/>), with that prefab's path: they are not written.</summary>
+        /// <summary>The loaded prefabs holding instances of a prefab written in this session (its
+        /// variants, the prefabs nesting it, and theirs), with that prefab's path: Unbound does not
+        /// write them again in the session (<see cref="RefreshDependents"/>).</summary>
         static readonly ConditionalWeakTable<LoadedFile, string> s_StaleSince = new ConditionalWeakTable<LoadedFile, string>();
 
         /// <summary>The loaded prefab of an asset path (null: none).</summary>
@@ -47,11 +48,12 @@ namespace Unbound.Runtime
                 Debug.LogError($"Unbound: {file?.Path} is not saved: the prefab has no root GameObject.");
                 return false;
             }
-            // Its objects still hold a prefab's values from before that prefab was written: writing
-            // them would put overrides of old values into the file, which the Editor does not write.
+            // A prefab it holds instances of was written in the session: the Editor loads it again
+            // from its file then; Unbound does not, so it does not write it (its objects could hold
+            // that prefab's values from before, written as overrides the Editor does not write).
             if (s_StaleSince.TryGetValue(file, out var source))
             {
-                Debug.LogWarning($"Unbound: {file.Path} is not saved: {source}, which it holds instances of, was saved while it had changes of its own, and Unbound does not load it again as the Editor does (its file is left as it is).");
+                Debug.LogWarning($"Unbound: {file.Path} is not saved: {source}, which it holds instances of, was saved in this session, and Unbound does not write a prefab after a prefab it holds was saved (the Editor loads it again); its changes since are not saved either.");
                 return false;
             }
             root.m_Name = Path.GetFileNameWithoutExtension(file.Path);
@@ -110,51 +112,82 @@ namespace Unbound.Runtime
 
         /// <summary>
         /// The loaded prefabs holding instances of <paramref name="written"/> (its variants, the
-        /// prefabs nesting it) take it as it was written, as the Editor imports them again: each
-        /// instance takes its source's values and its file's modifications, its unsaved changes
-        /// dropped, and the prefab is no longer dirty (matches the Unity 6000.0.71f1 Editor,
-        /// tests/projects/scenesave prefab-dirty-saves dependent.*, dependentOwn.*, nesting.*); their
-        /// scene instances and their own dependents follow. One that holds unsaved changes outside
-        /// those instances, modifications changed since it was read, or instances whose objects the
-        /// written prefab no longer matches cannot be loaded again so: it keeps its objects and is
-        /// not written (<see cref="Save"/>), with a warning.
+        /// prefabs nesting it, then theirs, by every path) take it as it was written for what is read
+        /// of them, as the Editor loads them again: each instance takes its source's values and its
+        /// file's modifications, its unsaved changes dropped, and the prefab is no longer dirty
+        /// (matches the Unity 6000.0.71f1 Editor, tests/projects/scenesave prefab-dirty-saves
+        /// dependent.*, dependentOwn.*, nesting.*); their scene instances follow. An instance whose
+        /// objects the written prefab no longer matches keeps its objects. None of them is written
+        /// again in the session (<see cref="Save"/>, with a warning): the Editor writes them
+        /// unchanged after such a load (dependent.file, nesting.file), and what Unbound holds of them
+        /// may not be what the Editor loads.
         /// </summary>
-        static void RefreshDependents(LoadedFile written, HashSet<string> seen)
+        static void RefreshDependents(LoadedFile written, HashSet<string> path)
         {
             foreach (var dependent in AssetDatabaseRuntime.LoadedFiles())
             {
-                if (dependent == null || dependent.Guid == null || seen.Contains(dependent.Guid)) continue;
+                if (dependent == null || dependent.Guid == null || path.Contains(dependent.Guid)) continue;
                 if (dependent.MainObject is not GameObject root || root == null) continue;
                 if (dependent.Path == null || !dependent.Path.EndsWith(".prefab", StringComparison.OrdinalIgnoreCase)) continue;
                 var instances = InstancesIn(root, written.Guid);
                 if (instances.Count == 0) continue;
-                seen.Add(dependent.Guid);
-                var members = new HashSet<Object>(ReferenceEqualityComparer.Instance);
-                foreach (var (data, instanceRoot) in instances)
-                    foreach (var o in PrefabInstances.ObjectsOf(data, instanceRoot)) members.Add(o);
-                string why = null;
-                foreach (var o in dependent.Objects.Values)
-                    if (o is not null && !o.m_Destroyed && EditorUtility.IsDirty(o) && !members.Contains(o)) why ??= "it has unsaved changes of its own";
-                foreach (var (data, instanceRoot) in instances)
-                {
-                    if (data.Edited) why ??= "its modifications were changed since it was read";
-                    else if (!MatchesSource(data, instanceRoot)) why ??= "the objects of its instances changed";
-                }
-                if (why != null)
-                {
-                    s_StaleSince.AddOrUpdate(dependent, written.Path);
-                    Debug.LogWarning($"Unbound: {dependent.Path} keeps the values it had before {written.Path} was saved ({why}): Unbound does not load it again as the Editor does, and does not save it.");
-                    continue;
-                }
+                if (!s_StaleSince.TryGetValue(dependent, out _)) s_StaleSince.AddOrUpdate(dependent, written.Path);
                 var change = new Change(dependent);
                 var refs = new ValueReferences();
+                bool merged = false;
                 foreach (var (data, instanceRoot) in instances)
+                {
+                    if (!MatchesSource(data, instanceRoot)) continue;
                     PrefabInstances.Merge(data, PrefabInstances.Capture(data, refs, liveDifferences: false, root: instanceRoot), instanceRoot);
+                    merged = true;
+                }
                 foreach (var o in dependent.Objects.Values)
                     if (o is not null && !o.m_Destroyed) EditorUtility.ClearDirty(o);
-                change.MergeInstances();
-                RefreshDependents(dependent, seen);
+                foreach (var (data, instanceRoot) in instances)
+                    foreach (var o in PrefabInstances.ObjectsOf(data, instanceRoot)) EditorUtility.ClearDirty(o);
+                if (merged) change.MergeInstances();
+                path.Add(dependent.Guid);
+                RefreshDependents(dependent, path);
+                path.Remove(dependent.Guid);
             }
+        }
+
+        /// <summary>The prefabs whose instances a loaded prefab holds (its base, the prefabs it
+        /// nests, at any depth), by GUID.</summary>
+        internal static HashSet<string> SourcesHeld(LoadedFile file)
+        {
+            var sources = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            if (file?.MainObject is not GameObject root || root == null) return sources;
+            void Walk(Transform t)
+            {
+                if (PrefabLinks.Of(t.m_GameObject)?.Instance is PrefabInstanceData data && data.InAsset && data.SourceGuid != null)
+                    sources.Add(data.SourceGuid);
+                foreach (var child in t.m_Children) Walk(child);
+            }
+            Walk(root.transform);
+            return sources;
+        }
+
+        /// <summary>The files to write in the order that writes a prefab before the prefabs holding
+        /// instances of it, else in path order (<paramref name="sources"/>: a file's held prefabs).</summary>
+        internal static List<string> SourcesFirst(IEnumerable<(string Guid, string Path)> files, Func<string, ICollection<string>> sources)
+        {
+            var byPath = new List<(string Guid, string Path)>(files);
+            byPath.Sort((a, b) => string.CompareOrdinal(a.Path, b.Path));
+            var pending = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var f in byPath) pending.Add(f.Guid);
+            var order = new List<string>();
+            var visiting = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            void Visit(string guid)
+            {
+                if (!pending.Contains(guid) || !visiting.Add(guid)) return;
+                foreach (var held in sources(guid) ?? Array.Empty<string>())
+                    if (!string.Equals(held, guid, StringComparison.OrdinalIgnoreCase)) Visit(held);
+                pending.Remove(guid);
+                order.Add(guid);
+            }
+            foreach (var f in byPath) Visit(f.Guid);
+            return order;
         }
 
         /// <summary>Marks a loaded prefab as one that could not take a prefab it holds instances of.</summary>

@@ -93,8 +93,14 @@ namespace Unbound.Runtime
                         if (byGuid[guid].Count == 0 || (!save.Contains(path) && !AssetDatabase.IsImmutablePackagePath(path))) byGuid.Remove(guid);
                     }
                 }
-                foreach (var pair in byGuid)
+                // A prefab is written before the prefabs holding instances of it (which are then not
+                // written: PrefabAssets.RefreshDependents), the others in path order.
+                var files = new List<(string, string)>();
+                foreach (var guid in byGuid.Keys) files.Add((guid, AssetDatabaseRuntime.PathOf(guid) ?? guid));
+                var order = PrefabAssets.SourcesFirst(files, guid => PrefabAssets.FileOf(guid) is { } prefab ? PrefabAssets.SourcesHeld(prefab) : null);
+                foreach (var guid in order)
                 {
+                    var pair = new KeyValuePair<string, List<Object>>(guid, byGuid[guid]);
                     try { Save(pair.Key, pair.Value, unchangedStays, writePrefabs, exit); }
                     catch (Exception e) when (e is IOException || e is NotSupportedException || e is UnauthorizedAccessException)
                     {

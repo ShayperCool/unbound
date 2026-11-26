@@ -21,6 +21,10 @@ const RENDERING_LIMITATIONS: &[&str] = &[
     "Game-view Gizmos.DrawGUITexture is not supported; Scene-view rendering is not available.",
 ];
 
+const ASSET_WRITE_LIMITATIONS: &[&str] = &[
+    "A prefab holding instances of a prefab saved in the same session (a variant of it, a prefab nesting it) is not written again in that session, its own changes since included: the Editor loads such a prefab again from its file, Unbound does not (it warns at each save it skips).",
+];
+
 const AUDIO_LIMITATIONS: &[&str] = &[
     "3D AudioDistortionFilter and AudioChorusFilter are measured only for the Unity 6000.0 release family (measured on 6000.0.71f1); other families reject these placements.",
     "AudioListener script/component interleaving is measured only for the Unity 6000.0 release family (measured on 6000.0.71f1); sharing the listener GameObject with an AudioSource is unsupported.",
@@ -369,6 +373,7 @@ pub fn doctor(args: &ProjectArgs, all: bool, as_json: bool) -> Result<()> {
                     .collect::<Vec<_>>(),
             },
             "audioLimitations": AUDIO_LIMITATIONS,
+            "assetWriteLimitations": ASSET_WRITE_LIMITATIONS,
             "playModeSpriteAtlases": play_mode_atlases.as_ref().map(|a| json!({"mode": a.mode, "atlases": a.paths})),
             "unsupportedMessages": messages.messages,
             "messageAnalysisFailedAssemblies": messages.failed_assemblies,
@@ -430,6 +435,10 @@ pub fn doctor(args: &ProjectArgs, all: bool, as_json: bool) -> Result<()> {
     }
     println!("\nAudio limitations:");
     for limitation in AUDIO_LIMITATIONS {
+        println!("  {limitation}");
+    }
+    println!("\nAsset write limitations:");
+    for limitation in ASSET_WRITE_LIMITATIONS {
         println!("  {limitation}");
     }
     field_coverage.print();
