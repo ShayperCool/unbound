@@ -247,6 +247,7 @@ namespace Unbound.Runtime
             obj.IsPersistentAsset = true;
             file.Object = obj;
             s_ByObject[obj] = file;
+            if (obj is UnityEditor.Presets.PresetManager) UnityEditor.Presets.PresetManager.Loaded(file.Body);
             return true;
         }
 

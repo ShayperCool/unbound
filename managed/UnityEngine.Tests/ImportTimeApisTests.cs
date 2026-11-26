@@ -44,9 +44,16 @@ namespace UnityEngine.Tests
             var shader = ShaderUtil.CreateShaderAsset("Shader \"Tests/ImportTimeApis/Registered\" { SubShader { Pass { } } }");
             try
             {
+                // Not findable until it is registered.
+                Shader.Unregister(shader);
+                Assert.Null(Shader.Find("Tests/ImportTimeApis/Registered"));
                 ShaderUtil.RegisterShader(shader);
                 Assert.Same(shader, Shader.Find("Tests/ImportTimeApis/Registered"));
                 Assert.Throws<ArgumentNullException>(() => ShaderUtil.RegisterShader(null));
+                // A destroyed shader is a missing reference, as for other object arguments.
+                var gone = ShaderUtil.CreateShaderAsset("Shader \"Tests/ImportTimeApis/Gone\" { SubShader { Pass { } } }");
+                Object.DestroyImmediate(gone);
+                Assert.Throws<MissingReferenceException>(() => ShaderUtil.RegisterShader(gone));
                 Assert.Empty(m_Logs.Lines);
             }
             finally { Object.DestroyImmediate(shader); }
@@ -83,6 +90,9 @@ namespace UnityEngine.Tests
         [Fact]
         public void ImportTimeObjectsAreMadeWithoutNotices()
         {
+            // A notice is logged once per member in a process: forget earlier tests' uses.
+            foreach (var member in new[] { "UnityEditor.ActiveEditorTracker.ForceRebuild", "UnityEditor.TrueTypeFontImporter.ctor", "UnityEditor.Presets.PresetManager.ctor", "UnityEditor.ComputeShaderImporter.ctor" })
+                Stubs.Forget(member);
             ActiveEditorTracker.sharedTracker.ForceRebuild();
             Assert.Empty(ActiveEditorTracker.sharedTracker.activeEditors);
             // A font's importer, as a font's import makes it from its .meta, and the preset settings.
@@ -90,9 +100,28 @@ namespace UnityEngine.Tests
                 TestYaml.DocumentBody("TrueTypeFontImporter:\n  fontSize: 16\n"));
             Assert.IsType<TrueTypeFontImporter>(font);
             Object.DestroyImmediate(font);
+            var compute = AssetImporter.FromMeta("Assets/Shaders/Blur.compute", "a123456789abcdef0123456789abcdef", "ComputeShaderImporter",
+                TestYaml.DocumentBody("ComputeShaderImporter:\n  externalObjects: {}\n"));
+            Assert.IsType<UnityEditor.ComputeShaderImporter>(compute);
+            Object.DestroyImmediate(compute);
             var presets = new UnityEditor.Presets.PresetManager();
             Object.DestroyImmediate(presets);
             Assert.DoesNotContain(m_Logs.Lines, l => l.Contains("not implemented"));
         }
+
+        [Fact]
+        public void PresetSettingsWithDefaultPresetsSayTheyAreNotApplied()
+        {
+            Stubs.Forget(UnityEditor.Presets.PresetManager.DefaultPresetsNotice);
+            UnityEditor.Presets.PresetManager.Loaded(UnityYamlText.Parse(Settings("m_DefaultPresets: {}"))[0].Body);
+            Assert.Empty(m_Logs.Lines);
+            UnityEditor.Presets.PresetManager.Loaded(UnityYamlText.Parse(Settings(
+                "m_DefaultPresets:\n    1060208752:\n    - m_Preset: {fileID: 2655988077585873504, guid: 0123456789abcdef0123456789abcdef, type: 2}\n      m_Filter: \n      m_Disabled: 0"))[0].Body);
+            Assert.Equal(new[] { "Warning: Unbound: PresetManager default presets are not applied to new imports or objects yet" }, m_Logs.Lines);
+            Stubs.Forget(UnityEditor.Presets.PresetManager.DefaultPresetsNotice);
+        }
+
+        static string Settings(string presets) =>
+            "%YAML 1.1\n%TAG !u! tag:unity3d.com,2011:\n--- !u!1386491679 &1\nPresetManager:\n  m_ObjectHideFlags: 0\n  serializedVersion: 2\n  " + presets + "\n";
     }
 }

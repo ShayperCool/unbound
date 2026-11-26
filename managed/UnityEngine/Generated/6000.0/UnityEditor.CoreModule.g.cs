@@ -5858,10 +5858,8 @@ namespace UnityEditor
         Lz4 = 2,
         Lz4HC = 3,
     }
-    [global::Unbound.Stub]
-    public unsafe sealed partial class ComputeShaderImporter : global::UnityEditor.AssetImporter
+    unsafe partial class ComputeShaderImporter
     {
-        [global::Unbound.Stub] public ComputeShaderImporter() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ComputeShaderImporter.ctor"); }
         public global::UnityEditor.PreprocessorOverride preprocessorOverride { [global::Unbound.Stub] get { if (global::Unbound.Runtime.Compat.RemovedEditorSettingsMeasured) return (global::UnityEditor.PreprocessorOverride)0; global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ComputeShaderImporter.preprocessorOverride"); return default; } [global::Unbound.Stub] set { if (global::Unbound.Runtime.Compat.RemovedEditorSettingsMeasured) return; global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ComputeShaderImporter.preprocessorOverride"); } }
     }
     [global::Unbound.Stub]

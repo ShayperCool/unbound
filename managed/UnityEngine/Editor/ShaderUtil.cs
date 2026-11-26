@@ -18,7 +18,7 @@ namespace UnityEditor
         /// the shader name registry, the shader not null.</summary>
         public static void RegisterShader(Shader shader)
         {
-            if (shader == null) throw new ArgumentNullException(nameof(shader));
+            UnityEngine.Object.ThrowIfNullArgument(shader, nameof(shader));
             Shader.Register(shader);
         }
 
