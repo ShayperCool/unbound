@@ -19,6 +19,14 @@ namespace UnityEditorInternal
         const int MaximumHeightRefreshes = 8;
 
         internal List<int> m_Selection = new List<int>();
+        SerializedObject m_SerializedObject;
+        string m_PropertyPath = string.Empty;
+        float m_DragOffset;
+        float m_DraggedY;
+        bool m_Dragging;
+        List<int> m_NonDragTargetIndices;
+        readonly GUISlideGroup m_SlideGroup = new GUISlideGroup();
+        bool m_ScheduleRemove;
         internal bool m_PropertyCacheValid;
         SerializedProperty m_SerializedProperty;
         readonly bool m_DisplayHeader;
@@ -29,7 +37,33 @@ namespace UnityEditorInternal
         bool m_RefreshingHeights;
 
         public delegate float ElementHeightCallbackDelegate(int index);
+        public delegate void ReorderCallbackDelegateWithDetails(ReorderableList list, int oldIndex, int newIndex);
+        public delegate void ReorderCallbackDelegate(ReorderableList list);
+        public delegate void SelectCallbackDelegate(ReorderableList list);
+        public delegate void AddCallbackDelegate(ReorderableList list);
+        public delegate void AddDropdownCallbackDelegate(Rect buttonRect, ReorderableList list);
+        public delegate void RemoveCallbackDelegate(ReorderableList list);
+        public delegate void DeleteArrayElementCallbackDelegate(ReorderableList list, int index);
+        public delegate void ChangedCallbackDelegate(ReorderableList list);
+        public delegate bool CanRemoveCallbackDelegate(ReorderableList list);
+        public delegate bool CanAddCallbackDelegate(ReorderableList list);
+        public delegate void DragCallbackDelegate(ReorderableList list);
+
         public ElementHeightCallbackDelegate elementHeightCallback;
+        public ReorderCallbackDelegateWithDetails onReorderCallbackWithDetails;
+        public ReorderCallbackDelegate onReorderCallback;
+        public SelectCallbackDelegate onSelectCallback;
+        public AddCallbackDelegate onAddCallback;
+        public AddDropdownCallbackDelegate onAddDropdownCallback;
+        public RemoveCallbackDelegate onRemoveCallback;
+        public DragCallbackDelegate onMouseDragCallback;
+        public SelectCallbackDelegate onMouseUpCallback;
+        public CanRemoveCallbackDelegate onCanRemoveCallback;
+        public CanAddCallbackDelegate onCanAddCallback;
+        public ChangedCallbackDelegate onChangedCallback;
+        /// <summary>Called by the Editor's "Delete Array Element" property context menu, which Unbound
+        /// does not show.</summary>
+        public DeleteArrayElementCallbackDelegate onDeleteArrayElementCallback;
         public bool displayAdd;
         public bool displayRemove;
         public float elementHeight;
@@ -45,11 +79,11 @@ namespace UnityEditorInternal
             : this(null, elements, draggable, displayHeader, displayAddButton, displayRemoveButton) { }
 
         public ReorderableList(SerializedObject serializedObject, SerializedProperty elements)
-            : this(elements, null, true, true, true, true) { }
+            : this(elements, null, true, true, true, true) => m_SerializedObject = serializedObject;
 
         public ReorderableList(SerializedObject serializedObject, SerializedProperty elements, bool draggable,
             bool displayHeader, bool displayAddButton, bool displayRemoveButton)
-            : this(elements, null, draggable, displayHeader, displayAddButton, displayRemoveButton) { }
+            : this(elements, null, draggable, displayHeader, displayAddButton, displayRemoveButton) => m_SerializedObject = serializedObject;
 
         ReorderableList(SerializedProperty property, IList elements, bool draggable, bool displayHeader,
             bool displayAddButton, bool displayRemoveButton)
@@ -72,6 +106,7 @@ namespace UnityEditorInternal
 
             if (property != null)
             {
+                m_PropertyPath = property.propertyPath;
                 if (!property.editable) this.draggable = false;
                 if (!property.isArray) Debug.LogError("Input elements should be an Array SerializedProperty");
             }
@@ -86,6 +121,8 @@ namespace UnityEditorInternal
             {
                 m_SerializedProperty = value;
                 if (value == null) throw new NullReferenceException("Object reference not set to an instance of an object");
+                m_SerializedObject = value.serializedObject;
+                m_PropertyPath = value.propertyPath;
             }
         }
 
@@ -124,6 +161,54 @@ namespace UnityEditorInternal
         }
 
         internal void InvalidateCache() => m_PropertyCacheValid = false;
+
+        /// <summary>Unity's C#: the list's cache and those its property handler keeps for the lists
+        /// inside its elements (Unbound draws no property lists with ReorderableList: none).</summary>
+        internal void InvalidateCacheRecursive() => InvalidateCache();
+
+        /// <summary>After an add or remove: the cache (several edited objects: the Editor also
+        /// refreshes its inspectors, which Unbound does not have).</summary>
+        internal void InvalidateForGUI() => InvalidateCache();
+
+        bool isOverMaxMultiEditLimit
+        {
+            get
+            {
+                GetCount(out bool over);
+                return over;
+            }
+        }
+
+        // Lists of lists: a list whose elements changed marks the lists around it outdated; each
+        // checks for itself when it draws (Unity's C#).
+        static List<string> s_OutdatedProperties = new List<string>();
+
+        static string GetParentListPath(string propertyPath)
+        {
+            int parentPathLength = propertyPath.LastIndexOf(".Array.data[", StringComparison.Ordinal);
+            return parentPathLength < 0 ? null : propertyPath.Substring(0, parentPathLength);
+        }
+
+        internal static void InvalidateParentCaches(string propertyPath)
+        {
+            string parentPath = GetParentListPath(propertyPath);
+            while (parentPath != null)
+            {
+                s_OutdatedProperties.Add(parentPath);
+                parentPath = GetParentListPath(parentPath);
+            }
+        }
+
+        bool CheckForChildInvalidation()
+        {
+            if (s_OutdatedProperties.BinarySearch(m_PropertyPath) >= 0)
+            {
+                InvalidateCache();
+                s_OutdatedProperties = s_OutdatedProperties.FindAll(e => !e.Equals(m_PropertyPath));
+                return true;
+            }
+            return false;
+        }
 
         float GetElementAreaHeight()
         {

@@ -7447,7 +7447,6 @@ namespace UnityEditor
         [global::Unbound.Stub] internal static readonly global::System.Text.RegularExpressions.Regex s_LinkTagRegex;
         [global::Unbound.Stub] internal static bool s_CollectingToolTips;
         [global::Unbound.Stub] internal static bool IsEditingTextField() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUI.IsEditingTextField"); return default; }
-        [global::Unbound.Stub] internal static void EndEditingActiveTextField() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUI.EndEditingActiveTextField"); }
         [global::Unbound.Stub] internal static void ClearStacks() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUI.ClearStacks"); }
         [global::Unbound.Stub] internal static void BeginDisabled(bool disabled) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUI.BeginDisabled"); }
         [global::Unbound.Stub] internal static void EndDisabled() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.EditorGUI.EndDisabled"); }
@@ -9420,17 +9419,10 @@ namespace UnityEditor
         [global::Unbound.Stub] internal override void OnDoubleClickInstruction(int index) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.GUIPropertyInspectView.OnDoubleClickInstruction"); }
         [global::Unbound.Stub] internal override void OnSelectedInstructionChanged(int index) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.GUIPropertyInspectView.OnSelectedInstructionChanged"); }
     }
-    [global::Unbound.Stub]
-    internal unsafe partial class GUISlideGroup
+    unsafe partial class GUISlideGroup
     {
-        [global::Unbound.Stub] internal static global::UnityEditor.GUISlideGroup current;
-        [global::Unbound.Stub] public void Begin() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.GUISlideGroup.Begin"); }
-        [global::Unbound.Stub] public void End() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.GUISlideGroup.End"); }
-        [global::Unbound.Stub] public void Reset() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.GUISlideGroup.Reset"); }
         [global::Unbound.Stub] public global::UnityEngine.Rect BeginHorizontal(int id, params global::UnityEngine.GUILayoutOption[] options) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.GUISlideGroup.BeginHorizontal"); return default; }
         [global::Unbound.Stub] public void EndHorizontal() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.GUISlideGroup.EndHorizontal"); }
-        [global::Unbound.Stub] public global::UnityEngine.Rect GetRect(int id, global::UnityEngine.Rect r) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.GUISlideGroup.GetRect"); return default; }
-        [global::Unbound.Stub] public GUISlideGroup() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.GUISlideGroup.ctor"); }
     }
     [global::Unbound.Stub]
     internal unsafe partial class GUIStyleHolder : global::UnityEngine.ScriptableObject
@@ -48497,36 +48489,10 @@ namespace UnityEditorInternal
     }
     unsafe partial class ReorderableList
     {
-        [global::Unbound.Stub] public global::UnityEditorInternal.ReorderableList.ReorderCallbackDelegateWithDetails onReorderCallbackWithDetails;
-        [global::Unbound.Stub] public global::UnityEditorInternal.ReorderableList.ReorderCallbackDelegate onReorderCallback;
-        [global::Unbound.Stub] public global::UnityEditorInternal.ReorderableList.SelectCallbackDelegate onSelectCallback;
-        [global::Unbound.Stub] public global::UnityEditorInternal.ReorderableList.AddCallbackDelegate onAddCallback;
-        [global::Unbound.Stub] public global::UnityEditorInternal.ReorderableList.AddDropdownCallbackDelegate onAddDropdownCallback;
-        [global::Unbound.Stub] public global::UnityEditorInternal.ReorderableList.RemoveCallbackDelegate onRemoveCallback;
-        [global::Unbound.Stub] public global::UnityEditorInternal.ReorderableList.DragCallbackDelegate onMouseDragCallback;
-        [global::Unbound.Stub] public global::UnityEditorInternal.ReorderableList.SelectCallbackDelegate onMouseUpCallback;
-        [global::Unbound.Stub] public global::UnityEditorInternal.ReorderableList.CanRemoveCallbackDelegate onCanRemoveCallback;
-        [global::Unbound.Stub] public global::UnityEditorInternal.ReorderableList.CanAddCallbackDelegate onCanAddCallback;
-        [global::Unbound.Stub] public global::UnityEditorInternal.ReorderableList.ChangedCallbackDelegate onChangedCallback;
-        [global::Unbound.Stub] public global::UnityEditorInternal.ReorderableList.DeleteArrayElementCallbackDelegate onDeleteArrayElementCallback;
         [global::Unbound.Stub] internal int m_CacheCount;
-        [global::Unbound.Stub] internal static void InvalidateParentCaches(string propertyPath) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditorInternal.ReorderableList.InvalidateParentCaches"); }
-        [global::Unbound.Stub] internal void InvalidateForGUI() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditorInternal.ReorderableList.InvalidateForGUI"); }
         [global::Unbound.Stub] internal static void InvalidateExistingListCaches() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditorInternal.ReorderableList.InvalidateExistingListCaches"); }
         [global::Unbound.Stub] public static global::UnityEditorInternal.ReorderableList GetReorderableListFromSerializedProperty(global::UnityEditor.SerializedProperty prop) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditorInternal.ReorderableList.GetReorderableListFromSerializedProperty"); return default; }
         [global::Unbound.Stub] internal void CacheIfNeeded() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditorInternal.ReorderableList.CacheIfNeeded"); }
-        [global::Unbound.Stub] internal void InvalidateCacheRecursive() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditorInternal.ReorderableList.InvalidateCacheRecursive"); }
-        public unsafe delegate void ReorderCallbackDelegateWithDetails(global::UnityEditorInternal.ReorderableList list, int oldIndex, int newIndex);
-        public unsafe delegate void ReorderCallbackDelegate(global::UnityEditorInternal.ReorderableList list);
-        public unsafe delegate void SelectCallbackDelegate(global::UnityEditorInternal.ReorderableList list);
-        public unsafe delegate void AddCallbackDelegate(global::UnityEditorInternal.ReorderableList list);
-        public unsafe delegate void AddDropdownCallbackDelegate(global::UnityEngine.Rect buttonRect, global::UnityEditorInternal.ReorderableList list);
-        public unsafe delegate void RemoveCallbackDelegate(global::UnityEditorInternal.ReorderableList list);
-        public unsafe delegate void DeleteArrayElementCallbackDelegate(global::UnityEditorInternal.ReorderableList list, int index);
-        public unsafe delegate void ChangedCallbackDelegate(global::UnityEditorInternal.ReorderableList list);
-        public unsafe delegate bool CanRemoveCallbackDelegate(global::UnityEditorInternal.ReorderableList list);
-        public unsafe delegate bool CanAddCallbackDelegate(global::UnityEditorInternal.ReorderableList list);
-        public unsafe delegate void DragCallbackDelegate(global::UnityEditorInternal.ReorderableList list);
         [global::Unbound.Stub]
         internal unsafe partial struct PropertyCacheEntry
         {
@@ -48535,12 +48501,6 @@ namespace UnityEditorInternal
             [global::Unbound.Stub] public float offset;
             [global::Unbound.Stub] public int controlCount;
             [global::Unbound.Stub] public bool Set(global::UnityEditor.SerializedProperty property, float height, float offset) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditorInternal.ReorderableList.PropertyCacheEntry.Set"); return default; }
-        }
-        unsafe partial class Defaults
-        {
-            [global::Unbound.Stub] internal void DoAddButton(global::UnityEditorInternal.ReorderableList list, global::UnityEngine.Object value) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditorInternal.ReorderableList.Defaults.DoAddButton"); }
-            [global::Unbound.Stub] public void DoAddButton(global::UnityEditorInternal.ReorderableList list) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditorInternal.ReorderableList.Defaults.DoAddButton"); }
-            [global::Unbound.Stub] public void DoRemoveButton(global::UnityEditorInternal.ReorderableList list) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditorInternal.ReorderableList.Defaults.DoRemoveButton"); }
         }
     }
     [global::Unbound.Stub]
