@@ -314,6 +314,25 @@ class RuntimeSnapshotTests(unittest.TestCase):
             self.snapshot('corrupt-blob')
         self.assertFalse((self.root/'corrupt-blob/runtime').exists())
 
+    def test_a_managed_blob_made_writable_gets_its_mode_back(self):
+        first = self.snapshot()
+        blob = next(p for p in (self.cache/'snapshots/.managed-blobs').iterdir() if p.read_bytes() == b'host')
+        blob.chmod(0o644)
+        self.cli.write_bytes(b'next cli')
+        second = self.snapshot('restored')
+        self.assertEqual(blob.stat().st_mode & 0o777, 0o444)
+        self.assertEqual((first/'managed/Unbound.Host.dll').stat().st_mode & 0o777, 0o444)
+        self.assertEqual((second/'managed/Unbound.Host.dll').read_bytes(), b'host')
+
+    def test_a_writable_managed_blob_that_changed_is_rejected(self):
+        self.snapshot()
+        blob = next(p for p in (self.cache/'snapshots/.managed-blobs').iterdir() if p.read_bytes() == b'host')
+        blob.chmod(0o644)
+        blob.write_bytes(b'changed')
+        self.cli.write_bytes(b'next cli')
+        with self.assertRaisesRegex(ValueError, 'invalid managed blob'):
+            self.snapshot('changed-blob')
+
     def test_task_release_keeps_other_tasks_and_promoted_runs(self):
         with mock.patch.object(runtime, 'task_owner', return_value={'worktree': str(self.root), 'branch': 'task'}):
             first = self.snapshot()

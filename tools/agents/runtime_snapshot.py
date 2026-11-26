@@ -255,7 +255,14 @@ def dedupe_managed(staging, hashes, modes, storage):
         blob = blobs/(expected+f'-{modes[name]:o}')
         target = staging/name
         if blob.exists():
-            if blob.is_symlink() or not blob.is_file() or digest(blob) != expected or blob.stat().st_mode & 0o777 != modes[name]:
+            if blob.is_symlink() or not blob.is_file():
+                raise ValueError(f'invalid managed blob: {blob}')
+            if blob.stat().st_mode & 0o777 != modes[name]:
+                # A name of the shared inode was made writable outside these tools (a manual
+                # cleanup): it gets its recorded mode back, for every snapshot sharing it, when
+                # its content is still the recorded one (checked after the change).
+                os.chmod(blob, modes[name])
+            if digest(blob) != expected or blob.stat().st_mode & 0o777 != modes[name]:
                 raise ValueError(f'invalid managed blob: {blob}')
             target.unlink()
             os.link(blob, target)
