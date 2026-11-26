@@ -741,7 +741,7 @@ namespace Unbound.Runtime
         const string TextureSettingsVersion = "2";
 
         /// <summary>The values an importer reads texture settings without their own serialized version
-        /// with (version 1, in any section): its <c>wrapMode</c>, else Repeat, is every axis's wrap, its
+        /// with (version 1, in any section): its <c>wrapMode</c> (else a missing wrap's reading) is every axis's wrap, its
         /// per-axis keys are not read (matches the Unity 6000.0.71f1 Editor, tests/projects/spritemeta
         /// importer/ and texture/ KeepWrap, KeepWrapMode, KeepDefaultWrap, CurrentWrap,
         /// CurrentWrapMode); they are then of the release's version. None for other settings.</summary>
@@ -749,7 +749,9 @@ namespace Unbound.Runtime
         {
             var values = new List<(string, string)>();
             if (settings?.Get("textureSettings") is not { Kind: YKind.Map } own || own.Get("serializedVersion") != null) return values;
-            var wrap = own.Get("wrapMode") is { Kind: YKind.Scalar } mode ? mode.Scalar : "0";
+            // Without a wrapMode: a wrap no settings hold.
+            var wrap = own.Get("wrapMode") is { Kind: YKind.Scalar } mode ? mode.Scalar
+                : TextureImporter.MissingWrap(settings).ToString(System.Globalization.CultureInfo.InvariantCulture);
             values.Add(("textureSettings.serializedVersion", TextureSettingsVersion));
             foreach (var axis in new[] { "wrapU", "wrapV", "wrapW" }) values.Add(("textureSettings." + axis, wrap));
             return values;

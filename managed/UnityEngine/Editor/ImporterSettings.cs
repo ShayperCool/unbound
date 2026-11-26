@@ -564,12 +564,25 @@ namespace UnityEditor
         }
 
         /// <summary>A wrap setting as the import reads it, -1 for the type's default: its key, else the
-        /// older per-texture <c>wrapMode</c>, else Repeat whatever the type (matches the Unity
-        /// 6000.0.71f1 Editor, tests/projects/importermeta change.GuiNoWrap, tests/projects/spritemeta
-        /// importer/Bare, KeepWrapV2). Settings of version 1 are read as version 2 when the importer
-        /// loads them (<see cref="ImporterLayout.VersionOneReadValues"/>).</summary>
-        static int Wrap(YNode root, string path) =>
-            (MetaSettings.Find(root, path) ?? MetaSettings.Find(root, "textureSettings.wrapMode"))?.AsInt(-1) ?? 0;
+        /// older per-texture <c>wrapMode</c>, else Repeat whatever the type in settings of the
+        /// release's serialized version or of none (matches the Unity 6000.0.71f1 Editor,
+        /// tests/projects/importermeta change.GuiNoWrap, tests/projects/spritemeta importer/Bare,
+        /// KeepWrapV2), the type's default in older ones (not measured). Settings of version 1 are
+        /// read as version 2 when the importer loads them (<see cref="ImporterLayout.VersionOneReadValues"/>).</summary>
+        static int Wrap(YNode root, string path)
+        {
+            var node = MetaSettings.Find(root, path) ?? MetaSettings.Find(root, "textureSettings.wrapMode");
+            return node != null ? node.AsInt(-1) : MissingWrap(root);
+        }
+
+        /// <summary>A wrap no settings hold (<see cref="Wrap"/>): Repeat, -1 (the type's default) in a
+        /// section of an older serialized version than the release's.</summary>
+        internal static int MissingWrap(YNode root) =>
+            MetaSettings.Find(root, "serializedVersion") is { } version && version.AsInt(CurrentSerializedVersion) < CurrentSerializedVersion ? -1 : 0;
+
+        /// <summary>The TextureImporter's serialized version in the 6000.0 Editor's .meta files
+        /// (crates/unbound-assets/src/new_meta/texture_importer.yaml).</summary>
+        const int CurrentSerializedVersion = 13;
 
         /// <summary>What a missing or -1 setting means: Clamp wrapping for the UI types (Sprite,
         /// GUI, Cursor) and Repeat for the others; bilinear filtering, anisotropy 1, mip maps,

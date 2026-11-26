@@ -124,7 +124,8 @@ fn reads_legacy_settings() {
 
 /// A GUI texture's serializedVersion 13 .meta without wrap keys repeats (tests/projects/importermeta
 /// change.GuiNoWrap), and so does a sprite's of no serialized version (tests/projects/spritemeta
-/// texture/Bare); `-1` keeps the type's default (Clamp for the UI types, `reads_legacy_settings`).
+/// texture/Bare); `-1` and older sections without them keep the type's default (Clamp for the UI
+/// types, `reads_legacy_settings`).
 #[test]
 fn a_missing_wrap_key_repeats_for_every_type() {
     let gui = "TextureImporter:\n  serializedVersion: 13\n  textureSettings:\n    serializedVersion: 2\n    filterMode: 1\n  textureType: 2\n";
@@ -136,6 +137,8 @@ fn a_missing_wrap_key_repeats_for_every_type() {
     );
     let auto = gui.replace("    filterMode: 1\n", "    filterMode: 1\n    wrapU: -1\n");
     assert_eq!(settings(&auto, "Standalone").wrap_u, WrapMode::Clamp);
+    let older = gui.replace("serializedVersion: 13", "serializedVersion: 12");
+    assert_eq!(settings(&older, "Standalone").wrap_u, WrapMode::Clamp);
     let sprite = "TextureImporter:\n  textureType: 8\n  spriteMode: 1\n";
     let s = settings(sprite, "Standalone");
     assert_eq!(s.texture_type, TextureType::Sprite);

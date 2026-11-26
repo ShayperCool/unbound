@@ -25,6 +25,10 @@ use serde::{Deserialize, Serialize};
 use std::{path::Path, sync::OnceLock};
 use unbound_yaml::Value;
 
+/// The TextureImporter's serialized version in the 6000.0 Editor's .meta files
+/// (crates/unbound-assets/src/new_meta/texture_importer.yaml).
+const CURRENT_SERIALIZED_VERSION: i64 = 13;
+
 /// File extensions Unity's TextureImporter handles that this importer decodes.
 pub const EXTENSIONS: &[&str] = &[
     "png", "jpg", "jpeg", "tga", "bmp", "gif", "psd", "tif", "tiff", "hdr", "exr",
@@ -329,9 +333,10 @@ impl TextureSettings {
         // Sampler state. `-1` (and `-100` for the mip bias) mean "the type's default". Settings of
         // their own serialized version (2 and later) hold a wrap key per axis; settings without one
         // are of version 1, whose `wrapMode` is every axis's and whose per-axis keys are not read.
-        // A wrap neither holds reads Repeat whatever the type (matches the Unity 6000.0.71f1 Editor,
+        // A wrap neither holds reads Repeat whatever the type in a section of the release's
+        // serialized version or of none (matches the Unity 6000.0.71f1 Editor,
         // tests/projects/importermeta change.GuiNoWrap, tests/projects/spritemeta texture/KeepWrap*,
-        // Bare, CurrentWrap*; measured in sections of the release's serialized version and of none).
+        // Bare, CurrentWrap*), the type's default in a section of an older version (not measured).
         let versioned = matches!(imp.get("textureSettings"), Some(map) if map.get("serializedVersion").is_some());
         let wrap = |key: &str| -> WrapMode {
             let value = if versioned {
@@ -340,7 +345,9 @@ impl TextureSettings {
             } else {
                 int(imp, "textureSettings.wrapMode")
             };
-            match value.unwrap_or(0) {
+            let older =
+                int(imp, "serializedVersion").is_some_and(|v| v < CURRENT_SERIALIZED_VERSION);
+            match value.unwrap_or(if older { -1 } else { 0 }) {
                 0 => WrapMode::Repeat,
                 1 => WrapMode::Clamp,
                 2 => WrapMode::Mirror,
@@ -1572,7 +1579,7 @@ impl Importer for TextureImporter {
     // 55: the settings keep the importer's ignoreMipmapLimit.
     // 56: a normal map carries its usage mode (DXT5nm or plain).
     // 57: textureSettings without their own serialized version wrap by their wrapMode alone, and a
-    //     wrap no settings hold reads Repeat in any layout (an oldest sprite's was Clamp); an
+    //     wrap no settings hold reads Repeat in the oldest layout too (a sprite's was Clamp); an
     //     oldest sprite section without a default entry is uncompressed.
     const VERSION: u32 = 57;
 

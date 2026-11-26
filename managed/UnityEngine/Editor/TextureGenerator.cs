@@ -310,7 +310,8 @@ namespace UnityEditor.AssetImporters
         {
             var s = settings.textureImporterSettings;
             var p = settings.platformSettings;
-            var y = new StringBuilder("TextureImporter:\n");
+            // Of the release's serialized versions: the import reads each setting by its key.
+            var y = new StringBuilder("TextureImporter:\n  serializedVersion: 13\n");
             void Line(int depth, string key, object value) =>
                 y.Append(' ', depth * 2).Append(key).Append(": ").Append(Scalar(value)).Append('\n');
             y.Append("  mipmaps:\n");
@@ -333,6 +334,7 @@ namespace UnityEditor.AssetImporters
             Line(1, "generateCubemap", (int)s.generateCubemap);
             Line(1, "cubemapConvolution", (int)s.cubemapConvolution);
             y.Append("  textureSettings:\n");
+            Line(2, "serializedVersion", 2);
             Line(2, "filterMode", (int)s.filterMode);
             Line(2, "aniso", s.aniso);
             Line(2, "mipBias", s.mipmapBias);
