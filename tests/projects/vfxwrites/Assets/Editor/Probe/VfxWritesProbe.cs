@@ -265,6 +265,19 @@ public static class VfxWritesProbe
             Row("editing write/shadows after", resource.rendererSettings.shadowCastingMode);
             Row("editing write/dirty", EditorUtility.IsDirty(resource));
 
+            // Several dirty assets made dirty against their path order (the second material, the
+            // first, then the graph; the tag manager is still edited), then SaveAssets: the paths
+            // the processors get.
+            second.renderQueue = 2300;
+            EditorUtility.SetDirty(second);
+            material.renderQueue = 2400;
+            EditorUtility.SetDirty(material);
+            resource.initialEventName = "Several";
+            VfxWritesSaveLog.Calls.Clear();
+            AssetDatabase.SaveAssets();
+            // (The Editor's order differs from run to run: the paths are compared as a set.)
+            Row("several save assets/will save", string.Join(" | ", VfxWritesSaveLog.Calls.Select(c => string.Join(", ", c.Split(", ").OrderBy(x => x, StringComparer.Ordinal)))));
+
             // The created graph's model edited (an operator added) and left for the exit; run.py
             // counts the file's documents after the run (exit/created documents).
             var createdGraph = VisualEffectResource.GetResourceAtPath(Created).GetOrCreateGraph();
@@ -274,6 +287,9 @@ public static class VfxWritesProbe
             Row("exit/created documents before", File.ReadAllText(Created).Split('\n').Count(l => l.StartsWith("--- ", StringComparison.Ordinal)));
             resource.initialEventName = "AtExit";
             Row("exit/dirty before", EditorUtility.IsDirty(resource));
+            // From here on the processor's calls go to a file run.py reads after the run
+            // (exit/will save): what the exit's save hands OnWillSaveAssets.
+            VfxWritesSaveLog.ExitFile = string.IsNullOrEmpty(Environment.GetEnvironmentVariable("VFX_WRITES_OUT")) ? null : Path.Combine(Environment.GetEnvironmentVariable("VFX_WRITES_OUT"), "exit-will-save.txt");
             s_Out.Append("{\"k\": \"complete\", \"v\": true}\n");
         }
         catch (Exception e)

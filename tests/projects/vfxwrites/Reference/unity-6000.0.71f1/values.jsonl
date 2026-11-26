@@ -120,10 +120,12 @@
 {"k":"editing write/shadows inside","v":"On"}
 {"k":"editing write/shadows after","v":"Off"}
 {"k":"editing write/dirty","v":"False"}
+{"k":"several save assets/will save","v":"Assets/Graphs/BoundsAuto.vfx, Assets/Probe.mat, Assets/Second.mat, ProjectSettings/TagManager.asset"}
 {"k":"exit/created graph dirty before","v":"True"}
 {"k":"exit/created resource dirty before","v":"False"}
 {"k":"exit/created documents before","v":"7"}
 {"k":"exit/dirty before","v":"True"}
 {"k": "exit/initialEventName", "v": "AtExit"}
 {"k": "exit/created documents", "v": "11"}
+{"k": "exit/will save", "v": "Assets/Graphs/BoundsAuto.vfx, Assets/Graphs/Created.vfx"}
 {"k": "complete", "v": true}

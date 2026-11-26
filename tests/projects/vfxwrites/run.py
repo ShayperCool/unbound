@@ -34,12 +34,17 @@ CREATED = 'Assets/Graphs/Created.vfx'
 def with_exit_row(values_path, project):
     """The capture's rows with `exit/initialEventName`, the graph's initial event as the file holds
     it after the run ended (the probe left that setting unsaved for the exit), and `exit/created
-    documents`, the created graph's document count after the run (its model was left edited)."""
+    documents`, the created graph's document count after the run (its model was left edited), and
+    `exit/will save`, the paths the processor got from the exit's save (a line per call)."""
     lines = Path(values_path).read_text().splitlines()
     event = next((line.split(':', 1)[1].strip() for line in (project/GRAPH).read_text().splitlines()
                   if line.strip().startswith('m_InitialEventName:')), '<none>')
     documents = sum(line.startswith('--- ') for line in (project/CREATED).read_text().splitlines())
-    rows = [json.dumps({'k': 'exit/initialEventName', 'v': event}), json.dumps({'k': 'exit/created documents', 'v': str(documents)})]
+    calls = Path(values_path).parent/'exit-will-save.txt'
+    # The Editor's order of several paths differs from run to run: each call's paths as a set.
+    hook = ' | '.join(', '.join(sorted(line.split(', '))) for line in calls.read_text().splitlines()) if calls.exists() else '<no call>'
+    rows = [json.dumps({'k': 'exit/initialEventName', 'v': event}), json.dumps({'k': 'exit/created documents', 'v': str(documents)}),
+            json.dumps({'k': 'exit/will save', 'v': hook})]
     if lines and lines[-1].startswith('{"k": "complete"'):
         lines[len(lines) - 1:len(lines) - 1] = rows
     Path(values_path).write_text('\n'.join(lines) + '\n')

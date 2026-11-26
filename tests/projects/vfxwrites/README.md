@@ -51,7 +51,11 @@ the step, when there was one).
   `SaveAssetIfDirty` by GUID of `ProjectSettings/TagManager.asset` after a tag added through a
   `SerializedObject` (whether its file changed); `exit/dirty before`: a
   setting left unsaved, and `exit/initialEventName`, which `run.py` adds after the run: that setting
-  as the file holds it once the Editor (or Unbound) has exited; `exit/created ... before`: an
+  as the file holds it once the Editor (or Unbound) has exited; `several save assets/will save`: two
+  materials and the graph made dirty against their path order (the tag manager still edited), then
+  `SaveAssets` (paths compared as a set: the Editor's order differs from run to run);
+  `exit/will save` (`run.py`, from the processor's calls after the probe): what the exit's save
+  hands `OnWillSaveAssets`; `exit/created ... before`: an
   operator added to the created graph's model and left unsaved, and `exit/created documents`
   (`run.py`, after the run): that file's document count.
 
