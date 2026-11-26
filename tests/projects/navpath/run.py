@@ -74,6 +74,12 @@ SHAPES = ('box', 'boxlong', 'boxturn', 'boxscaled', 'boxtilt', 'caplying', 'capt
           'boxbig', 'boxtilt1', 'boxtilt10', 'boxtiltx',
           'boxsunk', 'boxfloor', 'boxraised', 'boxfbx', 'boxfbxsunk', 'boxtilt001',
           'boxinside', 'boxinsideturn', 'boxinsidefbx', 'boxinsidetilt', 'boxhead', 'boxfeet', 'boxtall', 'boxabove')
+CLIPPED_CAPSULES = (
+    ('cap45h382', 5), ('cap45h384', 5), ('cap30h6', 7), ('cap60h8', 5), ('cap5h6', 4),
+    ('cap45sunk', 5), ('cap45raised', 5), ('cap135sunk', 4), ('cap45scaled', 5),
+    ('cap5low', 4), ('cap5high', 4), ('cap10low', 4), ('cap10high', 5),
+    ('caplyinglow', 4), ('caplyinghigh', 4), ('caplyingabove', 2), ('caprank', 1),
+)
 STEERED = tuple(shape for shape in SHAPES if shape not in ('boxscaled', 'captiltx'))
 # Scenario -> key prefixes of the differences that are reported but not gated ('' = all of them).
 LISTED = {
@@ -167,6 +173,8 @@ def obstacle_shapes_problem(path):
         return 'wrong Unity release in the obstacle shapes capture'
     numeric = {f'contact.{shape}.s{start}.f{frame}.at.{axis}'
                for shape in SHAPES for start in range(6) for frame in (1, 2, 3) for axis in 'xyz'}
+    numeric |= {f'contact.{shape}.s{start}.f{frame}.at.{axis}'
+                for shape, count in CLIPPED_CAPSULES for start in range(count) for frame in (1, 2, 3) for axis in 'xyz'}
     numeric |= {f'steer.{shape}.z{lane}.f{frame}.{vector}.{axis}'
                 for shape in STEERED for lane in ('0.3', '0.9') for frame in range(5, 81, 5)
                 for vector in ('at', 'velocity') for axis in 'xyz'}

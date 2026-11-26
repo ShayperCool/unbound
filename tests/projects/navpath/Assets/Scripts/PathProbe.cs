@@ -1677,6 +1677,111 @@ public class PathProbe : MonoBehaviour
             Destroy(post);
             yield return null;
         }
+        // Capsules whose shaft reaches above or below the agent's height, or lies wholly beyond it:
+        // continuity across the height boundary (45 deg h3.82 vs h3.84), steep poles clipped at both
+        // ends (30 deg h6, 60 deg h8, 5 deg h6), one-sided clips (sunk, raised, 135 deg), non-uniform
+        // scale, and caps reaching across the feet or head at 5, 10 and 90 degrees.
+        var clippedCapsules = new (string name, float radius, float height, Vector3 euler, Vector3 scale, float lift, Vector2[] points)[]
+        {
+            ("cap45h382", 0.5f, 3.82f, new Vector3(0f, 0f, 45f), Vector3.one, 0f,
+                new[] { new Vector2(0f, 0f), new Vector2(0.9f, 0f), new Vector2(1.5f, 0f), new Vector2(-1.5f, 0.2f), new Vector2(2.1f, 0f) }),
+            ("cap45h384", 0.5f, 3.84f, new Vector3(0f, 0f, 45f), Vector3.one, 0f,
+                new[] { new Vector2(0f, 0f), new Vector2(0.9f, 0f), new Vector2(1.5f, 0f), new Vector2(-1.5f, 0.2f), new Vector2(2.1f, 0f) }),
+            ("cap30h6", 0.5f, 6f, new Vector3(0f, 0f, 30f), Vector3.one, 0f,
+                new[] { new Vector2(0f, 0f), new Vector2(-0.9f, 0f), new Vector2(-1.05f, 0f), new Vector2(-1.3f, 0f), new Vector2(-1.6f, 0f), new Vector2(-1.7f, 0f), new Vector2(1.3f, 0.2f) }),
+            ("cap60h8", 0.5f, 8f, new Vector3(0f, 0f, 60f), Vector3.one, 0f,
+                new[] { new Vector2(0f, 0f), new Vector2(-2.2f, 0.1f), new Vector2(-3.0f, 0f), new Vector2(-3.3f, 0f), new Vector2(2.8f, 0.2f) }),
+            ("cap5h6", 0.5f, 6f, new Vector3(0f, 0f, 5f), Vector3.one, 0f,
+                new[] { new Vector2(0f, 0f), new Vector2(-0.8f, 0f), new Vector2(-1.05f, 0f), new Vector2(-1.15f, 0f) }),
+            ("cap45sunk", 0.5f, 4f, new Vector3(0f, 0f, 45f), Vector3.one, -1f,
+                new[] { new Vector2(0f, 0f), new Vector2(-0.9f, 0.1f), new Vector2(-1.5f, 0f), new Vector2(0.8f, 0f), new Vector2(1.5f, 0f) }),
+            ("cap45raised", 0.5f, 4f, new Vector3(0f, 0f, 45f), Vector3.one, 1f,
+                new[] { new Vector2(0f, 0f), new Vector2(-0.9f, 0.1f), new Vector2(-1.5f, 0f), new Vector2(0.8f, 0f), new Vector2(1.5f, 0f) }),
+            ("cap135sunk", 0.5f, 4f, new Vector3(0f, 0f, 135f), Vector3.one, -1f,
+                new[] { new Vector2(0f, 0f), new Vector2(-0.9f, 0.1f), new Vector2(0.8f, 0f), new Vector2(1.5f, 0f) }),
+            ("cap45scaled", 0.5f, 4.5f, new Vector3(0f, 0f, 45f), new Vector3(1.4f, 1.2f, 0.8f), 0f,
+                new[] { new Vector2(0f, 0f), new Vector2(1.2f, 0.2f), new Vector2(-1.6f, 0f), new Vector2(-2.2f, 0f), new Vector2(-2.6f, 0f) }),
+            ("cap5low", 0.5f, 3f, new Vector3(0f, 0f, 5f), Vector3.one, -2.25f,
+                new[] { new Vector2(0f, 0f), new Vector2(-0.2f, 0.1f), new Vector2(-0.6f, 0.1f), new Vector2(0.5f, 0f) }),
+            ("cap5high", 0.5f, 3f, new Vector3(0f, 0f, 5f), Vector3.one, 2.25f,
+                new[] { new Vector2(0f, 0f), new Vector2(0.2f, 0.1f), new Vector2(0.6f, 0.1f), new Vector2(-0.5f, 0f) }),
+            ("cap10low", 0.5f, 3f, new Vector3(0f, 0f, 10f), Vector3.one, -2.25f,
+                new[] { new Vector2(0f, 0f), new Vector2(-0.3f, 0.1f), new Vector2(-0.8f, 0.1f), new Vector2(0.5f, 0f) }),
+            ("cap10high", 0.5f, 3f, new Vector3(0f, 0f, 10f), Vector3.one, 2.25f,
+                new[] { new Vector2(0f, 0f), new Vector2(-0.2f, 0.1f), new Vector2(0.3f, 0.1f), new Vector2(0.8f, 0.1f), new Vector2(-0.5f, 0f) }),
+            ("caplyinglow", 0.5f, 3f, new Vector3(0f, 0f, 90f), Vector3.one, -1.25f,
+                new[] { new Vector2(0f, 0f), new Vector2(0.6f, -0.2f), new Vector2(1.2f, 0.45f), new Vector2(0.3f, 0.85f) }),
+            ("caplyinghigh", 0.5f, 3f, new Vector3(0f, 0f, 90f), Vector3.one, 1.25f,
+                new[] { new Vector2(0f, 0f), new Vector2(0.6f, -0.2f), new Vector2(1.2f, 0.45f), new Vector2(0.3f, 0.85f) }),
+            ("caplyingabove", 0.5f, 3f, new Vector3(0f, 0f, 90f), Vector3.one, 1.6f,
+                new[] { new Vector2(0f, 0f), new Vector2(0.6f, -0.2f) }),
+        };
+        foreach (var c in clippedCapsules)
+        {
+            for (int i = 0; i < c.points.Length; i++)
+            {
+                var post = new GameObject(c.name);
+                post.transform.position = center + new Vector3(0f, c.lift, 0f);
+                post.transform.rotation = Quaternion.Euler(c.euler);
+                post.transform.localScale = c.scale;
+                var obstacle = post.AddComponent<NavMeshObstacle>();
+                obstacle.carving = false;
+                obstacle.shape = NavMeshObstacleShape.Capsule;
+                obstacle.radius = c.radius;
+                obstacle.height = c.height;
+                yield return null;
+                var mover = new GameObject("mover");
+                mover.transform.position = new Vector3(center.x + c.points[i].x, floor, center.z + c.points[i].y);
+                var agent = mover.AddComponent<NavMeshAgent>();
+                string key = "contact." + c.name + ".s" + i;
+                for (int frame = 1; frame <= 3; frame++)
+                {
+                    yield return null;
+                    ProbeLog.Value(key + ".f" + frame + ".at", agent.nextPosition);
+                }
+                Destroy(mover);
+                Destroy(post);
+                yield return null;
+            }
+        }
+        // Neighbour ranking control: 8 closer upright capsules around the agent (radius 0.2, 1.6 m away)
+        // plus one lying capsule centered 2.5 m away whose shaft reaches the agent's start.
+        {
+            var decoys = new List<GameObject>();
+            for (int i = 0; i < 8; i++)
+            {
+                float a = i * Mathf.PI * 0.25f;
+                var d = new GameObject("decoy" + i);
+                d.transform.position = new Vector3(center.x - 0.3f + Mathf.Cos(a) * 1.6f, floor + 1f, center.z + Mathf.Sin(a) * 1.6f);
+                var ob = d.AddComponent<NavMeshObstacle>();
+                ob.carving = false;
+                ob.shape = NavMeshObstacleShape.Capsule;
+                ob.radius = 0.2f;
+                ob.height = 2f;
+                decoys.Add(d);
+            }
+            var bar = new GameObject("caprank");
+            bar.transform.position = center + new Vector3(2.5f, 0f, 0f);
+            bar.transform.rotation = Quaternion.Euler(0f, 0f, 90f);
+            var barOb = bar.AddComponent<NavMeshObstacle>();
+            barOb.carving = false;
+            barOb.shape = NavMeshObstacleShape.Capsule;
+            barOb.radius = 0.5f;
+            barOb.height = 6f;
+            yield return null;
+            var mover = new GameObject("mover");
+            mover.transform.position = new Vector3(center.x - 0.3f, floor, center.z);
+            var agent = mover.AddComponent<NavMeshAgent>();
+            for (int frame = 1; frame <= 3; frame++)
+            {
+                yield return null;
+                ProbeLog.Value("contact.caprank.s0.f" + frame + ".at", agent.nextPosition);
+            }
+            Destroy(mover);
+            Destroy(bar);
+            foreach (var d in decoys) Destroy(d);
+            yield return null;
+        }
     }
 
     IEnumerator ClippedCapContacts()
