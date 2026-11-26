@@ -42,11 +42,10 @@ namespace UnityEngine
                 m_UnreadableRaw = Copy(m_UnreadableRaw),
                 alphaIsTransparency = alphaIsTransparency,
                 m_IgnoreMipmapLimit = m_IgnoreMipmapLimit,
-                requestedMipmapLevel = requestedMipmapLevel,
-                minimumMipmapLevel = minimumMipmapLevel,
                 m_PixelsDirty = true,
             };
             copy.SetSamplerQuietly(filterMode, wrapModeU, wrapModeV, wrapModeW, anisoLevel, mipMapBias);
+            CopyStreamingTo(copy);
             // A clone uploads its own retained CPU snapshot, including unapplied edits. No
             // asset GUID is copied: later sampler/pixel writes cannot reload or alias the source.
             copy.EnsureUploaded();

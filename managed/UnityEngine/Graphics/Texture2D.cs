@@ -1135,6 +1135,7 @@ namespace UnityEngine
             // m_ColorSpace 0 is linear data (TextMeshPro's Alpha8 atlases, terrain splat maps).
             m_Linear = body.Int("m_ColorSpace", 1) == 0;
             m_UsageMode = body.Int("m_LightmapFormat");
+            SetStreaming(body.Bool("m_StreamingMipmaps"), body.Int("m_StreamingMipmapsPriority"));
             var settings = body.Get("m_TextureSettings");
             if (settings != null)
             {
