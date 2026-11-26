@@ -54,7 +54,10 @@ the step, when there was one).
   as the file holds it once the Editor (or Unbound) has exited; `scene new additive/...`: a new
   scene added beside the batch Editor's untitled one (refused); `scene save new|edited|open|dropped/...`:
   a new scene saved at a path, edited and saved, saved through `SaveOpenScenes`, then saved while the
-  processor drops scene paths (result, the paths the processors got, the file, the dirty flag);
+  processor drops scene paths (result, the paths the processors got, their calls, the order of the
+  calls and the `sceneSaving`/`sceneSaved` callbacks, the file, the dirty flag); `scene save second
+  new`, `scene save two open`: a second scene saved, then both made dirty and saved through one
+  `SaveOpenScenes` (paths within a call sorted: the Editor's order differs from run to run);
   `several save assets/will save`: two
   materials and the graph made dirty against their path order (the tag manager still edited), then
   `SaveAssets` (paths compared as a set: the Editor's order differs from run to run);

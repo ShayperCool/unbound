@@ -127,14 +127,31 @@
 {"k":"scene new additive/error","v":"InvalidOperationException: Cannot create a new scene additively with an untitled scene unsaved."}
 {"k":"scene save new/result","v":"True"}
 {"k":"scene save new/will save","v":""}
+{"k":"scene save new/calls","v":"1"}
+{"k":"scene save new/events","v":"will save [] | saving Assets/Probe.unity | saved Probe"}
 {"k":"scene save edited/result","v":"True"}
 {"k":"scene save edited/will save","v":"Assets/Probe.unity"}
+{"k":"scene save edited/calls","v":"1"}
+{"k":"scene save edited/events","v":"will save [Assets/Probe.unity] | saving Assets/Probe.unity | saved Probe"}
 {"k":"scene save open/result","v":"True"}
 {"k":"scene save open/will save","v":"Assets/Probe.unity"}
+{"k":"scene save open/calls","v":"1"}
+{"k":"scene save open/events","v":"will save [Assets/Probe.unity] | saving Assets/Probe.unity | saved Probe"}
 {"k":"scene save dropped/result","v":"False"}
 {"k":"scene save dropped/will save","v":"Assets/Probe.unity"}
+{"k":"scene save dropped/calls","v":"1"}
+{"k":"scene save dropped/events","v":"will save [Assets/Probe.unity]"}
 {"k":"scene save dropped/file changed","v":"False"}
 {"k":"scene save dropped/dirty","v":"True"}
+{"k":"scene save second new/result","v":"True"}
+{"k":"scene save second new/will save","v":""}
+{"k":"scene save second new/calls","v":"1"}
+{"k":"scene save second new/events","v":"will save [] | saving Assets/SecondProbe.unity | saved SecondProbe"}
+{"k":"scene save two open/result","v":"True"}
+{"k":"scene save two open/will save","v":"Assets/Probe.unity, Assets/SecondProbe.unity"}
+{"k":"scene save two open/calls","v":"1"}
+{"k":"scene save two open/events","v":"will save [Assets/Probe.unity, Assets/SecondProbe.unity] | saving Assets/Probe.unity | saving Assets/SecondProbe.unity | saved Probe | saved SecondProbe"}
+{"k":"scene save two open/dirty","v":"False False"}
 {"k":"exit/created graph dirty before","v":"True"}
 {"k":"exit/created resource dirty before","v":"False"}
 {"k":"exit/created documents before","v":"7"}

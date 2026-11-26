@@ -293,30 +293,43 @@ public static class VfxWritesProbe
             }
             catch (Exception e) { Row("scene new additive/error", e.GetType().Name + ": " + e.Message); }
             var scene = UnityEditor.SceneManagement.EditorSceneManager.NewScene(UnityEditor.SceneManagement.NewSceneSetup.EmptyScene, UnityEditor.SceneManagement.NewSceneMode.Single);
-            const string scenePath = "Assets/Probe.unity";
-            VfxWritesSaveLog.Calls.Clear();
-            Row("scene save new/result", UnityEditor.SceneManagement.EditorSceneManager.SaveScene(scene, scenePath));
-            Row("scene save new/will save", string.Join(" | ", VfxWritesSaveLog.Calls));
+            const string scenePath = "Assets/Probe.unity", secondScenePath = "Assets/SecondProbe.unity";
+            // Each step's processor calls and scene save callbacks, in order.
+            void SceneStep(string step, Func<bool> save)
+            {
+                VfxWritesSaveLog.Calls.Clear();
+                VfxWritesSaveLog.Events.Clear();
+                Row(step + "/result", save());
+                Row(step + "/will save", string.Join(" | ", VfxWritesSaveLog.Calls.Select(c => string.Join(", ", c.Split(", ").OrderBy(x => x, StringComparer.Ordinal)))));
+                Row(step + "/calls", VfxWritesSaveLog.Calls.Count);
+                Row(step + "/events", string.Join(" | ", VfxWritesSaveLog.Events));
+            }
+            SceneStep("scene save new", () => UnityEditor.SceneManagement.EditorSceneManager.SaveScene(scene, scenePath));
             var sceneObject = new GameObject("Added");
             UnityEngine.SceneManagement.SceneManager.MoveGameObjectToScene(sceneObject, scene);
-            VfxWritesSaveLog.Calls.Clear();
-            Row("scene save edited/result", UnityEditor.SceneManagement.EditorSceneManager.SaveScene(scene));
-            Row("scene save edited/will save", string.Join(" | ", VfxWritesSaveLog.Calls));
+            SceneStep("scene save edited", () => UnityEditor.SceneManagement.EditorSceneManager.SaveScene(scene));
             sceneObject.name = "Renamed";
             UnityEditor.SceneManagement.EditorSceneManager.MarkSceneDirty(scene);
-            VfxWritesSaveLog.Calls.Clear();
-            Row("scene save open/result", UnityEditor.SceneManagement.EditorSceneManager.SaveOpenScenes());
-            Row("scene save open/will save", string.Join(" | ", VfxWritesSaveLog.Calls));
+            SceneStep("scene save open", () => UnityEditor.SceneManagement.EditorSceneManager.SaveOpenScenes());
             sceneObject.name = "Dropped";
             UnityEditor.SceneManagement.EditorSceneManager.MarkSceneDirty(scene);
             var sceneBefore = File.ReadAllText(scenePath);
             VfxWritesSaveLog.DropScenes = true;
-            VfxWritesSaveLog.Calls.Clear();
-            Row("scene save dropped/result", UnityEditor.SceneManagement.EditorSceneManager.SaveScene(scene));
+            SceneStep("scene save dropped", () => UnityEditor.SceneManagement.EditorSceneManager.SaveScene(scene));
             VfxWritesSaveLog.DropScenes = false;
-            Row("scene save dropped/will save", string.Join(" | ", VfxWritesSaveLog.Calls));
             Row("scene save dropped/file changed", File.ReadAllText(scenePath) != sceneBefore);
             Row("scene save dropped/dirty", scene.isDirty);
+            // Two titled scenes, both dirty, saved by one SaveOpenScenes: one call or one per scene.
+            var secondScene = UnityEditor.SceneManagement.EditorSceneManager.NewScene(UnityEditor.SceneManagement.NewSceneSetup.EmptyScene, UnityEditor.SceneManagement.NewSceneMode.Additive);
+            SceneStep("scene save second new", () => UnityEditor.SceneManagement.EditorSceneManager.SaveScene(secondScene, secondScenePath));
+            var secondObject = new GameObject("Other");
+            UnityEngine.SceneManagement.SceneManager.MoveGameObjectToScene(secondObject, secondScene);
+            UnityEditor.SceneManagement.EditorSceneManager.MarkSceneDirty(secondScene);
+            sceneObject.name = "Both";
+            UnityEditor.SceneManagement.EditorSceneManager.MarkSceneDirty(scene);
+            SceneStep("scene save two open", () => UnityEditor.SceneManagement.EditorSceneManager.SaveOpenScenes());
+            Row("scene save two open/dirty", scene.isDirty + " " + secondScene.isDirty);
+            UnityEditor.SceneManagement.EditorSceneManager.CloseScene(secondScene, true);
 
             // The created graph's model edited (an operator added) and left for the exit; run.py
             // counts the file's documents after the run (exit/created documents).
