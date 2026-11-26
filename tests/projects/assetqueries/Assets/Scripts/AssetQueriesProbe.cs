@@ -221,6 +221,23 @@ public class AssetQueriesProbe : MonoBehaviour
         });
         Names("set_both");
         Try("set_both/paths", () => L(AssetDatabase.GetAssetPathsFromAssetBundle("both-bundle.hd")));
+
+        // A variant set alone after a name; a forced removal's name after its asset imports again.
+        Try("set_variant/name", () =>
+        {
+            plain.assetBundleName = "var-bundle";
+            plain.assetBundleVariant = "SD";
+            return S(plain.assetBundleName) + " " + S(plain.assetBundleVariant) + " meta " + Meta("Assets/Data/Plain.txt");
+        });
+        Names("set_variant");
+        Try("set_variant/paths", () => L(AssetDatabase.GetAssetPathsFromAssetBundle("var-bundle.sd")));
+        Try("reimport_removed", () =>
+        {
+            AssetDatabase.RemoveAssetBundleName("mat-bundle", true);
+            AssetDatabase.ImportAsset("Assets/Data/Mat.mat", ImportAssetOptions.ForceUpdate);
+            return "done";
+        });
+        Names("reimport_removed");
     }
 
     /// <summary>The import worker counts: AssetDatabase's and the user settings', set and forced.</summary>
