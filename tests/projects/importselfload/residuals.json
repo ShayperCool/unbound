@@ -1,5 +1,5 @@
 {
- "AssetDatabase.SetImporterOverride, GetImporterOverride, ClearImporterOverride, GetAvailableImporters and GetDefaultImporter are not implemented (they warn), and an importerOverride section of a .meta is not followed: the Editor writes the section and imports with the override": [
+ "AssetDatabase.SetImporterOverride and ClearImporterOverride are not implemented (they warn), and an importerOverride section beside another importer's section is not followed: the Editor writes the section, imports with the override and answers it from GetImporterOverride (Q805)": [
   "again/get",
   "again/importer",
   "again/lines/all Assets/Data/Plain.ovr2",
@@ -10,18 +10,11 @@
   "clear_none/lines/all Assets/Data/Own.over",
   "clear_plain/lines/all Assets/Data/Plain.ovr2",
   "clear_plain/meta",
+  "clear_preset/get",
   "clear_preset/lines/all Assets/Data/Preset.ovr2",
   "clear_preset/meta",
   "first/all Assets/Data/Preset.ovr2",
-  "importers/Assets/Data/Mismatch.json",
-  "importers/Assets/Data/Override.ovr2",
-  "importers/Assets/Data/Own.over",
-  "importers/Assets/Data/Plain.ovr2",
   "importers/Assets/Data/Preset.ovr2",
-  "importers/Assets/Data/Second.ovr2",
-  "importers/Assets/Data/Thing.gen",
-  "importers/Assets/Textures/Painted.png",
-  "importers/Assets/Textures/Sprite.png",
   "invalid/logs",
   "missing/logs",
   "own_default/get",
@@ -39,6 +32,13 @@
   "spaced/main",
   "spaced/meta"
  ],
+ "Unbound imports an asset when it first loads, not at the project's open: nothing loads the quiet assets before Play mode, so their callbacks run at their first ImportAsset": [
+  "first/import Assets/Quiet/Quiet.gen",
+  "first/post Assets/Quiet/Quiet.gen",
+  "first/post Assets/Quiet/Quiet.png",
+  "first/pre Assets/Quiet/Quiet.png",
+  "first/sprites Assets/Quiet/Quiet.png"
+ ],
  "Unbound keeps one C# object per asset object: what a load gives after a reimport is the object loaded before it (the Editor gives another C# object of the same instance id)": [
   "kept/Assets/Data/Thing.gen Texture2D Thing",
   "kept/Assets/Quiet/Quiet.gen Texture2D Quiet",
@@ -47,12 +47,5 @@
   "kept/Assets/Textures/Painted.png Texture2D Painted",
   "kept/Assets/Textures/Sprite.png Sprite Sprite",
   "kept/Assets/Textures/Sprite.png Texture2D Sprite"
- ],
- "Unbound imports an asset when it first loads, not at the project's open: nothing loads the quiet assets before Play mode, so their callbacks run at their first ImportAsset": [
-  "first/import Assets/Quiet/Quiet.gen",
-  "first/post Assets/Quiet/Quiet.gen",
-  "first/post Assets/Quiet/Quiet.png",
-  "first/pre Assets/Quiet/Quiet.png",
-  "first/sprites Assets/Quiet/Quiet.png"
  ]
 }
