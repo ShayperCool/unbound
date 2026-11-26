@@ -112,12 +112,20 @@ namespace UnityEditor
         {
             if (string.IsNullOrEmpty(path)) return;
             _ = BundleNames;
-            // The engine's listing reads the name from the .meta written (a later Refresh finds
-            // nothing changed); the asset is not imported again.
+            // The engine's listing reads the .meta written again, as a rescan reads it (a later
+            // Refresh finds nothing changed: its importer's section, which the save may have
+            // given it, too); the asset is not imported again.
+            Entry header = null;
             if (written && Native.IsReady)
-                Native.Call("asset-bundle", System.Text.Json.JsonSerializer.Serialize(new { path }));
+                header = System.Text.Json.JsonSerializer.Deserialize<Entry>(
+                    Native.Call("asset-header", System.Text.Json.JsonSerializer.Serialize(new { path })), s_Json);
             if (s_ByPath.TryGetValue(path, out var entry))
             {
+                if (header != null)
+                {
+                    entry.Importer = header.Importer;
+                    entry.Labels = header.Labels ?? Array.Empty<string>();
+                }
                 entry.Bundle = name ?? "";
                 entry.Variant = variant ?? "";
             }
@@ -305,7 +313,9 @@ namespace UnityEditor
         /// the user settings file the Editor wrote). Its rounding of other counts, and a floor, are
         /// not measured (here: rounded down, at least one).</summary>
         internal static int DefaultDesiredImportWorkerCount(int processors) =>
-            Math.Max(1, (int)(EditorPrefs.GetFloat(DesiredImportWorkerCountShareKey, DefaultDesiredImportWorkerCountShare) * processors));
+            DefaultDesiredImportWorkerCount(processors, EditorPrefs.GetFloat(DesiredImportWorkerCountShareKey, DefaultDesiredImportWorkerCountShare));
+
+        internal static int DefaultDesiredImportWorkerCount(int processors, float share) => Math.Max(1, (int)(share * processors));
 
         /// <summary>The Editor preference "Import Worker Count %" (a share of the logical processors,
         /// 0.25 by default: Unity's AssetPipelinePreferences).</summary>

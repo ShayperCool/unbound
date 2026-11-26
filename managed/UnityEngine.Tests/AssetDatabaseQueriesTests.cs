@@ -160,7 +160,10 @@ namespace UnityEngine.Tests
         {
             // A quarter of 12 processors is 3 (the Editor's on the measured machine); the user
             // settings file's values come first.
-            Assert.Equal(3, EditorUserSettings.DefaultDesiredImportWorkerCount(12));
+            Assert.Equal(3, EditorUserSettings.DefaultDesiredImportWorkerCount(12, 0.25f));
+            // The preference's share (rounding down, at least one: not measured beyond 12 at 25%).
+            Assert.Equal(6, EditorUserSettings.DefaultDesiredImportWorkerCount(12, 0.5f));
+            Assert.Equal(1, EditorUserSettings.DefaultDesiredImportWorkerCount(2, 0.25f));
             const string file = "%YAML 1.1\n--- !u!162 &1\nEditorUserSettings:\n  m_ObjectHideFlags: 0\n  m_DesiredImportWorkerCount: 8\n  m_StandbyImportWorkerCount: 2\n";
             Assert.Equal(8, EditorUserSettings.WorkerSetting(file, "m_DesiredImportWorkerCount"));
             Assert.Null(EditorUserSettings.WorkerSetting(file, "m_IdleImportWorkerShutdownDelay"));

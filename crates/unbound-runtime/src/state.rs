@@ -1006,23 +1006,34 @@ pub fn dispatch(method: &str, request: &str) -> Result<String> {
                 .collect();
             Ok(serde_json::Value::Array(roots).to_string())
         }
-        "asset-bundle" => {
-            // The AssetBundle name of an asset whose .meta a script's set wrote (AssetImporter
-            // .assetBundleName): read again into the database, without importing the asset.
+        "asset-header" => {
+            // What a .meta a script's save wrote holds (AssetImporter.assetBundleName, its
+            // importer's section): read again into the database as a rescan reads it, without
+            // importing the asset; its importer and labels as the listing gives them, null for a
+            // path of no asset.
             #[derive(Deserialize)]
             struct Request {
                 path: String,
             }
             let r: Request = serde_json::from_str(request)?;
             let Some(file) = s.db().by_path(&r.path).map(|a| a.file.clone()) else {
-                return Ok("false".into());
+                return Ok("null".into());
             };
             let mut meta = file.into_os_string();
             meta.push(".meta");
-            let bundle = unbound_project::assetdb::read_meta_header(std::path::Path::new(&meta)).bundle;
-            let mut found = false;
-            s.update_db(false, |db| found = db.set_bundle(&r.path, bundle));
-            Ok(found.to_string())
+            let header = unbound_project::assetdb::read_meta_header(std::path::Path::new(&meta));
+            let mut answer = serde_json::Value::Null;
+            s.update_db(false, |db| {
+                if let Some(a) = db.set_header(&r.path, header) {
+                    answer = json!({
+                        "importer": asset_importer(a),
+                        "labels": a.labels,
+                        "bundle": a.bundle.name,
+                        "variant": a.bundle.variant,
+                    });
+                }
+            });
+            Ok(answer.to_string())
         }
         "asset-list" => {
             // Every asset: what AssetDatabase.GetAllAssetPaths and FindAssets search.

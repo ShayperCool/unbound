@@ -232,16 +232,16 @@ impl AssetDb {
         self.assets.iter()
     }
 
-    /// Gives the asset at `path` the AssetBundle name its `.meta` has now (a script's set wrote
-    /// it); false for a path of no asset.
-    pub fn set_bundle(&mut self, path: &str, bundle: Bundle) -> bool {
-        match self.by_path.get(&path.to_ascii_lowercase()) {
-            Some(&i) => {
-                self.assets[i].bundle = bundle;
-                true
-            }
-            None => false,
-        }
+    /// Gives the asset at `path` what its `.meta` holds now (a script's save wrote it): its
+    /// labels, importer section and AssetBundle name, as a rescan would read them (its GUID is
+    /// kept); the asset, or None for a path of no asset.
+    pub fn set_header(&mut self, path: &str, header: MetaHeader) -> Option<&Asset> {
+        let &i = self.by_path.get(&path.to_ascii_lowercase())?;
+        let asset = &mut self.assets[i];
+        asset.labels = header.labels;
+        asset.importer = header.importer;
+        asset.bundle = header.bundle;
+        Some(asset)
     }
 
     /// Lists `asset`, in place of what had its GUID or its path.
@@ -493,16 +493,27 @@ mod db_tests {
     use super::*;
 
     #[test]
-    fn an_assets_bundle_name_changes_with_its_meta_without_a_new_scan() {
+    fn an_assets_header_changes_with_its_meta_without_a_new_scan() {
+        // A .meta of its GUID alone that a save gave its importer's section and a name.
+        let dir = std::env::temp_dir().join(format!("unbound-db-header-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let meta = dir.join("T.png.meta");
+        std::fs::write(&meta, "fileFormatVersion: 2\nguid: 00000000000000000000000000000001\nTextureImporter:\n  serializedVersion: 13\n  userData: \n  assetBundleName: ui\n  assetBundleVariant: hd\n").unwrap();
         let mut db = AssetDb::default();
-        db.insert(asset(1, "Assets/A.txt"));
-        let bundle = Bundle {
-            name: "ui".into(),
-            variant: "hd".into(),
-        };
-        assert!(db.set_bundle("assets/a.txt", bundle.clone()));
-        assert_eq!(db.by_path("Assets/A.txt").unwrap().bundle, bundle);
-        assert!(!db.set_bundle("Assets/B.txt", Bundle::default()));
+        db.insert(asset(1, "Assets/T.png"));
+        let header = read_meta_header(&meta);
+        let asset = db.set_header("assets/t.png", header.clone()).unwrap();
+        assert_eq!(asset.importer.as_deref(), Some("TextureImporter"));
+        assert_eq!(
+            asset.bundle,
+            Bundle {
+                name: "ui".into(),
+                variant: "hd".into()
+            }
+        );
+        assert_eq!(asset.guid, Guid(1));
+        assert!(db.set_header("Assets/B.txt", header).is_none());
+        let _ = std::fs::remove_dir_all(&dir);
     }
 
     #[test]
