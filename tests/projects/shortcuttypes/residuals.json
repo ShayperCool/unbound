@@ -1,5 +1,0 @@
-{
-  "ContextManager.globalContextType is still a generated stub (null): the shortcut context manager, with the rest of the shortcut registry, is not written by hand yet. The attributes' priority rule finds the global context type by its name, so a shortcut declared in it still gets the global priority (attribute.globalContext)": [
-    "attribute.globalContextType"
-  ]
-}
