@@ -7,7 +7,6 @@ two macOS Editor batch captures that agree on them (their values depend on neith
 graphics device); earlier rows are unchanged. The queued text-asset identity rows move by the shift
 measured on macOS.
 
-The creation-defaults slice (Q813) resolves 37 queued rows with the controls of
 The channel client slice adds one row: `UnityEditor.MPE.ChannelClient`, now written by hand, is excluded (no public parameterless constructor), from two independent Linux GPU captures that agree on it; earlier rows are unchanged.
 
 The creation-defaults slice (Q813) resolves 37 queued rows with the controls of
