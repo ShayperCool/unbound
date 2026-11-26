@@ -8,6 +8,7 @@
     "crates/unbound-assets/src/new_meta/",
     "crates/unbound-runtime/src/state.rs",
     "managed/UnityEngine/Editor/ImporterMetaFiles.cs",
+    "managed/UnityEngine/Editor/TextureImporterPlatforms.cs",
     "managed/UnityEngine/Editor/ImporterSettings.cs"
   ]
 }

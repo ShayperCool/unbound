@@ -135,6 +135,13 @@ namespace UnityEditor
         /// <summary>Reads the importer's own settings from its section of the .meta.</summary>
         internal virtual void ReadSettings(YNode body) { }
 
+        /// <summary>The settings as the .meta would hold them were nothing changed: without what the
+        /// importer added itself on loading them (<see cref="TextureImporter"/>'s platforms).</summary>
+        internal virtual YNode SavedSettings() => m_Settings;
+
+        /// <summary>The settings were written into the .meta whole.</summary>
+        internal virtual void SettingsWritten() { }
+
         /// <summary>The asset was imported again with this importer's settings.</summary>
         internal virtual void Reimported() { }
 

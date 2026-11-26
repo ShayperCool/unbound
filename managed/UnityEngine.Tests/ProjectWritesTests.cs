@@ -204,14 +204,17 @@ namespace UnityEngine.Tests
         static string TextureTemplate() => NewMetaTemplate("texture_importer.yaml").Replace("{platforms}",
             string.Concat(new[] { "DefaultTexturePlatform", "Standalone", "Android" }.Select(p => NewMetaTemplate("texture_platform.yaml").Replace("{platform}", p))));
 
-        static IEnumerable<YText> Installed() =>
-            UnityYamlText.ParseTopLevel("platformSettings:\n" + NewMetaTemplate("texture_platform.yaml").Replace("{platform}", "Android")).Get("platformSettings").Items;
-
+        /// <summary>The settings of a .meta as the importer holds them, the platforms it imports for
+        /// added (those of the Mac Editor that recorded label-metas; none for a release family whose
+        /// files are not measured, <paramref name="template"/> ""), changed, and written.</summary>
         static string Rewrite(string text, Action<YNode> change, List<string> unwritten, string template = null)
         {
-            var settings = UnityYamlText.ParseTopLevel(text).Get("TextureImporter").ToNode();
+            var saved = UnityYamlText.ParseTopLevel(text).Get("TextureImporter").ToNode();
+            var settings = MetaSettings.Clone(saved);
+            UnityEditor.TextureImporter.AddMissingPlatforms(settings, template == "" ? null : new[] { "Standalone", "Android" });
+            change(saved);
             change(settings);
-            return ImporterMeta.Rewritten(text, "TextureImporter", settings, ("", "", ""), template ?? TextureTemplate(), Installed, unwritten);
+            return ImporterMeta.Rewritten(text, "TextureImporter", settings, saved, ("", "", ""), template ?? TextureTemplate(), unwritten);
         }
 
         /// <summary>A texture's section of the current version that lacks settings and a platform
@@ -232,7 +235,7 @@ namespace UnityEngine.Tests
         /// <summary>What is not filled writes nothing new: no change at all (projectwrites 06.crlf
         /// unchanged), a missing setting given the value its default reads, and a missing setting of
         /// a section of another version, which stays reported; a changed setting there is written
-        /// with the installed modules, as before.</summary>
+        /// with the platforms the importer added.</summary>
         [Fact]
         public void ATextureSectionIsFilledOnlyForAChangeOfASectionOfTheCurrentVersion()
         {
@@ -251,8 +254,8 @@ namespace UnityEngine.Tests
             var changed = Rewrite(old, s => MetaSettings.SetInt(s, "mipmaps.enableMipMap", 0), unwritten);
             Assert.Empty(unwritten);
             Assert.StartsWith(old.Replace("enableMipMap: 1", "enableMipMap: 0").Replace("  userData: \n", ""), changed);
-            Assert.Contains("    buildTarget: Android\n", changed);
-            Assert.DoesNotContain("buildTarget: Standalone", changed);
+            // The platforms the importer added, in the file's layout (not measured for older layouts).
+            Assert.EndsWith("    buildTarget: Standalone\n    maxTextureSize: 2048\n  - serializedVersion: 3\n    buildTarget: Android\n    maxTextureSize: 2048\n  userData: \n", changed);
             // A release family whose files are not measured: no template, nothing filled.
             Assert.Null(Rewrite(partial, s => MetaSettings.SetInt(s, "streamingMipmaps", 1), unwritten, template: ""));
         }

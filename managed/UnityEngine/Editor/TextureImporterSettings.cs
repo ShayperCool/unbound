@@ -467,7 +467,7 @@ namespace UnityEditor
             return entries.Count > 0 ? entries : null;
         }
 
-        static TextureImporterPlatformSettings ReadEntry(YNode node, bool prefixed, int version)
+        internal static TextureImporterPlatformSettings ReadEntry(YNode node, bool prefixed, int version)
         {
             var settings = new TextureImporterPlatformSettings();
 

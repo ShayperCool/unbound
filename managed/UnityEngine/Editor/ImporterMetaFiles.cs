@@ -51,8 +51,9 @@ namespace Unbound.Runtime
     /// tests/projects/scenesave label-metas): the file's text with each changed setting's value
     /// replaced, the common <c>userData</c> and AssetBundle fields (the bundle names lowercased),
     /// and for a texture, audio or model importer the whole section then in the release's layout
-    /// (<see cref="ImporterLayout"/>: the keys measured missing at their defaults, a texture's
-    /// missing platforms after its own); a file whose settings did not change is not written.
+    /// (<see cref="ImporterLayout"/>: the keys measured missing at their defaults), a texture's
+    /// platform entries as its importer holds them (<see cref="UnityEditor.TextureImporter"/>,
+    /// tests/projects/textureplatforms); a file whose settings did not change is not written.
     /// Saved by SaveAndReimport, WriteImportSettingsIfDirty, and by an
     /// import whose preprocessors changed the settings.
     /// </summary>
@@ -97,8 +98,8 @@ namespace Unbound.Runtime
             var unwritten = new List<string>();
             bool texture = importer.m_SettingsType == "TextureImporter";
             var layout = texture ? ImporterLayout.ForTexture(TextureTemplate()) : ImporterLayout.Of(importer.m_SettingsType);
-            var written = Rewritten(text, importer.m_SettingsType, importer.m_Settings, common, layout,
-                texture ? InstalledPlatformEntries : null, unwritten, out var older, out bool laidOut);
+            var written = Rewritten(text, importer.m_SettingsType, importer.m_Settings, importer.SavedSettings(), common, layout, unwritten,
+                out var older, out bool laidOut);
             importer.m_ImportedSettings = MetaSettings.ToJson(importer.m_Settings);
             if (older.Count > 0)
                 Debug.LogWarning($"Unbound saves the {importer.m_SettingsType} settings of '{path}' in the layout the file has ({string.Join(", ", older)}): "
@@ -115,6 +116,7 @@ namespace Unbound.Runtime
             }
             File.WriteAllText(meta, written);
             UnityEditor.ProjectImports.Wrote(meta);
+            importer.SettingsWritten();
             return true;
         }
 
@@ -122,24 +124,37 @@ namespace Unbound.Runtime
         /// (<paramref name="type"/>), or null when nothing is to be written; the settings whose
         /// place is not known go to <paramref name="unwritten"/>. <paramref name="textureTemplate"/>:
         /// the texture section at its defaults with its platforms ("" but for a texture of a
-        /// measured release); <paramref name="installedPlatforms"/>: a texture's installed modules'
-        /// entries.</summary>
-        internal static string Rewritten(string text, string type, YNode settings, (string UserData, string Bundle, string Variant) common,
-            string textureTemplate, Func<IEnumerable<YText>> installedPlatforms, List<string> unwritten) =>
-            Rewritten(text, type, settings, common, type == "TextureImporter" ? ImporterLayout.ForTexture(textureTemplate) : null,
-                installedPlatforms, unwritten, out _, out _);
+        /// measured release); <paramref name="saved"/>: the settings without what the importer
+        /// added itself (<see cref="AssetImporter.SavedSettings"/>).</summary>
+        internal static string Rewritten(string text, string type, YNode settings, YNode saved, (string UserData, string Bundle, string Variant) common,
+            string textureTemplate, List<string> unwritten) =>
+            Rewritten(text, type, settings, saved, common, type == "TextureImporter" ? ImporterLayout.ForTexture(textureTemplate) : null,
+                unwritten, out _, out _);
 
         /// <summary>The same with the importer's <paramref name="layout"/> (null where it is not
         /// measured); in <paramref name="older"/> what kept the file's layout, whether the section
         /// was laid out.</summary>
-        internal static string Rewritten(string text, string type, YNode settings, (string UserData, string Bundle, string Variant) common,
-            ImporterLayout layout, Func<IEnumerable<YText>> installedPlatforms, List<string> unwritten, out List<string> older, out bool laidOut)
+        internal static string Rewritten(string text, string type, YNode settings, YNode saved, (string UserData, string Bundle, string Variant) common,
+            ImporterLayout layout, List<string> unwritten, out List<string> older, out bool laidOut)
         {
             older = new List<string>();
             laidOut = false;
+            // What the importer added itself on loading its settings (a texture's platforms) is no
+            // change: without one the file is not written (tests/projects/importermeta same.*).
+            if (saved != null && !ReferenceEquals(saved, settings))
+            {
+                var unchanged = new List<string>();
+                if (Rewritten(text, type, saved, null, common, layout, unchanged, out older, out _) == null)
+                {
+                    unwritten.AddRange(unchanged);
+                    return null;
+                }
+                older = new List<string>();
+            }
             var root = UnityYamlText.ParseTopLevel(text);
             var section = root.Get(type);
             if (section == null || section.Kind != YKind.Map) return null;
+            if (type == "TextureImporter") MatchPlatforms(section, settings);
             Patch(section, settings, "", unwritten);
             SetCommonScalars(section, common);
             var original = text.Replace("\r\n", "\n");
@@ -177,14 +192,6 @@ namespace Unbound.Runtime
                     }
                 }
             }
-            // A texture's settings written again list its missing platforms after its own (the
-            // layout's, scenesave label-metas kept.*), then every installed platform module
-            // (tests/projects/projectwrites 06.crlf).
-            if (installedPlatforms != null && root.Get(type)?.Get("platformSettings") is { Kind: YKind.Seq } list)
-            {
-                if (laidOut) AppendMissingPlatforms(list, layout.TemplatePlatforms);
-                AppendMissingPlatforms(list, installedPlatforms());
-            }
             written = UnityYamlText.WriteTopLevel(root);
             return written == original ? null : written;
         }
@@ -216,13 +223,80 @@ namespace Unbound.Runtime
             importer.Reimported();
         }
 
-        sealed class Platform
+        static string[] s_TextureImportPlatforms;
+        static bool? s_TextureFilesMeasured;
+
+        /// <summary>For tests: the platforms <see cref="TextureImportPlatforms"/> answers.</summary>
+        internal static string[] s_TextureImportPlatformsForTests;
+
+        /// <summary>The platforms a texture imports for besides the default: Standalone, then the
+        /// installation's platform modules (matches the Unity 6000.0.71f1 Editor, whose importer adds
+        /// their missing entries, tests/projects/textureplatforms load.*, scenesave label-metas
+        /// kept.*); null where that is not measured (another release family, no native side).</summary>
+        internal static IReadOnlyList<string> TextureImportPlatforms
         {
-            public string Name { get; set; }
-            public string Entry { get; set; }
+            get
+            {
+                if (s_TextureImportPlatformsForTests != null) return s_TextureImportPlatformsForTests;
+                if (!Native.IsReady) return null;
+                s_TextureFilesMeasured ??= TextureTemplate().Length > 0;
+                if (s_TextureFilesMeasured != true) return null;
+                if (s_TextureImportPlatforms == null)
+                {
+                    using var modules = System.Text.Json.JsonDocument.Parse(Native.Call("texture-platforms", "{}"));
+                    var names = new List<string> { "Standalone" };
+                    foreach (var module in modules.RootElement.EnumerateArray())
+                        if (module.GetProperty("name").GetString() is { } name && !names.Contains(name)) names.Add(name);
+                    s_TextureImportPlatforms = names.ToArray();
+                }
+                return s_TextureImportPlatforms;
+            }
         }
 
-        static Platform[] s_Platforms;
+        /// <summary>The section's platform entries made those of <paramref name="settings"/>, in
+        /// their order by <c>buildTarget</c>: an entry the file has keeps its text (the values are
+        /// patched in after), one it lacks is added as the settings hold it, one the settings lack
+        /// is removed (tests/projects/textureplatforms set.*, clear.*, load.*).</summary>
+        static void MatchPlatforms(YText section, YNode settings)
+        {
+            if (settings?.Get("platformSettings") is not { Kind: YKind.Seq } wanted || section.Get("platformSettings") is not { Kind: YKind.Seq } list) return;
+            var remaining = new List<YText>(list.Items);
+            var items = new List<YText>(wanted.Items.Length);
+            foreach (var entry in wanted.Items)
+            {
+                var name = entry.Kind == YKind.Map ? entry.Get("buildTarget")?.AsString() : null;
+                int at = name == null ? -1 : remaining.FindIndex(item => item.Kind == YKind.Map && item.Get("buildTarget")?.Text == name);
+                if (at >= 0)
+                {
+                    items.Add(remaining[at]);
+                    remaining.RemoveAt(at);
+                }
+                else items.Add(FromNode(entry));
+            }
+            list.Items.Clear();
+            list.Items.AddRange(items);
+            list.Flow = items.Count == 0;
+        }
+
+        /// <summary>The text of a block map or sequence of scalars as the managed reader holds it.</summary>
+        static YText FromNode(YNode node)
+        {
+            switch (node?.Kind ?? YKind.Null)
+            {
+                case YKind.Map:
+                    var map = YText.Map();
+                    for (int i = 0; i < node.Keys.Length; i++) map.Add(node.Keys[i], FromNode(node.Values[i]));
+                    return map;
+                case YKind.Seq:
+                    var seq = YText.Seq(flow: node.Items.Length == 0);
+                    foreach (var item in node.Items) seq.Items.Add(FromNode(item));
+                    return seq;
+                case YKind.Scalar:
+                    return YText.Scalar(Plain(node.Scalar));
+                default:
+                    return YText.Scalar("");
+            }
+        }
 
         static void SetCommonScalars(YText section, (string UserData, string Bundle, string Variant) common)
         {
@@ -235,40 +309,6 @@ namespace Unbound.Runtime
 
         static string TextureTemplate() =>
             s_TextureTemplate ??= System.Text.Json.JsonDocument.Parse(Native.Call("texture-meta-template", "{}")).RootElement.GetProperty("section").GetString() ?? "";
-
-        /// <summary>The platform entries a list lacks, after the list's own, in the order given
-        /// (label-metas kept.*: DefaultTexturePlatform, Android, then Standalone); whether any was
-        /// added.</summary>
-        static bool AppendMissingPlatforms(YText list, IEnumerable<YText> entries)
-        {
-            bool added = false;
-            foreach (var entry in entries)
-            {
-                if (entry?.Get("buildTarget")?.Text is not string name || IndexOfPlatform(list, name) >= 0) continue;
-                list.Items.Add(entry);
-                added = true;
-            }
-            return added;
-        }
-
-        static int IndexOfPlatform(YText list, string name)
-        {
-            for (int i = 0; i < list.Items.Count; i++)
-                if (list.Items[i].Kind == YKind.Map && list.Items[i].Get("buildTarget")?.Text == name) return i;
-            return -1;
-        }
-
-        /// <summary>The installation's platform modules' entries at their defaults.</summary>
-        static IEnumerable<YText> InstalledPlatformEntries()
-        {
-            s_Platforms ??= System.Text.Json.JsonSerializer.Deserialize<Platform[]>(Native.Call("texture-platforms", "{}"),
-                new System.Text.Json.JsonSerializerOptions { PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase }) ?? Array.Empty<Platform>();
-            return s_Platforms.Select(platform =>
-            {
-                var entry = UnityYamlText.ParseTopLevel("platformSettings:\n" + platform.Entry).Get("platformSettings");
-                return entry?.Kind == YKind.Seq && entry.Items.Count == 1 ? entry.Items[0] : null;
-            });
-        }
 
         /// <summary>Each scalar of <paramref name="settings"/> (the importer's tree) into the same
         /// place of <paramref name="text"/> where it differs; entries the file does not have stay
@@ -413,11 +453,6 @@ namespace Unbound.Runtime
         readonly YText m_Section;
         readonly YText m_PlatformEntry;
 
-        /// <summary>The platform entries of the layout (a texture's: DefaultTexturePlatform,
-        /// Standalone, the installed modules), which a laid-out section lacking them gets after its
-        /// own (tests/projects/scenesave label-metas kept.*).</summary>
-        internal IReadOnlyList<YText> TemplatePlatforms { get; }
-
         /// <param name="platformEntry">One per-platform entry of the layout; null: the first of the
         /// section's own platform list, if it has one.</param>
         internal ImporterLayout(string importer, string section, string platformEntry)
@@ -426,11 +461,10 @@ namespace Unbound.Runtime
             m_Section = UnityYamlText.ParseTopLevel(section).Get(importer)
                 ?? throw new FormatException($"the layout of {importer} has no {importer} section");
             var own = m_Section.Get("platformSettings");
-            TemplatePlatforms = own?.Kind == YKind.Seq ? own.Items.ToArray() : Array.Empty<YText>();
             if (platformEntry != null)
                 m_PlatformEntry = UnityYamlText.ParseTopLevel("platformSettings:\n" + platformEntry).Get("platformSettings")?.Items.FirstOrDefault()
                     ?? throw new FormatException($"the layout of {importer} has no platform entry");
-            else m_PlatformEntry = TemplatePlatforms.FirstOrDefault(entry => entry.Kind == YKind.Map);
+            else m_PlatformEntry = own?.Kind == YKind.Seq ? own.Items.FirstOrDefault(entry => entry.Kind == YKind.Map) : null;
         }
 
         /// <summary>A texture's layout from its new-asset section with its platforms
