@@ -166,6 +166,9 @@ namespace UnityEngine.Tests
         [Fact]
         public void AnAgentWalksAroundAnObstacleOnItsWay()
         {
+            // Unbound's box cover (C5), for a release without the measured answer: the measured
+            // release ignores upright boxes (UprightBoxesAreNoObstacleOnTheMeasuredRelease).
+            using var release = TestRelease.Pin(TestRelease.Unmeasured);
             // Documented: agents sidestep the obstacle as they move along their path. The box (1 m,
             // a little off the line) with the agent's 0.5 m radius leaves no straight way past.
             Box(new Vector3(0f, 0.5f, 0.2f), Vector3.one);
@@ -224,6 +227,9 @@ namespace UnityEngine.Tests
         [Fact]
         public void TheShapeAndSizeAreRespected()
         {
+            // Unbound's box cover (C5), for a release without the measured answer: the measured
+            // release ignores upright boxes (UprightBoxesAreNoObstacleOnTheMeasuredRelease).
+            using var release = TestRelease.Pin(TestRelease.Unmeasured);
             // A box 5.5 m long across the path takes the agent further out than a 1 m box; turned a
             // quarter, a box 5.5 m along x is the same; raised above the agents' height it is no
             // obstacle; a capsule's radius counts.
@@ -322,6 +328,9 @@ namespace UnityEngine.Tests
         [Fact]
         public void ALongBoxAndACrowdedNeighbourQueryAreReportedOnce()
         {
+            // Unbound's box cover (C5), for a release without the measured answer: the measured
+            // release ignores upright boxes (UprightBoxesAreNoObstacleOnTheMeasuredRelease).
+            using var release = TestRelease.Pin(TestRelease.Unmeasured);
             var warnings = new List<string>();
             WithWarnings(warnings, () =>
             {
@@ -395,8 +404,40 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
+        public void UprightBoxesAreNoObstacleOnTheMeasuredRelease()
+        {
+            // Unity 6000.0.71f1 (tests/projects/navpath obstacle-shapes): an upright box, of any
+            // size and turned about the vertical or not, is walked through and pushes no agent out;
+            // one tilted by a degree is avoided.
+            using var release = TestRelease.Pin(TestRelease.Measured);
+            foreach (var rotation in new[] { Quaternion.identity, Quaternion.Euler(0f, 30f, 0f) })
+            {
+                var box = Box(new Vector3(0f, 0.5f, 0.2f), new Vector3(1.5f, 1f, 1f), rotation);
+                var agent = Agent();
+                var walk = Walk(agent);
+                Assert.True(walk.Deviation < 1e-3f, $"upright box: {walk.Deviation} m from the line");
+                Remove(agent);
+                Remove(box);
+            }
+            var inside = Box(new Vector3(0f, 0.5f, 0.2f), new Vector3(2f, 1f, 2f));
+            var standing = Agent(new Vector3(0.1f, 0f, 0.3f), new Vector3(0.1f, 0f, 0.3f));
+            var before = standing.nextPosition;
+            for (int i = 0; i < 5; i++) Step();
+            Assert.True((standing.nextPosition - before).magnitude < 1e-4f, $"pushed to {standing.nextPosition}");
+            Remove(standing);
+            Remove(inside);
+
+            var tilted = Box(new Vector3(0f, 0.5f, 0.2f), new Vector3(1.5f, 1f, 1f), Quaternion.Euler(0f, 0f, 1f));
+            var avoider = Agent();
+            Assert.True(Walk(avoider).Deviation > 0.5f, "a tilted box is avoided");
+        }
+
+        [Fact]
         public void DisablingTheObstacleRestoresTheStraightWalk()
         {
+            // Unbound's box cover (C5), for a release without the measured answer: the measured
+            // release ignores upright boxes (UprightBoxesAreNoObstacleOnTheMeasuredRelease).
+            using var release = TestRelease.Pin(TestRelease.Unmeasured);
             var obstacle = Box(new Vector3(0f, 0.5f, 0.2f), Vector3.one);
             var agent = Agent();
             Assert.True(Walk(agent).Deviation > 0.75f);
