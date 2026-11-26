@@ -1,6 +1,6 @@
 # VideoPlayer audio output
 
-The Unity 6000.0.71f1 Play mode capture (batch Linux GPU Editor, two identical captures) plays
+The Unity 6000.0.71f1 Play mode capture (batch Linux GPU Editor, two identical captures of three) plays
 `Assets/Video/tone.webm` (VP8 64x48, 10 frames a second, 3 seconds, a Vorbis stereo track at 48
 kHz: a tone stepping every half second through 300, 450, 600, 750, 900 and 1050 Hz, its left
 channel at amplitude 0.5 and its right at 0.25) with a VideoPlayer rendering in API Only mode,
@@ -11,8 +11,12 @@ one fresh player and AudioSource per scenario:
   played; `speed2`: playbackSpeed 2; `trackOff`: the track disabled; `direct`: Direct output;
   `none`: no audio output; `loop`: looping past the end.
 - A filter on the AudioSource (OnAudioFilterRead) measures every block it is given. Each phase
-  records whether any sound came, the tone steps heard in order (0 for 300 Hz to 5 for 1050 Hz; a
-  step counts when two blocks in a row hear it), and the steady blocks' RMS per channel; `.listener`
+  records whether any sound came, the tone steps heard (0 for 300 Hz to 5 for 1050 Hz; a step
+  counts when two blocks in a row hear it) as far as they do not depend on how long the phase ran
+  (the main thread wakes late under load): all of them for the clip played to its end, the last
+  before the wrap and the first after for the loop, else the first step and whether each next one
+  followed the one before (at speed 2 whether four steps were reached), and the steady blocks' RMS
+  per channel; `.listener`
   is whether AudioListener.GetOutputData heard anything; `.start` is when the first sound came
   after Play and `play.endGap` how long before loopPointReached the last one came (by the filter's
   AudioSettings.dspTime, to a tenth of a second). Also the prepared player's track answers,

@@ -9,46 +9,46 @@
 {"k":"volume.prepared","v":[true,1,1,true,true,true,1,false]}
 {"k":"Video volume.playing","v":[true,true]}
 {"k":"volume.end","v":[false,true,"null"]}
-{"k":"volume.a","v":[true,[0,1,2],0.18,0.09]}
+{"k":"volume.a","v":[true,[0,true],0.18,0.09]}
 {"k":"volume.listener","v":[true]}
 {"k":"volume.start","v":[0]}
 {"k":"pause.prepared","v":[true,1,1,true,true,true,1,false]}
 {"k":"pause.end","v":[false,true,"null"]}
-{"k":"pause.a","v":[true,[0,1],0.35,0.18]}
-{"k":"pause.paused","v":[false,[],0,0]}
-{"k":"pause.resumed","v":[true,[1,2],0.35,0.18]}
+{"k":"pause.a","v":[true,[0,true],0.35,0.18]}
+{"k":"pause.paused","v":[false,[-1,true],0,0]}
+{"k":"pause.resumed","v":[true,[1,true],0.35,0.18]}
 {"k":"pause.listener","v":[true]}
 {"k":"seek.prepared","v":[true,1,1,true,true,true,1,false]}
 {"k":"seek.completed","v":[true,0.2]}
 {"k":"seek.end","v":[false,true,"null"]}
-{"k":"seek.a","v":[true,[0],0.35,0.18]}
-{"k":"seek.afterSeek","v":[true,[4],0.35,0.18]}
+{"k":"seek.a","v":[true,[0,true],0.35,0.18]}
+{"k":"seek.afterSeek","v":[true,[4,true],0.35,0.18]}
 {"k":"seek.listener","v":[true]}
 {"k":"speed2.prepared","v":[true,1,1,true,true,true,1,false]}
 {"k":"Video speed2.playing","v":[true,true]}
 {"k":"speed2.end","v":[false,true,"null"]}
-{"k":"speed2.a","v":[true,[0,1,2,3,4],0.35,0.17]}
+{"k":"speed2.a","v":[true,[0,true],0.35,0.17]}
 {"k":"speed2.listener","v":[true]}
 {"k":"speed2.start","v":[0]}
 {"k":"trackOff.prepared","v":[true,1,1,true,true,false,1,false]}
 {"k":"Video trackOff.playing","v":[true,false]}
 {"k":"trackOff.end","v":[false,false,"null"]}
-{"k":"trackOff.a","v":[false,[],0,0]}
+{"k":"trackOff.a","v":[false,[-1,true],0,0]}
 {"k":"trackOff.listener","v":[false]}
 {"k":"direct.prepared","v":[true,1,1,true,true,true,1,false]}
 {"k":"Video direct.playing","v":[true,false]}
 {"k":"direct.end","v":[false,false,"null"]}
-{"k":"direct.a","v":[false,[],0,0]}
+{"k":"direct.a","v":[false,[-1,true],0,0]}
 {"k":"direct.listener","v":[true]}
 {"k":"none.prepared","v":[true,1,1,true,true,true,1,false]}
 {"k":"Video none.playing","v":[true,false]}
 {"k":"none.end","v":[false,false,"null"]}
-{"k":"none.a","v":[false,[],0,0]}
+{"k":"none.a","v":[false,[-1,true],0,0]}
 {"k":"none.listener","v":[false]}
 {"k":"loop.prepared","v":[true,1,1,true,true,true,1,false]}
 {"k":"Video loop.playing","v":[true,true]}
 {"k":"loop.end","v":[false,true,"null"]}
-{"k":"loop.a","v":[true,[0,1,2,3,4,0,1,2,3],0.35,0.18]}
+{"k":"loop.a","v":[true,[4,0],0.35,0.18]}
 {"k":"loop.listener","v":[true]}
 {"k":"loop.start","v":[0]}
 {"k":"complete","v":true}

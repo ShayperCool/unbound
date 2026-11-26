@@ -172,7 +172,7 @@ public sealed class VideoAudioProbe : MonoBehaviour
         yield return new WaitForSecondsRealtime(0.6f);
     }
 
-    /// <summary>A short play, then paused, a seek to 2 seconds (the 900 Hz step) and its
+    /// <summary>A quarter of a second of play, then paused, a seek to 2 seconds (the 900 Hz step) and its
     /// completion awaited, then played again.</summary>
     IEnumerator Seek()
     {
@@ -190,7 +190,29 @@ public sealed class VideoAudioProbe : MonoBehaviour
         Put("seek.completed", done, Math.Round(m_Player.time, 1));
         m_Recorder.Phase = "afterSeek";
         m_Player.Play();
+        // (The Editor's sound after the seek is steady with these waits; after half a second of
+        // play before the pause it came in only one of three captures.)
         yield return new WaitForSecondsRealtime(0.35f);
+    }
+
+    /// <summary>The tone steps of a phase as far as they do not depend on how long the phase ran
+    /// (the main thread can wake late under load): a clip played to its end gives them all; a
+    /// looping one the last step before it wrapped and the first after; any other phase its first
+    /// step and whether each next step followed the one before (at speed 2, where skipped chunks
+    /// can cut a step short, whether it reached four steps instead).</summary>
+    static object StepSummary(string name, List<int> steps)
+    {
+        if (name == "play") return steps.ToArray();
+        if (name == "loop")
+        {
+            int at = Enumerable.Range(1, Math.Max(0, steps.Count - 1)).FirstOrDefault(i => steps[i] < steps[i - 1]);
+            return at > 0 ? new object[] { steps[at - 1], steps[at] } : new object[] { steps.Count > 0 ? steps[steps.Count - 1] : -1, -1 };
+        }
+        bool ascending = Enumerable.Range(1, Math.Max(0, steps.Count - 1)).All(i => steps[i] == steps[i - 1] + 1);
+        // At speed 2 the 1.2 s phase reaches at least four steps (about three at speed 1); a late
+        // main thread only adds steps.
+        if (name == "speed2") return new object[] { steps.Count > 0 ? steps[0] : -1, steps.Count >= 4 };
+        return new object[] { steps.Count > 0 ? steps[0] : -1, ascending };
     }
 
     /// <summary>Per phase: whether sound came, the tone steps heard in order (a step counts when two
@@ -215,7 +237,7 @@ public sealed class VideoAudioProbe : MonoBehaviour
             var steady = sounding.Where(b => Math.Abs((b.Frequency - 300) / 150 - Math.Round((b.Frequency - 300) / 150)) < 0.2).ToList();
             Put(name + "." + phase,
                 sounding.Count > 0,
-                steps.ToArray(),
+                StepSummary(name, steps),
                 steady.Count == 0 ? 0 : Math.Round(steady.Average(b => b.RmsLeft), 2),
                 steady.Count == 0 ? 0 : Math.Round(steady.Average(b => b.RmsRight), 2));
         }
