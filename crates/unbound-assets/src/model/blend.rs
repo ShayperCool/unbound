@@ -92,7 +92,8 @@ pub(crate) fn conversion_key(script: Option<&Path>) -> String {
 }
 
 /// Fetches the export script first when the Editor files hold it only as a file still to fetch
-/// (a cache tree linked from an earlier unpack set, `unbound_project::editor_archive::ensure`).
+/// (a cache tree linked from an earlier unpack set, `unbound_project::editor_archive::ensure`),
+/// for the cache key alone: [`convert`] only reads what is there.
 fn fetch_script(script: &Path) -> Result<()> {
     match script.parent().and_then(Path::parent) {
         Some(data) if script.ends_with(EXPORT_SCRIPT) => {
@@ -111,7 +112,8 @@ pub(crate) fn convert(source: &Path, script: Option<&Path>) -> Result<Vec<u8>> {
             source.display()
         )
     })?;
-    fetch_script(script).with_context(|| format!("cannot import {}", source.display()))?;
+    // The script was fetched, if it was pending, for the cache key (conversion_key) before this:
+    // a conversion never runs under a key made without it.
     if !script.is_file() {
         bail!(
             "cannot import {}: the Editor installation has no {} (it converts .blend files with it)",
@@ -226,6 +228,29 @@ mod tests {
         assert!(is_blend(Path::new("Assets/Scene.BLEND")));
         assert!(!is_blend(Path::new("Assets/Scene.fbx")));
         assert!(!is_blend(Path::new("Assets/Scene.blend1")));
+    }
+
+    #[test]
+    fn converting_never_fetches_a_pending_script() {
+        // A cache tree whose script is still to fetch: the conversion refuses at once (the cache
+        // key fetches it, not the conversion), without asking for consent or the release index.
+        let root = std::env::temp_dir()
+            .join(format!("unbound-blend-pending-{}", std::process::id()))
+            .join("6000.0.71f1");
+        let data = root.join("Editor/Data");
+        std::fs::create_dir_all(&data).unwrap();
+        std::fs::write(root.join(".pending"), format!("{EXPORT_SCRIPT}\n")).unwrap();
+        let script = data.join(EXPORT_SCRIPT);
+        let error = format!(
+            "{:#}",
+            convert(Path::new("model.blend"), Some(&script)).unwrap_err()
+        );
+        assert!(error.contains("has no"), "{error}");
+        assert!(
+            !error.contains("consent") && !error.contains("Unity 6000.0.71f1"),
+            "{error}"
+        );
+        let _ = std::fs::remove_dir_all(root.parent().unwrap());
     }
 
     #[test]

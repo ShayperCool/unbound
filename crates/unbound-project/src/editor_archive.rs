@@ -12,6 +12,7 @@ use md5::{Digest, Md5};
 use std::{
     io::{self, BufReader, Read},
     path::{Component, Path, PathBuf},
+    sync::Mutex,
     time::Duration,
 };
 use unbound_compat::UnityVersion;
@@ -131,15 +132,9 @@ fn upgrade(editors: &Path, release: UnityVersion) -> Result<bool> {
             return Err(e)
                 .with_context(|| format!("linking {} into {}", old.display(), root.display()));
         }
-        if root.exists() {
-            if root.join(".complete").is_file() {
-                // Another process finished first.
-                let _ = std::fs::remove_dir_all(&temp);
-                return Ok(false);
-            }
-            std::fs::remove_dir_all(&root)?;
+        if !publish_tree(&temp, &root)? {
+            return Ok(false);
         }
-        std::fs::rename(&temp, &root)?;
         tracing::info!(
             "Unity {release}'s files are linked from {} into {}{}",
             old.display(),
@@ -155,6 +150,26 @@ fn upgrade(editors: &Path, release: UnityVersion) -> Result<bool> {
     Ok(false)
 }
 
+/// Moves the finished tree `temp` to `root`; false (and `temp` removed) when another process's
+/// complete tree is there first, also when it arrives between the check and the move.
+fn publish_tree(temp: &Path, root: &Path) -> Result<bool> {
+    if root.exists() {
+        if root.join(".complete").is_file() {
+            let _ = std::fs::remove_dir_all(temp);
+            return Ok(false);
+        }
+        std::fs::remove_dir_all(root)?;
+    }
+    if let Err(e) = std::fs::rename(temp, root) {
+        let _ = std::fs::remove_dir_all(temp);
+        if root.join(".complete").is_file() {
+            return Ok(false);
+        }
+        return Err(e).with_context(|| format!("moving {} to {}", temp.display(), root.display()));
+    }
+    Ok(true)
+}
+
 /// The files of `src` (folders, regular files; not unpacking leftovers) at the same places below
 /// `dst`, hard-linked, else copied.
 fn link_tree(src: &Path, dst: &Path) -> Result<()> {
@@ -162,8 +177,10 @@ fn link_tree(src: &Path, dst: &Path) -> Result<()> {
     for entry in std::fs::read_dir(src).with_context(|| format!("reading {}", src.display()))? {
         let entry = entry?;
         let name = entry.file_name();
-        if name.to_string_lossy().starts_with(".unpacking-")
-            || name.to_string_lossy().starts_with(".fetching-")
+        let text = name.to_string_lossy();
+        if [".unpacking-", ".fetching-", ".pending-"]
+            .iter()
+            .any(|leftover| text.starts_with(leftover))
         {
             continue;
         }
@@ -200,6 +217,7 @@ fn write_pending(root: &Path, pending: &[String]) -> Result<()> {
         };
     }
     let temp = root.join(format!("{PENDING}-{}", std::process::id()));
+    // (`link_tree` skips such a leftover.)
     std::fs::write(&temp, pending.join("\n") + "\n")?;
     std::fs::rename(&temp, &path)?;
     Ok(())
@@ -209,28 +227,67 @@ fn write_pending(root: &Path, pending: &[String]) -> Result<()> {
 /// the files a tree linked from an earlier format version still lacks ([`PENDING`]): those files
 /// are fetched from the release's Editor archive now, after the same consent as a first download.
 /// Anything else is left to the caller, who reports a missing file itself.
+/// A fetch that failed or was declined is not tried again in the same process: its error is
+/// returned for every later file of that tree.
 pub fn ensure(data: &Path, rel: &str) -> Result<()> {
-    ensure_with(data, rel, |release, root, pending| {
-        if std::env::var_os("UNBOUND_OFFLINE").is_some() {
-            bail!(
-                "Unity {release}'s {} are not cached in {} and UNBOUND_OFFLINE forbids \
-                 downloading them",
-                pending.join(", "),
-                root.display()
-            );
+    static REFUSED: Refused = Mutex::new(None);
+    ensure_once(&REFUSED, data, rel, fetch_now)
+}
+
+type Refused = Mutex<Option<std::collections::HashMap<PathBuf, String>>>;
+
+/// [`ensure_with`], remembering in `refused` the error of a fetch for its tree.
+fn ensure_once(
+    refused: &Refused,
+    data: &Path,
+    rel: &str,
+    fetch: impl FnOnce(UnityVersion, &Path, &[String]) -> Result<()>,
+) -> Result<()> {
+    let mut refused = refused.lock().unwrap_or_else(|e| e.into_inner());
+    let refused = refused.get_or_insert_with(Default::default);
+    if let Some(error) = refused.get(data) {
+        if data.join(rel).is_file() {
+            return Ok(());
         }
-        let index = releases::lookup(release)?;
-        let editor = index.linux_editor().with_context(|| {
-            format!("Unity {release} has no Linux Editor archive to take its files from")
+        bail!("{error}");
+    }
+    let result = ensure_with(data, rel, fetch);
+    if let Err(e) = &result {
+        refused.insert(data.to_path_buf(), format!("{e:#}"));
+    }
+    result
+}
+
+/// Fetches a tree's [`PENDING`] files: refused offline, or at once without a terminal to ask on
+/// (before the release index is asked); else after the user agrees.
+fn fetch_now(release: UnityVersion, root: &Path, pending: &[String]) -> Result<()> {
+    let parts = [format!("its Editor archive (for {})", pending.join(", "))];
+    if std::env::var_os("UNBOUND_OFFLINE").is_some() {
+        bail!(
+            "Unity {release}'s {} are not cached in {} and UNBOUND_OFFLINE forbids \
+                 downloading them",
+            pending.join(", "),
+            root.display()
+        );
+    }
+    // Refused at once, before the release index is asked, when there is no one to ask.
+    let (accepted, interactive) = consent();
+    if !accepted && !interactive {
+        decide_download(release, &parts, None, root, false, false, |_| {
+            unreachable!("not interactive")
         })?;
-        confirm_download(
-            release,
-            &[format!("its Editor archive (for {})", pending.join(", "))],
-            editor.download_size.as_ref().map(|s| s.value),
-            root,
-        )?;
-        fetch_pending(release, root, editor, pending)
-    })
+    }
+    let index = releases::lookup(release)?;
+    let editor = index.linux_editor().with_context(|| {
+        format!("Unity {release} has no Linux Editor archive to take its files from")
+    })?;
+    confirm_download(
+        release,
+        &parts,
+        editor.download_size.as_ref().map(|s| s.value),
+        root,
+    )?;
+    fetch_pending(release, root, editor, pending)
 }
 
 fn ensure_with(
@@ -277,17 +334,31 @@ fn fetch_pending(
         pending.join(", "),
         download.url
     );
+    let mut stream = Stream::new(&download.url, format!("Unity {release}'s Editor"), size);
+    unpack_pending(&mut stream, root, pending, |stream| {
+        stream.verify(&download.integrity)
+    })
+    .with_context(|| format!("unpacking {}", download.url))
+}
+
+/// The [`PENDING`] files of `root` taken from an Editor archive stream (`verify` checks the stream
+/// once it is read whole), moved into place and taken off the list.
+fn unpack_pending<R: Read>(
+    stream: &mut R,
+    root: &Path,
+    pending: &[String],
+    verify: impl FnOnce(&mut R) -> Result<()>,
+) -> Result<()> {
     let temp = root.join(format!(".fetching-{}", std::process::id()));
     if temp.exists() {
         std::fs::remove_dir_all(&temp)?;
     }
-    let mut stream = Stream::new(&download.url, format!("Unity {release}'s Editor"), size);
-    let result = unpack_tar_xz(&mut stream, &temp, |path: &str| {
+    let result = unpack_tar_xz(stream, &temp, |path: &str| {
         path.strip_prefix("Editor/Data/")
             .filter(|rel| pending.iter().any(|p| p == rel))
             .map(str::to_string)
     })
-    .and_then(|_| stream.verify(&download.integrity))
+    .and_then(|_| verify(stream))
     .and_then(|()| {
         let data = root.join("Editor/Data");
         for rel in pending {
@@ -306,7 +377,7 @@ fn fetch_pending(
         write_pending(root, &left)
     });
     let _ = std::fs::remove_dir_all(&temp);
-    result.with_context(|| format!("unpacking {}", download.url))
+    result
 }
 
 /// `Editor/Data` of the release's unpacked Editor files, when they are complete.
@@ -455,10 +526,8 @@ fn confirm_download(
     bytes: Option<u64>,
     root: &Path,
 ) -> Result<()> {
-    use std::io::{IsTerminal, Write};
-    let accepted =
-        std::env::var_os(ACCEPT_DOWNLOAD_VARIABLE).is_some_and(|v| !v.is_empty() && v != "0");
-    let interactive = io::stdin().is_terminal() && io::stderr().is_terminal();
+    use std::io::Write;
+    let (accepted, interactive) = consent();
     decide_download(
         release,
         parts,
@@ -474,6 +543,18 @@ fn confirm_download(
             io::stdin().read_line(&mut answer)?;
             Ok(answer)
         },
+    )
+}
+
+/// Whether downloading is accepted beforehand ([`ACCEPT_DOWNLOAD_VARIABLE`]) and whether there
+/// is a terminal to ask on.
+fn consent() -> (bool, bool) {
+    use std::io::IsTerminal;
+    let accepted =
+        std::env::var_os(ACCEPT_DOWNLOAD_VARIABLE).is_some_and(|v| !v.is_empty() && v != "0");
+    (
+        accepted,
+        io::stdin().is_terminal() && io::stderr().is_terminal(),
     )
 }
 
@@ -552,16 +633,9 @@ fn fetch_editor(release: UnityVersion, root: &Path, download: &releases::Downloa
         return Err(e).with_context(|| format!("unpacking {}", download.url));
     }
     std::fs::write(temp.join(".complete"), b"")?;
-    if root.exists() {
-        if root.join(".complete").is_file() {
-            // Another process finished first.
-            let _ = std::fs::remove_dir_all(&temp);
-            return Ok(());
-        }
-        std::fs::remove_dir_all(root)?;
+    if publish_tree(&temp, root)? {
+        tracing::info!("Unity {release}'s files are in {}", root.display());
     }
-    std::fs::rename(&temp, root)?;
-    tracing::info!("Unity {release}'s files are in {}", root.display());
     Ok(())
 }
 
@@ -670,7 +744,7 @@ fn write_member(data: &Path, rel: &str, contents: &mut impl Read) -> Result<bool
 /// The regular files of a `.tar.xz` stream whose paths `map` takes to a path below `Editor/Data`,
 /// unpacked into `data` when [`wanted`]. Returns how many.
 fn unpack_tar_xz(
-    stream: &mut Stream,
+    stream: &mut impl Read,
     data: &Path,
     map: impl Fn(&str) -> Option<String>,
 ) -> Result<usize> {
@@ -1085,6 +1159,110 @@ mod tests {
         ensure_with(&data, &script, |_, _, _| panic!("present")).unwrap();
         write_pending(&root, &[]).unwrap();
         assert!(!root.join(PENDING).exists());
+        let _ = std::fs::remove_dir_all(&editors);
+    }
+
+    #[test]
+    fn every_added_file_is_unpacked() {
+        for (_, added) in ADDED {
+            for rel in *added {
+                assert!(wanted(rel), "{rel}");
+            }
+        }
+    }
+
+    /// A `.tar.xz` of `members` (path, contents).
+    fn tar_xz(members: &[(&str, &[u8])]) -> Vec<u8> {
+        let mut tar = tar::Builder::new(Vec::new());
+        for (path, body) in members {
+            let mut header = tar::Header::new_gnu();
+            header.set_size(body.len() as u64);
+            header.set_mode(0o644);
+            header.set_cksum();
+            tar.append_data(&mut header, path, *body).unwrap();
+        }
+        let tar = tar.into_inner().unwrap();
+        let mut xz = liblzma::write::XzEncoder::new(Vec::new(), 1);
+        io::Write::write_all(&mut xz, &tar).unwrap();
+        xz.finish().unwrap()
+    }
+
+    #[test]
+    fn pending_files_are_taken_from_the_archive_and_off_the_list() {
+        let editors = temp_editors("unpack");
+        let release: UnityVersion = "6000.0.71f1".parse().unwrap();
+        let root = root_in(&editors, FORMAT_VERSION, release);
+        complete_tree(&root);
+        let script = "Tools/Unity-BlenderToFBX.py".to_string();
+        write_pending(&root, std::slice::from_ref(&script)).unwrap();
+        let archive = tar_xz(&[
+            ("Editor/Data/Managed/UnityEngine/Other.dll", b"other"),
+            ("Editor/Data/Tools/Unity-BlenderToFBX.py", b"script"),
+        ]);
+        // A failed verification moves nothing in and keeps the list.
+        let error = unpack_pending(
+            &mut io::Cursor::new(&archive),
+            &root,
+            std::slice::from_ref(&script),
+            |_| bail!("the download's MD5 does not match"),
+        )
+        .unwrap_err();
+        assert!(format!("{error:#}").contains("MD5"));
+        let data = root.join("Editor/Data");
+        assert!(!data.join(&script).exists());
+        assert_eq!(read_pending(&root).unwrap(), vec![script.clone()]);
+        unpack_pending(
+            &mut io::Cursor::new(&archive),
+            &root,
+            std::slice::from_ref(&script),
+            |_| Ok(()),
+        )
+        .unwrap();
+        assert_eq!(std::fs::read(data.join(&script)).unwrap(), b"script");
+        // Only the pending files are taken; the list is gone, and so is the temporary folder.
+        assert!(!data.join("Managed/UnityEngine/Other.dll").exists());
+        assert!(!root.join(PENDING).exists());
+        assert!(
+            std::fs::read_dir(&root)
+                .unwrap()
+                .flatten()
+                .all(|e| !e.file_name().to_string_lossy().starts_with(".fetching-"))
+        );
+        // A pending file the archive lacks is an error.
+        let missing = vec!["Resources/unity editor resources".to_string()];
+        let error = unpack_pending(&mut io::Cursor::new(&archive), &root, &missing, |_| Ok(()))
+            .unwrap_err();
+        assert!(
+            format!("{error:#}")
+                .contains("the archive has no Editor/Data/Resources/unity editor resources")
+        );
+        let _ = std::fs::remove_dir_all(&editors);
+    }
+
+    #[test]
+    fn a_refused_fetch_is_not_tried_again() {
+        let editors = temp_editors("refused");
+        let release: UnityVersion = "6000.0.71f1".parse().unwrap();
+        let root = root_in(&editors, FORMAT_VERSION, release);
+        complete_tree(&root);
+        let script = "Tools/Unity-BlenderToFBX.py";
+        write_pending(&root, &[script.to_string()]).unwrap();
+        let data = root.join("Editor/Data");
+        let refused: Refused = Mutex::new(None);
+        let error =
+            ensure_once(&refused, &data, script, |_, _, _| bail!("not downloading")).unwrap_err();
+        assert!(format!("{error:#}").contains("not downloading"));
+        let again =
+            ensure_once(&refused, &data, script, |_, _, _| panic!("asked again")).unwrap_err();
+        assert!(format!("{again:#}").contains("not downloading"));
+        // Present files are fine whatever was refused.
+        ensure_once(
+            &refused,
+            &data,
+            "Managed/UnityEngine/UnityEngine.dll",
+            |_, _, _| panic!("present"),
+        )
+        .unwrap();
         let _ = std::fs::remove_dir_all(&editors);
     }
 
