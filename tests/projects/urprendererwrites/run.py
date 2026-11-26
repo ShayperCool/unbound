@@ -7,7 +7,9 @@ README.md).
     run.py publish L1 L2         # two identical captures -> Reference/
     run.py check                 # Unbound on a fresh copy against the reference
 
-Each capture opens one fresh copy of the project once (nothing imported yet) and plays a few frames.
+Each capture opens one fresh copy of the project twice, keeping what the first open leaves (the
+Editor's Library/, Unbound's project directory): `open1` with nothing imported yet, `open2` a later
+session. Each plays a few frames.
 The rows: the probe's `load` lines (each asset's dirtiness after its load, its XR system data
 reference and whether its debug sampling shader is set) and every file of the project after the run
 (`exit.<path>`, tests/file_writes.py).
@@ -34,7 +36,7 @@ WORK = run_root(ROOT, 'runs')
 HEAVY = Path.home()/'.cache/compat/with-heavy-job'
 OUT = 'values.jsonl'
 VARIABLE = 'URPRENDERERWRITES_OUT'
-OPENS = ('open1',)
+OPENS = ('open1', 'open2')
 
 
 
@@ -142,11 +144,11 @@ def create():
         return 1
     for name in ('Current.asset', 'Current.asset.meta'):
         shutil.copyfile(project/OLD/name, ROOT/OLD/name)
-    scripts = 'Assets/Resources/S'
-    if (ROOT/scripts).exists():
-        shutil.rmtree(ROOT/scripts)
-    shutil.copytree(project/scripts, ROOT/scripts)
-    shutil.copyfile(project/(scripts + '.meta'), ROOT/(scripts + '.meta'))
+    for scripts in ('Assets/Resources/S', 'Assets/Resources/P'):
+        if (ROOT/scripts).exists():
+            shutil.rmtree(ROOT/scripts)
+        shutil.copytree(project/scripts, ROOT/scripts)
+        shutil.copyfile(project/(scripts + '.meta'), ROOT/(scripts + '.meta'))
     for part in ('ProjectSettings', 'Packages'):
         shutil.rmtree(ROOT/part)
         shutil.copytree(project/part, ROOT/part)

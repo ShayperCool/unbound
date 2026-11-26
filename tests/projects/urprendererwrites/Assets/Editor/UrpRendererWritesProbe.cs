@@ -10,7 +10,7 @@ using UnityEngine.Rendering.Universal;
 /// What loading a URP renderer asset saved in an older layout does to it, and what the Editor's exit
 /// writes (see README.md). In Play mode, frame 2 loads each asset of Resources/R and records whether
 /// it is dirty and whether its XR system data reference is set; frame 4 leaves the Editor, whose exit
-/// saves what is dirty. Lines go to the file URPRENDERERWRITES_OUT names. The Editor's capture runs
+/// saves what is dirty (a prefab's behaviour that marks itself dirty from OnValidate too). Lines go to the file URPRENDERERWRITES_OUT names. The Editor's capture runs
 /// <c>-executeMethod UrpRendererWritesProbe.Record</c>, which enters Play mode, as `unbound run`
 /// plays the project. <c>-executeMethod UrpRendererWritesProbe.Create -quit</c> authors
 /// Resources/R/Current.asset (run.py create derives the older layouts from it).
@@ -58,6 +58,11 @@ static class UrpRendererWritesProbe
             if (asset == null) { Line("load", name, "missing"); continue; }
             Line("load", name, EditorUtility.IsDirty(asset) ? "dirty" : "clean", asset.number.ToString());
         }
+        // A prefab whose behaviour marks itself dirty from OnValidate (in Play mode only, so the
+        // authoring import leaves it as written).
+        var prefab = Resources.Load<GameObject>("P/ValidatePrefab");
+        var behaviour = prefab != null ? prefab.GetComponent<DirtyOnValidate>() : null;
+        Line("load", "ValidatePrefab", behaviour == null ? "missing" : (EditorUtility.IsDirty(behaviour) ? "dirty" : "clean") + "/" + behaviour.number);
     }
 
     public static void Record()
@@ -78,6 +83,11 @@ static class UrpRendererWritesProbe
             asset.change = change;
             AssetDatabase.CreateAsset(asset, "Assets/Resources/S/" + name + ".asset");
         }
+        if (!AssetDatabase.IsValidFolder("Assets/Resources/P")) AssetDatabase.CreateFolder("Assets/Resources", "P");
+        var go = new GameObject("ValidatePrefab");
+        go.AddComponent<DirtyOnValidate>();
+        PrefabUtility.SaveAsPrefabAsset(go, "Assets/Resources/P/ValidatePrefab.prefab");
+        UnityEngine.Object.DestroyImmediate(go);
         AssetDatabase.SaveAssets();
     }
 }

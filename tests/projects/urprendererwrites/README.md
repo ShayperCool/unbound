@@ -20,22 +20,24 @@ shader, which the reload fills) and `OldLayout` (as an older pipeline wrote it: 
 without the probe volume resources, with the shader resources block it had, a flow map wrapped at
 the width and asset version 1). `Assets/Resources/S` holds `DirtyOnLoad` script assets that call
 `EditorUtility.SetDirty` from Awake, OnEnable or OnValidate, with a field changed (`*Changed`) or
-not (`*Same`).
+not (`*Same`). `Assets/Resources/P/ValidatePrefab` is a prefab whose `DirtyOnValidate` behaviour
+increments a field and calls `EditorUtility.SetDirty` from OnValidate in Play mode.
 
 `Assets/Editor/UrpRendererWritesProbe.cs` (`-executeMethod UrpRendererWritesProbe.Record` /
 `unbound run`) enters Play mode, loads every asset at frame 2 and records whether it is dirty, its
-XR system data and whether its sampling shader is set (renderers) or its field (scripts)
-(`load.*`), and leaves the Editor at frame 4. `run.py` opens one fresh copy once and adds every
-file of the project after the run (`exit.<path>`, tests/file_writes.py).
+XR system data and whether its sampling shader is set (renderers) or its field (scripts, the
+prefab's behaviour) (`load.*`), and leaves the Editor at frame 4. `run.py` opens one fresh copy
+twice, keeping what the first open leaves: `open1` with nothing imported, `open2` a later session,
+whose loads come from the first open's import; after each it adds every file of the project
+(`<open>.exit.<path>`, tests/file_writes.py).
 
-Measured: every asset is clean after its load, also when its load callbacks called SetDirty and
-changed a field (the renderers' reload, `OnEnableChanged`'s and `OnValidateChanged`'s field reads
-1), and the Editor's exit writes none of them: the files stay as they were. The missing XR system
-data reads null.
+Measured, at both opens: every asset is clean after its load, also when its load callbacks called
+SetDirty and changed a field (the renderers' reload, `OnEnableChanged`'s, `OnValidateChanged`'s and
+the prefab behaviour's field read 1), and the Editor's exit writes none of them: the files stay as
+they were. The missing XR system data reads null.
 
-Unmeasured: a prefab's behaviours' OnValidate during the prefab's load (Unbound leaves the prefab's
-objects as clean as they were too), what the Editor writes for such an asset once it is saved
-(a missing reference, the obsolete block, the wrapped line).
+Unmeasured: loads in Edit mode, what the Editor writes for such an asset once it is saved (a
+missing reference, the obsolete block, the wrapped line).
 
 Create (once), record, publish and check:
 
