@@ -106,8 +106,15 @@ class InstallationFilesTests(unittest.TestCase):
         self.assertEqual(self.compare(reference, actual, installation_files=self.FILES), 1)
 
     def test_two_editor_captures_compare_without_modules(self):
+        # The repeat check of two Editor captures (`run.py compare`, README Record) asks no modules.
         files = {'Assets/Labels/Tex.png.meta': meta('DefaultTexturePlatform', 'Standalone', 'Android')}
-        self.assertEqual(self.compare(files, dict(files)), 0)
+        with tempfile.TemporaryDirectory() as first, tempfile.TemporaryDirectory() as second:
+            self.run_dir(first, files)
+            self.run_dir(second, dict(files))
+            compared = __import__('subprocess').run(
+                [sys.executable, str(TESTS/'projects/scenesave/run.py'), 'compare', first, second, '--case', 'label-metas'],
+                capture_output=True, text=True)
+            self.assertEqual(compared.returncode, 0, compared.stdout + compared.stderr)
 
 
 if __name__ == '__main__':
