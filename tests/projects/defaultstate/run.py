@@ -35,6 +35,43 @@ def inventory(out):
     return report
 
 
+# `inventory` exit status when the built inventory differs from the base commit's reference.
+INVENTORY_CHANGED = 3
+
+
+def type_changes(before, after):
+    """The types an inventory adds, removes or changes (category, module or status), by name."""
+    old = {row['type']: row for row in before}
+    new = {row['type']: row for row in after}
+    added = sorted(set(new) - set(old))
+    removed = sorted(set(old) - set(new))
+    changed = sorted(name for name in set(old) & set(new) if old[name] != new[name])
+    return added, removed, changed
+
+
+def inventory_changed(base, label):
+    """Whether the built engine's public type inventory differs from the reference inventory at
+    `base` (land.py's cheap check of whether a branch changes the inventory: no Editor and no engine
+    run, the same `api-defaults` report the probe compares first). 0 unchanged or nothing to compare
+    with, INVENTORY_CHANGED when it differs."""
+    relative = (reference_root(ROOT)/'inventory.json').relative_to(REPO).as_posix()
+    shown = subprocess.run(['git', 'show', f'{base}:{relative}'], cwd=REPO, capture_output=True, text=True)
+    if shown.returncode:
+        print(f'no reference inventory {relative} at {base}: nothing to compare')
+        return 0
+    report = inventory(WORK/label)
+    added, removed, changed = type_changes(json.loads(shown.stdout)['types'], report['types'])
+    if not (added or removed or changed):
+        print(f'public type inventory unchanged ({len(report["types"])} types)')
+        return 0
+    for kind, names in (('added', added), ('removed', removed), ('changed', changed)):
+        for name in names:
+            print(kind, name)
+    print(f'public type inventory changed: {len(added)} added, {len(removed)} removed, {len(changed)} changed '
+          f'(capture their Editor rows: README.md)')
+    return INVENTORY_CHANGED
+
+
 def project_at(out):
     project = out/'project'
     for folder in ('Assets', 'Packages', 'ProjectSettings'):
@@ -166,10 +203,11 @@ def check(candidate):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('mode', choices=['native', 'engine', 'publish', 'compare', 'check'])
+    parser.add_argument('mode', choices=['native', 'engine', 'publish', 'compare', 'check', 'inventory'])
     parser.add_argument('labels', nargs='*')
     parser.add_argument('--label')
     parser.add_argument('--candidate', type=Path)
+    parser.add_argument('--base', help='inventory: the commit whose reference inventory to compare with (default HEAD)')
     args = parser.parse_args()
     for label in args.labels + ([args.label] if args.label else []):
         if Path(label).name != label or label in ('.', '..'):
@@ -182,6 +220,8 @@ def main():
     if args.mode == 'engine': return engine(args.label)
     if args.mode == 'publish': return publish(args.labels)
     if args.mode == 'compare': return check(args.candidate)
+    if args.mode == 'inventory':
+        return inventory_changed(args.base or 'HEAD', time.strftime('inventory-%Y%m%d-%H%M%S-')+str(os.getpid()))
     label = time.strftime('check-%Y%m%d-%H%M%S-')+str(os.getpid())
     return engine(label) or check(WORK/label)
 

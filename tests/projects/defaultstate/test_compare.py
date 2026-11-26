@@ -173,3 +173,13 @@ class ComparisonTests(unittest.TestCase):
 
 
 if __name__ == '__main__': unittest.main()
+
+
+class InventoryChangeTests(unittest.TestCase):
+    def test_added_removed_and_changed_types(self):
+        row = lambda name, status='constructed': {'category': 'struct', 'module': 'UnityEngine.CoreModule',
+                                                  'status': status, 'type': name}
+        before = [row('A'), row('B'), row('C', 'no-public-parameterless-constructor')]
+        after = [row('A'), row('C'), row('D')]
+        self.assertEqual(capture_runner.type_changes(before, after), (['D'], ['B'], ['C']))
+        self.assertEqual(capture_runner.type_changes(before, before), ([], [], []))

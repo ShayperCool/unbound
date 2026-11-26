@@ -178,6 +178,12 @@ refuses to overwrite an existing reference. New implemented types require a new
 reviewed capture, while existing canonical rows must be preserved byte for byte
 unless their measured context is explicitly changed and reviewed.
 
+`run.py inventory --base <commit>` compares only the built engine's type inventory (`unbound
+api-defaults`, no Editor and no engine run) with the reference inventory at that commit and exits
+3 when a type is added, removed or changed. `tools/agents/land.py` runs it in every gate whose
+change touches the managed API, and when it exits 3 the gate also runs `run.py check`, so a branch
+that adds a hand-written public type cannot land without that type's Editor rows.
+
 `debt.json` is an exact per-release migration queue with a reason for each row.
 It retains both expected and current values. Variable creation values have anchored patterns limited to the observed leaves.
 The Terrain resource-retention boolean has a separate reasoned context entry for

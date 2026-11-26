@@ -2117,6 +2117,62 @@ class ApiGateTests(unittest.TestCase):
 
 
 
+class InventoryGateTests(unittest.TestCase):
+    def gate(self, root, probes=(), releases=None):
+        log = root/'gate.log'
+        log.write_text('')
+        return land.Gate(root, 'base0', list(probes), False, log, environment={},
+                         releases=releases)
+
+    def test_a_changed_inventory_adds_the_default_state_check(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            gate = self.gate(root, ['python3 tests/projects/foo/run.py gate'], releases=['6000.0.71f1'])
+            with mock.patch.object(gate, 'step', return_value=land.INVENTORY_CHANGED) as step, \
+                 mock.patch.object(land, 'probe_release', return_value='6000.0.71f1'), \
+                 mock.patch.object(land, 'suite_coverage', return_value=set()):
+                gate.check_inventory(root/'unbound')
+                gate.add_inventory_probe()
+            command = step.call_args.args[1]
+            self.assertEqual(command[1:], ['tests/projects/defaultstate/run.py', 'inventory', '--base', 'base0'])
+            self.assertEqual(step.call_args.kwargs['env']['UNBOUND'], str(root/'unbound'))
+            self.assertEqual(gate.probes, ['python3 tests/projects/foo/run.py gate', land.INVENTORY_PROBE])
+            self.assertEqual(gate.releases, ['6000.0.71f1', '6000.0.71f1'])
+            self.assertIn('public type inventory changed', (root/'gate.log').read_text())
+
+    def test_an_unchanged_inventory_adds_nothing(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            gate = self.gate(root)
+            with mock.patch.object(gate, 'step', return_value=0):
+                gate.check_inventory(root/'unbound')
+                gate.add_inventory_probe()
+            self.assertEqual(gate.probes, [])
+
+    def test_an_explicit_default_state_probe_skips_the_inventory_run(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            for probe, coverage in [('python3 tests/projects/defaultstate/run.py check', set()),
+                                    ("python3 tools/agents/suite.py --only defaultstate", {('defaultstate', '6000.0.71f1')})]:
+                gate = self.gate(root, [probe], releases=['6000.0.71f1'])
+                with mock.patch.object(gate, 'step') as step, \
+                     mock.patch.object(land, 'suite_coverage', return_value=coverage):
+                    gate.check_inventory(root/'unbound')
+                    gate.add_inventory_probe()
+                step.assert_not_called()
+                self.assertEqual(gate.probes, [probe])
+
+    def test_a_failed_inventory_run_fails_the_gate(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            gate = self.gate(root)
+            with mock.patch.object(gate, 'step', return_value=1), \
+                 mock.patch.object(gate, 'fail', side_effect=SystemExit(5)) as fail:
+                with self.assertRaises(SystemExit):
+                    gate.check_inventory(root/'unbound')
+            fail.assert_called_once_with('public type inventory')
+
+
 class GateLaneTests(unittest.TestCase):
     """Rust tests run beside the .NET steps, after the runtime snapshot and gen-stubs."""
     def gate(self, root, events, steps):
@@ -2134,6 +2190,7 @@ class GateLaneTests(unittest.TestCase):
         self.api_cli = []
         gate.api_checks = lambda cli: (self.api_cli.append(cli),
                                        gate.step('API declarations and attribute lookups', steps['api']))
+        gate.check_inventory = lambda cli: None  # InventoryGateTests
         return gate
 
     def run_gate(self, gate, changed):

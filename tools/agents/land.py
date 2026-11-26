@@ -97,6 +97,11 @@ GENERATED = 'managed/UnityEngine/Generated'
 STUB_INPUTS = re.compile(r'^(managed/|crates/unbound-compat/|crates/unbound-project/src/(?:install|editor_archive|compile)\.rs$'
                          r'|crates/unbound/src/commands\.rs$|tools/agents/(?:land|test_land)\.py$)')
 STUB_PROJECT = 'tests/projects/packages'
+# A change of the public type inventory (a hand-written Unity type added, removed or changed) must
+# land with its default-state rows: the gate compares the built inventory with the base's reference
+# (`run.py inventory`, no Editor or engine run) and then runs the probe's check inside the gate.
+INVENTORY_PROBE = 'python3 tests/projects/defaultstate/run.py check'
+INVENTORY_CHANGED = 3
 HERE = Path(__file__).resolve().parent
 CATALOG_SOURCE = (HERE/'probe_catalog.py').read_text()
 from probe_runtime import (RELEASE_VARIABLE, default_release, probe_release, NO_EDITOR, probe_path,
@@ -511,6 +516,8 @@ class Gate:
         # Per-check time limits by automatic_limit_key for checks without the shared budget (the
         # post-land checker's recorded durations); others keep AUTO_PROBE_TIMEOUT_SECONDS.
         self.automatic_limits = {}
+        # Whether the built public type inventory differs from the base's (check_inventory).
+        self.inventory_changed = False
 
     def note(self, text):
         """A timestamped line in the gate log for phases that are not commands."""
@@ -660,6 +667,7 @@ class Gate:
             # The .NET steps share the checkout's managed build directory: one sequence.
             if stubs:
                 self.api_checks(cli)
+                self.check_inventory(cli)
             self.managed_tests(target)
 
         lanes = [dotnet_lane]
@@ -682,6 +690,7 @@ class Gate:
             raise
         self.use_probe_runtime()
 
+        self.add_inventory_probe()
         self.run_probes()
         if self.automatic is None:
             self.note('automatic probe selection started')
@@ -986,6 +995,50 @@ class Gate:
             tools_tests = [str(LAUNCHER), '--kind', 'test', *tools_tests]
         if self.step('API tooling tests', tools_tests, env=env):
             self.fail('API tooling tests')
+
+    def covers_inventory(self):
+        """Whether an explicit probe already runs the default-state check."""
+        for index, probe in enumerate(self.probes):
+            if INVENTORY_PROBE.split(' ', 1)[1] in probe:
+                return True
+            try:
+                release = self.releases[index] if self.releases is not None else probe_release(probe, self.worktree, self.env)
+            except ValueError:
+                continue
+            if any(name == 'defaultstate' for name, _ in suite_coverage(probe, release)):
+                return True
+        return False
+
+    def check_inventory(self, cli):
+        """Compare the built public type inventory with the base's reference (a tool run of the
+        gate's build, no Editor or engine run); a change makes add_inventory_probe gate it."""
+        if self.covers_inventory():
+            return
+        env = dict(self.env, UNBOUND=str(cli), UNBOUND_CLI=str(cli))
+        code = self.step('public type inventory',
+                         [sys.executable, 'tests/projects/defaultstate/run.py', 'inventory', '--base', self.base], env=env)
+        if code == INVENTORY_CHANGED:
+            self.inventory_changed = True
+        elif code:
+            self.fail('public type inventory')
+
+    def add_inventory_probe(self):
+        """The default-state check as one more explicit probe when the inventory changed."""
+        if not self.inventory_changed or self.covers_inventory():
+            return
+        message = ('the public type inventory changed: the default-state check gates this landing '
+                   f'({INVENTORY_PROBE}; new types need their Editor rows, tests/projects/defaultstate/README.md)')
+        print('land: '+message, flush=True)
+        self.note(message)
+        try:
+            release = probe_release(INVENTORY_PROBE, self.worktree, self.env)
+        except ValueError as error:
+            die(2, str(error))
+        self.probes = [*self.probes, INVENTORY_PROBE]
+        if self.releases is not None:
+            self.releases = [*self.releases, release]
+        if self.probe_owners:
+            self.probe_owners = [*self.probe_owners, ['public type inventory']]
 
     def managed_test_failures(self, target, configuration='Release'):
         """Run the managed unit tests built in configuration: (exit code, failing test names, whether
