@@ -107,7 +107,8 @@ public class SpriteMetaProbe : MonoBehaviour
 
     static readonly string[] Textures = { "Control", "EmptyId", "IdNpot", "EmptyIdPot0", "Bare", "New", "NewNpot", "NewGaps",
         "BareWrap", "BarePpu", "BareDefault", "BareFull", "BareLegacy", "BareSize", "BareDefaultEntry", "BareSheet", "BarePlat", "BareTag",
-        "SaveData", "SaveNpot", "SaveClear", "SaveBundle", "SaveKeep",
+        "SaveData", "SaveNpot", "SaveClear", "SaveBundle", "SaveKeep", "SaveWrap",
+        "KeepWrap", "KeepWrapV2", "KeepWrapMode", "KeepDefaultWrap", "CurrentWrap", "CurrentWrapMode",
         "SliceL", "SliceDiag", "SliceDot", "SliceEdge", "SliceFaint", "SliceFive", "SliceNear", "SliceHole", "SliceNpot",
         "SliceThin", "SliceFlat", "SliceAlone3", "SliceAlone4", "SliceTwoBigDot", "SliceBigNear", "SliceBigGap2", "SliceSmallBetween", "SliceAreaSmall",
         "SliceRowMerge", "SliceTopDot", "SliceEmpty", "SliceChain", "SliceMany",
@@ -154,6 +155,7 @@ public class SpriteMetaProbe : MonoBehaviour
             ("SaveClear", i => i.ClearPlatformTextureSettings("Standalone")),
             ("SaveBundle", i => i.assetBundleName = "Mixed-Bundle"),
             ("SaveKeep", i => { }),
+            ("SaveWrap", i => i.userData = "wrap"),
         };
         foreach (var (name, change) in changes)
         {
@@ -188,6 +190,14 @@ public class SpriteMetaProbe : MonoBehaviour
                     + " wrap " + importer.wrapModeU + "," + importer.wrapModeV + "," + importer.wrapModeW
                     + " mipmaps " + importer.mipmapEnabled + " alphaIsTransparency " + importer.alphaIsTransparency
                     + " ppu " + F(importer.spritePixelsPerUnit);
+            });
+            // The texture the import made: the sampler settings it imported with.
+            Try("texture/" + name, () =>
+            {
+                var texture = AssetDatabase.LoadAssetAtPath<Texture2D>(path);
+                if (texture == null) return "null";
+                return "wrap " + texture.wrapModeU + "," + texture.wrapModeV + "," + texture.wrapModeW + " filter " + texture.filterMode
+                    + " aniso " + texture.anisoLevel + " mipBias " + F(texture.mipMapBias) + " mips " + texture.mipmapCount + " format " + texture.format;
             });
             Try("sprites/" + name, () =>
             {
