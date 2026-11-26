@@ -1,0 +1,91 @@
+{"k":"open/Default.foo","v":"fileFormatVersion: 2\nguid: (guid)\nDefaultImporter:\n  externalObjects: {}\n  userData: \n  assetBundleName: \n  assetBundleVariant: \n"}
+{"k":"importer/Default.foo","v":"FooImporter setting 0"}
+{"k":"imported/Default.foo","v":"UnityEngine.TextAsset 'FooImporter:Default.foo'"}
+{"k":"type/Default.foo","v":"FooImporter"}
+{"k":"default/Default.foo","v":"FooImporter"}
+{"k":"available/Default.foo","v":"[FooImporter]"}
+{"k":"override/Default.foo","v":"null"}
+{"k":"open/Guid.foo","v":"fileFormatVersion: 2\nguid: (guid)\n"}
+{"k":"importer/Guid.foo","v":"FooImporter setting 0"}
+{"k":"imported/Guid.foo","v":"UnityEngine.TextAsset 'FooImporter:Guid.foo'"}
+{"k":"type/Guid.foo","v":"FooImporter"}
+{"k":"default/Guid.foo","v":"FooImporter"}
+{"k":"available/Guid.foo","v":"[FooImporter]"}
+{"k":"override/Guid.foo","v":"null"}
+{"k":"open/Guid.uss","v":"fileFormatVersion: 2\nguid: (guid)\n"}
+{"k":"importer/Guid.uss","v":"UnityEditor.UIElements.StyleSheets.StyleSheetImporter"}
+{"k":"imported/Guid.uss","v":"UnityEngine.UIElements.StyleSheet"}
+{"k":"type/Guid.uss","v":"UnityEditor.UIElements.StyleSheets.StyleSheetImporter"}
+{"k":"default/Guid.uss","v":"UnityEditor.UIElements.StyleSheets.StyleSheetImporter"}
+{"k":"available/Guid.uss","v":"[UnityEditor.UIElements.StyleSheets.StyleSheetImporter]"}
+{"k":"override/Guid.uss","v":"null"}
+{"k":"open/Guid.xyz","v":"fileFormatVersion: 2\nguid: (guid)\n"}
+{"k":"importer/Guid.xyz","v":"UnityEditor.AssetImporter"}
+{"k":"imported/Guid.xyz","v":"UnityEditor.DefaultAsset"}
+{"k":"type/Guid.xyz","v":"UnityEditor.AssetImporter"}
+{"k":"default/Guid.xyz","v":"null"}
+{"k":"available/Guid.xyz","v":"[]"}
+{"k":"override/Guid.xyz","v":"null"}
+{"k":"open/Named.bar","v":"fileFormatVersion: 2\nguid: (guid)\nScriptedImporter:\n  internalIDToNameTable: []\n  externalObjects: {}\n  serializedVersion: 2\n  userData: \n  assetBundleName: \n  assetBundleVariant: \n  script: {fileID: 11500000, guid: 95c1cd9a428e4b3483c3cb0019f51fde, type: 3}\n  setting: 0\n"}
+{"k":"importer/Named.bar","v":"BarImporter setting 0"}
+{"k":"imported/Named.bar","v":"UnityEngine.TextAsset 'BarImporter:Named.bar'"}
+{"k":"type/Named.bar","v":"BarImporter"}
+{"k":"default/Named.bar","v":"BarImporter"}
+{"k":"available/Named.bar","v":"[BarImporter]"}
+{"k":"override/Named.bar","v":"null"}
+{"k":"open/Other.foo","v":"fileFormatVersion: 2\nguid: (guid)\nScriptedImporter:\n  internalIDToNameTable: []\n  externalObjects: {}\n  serializedVersion: 2\n  userData: \n  assetBundleName: \n  assetBundleVariant: \n  script: {fileID: 11500000, guid: fe7149dab52c402586c2710ef982d2dd, type: 3}\n  setting: 0\n"}
+{"k":"importer/Other.foo","v":"FooImporter setting 0"}
+{"k":"imported/Other.foo","v":"UnityEngine.TextAsset 'FooImporter:Other.foo'"}
+{"k":"type/Other.foo","v":"FooImporter"}
+{"k":"default/Other.foo","v":"FooImporter"}
+{"k":"available/Other.foo","v":"[FooImporter]"}
+{"k":"override/Other.foo","v":"null"}
+{"k":"open/Own.foo","v":"fileFormatVersion: 2\nguid: (guid)\nScriptedImporter:\n  internalIDToNameTable: []\n  externalObjects: {}\n  serializedVersion: 2\n  userData: \n  assetBundleName: \n  assetBundleVariant: \n  script: {fileID: 11500000, guid: fe7149dab52c402586c2710ef982d2dd, type: 3}\n  setting: 7\n"}
+{"k":"importer/Own.foo","v":"FooImporter setting 7"}
+{"k":"imported/Own.foo","v":"UnityEngine.TextAsset 'FooImporter:Own.foo'"}
+{"k":"type/Own.foo","v":"FooImporter"}
+{"k":"default/Own.foo","v":"FooImporter"}
+{"k":"available/Own.foo","v":"[FooImporter]"}
+{"k":"override/Own.foo","v":"null"}
+{"k":"open/Plain.txt","v":"fileFormatVersion: 2\nguid: (guid)\nScriptedImporter:\n  internalIDToNameTable: []\n  externalObjects: {}\n  serializedVersion: 2\n  userData: \n  assetBundleName: \n  assetBundleVariant: \n  script: {fileID: 11500000, guid: fe7149dab52c402586c2710ef982d2dd, type: 3}\n  setting: 7\n"}
+{"k":"importer/Plain.txt","v":"UnityEditor.TextScriptImporter"}
+{"k":"imported/Plain.txt","v":"UnityEngine.TextAsset 'Plain.txt'"}
+{"k":"type/Plain.txt","v":"UnityEditor.TextScriptImporter"}
+{"k":"default/Plain.txt","v":"UnityEditor.TextScriptImporter"}
+{"k":"available/Plain.txt","v":"[UnityEditor.TextScriptImporter]"}
+{"k":"override/Plain.txt","v":"null"}
+{"k":"open/Text.foo","v":"fileFormatVersion: 2\nguid: (guid)\nTextScriptImporter:\n  externalObjects: {}\n  userData: \n  assetBundleName: \n  assetBundleVariant: \n"}
+{"k":"importer/Text.foo","v":"FooImporter setting 0"}
+{"k":"imported/Text.foo","v":"UnityEngine.TextAsset 'FooImporter:Text.foo'"}
+{"k":"type/Text.foo","v":"FooImporter"}
+{"k":"default/Text.foo","v":"FooImporter"}
+{"k":"available/Text.foo","v":"[FooImporter]"}
+{"k":"override/Text.foo","v":"null"}
+{"k":"open/Unclaimed.qux","v":"fileFormatVersion: 2\nguid: (guid)\nScriptedImporter:\n  internalIDToNameTable: []\n  externalObjects: {}\n  serializedVersion: 2\n  userData: \n  assetBundleName: \n  assetBundleVariant: \n  script: {fileID: 11500000, guid: fe7149dab52c402586c2710ef982d2dd, type: 3}\n  setting: 7\n"}
+{"k":"importer/Unclaimed.qux","v":"UnityEditor.AssetImporter"}
+{"k":"imported/Unclaimed.qux","v":"UnityEditor.DefaultAsset"}
+{"k":"type/Unclaimed.qux","v":"UnityEditor.AssetImporter"}
+{"k":"default/Unclaimed.qux","v":"null"}
+{"k":"available/Unclaimed.qux","v":"[]"}
+{"k":"override/Unclaimed.qux","v":"null"}
+{"k":"labels/Default.foo","v":"FooImporter setting 0 | UnityEngine.TextAsset 'FooImporter:Default.foo'"}
+{"k":"labels/Default.foo/meta","v":"fileFormatVersion: 2\nguid: (guid)\nlabels:\n- probe\nScriptedImporter:\n  internalIDToNameTable: []\n  externalObjects: {}\n  serializedVersion: 2\n  userData: \n  assetBundleName: \n  assetBundleVariant: \n  script: {fileID: 11500000, guid: fe7149dab52c402586c2710ef982d2dd, type: 3}\n  setting: 0\n"}
+{"k":"labels/Guid.foo","v":"FooImporter setting 0 | UnityEngine.TextAsset 'FooImporter:Guid.foo'"}
+{"k":"labels/Guid.foo/meta","v":"fileFormatVersion: 2\nguid: (guid)\nlabels:\n- probe\nScriptedImporter:\n  internalIDToNameTable: []\n  externalObjects: {}\n  serializedVersion: 2\n  userData: \n  assetBundleName: \n  assetBundleVariant: \n  script: {fileID: 11500000, guid: fe7149dab52c402586c2710ef982d2dd, type: 3}\n  setting: 0\n"}
+{"k":"labels/Guid.uss","v":"UnityEditor.UIElements.StyleSheets.StyleSheetImporter | UnityEngine.UIElements.StyleSheet"}
+{"k":"labels/Guid.uss/meta","v":"fileFormatVersion: 2\nguid: (guid)\nlabels:\n- probe\nScriptedImporter:\n  internalIDToNameTable: []\n  externalObjects: {}\n  serializedVersion: 2\n  userData: \n  assetBundleName: \n  assetBundleVariant: \n  script: {fileID: 12385, guid: 0000000000000000e000000000000000, type: 0}\n  disableValidation: 0\n"}
+{"k":"labels/Guid.xyz","v":"UnityEditor.AssetImporter | UnityEditor.DefaultAsset"}
+{"k":"labels/Guid.xyz/meta","v":"fileFormatVersion: 2\nguid: (guid)\nlabels:\n- probe\nDefaultImporter:\n  externalObjects: {}\n  userData: \n  assetBundleName: \n  assetBundleVariant: \n"}
+{"k":"labels/Named.bar","v":"BarImporter setting 0 | UnityEngine.TextAsset 'BarImporter:Named.bar'"}
+{"k":"labels/Named.bar/meta","v":"fileFormatVersion: 2\nguid: (guid)\nlabels:\n- probe\nScriptedImporter:\n  internalIDToNameTable: []\n  externalObjects: {}\n  serializedVersion: 2\n  userData: \n  assetBundleName: \n  assetBundleVariant: \n  script: {fileID: 11500000, guid: 95c1cd9a428e4b3483c3cb0019f51fde, type: 3}\n  setting: 0\n"}
+{"k":"labels/Other.foo","v":"FooImporter setting 0 | UnityEngine.TextAsset 'FooImporter:Other.foo'"}
+{"k":"labels/Other.foo/meta","v":"fileFormatVersion: 2\nguid: (guid)\nlabels:\n- probe\nScriptedImporter:\n  internalIDToNameTable: []\n  externalObjects: {}\n  serializedVersion: 2\n  userData: \n  assetBundleName: \n  assetBundleVariant: \n  script: {fileID: 11500000, guid: fe7149dab52c402586c2710ef982d2dd, type: 3}\n  setting: 0\n"}
+{"k":"labels/Own.foo","v":"FooImporter setting 7 | UnityEngine.TextAsset 'FooImporter:Own.foo'"}
+{"k":"labels/Own.foo/meta","v":"fileFormatVersion: 2\nguid: (guid)\nlabels:\n- probe\nScriptedImporter:\n  internalIDToNameTable: []\n  externalObjects: {}\n  serializedVersion: 2\n  userData: \n  assetBundleName: \n  assetBundleVariant: \n  script: {fileID: 11500000, guid: fe7149dab52c402586c2710ef982d2dd, type: 3}\n  setting: 7\n"}
+{"k":"labels/Plain.txt","v":"UnityEditor.TextScriptImporter | UnityEngine.TextAsset 'Plain.txt'"}
+{"k":"labels/Plain.txt/meta","v":"fileFormatVersion: 2\nguid: (guid)\nlabels:\n- probe\nTextScriptImporter:\n  externalObjects: {}\n  userData: \n  assetBundleName: \n  assetBundleVariant: \n"}
+{"k":"labels/Text.foo","v":"FooImporter setting 0 | UnityEngine.TextAsset 'FooImporter:Text.foo'"}
+{"k":"labels/Text.foo/meta","v":"fileFormatVersion: 2\nguid: (guid)\nlabels:\n- probe\nScriptedImporter:\n  internalIDToNameTable: []\n  externalObjects: {}\n  serializedVersion: 2\n  userData: \n  assetBundleName: \n  assetBundleVariant: \n  script: {fileID: 11500000, guid: fe7149dab52c402586c2710ef982d2dd, type: 3}\n  setting: 0\n"}
+{"k":"labels/Unclaimed.qux","v":"UnityEditor.AssetImporter | UnityEditor.DefaultAsset"}
+{"k":"labels/Unclaimed.qux/meta","v":"fileFormatVersion: 2\nguid: (guid)\nlabels:\n- probe\nDefaultImporter:\n  externalObjects: {}\n  userData: \n  assetBundleName: \n  assetBundleVariant: \n"}
+{"k":"complete","v":true}
