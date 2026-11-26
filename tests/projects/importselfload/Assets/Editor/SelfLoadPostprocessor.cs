@@ -46,6 +46,9 @@ public class SelfLoadPostprocessor : AssetPostprocessor
 
     static bool Probed(string path) => path.StartsWith("Assets/Textures/", StringComparison.Ordinal) || path.StartsWith("Assets/Data/", StringComparison.Ordinal);
 
+    /// <summary>A readable, uncompressed texture whose OnPostprocessTexture sets its first texel (red 77).</summary>
+    internal const string PaintedPath = "Assets/Textures/Painted.png";
+
     /// <summary>Assets in Assets/Quiet/ are noted without loading them.</summary>
     internal static bool Quiet(string path) => path.StartsWith("Assets/Quiet/", StringComparison.Ordinal);
 
@@ -53,7 +56,13 @@ public class SelfLoadPostprocessor : AssetPostprocessor
     internal static string Observe(string path) => Quiet(path) ? "quiet" : Loads(path);
 
     void OnPreprocessTexture() { if (Probed(assetPath) || Quiet(assetPath)) Note("pre " + assetPath + " | " + Observe(assetPath)); }
-    void OnPostprocessTexture(Texture2D texture) { if (Probed(assetPath) || Quiet(assetPath)) Note("post " + assetPath + " | " + Observe(assetPath)); }
+    void OnPostprocessTexture(Texture2D texture)
+    {
+        if (!Probed(assetPath) && !Quiet(assetPath)) return;
+        // The painted texture's first texel is the postprocessor's, at every import.
+        if (assetPath == PaintedPath) texture.SetPixel(0, 0, new Color32(77, 0, 0, 255));
+        Note("post " + assetPath + " | " + Observe(assetPath));
+    }
     void OnPostprocessSprites(Texture2D texture, Sprite[] sprites) { if (Probed(assetPath) || Quiet(assetPath)) Note("sprites " + assetPath + " | " + Observe(assetPath)); }
 
     static void OnPostprocessAllAssets(string[] imported, string[] deleted, string[] moved, string[] from)

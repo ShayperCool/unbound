@@ -20,6 +20,7 @@
   "importers/Assets/Data/Preset.ovr2",
   "importers/Assets/Data/Second.ovr2",
   "importers/Assets/Data/Thing.gen",
+  "importers/Assets/Textures/Painted.png",
   "importers/Assets/Textures/Sprite.png",
   "invalid/logs",
   "missing/logs",
@@ -38,19 +39,20 @@
   "spaced/main",
   "spaced/meta"
  ],
+ "Unbound keeps one C# object per asset object: what a load gives after a reimport is the object loaded before it (the Editor gives another C# object of the same instance id)": [
+  "kept/Assets/Data/Thing.gen Texture2D Thing",
+  "kept/Assets/Quiet/Quiet.gen Texture2D Quiet",
+  "kept/Assets/Quiet/Quiet.png Sprite Quiet",
+  "kept/Assets/Quiet/Quiet.png Texture2D Quiet",
+  "kept/Assets/Textures/Painted.png Texture2D Painted",
+  "kept/Assets/Textures/Sprite.png Sprite Sprite",
+  "kept/Assets/Textures/Sprite.png Texture2D Sprite"
+ ],
  "Unbound imports an asset when it first loads, not at the project's open: nothing loads the quiet assets before Play mode, so their callbacks run at their first ImportAsset": [
   "first/import Assets/Quiet/Quiet.gen",
   "first/post Assets/Quiet/Quiet.gen",
   "first/post Assets/Quiet/Quiet.png",
   "first/pre Assets/Quiet/Quiet.png",
   "first/sprites Assets/Quiet/Quiet.png"
- ],
- "Unbound keeps one C# object per asset object: what a load gives after a reimport is the object loaded before it (the Editor gives another C# object of the same instance id)": [
-  "kept/Assets/Data/Thing.gen Texture2D Thing",
-  "kept/Assets/Quiet/Quiet.gen Texture2D Quiet",
-  "kept/Assets/Quiet/Quiet.png Sprite Quiet",
-  "kept/Assets/Quiet/Quiet.png Texture2D Quiet",
-  "kept/Assets/Textures/Sprite.png Sprite Sprite",
-  "kept/Assets/Textures/Sprite.png Texture2D Sprite"
  ]
 }

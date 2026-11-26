@@ -16,7 +16,7 @@ public class ImportSelfLoadProbe : MonoBehaviour
     const string Variable = "IMPORTSELFLOAD_OUT";
     static StreamWriter output;
     static readonly List<string> logs = new List<string>();
-    static readonly string[] Assets = { "Assets/Textures/Sprite.png", "Assets/Data/Thing.gen", "Assets/Data/Mismatch.json", "Assets/Data/Override.ovr2", "Assets/Data/Plain.ovr2", "Assets/Data/Own.over", "Assets/Data/Second.ovr2", "Assets/Data/Preset.ovr2" };
+    static readonly string[] Assets = { "Assets/Textures/Sprite.png", "Assets/Data/Thing.gen", "Assets/Data/Mismatch.json", "Assets/Data/Override.ovr2", "Assets/Data/Plain.ovr2", "Assets/Data/Own.over", "Assets/Data/Second.ovr2", "Assets/Data/Preset.ovr2", "Assets/Textures/Painted.png" };
 
     static string Escape(string value) =>
         value.Replace("\\", "\\\\").Replace("\"", "\\\"").Replace("\n", "\\n").Replace("\r", "\\r").Replace("\t", "\\t");
@@ -106,18 +106,25 @@ public class ImportSelfLoadProbe : MonoBehaviour
             Logs();
             // An unchanged asset imported without ForceUpdate: the probed ones (whose imports load
             // them) and the quiet ones (whose imports do not).
-            foreach (var path in new[] { "Assets/Textures/Sprite.png", "Assets/Data/Thing.gen", "Assets/Quiet/Quiet.png", "Assets/Quiet/Quiet.gen" })
+            foreach (var path in new[] { "Assets/Textures/Sprite.png", "Assets/Data/Thing.gen", "Assets/Quiet/Quiet.png", "Assets/Quiet/Quiet.gen", "Assets/Textures/Painted.png" })
                 AssetDatabase.ImportAsset(path);
             int plain = Lines(dir, "plain", seen);
             Row("plain/lines", (plain - seen).ToString());
             Row("plain/logs", Logs());
             seen = plain;
             // The objects loaded before a forced reimport, and the .meta, to compare after it.
-            var forced = new[] { "Assets/Textures/Sprite.png", "Assets/Data/Thing.gen", "Assets/Quiet/Quiet.png", "Assets/Quiet/Quiet.gen" };
+            var forced = new[] { "Assets/Textures/Sprite.png", "Assets/Data/Thing.gen", "Assets/Quiet/Quiet.png", "Assets/Quiet/Quiet.gen", "Assets/Textures/Painted.png" };
             var before = forced.ToDictionary(p => p, p => AssetDatabase.LoadAllAssetsAtPath(p)
                 .Select(o => (Object: o, Id: o.GetInstanceID(), Type: o.GetType(), Name: o.name)).OrderBy(e => e.Type.Name, StringComparer.Ordinal).ToArray());
             int width = AssetDatabase.LoadAssetAtPath<Texture2D>("Assets/Data/Thing.gen").width;
             var spriteMeta = Meta("Assets/Textures/Sprite.png");
+            // The painted texture, its first texel the postprocessor's, then set by a script: what
+            // the reference loaded before has after the reimport.
+            var painted = AssetDatabase.LoadAssetAtPath<Texture2D>("Assets/Textures/Painted.png");
+            int imported = painted.GetPixels32()[0].r;
+            painted.SetPixel(0, 0, new Color32(5, 0, 0, 255));
+            painted.Apply();
+            Row("paint/before", "imported r " + imported + " set r " + painted.GetPixels32()[0].r);
             foreach (var path in forced)
                 AssetDatabase.ImportAsset(path, ImportAssetOptions.ForceUpdate);
             seen = Lines(dir, "reimport", seen);
@@ -136,6 +143,8 @@ public class ImportSelfLoadProbe : MonoBehaviour
             var kept = (Texture2D)before["Assets/Data/Thing.gen"].First(e => e.Object is Texture2D).Object;
             Row("kept/Assets/Data/Thing.gen width", "before " + width + " old " + (kept != null ? kept.width.ToString() : "dead")
                 + " fresh " + AssetDatabase.LoadAssetAtPath<Texture2D>("Assets/Data/Thing.gen").width);
+            Row("paint/after", "old r " + (painted != null ? painted.GetPixels32()[0].r.ToString() : "dead")
+                + " fresh r " + AssetDatabase.LoadAssetAtPath<Texture2D>("Assets/Textures/Painted.png").GetPixels32()[0].r);
             Row("reimport/meta Assets/Textures/Sprite.png", Meta("Assets/Textures/Sprite.png") == spriteMeta ? "unchanged" : Meta("Assets/Textures/Sprite.png"));
             // The quiet assets imported without ForceUpdate once more.
             foreach (var path in new[] { "Assets/Quiet/Quiet.png", "Assets/Quiet/Quiet.gen" })

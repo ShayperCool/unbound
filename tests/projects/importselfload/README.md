@@ -13,7 +13,8 @@ without loading them), `GenImporter` (a ScriptedImporter of `.gen` files that lo
 run; the texture is 4 pixels wider at each import of the file), `OverImporter` (a ScriptedImporter of
 `.over` files that names `.ovr2` as an override extension) and `ProbeImporters.SpacedImporter`
 (another importer naming `.ovr2` as an override extension, in a namespace).
-`Assets/Textures/Sprite.png` is a Single sprite, `Assets/Quiet` holds copies of it and of
+`Assets/Textures/Sprite.png` is a Single sprite, `Assets/Textures/Painted.png` a readable uncompressed
+texture whose `OnPostprocessTexture` sets its first texel (red 77), `Assets/Quiet` holds copies of the sprite and of
 `Thing.gen`; `Assets/Data` holds `Thing.gen`, `Mismatch.json` and `Override.ovr2` (whose `.meta`
 names `GenImporter` and `OverImporter` in its importer section), `Own.over`, `Plain.ovr2` and
 `Second.ovr2` (DefaultImporter `.meta` files) and `Preset.ovr2`, whose `.meta` sets `OverImporter`
@@ -30,7 +31,9 @@ as its override from the start.
   assets; `plain2/*` the quiet ones once more after the forced imports.
 * `reimport/<callback> <path>`: the same after `ImportAsset(ForceUpdate)`; `kept/*`: each object
   loaded before it, after it (alive, `==` and the same C# object as the fresh load, its instance
-  id), the generated texture's width (before, of the old reference, fresh), the sprite's `.meta`.
+  id), the generated texture's width (before, of the old reference, fresh), the sprite's `.meta`;
+  `paint/*`: the painted texture's first texel as imported, as a script set it before the reimport,
+  and after it through the old reference and a fresh load.
 * `forced/<path>`: `Override.ovr2` and `Mismatch.json` imported again with `ForceUpdate`.
 * `set_override/*`, `spaced/*`, `again/*`, `invalid/*`, `missing/*`, `own_default/*`, `clear*/*`:
   `SetImporterOverride` and `ClearImporterOverride` on the `.ovr2`, `.over` and `.json` assets and a
@@ -43,7 +46,8 @@ and log nothing, at the first import and at a reimport; from `OnPostprocessAllAs
 imported asset. `ImportAsset` imports an asset already imported again, with or without
 `ForceUpdate`, whether its import loads it or not: its importer and all
 its callbacks run again; the objects loaded before stay alive with the same instance ids and take
-the new import's content (another C# object stands for them after it); the `.meta` is not written.
+the new import's content, what its postprocessors set included (another C# object stands for them
+after it); the `.meta` is not written.
 A `.meta` whose importer section names a ScriptedImporter imports with it only when
 the importer names the file's extension among those it imports: `Mismatch.json` is a TextAsset of
 the TextScriptImporter, `Override.ovr2` (an override extension of `OverImporter`) a DefaultAsset of the

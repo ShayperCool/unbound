@@ -7,14 +7,17 @@
 {"k":"first/all Assets/Data/Thing.gen","v":"texture Thing main Texture2D all 1 errors 0"}
 {"k":"first/all Assets/Quiet/Quiet.gen","v":"quiet"}
 {"k":"first/all Assets/Quiet/Quiet.png","v":"quiet"}
+{"k":"first/all Assets/Textures/Painted.png","v":"texture Painted main Texture2D all 1 errors 0"}
 {"k":"first/all Assets/Textures/Sprite.png","v":"texture Sprite main Texture2D all 2 errors 0"}
 {"k":"first/import Assets/Data/Thing.gen","v":"texture null main null all 0 errors 0"}
 {"k":"first/import Assets/Quiet/Quiet.gen","v":"quiet"}
 {"k":"first/post Assets/Data/Thing.gen","v":"texture null main null all 0 errors 0"}
 {"k":"first/post Assets/Quiet/Quiet.gen","v":"quiet"}
 {"k":"first/post Assets/Quiet/Quiet.png","v":"quiet"}
+{"k":"first/post Assets/Textures/Painted.png","v":"texture null main null all 0 errors 0"}
 {"k":"first/post Assets/Textures/Sprite.png","v":"texture null main null all 0 errors 0"}
 {"k":"first/pre Assets/Quiet/Quiet.png","v":"quiet"}
+{"k":"first/pre Assets/Textures/Painted.png","v":"texture null main null all 0 errors 0"}
 {"k":"first/pre Assets/Textures/Sprite.png","v":"texture null main null all 0 errors 0"}
 {"k":"first/sprites Assets/Quiet/Quiet.png","v":"quiet"}
 {"k":"first/sprites Assets/Textures/Sprite.png","v":"texture null main null all 0 errors 0"}
@@ -26,6 +29,7 @@
 {"k":"asset/Assets/Data/Own.over","v":"main TextAsset Own importer OverImporter"}
 {"k":"asset/Assets/Data/Second.ovr2","v":"main DefaultAsset Second importer AssetImporter"}
 {"k":"asset/Assets/Data/Preset.ovr2","v":"main TextAsset Preset importer OverImporter"}
+{"k":"asset/Assets/Textures/Painted.png","v":"main Texture2D Painted importer TextureImporter"}
 {"k":"meta/Assets/Data/Preset.ovr2","v":"fileFormatVersion: 2\nguid: (guid)\nimporterOverride:\n  nativeImporterType: 2089858483\n  scriptedImporterType:\n    serializedVersion: 2\n    Hash: 104ddd7902d5b6bcff8d6316c3d1f5bc\nDefaultImporter:\n  externalObjects: {}\n  userData: \n  assetBundleName: \n  assetBundleVariant: \n"}
 {"k":"importers/Assets/Textures/Sprite.png","v":"default UnityEditor.TextureImporter available [UnityEditor.TextureImporter] override null"}
 {"k":"importers/Assets/Data/Thing.gen","v":"default GenImporter available [GenImporter] override null"}
@@ -35,33 +39,41 @@
 {"k":"importers/Assets/Data/Own.over","v":"default OverImporter available [OverImporter] override null"}
 {"k":"importers/Assets/Data/Second.ovr2","v":"default null available [OverImporter,ProbeImporters.SpacedImporter] override null"}
 {"k":"importers/Assets/Data/Preset.ovr2","v":"default null available [OverImporter,ProbeImporters.SpacedImporter] override OverImporter"}
+{"k":"importers/Assets/Textures/Painted.png","v":"default UnityEditor.TextureImporter available [UnityEditor.TextureImporter] override null"}
 {"k":"plain/all Assets/Data/Thing.gen","v":"texture Thing main Texture2D all 1 errors 0"}
 {"k":"plain/all Assets/Quiet/Quiet.gen","v":"quiet"}
 {"k":"plain/all Assets/Quiet/Quiet.png","v":"quiet"}
+{"k":"plain/all Assets/Textures/Painted.png","v":"texture Painted main Texture2D all 1 errors 0"}
 {"k":"plain/all Assets/Textures/Sprite.png","v":"texture Sprite main Texture2D all 2 errors 0"}
 {"k":"plain/import Assets/Data/Thing.gen","v":"texture null main null all 0 errors 0"}
 {"k":"plain/import Assets/Quiet/Quiet.gen","v":"quiet"}
 {"k":"plain/post Assets/Data/Thing.gen","v":"texture null main null all 0 errors 0"}
 {"k":"plain/post Assets/Quiet/Quiet.gen","v":"quiet"}
 {"k":"plain/post Assets/Quiet/Quiet.png","v":"quiet"}
+{"k":"plain/post Assets/Textures/Painted.png","v":"texture null main null all 0 errors 0"}
 {"k":"plain/post Assets/Textures/Sprite.png","v":"texture null main null all 0 errors 0"}
 {"k":"plain/pre Assets/Quiet/Quiet.png","v":"quiet"}
+{"k":"plain/pre Assets/Textures/Painted.png","v":"texture null main null all 0 errors 0"}
 {"k":"plain/pre Assets/Textures/Sprite.png","v":"texture null main null all 0 errors 0"}
 {"k":"plain/sprites Assets/Quiet/Quiet.png","v":"quiet"}
 {"k":"plain/sprites Assets/Textures/Sprite.png","v":"texture null main null all 0 errors 0"}
-{"k":"plain/lines","v":"14"}
+{"k":"plain/lines","v":"17"}
 {"k":"plain/logs","v":""}
+{"k":"paint/before","v":"imported r 77 set r 5"}
 {"k":"reimport/all Assets/Data/Thing.gen","v":"texture Thing main Texture2D all 1 errors 0"}
 {"k":"reimport/all Assets/Quiet/Quiet.gen","v":"quiet"}
 {"k":"reimport/all Assets/Quiet/Quiet.png","v":"quiet"}
+{"k":"reimport/all Assets/Textures/Painted.png","v":"texture Painted main Texture2D all 1 errors 0"}
 {"k":"reimport/all Assets/Textures/Sprite.png","v":"texture Sprite main Texture2D all 2 errors 0"}
 {"k":"reimport/import Assets/Data/Thing.gen","v":"texture null main null all 0 errors 0"}
 {"k":"reimport/import Assets/Quiet/Quiet.gen","v":"quiet"}
 {"k":"reimport/post Assets/Data/Thing.gen","v":"texture null main null all 0 errors 0"}
 {"k":"reimport/post Assets/Quiet/Quiet.gen","v":"quiet"}
 {"k":"reimport/post Assets/Quiet/Quiet.png","v":"quiet"}
+{"k":"reimport/post Assets/Textures/Painted.png","v":"texture null main null all 0 errors 0"}
 {"k":"reimport/post Assets/Textures/Sprite.png","v":"texture null main null all 0 errors 0"}
 {"k":"reimport/pre Assets/Quiet/Quiet.png","v":"quiet"}
+{"k":"reimport/pre Assets/Textures/Painted.png","v":"texture null main null all 0 errors 0"}
 {"k":"reimport/pre Assets/Textures/Sprite.png","v":"texture null main null all 0 errors 0"}
 {"k":"reimport/sprites Assets/Quiet/Quiet.png","v":"quiet"}
 {"k":"reimport/sprites Assets/Textures/Sprite.png","v":"texture null main null all 0 errors 0"}
@@ -76,7 +88,10 @@
 {"k":"kept/Assets/Quiet/Quiet.png Texture2D Quiet","v":"alive True equal True same False id same"}
 {"k":"reimport/count Assets/Quiet/Quiet.gen","v":"1 -> 1"}
 {"k":"kept/Assets/Quiet/Quiet.gen Texture2D Quiet","v":"alive True equal True same False id same"}
+{"k":"reimport/count Assets/Textures/Painted.png","v":"1 -> 1"}
+{"k":"kept/Assets/Textures/Painted.png Texture2D Painted","v":"alive True equal True same False id same"}
 {"k":"kept/Assets/Data/Thing.gen width","v":"before 8 old 16 fresh 16"}
+{"k":"paint/after","v":"old r 77 fresh r 77"}
 {"k":"reimport/meta Assets/Textures/Sprite.png","v":"unchanged"}
 {"k":"plain2/all Assets/Quiet/Quiet.gen","v":"quiet"}
 {"k":"plain2/all Assets/Quiet/Quiet.png","v":"quiet"}
