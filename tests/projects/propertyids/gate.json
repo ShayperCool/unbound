@@ -1,0 +1,11 @@
+{
+  "commands": [
+    "python3 tests/projects/propertyids/run.py gate"
+  ],
+  "summary": "propertyids: .*",
+  "engine_paths": [
+    "managed/UnityEngine/Graphics/Shader.cs",
+    "managed/UnityEngine/Runtime/Compat.cs",
+    "tests/projects/propertyids/"
+  ]
+}
