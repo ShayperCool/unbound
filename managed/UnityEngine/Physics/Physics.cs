@@ -13,6 +13,30 @@ namespace UnityEngine
     /// </summary>
     public partial class Physics
     {
+        /// <summary>Prepares a mesh for MeshColliders (Unity: callable from any thread). Unbound
+        /// cooks a mesh when a collider takes it, so only the checks are done here, with the Unity
+        /// 6000.0.71f1 Editor's warnings (tests/projects/bakemesh): a null id, an id of no living
+        /// object, an id of something else than a mesh; a mesh, also empty or not readable, is
+        /// taken without a word.</summary>
+        public static void BakeMesh(int meshID, bool convex) => BakeMesh(meshID, convex, (MeshColliderCookingOptions)30);
+
+        public static void BakeMesh(int meshID, bool convex, MeshColliderCookingOptions cookingOptions)
+        {
+            if (meshID == 0)
+            {
+                Debug.LogWarning("Null mesh instance id is not allowed.");
+                return;
+            }
+            var found = Object.FindObjectFromInstanceID(meshID);
+            if (found is null)
+            {
+                Debug.LogWarning("Failed to resolve instance id: ");
+                return;
+            }
+            // The Editor's message ends at the colon, whatever the object's name.
+            if (found is not Mesh) Debug.LogWarning("Resolved the instance id to a valid object, but that object is not a Mesh: ");
+        }
+
         public const int IgnoreRaycastLayer = 4;
         public const int DefaultRaycastLayers = -5;
         public const int AllLayers = -1;
