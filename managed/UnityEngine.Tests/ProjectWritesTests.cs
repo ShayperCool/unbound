@@ -257,10 +257,12 @@ namespace UnityEngine.Tests
         }
 
         /// <summary>The oldest layout is converted only where it is measured, a sprite's whose
-        /// textureSettings are of their own version or of the wrap keys alone, and only for a
-        /// change: an unchanged importer writes nothing; a Default texture's section (spritemeta
+        /// textureSettings are of their own version or of the wrap keys alone, and only for its
+        /// first import's change: an unchanged importer writes nothing; another change beside it (a
+        /// setting, the NPOT scaling, another sprite ID, user data, a platform entry cleared or
+        /// set) keeps the file's layout, said; so do a Default texture's section (spritemeta
         /// BareDefault, which the Editor reads as another type) and one of other older
-        /// textureSettings keys keep their layout, said.</summary>
+        /// textureSettings keys.</summary>
         [Fact]
         public void TheOldestLayoutIsConvertedOnlyForAChangeOfAMeasuredSpriteSection()
         {
@@ -279,22 +281,73 @@ namespace UnityEngine.Tests
                 Assert.False(ImporterLayout.IsOldestSprite(UnityYamlText.ParseTopLevel(head + "  textureType: 0\n").Get("TextureImporter")));
                 Assert.False(ImporterLayout.IsOldestSprite(UnityYamlText.ParseTopLevel(head + "  textureType: 8\n  textureSettings:\n    filterMode: 0\n").Get("TextureImporter")));
                 Assert.False(ImporterLayout.IsOldestSprite(UnityYamlText.ParseTopLevel(head + "  serializedVersion: 13\n  textureType: 8\n").Get("TextureImporter")));
-                // Another change of an oldest sprite section (a script's filter mode beside the first
-                // import's ID): its layout kept, said, nothing of the change lost.
-                var spriteText = head + "  textureType: 8\n  spriteMode: 1\n  textureSettings:\n    filterMode: 1\n";
-                var spriteSection = UnityYamlText.ParseTopLevel(spriteText).Get("TextureImporter");
-                var firstImport = spriteSection.ToNode();
-                MetaSettings.Set(firstImport, "spriteSheet.spriteID", "5e97eb03825dee720800000000000000");
-                MetaSettings.SetInt(firstImport, "nPOTScale", 0);
-                Assert.True(ImporterLayout.OnlyFirstImportChanges(spriteSection, firstImport));
-                var changed = MetaSettings.Clone(firstImport);
-                MetaSettings.SetInt(changed, "textureSettings.filterMode", 0);
-                Assert.False(ImporterLayout.OnlyFirstImportChanges(spriteSection, changed));
-                Assert.True(ImporterLayout.IsOldestSprite(UnityYamlText.ParseTopLevel(head + "  textureType: 8\n  textureSettings:\n    wrapU: 1\n").Get("TextureImporter")));
-                var unwrittenSprite = new List<string>();
-                var keptSprite = ImporterMeta.Rewritten(spriteText, "TextureImporter", MetaSettings.Clone(changed), changed, ("", "", ""), TextureTemplate(), unwrittenSprite);
-                Assert.True(keptSprite == null || keptSprite.Contains("    filterMode: 0\n"));
-                Assert.DoesNotContain("applyGammaDecoding: 1", keptSprite ?? "");
+                // The first import's change of an oldest sprite section is the measured write; any
+                // other change beside it is not (its layout kept, said, nothing of it lost).
+                const string id = "5e97eb03825dee720800000000000000";
+                Assert.Equal(id, UnityEditor.SpriteImports.SingleSpriteId);
+                var none = ("", "", "");
+                var bareText = head + "  textureType: 8\n  spriteMode: 1\n  textureSettings:\n    wrapU: 1\n";
+                var bare = UnityYamlText.ParseTopLevel(bareText).Get("TextureImporter");
+                YNode FirstImport(YText section)
+                {
+                    var node = section.ToNode();
+                    MetaSettings.Set(node, "spriteSheet.spriteID", id);
+                    MetaSettings.SetInt(node, "nPOTScale", 0);
+                    return node;
+                }
+                Assert.True(ImporterLayout.IsOldestSprite(bare));
+                Assert.True(ImporterLayout.OnlyFirstImportChanges(bare, FirstImport(bare), none));
+                var npot = FirstImport(bare);
+                MetaSettings.SetInt(npot, "nPOTScale", 2);
+                Assert.False(ImporterLayout.OnlyFirstImportChanges(bare, npot, none));
+                var otherId = FirstImport(bare);
+                MetaSettings.Set(otherId, "spriteSheet.spriteID", "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa");
+                Assert.False(ImporterLayout.OnlyFirstImportChanges(bare, otherId, none));
+                var wrap = FirstImport(bare);
+                MetaSettings.SetInt(wrap, "textureSettings.wrapU", 0);
+                Assert.False(ImporterLayout.OnlyFirstImportChanges(bare, wrap, none));
+                Assert.False(ImporterLayout.OnlyFirstImportChanges(bare, FirstImport(bare), ("data", "", "")));
+                Assert.False(ImporterLayout.OnlyFirstImportChanges(bare, FirstImport(bare), ("", "bundle", "")));
+                // A section that has its sprite ID gets no first import.
+                var withId = UnityYamlText.ParseTopLevel(bareText + "  spriteSheet:\n    spriteID: " + id + "\n").Get("TextureImporter");
+                Assert.False(ImporterLayout.OnlyFirstImportChanges(withId, FirstImport(withId), none));
+
+                // A platform entry cleared beside the first import (BareFull's Standalone): the file's
+                // layout kept and the entry removed, as a change of any other layout's.
+                var project = Path.Combine(Repo(), "tests", "projects", "spritemeta");
+                var fullText = File.ReadAllText(Path.Combine(project, "Assets", "Textures", "BareFull.png.meta"));
+                var full = UnityYamlText.ParseTopLevel(fullText).Get("TextureImporter");
+                Assert.True(ImporterLayout.OnlyFirstImportChanges(full, FirstImport(full), none));
+                var cleared = FirstImport(full);
+                var platforms = MetaSettings.Find(cleared, "platformSettings");
+                platforms.Items = platforms.Items.Where(e => e.Get("buildTarget")?.AsString() != "Standalone").ToArray();
+                Assert.False(ImporterLayout.OnlyFirstImportChanges(full, cleared, none));
+                var unwrittenFull = new List<string>();
+                var keptFull = ImporterMeta.Rewritten(fullText, "TextureImporter", MetaSettings.Clone(cleared), cleared, none,
+                    ImporterLayout.ForTexture(TextureTemplate()), unwrittenFull, out var olderFull, out bool laidOutFull);
+                Assert.False(laidOutFull);
+                Assert.Contains("serializedVersion: missing", olderFull);
+                Assert.DoesNotContain("buildTarget: Standalone", keptFull);
+                Assert.Contains("    spriteID: " + id + "\n", keptFull);
+                Assert.DoesNotContain("serializedVersion: 13", keptFull);
+                // Added: a platform entry set beside the first import.
+                var set = FirstImport(full);
+                var entries = MetaSettings.Find(set, "platformSettings");
+                var added = MetaSettings.Clone(entries.Items[1]);
+                MetaSettings.Set(added, "buildTarget", "iPhone");
+                entries.Items = entries.Items.Append(added).ToArray();
+                Assert.False(ImporterLayout.OnlyFirstImportChanges(full, set, none));
+
+                // A user data given beside the first import of a section that lacks the key: the layout
+                // kept and the setting said unwritten, not dropped silently.
+                var unwrittenData = new List<string>();
+                var keptData = ImporterMeta.Rewritten(bareText, "TextureImporter", FirstImport(bare), FirstImport(bare), ("data", "", ""),
+                    ImporterLayout.ForTexture(TextureTemplate()), unwrittenData, out var olderData, out bool laidOutData);
+                Assert.False(laidOutData);
+                Assert.Contains("serializedVersion: missing", olderData);
+                Assert.Contains("userData", unwrittenData);
+                Assert.DoesNotContain("applyGammaDecoding: 1", keptData ?? "");
+
                 // A change of a Default texture's: the file's layout kept (the older settings' place
                 // in the release's is not measured), patched in place.
                 var defaultText = head + "  textureType: 0\n  maxTextureSize: 2048\n";

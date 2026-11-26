@@ -165,10 +165,14 @@ namespace Unbound.Runtime
             // the file's platform entries, after which its layout adds the others
             // (ImporterLayout.Arrange); any other change of such a section keeps its layout.
             bool oldest = type == "TextureImporter" && layout != null && ImporterLayout.IsOldestSprite(section)
-                && ImporterLayout.OnlyFirstImportChanges(section, saved ?? settings);
+                && ImporterLayout.OnlyFirstImportChanges(section, saved ?? settings, common);
             if (type == "TextureImporter" && !oldest) MatchPlatforms(section, settings);
             Patch(section, settings, "", unwritten);
             SetCommonScalars(section, common);
+            // A common setting the file lacks is not patched in: said, unless the section is laid
+            // out (the layout places it).
+            foreach (var (key, value) in CommonScalars(common))
+                if (!string.IsNullOrEmpty(value) && section.Get(key) == null) unwritten.Add(key);
             var original = text.Replace("\r\n", "\n");
             var written = UnityYamlText.WriteTopLevel(root);
             // Settings that did not change write nothing (tests/projects/projectwrites 06.crlf
@@ -192,7 +196,8 @@ namespace Unbound.Runtime
                     {
                         // A missing setting given the value its default reads is no change (unmeasured).
                         var plain = UnityYamlText.ParseTopLevel(text);
-                        LayOut(plain, type, layout, plain.Get(type).ToNode(), s => SetCommonScalars(s, common), new List<string>());
+                        // (With the file's own common settings: a given one it lacks is a change.)
+                        LayOut(plain, type, layout, plain.Get(type).ToNode(), _ => { }, new List<string>());
                         if (UnityYamlText.WriteTopLevel(root) == UnityYamlText.WriteTopLevel(plain))
                         {
                             // Still reported: whether the Editor writes the section then is not known.
@@ -312,10 +317,12 @@ namespace Unbound.Runtime
 
         static void SetCommonScalars(YText section, (string UserData, string Bundle, string Variant) common)
         {
-            SetScalar(section, "userData", common.UserData);
-            SetScalar(section, "assetBundleName", common.Bundle);
-            SetScalar(section, "assetBundleVariant", common.Variant);
+            foreach (var (key, value) in CommonScalars(common)) SetScalar(section, key, value);
         }
+
+        /// <summary>The settings every importer's section ends with, by key.</summary>
+        internal static (string Key, string Value)[] CommonScalars((string UserData, string Bundle, string Variant) common) =>
+            new[] { ("userData", common.UserData), ("assetBundleName", common.Bundle), ("assetBundleVariant", common.Variant) };
 
         static string s_TextureTemplate;
 
@@ -548,12 +555,23 @@ namespace Unbound.Runtime
             return true;
         }
 
-        /// <summary>Whether the importer's <paramref name="settings"/> differ from an oldest-layout
-        /// section's keys only by what a sprite's first import sets (its sprite ID and NPOT
-        /// scaling, tests/projects/spritemeta Bare*): the change whose write is measured.</summary>
-        internal static bool OnlyFirstImportChanges(YText section, YNode settings)
+        /// <summary>Whether the importer's <paramref name="settings"/> and <paramref name="common"/>
+        /// settings differ from an oldest-layout section's only by what a sprite's first import sets
+        /// (tests/projects/spritemeta Bare*): the change whose write is measured. That import is a
+        /// Single sprite's of no sprite ID (<see cref="SpriteImports.NeedsSpriteId"/>, as
+        /// <see cref="SpriteImports.Imported(IEnumerable{string})"/> chooses it), which gets the single
+        /// sprite's ID and no NPOT scaling; any other change, a platform entry set or cleared among
+        /// them, is not this write.</summary>
+        internal static bool OnlyFirstImportChanges(YText section, YNode settings, (string UserData, string Bundle, string Variant) common)
         {
-            if (section == null || settings == null) return false;
+            if (section == null || settings == null || !SpriteImports.NeedsSpriteId(section.ToNode())) return false;
+            if (MetaSettings.Find(settings, "spriteSheet.spriteID")?.AsString() != SpriteImports.SingleSpriteId) return false;
+            if (MetaSettings.Find(settings, "nPOTScale") is { } npot && npot.AsString() != ((int)UnityEditor.TextureImporterNPOTScale.None).ToString()) return false;
+            foreach (var (key, value) in ImporterMeta.CommonScalars(common))
+                if ((section.Get(key) is { Kind: YKind.Scalar } own ? own.Text : "") != (value ?? "")) return false;
+            // The platform entries the file has, by name and in order (the patch below compares
+            // their values; an entry removed or added is not seen there).
+            if (!SameTargets(section.Get("platformSettings"), MetaSettings.Find(settings, "platformSettings"))) return false;
             // The settings with the first import's keys put back as the file has them, patched into
             // the file as a save patches them: no text change, and nothing but those keys unwritten.
             var probe = MetaSettings.Clone(settings);
@@ -574,6 +592,19 @@ namespace Unbound.Runtime
                 if (path == "spriteSheet" && MetaSettings.Find(settings, "spriteSheet") is { Kind: YKind.Map } sheet
                     && sheet.Keys.All(k => k == "spriteID")) continue;
                 return false;
+            }
+            return true;
+        }
+
+        static bool SameTargets(YText file, YNode settings)
+        {
+            int count = file is { Kind: YKind.Seq } ? file.Items.Count : 0;
+            if (count != (settings is { Kind: YKind.Seq } ? settings.Items.Length : 0)) return false;
+            for (int i = 0; i < count; i++)
+            {
+                var own = file.Items[i].Kind == YKind.Map ? file.Items[i].Get("buildTarget")?.Text : null;
+                var given = settings.Items[i].Kind == YKind.Map ? settings.Items[i].Get("buildTarget")?.AsString() : null;
+                if (own == null || own != given) return false;
             }
             return true;
         }
