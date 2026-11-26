@@ -234,7 +234,10 @@ namespace Unbound.UIElements
                 if (Cur == '"' || Cur == '\'') { ReadString(); continue; }
                 Advance();
             }
-            if (AtEnd) throw new UssSyntaxException("expected '{'");
+            // Text the file ends in before a block (a stray character or word after the last rule)
+            // makes no rule and no error; a block the file ends in is closed by the end, its
+            // declarations kept (measured: tests/projects/ussvalidation Trailing*).
+            if (AtEnd) return;
             var selectorText = StripComments(m_Text.Substring(selectorStart, m_Pos - selectorStart));
             Advance();
 
@@ -251,8 +254,7 @@ namespace Unbound.UIElements
             while (true)
             {
                 SkipSpace();
-                if (AtEnd) throw new UssSyntaxException("expected '}'");
-                if (Cur == '}') { Advance(); break; }
+                if (AtEnd || Cur == '}') { if (!AtEnd) Advance(); break; }
                 if (Cur == ';') { Advance(); continue; }
                 int propLine = m_Line;
                 var name = ReadPropertyName();
