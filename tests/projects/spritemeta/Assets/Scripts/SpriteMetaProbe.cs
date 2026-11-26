@@ -92,7 +92,8 @@ public class SpriteMetaProbe : MonoBehaviour
     }
 
     static readonly string[] Textures = { "Control", "EmptyId", "IdNpot", "EmptyIdPot0", "Bare", "New", "NewNpot", "NewGaps",
-        "BareWrap", "BarePpu", "BareDefault", "BareFull",
+        "BareWrap", "BarePpu", "BareDefault", "BareFull", "BareLegacy", "BareSize", "BareSheet", "BarePlat", "BareTag",
+        "SaveData", "SaveNpot", "SaveClear", "SaveBundle", "SaveKeep",
         "SliceL", "SliceDiag", "SliceDot", "SliceEdge", "SliceFaint", "SliceFive", "SliceNear", "SliceHole", "SliceNpot",
         "SliceThin", "SliceFlat", "SliceAlone3", "SliceAlone4", "SliceTwoBigDot", "SliceBigNear", "SliceBigGap2", "SliceSmallBetween", "SliceAreaSmall",
         "SliceRowMerge", "SliceTopDot", "SliceEmpty", "SliceChain", "SliceMany",
@@ -123,12 +124,48 @@ public class SpriteMetaProbe : MonoBehaviour
             Meta("session/" + name, "Assets/Session/" + name + ".png");
             Describe(name, "Assets/Session/" + name + ".png");
         }
+        Saves();
         // What the project's files are once every import is done (a later write would show here).
         foreach (var name in Textures) Meta("end/" + name, "Assets/Textures/" + name + ".png");
     }
 
+    /// <summary>A script's change of a sprite whose .meta has no serialized version but has its
+    /// sprite ID (no first-import write), saved by SaveAndReimport: the .meta then.</summary>
+    static void Saves()
+    {
+        var changes = new (string Name, Action<TextureImporter> Change)[]
+        {
+            ("SaveData", i => i.userData = "data"),
+            ("SaveNpot", i => i.npotScale = TextureImporterNPOTScale.ToLarger),
+            ("SaveClear", i => i.ClearPlatformTextureSettings("Standalone")),
+            ("SaveBundle", i => i.assetBundleName = "Mixed-Bundle"),
+            ("SaveKeep", i => { }),
+        };
+        foreach (var (name, change) in changes)
+        {
+            var path = "Assets/Textures/" + name + ".png";
+            Try("save/" + name, () =>
+            {
+                var importer = (TextureImporter)AssetImporter.GetAtPath(path);
+                change(importer);
+                importer.SaveAndReimport();
+                return "done";
+            });
+            Meta("save/" + name + "/meta", path);
+            Describe("saved_" + name, path);
+        }
+    }
+
     static void Describe(string name, string path)
     {
+        Try("platform/" + name, () =>
+        {
+            var importer = (TextureImporter)AssetImporter.GetAtPath(path);
+            string P(TextureImporterPlatformSettings p) => p.name + " overridden " + p.overridden + " max " + p.maxTextureSize + " format " + p.format
+                + " compression " + p.textureCompression + " quality " + p.compressionQuality;
+            return P(importer.GetDefaultPlatformTextureSettings()) + " | " + P(importer.GetPlatformTextureSettings("Standalone"))
+                + " | maxTextureSize " + importer.maxTextureSize + " compressionQuality " + importer.compressionQuality;
+        });
         {
             Try("importer/" + name, () =>
             {

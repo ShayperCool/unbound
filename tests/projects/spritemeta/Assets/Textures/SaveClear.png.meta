@@ -1,0 +1,17 @@
+fileFormatVersion: 2
+guid: 90c7080234504416a12eae097c79e50a
+TextureImporter:
+  textureType: 8
+  spriteMode: 1
+  spriteSheet:
+    serializedVersion: 2
+    spriteID: 5e97eb03825dee720800000000000000
+  platformSettings:
+  - serializedVersion: 4
+    buildTarget: DefaultTexturePlatform
+    maxTextureSize: 2048
+    textureCompression: 1
+  - serializedVersion: 4
+    buildTarget: Standalone
+    maxTextureSize: 1024
+    overridden: 1

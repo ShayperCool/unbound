@@ -1,0 +1,9 @@
+fileFormatVersion: 2
+guid: b0247cd12f694c80afa4f25595252568
+TextureImporter:
+  textureType: 8
+  spriteMode: 1
+  platformSettings:
+  - buildTarget: Standalone
+    maxTextureSize: 1024
+    overridden: 1
