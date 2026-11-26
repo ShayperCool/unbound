@@ -8,8 +8,9 @@ using Xunit;
 namespace UnityEngine.Tests
 {
     /// <summary>When the Death sub-emitters of a particle whose trail outlives it fire, against the
-    /// Unity 6000.0.71f1 Editor (tests/projects/particletrails pp/deathsub/die0): as its carrier
-    /// leaves the buffer, its trail spent, not when it dies.</summary>
+    /// Unity 6000.0.71f1 Editor (tests/projects/particletrails pp/deathsub/*, dc/*): as its carrier
+    /// leaves the buffer, its trail spent, not when it dies; never when SetParticles, Clear or a
+    /// clearing Stop removes the carrier; a carrier's child moves along the child's own frame.</summary>
     public class ParticleCarrierDeathTests
     {
         const float Step = .05f;
@@ -40,19 +41,28 @@ namespace UnityEngine.Tests
         }
 
         [Theory]
-        [InlineData(false)]
-        [InlineData(true)]
-        public void DeathChildrenComeAsTheParticlesLeaveTheBuffer(bool dieWithParticles)
+        [InlineData("pp/deathsub/die0")]
+        [InlineData("pp/deathsub/die1")]
+        [InlineData("dc/roundtrip")]
+        [InlineData("dc/everystep")]
+        [InlineData("dc/clear")]
+        [InlineData("dc/stopclear")]
+        [InlineData("dc/spent")]
+        [InlineData("dc/moving/die0")]
+        [InlineData("dc/moving/die1")]
+        public void DeathChildrenComeAsTheParticlesLeaveTheBuffer(string key)
         {
             var reference = Reference();
-            string key = "pp/deathsub/" + (dieWithParticles ? "die1" : "die0");
+            bool dieWithParticles = key.EndsWith("die1"), moving = key.StartsWith("dc/moving");
             var root = new GameObject(key + "/root");
             try
             {
                 var parent = Make(key, root.transform, dieWithParticles);
+                if (key == "dc/spent") { var t = parent.trails; t.lifetime = .02f; }
                 var child = Make(key + "/child", parent.transform, false);
-                var cm = child.main; cm.startLifetime = 5f; cm.startSpeed = 0f;
-                var cs = child.shape; cs.enabled = false;
+                var cm = child.main; cm.startLifetime = 5f; cm.startSpeed = moving ? 2f : 0f;
+                var cs = child.shape; cs.enabled = moving;
+                if (moving) { cs.shapeType = ParticleSystemShapeType.Cone; cs.angle = 0f; cs.radius = .0001f; }
                 var ce = child.emission; ce.SetBursts(new[] { new ParticleSystem.Burst(0f, (short)1) });
                 var ct = child.trails; ct.enabled = false;
                 var sub = parent.subEmitters; sub.enabled = true;
@@ -62,14 +72,23 @@ namespace UnityEngine.Tests
                 var buffer = new ParticleSystem.Particle[64];
                 for (int i = 0; i < 36; i++)
                 {
+                    // Removal by script while a carrier is held (steps 8 to 14 hold one).
+                    if (key == "dc/roundtrip" && i == 9 || key == "dc/everystep" && i > 0)
+                        parent.SetParticles(buffer, parent.GetParticles(buffer));
+                    if (key == "dc/clear" && i == 9) parent.Clear(false);
+                    if (key == "dc/stopclear" && i == 9) parent.Stop(false, ParticleSystemStopBehavior.StopEmittingAndClear);
                     parent.Simulate(Step, true, i == 0, false);
                     var expected = reference[$"{key}/{i}/child/particles"].EnumerateArray().Select(v => v.GetSingle()).ToArray();
                     int n = child.GetParticles(buffer);
                     Assert.True((int)expected[0] == n, $"step {i}: {expected[0]} children expected, {n} found");
                     for (int p = 0; p < n; p++)
                     {
-                        Assert.True(Mathf.Abs(expected[1 + 12 * p] - buffer[p].position.x) <= 1e-3f, $"step {i} child {p} x");
-                        Assert.True(Mathf.Abs(expected[2 + 12 * p] - buffer[p].position.y) <= 1e-3f, $"step {i} child {p} y");
+                        var at = buffer[p].position; var velocity = buffer[p].velocity;
+                        for (int c = 0; c < 3; c++)
+                        {
+                            Assert.True(Mathf.Abs(expected[1 + 12 * p + c] - at[c]) <= 1e-3f, $"step {i} child {p} position {c}");
+                            Assert.True(Mathf.Abs(expected[4 + 12 * p + c] - velocity[c]) <= 1e-3f, $"step {i} child {p} velocity {c}");
+                        }
                         Assert.True(Mathf.Abs(expected[7 + 12 * p] - buffer[p].remainingLifetime) <= 1e-3f, $"step {i} child {p} life");
                     }
                 }

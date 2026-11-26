@@ -780,6 +780,7 @@ public class ParticleTrailProbe : MonoBehaviour
         yield return CapPlayed(0.02f);
         CapDistanceTieControls();
         VertexDistanceRestartControls();
+        CarrierDeathControls();
         Record("complete", new List<float> { 1f });
         File.WriteAllText(s_Path, s_Out.ToString());
         Debug.Log("particle trails complete: " + s_Path);
@@ -788,6 +789,43 @@ public class ParticleTrailProbe : MonoBehaviour
 #else
         Application.Quit();
 #endif
+    }
+
+    /// <summary>Death sub-emitters of particles whose trails outlive them (the pp/deathsub/die0
+    /// system and child) when something else than the trail's end removes the carrier: a
+    /// GetParticles/SetParticles round trip once while a carrier is held and before every step,
+    /// Clear and Stop with StopEmittingAndClear on the parent alone; a trail already spent when
+    /// its particle dies; and a child with a cone and a speed, whose particles show the direction
+    /// a carrier's Death emission takes (with dieWithParticles false and true).</summary>
+    static void CarrierDeathControls()
+    {
+        foreach (var (name, die, trailLifetime, moving, before) in new (string, bool, float, bool, Action<int, ParticleSystem>)[]
+        {
+            ("dc/roundtrip", false, 0.5f, false, (i, s) => { if (i == 9) s.SetParticles(s_Buffer, s.GetParticles(s_Buffer)); }),
+            ("dc/everystep", false, 0.5f, false, (i, s) => { if (i > 0) s.SetParticles(s_Buffer, s.GetParticles(s_Buffer)); }),
+            ("dc/clear", false, 0.5f, false, (i, s) => { if (i == 9) s.Clear(false); }),
+            ("dc/stopclear", false, 0.5f, false, (i, s) => { if (i == 9) s.Stop(false, ParticleSystemStopBehavior.StopEmittingAndClear); }),
+            ("dc/spent", false, 0.02f, false, null),
+            ("dc/moving/die0", false, 0.5f, true, null),
+            ("dc/moving/die1", true, 0.5f, true, null),
+        })
+        {
+            var root = new GameObject(name + "/root");
+            var parent = Make(name, s => { var t = s.trails; t.dieWithParticles = die; t.lifetime = trailLifetime; }, root.transform);
+            var child = Make(name + "/child", s =>
+            {
+                var m = s.main; m.startLifetime = 5f; m.startSpeed = moving ? 2f : 0f;
+                var sh = s.shape; sh.enabled = moving;
+                if (moving) { sh.shapeType = ParticleSystemShapeType.Cone; sh.angle = 0f; sh.radius = 0.0001f; }
+                var e = s.emission; e.SetBursts(new[] { new ParticleSystem.Burst(0f, (short)1) });
+                var t = s.trails; t.enabled = false;
+            }, parent.transform);
+            var sub = parent.subEmitters;
+            sub.enabled = true;
+            sub.AddSubEmitter(child, ParticleSystemSubEmitterType.Death, ParticleSystemSubEmitterProperties.InheritNothing);
+            Run(name, parent, before: before, extra: i => RecordState(name + "/" + i + "/child", child));
+            DestroyImmediate(root);
+        }
     }
 
     /// <summary>Records the stop callback of the object it is on.</summary>

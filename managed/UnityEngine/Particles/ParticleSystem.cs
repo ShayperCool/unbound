@@ -806,8 +806,10 @@ namespace UnityEngine
                     if (m_Particles[index].IsTrailCarrier)
                     {
                         // A carrier of a fading trail leaves: its particle's Death sub-emitters
-                        // fire now, where it rests (not when SetParticles drops it); its trail goes
-                        // with it (spent, or dropped by SetParticles: measured, it does not fade).
+                        // fire now, from the carrier at rest (a child's emission takes the child's
+                        // own frame), but not when SetParticles drops it (6000.0.71f1, particletrails
+                        // dc/*; Clear and a clearing Stop fire none either); its trail goes with it
+                        // (spent, or dropped by SetParticles: measured, it does not fade).
                         if (removal == DeadSlotRemoval.DeathWithSubEmitters)
                         {
                             var dying = m_Particles[index];
@@ -819,7 +821,8 @@ namespace UnityEngine
                     {
                         // A death that leaves a carrier fires its Death sub-emitters when the
                         // carrier leaves, its trail spent (6000.0.71f1, particletrails
-                        // pp/deathsub/die0: a child appears in each step a carrier leaves).
+                        // pp/deathsub/die0: a child appears in each step a carrier leaves; dc/spent:
+                        // a trail spent at the death keeps its carrier one update).
                         if (removal == DeadSlotRemoval.DeathWithSubEmitters && !KeepsOrphanTrail(in m_Particles[index]))
                         {
                             var dying = m_Particles[index];
