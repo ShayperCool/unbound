@@ -222,20 +222,6 @@ class RuntimeSnapshotTests(unittest.TestCase):
         self.assertEqual(runtime.cleanup(cache=self.cache), [])
         self.assertTrue(snapshot.is_dir())
 
-    def test_the_pinned_runtime_is_main_builds_for_its_tree_only(self):
-        repo = self.root/'repo'
-        repo.mkdir()
-        def git(*args):
-            return subprocess.run(['git', '-C', str(repo), *args], check=True, capture_output=True, text=True).stdout.strip()
-        git('init', '-b', 'main')
-        git('-c', 'user.name=Test', '-c', 'user.email=test@example.invalid', 'commit', '--allow-empty', '-m', 'initial')
-        tree = git('rev-parse', 'HEAD^{tree}')
-        self.assertIsNone(runtime.pinned_runtime(repo, tree, cache=self.cache))
-        first = self.snapshot()
-        runtime.pin_main(first, repo, tree, cache=self.cache)
-        self.assertEqual(runtime.pinned_runtime(repo, tree, cache=self.cache), first.resolve())
-        self.assertIsNone(runtime.pinned_runtime(repo, '0'*40, cache=self.cache))
-
     def test_file_set_changes_during_capture_are_rejected(self):
         original = runtime.shutil.copyfile
         def changed(source, destination):

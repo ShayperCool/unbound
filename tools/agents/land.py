@@ -108,7 +108,7 @@ from probe_runtime import (RELEASE_VARIABLE, default_release, probe_release, NO_
                            EDITOR_WATCH, EDITOR_MARK, EDITOR_EXIT, PROBE_DIR, require_process_watch, stop_tree,
                            checkout_state, checkout_writes)
 from probe_schedule import parallel_groups
-from runtime_snapshot import snapshot_runtime, pin_main, pinned_runtime, atomic_json, release_reference
+from runtime_snapshot import snapshot_runtime, pin_main, atomic_json, release_reference
 from slot import changed_paths, hidden_index_paths, inside_any, live_process_paths, slot_root
 
 
@@ -1018,21 +1018,17 @@ class Gate:
         return False
 
     def check_inventory(self, cli):
-        """Compare the built public type inventory with the base's own (its pinned main build, else
-        its reference; a tool run, no Editor or engine run); a change makes add_inventory_probe
-        gate it."""
+        """Compare the gated tree's public type inventory with the base's (the one recorded by the
+        gate of the base's tree, else its reference; a tool run, no Editor or engine run, nothing when
+        the inventory sources are the base's); a change makes add_inventory_probe gate it."""
         if self.covers_inventory():
             return
         env = (self.runtime_env(self.probe_runtime) if self.probe_runtime is not None
                else dict(self.env, UNBOUND=str(cli), UNBOUND_CLI=str(cli)))
-        command = [sys.executable, 'tests/projects/defaultstate/run.py', 'inventory', '--base', self.base]
-        try:
-            base_runtime = pinned_runtime(self.worktree, git('rev-parse', f'{self.base}^{{tree}}', cwd=self.worktree))
-        except (OSError, ValueError, subprocess.CalledProcessError, KeyError):
-            base_runtime = None
-        if base_runtime is not None:
-            command += ['--base-runtime', str(base_runtime)]
-        code = self.step('public type inventory', command, env=env)
+        # The gate's build is of this clean worktree: its inventory is recorded for the tree.
+        env['UNBOUND_INVENTORY_RECORD'] = '1'
+        code = self.step('public type inventory',
+                         [sys.executable, 'tests/projects/defaultstate/run.py', 'inventory', '--base', self.base], env=env)
         if code == INVENTORY_CHANGED:
             self.inventory_changed = True
         elif code:

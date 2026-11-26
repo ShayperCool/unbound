@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Capture default-state rows in two GPU Editors, or compare the matching Unbound inventory."""
 import argparse
+import hashlib
 import json
 import os
 from pathlib import Path
@@ -24,20 +25,11 @@ def cli():
     return os.environ.get('UNBOUND_CLI') or os.environ.get('UNBOUND') or str(REPO/'target/release/unbound')
 
 
-def runtime_environment(runtime):
-    """The environment that runs a frozen runtime snapshot's CLI (land.py's probe runtime)."""
-    runtime = Path(runtime)
-    libraries = str(runtime/'managed') + (os.pathsep+os.environ['LD_LIBRARY_PATH'] if os.environ.get('LD_LIBRARY_PATH') else '')
-    return dict(os.environ, UNBOUND=str(runtime/'unbound'), UNBOUND_CLI=str(runtime/'unbound'), UNBOUND_RUNTIME=str(runtime),
-                UNBOUND_MANAGED_DIR=str(runtime/'managed'), LD_LIBRARY_PATH=libraries)
-
-
-def inventory(out, env=None):
+def inventory(out):
     out.mkdir(parents=True, exist_ok=False)
-    tool = (env or os.environ).get('UNBOUND_CLI') or (env or os.environ).get('UNBOUND') or cli()
-    command = [str(HEAVY), '--kind', 'tool', tool, 'api-defaults', '-p', str(project_copy(ROOT, out/'inventory-project'))]
+    command = [str(HEAVY), '--kind', 'tool', cli(), 'api-defaults', '-p', str(project_copy(ROOT, out/'inventory-project'))]
     with (out/'inventory.json').open('w') as output, (out/'inventory.log').open('w') as log:
-        subprocess.run(command, cwd=REPO, stdout=output, stderr=log, check=True, env=env)
+        subprocess.run(command, cwd=REPO, stdout=output, stderr=log, check=True)
     report = json.loads((out/'inventory.json').read_text())
     if report['release'] != unity_version():
         raise ValueError('project release differs from selected probe release')
@@ -58,45 +50,83 @@ def type_changes(before, after):
     return added, removed, changed
 
 
-def base_inventory(base, base_runtime):
-    """The base's own inventory: its build's report when its runtime is given (cached by the
-    content-addressed snapshot), else its committed reference inventory (None without one)."""
-    if base_runtime is not None:
-        cached = WORK/'base-inventories'/Path(base_runtime).resolve().name
-        if not (cached/'inventory.json').is_file():
-            scratch = WORK/'base-inventories'/f'.{cached.name}-{os.getpid()}'
-            shutil.rmtree(scratch, ignore_errors=True)
-            inventory(scratch, runtime_environment(base_runtime))
-            try:
-                os.rename(scratch, cached)
-            except OSError:
-                shutil.rmtree(scratch, ignore_errors=True)  # another run cached it first
-        print(f'base inventory: the build of {base} ({Path(base_runtime).name[:12]})')
-        return json.loads((cached/'inventory.json').read_text())
+# What an inventory is made from: `api-defaults` compiles the checkout's hand-written sources
+# (managed/) and reflects over them with its own code (commands.rs) against the release's assemblies.
+INVENTORY_SOURCES = ('managed', 'crates/unbound/src/commands.rs')
+
+
+def git_output(*args):
+    return subprocess.run(['git', *args], cwd=REPO, check=True, capture_output=True, text=True).stdout.strip()
+
+
+def inventory_key(rev):
+    """A content key of what `rev`'s inventory is made from (sources and release)."""
+    objects = [git_output('rev-parse', f'{rev}:{path}') for path in INVENTORY_SOURCES]
+    return hashlib.sha256('\n'.join([*objects, unity_version()]).encode()).hexdigest()
+
+
+def sources_clean():
+    """Whether the checkout's inventory sources are HEAD's (then its inventory is HEAD's)."""
+    return git_output('status', '--porcelain', '--', *INVENTORY_SOURCES) == ''
+
+
+def inventory_cache():
+    return WORK/'inventories'
+
+
+def cached_inventory(key):
+    path = inventory_cache()/f'{key}.json'
+    return json.loads(path.read_text()) if path.is_file() else None
+
+
+def keep_inventory(key, report):
+    """Record an inventory under its content key (the next gate's base when this tree lands)."""
+    cache = inventory_cache()
+    cache.mkdir(parents=True, exist_ok=True)
+    scratch = cache/f'.{key}-{os.getpid()}'
+    scratch.write_text(json.dumps({'types': report['types'], 'constructorStores': report.get('constructorStores')}))
+    os.replace(scratch, cache/f'{key}.json')
+
+
+def base_inventory(base):
+    """The base's inventory: the one recorded for its sources (by an earlier gate of that tree),
+    else its committed reference inventory, said so (None without either)."""
+    recorded = cached_inventory(inventory_key(base))
+    if recorded is not None:
+        print(f'base inventory: recorded for the sources of {base}')
+        return recorded
     relative = (reference_root(ROOT)/'inventory.json').relative_to(REPO).as_posix()
     shown = subprocess.run(['git', 'show', f'{base}:{relative}'], cwd=REPO, capture_output=True, text=True)
     if shown.returncode:
         return None
-    print(f'base inventory: no build of {base}, its committed reference {relative} '
+    print(f'base inventory: none recorded for {base}, its committed reference {relative} '
           '(a type main added without rows shows here too)')
     return json.loads(shown.stdout)
 
 
-def inventory_changed(base, label, base_runtime=None):
-    """Whether the built engine's public type inventory (types and constructor stores) differs from
-    the base's (land.py's cheap check of whether a branch changes the inventory: no Editor and no
-    engine run, the same `api-defaults` report the probe compares first). 0 unchanged or nothing to
-    compare with, INVENTORY_CHANGED when it differs."""
-    before = base_inventory(base, base_runtime)
+def inventory_changed(base, label):
+    """Whether the checkout's public type inventory (types and constructor store differences)
+    differs from the base's (land.py's cheap check of whether a branch changes the inventory: no
+    Editor and no engine run, the same `api-defaults` report the probe compares first). 0 unchanged
+    or nothing to compare with, INVENTORY_CHANGED when it differs. A gate's clean checkout records
+    its inventory for later bases (UNBOUND_INVENTORY_RECORD=1)."""
+    clean = sources_clean()
+    if clean and inventory_key('HEAD') == inventory_key(base):
+        print(f'public type inventory unchanged: the inventory sources are {base}\'s')
+        return 0
+    before = base_inventory(base)
+    report = inventory(WORK/label)
+    # Only a gate records: its CLI is built from this checkout, so the report is of these sources.
+    if clean and os.environ.get('UNBOUND_INVENTORY_RECORD') == '1':
+        keep_inventory(inventory_key('HEAD'), report)
     if before is None:
         print(f'no inventory of {base}: nothing to compare')
         return 0
-    report = inventory(WORK/label)
     added, removed, changed = type_changes(before['types'], report['types'])
     # The constructor stores' differences (what `check` compares; their other fields are counts
-    # that move with any constructor).
+    # that move with any constructor). A reference inventory has none to compare.
     differences = lambda inventory: (inventory.get('constructorStores') or {}).get('differences', [])
-    stores = base_runtime is not None and differences(before) != differences(report)
+    stores = 'constructorStores' in before and differences(before) != differences(report)
     if stores:
         print('constructor store differences changed')
     if not (added or removed or changed or stores):
@@ -246,7 +276,6 @@ def main():
     parser.add_argument('--label')
     parser.add_argument('--candidate', type=Path)
     parser.add_argument('--base', help='inventory: the commit to compare with (default HEAD)')
-    parser.add_argument('--base-runtime', type=Path, help="inventory: the base's own runtime snapshot (else its reference inventory)")
     args = parser.parse_args()
     for label in args.labels + ([args.label] if args.label else []):
         if Path(label).name != label or label in ('.', '..'):
@@ -260,8 +289,7 @@ def main():
     if args.mode == 'publish': return publish(args.labels)
     if args.mode == 'compare': return check(args.candidate)
     if args.mode == 'inventory':
-        return inventory_changed(args.base or 'HEAD', time.strftime('inventory-%Y%m%d-%H%M%S-')+str(os.getpid()),
-                                 args.base_runtime)
+        return inventory_changed(args.base or 'HEAD', time.strftime('inventory-%Y%m%d-%H%M%S-')+str(os.getpid()))
     label = time.strftime('check-%Y%m%d-%H%M%S-')+str(os.getpid())
     return engine(label) or check(WORK/label)
 

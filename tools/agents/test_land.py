@@ -2124,38 +2124,34 @@ class InventoryGateTests(unittest.TestCase):
         return land.Gate(root, 'base0', list(probes), False, log, environment={},
                          releases=releases)
 
-    def check(self, gate, root, code, base_runtime=None):
+    def check(self, gate, root, code):
         with mock.patch.object(gate, 'step', return_value=code) as step, \
-             mock.patch.object(land, 'git', return_value='tree0'), \
-             mock.patch.object(land, 'pinned_runtime', return_value=base_runtime) as pinned, \
              mock.patch.object(land, 'probe_release', return_value='6000.0.71f1'):
             gate.check_inventory(root/'unbound')
             gate.add_inventory_probe()
-        return step, pinned
+        return step
 
     def test_a_changed_inventory_adds_the_default_state_check(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             gate = self.gate(root, ['python3 tests/projects/foo/run.py gate'], releases=['6000.0.71f1'])
             gate.probe_owners = [['slot/a', 'slot/b']]
-            step, pinned = self.check(gate, root, land.INVENTORY_CHANGED, base_runtime=root/'snap')
+            step = self.check(gate, root, land.INVENTORY_CHANGED)
             command = step.call_args.args[1]
-            self.assertEqual(command[1:], ['tests/projects/defaultstate/run.py', 'inventory', '--base', 'base0',
-                                           '--base-runtime', str(root/'snap')])
-            self.assertEqual(pinned.call_args.args, (root, 'tree0'))
+            self.assertEqual(command[1:], ['tests/projects/defaultstate/run.py', 'inventory', '--base', 'base0'])
             self.assertEqual(step.call_args.kwargs['env']['UNBOUND'], str(root/'unbound'))
+            self.assertEqual(step.call_args.kwargs['env']['UNBOUND_INVENTORY_RECORD'], '1')
             self.assertEqual(gate.probes, ['python3 tests/projects/foo/run.py gate', land.INVENTORY_PROBE])
             self.assertEqual(gate.releases, ['6000.0.71f1', '6000.0.71f1'])
             self.assertEqual(gate.probe_owners, [['slot/a', 'slot/b'], ['slot/a', 'slot/b']])
             self.assertIn('public type inventory changed', (root/'gate.log').read_text())
 
-    def test_the_frozen_runtime_and_no_base_build(self):
+    def test_the_check_runs_the_frozen_runtime(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             gate = self.gate(root)
             gate.probe_runtime = root/'frozen'
-            step, _ = self.check(gate, root, 0)
-            self.assertNotIn('--base-runtime', step.call_args.args[1])
+            step = self.check(gate, root, 0)
             self.assertEqual(step.call_args.kwargs['env']['UNBOUND'], str(root/'frozen'/'unbound'))
             self.assertEqual(step.call_args.kwargs['env']['UNBOUND_MANAGED_DIR'], str(root/'frozen'/'managed'))
             self.assertEqual(gate.probes, [])
@@ -2180,7 +2176,7 @@ class InventoryGateTests(unittest.TestCase):
             probe = 'python3 tools/agents/suite.py --only defaultstate'
             gate = self.gate(root, [probe], releases=['6000.0.71f1'])
             with mock.patch.object(land, 'suite_coverage', return_value={('defaultstate', '6000.0.71f1')}):
-                step, _ = self.check(gate, root, land.INVENTORY_CHANGED)
+                step = self.check(gate, root, land.INVENTORY_CHANGED)
             step.assert_called_once()
             self.assertEqual(gate.probes, [probe, land.INVENTORY_PROBE])
 
@@ -2189,8 +2185,6 @@ class InventoryGateTests(unittest.TestCase):
             root = Path(directory)
             gate = self.gate(root)
             with mock.patch.object(gate, 'step', return_value=1), \
-                 mock.patch.object(land, 'git', return_value='tree0'), \
-                 mock.patch.object(land, 'pinned_runtime', return_value=None), \
                  mock.patch.object(gate, 'fail', side_effect=SystemExit(5)) as fail:
                 with self.assertRaises(SystemExit):
                     gate.check_inventory(root/'unbound')
@@ -2223,7 +2217,6 @@ class InventoryGateTests(unittest.TestCase):
                 guard = subprocess.CompletedProcess([], 0)
                 with mock.patch.object(land, 'git', side_effect=lambda *a, **k: changed if a[0] == 'diff' else 'tree0'), \
                      mock.patch.object(land.subprocess, 'run', return_value=guard), \
-                     mock.patch.object(land, 'pinned_runtime', return_value=None), \
                      mock.patch.object(land, 'probe_release', return_value='6000.0.71f1'), \
                      contextlib.redirect_stdout(io.StringIO()):
                     gate.run()

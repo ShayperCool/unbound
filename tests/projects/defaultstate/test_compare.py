@@ -182,5 +182,62 @@ class InventoryChangeTests(unittest.TestCase):
         self.assertEqual(capture_runner.type_changes(before, before), ([], [], []))
 
 
+class InventoryCheckTests(unittest.TestCase):
+    """`run.py inventory`: the base's inventory is the one recorded for its sources."""
+    row = staticmethod(lambda name: {'category': 'class', 'module': 'UnityEngine.CoreModule', 'status': 'constructed', 'type': name})
+
+    def run_check(self, work, keys, clean=True, record=True, branch=('A', 'B'), reference=None):
+        report = {'types': [self.row(name) for name in branch], 'constructorStores': {'differences': []}}
+        environment = {'UNBOUND_INVENTORY_RECORD': '1'} if record else {}
+        shown = mock.Mock(returncode=0 if reference is not None else 1, stdout=json.dumps(reference or {}))
+        with mock.patch.object(capture_runner, 'WORK', work), \
+             mock.patch.object(capture_runner, 'inventory_key', side_effect=lambda rev: keys[rev]), \
+             mock.patch.object(capture_runner, 'sources_clean', return_value=clean), \
+             mock.patch.object(capture_runner, 'inventory', return_value=report) as built, \
+             mock.patch.object(capture_runner.subprocess, 'run', return_value=shown), \
+             mock.patch.dict(capture_runner.os.environ, environment, clear=False), \
+             mock.patch('builtins.print'):
+            if not record:
+                capture_runner.os.environ.pop('UNBOUND_INVENTORY_RECORD', None)
+            code = capture_runner.inventory_changed('base0', 'label')
+        return code, built
+
+    def test_unchanged_sources_need_no_inventory(self):
+        with tempfile.TemporaryDirectory() as directory:
+            code, built = self.run_check(Path(directory), {'HEAD': 'k1', 'base0': 'k1'})
+            self.assertEqual(code, 0)
+            built.assert_not_called()
+
+    def test_an_added_type_against_the_recorded_base_and_the_branch_recorded(self):
+        with tempfile.TemporaryDirectory() as directory:
+            work = Path(directory)
+            capture_runner.WORK, saved = work, capture_runner.WORK
+            try:
+                capture_runner.keep_inventory('k0', {'types': [self.row('A'), self.row('B')], 'constructorStores': {'differences': []}})
+            finally:
+                capture_runner.WORK = saved
+            code, built = self.run_check(work, {'HEAD': 'k2', 'base0': 'k0'}, branch=('A', 'B', 'Foo'))
+            self.assertEqual(code, capture_runner.INVENTORY_CHANGED)
+            recorded = json.loads((work/'inventories'/'k2.json').read_text())
+            self.assertEqual([row['type'] for row in recorded['types']], ['A', 'B', 'Foo'])
+            # The recorded base is the base's, not the branch's.
+            self.assertEqual([row['type'] for row in json.loads((work/'inventories'/'k0.json').read_text())['types']], ['A', 'B'])
+
+    def test_only_a_gate_records_and_a_dirty_checkout_never(self):
+        with tempfile.TemporaryDirectory() as directory:
+            work = Path(directory)
+            self.run_check(work, {'HEAD': 'k3', 'base0': 'k0'}, record=False, reference={'types': [self.row('A'), self.row('B')]})
+            self.run_check(work, {'HEAD': 'k3', 'base0': 'k0'}, clean=False, reference={'types': [self.row('A'), self.row('B')]})
+            self.assertFalse((work/'inventories'/'k3.json').exists())
+
+    def test_without_a_recorded_base_the_reference_is_used(self):
+        with tempfile.TemporaryDirectory() as directory:
+            code, _ = self.run_check(Path(directory), {'HEAD': 'k4', 'base0': 'k5'}, branch=('A',),
+                                     reference={'types': [self.row('A'), self.row('Gone')]})
+            self.assertEqual(code, capture_runner.INVENTORY_CHANGED)
+            code, _ = self.run_check(Path(directory), {'HEAD': 'k4', 'base0': 'k5'}, branch=('A',), reference={'types': [self.row('A')]})
+            self.assertEqual(code, 0)
+
+
 if __name__ == '__main__': unittest.main()
 
