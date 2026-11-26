@@ -12,7 +12,7 @@ using UnityEngine.Video;
 /// Records the pictures of a VP8 clip with alpha in Editor Play mode. The clip
 /// (Assets/Video/alpha.webm: 64x48, 10 frames a second, 1 second, one colour 0x4080C0, its alpha
 /// a horizontal ramp from 0 at the left column to 255 at the right) is shown paused on frame 0 into
-/// an ARGB32 render texture (and a second, with the player's targetCameraAlpha left alone); each
+/// an ARGB32 render texture and an ARGBHalf one; each
 /// row records the colour and alpha (0..255) at columns 0, 8, 16, 24, 32, 40, 48, 56 and 63 of
 /// its middle row, and the render texture's own size.
 /// </summary>
