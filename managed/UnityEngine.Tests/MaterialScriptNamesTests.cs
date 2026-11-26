@@ -246,7 +246,8 @@ namespace UnityEngine.Tests
         [Fact]
         public void ACopyKeepsTheValuesSetForNamesTheShaderDeclares()
         {
-            // Values of another kind than the declared one are not measured: a copy keeps them.
+            // Values of another kind than the declared one are not measured: these assertions pin
+            // Unbound's current default (a copy keeps them, as before), not a measured Unity answer.
             var m = Own(new Material(Names()));
             m.SetInt("_Count", 3);
             m.SetInteger("_Glossiness", 1);
