@@ -7,10 +7,13 @@
 //!
 //! - a virtual player that Multiplayer Play Mode starts (`--virtual-project-clone`, its project
 //!   folder as `-projectPath`) runs as another `unbound run` of that folder, with the player's
-//!   arguments after `--` (they are its command line as editor code reads it) and its output in
-//!   the `-logFile` the arguments name;
+//!   arguments after `--` (they are its command line as editor code reads it, so its console log
+//!   is the `-logFile` they name, as the Editor's is) and without this process's
+//!   `UNBOUND_PROJECT_DATA` (its own project data); its standard output and error (the process's
+//!   own messages) go to `<logFile>.unbound.txt` beside it, the folders made as needed, else
+//!   nowhere: Multiplayer Play Mode does not read them;
 //! - any other launch of the Editor's executable is refused: the call fails with `EPERM` (so
-//!   `Process.Start` throws) after a line on the new process's standard error.
+//!   `Process.Start` throws) after a line on this process's standard error.
 //!
 //! Everything else runs as asked. The function runs in the child of a `vfork`, so it only reads
 //! memory, uses the stack and makes system calls.
@@ -21,8 +24,10 @@ use std::sync::OnceLock;
 struct Guard {
     /// The Editor's executable, as configured and lexically normalized (`..` and `.` resolved).
     unity: Vec<Vec<u8>>,
-    /// This executable.
-    unbound: CString,
+    /// This executable; without one (it cannot be named), every launch of the Editor is refused.
+    unbound: Option<CString>,
+    /// This process's standard error at install (a launch's own one may be a pipe already).
+    stderr: c_int,
 }
 
 static GUARD: OnceLock<Guard> = OnceLock::new();
@@ -34,12 +39,14 @@ pub fn install(unity: &Path) {
     tracing::warn!(
         "Unbound does not intercept launches of the Unity Editor's executable on this OS: a Multiplayer Play Mode virtual player would start the real Editor"
     );
-    let Ok(exe) = std::env::current_exe() else {
+    let unbound = std::env::current_exe()
+        .ok()
+        .and_then(|exe| CString::new(exe.as_os_str().as_encoded_bytes()).ok());
+    if unbound.is_none() {
         tracing::warn!(
             "Unbound cannot name its own executable: launches of the Unity Editor's executable are refused"
         );
-        return;
-    };
+    }
     let mut forms = Vec::new();
     for form in [Some(unity.to_path_buf()), std::fs::canonicalize(unity).ok()]
         .into_iter()
@@ -54,17 +61,29 @@ pub fn install(unity: &Path) {
             }
         }
     }
-    let Ok(unbound) = CString::new(exe.as_os_str().as_encoded_bytes()) else {
-        return;
-    };
+    #[cfg(target_os = "linux")]
+    let stderr = unsafe { libc::fcntl(2, libc::F_DUPFD_CLOEXEC, 100) };
+    #[cfg(not(target_os = "linux"))]
+    let stderr = 2;
     let _ = GUARD.set(Guard {
         unity: forms,
         unbound,
+        stderr,
     });
 }
 
 const PATH_LIMIT: usize = 4096;
 const ARG_LIMIT: usize = 512;
+const ENV_LIMIT: usize = 1024;
+
+/// `path` with `.` and `..` resolved lexically (as .NET's `Path.GetFullPath` does), for display.
+pub fn normalized(path: &Path) -> String {
+    let mut buffer = [0u8; PATH_LIMIT];
+    match normalize(path.as_os_str().as_encoded_bytes(), &mut buffer) {
+        Some(n) => String::from_utf8_lossy(&buffer[..n]).into_owned(),
+        None => path.display().to_string(),
+    }
+}
 
 /// `path` with `.` and `..` components and repeated slashes resolved, into `out`: its length, or
 /// None for a relative path or one too long.
@@ -189,7 +208,7 @@ unsafe fn launch(guard: &Guard, argv: *const *const c_char, envp: *const *const 
             let mut at = argv.add(1);
             while !(*at).is_null() {
                 if count == ARG_LIMIT {
-                    return refuse(b"too many arguments");
+                    return refuse(guard, b"too many arguments");
                 }
                 args[count] = bytes(*at);
                 pointers[count] = *at;
@@ -199,43 +218,97 @@ unsafe fn launch(guard: &Guard, argv: *const *const c_char, envp: *const *const 
         }
         let Launch::Clone { project, log } = classify(&args[..count]) else {
             return refuse(
+                guard,
                 b"only Multiplayer Play Mode's virtual players run (as another Unbound)",
             );
         };
-        if let Some(log) = log {
-            let fd = libc::open(
-                pointers[log],
-                libc::O_WRONLY | libc::O_CREAT | libc::O_APPEND,
-                0o644,
+        let Some(unbound) = guard.unbound.as_ref() else {
+            return refuse(
+                guard,
+                b"this process cannot name its own executable to run the player",
             );
-            if fd >= 0 {
-                libc::dup2(fd, 1);
-                libc::dup2(fd, 2);
-                if fd > 2 {
-                    libc::close(fd);
+        };
+        // The environment without this process's project data folder.
+        let mut environment: [*const c_char; ENV_LIMIT] = [std::ptr::null(); ENV_LIMIT];
+        let mut kept = 0usize;
+        if !envp.is_null() {
+            let mut at = envp;
+            while !(*at).is_null() {
+                if !bytes(*at).starts_with(b"UNBOUND_PROJECT_DATA=") {
+                    if kept + 1 == ENV_LIMIT {
+                        return refuse(guard, b"too many environment variables");
+                    }
+                    environment[kept] = *at;
+                    kept += 1;
                 }
+                at = at.add(1);
             }
         }
+        redirect_output(log.map(|log| args[log]));
         // unbound run -p <project> --no-watch -- <the player's arguments>
         let mut run: [*const c_char; ARG_LIMIT + 8] = [std::ptr::null(); ARG_LIMIT + 8];
-        run[0] = guard.unbound.as_ptr();
+        run[0] = unbound.as_ptr();
         run[1] = RUN.as_ptr().cast();
         run[2] = PROJECT.as_ptr().cast();
         run[3] = pointers[project];
         run[4] = NO_WATCH.as_ptr().cast();
         run[5] = REST.as_ptr().cast();
         run[6..6 + count].copy_from_slice(&pointers[..count]);
-        real_execve(guard.unbound.as_ptr(), run.as_ptr(), envp)
+        real_execve(unbound.as_ptr(), run.as_ptr(), environment.as_ptr())
+    }
+}
+
+/// Points standard output and error at `<log>.unbound.txt` (its folders made as needed), else at
+/// `/dev/null`: the launcher's pipes for them may already be closed.
+#[cfg(target_os = "linux")]
+unsafe fn redirect_output(log: Option<&[u8]>) {
+    const SUFFIX: &[u8] = b".unbound.txt";
+    unsafe {
+        let mut path = [0u8; PATH_LIMIT + 16];
+        let mut fd = -1;
+        if let Some(log) = log
+            && !log.is_empty()
+            && log.len() + SUFFIX.len() < path.len()
+        {
+            path[..log.len()].copy_from_slice(log);
+            path[log.len()..log.len() + SUFFIX.len()].copy_from_slice(SUFFIX);
+            let end = log.len() + SUFFIX.len();
+            // The folders, one by one (the file's own name excluded).
+            for i in 1..end {
+                if path[i] == b'/' {
+                    path[i] = 0;
+                    libc::mkdir(path.as_ptr().cast(), 0o755);
+                    path[i] = b'/';
+                }
+            }
+            path[end] = 0;
+            fd = libc::open(
+                path.as_ptr().cast(),
+                libc::O_WRONLY | libc::O_CREAT | libc::O_APPEND,
+                0o644,
+            );
+        }
+        if fd < 0 {
+            fd = libc::open(c"/dev/null".as_ptr(), libc::O_WRONLY);
+        }
+        if fd >= 0 {
+            libc::dup2(fd, 1);
+            libc::dup2(fd, 2);
+            if fd > 2 {
+                libc::close(fd);
+            }
+        }
     }
 }
 
 #[cfg(target_os = "linux")]
-unsafe fn refuse(why: &[u8]) -> c_int {
+unsafe fn refuse(guard: &Guard, why: &[u8]) -> c_int {
     const PREFIX: &[u8] = b"Unbound: refusing to run the Unity Editor's executable: ";
+    let fd = if guard.stderr >= 0 { guard.stderr } else { 2 };
     unsafe {
-        libc::write(2, PREFIX.as_ptr().cast(), PREFIX.len());
-        libc::write(2, why.as_ptr().cast(), why.len());
-        libc::write(2, b"\n".as_ptr().cast(), 1);
+        libc::write(fd, PREFIX.as_ptr().cast(), PREFIX.len());
+        libc::write(fd, why.as_ptr().cast(), why.len());
+        libc::write(fd, b"\n".as_ptr().cast(), 1);
         *libc::__errno_location() = libc::EPERM;
     }
     -1

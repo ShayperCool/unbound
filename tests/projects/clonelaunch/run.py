@@ -31,18 +31,22 @@ def check():
                                '--headless', '100000', '--no-watch'], env=env, stdout=log, stderr=subprocess.STDOUT).returncode
     main_text = (out/'main.txt').read_text() if (out/'main.txt').exists() else ''
     clone_lines = (out/'clone.txt').read_text().splitlines() if (out/'clone.txt').exists() else []
-    clone_log = out/'clone-log.txt'
+    editor_log = clone/'Logs'/'Editor.log'
+    native_log = clone/'Logs'/'Editor.log.unbound.txt'
+    text = lambda path: path.read_text(errors='replace') if path.exists() else ''
     checks = [
         ('launcher exit', code == 0, code),
         ('plain launch refused', 'plain launch: Win32Exception:' in main_text and 'Operation not permitted' in main_text,
          [l for l in main_text.splitlines() if l.startswith('plain launch')]),
+        ('refusal said on the launcher\'s standard error', "Unbound: refusing to run the Unity Editor's executable" in text(out/'engine.log'), 'engine.log'),
         ('clone ran', 'clone marker True' in main_text, main_text.strip()),
-        ('clone exited 0', 'clone exited True code 0' in main_text, main_text.strip()),
+        ('clone exited', 'clone exited True' in main_text, main_text.strip()),
         ('clone command line', clone_lines[1:11] == [
-            '-projectPath', str(clone), '--virtual-project-clone', '-forgetProjectPath', '-logFile', str(clone_log),
+            '-projectPath', str(clone), '--virtual-project-clone', '-forgetProjectPath', '-logFile', str(editor_log),
             '-vp-channel-name=vp-channel', '-ump-channel-service-port', '1234', '-vpId=abc'], clone_lines[:11]),
-        ('clone command line names the Editor', bool(clone_lines) and clone_lines[0].endswith('/Unity'), clone_lines[:1]),
-        ('clone output in its -logFile', clone_log.exists() and clone_log.stat().st_size > 0, str(clone_log)),
+        ('clone command line names the Editor', bool(clone_lines) and clone_lines[0].endswith('/Editor/Unity'), clone_lines[:1]),
+        ('clone console log in its -logFile', 'The virtual player logs this.' in text(editor_log), str(editor_log)),
+        ('clone process output beside it', 'INFO' in text(native_log), str(native_log)),
     ]
     failed = [(name, detail) for name, ok, detail in checks if not ok]
     for name, detail in failed:

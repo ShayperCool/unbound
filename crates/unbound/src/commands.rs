@@ -1603,9 +1603,11 @@ fn run_session(args: &ProjectArgs, run: RunArgs) -> Result<()> {
     let command_line: Vec<String> = if run.editor_args.is_empty() {
         Vec::new()
     } else {
-        std::iter::once(project.install.editor_executable().display().to_string())
-            .chain(run.editor_args.iter().cloned())
-            .collect()
+        std::iter::once(crate::editor_launch::normalized(
+            &project.install.editor_executable(),
+        ))
+        .chain(run.editor_args.iter().cloned())
+        .collect()
     };
     let (width, height) = match &run.size {
         Some(size) => parse_size(size)?,
