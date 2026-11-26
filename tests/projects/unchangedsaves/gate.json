@@ -1,0 +1,20 @@
+{
+  "commands": [
+    "python3 tests/projects/unchangedsaves/run.py check"
+  ],
+  "summary": "unchangedsaves: \\d+/\\d+ rows match; \\d+ differ; \\d+ known residuals",
+  "engine_paths": [
+    "managed/UnityEngine/Core/Application.cs",
+    "managed/UnityEngine/Editor/AssetDatabase.cs",
+    "managed/UnityEngine/Editor/AssetFiles.cs",
+    "managed/UnityEngine/Editor/AssetPostprocessing.cs",
+    "managed/UnityEngine/Editor/EditorInitialization.cs",
+    "managed/UnityEngine/Editor/ProjectImports.cs",
+    "managed/UnityEngine/Editor/SceneFiles.cs",
+    "managed/UnityEngine/Editor/SessionImports.cs",
+    "managed/UnityEngine/Graphics/Material.cs",
+    "managed/UnityEngine/Runtime/PlayerLoopDriver.cs",
+    "tests/file_writes.py",
+    "tests/projects/unchangedsaves/"
+  ]
+}
