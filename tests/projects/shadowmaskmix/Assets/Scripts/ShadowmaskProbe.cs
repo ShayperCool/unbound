@@ -48,10 +48,19 @@ public sealed class ShadowmaskProbe : MonoBehaviour
             Rec("light/" + light.name, "bake=" + o.lightmapBakeType + " mixed=" + o.mixedLightingMode + " channel=" + o.occlusionMaskChannel
                 + " probeChannel=" + o.probeOcclusionLightIndex + " baked=" + o.isBaked + " caster=" + light.lightShadowCasterMode);
         }
-        foreach (var name in new[] { "Ground", "Near Block", "Near Column", "Far Block", "Far Column", "Near Sphere", "Far Sphere" })
+        foreach (var name in new[] { "Ground", "Near Block", "Near Column", "Far Block", "Far Column", "Near Sphere", "Far Sphere", "Wall", "Shadowed Sphere", "Far Shadowed Sphere" })
         {
             var r = GameObject.Find(name).GetComponent<Renderer>();
             Rec("renderer/" + name, "lightmap=" + r.lightmapIndex + " st=" + F(r.lightmapScaleOffset.x) + "," + F(r.lightmapScaleOffset.y) + "," + F(r.lightmapScaleOffset.z) + "," + F(r.lightmapScaleOffset.w));
+        }
+        // The probe occlusion the shadowed spheres take (their probe's, interpolated at their center).
+        foreach (var name in new[] { "Shadowed Sphere", "Far Shadowed Sphere" })
+        {
+            var at = new[] { GameObject.Find(name).transform.position };
+            var sh = new UnityEngine.Rendering.SphericalHarmonicsL2[1];
+            var occlusion = new Vector4[1];
+            LightProbes.CalculateInterpolatedLightAndOcclusionProbes(at, sh, occlusion);
+            Rec("occlusion/" + name, F(occlusion[0].x) + "," + F(occlusion[0].y) + "," + F(occlusion[0].z) + "," + F(occlusion[0].w));
         }
         var maps = LightmapSettings.lightmaps;
         Rec("lightmaps", maps.Length + " shadowmask=" + (maps.Length > 0 && maps[0].shadowMask != null));

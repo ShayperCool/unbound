@@ -71,6 +71,12 @@ public static class ShadowmaskSetup
         // Dynamic objects: lit by probes, casting realtime shadows only.
         Block("Near Sphere", PrimitiveType.Sphere, new Vector3(0.2f, 0.6f, 1f), Vector3.one * 1.2f, white, false);
         Block("Far Sphere", PrimitiveType.Sphere, new Vector3(0f, 1f, 29f), Vector3.one * 2f, white, false);
+        // Dynamic spheres in the sun's shadow of a static wall or block: the near one inside the
+        // shadow distance, the far one beyond it; a light probe at each one's center gives it the
+        // probe's occlusion.
+        Block("Wall", PrimitiveType.Cube, new Vector3(-3f, 1.25f, 1.1f), new Vector3(0.2f, 2.5f, 1f), sand, true);
+        Block("Shadowed Sphere", PrimitiveType.Sphere, new Vector3(-4.2f, 0.3f, 2.6f), Vector3.one * 0.6f, white, false);
+        Block("Far Shadowed Sphere", PrimitiveType.Sphere, new Vector3(-4.3f, 0.3f, 31.8f), Vector3.one * 0.6f, white, false);
 
         var probes = new GameObject("Light Probe Group", typeof(LightProbeGroup)).GetComponent<LightProbeGroup>();
         var positions = new List<Vector3>();
@@ -78,6 +84,8 @@ public static class ShadowmaskSetup
             for (int y = 0; y <= 3; y += 3)
                 for (int z = -2; z <= 38; z += 4)
                     positions.Add(new Vector3(x, y + 0.2f, z));
+        positions.Add(new Vector3(-4.2f, 0.3f, 2.6f));
+        positions.Add(new Vector3(-4.3f, 0.3f, 31.8f));
         probes.probePositions = positions.ToArray();
 
         RenderSettings.ambientMode = AmbientMode.Trilight;

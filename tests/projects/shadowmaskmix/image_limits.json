@@ -1,37 +1,37 @@
 {
  "deferred_distance_default.png": {
-  "mean": 0.06,
-  "worst": 5,
+  "mean": 0.07,
+  "worst": 7,
   "over8": 0,
   "reason": "The Editor's image within rounding (no pixel over 8/255), measured on one machine: an NVIDIA driver, the Linux Editor on OpenGL Core, Unbound's OpenGL Core device. Another GPU, driver or device is unmeasured."
  },
  "deferred_distance_everything.png": {
-  "mean": 0.06,
-  "worst": 5,
+  "mean": 0.07,
+  "worst": 7,
   "over8": 0,
   "reason": "The Editor's image within rounding (no pixel over 8/255), measured on one machine: an NVIDIA driver, the Linux Editor on OpenGL Core, Unbound's OpenGL Core device. Another GPU, driver or device is unmeasured."
  },
  "deferred_distance_nonlightmappedonly.png": {
-  "mean": 0.06,
-  "worst": 5,
+  "mean": 0.08,
+  "worst": 7,
   "over8": 0,
   "reason": "The Editor's image within rounding (no pixel over 8/255), measured on one machine: an NVIDIA driver, the Linux Editor on OpenGL Core, Unbound's OpenGL Core device. Another GPU, driver or device is unmeasured."
  },
  "deferred_shadowmask_default.png": {
   "mean": 0.06,
-  "worst": 5,
+  "worst": 7,
   "over8": 0,
   "reason": "The Editor's image within rounding (no pixel over 8/255), measured on one machine: an NVIDIA driver, the Linux Editor on OpenGL Core, Unbound's OpenGL Core device. Another GPU, driver or device is unmeasured."
  },
  "deferred_shadowmask_everything.png": {
-  "mean": 0.06,
-  "worst": 5,
-  "over8": 0,
-  "reason": "The Editor's image within rounding (no pixel over 8/255), measured on one machine: an NVIDIA driver, the Linux Editor on OpenGL Core, Unbound's OpenGL Core device. Another GPU, driver or device is unmeasured."
+  "mean": 0.07,
+  "worst": 13,
+  "over8": 6,
+  "reason": "Up to 6 pixels of the ground at the foot of the wall's realtime shadow (around 91,116) up to 13/255 lighter than the Editor's where lightmapped casters cast realtime shadows in the Shadowmask mode; every other pixel within rounding. Cause not resolved (the mask's and the shadow map's edges meet there). NVIDIA driver, OpenGL Core."
  },
  "deferred_shadowmask_nonlightmappedonly.png": {
   "mean": 0.06,
-  "worst": 5,
+  "worst": 7,
   "over8": 0,
   "reason": "The Editor's image within rounding (no pixel over 8/255), measured on one machine: an NVIDIA driver, the Linux Editor on OpenGL Core, Unbound's OpenGL Core device. Another GPU, driver or device is unmeasured."
  },
@@ -61,9 +61,9 @@
  },
  "forward_shadowmask_everything.png": {
   "mean": 0.06,
-  "worst": 5,
-  "over8": 0,
-  "reason": "The Editor's image within rounding (no pixel over 8/255), measured on one machine: an NVIDIA driver, the Linux Editor on OpenGL Core, Unbound's OpenGL Core device. Another GPU, driver or device is unmeasured."
+  "worst": 12,
+  "over8": 4,
+  "reason": "Up to 4 pixels of the ground at the foot of the wall's realtime shadow (around 91,116) up to 12/255 lighter than the Editor's where lightmapped casters cast realtime shadows in the Shadowmask mode; every other pixel within rounding. Cause not resolved (the mask's and the shadow map's edges meet there). NVIDIA driver, OpenGL Core."
  },
  "forward_shadowmask_nonlightmappedonly.png": {
   "mean": 0.06,

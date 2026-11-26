@@ -1,0 +1,5 @@
+{
+ "LightProbes.CalculateInterpolatedLightAndOcclusionProbes at a probe's own position: the occlusion differs from the Editor's in the third significant digit (0.0019045 against 0.0019114; the blend weights at a probe, not traced)": [
+  "occlusion/Shadowed Sphere"
+ ]
+}

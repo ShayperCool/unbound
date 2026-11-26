@@ -1,12 +1,17 @@
-{"k":"light/Sun","v":"bake=Mixed mixed=Shadowmask channel=0 probeChannel=1 baked=True caster=Default"}
-{"k":"light/Point Light","v":"bake=Mixed mixed=Shadowmask channel=1 probeChannel=0 baked=True caster=Default"}
+{"k":"light/Sun","v":"bake=Mixed mixed=Shadowmask channel=0 probeChannel=0 baked=True caster=Default"}
+{"k":"light/Point Light","v":"bake=Mixed mixed=Shadowmask channel=1 probeChannel=1 baked=True caster=Default"}
 {"k":"renderer/Ground","v":"lightmap=0 st=0.6953125,0.6953125,0,0.03515625"}
-{"k":"renderer/Near Block","v":"lightmap=0 st=0.0511597134,0.0511597134,-0.000207491845,0.800573766"}
+{"k":"renderer/Near Block","v":"lightmap=0 st=0.0511597134,0.0511597134,-0.000207491845,0.839636266"}
 {"k":"renderer/Near Column","v":"lightmap=0 st=0.039353624,0.039353624,-0.0001596091,-0.0001596091"}
 {"k":"renderer/Far Block","v":"lightmap=0 st=0.106254786,0.106254786,0.08550656,0.7378503"}
 {"k":"renderer/Far Column","v":"lightmap=0 st=0.07870725,0.07870725,-0.0003192182,0.737962"}
 {"k":"renderer/Near Sphere","v":"lightmap=-1 st=1,1,0,0"}
 {"k":"renderer/Far Sphere","v":"lightmap=-1 st=1,1,0,0"}
+{"k":"renderer/Wall","v":"lightmap=0 st=0.04722435,0.04722435,-0.000191530926,0.80058974"}
+{"k":"renderer/Shadowed Sphere","v":"lightmap=-1 st=1,1,0,0"}
+{"k":"renderer/Far Shadowed Sphere","v":"lightmap=-1 st=1,1,0,0"}
+{"k":"occlusion/Shadowed Sphere","v":"0.00191139278,1,1,1"}
+{"k":"occlusion/Far Shadowed Sphere","v":"1,1,1,1"}
 {"k":"lightmaps","v":"1 shadowmask=True"}
 {"k":"shot/forward_shadowmask_default","v":"forward_shadowmask_default.png"}
 {"k":"shot/forward_shadowmask_nonlightmappedonly","v":"forward_shadowmask_nonlightmappedonly.png"}
