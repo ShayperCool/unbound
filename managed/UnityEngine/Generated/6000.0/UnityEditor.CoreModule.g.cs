@@ -33139,29 +33139,12 @@ namespace UnityEditor.PackageManager.UI
         public global::UnityEditor.PackageManager.UI.IPackage[] packages { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.PackageManager.UI.PackageSelectionArgs.packages"); return global::System.Array.Empty<global::UnityEditor.PackageManager.UI.IPackage>(); } [global::Unbound.Stub] internal set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.PackageManager.UI.PackageSelectionArgs.packages"); } }
         public global::UnityEditor.PackageManager.UI.IWindow window { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.PackageManager.UI.PackageSelectionArgs.window"); return default; } [global::Unbound.Stub] internal set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.PackageManager.UI.PackageSelectionArgs.window"); } }
     }
-    [global::System.Serializable]
-    [global::Unbound.Stub]
-    public unsafe partial struct Sample
+    unsafe partial struct Sample
     {
         [global::Unbound.Stub] internal Sample(global::UnityEditor.PackageManager.UI.Internal.IIOProxy ioProxy, global::UnityEditor.PackageManager.UI.Internal.IAssetDatabaseProxy assetDatabase, string displayName, string description, string resolvedPath, string importPath, bool interactiveImport) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.PackageManager.UI.Sample.ctor"); }
         [global::Unbound.Stub] internal static global::System.Collections.Generic.IEnumerable<global::UnityEditor.PackageManager.UI.Sample> FindByPackage(global::UnityEditor.PackageManager.PackageInfo package, global::UnityEditor.PackageManager.UI.Internal.IUpmCache upmCache, global::UnityEditor.PackageManager.UI.Internal.IIOProxy ioProxy, global::UnityEditor.PackageManager.UI.Internal.IAssetDatabaseProxy assetDatabaseProxy) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.PackageManager.UI.Sample.FindByPackage"); return global::System.Array.Empty<global::UnityEditor.PackageManager.UI.Sample>(); }
-        [global::Unbound.Stub] public static global::System.Collections.Generic.IEnumerable<global::UnityEditor.PackageManager.UI.Sample> FindByPackage(string packageName, string packageVersion) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.PackageManager.UI.Sample.FindByPackage"); return global::System.Array.Empty<global::UnityEditor.PackageManager.UI.Sample>(); }
-        [global::Unbound.Stub] public bool Import(global::UnityEditor.PackageManager.UI.Sample.ImportOptions options = (global::UnityEditor.PackageManager.UI.Sample.ImportOptions)0) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.PackageManager.UI.Sample.Import"); return default; }
-        public string displayName { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.PackageManager.UI.Sample.displayName"); return default; } }
-        public string description { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.PackageManager.UI.Sample.description"); return default; } }
-        public string resolvedPath { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.PackageManager.UI.Sample.resolvedPath"); return default; } }
-        public string importPath { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.PackageManager.UI.Sample.importPath"); return default; } }
-        public bool interactiveImport { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.PackageManager.UI.Sample.interactiveImport"); return default; } }
-        public bool isImported { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.PackageManager.UI.Sample.isImported"); return default; } }
         internal global::System.Collections.Generic.List<string> previousImports { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.PackageManager.UI.Sample.previousImports"); return new global::System.Collections.Generic.List<string>(); } }
         internal string size { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.PackageManager.UI.Sample.size"); return default; } }
-        [global::System.Flags]
-        public enum ImportOptions
-        {
-            None = 0,
-            OverridePreviousImports = 1,
-            HideImportWindow = 2,
-        }
     }
     [global::Unbound.Stub]
     public unsafe static partial class Window
