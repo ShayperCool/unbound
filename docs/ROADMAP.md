@@ -241,13 +241,16 @@ In dependency order; each item ends with an Editor-reference probe.
       end is within two radii at speed), the update order. Left: grid cell boundaries in crowded
       scenes, the height Unity keeps or drops in a desired velocity on slopes (navmesh climber),
       and the long runs, where any difference carries on.
-- [x] Particle System against an Editor probe (`tests/projects/particles`: 93 scenarios of
-      particles per step, real frames and 18 images; 1491 of 1559 records and every image but one
-      match): stepping (Unity's equal sub-steps, emission timing and phase across loops, prewarm,
+- [x] Particle System against an Editor probe (`tests/projects/particles`: 99 scenarios of
+      particles per step, real frames and 17 images; all 1590 records match, two images within
+      recorded residuals): stepping (Unity's equal sub-steps, emission timing and phase across loops, prewarm,
       lifetimes), every main and shape module setting tried, velocity/limit/drag/force/orbital,
       color/size/rotation modules, custom data, collisions with planes and the world, triggers,
-      force fields, trails, the lights module, the render modes. Left: Unity's noise function,
-      force field rotation, ribbon trails, sub-emitter timing in Simulate, Particle System jobs.
+      force fields and their rotation, trails and the order ribbons join particles in, the noise
+      module (`tests/projects/particlenoise`), the lights module, the render modes, the job API
+      (`tests/projects/particlejobs`). Left: Death sub-emitter children of particles that keep
+      their trails (`tests/projects/particletrails` `death-child-age`), particle lights in the
+      built-in pipeline's drawing.
 - [ ] Terrain (leftovers back in scope 2026-11-12): TerrainData from the Editor's asset with its height, normal and steepness queries,
       the TerrainCollider (PhysX height field, holes, tree capsules), drawing with Unity's terrain
       shaders and trees (`tests/projects/terrain`: 214/216 records, two steepness values a float step

@@ -33,18 +33,14 @@ Values match within 1e-3 (colors within 1/255). Lifetimes and rates are chosen o
 step grid where they could otherwise land exactly on a step boundary, where which side of it
 Unity's float arithmetic falls decides one particle.
 
-What still differs, and why:
+What still differs, and why: every value of the 99 scenarios matches (1590 records, among them
+`noise`, `external_forces_rotation`, `sub_emitters_child`, `simulate_long_call`, `set_particles`
+and `collision_world`, which differed before). Two images keep recorded residuals
+(`image-residuals.json`):
 
-- `noise`: Unity's noise field is its own function; Unbound's moves particles differently.
-- `external_forces_rotation`: force field rotation is not simulated (Unbound warns).
-- `sub_emitters_child`: Death children retain their separate `Simulate` age residual.
-  Birth origin/age controls are described in `../particlerandom/README.md`.
-- `simulate_long_call`, `set_particles`: a single long `Simulate` from a restart splits its time
-  so that Unity's clock ends one float step lower, and the particle due exactly at the end is one
-  step later.
-- `collision_world`: a particle bouncing off a box collider lands about 0.005 apart.
-- `lights` (image): the particle lights are created, but the built-in pipeline does not draw
+- `lights`: the particle lights are created, but the built-in pipeline does not draw them as
   additional lights yet.
+- `stretched`: 24 pixels one level apart along the stretched billboards' edges.
 
 ## Custom data streams
 
