@@ -50,8 +50,9 @@ every save drop the names set from script for which the shader has no property, 
 too: `Has*` false, getters log and return defaults, and under a shader declaring them they read its
 defaults, except a value the material's data lists as that kind (`_Saved` as a float, not a colour
 set for it), which the file keeps and that shader reads. A SerializedObject apply drops matrices and
-arrays as well. `renderer.material` and `CopyPropertiesFromMaterial` keep them. The names Unity's built-in shaders use have ids below a project's (`order.early_ids`), so
-`_MainTex`'s vectors come before a `_Color` declared first.
+arrays as well. `renderer.material` and `CopyPropertiesFromMaterial` keep them. The names Unity's
+built-in shaders use have ids below a project's (`order.early_ids`), so `_MainTex`'s vectors come
+before a `_Color` declared first.
 
 Not covered: material variants, buffers, a material saved inside another asset.
 
