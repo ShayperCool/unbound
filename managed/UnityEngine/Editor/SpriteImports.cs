@@ -51,17 +51,21 @@ namespace UnityEditor
             if (!Compat.SpriteFirstImportMeasured) return;
             foreach (var path in imported)
             {
-                // Chosen by the .meta alone: no asset is loaded (a first open lists every asset,
-                // whose loads would run scripts' callbacks; tests/projects/assetloaded).
-                if (AssetDatabase.IsImmutablePackagePath(path)) continue;
-                // A settings file or a built-in asset has no .meta of its own.
-                var file = AssetDatabase.FileOf(path);
-                if (string.IsNullOrEmpty(file) || !System.IO.File.Exists(file + ".meta")) continue;
-                var guid = AssetDatabase.AssetPathToGUID(path);
-                if (string.IsNullOrEmpty(guid)) continue;
-                var meta = Native.LoadDocuments("meta:" + guid);
+                // Chosen by the database's listing and the .meta alone: no asset is loaded (a
+                // first open lists every asset, whose loads would run scripts' callbacks;
+                // tests/projects/assetloaded), and only a texture's .meta is read.
+                if (AssetDatabase.IsImmutablePackagePath(path) || AssetDatabase.Listed(path) is not { Kind: "texture" } listed) continue;
+                List<Unbound.Runtime.YDocument> meta;
+                try { meta = Native.LoadDocuments("meta:" + listed.Guid); }
+                catch (InvalidOperationException e)
+                {
+                    UnityEngine.Debug.LogWarning($"Unbound: the .meta of {path} cannot be read, so its sprite is given no ID: {e.Message}");
+                    continue;
+                }
                 if (meta.Count == 0 || meta[0].TypeName != "TextureImporter" || !NeedsSpriteId(meta[0].Body)) continue;
-                if (AssetImporter.GetAtPath(path) is not TextureImporter importer || importer.m_Settings == null) continue;
+                // The importer as the session holds it: a script may have changed it since.
+                if (AssetImporter.GetAtPath(path) is not TextureImporter importer || importer.m_Settings == null
+                    || !NeedsSpriteId(importer.m_Settings)) continue;
                 MetaSettings.Set(importer.m_Settings, "spriteSheet.spriteID", SingleSpriteId);
                 MetaSettings.SetInt(importer.m_Settings, "nPOTScale", (int)TextureImporterNPOTScale.None);
                 importer.Changed();

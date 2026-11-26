@@ -239,6 +239,12 @@ impl RuntimeState {
                     },
                 )?,
             };
+            if self.new_meta.mode_2d && importer == unbound_assets::new_meta::NewImporter::Texture {
+                tracing::warn!(
+                    "{}: in a 2D project the Editor imports a new texture as sprites; what it writes for one an API imports (ImportAsset, a bake) is not measured, so Unbound gives it a Default texture's .meta",
+                    request.path
+                );
+            }
             let guid = unbound_assets::new_meta::new_guid();
             std::fs::write(
                 &meta,

@@ -90,6 +90,15 @@ namespace UnityEditor
             return normalized != null && s_ByPath.TryGetValue(normalized, out var e) ? e.Guid : "";
         }
 
+        /// <summary>The database's kind of the asset at <paramref name="path"/> ("texture", "model",
+        /// ...), read from its listing (nothing is loaded or parsed); null for no asset.</summary>
+        internal static (string Guid, string Kind)? Listed(string path)
+        {
+            var normalized = path?.Replace('\\', '/').TrimEnd('/');
+            _ = Entries;
+            return normalized != null && s_ByPath.TryGetValue(normalized, out var e) ? (e.Guid, e.Kind) : null;
+        }
+
         public static GUID GUIDFromAssetPath(string path) => new GUID(AssetPathToGUID(path));
 
         /// <summary>A folder asset's path: Assets, a package's root and the folders in them;
