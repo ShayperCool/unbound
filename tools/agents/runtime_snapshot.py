@@ -380,6 +380,20 @@ def pin_main(runtime, repo, tree, *, previous_tree=None, cache=None):
         atomic_json(pin, {'git_dir': common, 'tree': tree, 'snapshot': snapshot.name})
 
 
+def pinned_runtime(repo, tree, *, cache=None):
+    """The runtime pinned for main at `tree` (pin_main), or None when main's pin is of another tree
+    or its snapshot is gone."""
+    cache = Path(cache or cache_root()).resolve()
+    common = subprocess.run(['git', '-C', str(Path(repo).resolve()), 'rev-parse', '--path-format=absolute', '--git-common-dir'],
+                            check=True, capture_output=True, text=True).stdout.strip()
+    pin = cache/'pins'/hashlib.sha256(os.fsencode(common)).hexdigest()
+    if not pin.is_file():
+        return None
+    value = json.loads(pin.read_text())
+    snapshot = cache/'snapshots'/value['snapshot']
+    return snapshot if value.get('tree') == tree and (snapshot/'unbound').is_file() else None
+
+
 def cleanup(*, days=14, cache=None, now=None, repo=None, remove=None, dry_run=False):
     """Remove old, unreferenced snapshots; retained run links and current main pins protect them."""
     if days < 0:

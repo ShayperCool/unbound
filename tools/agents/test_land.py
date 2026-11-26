@@ -2124,36 +2124,48 @@ class InventoryGateTests(unittest.TestCase):
         return land.Gate(root, 'base0', list(probes), False, log, environment={},
                          releases=releases)
 
+    def check(self, gate, root, code, base_runtime=None):
+        with mock.patch.object(gate, 'step', return_value=code) as step, \
+             mock.patch.object(land, 'git', return_value='tree0'), \
+             mock.patch.object(land, 'pinned_runtime', return_value=base_runtime) as pinned, \
+             mock.patch.object(land, 'probe_release', return_value='6000.0.71f1'):
+            gate.check_inventory(root/'unbound')
+            gate.add_inventory_probe()
+        return step, pinned
+
     def test_a_changed_inventory_adds_the_default_state_check(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             gate = self.gate(root, ['python3 tests/projects/foo/run.py gate'], releases=['6000.0.71f1'])
-            with mock.patch.object(gate, 'step', return_value=land.INVENTORY_CHANGED) as step, \
-                 mock.patch.object(land, 'probe_release', return_value='6000.0.71f1'), \
-                 mock.patch.object(land, 'suite_coverage', return_value=set()):
-                gate.check_inventory(root/'unbound')
-                gate.add_inventory_probe()
+            gate.probe_owners = [['slot/a', 'slot/b']]
+            step, pinned = self.check(gate, root, land.INVENTORY_CHANGED, base_runtime=root/'snap')
             command = step.call_args.args[1]
-            self.assertEqual(command[1:], ['tests/projects/defaultstate/run.py', 'inventory', '--base', 'base0'])
+            self.assertEqual(command[1:], ['tests/projects/defaultstate/run.py', 'inventory', '--base', 'base0',
+                                           '--base-runtime', str(root/'snap')])
+            self.assertEqual(pinned.call_args.args, (root, 'tree0'))
             self.assertEqual(step.call_args.kwargs['env']['UNBOUND'], str(root/'unbound'))
             self.assertEqual(gate.probes, ['python3 tests/projects/foo/run.py gate', land.INVENTORY_PROBE])
             self.assertEqual(gate.releases, ['6000.0.71f1', '6000.0.71f1'])
+            self.assertEqual(gate.probe_owners, [['slot/a', 'slot/b'], ['slot/a', 'slot/b']])
             self.assertIn('public type inventory changed', (root/'gate.log').read_text())
 
-    def test_an_unchanged_inventory_adds_nothing(self):
+    def test_the_frozen_runtime_and_no_base_build(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             gate = self.gate(root)
-            with mock.patch.object(gate, 'step', return_value=0):
-                gate.check_inventory(root/'unbound')
-                gate.add_inventory_probe()
+            gate.probe_runtime = root/'frozen'
+            step, _ = self.check(gate, root, 0)
+            self.assertNotIn('--base-runtime', step.call_args.args[1])
+            self.assertEqual(step.call_args.kwargs['env']['UNBOUND'], str(root/'frozen'/'unbound'))
+            self.assertEqual(step.call_args.kwargs['env']['UNBOUND_MANAGED_DIR'], str(root/'frozen'/'managed'))
             self.assertEqual(gate.probes, [])
 
-    def test_an_explicit_default_state_probe_skips_the_inventory_run(self):
+    def test_an_explicit_default_state_check_skips_the_inventory_run(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             for probe, coverage in [('python3 tests/projects/defaultstate/run.py check', set()),
-                                    ("python3 tools/agents/suite.py --only defaultstate", {('defaultstate', '6000.0.71f1')})]:
+                                    ('python3 tools/agents/suite.py --only defaultstate --against none', {('defaultstate', '6000.0.71f1')}),
+                                    ('python3 tools/agents/suite.py --only defaultstate --against=none', {('defaultstate', '6000.0.71f1')})]:
                 gate = self.gate(root, [probe], releases=['6000.0.71f1'])
                 with mock.patch.object(gate, 'step') as step, \
                      mock.patch.object(land, 'suite_coverage', return_value=coverage):
@@ -2162,15 +2174,61 @@ class InventoryGateTests(unittest.TestCase):
                 step.assert_not_called()
                 self.assertEqual(gate.probes, [probe])
 
+    def test_a_suite_judged_against_the_baseline_is_no_coverage(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            probe = 'python3 tools/agents/suite.py --only defaultstate'
+            gate = self.gate(root, [probe], releases=['6000.0.71f1'])
+            with mock.patch.object(land, 'suite_coverage', return_value={('defaultstate', '6000.0.71f1')}):
+                step, _ = self.check(gate, root, land.INVENTORY_CHANGED)
+            step.assert_called_once()
+            self.assertEqual(gate.probes, [probe, land.INVENTORY_PROBE])
+
     def test_a_failed_inventory_run_fails_the_gate(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             gate = self.gate(root)
             with mock.patch.object(gate, 'step', return_value=1), \
+                 mock.patch.object(land, 'git', return_value='tree0'), \
+                 mock.patch.object(land, 'pinned_runtime', return_value=None), \
                  mock.patch.object(gate, 'fail', side_effect=SystemExit(5)) as fail:
                 with self.assertRaises(SystemExit):
                     gate.check_inventory(root/'unbound')
             fail.assert_called_once_with('public type inventory')
+
+    def test_the_gate_runs_the_check_for_managed_changes_only(self):
+        """The wiring: a stub-input change runs the inventory step in the .NET lane and its probe
+        reaches run_probes; a change outside the stub inputs never runs it."""
+        for changed, expected in [('managed/UnityEngine/Core/Foo.cs', True), ('crates/unbound-control/src/lib.rs', False)]:
+            with tempfile.TemporaryDirectory() as directory:
+                root = Path(directory)
+                gate = land.Gate(root, 'base0', [], False, root/'gate.log', environment={'UNBOUND': str(root/'unbound')},
+                                 releases=[])
+                (root/'gate.log').write_text('')
+                gate.build = lambda: ([sys.executable, 'tools/build.py'], root/'target')
+                gate.freeze_runtime = lambda target: setattr(gate, 'probe_runtime', root/'frozen')
+                gate.use_probe_runtime = lambda: None
+                gate.generate_stubs = gate.api_checks = gate.managed_tests = lambda *a: None
+                gate.rust_tests = lambda command: None
+                gate.touched_crates = lambda changed: []
+                gate.automatic = []
+                gate.run_automatic_probes = lambda: None
+                seen = []
+                gate.run_probes = lambda: seen.append(list(gate.probes))
+                steps = []
+                def step(name, command, **kwargs):
+                    steps.append(name)
+                    return land.INVENTORY_CHANGED
+                gate.step = step
+                guard = subprocess.CompletedProcess([], 0)
+                with mock.patch.object(land, 'git', side_effect=lambda *a, **k: changed if a[0] == 'diff' else 'tree0'), \
+                     mock.patch.object(land.subprocess, 'run', return_value=guard), \
+                     mock.patch.object(land, 'pinned_runtime', return_value=None), \
+                     mock.patch.object(land, 'probe_release', return_value='6000.0.71f1'), \
+                     contextlib.redirect_stdout(io.StringIO()):
+                    gate.run()
+                self.assertEqual('public type inventory' in steps, expected, changed)
+                self.assertEqual(seen, [[land.INVENTORY_PROBE] if expected else []], changed)
 
 
 class GateLaneTests(unittest.TestCase):

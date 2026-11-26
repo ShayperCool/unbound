@@ -24,11 +24,20 @@ def cli():
     return os.environ.get('UNBOUND_CLI') or os.environ.get('UNBOUND') or str(REPO/'target/release/unbound')
 
 
-def inventory(out):
+def runtime_environment(runtime):
+    """The environment that runs a frozen runtime snapshot's CLI (land.py's probe runtime)."""
+    runtime = Path(runtime)
+    libraries = str(runtime/'managed') + (os.pathsep+os.environ['LD_LIBRARY_PATH'] if os.environ.get('LD_LIBRARY_PATH') else '')
+    return dict(os.environ, UNBOUND=str(runtime/'unbound'), UNBOUND_CLI=str(runtime/'unbound'), UNBOUND_RUNTIME=str(runtime),
+                UNBOUND_MANAGED_DIR=str(runtime/'managed'), LD_LIBRARY_PATH=libraries)
+
+
+def inventory(out, env=None):
     out.mkdir(parents=True, exist_ok=False)
-    command = [str(HEAVY), '--kind', 'tool', cli(), 'api-defaults', '-p', str(project_copy(ROOT, out/'inventory-project'))]
+    tool = (env or os.environ).get('UNBOUND_CLI') or (env or os.environ).get('UNBOUND') or cli()
+    command = [str(HEAVY), '--kind', 'tool', tool, 'api-defaults', '-p', str(project_copy(ROOT, out/'inventory-project'))]
     with (out/'inventory.json').open('w') as output, (out/'inventory.log').open('w') as log:
-        subprocess.run(command, cwd=REPO, stdout=output, stderr=log, check=True)
+        subprocess.run(command, cwd=REPO, stdout=output, stderr=log, check=True, env=env)
     report = json.loads((out/'inventory.json').read_text())
     if report['release'] != unity_version():
         raise ValueError('project release differs from selected probe release')
@@ -49,19 +58,48 @@ def type_changes(before, after):
     return added, removed, changed
 
 
-def inventory_changed(base, label):
-    """Whether the built engine's public type inventory differs from the reference inventory at
-    `base` (land.py's cheap check of whether a branch changes the inventory: no Editor and no engine
-    run, the same `api-defaults` report the probe compares first). 0 unchanged or nothing to compare
-    with, INVENTORY_CHANGED when it differs."""
+def base_inventory(base, base_runtime):
+    """The base's own inventory: its build's report when its runtime is given (cached by the
+    content-addressed snapshot), else its committed reference inventory (None without one)."""
+    if base_runtime is not None:
+        cached = WORK/'base-inventories'/Path(base_runtime).resolve().name
+        if not (cached/'inventory.json').is_file():
+            scratch = WORK/'base-inventories'/f'.{cached.name}-{os.getpid()}'
+            shutil.rmtree(scratch, ignore_errors=True)
+            inventory(scratch, runtime_environment(base_runtime))
+            try:
+                os.rename(scratch, cached)
+            except OSError:
+                shutil.rmtree(scratch, ignore_errors=True)  # another run cached it first
+        print(f'base inventory: the build of {base} ({Path(base_runtime).name[:12]})')
+        return json.loads((cached/'inventory.json').read_text())
     relative = (reference_root(ROOT)/'inventory.json').relative_to(REPO).as_posix()
     shown = subprocess.run(['git', 'show', f'{base}:{relative}'], cwd=REPO, capture_output=True, text=True)
     if shown.returncode:
-        print(f'no reference inventory {relative} at {base}: nothing to compare')
+        return None
+    print(f'base inventory: no build of {base}, its committed reference {relative} '
+          '(a type main added without rows shows here too)')
+    return json.loads(shown.stdout)
+
+
+def inventory_changed(base, label, base_runtime=None):
+    """Whether the built engine's public type inventory (types and constructor stores) differs from
+    the base's (land.py's cheap check of whether a branch changes the inventory: no Editor and no
+    engine run, the same `api-defaults` report the probe compares first). 0 unchanged or nothing to
+    compare with, INVENTORY_CHANGED when it differs."""
+    before = base_inventory(base, base_runtime)
+    if before is None:
+        print(f'no inventory of {base}: nothing to compare')
         return 0
     report = inventory(WORK/label)
-    added, removed, changed = type_changes(json.loads(shown.stdout)['types'], report['types'])
-    if not (added or removed or changed):
+    added, removed, changed = type_changes(before['types'], report['types'])
+    # The constructor stores' differences (what `check` compares; their other fields are counts
+    # that move with any constructor).
+    differences = lambda inventory: (inventory.get('constructorStores') or {}).get('differences', [])
+    stores = base_runtime is not None and differences(before) != differences(report)
+    if stores:
+        print('constructor store differences changed')
+    if not (added or removed or changed or stores):
         print(f'public type inventory unchanged ({len(report["types"])} types)')
         return 0
     for kind, names in (('added', added), ('removed', removed), ('changed', changed)):
@@ -207,7 +245,8 @@ def main():
     parser.add_argument('labels', nargs='*')
     parser.add_argument('--label')
     parser.add_argument('--candidate', type=Path)
-    parser.add_argument('--base', help='inventory: the commit whose reference inventory to compare with (default HEAD)')
+    parser.add_argument('--base', help='inventory: the commit to compare with (default HEAD)')
+    parser.add_argument('--base-runtime', type=Path, help="inventory: the base's own runtime snapshot (else its reference inventory)")
     args = parser.parse_args()
     for label in args.labels + ([args.label] if args.label else []):
         if Path(label).name != label or label in ('.', '..'):
@@ -221,7 +260,8 @@ def main():
     if args.mode == 'publish': return publish(args.labels)
     if args.mode == 'compare': return check(args.candidate)
     if args.mode == 'inventory':
-        return inventory_changed(args.base or 'HEAD', time.strftime('inventory-%Y%m%d-%H%M%S-')+str(os.getpid()))
+        return inventory_changed(args.base or 'HEAD', time.strftime('inventory-%Y%m%d-%H%M%S-')+str(os.getpid()),
+                                 args.base_runtime)
     label = time.strftime('check-%Y%m%d-%H%M%S-')+str(os.getpid())
     return engine(label) or check(WORK/label)
 

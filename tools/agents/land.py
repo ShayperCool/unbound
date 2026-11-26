@@ -108,7 +108,7 @@ from probe_runtime import (RELEASE_VARIABLE, default_release, probe_release, NO_
                            EDITOR_WATCH, EDITOR_MARK, EDITOR_EXIT, PROBE_DIR, require_process_watch, stop_tree,
                            checkout_state, checkout_writes)
 from probe_schedule import parallel_groups
-from runtime_snapshot import snapshot_runtime, pin_main, atomic_json, release_reference
+from runtime_snapshot import snapshot_runtime, pin_main, pinned_runtime, atomic_json, release_reference
 from slot import changed_paths, hidden_index_paths, inside_any, live_process_paths, slot_root
 
 
@@ -746,15 +746,18 @@ class Gate:
         self.probe_runtime = snapshot_runtime(Path(self.env['UNBOUND']), target/'managed',
                                               self.log.with_suffix('.runtime'))
 
-    def use_probe_runtime(self):
-        """Point the gate's environment (probes and later steps) at the frozen runtime."""
-        runtime = self.probe_runtime
+    def runtime_env(self, runtime):
+        """The gate's environment pointed at a frozen runtime snapshot."""
+        runtime = Path(runtime)
         libraries = str(runtime/'managed')
         if self.env.get('LD_LIBRARY_PATH'):
             libraries += os.pathsep+self.env['LD_LIBRARY_PATH']
-        self.env.update(UNBOUND=str(runtime/'unbound'), UNBOUND_CLI=str(runtime/'unbound'), UNBOUND_RUNTIME=str(runtime),
-                        UNBOUND_MANAGED_DIR=str(runtime/'managed'), LD_LIBRARY_PATH=libraries,
-                        PATH=probe_path(self.env, STATE/'python'))
+        return dict(self.env, UNBOUND=str(runtime/'unbound'), UNBOUND_CLI=str(runtime/'unbound'), UNBOUND_RUNTIME=str(runtime),
+                    UNBOUND_MANAGED_DIR=str(runtime/'managed'), LD_LIBRARY_PATH=libraries)
+
+    def use_probe_runtime(self):
+        """Point the gate's environment (probes and later steps) at the frozen runtime."""
+        self.env = dict(self.runtime_env(self.probe_runtime), PATH=probe_path(self.env, STATE/'python'))
 
     def probe_specs(self):
         from suite import gate_spec, NoRecipe
@@ -997,10 +1000,15 @@ class Gate:
             self.fail('API tooling tests')
 
     def covers_inventory(self):
-        """Whether an explicit probe already runs the default-state check."""
+        """Whether an explicit probe already runs the default-state check with a verdict of its own
+        (a suite run judged against the baseline could pass a probe that fails as the baseline does)."""
         for index, probe in enumerate(self.probes):
             if INVENTORY_PROBE.split(' ', 1)[1] in probe:
                 return True
+            argv = suite_arguments(probe)
+            if argv is None or not ('--against=none' in argv or
+                                    ('--against' in argv and argv[argv.index('--against')+1:][:1] == ['none'])):
+                continue
             try:
                 release = self.releases[index] if self.releases is not None else probe_release(probe, self.worktree, self.env)
             except ValueError:
@@ -1010,13 +1018,21 @@ class Gate:
         return False
 
     def check_inventory(self, cli):
-        """Compare the built public type inventory with the base's reference (a tool run of the
-        gate's build, no Editor or engine run); a change makes add_inventory_probe gate it."""
+        """Compare the built public type inventory with the base's own (its pinned main build, else
+        its reference; a tool run, no Editor or engine run); a change makes add_inventory_probe
+        gate it."""
         if self.covers_inventory():
             return
-        env = dict(self.env, UNBOUND=str(cli), UNBOUND_CLI=str(cli))
-        code = self.step('public type inventory',
-                         [sys.executable, 'tests/projects/defaultstate/run.py', 'inventory', '--base', self.base], env=env)
+        env = (self.runtime_env(self.probe_runtime) if self.probe_runtime is not None
+               else dict(self.env, UNBOUND=str(cli), UNBOUND_CLI=str(cli)))
+        command = [sys.executable, 'tests/projects/defaultstate/run.py', 'inventory', '--base', self.base]
+        try:
+            base_runtime = pinned_runtime(self.worktree, git('rev-parse', f'{self.base}^{{tree}}', cwd=self.worktree))
+        except (OSError, ValueError, subprocess.CalledProcessError, KeyError):
+            base_runtime = None
+        if base_runtime is not None:
+            command += ['--base-runtime', str(base_runtime)]
+        code = self.step('public type inventory', command, env=env)
         if code == INVENTORY_CHANGED:
             self.inventory_changed = True
         elif code:
@@ -1038,7 +1054,8 @@ class Gate:
         if self.releases is not None:
             self.releases = [*self.releases, release]
         if self.probe_owners:
-            self.probe_owners = [*self.probe_owners, ['public type inventory']]
+            owners = list(dict.fromkeys(owner for group in self.probe_owners for owner in group))
+            self.probe_owners = [*self.probe_owners, owners]
 
     def managed_test_failures(self, target, configuration='Release'):
         """Run the managed unit tests built in configuration: (exit code, failing test names, whether

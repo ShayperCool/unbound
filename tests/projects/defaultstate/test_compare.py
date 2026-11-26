@@ -172,9 +172,6 @@ class ComparisonTests(unittest.TestCase):
         self.assertTrue(check_constructor_stores({'differences': []}, debt))
 
 
-if __name__ == '__main__': unittest.main()
-
-
 class InventoryChangeTests(unittest.TestCase):
     def test_added_removed_and_changed_types(self):
         row = lambda name, status='constructed': {'category': 'struct', 'module': 'UnityEngine.CoreModule',
@@ -183,3 +180,7 @@ class InventoryChangeTests(unittest.TestCase):
         after = [row('A'), row('C'), row('D')]
         self.assertEqual(capture_runner.type_changes(before, after), (['D'], ['B'], ['C']))
         self.assertEqual(capture_runner.type_changes(before, before), ([], [], []))
+
+
+if __name__ == '__main__': unittest.main()
+
