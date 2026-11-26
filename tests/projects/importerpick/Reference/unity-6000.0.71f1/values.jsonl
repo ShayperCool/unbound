@@ -47,6 +47,13 @@
 {"k":"default/Own.foo","v":"FooImporter"}
 {"k":"available/Own.foo","v":"[FooImporter]"}
 {"k":"override/Own.foo","v":"null"}
+{"k":"open/Own.part","v":"fileFormatVersion: 2\nguid: (guid)\nScriptedImporter:\n  internalIDToNameTable: []\n  externalObjects: {}\n  serializedVersion: 2\n  userData: \n  assetBundleName: \n  assetBundleVariant: \n  script: {fileID: 11500000, guid: 55637d9115fb4c62a0a92f8a6233a2d7, type: 3}\n  setting: 7\n  label: seven\n"}
+{"k":"importer/Own.part","v":"PartImporter setting 7 label 'seven'"}
+{"k":"imported/Own.part","v":"UnityEngine.TextAsset 'PartImporter:Own.part:seven'"}
+{"k":"type/Own.part","v":"PartImporter"}
+{"k":"default/Own.part","v":"PartImporter"}
+{"k":"available/Own.part","v":"[PartImporter]"}
+{"k":"override/Own.part","v":"null"}
 {"k":"open/Plain.txt","v":"fileFormatVersion: 2\nguid: (guid)\nScriptedImporter:\n  internalIDToNameTable: []\n  externalObjects: {}\n  serializedVersion: 2\n  userData: \n  assetBundleName: \n  assetBundleVariant: \n  script: {fileID: 11500000, guid: fe7149dab52c402586c2710ef982d2dd, type: 3}\n  setting: 7\n"}
 {"k":"importer/Plain.txt","v":"UnityEditor.TextScriptImporter"}
 {"k":"imported/Plain.txt","v":"UnityEngine.TextAsset 'Plain.txt'"}
@@ -82,6 +89,8 @@
 {"k":"labels/Other.foo/meta","v":"fileFormatVersion: 2\nguid: (guid)\nlabels:\n- probe\nScriptedImporter:\n  internalIDToNameTable: []\n  externalObjects: {}\n  serializedVersion: 2\n  userData: \n  assetBundleName: \n  assetBundleVariant: \n  script: {fileID: 11500000, guid: fe7149dab52c402586c2710ef982d2dd, type: 3}\n  setting: 0\n"}
 {"k":"labels/Own.foo","v":"FooImporter setting 7 | UnityEngine.TextAsset 'FooImporter:Own.foo'"}
 {"k":"labels/Own.foo/meta","v":"fileFormatVersion: 2\nguid: (guid)\nlabels:\n- probe\nScriptedImporter:\n  internalIDToNameTable: []\n  externalObjects: {}\n  serializedVersion: 2\n  userData: \n  assetBundleName: \n  assetBundleVariant: \n  script: {fileID: 11500000, guid: fe7149dab52c402586c2710ef982d2dd, type: 3}\n  setting: 7\n"}
+{"k":"labels/Own.part","v":"PartImporter setting 7 label 'seven' | UnityEngine.TextAsset 'PartImporter:Own.part:seven'"}
+{"k":"labels/Own.part/meta","v":"fileFormatVersion: 2\nguid: (guid)\nlabels:\n- probe\nScriptedImporter:\n  internalIDToNameTable: []\n  externalObjects: {}\n  serializedVersion: 2\n  userData: \n  assetBundleName: \n  assetBundleVariant: \n  script: {fileID: 11500000, guid: 55637d9115fb4c62a0a92f8a6233a2d7, type: 3}\n  setting: 7\n  label: seven\n"}
 {"k":"labels/Plain.txt","v":"UnityEditor.TextScriptImporter | UnityEngine.TextAsset 'Plain.txt'"}
 {"k":"labels/Plain.txt/meta","v":"fileFormatVersion: 2\nguid: (guid)\nlabels:\n- probe\nTextScriptImporter:\n  externalObjects: {}\n  userData: \n  assetBundleName: \n  assetBundleVariant: \n"}
 {"k":"labels/Text.foo","v":"FooImporter setting 0 | UnityEngine.TextAsset 'FooImporter:Text.foo'"}

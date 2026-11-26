@@ -81,6 +81,8 @@ public class ImporterPickProbe : MonoBehaviour
         var s = importer.GetType().FullName;
         var field = importer.GetType().GetField("setting");
         if (field != null) s += " setting " + field.GetValue(importer);
+        var label = importer.GetType().GetField("label");
+        if (label != null) s += " label '" + label.GetValue(importer) + "'";
         return s;
     }
 
