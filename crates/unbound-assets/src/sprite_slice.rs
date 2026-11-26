@@ -114,8 +114,9 @@ pub fn slice(width: u32, height: u32, alpha: impl Fn(u32, u32) -> u8) -> Vec<Rec
 }
 
 /// Which regions that are not small lie inside the rect of a larger one that is not small (its
-/// area larger, so equal rects are not each other's); those of equal size are not compared,
-/// which keeps a texture of many like regions linear after the sort.
+/// area larger, so equal rects are not each other's: two regions of one rect stay two, not
+/// measured); those of equal size are not compared, so a texture of many like regions costs
+/// little after the sort (regions of many sizes are compared pairwise).
 fn contained_regions(regions: &[[u32; 4]], small: &impl Fn(&[u32; 4]) -> bool) -> Vec<bool> {
     let area = |r: &[u32; 4]| u64::from(r[2] - r[0] + 1) * u64::from(r[3] - r[1] + 1);
     let mut big: Vec<usize> = (0..regions.len())
