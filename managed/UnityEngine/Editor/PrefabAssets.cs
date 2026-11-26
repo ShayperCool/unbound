@@ -23,7 +23,7 @@ namespace Unbound.Runtime
         /// <summary>The prefabs that were loaded when a prefab their files' nesting reaches was
         /// written in this session (its variants, the prefabs nesting it, and theirs, through every
         /// file of the chain, loaded or not), with that prefab's path: Unbound does not write them
-        /// again in the session (<see cref="RefreshDependents"/>, <see cref="Unwritable"/>). A prefab
+        /// again in the session (<see cref="RefreshDependents"/>, <see cref="Refusal"/>). A prefab
         /// loaded after the write is expanded from the files as they are then and is not marked.</summary>
         static readonly ConditionalWeakTable<LoadedFile, StaleMark> s_StaleSince = new ConditionalWeakTable<LoadedFile, StaleMark>();
 
@@ -196,7 +196,7 @@ namespace Unbound.Runtime
         /// an instance whose objects no longer match its source keeps its objects; objects added
         /// and not saved stay; unsaved changes elsewhere in the prefab stay. None of them is written
         /// again in the session (<see cref="Save"/>, with a warning): the Editor writes them
-        /// unchanged after such a load (dependent.file, nesting.file, chain2.file, top5.file).
+        /// unchanged after such a load (dependent.file, nesting.file, chain2.file, middle5.file).
         /// </summary>
         static void RefreshDependents(LoadedFile written)
         {
@@ -386,7 +386,8 @@ namespace Unbound.Runtime
         internal static Dictionary<long, FileInstance> FileInstances(string guid)
         {
             if (string.IsNullOrEmpty(guid)) return null;
-            var path = FilePathOf(guid);
+            // The file found before, while it is there (finding it can ask the engine).
+            var path = s_Nesting.TryGetValue(guid, out var known) && File.Exists(known.File) ? known.File : FilePathOf(guid);
             if (path == null) return null;
             var info = new FileInfo(path);
             if (!info.Exists) return null;

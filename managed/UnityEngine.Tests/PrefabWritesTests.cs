@@ -871,6 +871,29 @@ namespace UnityEngine.Tests
             Assert.DoesNotContain(warnings, w => w.Contains("is not saved"));
         }
 
+        /// <summary>A prefab held stale is not given its contents (refused before the asset takes
+        /// them); a plain hierarchy saved over it replaces what it held and is written.</summary>
+        [Fact]
+        public void ContentsOfAStalePrefabAreRefusedAndAHierarchyOverItIsWritten()
+        {
+            var before = FileText();
+            PrefabAssets.MarkStaleForTests(m_File, "Assets/Base.prefab");
+            var contentsRoot = PrefabContents.Load(m_File, AssetPath);
+            var contents = PrefabContents.Of(contentsRoot);
+            contentsRoot.GetComponent<PrefabTestHolder>().count = 55;
+            var warnings = CaptureWarnings(() => Assert.False(PrefabContents.Save(contents)));
+            PrefabContents.Unload(contentsRoot);
+            Assert.Equal(3, m_Asset.GetComponent<PrefabTestHolder>().count);
+            Assert.Equal(before, FileText());
+            Assert.Contains(warnings, w => w.Contains(AssetPath + " is not saved: Assets/Base.prefab, which it holds instances of, was saved in this session"));
+            var plain = new GameObject("Plain");
+            m_Made.Add(plain);
+            warnings = CaptureWarnings(() => Assert.True(PrefabContents.Replace(plain, m_File)));
+            Assert.DoesNotContain(warnings, w => w.Contains("is not saved"));
+            Assert.NotEqual(before, FileText());
+            Assert.Null(PrefabAssets.Refusal(m_File));
+        }
+
         /// <summary>A prefab held stale is refused before an apply changes anything: the instance
         /// keeps its override, the prefab its value and its file.</summary>
         [Fact]
@@ -957,7 +980,7 @@ namespace UnityEngine.Tests
 
             public void LogFormat(LogType type, Object context, string format, params object[] args)
             {
-                if (type == LogType.Warning) m_Warnings.Add(args == null || args.Length == 0 ? format : string.Format(format, args));
+                if (type == LogType.Warning || type == LogType.Error) m_Warnings.Add(args == null || args.Length == 0 ? format : string.Format(format, args));
                 m_Inner.LogFormat(type, context, format, args);
             }
 
