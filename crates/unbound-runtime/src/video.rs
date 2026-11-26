@@ -46,6 +46,43 @@ pub fn probe(path: &str) -> Result<Json> {
     clip_properties(path, &root)
 }
 
+type ProbeAnswer = Arc<Mutex<Option<std::result::Result<Json, String>>>>;
+
+fn probes() -> &'static Mutex<HashMap<u64, ProbeAnswer>> {
+    static PROBES: OnceLock<Mutex<HashMap<u64, ProbeAnswer>>> = OnceLock::new();
+    PROBES.get_or_init(|| Mutex::new(HashMap::new()))
+}
+
+/// Starts [`probe`] of a (network) source in its own thread, so the player's thread does not wait
+/// for the network; its id for [`probe_poll`].
+pub fn probe_start(path: &str) -> u64 {
+    static NEXT: AtomicU64 = AtomicU64::new(1);
+    let id = NEXT.fetch_add(1, Ordering::Relaxed);
+    let answer: ProbeAnswer = Arc::new(Mutex::new(None));
+    probes().lock().unwrap().insert(id, answer.clone());
+    let path = path.to_string();
+    std::thread::spawn(move || {
+        let result = probe(&path).map_err(|e| e.to_string());
+        *answer.lock().unwrap() = Some(result);
+    });
+    id
+}
+
+/// A started probe's answer once it has one (then forgotten); None while it reads.
+pub fn probe_poll(id: u64) -> Option<std::result::Result<Json, String>> {
+    let answer = probes().lock().unwrap().get(&id).cloned()?;
+    let done = answer.lock().unwrap().take();
+    if done.is_some() {
+        probes().lock().unwrap().remove(&id);
+    }
+    done
+}
+
+/// Forgets a started probe (its player was released); its thread's answer is dropped.
+pub fn probe_forget(id: u64) {
+    probes().lock().unwrap().remove(&id);
+}
+
 /// [`probe`]'s answer from ffprobe's JSON (`streams`, `format`).
 fn clip_properties(path: &str, root: &Json) -> Result<Json> {
     let streams = root["streams"].as_array().cloned().unwrap_or_default();
@@ -924,6 +961,29 @@ pub fn audio_control(
 
 pub fn audio_close(id: u64) {
     audio_streams().lock().unwrap().remove(&id);
+}
+
+#[cfg(test)]
+mod probe_thread_tests {
+    use super::*;
+
+    #[test]
+    fn a_started_probe_answers_once_then_is_forgotten() {
+        let id = probe_start("/no/such/video.webm");
+        let mut answer = None;
+        for _ in 0..500 {
+            if let Some(done) = probe_poll(id) {
+                answer = Some(done);
+                break;
+            }
+            std::thread::sleep(std::time::Duration::from_millis(10));
+        }
+        assert!(answer.expect("the probe answers").is_err());
+        assert!(probe_poll(id).is_none());
+        let other = probe_start("/no/such/other.webm");
+        probe_forget(other);
+        assert!(probe_poll(other).is_none());
+    }
 }
 
 #[cfg(test)]

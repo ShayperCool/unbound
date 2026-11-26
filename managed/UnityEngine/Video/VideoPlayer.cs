@@ -108,9 +108,12 @@ namespace UnityEngine.Video
 
         /// <summary>A clip of a file, its properties probed; an imported asset's (with its
         /// <paramref name="guid"/>) also reads its importer settings.</summary>
-        internal static VideoClip Probe(string file, string assetPath, string guid = null)
+        internal static VideoClip Probe(string file, string assetPath, string guid = null) =>
+            FromProbe(JsonDocument.Parse(Call("video-probe", JsonSerializer.Serialize(new { path = file }))).RootElement, file, assetPath, guid);
+
+        /// <summary>A clip from the host's probe of a file (its properties as ffprobe reads them).</summary>
+        internal static VideoClip FromProbe(JsonElement root, string file, string assetPath, string guid = null)
         {
-            var root = JsonDocument.Parse(Call("video-probe", JsonSerializer.Serialize(new { path = file }))).RootElement;
             VideoClip clip;
             using (ObjectRegistry.AsAssets())
                 clip = new VideoClip { IsPersistentAsset = true };
@@ -544,6 +547,15 @@ namespace UnityEngine.Video
                 {
                     var path = m_Url.StartsWith("file://", StringComparison.OrdinalIgnoreCase) ? new Uri(m_Url).LocalPath : m_Url;
                     m_File = path;
+                    if (IsRemote(m_Url))
+                    {
+                        // A network source is read by the host in its own thread; the player is prepared
+                        // when it answers (VideoPlayer.Prepare is asynchronous: isPrepared is false right
+                        // after it, measured: tests/projects/videourl *.afterPrepare).
+                        using var started = JsonDocument.Parse(VideoClip.Call("video-probe-start", JsonSerializer.Serialize(new { path })));
+                        m_UrlProbe = started.RootElement.GetProperty("id").GetUInt64();
+                        return true;
+                    }
                     var probed = VideoClip.Probe(path, null);
                     Adopt(probed);
                     DestroyImmediate(probed, true);
@@ -557,18 +569,61 @@ namespace UnityEngine.Video
                     if (!m_Clip.sRGB && QualitySettings.activeColorSpace == ColorSpace.Linear)
                         Warn($"video '{m_Name}' is imported without sRGB (VideoClipImporter sRGB off), but its pictures are still converted as sRGB colour in Linear colour space.");
                 }
-                using (var opened = JsonDocument.Parse(VideoClip.Call("video-open", JsonSerializer.Serialize(new { path = m_File, width = m_Width, height = m_Height, fps = m_FrameRate, alpha = m_SourceAlpha, codec = m_SourceCodec }))))
-                {
-                    m_Decoder = opened.RootElement.GetProperty("id").GetUInt64();
-                    // The decoder says whether it decodes the alpha (its codec and ffmpeg's decoders).
-                    m_SourceAlpha = opened.RootElement.TryGetProperty("alpha", out var decodes) && decodes.ValueKind == JsonValueKind.True;
-                }
+                OpenDecoder();
                 return true;
             }
             catch (Exception e)
             {
-                return Fail($"VideoPlayer cannot play {m_File}: {e.Message}");
+                return Fail(m_Source == VideoSource.Url ? UrlError() : $"VideoPlayer cannot play {m_File}: {e.Message}");
             }
+        }
+
+        /// <summary>A URL the host reads over the network (any scheme but file).</summary>
+        static bool IsRemote(string url) =>
+            Uri.TryCreate(url, UriKind.Absolute, out var uri) && !uri.IsFile && !string.IsNullOrEmpty(uri.Scheme);
+
+        /// <summary>The Editor's error for a URL it cannot read (a missing file on the server, a refused
+        /// connection: measured, tests/projects/videourl *.prepared).</summary>
+        string UrlError() => $"VideoPlayer cannot play url : {m_Url}\n\nCannot read file.";
+
+        /// <summary>The network probe of a URL source being read (0: none).</summary>
+        ulong m_UrlProbe;
+
+        /// <summary>Whether a network source's probe has answered: adopts it and opens its decoder, or
+        /// fails with the Editor's error; false while it reads.</summary>
+        bool UrlProbeDone()
+        {
+            using var polled = JsonDocument.Parse(VideoClip.Call("video-probe-poll", JsonSerializer.Serialize(new { id = m_UrlProbe })));
+            var root = polled.RootElement;
+            if (!root.GetProperty("done").GetBoolean()) return false;
+            m_UrlProbe = 0;
+            if (!root.TryGetProperty("result", out var result))
+            {
+                m_Preparing = false;
+                Fail(UrlError());
+                return true;
+            }
+            try
+            {
+                var probed = VideoClip.FromProbe(result, m_File, null);
+                Adopt(probed);
+                DestroyImmediate(probed, true);
+                OpenDecoder();
+            }
+            catch (Exception)
+            {
+                m_Preparing = false;
+                Fail(UrlError());
+            }
+            return true;
+        }
+
+        void OpenDecoder()
+        {
+            using var opened = JsonDocument.Parse(VideoClip.Call("video-open", JsonSerializer.Serialize(new { path = m_File, width = m_Width, height = m_Height, fps = m_FrameRate, alpha = m_SourceAlpha, codec = m_SourceCodec })));
+            m_Decoder = opened.RootElement.GetProperty("id").GetUInt64();
+            // The decoder says whether it decodes the alpha (its codec and ffmpeg's decoders).
+            m_SourceAlpha = opened.RootElement.TryGetProperty("alpha", out var decodes) && decodes.ValueKind == JsonValueKind.True;
         }
 
         void Adopt(VideoClip clip)
@@ -600,6 +655,11 @@ namespace UnityEngine.Video
         void Release()
         {
             CloseAllAudio();
+            if (m_UrlProbe != 0)
+            {
+                try { VideoClip.Call("video-probe-forget", JsonSerializer.Serialize(new { id = m_UrlProbe })); } catch (Exception) { }
+                m_UrlProbe = 0;
+            }
             if (m_Decoder != 0)
             {
                 try { VideoClip.Call("video-close", JsonSerializer.Serialize(new { id = m_Decoder })); } catch (Exception) { }
@@ -824,7 +884,9 @@ namespace UnityEngine.Video
 
         void UpdatePlayback()
         {
-            if (m_Preparing)
+            // A network source prepares when its probe has answered.
+            bool reading = m_Preparing && m_UrlProbe != 0 && !UrlProbeDone();
+            if (m_Preparing && !reading)
             {
                 m_Preparing = false;
                 m_Prepared = true;

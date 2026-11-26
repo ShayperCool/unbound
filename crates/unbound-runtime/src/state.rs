@@ -806,6 +806,36 @@ pub fn dispatch(method: &str, request: &str) -> Result<String> {
             let r: Request = serde_json::from_str(request)?;
             Ok(crate::video::probe(&r.path)?.to_string())
         }
+        "video-probe-start" => {
+            #[derive(serde::Deserialize)]
+            struct Request {
+                path: String,
+            }
+            let r: Request = serde_json::from_str(request)?;
+            Ok(json!({ "id": crate::video::probe_start(&r.path) }).to_string())
+        }
+        "video-probe-poll" => {
+            #[derive(serde::Deserialize)]
+            struct Request {
+                id: u64,
+            }
+            let r: Request = serde_json::from_str(request)?;
+            Ok(match crate::video::probe_poll(r.id) {
+                None => json!({ "done": false }),
+                Some(Ok(result)) => json!({ "done": true, "result": result }),
+                Some(Err(error)) => json!({ "done": true, "error": error }),
+            }
+            .to_string())
+        }
+        "video-probe-forget" => {
+            #[derive(serde::Deserialize)]
+            struct Request {
+                id: u64,
+            }
+            let r: Request = serde_json::from_str(request)?;
+            crate::video::probe_forget(r.id);
+            Ok("{}".into())
+        }
         "video-open" => {
             #[derive(serde::Deserialize)]
             struct Request {
