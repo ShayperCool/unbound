@@ -8,6 +8,7 @@
     "managed/UnityEngine/Terrain/SpeedTreeWindSimulation.cs",
     "managed/UnityEngine/Terrain/SpeedTree8WindState.cs",
     "managed/UnityEngine/Wind/WindZone.cs",
-    "managed/UnityEngine/Editor/SpeedTree8/"
+    "managed/UnityEngine/Editor/SpeedTree8/",
+    "tests/projects/speedtree9wind/Assets/"
   ]
 }
