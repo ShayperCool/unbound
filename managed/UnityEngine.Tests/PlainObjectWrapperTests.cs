@@ -26,7 +26,7 @@ namespace UnityEngine.Tests
             Assert.True(o == null);
             Assert.Equal(0, o.GetInstanceID());
             // Only the measured plain Object: a class derived from it outside the engine is unmeasured
-            // and stays an object.
+            // and stays an object (docs/COMPATIBILITY_GAPS.md, `Object` made with `new`).
             var subclass = new PlainObjectSubclass();
             Assert.Equal("", subclass.name);
             Assert.False(subclass == null);

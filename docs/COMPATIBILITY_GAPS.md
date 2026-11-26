@@ -1440,6 +1440,7 @@ material reload, macOS arm64 toolchain artefacts, the STP-under-motion residual 
 | `Resources.UnloadAsset` / `UnloadUnusedAssets` | Cubemap, arrays, 3D, serialized textures, sprites, fonts, shaders, clips, MonoScripts, shared-file assets unmeasured |
 | SerializedProperty `.Array` depth/type | measured once in an exploratory capture, not compared by builtinserial |
 | Yield wrapper marshalling | coroutine pointer ownership and other wrappers (yieldlayouts) |
+| `Object` made with `new` | a plain `UnityEngine.Object` is a wrapper without an engine object (defaultstate); a class derived from `Object` outside the engine, made with `new`, is unmeasured and stays a live object |
 | `LazyLoadReference<T>` and instance ids | async single loads, bundles, saving new objects; YAML save of a nonzero unresolved reference fails |
 | `SetGameObjectsActive` / `InstantiateGameObjects` | eleven batch-order pairs (activationorder); per-copy instantiate behaviour unmeasured |
 | `EditorUtility.RequestScriptReload` | still an ignored stub: no reload is requested (requested compilations and scripting define changes reload, Q590) |
