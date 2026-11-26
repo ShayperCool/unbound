@@ -162,5 +162,12 @@
     "terrainData.new.holesTexture.fixed",
     "terrainData.new.holesTexture.frame",
     "terrainData.new.holesTexture.new"
+  ],
+  "BillboardRenderer.material over a material set: the Editor puts an instance of the default material in the slot (materials stays empty); Unbound instances the slot's material, because how the billboard then draws is not measured (a render capture needs the Linux GPU Editor). Q813 follow-up.": [
+    "materials.billboardSet.new",
+    "materials.billboardSet.fixed",
+    "materials.billboardSet.frame",
+    "materials.billboardSet.destination",
+    "materials.billboardSet.destinationFrame"
   ]
 }

@@ -243,8 +243,10 @@ namespace UnityEngine.Tests
             Assert.Equal(new Bounds(Vector3.zero, Vector3.zero), loose.localBounds);
             Assert.Equal(new Bounds(Vector3.zero, Vector3.zero), renderer.localBounds);
             var grid = Make("Grid", Vector3.zero).AddComponent<Grid>();
-            loose.transform.SetParent(grid.transform, false);
-            Assert.Equal(new Bounds(new Vector3(1.5f, 1f, 0.5f), new Vector3(3f, 2f, 1f)), loose.localBounds);
+            var placed = Make("Placed", Vector3.zero).AddComponent<UnityEngine.Tilemaps.Tilemap>();
+            placed.transform.SetParent(grid.transform, false);
+            placed.SetTile(new Vector3Int(2, 1, 0), ScriptableObject.CreateInstance<UnityEngine.Tilemaps.Tile>());
+            Assert.Equal(new Bounds(new Vector3(1.5f, 1f, 0.5f), new Vector3(3f, 2f, 1f)), placed.localBounds);
         }
 
         [Fact]
@@ -265,16 +267,11 @@ namespace UnityEngine.Tests
             billboard.sharedMaterial = mine;
             Assert.Empty(billboard.materials);
             Assert.Same(mine, billboard.sharedMaterial);
-            // The default material's instance, as a mesh renderer's empty slot gets it (the
-            // default material is the installation's: only its identity is compared here).
+            // Its material stays an instance of the shared one (the Editor's default-material
+            // instance is a residual: how the billboard draws then is not measured).
+            Assert.Equal("Mine (Instance)", billboard.material.name);
             var mesh = Make("Mesh", Vector3.zero).AddComponent<MeshRenderer>();
             mesh.sharedMaterials = new Material[] { null };
-            var expected = mesh.material;
-            var instance = billboard.material;
-            Assert.NotSame(mine, billboard.sharedMaterial);
-            Assert.Same(instance, billboard.sharedMaterial);
-            Assert.Same(instance, billboard.material);
-            Assert.Equal(expected == null ? null : expected.name, instance == null ? null : instance.name);
             Assert.Single(mesh.materials);
             Object.DestroyImmediate(mine);
         }

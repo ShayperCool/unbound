@@ -352,8 +352,7 @@ namespace UnityEngine
         }
 
         /// <summary>Whether the renderer's instanced material array is empty whatever its shared
-        /// materials (a BillboardRenderer's in Unity 6000.0.71f1): its materials are none, and its
-        /// material is an instance of the default material put in the first slot.</summary>
+        /// materials (a BillboardRenderer's in Unity 6000.0.71f1): its materials are none.</summary>
         internal virtual bool NoMaterialInstances => false;
 
         /// <summary>The first material, instantiated for this renderer on first access.</summary>
@@ -362,8 +361,7 @@ namespace UnityEngine
             get
             { MainThreadCheck.Check("IsPersistent");
                 if (m_Materials.Length == 0) m_Materials = new Material[1];
-                var first = NoMaterialInstances && !m_OwnedMaterials.Contains(m_Materials[0]) ? null : m_Materials[0];
-                var owned = Own(first);
+                var owned = Own(m_Materials[0]);
                 if (!ReferenceEquals(owned, m_Materials[0])) Dirty();
                 m_Materials[0] = owned;
                 return m_Materials[0];

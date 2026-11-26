@@ -82,7 +82,8 @@ capsule's is 1 x 2 x 1) about the origin. A 2D physics world without bodies or c
 0 sub-steps and no lost time after a step; with any it reports the step's. A tilemap without a Grid
 has no bounds (with one, its cells' box). A SpriteShapeRenderer without geometry spans 2^20 each way
 about its origin. A BillboardRenderer's materials are none, and its material is a new instance of
-the default material put in its slot, also over a material set.
+the default material put in its slot, also over a material set (Unbound does not do the latter:
+a residual).
 
 `residuals.json` lists the differences still open: collider geometry holders (the measured rule is
 in the entry) and terrain textures.

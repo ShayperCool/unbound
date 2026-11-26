@@ -157,7 +157,6 @@ namespace UnityEngine.Tilemaps
             }
         }
 
-        internal Bounds localFrameBounds => CellsLocalBounds;
 
         public float animationFrameRate
         {
