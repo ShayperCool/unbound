@@ -1,0 +1,10 @@
+{
+  "commands": [
+    "python3 tests/projects/jointprojection/run.py gate"
+  ],
+  "summary": "jointprojection: .*",
+  "engine_paths": [
+    "managed/UnityEngine/Physics/Joints.cs",
+    "native/unbound_physx.cpp"
+  ]
+}
