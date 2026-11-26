@@ -739,8 +739,8 @@ namespace Unbound.Runtime
 
         /// <summary>GL's matrices in a Repaint: the screen's pixels (<see cref="Immediate.LoadScreenPixels"/>).
         /// They stay after the GUI, for the end-of-frame callbacks (tests/projects/framestate
-        /// gl.modelview.ongui, matrices.endofframe.gui). Loaded again before each script's
-        /// Repaint: with several OnGUI scripts that is unmeasured.</summary>
+        /// gl.modelview.ongui, matrices.endofframe.gui). Loaded again before each script's Layout
+        /// and Repaint (so also between one script's two passes): unmeasured.</summary>
         internal static void LoadRepaintMatrices() => Immediate.LoadScreenPixels();
 
         /// <summary>The frame's input events, at PreUpdate.IMGUISendQueuedEvents: after the fixed
@@ -796,10 +796,11 @@ namespace Unbound.Runtime
             s_Depth[mb] = GUI.depth;
         }
 
-        /// <summary>The Layout pass of a behaviour that uses GUILayout, for the event that follows.</summary>
+        /// <summary>The Layout pass of a behaviour that uses GUILayout, for the event that follows
+        /// (no enabled check: a behaviour gets its Layout and Repaint as a pair, as before).</summary>
         static void Layout(MonoBehaviour mb, Event e)
         {
-            if (!mb.useGUILayout || !mb.isActiveAndEnabled) return;
+            if (!mb.useGUILayout) return;
             var onGui = ScriptMessages.For(mb.GetType()).OnGUI;
             if (onGui == null) return;
             Invoke(mb, onGui, mb.GetInstanceID(), new Event(e) { type = EventType.Layout }, useLayout: true);

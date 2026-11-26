@@ -196,5 +196,57 @@ namespace Unbound.Tests
                 UnityEngine.Object.DestroyImmediate(go);
             }
         }
+
+        static readonly System.Collections.Generic.List<string> s_Passes = new System.Collections.Generic.List<string>();
+
+        sealed class OrderedGui : MonoBehaviour
+        {
+            internal string Tag;
+            internal int Depth;
+            internal MonoBehaviour DisableInLayout;
+            void OnGUI()
+            {
+                GUI.depth = Depth;
+                s_Passes.Add((Event.current.type == EventType.Layout ? "L " : "R ") + Tag);
+                if (Event.current.type == EventType.Layout && DisableInLayout != null) DisableInLayout.enabled = false;
+            }
+        }
+
+        static void RunGuiFrame() =>
+            typeof(GuiDispatch).GetMethod("RunFrame", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static).Invoke(null, null);
+
+        /// <summary>A Repaint runs every behaviour's Layout from the lowest GUI.depth up (equal
+        /// depths in their order), then the Repaints in the reverse order (tests/projects/imguicontrolids
+        /// order for equal depths; across depths the Repaint order is the earlier one), and a behaviour
+        /// another disables during its Layout still gets its own Layout and Repaint as a pair.</summary>
+        [Fact]
+        public void OnGuiRepaintRunsTheLayoutsThenTheRepaintsInReverse()
+        {
+            var go = new GameObject("gui order");
+            try
+            {
+                var a = go.AddComponent<OrderedGui>();
+                var b = go.AddComponent<OrderedGui>();
+                var c = go.AddComponent<OrderedGui>();
+                (a.Tag, b.Tag, c.Tag, c.Depth) = ("a", "b", "c", 1);
+                RunGuiFrame();
+                s_Passes.Clear();
+                RunGuiFrame();
+                Assert.Equal(new[] { "L a", "L b", "L c", "R c", "R b", "R a" }, s_Passes);
+
+                c.enabled = false;
+                a.DisableInLayout = b;
+                s_Passes.Clear();
+                RunGuiFrame();
+                Assert.Equal(new[] { "L a", "L b", "R b", "R a" }, s_Passes);
+            }
+            finally
+            {
+                GUI.depth = 0;
+                s_Passes.Clear();
+                GuiRender.Clear();
+                UnityEngine.Object.DestroyImmediate(go);
+            }
+        }
     }
 }
