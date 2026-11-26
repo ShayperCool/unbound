@@ -426,22 +426,7 @@ namespace Unbound.Runtime
         internal static void RegisterExtensions(bool rewriteStale)
         {
             if (!Compat.ScriptedImporterSelectionMeasured) return;
-            // The Editor's own ScriptedImporters (SpeedTree9Importer) take part as Unity's TypeCache
-            // lists them: an extension a project's importer declares too is rejected for both.
-            var types = new List<Type>();
-            var assemblies = new List<System.Reflection.Assembly> { typeof(ScriptedImporter).Assembly };
-            foreach (var assembly in GameDomain.Assemblies())
-                if (!assemblies.Contains(assembly)) assemblies.Add(assembly);
-            foreach (var assembly in assemblies)
-            {
-                Type[] all;
-                try { all = assembly.GetTypes(); }
-                catch (System.Reflection.ReflectionTypeLoadException e) { all = Array.FindAll(e.Types, t => t != null); }
-                foreach (var type in all)
-                    if (!type.IsAbstract && typeof(ScriptedImporter).IsAssignableFrom(type)
-                        && type.GetCustomAttributes(typeof(ScriptedImporterAttribute), false).Length > 0)
-                        types.Add(type);
-            }
+            var types = ImporterTypes(GameDomain.Assemblies());
             var selection = Select(types, type => GameDomain.ScriptOf(type) is { FileId: 11500000 });
             foreach (var error in selection.Errors) Debug.LogError(error);
             foreach (var (ext, type) in selection.Plugin)
@@ -480,6 +465,29 @@ namespace Unbound.Runtime
             if (!rewriteStale) return;
             foreach (var path in json.RootElement.GetProperty("stale").EnumerateArray())
                 WriteOwnSection(path.GetString());
+        }
+
+        /// <summary>The ScriptedImporter classes Unity's TypeCache gives RegisterScriptedImporters:
+        /// the concrete ones with the attribute, the Editor's own (SpeedTree9Importer) with those of
+        /// the game's assemblies, so an extension a project's importer declares too is rejected for
+        /// both.</summary>
+        internal static List<Type> ImporterTypes(IEnumerable<System.Reflection.Assembly> domain)
+        {
+            var types = new List<Type>();
+            var assemblies = new List<System.Reflection.Assembly> { typeof(ScriptedImporter).Assembly };
+            foreach (var assembly in domain)
+                if (!assemblies.Contains(assembly)) assemblies.Add(assembly);
+            foreach (var assembly in assemblies)
+            {
+                Type[] all;
+                try { all = assembly.GetTypes(); }
+                catch (System.Reflection.ReflectionTypeLoadException e) { all = Array.FindAll(e.Types, t => t != null); }
+                foreach (var type in all)
+                    if (!type.IsAbstract && typeof(ScriptedImporter).IsAssignableFrom(type)
+                        && type.GetCustomAttributes(typeof(ScriptedImporterAttribute), false).Length > 0)
+                        types.Add(type);
+            }
+            return types;
         }
 
         static void Add(IDictionary<string, List<Type>> map, string ext, Type type)

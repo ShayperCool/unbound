@@ -109,11 +109,14 @@ namespace UnityEngine.Tests
         [Fact]
         public void TheEditorsOwnImporterCollidesWithAProjectsOne()
         {
-            var selection = ScriptedImports.Select(
-                new[] { typeof(UnityEditor.SpeedTree.Importer.SpeedTree9Importer), typeof(St9Importer) },
-                type => type == typeof(St9Importer));
-            Assert.Equal(new[] { "st9" }, Sorted(selection.Rejected));
-            Assert.Empty(selection.ByExtension);
+            var types = ScriptedImports.ImporterTypes(new[] { typeof(St9Importer).Assembly });
+            Assert.Contains(typeof(UnityEditor.SpeedTree.Importer.SpeedTree9Importer), types);
+            Assert.Contains(typeof(St9Importer), types);
+            Assert.DoesNotContain(typeof(NoAttributeImporter), types);
+            var selection = ScriptedImports.Select(types, type => type.Assembly == typeof(St9Importer).Assembly);
+            Assert.Contains("st9", selection.Rejected);
+            Assert.False(selection.ByExtension.ContainsKey("st9"));
+            Assert.Contains(selection.Errors, e => e.StartsWith("Multiple scripted importers are targeting the extension 'st9' and have all been rejected: ", System.StringComparison.Ordinal));
         }
 
         [ScriptedImporter(1, "st9")]
