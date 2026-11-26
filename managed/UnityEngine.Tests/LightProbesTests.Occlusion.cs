@@ -57,6 +57,28 @@ namespace Unbound.Tests
         }
 
         [Fact]
+        public void ARenderersOcclusionComesFromItsOwnInterpolationAndIsOneOutsideTheBounds()
+        {
+            var set = SparseOcclusion();
+            // Inside: the same blend the readout gives, from the cell the walk keeps.
+            int cell = -1, hint = -1;
+            var inside = new Vector3(0.25f, 0.25f, 0.25f);
+            Assert.True(set.Interpolate(inside, ref cell, out var sh, out var occ));
+            Assert.True(set.Evaluate(inside, ref hint, out var readSh, out var readOcc));
+            Assert.Equal(readOcc, occ);
+            Assert.Equal(readSh, sh);
+            Assert.Equal(hint, cell);
+            // Outside the probes' bounds the lighting is extrapolated but nothing is occluded
+            // (measured: tests/projects/shadowmaskmix, the far shadowed sphere).
+            var outside = new Vector3(-0.5f, 0.1f, 0.1f);
+            Assert.True(set.Interpolate(outside, ref cell, out _, out occ));
+            Assert.Equal(Vector4.one, occ);
+            hint = -1;
+            Assert.False(set.Evaluate(outside, ref hint, out _, out readOcc));
+            Assert.Equal(Vector4.one, readOcc);
+        }
+
+        [Fact]
         public void OcclusionSlotsSharingAChannelAccumulate()
         {
             Assert.Equal(new Vector4(1f, 1f, 0.75f, 1f), ProbeSet.ProbeOcclusion(

@@ -278,9 +278,13 @@ namespace UnityEngine
             else if (lightmaps)
             {
                 // A probe-lit renderer's base pass: its light attenuated by the probes' occlusion
-                // (the add pass's: FrameBuilder.EmitItem).
-                properties = DrawPropertyPool.Copy(properties);
-                properties[s_LightColor0] = (Vector4)light.FinalColor(QualitySettings.activeColorSpace == ColorSpace.Linear) * ProbeOcclusion(renderer, light);
+                // (the add pass's and another base light's: FrameBuilder.EmitItem).
+                float occlusion = ProbeOcclusion(renderer, light);
+                if (occlusion != 1f)
+                {
+                    properties = DrawPropertyPool.Copy(properties);
+                    properties[s_LightColor0] = (Vector4)light.FinalColor(QualitySettings.activeColorSpace == ColorSpace.Linear) * occlusion;
+                }
             }
             if (shadowmaskMode) keywords.Add("LIGHTMAP_SHADOW_MIXING");
             return properties;
@@ -308,12 +312,24 @@ namespace UnityEngine
         /// for a lightmapped renderer or one without blended probes).</summary>
         internal static Vector4 ProbeOcclusionVector(Renderer renderer)
         {
+            if (renderer == null || Lightmapped(renderer)) return Vector4.one;
+            // A renderer's own occlusion (CustomProvided with one in its block) wins.
+            if (renderer.lightProbeUsage == LightProbeUsage.CustomProvided && renderer.m_PropertyBlock != null
+                && renderer.m_PropertyBlock.m_Values.TryGetValue(s_ProbesOcclusion, out var provided) && provided is Vector4[] array && array.Length > 0)
+                return array[0];
+            bool blended = renderer.lightProbeUsage is LightProbeUsage.BlendProbes or LightProbeUsage.CustomProvided
+                || (renderer.lightProbeUsage == LightProbeUsage.UseProxyVolume && LightProbeProxyVolume.Of(renderer) == null);
+            if (!blended) return Vector4.one;
+            if (renderer.m_ProbeOcclusionFrame == Time.frameCount) return renderer.m_ProbeOcclusion;
             var lightProbes = LightmapSettings.lightProbes;
-            if (renderer == null || Lightmapped(renderer) || lightProbes == null || lightProbes.count == 0
-                || renderer.lightProbeUsage != LightProbeUsage.BlendProbes) return Vector4.one;
+            if (lightProbes == null || lightProbes.count == 0) return Vector4.one;
             var anchor = renderer.probeAnchor;
-            int cell = -1;
-            return lightProbes.Occlusion(anchor != null ? anchor.position : renderer.bounds.center, ref cell);
+            int cell = renderer.m_ProbeCell;
+            if (!lightProbes.Interpolate(anchor != null ? anchor.position : renderer.bounds.center, ref cell, out _, out var occlusion)) return Vector4.one;
+            renderer.m_ProbeCell = cell;
+            renderer.m_ProbeOcclusion = occlusion;
+            renderer.m_ProbeOcclusionFrame = Time.frameCount;
+            return occlusion;
         }
 
         /// <summary>Whether <paramref name="light"/>'s realtime shadows leave lightmapped casters out:
@@ -474,7 +490,17 @@ namespace UnityEngine
                 return GraphicsSettings.currentRenderPipeline != null ? WithProbe(default, properties, copy: false, renderer) : properties;
             }
             if (realtime) return GraphicsSettings.currentRenderPipeline != null ? WithProbe(default, properties, copy: false, renderer) : properties;
-            if (probes && renderer.lightProbeUsage == LightProbeUsage.CustomProvided) return ProvidedProbes(properties, renderer.m_PropertyBlock);
+            if (probes && renderer.lightProbeUsage == LightProbeUsage.CustomProvided)
+            {
+                properties = ProvidedProbes(properties, renderer.m_PropertyBlock);
+                // Its occlusion, when its block has none, is the probes' as in normal lighting
+                // (LightProbeUsage.CustomProvided's documentation).
+                if (properties != null && properties.ContainsKey(s_ProbesOcclusion)) return properties;
+                var blended = ProbeOcclusionVector(renderer);
+                if (GraphicsSettings.currentRenderPipeline != null || blended == Vector4.one) return properties;
+                properties = DrawPropertyPool.Copy(properties);
+                return WithOcclusion(renderer, blended, properties);
+            }
             // Through a built proxy volume: its texture and constants; the renderer's probe
             // constants stay the ambient probe's (the frame's), none with Low quality (measured:
             // tests/projects/lppv *.sh). Without one it is lit as Blend Probes lights it.
@@ -491,9 +517,21 @@ namespace UnityEngine
             var anchor = renderer.probeAnchor;
             var position = anchor != null ? anchor.position : renderer.bounds.center;
             int cell = renderer.m_ProbeCell;
-            if (!lightProbes.Interpolate(position, ref cell, out var sh)) return properties;
+            if (!lightProbes.Interpolate(position, ref cell, out var sh, out var occlusion)) return properties;
             renderer.m_ProbeCell = cell;
-            return WithProbe(sh, properties, owner: renderer);
+            renderer.m_ProbeOcclusion = occlusion;
+            renderer.m_ProbeOcclusionFrame = Time.frameCount;
+            properties = WithProbe(sh, properties, owner: renderer);
+            return WithOcclusion(renderer, occlusion, properties);
+        }
+
+        /// <summary>A built-in pipeline draw's unity_ProbesOcclusion: the probes' occlusion (a
+        /// Deferred pass writes it as the renderer's shadow mask); left alone when it is all 1.</summary>
+        static Dictionary<int, object> WithOcclusion(Renderer renderer, Vector4 occlusion, Dictionary<int, object> properties)
+        {
+            if (GraphicsSettings.currentRenderPipeline != null || occlusion == Vector4.one) return properties;
+            properties[s_ProbesOcclusion] = BoxedVectors.Of(renderer.m_OcclusionBox ??= new BoxedVectors(1), 0, occlusion);
+            return properties;
         }
 
         /// <summary>A lightmap's textures and keywords on a draw's own properties: the lightmap

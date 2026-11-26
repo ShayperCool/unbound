@@ -20,8 +20,6 @@ namespace Unbound.Runtime
     internal static partial class FrameBuilder
     {
         static readonly List<ulong> s_Cleared = new List<ulong>();
-        static readonly int s_ProbesOcclusionId = Shader.PropertyToID("unity_ProbesOcclusion");
-        static readonly Dictionary<int, object> s_Occlusion = new Dictionary<int, object>();
         static Material s_DeferredShading, s_DeferredReflections, s_DeferredReflectionsOver;
         /// <summary>The shading and reflection materials with the blend factors the camera's
         /// light buffer takes: added (HDR) or multiplied (LDR).</summary>
@@ -181,14 +179,9 @@ namespace Unbound.Runtime
             {
                 var (item, pass) = deferred[i];
                 if (item.Material.shader != null && item.Material.shader.IsLodHidden) continue;
-                // A probe-lit renderer writes its probes' occlusion as its mask (unity_ProbesOcclusion).
-                Dictionary<int, object> occlusion = null;
-                if (shadowmask && item.Renderer != null && IsMeshLike(item.Renderer))
-                {
-                    s_Occlusion[s_ProbesOcclusionId] = BakedLighting.ProbeOcclusionVector(item.Renderer);
-                    occlusion = s_Occlusion;
-                }
-                EmitDraw(item, item.Material.Sync(), pass, extra: occlusion, extraKeyword: shadowmask ? "SHADOWS_SHADOWMASK" : null);
+                // A probe-lit renderer writes its probes' occlusion (unity_ProbesOcclusion, from
+                // BakedLighting.Apply) as its mask.
+                EmitDraw(item, item.Material.Sync(), pass, extraKeyword: shadowmask ? "SHADOWS_SHADOWMASK" : null);
             }
             GfxStream.StateOverride(null);
             RunEvent(camera, CameraEvent.AfterGBuffer, light);

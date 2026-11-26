@@ -2579,7 +2579,7 @@ namespace Unbound.Runtime
                 {
                     var forward = baseLight.transform.forward;
                     extra[s_WorldSpaceLightPos0Id] = new Vector4(-forward.x, -forward.y, -forward.z, 0f);
-                    extra[s_LightColor0Id] = (Vector4)baseLight.FinalColor(QualitySettings.activeColorSpace == ColorSpace.Linear);
+                    extra[s_LightColor0Id] = (Vector4)baseLight.FinalColor(QualitySettings.activeColorSpace == ColorSpace.Linear) * BakedLighting.ProbeOcclusion(item.Renderer, baseLight);
                 }
                 else
                 {

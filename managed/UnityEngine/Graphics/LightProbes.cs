@@ -171,24 +171,38 @@ namespace UnityEngine
         /// cells from <paramref name="cell"/> (a renderer's last cell) toward it, outer cells
         /// extrapolating along the hull rays; false without probes or without baked lighting
         /// (see <see cref="Evaluate"/>).</summary>
-        internal bool Interpolate(Vector3 p, ref int cell, out SphericalHarmonicsL2 sh)
+        internal bool Interpolate(Vector3 p, ref int cell, out SphericalHarmonicsL2 sh) => Interpolate(p, ref cell, out sh, out _);
+
+        /// <summary>As <see cref="Interpolate(Vector3, ref int, out SphericalHarmonicsL2)"/>, with
+        /// the probes' occlusion blended the same way (same cell, same fallbacks). Outside the
+        /// probes' bounds the occlusion is 1, as <see cref="Evaluate"/> answers it: measured on the
+        /// Unity 6000.0.71f1 Editor, tests/projects/shadowmaskmix, a renderer centred on a probe
+        /// whose baked occlusion is 0, just outside the stored bounds, is lit unoccluded and
+        /// LightProbes.CalculateInterpolatedLightAndOcclusionProbes answers 1 there.</summary>
+        internal bool Interpolate(Vector3 p, ref int cell, out SphericalHarmonicsL2 sh, out Vector4 occlusion)
         {
             sh = default;
+            occlusion = Vector4.one;
             if (Probes.Length == 0 || !(Baked || Realtime)) return false;
             if (Cells.Length == 0)
             {
-                sh = Probes[Nearest(p)];
+                int nearest = Nearest(p);
+                sh = Probes[nearest];
+                if (!OutsideBounds(p)) occlusion = OcclusionOf(nearest);
                 return true;
             }
             Span<float> w = stackalloc float[4];
             int found = Locate(p, cell, w);
             if (found < 0)
             {
-                sh = Probes[Nearest(p)];
+                int nearest = Nearest(p);
+                sh = Probes[nearest];
+                if (!OutsideBounds(p)) occlusion = OcclusionOf(nearest);
                 return true;
             }
             cell = found;
             Blend(found, w, out sh);
+            if (!OutsideBounds(p)) occlusion = BlendOcclusion(found, w);
             return true;
         }
 
@@ -840,12 +854,9 @@ namespace UnityEngine
         /// (<see cref="ProbeSet.Interpolate"/>).</summary>
         internal bool Interpolate(Vector3 p, ref int cell, out SphericalHarmonicsL2 sh) => m_Set.Interpolate(p, ref cell, out sh);
 
-        internal bool IsOuterCell(int cell) => m_Set.IsOuterCell(cell);
+        internal bool Interpolate(Vector3 p, ref int cell, out SphericalHarmonicsL2 sh, out Vector4 occlusion) => m_Set.Interpolate(p, ref cell, out sh, out occlusion);
 
-        /// <summary>The probes' baked occlusion blended at <paramref name="p"/> (one per shadow mask
-        /// channel; 1 where no probe gives one), as LightProbes.CalculateInterpolatedLightAndOcclusionProbes
-        /// answers it.</summary>
-        internal Vector4 Occlusion(Vector3 p, ref int cell) => m_Set.Evaluate(p, ref cell, out _, out var occlusion) ? occlusion : Vector4.one;
+        internal bool IsOuterCell(int cell) => m_Set.IsOuterCell(cell);
 
         internal static LightProbes FromJson(JsonElement json) => FromSet(ProbeSet.FromJson(json));
 
