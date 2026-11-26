@@ -150,8 +150,8 @@ unsafe fn bytes<'a>(s: *const c_char) -> &'a [u8] {
 /// What a launch of the Editor's executable with these arguments becomes.
 #[derive(Debug, PartialEq)]
 enum Launch {
-    /// A virtual player: `unbound run` of its project folder (the argument at `project`), its
-    /// output into the argument at `log`, if any.
+    /// A virtual player: `unbound run` of its project folder (the argument at `project`); `log`
+    /// is its `-logFile` argument, which its own console log takes (the guard leaves it alone).
     Clone { project: usize, log: Option<usize> },
     /// Anything else: refused.
     Refused,
