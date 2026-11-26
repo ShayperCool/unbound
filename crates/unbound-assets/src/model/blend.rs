@@ -36,7 +36,7 @@ struct Blender {
 }
 
 /// Blender, found and asked its version once per process: on macOS the application (where the
-/// Editor runs it from), else `blender` on the `PATH` (the Linux Editor's lookup is unmeasured).
+/// Editor runs it from), else `blender` on the `PATH` (unmeasured: the first conversion says so).
 fn installed() -> &'static Result<Blender, String> {
     static BLENDER: OnceLock<Result<Blender, String>> = OnceLock::new();
     BLENDER.get_or_init(|| {
@@ -60,9 +60,9 @@ fn installed() -> &'static Result<Blender, String> {
             return Err(format!("{} --version failed ({})", path.display(), out.status));
         }
         let version = String::from_utf8_lossy(&out.stdout).trim().to_string();
-        if !cfg!(target_os = "macos") {
+        if path != app {
             tracing::warn!(
-                "converting .blend files with {} ({}): how the Editor finds Blender on this OS is unmeasured",
+                "converting .blend files with {} ({}), found on the PATH: whether the Editor finds Blender there is unmeasured",
                 path.display(),
                 version.lines().next().unwrap_or("")
             );
