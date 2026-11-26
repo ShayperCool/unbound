@@ -748,22 +748,41 @@ namespace Unbound.Runtime
             s_QuitDone = true;
             // A session that ends with Play mode ends it as the Editor leaves it, then the Editor quits.
             bool leavesPlayMode = EditorSession.IsPlaying && !s_EditorExit;
-            try
-            {
-                // Direct Editor exit omits the Play-mode quit message; stopping Play sends it.
-                if (leavesPlayMode && Compat.QuitCallbacksMeasured) UnityEditor.EditorApplication.Internal_PlayModeStateChanged(UnityEditor.PlayModeStateChange.ExitingPlayMode);
-                if (leavesPlayMode) Lifecycle.Broadcast(m => m.OnApplicationQuit, null);
-                // The Editor's exit in Edit mode raises no Application.quitting (tests/projects/tmpatlas
-                // quit.*); Application.unloading is raised as before (unmeasured).
-                if (!Compat.QuitCallbacksMeasured || EditorSession.IsPlaying) Application.Internal_Quitting();
-                else Application.Internal_Unloading();
-            }
-            finally { FinishQuit(s_EditorExit, PlayerPrefs.SaveOnQuit, NativePlugins.Shutdown, () => { using (UnityEditor.SessionImports.Muted()) AssetFiles.SaveDirty(); }, leavesPlayMode); }
+            try { RaiseQuitCallbacks(s_EditorExit); }
+            finally { FinishQuit(s_EditorExit, PlayerPrefs.SaveOnQuit, NativePlugins.Shutdown, () => ReportedExitSave(() => AssetFiles.SaveDirty()), leavesPlayMode); }
+        }
+
+        /// <summary>The callbacks of the session's end before the Editor quits: leaving Play mode
+        /// (ExitingPlayMode, OnApplicationQuit, Application.quitting with Play mode still on;
+        /// tests/projects/tmpatlas quit.*) when the session ends with Play mode on. The Editor's exit
+        /// raises no Application.quitting: in Edit mode (tests/projects/tmpatlas quit.*;
+        /// Application.unloading is raised as before, unmeasured), nor with Play mode on, which raises
+        /// neither Application.quitting nor Application.unloading nor Play mode's messages (matches the
+        /// Unity 6000.0.71f1 Editor, tests/projects/unchangedsaves leaving).</summary>
+        internal static void RaiseQuitCallbacks(bool editorExit)
+        {
+            bool leavesPlayMode = EditorSession.IsPlaying && !editorExit;
+            if (leavesPlayMode && Compat.QuitCallbacksMeasured) UnityEditor.EditorApplication.Internal_PlayModeStateChanged(UnityEditor.PlayModeStateChange.ExitingPlayMode);
+            if (leavesPlayMode) Lifecycle.Broadcast(m => m.OnApplicationQuit, null);
+            if (!Compat.QuitCallbacksMeasured || leavesPlayMode) Application.Internal_Quitting();
+            else if (EditorSession.IsPlaying) Application.Internal_Exiting();
+            else Application.Internal_Unloading();
+        }
+
+        /// <summary>The exit's save, reported as the Editor imports what it writes: one
+        /// OnPostprocessAllAssets call after EditorApplication.quitting (matches the Unity 6000.0.71f1
+        /// Editor, tests/projects/unchangedsaves leaving: the exit with Play mode on; the save after
+        /// leaving Play mode, in Edit mode, is unmeasured).</summary>
+        internal static void ReportedExitSave(Action save)
+        {
+            using (UnityEditor.SessionImports.Write()) save();
         }
 
         /// <param name="saveAssets">The Editor's exit writes the assets still dirty (measured:
-        /// tests/projects/scenesave, Edit and Play mode edits), after Play mode has ended and
-        /// EditorApplication.quitting (tests/projects/tmpatlas quit.*, exit.*).</param>
+        /// tests/projects/scenesave, Edit and Play mode edits), after EditorApplication.quitting:
+        /// after Play mode has ended when the session leaves it first (tests/projects/tmpatlas
+        /// quit.*, exit.*), with Play mode on at the Editor's exit (tests/projects/unchangedsaves
+        /// leaving).</param>
         /// <param name="leftPlayMode">The session ended with Play mode: EnteredEditMode follows its
         /// teardown, in Edit mode.</param>
         internal static void FinishQuit(bool editorExit, Action savePreferences, Action shutdownPlugins, Action saveAssets = null, bool leftPlayMode = false)

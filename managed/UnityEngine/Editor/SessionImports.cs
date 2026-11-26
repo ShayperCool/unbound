@@ -15,8 +15,9 @@ namespace UnityEditor
     /// load makes and the work it put off (its forced imports are in the load's own call; its other
     /// imports and its replayed postprocessing are not reported), scripts and assembly definitions
     /// (not measured: Unbound's session started again for them lists nothing), and what is not
-    /// measured: the save as the Editor exits, a sprite atlas pack's saves, a bake's files, a
-    /// package's import, SetLabels.
+    /// measured: a sprite atlas pack's saves, a bake's files, a package's import, SetLabels. The
+    /// save as the Editor exits is reported (tests/projects/unchangedsaves leaving: the exit with
+    /// Play mode on; after leaving Play mode first, in Edit mode, unmeasured).
     /// </summary>
     internal static class SessionImports
     {
