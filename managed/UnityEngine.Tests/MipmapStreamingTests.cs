@@ -55,8 +55,18 @@ namespace UnityEngine.Tests
                 Assert.Equal(-1, texture.minimumMipmapLevel);
                 texture.requestedMipmapLevel = 3;
                 Assert.Equal(-1, texture.requestedMipmapLevel);
+                // While streaming is active its levels are unmeasured: a notice.
+                QualitySettings.streamingMipmapsActive = true;
+                const string notice = "Texture2D levels of a streaming texture without mipmaps";
+                Unbound.Runtime.Stubs.Forget(notice);
+                Assert.Equal(-1, texture.calculatedMipmapLevel);
+                Assert.Contains(Unbound.Runtime.Stubs.HitReport(), h => h.Key == notice);
             }
-            finally { Object.DestroyImmediate(texture); }
+            finally
+            {
+                QualitySettings.streamingMipmapsActive = false;
+                Object.DestroyImmediate(texture);
+            }
         }
 
         [Fact]
@@ -128,6 +138,18 @@ namespace UnityEngine.Tests
                 big.requestedMipmapLevel = 0;
                 Assert.Equal(0, big.desiredMipmapLevel);
                 Assert.Equal(2, big.calculatedMipmapLevel);
+                // minimumCleared, minimum3, minimumNegative: a clear gives 8 back; a set minimum is
+                // clamped to 0 and the reduction.
+                big.ClearRequestedMipmapLevel();
+                big.ClearMinimumMipmapLevel();
+                Assert.Equal(8, big.minimumMipmapLevel);
+                Assert.Equal(2, big.desiredMipmapLevel);
+                big.minimumMipmapLevel = 3;
+                Assert.Equal(2, big.minimumMipmapLevel);
+                Assert.Equal(2, big.desiredMipmapLevel);
+                big.minimumMipmapLevel = -1;
+                Assert.Equal(0, big.minimumMipmapLevel);
+                Assert.Equal(0, big.desiredMipmapLevel);
             }
             finally
             {

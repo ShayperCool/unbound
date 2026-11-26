@@ -7,8 +7,9 @@ namespace UnityEngine
     /// mode (tests/projects/mipstreaming): a texture streams when its importer (or its asset file)
     /// says so. A texture that does not stream, or streams without mipmaps, keeps -1 for its
     /// requested, minimum, calculated and desired levels and ignores a requested level; a streaming
-    /// one starts with a minimum level of 8 whatever its size, takes a requested level clamped to
-    /// 0 and to QualitySettings.streamingMipmapsMaxLevelReduction and its last mip, and reports a
+    /// one starts with a minimum level of 8 whatever its size (back to 8 when cleared), takes a
+    /// requested or minimum level clamped to 0 and to QualitySettings.streamingMipmapsMaxLevelReduction
+    /// and its last mip, and reports a
     /// requested level other than the loaded one as not loaded. With streaming active, a texture
     /// the streaming system has not seen drawn is calculated at the maximum level reduction (not
     /// clamped to its mips); the desired level is the requested one when set (whatever the
@@ -53,8 +54,9 @@ namespace UnityEngine
             ReadStreaming();
             copy.SetStreaming(m_Streaming, m_StreamingPriority);
             copy.m_StreamingCopy = true;
-            int level = m_StreamsLevels && QualitySettings.streamingMipmapsActive ? desiredMipmapLevel : m_LoadedMipmapLevel;
-            if (level > 0)
+            bool calculated = Calculated();
+            int level = calculated ? desiredMipmapLevel : m_LoadedMipmapLevel;
+            if (calculated && (calculatedMipmapLevel != level || (m_RequestedMipmapLevel >= 0 && m_RequestedMipmapLevel != level)))
                 Unbound.Runtime.Stubs.Ignored("Texture2D.loadedMipmapLevel of a copy", "a copy reports its source's desired level as loaded (measured where the source's requested, calculated and desired levels were all the same)");
             copy.m_LoadedMipmapLevel = Mathf.Max(0, level);
         }
@@ -70,8 +72,7 @@ namespace UnityEngine
             {
                 ReadStreaming();
                 if (!m_StreamsLevels) return;
-                int most = Mathf.Min(QualitySettings.streamingMipmapsMaxLevelReduction, Mathf.Max(0, mipmapCount - 1));
-                m_RequestedMipmapLevel = Mathf.Clamp(value, 0, most);
+                m_RequestedMipmapLevel = Mathf.Clamp(value, 0, MostReducedLevel());
             }
         }
 
@@ -87,16 +88,20 @@ namespace UnityEngine
             set
             {
                 ReadStreaming();
-                if (m_StreamsLevels) m_MinimumMipmapLevel = value;
+                if (m_StreamsLevels) m_MinimumMipmapLevel = Mathf.Clamp(value, 0, MostReducedLevel());
             }
         }
 
+        /// <summary>Back to the level a streaming texture starts with (8, as the Editor reads it back).</summary>
         public void ClearMinimumMipmapLevel()
         {
             ReadStreaming();
-            if (m_StreamsLevels)
-                Unbound.Runtime.Stubs.Ignored("Texture2D.ClearMinimumMipmapLevel", "the level a streaming texture's cleared minimum reads back is not measured: it keeps its value");
+            if (m_StreamsLevels) m_MinimumMipmapLevel = k_StreamingMinimumLevel;
         }
+
+        /// <summary>The most a requested or minimum level can reduce a texture: the quality level's
+        /// maximum level reduction, at most its last mip.</summary>
+        int MostReducedLevel() => Mathf.Min(QualitySettings.streamingMipmapsMaxLevelReduction, Mathf.Max(0, mipmapCount - 1));
 
         /// <summary>Whether the streaming system calculates the texture's level now.</summary>
         bool Calculated()
