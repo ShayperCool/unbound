@@ -109,6 +109,10 @@ namespace UnityEditor
         [Unbound.EditorFaithful("ends the Editor's sample batch: the values are already written")]
         public static void EndSampling() { }
 
+        /// <summary>Whether a property is an animation recording candidate: none is, as Unbound
+        /// records no candidates (AddCandidate is reported when called).</summary>
+        internal static bool IsPropertyCandidate(Object target, string propertyPath) => false;
+
         public static bool IsPropertyAnimated(Object target, string propertyPath)
         {
             if (target == null || propertyPath == null) return false;

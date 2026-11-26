@@ -511,19 +511,38 @@ namespace UnityEditor
         [Unbound.EditorFaithful("measured: tests/projects/editorui EditorUtility.DisplayDialogComplex")]
         public static int DisplayDialogComplex(string title, string message, string ok, string cancel, string alt) => 1;
 
+        /// <summary>An object's enabled state as its inspector toggle shows it: 1 or 0, or -1 when it
+        /// has no toggle. A script's behaviour has one only when it (or a base class) has Start,
+        /// Update, FixedUpdate, LateUpdate, OnGUI, OnEnable or OnDisable; a GameObject answers
+        /// whether it is active itself. Matches the Unity 6000.0.71f1 Editor
+        /// (tests/projects/editortitlebar objectEnabled; an inactive GameObject unmeasured).</summary>
         public static int GetObjectEnabled(Object target) => target switch
         {
+            MonoBehaviour m => HasEnabledToggle(m.GetType()) ? (m.enabled ? 1 : 0) : -1,
             Behaviour b => b.enabled ? 1 : 0,
             Renderer r => r.enabled ? 1 : 0,
             Collider c => c.enabled ? 1 : 0,
+            GameObject g => g.activeSelf ? 1 : 0,
             _ => -1,
         };
+
+        /// <summary>Whether a script's behaviours have the enabled toggle: the messages enabling
+        /// changes the effect of (measured: Awake, OnDestroy, OnValidate, Reset, OnDrawGizmos,
+        /// OnRenderObject, OnBecameVisible and OnApplicationQuit give none).</summary>
+        static bool HasEnabledToggle(Type type)
+        {
+            var m = Unbound.Runtime.ScriptMessages.For(type);
+            return m.Start != null || m.StartCoroutine != null || m.Update != null || m.FixedUpdate != null
+                || m.LateUpdate != null || m.OnGUI != null || m.OnEnable != null || m.OnDisable != null;
+        }
 
         public static void SetObjectEnabled(Object target, bool enabled)
         {
             switch (target)
             {
                 case Behaviour b: b.enabled = enabled; break;
+                // As GetObjectEnabled reads it (setting is unmeasured).
+                case GameObject g: g.SetActive(enabled); break;
                 case Renderer r: r.enabled = enabled; break;
                 case Collider c: c.enabled = enabled; break;
             }
