@@ -160,8 +160,9 @@ namespace UnityEditor
             GUI.CalculateScaledTextureRects(position, scaleMode, imageAspect, ref screenRect, ref sourceRect);
             // Unity shows only the unpadded part of an always-padded texture; Unbound pads none.
             // Unity draws with Graphics.DrawTexture at once, among the GUI's draws: in the frame's GUI
-            // pass Unbound records the draw there (its GUI draws are drawn after the pass).
-            if (GuiRender.Painting)
+            // pass, into the screen under the pass's matrices, Unbound records the draw there (its GUI
+            // draws are drawn after the pass); elsewhere it draws as Graphics.DrawTexture does.
+            if (GuiRender.DrawsIntoGuiPass)
             {
                 GuiRender.DrawMaterialTexture(screenRect, image, sourceRect, GUI.color, mat, clip: EditorGUIUtility.IsPreviewMaterial(mat));
                 if (manualResolve) GuiRender.ReleaseAfterCollect((RenderTexture)image);

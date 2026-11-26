@@ -44,6 +44,7 @@ namespace UnityEngine.Tests
             GUIUtility.BeginGUI(0, 41, 0);
             bool painting = GuiRender.Painting;
             GuiRender.Painting = true;
+            GuiDispatch.LoadRepaintMatrices();
             try { draw(); }
             finally
             {
@@ -123,6 +124,40 @@ namespace UnityEngine.Tests
                 Object.DestroyImmediate(texture);
                 Object.DestroyImmediate(first);
                 if (second) Object.DestroyImmediate(second);
+            }
+        }
+
+        [Fact]
+        public void APreviewIntoARenderTextureOrUnderOtherMatricesIsNotRecordedInTheGuiPass()
+        {
+            var texture = new Texture2D(4, 4);
+            var material = UserMaterial();
+            var target = new RenderTexture(16, 16, 0);
+            try
+            {
+                GuiRender.Clear();
+                int quads = GuiRender.QuadCount;
+                Repaint(() =>
+                {
+                    RenderTexture.active = target;
+                    try { EditorGUI.DrawPreviewTexture(new Rect(0, 0, 8, 8), texture, material); }
+                    finally { RenderTexture.active = null; }
+                    GL.PushMatrix();
+                    GL.LoadOrtho();
+                    try { EditorGUI.DrawPreviewTexture(new Rect(0, 0, 1, 1), texture, material); }
+                    finally { GL.PopMatrix(); }
+                });
+                Assert.Equal(quads, GuiRender.QuadCount);
+                // The pass's own target and matrices: recorded.
+                Repaint(() => EditorGUI.DrawPreviewTexture(new Rect(0, 0, 8, 8), texture, material));
+                Assert.Equal(quads + 1, GuiRender.QuadCount);
+            }
+            finally
+            {
+                GuiRender.Clear();
+                Object.DestroyImmediate(texture);
+                Object.DestroyImmediate(material);
+                Object.DestroyImmediate(target);
             }
         }
 

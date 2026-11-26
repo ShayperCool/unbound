@@ -315,6 +315,15 @@ namespace Unbound.Runtime
 
         /// <summary>Whether the frame's GUI pass (<see cref="GuiDispatch"/>) is running.</summary>
         internal static bool Painting;
+
+        /// <summary>GL's matrices as the GUI pass loaded them for the current script.</summary>
+        internal static Matrix4x4 PassProjection, PassModelView;
+
+        /// <summary>Whether a draw now goes where the GUI pass draws: the frame's GUI pass, the screen
+        /// as the target and GL's matrices the pass's own (a script that set a render texture or
+        /// other matrices draws there instead).</summary>
+        internal static bool DrawsIntoGuiPass =>
+            Painting && RenderTexture.active == null && Immediate.Projection == PassProjection && Immediate.ModelView == PassModelView;
         static Mesh s_Mesh;
 
         internal static int QuadCount => s_Positions.Count / 4;
@@ -847,7 +856,12 @@ namespace Unbound.Runtime
         /// They stay after the GUI, for the end-of-frame callbacks (tests/projects/framestate
         /// gl.modelview.ongui, matrices.endofframe.gui). Loaded again before each script's Layout
         /// and Repaint (so also between one script's two passes): unmeasured.</summary>
-        internal static void LoadRepaintMatrices() => Immediate.LoadScreenPixels();
+        internal static void LoadRepaintMatrices()
+        {
+            Immediate.LoadScreenPixels();
+            GuiRender.PassProjection = Immediate.Projection;
+            GuiRender.PassModelView = Immediate.ModelView;
+        }
 
         /// <summary>The frame's input events, at PreUpdate.IMGUISendQueuedEvents: after the fixed
         /// steps, before the Input System's update and Update (measured,
