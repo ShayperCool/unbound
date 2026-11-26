@@ -344,6 +344,10 @@ fn main() -> anyhow::Result<()> {
         let joined = std::env::join_paths(dirs)?;
         unsafe { std::env::set_var("UNBOUND_PACKAGES", joined) };
     }
+    // A virtual player this process's launch guard started: its output into its own project data.
+    if let Command::Run { project, .. } = &cli.command {
+        editor_launch::player_output(&project.project);
+    }
     match cli.command {
         Command::CrunchBlocks { input, output } => {
             let image = unbound_assets::texture::crunch::transcode(&std::fs::read(input)?)?;

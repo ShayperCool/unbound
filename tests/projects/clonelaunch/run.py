@@ -27,12 +27,14 @@ def check():
     cli = value_probe.engine_cli()
     with open(out/'engine.log', 'w') as log:
         # The player runs inside the launcher's lease.
-        code = subprocess.run([str(value_probe.LAUNCHER), '--kind', 'engine-gpu', 'timeout', '900', cli, 'run', '-p', str(main),
+        # The launcher keeps its project data elsewhere (--project-data): the player keeps its own.
+        code = subprocess.run([str(value_probe.LAUNCHER), '--kind', 'engine-gpu', 'timeout', '900', cli,
+                               '--project-data', str(out/'main-data'), 'run', '-p', str(main),
                                '--headless', '100000', '--no-watch'], env=env, stdout=log, stderr=subprocess.STDOUT).returncode
     main_text = (out/'main.txt').read_text() if (out/'main.txt').exists() else ''
     clone_lines = (out/'clone.txt').read_text().splitlines() if (out/'clone.txt').exists() else []
     editor_log = clone/'Logs'/'Editor.log'
-    native_log = clone/'Logs'/'Editor.log.unbound.txt'
+    native_log = clone/'LibraryUnbound'/'VirtualPlayer.log'
     text = lambda path: path.read_text(errors='replace') if path.exists() else ''
     checks = [
         ('launcher exit', code == 0, code),
@@ -46,7 +48,11 @@ def check():
             '-vp-channel-name=vp-channel', '-ump-channel-service-port', '1234', '-vpId=abc'], clone_lines[:11]),
         ('clone command line names the Editor', bool(clone_lines) and clone_lines[0].endswith('/Editor/Unity'), clone_lines[:1]),
         ('clone console log in its -logFile', 'The virtual player logs this.' in text(editor_log), str(editor_log)),
-        ('clone process output beside it', 'INFO' in text(native_log), str(native_log)),
+        ('clone process output in its own project data', 'INFO' in text(native_log), str(native_log)),
+        ('clone project data its own', (clone/'LibraryUnbound'/'ProjectView').is_dir() and (out/'main-data'/'ProjectView').is_dir()
+         and not (out/'main-data'/'VirtualPlayer.log').exists(), str(out/'main-data')),
+        ('nothing beside the clone log', sorted(p.name for p in (clone/'Logs').iterdir()) == ['Editor.log'] if (clone/'Logs').is_dir() else False,
+         sorted(p.name for p in (clone/'Logs').iterdir()) if (clone/'Logs').is_dir() else None),
     ]
     failed = [(name, detail) for name, ok, detail in checks if not ok]
     for name, detail in failed:

@@ -10,8 +10,8 @@
 //!   arguments after `--` (they are its command line as editor code reads it, so its console log
 //!   is the `-logFile` they name, as the Editor's is) and without this process's
 //!   `UNBOUND_PROJECT_DATA` (its own project data); its standard output and error (the process's
-//!   own messages) go to `<logFile>.unbound.txt` beside it, the folders made as needed, else
-//!   nowhere: Multiplayer Play Mode does not read them;
+//!   own messages, which Multiplayer Play Mode does not read: the launcher's pipes for them may
+//!   be closed) go to `VirtualPlayer.log` in its project data (`player_output`);
 //! - any other launch of the Editor's executable is refused: the call fails with `EPERM` (so
 //!   `Process.Start` throws) after a line on this process's standard error.
 //!
@@ -75,6 +75,30 @@ pub fn install(unity: &Path) {
 const PATH_LIMIT: usize = 4096;
 const ARG_LIMIT: usize = 512;
 const ENV_LIMIT: usize = 1024;
+
+/// In a virtual player the guard started (its environment says so): its standard output and error
+/// to `VirtualPlayer.log` in the project's data folder (appended), the variable dropped for its
+/// own launches. Its first messages before this are lost (they went nowhere).
+pub fn player_output(project: &Path) {
+    if std::env::var_os(PLAYER_VARIABLE).is_none() {
+        return;
+    }
+    unsafe { std::env::remove_var(PLAYER_VARIABLE) };
+    let dir = unbound_project::unbound_dir(project);
+    let _ = std::fs::create_dir_all(&dir);
+    #[cfg(unix)]
+    if let Ok(file) = std::fs::OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(dir.join("VirtualPlayer.log"))
+    {
+        use std::os::fd::AsRawFd;
+        unsafe {
+            libc::dup2(file.as_raw_fd(), 1);
+            libc::dup2(file.as_raw_fd(), 2);
+        }
+    }
+}
 
 /// `path` with `.` and `..` resolved lexically (as .NET's `Path.GetFullPath` does), for display.
 pub fn normalized(path: &Path) -> String {
@@ -152,6 +176,9 @@ fn classify(args: &[&[u8]]) -> Launch {
     }
 }
 
+/// Set in a virtual player's environment by the guard.
+const PLAYER_VARIABLE: &str = "UNBOUND_VIRTUAL_PLAYER";
+const PLAYER: &[u8] = b"UNBOUND_VIRTUAL_PLAYER=1\0";
 const RUN: &[u8] = b"run\0";
 const PROJECT: &[u8] = b"-p\0";
 const NO_WATCH: &[u8] = b"--no-watch\0";
@@ -235,7 +262,7 @@ unsafe fn launch(guard: &Guard, argv: *const *const c_char, envp: *const *const 
             let mut at = envp;
             while !(*at).is_null() {
                 if !bytes(*at).starts_with(b"UNBOUND_PROJECT_DATA=") {
-                    if kept + 1 == ENV_LIMIT {
+                    if kept + 2 == ENV_LIMIT {
                         return refuse(guard, b"too many environment variables");
                     }
                     environment[kept] = *at;
@@ -244,7 +271,16 @@ unsafe fn launch(guard: &Guard, argv: *const *const c_char, envp: *const *const 
                 at = at.add(1);
             }
         }
-        redirect_output(log.map(|log| args[log]));
+        let _ = log;
+        environment[kept] = PLAYER.as_ptr().cast();
+        let null = libc::open(c"/dev/null".as_ptr(), libc::O_WRONLY);
+        if null >= 0 {
+            libc::dup2(null, 1);
+            libc::dup2(null, 2);
+            if null > 2 {
+                libc::close(null);
+            }
+        }
         // unbound run -p <project> --no-watch -- <the player's arguments>
         let mut run: [*const c_char; ARG_LIMIT + 8] = [std::ptr::null(); ARG_LIMIT + 8];
         run[0] = unbound.as_ptr();
@@ -255,49 +291,6 @@ unsafe fn launch(guard: &Guard, argv: *const *const c_char, envp: *const *const 
         run[5] = REST.as_ptr().cast();
         run[6..6 + count].copy_from_slice(&pointers[..count]);
         real_execve(unbound.as_ptr(), run.as_ptr(), environment.as_ptr())
-    }
-}
-
-/// Points standard output and error at `<log>.unbound.txt` (its folders made as needed), else at
-/// `/dev/null`: the launcher's pipes for them may already be closed.
-#[cfg(target_os = "linux")]
-unsafe fn redirect_output(log: Option<&[u8]>) {
-    const SUFFIX: &[u8] = b".unbound.txt";
-    unsafe {
-        let mut path = [0u8; PATH_LIMIT + 16];
-        let mut fd = -1;
-        if let Some(log) = log
-            && !log.is_empty()
-            && log.len() + SUFFIX.len() < path.len()
-        {
-            path[..log.len()].copy_from_slice(log);
-            path[log.len()..log.len() + SUFFIX.len()].copy_from_slice(SUFFIX);
-            let end = log.len() + SUFFIX.len();
-            // The folders, one by one (the file's own name excluded).
-            for i in 1..end {
-                if path[i] == b'/' {
-                    path[i] = 0;
-                    libc::mkdir(path.as_ptr().cast(), 0o755);
-                    path[i] = b'/';
-                }
-            }
-            path[end] = 0;
-            fd = libc::open(
-                path.as_ptr().cast(),
-                libc::O_WRONLY | libc::O_CREAT | libc::O_APPEND,
-                0o644,
-            );
-        }
-        if fd < 0 {
-            fd = libc::open(c"/dev/null".as_ptr(), libc::O_WRONLY);
-        }
-        if fd >= 0 {
-            libc::dup2(fd, 1);
-            libc::dup2(fd, 2);
-            if fd > 2 {
-                libc::close(fd);
-            }
-        }
     }
 }
 

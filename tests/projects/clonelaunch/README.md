@@ -12,8 +12,9 @@ executable twice with `Process.Start`, and checks what happened:
   <clone>/Logs/Editor.log ... -vpId=...`, the `Logs` folder not made yet): another `unbound run` of
   the clone project (a second private copy) starts; it sees the Editor's executable and the
   player's arguments as its command line, logs a line, writes its command line to `clone.txt` and
-  exits; its console log is the `-logFile` (the line it logged there) and its own output is beside
-  it in `Editor.log.unbound.txt`.
+  exits; its console log is the `-logFile` (the line it logged there, nothing else beside it) and
+  its own output is `VirtualPlayer.log` in its own project data (`LibraryUnbound`), though the
+  launcher keeps its project data elsewhere (`--project-data`).
 
 Linux only: on macOS the launch is not intercepted yet and the check does not run.
 
