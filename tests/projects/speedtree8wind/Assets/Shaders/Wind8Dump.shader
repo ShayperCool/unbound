@@ -1,5 +1,6 @@
-// Writes the SpeedTree 8 wind constants a renderer draws with: pixel x of a 30x1 target gets
-// constant x (the 15 of the SpeedTreeWind constant buffer, then the 15 of SpeedTreeWindHistory).
+// Writes the SpeedTree 8 wind constants a renderer draws with: pixel x of a 32x1 target gets
+// constant x (the 16 of the SpeedTreeWind constant buffer, then the 16 of SpeedTreeWindHistory, as
+// the SpeedTree 8 shaders declare them, _ST_WindAnimation last).
 // The mesh is a quad whose UVs cover [0, 1], so it covers the target.
 Shader "Probe/Wind8Dump"
 {
@@ -29,6 +30,7 @@ Shader "Probe/Wind8Dump"
                 float4 _ST_WindLeaf2Tumble;
                 float4 _ST_WindLeaf2Twitch;
                 float4 _ST_WindFrondRipple;
+                float4 _ST_WindAnimation;
             };
 
             cbuffer SpeedTreeWindHistory
@@ -48,6 +50,7 @@ Shader "Probe/Wind8Dump"
                 float4 _ST_WindLeaf2TumbleHistory;
                 float4 _ST_WindLeaf2TwitchHistory;
                 float4 _ST_WindFrondRippleHistory;
+                float4 _ST_WindAnimationHistory;
             };
 
             struct appdata { float4 vertex : POSITION; float2 uv : TEXCOORD0; };
@@ -75,21 +78,23 @@ Shader "Probe/Wind8Dump"
                 if (i == 12) return _ST_WindLeaf2Tumble;
                 if (i == 13) return _ST_WindLeaf2Twitch;
                 if (i == 14) return _ST_WindFrondRipple;
-                if (i == 15) return _ST_WindVectorHistory;
-                if (i == 16) return _ST_WindGlobalHistory;
-                if (i == 17) return _ST_WindBranchHistory;
-                if (i == 18) return _ST_WindBranchTwitchHistory;
-                if (i == 19) return _ST_WindBranchWhipHistory;
-                if (i == 20) return _ST_WindBranchAnchorHistory;
-                if (i == 21) return _ST_WindBranchAdherencesHistory;
-                if (i == 22) return _ST_WindTurbulencesHistory;
-                if (i == 23) return _ST_WindLeaf1RippleHistory;
-                if (i == 24) return _ST_WindLeaf1TumbleHistory;
-                if (i == 25) return _ST_WindLeaf1TwitchHistory;
-                if (i == 26) return _ST_WindLeaf2RippleHistory;
-                if (i == 27) return _ST_WindLeaf2TumbleHistory;
-                if (i == 28) return _ST_WindLeaf2TwitchHistory;
-                return _ST_WindFrondRippleHistory;
+                if (i == 15) return _ST_WindAnimation;
+                if (i == 16) return _ST_WindVectorHistory;
+                if (i == 17) return _ST_WindGlobalHistory;
+                if (i == 18) return _ST_WindBranchHistory;
+                if (i == 19) return _ST_WindBranchTwitchHistory;
+                if (i == 20) return _ST_WindBranchWhipHistory;
+                if (i == 21) return _ST_WindBranchAnchorHistory;
+                if (i == 22) return _ST_WindBranchAdherencesHistory;
+                if (i == 23) return _ST_WindTurbulencesHistory;
+                if (i == 24) return _ST_WindLeaf1RippleHistory;
+                if (i == 25) return _ST_WindLeaf1TumbleHistory;
+                if (i == 26) return _ST_WindLeaf1TwitchHistory;
+                if (i == 27) return _ST_WindLeaf2RippleHistory;
+                if (i == 28) return _ST_WindLeaf2TumbleHistory;
+                if (i == 29) return _ST_WindLeaf2TwitchHistory;
+                if (i == 30) return _ST_WindFrondRippleHistory;
+                return _ST_WindAnimationHistory;
             }
             ENDHLSL
         }

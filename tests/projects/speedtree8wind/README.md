@@ -9,9 +9,9 @@ project copy, and stops when they are not there (`gate --if-staged` prints a SKI
 
 `Assets/Scripts/SpeedTree8WindProbe.cs` plays at a captured 30 frames per second. Each probe tree
 is a copy of the asset's first level (its Tree keeps the asset's wind asset) drawing a quad with
-`Assets/Shaders/Wind8Dump.shader`, which writes the constant buffers `SpeedTreeWind` (the 15
-`_ST_Wind*` vectors) and `SpeedTreeWindHistory` (each name with `History` after it) into a 30x1
-float target; one orthographic camera per tree renders it every frame. `FieldA` draws camera
+`Assets/Shaders/Wind8Dump.shader`, which writes the constant buffers `SpeedTreeWind` (the 16
+`_ST_Wind*` vectors the SpeedTree 8 shaders declare, `_ST_WindAnimation` last) and
+`SpeedTreeWindHistory` (each name with `History` after it) into a 32x1 float target; one orthographic camera per tree renders it every frame. `FieldA` draws camera
 motion vectors (its current constants are recorded), `FieldB` (turned and scaled) per-object
 motion vectors (its history too). The scene has no wind at first; then a directional zone comes
 (frame 10), its main wind rises above 1 (50), it turns around (75), a second directional zone
@@ -41,13 +41,31 @@ time since play started (a jump of every phase by its curve at strength 0 times 
 `_ST_WindAnimation` is never written.
 
     python3 tests/projects/speedtree8wind/run.py record --label A   # Editor capture (Linux, GPU)
-    python3 tests/projects/speedtree8wind/run.py publish A B        # two identical captures
+    python3 tests/projects/speedtree8wind/run.py publish A B        # two identical captures (--profile first: the same for the first-frame scene)
     python3 tests/projects/speedtree8wind/run.py gate               # the engine against Reference/
 
-Not measured: a wind from the first frame (the first frame's history), the billboard level (the probe draws a copy of the first level), the file options
-that make a branch level's adherence directional (the sample sets neither; Unbound scales it by
-the first level's length), palm wind (its shader reads `_ST_WindAnimation`, which Unbound binds
-nothing to), a SpeedTree 8 wind still easing keeping SpeedTree 9 trees' world windy (Unbound has
-one world wind for both), spherical zones reaching a SpeedTree 8 tree (Unbound keeps the asset's wind for it
-and says so once), gusts (the release never turns them on), the GPU Resident Drawer's SpeedTree 8
+Further trees (Q769): `FieldNear`, which a spherical zone (frame 1010, wind 1.2 toward the tree,
+radius 10) reaches until it is moved away (1100); `FieldBillboard`, a copy of the asset's billboard
+(last) level; `FieldDirectional`, a copy of a staged variant of the tree (`Field_Directional.st`,
+the sample's bytes with the wind options that make both branch levels' adherence directional
+set; no sample sets them); `Calm9`, a SpeedTree 9 tree (`Calm.st9` and its dump, staged from
+tests/projects/speedtree9wind; its unwritten first branch level is not recorded) and `Calm9Late`,
+one that first draws (330) while only the SpeedTree 8 wind still eases. A global
+`_ST_WindAnimation` is set at frame 2 and the dump material's at 1299: before a tree draws with
+wind its raw value is recorded, afterwards only whether it is the global or material value. The
+profile `first` (`--profile first`) plays `Assets/Scenes/FirstWind.unity`, whose directional zone
+blows from the first frame, with FieldA and FieldB (frames 1 to 450).
+
+Measured besides (same Editor, two identical captures per profile): a SpeedTree 8 wind starts
+along +x (a wind from the first frame turns from +x toward the scene's; the first update of a
+windless scene rests it at once); the billboard level draws the same constants as the first; the
+directional options multiply the branch levels' adherence by the first level's length (in the
+imported units); a tree that a spherical zone reaches gets a wind of its own, as a SpeedTree 9
+tree does, whose phases return to its asset's wind's out of reach; a SpeedTree 8 wind still easing
+keeps the world windy for a SpeedTree 9 tree that first draws; `_ST_WindAnimation` reads the
+global value until the tree draws with wind and then neither the global nor the material value
+(the engine's buffer holds something else there, not repeatable). The imported variant's children
+come in name order in the Editor (its collision objects first): a recorded residual.
+
+Not measured: gusts (the release never turns them on), the GPU Resident Drawer's SpeedTree 8
 parameters (Unbound gives it the 15 constants in the SpeedTree 8 shaders' order and says so once).
