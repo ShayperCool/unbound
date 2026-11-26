@@ -18,8 +18,9 @@ namespace UnityEngine.Tests
             var box = SpriteUtility.GeneratePolygonOutlineVerticesOfSize(0, 100, 50);
             Assert.Equal(new[] { new Vector2(-50f, -25f), new Vector2(50f, -25f), new Vector2(50f, 25f), new Vector2(-50f, 25f) }, box);
             var many = SpriteUtility.GeneratePolygonOutlineVerticesOfSize(128, 100, 50);
-            // The angle is summed per corner in single precision (the Editor's corner 80).
-            Assert.Equal(35.35522f, many[80].x, 3);
+            // The angle is summed per corner in single precision: the Editor's corner 127 is at
+            // 2.453239 (a product of the step and the index would give 2.453382).
+            Assert.Equal(2.453239f, many[127].x, 5);
             Assert.Single(SpriteUtility.GeneratePolygonOutlineVerticesOfSize(1, 10, 10));
         }
 

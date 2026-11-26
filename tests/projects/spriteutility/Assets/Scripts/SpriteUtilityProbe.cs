@@ -90,7 +90,7 @@ public class SpriteUtilityProbe : MonoBehaviour
         foreach (int sides in new[] { 0, 1, 2, 3, 4, 5, 6, 8, 12, 33, 128 })
             foreach (var (w, h) in new[] { (64, 64), (100, 50), (7, 13), (1, 1), (0, 10) })
                 Outline(outline, sides, w, h);
-        // A negative side count ends the Editor (its allocation overflows): not recorded.
+        // A negative side count crashes the Editor: not recorded.
         Outline(outline, 4, -8, 16);
 
         var texture = new Texture2D(32, 16) { name = "Probe" };

@@ -11,27 +11,34 @@ namespace UnityEditor.Sprites
         /// 6000.0.71f1, tests/projects/spriteutility texture.*.True, uvs.*.True).</summary>
         const string NotPackedMessage = "Could not get atlas data - Sprite is not packed.";
 
-        /// <summary>The sprite's texture (matches the Unity 6000.0.71f1 Editor, tests/projects/spriteutility
-        /// texture.*). The atlas data of a sprite that is not packed throws; a packed sprite's atlas
-        /// texture is not implemented yet.</summary>
+        /// <summary>The texture of a sprite that is not packed (matches the Unity 6000.0.71f1 Editor,
+        /// tests/projects/spriteutility texture.*); its atlas data throws. A packed sprite's source and
+        /// atlas textures are not measured: reported, the sprite's texture answered.</summary>
         public static Texture2D GetSpriteTexture(Sprite sprite, bool getAtlasData)
         {
             if (sprite == null) throw new ArgumentNullException(nameof(sprite));
-            if (!getAtlasData) return sprite.texture;
-            if (!sprite.packed) throw new ArgumentException(NotPackedMessage);
-            Stubs.NotImplemented("UnityEditor.Sprites.SpriteUtility.GetSpriteTexture(packed atlas data)");
+            if (!sprite.packed)
+            {
+                if (getAtlasData) throw new ArgumentException(NotPackedMessage);
+                return sprite.texture;
+            }
+            Stubs.NotImplemented("UnityEditor.Sprites.SpriteUtility.GetSpriteTexture(packed sprite)");
             return sprite.texture;
         }
 
-        /// <summary>The sprite's texture coordinates (matches the Unity 6000.0.71f1 Editor,
-        /// tests/projects/spriteutility uvs.*): its uv. The atlas data of a sprite that is not packed
-        /// throws; a packed sprite's atlas coordinates are not implemented yet.</summary>
+        /// <summary>The texture coordinates of a sprite that is not packed, its uv (matches the Unity
+        /// 6000.0.71f1 Editor, tests/projects/spriteutility uvs.*); its atlas data throws. A packed
+        /// sprite's source and atlas coordinates are not measured: reported, the sprite's uv
+        /// answered.</summary>
         public static Vector2[] GetSpriteUVs(Sprite sprite, bool getAtlasData)
         {
             if (sprite == null) throw new ArgumentNullException(nameof(sprite));
-            if (!getAtlasData) return sprite.uv;
-            if (!sprite.packed) throw new ArgumentException(NotPackedMessage);
-            Stubs.NotImplemented("UnityEditor.Sprites.SpriteUtility.GetSpriteUVs(packed atlas data)");
+            if (!sprite.packed)
+            {
+                if (getAtlasData) throw new ArgumentException(NotPackedMessage);
+                return sprite.uv;
+            }
+            Stubs.NotImplemented("UnityEditor.Sprites.SpriteUtility.GetSpriteUVs(packed sprite)");
             return sprite.uv;
         }
 
@@ -53,11 +60,12 @@ namespace UnityEditor.Sprites
             if (sides < 0) throw new ArgumentOutOfRangeException(nameof(sides));
             var points = new Vector2[sides];
             // The angle grows by one step per corner, in single precision (the measured corners
-            // of 128 sides keep the sum's rounding).
-            float step = 2f * MathF.PI / sides, angle = 0f;
+            // of 128 sides keep the sum's rounding); its sine and cosine are taken in double
+            // precision and rounded (every measured corner, bit for bit).
+            float step = 2f * Mathf.PI / sides, angle = 0f;
             for (int k = 0; k < sides; k++)
             {
-                points[k] = new Vector2(-MathF.Sin(angle) * halfWidth, MathF.Cos(angle) * halfHeight);
+                points[k] = new Vector2(-Mathf.Sin(angle) * halfWidth, Mathf.Cos(angle) * halfHeight);
                 angle += step;
             }
             return points;
