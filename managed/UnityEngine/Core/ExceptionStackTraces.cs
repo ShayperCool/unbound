@@ -151,7 +151,7 @@ namespace Unbound.Runtime
 
         const string PackageCache = "Library/PackageCache/";
 
-        static readonly ConcurrentDictionary<(MethodBase, string, int), (int, string, int)> s_UnityPlaces = new();
+        static readonly ConcurrentDictionary<(string, MethodBase, string, int), (int, string, int)> s_UnityPlaces = new();
 
         /// <summary>Whether <paramref name="method"/> stands for a managed Unity method
         /// (<see cref="Unbound.UnityFrameAttribute"/>), and that method's source place as
@@ -187,9 +187,10 @@ namespace Unbound.Runtime
                 owner = DefinitionName(called.DeclaringType);
                 count = called.GetParameters().Length;
             }
-            return s_UnityPlaces.GetOrAdd((method, owner, count), key =>
+            // By installation too: the places are that installation's.
+            return s_UnityPlaces.GetOrAdd((data, method, owner, count), key =>
             {
-                var (m, calleeOwner, calleeParameters) = key;
+                var (_, m, calleeOwner, calleeParameters) = key;
                 var pdb = PortablePdb.OfFile(Path.Combine(data, "Managed", "UnityEngine", "UnityEngine.CoreModule.dll"));
                 var definition = m.DeclaringType.IsConstructedGenericType ? m.Module.ResolveMethod(m.MetadataToken) : m;
                 var parameters = Array.ConvertAll(definition.GetParameters(), p => PortablePdb.ParameterTypeName(p.ParameterType));
