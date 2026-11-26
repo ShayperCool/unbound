@@ -5,12 +5,14 @@
 //! needs Blender as well).
 use anyhow::{Context, Result, anyhow, bail};
 use std::{
+    io::Read,
     path::{Path, PathBuf},
-    process::Command,
+    process::{Command, ExitStatus, Stdio},
     sync::{
         OnceLock,
         atomic::{AtomicU64, Ordering},
     },
+    time::{Duration, Instant},
 };
 
 /// The Editor installation's Blender export script, relative to its data directory
@@ -23,54 +25,70 @@ pub(crate) fn is_blend(source: &Path) -> bool {
         .is_some_and(|e| e.eq_ignore_ascii_case("blend"))
 }
 
-/// Blender: on macOS the application (where the Editor runs it from), else `blender` on the
-/// `PATH` (the Linux Editor's lookup is unmeasured).
-fn blender() -> Option<PathBuf> {
-    let app = Path::new("/Applications/Blender.app/Contents/MacOS/Blender");
-    if cfg!(target_os = "macos") && app.is_file() {
-        return Some(app.to_path_buf());
-    }
-    let path = std::env::var_os("PATH")?;
-    std::env::split_paths(&path)
-        .map(|dir| dir.join("blender"))
-        .find(|candidate| candidate.is_file())
+/// How long one conversion may take before Unbound stops Blender (a scene that big is not
+/// expected; a hung Blender would otherwise stall the import without a word).
+const CONVERSION_LIMIT: Duration = Duration::from_secs(600);
+
+/// The Blender that converts: its executable and its `--version` text (version and build hash).
+struct Blender {
+    path: PathBuf,
+    version: String,
 }
 
-/// Blender's `--version` text (its version and build hash), asked once per process.
-fn blender_version() -> &'static Result<String, String> {
-    static VERSION: OnceLock<Result<String, String>> = OnceLock::new();
-    VERSION.get_or_init(|| {
-        let blender = blender().ok_or_else(|| "Blender is not installed".to_string())?;
-        let out = Command::new(&blender)
+/// Blender, found and asked its version once per process: on macOS the application (where the
+/// Editor runs it from), else `blender` on the `PATH` (the Linux Editor's lookup is unmeasured).
+fn installed() -> &'static Result<Blender, String> {
+    static BLENDER: OnceLock<Result<Blender, String>> = OnceLock::new();
+    BLENDER.get_or_init(|| {
+        let app = Path::new("/Applications/Blender.app/Contents/MacOS/Blender");
+        let path = if cfg!(target_os = "macos") && app.is_file() {
+            app.to_path_buf()
+        } else {
+            std::env::var_os("PATH")
+                .and_then(|path| {
+                    std::env::split_paths(&path)
+                        .map(|dir| dir.join("blender"))
+                        .find(|candidate| candidate.is_file())
+                })
+                .ok_or_else(|| "Blender is not installed".to_string())?
+        };
+        let out = Command::new(&path)
             .arg("--version")
             .output()
-            .map_err(|e| format!("running {}: {e}", blender.display()))?;
+            .map_err(|e| format!("running {}: {e}", path.display()))?;
         if !out.status.success() {
-            return Err(format!("{} --version failed", blender.display()));
+            return Err(format!("{} --version failed ({})", path.display(), out.status));
         }
-        Ok(String::from_utf8_lossy(&out.stdout).trim().to_string())
+        let version = String::from_utf8_lossy(&out.stdout).trim().to_string();
+        if !cfg!(target_os = "macos") {
+            tracing::warn!(
+                "converting .blend files with {} ({}): how the Editor finds Blender on this OS is unmeasured",
+                path.display(),
+                version.lines().next().unwrap_or("")
+            );
+        }
+        Ok(Blender { path, version })
     })
 }
 
 /// What decides a `.blend` file's FBX besides the file: the Blender that converts it and the
 /// export script's content. Empty when either is missing (the import then fails).
 pub(crate) fn conversion_key(script: Option<&Path>) -> String {
-    let Some(script) = script else {
-        return String::new();
-    };
-    let Ok(version) = blender_version() else {
+    let (Some(script), Ok(blender)) = (script, installed()) else {
         return String::new();
     };
     let Ok(text) = std::fs::read(script) else {
         return String::new();
     };
     format!(
-        "blender\0{version}\0{}",
+        "blender\0{}\0{}",
+        blender.version,
         blake3::hash(&text).to_hex().as_str()
     )
 }
 
-/// The FBX that Blender writes for `source` with the export script.
+/// The FBX that Blender writes for `source` with the export script. A conversion is refused
+/// when what identifies it in the cache (see [`conversion_key`]) is not known.
 pub(crate) fn convert(source: &Path, script: Option<&Path>) -> Result<Vec<u8>> {
     let script = script.ok_or_else(|| {
         anyhow!(
@@ -85,12 +103,19 @@ pub(crate) fn convert(source: &Path, script: Option<&Path>) -> Result<Vec<u8>> {
             script.display()
         );
     }
-    let blender = blender().ok_or_else(|| {
+    let blender = installed().as_ref().map_err(|e| {
         anyhow!(
-            "cannot import {}: Blender is not installed (the Editor imports .blend files by running Blender)",
+            "cannot import {}: {e} (the Editor imports .blend files by running Blender)",
             source.display()
         )
     })?;
+    if conversion_key(Some(script)).is_empty() {
+        bail!(
+            "cannot import {}: {} is not readable",
+            source.display(),
+            script.display()
+        );
+    }
     static NEXT: AtomicU64 = AtomicU64::new(0);
     let out = std::env::temp_dir().join(format!(
         "unbound-blend-{}-{}.fbx",
@@ -98,31 +123,81 @@ pub(crate) fn convert(source: &Path, script: Option<&Path>) -> Result<Vec<u8>> {
         NEXT.fetch_add(1, Ordering::Relaxed)
     ));
     let absolute = std::path::absolute(source).unwrap_or_else(|_| source.to_path_buf());
-    let result = Command::new(&blender)
-        .arg("-b")
-        .arg(&absolute)
-        .arg("-P")
-        .arg(script)
-        .arg("--")
-        .arg(&out)
-        .output()
-        .with_context(|| format!("running {}", blender.display()));
+    let result = run(
+        Command::new(&blender.path)
+            .arg("-b")
+            .arg(&absolute)
+            .arg("-P")
+            .arg(script)
+            .arg("--")
+            .arg(&out),
+        source,
+    );
     let bytes = std::fs::read(&out);
     let _ = std::fs::remove_file(&out);
-    let output = result?;
+    let (status, log) = result?;
     match bytes {
-        Ok(bytes) if output.status.success() => Ok(bytes),
+        Ok(bytes) if status.success() => Ok(bytes),
         _ => {
-            let log = String::from_utf8_lossy(&output.stdout);
             let tail: Vec<&str> = log.lines().rev().take(8).collect();
             bail!(
-                "cannot import {}: Blender did not convert it to FBX ({}): {}",
+                "cannot import {}: Blender did not convert it to FBX ({status}): {}",
                 source.display(),
-                output.status,
                 tail.into_iter().rev().collect::<Vec<_>>().join(" | ")
             )
         }
     }
+}
+
+/// Runs Blender, its output kept, stopping it after [`CONVERSION_LIMIT`].
+fn run(command: &mut Command, source: &Path) -> Result<(ExitStatus, String)> {
+    let mut child = command
+        .stdin(Stdio::null())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()
+        .context("running Blender")?;
+    let readers: Vec<_> = [
+        child
+            .stdout
+            .take()
+            .map(|s| Box::new(s) as Box<dyn Read + Send>),
+        child
+            .stderr
+            .take()
+            .map(|s| Box::new(s) as Box<dyn Read + Send>),
+    ]
+    .into_iter()
+    .flatten()
+    .map(|mut stream| {
+        std::thread::spawn(move || {
+            let mut text = Vec::new();
+            let _ = stream.read_to_end(&mut text);
+            text
+        })
+    })
+    .collect();
+    let started = Instant::now();
+    let status = loop {
+        if let Some(status) = child.try_wait()? {
+            break status;
+        }
+        if started.elapsed() > CONVERSION_LIMIT {
+            let _ = child.kill();
+            let _ = child.wait();
+            bail!(
+                "cannot import {}: Blender did not finish converting it within {} s",
+                source.display(),
+                CONVERSION_LIMIT.as_secs()
+            );
+        }
+        std::thread::sleep(Duration::from_millis(20));
+    };
+    let mut log = String::new();
+    for reader in readers {
+        log.push_str(&String::from_utf8_lossy(&reader.join().unwrap_or_default()));
+    }
+    Ok((status, log))
 }
 
 #[cfg(test)]

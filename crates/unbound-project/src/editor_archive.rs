@@ -738,6 +738,8 @@ mod tests {
             "PlaybackEngines/iOSSupport/UnityEditor.iOS.Extensions.Xcode.dll",
             "Resources/modules.asset",
             "PlaybackEngines/AndroidPlayer/modules.asset",
+            // The Blender export script .blend files are converted with.
+            "Tools/Unity-BlenderToFBX.py",
         ] {
             assert!(wanted(rel), "{rel}");
         }
@@ -749,6 +751,7 @@ mod tests {
             "PlaybackEngines/LinuxStandaloneSupport/Variations/linux64_player_development_mono/LinuxPlayer",
             "PlaybackEngines/AndroidPlayer/Tools/UnityEditor.Android.Tool.dll",
             "il2cpp/build/deploy/il2cpp.dll",
+            "Tools/FBXMayaExport.mel",
         ] {
             assert!(!wanted(rel), "{rel}");
         }

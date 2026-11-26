@@ -22,9 +22,14 @@ meshes in Play mode. `Assets/Scripts/DccModelsProbe.cs` records in Play mode int
   and indices, bounds, channel counts, and every vertex's position, normal and first UV.
 
 Residual (residuals.json): `ModelImporter.fileScale` is a generated stub for every model format.
+The gate prints the Blender that converts and warns when it is not the Reference's (Blender
+5.2.2): another version's differences may be its exporter's, not Unbound's.
 Not recorded: a machine without Blender (the Editor cannot import the file either; Unbound reports
-it as not imported), the Linux Editor's Blender lookup (Unbound runs `blender` from the `PATH`),
-and the other DCC formats (`.dae`, `.3ds`, `.max`).
+it as not imported), the Linux Editor's Blender lookup (Unbound runs `blender` from the `PATH` and
+warns once that the lookup is unmeasured), a `.blend` file that links other `.blend` files or
+external images (Unbound's cache entry does not follow them: a change to them alone is not
+re-imported), assets referring to the file's objects from a scene or prefab, and the other DCC
+formats (`.dae`, `.3ds`, `.max`).
 
 Record and gate:
 
