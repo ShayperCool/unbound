@@ -112,6 +112,17 @@ namespace UnityEngine.Tests
             Assert.Empty(m_Logs);
         }
 
+        /// <summary>SaveAssetIfDirty of a file with nothing to save calls no processor (unlike
+        /// SaveAssets; matches the Unity 6000.0.71f1 Editor, tests/projects/vfxwrites model save if
+        /// dirty resource: no OnWillSaveAssets call).</summary>
+        [Fact]
+        public void SaveAssetIfDirtyWithNothingToSaveCallsNoProcessor()
+        {
+            AssetModificationProcessorInternal.ProcessorsForTests = new[] { typeof(Keeping) };
+            AssetDatabase.SaveAssetIfDirty(new GUID("0123456789abcdef0123456789abcdef"));
+            Assert.Empty(s_Calls);
+        }
+
         [Fact]
         public void NoneDirtyStillCallsWithAnEmptyList()
         {

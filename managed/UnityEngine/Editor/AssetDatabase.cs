@@ -494,16 +494,17 @@ namespace UnityEditor
 
         public static void SaveAssetIfDirty(Object obj)
         {
-            using var write = SessionImports.Write();
-            if (SettingsAssets.Of(obj) is SettingsFile settings) SettingsAssets.Save(settings);
             // As Unity's own C# does: the file of the object, by its GUID.
-            else if (TryGetGUIDAndLocalFileIdentifier(obj, out var guid, out _)) SaveAssetIfDirty(new GUID(guid));
+            if (TryGetGUIDAndLocalFileIdentifier(obj, out var guid, out _)) SaveAssetIfDirty(new GUID(guid));
         }
 
+        /// <summary>Saves an asset file that has something to save (AssetFiles.SaveFileIfDirty). A
+        /// project settings file is not written, edited or not: SaveAssets writes it (matches the
+        /// Unity 6000.0.71f1 Editor, tests/projects/vfxwrites settings save if dirty guid).</summary>
         public static void SaveAssetIfDirty(GUID guid)
         {
             using var write = SessionImports.Write();
-            AssetFiles.SaveFileIfDirty(guid.ToString());
+            if (SettingsAssets.ByGuid(guid.ToString()) == null) AssetFiles.SaveFileIfDirty(guid.ToString());
         }
 
 

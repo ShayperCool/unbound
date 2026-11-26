@@ -288,7 +288,24 @@ namespace UnityEditor
         }
 
         /// <summary>Whether the asset CreateAsset made at a GUID has changes to save.</summary>
-        internal static bool CreatedHasChanges(string guid) => s_Created.TryGetValue(guid, out var created) && HasChanges(created);
+        internal static bool CreatedHasChanges(string guid) => s_Created.TryGetValue(guid, out var created) && Live(created) && HasChanges(created);
+
+        /// <summary>The GUIDs of the assets CreateAsset made that have changes to save (of
+        /// <paramref name="only"/>'s asset, of <paramref name="onlyFiles"/>, when given).</summary>
+        internal static List<string> CreatedWithChanges(Object only = null, ICollection<string> onlyFiles = null)
+        {
+            var guids = new List<string>();
+            foreach (var pair in s_Created)
+            {
+                if (only is not null && !pair.Value.Objects.ContainsKey(only)) continue;
+                if (onlyFiles != null && !onlyFiles.Contains(pair.Key)) continue;
+                if (Live(pair.Value) && HasChanges(pair.Value)) guids.Add(pair.Key);
+            }
+            return guids;
+        }
+
+        /// <summary>The asset still has a main object (or one to give it) and its file.</summary>
+        static bool Live(CreatedAsset created) => (created.Main != null || created.MainRemoved) && System.IO.File.Exists(FileOf(created.Path));
 
         /// <summary>Objects added or removed since the file was written, or one of them dirty.</summary>
         static bool HasChanges(CreatedAsset created) => created.Unsaved || created.Objects.Keys.Any(o => o != null && EditorUtility.IsDirty(o));
@@ -342,7 +359,7 @@ namespace UnityEditor
             foreach (var pair in s_Created.ToList())
             {
                 var created = pair.Value;
-                if ((created.Main == null && !created.MainRemoved) || !System.IO.File.Exists(FileOf(created.Path)))
+                if (!Live(created))
                 {
                     s_Created.Remove(pair.Key);
                     continue;

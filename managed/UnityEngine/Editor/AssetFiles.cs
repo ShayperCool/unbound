@@ -33,8 +33,10 @@ namespace Unbound.Runtime
         internal static void SaveDirty(Object only = null, bool unchangedStays = false, ICollection<string> onlyFiles = null, bool willSave = false)
         {
             Undo.FlushDirtiness();
-            // The assets CreateAsset made are written from their objects (and so no longer dirty).
-            AssetDatabase.SaveCreated(only, onlyFiles);
+            // The assets CreateAsset made are written from their objects (and so no longer dirty);
+            // with willSave, once the processors have returned their paths.
+            var created = willSave ? AssetDatabase.CreatedWithChanges(only, onlyFiles) : null;
+            if (!willSave) AssetDatabase.SaveCreated(only, onlyFiles);
             var dirty = new List<int>(EditorUtility.DirtyIds);
             var byGuid = new Dictionary<string, List<Object>>(StringComparer.OrdinalIgnoreCase);
             foreach (var id in dirty)
@@ -47,21 +49,26 @@ namespace Unbound.Runtime
                 list.Add(o);
             }
             // AssetDatabase.SaveAssets first hands the processors' OnWillSaveAssets the paths of the
-            // dirty assets (in path order; the Editor's order for several is unmeasured; assets
-            // CreateAsset made, written above, are not among them: unmeasured) and saves the paths
-            // they return; a processor may have saved some itself (the VFX package writes its graphs).
+            // dirty assets, those CreateAsset made included (in path order; the Editor's order for
+            // several is unmeasured; matches the Unity 6000.0.71f1 Editor, tests/projects/vfxwrites
+            // material save assets) and saves the paths they return; a processor may have saved some
+            // itself (the VFX package writes its graphs).
             try
             {
                 if (willSave)
                 {
                     // A package the project does not hold is not the project's to save: its paths
                     // are not offered, and Save leaves them as before.
+                    var offered = new List<string>(byGuid.Keys);
+                    offered.AddRange(created);
                     var paths = new List<string>();
-                    foreach (var guid in byGuid.Keys)
-                        if (!AssetDatabase.IsImmutablePackagePath(AssetDatabaseRuntime.PathOf(guid))) paths.Add(AssetDatabaseRuntime.PathOf(guid));
+                    foreach (var guid in offered)
+                        if (!AssetDatabase.IsImmutablePackagePath(AssetDatabaseRuntime.PathOf(guid)) && !paths.Contains(AssetDatabaseRuntime.PathOf(guid))) paths.Add(AssetDatabaseRuntime.PathOf(guid));
                     paths.Sort(StringComparer.Ordinal);
                     VisualEffectWrites.RefusedInSave = new HashSet<UnityEditor.VFX.VisualEffectResource>(ReferenceEqualityComparer.Instance);
                     var save = new HashSet<string>(AssetModificationProcessorInternal.OnWillSaveAssets(paths.ToArray()), StringComparer.Ordinal);
+                    created.RemoveAll(guid => !save.Contains(AssetDatabaseRuntime.PathOf(guid)) && !AssetDatabase.IsImmutablePackagePath(AssetDatabaseRuntime.PathOf(guid)));
+                    if (created.Count > 0) AssetDatabase.SaveCreated(only, new HashSet<string>(created, StringComparer.OrdinalIgnoreCase));
                     foreach (var guid in new List<string>(byGuid.Keys))
                     {
                         var path = AssetDatabaseRuntime.PathOf(guid);
