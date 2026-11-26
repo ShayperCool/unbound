@@ -64,6 +64,22 @@ namespace UnityEditor
 
         internal static void Invalidate() => s_Entries = null;
 
+        /// <summary>For tests: the listing of <paramref name="json"/> until disposed, then the one
+        /// before, as it was (a later test sees the engine's listing, not a stale index).</summary>
+        internal static IDisposable ListForTests(string json)
+        {
+            var saved = (s_Entries, s_ByGuid, s_ByPath);
+            List(json);
+            return new ListingScope(saved);
+        }
+
+        sealed class ListingScope : IDisposable
+        {
+            readonly (List<Entry>, Dictionary<string, Entry>, Dictionary<string, Entry>) m_Saved;
+            internal ListingScope((List<Entry>, Dictionary<string, Entry>, Dictionary<string, Entry>) saved) => m_Saved = saved;
+            public void Dispose() => (s_Entries, s_ByGuid, s_ByPath) = m_Saved;
+        }
+
         /// <summary>Whether the asset database lists an asset of this GUID.</summary>
         internal static bool Lists(string guid)
         {

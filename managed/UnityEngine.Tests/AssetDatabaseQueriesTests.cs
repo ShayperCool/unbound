@@ -13,12 +13,13 @@ namespace UnityEngine.Tests
     {
         readonly ILogHandler m_Handler = Debug.unityLogger.logHandler;
         readonly Capture m_Logs = new Capture();
+        readonly IDisposable m_Listing;
 
         public AssetDatabaseQueriesTests()
         {
             Debug.unityLogger.logHandler = m_Logs;
             AssetDatabase.ForgetBundleNames();
-            AssetDatabase.List("""
+            m_Listing = AssetDatabase.ListForTests("""
                 [
                   {"guid":"00000000000000001000000000000000","path":"Assets","kind":"folder","importer":"DefaultImporter","labels":[]},
                   {"guid":"10000000000000000000000000000001","path":"Assets/Data","kind":"folder","importer":"DefaultImporter","labels":[]},
@@ -38,7 +39,7 @@ namespace UnityEngine.Tests
         {
             Debug.unityLogger.logHandler = m_Handler;
             AssetDatabase.ForgetBundleNames();
-            AssetDatabase.Invalidate();
+            m_Listing.Dispose();
         }
 
         sealed class Capture : ILogHandler
