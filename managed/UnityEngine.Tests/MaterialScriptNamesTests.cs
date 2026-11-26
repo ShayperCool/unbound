@@ -60,8 +60,13 @@ namespace UnityEngine.Tests
             var expected = System.Text.Json.JsonDocument.Parse(System.IO.File.ReadLines(System.IO.Path.Combine(Repo(), "tests", "projects", "propertyids",
                     "Reference", "unity-6000.0.71f1", "values.jsonl")).First(l => l.Contains("\"builtin/before_project\"")))
                 .RootElement.GetProperty("v").GetString().Split('\n');
-            // (A suite run under a release whose order is not measured starts the ids without them.)
-            if (!Shader.EngineOrderMeasured) return;
+            // The ids start under the run's release: one whose order is not measured has only the two.
+            Assert.Equal(TestRelease.RunMeasured, Shader.EngineOrderMeasured);
+            if (!TestRelease.RunMeasured)
+            {
+                Assert.Equal(new[] { 0, 1 }, new[] { Shader.PropertyToID("_MainTex"), Shader.PropertyToID("_Color") });
+                return;
+            }
             Assert.Equal(494, expected.Length);
             var ids = expected.Select(Shader.PropertyToID).ToArray();
             for (int i = 0; i < ids.Length; i++) Assert.Equal(i, ids[i]);
@@ -83,7 +88,7 @@ namespace UnityEngine.Tests
         [Fact]
         public void TheShadersNamesAreListedByIdBesideTheEnginesNames()
         {
-            if (!Shader.EngineOrderMeasured) return;
+            Assert.Equal(TestRelease.RunMeasured, Shader.EngineOrderMeasured);
             int n = ++s_Made;
             string tint = "_Tint" + n, albedo = "_Albedo" + n, glow = "_Glow" + n;
             var shader = Own(ShaderUtil.CreateShaderAsset("Shader \"Tests/MaterialScriptNames/ById" + n + "\" {\nProperties { "
@@ -96,6 +101,13 @@ namespace UnityEngine.Tests
             // A colour declared after the texture comes after its vectors.
             Assert.Equal(Shader.PropertyToID(albedo) + 4, Shader.PropertyToID(glow));
             var m = Own(new Material(shader));
+            if (!TestRelease.RunMeasured)
+            {
+                // The order not measured: the shader's names in declaration order.
+                Assert.Equal(new[] { tint, "_Color", albedo + "_ST", albedo + "_TexelSize", albedo + "_HDR", glow, "_MainTex_ST", "_MainTex_TexelSize", "_MainTex_HDR" },
+                    m.GetPropertyNames(MaterialPropertyType.Vector));
+                return;
+            }
             Assert.Equal(new[] { "_MainTex_ST", "_MainTex_TexelSize", "_MainTex_HDR", "_Color", tint, albedo + "_ST", albedo + "_TexelSize", albedo + "_HDR", glow },
                 m.GetPropertyNames(MaterialPropertyType.Vector));
             Assert.Equal(new[] { "_Cutoff", "_Glossiness" }, m.GetPropertyNames(MaterialPropertyType.Float));

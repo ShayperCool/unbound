@@ -68,9 +68,9 @@ namespace UnityEngine.Tests
         public void AMaterialsPropertiesAreFloatsThenVectorsInNameIdOrder()
         {
             using var release = TestRelease.Pin(TestRelease.Measured);
-            // (The ids' order is the release's the ids started under: a suite run under a release
-            // whose order is not measured has the other one.)
-            if (!Shader.EngineOrderMeasured) return;
+            // (The ids' order is the run's release's: one whose order is not measured has another.)
+            Assert.Equal(TestRelease.RunMeasured, Shader.EngineOrderMeasured);
+            if (!TestRelease.RunMeasured) return;
             var shader = ProbeShader("Q758 test/order",
                 ("_L4TexB", Rendering.ShaderPropertyType.Texture, 0),
                 ("_L4FloatB", Rendering.ShaderPropertyType.Float, 0),
@@ -118,9 +118,9 @@ namespace UnityEngine.Tests
         public void BuiltInShaderNamesKeepTheirStartupIds()
         {
             using var release = TestRelease.Pin(TestRelease.Measured);
-            // (The ids' order is the release's the ids started under: a suite run under a release
-            // whose order is not measured has the other one.)
-            if (!Shader.EngineOrderMeasured) return;
+            // (The ids' order is the run's release's: one whose order is not measured has another.)
+            Assert.Equal(TestRelease.RunMeasured, Shader.EngineOrderMeasured);
+            if (!TestRelease.RunMeasured) return;
             var shader = ProbeShader("Q758 test/startup",
                 ("_Mode", Rendering.ShaderPropertyType.Float, 0),
                 ("_SpecColor", Rendering.ShaderPropertyType.Color, 0),

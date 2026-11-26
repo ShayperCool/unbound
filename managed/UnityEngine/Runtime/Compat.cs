@@ -1315,11 +1315,11 @@ namespace Unbound.Runtime
 
         /// <summary>The shader property names the engine gives ids when it starts, before any
         /// project content, in the order of their ids (matches the Unity 6000.0.71f1 Editor,
-        /// tests/projects/propertyids builtin.before_project: identical at InitializeOnLoad in
-        /// projects of other shaders). Null for a release whose order is not measured. Names the
-        /// Editor gives ids later in a session (the shaders it loads itself) are not among them, and
-        /// the ids' values (negative for some, one shared by two names) are not modelled: only their
-        /// order.</summary>
+        /// tests/projects/propertyids builtin.before_project: the same in a project of every
+        /// built-in module). Null for a release whose order is not measured. Names the Editor gives
+        /// ids later in a session (the shaders it loads itself) are not among them, and the ids'
+        /// values (negative for some, one shared by each group of legacy aliases) are not modelled:
+        /// only their order.</summary>
         internal static string[] EnginePropertyNames => RenderingMeasured ? s_EnginePropertyNames6000_0 ??= ReadEnginePropertyNames("6000.0") : null;
 
         static string[] s_EnginePropertyNames6000_0;

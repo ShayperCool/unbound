@@ -36,7 +36,16 @@ namespace UnityEngine.Tests
         internal static void Select()
         {
             var release = Environment.GetEnvironmentVariable("UNBOUND_TEST_UNITY_RELEASE");
-            ProjectInfo.UnityVersion = string.IsNullOrEmpty(release) ? Measured : release;
+            ProjectInfo.UnityVersion = Run = string.IsNullOrEmpty(release) ? Measured : release;
+            // The shader property ids start under the run's release, as the engine's under the
+            // project's, whichever test touches a shader first (a pinned one would start them otherwise).
+            RuntimeHelpers.RunClassConstructor(typeof(Shader).TypeHandle);
         }
+
+        /// <summary>The release of the whole run (<see cref="Select"/>).</summary>
+        internal static string Run { get; private set; }
+
+        /// <summary>Whether the run's release is of a measured family.</summary>
+        internal static bool RunMeasured => Compat.FamilyOf(Run) != ReleaseFamily.Unmeasured;
     }
 }

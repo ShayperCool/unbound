@@ -36,7 +36,7 @@ namespace UnityEditor
             if (!s_FirstShaderOf.TryGetValue(name, out var first)) s_FirstShaderOf[name] = shaderName;
             else if (first != shaderName)
                 Unbound.Runtime.Stubs.Ignored("AnimationUtility.GetAnimatableBindings names shaders share",
-                    "orders a name two shaders declare as the first shader seen declares it (the Editor numbers it in its own shader load order; not measured)");
+                    "orders a name two shaders declare by the id the first shader loaded gave it (the Editor numbers it in its own shader load order; not measured)");
         }
 
         static readonly string[] s_Rgba = { "r", "g", "b", "a" };

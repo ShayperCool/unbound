@@ -9,6 +9,9 @@
     "tests/projects/animbindings/",
     "tests/projects/analyticssession/ProjectSettings/",
     "tests/projects/imguiskin/Assets/Editor/",
-    "tests/projects/imguiskin/Assets/Scenes/"
+    "tests/projects/imguiskin/Assets/Scenes/",
+    "managed/UnityEngine/Graphics/Shader.cs",
+    "managed/UnityEngine/Graphics/ShaderLab.cs",
+    "tests/projects/propertyids/Reference/"
   ]
 }
