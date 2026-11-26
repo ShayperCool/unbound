@@ -374,6 +374,13 @@ pub fn info(args: &ProjectArgs) -> Result<()> {
         }
     );
     println!("install   {}", project.install.data.display());
+    // The installation's platform modules, by the names a texture's settings give them: which
+    // per-platform entries the Editor and Unbound write into a texture's .meta.
+    let modules = unbound_assets::new_meta::MetaContext::for_install(
+        &unbound_project::install::playback_engines(&project.install.data),
+    )
+    .platforms;
+    println!("modules   {}", modules.join(","));
     println!(
         "packages  {} resolved, {} missing",
         project.packages.len(),

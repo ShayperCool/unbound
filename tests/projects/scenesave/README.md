@@ -154,6 +154,9 @@ file the run added, changed or removed.
   platform: each `.meta` as the project opens, after `SetLabels` and after `ClearLabels`, and the
   textures' after `SaveAndReimport` of a setting the section has and of one it lacks. Recorded in
   the macOS Editor (batch mode, no graphics, the Android module installed: two identical captures).
+  A texture's `.meta` lists the installation's platform modules: the comparison leaves out, on both
+  sides, the entries of the modules only one of the recording and the gating installations has (the
+  run's from `unbound info`, `tests/texture_platforms.py`); the rest is compared byte for byte.
 - `refresh-changes` (Edit Mode, `RefreshChangeTests`): files of imported assets changed on disk
   during the session, then `AssetDatabase.Refresh`: a file only touched, a text file, a YAML asset,
   an image and an importer setting in the image's `.meta`, a material a scene object uses (the scene

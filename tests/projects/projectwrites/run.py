@@ -29,6 +29,7 @@ PROBE = Path(__file__).resolve().parent
 sys.path.insert(0, str(PROBE.parents[1]))
 import editor_runner  # noqa: E402
 from probe_paths import run_root, unity_version  # noqa: E402
+import texture_platforms  # noqa: E402
 import value_probe  # noqa: E402
 
 VARIABLE = 'PROJECT_WRITES_OUT'
@@ -225,7 +226,7 @@ FILE_ID = re.compile(rb'(&|fileID: )(-?[0-9]{5,})')
 KEPT_IDS = {b'11400000', b'11500000', b'10900000'}
 # A per-platform settings entry of a platform module: which ones a new .meta lists is a fact of
 # the Editor installation (the probe checks them against the installed modules in the run).
-PLATFORM_ENTRY = re.compile(rb'(?m)^( *)- serializedVersion: [0-9]+\n\1  buildTarget: (?!DefaultTexturePlatform\b|Standalone\b)\S+\n(?:\1  .*\n)*')
+PLATFORM_ENTRY = texture_platforms.entry_pattern()
 # Files compared as lines gone and added: settings and package files the Editor rewrites.
 LINE_DIFFED = re.compile(r'^(ProjectSettings/.*|Packages/.*\.json)$')
 

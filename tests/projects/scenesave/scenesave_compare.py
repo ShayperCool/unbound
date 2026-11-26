@@ -22,7 +22,11 @@ no longer occurs, fails the comparison.
 import difflib
 import json
 import re
+import sys
 from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+import texture_platforms  # noqa: E402
 
 HEADER = re.compile(r'^--- !u!(\d+) &(-?\d+)( stripped)?$')
 FILE_ID = re.compile(r'(fileID: |&)(-?\d+)')
@@ -269,9 +273,13 @@ def sort_created_modifications(text, created_guids):
     return '\n'.join(out)
 
 
-def compare_file(reference, actual, path, created=({}, {})):
-    """None when equal (after the id mapping), else a short description."""
+def compare_file(reference, actual, path, created=({}, {}), installation_modules=()):
+    """None when equal (after the id mapping), else a short description. A texture `.meta` is
+    compared without the per-platform entries of `installation_modules`, the platform modules only
+    one of the two installations has (texture_platforms; the rest of the text byte for byte)."""
     ref, act = reference.read_bytes(), actual.read_bytes()
+    if installation_modules and path.endswith('.meta') and b'\nTextureImporter:\n' in ref + act:
+        ref, act = texture_platforms.strip(ref, installation_modules), texture_platforms.strip(act, installation_modules)
     if ref == act:
         return None
     if path.endswith('.meta'):
@@ -348,7 +356,7 @@ def file_set(case_dir, summary):
     return files
 
 
-def compare_runs(reference, actual, cases, report=None):
+def compare_runs(reference, actual, cases, report=None, recorded_modules=None):
     failures, compared = [], 0
     for case in cases:
         ref, act = Path(reference)/case, Path(actual)/case
@@ -365,13 +373,21 @@ def compare_runs(reference, actual, cases, report=None):
             if rr.get(key) != ar.get(key):
                 failures.append({'case': case, 'key': key, 'reference': rr.get(key), 'actual': ar.get(key)})
         rf, af = file_set(ref, rs), file_set(act, acs)
+        # The platform modules one installation has and the other lacks (a reference's from its
+        # summary, else as recorded; a run's from its summary).
+        modules = ()
+        if recorded_modules and case in recorded_modules:
+            if 'modules' not in acs:
+                failures.append({'case': case, 'key': 'modules', 'reference': 'listed', 'actual': 'missing'})
+            else:
+                modules = texture_platforms.installation_differences(rs.get('modules', recorded_modules[case]), acs['modules'])
         created = created_assets(rf, af)
         for rel in sorted(set(rf) | set(af)):
             compared += 1
             if rel not in rf or rel not in af:
                 failures.append({'case': case, 'key': 'file:' + rel, 'reference': rel in rf, 'actual': rel in af})
                 continue
-            problem = compare_file(rf[rel], af[rel], rel, created)
+            problem = compare_file(rf[rel], af[rel], rel, created, modules)
             if problem:
                 failures.append({'case': case, 'key': 'file:' + rel, 'reference': 'written', 'actual': problem})
         compared += 1

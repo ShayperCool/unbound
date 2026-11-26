@@ -306,6 +306,12 @@ def seed_build_index_list(project, play):
     settings.write_bytes(text.replace(old, seeded))
 
 
+# The cases whose texture `.meta` files list the installation's platform modules, with the modules
+# of the Editor installation their reference was recorded with (the macOS Editor with the Android
+# module, README label-metas).
+INSTALLATION_CASES = {'label-metas': ('Android',)}
+
+
 def run_case(kind, case, out, cli=None):
     platform, test_filter = CASES[case]
     scratch = run_root(PROBE, 'work')
@@ -348,6 +354,14 @@ def run_case(kind, case, out, cli=None):
             changed.append(rel)
     removed = [rel for rel in before if rel not in after]
     summary = {'case': case, 'exit': code, 'changed': changed, 'removed': removed}
+    if kind != 'editor' and case in INSTALLATION_CASES:
+        # The installation's platform modules, which decide a texture .meta's platform entries
+        # (scenesave_compare leaves out those of the modules only one installation has).
+        info = subprocess.run([command[0], 'info', '-p', str(project)], capture_output=True, text=True, timeout=600).stdout
+        line = next((l for l in info.splitlines() if l.startswith('modules ')), None)
+        if line is None:
+            raise SystemExit(f'{case}: `unbound info` gives no modules line')
+        summary['modules'] = [m for m in line.split(None, 1)[1].split(',') if m] if len(line.split(None, 1)) > 1 else []
     (out/'summary.json').write_text(json.dumps(summary, indent=2) + '\n')
     shutil.copy(rows, out/'rows.jsonl') if rows.exists() else (out/'rows.jsonl').write_text('')
     if (work/'snapshots').is_dir():
@@ -386,7 +400,8 @@ def main():
             run_case(args.command, case, out/case)
         return 0
     if args.command == 'compare':
-        return scenesave_compare.compare_runs(args.reference, args.actual, args.case or sorted(CASES))
+        return scenesave_compare.compare_runs(args.reference, args.actual, args.case or sorted(CASES),
+                                              recorded_modules=INSTALLATION_CASES)
     if args.command == 'compare-file':
         problem = scenesave_compare.compare_file(args.reference, args.actual, args.actual.name)
         print(problem or 'identical')
@@ -394,7 +409,8 @@ def main():
     out = run_root(PROBE, 'gate')
     for case in sorted(CASES):
         run_case('unbound', case, out/case)
-    return scenesave_compare.compare_runs(reference_root(PROBE), out, sorted(CASES), report=out/'report.json')
+    return scenesave_compare.compare_runs(reference_root(PROBE), out, sorted(CASES), report=out/'report.json',
+                                          recorded_modules=INSTALLATION_CASES)
 
 
 if __name__ == '__main__':
