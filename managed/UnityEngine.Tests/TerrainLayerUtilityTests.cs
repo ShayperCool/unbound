@@ -26,10 +26,18 @@ namespace UnityEngine.Tests
             try { body(); }
             finally
             {
+                // The cached contents hold the stand-in icon: build them again next time.
+                typeof(TerrainLayerUtility).GetField("s_Styles", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static).SetValue(null, null);
                 for (int i = 0; i < caches.Length; i++)
                     ((Texture2D[])typeof(EditorGUIUtility).GetField(caches[i], System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static).GetValue(null))[1] = saved[i];
                 Object.DestroyImmediate(icon);
             }
+        }
+
+        sealed class TilingHolder : ScriptableObject
+        {
+            public Vector2 size;
+            public Vector2 offset;
         }
 
         static int LayoutEntries(Action body)
@@ -102,9 +110,22 @@ namespace UnityEngine.Tests
             try
             {
                 // A label and two vector fields.
-                Assert.Equal(3, LayoutEntries(() => TerrainLayerUtility.TilingSettingsUI(layer)));
+                WithWarningIcon(() => Assert.Equal(3, LayoutEntries(() => TerrainLayerUtility.TilingSettingsUI(layer))));
                 Assert.Equal(new Vector2(3f, 4f), layer.tileSize);
                 Assert.Equal(new Vector2(0.5f, 0.25f), layer.tileOffset);
+                // The property overload, on two Vector2 fields of a scripted object.
+                var holder = ScriptableObject.CreateInstance<TilingHolder>();
+                holder.size = new Vector2(3f, 4f);
+                holder.offset = new Vector2(0.5f, 0.25f);
+                var serialized = new SerializedObject(holder);
+                var size = serialized.FindProperty("size");
+                var offset = serialized.FindProperty("offset");
+                Assert.NotNull(size);
+                Assert.NotNull(offset);
+                WithWarningIcon(() => Assert.Equal(3, LayoutEntries(() => TerrainLayerUtility.TilingSettingsUI(size, offset))));
+                Assert.Equal(new Vector2(3f, 4f), size.vector2Value);
+                Assert.Equal(new Vector2(0.5f, 0.25f), offset.vector2Value);
+                Object.DestroyImmediate(holder);
             }
             finally { Object.DestroyImmediate(layer); }
         }
