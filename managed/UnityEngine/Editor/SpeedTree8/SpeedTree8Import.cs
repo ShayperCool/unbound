@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
+using System.Linq;
 using Unbound.Runtime;
 using UnityEditor;
 using UnityEditor.AssetImporters;
@@ -84,6 +85,7 @@ namespace Unbound.SpeedTree
                 import.Build();
                 using (AssetDatabaseRuntime.ImportCallbacks(info.Guid))
                     AssetPostprocessorHooks.Run(AssetPostprocessing.Hooks("OnPostprocessSpeedTree", typeof(GameObject)), session, new object[] { import.Root });
+                import.SortChildrenByName();
             }
             return import;
         }
@@ -227,6 +229,23 @@ namespace Unbound.SpeedTree
             }
 
             bool IsBillboard(int lod) => m_Tree.LastLodIsBillboard && lod == m_Tree.Lods.Length - 1;
+
+            /// <summary>The imported tree keeps its children in name order, letters compared without
+            /// case: a tree named in lower case (`card-tree-sample`) has its levels before
+            /// `CollisionObject0`, `Field_Embedded` after it; OnPostprocessSpeedTree still sees them
+            /// in the order they were made, the levels first (matches the Unity 6000.0.71f1 Editor,
+            /// tests/projects/speedtree8 `children`, `callbacks`). Unmeasured: numbers of more
+            /// digits than others of their kind (an eleventh collision object; compared as text) and
+            /// children a postprocessor adds (sorted with the others).</summary>
+            internal void SortChildrenByName()
+            {
+                var root = Root.transform;
+                var children = new List<Transform>(root.childCount);
+                for (int i = 0; i < root.childCount; i++) children.Add(root.GetChild(i));
+                // A stable sort: equal names keep the order they were made in.
+                var sorted = children.OrderBy(t => t.name, StringComparer.OrdinalIgnoreCase).ToList();
+                for (int i = 0; i < sorted.Count; i++) sorted[i].SetSiblingIndex(i);
+            }
 
             MeshRenderer CreateLevel(int index)
             {
