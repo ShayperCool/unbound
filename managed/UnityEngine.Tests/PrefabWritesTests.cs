@@ -501,6 +501,9 @@ namespace UnityEngine.Tests
             Assert.Equal(HideFlags.DontSaveInEditor | HideFlags.HideInInspector, added.hideFlags);
             Assert.False(EditorUtility.IsDirty(m_Asset));
             var holder = m_Asset.GetComponent<PrefabTestHolder>();
+            // An Undo record the callbacks made dirties nothing once flushed.
+            Undo.FlushDirtiness();
+            Assert.False(EditorUtility.IsDirty(holder));
             holder.label = "after the import";
             EditorUtility.SetDirty(holder);
             AssetDatabase.SaveAssets();
@@ -515,6 +518,9 @@ namespace UnityEngine.Tests
             {
                 root.AddComponent<UnityEngine.SphereCollider>().hideFlags = HideFlags.HideInInspector;
                 EditorUtility.SetDirty(root);
+                var holder = root.GetComponent<PrefabTestHolder>();
+                Undo.RecordObject(holder, "postprocess");
+                holder.label = "from the import";
             }
         }
 
