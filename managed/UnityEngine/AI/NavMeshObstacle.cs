@@ -298,11 +298,13 @@ namespace Unbound.Runtime
     //   physics or animation are unmeasured.
     // C4: a capsule is a circle of its radius times the larger horizontal scale (the Scripting API
     //   calls the obstacle "cylindrical in shape"). Upright, at its axis (navpath
-    //   obstacle-separation); lying or tilted, on the measured release, at the nearest point, seen
-    //   from above, of the part of its shaft within the agent's height (navpath obstacle-shapes
-    //   caplying, captilt, captiltx: agents are pushed to the two radii from the shaft, along +x
-    //   when on it; walking past, Unity keeps 1 to 2 cm more clearance alongside the shaft, listed).
-    //   Other releases keep an upright circle at the center (unmeasured).
+    //   obstacle-separation); lying or tilted, on the measured release, at the point of its shaft
+    //   nearest the agent seen from above (navpath obstacle-shapes caplying, captilt, captiltx,
+    //   shafts within the agent's height: agents are pushed to the two radii from the shaft, along
+    //   +x when on it; walking past, Unity keeps 1 to 2 cm more clearance alongside the shaft,
+    //   listed). Unbound's choice (unmeasured): that point's radius is cut by the height between it
+    //   and the agent's height span, as an upright capsule's cap is; a capsule whose height misses
+    //   the agent's is no neighbour. Other releases keep an upright circle at the center.
     // C5 (measured, not reproduced): Unity avoids a box, and pushes agents out of it, by its
     //   outline (navpath obstacle-shapes box*, listed); the one box it ignores is one spanning the
     //   agent's height exactly, a float coincidence. Unbound's choice:
@@ -894,7 +896,7 @@ namespace Unbound.Runtime
                         x0, x1, z0, z1, invX, invZ)) candidates++;
                 }
                 for (int j = 0; j < s_Near.Count; j++)
-                    if (InCells(s_NearPositions[j], NavMesh.V(s_Near[j].Velocity), s_Near[j].Radius, horizon, prediction,
+                    if (InCells(s_NearPositions[j], NavMesh.V(s_Near[j].Velocity), s_Near[j].Reach, horizon, prediction,
                         x0, x1, z0, z1, invX, invZ)) circles++;
                 if (circles == 0 || candidates + circles <= NeighbourCandidates) continue;
                 s_WarnedCandidates = true;

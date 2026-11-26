@@ -1123,8 +1123,11 @@ namespace DotRecast.Detour.Crowd
                 float radius = ag.option.radius;
                 if (ag.option.tiltedCapsule)
                 {
-                    // Unbound's choice (unmeasured): the half-diagonal of a tilted capsule's
-                    // horizontal bounds, as for an upright one.
+                    // Unbound's choice (unmeasured): a tilted capsule whose height misses the
+                    // agent's is no neighbour; one that reaches it ranks by the half-diagonal of
+                    // its horizontal bounds, as an upright one does.
+                    float reachY = MathF.Abs(ag.option.capsuleAxis.Y) + radius;
+                    if (ag.npos.Y - reachY > pos.Y + skip.option.height || ag.npos.Y + reachY < pos.Y) continue;
                     float ex = radius + MathF.Abs(ag.option.capsuleAxis.X), ez = radius + MathF.Abs(ag.option.capsuleAxis.Z);
                     radius = MathF.Sqrt(ex * ex + ez * ez);
                 }
@@ -1417,44 +1420,28 @@ namespace DotRecast.Detour.Crowd
             ? ag.option.radius + MathF.Sqrt(RcMath.Sqr(ag.option.capsuleAxis.X) + RcMath.Sqr(ag.option.capsuleAxis.Z))
             : ag.option.radius;
 
-        /// Unbound: a tilted capsule as an agent meets it: the circle of its radius at the nearest
-        /// point, seen from above, of the part of its shaft within the agent's height; when no part
-        /// is, the end nearest that height, its radius cut by the height between as for an upright
-        /// capsule's cap (tests/projects/navpath obstacle-shapes caplying, captilt, captiltx: pushed
-        /// to their radii apart from the shaft, along +x when on it).
+        /// Unbound: a tilted capsule as an agent meets it: the circle at the point of its shaft nearest
+        /// the agent seen from above, of its radius cut by the height between that point and the
+        /// agent's height span, as an upright capsule's cap is (none when that height exceeds the
+        /// radius). Measured for shafts within the agent's height (tests/projects/navpath
+        /// obstacle-shapes caplying, captilt, captiltx: agents are pushed to the two radii from the
+        /// shaft, along +x when on it); a shaft reaching above or below the agent, and the cut radius,
+        /// are Unbound's choice (unmeasured).
         internal static bool TryProjectTiltedCapsule(DtCrowdAgent ag, DtCrowdAgent capsule,
             out float radius, out bool clippedCap, out RcVec3f center)
         {
             radius = capsule.option.radius;
-            clippedCap = false;
             var axis = capsule.option.capsuleAxis;
             var mid = capsule.npos;
+            float lengthSqr = axis.X * axis.X + axis.Z * axis.Z;
+            float t = lengthSqr > 0f
+                ? Math.Clamp(((ag.npos.X - mid.X) * axis.X + (ag.npos.Z - mid.Z) * axis.Z) / lengthSqr, -1f, 1f) : 0f;
+            center = new RcVec3f(mid.X + axis.X * t, mid.Y + axis.Y * t, mid.Z + axis.Z * t);
             float bottom = ag.npos.Y, top = ag.npos.Y + ag.option.height;
-            float lo = -1f, hi = 1f;
-            if (MathF.Abs(axis.Y) > 1e-9f)
-            {
-                float t0 = (bottom - mid.Y) / axis.Y, t1 = (top - mid.Y) / axis.Y;
-                lo = MathF.Max(-1f, MathF.Min(t0, t1));
-                hi = MathF.Min(1f, MathF.Max(t0, t1));
-            }
-            else if (mid.Y < bottom || mid.Y > top) lo = 2f;
-            if (lo <= hi)
-            {
-                float lengthSqr = axis.X * axis.X + axis.Z * axis.Z;
-                float t = lengthSqr > 0f
-                    ? ((ag.npos.X - mid.X) * axis.X + (ag.npos.Z - mid.Z) * axis.Z) / lengthSqr : lo;
-                t = Math.Clamp(t, lo, hi);
-                center = new RcVec3f(mid.X + axis.X * t, mid.Y + axis.Y * t, mid.Z + axis.Z * t);
-                return true;
-            }
-            // No part of the shaft within the agent's height: the end nearest it.
-            var low = axis.Y >= 0f ? RcVec3f.Subtract(mid, axis) : RcVec3f.Add(mid, axis);
-            var high = axis.Y >= 0f ? RcVec3f.Add(mid, axis) : RcVec3f.Subtract(mid, axis);
-            center = low.Y > top ? low : high;
-            float gap = center.Y > top ? center.Y - top : bottom - center.Y;
+            float gap = center.Y > top ? center.Y - top : center.Y < bottom ? bottom - center.Y : 0f;
+            clippedCap = gap > 0f;
             if (gap > radius) return false;
-            clippedCap = true;
-            radius = MathF.Sqrt(radius * radius - gap * gap);
+            if (clippedCap) radius = MathF.Sqrt(radius * radius - gap * gap);
             return true;
         }
 

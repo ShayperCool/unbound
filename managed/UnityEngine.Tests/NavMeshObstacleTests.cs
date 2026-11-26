@@ -428,6 +428,36 @@ namespace UnityEngine.Tests
                 $"expected ({expectedX}, {expectedZ}), at {agent.nextPosition}");
         }
 
+        [Theory]
+        // Unbound's choice (unmeasured): a lying capsule out of the agent's height meets it with
+        // its radius cut by the height between, as an upright capsule's cap: sunk 0.1 m below the
+        // feet it still pushes, 0.6 m above the head (more than its radius) it does not.
+        [InlineData(-0.1f, true)]
+        [InlineData(0.6f, false)]
+        public void ALyingCapsuleOutOfTheAgentsHeightMeetsItWithItsRadiusCut(float gap, bool pushes)
+        {
+            using var release = TestRelease.Pin(TestRelease.Measured);
+            var standing = new GameObject("agent");
+            m_Objects.Add(standing);
+            standing.transform.position = new Vector3(0.3f, 0f, 0.6f);
+            var agent = standing.AddComponent<NavMeshAgent>();
+            Assert.True(agent.isOnNavMesh);
+            float feet = agent.nextPosition.y;
+            var go = new GameObject("obstacle");
+            m_Objects.Add(go);
+            go.transform.position = new Vector3(0f, gap < 0f ? feet + gap : feet + agent.height + gap, 0f);
+            go.transform.rotation = Quaternion.Euler(0f, 0f, 90f);
+            var obstacle = go.AddComponent<NavMeshObstacle>();
+            obstacle.shape = NavMeshObstacleShape.Capsule;
+            obstacle.radius = 0.5f;
+            obstacle.height = 3f;
+            obstacle.carving = false;
+            for (int i = 0; i < 20; i++) Step();
+            float expected = pushes ? agent.radius + Mathf.Sqrt(0.25f - gap * gap) : 0.6f;
+            Assert.True(Mathf.Abs(agent.nextPosition.z - expected) < 2e-3f && Mathf.Abs(agent.nextPosition.x - 0.3f) < 2e-3f,
+                $"expected z {expected}, at {agent.nextPosition}");
+        }
+
         [Fact]
         public void DisablingTheObstacleRestoresTheStraightWalk()
         {

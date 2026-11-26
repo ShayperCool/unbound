@@ -150,7 +150,7 @@ root, is avoided. Unbound's boxes are a cover of circles (`NavMeshObstacle.cs` C
 value is listed (reported, not gated).
 
 A lying or tilted capsule pushes agents to its radius plus theirs from its shaft seen from above
-(along +x when they stand on it); Unbound matches every capsule contact value. Walking past one,
+(along +x when they stand on it); Unbound matches every capsule contact value. Every probe capsule's shaft lies within the agent's height; one reaching above or below it is unmeasured. Walking past one,
 Unity keeps 1 to 2 cm more clearance alongside the shaft; those steering values are listed.
 
     UNBOUND_PROBE_UNITY_VERSION=6000.0.71f1 python3 tests/projects/navpath/run.py editor --profile obstacle-shapes --label L
