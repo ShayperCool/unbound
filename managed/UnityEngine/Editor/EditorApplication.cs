@@ -93,6 +93,8 @@ namespace UnityEditor
             ObjectChangeEvents.Publish();
             try { InternalUpdate?.Invoke(); }
             catch (Exception e) { Debug.LogException(e); }
+            // The channel service's messages reach their handlers each update (channelmessages).
+            UnityEditor.MPE.ChannelService.EditorUpdate();
             var ticks = tick;
             if (ticks != null)
             {

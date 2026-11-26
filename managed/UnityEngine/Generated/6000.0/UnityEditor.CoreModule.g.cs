@@ -30782,28 +30782,9 @@ namespace UnityEditor.Localization.Editor
 }
 namespace UnityEditor.MPE
 {
-    [global::Unbound.Stub]
-    public unsafe partial class ChannelClient
+    unsafe partial class ChannelClient
     {
-        [global::Unbound.Stub] internal static global::System.Collections.Generic.Dictionary<int, global::UnityEditor.MPE.ChannelClient> s_Clients;
-        [global::Unbound.Stub] public bool IsConnected() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.MPE.ChannelClient.IsConnected"); return default; }
-        [global::Unbound.Stub] public void Start(bool autoTick) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.MPE.ChannelClient.Start"); }
-        [global::Unbound.Stub] public void Stop() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.MPE.ChannelClient.Stop"); }
-        [global::Unbound.Stub] public void Close() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.MPE.ChannelClient.Close"); }
-        [global::Unbound.Stub] public void Tick() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.MPE.ChannelClient.Tick"); }
-        [global::Unbound.Stub] public void Send(string data) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.MPE.ChannelClient.Send"); }
-        [global::Unbound.Stub] public void Send(byte[] data) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.MPE.ChannelClient.Send"); }
-        [global::Unbound.Stub] public global::System.Action RegisterMessageHandler(global::System.Action<string> handler) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.MPE.ChannelClient.RegisterMessageHandler"); return default; }
-        [global::Unbound.Stub] public void UnregisterMessageHandler(global::System.Action<string> handler) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.MPE.ChannelClient.UnregisterMessageHandler"); }
-        [global::Unbound.Stub] public global::System.Action RegisterMessageHandler(global::System.Action<byte[]> handler) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.MPE.ChannelClient.RegisterMessageHandler"); return default; }
-        [global::Unbound.Stub] public void UnregisterMessageHandler(global::System.Action<byte[]> handler) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.MPE.ChannelClient.UnregisterMessageHandler"); }
-        [global::Unbound.Stub] public int NewRequestId() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.MPE.ChannelClient.NewRequestId"); return default; }
-        [global::Unbound.Stub] public global::UnityEditor.MPE.ChannelClientInfo GetChannelClientInfo() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.MPE.ChannelClient.GetChannelClientInfo"); return default; }
         [global::Unbound.Stub] public static void Send(int connectionId, byte[] data) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.MPE.ChannelClient.Send"); }
-        [global::Unbound.Stub] public static void Close(string channelName) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.MPE.ChannelClient.Close"); }
-        [global::Unbound.Stub] public static global::UnityEditor.MPE.ChannelClient GetOrCreateClient(string channelName) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.MPE.ChannelClient.GetOrCreateClient"); return default; }
-        [global::Unbound.Stub] public static void Shutdown() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.MPE.ChannelClient.Shutdown"); }
-        [global::Unbound.Stub] public static global::UnityEditor.MPE.ChannelClientInfo GetChannelClientInfo(string channelName) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.MPE.ChannelClient.GetChannelClientInfo"); return default; }
         [global::Unbound.Stub] internal static void Internal_Shutdown() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.MPE.ChannelClient.Internal_Shutdown"); }
         [global::Unbound.Stub] internal static void Start(int clientId, bool autoTick) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.MPE.ChannelClient.Start"); }
         [global::Unbound.Stub] internal static void Stop(int clientId) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.MPE.ChannelClient.Stop"); }
@@ -30815,10 +30796,6 @@ namespace UnityEditor.MPE
         [global::Unbound.Stub] internal static void Internal_CloseClient(string channelName) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.MPE.ChannelClient.Internal_CloseClient"); }
         [global::Unbound.Stub] public static int NewRequestId(int clientId) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.MPE.ChannelClient.NewRequestId"); return default; }
         [global::Unbound.Stub] public static global::UnityEditor.MPE.ChannelClientInfo GetChannelClientInfo(int clientId) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.MPE.ChannelClient.GetChannelClientInfo"); return default; }
-        [global::Unbound.Stub] public static global::UnityEditor.MPE.ChannelClientInfo[] GetChannelClientList() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.MPE.ChannelClient.GetChannelClientList"); return global::System.Array.Empty<global::UnityEditor.MPE.ChannelClientInfo>(); }
-        public int clientId { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.MPE.ChannelClient.clientId"); return default; } }
-        public string channelName { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.MPE.ChannelClient.channelName"); return default; } }
-        public bool isAutoTick { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.MPE.ChannelClient.isAutoTick"); return default; } }
     }
     [global::Unbound.Stub]
     public unsafe partial struct ChannelClientScope : global::System.IDisposable

@@ -21,10 +21,10 @@ on the Linux Editor (the only row the two references differ in; the EditorPrefs 
 the Linux Editor and the engine see preferences without the key), `Collab.instance` a `Collab`,
 and a handler can be added to and removed from the toolbar event.
 
-Residual (`residuals.json`): Unbound runs no channel server and reports no port (0, with a warning).
+The channel service's messages with its clients: tests/projects/channelmessages.
 
 Unmeasured: a windowed Editor's service at startup (running there), channels used while the
-service is stopped (Unbound keeps them), messages from clients.
+service is stopped (Unbound keeps them).
 
 ```sh
 python3 tests/projects/editorchannels/run.py record --label a

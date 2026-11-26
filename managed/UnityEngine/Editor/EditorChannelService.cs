@@ -32,11 +32,14 @@ namespace UnityEditor.MPE
         public static bool operator !=(ChannelInfo x, ChannelInfo y) => !(x == y);
     }
 
-    /// <summary>A client connected to a channel (Unity's C#); none connects to Unbound.</summary>
+    /// <summary>A client connected to a channel (Unity's C#).</summary>
     [Serializable]
     public partial struct ChannelClientInfo : IEquatable<ChannelClientInfo>
     {
         public static ChannelClientInfo invalidClient = new ChannelClientInfo { m_ChannelClientId = -1, m_ConnectionId = -1 };
+
+        internal static ChannelClientInfo Of(string name, int clientId, int connectionId) =>
+            new ChannelClientInfo { m_ChannelName = name, m_ChannelClientId = clientId, m_ConnectionId = connectionId };
 
         string m_ChannelName;
         int m_ChannelClientId;
@@ -66,8 +69,13 @@ namespace UnityEditor.MPE
     /// holding the Editor's own channels <c>echo</c>, <c>echoAll</c>, <c>event</c> and
     /// <c>status</c>; a channel's id is its name's 32-bit xxHash with the service's seed, whether
     /// the channel is open or not; channels open and close, handlers register as Unity's C# does.
-    /// Unbound runs no channel server: no client connects, so broadcasts and sends reach nobody (the
-    /// Editor's capture has no client either) and the port is reported as none, with a warning.
+    /// Started, it serves WebSocket clients on 127.0.0.1 at a free port (<see cref="Unbound.Runtime.ChannelServer"/>):
+    /// a client's messages reach its channel's handlers on <see cref="DispatchMessages"/> and each
+    /// Editor update, as bytes (a text message's UTF-8); broadcasts and sends go to the channel's or
+    /// the connection's client as text or binary messages; the <c>echo</c> channel answers each
+    /// message (matches the Unity 6000.0.71f1 Editor with clients of the same Editor,
+    /// tests/projects/channelmessages). Unmeasured: clients of other processes, the <c>echoAll</c>,
+    /// <c>event</c> and <c>status</c> channels' messages, a handler that throws.
     /// </summary>
     public static partial class ChannelService
     {
@@ -147,19 +155,34 @@ namespace UnityEditor.MPE
         [Unbound.EditorFaithful("the service's local address (measured: tests/projects/editorchannels mpe.address)")]
         public static string GetAddress() => Measured(nameof(GetAddress)) ? "127.0.0.1" : null;
 
-        public static int GetPort()
+        /// <summary>The service's port while it runs (0 stopped: unmeasured).</summary>
+        public static int GetPort() => Measured(nameof(GetPort)) ? Unbound.Runtime.ChannelServer.Port : 0;
+
+        /// <summary>Gives the messages clients sent to the handlers of their channels.</summary>
+        public static void DispatchMessages()
         {
-            Stubs.Ignored("UnityEditor.MPE.ChannelService.GetPort", "Unbound runs no channel server: no client can connect, so there is no port (0)");
-            return 0;
+            if (!Measured(nameof(DispatchMessages))) return;
+            Unbound.Runtime.ChannelServer.Dispatch(HandlersOf);
         }
 
-        /// <summary>Messages come from clients, and none connect.</summary>
-        [Unbound.EditorFaithful("no client connects to Unbound's channel service, as none does in the Editor's capture (tests/projects/editorchannels mpe.clients)")]
-        public static void DispatchMessages() { }
+        static List<Action<int, byte[]>> HandlersOf(string channelName)
+        {
+            if (!s_Open.Contains(channelName)) return null;
+            return s_Handlers.TryGetValue(ChannelNameToId(channelName), out var handlers) ? handlers : null;
+        }
+
+        /// <summary>Each Editor update: the clients' messages to the handlers, then the auto-ticked
+        /// clients' ticks.</summary>
+        internal static void EditorUpdate()
+        {
+            if (s_Running) DispatchMessages();
+            ChannelClient.TickAutoClients();
+        }
 
         public static void Start()
         {
             if (!Measured(nameof(Start)) || s_Running) return;
+            Unbound.Runtime.ChannelServer.Start();
             s_Running = true;
             foreach (var own in s_OwnChannels)
                 if (!s_Open.Contains(own)) s_Open.Add(own);
@@ -167,7 +190,9 @@ namespace UnityEditor.MPE
 
         public static void Stop()
         {
-            if (Measured(nameof(Stop))) s_Running = false;
+            if (!Measured(nameof(Stop))) return;
+            s_Running = false;
+            Unbound.Runtime.ChannelServer.Stop();
         }
 
         public static bool IsRunning() => Measured(nameof(IsRunning)) && s_Running;
@@ -180,24 +205,52 @@ namespace UnityEditor.MPE
             return list;
         }
 
-        [Unbound.EditorFaithful("no client connects to Unbound's channel service, as none does in the Editor's capture (tests/projects/editorchannels mpe.clients)")]
-        public static ChannelClientInfo[] GetChannelClientList() => Array.Empty<ChannelClientInfo>();
+        /// <summary>The service's connected clients: an in-process client as its own
+        /// <see cref="ChannelClient.GetChannelClientInfo()"/> (channelmessages client.list); another
+        /// process's with no client id (-1, unmeasured).</summary>
+        public static ChannelClientInfo[] GetChannelClientList()
+        {
+            if (!Measured(nameof(GetChannelClientList))) return Array.Empty<ChannelClientInfo>();
+            var list = new List<ChannelClientInfo>();
+            foreach (var (id, channel, port) in Unbound.Runtime.ChannelServer.Connections())
+            {
+                var own = ChannelClient.OfConnection(id);
+                list.Add(own ?? ChannelClientInfo.Of(channel, -1, id));
+            }
+            return list.ToArray();
+        }
 
-        /// <summary>No client is connected: the message reaches nobody.</summary>
-        [Unbound.EditorFaithful("no client connects to Unbound's channel service, as none does in the Editor's capture (tests/projects/editorchannels mpe.clients)")]
-        public static void Broadcast(int channelId, string data) { }
+        /// <summary>The channel's clients get the text as a text message.</summary>
+        public static void Broadcast(int channelId, string data)
+        {
+            if (Measured(nameof(Broadcast)) && NameOf(channelId) is string channel)
+                Unbound.Runtime.ChannelServer.Broadcast(channel, Encoding.UTF8.GetBytes(data ?? ""), text: true);
+        }
 
-        /// <summary>No client is connected: the message reaches nobody.</summary>
-        [Unbound.EditorFaithful("no client connects to Unbound's channel service, as none does in the Editor's capture (tests/projects/editorchannels mpe.clients)")]
-        public static void BroadcastBinary(int channelId, byte[] data) { }
+        /// <summary>The channel's clients get the bytes as a binary message.</summary>
+        public static void BroadcastBinary(int channelId, byte[] data)
+        {
+            if (Measured(nameof(BroadcastBinary)) && NameOf(channelId) is string channel)
+                Unbound.Runtime.ChannelServer.Broadcast(channel, data, text: false);
+        }
 
-        /// <summary>No client is connected: the message reaches nobody.</summary>
-        [Unbound.EditorFaithful("no client connects to Unbound's channel service, as none does in the Editor's capture (tests/projects/editorchannels mpe.clients)")]
-        public static void Send(int connectionId, string data) { }
+        public static void Send(int connectionId, string data)
+        {
+            if (Measured(nameof(Send))) Unbound.Runtime.ChannelServer.Send(connectionId, Encoding.UTF8.GetBytes(data ?? ""), text: true);
+        }
 
-        /// <summary>No client is connected: the message reaches nobody.</summary>
-        [Unbound.EditorFaithful("no client connects to Unbound's channel service, as none does in the Editor's capture (tests/projects/editorchannels mpe.clients)")]
-        internal static void SendBinary(int connectionId, byte[] data) { }
+        internal static void SendBinary(int connectionId, byte[] data)
+        {
+            if (Measured(nameof(SendBinary))) Unbound.Runtime.ChannelServer.Send(connectionId, data, text: false);
+        }
+
+        /// <summary>The name of an open channel, by its id.</summary>
+        static string NameOf(int channelId)
+        {
+            foreach (var name in s_Open)
+                if (ChannelNameToId(name) == channelId) return name;
+            return null;
+        }
 
         public static int ChannelNameToId(string channelName) => Measured(nameof(ChannelNameToId))
             ? unchecked((int)XxHash32.Hash(Encoding.UTF8.GetBytes(channelName ?? ""), ChannelIdSeed))
