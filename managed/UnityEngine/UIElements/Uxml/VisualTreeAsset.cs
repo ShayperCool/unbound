@@ -354,8 +354,9 @@ namespace Unbound.UIElements
         /// <summary>A loaded document takes a new import's tree in place (its file changed on disk):
         /// <paramref name="kept"/> holds <paramref name="copy"/>'s content, the overrides written in
         /// it naming <paramref name="kept"/>; the copy, destroyed next, the old content. An enabled
-        /// UIDocument showing it keeps the elements it cloned, with a warning (the Editor's live
-        /// reload of its panel is not measured).</summary>
+        /// UIDocument showing elements made from it (its document, a template the document
+        /// instances, a clone a script added) keeps them, with a warning (the Editor's live reload of
+        /// its panel is not measured).</summary>
         internal static void Adopt(VisualTreeAsset kept, VisualTreeAsset copy, string path)
         {
             Unbound.Runtime.AssetDatabaseRuntime.SwapContent(copy, kept);
@@ -373,8 +374,27 @@ namespace Unbound.UIElements
             }
             Repoint(kept.m_UaRoot);
             foreach (var document in Object.FindObjectsByType<UIDocument>(FindObjectsInactive.Exclude, FindObjectsSortMode.None))
-                if (document.isActiveAndEnabled && ReferenceEquals(document.visualTreeAsset, kept))
-                    Debug.LogWarning($"Unbound: {path} changed on disk; the UIDocument of '{document.gameObject.name}' keeps the elements it made from it (the Editor's live reload of its panel is not measured)");
+                if (document.isActiveAndEnabled && (ReferenceEquals(document.visualTreeAsset, kept) || MadeFrom(document.rootVisualElement, kept)))
+                    Debug.LogWarning($"Unbound: {path} changed on disk; the UIDocument of '{document.gameObject.name}' keeps the elements made from it (the Editor's live reload of its panel is not measured)");
+        }
+
+        /// <summary>Whether an element of the tree under <paramref name="root"/> was cloned from
+        /// <paramref name="document"/>: as its own document, a template it instances, or a clone a
+        /// script added.</summary>
+        static bool MadeFrom(VisualElement root, VisualTreeAsset document)
+        {
+            if (root == null) return false;
+            var stack = new Stack<VisualElement>();
+            stack.Push(root);
+            while (stack.Count > 0)
+            {
+                var element = stack.Pop();
+                if (ReferenceEquals(element.visualTreeAssetSource, document)
+                    || (element is TemplateContainer container && ReferenceEquals(container.templateSource, document)))
+                    return true;
+                foreach (var child in element.hierarchy.Children()) stack.Push(child);
+            }
+            return false;
         }
 
         internal static LoadedFileHandle Import(string assetPath, string text, VisualTreeAsset asset)

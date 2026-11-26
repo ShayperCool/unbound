@@ -246,6 +246,37 @@ namespace UnityEngine.Tests
             }
         }
 
+        /// <summary>The overrides a changed document's new tree holds name the loaded document, not
+        /// the copy destroyed after it takes the tree.</summary>
+        [Fact]
+        public void ADocumentsOverridesNameTheLoadedDocument()
+        {
+            const string text = "<ui:UXML xmlns:ui=\"UnityEngine.UIElements\"><ui:Template name=\"Row\" src=\"Row.uxml\" />"
+                + "<ui:Instance template=\"Row\"><ui:AttributeOverrides element-name=\"x\" text=\"y\" /></ui:Instance></ui:UXML>\n";
+            var kept = ScriptableObject.CreateInstance<UnityEngine.UIElements.VisualTreeAsset>();
+            var copy = ScriptableObject.CreateInstance<UnityEngine.UIElements.VisualTreeAsset>();
+            try
+            {
+                Unbound.UIElements.UxmlImporter.Import("Assets/Main.uxml", text, kept);
+                Unbound.UIElements.UxmlImporter.Import("Assets/Main.uxml", text, copy);
+                Unbound.UIElements.UxmlImporter.Adopt(kept, copy, "Assets/Main.uxml");
+                var sources = new System.Collections.Generic.List<UnityEngine.UIElements.VisualTreeAsset>();
+                void Visit(Unbound.UIElements.UxmlNode node)
+                {
+                    foreach (var o in node.Overrides ?? new System.Collections.Generic.List<Unbound.UIElements.UxmlAttributeOverride>()) sources.Add(o.Source);
+                    foreach (var c in node.Children) Visit(c);
+                }
+                Visit(kept.m_UaRoot);
+                Assert.NotEmpty(sources);
+                Assert.All(sources, source => Assert.Same(kept, source));
+            }
+            finally
+            {
+                Object.DestroyImmediate(kept);
+                Object.DestroyImmediate(copy);
+            }
+        }
+
         sealed class WarningCapture : ILogHandler
         {
             readonly ILogHandler m_Inner;
@@ -276,6 +307,8 @@ namespace UnityEngine.Tests
             var kept = ScriptableObject.CreateInstance<UnityEngine.UIElements.VisualTreeAsset>();
             var copy = ScriptableObject.CreateInstance<UnityEngine.UIElements.VisualTreeAsset>();
             var shown = new GameObject("Shown").AddComponent<UnityEngine.UIElements.UIDocument>();
+            var other = ScriptableObject.CreateInstance<UnityEngine.UIElements.VisualTreeAsset>();
+            var cloned = new GameObject("Cloned").AddComponent<UnityEngine.UIElements.UIDocument>();
             // Unbound's diagnostics bypass Application.logMessageReceived: captured at the handler.
             var warnings = new System.Collections.Generic.List<string>();
             var logger = Debug.unityLogger;
@@ -286,17 +319,25 @@ namespace UnityEngine.Tests
                 Unbound.UIElements.UxmlImporter.Import(path, "<ui:UXML xmlns:ui=\"UnityEngine.UIElements\"><ui:Label text=\"first\" /></ui:UXML>\n", kept);
                 Unbound.UIElements.UxmlImporter.Import(path, "<ui:UXML xmlns:ui=\"UnityEngine.UIElements\"><ui:Label text=\"second\" /></ui:UXML>\n", copy);
                 shown.visualTreeAsset = kept;
+                // Another document's panel with a clone of the changed one a script added.
+                Unbound.UIElements.UxmlImporter.Import("Assets/Other.uxml", "<ui:UXML xmlns:ui=\"UnityEngine.UIElements\"><ui:Label text=\"other\" /></ui:UXML>\n", other);
+                cloned.visualTreeAsset = other;
+                Assert.NotNull(cloned.rootVisualElement);
+                cloned.rootVisualElement.Add(kept.CloneTree());
                 Assert.Null(AssetDatabaseRuntime.InPlaceRefusal(kept, copy));
                 Unbound.UIElements.UxmlImporter.Adopt(kept, copy, path);
                 Assert.Equal("second", UnityEngine.UIElements.UQueryExtensions.Q<UnityEngine.UIElements.Label>(kept.CloneTree()).text);
                 Assert.Equal("first", UnityEngine.UIElements.UQueryExtensions.Q<UnityEngine.UIElements.Label>(copy.CloneTree()).text);
                 // The document a UIDocument shows: its elements stay, with a warning.
-                Assert.Contains(warnings, w => w.Contains(path + " changed on disk; the UIDocument of 'Shown' keeps the elements it made from it"));
+                Assert.Contains(warnings, w => w.Contains(path + " changed on disk; the UIDocument of 'Shown' keeps the elements made from it"));
+                Assert.Contains(warnings, w => w.Contains(path + " changed on disk; the UIDocument of 'Cloned' keeps the elements made from it"));
             }
             finally
             {
                 logger.logHandler = previous;
                 Object.DestroyImmediate(shown.gameObject);
+                Object.DestroyImmediate(cloned.gameObject);
+                Object.DestroyImmediate(other);
                 Object.DestroyImmediate(kept);
                 Object.DestroyImmediate(copy);
             }
