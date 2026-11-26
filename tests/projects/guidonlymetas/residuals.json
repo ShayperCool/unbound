@@ -5,5 +5,8 @@
     "model/Tri/importer",
     "model/Tri/renderer",
     "open/files"
+  ],
+  "A GUID-only image of aspect 1.53, which the Editor imports as a cube map with 128x128 faces: the corner square and the panorama give that size, so its layout is not measured; Unbound imports it as a 2D texture with a warning (follow-up: a pixel capture of the faces)": [
+    "aspect/Aspect153x100"
   ]
 }

@@ -1,4 +1,16 @@
-{"k":"open/files","v":"Assets/Guid/Beep.wav\nAssets/Guid/Beep.wav.meta\nAssets/Guid/BeepSaved.wav\nAssets/Guid/BeepSaved.wav.meta\nAssets/Guid/Materials\nAssets/Guid/Materials.meta\nAssets/Guid/Materials/Tri-Red.mat\nAssets/Guid/Materials/Tri-Red.mat.meta\nAssets/Guid/Square.png\nAssets/Guid/Square.png.meta\nAssets/Guid/Strip.png\nAssets/Guid/Strip.png.meta\nAssets/Guid/TexSaved.png\nAssets/Guid/TexSaved.png.meta\nAssets/Guid/Tri.mtl\nAssets/Guid/Tri.mtl.meta\nAssets/Guid/Tri.obj\nAssets/Guid/Tri.obj.meta\nAssets/Guid/Wide.png\nAssets/Guid/Wide.png.meta"}
+{"k":"open/files","v":"Assets/Guid/Aspect113x100.png\nAssets/Guid/Aspect113x100.png.meta\nAssets/Guid/Aspect122x100.png\nAssets/Guid/Aspect122x100.png.meta\nAssets/Guid/Aspect128x16.png\nAssets/Guid/Aspect128x16.png.meta\nAssets/Guid/Aspect140x100.png\nAssets/Guid/Aspect140x100.png.meta\nAssets/Guid/Aspect153x100.png\nAssets/Guid/Aspect153x100.png.meta\nAssets/Guid/Aspect16x256.png\nAssets/Guid/Aspect16x256.png.meta\nAssets/Guid/Aspect16x64.png\nAssets/Guid/Aspect16x64.png.meta\nAssets/Guid/Aspect256x1.png\nAssets/Guid/Aspect256x1.png.meta\nAssets/Guid/Aspect256x16.png\nAssets/Guid/Aspect256x16.png.meta\nAssets/Guid/Aspect285x100.png\nAssets/Guid/Aspect285x100.png.meta\nAssets/Guid/Aspect600x100.png\nAssets/Guid/Aspect600x100.png.meta\nAssets/Guid/Aspect68x100.png\nAssets/Guid/Aspect68x100.png.meta\nAssets/Guid/Beep.wav\nAssets/Guid/Beep.wav.meta\nAssets/Guid/BeepSaved.wav\nAssets/Guid/BeepSaved.wav.meta\nAssets/Guid/Materials\nAssets/Guid/Materials.meta\nAssets/Guid/Materials/Tri-Red.mat\nAssets/Guid/Materials/Tri-Red.mat.meta\nAssets/Guid/Square.png\nAssets/Guid/Square.png.meta\nAssets/Guid/Strip.png\nAssets/Guid/Strip.png.meta\nAssets/Guid/TexSaved.png\nAssets/Guid/TexSaved.png.meta\nAssets/Guid/Tri.mtl\nAssets/Guid/Tri.mtl.meta\nAssets/Guid/Tri.obj\nAssets/Guid/Tri.obj.meta\nAssets/Guid/Wide.png\nAssets/Guid/Wide.png.meta"}
+{"k":"open/Assets/Guid/Aspect113x100.png","v":"fileFormatVersion: 2\nguid: (guid)\n"}
+{"k":"open/Assets/Guid/Aspect122x100.png","v":"fileFormatVersion: 2\nguid: (guid)\n"}
+{"k":"open/Assets/Guid/Aspect128x16.png","v":"fileFormatVersion: 2\nguid: (guid)\n"}
+{"k":"open/Assets/Guid/Aspect140x100.png","v":"fileFormatVersion: 2\nguid: (guid)\n"}
+{"k":"open/Assets/Guid/Aspect153x100.png","v":"fileFormatVersion: 2\nguid: (guid)\n"}
+{"k":"open/Assets/Guid/Aspect16x256.png","v":"fileFormatVersion: 2\nguid: (guid)\n"}
+{"k":"open/Assets/Guid/Aspect16x64.png","v":"fileFormatVersion: 2\nguid: (guid)\n"}
+{"k":"open/Assets/Guid/Aspect256x1.png","v":"fileFormatVersion: 2\nguid: (guid)\n"}
+{"k":"open/Assets/Guid/Aspect256x16.png","v":"fileFormatVersion: 2\nguid: (guid)\n"}
+{"k":"open/Assets/Guid/Aspect285x100.png","v":"fileFormatVersion: 2\nguid: (guid)\n"}
+{"k":"open/Assets/Guid/Aspect600x100.png","v":"fileFormatVersion: 2\nguid: (guid)\n"}
+{"k":"open/Assets/Guid/Aspect68x100.png","v":"fileFormatVersion: 2\nguid: (guid)\n"}
 {"k":"open/Assets/Guid/Beep.wav","v":"fileFormatVersion: 2\nguid: (guid)\n"}
 {"k":"open/Assets/Guid/BeepSaved.wav","v":"fileFormatVersion: 2\nguid: (guid)\n"}
 {"k":"open/Assets/Guid/Square.png","v":"fileFormatVersion: 2\nguid: (guid)\n"}
@@ -19,6 +31,18 @@
 {"k":"sound/Beep/importer","v":"mono False background False ambisonic False | default load CompressedInMemory format Vorbis quality 1 rate PreserveSampleRate override 0 preload False"}
 {"k":"sound/BeepSaved","v":"AudioClip load CompressedInMemory preload False background False ambisonic False channels 1 frequency 22050 samples 2205"}
 {"k":"sound/BeepSaved/importer","v":"mono False background False ambisonic False | default load CompressedInMemory format Vorbis quality 1 rate PreserveSampleRate override 0 preload False"}
+{"k":"aspect/Aspect113x100","v":"Cubemap Cube 64x64 mips 7 filter Bilinear wrap Clamp,Clamp,Clamp aniso 1 readable False R8G8B8_UNorm format RGB24"}
+{"k":"aspect/Aspect122x100","v":"Cubemap Cube 128x128 mips 8 filter Bilinear wrap Clamp,Clamp,Clamp aniso 1 readable False R8G8B8_UNorm format RGB24"}
+{"k":"aspect/Aspect128x16","v":"Cubemap Cube 16x16 mips 5 filter Bilinear wrap Clamp,Clamp,Clamp aniso 1 readable False R8G8B8_UNorm format RGB24"}
+{"k":"aspect/Aspect140x100","v":"Cubemap Cube 64x64 mips 7 filter Bilinear wrap Clamp,Clamp,Clamp aniso 1 readable False R8G8B8_UNorm format RGB24"}
+{"k":"aspect/Aspect153x100","v":"Cubemap Cube 128x128 mips 8 filter Bilinear wrap Clamp,Clamp,Clamp aniso 1 readable False R8G8B8_UNorm format RGB24"}
+{"k":"aspect/Aspect16x256","v":"Cubemap Cube 16x16 mips 5 filter Bilinear wrap Clamp,Clamp,Clamp aniso 1 readable False R8G8B8_UNorm format RGB24"}
+{"k":"aspect/Aspect16x64","v":"Cubemap Cube 16x16 mips 5 filter Bilinear wrap Clamp,Clamp,Clamp aniso 1 readable False R8G8B8_UNorm format RGB24"}
+{"k":"aspect/Aspect256x1","v":"Cubemap Cube 1x1 mips 1 filter Bilinear wrap Clamp,Clamp,Clamp aniso 1 readable False R8G8B8_UNorm format RGB24"}
+{"k":"aspect/Aspect256x16","v":"Cubemap Cube 16x16 mips 5 filter Bilinear wrap Clamp,Clamp,Clamp aniso 1 readable False R8G8B8_UNorm format RGB24"}
+{"k":"aspect/Aspect285x100","v":"Cubemap Cube 128x128 mips 8 filter Bilinear wrap Clamp,Clamp,Clamp aniso 1 readable False R8G8B8_UNorm format RGB24"}
+{"k":"aspect/Aspect600x100","v":"Cubemap Cube 128x128 mips 8 filter Bilinear wrap Clamp,Clamp,Clamp aniso 1 readable False R8G8B8_UNorm format RGB24"}
+{"k":"aspect/Aspect68x100","v":"Cubemap Cube 128x128 mips 8 filter Bilinear wrap Clamp,Clamp,Clamp aniso 1 readable False R8G8B8_UNorm format RGB24"}
 {"k":"model/Tri","v":"Animation Tri\nGameObject Tri\nGameObject default\nMesh default\nMeshFilter default\nMeshRenderer default\nTransform Tri\nTransform default"}
 {"k":"model/Tri/renderer","v":"Tri-Red Assets/Guid/Materials/Tri-Red.mat Standard"}
 {"k":"model/Tri/importer","v":"materials LegacyImport location External naming BasedOnTextureName_Or_ModelNameAndMaterialName search RecursiveUp scale 1 fileScale False animation True type Legacy readable True normals Import tangents CalculateLegacyWithSplitTangents colliders False"}
@@ -27,5 +51,5 @@
 {"k":"save/TexSaved/meta.platforms","v":"the installed modules"}
 {"k":"save/BeepSaved","v":"AudioClip load CompressedInMemory preload False background False ambisonic False channels 1 frequency 22050 samples 2205"}
 {"k":"save/BeepSaved/meta","v":"fileFormatVersion: 2\nguid: (guid)\nAudioImporter:\n  externalObjects: {}\n  serializedVersion: 8\n  defaultSettings:\n    serializedVersion: 2\n    loadType: 1\n    sampleRateSetting: 0\n    sampleRateOverride: 0\n    compressionFormat: 1\n    quality: 1\n    conversionMode: 0\n    preloadAudioData: 0\n  platformSettingOverrides: {}\n  forceToMono: 1\n  normalize: 1\n  loadInBackground: 0\n  ambisonic: 0\n  3D: 1\n  userData: \n  assetBundleName: \n  assetBundleVariant: \n"}
-{"k":"end/files","v":"Assets/Guid/Beep.wav\nAssets/Guid/Beep.wav.meta\nAssets/Guid/BeepSaved.wav\nAssets/Guid/BeepSaved.wav.meta\nAssets/Guid/Materials\nAssets/Guid/Materials.meta\nAssets/Guid/Materials/Tri-Red.mat\nAssets/Guid/Materials/Tri-Red.mat.meta\nAssets/Guid/Square.png\nAssets/Guid/Square.png.meta\nAssets/Guid/Strip.png\nAssets/Guid/Strip.png.meta\nAssets/Guid/TexSaved.png\nAssets/Guid/TexSaved.png.meta\nAssets/Guid/Tri.mtl\nAssets/Guid/Tri.mtl.meta\nAssets/Guid/Tri.obj\nAssets/Guid/Tri.obj.meta\nAssets/Guid/Wide.png\nAssets/Guid/Wide.png.meta"}
+{"k":"end/files","v":"Assets/Guid/Aspect113x100.png\nAssets/Guid/Aspect113x100.png.meta\nAssets/Guid/Aspect122x100.png\nAssets/Guid/Aspect122x100.png.meta\nAssets/Guid/Aspect128x16.png\nAssets/Guid/Aspect128x16.png.meta\nAssets/Guid/Aspect140x100.png\nAssets/Guid/Aspect140x100.png.meta\nAssets/Guid/Aspect153x100.png\nAssets/Guid/Aspect153x100.png.meta\nAssets/Guid/Aspect16x256.png\nAssets/Guid/Aspect16x256.png.meta\nAssets/Guid/Aspect16x64.png\nAssets/Guid/Aspect16x64.png.meta\nAssets/Guid/Aspect256x1.png\nAssets/Guid/Aspect256x1.png.meta\nAssets/Guid/Aspect256x16.png\nAssets/Guid/Aspect256x16.png.meta\nAssets/Guid/Aspect285x100.png\nAssets/Guid/Aspect285x100.png.meta\nAssets/Guid/Aspect600x100.png\nAssets/Guid/Aspect600x100.png.meta\nAssets/Guid/Aspect68x100.png\nAssets/Guid/Aspect68x100.png.meta\nAssets/Guid/Beep.wav\nAssets/Guid/Beep.wav.meta\nAssets/Guid/BeepSaved.wav\nAssets/Guid/BeepSaved.wav.meta\nAssets/Guid/Materials\nAssets/Guid/Materials.meta\nAssets/Guid/Materials/Tri-Red.mat\nAssets/Guid/Materials/Tri-Red.mat.meta\nAssets/Guid/Square.png\nAssets/Guid/Square.png.meta\nAssets/Guid/Strip.png\nAssets/Guid/Strip.png.meta\nAssets/Guid/TexSaved.png\nAssets/Guid/TexSaved.png.meta\nAssets/Guid/Tri.mtl\nAssets/Guid/Tri.mtl.meta\nAssets/Guid/Tri.obj\nAssets/Guid/Tri.obj.meta\nAssets/Guid/Wide.png\nAssets/Guid/Wide.png.meta"}
 {"k":"complete","v":true}

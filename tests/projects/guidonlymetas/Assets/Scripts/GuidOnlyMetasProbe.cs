@@ -151,6 +151,9 @@ public class GuidOnlyMetasProbe : MonoBehaviour
             Try("sound/" + name, () => Clip(path));
             Try("sound/" + name + "/importer", () => AssetImporter.GetAtPath(path) is AudioImporter i ? AudioImporterValues(i) : AssetImporter.GetAtPath(path)?.GetType().Name ?? "null");
         }
+        // Images of aspects between and beyond the AutoCubemap layouts'.
+        foreach (var path in Directory.GetFiles(Folder, "Aspect*.png").Select(p => p.Replace('\\', '/')).OrderBy(p => p, StringComparer.Ordinal))
+            Try("aspect/" + Path.GetFileNameWithoutExtension(path), () => Texture(path));
         const string model = Folder + "/Tri.obj";
         Try("model/Tri", () => string.Join("\n", AssetDatabase.LoadAllAssetsAtPath(model).Select(o => o.GetType().Name + " " + o.name).OrderBy(s => s, StringComparer.Ordinal)));
         Try("model/Tri/renderer", () =>
