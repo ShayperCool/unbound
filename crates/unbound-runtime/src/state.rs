@@ -813,9 +813,13 @@ pub fn dispatch(method: &str, request: &str) -> Result<String> {
                 width: usize,
                 height: usize,
                 fps: f64,
+                #[serde(default)]
+                alpha: bool,
+                #[serde(default)]
+                codec: String,
             }
             let r: Request = serde_json::from_str(request)?;
-            Ok(json!({ "id": crate::video::open(&r.path, r.width, r.height, r.fps) }).to_string())
+            Ok(json!({ "id": crate::video::open(&r.path, r.width, r.height, r.fps, r.alpha, &r.codec) }).to_string())
         }
         "video-audio-open" => {
             // A video's audio track as the data of streamed clip `clip` (made by the managed side).

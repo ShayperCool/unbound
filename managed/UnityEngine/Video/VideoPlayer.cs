@@ -31,6 +31,10 @@ namespace UnityEngine.Video
         internal uint m_Width, m_Height;
         internal uint m_AspectNumerator = 1, m_AspectDenominator = 1;
         internal ushort m_AudioTracks;
+        /// <summary>The stream has an alpha channel (VP8/VP9 WebM, measured: tests/projects/videoalpha),
+        /// and its codec's name as ffprobe gives it.</summary>
+        internal bool m_Alpha;
+        internal string m_Codec = "";
         /// <summary>Each audio track's format, in the file's stream order; null when the host did not
         /// report it.</summary>
         internal AudioTrack[] m_AudioTrackInfo;
@@ -123,6 +127,8 @@ namespace UnityEngine.Video
             clip.m_AspectNumerator = root.GetProperty("aspectNumerator").GetUInt32();
             clip.m_AspectDenominator = root.GetProperty("aspectDenominator").GetUInt32();
             clip.m_AudioTrackInfo = ReadAudioTracks(root);
+            clip.m_Alpha = root.TryGetProperty("alpha", out var alpha) && alpha.ValueKind == JsonValueKind.True;
+            clip.m_Codec = root.TryGetProperty("codec", out var codec) ? codec.GetString() ?? "" : "";
             if (guid != null) clip.m_sRGB = ReadSRGB(ImporterSettings(guid, assetPath ?? file), assetPath ?? file);
             return clip;
         }
@@ -498,7 +504,7 @@ namespace UnityEngine.Video
                     if (!m_Clip.sRGB && QualitySettings.activeColorSpace == ColorSpace.Linear)
                         Warn($"video '{m_Name}' is imported without sRGB (VideoClipImporter sRGB off), but its pictures are still converted as sRGB colour in Linear colour space.");
                 }
-                m_Decoder = JsonDocument.Parse(VideoClip.Call("video-open", JsonSerializer.Serialize(new { path = m_File, width = m_Width, height = m_Height, fps = m_FrameRate })))
+                m_Decoder = JsonDocument.Parse(VideoClip.Call("video-open", JsonSerializer.Serialize(new { path = m_File, width = m_Width, height = m_Height, fps = m_FrameRate, alpha = m_SourceAlpha, codec = m_SourceCodec })))
                     .RootElement.GetProperty("id").GetUInt64();
                 return true;
             }
@@ -518,7 +524,13 @@ namespace UnityEngine.Video
             m_Length = clip.m_Length;
             m_SourceAudioTracks = clip.m_AudioTracks;
             m_SourceAudioTrackInfo = clip.m_AudioTrackInfo;
+            m_SourceAlpha = clip.m_Alpha;
+            m_SourceCodec = clip.m_Codec;
         }
+
+        /// <summary>The opened source has an alpha channel, and its codec.</summary>
+        bool m_SourceAlpha;
+        string m_SourceCodec = "";
 
         bool Fail(string message)
         {
@@ -546,6 +558,14 @@ namespace UnityEngine.Video
         {
             if (m_Decoder == 0) return;
             int width = (int)Math.Max(1, m_Width), height = (int)Math.Max(1, m_Height);
+            // With alpha, Hidden/VideoDecode's YCbCrA passes read Y and A side by side and U and V
+            // in the left halves of planes twice as wide.
+            int across = m_SourceAlpha ? 2 : 1;
+            if (m_Planes != null && m_Planes[0].width != across * width)
+            {
+                foreach (var plane in m_Planes) DestroyImmediate(plane);
+                m_Planes = null;
+            }
             if (m_Planes == null)
             {
                 Texture2D Plane(string name, int w, int h)
@@ -560,9 +580,9 @@ namespace UnityEngine.Video
                 }
                 m_Planes = new[]
                 {
-                    Plane("VideoY", width, height),
-                    Plane("VideoU", (width + 1) / 2, (height + 1) / 2),
-                    Plane("VideoV", (width + 1) / 2, (height + 1) / 2),
+                    Plane("VideoY", across * width, height),
+                    Plane("VideoU", across * ((width + 1) / 2), (height + 1) / 2),
+                    Plane("VideoV", across * ((width + 1) / 2), (height + 1) / 2),
                 };
             }
             if (m_Texture == null)
@@ -592,7 +612,8 @@ namespace UnityEngine.Video
         }
 
         /// <summary>The planes into colours with Unity's own conversion (Hidden/VideoDecode's
-        /// YCbCr_To_RGB1 pass: BT.601 limited range, chroma sampled per 2x2 pixels).</summary>
+        /// YCbCr_To_RGB1 pass: BT.601 limited range, chroma sampled per 2x2 pixels; with alpha its
+        /// YCbCrA_To_RGBAFull pass, the alpha as decoded: tests/projects/videoalpha).</summary>
         void Decode()
         {
             if (s_Decode == null)
@@ -602,7 +623,7 @@ namespace UnityEngine.Video
             }
             s_Decode.SetTexture("_SecondTex", m_Planes[1]);
             s_Decode.SetTexture("_ThirdTex", m_Planes[2]);
-            Graphics.Blit(m_Planes[0], m_Texture, s_Decode, 0);
+            Graphics.Blit(m_Planes[0], m_Texture, s_Decode, m_SourceAlpha ? 1 : 0);
         }
 
         /// <summary>The current frame in the render target or the renderer's material property.</summary>

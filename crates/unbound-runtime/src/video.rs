@@ -30,8 +30,8 @@ pub fn probe(path: &str) -> Result<Json> {
     let output = Command::new("ffprobe")
         .args(["-v", "error", "-count_packets", "-show_entries"])
         .arg(
-            "stream=codec_type,width,height,r_frame_rate,nb_read_packets,sample_aspect_ratio,channels,sample_rate\
-             :stream_tags=language:format=duration",
+            "stream=codec_type,codec_name,width,height,r_frame_rate,nb_read_packets,sample_aspect_ratio,channels,sample_rate\
+             :stream_tags=language,alpha_mode:format=duration",
         )
         .args(["-of", "json", path])
         .output()
@@ -95,6 +95,10 @@ fn clip_properties(path: &str, root: &Json) -> Result<Json> {
         "aspectNumerator": aspect_n,
         "aspectDenominator": aspect_d,
         "audioTrackInfo": audio_track_info,
+        // A VP8/VP9 WebM stream with an alpha channel (Matroska's AlphaMode, which ffprobe gives as
+        // the tag alpha_mode=1): its alpha is decoded with the pictures.
+        "alpha": video["tags"]["alpha_mode"].as_str() == Some("1"),
+        "codec": video["codec_name"].as_str().unwrap_or(""),
     }))
 }
 
@@ -118,6 +122,8 @@ struct Decoder {
     width: usize,
     height: usize,
     fps: f64,
+    /// The stream's alpha is decoded too (by libvpx: ffmpeg's own VP8/VP9 decoders drop it).
+    alpha: Option<&'static str>,
     process: Option<(Child, ChildStdout)>,
     /// The frame the process writes next.
     next: i64,
@@ -127,9 +133,19 @@ impl Decoder {
     fn start(&mut self, frame: i64) -> Result<()> {
         self.stop();
         let time = frame.max(0) as f64 / self.fps.max(1e-6);
-        let mut child = Command::new("ffmpeg")
-            .args(["-v", "error", "-nostdin", "-ss", &format!("{time:.6}"), "-i", &self.path])
-            .args(["-an", "-f", "rawvideo", "-pix_fmt", "yuv420p", "-"])
+        let mut command = Command::new("ffmpeg");
+        command.args(["-v", "error", "-nostdin", "-ss", &format!("{time:.6}")]);
+        if let Some(decoder) = self.alpha {
+            command.args(["-c:v", decoder]);
+        }
+        let pixels = if self.alpha.is_some() {
+            "yuva420p"
+        } else {
+            "yuv420p"
+        };
+        let mut child = command
+            .args(["-i", &self.path])
+            .args(["-an", "-f", "rawvideo", "-pix_fmt", pixels, "-"])
             .stdin(Stdio::null())
             .stdout(Stdio::piped())
             .stderr(Stdio::null())
@@ -148,10 +164,53 @@ impl Decoder {
         }
     }
 
-    /// The planes' sizes: Y, then U and V at half the size (rounded up).
-    fn planes(&self) -> [(usize, usize); 3] {
+    /// The decoded frame's planes as ffmpeg writes them: Y, then U and V at half the size (rounded
+    /// up), then A at full size for a stream with alpha.
+    fn planes(&self) -> Vec<(usize, usize)> {
         let chroma = (self.width.div_ceil(2), self.height.div_ceil(2));
-        [(self.width, self.height), chroma, chroma]
+        let mut planes = vec![(self.width, self.height), chroma, chroma];
+        if self.alpha.is_some() {
+            planes.push((self.width, self.height));
+        }
+        planes
+    }
+
+    /// The three textures Unity's Hidden/VideoDecode reads, each plane's rows top first: Y, U and
+    /// V as decoded; with alpha (its YCbCrA passes) the Y texture twice as wide with A in its
+    /// right half, and U and V twice as wide with the chroma in their left halves.
+    fn textures(&self, data: &[u8]) -> Vec<(usize, usize, Vec<u8>)> {
+        let mut planes = Vec::new();
+        let mut at = 0;
+        for (w, h) in self.planes() {
+            planes.push((w, h, &data[at..at + w * h]));
+            at += w * h;
+        }
+        if self.alpha.is_none() {
+            return planes
+                .into_iter()
+                .map(|(w, h, p)| (w, h, p.to_vec()))
+                .collect();
+        }
+        let side_by_side = |left: &[u8], right: Option<&[u8]>, w: usize, h: usize| {
+            let mut out = vec![0u8; 2 * w * h];
+            for row in 0..h {
+                out[row * 2 * w..row * 2 * w + w].copy_from_slice(&left[row * w..row * w + w]);
+                if let Some(right) = right {
+                    out[row * 2 * w + w..(row + 1) * 2 * w]
+                        .copy_from_slice(&right[row * w..row * w + w]);
+                }
+            }
+            (2 * w, h, out)
+        };
+        let (yw, yh, y) = planes[0];
+        let (cw, ch, u) = planes[1];
+        let v = planes[2].2;
+        let a = planes[3].2;
+        vec![
+            side_by_side(y, Some(a), yw, yh),
+            side_by_side(u, None, cw, ch),
+            side_by_side(v, None, cw, ch),
+        ]
     }
 
     /// Frame `n`'s Y, U and V planes one after the other, top rows first; None past the end.
@@ -187,7 +246,16 @@ fn decoders() -> &'static Mutex<HashMap<u64, Decoder>> {
     DECODERS.get_or_init(|| Mutex::new(HashMap::new()))
 }
 
-pub fn open(path: &str, width: usize, height: usize, fps: f64) -> u64 {
+/// The libvpx decoder of a codec with alpha (`None`: no alpha, or a codec without one).
+fn alpha_decoder(alpha: bool, codec: &str) -> Option<&'static str> {
+    match (alpha, codec) {
+        (true, "vp8") => Some("libvpx"),
+        (true, "vp9") => Some("libvpx-vp9"),
+        _ => None,
+    }
+}
+
+pub fn open(path: &str, width: usize, height: usize, fps: f64, alpha: bool, codec: &str) -> u64 {
     static NEXT: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(1);
     let id = NEXT.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
     decoders().lock().unwrap().insert(
@@ -197,6 +265,7 @@ pub fn open(path: &str, width: usize, height: usize, fps: f64) -> u64 {
             width,
             height,
             fps,
+            alpha: alpha_decoder(alpha, codec),
             process: None,
             next: 0,
         },
@@ -211,7 +280,7 @@ pub fn close(id: u64) {
 /// Decodes frame `n` of a decoder into the Y, U and V textures `handles` (rows bottom first, as
 /// Unity's textures are); false past the clip's end.
 pub fn frame(id: u64, n: i64, handles: [u64; 3]) -> Result<bool> {
-    let (data, planes) = {
+    let data = {
         let mut all = decoders().lock().unwrap();
         let decoder = all
             .get_mut(&id)
@@ -219,12 +288,9 @@ pub fn frame(id: u64, n: i64, handles: [u64; 3]) -> Result<bool> {
         let Some(data) = decoder.frame(n)? else {
             return Ok(false);
         };
-        (data, decoder.planes())
+        decoder.textures(&data)
     };
-    let mut at = 0;
-    for ((width, height), handle) in planes.into_iter().zip(handles) {
-        let plane = &data[at..at + width * height];
-        at += width * height;
+    for ((width, height, plane), handle) in data.into_iter().zip(handles) {
         let mut flipped = Vec::with_capacity(plane.len());
         for row in plane.chunks_exact(width).rev() {
             flipped.extend_from_slice(row);
@@ -340,10 +406,12 @@ mod tests {
             assert_eq!(
                 keys,
                 [
+                    "alpha",
                     "aspectDenominator",
                     "aspectNumerator",
                     "audioTrackInfo",
                     "audioTracks",
+                    "codec",
                     "frameCount",
                     "frameRate",
                     "frameRateDenominator",
@@ -364,6 +432,58 @@ mod tests {
             assert_eq!(clip["aspectNumerator"], 1);
             assert_eq!(clip["aspectDenominator"], 1);
         }
+    }
+
+    #[test]
+    fn a_stream_tagged_with_alpha_reports_it_and_its_codec() {
+        let text = r#"{"streams": [{"codec_type": "video", "codec_name": "vp8", "width": 64, "height": 48,
+            "r_frame_rate": "10/1", "nb_read_packets": "10", "tags": {"alpha_mode": "1"}}], "format": {"duration": "1"}}"#;
+        let clip = parse(text);
+        assert_eq!(clip["alpha"], true);
+        assert_eq!(clip["codec"], "vp8");
+        assert_eq!(parse(VIDEO_ONLY)["alpha"], false);
+        assert_eq!(alpha_decoder(true, "vp8"), Some("libvpx"));
+        assert_eq!(alpha_decoder(true, "vp9"), Some("libvpx-vp9"));
+        assert_eq!(alpha_decoder(true, "h264"), None);
+        assert_eq!(alpha_decoder(false, "vp8"), None);
+    }
+
+    #[test]
+    fn alpha_textures_put_y_and_a_side_by_side_and_chroma_left() {
+        let decoder = Decoder {
+            path: String::new(),
+            width: 4,
+            height: 2,
+            fps: 10.0,
+            alpha: Some("libvpx"),
+            process: None,
+            next: 0,
+        };
+        // Y 1..8, U 20..21, V 30..31, A 40..47 (2x1 chroma).
+        let mut data: Vec<u8> = (1..=8).collect();
+        data.extend([20, 21, 30, 31]);
+        data.extend(40..48);
+        let textures = decoder.textures(&data);
+        assert_eq!(
+            textures[0],
+            (
+                8,
+                2,
+                vec![1, 2, 3, 4, 40, 41, 42, 43, 5, 6, 7, 8, 44, 45, 46, 47]
+            )
+        );
+        assert_eq!(textures[1], (4, 1, vec![20, 21, 0, 0]));
+        assert_eq!(textures[2], (4, 1, vec![30, 31, 0, 0]));
+        let plain = Decoder {
+            path: String::new(),
+            width: 4,
+            height: 2,
+            fps: 10.0,
+            alpha: None,
+            process: None,
+            next: 0,
+        };
+        assert_eq!(plain.textures(&data[..12])[0], (4, 2, (1..=8).collect()));
     }
 
     #[test]
