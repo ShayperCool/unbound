@@ -10,14 +10,18 @@
     "managed/UnityEngine/Animation/Animator.cs",
     "managed/UnityEngine/Core/GameObject.cs",
     "managed/UnityEngine/Graphics/AsyncReadback.cs",
+    "managed/UnityEngine/Graphics/Billboards.cs",
     "managed/UnityEngine/Graphics/CommandBuffer.cs",
     "managed/UnityEngine/Graphics/GraphicsFormats.cs",
     "managed/UnityEngine/Graphics/Light.Settings.cs",
     "managed/UnityEngine/Graphics/Lightmapping.cs",
     "managed/UnityEngine/Graphics/LineRenderers.cs",
     "managed/UnityEngine/Graphics/RenderTexture.cs",
+    "managed/UnityEngine/Graphics/Renderer.cs",
     "managed/UnityEngine/Graphics/Srp/",
     "managed/UnityEngine/Physics2D/Physics2DWorld.cs",
+    "managed/UnityEngine/Tilemap/Tilemap.cs",
+    "managed/UnityEngine/U2D/SpriteShapeRenderer.cs",
     "managed/UnityEngine/UI/Canvas.cs"
   ]
 }

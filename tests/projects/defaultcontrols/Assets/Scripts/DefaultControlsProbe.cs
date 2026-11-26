@@ -324,6 +324,82 @@ public class DefaultControlsProbe : MonoBehaviour
         withSprite.SetTile(new Vector3Int(2, 1, 0), tile);
         Staged("tilemap.sprite", () => TilemapBounds(withSprite, withSpriteRenderer));
 
+        // Tilemaps without a Grid: empty, resized, with a tile without and with a sprite.
+        var loose = new GameObject("LooseTilemap").AddComponent<Tilemap>();
+        var looseRenderer = loose.gameObject.AddComponent<TilemapRenderer>();
+        Staged("tilemap.loose.empty", () => TilemapBounds(loose, looseRenderer));
+        var looseResized = new GameObject("LooseResized").AddComponent<Tilemap>();
+        var looseResizedRenderer = looseResized.gameObject.AddComponent<TilemapRenderer>();
+        looseResized.origin = new Vector3Int(-1, -2, 0);
+        looseResized.size = new Vector3Int(4, 5, 1);
+        looseResized.ResizeBounds();
+        Staged("tilemap.loose.resized", () => TilemapBounds(looseResized, looseResizedRenderer));
+        var looseSpriteless = new GameObject("LooseSpriteless").AddComponent<Tilemap>();
+        var looseSpritelessRenderer = looseSpriteless.gameObject.AddComponent<TilemapRenderer>();
+        looseSpriteless.SetTile(new Vector3Int(2, 1, 0), ScriptableObject.CreateInstance<Tile>());
+        Staged("tilemap.loose.spriteless", () => TilemapBounds(looseSpriteless, looseSpritelessRenderer));
+        var looseSprite = new GameObject("LooseSprite").AddComponent<Tilemap>();
+        var looseSpriteRenderer = looseSprite.gameObject.AddComponent<TilemapRenderer>();
+        looseSprite.SetTile(new Vector3Int(2, 1, 0), tile);
+        Staged("tilemap.loose.sprite", () => TilemapBounds(looseSprite, looseSpriteRenderer));
+        var gridResized = new GameObject("GridResized").AddComponent<Tilemap>();
+        gridResized.transform.SetParent(grid.transform, false);
+        var gridResizedRenderer = gridResized.gameObject.AddComponent<TilemapRenderer>();
+        gridResized.origin = new Vector3Int(-1, -2, 0);
+        gridResized.size = new Vector3Int(4, 5, 1);
+        gridResized.ResizeBounds();
+        Staged("tilemap.gridResized", () => TilemapBounds(gridResized, gridResizedRenderer));
+        var gridScaled = new GameObject("GridScaled").AddComponent<Grid>();
+        gridScaled.cellSize = new Vector3(2, 3, 1);
+        var scaledMap = new GameObject("ScaledMap").AddComponent<Tilemap>();
+        scaledMap.transform.SetParent(gridScaled.transform, false);
+        var scaledMapRenderer = scaledMap.gameObject.AddComponent<TilemapRenderer>();
+        scaledMap.SetTile(new Vector3Int(2, 1, 0), tile);
+        Staged("tilemap.cellSize", () => TilemapBounds(scaledMap, scaledMapRenderer));
+
+        // Sprite shape renderers before any geometry: at the origin, moved and scaled.
+        var spriteShape = Make("SpriteShape", Vector3.zero, Vector3.one).AddComponent<UnityEngine.U2D.SpriteShapeRenderer>();
+        Staged("spriteShape.new", () => RendererBounds(spriteShape));
+        var shapeMoved = Make("SpriteShapeMoved", new Vector3(5, 0, 0), new Vector3(2, 2, 2)).AddComponent<UnityEngine.U2D.SpriteShapeRenderer>();
+        Staged("spriteShape.moved", () => RendererBounds(shapeMoved));
+
+        // Material slots: a billboard renderer's and a mesh renderer's with one empty slot.
+        Staged("materials.billboard", () =>
+        {
+            var g = Make("Billboard", Vector3.zero, Vector3.one);
+            var r = g.AddComponent<BillboardRenderer>();
+            var text = Materials(r);
+            DestroyImmediate(g);
+            return text;
+        });
+        Staged("materials.billboardSet", () =>
+        {
+            var g = Make("BillboardSet", Vector3.zero, Vector3.one);
+            var r = g.AddComponent<BillboardRenderer>();
+            var material = new Material(Shader.Find("Unlit/Color")) { name = "Probe" };
+            r.sharedMaterial = material;
+            var text = Materials(r);
+            DestroyImmediate(g);
+            return text;
+        });
+        Staged("materials.meshNull", () =>
+        {
+            var g = Make("MeshNull", Vector3.zero, Vector3.one);
+            var r = g.AddComponent<MeshRenderer>();
+            r.sharedMaterials = new Material[] { null };
+            var text = Materials(r);
+            DestroyImmediate(g);
+            return text;
+        });
+        Staged("materials.meshNew", () =>
+        {
+            var g = Make("MeshNew", Vector3.zero, Vector3.one);
+            var r = g.AddComponent<MeshRenderer>();
+            var text = Materials(r);
+            DestroyImmediate(g);
+            return text;
+        });
+
         var canvas = new GameObject("Canvas").AddComponent<Canvas>();
         canvas.renderMode = RenderMode.ScreenSpaceOverlay;
         Staged("canvas.overlay", () => V2(canvas.renderingDisplaySize));
@@ -515,6 +591,24 @@ public class DefaultControlsProbe : MonoBehaviour
         var text = o.shape + ":height=" + F(o.height) + ";radius=" + F(o.radius) + ";size=" + V(o.size) + ";center=" + V(o.center);
         if (destroy) DestroyImmediate(o.gameObject);
         return text;
+    }
+
+    static string MaterialNames(Material[] materials)
+    {
+        if (materials == null) return "null";
+        var names = new string[materials.Length];
+        for (int i = 0; i < materials.Length; i++) names[i] = materials[i] == null ? "null" : materials[i].name;
+        return materials.Length + "[" + string.Join(",", names) + "]";
+    }
+
+    /// <summary>A renderer's shared materials, then its materials, then its material (each read
+    /// on the state the previous read left).</summary>
+    static string Materials(Renderer r)
+    {
+        var shared = MaterialNames(r.sharedMaterials);
+        var instances = MaterialNames(r.materials);
+        var single = r.material == null ? "null" : r.material.name;
+        return "shared=" + shared + ";materials=" + instances + ";material=" + single + ";sharedAfter=" + MaterialNames(r.sharedMaterials);
     }
 
     static string RendererBounds(Renderer renderer) => "world=" + V(renderer.bounds.center) + "/" + V(renderer.bounds.extents) + ";local=" + V(renderer.localBounds.center) + "/" + V(renderer.localBounds.extents);

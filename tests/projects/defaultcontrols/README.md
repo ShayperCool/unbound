@@ -46,7 +46,11 @@ frames, after a destination is set and two frames later (`<key>.<stage>`).
 * `trail.*`, `line.new`: bounds of trails without points (at, away from the origin, wider,
   scaled) and of a new line.
 * `tilemap.*`: cell and local bounds of an empty tilemap and with a tile without and with a
-  sprite.
+  sprite, resized, on a grid of another cell size, and the same without a Grid (`tilemap.loose.*`).
+* `spriteShape.*`: SpriteShapeRenderer bounds before any geometry, at the origin and moved and
+  scaled.
+* `materials.*`: shared materials, materials and material of a BillboardRenderer (empty and with a
+  material set) and of a MeshRenderer with an empty slot.
 * `canvas.*`: Canvas.renderingDisplaySize of overlay, camera without camera, world space, a
   resized world-space canvas and a new canvas (with its render mode).
 * `physics2d.*`: PhysicsScene2D.subStepCount of the default and of local scenes (empty, with a
@@ -75,7 +79,10 @@ size's height and setting it sets that height, its radius reads half the size's 
 it sets the width and depth, and a shape change fits it again as adding it does: around its
 mesh's bounds (a capsule as wide as their wider side), else the new shape's default size (a
 capsule's is 1 x 2 x 1) about the origin. A 2D physics world without bodies or colliders reports
-0 sub-steps and no lost time after a step; with any it reports the step's.
+0 sub-steps and no lost time after a step; with any it reports the step's. A tilemap without a Grid
+has no bounds (with one, its cells' box). A SpriteShapeRenderer without geometry spans 2^20 each way
+about its origin. A BillboardRenderer's materials are none, and its material is a new instance of
+the default material put in its slot, also over a material set.
 
 `residuals.json` lists the differences still open: collider geometry holders (the measured rule is
 in the entry) and terrain textures.

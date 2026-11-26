@@ -304,6 +304,18 @@
 {"k":"tilemap.empty.new","v":"cells=Position: (0, 0, 0), Size: (0, 0, 1);local=0,0,0.5/0,0,0.5;world=0,0,0.5/0,0,0.5;local=0,0,0.5/0,0,0.5"}
 {"k":"tilemap.spriteless.new","v":"cells=Position: (0, 0, 0), Size: (3, 2, 1);local=1.5,1,0.5/1.5,1,0.5;world=1.5,1,0.5/1.5,1,0.5;local=1.5,1,0.5/1.5,1,0.5"}
 {"k":"tilemap.sprite.new","v":"cells=Position: (0, 0, 0), Size: (3, 2, 1);local=1.5,1,0.5/1.5,1,0.5;world=1.5,1,0.5/1.5,1,0.5;local=1.5,1,0.5/1.5,1,0.5"}
+{"k":"tilemap.loose.empty.new","v":"cells=Position: (0, 0, 0), Size: (0, 0, 1);local=0,0,0/0,0,0;world=0,0,0/0,0,0;local=0,0,0/0,0,0"}
+{"k":"tilemap.loose.resized.new","v":"cells=Position: (-1, -2, 0), Size: (4, 5, 1);local=0,0,0/0,0,0;world=0,0,0/0,0,0;local=0,0,0/0,0,0"}
+{"k":"tilemap.loose.spriteless.new","v":"cells=Position: (0, 0, 0), Size: (3, 2, 1);local=0,0,0/0,0,0;world=0,0,0/0,0,0;local=0,0,0/0,0,0"}
+{"k":"tilemap.loose.sprite.new","v":"cells=Position: (0, 0, 0), Size: (3, 2, 1);local=0,0,0/0,0,0;world=0,0,0/0,0,0;local=0,0,0/0,0,0"}
+{"k":"tilemap.gridResized.new","v":"cells=Position: (-1, -2, 0), Size: (4, 5, 1);local=1,0.5,0.5/2,2.5,0.5;world=1,0.5,0.5/2,2.5,0.5;local=1,0.5,0.5/2,2.5,0.5"}
+{"k":"tilemap.cellSize.new","v":"cells=Position: (0, 0, 0), Size: (3, 2, 1);local=3,3,0.5/3,3,0.5;world=3,3,0.5/3,3,0.5;local=3,3,0.5/3,3,0.5"}
+{"k":"spriteShape.new.new","v":"world=0,0,0/1048576,1048576,1048576;local=0,0,0/1048576,1048576,1048576"}
+{"k":"spriteShape.moved.new","v":"world=5,0,0/2097152,2097152,2097152;local=0,0,0/1048576,1048576,1048576"}
+{"k":"materials.billboard.new","v":"shared=1[null];materials=0[];material=Default-Material (Instance);sharedAfter=1[Default-Material (Instance)]"}
+{"k":"materials.billboardSet.new","v":"shared=1[Probe];materials=0[];material=Default-Material (Instance);sharedAfter=1[Default-Material (Instance)]"}
+{"k":"materials.meshNull.new","v":"shared=1[null];materials=1[Default-Material (Instance)];material=Default-Material (Instance);sharedAfter=1[Default-Material (Instance)]"}
+{"k":"materials.meshNew.new","v":"shared=1[null];materials=1[Default-Material (Instance)];material=Default-Material (Instance);sharedAfter=1[Default-Material (Instance)]"}
 {"k":"canvas.overlay.new","v":"640,480"}
 {"k":"canvas.world.new","v":"100,100"}
 {"k":"canvas.cameraWithout.new","v":"640,480"}
@@ -385,6 +397,18 @@
 {"k":"tilemap.empty.fixed","v":"cells=Position: (0, 0, 0), Size: (0, 0, 1);local=0,0,0.5/0,0,0.5;world=0,0,0.5/0,0,0.5;local=0,0,0.5/0,0,0.5"}
 {"k":"tilemap.spriteless.fixed","v":"cells=Position: (0, 0, 0), Size: (3, 2, 1);local=1.5,1,0.5/1.5,1,0.5;world=1.5,1,0.5/1.5,1,0.5;local=1.5,1,0.5/1.5,1,0.5"}
 {"k":"tilemap.sprite.fixed","v":"cells=Position: (0, 0, 0), Size: (3, 2, 1);local=1.5,1,0.5/1.5,1,0.5;world=1.5,1,0.5/1.5,1,0.5;local=1.5,1,0.5/1.5,1,0.5"}
+{"k":"tilemap.loose.empty.fixed","v":"cells=Position: (0, 0, 0), Size: (0, 0, 1);local=0,0,0/0,0,0;world=0,0,0/0,0,0;local=0,0,0/0,0,0"}
+{"k":"tilemap.loose.resized.fixed","v":"cells=Position: (-1, -2, 0), Size: (4, 5, 1);local=0,0,0/0,0,0;world=0,0,0/0,0,0;local=0,0,0/0,0,0"}
+{"k":"tilemap.loose.spriteless.fixed","v":"cells=Position: (0, 0, 0), Size: (3, 2, 1);local=0,0,0/0,0,0;world=0,0,0/0,0,0;local=0,0,0/0,0,0"}
+{"k":"tilemap.loose.sprite.fixed","v":"cells=Position: (0, 0, 0), Size: (3, 2, 1);local=0,0,0/0,0,0;world=0,0,0/0,0,0;local=0,0,0/0,0,0"}
+{"k":"tilemap.gridResized.fixed","v":"cells=Position: (-1, -2, 0), Size: (4, 5, 1);local=1,0.5,0.5/2,2.5,0.5;world=1,0.5,0.5/2,2.5,0.5;local=1,0.5,0.5/2,2.5,0.5"}
+{"k":"tilemap.cellSize.fixed","v":"cells=Position: (0, 0, 0), Size: (3, 2, 1);local=3,3,0.5/3,3,0.5;world=3,3,0.5/3,3,0.5;local=3,3,0.5/3,3,0.5"}
+{"k":"spriteShape.new.fixed","v":"world=0,0,0/1048576,1048576,1048576;local=0,0,0/1048576,1048576,1048576"}
+{"k":"spriteShape.moved.fixed","v":"world=5,0,0/2097152,2097152,2097152;local=0,0,0/1048576,1048576,1048576"}
+{"k":"materials.billboard.fixed","v":"shared=1[null];materials=0[];material=Default-Material (Instance);sharedAfter=1[Default-Material (Instance)]"}
+{"k":"materials.billboardSet.fixed","v":"shared=1[Probe];materials=0[];material=Default-Material (Instance);sharedAfter=1[Default-Material (Instance)]"}
+{"k":"materials.meshNull.fixed","v":"shared=1[null];materials=1[Default-Material (Instance)];material=Default-Material (Instance);sharedAfter=1[Default-Material (Instance)]"}
+{"k":"materials.meshNew.fixed","v":"shared=1[null];materials=1[Default-Material (Instance)];material=Default-Material (Instance);sharedAfter=1[Default-Material (Instance)]"}
 {"k":"canvas.overlay.fixed","v":"640,480"}
 {"k":"canvas.world.fixed","v":"100,100"}
 {"k":"canvas.cameraWithout.fixed","v":"640,480"}
@@ -466,6 +490,18 @@
 {"k":"tilemap.empty.frame","v":"cells=Position: (0, 0, 0), Size: (0, 0, 1);local=0,0,0.5/0,0,0.5;world=0,0,0.5/0,0,0.5;local=0,0,0.5/0,0,0.5"}
 {"k":"tilemap.spriteless.frame","v":"cells=Position: (0, 0, 0), Size: (3, 2, 1);local=1.5,1,0.5/1.5,1,0.5;world=1.5,1,0.5/1.5,1,0.5;local=1.5,1,0.5/1.5,1,0.5"}
 {"k":"tilemap.sprite.frame","v":"cells=Position: (0, 0, 0), Size: (3, 2, 1);local=1.5,1,0.5/1.5,1,0.5;world=1.5,1,0.5/1.5,1,0.5;local=1.5,1,0.5/1.5,1,0.5"}
+{"k":"tilemap.loose.empty.frame","v":"cells=Position: (0, 0, 0), Size: (0, 0, 1);local=0,0,0/0,0,0;world=0,0,0/0,0,0;local=0,0,0/0,0,0"}
+{"k":"tilemap.loose.resized.frame","v":"cells=Position: (-1, -2, 0), Size: (4, 5, 1);local=0,0,0/0,0,0;world=0,0,0/0,0,0;local=0,0,0/0,0,0"}
+{"k":"tilemap.loose.spriteless.frame","v":"cells=Position: (0, 0, 0), Size: (3, 2, 1);local=0,0,0/0,0,0;world=0,0,0/0,0,0;local=0,0,0/0,0,0"}
+{"k":"tilemap.loose.sprite.frame","v":"cells=Position: (0, 0, 0), Size: (3, 2, 1);local=0,0,0/0,0,0;world=0,0,0/0,0,0;local=0,0,0/0,0,0"}
+{"k":"tilemap.gridResized.frame","v":"cells=Position: (-1, -2, 0), Size: (4, 5, 1);local=1,0.5,0.5/2,2.5,0.5;world=1,0.5,0.5/2,2.5,0.5;local=1,0.5,0.5/2,2.5,0.5"}
+{"k":"tilemap.cellSize.frame","v":"cells=Position: (0, 0, 0), Size: (3, 2, 1);local=3,3,0.5/3,3,0.5;world=3,3,0.5/3,3,0.5;local=3,3,0.5/3,3,0.5"}
+{"k":"spriteShape.new.frame","v":"world=0,0,0/1048576,1048576,1048576;local=0,0,0/1048576,1048576,1048576"}
+{"k":"spriteShape.moved.frame","v":"world=5,0,0/2097152,2097152,2097152;local=0,0,0/1048576,1048576,1048576"}
+{"k":"materials.billboard.frame","v":"shared=1[null];materials=0[];material=Default-Material (Instance);sharedAfter=1[Default-Material (Instance)]"}
+{"k":"materials.billboardSet.frame","v":"shared=1[Probe];materials=0[];material=Default-Material (Instance);sharedAfter=1[Default-Material (Instance)]"}
+{"k":"materials.meshNull.frame","v":"shared=1[null];materials=1[Default-Material (Instance)];material=Default-Material (Instance);sharedAfter=1[Default-Material (Instance)]"}
+{"k":"materials.meshNew.frame","v":"shared=1[null];materials=1[Default-Material (Instance)];material=Default-Material (Instance);sharedAfter=1[Default-Material (Instance)]"}
 {"k":"canvas.overlay.frame","v":"640,480"}
 {"k":"canvas.world.frame","v":"100,100"}
 {"k":"canvas.cameraWithout.frame","v":"640,480"}
@@ -551,6 +587,18 @@
 {"k":"tilemap.empty.destination","v":"cells=Position: (0, 0, 0), Size: (0, 0, 1);local=0,0,0.5/0,0,0.5;world=0,0,0.5/0,0,0.5;local=0,0,0.5/0,0,0.5"}
 {"k":"tilemap.spriteless.destination","v":"cells=Position: (0, 0, 0), Size: (3, 2, 1);local=1.5,1,0.5/1.5,1,0.5;world=1.5,1,0.5/1.5,1,0.5;local=1.5,1,0.5/1.5,1,0.5"}
 {"k":"tilemap.sprite.destination","v":"cells=Position: (0, 0, 0), Size: (3, 2, 1);local=1.5,1,0.5/1.5,1,0.5;world=1.5,1,0.5/1.5,1,0.5;local=1.5,1,0.5/1.5,1,0.5"}
+{"k":"tilemap.loose.empty.destination","v":"cells=Position: (0, 0, 0), Size: (0, 0, 1);local=0,0,0/0,0,0;world=0,0,0/0,0,0;local=0,0,0/0,0,0"}
+{"k":"tilemap.loose.resized.destination","v":"cells=Position: (-1, -2, 0), Size: (4, 5, 1);local=0,0,0/0,0,0;world=0,0,0/0,0,0;local=0,0,0/0,0,0"}
+{"k":"tilemap.loose.spriteless.destination","v":"cells=Position: (0, 0, 0), Size: (3, 2, 1);local=0,0,0/0,0,0;world=0,0,0/0,0,0;local=0,0,0/0,0,0"}
+{"k":"tilemap.loose.sprite.destination","v":"cells=Position: (0, 0, 0), Size: (3, 2, 1);local=0,0,0/0,0,0;world=0,0,0/0,0,0;local=0,0,0/0,0,0"}
+{"k":"tilemap.gridResized.destination","v":"cells=Position: (-1, -2, 0), Size: (4, 5, 1);local=1,0.5,0.5/2,2.5,0.5;world=1,0.5,0.5/2,2.5,0.5;local=1,0.5,0.5/2,2.5,0.5"}
+{"k":"tilemap.cellSize.destination","v":"cells=Position: (0, 0, 0), Size: (3, 2, 1);local=3,3,0.5/3,3,0.5;world=3,3,0.5/3,3,0.5;local=3,3,0.5/3,3,0.5"}
+{"k":"spriteShape.new.destination","v":"world=0,0,0/1048576,1048576,1048576;local=0,0,0/1048576,1048576,1048576"}
+{"k":"spriteShape.moved.destination","v":"world=5,0,0/2097152,2097152,2097152;local=0,0,0/1048576,1048576,1048576"}
+{"k":"materials.billboard.destination","v":"shared=1[null];materials=0[];material=Default-Material (Instance);sharedAfter=1[Default-Material (Instance)]"}
+{"k":"materials.billboardSet.destination","v":"shared=1[Probe];materials=0[];material=Default-Material (Instance);sharedAfter=1[Default-Material (Instance)]"}
+{"k":"materials.meshNull.destination","v":"shared=1[null];materials=1[Default-Material (Instance)];material=Default-Material (Instance);sharedAfter=1[Default-Material (Instance)]"}
+{"k":"materials.meshNew.destination","v":"shared=1[null];materials=1[Default-Material (Instance)];material=Default-Material (Instance);sharedAfter=1[Default-Material (Instance)]"}
 {"k":"canvas.overlay.destination","v":"640,480"}
 {"k":"canvas.world.destination","v":"100,100"}
 {"k":"canvas.cameraWithout.destination","v":"640,480"}
@@ -631,6 +679,18 @@
 {"k":"tilemap.empty.destinationFrame","v":"cells=Position: (0, 0, 0), Size: (0, 0, 1);local=0,0,0.5/0,0,0.5;world=0,0,0.5/0,0,0.5;local=0,0,0.5/0,0,0.5"}
 {"k":"tilemap.spriteless.destinationFrame","v":"cells=Position: (0, 0, 0), Size: (3, 2, 1);local=1.5,1,0.5/1.5,1,0.5;world=1.5,1,0.5/1.5,1,0.5;local=1.5,1,0.5/1.5,1,0.5"}
 {"k":"tilemap.sprite.destinationFrame","v":"cells=Position: (0, 0, 0), Size: (3, 2, 1);local=1.5,1,0.5/1.5,1,0.5;world=1.5,1,0.5/1.5,1,0.5;local=1.5,1,0.5/1.5,1,0.5"}
+{"k":"tilemap.loose.empty.destinationFrame","v":"cells=Position: (0, 0, 0), Size: (0, 0, 1);local=0,0,0/0,0,0;world=0,0,0/0,0,0;local=0,0,0/0,0,0"}
+{"k":"tilemap.loose.resized.destinationFrame","v":"cells=Position: (-1, -2, 0), Size: (4, 5, 1);local=0,0,0/0,0,0;world=0,0,0/0,0,0;local=0,0,0/0,0,0"}
+{"k":"tilemap.loose.spriteless.destinationFrame","v":"cells=Position: (0, 0, 0), Size: (3, 2, 1);local=0,0,0/0,0,0;world=0,0,0/0,0,0;local=0,0,0/0,0,0"}
+{"k":"tilemap.loose.sprite.destinationFrame","v":"cells=Position: (0, 0, 0), Size: (3, 2, 1);local=0,0,0/0,0,0;world=0,0,0/0,0,0;local=0,0,0/0,0,0"}
+{"k":"tilemap.gridResized.destinationFrame","v":"cells=Position: (-1, -2, 0), Size: (4, 5, 1);local=1,0.5,0.5/2,2.5,0.5;world=1,0.5,0.5/2,2.5,0.5;local=1,0.5,0.5/2,2.5,0.5"}
+{"k":"tilemap.cellSize.destinationFrame","v":"cells=Position: (0, 0, 0), Size: (3, 2, 1);local=3,3,0.5/3,3,0.5;world=3,3,0.5/3,3,0.5;local=3,3,0.5/3,3,0.5"}
+{"k":"spriteShape.new.destinationFrame","v":"world=0,0,0/1048576,1048576,1048576;local=0,0,0/1048576,1048576,1048576"}
+{"k":"spriteShape.moved.destinationFrame","v":"world=5,0,0/2097152,2097152,2097152;local=0,0,0/1048576,1048576,1048576"}
+{"k":"materials.billboard.destinationFrame","v":"shared=1[null];materials=0[];material=Default-Material (Instance);sharedAfter=1[Default-Material (Instance)]"}
+{"k":"materials.billboardSet.destinationFrame","v":"shared=1[Probe];materials=0[];material=Default-Material (Instance);sharedAfter=1[Default-Material (Instance)]"}
+{"k":"materials.meshNull.destinationFrame","v":"shared=1[null];materials=1[Default-Material (Instance)];material=Default-Material (Instance);sharedAfter=1[Default-Material (Instance)]"}
+{"k":"materials.meshNew.destinationFrame","v":"shared=1[null];materials=1[Default-Material (Instance)];material=Default-Material (Instance);sharedAfter=1[Default-Material (Instance)]"}
 {"k":"canvas.overlay.destinationFrame","v":"640,480"}
 {"k":"canvas.world.destinationFrame","v":"100,100"}
 {"k":"canvas.cameraWithout.destinationFrame","v":"640,480"}
