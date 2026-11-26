@@ -406,10 +406,18 @@ namespace UnityEngine
             }
         }
 
+        // The empty-input answers are Unity's own C# (Texture.cs): the array and pointer forms log
+        // and return, the NativeArray form throws.
+        const string NoRawData = "No texture data provided to LoadRawTextureData";
+
         public void LoadRawTextureData(byte[] data)
         {
             RequireReadable(pixels: !SourceBlocks);
-            if (data == null) throw new ArgumentNullException(nameof(data));
+            if (data == null || data.Length == 0)
+            {
+                Debug.LogError(NoRawData, this);
+                return;
+            }
             if (SourceBlocks)
             {
                 LoadBlocks(data);
@@ -436,6 +444,12 @@ namespace UnityEngine
 
         public void LoadRawTextureData(IntPtr data, int size)
         {
+            RequireReadable(pixels: !SourceBlocks);
+            if (data == IntPtr.Zero || size == 0)
+            {
+                Debug.LogError(NoRawData, this);
+                return;
+            }
             var bytes = new byte[size];
             Marshal.Copy(data, bytes, 0, size);
             LoadRawTextureData(bytes);
