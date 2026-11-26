@@ -59,6 +59,21 @@ public static class VfxWritesProbe
         s_Last = text;
     }
 
+    /// <summary>The documents of <paramref name="after"/> whose header line (type and file id)
+    /// <paramref name="before"/> does not have, whole and in file order.</summary>
+    static string NewDocuments(string before, string after)
+    {
+        var headers = new HashSet<string>(before.Split('\n').Where(l => l.StartsWith("--- ", StringComparison.Ordinal)));
+        var b = new StringBuilder();
+        bool copying = false;
+        foreach (var line in after.Split('\n'))
+        {
+            if (line.StartsWith("--- ", StringComparison.Ordinal)) copying = !headers.Contains(line);
+            if (copying) b.Append(line).Append('\n');
+        }
+        return b.ToString();
+    }
+
     static void Step(string step, VisualEffectResource resource, Action act)
     {
         VfxWritesSaveLog.Calls.Clear();
@@ -106,6 +121,22 @@ public static class VfxWritesProbe
             Row("block edit/slot dirty", EditorUtility.IsDirty(count));
             Step("block edit write", resource, () => resource.WriteAssetWithSubAssets());
             Step("reimport", resource, () => AssetDatabase.ImportAsset(Graph, ImportAssetOptions.ForceUpdate));
+
+            // A block added to the initialize context, written with its sub-assets (the graph
+            // gains the block and its two slots), then removed and written again.
+            resource = VisualEffectResource.GetResourceAtPath(Graph);
+            graph = resource.GetOrCreateGraph();
+            var init = graph.children.OfType<VFXBasicInitialize>().First();
+            var added = ScriptableObject.CreateInstance<UnityEditor.VFX.Block.SetAttribute>();
+            added.SetSettingValue("attribute", "lifetime");
+            Step("block add", resource, () => init.AddChild(added));
+            var beforeAdd = File.ReadAllText(Graph);
+            Step("block add write", resource, () => resource.WriteAssetWithSubAssets());
+            Row("block add write/new documents", NewDocuments(beforeAdd, File.ReadAllText(Graph)));
+            Row("block add write/contents", resource.GetContents().Length);
+            Step("block remove", resource, () => init.RemoveChild(added));
+            Step("block remove write", resource, () => resource.WriteAssetWithSubAssets());
+            Row("block remove write/contents", resource.GetContents().Length);
 
             // A new graph.
             VisualEffectAssetEditorUtility.CreateNewAsset(Created);

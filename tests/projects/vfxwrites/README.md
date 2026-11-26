@@ -23,6 +23,10 @@ the step, when there was one).
   `block edit write`: `WriteAssetWithSubAssets` (the package's save: the graph's objects set as the
   resource's contents, then `WriteAsset`);
 - `reimport`: a forced import;
+- `block add`, `block add write`: a SetAttribute block (lifetime) added to the initialize context,
+  then `WriteAssetWithSubAssets` (the graph gains the block and its two slots); `block remove`,
+  `block remove write`: the block removed again and written (`.../contents`: `GetContents`' count;
+  `block add write/new documents`: the documents the write added, whole);
 - `create`: `VisualEffectAssetEditorUtility.CreateNewAsset` of a new graph (`create/text` the file,
   `create/meta` its .meta without the GUID line), then `create save`: `SaveAssets`.
 
