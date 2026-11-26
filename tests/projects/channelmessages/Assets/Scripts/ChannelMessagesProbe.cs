@@ -114,6 +114,8 @@ public class ChannelMessagesProbe : MonoBehaviour
                 + "; connection positive " + (info.connectionId > 0) + "; name " + info.name;
         }));
         Row("client.info_by_name", Try(() => (ChannelClient.GetChannelClientInfo(Channel) == client.GetChannelClientInfo()).ToString()));
+        Row("client.id_is_channel_id", Try(() => (client.clientId == channelId).ToString()));
+        Row("client.duplicate_handler", Try(() => { Action<byte[]> h = _ => { }; client.RegisterMessageHandler(h); client.RegisterMessageHandler(h); return "ok"; }));
 
         // Client to server: text, then binary.
         yield return ToServer(client, "text", () => client.Send("hello server"));

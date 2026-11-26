@@ -155,8 +155,14 @@ namespace UnityEditor.MPE
         [Unbound.EditorFaithful("the service's local address (measured: tests/projects/editorchannels mpe.address)")]
         public static string GetAddress() => Measured(nameof(GetAddress)) ? "127.0.0.1" : null;
 
-        /// <summary>The service's port while it runs (0 stopped: unmeasured).</summary>
-        public static int GetPort() => Measured(nameof(GetPort)) ? Unbound.Runtime.ChannelServer.Port : 0;
+        /// <summary>The service's port while it runs; stopped, 0 with a notice (unmeasured).</summary>
+        public static int GetPort()
+        {
+            if (!Measured(nameof(GetPort))) return 0;
+            if (!Unbound.Runtime.ChannelServer.Running)
+                Stubs.Ignored("UnityEditor.MPE.ChannelService.GetPort", "the stopped service's port is not measured; Unbound answers 0");
+            return Unbound.Runtime.ChannelServer.Port;
+        }
 
         /// <summary>Gives the messages clients sent to the handlers of their channels.</summary>
         public static void DispatchMessages()

@@ -7,6 +7,8 @@
 {"k":"client.connected","v":"True"}
 {"k":"client.list","v":"1 entries; own entry True; clientId matches True; connection positive True; name probe-channel"}
 {"k":"client.info_by_name","v":"True"}
+{"k":"client.id_is_channel_id","v":"True"}
+{"k":"client.duplicate_handler","v":"throws Exception: Channel Client Handler already registered"}
 {"k":"to_server.text.send","v":"ok"}
 {"k":"to_server.text.before_dispatch","v":""}
 {"k":"to_server.text.after_dispatch","v":""}

@@ -37,6 +37,12 @@ namespace UnityEngine.Tests
                 Assert.True(client.IsConnected());
                 Assert.False(client.isAutoTick);
 
+                Assert.Equal(ChannelService.ChannelNameToId(Channel), client.clientId);
+                Action<byte[]> again = _ => { };
+                client.RegisterMessageHandler(again);
+                Assert.Equal("Channel Client Handler already registered", Assert.Throws<Exception>(() => client.RegisterMessageHandler(again)).Message);
+                client.UnregisterMessageHandler(again);
+
                 var info = client.GetChannelClientInfo();
                 Assert.True(info.connectionId > 0);
                 Assert.Equal(client.clientId, info.clientId);
@@ -99,6 +105,30 @@ namespace UnityEngine.Tests
             {
                 ChannelClient.Close("echo");
                 if (!wasRunning) ChannelService.Stop();
+            }
+        }
+
+        // Stopping the service with a client connected ends its connections; the process goes on.
+        [Fact]
+        public void StoppingTheServiceWithAConnectedClientEndsTheConnection()
+        {
+            bool wasRunning = ChannelService.IsRunning();
+            ChannelService.Start();
+            try
+            {
+                var client = ChannelClient.GetOrCreateClient(Channel);
+                client.Start(false);
+                Assert.True(client.IsConnected());
+                ChannelService.Stop();
+                for (int i = 0; i < 100 && client.IsConnected(); i++) Thread.Sleep(20);
+                Assert.False(client.IsConnected());
+                Assert.Empty(ChannelService.GetChannelClientList());
+                Thread.Sleep(200);
+            }
+            finally
+            {
+                ChannelClient.Close(Channel);
+                if (wasRunning) ChannelService.Start();
             }
         }
     }

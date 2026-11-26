@@ -120,7 +120,9 @@ namespace Unbound.Runtime
                 foreach (var message in ChannelSockets.Receive(socket))
                     s_Incoming.Enqueue((connection.Id, message));
             }
-            catch (Exception e) when (e is IOException || e is WebSocketException || e is SocketException || e is ObjectDisposedException) { }
+            // A stopped service aborts its sockets: a pending receive ends with OperationCanceledException.
+            catch (Exception e) when (e is IOException || e is WebSocketException || e is SocketException || e is ObjectDisposedException
+                                      || e is OperationCanceledException || e is InvalidOperationException) { }
             finally
             {
                 if (connection != null)
@@ -241,7 +243,7 @@ namespace Unbound.Runtime
                 {
                     // Answer the other end's close.
                     try { socket.CloseOutputAsync(WebSocketCloseStatus.NormalClosure, "", CancellationToken.None).GetAwaiter().GetResult(); }
-                    catch (Exception e) when (e is WebSocketException || e is IOException || e is ObjectDisposedException) { }
+                    catch (Exception e) when (e is WebSocketException || e is IOException || e is ObjectDisposedException || e is OperationCanceledException) { }
                     yield break;
                 }
                 message.Write(buffer, 0, result.Count);
@@ -260,7 +262,8 @@ namespace Unbound.Runtime
                 socket.SendAsync(new ArraySegment<byte>(data ?? Array.Empty<byte>()), text ? WebSocketMessageType.Text : WebSocketMessageType.Binary, true, CancellationToken.None)
                     .GetAwaiter().GetResult();
             }
-            catch (Exception e) when (e is WebSocketException || e is IOException || e is ObjectDisposedException) { }
+            catch (Exception e) when (e is WebSocketException || e is IOException || e is ObjectDisposedException
+                                      || e is OperationCanceledException || e is InvalidOperationException) { }
         }
     }
 
@@ -317,7 +320,8 @@ namespace Unbound.Runtime
                     {
                         foreach (var message in ChannelSockets.Receive(socket)) client.m_Incoming.Enqueue(message);
                     }
-                    catch (Exception e) when (e is WebSocketException || e is IOException || e is ObjectDisposedException || e is OperationCanceledException) { }
+                    catch (Exception e) when (e is WebSocketException || e is IOException || e is ObjectDisposedException
+                                              || e is OperationCanceledException || e is InvalidOperationException) { }
                 }) { IsBackground = true, Name = "Unbound channel client" }.Start();
                 return client;
             }
