@@ -6,6 +6,7 @@
     run.py gate [--label L]     Unbound (unbound test, Edit mode) on a fresh copy, compared with it
 """
 import argparse
+import json
 import os
 from pathlib import Path
 import subprocess
@@ -26,6 +27,21 @@ ENTRY = ('using NUnit.Framework;\n'
          'public static class VfxWritesEntry { [Test] public static void Run() { VfxWritesProbe.Record(); } }\n')
 
 
+GRAPH = 'Assets/Graphs/BoundsAuto.vfx'
+
+
+def with_exit_row(values_path, project):
+    """The capture's rows with `exit/initialEventName`: the graph's initial event as the file holds
+    it after the run ended (the probe left that setting unsaved for the exit)."""
+    lines = Path(values_path).read_text().splitlines()
+    event = next((line.split(':', 1)[1].strip() for line in (project/GRAPH).read_text().splitlines()
+                  if line.strip().startswith('m_InitialEventName:')), '<none>')
+    row = json.dumps({'k': 'exit/initialEventName', 'v': event})
+    if lines and lines[-1].startswith('{"k": "complete"'):
+        lines.insert(len(lines) - 1, row)
+    Path(values_path).write_text('\n'.join(lines) + '\n')
+
+
 def record(label):
     out = run_root(PROBE, label)
     project = value_probe.assemble(PROBE, out)
@@ -37,6 +53,7 @@ def record(label):
     problem = editor_runner.result_problem(out, gpu=True) or editor_runner.jsonl_complete()(capture)
     if problem:
         raise SystemExit(f'{out}: {problem}')
+    with_exit_row(capture/value_probe.VALUES, project)
     print('captured', capture)
     return 0
 
@@ -52,6 +69,8 @@ def gate(label):
         code = subprocess.run([str(value_probe.LAUNCHER), '--kind', 'engine-gpu', 'timeout', '900', value_probe.engine_cli(), 'test',
                                '--graphics', '-p', str(project), '--platform', 'EditMode', '--filter', 'VfxWritesEntry.Run'],
                               env={**os.environ, VARIABLE: str(capture)}, stdout=log, stderr=subprocess.STDOUT).returncode
+    if (capture/value_probe.VALUES).is_file():
+        with_exit_row(capture/value_probe.VALUES, project)
     expected = value_probe.read_values(value_probe.reference_dir(PROBE)/value_probe.VALUES)
     try:
         actual = value_probe.read_values(capture/value_probe.VALUES)

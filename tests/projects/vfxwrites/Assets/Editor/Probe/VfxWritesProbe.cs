@@ -178,6 +178,15 @@ public static class VfxWritesProbe
             AssetDatabase.SaveAssets();
             Row("subgraph setting save/will save", string.Join(" | ", VfxWritesSaveLog.Calls));
             Row("subgraph setting save/text", File.ReadAllText(op));
+
+            // AssetDatabase.SaveAssetIfDirty of the graph's resource and of its asset (which is not
+            // dirty itself), each after a setting; then a setting left unsaved for the Editor's
+            // exit (run.py reads the file after the run: exit/initialEventName).
+            s_Last = File.ReadAllText(Graph);
+            Step("save if dirty resource", resource, () => { resource.initialEventName = "IfDirtyResource"; AssetDatabase.SaveAssetIfDirty(resource); });
+            Step("save if dirty asset", resource, () => { resource.initialEventName = "IfDirtyAsset"; AssetDatabase.SaveAssetIfDirty(resource.asset); });
+            resource.initialEventName = "AtExit";
+            Row("exit/dirty before", EditorUtility.IsDirty(resource));
             s_Out.Append("{\"k\": \"complete\", \"v\": true}\n");
         }
         catch (Exception e)

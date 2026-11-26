@@ -35,6 +35,10 @@ the step, when there was one).
   created (`VisualEffectAssetEditorUtility.CreateNew`), their text and .meta; `subgraph write/text`:
   the operator subgraph with an Add operator added and written; `subgraph setting/dirty`,
   `subgraph setting save/...`: its `initialEventName` set, then `SaveAssets`.
+- `save if dirty resource`, `save if dirty asset`: a setting set, then `AssetDatabase.SaveAssetIfDirty`
+  of the resource and of its asset (not dirty itself); `exit/dirty before`: a setting left unsaved,
+  and `exit/initialEventName`, which `run.py` adds after the run: that setting as the file holds it
+  once the Editor (or Unbound) has exited.
 
 Measured in the Unity 6000.0.71f1 Editor (Linux, batch mode; two identical captures): an import
 writes nothing; `WriteAsset` with nothing changed leaves the bytes as they were; every resource
@@ -47,11 +51,11 @@ them gives the original bytes back; `GetContents`
 lists the resource itself beside the graph's objects; `CreateNewAsset` writes the package's
 nine-line file and its .meta; that new graph, built and written, gets its resource's fields whole and
 its documents in file id order; subgraphs are created with the same file and .meta and written as
-graphs are.
+graphs are; `SaveAssetIfDirty` of the resource or of its asset writes the dirty graph through
+`OnWillSaveAssets` with its path, and the Editor's exit writes a graph left dirty.
 
 Unbound matches every row. Not measured: a graph whose objects
-change other than one block added and removed, a block subgraph's contents, `rendererSettings`, `SaveAssetIfDirty` and the Editor's exit for a dirty graph (the
-file is left as it is), several dirty assets at once (their order in `OnWillSaveAssets`), scene
+change other than one block added and removed, a block subgraph's contents, `rendererSettings`, several dirty assets at once (their order in `OnWillSaveAssets`), scene
 saves' `OnWillSaveAssets`, and class library types other than the primitive types and string in an
 added object's type names (Unbound refuses them: .NET names them otherwise than the Editor's Mono,
 which could not read .NET's names back).
