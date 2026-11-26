@@ -149,6 +149,35 @@ public static class VfxWritesProbe
             AssetDatabase.SaveAssets();
             if (VfxWritesSaveLog.Calls.Count > 0) Row("create save/will save", string.Join(" | ", VfxWritesSaveLog.Calls));
             Changes("create save", Created);
+
+            // The new graph built: an operator added to it, written with its sub-assets (the
+            // file held the package's skeleton).
+            var created = VisualEffectResource.GetResourceAtPath(Created);
+            created.GetOrCreateGraph().AddChild(ScriptableObject.CreateInstance<UnityEditor.VFX.Operator.Add>());
+            created.WriteAssetWithSubAssets();
+            Row("fresh write/text", File.ReadAllText(Created));
+
+            // Subgraphs: an operator subgraph and a block subgraph created, the operator subgraph
+            // built as the graph above and then a setting of it saved.
+            const string op = "Assets/Graphs/Op.vfxoperator", blocks = "Assets/Graphs/Blocks.vfxblock";
+            VisualEffectAssetEditorUtility.CreateNew<VisualEffectSubgraphOperator>(op);
+            VisualEffectAssetEditorUtility.CreateNew<VisualEffectSubgraphBlock>(blocks);
+            foreach (var path in new[] { op, blocks })
+            {
+                Row("subgraph create/" + Path.GetExtension(path) + "/text", File.ReadAllText(path));
+                var subMeta = File.Exists(path + ".meta") ? File.ReadAllText(path + ".meta") : null;
+                Row("subgraph create/" + Path.GetExtension(path) + "/meta", subMeta == null ? "missing" : string.Join("\n", subMeta.Split('\n').Where(l => !l.StartsWith("guid: ", StringComparison.Ordinal))));
+            }
+            var subgraph = VisualEffectResource.GetResourceAtPath(op);
+            subgraph.GetOrCreateGraph().AddChild(ScriptableObject.CreateInstance<UnityEditor.VFX.Operator.Add>());
+            subgraph.WriteAssetWithSubAssets();
+            Row("subgraph write/text", File.ReadAllText(op));
+            subgraph.initialEventName = "SubgraphEvent";
+            Row("subgraph setting/dirty", EditorUtility.IsDirty(subgraph));
+            VfxWritesSaveLog.Calls.Clear();
+            AssetDatabase.SaveAssets();
+            Row("subgraph setting save/will save", string.Join(" | ", VfxWritesSaveLog.Calls));
+            Row("subgraph setting save/text", File.ReadAllText(op));
             s_Out.Append("{\"k\": \"complete\", \"v\": true}\n");
         }
         catch (Exception e)
