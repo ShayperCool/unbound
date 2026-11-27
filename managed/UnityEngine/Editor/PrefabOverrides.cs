@@ -109,8 +109,9 @@ namespace Unbound.Runtime
                     case YKind.Map:
                         for (int i = 0; i < v.Keys.Count; i++)
                         {
-                            if (prefix.Length == 0 && s_Structural.Contains(v.Keys[i])) continue;
-                            Walk(prefix.Length == 0 ? v.Keys[i] : prefix + "." + v.Keys[i], v.Values[i]);
+                            var key = YText.UnquoteKey(v.Keys[i]);
+                            if (prefix.Length == 0 && s_Structural.Contains(key)) continue;
+                            Walk(prefix.Length == 0 ? key : prefix + "." + key, v.Values[i]);
                         }
                         return;
                     case YKind.Seq:
@@ -152,7 +153,7 @@ namespace Unbound.Runtime
             Read(target, body, refs);
         }
 
-        static void SetPath(YText body, string path, YText value)
+        internal static void SetPath(YText body, string path, YText value)
         {
             var parts = path.Split('.');
             var node = body;
@@ -183,12 +184,12 @@ namespace Unbound.Runtime
                     continue;
                 }
                 if (node.Kind != YKind.Map) return;
+                var rawKey = node.FindRawKey(part, out var child);
                 if (last)
                 {
-                    node.Set(part, value);
+                    node.Set(rawKey ?? part, value);
                     return;
                 }
-                var child = node.Get(part);
                 if (child == null) return;
                 node = child;
             }

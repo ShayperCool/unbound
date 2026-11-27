@@ -37,6 +37,7 @@ namespace UnityEngine.Tests
         [Fact]
         public void DefaultsAndOutOfRangeIndicesReturnOne()
         {
+            using var release = TestRelease.Pin(TestRelease.Measured);
             var mesh = MakeRightTriangles((2f, 1f));
             try
             {
@@ -62,6 +63,7 @@ namespace UnityEngine.Tests
         [Fact]
         public void RecalculatesEachUvSetIndependently()
         {
+            using var release = TestRelease.Pin(TestRelease.Measured);
             var mesh = MakeRightTriangles((2f, 1f));
             try
             {
@@ -85,6 +87,7 @@ namespace UnityEngine.Tests
         [Fact]
         public void MissingUvsReturnOneEvenWithZeroThreshold()
         {
+            using var release = TestRelease.Pin(TestRelease.Measured);
             var mesh = MakeRightTriangles((2f, 1f));
             try
             {
@@ -103,6 +106,7 @@ namespace UnityEngine.Tests
         [Fact]
         public void AggregatesMatchesCommittedEditorReferenceValues()
         {
+            using var release = TestRelease.Pin(TestRelease.Measured);
             using var disposable = new MeshScope();
             // Reference: tests/projects/uvmetrics/Reference/unity-6000.0.71f1/values.jsonl
             var mixed = disposable.Add(MakeRightTriangles((1f, 1f), (2f, 1f)));
@@ -139,6 +143,7 @@ namespace UnityEngine.Tests
         [Fact]
         public void SkipsEmptyNonTriangleShortEdgeAndNarrowAngleTriangles()
         {
+            using var release = TestRelease.Pin(TestRelease.Measured);
             using var disposable = new MeshScope();
             var empty = disposable.Add(new Mesh());
             empty.RecalculateUVDistributionMetrics();
@@ -176,6 +181,7 @@ namespace UnityEngine.Tests
         [Fact]
         public void BaseVertexAndOutOfBoundsIndicesAreHandledSafely()
         {
+            using var release = TestRelease.Pin(TestRelease.Measured);
             var mesh = new Mesh();
             try
             {
@@ -203,6 +209,7 @@ namespace UnityEngine.Tests
         [Fact]
         public void CopyAndSerializedAssetRoundTripPreserveMetrics()
         {
+            using var release = TestRelease.Pin(TestRelease.Measured);
             var mesh = MakeRightTriangles((2f, 1f));
             Mesh clone = null;
             Mesh reloaded = null;
@@ -238,6 +245,7 @@ namespace UnityEngine.Tests
         [Fact]
         public void NonReadableMeshRefusesRecalculateInPlayModeAndLogsOnce()
         {
+            using var release = TestRelease.Pin(TestRelease.Measured);
             var mesh = MakeRightTriangles((2f, 1f));
             mesh.name = "LockedMesh";
             mesh.UploadMeshData(true);
@@ -396,6 +404,7 @@ namespace UnityEngine.Tests
         [Fact]
         public void MultiSubMeshTruncatesTrailingIndicesToTriangleMultiple()
         {
+            using var release = TestRelease.Pin(TestRelease.Measured);
             var mesh = new Mesh();
             try
             {
@@ -419,6 +428,133 @@ namespace UnityEngine.Tests
                 Assert.Equal(16f, mesh.GetUVDistributionMetric(0));
             }
             finally { Object.DestroyImmediate(mesh); }
+        }
+
+        [Fact]
+        public void UnmeasuredReleaseKeepsDefaultMetricsAndReportsIgnored()
+        {
+            using var release = TestRelease.Pin(TestRelease.Unmeasured);
+            var mesh = MakeRightTriangles((1f, 1f), (1.41421356f, 1f), (1.73205081f, 1f), (2f, 1f), (2.23606798f, 1f));
+            var logs = new List<(LogType Type, string Message)>();
+            var prevHandler = Debug.unityLogger.logHandler;
+            try
+            {
+                Stubs.Forget("Mesh.RecalculateUVDistributionMetrics");
+                Stubs.Forget("Mesh.RecalculateUVDistributionMetric");
+                Stubs.Forget("Mesh.GetUVDistributionMetric");
+                Debug.unityLogger.logHandler = new LogCapture(logs);
+
+                mesh.RecalculateUVDistributionMetrics();
+                mesh.RecalculateUVDistributionMetric(0);
+                Assert.Equal(1f, mesh.GetUVDistributionMetric(0));
+                Assert.Contains(logs, l => l.Type == LogType.Warning && l.Message.Contains("Mesh.RecalculateUVDistributionMetrics"));
+                Assert.Contains(logs, l => l.Type == LogType.Warning && l.Message.Contains("Mesh.RecalculateUVDistributionMetric "));
+                Assert.Contains(logs, l => l.Type == LogType.Warning && l.Message.Contains("Mesh.GetUVDistributionMetric"));
+            }
+            finally
+            {
+                Debug.unityLogger.logHandler = prevHandler;
+                Object.DestroyImmediate(mesh);
+            }
+        }
+
+        [Fact]
+        public void QuadsSubMeshSkipsWithNotice()
+        {
+            using var release = TestRelease.Pin(TestRelease.Measured);
+            var mesh = new Mesh();
+            var logs = new List<(LogType Type, string Message)>();
+            var prevHandler = Debug.unityLogger.logHandler;
+            try
+            {
+                Stubs.Forget("Mesh.RecalculateUVDistributionMetric(Quads)");
+                Debug.unityLogger.logHandler = new LogCapture(logs);
+
+                mesh.vertices = new[]
+                {
+                    Vector3.zero, new Vector3(0f, 2f, 0f), new Vector3(2f, 2f, 0f), new Vector3(2f, 0f, 0f),
+                };
+                mesh.uv = new[]
+                {
+                    Vector2.zero, new Vector2(0f, 1f), new Vector2(1f, 1f), new Vector2(1f, 0f),
+                };
+                mesh.SetIndices(new[] { 0, 1, 2, 3 }, MeshTopology.Quads, 0);
+                mesh.RecalculateUVDistributionMetrics();
+                Assert.Equal(1f, mesh.GetUVDistributionMetric(0));
+                Assert.Single(logs);
+                Assert.Equal(LogType.Warning, logs[0].Type);
+                Assert.Contains("MeshTopology.Quads", logs[0].Message);
+            }
+            finally
+            {
+                Debug.unityLogger.logHandler = prevHandler;
+                Object.DestroyImmediate(mesh);
+            }
+        }
+
+        [Fact]
+        public void ImporterMetaRewrittenPreservesAndPatchesSingleQuotedKeysInSequences()
+        {
+            const string meta =
+                "fileFormatVersion: 2\n" +
+                "guid: 11111111111111111111111111111111\n" +
+                "TextureImporter:\n" +
+                "  serializedVersion: 13\n" +
+                "  spriteSheet:\n" +
+                "    weights:\n" +
+                "    - 'weight[0]': 1\n" +
+                "      'weight[1]': 0\n" +
+                "      'boneIndex[0]': 0\n" +
+                "  userData: old\n" +
+                "  assetBundleName: \n" +
+                "  assetBundleVariant: \n";
+
+            var parsed = UnityYamlText.ParseTopLevel(meta).Get("TextureImporter").ToNode();
+            var unwritten = new List<string>();
+            // Unchanged settings must report 0 unwritten keys and return null (no write).
+            var unchanged = ImporterMeta.Rewritten(meta, "TextureImporter", parsed, null, ("old", "", ""), "", unwritten);
+            Assert.Null(unchanged);
+            Assert.Empty(unwritten);
+
+            // Editing userData alone writes cleanly with 0 unwritten keys and preserves single-quoted keys.
+            var userDataOnly = ImporterMeta.Rewritten(meta, "TextureImporter", parsed, null, ("updated", "", ""), "", unwritten);
+            Assert.NotNull(userDataOnly);
+            Assert.Empty(unwritten);
+            Assert.Contains("- 'weight[0]': 1", userDataOnly);
+            Assert.Contains("userData: updated", userDataOnly);
+
+            // Editing a single-quoted weight value patches under the original raw quoted key.
+            var weightMap = parsed.Get("spriteSheet").Get("weights").Items[0];
+            for (int i = 0; i < weightMap.Keys.Length; i++)
+                if (weightMap.Keys[i] == "weight[0]") weightMap.Values[i] = YNode.MakeScalar("0.75");
+            var editedWeight = ImporterMeta.Rewritten(meta, "TextureImporter", parsed, null, ("old", "", ""), "", unwritten);
+            Assert.NotNull(editedWeight);
+            Assert.Empty(unwritten);
+            Assert.Contains("- 'weight[0]': 0.75", editedWeight);
+            Assert.Contains("  'weight[1]': 0", editedWeight);
+        }
+
+        [Fact]
+        public void PrefabValuesFlattenAndSetPathMatchSingleQuotedKeys()
+        {
+            const string yaml =
+                "%YAML 1.1\n" +
+                "%TAG !u! tag:unity3d.com,2011:\n" +
+                "--- !u!114 &11400000\n" +
+                "MonoBehaviour:\n" +
+                "  m_AmbientProbe:\n" +
+                "    'sh[ 0]': 1\n" +
+                "    'sh[ 1]': 2\n";
+            var docs = UnityYamlText.Parse(yaml);
+            var body = docs[0].Body;
+            var flat = PrefabValues.ByPath(PrefabValues.Flatten(body));
+            Assert.True(flat.ContainsKey("m_AmbientProbe.sh[ 0]"));
+            Assert.Equal("1", flat["m_AmbientProbe.sh[ 0]"].Raw);
+
+            PrefabValues.SetPath(body, "m_AmbientProbe.sh[ 0]", YText.Scalar("3.5"));
+            var written = UnityYamlText.Write(docs);
+            Assert.Contains("'sh[ 0]': 3.5", written);
+            Assert.Contains("'sh[ 1]': 2", written);
         }
 
         sealed class LogCapture : ILogHandler

@@ -372,7 +372,7 @@ namespace Unbound.Runtime
                     for (int i = 0; i < settings.Keys.Length; i++)
                     {
                         var key = settings.Keys[i];
-                        var child = text.Get(key);
+                        var rawKey = text.FindRawKey(key, out var child);
                         if (child == null)
                         {
                             unwritten.Add(at + key);
@@ -380,7 +380,7 @@ namespace Unbound.Runtime
                         }
                         if (child.Kind == YKind.Scalar && settings.Values[i].Kind == YKind.Scalar)
                         {
-                            if (child.Text != settings.Values[i].Scalar) Replace(text, key, settings.Values[i].Scalar);
+                            if (child.Text != settings.Values[i].Scalar) Replace(text, rawKey, settings.Values[i].Scalar);
                         }
                         else Patch(child, settings.Values[i], at + key + ".", unwritten);
                     }

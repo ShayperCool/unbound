@@ -1180,6 +1180,11 @@ namespace UnityEngine
         public void RecalculateUVDistributionMetrics(float uvAreaThreshold = 1e-9f)
         {
             if (!CanCall(nameof(RecalculateUVDistributionMetrics))) return;
+            if (!Compat.RenderingMeasured)
+            {
+                Unbound.Runtime.Stubs.Ignored("Mesh.RecalculateUVDistributionMetrics", "UV distribution metrics are measured for Unity 6000.0 only");
+                return;
+            }
             for (int set = 0; set < m_UVMetrics.Length; set++) RecalculateUVDistributionMetricCore(set, uvAreaThreshold);
         }
 
@@ -1195,6 +1200,11 @@ namespace UnityEngine
         public void RecalculateUVDistributionMetric(int uvSetIndex, float uvAreaThreshold = 1e-9f)
         {
             if (!CanCall(nameof(RecalculateUVDistributionMetric))) return;
+            if (!Compat.RenderingMeasured)
+            {
+                Unbound.Runtime.Stubs.Ignored("Mesh.RecalculateUVDistributionMetric", "UV distribution metrics are measured for Unity 6000.0 only");
+                return;
+            }
             RecalculateUVDistributionMetricCore(uvSetIndex, uvAreaThreshold);
         }
 
@@ -1216,19 +1226,30 @@ namespace UnityEngine
             else
             {
                 var list = new List<int>();
+                bool skippedQuads = false;
                 foreach (var sub in m_SubMeshes)
                 {
-                    if (sub.Topology != MeshTopology.Triangles) continue;
+                    if (sub.Topology != MeshTopology.Triangles)
+                    {
+                        if (sub.Topology == MeshTopology.Quads && sub.Indices.Length > 0) skippedQuads = true;
+                        continue;
+                    }
                     int count = sub.Indices.Length - sub.Indices.Length % 3;
                     for (int k = 0; k < count; k++) list.Add(sub.Indices[k] + sub.BaseVertex);
                 }
+                if (skippedQuads)
+                    Unbound.Runtime.Stubs.Ignored("Mesh.RecalculateUVDistributionMetric(Quads)", "non-triangle MeshTopology.Quads sub-meshes are unmeasured and skipped");
                 indices = list.ToArray();
             }
             m_UVMetrics[uvSetIndex] = UVDistributionMetric(m_Vertices, indices, uvs, uvAreaThreshold);
         }
 
-        public float GetUVDistributionMetric(int uvSetIndex) =>
-            uvSetIndex >= 0 && uvSetIndex < m_UVMetrics.Length ? m_UVMetrics[uvSetIndex] : 1f;
+        public float GetUVDistributionMetric(int uvSetIndex)
+        {
+            if (!Compat.RenderingMeasured)
+                Unbound.Runtime.Stubs.Ignored("Mesh.GetUVDistributionMetric", "UV distribution metrics are measured for Unity 6000.0 only");
+            return uvSetIndex >= 0 && uvSetIndex < m_UVMetrics.Length ? m_UVMetrics[uvSetIndex] : 1f;
+        }
 
         const float k_MetricMinimum = 0.001f;
         const double k_MetricDeviationFloor = 0.1;

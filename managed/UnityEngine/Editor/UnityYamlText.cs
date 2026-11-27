@@ -36,6 +36,28 @@ namespace Unbound.Runtime
             return null;
         }
 
+        internal static string UnquoteKey(string key) =>
+            key.Length >= 2 && key[0] == '\'' && key[key.Length - 1] == '\'' ? UnityYamlText.Unquote(key) : key;
+
+        /// <summary>The raw key stored in this map matching <paramref name="key"/> (exact first,
+        /// else a single-quoted key whose unquoted text equals <paramref name="key"/>), or null.</summary>
+        internal string FindRawKey(string key, out YText value)
+        {
+            for (int i = 0; i < Keys.Count; i++)
+                if (Keys[i] == key) { value = Values[i]; return Keys[i]; }
+            for (int i = 0; i < Keys.Count; i++)
+            {
+                var k = Keys[i];
+                if (k.Length >= 2 && k[0] == '\'' && k[k.Length - 1] == '\'' && UnityYamlText.Unquote(k) == key)
+                {
+                    value = Values[i];
+                    return k;
+                }
+            }
+            value = null;
+            return null;
+        }
+
         internal void Set(string key, YText value)
         {
             for (int i = 0; i < Keys.Count; i++)
@@ -115,10 +137,7 @@ namespace Unbound.Runtime
                 {
                     var keys = new string[Keys.Count];
                     for (int i = 0; i < keys.Length; i++)
-                    {
-                        var k = Keys[i];
-                        keys[i] = k.Length >= 2 && k[0] == '\'' && k[k.Length - 1] == '\'' ? UnityYamlText.Unquote(k) : k;
-                    }
+                        keys[i] = UnquoteKey(Keys[i]);
                     var values = new YNode[Values.Count];
                     for (int i = 0; i < values.Length; i++) values[i] = Values[i].ToNode();
                     return new YNode { Kind = YKind.Map, Keys = keys, Values = values };
