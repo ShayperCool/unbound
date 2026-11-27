@@ -577,14 +577,25 @@ class JanitorTests(unittest.TestCase):
         self.addCleanup(ext_blocked.chmod, 0o755)
         (self.cache/'ext-link').symlink_to(external)
         (self.cache/'blocked-target-link').symlink_to(ext_blocked/'hidden')
+        # A 0o444 non-root subdir can be listed via scandir, then denies stat/readlink on its children.
+        nosearch = self.cache/'nosearch-sub'
+        (nosearch/'child-dir').mkdir(parents=True)
+        (nosearch/'child-link').symlink_to(newest)
+        nosearch.chmod(0o444)
+        self.addCleanup(nosearch.chmod, 0o755)
         self.collect_applied()
         self.assertFalse(old.exists())
         self.assertTrue(newest.is_dir())
         self.assertFalse(self.j.partial)
         links = self.rows('links')[0]
-        self.assertEqual(links['unreadable'], 2)
-        self.assertIn(str(blocked), links['unreadable_examples'])
-        self.assertIn(str(ext_blocked), links['unreadable_examples'])
+        self.assertEqual(links['unreadable'], 5)
+        # Standalone link pointing behind an unreadable directory keeps its lexical protection and logs unreadable.
+        standalone = self.root/'standalone'
+        standalone.mkdir()
+        (standalone/'behind-blocked').symlink_to(ext_blocked/'hidden')
+        found, _, unreadable = janitor.link_walk([standalone], index_root=self.cache)
+        self.assertTrue(any(src == str(standalone/'behind-blocked') for src, _ in found))
+        self.assertEqual(unreadable, [str(standalone/'behind-blocked')])
 
     @unittest.skipIf(os.geteuid() == 0, 'root can list any directory')
     def test_unreadable_scan_root_still_fails_closed(self):
@@ -594,6 +605,44 @@ class JanitorTests(unittest.TestCase):
         self.addCleanup(unreadable_root.chmod, 0o755)
         with self.assertRaises(PermissionError):
             janitor.link_walk([unreadable_root], index_root=self.cache)
+
+        nosearch_root = self.root/'nosearch-root'
+        (nosearch_root/'sub').mkdir(parents=True)
+        (nosearch_root/'keep').symlink_to(self.cache)
+        nosearch_root.chmod(0o444)
+        self.addCleanup(nosearch_root.chmod, 0o755)
+        with self.assertRaises(PermissionError):
+            janitor.link_walk([nosearch_root], index_root=self.cache)
+
+    @unittest.skipIf(os.geteuid() == 0, 'root can list any directory')
+    def test_recheck_unreadable_subdirectory_is_skipped_and_logged(self):
+        # 1. Directory becomes unreadable right after DirectoryChanged (fallback current_entries).
+        holder = self.directory('recheck-holder')
+        # 2. Directory stays readable during DirectoryChanged fallback, then becomes unreadable before recheck.
+        recheck_dir = self.directory('recheck-later')
+        original_entries = run_cache_index.DirectoryIndex.entries
+        original_current = janitor.current_entries
+        def changed_entries(index, path, info):
+            if path == str(holder):
+                holder.chmod(0)
+                self.addCleanup(holder.chmod, 0o755)
+                raise run_cache_index.DirectoryChanged(path)
+            if path == str(recheck_dir):
+                raise run_cache_index.DirectoryChanged(path)
+            return original_entries(index, path, info)
+        seen_recheck = [False]
+        def chmod_after_first_current(path):
+            result = original_current(path)
+            if path == str(recheck_dir) and not seen_recheck[0]:
+                seen_recheck[0] = True
+                recheck_dir.chmod(0)
+                self.addCleanup(recheck_dir.chmod, 0o755)
+            return result
+        with patch.object(run_cache_index.DirectoryIndex, 'entries', changed_entries), \
+             patch.object(janitor, 'current_entries', chmod_after_first_current):
+            _, _, unreadable = janitor.link_walk([self.volume], index_root=self.cache)
+        self.assertIn(str(holder), unreadable)
+        self.assertIn(str(recheck_dir), unreadable)
 
     def test_non_permission_oserror_in_link_walk_still_fails_closed(self):
         old, newest = self.instances('probe', ['gate-1', 'gate-2'])

@@ -388,14 +388,24 @@ def process_paths(proc=Path('/proc'), *, uid=None, privileged=True, exclude_pid=
 
 
 def link_target(path):
-    """(lexical target, resolved target, whether it is a directory), or the OSError.
+    """(lexical target, resolved target, whether it is a directory, unreadable error or None),
+    or an OSError when the link itself could not be read or target stat hit a non-permission error.
     Read on the I/O threads."""
     try:
         path = Path(path)
         target = Path(os.readlink(path))
         target = target if target.is_absolute() else path.parent/target
+        lexical = Path(os.path.abspath(target))
         resolved = target.resolve()
-        return Path(os.path.abspath(target)), resolved, target.is_dir()
+        try:
+            is_dir = stat.S_ISDIR(os.stat(target).st_mode)
+        except OSError as error:
+            if gone(error):
+                return lexical, resolved, False, None
+            if unreadable_error(error):
+                return lexical, resolved, False, error
+            return error
+        return lexical, resolved, is_dir, None
     except OSError as error:
         return error
 
@@ -477,14 +487,16 @@ def link_walk(roots, *, excluded=(), seconds=300, index_root=None, prune=True):
             if isinstance(result, OSError):
                 if gone(result):
                     continue
-                if unreadable_error(result):
+                if unreadable_error(result) and os.path.dirname(link) not in root_set:
                     unreadable.add(link)
                     continue
                 raise result
-            lexical, target, is_dir = result
+            lexical, target, is_dir, target_unreadable = result
             found.append((link, os.fspath(lexical)))
             found.append((link, os.fspath(target)))
-            if is_dir and not any(inside(target, path) for path in excluded):
+            if target_unreadable is not None:
+                unreadable.add(link)
+            elif is_dir and not any(inside(target, path) for path in excluded):
                 pending.append(os.fspath(target))
         pending.extend(entry.path for entries in listed for entry in entries
                        if entry.kind == 'dir' and entry.path not in excluded)
@@ -504,10 +516,14 @@ def link_walk(roots, *, excluded=(), seconds=300, index_root=None, prune=True):
                         if gone(info):
                             vanished(directory)
                             continue
-                        if unreadable_error(info) and directory not in root_set:
+                        if unreadable_error(info) and directory not in root_set and os.path.dirname(directory) not in root_set:
                             unreadable.add(directory)
                             continue
                         raise info
+                    if directory in root_set:
+                        # A 0o444 scan root allows stat(root) and scandir(root) via d_type,
+                        # while denying search (+x) on its children; fail closed here.
+                        os.stat(os.path.join(directory, '.'))
                     identity = (info.st_dev, info.st_ino)
                     if walked(directory, identity):
                         continue
