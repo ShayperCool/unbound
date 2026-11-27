@@ -26,6 +26,17 @@ namespace UnityEngine.Tests
             public AnimationCurve curve = AnimationCurve.Linear(0, 0, 1, 1);
         }
 
+        [Serializable]
+        sealed class ManagedPayload
+        {
+            public int x = 7;
+        }
+
+        sealed class ManagedRefScript : MonoBehaviour
+        {
+            [SerializeReference] public object item = new ManagedPayload();
+        }
+
         sealed class PresetData : ScriptableObject
         {
             public int value = 4;
@@ -252,15 +263,39 @@ namespace UnityEngine.Tests
             using var release = TestRelease.Pin(TestRelease.Measured);
             var clip = new AnimationClip();
             var rectGo = new GameObject("Rect", typeof(RectTransform));
+            var newlineGo = new GameObject("Rect\n");
             var curveGo = new GameObject("Curve");
             var curveScript = curveGo.AddComponent<CurveScript>();
-            Preset clipPreset = null, rectPreset = null, curvePreset = null, coupledPreset = null;
+            var managedRefGo = new GameObject("ManagedRef");
+            var managedRefScript = managedRefGo.AddComponent<ManagedRefScript>();
+            var texImporter = (TextureImporter)AssetImporter.FromMeta(
+                "Assets/T.png",
+                "0123456789abcdef0123456789abcdef",
+                "TextureImporter",
+                TestYaml.DocumentBody("TextureImporter:\n  externalObjects: {}\n  serializedVersion: 13\n  userData: \n"));
+            var shader = Shader.Create("PresetsTests/Variant", 2000);
+            var parentMat = new Material(shader);
+            var variantMat = new Material(shader) { parent = parentMat };
+            var data = ScriptableObject.CreateInstance<PresetData>();
+            Preset clipPreset = null, rectPreset = null, curvePreset = null, managedRefPreset = null;
+            Preset texPreset = null, variantPreset = null, coupledPreset = null;
             string clipMember = "UnityEditor.Presets.Preset (serialized properties of UnityEngine.AnimationClip)";
             string rectMember = "UnityEditor.Presets.Preset (serialized properties of UnityEngine.RectTransform)";
+            string texCaptureMember = "UnityEditor.Presets.Preset (serialized properties of UnityEditor.TextureImporter)";
+            string texApplyMember = "UnityEditor.Presets.Preset.ApplyTo (serialized properties of UnityEditor.TextureImporter)";
+            string variantCaptureMember = "UnityEditor.Presets.Preset (serialized properties of UnityEngine.Material (variant))";
+            string variantApplyMember = "UnityEditor.Presets.Preset.ApplyTo (serialized properties of UnityEngine.Material (variant))";
             string curveMember = $"UnityEditor.Presets.Preset (property type AnimationCurve on {typeof(CurveScript).FullName}.curve)";
+            string managedRefMember = $"UnityEditor.Presets.Preset (property type ManagedReference on {typeof(ManagedRefScript).FullName}.item)";
             string coupledMember = "UnityEditor.Presets.Preset (coupled presets)";
-            string filterMember = "UnityEditor.Presets.Preset.GetDefaultPresetsForObject (a filter other than single-token glob:\"...\" on an object's name)";
-            foreach (var m in new[] { clipMember, rectMember, curveMember, coupledMember, filterMember }) Stubs.Forget(m);
+            string filterMember = "UnityEditor.Presets.Preset.GetDefaultPresetsForObject (a filter other than single-token glob:\"...\" on a component's GameObject name)";
+            string[] allMembers =
+            {
+                clipMember, rectMember, texCaptureMember, texApplyMember,
+                variantCaptureMember, variantApplyMember, curveMember, managedRefMember,
+                coupledMember, filterMember,
+            };
+            foreach (var m in allMembers) Stubs.Forget(m);
             try
             {
                 using var logs = new LogCapture();
@@ -270,11 +305,29 @@ namespace UnityEngine.Tests
                 rectPreset = new Preset(rectGo.GetComponent<RectTransform>());
                 Assert.Contains(logs.Lines, line => line.Contains("Unbound:") && line.Contains(rectMember));
 
+                // .meta-backed TextureImporter (TypeTreeTargets.Of != null) reports loudly on both capture and apply.
+                texPreset = new Preset(texImporter);
+                Assert.Contains(logs.Lines, line => line.Contains("Unbound:") && line.Contains(texCaptureMember));
+                Assert.True(texPreset.ApplyTo(texImporter));
+                Assert.Contains(logs.Lines, line => line.Contains("Unbound:") && line.Contains(texApplyMember));
+
+                // Material variants report loudly on both capture and apply.
+                Assert.True(variantMat.isVariant);
+                variantPreset = new Preset(variantMat);
+                Assert.Contains(logs.Lines, line => line.Contains("Unbound:") && line.Contains(variantCaptureMember));
+                Assert.True(variantPreset.ApplyTo(variantMat));
+                Assert.Contains(logs.Lines, line => line.Contains("Unbound:") && line.Contains(variantApplyMember));
+
                 curvePreset = new Preset(curveScript);
                 Assert.Contains(logs.Lines, line => line.Contains("Unbound:") && line.Contains(curveMember));
                 Assert.DoesNotContain(curvePreset.PropertyModifications, p => p.propertyPath == "curve");
 
-                // Coupled preset YAML reports loudly and sets IsCoupled.
+                // Non-null [SerializeReference] field reports loudly instead of recursing silently into child fields.
+                managedRefPreset = new Preset(managedRefScript);
+                Assert.Contains(logs.Lines, line => line.Contains("Unbound:") && line.Contains(managedRefMember));
+                Assert.DoesNotContain(managedRefPreset.PropertyModifications, p => p.propertyPath.StartsWith("item.", StringComparison.Ordinal));
+
+                // Coupled preset YAML reports loudly and sets IsCoupled; null resolver with objectReference does not throw.
                 var docs = UnityYaml.Parse(@"%YAML 1.1
 %TAG !u! tag:unity3d.com,2011:
 --- !u!181963792 &1
@@ -284,7 +337,11 @@ Preset:
     m_NativeTypeID: 4
     m_ManagedTypePPtr: {fileID: 0}
     m_ManagedTypeFallback: 
-  m_Properties: []
+  m_Properties:
+  - target: {fileID: 0}
+    propertyPath: m_Ref
+    value: 
+    objectReference: {fileID: 123, guid: 0123456789abcdef0123456789abcdef, type: 3}
   m_ExcludedProperties: []
   m_CoupledType:
     m_NativeTypeID: 20
@@ -297,18 +354,48 @@ Preset:
                 Assert.True(coupledPreset.IsCoupled());
                 Assert.Contains(logs.Lines, line => line.Contains("Unbound:") && line.Contains(coupledMember));
 
-                // Compound search filter starting with glob: reports loudly instead of failing silently.
+                // PresetType equality distinguishes null vs empty fallback (matching Unity's PresetType.Equals).
+                Assert.False(default(PresetType).Equals(new PresetType(0, null, "")));
+
+                // Single-token glob matches exact end (\z, not before trailing \n); compound, unquoted, **, ?, and non-component targets report loudly.
+                Assert.True(Preset.FilterTakes("glob:\"Rect*\"", rectGo.transform));
+                Assert.False(Preset.FilterTakes("glob:\"Rect\"", newlineGo.transform));
                 Assert.False(Preset.FilterTakes("glob:\"Rect*\" t:Transform", rectGo.transform));
+                Assert.Contains(logs.Lines, line => line.Contains("Unbound:") && line.Contains(filterMember));
+                Stubs.Forget(filterMember);
+                logs.Lines.Clear();
+                Assert.False(Preset.FilterTakes("glob:Rect*", rectGo.transform));
+                Assert.Contains(logs.Lines, line => line.Contains("Unbound:") && line.Contains(filterMember));
+                Stubs.Forget(filterMember);
+                logs.Lines.Clear();
+                Assert.False(Preset.FilterTakes("glob:\"Rect?\"", rectGo.transform));
+                Assert.Contains(logs.Lines, line => line.Contains("Unbound:") && line.Contains(filterMember));
+                Stubs.Forget(filterMember);
+                logs.Lines.Clear();
+                Assert.False(Preset.FilterTakes("glob:\"Rect**\"", rectGo.transform));
+                Assert.Contains(logs.Lines, line => line.Contains("Unbound:") && line.Contains(filterMember));
+                Stubs.Forget(filterMember);
+                logs.Lines.Clear();
+                Assert.False(Preset.FilterTakes("glob:\"Preset*\"", data));
                 Assert.Contains(logs.Lines, line => line.Contains("Unbound:") && line.Contains(filterMember));
             }
             finally
             {
-                foreach (var m in new[] { clipMember, rectMember, curveMember, coupledMember, filterMember }) Stubs.Forget(m);
+                foreach (var m in allMembers) Stubs.Forget(m);
                 if (coupledPreset != null) Object.DestroyImmediate(coupledPreset);
+                if (variantPreset != null) Object.DestroyImmediate(variantPreset);
+                if (texPreset != null) Object.DestroyImmediate(texPreset);
+                if (managedRefPreset != null) Object.DestroyImmediate(managedRefPreset);
                 if (curvePreset != null) Object.DestroyImmediate(curvePreset);
                 if (rectPreset != null) Object.DestroyImmediate(rectPreset);
                 if (clipPreset != null) Object.DestroyImmediate(clipPreset);
+                Object.DestroyImmediate(data);
+                Object.DestroyImmediate(variantMat);
+                Object.DestroyImmediate(parentMat);
+                Object.DestroyImmediate(texImporter);
+                Object.DestroyImmediate(managedRefGo);
                 Object.DestroyImmediate(curveGo);
+                Object.DestroyImmediate(newlineGo);
                 Object.DestroyImmediate(rectGo);
                 Object.DestroyImmediate(clip);
             }

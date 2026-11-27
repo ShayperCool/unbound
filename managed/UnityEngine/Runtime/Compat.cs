@@ -604,6 +604,7 @@ namespace Unbound.Runtime
         /// mini thumbnails, measured by tests/projects/editortitlebar on Unity 6000.0.71f1. Other
         /// families keep their unmeasured answers (not implemented, said once).</summary>
         internal static bool EditorTitlebarMeasured => Family == ReleaseFamily.Unity6000_0;
+        internal static bool EditorTitlebarMeasuredFor(string release) => FamilyOf(release) == ReleaseFamily.Unity6000_0;
 
         /// <summary>EditorGUI's texture previews (DrawPreviewTexture, DrawTextureAlpha,
         /// DrawTextureTransparent), measured by tests/projects/editorpreviewtexture on Unity

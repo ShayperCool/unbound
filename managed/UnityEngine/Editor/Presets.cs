@@ -100,9 +100,9 @@ namespace UnityEditor.Presets
 
         public bool Equals(PresetType other) =>
             m_NativeTypeID == other.m_NativeTypeID && m_ManagedTypePPtr == other.m_ManagedTypePPtr
-            && (m_ManagedTypeFallback ?? string.Empty) == (other.m_ManagedTypeFallback ?? string.Empty);
+            && m_ManagedTypeFallback == other.m_ManagedTypeFallback;
 
-        public override int GetHashCode() => HashCode.Combine(m_NativeTypeID, m_ManagedTypePPtr == null ? 0 : m_ManagedTypePPtr.GetInstanceID(), m_ManagedTypeFallback ?? string.Empty);
+        public override int GetHashCode() => HashCode.Combine(m_NativeTypeID, m_ManagedTypePPtr == null ? 0 : m_ManagedTypePPtr.GetInstanceID(), m_ManagedTypeFallback);
 
         public static bool operator ==(PresetType a, PresetType b) => a.Equals(b);
 
@@ -254,7 +254,7 @@ namespace UnityEditor.Presets
                     target = null,
                     propertyPath = p.Str("propertyPath"),
                     value = p.Str("value"),
-                    objectReference = reference.IsNull ? null : resolver.Resolve(reference, typeof(Object)),
+                    objectReference = reference.IsNull || resolver == null ? null : resolver.Resolve(reference, typeof(Object)),
                 });
             }
             m_Properties = properties.ToArray();
@@ -295,6 +295,8 @@ namespace UnityEditor.Presets
             if (!Compat.EditorTitlebarMeasured) { Stubs.NotImplemented("UnityEditor.Presets.Preset.ApplyTo"); return false; }
             if (!target) throw ObjectErrors.Argument(target, "target");
             if (!CanBeAppliedTo(target)) return false;
+            if (!IsMeasuredPropertyTarget(target))
+                Stubs.NotImplemented($"UnityEditor.Presets.Preset.ApplyTo (serialized properties of {TargetKindLabel(target)})");
             using var so = new SerializedObject(target);
             bool filterSelected = selectedPropertyPaths != null && selectedPropertyPaths.Length > 0;
             bool anyWritten = false;
@@ -475,13 +477,26 @@ namespace UnityEditor.Presets
             return false;
         }
 
+        static bool IsMeasuredPropertyTarget(Object target)
+        {
+            if (SerializedTree.IsScript(target)) return true;
+            var type = target.GetType();
+            if (type == typeof(Transform) || type == typeof(BoxCollider)) return true;
+            return target is Material material && type == typeof(Material) && !material.isVariant;
+        }
+
+        static string TargetKindLabel(Object target) =>
+            target is Material material && material.isVariant
+                ? "UnityEngine.Material (variant)"
+                : target.GetType().FullName;
+
         /// <summary>Reads an object's serialized leaf properties through SerializedObject, omitting
         /// identity and hierarchy headers (tests/projects/presets made.*).</summary>
         static PropertyModification[] CaptureProperties(Object source)
         {
             var sourceType = source.GetType();
-            if (!SerializedTree.IsScript(source) && sourceType != typeof(Transform) && sourceType != typeof(BoxCollider) && TypeTreeTargets.Of(source) == null)
-                Stubs.NotImplemented($"UnityEditor.Presets.Preset (serialized properties of {sourceType.FullName})");
+            if (!IsMeasuredPropertyTarget(source))
+                Stubs.NotImplemented($"UnityEditor.Presets.Preset (serialized properties of {TargetKindLabel(source)})");
             var list = new List<PropertyModification>();
             using var so = new SerializedObject(source);
             var it = so.GetIterator();
@@ -508,6 +523,12 @@ namespace UnityEditor.Presets
                 if (it.propertyType == SerializedPropertyType.ArraySize)
                 {
                     list.Add(new PropertyModification { target = null, propertyPath = it.propertyPath, value = it.intValue.ToString(CultureInfo.InvariantCulture), objectReference = null });
+                    enter = false;
+                    continue;
+                }
+                if (it.propertyType == SerializedPropertyType.ManagedReference)
+                {
+                    Stubs.NotImplemented($"UnityEditor.Presets.Preset (property type {it.propertyType} on {sourceType.FullName}.{it.propertyPath})");
                     enter = false;
                     continue;
                 }
@@ -644,19 +665,17 @@ namespace UnityEditor.Presets
         }
 
         /// <summary>Whether a default preset's filter takes <paramref name="target"/>: an empty one
-        /// takes every object; a single-token <c>glob:"pattern"</c> matches an object's name (a
-        /// component's GameObject's own name, case-sensitive, <c>*</c> not crossing <c>/</c>;
-        /// matches the Unity 6000.0.71f1 Editor, tests/projects/presets defaults.*). Importer path
-        /// filters and compound/other search filters are not measured and reported loudly.</summary>
+        /// takes every object; a quoted single-token <c>glob:"pattern"</c> (using <c>*</c> only, not
+        /// <c>**</c> or <c>?</c>) matches a component's GameObject's own name (case-sensitive,
+        /// <c>*</c> not crossing <c>/</c>; matches the Unity 6000.0.71f1 Editor, tests/projects/presets
+        /// defaults.*). Non-component targets with filters and other search expressions are not
+        /// measured and reported loudly.</summary>
         internal static bool FilterTakes(string filter, Object target)
         {
             if (string.IsNullOrEmpty(filter)) return true;
-            if (!(target is AssetImporter) && TryParseSingleGlob(filter, out var pattern))
-            {
-                var name = target is Component component ? component.gameObject.name : target.name;
-                return Regex.IsMatch(name ?? "", "^" + GlobToRegex(pattern) + "$");
-            }
-            Stubs.NotImplemented("UnityEditor.Presets.Preset.GetDefaultPresetsForObject (a filter other than single-token glob:\"...\" on an object's name)");
+            if (target is Component component && TryParseSingleGlob(filter, out var pattern))
+                return Regex.IsMatch(component.gameObject.name ?? "", @"\A" + GlobToRegex(pattern) + @"\z");
+            Stubs.NotImplemented("UnityEditor.Presets.Preset.GetDefaultPresetsForObject (a filter other than single-token glob:\"...\" on a component's GameObject name)");
             return false;
         }
 
@@ -670,13 +689,8 @@ namespace UnityEditor.Presets
             if (rest.Length >= 2 && rest[0] == '"' && rest[rest.Length - 1] == '"')
             {
                 var inner = rest.Substring(1, rest.Length - 2);
-                if (inner.IndexOf('"') >= 0) return false;
+                if (inner.IndexOf('"') >= 0 || inner.IndexOf('?') >= 0 || inner.Contains("**")) return false;
                 pattern = inner;
-                return true;
-            }
-            if (rest.Length > 0 && rest.IndexOfAny(new[] { ' ', '\t', '"' }) < 0)
-            {
-                pattern = rest;
                 return true;
             }
             return false;
@@ -699,9 +713,7 @@ namespace UnityEditor.Presets
             for (int i = 0; i < pattern.Length; i++)
             {
                 char c = pattern[i];
-                if (c == '*' && i + 1 < pattern.Length && pattern[i + 1] == '*') { sb.Append(".*"); i++; }
-                else if (c == '*') sb.Append("[^/]*");
-                else if (c == '?') sb.Append("[^/]");
+                if (c == '*') sb.Append("[^/]*");
                 else sb.Append(Regex.Escape(c.ToString()));
             }
             return sb.ToString();

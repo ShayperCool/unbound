@@ -93,6 +93,8 @@ namespace Unbound.Runtime
         {
             if (classId == 92 && Compat.RemovesLegacyGuiLayer(release ?? ProjectInfo.UnityVersion))
                 return (ClassReading.Ignored, "GUILayer: obsolete serialized component removed on load (tests/projects/classids)");
+            if (classId == 181963792 && !Compat.EditorTitlebarMeasuredFor(release ?? ProjectInfo.UnityVersion))
+                return (ClassReading.Unsupported, "Preset: reading .preset assets is measured only for Unity 6000.0");
             if (s_Loader.TryGetValue(classId, out var loader)) return (ClassReading.Loader, loader);
             if (s_Ignored.TryGetValue(classId, out var reason)) return (ClassReading.Ignored, reason);
             if (s_IgnoredWithoutData.TryGetValue(classId, out var data))

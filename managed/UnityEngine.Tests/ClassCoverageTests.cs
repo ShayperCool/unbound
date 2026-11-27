@@ -101,8 +101,10 @@ namespace Unbound.Tests
             Assert.Equal("Loader", navMesh.Reading);
             Assert.Equal("NavMeshSettings", navMesh.UnityName);
             Assert.Equal("Ignored", Listed(1002, "EditorExtensionImpl", new[] { "m_Object" }).Reading);
-            // Preset reads its serialized properties through AssetAdapters.
+            // Preset reads its serialized properties through AssetAdapters on measured 6000.0 releases only.
             Assert.Equal("Read", Listed(181963792, "Preset", new[] { "m_Properties" }).Reading);
+            Assert.Equal(ClassReading.Read, ClassCoverage.Classify(181963792, _ => true, "6000.0.71f1").Reading);
+            Assert.Equal(ClassReading.Unsupported, ClassCoverage.Classify(181963792, _ => true, "6000.3.0f1").Reading);
         }
 
         [Fact]
