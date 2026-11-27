@@ -2166,6 +2166,74 @@ pub fn dispatch(method: &str, request: &str) -> Result<String> {
                 r.delta_time,
             )?)?)
         }
+        "audio-mic-devices" => Ok(json!(s.audio.microphone_devices()).to_string()),
+        "audio-mic-caps" => {
+            #[derive(Deserialize)]
+            #[serde(rename_all = "camelCase")]
+            struct Request {
+                device_name: Option<String>,
+            }
+            let r: Request = serde_json::from_str(request)?;
+            let (min_freq, max_freq) = s.audio.microphone_caps(r.device_name.as_deref());
+            Ok(json!({ "minFreq": min_freq, "maxFreq": max_freq }).to_string())
+        }
+        "audio-mic-start" => {
+            #[derive(Deserialize)]
+            #[serde(rename_all = "camelCase")]
+            struct Request {
+                device_name: Option<String>,
+                r#loop: bool,
+                length_sec: i32,
+                frequency: i32,
+                clip_handle: u64,
+            }
+            let r: Request = serde_json::from_str(request)?;
+            match s.audio.microphone_start(
+                r.device_name.as_deref(),
+                r.r#loop,
+                r.length_sec,
+                r.frequency,
+                r.clip_handle,
+            ) {
+                Ok(started) => Ok(json!({
+                    "ok": true,
+                    "channels": started.channels,
+                    "frames": started.frames,
+                    "frequency": started.frequency,
+                })
+                .to_string()),
+                Err(error) => Ok(json!({ "ok": false, "error": error }).to_string()),
+            }
+        }
+        "audio-mic-end" => {
+            #[derive(Deserialize)]
+            #[serde(rename_all = "camelCase")]
+            struct Request {
+                device_name: Option<String>,
+            }
+            let r: Request = serde_json::from_str(request)?;
+            s.audio.microphone_end(r.device_name.as_deref());
+            Ok("{}".to_owned())
+        }
+        "audio-mic-is-recording" => {
+            #[derive(Deserialize)]
+            #[serde(rename_all = "camelCase")]
+            struct Request {
+                device_name: Option<String>,
+            }
+            let r: Request = serde_json::from_str(request)?;
+            Ok(json!(s.audio.microphone_is_recording(r.device_name.as_deref())).to_string())
+        }
+        "audio-mic-is-any-recording" => Ok(json!(s.audio.microphone_is_any_recording()).to_string()),
+        "audio-mic-position" => {
+            #[derive(Deserialize)]
+            #[serde(rename_all = "camelCase")]
+            struct Request {
+                device_name: Option<String>,
+            }
+            let r: Request = serde_json::from_str(request)?;
+            Ok(json!(s.audio.microphone_position(r.device_name.as_deref())).to_string())
+        }
         // The PluginImporter section the Editor writes into a plug-in's `.meta` that has no
         // platform settings when it writes the file again; "" when the `.meta` has them.
         "plugin-meta-section" => plugin_default_section(request),

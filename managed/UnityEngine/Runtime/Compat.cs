@@ -119,6 +119,11 @@ namespace Unbound.Runtime
         /// GetData rejection, and rejecting realtime streaming downloads of tracker files.</summary>
         internal static bool TrackerAudioMeasured => Family == ReleaseFamily.Unity6000_0;
 
+        /// <summary>UnityEngine.Microphone native recording length boundary (lengthSec == 3600
+        /// logs an error and returns null instead of throwing) and clip-destruction/reset stop
+        /// semantics measured on 6000.0.71f1 (tests/projects/audiomic).</summary>
+        internal static bool MicrophoneMeasured => Family == ReleaseFamily.Unity6000_0;
+
         /// <summary>First-use validation by the shader's editor: of model materials with built-in
         /// shader editors (tests/projects/modelimport, BuiltinBlend) and of loaded material assets
         /// with any editor (tests/projects/urpwrites, materialvalidation). The same measurements

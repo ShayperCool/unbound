@@ -104,30 +104,6 @@ namespace UnityEngine
         public Vector2? autoFocusPoint { get => m_AutoFocusPoint; set => m_AutoFocusPoint = value; }
         public bool isDepth => false;
     }
-
-    [Unbound.EditorFaithful("measured: tests/projects/platform on a machine without a microphone; Start warns")]
-    public sealed partial class Microphone
-    {
-        /// <summary>A named device that is not listed fails as in Unity; recording from the default
-        /// device is not supported yet.</summary>
-        public static AudioClip Start(string deviceName, bool loop, int lengthSec, int frequency)
-        {
-            if (!string.IsNullOrEmpty(deviceName))
-                throw new ArgumentException("Couldn't acquire device ID for device name " + deviceName);
-            Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Microphone.Start (audio capture)");
-            return null;
-        }
-
-        public static void End(string deviceName) { }
-        public static bool IsRecording(string deviceName) => false;
-        public static int GetPosition(string deviceName) => 0;
-
-        public static void GetDeviceCaps(string deviceName, out int minFreq, out int maxFreq)
-        {
-            minFreq = 0;
-            maxFreq = 0;
-        }
-    }
 }
 
 namespace UnityEngine.iOS

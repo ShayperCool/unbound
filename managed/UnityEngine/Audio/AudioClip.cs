@@ -337,6 +337,24 @@ namespace UnityEngine
 
         internal void InvokePCMReader(float[] data) => m_PCMReaderCallback?.Invoke(data);
 
+        /// <summary>Creates the mono AudioClip backed by an active <see cref="Microphone"/> recording
+        /// handle that the backend already registered.</summary>
+        internal static AudioClip CreateMicrophoneClip(ulong handle, int lengthSamples, int channels, int frequency)
+        {
+            var clip = new AudioClip
+            {
+                m_Name = "Microphone",
+                m_Samples = lengthSamples,
+                m_Channels = channels,
+                m_Frequency = frequency,
+                m_LoadType = AudioClipLoadType.DecompressOnLoad,
+                m_LoadState = AudioDataLoadState.Loaded,
+                m_Handle = handle,
+            };
+            clip.m_SharedData = new SharedClipData(AudioBackend.Current, handle);
+            return clip;
+        }
+
         internal void InvokePCMSetPosition(int position) => m_PCMSetPositionCallback?.Invoke(position);
 
         internal static AudioClip WithCallbacks(ulong handle) => s_WithCallbacks.TryGetValue(handle, out var clip) ? clip : null;

@@ -54,11 +54,6 @@ namespace UnityEngine
         [global::System.Obsolete("maxVolume is not supported anymore. Use min-, maxDistance and rolloffMode instead.")] public float maxVolume { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AudioSource.maxVolume"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AudioSource.maxVolume"); } }
         [global::System.Obsolete("rolloffFactor is not supported anymore. Use min-, maxDistance and rolloffMode instead.")] public float rolloffFactor { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AudioSource.rolloffFactor"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AudioSource.rolloffFactor"); } }
     }
-    unsafe partial class Microphone
-    {
-        public static string[] devices { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Microphone.devices"); return global::System.Array.Empty<string>(); } }
-        internal static bool isAnyDeviceRecording { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Microphone.isAnyDeviceRecording"); return default; } }
-    }
     [global::System.Obsolete("MovieTexture is removed. Use VideoPlayer instead.")]
     [global::Unbound.Stub]
     public unsafe sealed partial class MovieTexture : global::UnityEngine.Texture

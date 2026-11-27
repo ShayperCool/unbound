@@ -1,0 +1,1119 @@
+//! Live microphone audio capture for `UnityEngine.Microphone`.
+//!
+//! On Linux, devices and PCM streams come from the system's PulseAudio client library
+//! (`libpulse.so.0`, which also connects to PipeWire's PulseAudio server), loaded at runtime so
+//! binaries still run on systems without PulseAudio. Entry 0 is `"Default Input Device"` followed
+//! by each PulseAudio source description, deduplicated; recordings capture mono float32 PCM at the
+//! requested frequency directly into the mixer's `AudioClip` buffer (matches the Unity 6000.0.71f1
+//! Editor, `tests/projects/audiomic`).
+use crate::audio::mixer::{Clip, Mixer};
+use std::collections::HashMap;
+use std::sync::{
+    Arc, Mutex,
+    atomic::{AtomicBool, AtomicUsize, Ordering},
+};
+
+/// A recording device exposed by `Microphone.devices`.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct DeviceInfo {
+    /// Display name exposed to scripts (`"Default Input Device"` for index 0, then source names).
+    pub name: String,
+    /// Backend source identifier (`None` selects the server's default input source).
+    pub target: Option<String>,
+}
+
+/// Pure ring-buffer state shared between a capture callback and `Microphone.GetPosition`/`IsRecording`.
+#[derive(Debug)]
+pub struct RecordingRing {
+    total_frames: usize,
+    looping: bool,
+    write_pos: usize,
+    active: bool,
+}
+
+impl RecordingRing {
+    pub fn new(total_frames: usize, looping: bool) -> Self {
+        Self {
+            total_frames: total_frames.max(1),
+            looping,
+            write_pos: 0,
+            active: true,
+        }
+    }
+
+    pub fn is_active(&self) -> bool {
+        self.active
+    }
+
+    pub fn position(&self) -> usize {
+        if self.active { self.write_pos } else { 0 }
+    }
+
+    /// Writes mono `incoming` frames into `clip_samples` (which must have at least `total_frames`
+    /// elements). Returns `true` if recording remains active, `false` once a non-looping capture
+    /// finishes (resetting its reported position to 0, as observed in `tests/projects/audiomic`).
+    pub fn push_mono(&mut self, incoming: &[f32], clip_samples: &mut [f32]) -> bool {
+        if !self.active || incoming.is_empty() || clip_samples.is_empty() {
+            return self.active;
+        }
+        let cap = self.total_frames.min(clip_samples.len());
+        if cap == 0 {
+            self.active = false;
+            self.write_pos = 0;
+            return false;
+        }
+        let mut src = 0;
+        while src < incoming.len() && self.active {
+            let space = cap - self.write_pos;
+            let take = (incoming.len() - src).min(space);
+            clip_samples[self.write_pos..self.write_pos + take]
+                .copy_from_slice(&incoming[src..src + take]);
+            src += take;
+            self.write_pos += take;
+            if self.write_pos >= cap {
+                if self.looping {
+                    self.write_pos = 0;
+                } else {
+                    self.write_pos = 0;
+                    self.active = false;
+                }
+            }
+        }
+        self.active
+    }
+}
+
+/// Deduplicates display names by appending `" (1)"`, `" (2)"`, ... when a name already occurred.
+pub fn deduplicate_names(
+    raw: impl IntoIterator<Item = (String, Option<String>)>,
+) -> Vec<DeviceInfo> {
+    let mut seen: HashMap<String, usize> = HashMap::new();
+    let mut out = Vec::new();
+    for (base, target) in raw {
+        let mut candidate = base.clone();
+        if seen.contains_key(&candidate) {
+            let mut n = 1usize;
+            loop {
+                candidate = format!("{base} ({n})");
+                if !seen.contains_key(&candidate) {
+                    break;
+                }
+                n += 1;
+            }
+        }
+        seen.insert(candidate.clone(), out.len());
+        out.push(DeviceInfo {
+            name: candidate,
+            target,
+        });
+    }
+    out
+}
+
+/// Result of starting a recording.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct StartedRecording {
+    pub channels: i32,
+    pub frames: i32,
+    pub frequency: i32,
+}
+
+#[cfg(target_os = "linux")]
+mod backend {
+    use super::*;
+    use std::ffi::{CStr, CString, c_char, c_int, c_void};
+
+    const PA_CONTEXT_READY: c_int = 4;
+    const PA_CONTEXT_FAILED: c_int = 5;
+    const PA_CONTEXT_TERMINATED: c_int = 6;
+
+    const PA_STREAM_READY: c_int = 2;
+    const PA_STREAM_FAILED: c_int = 3;
+    const PA_STREAM_TERMINATED: c_int = 4;
+
+    const PA_OPERATION_RUNNING: c_int = 0;
+
+    const PA_SAMPLE_FLOAT32LE: c_int = 5;
+    const PA_STREAM_ADJUST_LATENCY: u32 = 0x2000;
+
+    #[repr(C)]
+    #[derive(Clone, Copy)]
+    struct PaSampleSpec {
+        format: c_int,
+        rate: u32,
+        channels: u8,
+    }
+
+    #[repr(C)]
+    #[derive(Clone, Copy)]
+    struct PaBufferAttr {
+        maxlength: u32,
+        tlength: u32,
+        prebuf: u32,
+        minreq: u32,
+        fragsize: u32,
+    }
+
+    /// Prefix of `pa_source_info` (PulseAudio ABI `PULSE_0`).
+    #[repr(C)]
+    struct PaSourceInfoHead {
+        name: *const c_char,
+        index: u32,
+        description: *const c_char,
+        sample_spec: PaSampleSpec,
+    }
+
+    /// Prefix of `pa_server_info` (PulseAudio ABI `PULSE_0`).
+    #[repr(C)]
+    struct PaServerInfoHead {
+        user_name: *const c_char,
+        host_name: *const c_char,
+        server_version: *const c_char,
+        server_name: *const c_char,
+        sample_spec: PaSampleSpec,
+        default_sink_name: *const c_char,
+        default_source_name: *const c_char,
+    }
+
+    type PaContextNotifyCb = unsafe extern "C" fn(*mut c_void, *mut c_void);
+    type PaServerInfoCb = unsafe extern "C" fn(*mut c_void, *const PaServerInfoHead, *mut c_void);
+    type PaSourceInfoCb =
+        unsafe extern "C" fn(*mut c_void, *const PaSourceInfoHead, c_int, *mut c_void);
+    type PaStreamNotifyCb = unsafe extern "C" fn(*mut c_void, *mut c_void);
+    type PaStreamRequestCb = unsafe extern "C" fn(*mut c_void, usize, *mut c_void);
+
+    macro_rules! pulse_api {
+        ($($name:ident: fn($($arg:ty),*) $(-> $ret:ty)?;)*) => {
+            #[allow(non_snake_case)]
+            struct PulseApi {
+                _library: libloading::Library,
+                $($name: unsafe extern "C" fn($($arg),*) $(-> $ret)?,)*
+            }
+
+            impl PulseApi {
+                unsafe fn load(library: libloading::Library) -> Result<Self, libloading::Error> {
+                    Ok(Self {
+                        $($name: unsafe { *library.get(concat!(stringify!($name), "\0").as_bytes())? },)*
+                        _library: library,
+                    })
+                }
+            }
+        };
+    }
+
+    pulse_api! {
+        pa_threaded_mainloop_new: fn() -> *mut c_void;
+        pa_threaded_mainloop_free: fn(*mut c_void);
+        pa_threaded_mainloop_start: fn(*mut c_void) -> c_int;
+        pa_threaded_mainloop_stop: fn(*mut c_void);
+        pa_threaded_mainloop_lock: fn(*mut c_void);
+        pa_threaded_mainloop_unlock: fn(*mut c_void);
+        pa_threaded_mainloop_wait: fn(*mut c_void);
+        pa_threaded_mainloop_signal: fn(*mut c_void, c_int);
+        pa_threaded_mainloop_get_api: fn(*mut c_void) -> *mut c_void;
+
+        pa_context_new: fn(*mut c_void, *const c_char) -> *mut c_void;
+        pa_context_unref: fn(*mut c_void);
+        pa_context_set_state_callback: fn(*mut c_void, Option<PaContextNotifyCb>, *mut c_void);
+        pa_context_connect: fn(*mut c_void, *const c_char, c_int, *const c_void) -> c_int;
+        pa_context_disconnect: fn(*mut c_void);
+        pa_context_get_state: fn(*mut c_void) -> c_int;
+        pa_context_get_server_info: fn(*mut c_void, PaServerInfoCb, *mut c_void) -> *mut c_void;
+        pa_context_get_source_info_list: fn(*mut c_void, PaSourceInfoCb, *mut c_void) -> *mut c_void;
+
+        pa_operation_get_state: fn(*mut c_void) -> c_int;
+        pa_operation_unref: fn(*mut c_void);
+
+        pa_stream_new: fn(*mut c_void, *const c_char, *const PaSampleSpec, *const c_void) -> *mut c_void;
+        pa_stream_unref: fn(*mut c_void);
+        pa_stream_set_state_callback: fn(*mut c_void, Option<PaStreamNotifyCb>, *mut c_void);
+        pa_stream_set_read_callback: fn(*mut c_void, Option<PaStreamRequestCb>, *mut c_void);
+        pa_stream_connect_record: fn(*mut c_void, *const c_char, *const PaBufferAttr, u32) -> c_int;
+        pa_stream_disconnect: fn(*mut c_void) -> c_int;
+        pa_stream_get_state: fn(*mut c_void) -> c_int;
+        pa_stream_peek: fn(*mut c_void, *mut *const c_void, *mut usize) -> c_int;
+        pa_stream_drop: fn(*mut c_void) -> c_int;
+    }
+
+    struct StreamCallbackState {
+        api: Arc<PulseApi>,
+        mixer: Arc<Mutex<Mixer>>,
+        clip_handle: u64,
+        ring: Mutex<RecordingRing>,
+        active: AtomicBool,
+        position: AtomicUsize,
+        stopped: AtomicBool,
+        scratch: Mutex<Vec<f32>>,
+    }
+
+    struct ActiveStream {
+        stream: *mut c_void,
+        clip_handle: u64,
+        state: Arc<StreamCallbackState>,
+        /// Raw `Arc::into_raw` pointer passed as `userdata`; reclaimed after callback is cleared.
+        userdata: *const StreamCallbackState,
+    }
+
+    unsafe impl Send for ActiveStream {}
+
+    struct PulseClient {
+        api: Arc<PulseApi>,
+        mainloop: *mut c_void,
+        context: *mut c_void,
+        streams: HashMap<usize, ActiveStream>,
+        cached_devices: Vec<DeviceInfo>,
+    }
+
+    unsafe impl Send for PulseClient {}
+
+    struct SignalData {
+        api: *const PulseApi,
+        mainloop: *mut c_void,
+    }
+
+    unsafe extern "C" fn context_state_cb(_ctx: *mut c_void, userdata: *mut c_void) {
+        if userdata.is_null() {
+            return;
+        }
+        unsafe {
+            let sig = &*(userdata as *const SignalData);
+            ((*sig.api).pa_threaded_mainloop_signal)(sig.mainloop, 0);
+        }
+    }
+
+    unsafe extern "C" fn stream_state_cb(_stream: *mut c_void, userdata: *mut c_void) {
+        if userdata.is_null() {
+            return;
+        }
+        unsafe {
+            let sig = &*(userdata as *const SignalData);
+            ((*sig.api).pa_threaded_mainloop_signal)(sig.mainloop, 0);
+        }
+    }
+
+    struct ServerInfoCollect {
+        api: *const PulseApi,
+        mainloop: *mut c_void,
+        default_source: Option<String>,
+    }
+
+    unsafe extern "C" fn server_info_cb(
+        _ctx: *mut c_void,
+        info: *const PaServerInfoHead,
+        userdata: *mut c_void,
+    ) {
+        unsafe {
+            let out = &mut *(userdata as *mut ServerInfoCollect);
+            if !info.is_null() && !(*info).default_source_name.is_null() {
+                let s = CStr::from_ptr((*info).default_source_name)
+                    .to_string_lossy()
+                    .into_owned();
+                if !s.is_empty() {
+                    out.default_source = Some(s);
+                }
+            }
+            ((*out.api).pa_threaded_mainloop_signal)(out.mainloop, 0);
+        }
+    }
+
+    struct SourceListCollect {
+        api: *const PulseApi,
+        mainloop: *mut c_void,
+        sources: Vec<(String, String)>,
+    }
+
+    unsafe extern "C" fn source_list_cb(
+        _ctx: *mut c_void,
+        info: *const PaSourceInfoHead,
+        eol: c_int,
+        userdata: *mut c_void,
+    ) {
+        unsafe {
+            let out = &mut *(userdata as *mut SourceListCollect);
+            if eol != 0 {
+                ((*out.api).pa_threaded_mainloop_signal)(out.mainloop, 0);
+                return;
+            }
+            if !info.is_null() {
+                let name = if (*info).name.is_null() {
+                    String::new()
+                } else {
+                    CStr::from_ptr((*info).name).to_string_lossy().into_owned()
+                };
+                let desc = if (*info).description.is_null() {
+                    String::new()
+                } else {
+                    CStr::from_ptr((*info).description)
+                        .to_string_lossy()
+                        .into_owned()
+                };
+                let display = if desc.is_empty() { name.clone() } else { desc };
+                if !display.is_empty() {
+                    out.sources.push((display, name));
+                }
+            }
+        }
+    }
+
+    unsafe extern "C" fn stream_read_cb(
+        stream: *mut c_void,
+        _nbytes: usize,
+        userdata: *mut c_void,
+    ) {
+        if userdata.is_null() {
+            return;
+        }
+        let state = unsafe { &*(userdata as *const StreamCallbackState) };
+        if state.stopped.load(Ordering::Acquire) || !state.active.load(Ordering::Acquire) {
+            return;
+        }
+        loop {
+            let mut ptr: *const c_void = std::ptr::null();
+            let mut len: usize = 0;
+            let rc = unsafe { (state.api.pa_stream_peek)(stream, &mut ptr, &mut len) };
+            if rc < 0 || len == 0 {
+                break;
+            }
+            let frames = len / std::mem::size_of::<f32>();
+            if frames > 0 && !state.stopped.load(Ordering::Acquire) {
+                let mut scratch = state.scratch.lock().unwrap_or_else(|e| e.into_inner());
+                scratch.clear();
+                scratch.reserve(frames);
+                if ptr.is_null() {
+                    scratch.resize(frames, 0.0);
+                } else {
+                    let bytes = unsafe { std::slice::from_raw_parts(ptr as *const u8, frames * 4) };
+                    for chunk in bytes.chunks_exact(4) {
+                        scratch.push(f32::from_le_bytes([chunk[0], chunk[1], chunk[2], chunk[3]]));
+                    }
+                }
+                let mut ring = state.ring.lock().unwrap_or_else(|e| e.into_inner());
+                let still_active = {
+                    let mut mixer = state.mixer.lock().unwrap_or_else(|e| e.into_inner());
+                    if let Some(clip) = mixer.clip_mut(state.clip_handle) {
+                        ring.push_mono(&scratch, &mut clip.samples)
+                    } else {
+                        ring.active = false;
+                        ring.write_pos = 0;
+                        false
+                    }
+                };
+                state.position.store(ring.position(), Ordering::Release);
+                state.active.store(still_active, Ordering::Release);
+                drop(ring);
+                drop(scratch);
+            }
+            unsafe {
+                (state.api.pa_stream_drop)(stream);
+            }
+            if !state.active.load(Ordering::Acquire) {
+                unsafe {
+                    (state.api.pa_stream_set_read_callback)(stream, None, std::ptr::null_mut());
+                    (state.api.pa_stream_disconnect)(stream);
+                }
+                break;
+            }
+        }
+    }
+
+    impl PulseClient {
+        fn connect() -> Option<Self> {
+            let names = ["libpulse.so.0", "libpulse.so"];
+            let library = names
+                .iter()
+                .find_map(|name| unsafe { libloading::Library::new(name) }.ok())?;
+            let api = Arc::new(unsafe { PulseApi::load(library) }.ok()?);
+            unsafe {
+                let mainloop = (api.pa_threaded_mainloop_new)();
+                if mainloop.is_null() {
+                    return None;
+                }
+                let ml_api = (api.pa_threaded_mainloop_get_api)(mainloop);
+                let app_name = CString::new("Unbound").unwrap();
+                let context = (api.pa_context_new)(ml_api, app_name.as_ptr());
+                if context.is_null() {
+                    (api.pa_threaded_mainloop_free)(mainloop);
+                    return None;
+                }
+                let sig = SignalData {
+                    api: Arc::as_ptr(&api),
+                    mainloop,
+                };
+                (api.pa_context_set_state_callback)(
+                    context,
+                    Some(context_state_cb),
+                    &sig as *const _ as *mut c_void,
+                );
+                if (api.pa_context_connect)(context, std::ptr::null(), 0, std::ptr::null()) < 0 {
+                    (api.pa_context_set_state_callback)(context, None, std::ptr::null_mut());
+                    (api.pa_context_unref)(context);
+                    (api.pa_threaded_mainloop_free)(mainloop);
+                    return None;
+                }
+                if (api.pa_threaded_mainloop_start)(mainloop) < 0 {
+                    (api.pa_context_set_state_callback)(context, None, std::ptr::null_mut());
+                    (api.pa_context_disconnect)(context);
+                    (api.pa_context_unref)(context);
+                    (api.pa_threaded_mainloop_free)(mainloop);
+                    return None;
+                }
+                (api.pa_threaded_mainloop_lock)(mainloop);
+                let mut ready = false;
+                loop {
+                    let st = (api.pa_context_get_state)(context);
+                    if st == PA_CONTEXT_READY {
+                        ready = true;
+                        break;
+                    }
+                    if st == PA_CONTEXT_FAILED || st == PA_CONTEXT_TERMINATED {
+                        break;
+                    }
+                    (api.pa_threaded_mainloop_wait)(mainloop);
+                }
+                (api.pa_context_set_state_callback)(context, None, std::ptr::null_mut());
+                (api.pa_threaded_mainloop_unlock)(mainloop);
+                if !ready {
+                    (api.pa_threaded_mainloop_stop)(mainloop);
+                    (api.pa_context_disconnect)(context);
+                    (api.pa_context_unref)(context);
+                    (api.pa_threaded_mainloop_free)(mainloop);
+                    return None;
+                }
+                Some(Self {
+                    api,
+                    mainloop,
+                    context,
+                    streams: HashMap::new(),
+                    cached_devices: Vec::new(),
+                })
+            }
+        }
+
+        fn refresh_devices(&mut self) -> &[DeviceInfo] {
+            let api = &self.api;
+            unsafe {
+                (api.pa_threaded_mainloop_lock)(self.mainloop);
+                if (api.pa_context_get_state)(self.context) != PA_CONTEXT_READY {
+                    (api.pa_threaded_mainloop_unlock)(self.mainloop);
+                    self.cached_devices.clear();
+                    return &self.cached_devices;
+                }
+                let mut server = ServerInfoCollect {
+                    api: Arc::as_ptr(api),
+                    mainloop: self.mainloop,
+                    default_source: None,
+                };
+                let op = (api.pa_context_get_server_info)(
+                    self.context,
+                    server_info_cb,
+                    &mut server as *mut _ as *mut c_void,
+                );
+                if !op.is_null() {
+                    while (api.pa_operation_get_state)(op) == PA_OPERATION_RUNNING {
+                        (api.pa_threaded_mainloop_wait)(self.mainloop);
+                    }
+                    (api.pa_operation_unref)(op);
+                }
+                let mut list = SourceListCollect {
+                    api: Arc::as_ptr(api),
+                    mainloop: self.mainloop,
+                    sources: Vec::new(),
+                };
+                let op = (api.pa_context_get_source_info_list)(
+                    self.context,
+                    source_list_cb,
+                    &mut list as *mut _ as *mut c_void,
+                );
+                if !op.is_null() {
+                    while (api.pa_operation_get_state)(op) == PA_OPERATION_RUNNING {
+                        (api.pa_threaded_mainloop_wait)(self.mainloop);
+                    }
+                    (api.pa_operation_unref)(op);
+                }
+                (api.pa_threaded_mainloop_unlock)(self.mainloop);
+
+                if list.sources.is_empty() {
+                    self.cached_devices.clear();
+                } else {
+                    let mut raw = Vec::with_capacity(list.sources.len() + 1);
+                    raw.push((
+                        "Default Input Device".to_string(),
+                        server.default_source.clone(),
+                    ));
+                    for (display, pa_name) in list.sources {
+                        raw.push((display, Some(pa_name)));
+                    }
+                    self.cached_devices = deduplicate_names(raw);
+                }
+            }
+            &self.cached_devices
+        }
+
+        fn resolve_device_id(&mut self, device_name: Option<&str>) -> Option<usize> {
+            if self.cached_devices.is_empty() {
+                self.refresh_devices();
+            }
+            if self.cached_devices.is_empty() {
+                return None;
+            }
+            match device_name {
+                None | Some("") => Some(0),
+                Some(name) => self
+                    .cached_devices
+                    .iter()
+                    .position(|d| d.name == name)
+                    .or_else(|| {
+                        self.refresh_devices();
+                        self.cached_devices.iter().position(|d| d.name == name)
+                    }),
+            }
+        }
+
+        fn stop_stream_entry(&mut self, id: usize) {
+            let Some(active) = self.streams.remove(&id) else {
+                return;
+            };
+            active.state.stopped.store(true, Ordering::Release);
+            active.state.active.store(false, Ordering::Release);
+            active.state.position.store(0, Ordering::Release);
+            let api = &self.api;
+            unsafe {
+                (api.pa_threaded_mainloop_lock)(self.mainloop);
+                (api.pa_stream_set_read_callback)(active.stream, None, std::ptr::null_mut());
+                (api.pa_stream_set_state_callback)(active.stream, None, std::ptr::null_mut());
+                (api.pa_stream_disconnect)(active.stream);
+                (api.pa_stream_unref)(active.stream);
+                (api.pa_threaded_mainloop_unlock)(self.mainloop);
+                // Safe: callbacks were cleared under the mainloop lock before reclaiming the Arc.
+                drop(Arc::from_raw(active.userdata));
+            }
+        }
+
+        fn stop_all(&mut self) {
+            let ids: Vec<usize> = self.streams.keys().copied().collect();
+            for id in ids {
+                self.stop_stream_entry(id);
+            }
+        }
+
+        fn stop_for_clip(&mut self, clip_handle: u64) {
+            let ids: Vec<usize> = self
+                .streams
+                .iter()
+                .filter_map(|(&id, s)| (s.clip_handle == clip_handle).then_some(id))
+                .collect();
+            for id in ids {
+                self.stop_stream_entry(id);
+            }
+        }
+
+        fn start_recording(
+            &mut self,
+            device_name: Option<&str>,
+            looping: bool,
+            length_sec: i32,
+            frequency: i32,
+            clip_handle: u64,
+            mixer: Arc<Mutex<Mixer>>,
+        ) -> Result<StartedRecording, String> {
+            let Some(id) = self.resolve_device_id(device_name) else {
+                return Err(format!(
+                    "Couldn't acquire device ID for device name {}",
+                    device_name.unwrap_or("")
+                ));
+            };
+            // Replace any active recording on this device (matches audiomic rec3.double_start).
+            self.stop_stream_entry(id);
+
+            let total_frames = (length_sec as usize).saturating_mul(frequency as usize);
+            if total_frames == 0 || total_frames > i32::MAX as usize {
+                return Err("Recording buffer size out of range".to_string());
+            }
+            // Insert the backing clip BEFORE taking the PulseAudio mainloop lock (lock order!).
+            {
+                let mut m = mixer.lock().unwrap_or_else(|e| e.into_inner());
+                m.add_clip(
+                    clip_handle,
+                    Clip::new(1, frequency as u32, vec![0.0; total_frames]),
+                );
+            }
+
+            let target = self
+                .cached_devices
+                .get(id)
+                .and_then(|d| d.target.as_deref())
+                .and_then(|s| CString::new(s).ok());
+            let spec = PaSampleSpec {
+                format: PA_SAMPLE_FLOAT32LE,
+                rate: frequency as u32,
+                channels: 1,
+            };
+            let frag_frames = ((frequency as u32) / 50).clamp(256, 2048);
+            let attr = PaBufferAttr {
+                maxlength: u32::MAX,
+                tlength: u32::MAX,
+                prebuf: u32::MAX,
+                minreq: u32::MAX,
+                fragsize: frag_frames * 4,
+            };
+            let state = Arc::new(StreamCallbackState {
+                api: self.api.clone(),
+                mixer: mixer.clone(),
+                clip_handle,
+                ring: Mutex::new(RecordingRing::new(total_frames, looping)),
+                active: AtomicBool::new(true),
+                position: AtomicUsize::new(0),
+                stopped: AtomicBool::new(false),
+                scratch: Mutex::new(Vec::with_capacity(frag_frames as usize)),
+            });
+            let userdata = Arc::into_raw(state.clone());
+            let api = &self.api;
+            let stream_name = CString::new("Unity Microphone").unwrap();
+            let stream = unsafe {
+                (api.pa_threaded_mainloop_lock)(self.mainloop);
+                let stream = (api.pa_stream_new)(
+                    self.context,
+                    stream_name.as_ptr(),
+                    &spec,
+                    std::ptr::null(),
+                );
+                if stream.is_null() {
+                    (api.pa_threaded_mainloop_unlock)(self.mainloop);
+                    drop(Arc::from_raw(userdata));
+                    mixer
+                        .lock()
+                        .unwrap_or_else(|e| e.into_inner())
+                        .release_clip(clip_handle);
+                    return Err("PulseAudio failed to create recording stream".to_string());
+                }
+                let sig = SignalData {
+                    api: Arc::as_ptr(api),
+                    mainloop: self.mainloop,
+                };
+                (api.pa_stream_set_state_callback)(
+                    stream,
+                    Some(stream_state_cb),
+                    &sig as *const _ as *mut c_void,
+                );
+                (api.pa_stream_set_read_callback)(
+                    stream,
+                    Some(stream_read_cb),
+                    userdata as *mut c_void,
+                );
+                let target_ptr = target.as_ref().map_or(std::ptr::null(), |c| c.as_ptr());
+                let rc = (api.pa_stream_connect_record)(
+                    stream,
+                    target_ptr,
+                    &attr,
+                    PA_STREAM_ADJUST_LATENCY,
+                );
+                let mut ready = false;
+                if rc == 0 {
+                    loop {
+                        let st = (api.pa_stream_get_state)(stream);
+                        if st == PA_STREAM_READY {
+                            ready = true;
+                            break;
+                        }
+                        if st == PA_STREAM_FAILED || st == PA_STREAM_TERMINATED {
+                            break;
+                        }
+                        (api.pa_threaded_mainloop_wait)(self.mainloop);
+                    }
+                }
+                (api.pa_stream_set_state_callback)(stream, None, std::ptr::null_mut());
+                if !ready {
+                    (api.pa_stream_set_read_callback)(stream, None, std::ptr::null_mut());
+                    (api.pa_stream_disconnect)(stream);
+                    (api.pa_stream_unref)(stream);
+                    (api.pa_threaded_mainloop_unlock)(self.mainloop);
+                    drop(Arc::from_raw(userdata));
+                    mixer
+                        .lock()
+                        .unwrap_or_else(|e| e.into_inner())
+                        .release_clip(clip_handle);
+                    return Err("PulseAudio failed to connect recording stream".to_string());
+                }
+                (api.pa_threaded_mainloop_unlock)(self.mainloop);
+                stream
+            };
+
+            self.streams.insert(
+                id,
+                ActiveStream {
+                    stream,
+                    clip_handle,
+                    state,
+                    userdata,
+                },
+            );
+            Ok(StartedRecording {
+                channels: 1,
+                frames: total_frames as i32,
+                frequency,
+            })
+        }
+
+        fn is_recording(&mut self, device_name: Option<&str>) -> bool {
+            let Some(id) = self.resolve_device_id(device_name) else {
+                return false;
+            };
+            let active = self
+                .streams
+                .get(&id)
+                .is_some_and(|s| s.state.active.load(Ordering::Acquire));
+            if !active && self.streams.contains_key(&id) {
+                self.stop_stream_entry(id);
+            }
+            active
+        }
+
+        fn is_any_recording(&mut self) -> bool {
+            let finished: Vec<usize> = self
+                .streams
+                .iter()
+                .filter_map(|(&id, s)| (!s.state.active.load(Ordering::Acquire)).then_some(id))
+                .collect();
+            for id in finished {
+                self.stop_stream_entry(id);
+            }
+            !self.streams.is_empty()
+        }
+
+        fn position(&mut self, device_name: Option<&str>) -> i32 {
+            let Some(id) = self.resolve_device_id(device_name) else {
+                return 0;
+            };
+            match self.streams.get(&id) {
+                Some(s) if s.state.active.load(Ordering::Acquire) => {
+                    s.state.position.load(Ordering::Acquire) as i32
+                }
+                Some(_) => {
+                    self.stop_stream_entry(id);
+                    0
+                }
+                None => 0,
+            }
+        }
+    }
+
+    impl Drop for PulseClient {
+        fn drop(&mut self) {
+            self.stop_all();
+            let api = &self.api;
+            unsafe {
+                (api.pa_threaded_mainloop_stop)(self.mainloop);
+                (api.pa_context_disconnect)(self.context);
+                (api.pa_context_unref)(self.context);
+                (api.pa_threaded_mainloop_free)(self.mainloop);
+            }
+        }
+    }
+
+    enum ClientState {
+        Uninitialized,
+        Unavailable,
+        Ready(PulseClient),
+    }
+
+    pub struct PlatformRecorder {
+        state: Mutex<ClientState>,
+    }
+
+    impl PlatformRecorder {
+        pub fn new() -> Self {
+            Self {
+                state: Mutex::new(ClientState::Uninitialized),
+            }
+        }
+
+        fn with_client<T>(&self, f: impl FnOnce(&mut PulseClient) -> T, fallback: T) -> T {
+            let mut guard = self.state.lock().unwrap_or_else(|e| e.into_inner());
+            if matches!(*guard, ClientState::Uninitialized) {
+                *guard = match PulseClient::connect() {
+                    Some(client) => ClientState::Ready(client),
+                    None => {
+                        tracing::warn!(
+                            "libpulse is unavailable or no PulseAudio server is running: Microphone has no input devices"
+                        );
+                        ClientState::Unavailable
+                    }
+                };
+            }
+            match &mut *guard {
+                ClientState::Ready(client) => f(client),
+                _ => fallback,
+            }
+        }
+
+        pub fn devices(&self) -> Vec<String> {
+            self.with_client(
+                |c| c.refresh_devices().iter().map(|d| d.name.clone()).collect(),
+                Vec::new(),
+            )
+        }
+
+        pub fn device_caps(&self, _device_name: Option<&str>) -> (i32, i32) {
+            // PulseAudio / PipeWire resamples arbitrary rates, matching Unity 6000.0.71f1
+            // (tests/projects/audiomic caps.*: minFreq=0, maxFreq=0).
+            (0, 0)
+        }
+
+        pub fn start(
+            &self,
+            device_name: Option<&str>,
+            looping: bool,
+            length_sec: i32,
+            frequency: i32,
+            clip_handle: u64,
+            mixer: Arc<Mutex<Mixer>>,
+        ) -> Result<StartedRecording, String> {
+            self.with_client(
+                |c| {
+                    c.start_recording(
+                        device_name,
+                        looping,
+                        length_sec,
+                        frequency,
+                        clip_handle,
+                        mixer,
+                    )
+                },
+                Err(format!(
+                    "Couldn't acquire device ID for device name {}",
+                    device_name.unwrap_or("")
+                )),
+            )
+        }
+
+        pub fn end(&self, device_name: Option<&str>) {
+            self.with_client(
+                |c| {
+                    if let Some(id) = c.resolve_device_id(device_name) {
+                        c.stop_stream_entry(id);
+                    }
+                },
+                (),
+            );
+        }
+
+        pub fn is_recording(&self, device_name: Option<&str>) -> bool {
+            self.with_client(|c| c.is_recording(device_name), false)
+        }
+
+        pub fn is_any_recording(&self) -> bool {
+            self.with_client(|c| c.is_any_recording(), false)
+        }
+
+        pub fn position(&self, device_name: Option<&str>) -> i32 {
+            self.with_client(|c| c.position(device_name), 0)
+        }
+
+        pub fn stop_all(&self) {
+            let mut guard = self.state.lock().unwrap_or_else(|e| e.into_inner());
+            if let ClientState::Ready(client) = &mut *guard {
+                client.stop_all();
+            }
+        }
+
+        pub fn on_clip_released(&self, clip_handle: u64) {
+            let mut guard = self.state.lock().unwrap_or_else(|e| e.into_inner());
+            if let ClientState::Ready(client) = &mut *guard {
+                client.stop_for_clip(clip_handle);
+            }
+        }
+    }
+}
+
+#[cfg(not(target_os = "linux"))]
+mod backend {
+    use super::*;
+
+    pub struct PlatformRecorder {
+        warned: AtomicBool,
+    }
+
+    impl PlatformRecorder {
+        pub fn new() -> Self {
+            Self {
+                warned: AtomicBool::new(false),
+            }
+        }
+
+        fn warn_once(&self) {
+            if !self.warned.swap(true, Ordering::Relaxed) {
+                tracing::warn!(
+                    "Unbound: UnityEngine.Microphone audio capture is not implemented on this OS"
+                );
+            }
+        }
+
+        pub fn devices(&self) -> Vec<String> {
+            self.warn_once();
+            Vec::new()
+        }
+
+        pub fn device_caps(&self, _device_name: Option<&str>) -> (i32, i32) {
+            (0, 0)
+        }
+
+        pub fn start(
+            &self,
+            device_name: Option<&str>,
+            _looping: bool,
+            _length_sec: i32,
+            _frequency: i32,
+            _clip_handle: u64,
+            _mixer: Arc<Mutex<Mixer>>,
+        ) -> Result<StartedRecording, String> {
+            self.warn_once();
+            Err(format!(
+                "Couldn't acquire device ID for device name {}",
+                device_name.unwrap_or("")
+            ))
+        }
+
+        pub fn end(&self, _device_name: Option<&str>) {}
+        pub fn is_recording(&self, _device_name: Option<&str>) -> bool {
+            false
+        }
+        pub fn is_any_recording(&self) -> bool {
+            false
+        }
+        pub fn position(&self, _device_name: Option<&str>) -> i32 {
+            0
+        }
+        pub fn stop_all(&self) {}
+        pub fn on_clip_released(&self, _clip_handle: u64) {}
+    }
+}
+
+/// Owns active microphone capture streams for an audio [`super::Engine`].
+pub struct Recorder {
+    inner: backend::PlatformRecorder,
+}
+
+impl Default for Recorder {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl Recorder {
+    pub fn new() -> Self {
+        Self {
+            inner: backend::PlatformRecorder::new(),
+        }
+    }
+
+    pub fn devices(&self) -> Vec<String> {
+        self.inner.devices()
+    }
+
+    pub fn device_caps(&self, device_name: Option<&str>) -> (i32, i32) {
+        self.inner.device_caps(device_name)
+    }
+
+    pub fn start(
+        &self,
+        device_name: Option<&str>,
+        looping: bool,
+        length_sec: i32,
+        frequency: i32,
+        clip_handle: u64,
+        mixer: Arc<Mutex<Mixer>>,
+    ) -> Result<StartedRecording, String> {
+        self.inner.start(
+            device_name,
+            looping,
+            length_sec,
+            frequency,
+            clip_handle,
+            mixer,
+        )
+    }
+
+    pub fn end(&self, device_name: Option<&str>) {
+        self.inner.end(device_name);
+    }
+
+    pub fn is_recording(&self, device_name: Option<&str>) -> bool {
+        self.inner.is_recording(device_name)
+    }
+
+    pub fn is_any_recording(&self) -> bool {
+        self.inner.is_any_recording()
+    }
+
+    pub fn position(&self, device_name: Option<&str>) -> i32 {
+        self.inner.position(device_name)
+    }
+
+    pub fn stop_all(&self) {
+        self.inner.stop_all();
+    }
+
+    pub fn on_clip_released(&self, clip_handle: u64) {
+        self.inner.on_clip_released(clip_handle);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn non_looping_ring_writes_sequentially_and_stops_at_end_with_position_zero() {
+        let mut ring = RecordingRing::new(6, false);
+        let mut clip = vec![0.0f32; 6];
+
+        assert!(ring.push_mono(&[0.1, 0.2, 0.3], &mut clip));
+        assert!(ring.is_active());
+        assert_eq!(ring.position(), 3);
+        assert_eq!(&clip[..3], &[0.1, 0.2, 0.3]);
+
+        // Writing past the end fills the remaining slots, stops, and resets position to 0.
+        assert!(!ring.push_mono(&[0.4, 0.5, 0.6, 0.7, 0.8], &mut clip));
+        assert!(!ring.is_active());
+        assert_eq!(ring.position(), 0);
+        assert_eq!(clip, vec![0.1, 0.2, 0.3, 0.4, 0.5, 0.6]);
+
+        // Further writes after completion are ignored.
+        assert!(!ring.push_mono(&[0.9], &mut clip));
+        assert_eq!(clip[0], 0.1);
+    }
+
+    #[test]
+    fn looping_ring_wraps_around_and_keeps_recording() {
+        let mut ring = RecordingRing::new(4, true);
+        let mut clip = vec![0.0f32; 4];
+
+        assert!(ring.push_mono(&[1.0, 2.0, 3.0], &mut clip));
+        assert_eq!(ring.position(), 3);
+
+        assert!(ring.push_mono(&[4.0, 5.0, 6.0], &mut clip));
+        assert!(ring.is_active());
+        assert_eq!(ring.position(), 2);
+        assert_eq!(clip, vec![5.0, 6.0, 3.0, 4.0]);
+    }
+
+    #[test]
+    fn duplicate_device_names_get_numbered_suffixes() {
+        let list = deduplicate_names([
+            ("Default Input Device".into(), None),
+            ("USB Mic".into(), Some("src0".into())),
+            ("USB Mic".into(), Some("src1".into())),
+            ("USB Mic".into(), Some("src2".into())),
+        ]);
+        let names: Vec<&str> = list.iter().map(|d| d.name.as_str()).collect();
+        assert_eq!(
+            names,
+            vec![
+                "Default Input Device",
+                "USB Mic",
+                "USB Mic (1)",
+                "USB Mic (2)"
+            ]
+        );
+    }
+}

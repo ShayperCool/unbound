@@ -1917,6 +1917,10 @@ impl Mixer {
         self.clips.get(&handle)
     }
 
+    pub fn clip_mut(&mut self, handle: u64) -> Option<&mut Clip> {
+        self.clips.get_mut(&handle)
+    }
+
     pub fn release_clip(&mut self, handle: u64) {
         self.clips.remove(&handle);
     }

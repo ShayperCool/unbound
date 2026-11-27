@@ -91,6 +91,15 @@ namespace Unbound.Runtime
         internal abstract AudioSpeakerMode ActiveSpeakerMode { get; }
         internal abstract bool Reset(AudioConfiguration configuration);
         internal abstract void InstallCallback();
+
+        // ------------------------------------------------------------------ microphone
+        internal abstract string[] MicrophoneDevices();
+        internal abstract void MicrophoneGetDeviceCaps(string deviceName, out int minFreq, out int maxFreq);
+        internal abstract bool MicrophoneStart(string deviceName, bool loop, int lengthSec, int frequency, ulong clipHandle, out int channels, out int frames, out string error);
+        internal abstract void MicrophoneEnd(string deviceName);
+        internal abstract bool MicrophoneIsRecording(string deviceName);
+        internal abstract bool MicrophoneIsAnyRecording();
+        internal abstract int MicrophoneGetPosition(string deviceName);
     }
 
     internal sealed unsafe class NativeAudioBackend : AudioBackend
@@ -242,6 +251,47 @@ namespace Unbound.Runtime
 
         internal override void InstallCallback() =>
             Native.Api.AudioSetCallback((delegate* unmanaged<int, ulong, float*, int, int, long, void>)&AudioFilters.Invoke);
+
+        internal override string[] MicrophoneDevices() =>
+            JsonSerializer.Deserialize<string[]>(Native.Call("audio-mic-devices", "{}"), s_Json) ?? Array.Empty<string>();
+
+        internal override void MicrophoneGetDeviceCaps(string deviceName, out int minFreq, out int maxFreq)
+        {
+            var req = JsonSerializer.Serialize(new { deviceName }, s_Json);
+            using var doc = JsonDocument.Parse(Native.Call("audio-mic-caps", req));
+            minFreq = doc.RootElement.GetProperty("minFreq").GetInt32();
+            maxFreq = doc.RootElement.GetProperty("maxFreq").GetInt32();
+        }
+
+        internal override bool MicrophoneStart(string deviceName, bool loop, int lengthSec, int frequency, ulong clipHandle, out int channels, out int frames, out string error)
+        {
+            var req = JsonSerializer.Serialize(new { deviceName, loop, lengthSec, frequency, clipHandle }, s_Json);
+            using var doc = JsonDocument.Parse(Native.Call("audio-mic-start", req));
+            var root = doc.RootElement;
+            if (root.GetProperty("ok").GetBoolean())
+            {
+                channels = root.GetProperty("channels").GetInt32();
+                frames = root.GetProperty("frames").GetInt32();
+                error = null;
+                return true;
+            }
+            channels = 0;
+            frames = 0;
+            error = root.TryGetProperty("error", out var err) ? err.GetString() : "Microphone recording failed";
+            return false;
+        }
+
+        internal override void MicrophoneEnd(string deviceName) =>
+            Native.Call("audio-mic-end", JsonSerializer.Serialize(new { deviceName }, s_Json));
+
+        internal override bool MicrophoneIsRecording(string deviceName) =>
+            JsonSerializer.Deserialize<bool>(Native.Call("audio-mic-is-recording", JsonSerializer.Serialize(new { deviceName }, s_Json)), s_Json);
+
+        internal override bool MicrophoneIsAnyRecording() =>
+            JsonSerializer.Deserialize<bool>(Native.Call("audio-mic-is-any-recording", "{}"), s_Json);
+
+        internal override int MicrophoneGetPosition(string deviceName) =>
+            JsonSerializer.Deserialize<int>(Native.Call("audio-mic-position", JsonSerializer.Serialize(new { deviceName }, s_Json)), s_Json);
     }
 
     /// <summary>
@@ -346,7 +396,14 @@ namespace Unbound.Runtime
             return true;
         }
 
-        internal override void ReleaseClip(ulong handle) => m_Clips.Remove(handle);
+        internal override void ReleaseClip(ulong handle)
+        {
+            var dead = new List<int>();
+            foreach (var kv in m_MicRecordings)
+                if (kv.Value.ClipHandle == handle) dead.Add(kv.Key);
+            foreach (var id in dead) m_MicRecordings.Remove(id);
+            m_Clips.Remove(handle);
+        }
 
         Source SourceOf(ulong handle)
         {
@@ -640,9 +697,111 @@ namespace Unbound.Runtime
                 source.OneShots.Clear();
                 source.Pending = 0;
             }
+            m_MicRecordings.Clear();
             return true;
         }
 
         internal override void InstallCallback() { }
+
+        // ------------------------------------------------------------------ virtual microphone
+        internal sealed class VirtualMicRecording
+        {
+            internal ulong ClipHandle;
+            internal bool Loop;
+            internal int Frames;
+            internal int Position;
+        }
+
+        /// <summary>Virtual input devices for unit tests (empty by default, like a headless host without audio input).</summary>
+        internal readonly List<string> VirtualMicDevices = new List<string>();
+        internal readonly Dictionary<int, VirtualMicRecording> m_MicRecordings = new Dictionary<int, VirtualMicRecording>();
+
+        int ResolveVirtualMicId(string deviceName)
+        {
+            if (Project.DisableAudio || VirtualMicDevices.Count == 0) return -1;
+            if (string.IsNullOrEmpty(deviceName)) return 0;
+            return VirtualMicDevices.IndexOf(deviceName);
+        }
+
+        internal override string[] MicrophoneDevices() =>
+            Project.DisableAudio ? Array.Empty<string>() : VirtualMicDevices.ToArray();
+
+        internal override void MicrophoneGetDeviceCaps(string deviceName, out int minFreq, out int maxFreq)
+        {
+            minFreq = 0;
+            maxFreq = 0;
+        }
+
+        internal override bool MicrophoneStart(string deviceName, bool loop, int lengthSec, int frequency, ulong clipHandle, out int channels, out int frames, out string error)
+        {
+            int id = ResolveVirtualMicId(deviceName);
+            if (id < 0)
+            {
+                channels = 0;
+                frames = 0;
+                error = "Couldn't acquire device ID for device name " + deviceName;
+                return false;
+            }
+            long total = (long)lengthSec * frequency;
+            if (total <= 0 || total > int.MaxValue)
+            {
+                channels = 0;
+                frames = 0;
+                error = "Recording buffer size out of range";
+                return false;
+            }
+            channels = 1;
+            frames = (int)total;
+            CreateClip(clipHandle, frames, channels, frequency, stream: false);
+            m_MicRecordings[id] = new VirtualMicRecording { ClipHandle = clipHandle, Loop = loop, Frames = frames, Position = 0 };
+            error = null;
+            return true;
+        }
+
+        internal override void MicrophoneEnd(string deviceName)
+        {
+            int id = ResolveVirtualMicId(deviceName);
+            if (id >= 0) m_MicRecordings.Remove(id);
+        }
+
+        internal override bool MicrophoneIsRecording(string deviceName)
+        {
+            int id = ResolveVirtualMicId(deviceName);
+            return id >= 0 && m_MicRecordings.ContainsKey(id);
+        }
+
+        internal override bool MicrophoneIsAnyRecording() => m_MicRecordings.Count > 0;
+
+        internal override int MicrophoneGetPosition(string deviceName)
+        {
+            int id = ResolveVirtualMicId(deviceName);
+            return id >= 0 && m_MicRecordings.TryGetValue(id, out var rec) ? rec.Position : 0;
+        }
+
+        /// <summary>Advances a virtual microphone recording in unit tests, matching native ring semantics.</summary>
+        internal void AdvanceVirtualMic(string deviceName, ReadOnlySpan<float> samples)
+        {
+            int id = ResolveVirtualMicId(deviceName);
+            if (id < 0 || !m_MicRecordings.TryGetValue(id, out var rec)) return;
+            if (!m_Clips.TryGetValue(rec.ClipHandle, out var clip) || clip.Samples == null) { m_MicRecordings.Remove(id); return; }
+            int cap = Math.Min(rec.Frames, clip.Samples.Length);
+            int src = 0;
+            while (src < samples.Length)
+            {
+                int take = Math.Min(samples.Length - src, cap - rec.Position);
+                samples.Slice(src, take).CopyTo(clip.Samples.AsSpan(rec.Position, take));
+                src += take;
+                rec.Position += take;
+                if (rec.Position >= cap)
+                {
+                    rec.Position = 0;
+                    if (!rec.Loop)
+                    {
+                        m_MicRecordings.Remove(id);
+                        return;
+                    }
+                }
+            }
+        }
     }
 }

@@ -1309,7 +1309,7 @@ extern "C" fn audio_clip_data(
 }
 
 extern "C" fn audio_release_clip(handle: u64) {
-    state::state().audio.mixer().release_clip(handle);
+    state::state().audio.release_clip(handle);
 }
 
 extern "C" fn audio_update_source(handle: u64, packet: *const AudioSourcePacket) -> i32 {

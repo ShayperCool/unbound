@@ -15,6 +15,7 @@ pub mod duck;
 pub mod effects;
 pub mod fft;
 pub mod flange;
+pub mod microphone;
 pub mod mixer;
 pub(crate) mod modulated_delay;
 pub mod normalize;
@@ -290,6 +291,7 @@ pub struct Engine {
     /// The output channels the virtual device stands for (see [`VIRTUAL_CHANNELS_VARIABLE`]).
     virtual_channels: usize,
     output_rules: unbound_compat::AudioOutputRules,
+    microphone: microphone::Recorder,
 }
 
 /// Overrides the channel count of the virtual device that runs without an output device.
@@ -390,6 +392,7 @@ impl Engine {
             reset_worker: Mutex::new(None),
             virtual_channels,
             output_rules,
+            microphone: microphone::Recorder::new(),
         };
         engine
             .start(configuration, open_device)
@@ -574,9 +577,80 @@ impl Engine {
             tracing::warn!("audio reset failed: {error:#}");
             return false;
         }
+        // Reset stops active microphone recordings (tests/projects/audiomic reset.after.*).
+        self.microphone.stop_all();
         *self.configuration.lock().unwrap() = configuration;
         self.capturing.store(false, Ordering::Release);
         true
+    }
+
+    pub fn release_clip(&self, handle: u64) {
+        // Stop any microphone recording targeting this clip BEFORE locking the mixer.
+        self.microphone.on_clip_released(handle);
+        self.mixer().release_clip(handle);
+    }
+
+    pub fn microphone_devices(&self) -> Vec<String> {
+        if self.settings.disable_audio {
+            return Vec::new();
+        }
+        self.microphone.devices()
+    }
+
+    pub fn microphone_caps(&self, device_name: Option<&str>) -> (i32, i32) {
+        if self.settings.disable_audio {
+            return (0, 0);
+        }
+        self.microphone.device_caps(device_name)
+    }
+
+    pub fn microphone_start(
+        &self,
+        device_name: Option<&str>,
+        looping: bool,
+        length_sec: i32,
+        frequency: i32,
+        clip_handle: u64,
+    ) -> Result<microphone::StartedRecording, String> {
+        if self.settings.disable_audio {
+            return Err(format!(
+                "Couldn't acquire device ID for device name {}",
+                device_name.unwrap_or("")
+            ));
+        }
+        self.microphone.start(
+            device_name,
+            looping,
+            length_sec,
+            frequency,
+            clip_handle,
+            self.mixer.clone(),
+        )
+    }
+
+    pub fn microphone_end(&self, device_name: Option<&str>) {
+        self.microphone.end(device_name);
+    }
+
+    pub fn microphone_is_recording(&self, device_name: Option<&str>) -> bool {
+        if self.settings.disable_audio {
+            return false;
+        }
+        self.microphone.is_recording(device_name)
+    }
+
+    pub fn microphone_is_any_recording(&self) -> bool {
+        if self.settings.disable_audio {
+            return false;
+        }
+        self.microphone.is_any_recording()
+    }
+
+    pub fn microphone_position(&self, device_name: Option<&str>) -> i32 {
+        if self.settings.disable_audio {
+            return 0;
+        }
+        self.microphone.position(device_name)
     }
 
     pub fn dsp_time(&self) -> f64 {
