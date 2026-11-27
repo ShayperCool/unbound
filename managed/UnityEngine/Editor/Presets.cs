@@ -40,6 +40,12 @@ namespace UnityEditor.Presets
                 m_ManagedTypePPtr = MonoScript.FromType(type);
                 if (m_ManagedTypePPtr == null) m_ManagedTypeFallback = type.FullName ?? string.Empty;
             }
+            else if (o is UnityEditor.AssetImporters.ScriptedImporter)
+            {
+                m_NativeTypeID = ScriptedImporterClassId;
+                m_ManagedTypePPtr = MonoScript.FromType(type);
+                if (m_ManagedTypePPtr == null) m_ManagedTypeFallback = type.FullName ?? string.Empty;
+            }
             else
             {
                 m_NativeTypeID = NativeClassIdOf(type);
@@ -56,6 +62,8 @@ namespace UnityEditor.Presets
         /// <summary>The class id a script's object is stored under (MonoBehaviour's, a ScriptableObject's
         /// too: tests/projects/presets Tuned.preset m_TargetType).</summary>
         const int ScriptClassId = 114;
+        /// <summary>The class id a ScriptedImporter subclass is stored under (unity-6000.0.71f1.jsonl).</summary>
+        const int ScriptedImporterClassId = 2089858483;
 
         /// <summary>The class the type names (null: none Unbound knows).</summary>
         Type TargetType =>
@@ -65,6 +73,9 @@ namespace UnityEditor.Presets
 
         public bool IsValid()
         {
+            if ((m_NativeTypeID == ScriptClassId || m_NativeTypeID == ScriptedImporterClassId)
+                && m_ManagedTypePPtr == null && string.IsNullOrEmpty(m_ManagedTypeFallback))
+                return false;
             var type = TargetType;
             return m_NativeTypeID != 0 && type != null && type != typeof(Preset)
                 && !type.IsDefined(typeof(ExcludeFromPresetAttribute), false);
@@ -146,7 +157,7 @@ namespace UnityEditor.Presets
 
         static Type NativeTypeOf(int classId)
         {
-            var type = ClassIds.TypeOf(classId);
+            var type = EngineTypes.ForClassId(classId, null, warn: false);
             if (type != null) return type;
             EnsureNativeTable();
             return s_NativeTypeById.TryGetValue(classId, out type) ? type : null;
@@ -215,11 +226,13 @@ namespace UnityEditor.Presets
         PresetType m_TargetType;
         PropertyModification[] m_Properties = Array.Empty<PropertyModification>();
         string[] m_ExcludedProperties = Array.Empty<string>();
+        bool m_IsCoupled;
 
         internal Preset() { }
 
         public Preset(Object source)
         {
+            if (!Compat.EditorTitlebarMeasured) { Stubs.NotImplemented("UnityEditor.Presets.Preset.ctor"); return; }
             if (!source) throw ObjectErrors.Argument(source, "source");
             var type = new PresetType(source);
             if (!type.IsValid()) throw new NotSupportedException($"Preset cannot be created from {source.GetType().FullName}.");
@@ -230,6 +243,7 @@ namespace UnityEditor.Presets
         internal void ReadSerialized(YNode body, IReferenceResolver resolver)
         {
             m_Name = body.Str("m_Name");
+            if (!Compat.EditorTitlebarMeasured) { Stubs.NotImplemented("UnityEditor.Presets.Preset (asset load)"); return; }
             m_TargetType = PresetType.Read(body.Get("m_TargetType"), resolver);
             var properties = new List<PropertyModification>();
             foreach (var p in body.Get("m_Properties")?.Seq() ?? Array.Empty<YNode>())
@@ -247,6 +261,11 @@ namespace UnityEditor.Presets
             var excluded = new List<string>();
             foreach (var e in body.Get("m_ExcludedProperties")?.Seq() ?? Array.Empty<YNode>()) excluded.Add(e.AsString());
             m_ExcludedProperties = excluded.ToArray();
+            var coupled = body.Get("m_CoupledType");
+            bool hasCoupledProps = false;
+            foreach (var _ in body.Get("m_CoupledProperties")?.Seq() ?? Array.Empty<YNode>()) { hasCoupledProps = true; break; }
+            m_IsCoupled = (coupled != null && coupled.Int("m_NativeTypeID") != 0) || hasCoupledProps;
+            if (m_IsCoupled) Stubs.NotImplemented("UnityEditor.Presets.Preset (coupled presets)");
         }
 
         public PropertyModification[] PropertyModifications
@@ -273,6 +292,7 @@ namespace UnityEditor.Presets
 
         public bool ApplyTo(Object target, string[] selectedPropertyPaths)
         {
+            if (!Compat.EditorTitlebarMeasured) { Stubs.NotImplemented("UnityEditor.Presets.Preset.ApplyTo"); return false; }
             if (!target) throw ObjectErrors.Argument(target, "target");
             if (!CanBeAppliedTo(target)) return false;
             using var so = new SerializedObject(target);
@@ -285,8 +305,7 @@ namespace UnityEditor.Presets
                 if (IsExcluded(m.propertyPath)) continue;
                 if (filterSelected && !MatchesAny(m.propertyPath, selectedPropertyPaths)) continue;
                 if (ApplyModification(so, m)) anyWritten = true;
-                else if (!(target is Material && ((m.propertyPath == "m_Parent" && m.objectReference == null)
-                    || (m.propertyPath == "m_ModifiedSerializedProperties" && (string.IsNullOrEmpty(m.value) || m.value == "0")))))
+                else if (!IsDefaultUnmappedMaterialVariantField(target, m))
                     skipped++;
             }
             if (skipped > 0)
@@ -295,14 +314,20 @@ namespace UnityEditor.Presets
             return true;
         }
 
+        static bool IsDefaultUnmappedMaterialVariantField(Object target, PropertyModification m) =>
+            target is Material && ((m.propertyPath == "m_Parent" && m.objectReference == null)
+                || (m.propertyPath == "m_ModifiedSerializedProperties" && (string.IsNullOrEmpty(m.value) || m.value == "0")));
+
         public bool DataEquals(Object target)
         {
+            if (!Compat.EditorTitlebarMeasured) { Stubs.NotImplemented("UnityEditor.Presets.Preset.DataEquals"); return false; }
             if (!target) throw ObjectErrors.Argument(target, "target");
             if (!CanBeAppliedTo(target)) return false;
             var actual = CaptureProperties(target);
             var expected = new Dictionary<string, PropertyModification>(StringComparer.Ordinal);
             foreach (var m in m_Properties)
-                if (m != null && !string.IsNullOrEmpty(m.propertyPath) && !IsExcluded(m.propertyPath))
+                if (m != null && !string.IsNullOrEmpty(m.propertyPath) && !IsExcluded(m.propertyPath)
+                    && !IsDefaultUnmappedMaterialVariantField(target, m))
                     expected[m.propertyPath] = m;
             var current = new Dictionary<string, PropertyModification>(StringComparer.Ordinal);
             foreach (var m in actual)
@@ -320,6 +345,7 @@ namespace UnityEditor.Presets
 
         public bool UpdateProperties(Object source)
         {
+            if (!Compat.EditorTitlebarMeasured) { Stubs.NotImplemented("UnityEditor.Presets.Preset.UpdateProperties"); return false; }
             if (!source) throw ObjectErrors.Argument(source, "source");
             if (!CanBeAppliedTo(source)) return false;
             m_Properties = CaptureProperties(source);
@@ -341,7 +367,7 @@ namespace UnityEditor.Presets
 
         public bool IsValid() => m_TargetType.IsValid();
 
-        internal bool IsCoupled() => false;
+        internal bool IsCoupled() => m_IsCoupled;
 
         public bool CanBeAppliedTo(Object target) => target != null && IsValid() && new PresetType(target) == m_TargetType;
 
@@ -356,6 +382,7 @@ namespace UnityEditor.Presets
         /// in their order (tests/projects/presets defaults.*).</summary>
         public static Preset[] GetDefaultPresetsForObject(Object target)
         {
+            if (!Compat.EditorTitlebarMeasured) { Stubs.NotImplemented("UnityEditor.Presets.Preset.GetDefaultPresetsForObject"); return Array.Empty<Preset>(); }
             if (!target) throw ObjectErrors.Argument(target, "target");
             var type = new PresetType(target);
             var found = new List<Preset>();
@@ -382,8 +409,10 @@ namespace UnityEditor.Presets
 
         public static PresetType[] GetAllDefaultTypes()
         {
+            if (!Compat.EditorTitlebarMeasured) { Stubs.NotImplemented("UnityEditor.Presets.Preset.GetAllDefaultTypes"); return Array.Empty<PresetType>(); }
             var types = new List<PresetType>();
-            foreach (var (type, _) in ManagerDefaults()) types.Add(type);
+            foreach (var (type, presets) in ManagerDefaults())
+                if (presets.Count > 0) types.Add(type);
             return types.ToArray();
         }
 
@@ -391,6 +420,7 @@ namespace UnityEditor.Presets
         /// its order (tests/projects/presets defaultsForType.*).</summary>
         public static DefaultPreset[] GetDefaultPresetsForType(PresetType type)
         {
+            if (!Compat.EditorTitlebarMeasured) { Stubs.NotImplemented("UnityEditor.Presets.Preset.GetDefaultPresetsForType"); return Array.Empty<DefaultPreset>(); }
             foreach (var (listed, presets) in ManagerDefaults())
                 if (listed == type) return presets.ToArray();
             return Array.Empty<DefaultPreset>();
@@ -412,7 +442,6 @@ namespace UnityEditor.Presets
 
         public static void RemoveFromDefault(Preset preset)
         {
-            if (preset == null) throw new ArgumentNullException(nameof(preset));
             var type = preset.GetPresetType();
             var list = GetDefaultPresetsForType(type);
             var kept = new List<DefaultPreset>();
@@ -450,8 +479,9 @@ namespace UnityEditor.Presets
         /// identity and hierarchy headers (tests/projects/presets made.*).</summary>
         static PropertyModification[] CaptureProperties(Object source)
         {
-            if (!SerializedTree.IsScript(source) && !(source is Transform) && !(source is BoxCollider) && TypeTreeTargets.Of(source) == null)
-                Stubs.NotImplemented($"UnityEditor.Presets.Preset (serialized properties of {source.GetType().FullName})");
+            var sourceType = source.GetType();
+            if (!SerializedTree.IsScript(source) && sourceType != typeof(Transform) && sourceType != typeof(BoxCollider) && TypeTreeTargets.Of(source) == null)
+                Stubs.NotImplemented($"UnityEditor.Presets.Preset (serialized properties of {sourceType.FullName})");
             var list = new List<PropertyModification>();
             using var so = new SerializedObject(source);
             var it = so.GetIterator();
@@ -487,20 +517,31 @@ namespace UnityEditor.Presets
                     continue;
                 }
                 enter = false;
-                string value = it.propertyType switch
+                string value;
+                switch (it.propertyType)
                 {
-                    SerializedPropertyType.Boolean => it.boolValue ? "1" : "0",
-                    SerializedPropertyType.Float => it.numericType == SerializedPropertyNumericType.Double
-                        ? FloatText.Format(it.doubleValue)
-                        : FloatText.Format(it.floatValue),
-                    SerializedPropertyType.Integer or SerializedPropertyType.Enum or SerializedPropertyType.LayerMask or SerializedPropertyType.Character =>
-                        it.numericType == SerializedPropertyNumericType.UInt64
+                    case SerializedPropertyType.Boolean:
+                        value = it.boolValue ? "1" : "0";
+                        break;
+                    case SerializedPropertyType.Float:
+                        value = it.numericType == SerializedPropertyNumericType.Double
+                            ? FloatText.Format(it.doubleValue)
+                            : FloatText.Format(it.floatValue);
+                        break;
+                    case SerializedPropertyType.Integer:
+                    case SerializedPropertyType.Enum:
+                    case SerializedPropertyType.LayerMask:
+                    case SerializedPropertyType.Character:
+                        value = it.numericType == SerializedPropertyNumericType.UInt64
                             ? it.ulongValue.ToString(CultureInfo.InvariantCulture)
                             : it.numericType == SerializedPropertyNumericType.UInt32
                                 ? it.uintValue.ToString(CultureInfo.InvariantCulture)
-                                : it.longValue.ToString(CultureInfo.InvariantCulture),
-                    _ => "",
-                };
+                                : it.longValue.ToString(CultureInfo.InvariantCulture);
+                        break;
+                    default:
+                        Stubs.NotImplemented($"UnityEditor.Presets.Preset (property type {it.propertyType} on {sourceType.FullName}.{it.propertyPath})");
+                        continue;
+                }
                 list.Add(new PropertyModification { target = null, propertyPath = it.propertyPath, value = value, objectReference = null });
             }
             return list.ToArray();
@@ -569,7 +610,8 @@ namespace UnityEditor.Presets
         }
 
         /// <summary>The Preset Manager's default presets by type, as ProjectSettings/PresetManager.asset
-        /// lists them (serializedVersion 2 <c>m_DefaultPresets</c> or v1 <c>m_DefaultList</c>).</summary>
+        /// lists them (serializedVersion 2 <c>m_DefaultPresets</c>; legacy v1 <c>m_DefaultList</c>
+        /// is unmeasured and reported loudly).</summary>
         static List<(PresetType Type, List<DefaultPreset> Presets)> ManagerDefaults()
         {
             var result = new List<(PresetType, List<DefaultPreset>)>();
@@ -578,43 +620,65 @@ namespace UnityEditor.Presets
             var resolver = new AssetReferences();
             var entries = new List<YNode>();
             foreach (var n in body.Get("m_DefaultPresets")?.Seq() ?? Array.Empty<YNode>()) entries.Add(n);
-            string typeKey = "first", listKey = "second";
             if (entries.Count == 0)
             {
-                foreach (var n in body.Get("m_DefaultList")?.Seq() ?? Array.Empty<YNode>()) entries.Add(n);
-                typeKey = "type";
-                listKey = "defaultPresets";
+                foreach (var _ in body.Get("m_DefaultList")?.Seq() ?? Array.Empty<YNode>())
+                {
+                    Stubs.NotImplemented("UnityEditor.Presets.PresetManager (v1 m_DefaultList)");
+                    return result;
+                }
+                return result;
             }
             foreach (var entry in entries)
             {
                 var presets = new List<DefaultPreset>();
-                foreach (var d in entry.Get(listKey)?.Seq() ?? Array.Empty<YNode>())
+                foreach (var d in entry.Get("second")?.Seq() ?? Array.Empty<YNode>())
                 {
                     var reference = d.Ref("m_Preset");
                     var preset = reference.IsNull ? null : resolver.Resolve(reference, typeof(Preset)) as Preset;
                     presets.Add(new DefaultPreset(d.Str("m_Filter"), preset, d.Int("m_Disabled") == 0));
                 }
-                result.Add((PresetType.Read(entry.Get(typeKey), resolver), presets));
+                result.Add((PresetType.Read(entry.Get("first"), resolver), presets));
             }
             return result;
         }
 
         /// <summary>Whether a default preset's filter takes <paramref name="target"/>: an empty one
-        /// takes every object; <c>glob:"pattern"</c> one whose name (a component's GameObject's)
-        /// the pattern matches (matches the Unity 6000.0.71f1 Editor, tests/projects/presets
-        /// defaults.NamedTransform, defaults.OtherTransform; the case of the letters, an importer's
-        /// path and other search filters are not measured: such a filter is said and takes none).</summary>
-        static bool FilterTakes(string filter, Object target)
+        /// takes every object; a single-token <c>glob:"pattern"</c> matches an object's name (a
+        /// component's GameObject's own name, case-sensitive, <c>*</c> not crossing <c>/</c>;
+        /// matches the Unity 6000.0.71f1 Editor, tests/projects/presets defaults.*). Importer path
+        /// filters and compound/other search filters are not measured and reported loudly.</summary>
+        internal static bool FilterTakes(string filter, Object target)
         {
             if (string.IsNullOrEmpty(filter)) return true;
-            const string glob = "glob:";
-            if (filter.StartsWith(glob, StringComparison.Ordinal) && !(target is AssetImporter))
+            if (!(target is AssetImporter) && TryParseSingleGlob(filter, out var pattern))
             {
-                var pattern = filter.Substring(glob.Length).Trim().Trim('"');
                 var name = target is Component component ? component.gameObject.name : target.name;
                 return Regex.IsMatch(name ?? "", "^" + GlobToRegex(pattern) + "$");
             }
-            Stubs.NotImplemented("UnityEditor.Presets.Preset.GetDefaultPresetsForObject (a filter other than glob:\"...\" on an object's name)");
+            Stubs.NotImplemented("UnityEditor.Presets.Preset.GetDefaultPresetsForObject (a filter other than single-token glob:\"...\" on an object's name)");
+            return false;
+        }
+
+        static bool TryParseSingleGlob(string filter, out string pattern)
+        {
+            pattern = null;
+            var trimmed = filter.Trim();
+            const string glob = "glob:";
+            if (!trimmed.StartsWith(glob, StringComparison.Ordinal)) return false;
+            var rest = trimmed.Substring(glob.Length);
+            if (rest.Length >= 2 && rest[0] == '"' && rest[rest.Length - 1] == '"')
+            {
+                var inner = rest.Substring(1, rest.Length - 2);
+                if (inner.IndexOf('"') >= 0) return false;
+                pattern = inner;
+                return true;
+            }
+            if (rest.Length > 0 && rest.IndexOfAny(new[] { ' ', '\t', '"' }) < 0)
+            {
+                pattern = rest;
+                return true;
+            }
             return false;
         }
 

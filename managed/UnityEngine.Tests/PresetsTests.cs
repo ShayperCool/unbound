@@ -1,20 +1,16 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using Unbound.Runtime;
 using Unbound.Tests;
 using UnityEditor;
+using UnityEditor.AssetImporters;
 using UnityEditor.Presets;
 using Xunit;
 
 namespace UnityEngine.Tests
 {
-    public class PresetsTests : IDisposable
+    public class PresetsTests
     {
-        readonly IDisposable m_Release = TestRelease.Pin(TestRelease.Measured);
-
-        public void Dispose() => m_Release.Dispose();
-
         sealed class PresetScript : MonoBehaviour
         {
             public int count = 3;
@@ -25,9 +21,19 @@ namespace UnityEngine.Tests
             internal int Hidden { get => hidden; set => hidden = value; }
         }
 
+        sealed class CurveScript : MonoBehaviour
+        {
+            public AnimationCurve curve = AnimationCurve.Linear(0, 0, 1, 1);
+        }
+
         sealed class PresetData : ScriptableObject
         {
             public int value = 4;
+        }
+
+        sealed class SampleScriptedImporter : ScriptedImporter
+        {
+            public override void OnImportAsset(AssetImportContext ctx) { }
         }
 
         [ExcludeFromPreset]
@@ -50,8 +56,9 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
-        public void PresetTypeDistinguishesValidDefaultAndExcludedClasses()
+        public void PresetTypeDistinguishesValidDefaultExcludedScriptedImporterAndMissingScript()
         {
+            using var release = TestRelease.Pin(TestRelease.Measured);
             var go = new GameObject("Target");
             var script = go.AddComponent<PresetScript>();
             var excluded = go.AddComponent<ExcludedScript>();
@@ -59,6 +66,8 @@ namespace UnityEngine.Tests
             var data = ScriptableObject.CreateInstance<PresetData>();
             var clip = new AnimationClip();
             var tex = new Texture2D(2, 2);
+            var texImporter = (TextureImporter)ObjectConstruction.CreateWithBacking(typeof(TextureImporter));
+            var scriptedImporter = (SampleScriptedImporter)ObjectConstruction.CreateWithBacking(typeof(SampleScriptedImporter));
             var preset = new Preset(go.transform);
             try
             {
@@ -81,6 +90,28 @@ namespace UnityEngine.Tests
                 Assert.False(clipType.IsValidDefault());
                 Assert.Equal("UnityEngine.AnimationClip", clipType.GetManagedTypeName());
 
+                // TextureImporter must resolve cleanly without logging an unsupported class warning.
+                using (var logs = new LogCapture())
+                {
+                    var importerType = new PresetType(texImporter);
+                    Assert.True(importerType.IsValid());
+                    Assert.True(importerType.IsValidDefault());
+                    Assert.Equal("UnityEditor.TextureImporter", importerType.GetManagedTypeName());
+                    Assert.DoesNotContain(logs.Lines, line => line.Contains("is not supported yet"));
+                }
+
+                // ScriptedImporter subclasses are valid default PresetTypes.
+                var scriptedType = new PresetType(scriptedImporter);
+                Assert.True(scriptedType.IsValid());
+                Assert.True(scriptedType.IsValidDefault());
+                Assert.Equal(typeof(SampleScriptedImporter).FullName, scriptedType.GetManagedTypeName());
+
+                // Missing MonoScript (native id 114, null script, empty fallback) is invalid yet reports MonoBehaviour.
+                var missingScriptType = new PresetType(114, null, "");
+                Assert.False(missingScriptType.IsValid());
+                Assert.False(missingScriptType.IsValidDefault());
+                Assert.Equal("UnityEngine.MonoBehaviour", missingScriptType.GetManagedTypeName());
+
                 Assert.False(new PresetType(go).IsValid());
                 Assert.False(new PresetType(go).IsValidDefault());
                 Assert.False(new PresetType(excluded).IsValid());
@@ -96,6 +127,8 @@ namespace UnityEngine.Tests
             finally
             {
                 Object.DestroyImmediate(preset);
+                Object.DestroyImmediate(scriptedImporter);
+                Object.DestroyImmediate(texImporter);
                 Object.DestroyImmediate(tex);
                 Object.DestroyImmediate(clip);
                 Object.DestroyImmediate(data);
@@ -106,6 +139,7 @@ namespace UnityEngine.Tests
         [Fact]
         public void DefaultPresetConstructorsAndDefaultValueFollowUnity()
         {
+            using var release = TestRelease.Pin(TestRelease.Measured);
             var go = new GameObject("Box");
             var preset = new Preset(go.transform);
             try
@@ -135,6 +169,7 @@ namespace UnityEngine.Tests
         [Fact]
         public void PresetCapturesAndAppliesTransformBoxAndScriptProperties()
         {
+            using var release = TestRelease.Pin(TestRelease.Measured);
             var srcGo = new GameObject("Source");
             var dstGo = new GameObject("Dest");
             var partialGo = new GameObject("Partial");
@@ -162,7 +197,7 @@ namespace UnityEngine.Tests
                 Assert.Equal(new Vector3(2, 3, 4), partialGo.transform.localScale);
                 Assert.False(transformPreset.DataEquals(partialGo.transform));
 
-                // Excluded property is skipped on ApplyTo and ignored by DataEquals.
+                // Excluded property is skipped on ApplyTo and ignored by DataEquals (measured).
                 transformPreset.excludedProperties = new[] { "m_LocalPosition" };
                 Assert.True(transformPreset.DataEquals(partialGo.transform));
 
@@ -193,12 +228,12 @@ namespace UnityEngine.Tests
                 Assert.Equal(new Vector3(4, 5, 6), dstBox.size);
                 Assert.True(dstBox.isTrigger);
 
-                // Error paths.
+                // Error paths (RemoveFromDefault(null) throws NullReferenceException as in Unity).
                 Assert.Throws<ArgumentNullException>(() => new Preset(null));
                 Assert.Throws<NotSupportedException>(() => new Preset(srcGo));
                 Assert.Throws<ArgumentNullException>(() => transformPreset.ApplyTo(null));
                 Assert.Throws<ArgumentNullException>(() => Preset.GetDefaultPresetsForObject(null));
-                Assert.Throws<ArgumentNullException>(() => Preset.RemoveFromDefault(null));
+                Assert.Throws<NullReferenceException>(() => Preset.RemoveFromDefault(null));
             }
             finally
             {
@@ -212,32 +247,90 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
-        public void UnmappedNativeTypeReportsLoudlyOnPresetCapture()
+        public void UnmappedTypesUnserializedLeafFieldsCoupledPresetsAndCompoundFiltersReportLoudly()
         {
+            using var release = TestRelease.Pin(TestRelease.Measured);
             var clip = new AnimationClip();
-            Preset preset = null;
-            string member = "UnityEditor.Presets.Preset (serialized properties of UnityEngine.AnimationClip)";
-            Stubs.Forget(member);
+            var rectGo = new GameObject("Rect", typeof(RectTransform));
+            var curveGo = new GameObject("Curve");
+            var curveScript = curveGo.AddComponent<CurveScript>();
+            Preset clipPreset = null, rectPreset = null, curvePreset = null, coupledPreset = null;
+            string clipMember = "UnityEditor.Presets.Preset (serialized properties of UnityEngine.AnimationClip)";
+            string rectMember = "UnityEditor.Presets.Preset (serialized properties of UnityEngine.RectTransform)";
+            string curveMember = $"UnityEditor.Presets.Preset (property type AnimationCurve on {typeof(CurveScript).FullName}.curve)";
+            string coupledMember = "UnityEditor.Presets.Preset (coupled presets)";
+            string filterMember = "UnityEditor.Presets.Preset.GetDefaultPresetsForObject (a filter other than single-token glob:\"...\" on an object's name)";
+            foreach (var m in new[] { clipMember, rectMember, curveMember, coupledMember, filterMember }) Stubs.Forget(m);
             try
             {
                 using var logs = new LogCapture();
-                preset = new Preset(clip);
-                Assert.Contains(logs.Lines, line => line.Contains("Unbound:") && line.Contains(member));
+                clipPreset = new Preset(clip);
+                Assert.Contains(logs.Lines, line => line.Contains("Unbound:") && line.Contains(clipMember));
+
+                rectPreset = new Preset(rectGo.GetComponent<RectTransform>());
+                Assert.Contains(logs.Lines, line => line.Contains("Unbound:") && line.Contains(rectMember));
+
+                curvePreset = new Preset(curveScript);
+                Assert.Contains(logs.Lines, line => line.Contains("Unbound:") && line.Contains(curveMember));
+                Assert.DoesNotContain(curvePreset.PropertyModifications, p => p.propertyPath == "curve");
+
+                // Coupled preset YAML reports loudly and sets IsCoupled.
+                var docs = UnityYaml.Parse(@"%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!181963792 &1
+Preset:
+  m_Name: Coupled
+  m_TargetType:
+    m_NativeTypeID: 4
+    m_ManagedTypePPtr: {fileID: 0}
+    m_ManagedTypeFallback: 
+  m_Properties: []
+  m_ExcludedProperties: []
+  m_CoupledType:
+    m_NativeTypeID: 20
+    m_ManagedTypePPtr: {fileID: 0}
+    m_ManagedTypeFallback: 
+  m_CoupledProperties: []
+");
+                coupledPreset = new Preset();
+                coupledPreset.ReadSerialized(docs[0].Body, null);
+                Assert.True(coupledPreset.IsCoupled());
+                Assert.Contains(logs.Lines, line => line.Contains("Unbound:") && line.Contains(coupledMember));
+
+                // Compound search filter starting with glob: reports loudly instead of failing silently.
+                Assert.False(Preset.FilterTakes("glob:\"Rect*\" t:Transform", rectGo.transform));
+                Assert.Contains(logs.Lines, line => line.Contains("Unbound:") && line.Contains(filterMember));
             }
             finally
             {
-                Stubs.Forget(member);
-                if (preset != null) Object.DestroyImmediate(preset);
+                foreach (var m in new[] { clipMember, rectMember, curveMember, coupledMember, filterMember }) Stubs.Forget(m);
+                if (coupledPreset != null) Object.DestroyImmediate(coupledPreset);
+                if (curvePreset != null) Object.DestroyImmediate(curvePreset);
+                if (rectPreset != null) Object.DestroyImmediate(rectPreset);
+                if (clipPreset != null) Object.DestroyImmediate(clipPreset);
+                Object.DestroyImmediate(curveGo);
+                Object.DestroyImmediate(rectGo);
                 Object.DestroyImmediate(clip);
             }
         }
 
         [Fact]
-        public void UnmeasuredReleaseReportsLoudlyOnPresetType()
+        public void UnmeasuredReleaseReportsLoudlyAcrossPresetApisWithoutThrowing()
         {
             var go = new GameObject("Unmeasured");
-            string member = "UnityEditor.Presets.PresetType.ctor";
-            Stubs.Forget(member);
+            Preset preset = null;
+            string[] members =
+            {
+                "UnityEditor.Presets.PresetType.ctor",
+                "UnityEditor.Presets.Preset.ctor",
+                "UnityEditor.Presets.Preset.ApplyTo",
+                "UnityEditor.Presets.Preset.DataEquals",
+                "UnityEditor.Presets.Preset.UpdateProperties",
+                "UnityEditor.Presets.Preset.GetAllDefaultTypes",
+                "UnityEditor.Presets.Preset.GetDefaultPresetsForType",
+                "UnityEditor.Presets.Preset.GetDefaultPresetsForObject",
+            };
+            foreach (var m in members) Stubs.Forget(m);
             try
             {
                 using (TestRelease.Pin(TestRelease.Unmeasured))
@@ -245,12 +338,22 @@ namespace UnityEngine.Tests
                 {
                     var pt = new PresetType(go.transform);
                     Assert.False(pt.IsValid());
-                    Assert.Contains(logs.Lines, line => line.Contains("Unbound:") && line.Contains(member));
+                    preset = new Preset(go.transform);
+                    Assert.False(preset.IsValid());
+                    Assert.False(preset.ApplyTo(go.transform));
+                    Assert.False(preset.DataEquals(go.transform));
+                    Assert.False(preset.UpdateProperties(go.transform));
+                    Assert.Empty(Preset.GetAllDefaultTypes());
+                    Assert.Empty(Preset.GetDefaultPresetsForType(pt));
+                    Assert.Empty(Preset.GetDefaultPresetsForObject(go.transform));
+                    foreach (var m in members)
+                        Assert.Contains(logs.Lines, line => line.Contains("Unbound:") && line.Contains(m));
                 }
             }
             finally
             {
-                Stubs.Forget(member);
+                foreach (var m in members) Stubs.Forget(m);
+                if (preset != null) Object.DestroyImmediate(preset);
                 Object.DestroyImmediate(go);
             }
         }
