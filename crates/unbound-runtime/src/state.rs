@@ -156,7 +156,7 @@ impl RuntimeState {
         let db = self.db();
         for request in paths {
             match self.import_path(request, &db, &taken) {
-                Ok(Some((asset, conflict))) => {
+                Ok(Some((asset, conflict, own_section))) => {
                     let mut result = json!({
                         "guid": asset.guid.to_string(),
                         "kind": listed_kind(&asset),
@@ -167,6 +167,9 @@ impl RuntimeState {
                     });
                     if let Some((guid, owner)) = conflict {
                         result["conflict"] = json!({ "guid": guid.to_string(), "owner": owner });
+                    }
+                    if own_section {
+                        result["ownSection"] = json!(true);
                     }
                     found.push(result);
                     taken.insert(asset.guid, request.path.to_ascii_lowercase());
@@ -201,7 +204,13 @@ impl RuntimeState {
         request: &ImportPath,
         db: &AssetDb,
         taken: &HashMap<Guid, String>,
-    ) -> Result<Option<(unbound_project::assetdb::Asset, Option<(Guid, String)>)>> {
+    ) -> Result<
+        Option<(
+            unbound_project::assetdb::Asset,
+            Option<(Guid, String)>,
+            bool,
+        )>,
+    > {
         let file = self
             .file_of(&request.path)
             .with_context(|| format!("{} is no asset of the project", request.path))?;
@@ -223,6 +232,8 @@ impl RuntimeState {
             return Ok(None);
         }
         let meta = unbound_assets::new_meta::meta_path(&file);
+        // A new .meta naming a project's ScriptedImporter, whose fields the managed side writes.
+        let mut own_section = false;
         if !meta.exists() {
             anyhow::ensure!(
                 self.editable_roots
@@ -238,15 +249,23 @@ impl RuntimeState {
             );
             let importer = match request.main {
                 Some(main) => unbound_assets::new_meta::NewImporter::NativeFormat { main },
-                None => unbound_assets::new_meta::importer_for(&file, file.is_dir()).with_context(
-                    || {
+                None => unbound_assets::new_meta::importer_for(&file, file.is_dir())
+                    .or_else(|| {
+                        (!file.is_dir())
+                            .then(|| project_new_importer(&file))
+                            .flatten()
+                    })
+                    .with_context(|| {
                         format!(
                             "Unbound does not know the .meta file the Editor writes for {} yet",
                             request.path
                         )
-                    },
-                )?,
+                    })?,
             };
+            own_section = matches!(
+                importer,
+                unbound_assets::new_meta::NewImporter::ProjectScripted { .. }
+            );
             if request.baked
                 && self.new_meta.mode_2d
                 && importer == unbound_assets::new_meta::NewImporter::Texture
@@ -310,6 +329,7 @@ impl RuntimeState {
                 bundle,
             },
             conflict,
+            own_section,
         )))
     }
 
@@ -321,13 +341,27 @@ impl RuntimeState {
     /// looked at. Returns each path that changed: what it is now, or for a gone asset its former
     /// GUID as `removed` (none when the GUID is listed again elsewhere: the asset moved).
     fn refresh_assets(&self) -> Vec<serde_json::Value> {
+        // The new files whose .meta names a project's ScriptedImporter (its fields to be written).
+        let own_sections = std::cell::RefCell::new(std::collections::HashSet::new());
         if self.new_meta_measured {
+            let project = |file: &Path| {
+                let importer = project_new_importer(file);
+                if matches!(
+                    importer,
+                    Some(unbound_assets::new_meta::NewImporter::ProjectScripted { .. })
+                ) {
+                    own_sections.borrow_mut().insert(file.to_path_buf());
+                }
+                importer
+            };
             unbound_assets::new_meta::import_roots(
                 &self.editable_roots,
                 &self.new_meta,
                 unbound_project::assetdb::is_hidden,
+                &project,
             );
         }
+        let own_sections = own_sections.into_inner();
         let roots: Vec<_> = self
             .asset_roots
             .iter()
@@ -370,6 +404,13 @@ impl RuntimeState {
             .zip(results)
             .map(|(request, mut result)| {
                 result["path"] = json!(request.path);
+                if self
+                    .file_of(&request.path)
+                    .is_some_and(|file| own_sections.contains(&file))
+                    && result.get("error").is_none()
+                {
+                    result["ownSection"] = json!(true);
+                }
                 if let Some(guid) = gone
                     .get(request.path.as_str())
                     .filter(|_| result.get("error").is_none())
@@ -2346,7 +2387,9 @@ fn native_importer(path: &str) -> Option<&'static str> {
             NewImporter::SpriteAtlas => "SpriteAtlasImporter",
             NewImporter::VisualEffect => "VisualEffectImporter",
             NewImporter::SpeedTree8(_) => "SpeedTreeImporter",
-            NewImporter::Scripted { .. } => "ScriptedImporter",
+            NewImporter::Scripted { .. } | NewImporter::ProjectScripted { .. } => {
+                "ScriptedImporter"
+            }
         },
     )
 }
@@ -2378,6 +2421,31 @@ fn has_native_importer(ext: &str) -> bool {
     let ext = ext.to_ascii_lowercase();
     DOCUMENTED_NATIVE_EXTENSIONS.contains(&ext.as_str())
         || native_importer(&format!("x.{ext}")).is_some_and(|name| name != "DefaultImporter")
+}
+
+/// The importer a new file of an extension no importer of the Editor's own claims gets, once the
+/// project's ScriptedImporters are known (matches the Unity 6000.0.71f1 Editor,
+/// tests/projects/importerpick `open/New.*` as the project opens, `session/*` by Refresh and
+/// ImportAsset): the ScriptedImporter of the project's scripts that declares it, else the
+/// DefaultImporter (an extension no importer declares; one that a plug-in's or the Editor's own
+/// importer declares, that two importers declare, or a file without an extension: none, not
+/// measured).
+fn project_new_importer(file: &Path) -> Option<unbound_assets::new_meta::NewImporter> {
+    use unbound_assets::new_meta::NewImporter;
+    let ext = file.extension()?.to_str()?.to_ascii_lowercase();
+    let registry = state().scripted_extensions.read().unwrap();
+    let registry = registry.as_ref()?;
+    if let Some((guid, file_id)) = registry.defaults.get(&ext) {
+        return Some(NewImporter::ProjectScripted {
+            script: Guid::parse(guid)?,
+            file_id: *file_id,
+        });
+    }
+    (!ext.is_empty()
+        && !registry.keep_meta.contains(&ext)
+        && !registry.rejected.contains(&ext)
+        && !has_native_importer(&ext))
+    .then_some(NewImporter::Default)
 }
 
 /// `meta` with the section of the importer that imports its file
@@ -2502,8 +2570,16 @@ fn set_scripted_importers(request: &str) -> Result<String> {
             }
         }
     }
+    let first = s.scripted_extensions.read().unwrap().is_none();
     *s.scripted_extensions.write().unwrap() = Some(registry);
-    Ok(json!({ "stale": stale, "native": native }).to_string())
+    // The files left without a .meta as the project opened, whose importer only the project's
+    // scripts decide: imported now, as the Editor imports them when it opens the project.
+    let found = if first && s.new_meta_measured {
+        s.refresh_assets()
+    } else {
+        Vec::new()
+    };
+    Ok(json!({ "stale": stale, "native": native, "found": found }).to_string())
 }
 
 /// The registry of [`set_scripted_importers`] from the extensions one project importer alone

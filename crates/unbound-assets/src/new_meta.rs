@@ -58,6 +58,13 @@ pub enum NewImporter {
         script: i64,
         validation: bool,
     },
+    /// A ScriptedImporter of the project's scripts that declares the file's extension: its
+    /// script's GUID and file id. The section names the script alone; the importer's fields are
+    /// written by the managed side, which knows their defaults.
+    ProjectScripted {
+        script: Guid,
+        file_id: i64,
+    },
 }
 
 /// UI Toolkit's importers, as the Editor names their scripts (built-in GUID
@@ -325,6 +332,18 @@ pub fn replace_guid(text: &str, old: Guid, new: Guid) -> anyhow::Result<String> 
 
 const TRAILER: &str = "  userData: \n  assetBundleName: \n  assetBundleVariant: \n";
 
+/// The reference type of a built-in extra resource's script and of a project's script.
+const BUILTIN_SCRIPT_TYPE: i32 = 0;
+const PROJECT_SCRIPT_TYPE: i32 = 3;
+
+/// A ScriptedImporter's section as the Editor writes it for a new asset, naming the importer's
+/// script (its fields, if it has any, follow).
+fn scripted_section(file_id: i64, guid: &str, kind: i32) -> String {
+    format!(
+        "ScriptedImporter:\n  internalIDToNameTable: []\n  externalObjects: {{}}\n  serializedVersion: 2\n{TRAILER}  script: {{fileID: {file_id}, guid: {guid}, type: {kind}}}\n"
+    )
+}
+
 /// The text of the new `.meta` of `asset` (the file itself, for what it names: a font).
 pub fn text(importer: NewImporter, guid: Guid, asset: &Path, context: &MetaContext) -> String {
     let mut out = format!("fileFormatVersion: 2\nguid: {guid}\n");
@@ -386,13 +405,20 @@ pub fn text(importer: NewImporter, guid: Guid, asset: &Path, context: &MetaConte
         )),
         NewImporter::SpeedTree8(shape) => out.push_str(&crate::speedtree8_meta::section(&shape)),
         NewImporter::Scripted { script, validation } => {
-            out.push_str(&format!(
-                "ScriptedImporter:\n  internalIDToNameTable: []\n  externalObjects: {{}}\n  serializedVersion: 2\n{TRAILER}  script: {{fileID: {script}, guid: 0000000000000000e000000000000000, type: 0}}\n"
+            out.push_str(&scripted_section(
+                script,
+                "0000000000000000e000000000000000",
+                BUILTIN_SCRIPT_TYPE,
             ));
             if validation {
                 out.push_str("  disableValidation: 0\n");
             }
         }
+        NewImporter::ProjectScripted { script, file_id } => out.push_str(&scripted_section(
+            file_id,
+            &script.to_string(),
+            PROJECT_SCRIPT_TYPE,
+        )),
     }
     out
 }
@@ -512,24 +538,41 @@ fn sprites_2d(section: String, asset: &Path) -> String {
 /// Unity's class id of Sprite, the key of a texture's internal id table.
 const SPRITE_CLASS_ID: u32 = 213;
 
+/// The importer the project's scripts give a new file of an extension no importer of the Editor's
+/// own claims ([`importer_for`] answers None for it): known once the scripts are compiled, so
+/// what opens the project before passes [`no_project_importers`].
+pub type ProjectImporters<'a> = &'a dyn Fn(&Path) -> Option<NewImporter>;
+
+/// Before the project's scripts are known: no importer of theirs.
+pub fn no_project_importers(_: &Path) -> Option<NewImporter> {
+    None
+}
+
 /// Writes the new `.meta` of the file or folder at `asset` unless it has one. Returns the GUID
 /// written, `Ok(None)` when it had one, and an error naming the extension when its importer has
 /// not been measured.
-pub fn write(asset: &Path, context: &MetaContext) -> anyhow::Result<Option<Guid>> {
+pub fn write(
+    asset: &Path,
+    context: &MetaContext,
+    project: ProjectImporters,
+) -> anyhow::Result<Option<Guid>> {
     let meta = meta_path(asset);
     if meta.exists() {
         return Ok(None);
     }
-    let importer = importer_for(asset, asset.is_dir()).ok_or_else(|| {
-        anyhow::anyhow!(
-            "{}: Unbound does not know the .meta file the Editor writes for a new {} file yet",
-            asset.display(),
-            asset
-                .extension()
-                .map(|e| format!(".{}", e.to_string_lossy()))
-                .unwrap_or_else(|| "extensionless".into())
-        )
-    })?;
+    let is_dir = asset.is_dir();
+    let importer = importer_for(asset, is_dir)
+        .or_else(|| (!is_dir).then(|| project(asset)).flatten())
+        .ok_or_else(|| {
+            anyhow::anyhow!(
+                "{}: Unbound does not know the .meta file the Editor writes for a new {} file yet",
+                asset.display(),
+                asset
+                    .extension()
+                    .map(|e| format!(".{}", e.to_string_lossy()))
+                    .unwrap_or_else(|| "extensionless".into())
+            )
+        })?;
     let guid = new_guid();
     std::fs::write(&meta, text(importer, guid, asset, context))?;
     Ok(Some(guid))
@@ -553,7 +596,12 @@ pub struct Imported {
 /// Writes the `.meta` of every file and folder under `root` that has none, as the Editor does
 /// when it opens or refreshes a project. Hidden names are skipped as the asset database skips
 /// them (`unbound_project::assetdb::is_hidden`); `root` itself is not an asset.
-pub fn import_new(root: &Path, context: &MetaContext, hidden: impl Fn(&str) -> bool) -> Imported {
+pub fn import_new(
+    root: &Path,
+    context: &MetaContext,
+    hidden: impl Fn(&str) -> bool,
+    project: ProjectImporters,
+) -> Imported {
     let mut imported = Imported::default();
     let mut walker = walkdir::WalkDir::new(root)
         .follow_links(true)
@@ -577,7 +625,7 @@ pub fn import_new(root: &Path, context: &MetaContext, hidden: impl Fn(&str) -> b
         {
             continue;
         }
-        match write(path, context) {
+        match write(path, context, project) {
             Ok(Some(_)) => imported.written.push(meta_path(path)),
             Ok(None) => {}
             Err(error) => imported.unsupported.push(error.to_string()),
@@ -593,10 +641,11 @@ pub fn import_roots<P: AsRef<Path>>(
     roots: &[P],
     context: &MetaContext,
     hidden: impl Fn(&str) -> bool + Copy,
+    project: ProjectImporters,
 ) -> Imported {
     let mut imported = Imported::default();
     for root in roots.iter().map(AsRef::as_ref).filter(|r| r.is_dir()) {
-        let found = import_new(root, context, hidden);
+        let found = import_new(root, context, hidden, project);
         imported.written.extend(found.written);
         imported.unsupported.extend(found.unsupported);
     }
@@ -626,6 +675,58 @@ mod tests {
                 .all(|c| c.is_ascii_hexdigit() && !c.is_ascii_uppercase())
         );
         assert_ne!(a, b);
+    }
+
+    #[test]
+    fn a_new_file_of_a_project_importers_extension_gets_its_script() {
+        // tests/projects/importerpick open/New.foo before the importer's fields, and
+        // open/New.qux: the DefaultImporter for an extension no importer declares.
+        let dir = std::env::temp_dir().join(format!("unbound-scripted-meta-{}", new_guid()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let script = Guid::parse("fe7149dab52c402586c2710ef982d2dd").unwrap();
+        let project = |file: &Path| match file.extension().and_then(|e| e.to_str()) {
+            Some("foo") => Some(NewImporter::ProjectScripted {
+                script,
+                file_id: 11500000,
+            }),
+            Some("qux") => Some(NewImporter::Default),
+            _ => None,
+        };
+        for name in ["New.foo", "New.qux", "New.zzz"] {
+            std::fs::write(dir.join(name), name).unwrap();
+        }
+        // Before the project's importers are known nothing is written for them.
+        let before = import_new(
+            &dir,
+            &MetaContext::default(),
+            |_| false,
+            &no_project_importers,
+        );
+        assert!(before.written.is_empty());
+        assert_eq!(before.unsupported.len(), 3);
+        let after = import_new(&dir, &MetaContext::default(), |_| false, &project);
+        assert_eq!(after.written.len(), 2);
+        assert_eq!(after.unsupported.len(), 1, "{:?}", after.unsupported);
+        let foo = std::fs::read_to_string(dir.join("New.foo.meta")).unwrap();
+        assert_eq!(
+            foo.replace(guid_of(&foo), "(guid)"),
+            "fileFormatVersion: 2\nguid: (guid)\nScriptedImporter:\n  internalIDToNameTable: []\n  externalObjects: {}\n  serializedVersion: 2\n  userData: \n  assetBundleName: \n  assetBundleVariant: \n  script: {fileID: 11500000, guid: fe7149dab52c402586c2710ef982d2dd, type: 3}\n"
+        );
+        let qux = std::fs::read_to_string(dir.join("New.qux.meta")).unwrap();
+        assert_eq!(
+            qux.replace(guid_of(&qux), "(guid)"),
+            "fileFormatVersion: 2\nguid: (guid)\nDefaultImporter:\n  externalObjects: {}\n  userData: \n  assetBundleName: \n  assetBundleVariant: \n"
+        );
+        // An importer of the Editor's own wins over the project's answer.
+        std::fs::write(dir.join("Own.txt"), "text").unwrap();
+        let text = |_: &Path| Some(NewImporter::Default);
+        import_new(&dir, &MetaContext::default(), |_| false, &text);
+        assert!(
+            std::fs::read_to_string(dir.join("Own.txt.meta"))
+                .unwrap()
+                .contains("TextScriptImporter:")
+        );
+        std::fs::remove_dir_all(&dir).unwrap();
     }
 
     #[test]
@@ -694,7 +795,12 @@ mod tests {
         .unwrap();
         std::fs::write(root.join("Plugins/Lib.dll"), "MZ").unwrap();
         std::fs::write(root.join("Plugins/Lib.pdb"), "pdb").unwrap();
-        let imported = import_new(&root, &MetaContext::default(), |_| false);
+        let imported = import_new(
+            &root,
+            &MetaContext::default(),
+            |_| false,
+            &no_project_importers,
+        );
         assert!(
             imported.unsupported.is_empty(),
             "{:?}",
@@ -934,7 +1040,12 @@ mod tests {
         std::fs::write(dir.join("Native.bundle/Contents/Info.plist"), "<plist/>").unwrap();
         std::fs::write(dir.join("Kept.txt.meta"), "fileFormatVersion: 2\nguid: 1\n").unwrap();
         let context = MetaContext::default();
-        let imported = import_new(&dir, &context, |name| name.starts_with('.'));
+        let imported = import_new(
+            &dir,
+            &context,
+            |name| name.starts_with('.'),
+            &no_project_importers,
+        );
         let mut written: Vec<_> = imported
             .written
             .iter()
@@ -954,9 +1065,14 @@ mod tests {
             "fileFormatVersion: 2\nguid: 1\n"
         );
         assert!(
-            import_new(&dir, &context, |name| name.starts_with('.'))
-                .written
-                .is_empty()
+            import_new(
+                &dir,
+                &context,
+                |name| name.starts_with('.'),
+                &no_project_importers
+            )
+            .written
+            .is_empty()
         );
         std::fs::remove_dir_all(&dir).unwrap();
     }

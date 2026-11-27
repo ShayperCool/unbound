@@ -58,6 +58,9 @@ namespace UnityEditor
             public string Removed { get; set; }
             /// <summary>The GUID the asset's .meta had, which another asset holds (it got a new one).</summary>
             public Conflict Conflict { get; set; }
+            /// <summary>Its new .meta names a project's ScriptedImporter, whose fields are written
+            /// here (<see cref="Unbound.Runtime.ScriptedImports.WriteOwnSection"/>).</summary>
+            public bool OwnSection { get; set; }
         }
 
         sealed class Conflict
@@ -102,6 +105,7 @@ namespace UnityEditor
             for (int i = 0; i < list.Count; i++)
             {
                 var asset = i < assets.Length ? assets[i] : null;
+                if (asset != null) asset.Path ??= list[i].Path;
                 guids[i] = asset?.Guid ?? "";
                 AssetDatabaseRuntime.ImportedInSession(guids[i]);
                 if (!string.IsNullOrEmpty(asset?.Error))
@@ -114,6 +118,7 @@ namespace UnityEditor
                 if (!string.IsNullOrEmpty(guids[i])) SessionImports.Imported(list[i].Path);
             }
             if (!relist) Invalidate();
+            WriteOwnSections(assets);
             return guids;
         }
 
@@ -329,10 +334,27 @@ namespace UnityEditor
             || path.EndsWith(".asmref", StringComparison.OrdinalIgnoreCase);
 
         /// <summary>The listing brought up to date with what a refresh found changed.</summary>
-        internal static void ApplyRefresh(string json)
+        internal static void ApplyRefresh(string json) => ApplyRefresh(JsonSerializer.Deserialize<ImportResult>(json, s_Json)?.Assets, session: true);
+
+        /// <summary>The assets the engine imported when the project's ScriptedImporters became
+        /// known (files left without a .meta as the project opened): listed, as imports of the
+        /// project's opening, not of the session.</summary>
+        internal static void ApplyFound(string json) =>
+            ApplyRefresh(JsonSerializer.Deserialize<Imported[]>(json, s_Json), session: false);
+
+        /// <summary>The fields of the new .meta files naming a project's ScriptedImporter, once
+        /// the assets are listed.</summary>
+        static void WriteOwnSections(Imported[] assets)
+        {
+            foreach (var asset in assets)
+                if (asset != null && asset.OwnSection && string.IsNullOrEmpty(asset.Error) && !string.IsNullOrEmpty(asset.Path))
+                    Unbound.Runtime.ScriptedImports.WriteOwnSection(asset.Path);
+        }
+
+        static void ApplyRefresh(Imported[] changes, bool session)
         {
             using var write = SessionImports.Write();
-            var changes = JsonSerializer.Deserialize<ImportResult>(json, s_Json)?.Assets ?? Array.Empty<Imported>();
+            changes ??= Array.Empty<Imported>();
             foreach (var change in changes)
             {
                 // A path the engine could not import (a .meta without a GUID line, ...) keeps its
@@ -355,7 +377,7 @@ namespace UnityEditor
                     SessionImports.Deleted(change.Path);
                 }
                 // A new or changed asset is imported in this session (its messages are logged at its load).
-                else
+                else if (session)
                 {
                     AssetDatabaseRuntime.ImportedInSession(change.Guid);
                     SessionImports.Imported(change.Path);
@@ -363,6 +385,7 @@ namespace UnityEditor
                 if (changes.Length <= RelistLimit) Relist(change.Path, change);
             }
             if (changes.Length > RelistLimit) Invalidate();
+            WriteOwnSections(changes);
         }
 
         /// <summary>Holds back imports (Refresh, ImportAsset of new files) until the matching

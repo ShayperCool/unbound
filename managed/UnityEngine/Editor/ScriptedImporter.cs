@@ -544,6 +544,10 @@ namespace Unbound.Runtime
             s_OverridesByExtension = overrides;
             s_ByOverrideHash = byHash;
             SetNativeDeclared(nativeDeclared);
+            // The files the project's opening left without a .meta, whose importer the scripts
+            // decide, imported by the engine now (importerpick open/New.*).
+            if (json.RootElement.TryGetProperty("found", out var found) && found.GetArrayLength() > 0)
+                UnityEditor.AssetDatabase.ApplyFound(found.GetRawText());
             if (!rewriteStale) return;
             foreach (var path in json.RootElement.GetProperty("stale").EnumerateArray())
                 WriteOwnSection(path.GetString());
@@ -626,7 +630,7 @@ namespace Unbound.Runtime
 
         /// <summary>The `.meta` of <paramref name="path"/> written with its importer's section at
         /// its defaults (the ScriptedImporter its extension's).</summary>
-        static void WriteOwnSection(string path)
+        internal static void WriteOwnSection(string path)
         {
             UnityEditor.AssetImporter.Evict(path);
             if (UnityEditor.AssetImporter.GetAtPath(path) is not ScriptedImporter importer || !UnityEditor.AssetDatabase.Editable(path)) return;

@@ -102,6 +102,9 @@ fn open_in_editor(args: &ProjectArgs) -> Result<Project> {
         &project.editable_roots(),
         &context,
         unbound_project::assetdb::is_hidden,
+        // The project's ScriptedImporters are known once its scripts compile: their files' .meta
+        // are written then (the runtime's scripted-importers).
+        &unbound_assets::new_meta::no_project_importers,
     );
     if !imported.written.is_empty() {
         tracing::info!(
