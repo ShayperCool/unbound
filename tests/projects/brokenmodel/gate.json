@@ -1,0 +1,13 @@
+{
+  "commands": [
+    "python3 tests/projects/brokenmodel/run.py gate"
+  ],
+  "summary": "brokenmodel: .*",
+  "engine_paths": [
+    "crates/unbound-assets/src/model.rs",
+    "crates/unbound-runtime/src/state.rs",
+    "managed/UnityEngine/Runtime/Loading.cs",
+    "managed/UnityEngine/Editor/AssetDatabase.cs",
+    "managed/UnityEngine/Editor/HierarchyPostprocessing.cs"
+  ]
+}

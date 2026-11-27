@@ -1,0 +1,292 @@
+{"k":"Garbage_fbx/exists","v":"True meta True"}
+{"k":"Garbage_fbx/guid","v":"set"}
+{"k":"Garbage_fbx/maintype","v":"UnityEngine.GameObject"}
+{"k":"Garbage_fbx/importer","v":"UnityEditor.ModelImporter"}
+{"k":"Garbage_fbx/main","v":"UnityEngine.GameObject 'Garbage' children 0 components Transform"}
+{"k":"Garbage_fbx/gameobject","v":"UnityEngine.GameObject 'Garbage' children 0 components Transform"}
+{"k":"Garbage_fbx/mesh","v":"null"}
+{"k":"Garbage_fbx/all","v":"GameObject,ImportLog,Transform"}
+{"k":"Garbage_fbx/representations","v":"0"}
+{"k":"Garbage_fbx/isloaded","v":"True"}
+{"k":"Garbage_fbx/fileids","v":"919132149155446097 -8679921383154817045"}
+{"k":"Garbage_fbx/import","v":"ok"}
+{"k":"Garbage_fbx/import.events","v":"all Assets/Models/Garbage.fbx\nlog Error ImportFBX Errors:\nCouldn't read file <project>/Assets/Models/Garbage.fbx.\nNone of the registered readers can process the file\n\n\npostprocessModel Assets/Models/Garbage.fbx Garbage children 0\npreprocessAsset Assets/Models/Garbage.fbx\npreprocessModel Assets/Models/Garbage.fbx"}
+{"k":"Garbage_fbx/after/exists","v":"True meta True"}
+{"k":"Garbage_fbx/after/guid","v":"set"}
+{"k":"Garbage_fbx/after/maintype","v":"UnityEngine.GameObject"}
+{"k":"Garbage_fbx/after/importer","v":"UnityEditor.ModelImporter"}
+{"k":"Garbage_fbx/after/main","v":"UnityEngine.GameObject 'Garbage' children 0 components Transform"}
+{"k":"Garbage_fbx/after/gameobject","v":"UnityEngine.GameObject 'Garbage' children 0 components Transform"}
+{"k":"Garbage_fbx/after/mesh","v":"null"}
+{"k":"Garbage_fbx/after/all","v":"GameObject,ImportLog,Transform"}
+{"k":"Garbage_fbx/after/representations","v":"0"}
+{"k":"Garbage_fbx/after/isloaded","v":"True"}
+{"k":"Garbage_fbx/after/fileids","v":"919132149155446097 -8679921383154817045"}
+{"k":"Empty_fbx/exists","v":"True meta True"}
+{"k":"Empty_fbx/guid","v":"set"}
+{"k":"Empty_fbx/maintype","v":"UnityEngine.GameObject"}
+{"k":"Empty_fbx/importer","v":"UnityEditor.ModelImporter"}
+{"k":"Empty_fbx/main","v":"UnityEngine.GameObject 'Empty' children 0 components Transform"}
+{"k":"Empty_fbx/gameobject","v":"UnityEngine.GameObject 'Empty' children 0 components Transform"}
+{"k":"Empty_fbx/mesh","v":"null"}
+{"k":"Empty_fbx/all","v":"GameObject,ImportLog,Transform"}
+{"k":"Empty_fbx/representations","v":"0"}
+{"k":"Empty_fbx/isloaded","v":"True"}
+{"k":"Empty_fbx/fileids","v":"919132149155446097 -8679921383154817045"}
+{"k":"Empty_fbx/import","v":"ok"}
+{"k":"Empty_fbx/import.events","v":"all Assets/Models/Empty.fbx\nlog Error ImportFBX Errors:\nCouldn't read file <project>/Assets/Models/Empty.fbx.\nNone of the registered readers can process the file\n\n\npostprocessModel Assets/Models/Empty.fbx Empty children 0\npreprocessAsset Assets/Models/Empty.fbx\npreprocessModel Assets/Models/Empty.fbx"}
+{"k":"Empty_fbx/after/exists","v":"True meta True"}
+{"k":"Empty_fbx/after/guid","v":"set"}
+{"k":"Empty_fbx/after/maintype","v":"UnityEngine.GameObject"}
+{"k":"Empty_fbx/after/importer","v":"UnityEditor.ModelImporter"}
+{"k":"Empty_fbx/after/main","v":"UnityEngine.GameObject 'Empty' children 0 components Transform"}
+{"k":"Empty_fbx/after/gameobject","v":"UnityEngine.GameObject 'Empty' children 0 components Transform"}
+{"k":"Empty_fbx/after/mesh","v":"null"}
+{"k":"Empty_fbx/after/all","v":"GameObject,ImportLog,Transform"}
+{"k":"Empty_fbx/after/representations","v":"0"}
+{"k":"Empty_fbx/after/isloaded","v":"True"}
+{"k":"Empty_fbx/after/fileids","v":"919132149155446097 -8679921383154817045"}
+{"k":"Truncated_fbx/exists","v":"True meta True"}
+{"k":"Truncated_fbx/guid","v":"set"}
+{"k":"Truncated_fbx/maintype","v":"UnityEngine.GameObject"}
+{"k":"Truncated_fbx/importer","v":"UnityEditor.ModelImporter"}
+{"k":"Truncated_fbx/main","v":"UnityEngine.GameObject 'Truncated' children 0 components Transform"}
+{"k":"Truncated_fbx/gameobject","v":"UnityEngine.GameObject 'Truncated' children 0 components Transform"}
+{"k":"Truncated_fbx/mesh","v":"null"}
+{"k":"Truncated_fbx/all","v":"GameObject,ImportLog,Transform"}
+{"k":"Truncated_fbx/representations","v":"0"}
+{"k":"Truncated_fbx/isloaded","v":"True"}
+{"k":"Truncated_fbx/fileids","v":"919132149155446097 -8679921383154817045"}
+{"k":"Truncated_fbx/import","v":"ok"}
+{"k":"Truncated_fbx/import.events","v":"all Assets/Models/Truncated.fbx\nlog Error ImportFBX Errors:\nCouldn't import file <project>/Assets/Models/Truncated.fbx.\nFile is corrupted: 'Truncated.fbx'\n\n\npostprocessModel Assets/Models/Truncated.fbx Truncated children 0\npreprocessAsset Assets/Models/Truncated.fbx\npreprocessModel Assets/Models/Truncated.fbx"}
+{"k":"Truncated_fbx/after/exists","v":"True meta True"}
+{"k":"Truncated_fbx/after/guid","v":"set"}
+{"k":"Truncated_fbx/after/maintype","v":"UnityEngine.GameObject"}
+{"k":"Truncated_fbx/after/importer","v":"UnityEditor.ModelImporter"}
+{"k":"Truncated_fbx/after/main","v":"UnityEngine.GameObject 'Truncated' children 0 components Transform"}
+{"k":"Truncated_fbx/after/gameobject","v":"UnityEngine.GameObject 'Truncated' children 0 components Transform"}
+{"k":"Truncated_fbx/after/mesh","v":"null"}
+{"k":"Truncated_fbx/after/all","v":"GameObject,ImportLog,Transform"}
+{"k":"Truncated_fbx/after/representations","v":"0"}
+{"k":"Truncated_fbx/after/isloaded","v":"True"}
+{"k":"Truncated_fbx/after/fileids","v":"919132149155446097 -8679921383154817045"}
+{"k":"CutAscii_fbx/exists","v":"True meta True"}
+{"k":"CutAscii_fbx/guid","v":"set"}
+{"k":"CutAscii_fbx/maintype","v":"UnityEngine.GameObject"}
+{"k":"CutAscii_fbx/importer","v":"UnityEditor.ModelImporter"}
+{"k":"CutAscii_fbx/main","v":"UnityEngine.GameObject 'CutAscii' children 0 components Transform"}
+{"k":"CutAscii_fbx/gameobject","v":"UnityEngine.GameObject 'CutAscii' children 0 components Transform"}
+{"k":"CutAscii_fbx/mesh","v":"null"}
+{"k":"CutAscii_fbx/all","v":"GameObject,Transform"}
+{"k":"CutAscii_fbx/representations","v":"0"}
+{"k":"CutAscii_fbx/isloaded","v":"True"}
+{"k":"CutAscii_fbx/fileids","v":"919132149155446097 -8679921383154817045"}
+{"k":"CutAscii_fbx/import","v":"ok"}
+{"k":"CutAscii_fbx/import.events","v":"all Assets/Models/CutAscii.fbx\npostprocessModel Assets/Models/CutAscii.fbx CutAscii children 0\npreprocessAsset Assets/Models/CutAscii.fbx\npreprocessModel Assets/Models/CutAscii.fbx"}
+{"k":"CutAscii_fbx/after/exists","v":"True meta True"}
+{"k":"CutAscii_fbx/after/guid","v":"set"}
+{"k":"CutAscii_fbx/after/maintype","v":"UnityEngine.GameObject"}
+{"k":"CutAscii_fbx/after/importer","v":"UnityEditor.ModelImporter"}
+{"k":"CutAscii_fbx/after/main","v":"UnityEngine.GameObject 'CutAscii' children 0 components Transform"}
+{"k":"CutAscii_fbx/after/gameobject","v":"UnityEngine.GameObject 'CutAscii' children 0 components Transform"}
+{"k":"CutAscii_fbx/after/mesh","v":"null"}
+{"k":"CutAscii_fbx/after/all","v":"GameObject,Transform"}
+{"k":"CutAscii_fbx/after/representations","v":"0"}
+{"k":"CutAscii_fbx/after/isloaded","v":"True"}
+{"k":"CutAscii_fbx/after/fileids","v":"919132149155446097 -8679921383154817045"}
+{"k":"CutModel_fbx/exists","v":"True meta True"}
+{"k":"CutModel_fbx/guid","v":"set"}
+{"k":"CutModel_fbx/maintype","v":"UnityEngine.GameObject"}
+{"k":"CutModel_fbx/importer","v":"UnityEditor.ModelImporter"}
+{"k":"CutModel_fbx/main","v":"UnityEngine.GameObject 'CutModel' children 2 components Transform child 'Bare' child 'Tagged'"}
+{"k":"CutModel_fbx/gameobject","v":"UnityEngine.GameObject 'CutModel' children 2 components Transform child 'Bare' child 'Tagged'"}
+{"k":"CutModel_fbx/mesh","v":"UnityEngine.Mesh 'Bare'"}
+{"k":"CutModel_fbx/all","v":"GameObject,GameObject,GameObject,ImportLog,Mesh,Mesh,MeshFilter,MeshFilter,MeshRenderer,MeshRenderer,Transform,Transform,Transform"}
+{"k":"CutModel_fbx/representations","v":"4"}
+{"k":"CutModel_fbx/isloaded","v":"True"}
+{"k":"CutModel_fbx/fileids","v":"919132149155446097 -8679921383154817045"}
+{"k":"CutModel_fbx/import","v":"ok"}
+{"k":"CutModel_fbx/import.events","v":"all Assets/Models/CutModel.fbx\nlog Warning ImportFBX Warnings:\nCan't import normals, because mesh 'Bare' doesn't have any.\nCan't import normals, because mesh 'Tagged' doesn't have any.\n\nlog Warning Mesh 'Bare' has no normals. Recalculating normals.\n\nlog Warning Mesh 'Tagged' has no normals. Recalculating normals.\n\npostprocessModel Assets/Models/CutModel.fbx CutModel children 2\npreprocessAsset Assets/Models/CutModel.fbx\npreprocessModel Assets/Models/CutModel.fbx"}
+{"k":"CutModel_fbx/after/exists","v":"True meta True"}
+{"k":"CutModel_fbx/after/guid","v":"set"}
+{"k":"CutModel_fbx/after/maintype","v":"UnityEngine.GameObject"}
+{"k":"CutModel_fbx/after/importer","v":"UnityEditor.ModelImporter"}
+{"k":"CutModel_fbx/after/main","v":"UnityEngine.GameObject 'CutModel' children 2 components Transform child 'Bare' child 'Tagged'"}
+{"k":"CutModel_fbx/after/gameobject","v":"UnityEngine.GameObject 'CutModel' children 2 components Transform child 'Bare' child 'Tagged'"}
+{"k":"CutModel_fbx/after/mesh","v":"UnityEngine.Mesh 'Bare'"}
+{"k":"CutModel_fbx/after/all","v":"GameObject,GameObject,GameObject,ImportLog,Mesh,Mesh,MeshFilter,MeshFilter,MeshRenderer,MeshRenderer,Transform,Transform,Transform"}
+{"k":"CutModel_fbx/after/representations","v":"4"}
+{"k":"CutModel_fbx/after/isloaded","v":"True"}
+{"k":"CutModel_fbx/after/fileids","v":"919132149155446097 -8679921383154817045"}
+{"k":"RigGeneric_fbx/exists","v":"True meta True"}
+{"k":"RigGeneric_fbx/guid","v":"set"}
+{"k":"RigGeneric_fbx/maintype","v":"UnityEngine.GameObject"}
+{"k":"RigGeneric_fbx/importer","v":"UnityEditor.ModelImporter"}
+{"k":"RigGeneric_fbx/main","v":"UnityEngine.GameObject 'RigGeneric' children 0 components Transform,Animator"}
+{"k":"RigGeneric_fbx/gameobject","v":"UnityEngine.GameObject 'RigGeneric' children 0 components Transform,Animator"}
+{"k":"RigGeneric_fbx/mesh","v":"null"}
+{"k":"RigGeneric_fbx/all","v":"Animator,Avatar,GameObject,ImportLog,Transform"}
+{"k":"RigGeneric_fbx/representations","v":"1"}
+{"k":"RigGeneric_fbx/isloaded","v":"True"}
+{"k":"RigGeneric_fbx/fileids","v":"919132149155446097 -8679921383154817045"}
+{"k":"RigGeneric_fbx/import","v":"ok"}
+{"k":"RigGeneric_fbx/import.events","v":"all Assets/Models/RigGeneric.fbx\nlog Error ImportFBX Errors:\nCouldn't read file <project>/Assets/Models/RigGeneric.fbx.\nNone of the registered readers can process the file\n\n\npostprocessModel Assets/Models/RigGeneric.fbx RigGeneric children 0\npreprocessAsset Assets/Models/RigGeneric.fbx\npreprocessModel Assets/Models/RigGeneric.fbx"}
+{"k":"RigGeneric_fbx/after/exists","v":"True meta True"}
+{"k":"RigGeneric_fbx/after/guid","v":"set"}
+{"k":"RigGeneric_fbx/after/maintype","v":"UnityEngine.GameObject"}
+{"k":"RigGeneric_fbx/after/importer","v":"UnityEditor.ModelImporter"}
+{"k":"RigGeneric_fbx/after/main","v":"UnityEngine.GameObject 'RigGeneric' children 0 components Transform,Animator"}
+{"k":"RigGeneric_fbx/after/gameobject","v":"UnityEngine.GameObject 'RigGeneric' children 0 components Transform,Animator"}
+{"k":"RigGeneric_fbx/after/mesh","v":"null"}
+{"k":"RigGeneric_fbx/after/all","v":"Animator,Avatar,GameObject,ImportLog,Transform"}
+{"k":"RigGeneric_fbx/after/representations","v":"1"}
+{"k":"RigGeneric_fbx/after/isloaded","v":"True"}
+{"k":"RigGeneric_fbx/after/fileids","v":"919132149155446097 -8679921383154817045"}
+{"k":"RigHumanoid_fbx/exists","v":"True meta True"}
+{"k":"RigHumanoid_fbx/guid","v":"set"}
+{"k":"RigHumanoid_fbx/maintype","v":"UnityEngine.GameObject"}
+{"k":"RigHumanoid_fbx/importer","v":"UnityEditor.ModelImporter"}
+{"k":"RigHumanoid_fbx/main","v":"UnityEngine.GameObject 'RigHumanoid' children 0 components Transform,Animator"}
+{"k":"RigHumanoid_fbx/gameobject","v":"UnityEngine.GameObject 'RigHumanoid' children 0 components Transform,Animator"}
+{"k":"RigHumanoid_fbx/mesh","v":"null"}
+{"k":"RigHumanoid_fbx/all","v":"Animator,Avatar,GameObject,ImportLog,Transform"}
+{"k":"RigHumanoid_fbx/representations","v":"1"}
+{"k":"RigHumanoid_fbx/isloaded","v":"True"}
+{"k":"RigHumanoid_fbx/fileids","v":"919132149155446097 -8679921383154817045"}
+{"k":"RigHumanoid_fbx/import","v":"ok"}
+{"k":"RigHumanoid_fbx/import.events","v":"all Assets/Models/RigHumanoid.fbx\nlog Error ImportFBX Errors:\nCouldn't read file <project>/Assets/Models/RigHumanoid.fbx.\nNone of the registered readers can process the file\n\n\nlog Error Rig Error:  Invalid Avatar Rig Configuration. Missing or invalid transform:\n\tRequired human bone 'Hips' not found\n\npostprocessModel Assets/Models/RigHumanoid.fbx RigHumanoid children 0\npreprocessAsset Assets/Models/RigHumanoid.fbx\npreprocessModel Assets/Models/RigHumanoid.fbx"}
+{"k":"RigHumanoid_fbx/after/exists","v":"True meta True"}
+{"k":"RigHumanoid_fbx/after/guid","v":"set"}
+{"k":"RigHumanoid_fbx/after/maintype","v":"UnityEngine.GameObject"}
+{"k":"RigHumanoid_fbx/after/importer","v":"UnityEditor.ModelImporter"}
+{"k":"RigHumanoid_fbx/after/main","v":"UnityEngine.GameObject 'RigHumanoid' children 0 components Transform,Animator"}
+{"k":"RigHumanoid_fbx/after/gameobject","v":"UnityEngine.GameObject 'RigHumanoid' children 0 components Transform,Animator"}
+{"k":"RigHumanoid_fbx/after/mesh","v":"null"}
+{"k":"RigHumanoid_fbx/after/all","v":"Animator,Avatar,GameObject,ImportLog,Transform"}
+{"k":"RigHumanoid_fbx/after/representations","v":"1"}
+{"k":"RigHumanoid_fbx/after/isloaded","v":"True"}
+{"k":"RigHumanoid_fbx/after/fileids","v":"919132149155446097 -8679921383154817045"}
+{"k":"RigLegacy_fbx/exists","v":"True meta True"}
+{"k":"RigLegacy_fbx/guid","v":"set"}
+{"k":"RigLegacy_fbx/maintype","v":"UnityEngine.GameObject"}
+{"k":"RigLegacy_fbx/importer","v":"UnityEditor.ModelImporter"}
+{"k":"RigLegacy_fbx/main","v":"UnityEngine.GameObject 'RigLegacy' children 0 components Transform,Animation"}
+{"k":"RigLegacy_fbx/gameobject","v":"UnityEngine.GameObject 'RigLegacy' children 0 components Transform,Animation"}
+{"k":"RigLegacy_fbx/mesh","v":"null"}
+{"k":"RigLegacy_fbx/all","v":"Animation,GameObject,ImportLog,Transform"}
+{"k":"RigLegacy_fbx/representations","v":"0"}
+{"k":"RigLegacy_fbx/isloaded","v":"True"}
+{"k":"RigLegacy_fbx/fileids","v":"919132149155446097 -8679921383154817045"}
+{"k":"RigLegacy_fbx/import","v":"ok"}
+{"k":"RigLegacy_fbx/import.events","v":"all Assets/Models/RigLegacy.fbx\nlog Error ImportFBX Errors:\nCouldn't read file <project>/Assets/Models/RigLegacy.fbx.\nNone of the registered readers can process the file\n\n\npostprocessModel Assets/Models/RigLegacy.fbx RigLegacy children 0\npreprocessAsset Assets/Models/RigLegacy.fbx\npreprocessModel Assets/Models/RigLegacy.fbx"}
+{"k":"RigLegacy_fbx/after/exists","v":"True meta True"}
+{"k":"RigLegacy_fbx/after/guid","v":"set"}
+{"k":"RigLegacy_fbx/after/maintype","v":"UnityEngine.GameObject"}
+{"k":"RigLegacy_fbx/after/importer","v":"UnityEditor.ModelImporter"}
+{"k":"RigLegacy_fbx/after/main","v":"UnityEngine.GameObject 'RigLegacy' children 0 components Transform,Animation"}
+{"k":"RigLegacy_fbx/after/gameobject","v":"UnityEngine.GameObject 'RigLegacy' children 0 components Transform,Animation"}
+{"k":"RigLegacy_fbx/after/mesh","v":"null"}
+{"k":"RigLegacy_fbx/after/all","v":"Animation,GameObject,ImportLog,Transform"}
+{"k":"RigLegacy_fbx/after/representations","v":"0"}
+{"k":"RigLegacy_fbx/after/isloaded","v":"True"}
+{"k":"RigLegacy_fbx/after/fileids","v":"919132149155446097 -8679921383154817045"}
+{"k":"Garbage_obj/exists","v":"True meta True"}
+{"k":"Garbage_obj/guid","v":"set"}
+{"k":"Garbage_obj/maintype","v":"UnityEngine.GameObject"}
+{"k":"Garbage_obj/importer","v":"UnityEditor.ModelImporter"}
+{"k":"Garbage_obj/main","v":"UnityEngine.GameObject 'Garbage' children 0 components Transform"}
+{"k":"Garbage_obj/gameobject","v":"UnityEngine.GameObject 'Garbage' children 0 components Transform"}
+{"k":"Garbage_obj/mesh","v":"null"}
+{"k":"Garbage_obj/all","v":"GameObject,Transform"}
+{"k":"Garbage_obj/representations","v":"0"}
+{"k":"Garbage_obj/isloaded","v":"True"}
+{"k":"Garbage_obj/fileids","v":"919132149155446097 -8679921383154817045"}
+{"k":"Garbage_obj/import","v":"ok"}
+{"k":"Garbage_obj/import.events","v":"all Assets/Models/Garbage.obj\npostprocessModel Assets/Models/Garbage.obj Garbage children 0\npreprocessAsset Assets/Models/Garbage.obj\npreprocessModel Assets/Models/Garbage.obj"}
+{"k":"Garbage_obj/after/exists","v":"True meta True"}
+{"k":"Garbage_obj/after/guid","v":"set"}
+{"k":"Garbage_obj/after/maintype","v":"UnityEngine.GameObject"}
+{"k":"Garbage_obj/after/importer","v":"UnityEditor.ModelImporter"}
+{"k":"Garbage_obj/after/main","v":"UnityEngine.GameObject 'Garbage' children 0 components Transform"}
+{"k":"Garbage_obj/after/gameobject","v":"UnityEngine.GameObject 'Garbage' children 0 components Transform"}
+{"k":"Garbage_obj/after/mesh","v":"null"}
+{"k":"Garbage_obj/after/all","v":"GameObject,Transform"}
+{"k":"Garbage_obj/after/representations","v":"0"}
+{"k":"Garbage_obj/after/isloaded","v":"True"}
+{"k":"Garbage_obj/after/fileids","v":"919132149155446097 -8679921383154817045"}
+{"k":"Empty_obj/exists","v":"True meta True"}
+{"k":"Empty_obj/guid","v":"set"}
+{"k":"Empty_obj/maintype","v":"UnityEngine.GameObject"}
+{"k":"Empty_obj/importer","v":"UnityEditor.ModelImporter"}
+{"k":"Empty_obj/main","v":"UnityEngine.GameObject 'Empty' children 0 components Transform"}
+{"k":"Empty_obj/gameobject","v":"UnityEngine.GameObject 'Empty' children 0 components Transform"}
+{"k":"Empty_obj/mesh","v":"null"}
+{"k":"Empty_obj/all","v":"GameObject,Transform"}
+{"k":"Empty_obj/representations","v":"0"}
+{"k":"Empty_obj/isloaded","v":"True"}
+{"k":"Empty_obj/fileids","v":"919132149155446097 -8679921383154817045"}
+{"k":"Empty_obj/import","v":"ok"}
+{"k":"Empty_obj/import.events","v":"all Assets/Models/Empty.obj\npostprocessModel Assets/Models/Empty.obj Empty children 0\npreprocessAsset Assets/Models/Empty.obj\npreprocessModel Assets/Models/Empty.obj"}
+{"k":"Empty_obj/after/exists","v":"True meta True"}
+{"k":"Empty_obj/after/guid","v":"set"}
+{"k":"Empty_obj/after/maintype","v":"UnityEngine.GameObject"}
+{"k":"Empty_obj/after/importer","v":"UnityEditor.ModelImporter"}
+{"k":"Empty_obj/after/main","v":"UnityEngine.GameObject 'Empty' children 0 components Transform"}
+{"k":"Empty_obj/after/gameobject","v":"UnityEngine.GameObject 'Empty' children 0 components Transform"}
+{"k":"Empty_obj/after/mesh","v":"null"}
+{"k":"Empty_obj/after/all","v":"GameObject,Transform"}
+{"k":"Empty_obj/after/representations","v":"0"}
+{"k":"Empty_obj/after/isloaded","v":"True"}
+{"k":"Empty_obj/after/fileids","v":"919132149155446097 -8679921383154817045"}
+{"k":"Tri_obj/exists","v":"True meta True"}
+{"k":"Tri_obj/guid","v":"set"}
+{"k":"Tri_obj/maintype","v":"UnityEngine.GameObject"}
+{"k":"Tri_obj/importer","v":"UnityEditor.ModelImporter"}
+{"k":"Tri_obj/main","v":"UnityEngine.GameObject 'Tri' children 1 components Transform child 'default'"}
+{"k":"Tri_obj/gameobject","v":"UnityEngine.GameObject 'Tri' children 1 components Transform child 'default'"}
+{"k":"Tri_obj/mesh","v":"UnityEngine.Mesh 'default'"}
+{"k":"Tri_obj/all","v":"GameObject,GameObject,ImportLog,Material,Mesh,MeshFilter,MeshRenderer,Transform,Transform"}
+{"k":"Tri_obj/representations","v":"3"}
+{"k":"Tri_obj/isloaded","v":"True"}
+{"k":"Tri_obj/fileids","v":"919132149155446097 -8679921383154817045"}
+{"k":"Tri_obj/import","v":"ok"}
+{"k":"Tri_obj/import.events","v":"all Assets/Models/Tri.obj\nlog Warning ImportFBX Warnings:\nCan't import normals, because mesh 'default' doesn't have any.\n\nlog Warning Mesh 'default' has no normals. Recalculating normals.\n\npostprocessModel Assets/Models/Tri.obj Tri children 1\npreprocessAsset Assets/Models/Tri.obj\npreprocessModel Assets/Models/Tri.obj"}
+{"k":"Tri_obj/after/exists","v":"True meta True"}
+{"k":"Tri_obj/after/guid","v":"set"}
+{"k":"Tri_obj/after/maintype","v":"UnityEngine.GameObject"}
+{"k":"Tri_obj/after/importer","v":"UnityEditor.ModelImporter"}
+{"k":"Tri_obj/after/main","v":"UnityEngine.GameObject 'Tri' children 1 components Transform child 'default'"}
+{"k":"Tri_obj/after/gameobject","v":"UnityEngine.GameObject 'Tri' children 1 components Transform child 'default'"}
+{"k":"Tri_obj/after/mesh","v":"UnityEngine.Mesh 'default'"}
+{"k":"Tri_obj/after/all","v":"GameObject,GameObject,ImportLog,Material,Mesh,MeshFilter,MeshRenderer,Transform,Transform"}
+{"k":"Tri_obj/after/representations","v":"3"}
+{"k":"Tri_obj/after/isloaded","v":"True"}
+{"k":"Tri_obj/after/fileids","v":"919132149155446097 -8679921383154817045"}
+{"k":"fresh/import","v":"ok"}
+{"k":"fresh/import.events","v":"all Assets/Models/Fresh.fbx\nlog Error ImportFBX Errors:\nCouldn't read file <project>/Assets/Models/Fresh.fbx.\nNone of the registered readers can process the file\n\n\npostprocessModel Assets/Models/Fresh.fbx Fresh children 0\npreprocessAsset Assets/Models/Fresh.fbx\npreprocessModel Assets/Models/Fresh.fbx"}
+{"k":"fresh/exists","v":"True meta True"}
+{"k":"fresh/guid","v":"set"}
+{"k":"fresh/maintype","v":"UnityEngine.GameObject"}
+{"k":"fresh/importer","v":"UnityEditor.ModelImporter"}
+{"k":"fresh/main","v":"UnityEngine.GameObject 'Fresh' children 0 components Transform"}
+{"k":"fresh/gameobject","v":"UnityEngine.GameObject 'Fresh' children 0 components Transform"}
+{"k":"fresh/mesh","v":"null"}
+{"k":"fresh/all","v":"GameObject,ImportLog,Transform"}
+{"k":"fresh/representations","v":"0"}
+{"k":"fresh/isloaded","v":"True"}
+{"k":"fresh/fileids","v":"919132149155446097 -8679921383154817045"}
+{"k":"fresh/refresh","v":"ok"}
+{"k":"fresh/refresh.events","v":"all Assets/Models/Fresh.fbx\nlog Error ImportFBX Errors:\nCouldn't read file <project>/Assets/Models/Fresh.fbx.\nNone of the registered readers can process the file\n\n\npostprocessModel Assets/Models/Fresh.fbx Fresh children 0\npreprocessAsset Assets/Models/Fresh.fbx\npreprocessModel Assets/Models/Fresh.fbx"}
+{"k":"fresh/refreshed/exists","v":"True meta True"}
+{"k":"fresh/refreshed/guid","v":"set"}
+{"k":"fresh/refreshed/maintype","v":"UnityEngine.GameObject"}
+{"k":"fresh/refreshed/importer","v":"UnityEditor.ModelImporter"}
+{"k":"fresh/refreshed/main","v":"UnityEngine.GameObject 'Fresh' children 0 components Transform"}
+{"k":"fresh/refreshed/gameobject","v":"UnityEngine.GameObject 'Fresh' children 0 components Transform"}
+{"k":"fresh/refreshed/mesh","v":"null"}
+{"k":"fresh/refreshed/all","v":"GameObject,ImportLog,Transform"}
+{"k":"fresh/refreshed/representations","v":"0"}
+{"k":"fresh/refreshed/isloaded","v":"True"}
+{"k":"fresh/refreshed/fileids","v":"919132149155446097 -8679921383154817045"}
+{"k":"garbage/instantiate","v":"UnityEngine.GameObject 'Garbage(Clone)' children 0 components Transform"}
+{"k":"complete","v":true}
