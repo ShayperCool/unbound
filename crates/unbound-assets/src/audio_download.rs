@@ -143,7 +143,12 @@ pub fn decode_at_rate(
             codec: Codec::Tracker,
         });
     }
+    let known_non_tracker = Container::Wav.holds(data)
+        || Container::Aiff.holds(data)
+        || Container::Ogg.holds(data)
+        || Container::Mpeg.holds(data);
     if container == Container::Any
+        && !known_non_tracker
         && let Some(fmt) = crate::tracker::detect(data)
     {
         let rate = if output_sample_rate == 0 {
@@ -669,5 +674,19 @@ mod tests {
         }
         assert!(decode_at_rate(&mod_bytes, Container::Xm, 48_000).is_err());
         assert!(decode_at_rate(&mod_bytes, Container::Wav, 48_000).is_err());
+
+        // A valid WAV whose PCM payload contains b"M.K." at offset 1080 must still decode as WAV
+        // under AudioType.UNKNOWN (Container::Any), not be hijacked by ProTracker MOD detection.
+        let mut tricky_wav = wav(1, 44_100, 2200);
+        tricky_wav[1080..1084].copy_from_slice(b"M.K.");
+        assert_eq!(
+            crate::tracker::detect(&tricky_wav),
+            Some(crate::tracker::TrackerFormat::Mod)
+        );
+        let decoded_wav = decode_at_rate(&tricky_wav, Container::Any, 48_000).unwrap();
+        assert_eq!(
+            (decoded_wav.codec, decoded_wav.channels, decoded_wav.rate),
+            (Codec::Pcm, 1, 44_100)
+        );
     }
 }

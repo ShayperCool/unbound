@@ -220,9 +220,12 @@ namespace UnityEngine.Tests
             }
         }
 
-        [Fact]
-        public void CompressedTrackerDownloadDisallowsGetDataAndInvalidTrackerLogsFmodError()
+        [Theory]
+        [InlineData(TestRelease.Measured)]
+        [InlineData(TestRelease.Unmeasured)]
+        public void CompressedTrackerDownloadDisallowsGetDataOnMeasuredFamilyAndInvalidTrackerLogsFmodError(string release)
         {
+            using var pinned = TestRelease.Pin(release);
             var xmPath = Path.Combine(m_Directory, "ok.xm");
             File.WriteAllBytes(xmPath, "Extended Module: dummy"u8.ToArray());
             using (var req = UnityWebRequestMultimedia.GetAudioClip("file://" + xmPath, AudioType.XM))
@@ -233,7 +236,19 @@ namespace UnityEngine.Tests
                 var clip = dh.audioClip;
                 Assert.NotNull(clip);
                 Assert.Equal((2, 48000, 64), (clip.channels, clip.frequency, clip.samples));
-                Assert.False(clip.GetData(new float[8], 0));
+                TakeLogs();
+                bool getOk = clip.GetData(new float[8], 0);
+                var getLogs = TakeLogs();
+                if (Compat.TrackerAudioMeasured)
+                {
+                    Assert.False(getOk);
+                    Assert.DoesNotContain(getLogs, l => l.Message.Contains("compressed samples"));
+                    Assert.DoesNotContain(getLogs, l => l.Message.Contains("CompressedInMemory"));
+                }
+                else
+                {
+                    Assert.True(getOk);
+                }
                 Object.DestroyImmediate(clip);
             }
 

@@ -143,6 +143,21 @@ mod tests {
                 .join("../../tests/projects/audiotracker/Assets/Audio/tone.xm"),
         )
         .unwrap();
-        assert!(unbound_assets::fsb5::decode(&xm, 0).is_err());
+        let len = xm.len();
+        let id = next_id();
+        bundles().lock().unwrap().insert(
+            id,
+            Arc::new(Bundle {
+                unity_version: "6000.0.71f1".to_string(),
+                files: vec![unbound_assets::bundle::BundleFile {
+                    path: "tracker.resS".to_string(),
+                    flags: 0,
+                    data: xm,
+                }],
+            }),
+        );
+        let result = audio(&format!("bundle:{id}/tracker.resS:0:{len}:0"));
+        close(id);
+        assert!(result.is_err());
     }
 }

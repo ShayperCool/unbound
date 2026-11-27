@@ -115,8 +115,8 @@ namespace Unbound.Runtime
 
         /// <summary>Tracker module AudioClip (.mod/.xm/.s3m/.it) lifecycle and download diagnostics
         /// measured on 6000.0.71f1 (tests/projects/audiotracker): synchronous load with warning on
-        /// loadInBackground, shared-sample rejection on CompressedInMemory SetData, and rejecting
-        /// realtime streaming downloads of tracker files.</summary>
+        /// loadInBackground, CompressedInMemory GetData/SetData rejection, compressed download
+        /// GetData rejection, and rejecting realtime streaming downloads of tracker files.</summary>
         internal static bool TrackerAudioMeasured => Family == ReleaseFamily.Unity6000_0;
 
         /// <summary>First-use validation by the shader's editor: of model materials with built-in

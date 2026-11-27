@@ -231,7 +231,10 @@ namespace UnityEngine
                 && ((m_IsAsset && m_LoadType == AudioClipLoadType.CompressedInMemory)
                     || m_Download == DownloadedForm.Compressed))
             {
-                Debug.LogError($"Cannot get data on tracker clip \"{DataName}\" with load type CompressedInMemory.", this);
+                string detail = m_Download == DownloadedForm.Compressed
+                    ? "downloaded with compression enabled"
+                    : "with load type CompressedInMemory";
+                Debug.LogError($"Cannot get data on tracker clip \"{DataName}\" ({detail}).", this);
                 return false;
             }
             // Compressed data stays compressed in memory: only PCM reads back.
@@ -388,7 +391,7 @@ namespace UnityEngine
             // voice already playing it reads the samples once they replace the silence.
             clip.m_IsTracker = info.IsTracker != 0;
             if (headerOnly) AudioBackend.Current.CreateClip(clip.m_Handle, info.Frames, info.Channels, info.Frequency, false);
-            else if (form == DownloadedForm.Compressed && !clip.m_IsTracker && info.CompressionFormat is not ((int)AudioCompressionFormat.MP3 or (int)AudioCompressionFormat.ADPCM))
+            else if (form == DownloadedForm.Compressed && !(clip.m_IsTracker && Compat.TrackerAudioMeasured) && info.CompressionFormat is not ((int)AudioCompressionFormat.MP3 or (int)AudioCompressionFormat.ADPCM))
                 clip.m_Download = DownloadedForm.Decompressed;
             clip.m_Samples = info.Frames;
             clip.m_Channels = info.Channels;
