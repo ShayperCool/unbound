@@ -273,15 +273,23 @@ impl Importer for AudioImporter {
     }
 
     fn options_key(&self) -> String {
-        let mut key = if self.guid_only_section {
+        if self.guid_only_section {
             format!("{}+guid-only-section", self.build_target)
         } else {
             self.build_target.clone()
-        };
-        if self.output_sample_rate != 0 && self.output_sample_rate != 48_000 {
-            key.push_str(&format!("+rate={}", self.output_sample_rate));
         }
-        key
+    }
+
+    fn source_key(&self, source: &Path) -> Result<String> {
+        let is_tracker = source
+            .extension()
+            .and_then(|e| e.to_str())
+            .and_then(crate::tracker::TrackerFormat::from_extension)
+            .is_some();
+        if is_tracker && self.output_sample_rate != 0 && self.output_sample_rate != 48_000 {
+            return Ok(format!("rate={}", self.output_sample_rate));
+        }
+        Ok(String::new())
     }
 }
 
@@ -751,10 +759,23 @@ AudioImporter:
         assert!(clip.is_tracker);
         assert_eq!((clip.channels, clip.sample_rate), (2, 48_000));
         assert_eq!(clip.frames(), 92_160);
-        // Output sample rate follows the importer's configured mixer rate and changes options_key.
+        // Output sample rate follows the importer's configured mixer rate and affects only tracker
+        // source_key values (not options_key or non-tracker assets like WAV).
         let mut at44 = AudioImporter::default();
         at44.output_sample_rate = 44_100;
-        assert_ne!(at44.options_key(), AudioImporter::default().options_key());
+        assert_eq!(at44.options_key(), AudioImporter::default().options_key());
+        assert_eq!(
+            at44.source_key(Path::new("tone.wav")).unwrap(),
+            AudioImporter::default()
+                .source_key(Path::new("tone.wav"))
+                .unwrap()
+        );
+        assert_ne!(
+            at44.source_key(Path::new("tone.xm")).unwrap(),
+            AudioImporter::default()
+                .source_key(Path::new("tone.xm"))
+                .unwrap()
+        );
         let clip44 = at44.import(Path::new("tone.xm"), &xm, &meta).unwrap();
         assert_eq!(
             (clip44.channels, clip44.sample_rate, clip44.frames()),

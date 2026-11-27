@@ -107,7 +107,7 @@ public sealed class AudioTrackerProbe : MonoBehaviour
 
         string[] assetNames = {
             "tone.mod", "tone.xm", "tone.s3m", "tone.it",
-            "xm_compressed.xm", "xm_streaming.xm", "xm_mono_rate.xm",
+            "xm_compressed.xm", "xm_compressed_pcm.xm", "xm_streaming.xm", "xm_mono_rate.xm",
             "xm_bg_nopreload.xm", "xm_pcm.xm", "xm_bpm150.xm"
         };
         var clips = new Dictionary<string, AudioClip>();
@@ -166,7 +166,7 @@ public sealed class AudioTrackerProbe : MonoBehaviour
         yield return MeasurePlayback("ctrl.vol05", clips["tone.xm"], loop: false, volume: 0.5f, pitch: 1f, maxWait: 3.5f, bpm: 125);
 
         // GetData / SetData across formats and loadTypes (after playback so SetData mutation does not affect playback)
-        foreach (string name in new[] { "tone.mod", "tone.xm", "tone.s3m", "tone.it", "xm_compressed.xm", "xm_streaming.xm", "xm_pcm.xm" })
+        foreach (string name in new[] { "tone.mod", "tone.xm", "tone.s3m", "tone.it", "xm_compressed.xm", "xm_compressed_pcm.xm", "xm_streaming.xm", "xm_pcm.xm" })
         {
             var clip = clips[name];
             if (clip == null) continue;
@@ -189,8 +189,10 @@ public sealed class AudioTrackerProbe : MonoBehaviour
             }
             Put("data." + name, getOk, peak > 0.001, setOk, readbackMatch,
                 HasLog(getLogs, "streamed samples"),
+                HasLog(getLogs, "compressed samples"),
                 HasLog(setLogs, "shared sample"),
-                HasLog(setLogs, "streamed samples"));
+                HasLog(setLogs, "streamed samples"),
+                HasLog(setLogs, "compressed samples"));
         }
 
         // UnityWebRequestMultimedia.GetAudioClip downloads
@@ -387,9 +389,18 @@ public sealed class AudioTrackerProbe : MonoBehaviour
             var logs = DrainLogs();
             if (clip == null)
             {
+                AudioClip second = null;
+                if (req.result == UnityWebRequest.Result.Success)
+                {
+                    try { second = dh.audioClip; }
+                    catch { }
+                }
+                var secondLogs = DrainLogs();
                 Put(key, res, "null", getClipErr,
                     HasLog(logs, "Tracker files (XM/IT/MOD/S3M) cannot be streamed in realtime"),
-                    HasLog(logs, "Unsupported file or audio format"));
+                    HasLog(logs, "Unsupported file or audio format"),
+                    second == null,
+                    HasLog(secondLogs, "Tracker files (XM/IT/MOD/S3M) cannot be streamed in realtime"));
                 yield break;
             }
             var buf = new float[512];
@@ -398,7 +409,8 @@ public sealed class AudioTrackerProbe : MonoBehaviour
             Put(key + ".props", res, clip.channels, clip.frequency,
                 (int)clip.loadType, (int)clip.loadState, getDataOk,
                 HasLog(logs, "Unsupported file or audio format"),
-                HasLog(dataLogs, "contains no data"));
+                HasLog(dataLogs, "contains no data"),
+                HasLog(dataLogs, "compressed samples"));
             Put(key + ".len", clip.samples, Round(clip.length, 3));
             if (playIt && clip.channels > 0)
                 yield return MeasurePlayback(key + ".play", clip, loop: false, volume: 1f, pitch: 1f, maxWait: 3.5f, bpm: 125);

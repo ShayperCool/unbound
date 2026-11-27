@@ -340,6 +340,7 @@ def write_all():
         ('tone.s3m', s3m, 'a8410000000000000000000000000012', {}),
         ('tone.it', it, 'a8410000000000000000000000000013', {}),
         ('xm_compressed.xm', xm, 'a8410000000000000000000000000014', dict(load_type=1)),
+        ('xm_compressed_pcm.xm', xm, 'a841000000000000000000000000001a', dict(load_type=1, compression=0)),
         ('xm_streaming.xm', xm, 'a8410000000000000000000000000015', dict(load_type=2)),
         ('xm_mono_rate.xm', xm, 'a8410000000000000000000000000016',
          dict(force_mono=1, normalize=1, rate_setting=2, rate_override=22050)),

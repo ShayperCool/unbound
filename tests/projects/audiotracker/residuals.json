@@ -15,6 +15,7 @@
     "meta.xm_bg_nopreload.xm.len",
     "meta.xm_bpm150.xm.len",
     "meta.xm_compressed.xm.len",
+    "meta.xm_compressed_pcm.xm.len",
     "meta.xm_mono_rate.xm.len",
     "meta.xm_pcm.xm.len",
     "meta.xm_streaming.xm.len",

@@ -10,6 +10,9 @@
     "crates/unbound-runtime/src/audio/",
     "crates/unbound-runtime/src/state.rs",
     "managed/UnityEngine/Audio/",
+    "managed/UnityEngine/Networking/AudioDownloads.cs",
+    "native/libxmp_lite/",
+    "native/unbound_tracker.c",
     "tests/projects/audiotracker/",
     "tests/projects/video/"
   ]

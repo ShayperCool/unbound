@@ -114,13 +114,6 @@ pub struct Decoded {
     pub codec: Codec,
 }
 
-/// Whether `data` under `container` is a tracker module (explicitly requested or detected under
-/// `Container::Any`).
-pub fn is_tracker(data: &[u8], container: Container) -> bool {
-    container.tracker_format().is_some()
-        || (container == Container::Any && crate::tracker::detect(data).is_some())
-}
-
 /// Decodes a downloaded file of the container `container` (tracker modules render at 48000 Hz).
 pub fn decode(data: &[u8], container: Container) -> Result<Decoded> {
     decode_at_rate(data, container, 48_000)
@@ -661,8 +654,6 @@ mod tests {
             (&s3m_bytes, Container::S3m),
             (&it_bytes, Container::It),
         ] {
-            assert!(is_tracker(bytes, container));
-            assert!(is_tracker(bytes, Container::Any));
             let decoded = decode_at_rate(bytes, container, 48_000).unwrap();
             assert_eq!(
                 (decoded.codec, decoded.channels, decoded.rate),
@@ -678,6 +669,5 @@ mod tests {
         }
         assert!(decode_at_rate(&mod_bytes, Container::Xm, 48_000).is_err());
         assert!(decode_at_rate(&mod_bytes, Container::Wav, 48_000).is_err());
-        assert!(!is_tracker(&wav(1, 22050, 16), Container::Any));
     }
 }

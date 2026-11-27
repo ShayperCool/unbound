@@ -8,9 +8,6 @@
 use anyhow::{Result, bail};
 use std::ffi::c_int;
 
-/// File extensions for tracker modules handled by `AudioImporter`.
-pub const EXTENSIONS: &[&str] = &["mod", "xm", "s3m", "it"];
-
 /// One of the four tracker module formats Unity supports.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[repr(i32)]
@@ -29,17 +26,6 @@ impl TrackerFormat {
             "xm" => Some(Self::Xm),
             "s3m" => Some(Self::S3m),
             "it" => Some(Self::It),
-            _ => None,
-        }
-    }
-
-    /// Format named by a Unity `AudioType` integer value.
-    pub fn from_audio_type(audio_type: i32) -> Option<Self> {
-        match audio_type {
-            10 => Some(Self::It),
-            12 => Some(Self::Mod),
-            17 => Some(Self::S3m),
-            21 => Some(Self::Xm),
             _ => None,
         }
     }

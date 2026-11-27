@@ -3360,13 +3360,11 @@ pub fn import_audio(handle: u64, guid: &str) -> Result<crate::audio::protocol::A
     let s = state();
     if guid.starts_with("bundle:") {
         // A player clip of an AssetBundle: its properties are the managed side's to read.
-        let initial_rate = s.audio_importer.read().unwrap().output_sample_rate;
-        let (decoded, is_tracker) = crate::bundles::audio(guid, initial_rate)?;
+        let decoded = crate::bundles::audio(guid)?;
         let info = crate::audio::protocol::AudioClipInfo {
             frames: (decoded.samples.len() / decoded.channels.max(1)) as i32,
             channels: decoded.channels as i32,
             frequency: decoded.rate as i32,
-            is_tracker: is_tracker as i32,
             ..Default::default()
         };
         s.audio.mixer().add_clip(

@@ -34,6 +34,7 @@ namespace UnityEngine.Networking
         bool m_Complete;
         bool m_Failed;
         AudioClip m_Clip;
+        bool m_StreamedTracker;
         bool m_FillAtEnd;
 
         public DownloadHandlerAudioClip(string url, AudioType audioType)
@@ -71,7 +72,16 @@ namespace UnityEngine.Networking
             {
                 if (!m_Started) throw new InvalidOperationException("Cannot access the .audioClip property of DownloadHandlerAudioClip before the download is initiated");
                 if (m_Failed) throw new InvalidOperationException("Cannot access the .audioClip property of an aborted DownloadHandlerAudioClip");
-                if (m_Clip == null) m_Clip = MakeClip();
+                if (m_StreamedTracker)
+                {
+                    AudioClip.LogStreamedTrackerDownloadError();
+                    return null;
+                }
+                if (m_Clip == null)
+                {
+                    m_Clip = MakeClip();
+                    if (m_Clip == null && m_StreamAudio && m_Complete) m_StreamedTracker = true;
+                }
                 return m_Clip;
             }
         }

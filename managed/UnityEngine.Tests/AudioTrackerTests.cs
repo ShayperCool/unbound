@@ -20,6 +20,7 @@ namespace UnityEngine.Tests
         readonly string m_Directory = Path.Combine(Path.GetTempPath(), $"unbound-tracker-{Guid.NewGuid():N}");
         readonly List<(LogType Type, string Message)> m_Logs = new List<(LogType, string)>();
         readonly ILogHandler m_PrevLogHandler;
+        int m_DecodeCalls;
 
         sealed class CapturingHandler : ILogHandler
         {
@@ -52,8 +53,9 @@ namespace UnityEngine.Tests
             Directory.Delete(m_Directory, true);
         }
 
-        static (AudioClipInfo, float[])? Decode(byte[] data, int type, bool headerOnly)
+        (AudioClipInfo, float[])? Decode(byte[] data, int type, bool headerOnly)
         {
+            m_DecodeCalls++;
             if (headerOnly) return null;
             bool isXm = data.Length >= 17 && data[0] == (byte)'E' && data[1] == (byte)'x';
             if (type is not ((int)AudioType.UNKNOWN or (int)AudioType.XM)) return null;
@@ -125,16 +127,24 @@ namespace UnityEngine.Tests
             var clip = AudioClip.FromImport("cmp-tracker", "cmp_xm");
             TakeLogs();
 
-            Assert.False(clip.GetData(new float[16], 0));
-            TakeLogs();
-            Assert.False(clip.SetData(new float[16], 0));
+            bool getOk = clip.GetData(new float[16], 0);
+            var getLogs = TakeLogs();
+            bool setOk = clip.SetData(new float[16], 0);
             var setLogs = TakeLogs();
             if (Compat.TrackerAudioMeasured)
+            {
+                Assert.False(getOk);
+                Assert.DoesNotContain(getLogs, l => l.Message.Contains("compressed samples"));
+                Assert.False(setOk);
                 Assert.Contains(setLogs, l => l.Type == LogType.Error && l.Message == "Cannot set data on shared sample for audio clip \"cmp_xm\"");
+            }
             else
-                Assert.Contains(setLogs, l => l.Type == LogType.Error && l.Message.Contains("compressed samples"));
+            {
+                Assert.True(getOk);
+                Assert.True(setOk);
+            }
 
-            if (Compat.AssetCloneResourcesMeasured)
+            if (Compat.AssetCloneResourcesMeasured && Compat.TrackerAudioMeasured)
             {
                 var clone = Object.Instantiate(clip);
                 TakeLogs();
@@ -181,6 +191,7 @@ namespace UnityEngine.Tests
             foreach (var type in new[] { AudioType.XM, AudioType.UNKNOWN })
             {
                 TakeLogs();
+                m_DecodeCalls = 0;
                 using var req = UnityWebRequestMultimedia.GetAudioClip(url, type);
                 var dh = (DownloadHandlerAudioClip)req.downloadHandler;
                 dh.streamAudio = true;
@@ -191,6 +202,15 @@ namespace UnityEngine.Tests
                 {
                     Assert.Null(clip);
                     Assert.Contains(logs, l => l.Type == LogType.Error && l.Message.Contains("Tracker files (XM/IT/MOD/S3M) cannot be streamed in realtime"));
+                    // Second access returns null and logs again (matches Unity 6000.0.71f1) without
+                    // re-decoding the module.
+                    int callsAfterFirst = m_DecodeCalls;
+                    Assert.Equal(type == AudioType.XM ? 0 : 1, callsAfterFirst);
+                    var second = dh.audioClip;
+                    var secondLogs = TakeLogs();
+                    Assert.Null(second);
+                    Assert.Contains(secondLogs, l => l.Type == LogType.Error && l.Message.Contains("Tracker files (XM/IT/MOD/S3M) cannot be streamed in realtime"));
+                    Assert.Equal(callsAfterFirst, m_DecodeCalls);
                 }
                 else
                 {
