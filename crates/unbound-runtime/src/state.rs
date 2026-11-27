@@ -309,9 +309,14 @@ impl RuntimeState {
             .map(|other| other.path.clone())
             .or_else(|| taken.get(&guid).filter(|other| **other != path).cloned());
         let mut conflict = None;
-        if let Some(owner) = owner
-            && !self.read_only
-        {
+        if let Some(owner) = owner {
+            anyhow::ensure!(
+                !self.read_only,
+                "cannot rewrite duplicate GUID {} for {} (already owned by {}) in read-only project",
+                guid,
+                request.path,
+                owner
+            );
             let fresh = unbound_assets::new_meta::new_guid();
             // Written again with LF, as the Editor writes a .meta (tests/projects/projectwrites 06.crlf).
             let text = std::fs::read_to_string(&meta)?.replace("\r\n", "\n");
@@ -4877,5 +4882,118 @@ mod tests {
         assert!(message.contains("finding built-in shaders: UNBOUND_OFFLINE forbids downloading"));
         assert!(message.contains("UNBOUND_BUILTIN_SHADERS"));
         assert!(builtin_shader_roots(Err(offline)).is_empty());
+    }
+
+    fn test_runtime_state(root: &Path, read_only: bool) -> RuntimeState {
+        let assets = root.join("Assets");
+        let db = Arc::new(AssetDb::scan(&[unbound_project::assetdb::Root {
+            dir: &assets,
+            virtual_path: "Assets".to_string(),
+        }]));
+        let resources = resources_of(&db);
+        RuntimeState {
+            project_root: root.to_path_buf(),
+            unity_data: root.to_path_buf(),
+            asset_roots: vec![(assets.clone(), "Assets".to_string())],
+            scan_roots: vec![assets.clone()],
+            editable_roots: if read_only { Vec::new() } else { vec![assets] },
+            read_only,
+            new_meta_measured: true,
+            guid_only_cubes: Default::default(),
+            scripted_extensions: RwLock::new(None),
+            release: "6000.0.71f1".to_string(),
+            font_colr_native_hinting: true,
+            new_meta: unbound_assets::new_meta::MetaContext::default(),
+            db: RwLock::new(db),
+            loader: DocumentLoader::new(Box::new(|_| None)),
+            resources: RwLock::new(resources),
+            texture_mip_biases: Default::default(),
+            backend: RwLock::new(Arc::new(NullBackend)),
+            imports: AssetCache::for_project(root),
+            texture_importer: RwLock::new(TextureImporter::default()),
+            model_importer: unbound_assets::ModelImporter::default(),
+            textures: RwLock::new(HashMap::new()),
+            generated: RwLock::new(HashMap::new()),
+            shaders: RwLock::new(None),
+            builtin_shader_roots: Vec::new(),
+            builtin_shaders: RwLock::new(None),
+            audio_importer: RwLock::new(AudioImporter::default()),
+            models: RwLock::new(HashMap::new()),
+            audio: crate::audio::Engine::new(crate::audio::ProjectAudioSettings::default(), true),
+            play_mode_atlases: None,
+            atlases: RwLock::new(None),
+            traced_texels: std::sync::Mutex::new(None),
+        }
+    }
+
+    #[test]
+    fn read_only_refresh_skips_new_meta_rescans_edits_and_preserves_guid_owner() {
+        let dir = std::env::temp_dir().join(format!(
+            "unbound-readonly-refresh-{}-{}",
+            std::process::id(),
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_nanos()
+        ));
+        let assets = dir.join("Assets");
+        std::fs::create_dir_all(&assets).unwrap();
+
+        let orig_guid = "11111111111111111111111111111111";
+        let orig_meta =
+            format!("fileFormatVersion: 2\nguid: {orig_guid}\nTextScriptImporter:\n  userData: \n");
+        std::fs::write(assets.join("Orig.txt"), "hello").unwrap();
+        std::fs::write(assets.join("Orig.txt.meta"), &orig_meta).unwrap();
+
+        let state = test_runtime_state(&dir, true);
+        let parsed_orig = Guid::parse(orig_guid).unwrap();
+        assert_eq!(
+            state.db().by_guid(parsed_orig).map(|a| a.path.as_str()),
+            Some("Assets/Orig.txt")
+        );
+
+        // 1. Untracked new file gets no .meta under read_only.
+        std::fs::write(assets.join("Untracked.txt"), "new").unwrap();
+        // 2. Edited .meta on an existing asset is still rescanned read-only.
+        let edited_meta = format!(
+            "fileFormatVersion: 2\nguid: {orig_guid}\nlabels:\n- Tagged\nTextScriptImporter:\n  userData: \n"
+        );
+        std::fs::write(assets.join("Orig.txt.meta"), &edited_meta).unwrap();
+        // 3. Duplicate-GUID copy must neither rewrite Copy.txt.meta nor evict Orig.txt from db.
+        std::fs::write(assets.join("Copy.txt"), "copy").unwrap();
+        std::fs::write(assets.join("Copy.txt.meta"), &orig_meta).unwrap();
+
+        let results = state.refresh_assets();
+        assert!(
+            !assets.join("Untracked.txt.meta").exists(),
+            "read-only refresh must not write a new .meta for Untracked.txt"
+        );
+        assert_eq!(
+            std::fs::read_to_string(assets.join("Copy.txt.meta")).unwrap(),
+            orig_meta,
+            "read-only refresh must not rewrite duplicate-GUID Copy.txt.meta"
+        );
+        let db = state.db();
+        let owner = db
+            .by_guid(parsed_orig)
+            .expect("original GUID owner must stay in db");
+        assert_eq!(owner.path, "Assets/Orig.txt");
+        assert!(
+            owner.labels.iter().any(|l| l == "Tagged"),
+            "edited .meta labels must be rescanned under read-only"
+        );
+        assert!(
+            db.by_path("Assets/Copy.txt").is_none(),
+            "duplicate-GUID copy must not replace or enter db under read-only"
+        );
+        assert!(
+            results.iter().any(|r| {
+                r.get("path").and_then(|v| v.as_str()) == Some("Assets/Copy.txt")
+                    && r.get("error").is_some()
+            }),
+            "duplicate-GUID copy under read-only must report an error: {results:?}"
+        );
+
+        std::fs::remove_dir_all(&dir).ok();
     }
 }

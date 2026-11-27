@@ -1,4 +1,5 @@
 using System;
+using Unbound.Runtime;
 using UnityEditor;
 using Xunit;
 using PackageInfo = UnityEditor.PackageManager.PackageInfo;
@@ -145,6 +146,41 @@ namespace UnityEngine.Tests
                 _ => importer,
                 _ => { writeCalls++; return true; });
             Assert.Equal(1, writeCalls);
+        }
+
+        [Fact]
+        public void ReadOnlyProjectSuppressesScenePrefabScriptSampleAndSaveFileIfDirtyWrites()
+        {
+            var scene = new SceneData { Path = "Assets/Test.unity", Name = "Test", IsLoaded = true };
+            var root = new GameObject("PrefabRoot");
+            try
+            {
+                var prefabFile = new LoadedFile { Path = "Assets/Test.prefab", MainObject = root };
+                prefabFile.Objects[1] = root;
+                var sample = default(UnityEditor.PackageManager.UI.Sample);
+
+                // Control: CanSave accepts a loaded Assets/*.unity scene when not read-only.
+                Assert.True(SceneFiles.CanSave(scene, "Assets/Test.unity"));
+
+                ProjectInfo.ReadOnly = true;
+                try
+                {
+                    Assert.False(SceneFiles.CanSave(scene, "Assets/Test.unity"));
+                    Assert.False(PrefabAssets.Save(prefabFile));
+                    Assert.Null(ProjectWindowUtil.CreateScriptAssetWithContent("Assets/NewScript.cs", "// test"));
+                    Assert.False(sample.Import());
+                    // SaveFileIfDirty returns before OnWillSaveAssets when read-only.
+                    AssetFiles.SaveFileIfDirty("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa");
+                }
+                finally
+                {
+                    ProjectInfo.ReadOnly = false;
+                }
+            }
+            finally
+            {
+                Object.DestroyImmediate(root);
+            }
         }
     }
 }

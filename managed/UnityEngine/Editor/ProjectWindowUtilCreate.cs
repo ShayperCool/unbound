@@ -60,6 +60,11 @@ namespace UnityEditor
         /// project's for new scripts), imports it and returns its main object.</summary>
         public static Object CreateScriptAssetWithContent(string assetPath, string scriptContent)
         {
+            if (ProjectInfo.ReadOnly)
+            {
+                Debug.LogError($"Unbound: {assetPath} is not created: the project is read-only.");
+                return null;
+            }
             AssetModificationProcessorInternal.OnWillCreateAsset(assetPath);
             scriptContent = SetLineEndings(scriptContent, EditorSettings.lineEndingsForNewScripts);
             File.WriteAllText(AssetDatabase.FileOf(assetPath), scriptContent);

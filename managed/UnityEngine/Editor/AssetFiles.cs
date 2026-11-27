@@ -138,6 +138,7 @@ namespace Unbound.Runtime
         /// material save if dirty: a material CreateAsset made).</summary>
         internal static void SaveFileIfDirty(string guid)
         {
+            if (ProjectInfo.ReadOnly) return;
             Undo.FlushDirtiness();
             if (!HasChanges(guid)) return;
             var path = AssetDatabaseRuntime.PathOf(guid);

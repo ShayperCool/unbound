@@ -59,6 +59,11 @@ namespace Unbound.Runtime
         /// it cannot be written.</summary>
         internal static bool Save(LoadedFile file)
         {
+            if (ProjectInfo.ReadOnly)
+            {
+                Debug.LogError($"Unbound: {file?.Path} is not saved: the project is read-only.");
+                return false;
+            }
             if (file?.MainObject is not GameObject root || root == null)
             {
                 Debug.LogError($"Unbound: {file?.Path} is not saved: the prefab has no root GameObject.");

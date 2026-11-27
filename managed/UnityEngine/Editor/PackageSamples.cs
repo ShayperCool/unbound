@@ -168,6 +168,11 @@ namespace UnityEditor.PackageManager.UI
         /// with it), then a Refresh (packagesamples import.*, files.*).</summary>
         public bool Import(ImportOptions options = ImportOptions.None)
         {
+            if (ProjectInfo.ReadOnly)
+            {
+                Debug.LogError($"Unbound: sample {displayName} is not imported: the project is read-only.");
+                return false;
+            }
             try
             {
                 bool interactive = (options & ImportOptions.HideImportWindow) == ImportOptions.None && interactiveImport;

@@ -111,6 +111,11 @@ namespace Unbound.Runtime
         /// scene asset); the reason is logged when not.</summary>
         internal static bool CanSave(SceneData scene, string path)
         {
+            if (ProjectInfo.ReadOnly)
+            {
+                Debug.LogError($"Unbound: {path} is not saved: the project is read-only.");
+                return false;
+            }
             if (!scene.IsLoaded)
             {
                 Debug.LogError($"Unbound: {path} is not saved: the scene is not loaded.");
