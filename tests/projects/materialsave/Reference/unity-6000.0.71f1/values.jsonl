@@ -1,0 +1,94 @@
+{"k":"loaded/NoLocked/_MainTex","v":"has 'Tex'"}
+{"k":"loaded/NoLocked/_Other","v":"has null"}
+{"k":"loaded/NoLocked/_Locked","v":"has 'Tex2'"}
+{"k":"loaded/NoLocked/_Missing","v":"no null"}
+{"k":"loaded/NoLocked/_BumpMap","v":"no null"}
+{"k":"loaded/NoLocked/names","v":"_Locked,_MainTex,_Missing,_Other"}
+{"k":"loaded/OtherLocked/_MainTex","v":"has null"}
+{"k":"loaded/OtherLocked/_Other","v":"has null"}
+{"k":"loaded/OtherLocked/_Locked","v":"has 'Tex2'"}
+{"k":"loaded/OtherLocked/_Missing","v":"no null"}
+{"k":"loaded/OtherLocked/_BumpMap","v":"no null"}
+{"k":"loaded/OtherLocked/names","v":"_Locked,_MainTex,_Other"}
+{"k":"loaded/MissingProps/_MainTex","v":"has null"}
+{"k":"loaded/MissingProps/_Other","v":"has null"}
+{"k":"loaded/MissingProps/_Locked","v":"has 'Tex2'"}
+{"k":"loaded/MissingProps/_Missing","v":"no null"}
+{"k":"loaded/MissingProps/_BumpMap","v":"no null"}
+{"k":"loaded/MissingProps/names","v":"_Locked,_MainTex,_Other"}
+{"k":"loaded/BuiltinMissing/_MainTex","v":"has null"}
+{"k":"loaded/BuiltinMissing/_Other","v":"no null"}
+{"k":"loaded/BuiltinMissing/_Locked","v":"no null"}
+{"k":"loaded/BuiltinMissing/_Missing","v":"no null"}
+{"k":"loaded/BuiltinMissing/_BumpMap","v":"has null"}
+{"k":"loaded/BuiltinMissing/names","v":"_BumpMap,_DetailAlbedoMap,_DetailMask,_DetailNormalMap,_EmissionMap,_MainTex,_MetallicGlossMap,_OcclusionMap,_ParallaxMap"}
+{"k":"loaded/SetLocked/_MainTex","v":"has 'Tex'"}
+{"k":"loaded/SetLocked/_Other","v":"has null"}
+{"k":"loaded/SetLocked/_Locked","v":"has 'Tex2'"}
+{"k":"loaded/SetLocked/_Missing","v":"no null"}
+{"k":"loaded/SetLocked/_BumpMap","v":"no null"}
+{"k":"loaded/SetLocked/names","v":"_Locked,_MainTex,_Other"}
+{"k":"loaded/Replaced/_MainTex","v":"has null"}
+{"k":"loaded/Replaced/_Other","v":"has null"}
+{"k":"loaded/Replaced/_Locked","v":"has 'Tex2'"}
+{"k":"loaded/Replaced/_Missing","v":"no null"}
+{"k":"loaded/Replaced/_BumpMap","v":"no null"}
+{"k":"loaded/Replaced/names","v":"_Locked,_MainTex,_Other"}
+{"k":"save","v":"done"}
+{"k":"file/NoLocked","v":"%YAML 1.1\n%TAG !u! tag:unity3d.com,2011:\n--- !u!21 &2100000\nMaterial:\n  serializedVersion: 8\n  m_ObjectHideFlags: 0\n  m_CorrespondingSourceObject: {fileID: 0}\n  m_PrefabInstance: {fileID: 0}\n  m_PrefabAsset: {fileID: 0}\n  m_Name: NoLocked\n  m_Shader: {fileID: 4800000, guid: a5a00000000000000000000000000003, type: 3}\n  m_Parent: {fileID: 0}\n  m_ModifiedSerializedProperties: 0\n  m_ValidKeywords: []\n  m_InvalidKeywords: []\n  m_LightmapFlags: 4\n  m_EnableInstancingVariants: 0\n  m_DoubleSidedGI: 0\n  m_CustomRenderQueue: -1\n  stringTagMap: {}\n  disabledShaderPasses: []\n  m_LockedProperties: \n  m_SavedProperties:\n    serializedVersion: 3\n    m_TexEnvs:\n    - _Locked:\n        m_Texture: {fileID: 2800000, guid: a5a00000000000000000000000000002, type: 3}\n        m_Scale: {x: 1, y: 1}\n        m_Offset: {x: 0, y: 0}\n    - _MainTex:\n        m_Texture: {fileID: 2800000, guid: a5a00000000000000000000000000001, type: 3}\n        m_Scale: {x: 1, y: 1}\n        m_Offset: {x: 0, y: 0}\n    - _Missing:\n        m_Texture: {fileID: 2800000, guid: a5a000000000000000000000000000ff, type: 3}\n        m_Scale: {x: 1, y: 1}\n        m_Offset: {x: 0, y: 0}\n    - _Other:\n        m_Texture: {fileID: 0}\n        m_Scale: {x: 1, y: 1}\n        m_Offset: {x: 0, y: 0}\n    m_Ints: []\n    m_Floats: []\n    m_Colors:\n    - _Tint: {r: 1, g: 1, b: 1, a: 1}\n  m_BuildTextureStacks: []\n  m_AllowLocking: 1\n"}
+{"k":"saved/NoLocked/_MainTex","v":"has 'Tex'"}
+{"k":"saved/NoLocked/_Other","v":"has null"}
+{"k":"saved/NoLocked/_Locked","v":"has 'Tex2'"}
+{"k":"saved/NoLocked/_Missing","v":"no null"}
+{"k":"saved/NoLocked/_BumpMap","v":"no null"}
+{"k":"saved/NoLocked/names","v":"_Locked,_MainTex,_Missing,_Other"}
+{"k":"file/OtherLocked","v":"%YAML 1.1\n%TAG !u! tag:unity3d.com,2011:\n--- !u!21 &2100000\nMaterial:\n  serializedVersion: 8\n  m_ObjectHideFlags: 0\n  m_CorrespondingSourceObject: {fileID: 0}\n  m_PrefabInstance: {fileID: 0}\n  m_PrefabAsset: {fileID: 0}\n  m_Name: OtherLocked\n  m_Shader: {fileID: 4800000, guid: a5a00000000000000000000000000003, type: 3}\n  m_Parent: {fileID: 0}\n  m_ModifiedSerializedProperties: 0\n  m_ValidKeywords: []\n  m_InvalidKeywords: []\n  m_LightmapFlags: 4\n  m_EnableInstancingVariants: 0\n  m_DoubleSidedGI: 0\n  m_CustomRenderQueue: -1\n  stringTagMap: {}\n  disabledShaderPasses: []\n  m_LockedProperties: \n  m_SavedProperties:\n    serializedVersion: 3\n    m_TexEnvs:\n    - _Locked:\n        m_Texture: {fileID: 2800000, guid: a5a00000000000000000000000000002, type: 3}\n        m_Scale: {x: 1, y: 1}\n        m_Offset: {x: 0, y: 0}\n    - _MainTex:\n        m_Texture: {fileID: 0}\n        m_Scale: {x: 1, y: 1}\n        m_Offset: {x: 0, y: 0}\n    - _Other:\n        m_Texture: {fileID: 0}\n        m_Scale: {x: 1, y: 1}\n        m_Offset: {x: 0, y: 0}\n    m_Ints: []\n    m_Floats: []\n    m_Colors:\n    - _Tint: {r: 1, g: 1, b: 1, a: 1}\n  m_BuildTextureStacks: []\n  m_AllowLocking: 1\n"}
+{"k":"saved/OtherLocked/_MainTex","v":"has null"}
+{"k":"saved/OtherLocked/_Other","v":"has null"}
+{"k":"saved/OtherLocked/_Locked","v":"has 'Tex2'"}
+{"k":"saved/OtherLocked/_Missing","v":"no null"}
+{"k":"saved/OtherLocked/_BumpMap","v":"no null"}
+{"k":"saved/OtherLocked/names","v":"_Locked,_MainTex,_Other"}
+{"k":"file/MissingProps","v":"%YAML 1.1\n%TAG !u! tag:unity3d.com,2011:\n--- !u!21 &2100000\nMaterial:\n  serializedVersion: 8\n  m_ObjectHideFlags: 0\n  m_CorrespondingSourceObject: {fileID: 0}\n  m_PrefabInstance: {fileID: 0}\n  m_PrefabAsset: {fileID: 0}\n  m_Name: MissingProps\n  m_Shader: {fileID: 4800000, guid: a5a00000000000000000000000000003, type: 3}\n  m_Parent: {fileID: 0}\n  m_ModifiedSerializedProperties: 0\n  m_ValidKeywords: []\n  m_InvalidKeywords: []\n  m_LightmapFlags: 4\n  m_EnableInstancingVariants: 0\n  m_DoubleSidedGI: 0\n  m_CustomRenderQueue: -1\n  stringTagMap: {}\n  disabledShaderPasses: []\n  m_LockedProperties: \n  m_SavedProperties:\n    serializedVersion: 3\n    m_TexEnvs:\n    - _Locked:\n        m_Texture: {fileID: 2800000, guid: a5a00000000000000000000000000002, type: 3}\n        m_Scale: {x: 1, y: 1}\n        m_Offset: {x: 0, y: 0}\n    - _MainTex:\n        m_Texture: {fileID: 2800000, guid: a5a000000000000000000000000000ff, type: 3}\n        m_Scale: {x: 1, y: 1}\n        m_Offset: {x: 0, y: 0}\n    - _Other:\n        m_Texture: {fileID: 12345, guid: a5a00000000000000000000000000001, type: 3}\n        m_Scale: {x: 1, y: 1}\n        m_Offset: {x: 0, y: 0}\n    m_Ints: []\n    m_Floats: []\n    m_Colors:\n    - _Tint: {r: 1, g: 1, b: 1, a: 1}\n  m_BuildTextureStacks: []\n  m_AllowLocking: 1\n"}
+{"k":"saved/MissingProps/_MainTex","v":"has null"}
+{"k":"saved/MissingProps/_Other","v":"has null"}
+{"k":"saved/MissingProps/_Locked","v":"has 'Tex2'"}
+{"k":"saved/MissingProps/_Missing","v":"no null"}
+{"k":"saved/MissingProps/_BumpMap","v":"no null"}
+{"k":"saved/MissingProps/names","v":"_Locked,_MainTex,_Other"}
+{"k":"file/BuiltinMissing","v":"%YAML 1.1\n%TAG !u! tag:unity3d.com,2011:\n--- !u!21 &2100000\nMaterial:\n  serializedVersion: 8\n  m_ObjectHideFlags: 0\n  m_CorrespondingSourceObject: {fileID: 0}\n  m_PrefabInstance: {fileID: 0}\n  m_PrefabAsset: {fileID: 0}\n  m_Name: BuiltinMissing\n  m_Shader: {fileID: 46, guid: 0000000000000000f000000000000000, type: 0}\n  m_Parent: {fileID: 0}\n  m_ModifiedSerializedProperties: 0\n  m_ValidKeywords: []\n  m_InvalidKeywords: []\n  m_LightmapFlags: 4\n  m_EnableInstancingVariants: 0\n  m_DoubleSidedGI: 0\n  m_CustomRenderQueue: -1\n  stringTagMap: {}\n  disabledShaderPasses: []\n  m_LockedProperties: \n  m_SavedProperties:\n    serializedVersion: 3\n    m_TexEnvs:\n    - _BumpMap:\n        m_Texture: {fileID: 0}\n        m_Scale: {x: 1, y: 1}\n        m_Offset: {x: 0, y: 0}\n    - _DetailAlbedoMap:\n        m_Texture: {fileID: 0}\n        m_Scale: {x: 1, y: 1}\n        m_Offset: {x: 0, y: 0}\n    - _DetailMask:\n        m_Texture: {fileID: 0}\n        m_Scale: {x: 1, y: 1}\n        m_Offset: {x: 0, y: 0}\n    - _DetailNormalMap:\n        m_Texture: {fileID: 0}\n        m_Scale: {x: 1, y: 1}\n        m_Offset: {x: 0, y: 0}\n    - _EmissionMap:\n        m_Texture: {fileID: 0}\n        m_Scale: {x: 1, y: 1}\n        m_Offset: {x: 0, y: 0}\n    - _MainTex:\n        m_Texture: {fileID: 2800000, guid: a5a000000000000000000000000000ff, type: 3}\n        m_Scale: {x: 1, y: 1}\n        m_Offset: {x: 0, y: 0}\n    - _MetallicGlossMap:\n        m_Texture: {fileID: 0}\n        m_Scale: {x: 1, y: 1}\n        m_Offset: {x: 0, y: 0}\n    - _OcclusionMap:\n        m_Texture: {fileID: 0}\n        m_Scale: {x: 1, y: 1}\n        m_Offset: {x: 0, y: 0}\n    - _ParallaxMap:\n        m_Texture: {fileID: 0}\n        m_Scale: {x: 1, y: 1}\n        m_Offset: {x: 0, y: 0}\n    m_Ints: []\n    m_Floats:\n    - _BumpScale: 1\n    - _Cutoff: 0.5\n    - _DetailNormalMapScale: 1\n    - _DstBlend: 0\n    - _GlossMapScale: 1\n    - _Glossiness: 0.5\n    - _GlossyReflections: 1\n    - _Metallic: 0\n    - _Mode: 0\n    - _OcclusionStrength: 1\n    - _Parallax: 0.02\n    - _SmoothnessTextureChannel: 0\n    - _SpecularHighlights: 1\n    - _SrcBlend: 1\n    - _UVSec: 0\n    - _ZWrite: 1\n    m_Colors:\n    - _Color: {r: 1, g: 1, b: 1, a: 1}\n    - _EmissionColor: {r: 0, g: 0, b: 0, a: 1}\n  m_BuildTextureStacks: []\n  m_AllowLocking: 1\n"}
+{"k":"saved/BuiltinMissing/_MainTex","v":"has null"}
+{"k":"saved/BuiltinMissing/_Other","v":"no null"}
+{"k":"saved/BuiltinMissing/_Locked","v":"no null"}
+{"k":"saved/BuiltinMissing/_Missing","v":"no null"}
+{"k":"saved/BuiltinMissing/_BumpMap","v":"has null"}
+{"k":"saved/BuiltinMissing/names","v":"_BumpMap,_DetailAlbedoMap,_DetailMask,_DetailNormalMap,_EmissionMap,_MainTex,_MetallicGlossMap,_OcclusionMap,_ParallaxMap"}
+{"k":"file/SetLocked","v":"%YAML 1.1\n%TAG !u! tag:unity3d.com,2011:\n--- !u!21 &2100000\nMaterial:\n  serializedVersion: 8\n  m_ObjectHideFlags: 0\n  m_CorrespondingSourceObject: {fileID: 0}\n  m_PrefabInstance: {fileID: 0}\n  m_PrefabAsset: {fileID: 0}\n  m_Name: SetLocked\n  m_Shader: {fileID: 4800000, guid: a5a00000000000000000000000000003, type: 3}\n  m_Parent: {fileID: 0}\n  m_ModifiedSerializedProperties: 0\n  m_ValidKeywords: []\n  m_InvalidKeywords: []\n  m_LightmapFlags: 4\n  m_EnableInstancingVariants: 0\n  m_DoubleSidedGI: 0\n  m_CustomRenderQueue: -1\n  stringTagMap: {}\n  disabledShaderPasses: []\n  m_LockedProperties: \n  m_SavedProperties:\n    serializedVersion: 3\n    m_TexEnvs:\n    - _Locked:\n        m_Texture: {fileID: 2800000, guid: a5a00000000000000000000000000001, type: 3}\n        m_Scale: {x: 1, y: 1}\n        m_Offset: {x: 0, y: 0}\n    - _MainTex:\n        m_Texture: {fileID: 2800000, guid: a5a00000000000000000000000000001, type: 3}\n        m_Scale: {x: 1, y: 1}\n        m_Offset: {x: 0, y: 0}\n    - _Other:\n        m_Texture: {fileID: 0}\n        m_Scale: {x: 1, y: 1}\n        m_Offset: {x: 0, y: 0}\n    m_Ints: []\n    m_Floats: []\n    m_Colors:\n    - _Tint: {r: 1, g: 1, b: 1, a: 1}\n  m_BuildTextureStacks: []\n  m_AllowLocking: 1\n"}
+{"k":"saved/SetLocked/_MainTex","v":"has 'Tex'"}
+{"k":"saved/SetLocked/_Other","v":"has null"}
+{"k":"saved/SetLocked/_Locked","v":"has 'Tex2'"}
+{"k":"saved/SetLocked/_Missing","v":"no null"}
+{"k":"saved/SetLocked/_BumpMap","v":"no null"}
+{"k":"saved/SetLocked/names","v":"_Locked,_MainTex,_Other"}
+{"k":"file/Replaced","v":"%YAML 1.1\n%TAG !u! tag:unity3d.com,2011:\n--- !u!21 &2100000\nMaterial:\n  serializedVersion: 8\n  m_ObjectHideFlags: 0\n  m_CorrespondingSourceObject: {fileID: 0}\n  m_PrefabInstance: {fileID: 0}\n  m_PrefabAsset: {fileID: 0}\n  m_Name: Replaced\n  m_Shader: {fileID: 4800000, guid: a5a00000000000000000000000000003, type: 3}\n  m_Parent: {fileID: 0}\n  m_ModifiedSerializedProperties: 0\n  m_ValidKeywords: []\n  m_InvalidKeywords: []\n  m_LightmapFlags: 4\n  m_EnableInstancingVariants: 0\n  m_DoubleSidedGI: 0\n  m_CustomRenderQueue: -1\n  stringTagMap: {}\n  disabledShaderPasses: []\n  m_LockedProperties: \n  m_SavedProperties:\n    serializedVersion: 3\n    m_TexEnvs:\n    - _Locked:\n        m_Texture: {fileID: 2800000, guid: a5a00000000000000000000000000002, type: 3}\n        m_Scale: {x: 1, y: 1}\n        m_Offset: {x: 0, y: 0}\n    - _MainTex:\n        m_Texture: {fileID: 2800000, guid: a5a00000000000000000000000000001, type: 3}\n        m_Scale: {x: 1, y: 1}\n        m_Offset: {x: 0, y: 0}\n    - _Other:\n        m_Texture: {fileID: 0}\n        m_Scale: {x: 1, y: 1}\n        m_Offset: {x: 0, y: 0}\n    m_Ints: []\n    m_Floats: []\n    m_Colors:\n    - _Tint: {r: 1, g: 1, b: 1, a: 1}\n  m_BuildTextureStacks: []\n  m_AllowLocking: 1\n"}
+{"k":"saved/Replaced/_MainTex","v":"has 'Tex'"}
+{"k":"saved/Replaced/_Other","v":"has null"}
+{"k":"saved/Replaced/_Locked","v":"has 'Tex2'"}
+{"k":"saved/Replaced/_Missing","v":"no null"}
+{"k":"saved/Replaced/_BumpMap","v":"no null"}
+{"k":"saved/Replaced/names","v":"_Locked,_MainTex,_Other"}
+{"k":"new/made/_MainTex","v":"has null"}
+{"k":"new/made/_Other","v":"has 'Tex'"}
+{"k":"new/made/_Locked","v":"has 'Tex2'"}
+{"k":"new/made/_Missing","v":"no null"}
+{"k":"new/made/_BumpMap","v":"no null"}
+{"k":"new/made/names","v":"_Locked,_MainTex,_Other"}
+{"k":"new/create","v":"done"}
+{"k":"file/New","v":"%YAML 1.1\n%TAG !u! tag:unity3d.com,2011:\n--- !u!21 &2100000\nMaterial:\n  serializedVersion: 8\n  m_ObjectHideFlags: 0\n  m_CorrespondingSourceObject: {fileID: 0}\n  m_PrefabInstance: {fileID: 0}\n  m_PrefabAsset: {fileID: 0}\n  m_Name: New\n  m_Shader: {fileID: 4800000, guid: a5a00000000000000000000000000003, type: 3}\n  m_Parent: {fileID: 0}\n  m_ModifiedSerializedProperties: 0\n  m_ValidKeywords: []\n  m_InvalidKeywords: []\n  m_LightmapFlags: 4\n  m_EnableInstancingVariants: 0\n  m_DoubleSidedGI: 0\n  m_CustomRenderQueue: -1\n  stringTagMap: {}\n  disabledShaderPasses: []\n  m_LockedProperties: \n  m_SavedProperties:\n    serializedVersion: 3\n    m_TexEnvs:\n    - _Locked:\n        m_Texture: {fileID: 2800000, guid: a5a00000000000000000000000000002, type: 3}\n        m_Scale: {x: 1, y: 1}\n        m_Offset: {x: 0, y: 0}\n    - _MainTex:\n        m_Texture: {fileID: 0}\n        m_Scale: {x: 1, y: 1}\n        m_Offset: {x: 0, y: 0}\n    - _Other:\n        m_Texture: {fileID: 2800000, guid: a5a00000000000000000000000000001, type: 3}\n        m_Scale: {x: 1, y: 1}\n        m_Offset: {x: 0, y: 0}\n    m_Ints: []\n    m_Floats: []\n    m_Colors:\n    - _Tint: {r: 1, g: 1, b: 1, a: 1}\n  m_BuildTextureStacks: []\n  m_AllowLocking: 1\n"}
+{"k":"saved/New/_MainTex","v":"has null"}
+{"k":"saved/New/_Other","v":"has 'Tex'"}
+{"k":"saved/New/_Locked","v":"has 'Tex2'"}
+{"k":"saved/New/_Missing","v":"no null"}
+{"k":"saved/New/_BumpMap","v":"no null"}
+{"k":"saved/New/names","v":"_Locked,_MainTex,_Other"}
+{"k":"complete","v":true}

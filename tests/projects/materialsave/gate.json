@@ -1,0 +1,12 @@
+{
+  "commands": [
+    "python3 tests/projects/materialsave/run.py gate"
+  ],
+  "summary": "materialsave: .*",
+  "engine_paths": [
+    "managed/UnityEngine/Graphics/Material.cs",
+    "managed/UnityEngine/Graphics/Shader.cs",
+    "managed/UnityEngine/Graphics/AssetImporters.cs",
+    "managed/UnityEngine/Editor/MaterialSerialization.cs"
+  ]
+}
