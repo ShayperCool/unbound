@@ -956,3 +956,9 @@ as two Unity 6000.0.71f1 batch Editor captures on macOS write them (neither type
 the graphics device); every earlier row is unchanged. A recorder made with the obsolete parameterless constructor has
 no engine side: every property getter throws NullReferenceException. The added types shift the text assets' queued
 `instanceID` rows by the macOS-measured -10 (`debt.json`).
+
+The Presets slice adds seven rows. Two independent Unity 6000.0.71f1 Linux GPU
+Editor captures agree on the default struct's null filter and preset and its
+enabled flag. The recorder excludes `Preset` because it has no public
+parameterless constructor. Every earlier reference row and inventory entry
+stays unchanged.

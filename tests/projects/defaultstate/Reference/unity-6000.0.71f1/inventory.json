@@ -2215,6 +2215,18 @@
       "category": "struct",
       "module": "UnityEditor.CoreModule",
       "status": "candidate",
+      "type": "UnityEditor.Presets.DefaultPreset"
+    },
+    {
+      "category": "class",
+      "module": "UnityEditor.CoreModule",
+      "status": "no-public-parameterless-constructor",
+      "type": "UnityEditor.Presets.Preset"
+    },
+    {
+      "category": "struct",
+      "module": "UnityEditor.CoreModule",
+      "status": "candidate",
       "type": "UnityEditor.Presets.PresetType"
     },
     {

@@ -17772,4 +17772,11 @@
 {"key":"UnityEditor.VersionControl.Task/@factory","status":"excluded","value":"no-public-parameterless-constructor"}
 {"key":"UnityEditor.VersionControl.VersionControlUtils/@factory","status":"excluded","value":"static"}
 {"key":"UnityEditor.VersionControlSettings/@factory","status":"excluded","value":"no-public-parameterless-constructor"}
+{"key":"UnityEditor.Presets.DefaultPreset/@factory","status":"value","value":"struct"}
+{"key":"UnityEditor.Presets.DefaultPreset/Field/UnityEditor.Presets.DefaultPreset/m_Filter","status":"value","value":"null"}
+{"key":"UnityEditor.Presets.DefaultPreset/Field/UnityEditor.Presets.DefaultPreset/m_Preset","status":"value","value":"null"}
+{"key":"UnityEditor.Presets.DefaultPreset/Property/UnityEditor.Presets.DefaultPreset/enabled","status":"value","value":"true"}
+{"key":"UnityEditor.Presets.DefaultPreset/Property/UnityEditor.Presets.DefaultPreset/filter","status":"value","value":"null"}
+{"key":"UnityEditor.Presets.DefaultPreset/Property/UnityEditor.Presets.DefaultPreset/preset","status":"value","value":"null"}
+{"key":"UnityEditor.Presets.Preset/@factory","status":"excluded","value":"no-public-parameterless-constructor"}
 {"key":"complete","status":"value","value":"1"}
