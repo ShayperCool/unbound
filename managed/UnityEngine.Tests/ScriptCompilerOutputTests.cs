@@ -45,13 +45,45 @@ namespace UnityEngine.Tests
             Assert.Single(new CSharpParser().Parse(new[] { "Assets/A.cs(3,5): error CS1002: x" }, true));
         }
 
+        /// <summary>A parser whose pattern only takes short lines, which skips lines starting with
+        /// '#', knows an internal-error pattern and no information kind.</summary>
+        sealed class ShortLineParser : CompilerOutputParserBase
+        {
+            static readonly Regex s_Line = new Regex(@"^(?<filename>[^:(]+)\((?<line>\d+),(?<column>\d+)\):\s*(?<type>\w+)[^\n]{0,150}$", RegexOptions.ExplicitCapture);
+            static readonly Regex s_Internal = new Regex(@"^internal (?<type>\w+): ", RegexOptions.ExplicitCapture);
+            protected override string GetErrorIdentifier() => "error";
+            protected override string GetInformationIdentifier() => null;
+            protected override bool ShouldParseLine(string line) => !line.StartsWith("#");
+            protected override Regex GetOutputRegex() => s_Line;
+            protected override Regex GetInternalErrorOutputRegex() => s_Internal;
+        }
+
         [Fact]
         public void ALongLineIsMatchedByItsStartAndKeptWhole()
         {
+            // The whole line is too long for the pattern; its first 100 characters match.
             string line = "Assets/A.cs(3,5): error CS1002: " + new string('x', 1200);
-            var message = new CSharpParser().Parse(new[] { line }, false).Single();
+            var message = new ShortLineParser().Parse(new[] { line }, false).Single();
             Assert.Equal(line, message.message);
             Assert.Equal(CompilerMessageType.Error, message.type);
+            // A line of exactly 1000 characters is matched whole, which this pattern refuses.
+            Assert.Empty(new ShortLineParser().Parse(new[] { line.Substring(0, 1000) }, false));
+        }
+
+        [Fact]
+        public void SkippedLinesTheInternalErrorPatternAndNoInformationKind()
+        {
+            var messages = new ShortLineParser().Parse(new[]
+            {
+                "# Assets/A.cs(1,1): error CS1: skipped",
+                "internal error: the compiler crashed",
+                "Assets/C.cs(2,7): info RS001: note",
+            }, false).ToArray();
+            Assert.Equal(2, messages.Length);
+            Assert.Equal(CompilerMessageType.Error, messages[0].type);
+            Assert.Null(messages[0].file);
+            // Without an information kind, "info" is a warning.
+            Assert.Equal(CompilerMessageType.Warning, messages[1].type);
         }
     }
 }
