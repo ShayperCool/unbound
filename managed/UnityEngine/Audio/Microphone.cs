@@ -11,14 +11,43 @@ namespace UnityEngine
     public sealed partial class Microphone
     {
         /// <summary>A list of available microphone devices, identified by name.</summary>
-        public static string[] devices => AudioBackend.Current.MicrophoneDevices();
+        public static string[] devices
+        {
+            get
+            {
+                var backend = AudioBackend.Current;
+                if (!backend.MicrophoneSupported)
+                {
+                    Stubs.NotImplemented("Microphone.devices");
+                    return Array.Empty<string>();
+                }
+                return backend.MicrophoneDevices();
+            }
+        }
 
-        internal static bool isAnyDeviceRecording => AudioBackend.Current.MicrophoneIsAnyRecording();
+        internal static bool isAnyDeviceRecording
+        {
+            get
+            {
+                var backend = AudioBackend.Current;
+                if (!backend.MicrophoneSupported)
+                {
+                    Stubs.NotImplemented("Microphone.isAnyDeviceRecording");
+                    return false;
+                }
+                return backend.MicrophoneIsAnyRecording();
+            }
+        }
 
         /// <summary>Start recording with a connected microphone device into a mono AudioClip.</summary>
         public static AudioClip Start(string deviceName, bool loop, int lengthSec, int frequency)
         {
             var backend = AudioBackend.Current;
+            if (!backend.MicrophoneSupported)
+            {
+                Stubs.NotImplemented("Microphone.Start");
+                return null;
+            }
             var available = backend.MicrophoneDevices();
             bool hasDevice = string.IsNullOrEmpty(deviceName)
                 ? available.Length > 0

@@ -16,7 +16,7 @@ namespace UnityEngine.Tests
         [Fact]
         public void TheVersionIncludesCachedDisplayAndImeFrameVersions()
         {
-            Assert.Equal(98u, NativeApi.CurrentVersion);
+            Assert.Equal(99u, NativeApi.CurrentVersion);
             Assert.Equal(36, System.Runtime.InteropServices.Marshal.SizeOf<AudioClipInfo>());
             Assert.Equal(32, (int)System.Runtime.InteropServices.Marshal.OffsetOf<AudioClipInfo>("IsTracker"));
             Assert.Equal(5, AudioCallbackKind.PrepareRenderBuffer);

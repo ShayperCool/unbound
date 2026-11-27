@@ -25,4 +25,4 @@ python3 tests/projects/audiomic/run.py gate
 
 ## Reference
 
-`Reference/unity-6000.0.71f1/values.jsonl`: two independent, byte-identical Unity 6000.0.71f1 Linux Editor batch captures (`117` rows).
+`Reference/unity-6000.0.71f1/values.jsonl`: two independent, byte-identical Unity 6000.0.71f1 Linux Editor batch captures (`118` rows plus `complete`).

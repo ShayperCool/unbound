@@ -6,11 +6,11 @@
 //! by each PulseAudio source description, deduplicated; recordings capture mono float32 PCM at the
 //! requested frequency directly into the mixer's `AudioClip` buffer (matches the Unity 6000.0.71f1
 //! Editor, `tests/projects/audiomic`).
-use crate::audio::mixer::{Clip, Mixer};
+use crate::audio::mixer::Mixer;
 use std::collections::HashMap;
 use std::sync::{
     Arc, Mutex,
-    atomic::{AtomicBool, AtomicUsize, Ordering},
+    atomic::{AtomicBool, Ordering},
 };
 
 /// A recording device exposed by `Microphone.devices`.
@@ -20,6 +20,37 @@ pub struct DeviceInfo {
     pub name: String,
     /// Backend source identifier (`None` selects the server's default input source).
     pub target: Option<String>,
+}
+
+/// Stable identifier for an active microphone stream, independent of list reordering.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub enum DeviceKey {
+    /// Index 0 (`"Default Input Device"` / `null` / `""`).
+    Default,
+    /// A specific backend source identifier.
+    Source(String),
+}
+
+/// Resolves a script device name against a cached device list into a stable [`DeviceKey`].
+pub fn resolve_device_key(devices: &[DeviceInfo], device_name: Option<&str>) -> Option<DeviceKey> {
+    if devices.is_empty() {
+        return None;
+    }
+    match device_name {
+        None | Some("") => Some(DeviceKey::Default),
+        Some(name) => {
+            let idx = devices.iter().position(|d| d.name == name)?;
+            if idx == 0 {
+                Some(DeviceKey::Default)
+            } else {
+                devices[idx]
+                    .target
+                    .as_ref()
+                    .map(|t| DeviceKey::Source(t.clone()))
+                    .or(Some(DeviceKey::Default))
+            }
+        }
+    }
 }
 
 /// Pure ring-buffer state shared between a capture callback and `Microphone.GetPosition`/`IsRecording`.
@@ -121,7 +152,9 @@ pub struct StartedRecording {
 #[cfg(target_os = "linux")]
 mod backend {
     use super::*;
+    use crate::audio::mixer::Clip;
     use std::ffi::{CStr, CString, c_char, c_int, c_void};
+    use std::sync::atomic::AtomicUsize;
 
     const PA_CONTEXT_READY: c_int = 4;
     const PA_CONTEXT_FAILED: c_int = 5;
@@ -260,7 +293,9 @@ mod backend {
         api: Arc<PulseApi>,
         mainloop: *mut c_void,
         context: *mut c_void,
-        streams: HashMap<usize, ActiveStream>,
+        /// Heap-allocated context state callback userdata; kept alive until Drop clears callback.
+        context_signal: *mut SignalData,
+        streams: HashMap<DeviceKey, ActiveStream>,
         cached_devices: Vec<DeviceInfo>,
     }
 
@@ -435,19 +470,20 @@ mod backend {
                     (api.pa_threaded_mainloop_free)(mainloop);
                     return None;
                 }
-                let sig = SignalData {
+                let context_signal = Box::into_raw(Box::new(SignalData {
                     api: Arc::as_ptr(&api),
                     mainloop,
-                };
+                }));
                 (api.pa_context_set_state_callback)(
                     context,
                     Some(context_state_cb),
-                    &sig as *const _ as *mut c_void,
+                    context_signal as *mut c_void,
                 );
                 if (api.pa_context_connect)(context, std::ptr::null(), 0, std::ptr::null()) < 0 {
                     (api.pa_context_set_state_callback)(context, None, std::ptr::null_mut());
                     (api.pa_context_unref)(context);
                     (api.pa_threaded_mainloop_free)(mainloop);
+                    drop(Box::from_raw(context_signal));
                     return None;
                 }
                 if (api.pa_threaded_mainloop_start)(mainloop) < 0 {
@@ -455,6 +491,7 @@ mod backend {
                     (api.pa_context_disconnect)(context);
                     (api.pa_context_unref)(context);
                     (api.pa_threaded_mainloop_free)(mainloop);
+                    drop(Box::from_raw(context_signal));
                     return None;
                 }
                 (api.pa_threaded_mainloop_lock)(mainloop);
@@ -470,19 +507,22 @@ mod backend {
                     }
                     (api.pa_threaded_mainloop_wait)(mainloop);
                 }
-                (api.pa_context_set_state_callback)(context, None, std::ptr::null_mut());
-                (api.pa_threaded_mainloop_unlock)(mainloop);
                 if !ready {
+                    (api.pa_context_set_state_callback)(context, None, std::ptr::null_mut());
+                    (api.pa_threaded_mainloop_unlock)(mainloop);
                     (api.pa_threaded_mainloop_stop)(mainloop);
                     (api.pa_context_disconnect)(context);
                     (api.pa_context_unref)(context);
                     (api.pa_threaded_mainloop_free)(mainloop);
+                    drop(Box::from_raw(context_signal));
                     return None;
                 }
+                (api.pa_threaded_mainloop_unlock)(mainloop);
                 Some(Self {
                     api,
                     mainloop,
                     context,
+                    context_signal,
                     streams: HashMap::new(),
                     cached_devices: Vec::new(),
                 })
@@ -490,6 +530,7 @@ mod backend {
         }
 
         fn refresh_devices(&mut self) -> &[DeviceInfo] {
+            self.reap_finished();
             let api = &self.api;
             unsafe {
                 (api.pa_threaded_mainloop_lock)(self.mainloop);
@@ -509,7 +550,9 @@ mod backend {
                     &mut server as *mut _ as *mut c_void,
                 );
                 if !op.is_null() {
-                    while (api.pa_operation_get_state)(op) == PA_OPERATION_RUNNING {
+                    while (api.pa_operation_get_state)(op) == PA_OPERATION_RUNNING
+                        && (api.pa_context_get_state)(self.context) == PA_CONTEXT_READY
+                    {
                         (api.pa_threaded_mainloop_wait)(self.mainloop);
                     }
                     (api.pa_operation_unref)(op);
@@ -519,16 +562,20 @@ mod backend {
                     mainloop: self.mainloop,
                     sources: Vec::new(),
                 };
-                let op = (api.pa_context_get_source_info_list)(
-                    self.context,
-                    source_list_cb,
-                    &mut list as *mut _ as *mut c_void,
-                );
-                if !op.is_null() {
-                    while (api.pa_operation_get_state)(op) == PA_OPERATION_RUNNING {
-                        (api.pa_threaded_mainloop_wait)(self.mainloop);
+                if (api.pa_context_get_state)(self.context) == PA_CONTEXT_READY {
+                    let op = (api.pa_context_get_source_info_list)(
+                        self.context,
+                        source_list_cb,
+                        &mut list as *mut _ as *mut c_void,
+                    );
+                    if !op.is_null() {
+                        while (api.pa_operation_get_state)(op) == PA_OPERATION_RUNNING
+                            && (api.pa_context_get_state)(self.context) == PA_CONTEXT_READY
+                        {
+                            (api.pa_threaded_mainloop_wait)(self.mainloop);
+                        }
+                        (api.pa_operation_unref)(op);
                     }
-                    (api.pa_operation_unref)(op);
                 }
                 (api.pa_threaded_mainloop_unlock)(self.mainloop);
 
@@ -549,28 +596,31 @@ mod backend {
             &self.cached_devices
         }
 
-        fn resolve_device_id(&mut self, device_name: Option<&str>) -> Option<usize> {
+        /// Resolves a device name from cached devices only (no PulseAudio lock or IPC).
+        fn resolve_device_key_cached(&self, device_name: Option<&str>) -> Option<DeviceKey> {
+            resolve_device_key(&self.cached_devices, device_name)
+        }
+
+        /// Resolves a device name, lazily populating the device cache once when empty.
+        fn resolve_device_key_or_init(&mut self, device_name: Option<&str>) -> Option<DeviceKey> {
             if self.cached_devices.is_empty() {
                 self.refresh_devices();
             }
-            if self.cached_devices.is_empty() {
-                return None;
-            }
-            match device_name {
-                None | Some("") => Some(0),
-                Some(name) => self
+            resolve_device_key(&self.cached_devices, device_name)
+        }
+
+        fn target_for_key<'a>(&'a self, key: &'a DeviceKey) -> Option<&'a str> {
+            match key {
+                DeviceKey::Default => self
                     .cached_devices
-                    .iter()
-                    .position(|d| d.name == name)
-                    .or_else(|| {
-                        self.refresh_devices();
-                        self.cached_devices.iter().position(|d| d.name == name)
-                    }),
+                    .first()
+                    .and_then(|d| d.target.as_deref()),
+                DeviceKey::Source(s) => Some(s.as_str()),
             }
         }
 
-        fn stop_stream_entry(&mut self, id: usize) {
-            let Some(active) = self.streams.remove(&id) else {
+        fn stop_stream_entry(&mut self, key: &DeviceKey) {
+            let Some(active) = self.streams.remove(key) else {
                 return;
             };
             active.state.stopped.store(true, Ordering::Release);
@@ -589,21 +639,32 @@ mod backend {
             }
         }
 
+        fn reap_finished(&mut self) {
+            let finished: Vec<DeviceKey> = self
+                .streams
+                .iter()
+                .filter_map(|(k, s)| (!s.state.active.load(Ordering::Acquire)).then(|| k.clone()))
+                .collect();
+            for key in finished {
+                self.stop_stream_entry(&key);
+            }
+        }
+
         fn stop_all(&mut self) {
-            let ids: Vec<usize> = self.streams.keys().copied().collect();
-            for id in ids {
-                self.stop_stream_entry(id);
+            let keys: Vec<DeviceKey> = self.streams.keys().cloned().collect();
+            for key in keys {
+                self.stop_stream_entry(&key);
             }
         }
 
         fn stop_for_clip(&mut self, clip_handle: u64) {
-            let ids: Vec<usize> = self
+            let keys: Vec<DeviceKey> = self
                 .streams
                 .iter()
-                .filter_map(|(&id, s)| (s.clip_handle == clip_handle).then_some(id))
+                .filter_map(|(k, s)| (s.clip_handle == clip_handle).then(|| k.clone()))
                 .collect();
-            for id in ids {
-                self.stop_stream_entry(id);
+            for key in keys {
+                self.stop_stream_entry(&key);
             }
         }
 
@@ -616,19 +677,24 @@ mod backend {
             clip_handle: u64,
             mixer: Arc<Mutex<Mixer>>,
         ) -> Result<StartedRecording, String> {
-            let Some(id) = self.resolve_device_id(device_name) else {
+            self.reap_finished();
+            let Some(key) = self.resolve_device_key_or_init(device_name) else {
                 return Err(format!(
                     "Couldn't acquire device ID for device name {}",
                     device_name.unwrap_or("")
                 ));
             };
-            // Replace any active recording on this device (matches audiomic rec3.double_start).
-            self.stop_stream_entry(id);
-
+            if length_sec <= 0 || frequency <= 0 {
+                return Err("Recording buffer size out of range".to_string());
+            }
             let total_frames = (length_sec as usize).saturating_mul(frequency as usize);
             if total_frames == 0 || total_frames > i32::MAX as usize {
                 return Err("Recording buffer size out of range".to_string());
             }
+            // Replace any active recording on this device after validating parameters
+            // (matches audiomic rec3.double_start).
+            self.stop_stream_entry(&key);
+
             // Insert the backing clip BEFORE taking the PulseAudio mainloop lock (lock order!).
             {
                 let mut m = mixer.lock().unwrap_or_else(|e| e.into_inner());
@@ -638,11 +704,7 @@ mod backend {
                 );
             }
 
-            let target = self
-                .cached_devices
-                .get(id)
-                .and_then(|d| d.target.as_deref())
-                .and_then(|s| CString::new(s).ok());
+            let target = self.target_for_key(&key).and_then(|s| CString::new(s).ok());
             let spec = PaSampleSpec {
                 format: PA_SAMPLE_FLOAT32LE,
                 rate: frequency as u32,
@@ -739,7 +801,7 @@ mod backend {
             };
 
             self.streams.insert(
-                id,
+                key,
                 ActiveStream {
                     stream,
                     clip_handle,
@@ -754,45 +816,33 @@ mod backend {
             })
         }
 
-        fn is_recording(&mut self, device_name: Option<&str>) -> bool {
-            let Some(id) = self.resolve_device_id(device_name) else {
+        /// Queries active state from atomics and cached devices only (never acquires
+        /// `pa_threaded_mainloop_lock` or performs PulseAudio IPC, avoiding AB-BA deadlock when
+        /// called from `OnAudioFilterRead` while the mixer lock is held).
+        fn is_recording(&self, device_name: Option<&str>) -> bool {
+            let Some(key) = self.resolve_device_key_cached(device_name) else {
                 return false;
             };
-            let active = self
-                .streams
-                .get(&id)
-                .is_some_and(|s| s.state.active.load(Ordering::Acquire));
-            if !active && self.streams.contains_key(&id) {
-                self.stop_stream_entry(id);
-            }
-            active
+            self.streams
+                .get(&key)
+                .is_some_and(|s| s.state.active.load(Ordering::Acquire))
         }
 
-        fn is_any_recording(&mut self) -> bool {
-            let finished: Vec<usize> = self
-                .streams
-                .iter()
-                .filter_map(|(&id, s)| (!s.state.active.load(Ordering::Acquire)).then_some(id))
-                .collect();
-            for id in finished {
-                self.stop_stream_entry(id);
-            }
-            !self.streams.is_empty()
+        fn is_any_recording(&self) -> bool {
+            self.streams
+                .values()
+                .any(|s| s.state.active.load(Ordering::Acquire))
         }
 
-        fn position(&mut self, device_name: Option<&str>) -> i32 {
-            let Some(id) = self.resolve_device_id(device_name) else {
+        fn position(&self, device_name: Option<&str>) -> i32 {
+            let Some(key) = self.resolve_device_key_cached(device_name) else {
                 return 0;
             };
-            match self.streams.get(&id) {
+            match self.streams.get(&key) {
                 Some(s) if s.state.active.load(Ordering::Acquire) => {
                     s.state.position.load(Ordering::Acquire) as i32
                 }
-                Some(_) => {
-                    self.stop_stream_entry(id);
-                    0
-                }
-                None => 0,
+                _ => 0,
             }
         }
     }
@@ -802,10 +852,14 @@ mod backend {
             self.stop_all();
             let api = &self.api;
             unsafe {
+                (api.pa_threaded_mainloop_lock)(self.mainloop);
+                (api.pa_context_set_state_callback)(self.context, None, std::ptr::null_mut());
+                (api.pa_threaded_mainloop_unlock)(self.mainloop);
                 (api.pa_threaded_mainloop_stop)(self.mainloop);
                 (api.pa_context_disconnect)(self.context);
                 (api.pa_context_unref)(self.context);
                 (api.pa_threaded_mainloop_free)(self.mainloop);
+                drop(Box::from_raw(self.context_signal));
             }
         }
     }
@@ -887,26 +941,37 @@ mod backend {
         }
 
         pub fn end(&self, device_name: Option<&str>) {
-            self.with_client(
-                |c| {
-                    if let Some(id) = c.resolve_device_id(device_name) {
-                        c.stop_stream_entry(id);
-                    }
-                },
-                (),
-            );
+            let mut guard = self.state.lock().unwrap_or_else(|e| e.into_inner());
+            if let ClientState::Ready(client) = &mut *guard {
+                client.reap_finished();
+                if let Some(key) = client.resolve_device_key_cached(device_name) {
+                    client.stop_stream_entry(&key);
+                }
+            }
         }
 
         pub fn is_recording(&self, device_name: Option<&str>) -> bool {
-            self.with_client(|c| c.is_recording(device_name), false)
+            let guard = self.state.lock().unwrap_or_else(|e| e.into_inner());
+            match &*guard {
+                ClientState::Ready(client) => client.is_recording(device_name),
+                _ => false,
+            }
         }
 
         pub fn is_any_recording(&self) -> bool {
-            self.with_client(|c| c.is_any_recording(), false)
+            let guard = self.state.lock().unwrap_or_else(|e| e.into_inner());
+            match &*guard {
+                ClientState::Ready(client) => client.is_any_recording(),
+                _ => false,
+            }
         }
 
         pub fn position(&self, device_name: Option<&str>) -> i32 {
-            self.with_client(|c| c.position(device_name), 0)
+            let guard = self.state.lock().unwrap_or_else(|e| e.into_inner());
+            match &*guard {
+                ClientState::Ready(client) => client.position(device_name),
+                _ => 0,
+            }
         }
 
         pub fn stop_all(&self) {
@@ -1115,5 +1180,41 @@ mod tests {
                 "USB Mic (2)"
             ]
         );
+    }
+
+    #[test]
+    fn device_key_stays_stable_when_other_devices_disconnect() {
+        let before = deduplicate_names([
+            ("Default Input Device".into(), Some("src0".into())),
+            ("Headset Mic".into(), Some("src1".into())),
+            ("USB Mic".into(), Some("src2".into())),
+        ]);
+        let after = deduplicate_names([
+            ("Default Input Device".into(), Some("src0".into())),
+            ("USB Mic".into(), Some("src2".into())),
+        ]);
+        let key_before = resolve_device_key(&before, Some("USB Mic"));
+        let key_after = resolve_device_key(&after, Some("USB Mic"));
+        assert_eq!(key_before, Some(DeviceKey::Source("src2".into())));
+        assert_eq!(key_before, key_after);
+        assert_eq!(resolve_device_key(&before, None), Some(DeviceKey::Default));
+        assert_eq!(
+            resolve_device_key(&before, Some("")),
+            Some(DeviceKey::Default)
+        );
+        assert_eq!(
+            resolve_device_key(&before, Some("Default Input Device")),
+            Some(DeviceKey::Default)
+        );
+        assert_eq!(resolve_device_key(&before, Some("Missing")), None);
+    }
+
+    #[test]
+    fn idle_queries_return_defaults_without_connecting() {
+        let recorder = Recorder::new();
+        assert!(!recorder.is_recording(None));
+        assert!(!recorder.is_any_recording());
+        assert_eq!(recorder.position(None), 0);
+        assert_eq!(recorder.position(Some("NoSuchDevice")), 0);
     }
 }

@@ -93,6 +93,7 @@ namespace Unbound.Runtime
         internal abstract void InstallCallback();
 
         // ------------------------------------------------------------------ microphone
+        internal virtual bool MicrophoneSupported => true;
         internal abstract string[] MicrophoneDevices();
         internal abstract void MicrophoneGetDeviceCaps(string deviceName, out int minFreq, out int maxFreq);
         internal abstract bool MicrophoneStart(string deviceName, bool loop, int lengthSec, int frequency, ulong clipHandle, out int channels, out int frames, out string error);
@@ -252,6 +253,8 @@ namespace Unbound.Runtime
         internal override void InstallCallback() =>
             Native.Api.AudioSetCallback((delegate* unmanaged<int, ulong, float*, int, int, long, void>)&AudioFilters.Invoke);
 
+        internal override bool MicrophoneSupported => OperatingSystem.IsLinux();
+
         internal override string[] MicrophoneDevices() =>
             JsonSerializer.Deserialize<string[]>(Native.Call("audio-mic-devices", "{}"), s_Json) ?? Array.Empty<string>();
 
@@ -284,14 +287,31 @@ namespace Unbound.Runtime
         internal override void MicrophoneEnd(string deviceName) =>
             Native.Call("audio-mic-end", JsonSerializer.Serialize(new { deviceName }, s_Json));
 
+        static int CallWithUtf8Device(string deviceName, delegate* unmanaged<byte*, int, int> fn)
+        {
+            if (string.IsNullOrEmpty(deviceName))
+                return fn(null, 0);
+            int maxBytes = System.Text.Encoding.UTF8.GetMaxByteCount(deviceName.Length);
+            if (maxBytes <= 256)
+            {
+                Span<byte> buf = stackalloc byte[256];
+                int len = System.Text.Encoding.UTF8.GetBytes(deviceName, buf);
+                fixed (byte* ptr = buf)
+                    return fn(ptr, len);
+            }
+            var heap = System.Text.Encoding.UTF8.GetBytes(deviceName);
+            fixed (byte* ptr = heap)
+                return fn(ptr, heap.Length);
+        }
+
         internal override bool MicrophoneIsRecording(string deviceName) =>
-            JsonSerializer.Deserialize<bool>(Native.Call("audio-mic-is-recording", JsonSerializer.Serialize(new { deviceName }, s_Json)), s_Json);
+            CallWithUtf8Device(deviceName, Native.Api.AudioMicIsRecording) != 0;
 
         internal override bool MicrophoneIsAnyRecording() =>
-            JsonSerializer.Deserialize<bool>(Native.Call("audio-mic-is-any-recording", "{}"), s_Json);
+            Native.Api.AudioMicIsAnyRecording() != 0;
 
         internal override int MicrophoneGetPosition(string deviceName) =>
-            JsonSerializer.Deserialize<int>(Native.Call("audio-mic-position", JsonSerializer.Serialize(new { deviceName }, s_Json)), s_Json);
+            CallWithUtf8Device(deviceName, Native.Api.AudioMicPosition);
     }
 
     /// <summary>
@@ -713,6 +733,8 @@ namespace Unbound.Runtime
         }
 
         /// <summary>Virtual input devices for unit tests (empty by default, like a headless host without audio input).</summary>
+        internal bool VirtualMicSupported = true;
+        internal override bool MicrophoneSupported => VirtualMicSupported;
         internal readonly List<string> VirtualMicDevices = new List<string>();
         internal readonly Dictionary<int, VirtualMicRecording> m_MicRecordings = new Dictionary<int, VirtualMicRecording>();
 

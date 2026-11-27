@@ -158,8 +158,38 @@ namespace UnityEngine.Tests
             Assert.False(Microphone.IsRecording(null));
             Assert.Equal(0, Microphone.GetPosition(null));
 
+            // Active Microphone.End stops an active recording through a default-device alias.
+            var clip4 = Microphone.Start("", true, 1, 8);
+            m_Backend.AdvanceVirtualMic("", new[] { 0.25f, 0.5f });
+            Assert.True(Microphone.IsRecording("Default Input Device"));
+            Assert.Equal(2, Microphone.GetPosition("Default Input Device"));
+            Microphone.End("Default Input Device");
+            Assert.False(Microphone.IsRecording(null));
+            Assert.Equal(0, Microphone.GetPosition(null));
+            Assert.False(Microphone.isAnyDeviceRecording);
+
             Object.DestroyImmediate(clip1);
             Object.DestroyImmediate(clip3);
+            Object.DestroyImmediate(clip4);
+        }
+
+        [Fact]
+        public void UnsupportedPlatformWarnsViaStubsAndReturnsNullWithoutThrowing()
+        {
+            m_Backend.VirtualMicSupported = false;
+            TakeLogs();
+            Assert.Empty(Microphone.devices);
+            Assert.False(Microphone.isAnyDeviceRecording);
+            Assert.Null(Microphone.Start(null, false, 1, 44100));
+            var logs = TakeLogs();
+            Assert.Contains(logs, l => l.Message.Contains("Microphone.devices"));
+            Assert.Contains(logs, l => l.Message.Contains("Microphone.isAnyDeviceRecording"));
+            Assert.Contains(logs, l => l.Message.Contains("Microphone.Start"));
+            Assert.False(Microphone.IsRecording(null));
+            Assert.Equal(0, Microphone.GetPosition(null));
+            Microphone.GetDeviceCaps(null, out int minF, out int maxF);
+            Assert.Equal((0, 0), (minF, maxF));
+            Microphone.End(null);
         }
 
         [Fact]

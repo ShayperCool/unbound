@@ -10,7 +10,7 @@ namespace Unbound.Runtime
     [System.Runtime.InteropServices.StructLayout(System.Runtime.InteropServices.LayoutKind.Sequential)]
     internal unsafe struct NativeApi
     {
-        internal const uint CurrentVersion = 98;
+        internal const uint CurrentVersion = 99;
 
         internal uint Version;
         /// <summary>(level, UTF-8 text, length): writes a console line.</summary>
@@ -228,5 +228,11 @@ namespace Unbound.Runtime
         internal delegate* unmanaged<ulong, byte*, int, byte*, long, ImportedTextureInfo*, NativeBuffer*, int> GenerateTexture;
         /// <summary>The job system's table (`unbound_jobs::ffi::JobsApi`, managed `JobsApi`).</summary>
         internal delegate* unmanaged<void*> JobsApi;
+        /// <summary>(device UTF-8 bytes or null for default, byte length): 1 if recording, else 0.</summary>
+        internal delegate* unmanaged<byte*, int, int> AudioMicIsRecording;
+        /// <summary>1 if any microphone device is currently recording, else 0.</summary>
+        internal delegate* unmanaged<int> AudioMicIsAnyRecording;
+        /// <summary>(device UTF-8 bytes or null for default, byte length): current sample position or 0.</summary>
+        internal delegate* unmanaged<byte*, int, int> AudioMicPosition;
     }
 }

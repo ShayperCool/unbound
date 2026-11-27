@@ -2215,25 +2215,6 @@ pub fn dispatch(method: &str, request: &str) -> Result<String> {
             s.audio.microphone_end(r.device_name.as_deref());
             Ok("{}".to_owned())
         }
-        "audio-mic-is-recording" => {
-            #[derive(Deserialize)]
-            #[serde(rename_all = "camelCase")]
-            struct Request {
-                device_name: Option<String>,
-            }
-            let r: Request = serde_json::from_str(request)?;
-            Ok(json!(s.audio.microphone_is_recording(r.device_name.as_deref())).to_string())
-        }
-        "audio-mic-is-any-recording" => Ok(json!(s.audio.microphone_is_any_recording()).to_string()),
-        "audio-mic-position" => {
-            #[derive(Deserialize)]
-            #[serde(rename_all = "camelCase")]
-            struct Request {
-                device_name: Option<String>,
-            }
-            let r: Request = serde_json::from_str(request)?;
-            Ok(json!(s.audio.microphone_position(r.device_name.as_deref())).to_string())
-        }
         // The PluginImporter section the Editor writes into a plug-in's `.meta` that has no
         // platform settings when it writes the file again; "" when the `.meta` has them.
         "plugin-meta-section" => plugin_default_section(request),

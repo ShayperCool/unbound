@@ -113,7 +113,8 @@ use std::ffi::c_void;
 /// 97: the `MipmapLimit` command and `texture-mipmap-limit` call; `ImportedTextureInfo` ends with
 /// the importer's `ignore_mipmap_limit`.
 /// 98: `AudioClipInfo` ends with `is_tracker` for tracker modules (`.mod`, `.xm`, `.s3m`, `.it`).
-pub const NATIVE_API_VERSION: u32 = 98;
+/// 99: direct `audio_mic_is_recording`, `audio_mic_is_any_recording` and `audio_mic_position`.
+pub const NATIVE_API_VERSION: u32 = 99;
 
 /// A legacy glyph bitmap in pixels, with its logical top after bitmap synthesis.
 #[repr(C)]
@@ -399,6 +400,13 @@ pub struct NativeApi {
     // Version 92: the job system.
     /// The job system's table (`unbound_jobs::ffi::JobsApi`, managed `JobsApi`).
     pub jobs_api: extern "C" fn() -> *const c_void,
+    // Version 99: lock-free, allocation-free microphone polling queries.
+    /// (device UTF-8 bytes or null for default, byte length): 1 if recording, else 0.
+    pub audio_mic_is_recording: extern "C" fn(*const u8, i32) -> i32,
+    /// 1 if any microphone device is currently recording, else 0.
+    pub audio_mic_is_any_recording: extern "C" fn() -> i32,
+    /// (device UTF-8 bytes or null for default, byte length): current sample position or 0.
+    pub audio_mic_position: extern "C" fn(*const u8, i32) -> i32,
 }
 
 pub fn api() -> NativeApi {
@@ -465,6 +473,9 @@ pub fn api() -> NativeApi {
         document_source_write,
         generate_texture,
         jobs_api,
+        audio_mic_is_recording,
+        audio_mic_is_any_recording,
+        audio_mic_position,
     }
 }
 
@@ -1310,6 +1321,30 @@ extern "C" fn audio_clip_data(
 
 extern "C" fn audio_release_clip(handle: u64) {
     state::state().audio.release_clip(handle);
+}
+
+fn mic_device_str<'a>(device: *const u8, length: i32) -> Option<&'a str> {
+    if device.is_null() || length <= 0 {
+        return None;
+    }
+    let bytes = unsafe { std::slice::from_raw_parts(device, length as usize) };
+    std::str::from_utf8(bytes).ok()
+}
+
+extern "C" fn audio_mic_is_recording(device: *const u8, length: i32) -> i32 {
+    state::state()
+        .audio
+        .microphone_is_recording(mic_device_str(device, length)) as i32
+}
+
+extern "C" fn audio_mic_is_any_recording() -> i32 {
+    state::state().audio.microphone_is_any_recording() as i32
+}
+
+extern "C" fn audio_mic_position(device: *const u8, length: i32) -> i32 {
+    state::state()
+        .audio
+        .microphone_position(mic_device_str(device, length))
 }
 
 extern "C" fn audio_update_source(handle: u64, packet: *const AudioSourcePacket) -> i32 {
