@@ -50,6 +50,16 @@ namespace UnityEngine.Tests
               + "|" + asset.isInCurrentProject;
 
         [Fact]
+        public void ANewChangeSetHasAnEmptyDescriptionAndTheDefaultId()
+        {
+            // tests/projects/defaultstate: ChangeSet/description "", ChangeSet/id "-1".
+            var changeSet = new ChangeSet();
+            Assert.Equal("", changeSet.description);
+            Assert.Equal("-1", changeSet.id);
+            Assert.Equal(ChangeSet.defaultID, changeSet.id);
+        }
+
+        [Fact]
         public void AnAssetIsAnsweredFromItsPath()
         {
             Assert.Equal("Assets/Data/A.txt|A|A.txt|Assets/Data/A.txt|False|False|None|True", A(new Asset("Assets/Data/A.txt")));

@@ -44907,13 +44907,10 @@ namespace UnityEditor.VersionControl
     }
     unsafe partial class ChangeSet
     {
-        [global::Unbound.Stub] public static string defaultID;
         [global::Unbound.Stub] public ChangeSet(string description) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.VersionControl.ChangeSet.ctor"); }
         [global::Unbound.Stub] public ChangeSet(string description, string revision) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.VersionControl.ChangeSet.ctor"); }
         [global::Unbound.Stub] public ChangeSet(global::UnityEditor.VersionControl.ChangeSet other) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.VersionControl.ChangeSet.ctor"); }
         [global::Unbound.Stub] public void Dispose() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.VersionControl.ChangeSet.Dispose"); }
-        public string description { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.VersionControl.ChangeSet.description"); return default; } }
-        public string id { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.VersionControl.ChangeSet.id"); return default; } }
         [global::Unbound.Stub]
         internal unsafe static partial class BindingsMarshaller
         {

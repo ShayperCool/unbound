@@ -187,8 +187,20 @@ namespace UnityEditor.VersionControl
         internal Plugin() { }
     }
 
+    /// <summary>A change set: a new one has an empty description and the default id -1, as the
+    /// Unity 6000.0.71f1 Editor answers (tests/projects/defaultstate); its other constructors and
+    /// members are generated (the getters answer those defaults after them too).</summary>
     [StructLayout(LayoutKind.Sequential)]
-    public partial class ChangeSet { }
+    public partial class ChangeSet
+    {
+        public static string defaultID = "-1";
+
+        string m_Description = "", m_Id = defaultID;
+
+        public string description => m_Description;
+
+        public string id => m_Id;
+    }
 
     public partial class AssetList : List<Asset>
     {
