@@ -1,0 +1,15 @@
+{
+  "commands": [
+    "python3 tests/projects/presets/run.py gate"
+  ],
+  "summary": "presets: .*",
+  "engine_paths": [
+    "managed/UnityEngine/Editor/Presets.cs",
+    "managed/UnityEngine/Editor/SerializedObject.cs",
+    "managed/UnityEngine/Editor/SerializedPropertyTree.cs",
+    "managed/UnityEngine/Editor/MaterialSerialization.cs",
+    "managed/UnityEngine/Editor/SettingsAssets.cs",
+    "managed/UnityEngine/Runtime/AssetAdapters.cs",
+    "managed/UnityEngine/Runtime/ClassCoverage.cs"
+  ]
+}

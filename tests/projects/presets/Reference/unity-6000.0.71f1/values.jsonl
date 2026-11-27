@@ -1,0 +1,74 @@
+{"k":"asset/Transform/name","v":"Transform"}
+{"k":"asset/Transform/fullType","v":"UnityEngine.Transform"}
+{"k":"asset/Transform/type","v":"Transform"}
+{"k":"asset/Transform/valid","v":"True"}
+{"k":"asset/Transform/presetType","v":"valid True default True managed 'UnityEngine.Transform'"}
+{"k":"asset/Transform/modifications","v":"m_LocalRotation.x=0\nm_LocalRotation.y=0\nm_LocalRotation.z=0\nm_LocalRotation.w=1\nm_LocalPosition.x=1\nm_LocalPosition.y=2\nm_LocalPosition.z=3\nm_LocalScale.x=2\nm_LocalScale.y=2\nm_LocalScale.z=2\nm_ConstrainProportionsScale=0\nm_LocalEulerAnglesHint.x=0\nm_LocalEulerAnglesHint.y=0\nm_LocalEulerAnglesHint.z=0"}
+{"k":"asset/Transform/excluded","v":""}
+{"k":"asset/Tuned/name","v":"Tuned"}
+{"k":"asset/Tuned/fullType","v":"Tuned"}
+{"k":"asset/Tuned/type","v":"Tuned"}
+{"k":"asset/Tuned/valid","v":"True"}
+{"k":"asset/Tuned/presetType","v":"valid True default True managed 'Tuned'"}
+{"k":"asset/Tuned/modifications","v":"m_Enabled=1\nm_EditorHideFlags=0\nm_EditorClassIdentifier=\ncount=9\nspeed=1.5\nlabel=preset\ntint.r=1\ntint.g=0\ntint.b=0\ntint.a=1\ntarget=\nhidden=7"}
+{"k":"asset/Tuned/excluded","v":""}
+{"k":"asset/Box/name","v":"Box"}
+{"k":"asset/Box/fullType","v":"UnityEngine.BoxCollider"}
+{"k":"asset/Box/type","v":"BoxCollider"}
+{"k":"asset/Box/valid","v":"True"}
+{"k":"asset/Box/presetType","v":"valid True default True managed 'UnityEngine.BoxCollider'"}
+{"k":"asset/Box/modifications","v":"m_Material=\nm_IncludeLayers.m_Bits=0\nm_ExcludeLayers.m_Bits=0\nm_LayerOverridePriority=0\nm_IsTrigger=0\nm_ProvidesContacts=0\nm_Enabled=1\nm_Size.x=4\nm_Size.y=5\nm_Size.z=6\nm_Center.x=0\nm_Center.y=0\nm_Center.z=0"}
+{"k":"asset/Box/excluded","v":""}
+{"k":"asset/Material/fullType","v":"UnityEngine.Material"}
+{"k":"asset/Material/valid","v":"True"}
+{"k":"canApply/TransformToTransform","v":"True"}
+{"k":"canApply/TransformToBox","v":"False"}
+{"k":"canApply/TransformToNull","v":"False"}
+{"k":"canApply/TunedToTuned","v":"True"}
+{"k":"canApply/TunedToBox","v":"False"}
+{"k":"canApply/MaterialToMaterial","v":"True"}
+{"k":"apply/Transform","v":"True (1.00, 2.00, 3.00) (2.00, 2.00, 2.00)"}
+{"k":"apply/TransformPartial","v":"True (0.00, 0.00, 0.00) (2.00, 2.00, 2.00)"}
+{"k":"apply/TransformToBox","v":"False"}
+{"k":"apply/Tuned","v":"True 9 1.5 preset RGBA(1.000, 0.000, 0.000, 1.000)"}
+{"k":"apply/Box","v":"True (4.00, 5.00, 6.00) (0.00, 0.00, 0.00) False"}
+{"k":"apply/Material","v":"True RGBA(0.000, 1.000, 0.000, 1.000)"}
+{"k":"apply/Null","v":"throws System.ArgumentNullException"}
+{"k":"defaults/NamedTransform","v":"[Transform]"}
+{"k":"defaults/OtherTransform","v":"[]"}
+{"k":"defaults/Box","v":"[Box]"}
+{"k":"defaults/Tuned","v":"[]"}
+{"k":"defaults/Null","v":"throws System.ArgumentNullException"}
+{"k":"defaultsForType/Transform","v":"'glob:\"Named*\"' Transform True|'' Transform False"}
+{"k":"defaultsForType/Tuned","v":"0"}
+{"k":"type/Transform","v":"valid True default True managed 'UnityEngine.Transform'"}
+{"k":"type/Tuned","v":"valid True default True managed 'Tuned'"}
+{"k":"type/Material","v":"valid True default False managed 'UnityEngine.Material'"}
+{"k":"type/GameObject","v":"valid False default False managed 'UnityEngine.GameObject'"}
+{"k":"type/Default","v":"valid False default False managed 'UnityEngine.Object'"}
+{"k":"type/ScriptableObject","v":"valid True default True managed 'TunedData'"}
+{"k":"type/TextureImporter","v":"valid True default True managed 'UnityEditor.TextureImporter'"}
+{"k":"type/AnimationClip","v":"valid True default False managed 'UnityEngine.AnimationClip'"}
+{"k":"type/Texture2D","v":"valid False default False managed 'UnityEngine.Texture2D'"}
+{"k":"type/Null","v":"throws System.ArgumentNullException"}
+{"k":"type/Preset","v":"valid False default False managed 'UnityEditor.Presets.Preset'"}
+{"k":"type/Equal","v":"True False"}
+{"k":"defaultPreset/two","v":"'f' Box True"}
+{"k":"defaultPreset/three","v":"'g' Box False"}
+{"k":"defaultPreset/default","v":"'' null True"}
+{"k":"made/Transform/name","v":""}
+{"k":"made/Transform/fullType","v":"UnityEngine.Transform"}
+{"k":"made/Transform/type","v":"Transform"}
+{"k":"made/Transform/valid","v":"True"}
+{"k":"made/Transform/presetType","v":"valid True default True managed 'UnityEngine.Transform'"}
+{"k":"made/Transform/modifications","v":"m_LocalRotation.x=0\nm_LocalRotation.y=0\nm_LocalRotation.z=0\nm_LocalRotation.w=1\nm_LocalPosition.x=4\nm_LocalPosition.y=5\nm_LocalPosition.z=6\nm_LocalScale.x=1\nm_LocalScale.y=1\nm_LocalScale.z=1\nm_ConstrainProportionsScale=0\nm_LocalEulerAnglesHint.x=0\nm_LocalEulerAnglesHint.y=0\nm_LocalEulerAnglesHint.z=0"}
+{"k":"made/Transform/excluded","v":""}
+{"k":"made/Tuned/name","v":""}
+{"k":"made/Tuned/fullType","v":"Tuned"}
+{"k":"made/Tuned/type","v":"Tuned"}
+{"k":"made/Tuned/valid","v":"True"}
+{"k":"made/Tuned/presetType","v":"valid True default True managed 'Tuned'"}
+{"k":"made/Tuned/modifications","v":"m_Enabled=1\nm_EditorHideFlags=0\nm_EditorClassIdentifier=\ncount=3\nspeed=1.5\nlabel=made\ntint.r=1\ntint.g=0\ntint.b=0\ntint.a=1\ntarget=\nhidden=7"}
+{"k":"made/Tuned/excluded","v":""}
+{"k":"made/GameObject/valid","v":"throws System.NotSupportedException"}
+{"k":"complete","v":true}
