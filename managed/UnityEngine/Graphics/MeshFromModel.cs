@@ -179,6 +179,7 @@ namespace UnityEngine
                 m_UVs[i] = null;
                 m_UVDimensions[i] = saved.m_UVDimensions[i];
             }
+            Array.Copy(saved.m_UVMetrics, m_UVMetrics, m_UVMetrics.Length);
             m_SubMeshes.Clear();
             foreach (var s in saved.m_SubMeshes)
             {

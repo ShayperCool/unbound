@@ -260,6 +260,8 @@ namespace UnityEngine
 
             var aabb = body.Get("m_LocalAABB");
             if (aabb != null) bounds = new Bounds(Vec3(aabb.Get("m_Center")), Vec3(aabb.Get("m_Extent")) * 2f);
+            m_UVMetrics[0] = body.Float("m_MeshMetrics[0]", 1f);
+            m_UVMetrics[1] = body.Float("m_MeshMetrics[1]", 1f);
             m_IsReadable = body.Bool("m_IsReadable", true);
             return true;
         }

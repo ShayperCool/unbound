@@ -1195,11 +1195,26 @@ namespace UnityEngine
         {
             if (uvSetIndex < 0 || uvSetIndex >= m_UVMetrics.Length) return;
             EnsureModelLoaded();
-            var indices = new List<int>();
-            foreach (var sub in m_SubMeshes)
-                if (sub.Topology == MeshTopology.Triangles)
-                    foreach (var i in sub.Indices) indices.Add(i + sub.BaseVertex);
-            m_UVMetrics[uvSetIndex] = UVDistributionMetric(m_Vertices, indices.ToArray(), m_UVs[uvSetIndex], uvAreaThreshold);
+            var uvs = m_UVs[uvSetIndex];
+            if (uvs == null || uvs.Length == 0)
+            {
+                m_UVMetrics[uvSetIndex] = 1f;
+                return;
+            }
+            int[] indices;
+            if (m_SubMeshes.Count == 1 && m_SubMeshes[0].Topology == MeshTopology.Triangles && m_SubMeshes[0].BaseVertex == 0)
+            {
+                indices = m_SubMeshes[0].Indices;
+            }
+            else
+            {
+                var list = new List<int>();
+                foreach (var sub in m_SubMeshes)
+                    if (sub.Topology == MeshTopology.Triangles)
+                        foreach (var i in sub.Indices) list.Add(i + sub.BaseVertex);
+                indices = list.ToArray();
+            }
+            m_UVMetrics[uvSetIndex] = UVDistributionMetric(m_Vertices, indices, uvs, uvAreaThreshold);
         }
 
         public float GetUVDistributionMetric(int uvSetIndex) =>
@@ -1212,8 +1227,9 @@ namespace UnityEngine
         internal static float UVDistributionMetric(Vector3[] vertices, int[] indices, Vector4[] uvs, float uvAreaThreshold)
         {
             int triangleCount = indices.Length / 3;
-            Vector3 P(int i) => i < vertices.Length ? vertices[i] : default;
-            Vector2 U(int i) => uvs != null && i < uvs.Length ? (Vector2)uvs[i] : default;
+            if (triangleCount == 0 || vertices.Length == 0 || uvs == null || uvs.Length == 0) return 1f;
+            Vector3 P(int i) => (uint)i < (uint)vertices.Length ? vertices[i] : default;
+            Vector2 U(int i) => (uint)i < (uint)uvs.Length ? (Vector2)uvs[i] : default;
 
             // The area below which triangles are not counted.
             var areas = new float[triangleCount];
