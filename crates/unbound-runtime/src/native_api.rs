@@ -400,7 +400,7 @@ pub struct NativeApi {
     // Version 92: the job system.
     /// The job system's table (`unbound_jobs::ffi::JobsApi`, managed `JobsApi`).
     pub jobs_api: extern "C" fn() -> *const c_void,
-    // Version 99: lock-free, allocation-free microphone polling queries.
+    // Version 99: leaf-locked, allocation-free microphone polling queries.
     /// (device UTF-8 bytes or null for default, byte length): 1 if recording, else 0.
     pub audio_mic_is_recording: extern "C" fn(*const u8, i32) -> i32,
     /// 1 if any microphone device is currently recording, else 0.

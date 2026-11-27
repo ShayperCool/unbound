@@ -177,10 +177,15 @@ namespace UnityEngine.Tests
         public void UnsupportedPlatformWarnsViaStubsAndReturnsNullWithoutThrowing()
         {
             m_Backend.VirtualMicSupported = false;
+            Stubs.Forget("Microphone.devices");
+            Stubs.Forget("Microphone.isAnyDeviceRecording");
+            Stubs.Forget("Microphone.Start");
             TakeLogs();
             Assert.Empty(Microphone.devices);
             Assert.False(Microphone.isAnyDeviceRecording);
+            Assert.Throws<ArgumentException>(() => Microphone.Start("no such device", false, 1, 44100));
             Assert.Null(Microphone.Start(null, false, 1, 44100));
+            Assert.Null(Microphone.Start("", false, 1, 44100));
             var logs = TakeLogs();
             Assert.Contains(logs, l => l.Message.Contains("Microphone.devices"));
             Assert.Contains(logs, l => l.Message.Contains("Microphone.isAnyDeviceRecording"));

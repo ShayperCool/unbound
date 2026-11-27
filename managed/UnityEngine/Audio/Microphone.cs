@@ -45,6 +45,8 @@ namespace UnityEngine
             var backend = AudioBackend.Current;
             if (!backend.MicrophoneSupported)
             {
+                if (!string.IsNullOrEmpty(deviceName))
+                    throw new ArgumentException("Couldn't acquire device ID for device name " + deviceName);
                 Stubs.NotImplemented("Microphone.Start");
                 return null;
             }

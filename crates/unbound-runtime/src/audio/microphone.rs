@@ -9,7 +9,7 @@
 use crate::audio::mixer::Mixer;
 use std::collections::HashMap;
 use std::sync::{
-    Arc, Mutex,
+    Arc, Mutex, RwLock,
     atomic::{AtomicBool, Ordering},
 };
 
@@ -268,13 +268,18 @@ mod backend {
         pa_stream_drop: fn(*mut c_void) -> c_int;
     }
 
+    /// Atomic polling state shared between the capture callback and `QueryTable`.
+    struct StreamQueryState {
+        active: AtomicBool,
+        position: AtomicUsize,
+    }
+
     struct StreamCallbackState {
         api: Arc<PulseApi>,
         mixer: Arc<Mutex<Mixer>>,
         clip_handle: u64,
         ring: Mutex<RecordingRing>,
-        active: AtomicBool,
-        position: AtomicUsize,
+        query: Arc<StreamQueryState>,
         stopped: AtomicBool,
         scratch: Mutex<Vec<f32>>,
     }
@@ -399,7 +404,7 @@ mod backend {
             return;
         }
         let state = unsafe { &*(userdata as *const StreamCallbackState) };
-        if state.stopped.load(Ordering::Acquire) || !state.active.load(Ordering::Acquire) {
+        if state.stopped.load(Ordering::Acquire) || !state.query.active.load(Ordering::Acquire) {
             return;
         }
         loop {
@@ -433,15 +438,18 @@ mod backend {
                         false
                     }
                 };
-                state.position.store(ring.position(), Ordering::Release);
-                state.active.store(still_active, Ordering::Release);
+                state
+                    .query
+                    .position
+                    .store(ring.position(), Ordering::Release);
+                state.query.active.store(still_active, Ordering::Release);
                 drop(ring);
                 drop(scratch);
             }
             unsafe {
                 (state.api.pa_stream_drop)(stream);
             }
-            if !state.active.load(Ordering::Acquire) {
+            if !state.query.active.load(Ordering::Acquire) {
                 unsafe {
                     (state.api.pa_stream_set_read_callback)(stream, None, std::ptr::null_mut());
                     (state.api.pa_stream_disconnect)(stream);
@@ -624,8 +632,8 @@ mod backend {
                 return;
             };
             active.state.stopped.store(true, Ordering::Release);
-            active.state.active.store(false, Ordering::Release);
-            active.state.position.store(0, Ordering::Release);
+            active.state.query.active.store(false, Ordering::Release);
+            active.state.query.position.store(0, Ordering::Release);
             let api = &self.api;
             unsafe {
                 (api.pa_threaded_mainloop_lock)(self.mainloop);
@@ -643,7 +651,9 @@ mod backend {
             let finished: Vec<DeviceKey> = self
                 .streams
                 .iter()
-                .filter_map(|(k, s)| (!s.state.active.load(Ordering::Acquire)).then(|| k.clone()))
+                .filter_map(|(k, s)| {
+                    (!s.state.query.active.load(Ordering::Acquire)).then(|| k.clone())
+                })
                 .collect();
             for key in finished {
                 self.stop_stream_entry(&key);
@@ -718,13 +728,16 @@ mod backend {
                 minreq: u32::MAX,
                 fragsize: frag_frames * 4,
             };
+            let query = Arc::new(StreamQueryState {
+                active: AtomicBool::new(true),
+                position: AtomicUsize::new(0),
+            });
             let state = Arc::new(StreamCallbackState {
                 api: self.api.clone(),
                 mixer: mixer.clone(),
                 clip_handle,
                 ring: Mutex::new(RecordingRing::new(total_frames, looping)),
-                active: AtomicBool::new(true),
-                position: AtomicUsize::new(0),
+                query,
                 stopped: AtomicBool::new(false),
                 scratch: Mutex::new(Vec::with_capacity(frag_frames as usize)),
             });
@@ -815,36 +828,6 @@ mod backend {
                 frequency,
             })
         }
-
-        /// Queries active state from atomics and cached devices only (never acquires
-        /// `pa_threaded_mainloop_lock` or performs PulseAudio IPC, avoiding AB-BA deadlock when
-        /// called from `OnAudioFilterRead` while the mixer lock is held).
-        fn is_recording(&self, device_name: Option<&str>) -> bool {
-            let Some(key) = self.resolve_device_key_cached(device_name) else {
-                return false;
-            };
-            self.streams
-                .get(&key)
-                .is_some_and(|s| s.state.active.load(Ordering::Acquire))
-        }
-
-        fn is_any_recording(&self) -> bool {
-            self.streams
-                .values()
-                .any(|s| s.state.active.load(Ordering::Acquire))
-        }
-
-        fn position(&self, device_name: Option<&str>) -> i32 {
-            let Some(key) = self.resolve_device_key_cached(device_name) else {
-                return 0;
-            };
-            match self.streams.get(&key) {
-                Some(s) if s.state.active.load(Ordering::Acquire) => {
-                    s.state.position.load(Ordering::Acquire) as i32
-                }
-                _ => 0,
-            }
-        }
     }
 
     impl Drop for PulseClient {
@@ -870,14 +853,37 @@ mod backend {
         Ready(PulseClient),
     }
 
+    /// Snapshot read by polling queries (`is_recording`, `is_any_recording`, `position`).
+    /// Guarded by a leaf `RwLock` that is never held across `Mixer` or PulseAudio locks, so
+    /// polling from `OnAudioFilterRead` (which holds `Mixer`) cannot deadlock with control ops.
+    #[derive(Default)]
+    struct QueryTable {
+        devices: Vec<DeviceInfo>,
+        streams: HashMap<DeviceKey, Arc<StreamQueryState>>,
+    }
+
     pub struct PlatformRecorder {
         state: Mutex<ClientState>,
+        query: RwLock<QueryTable>,
     }
 
     impl PlatformRecorder {
         pub fn new() -> Self {
             Self {
                 state: Mutex::new(ClientState::Uninitialized),
+                query: RwLock::new(QueryTable::default()),
+            }
+        }
+
+        /// Publishes `client`'s cached devices and active stream atomics to the leaf query table.
+        /// Callers must not hold `Mixer` or `pa_threaded_mainloop_lock`.
+        fn sync_query(&self, client: &PulseClient) {
+            let mut q = self.query.write().unwrap_or_else(|e| e.into_inner());
+            q.devices.clone_from(&client.cached_devices);
+            q.streams.clear();
+            for (key, active) in &client.streams {
+                q.streams
+                    .insert(key.clone(), Arc::clone(&active.state.query));
             }
         }
 
@@ -895,7 +901,11 @@ mod backend {
                 };
             }
             match &mut *guard {
-                ClientState::Ready(client) => f(client),
+                ClientState::Ready(client) => {
+                    let result = f(client);
+                    self.sync_query(client);
+                    result
+                }
                 _ => fallback,
             }
         }
@@ -947,29 +957,34 @@ mod backend {
                 if let Some(key) = client.resolve_device_key_cached(device_name) {
                     client.stop_stream_entry(&key);
                 }
+                self.sync_query(client);
             }
         }
 
         pub fn is_recording(&self, device_name: Option<&str>) -> bool {
-            let guard = self.state.lock().unwrap_or_else(|e| e.into_inner());
-            match &*guard {
-                ClientState::Ready(client) => client.is_recording(device_name),
-                _ => false,
-            }
+            let q = self.query.read().unwrap_or_else(|e| e.into_inner());
+            let Some(key) = resolve_device_key(&q.devices, device_name) else {
+                return false;
+            };
+            q.streams
+                .get(&key)
+                .is_some_and(|s| s.active.load(Ordering::Acquire))
         }
 
         pub fn is_any_recording(&self) -> bool {
-            let guard = self.state.lock().unwrap_or_else(|e| e.into_inner());
-            match &*guard {
-                ClientState::Ready(client) => client.is_any_recording(),
-                _ => false,
-            }
+            let q = self.query.read().unwrap_or_else(|e| e.into_inner());
+            q.streams.values().any(|s| s.active.load(Ordering::Acquire))
         }
 
         pub fn position(&self, device_name: Option<&str>) -> i32 {
-            let guard = self.state.lock().unwrap_or_else(|e| e.into_inner());
-            match &*guard {
-                ClientState::Ready(client) => client.position(device_name),
+            let q = self.query.read().unwrap_or_else(|e| e.into_inner());
+            let Some(key) = resolve_device_key(&q.devices, device_name) else {
+                return 0;
+            };
+            match q.streams.get(&key) {
+                Some(s) if s.active.load(Ordering::Acquire) => {
+                    s.position.load(Ordering::Acquire) as i32
+                }
                 _ => 0,
             }
         }
@@ -978,6 +993,7 @@ mod backend {
             let mut guard = self.state.lock().unwrap_or_else(|e| e.into_inner());
             if let ClientState::Ready(client) = &mut *guard {
                 client.stop_all();
+                self.sync_query(client);
             }
         }
 
@@ -985,7 +1001,38 @@ mod backend {
             let mut guard = self.state.lock().unwrap_or_else(|e| e.into_inner());
             if let ClientState::Ready(client) = &mut *guard {
                 client.stop_for_clip(clip_handle);
+                self.sync_query(client);
             }
+        }
+
+        #[cfg(test)]
+        pub(super) fn is_uninitialized(&self) -> bool {
+            matches!(
+                *self.state.lock().unwrap_or_else(|e| e.into_inner()),
+                ClientState::Uninitialized
+            )
+        }
+
+        #[cfg(test)]
+        pub(super) fn test_with_state_locked(
+            &self,
+            devices: Vec<DeviceInfo>,
+            key: DeviceKey,
+            position: usize,
+            active: bool,
+            f: impl FnOnce(),
+        ) {
+            let _guard = self.state.lock().unwrap();
+            let query_state = Arc::new(StreamQueryState {
+                active: AtomicBool::new(active),
+                position: AtomicUsize::new(position),
+            });
+            {
+                let mut q = self.query.write().unwrap();
+                q.devices = devices;
+                q.streams.insert(key, query_state);
+            }
+            f();
         }
     }
 }
@@ -1216,5 +1263,30 @@ mod tests {
         assert!(!recorder.is_any_recording());
         assert_eq!(recorder.position(None), 0);
         assert_eq!(recorder.position(Some("NoSuchDevice")), 0);
+        #[cfg(target_os = "linux")]
+        assert!(recorder.inner.is_uninitialized());
+    }
+
+    #[cfg(target_os = "linux")]
+    #[test]
+    fn polling_queries_do_not_block_on_control_state_lock() {
+        let recorder = Recorder::new();
+        let devices = deduplicate_names([
+            ("Default Input Device".into(), Some("src0".into())),
+            ("USB Mic".into(), Some("src1".into())),
+        ]);
+        recorder
+            .inner
+            .test_with_state_locked(devices, DeviceKey::Default, 42, true, || {
+                // Holding PlatformRecorder.state simulates a main-thread control op (e.g. Start/End/devices)
+                // blocked on Mixer or PulseAudio; polling queries must read only the leaf QueryTable.
+                assert!(recorder.is_recording(None));
+                assert!(recorder.is_recording(Some("Default Input Device")));
+                assert!(!recorder.is_recording(Some("USB Mic")));
+                assert!(recorder.is_any_recording());
+                assert_eq!(recorder.position(None), 42);
+                assert_eq!(recorder.position(Some("Default Input Device")), 42);
+                assert_eq!(recorder.position(Some("USB Mic")), 0);
+            });
     }
 }
