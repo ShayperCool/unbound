@@ -271,6 +271,7 @@ namespace UnityEditor.PackageManager
     {
         readonly List<PackageInfo> m_Packages;
         [SerializeField] Error m_Error;
+        [SerializeField] bool m_HasError;
 
         private PackageCollection()
         {
@@ -283,9 +284,10 @@ namespace UnityEditor.PackageManager
         {
             m_Packages = packages != null ? new List<PackageInfo>(packages) : new List<PackageInfo>();
             m_Error = error;
+            m_HasError = error != null;
         }
 
-        public Error error => m_Error;
+        public Error error => m_HasError ? m_Error : null;
 
         IEnumerator<PackageInfo> IEnumerable<PackageInfo>.GetEnumerator() => m_Packages.GetEnumerator();
 
@@ -402,6 +404,7 @@ namespace UnityEditor.PackageManager.Requests
         internal NativeStatusCode m_Status = NativeStatusCode.NotFound;
         [SerializeField] internal long m_Id;
         [SerializeField] internal Error m_Error;
+        [SerializeField] bool m_ErrorFetched;
 
         internal Request() { }
 
@@ -415,6 +418,7 @@ namespace UnityEditor.PackageManager.Requests
         {
             m_Status = error != null ? NativeStatusCode.Error : NativeStatusCode.Done;
             m_Error = error;
+            m_ErrorFetched = error != null;
         }
 
         internal NativeStatusCode NativeStatus => m_Status;
@@ -444,7 +448,7 @@ namespace UnityEditor.PackageManager.Requests
             get
             {
                 FetchNativeData();
-                return m_Error;
+                return m_ErrorFetched ? m_Error : null;
             }
         }
 

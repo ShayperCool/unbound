@@ -230,6 +230,15 @@ namespace UnityEngine.Tests
             Assert.Contains("\"m_PackageIdOrName\":\"com.probe.not.installed\"", reqJson);
             var reqRt = JsonUtility.FromJson<RemoveRequest>(reqJson);
             Assert.Equal("com.probe.not.installed", reqRt.PackageIdOrName);
+            Assert.NotNull(reqRt.Error);
+            Assert.Equal(ErrorCode.NotFound, reqRt.Error.errorCode);
+
+            // Empty / error-free requests keep Error == null after deserialization (m_ErrorFetched == false).
+            var emptyReq = JsonUtility.FromJson<RemoveRequest>("{}");
+            Assert.Null(emptyReq.Error);
+            var listOk = Client.List(offlineMode: true);
+            var listRt = JsonUtility.FromJson<ListRequest>(JsonUtility.ToJson(listOk));
+            Assert.Null(listRt.Error);
 
             var err = new Error(NativeErrorCode.Conflict, "boom");
             var errJson = JsonUtility.ToJson(err);
@@ -245,10 +254,19 @@ namespace UnityEngine.Tests
             Assert.Equal("1.0.0", viRt.recommended);
             Assert.Equal(new[] { "0.9.0" }, viRt.deprecated);
 
+            var colOk = new PackageCollection(Array.Empty<PackageInfo>());
+            var colOkRt = JsonUtility.FromJson<PackageCollection>(JsonUtility.ToJson(colOk));
+            Assert.Null(colOkRt.error);
+            Assert.Null(JsonUtility.FromJson<PackageCollection>("{}").error);
+
             var col = new PackageCollection(Array.Empty<PackageInfo>(), new Error(NativeErrorCode.Conflict, "col-err"));
             var colJson = JsonUtility.ToJson(col);
             Assert.Contains("\"m_Error\"", colJson);
             Assert.Contains("\"col-err\"", colJson);
+            var colRt = JsonUtility.FromJson<PackageCollection>(colJson);
+            Assert.NotNull(colRt.error);
+            Assert.Equal(ErrorCode.Conflict, colRt.error.errorCode);
+            Assert.Equal("col-err", colRt.error.message);
 
             var bi = PackageInfo.FindForPackageName("com.unity.modules.audio");
             var piJson = JsonUtility.ToJson(bi);
