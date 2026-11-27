@@ -85,11 +85,14 @@ namespace UnityEngine.Tests
         [Fact]
         public void MissingUvsReturnOneEvenWithZeroThreshold()
         {
-            var mesh = new Mesh();
+            var mesh = MakeRightTriangles((2f, 1f));
             try
             {
-                mesh.vertices = new[] { Vector3.zero, Vector3.up, Vector3.right };
-                mesh.triangles = new[] { 0, 1, 2 };
+                mesh.RecalculateUVDistributionMetrics();
+                Assert.Equal(4f, mesh.GetUVDistributionMetric(0));
+
+                // Removing UVs must reset a previously non-1 metric back to 1 even with threshold 0.
+                mesh.uv = null;
                 mesh.RecalculateUVDistributionMetrics(0f);
                 Assert.Equal(1f, mesh.GetUVDistributionMetric(0));
                 Assert.Equal(1f, mesh.GetUVDistributionMetric(1));
@@ -230,6 +233,129 @@ namespace UnityEngine.Tests
                 if (clone != null) Object.DestroyImmediate(clone);
                 if (reloaded != null) Object.DestroyImmediate(reloaded);
             }
+        }
+
+        [Fact]
+        public void NonReadableMeshRefusesRecalculateInPlayModeAndLogsOnce()
+        {
+            var mesh = MakeRightTriangles((2f, 1f));
+            mesh.name = "LockedMesh";
+            mesh.UploadMeshData(true);
+            var logs = new List<(LogType Type, string Message)>();
+            var prevHandler = Debug.unityLogger.logHandler;
+            bool wasPlaying = EditorSession.IsPlaying;
+            try
+            {
+                Debug.unityLogger.logHandler = new LogCapture(logs);
+                EditorSession.IsPlaying = true;
+
+                mesh.RecalculateUVDistributionMetrics();
+                Assert.Equal(1f, mesh.GetUVDistributionMetric(0));
+                Assert.Equal(1f, mesh.GetUVDistributionMetric(1));
+                Assert.Single(logs);
+                Assert.Equal(LogType.Error, logs[0].Type);
+                Assert.Equal("Not allowed to call RecalculateUVDistributionMetrics() on mesh 'LockedMesh'", logs[0].Message);
+
+                logs.Clear();
+                mesh.RecalculateUVDistributionMetric(0);
+                Assert.Equal(1f, mesh.GetUVDistributionMetric(0));
+                Assert.Single(logs);
+                Assert.Equal("Not allowed to call RecalculateUVDistributionMetric() on mesh 'LockedMesh'", logs[0].Message);
+
+                // Even an out-of-range uvSetIndex logs before range checking (matches Unity 6000.0).
+                logs.Clear();
+                mesh.RecalculateUVDistributionMetric(8);
+                Assert.Single(logs);
+                Assert.Equal("Not allowed to call RecalculateUVDistributionMetric() on mesh 'LockedMesh'", logs[0].Message);
+
+                // Control: outside Play mode, access is allowed and computes 4f without logging.
+                logs.Clear();
+                EditorSession.IsPlaying = false;
+                mesh.RecalculateUVDistributionMetrics();
+                Assert.Empty(logs);
+                Assert.Equal(4f, mesh.GetUVDistributionMetric(0));
+            }
+            finally
+            {
+                EditorSession.IsPlaying = wasPlaying;
+                Debug.unityLogger.logHandler = prevHandler;
+                Object.DestroyImmediate(mesh);
+            }
+        }
+
+        [Fact]
+        public void ExistingMeshAssetSavePersistsUpdatedMetrics()
+        {
+            using var release = TestRelease.Pin(TestRelease.Measured);
+            var mesh = MakeRightTriangles((2f, 1f));
+            Mesh reloaded = null;
+            try
+            {
+                mesh.name = "SavedExistingMesh";
+                mesh.uv2 = new[] { Vector2.zero, new Vector2(0f, 0.5f), new Vector2(0.5f, 0f) };
+                var initialYaml = UnityYamlWriter.Write(new Object[] { mesh });
+                var docs = UnityYamlText.Parse(initialYaml);
+                Assert.Single(docs);
+                Assert.Equal("1", docs[0].Body.Get("'m_MeshMetrics[0]'")?.Raw);
+                Assert.Equal("1", docs[0].Body.Get("'m_MeshMetrics[1]'")?.Raw);
+
+                mesh.RecalculateUVDistributionMetrics();
+                UnityEditor.EditorUtility.SetDirty(mesh);
+                var ids = new Dictionary<Object, long>(System.Collections.Generic.ReferenceEqualityComparer.Instance) { [mesh] = docs[0].FileId };
+                int unlocated = 0;
+                Assert.True(NativeDocuments.Write(docs[0], mesh, ids, null, ref unlocated));
+                Assert.Equal(0, unlocated);
+
+                var updatedYaml = UnityYamlText.Write(docs);
+                Assert.Contains("'m_MeshMetrics[0]': 4", updatedYaml);
+                Assert.Contains("'m_MeshMetrics[1]': 16", updatedYaml);
+
+                reloaded = new Mesh();
+                reloaded.ReadSerialized(TestYaml.DocumentBody(updatedYaml), new NullResolver());
+                Assert.Equal(4f, reloaded.GetUVDistributionMetric(0));
+                Assert.Equal(16f, reloaded.GetUVDistributionMetric(1));
+            }
+            finally
+            {
+                UnityEditor.EditorUtility.ClearDirty(mesh);
+                Object.DestroyImmediate(mesh);
+                if (reloaded != null) Object.DestroyImmediate(reloaded);
+            }
+        }
+
+        [Fact]
+        public void MultiSubMeshTruncatesTrailingIndicesToTriangleMultiple()
+        {
+            var mesh = new Mesh();
+            try
+            {
+                mesh.vertices = new[]
+                {
+                    Vector3.zero, new Vector3(0f, 2f, 0f), new Vector3(2f, 0f, 0f),
+                    new Vector3(10f, 0f, 0f), new Vector3(10f, 2f, 0f), new Vector3(12f, 0f, 0f),
+                };
+                mesh.uv = new[]
+                {
+                    Vector2.zero, new Vector2(0f, 1f), new Vector2(1f, 0f),
+                    Vector2.zero, new Vector2(0f, 1f), new Vector2(1f, 0f),
+                };
+                mesh.subMeshCount = 2;
+                // Submesh 0 has 4 indices (1 trailing index beyond a triangle multiple); submesh 1 has 3.
+                mesh.m_SubMeshes[0].Indices = new[] { 0, 1, 2, 0 };
+                mesh.m_SubMeshes[1].Indices = new[] { 3, 4, 5 };
+                mesh.RecalculateUVDistributionMetrics();
+                Assert.Equal(4f, mesh.GetUVDistributionMetric(0));
+            }
+            finally { Object.DestroyImmediate(mesh); }
+        }
+
+        sealed class LogCapture : ILogHandler
+        {
+            readonly List<(LogType Type, string Message)> m_Logs;
+            public LogCapture(List<(LogType Type, string Message)> logs) => m_Logs = logs;
+            public void LogFormat(LogType logType, Object context, string format, params object[] args) =>
+                m_Logs.Add((logType, args == null || args.Length == 0 ? format : string.Format(format, args)));
+            public void LogException(System.Exception exception, Object context) { }
         }
 
         sealed class MeshScope : System.IDisposable

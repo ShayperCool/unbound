@@ -1511,6 +1511,7 @@ namespace Unbound.Runtime
         {
             "m_Name", "m_SubMeshes", "m_Shapes", "m_BindPose", "m_BoneNameHashes", "m_RootBoneNameHash", "m_BonesAABB",
             "m_IndexFormat", "m_IndexBuffer", "m_VertexData", "m_LocalAABB",
+            "'m_MeshMetrics[0]'", "'m_MeshMetrics[1]'",
         };
 
         static readonly string[] s_Texture2DKeys =

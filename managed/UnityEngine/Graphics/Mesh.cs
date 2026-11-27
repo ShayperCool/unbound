@@ -1179,7 +1179,8 @@ namespace UnityEngine
 
         public void RecalculateUVDistributionMetrics(float uvAreaThreshold = 1e-9f)
         {
-            for (int set = 0; set < m_UVMetrics.Length; set++) RecalculateUVDistributionMetric(set, uvAreaThreshold);
+            if (!CanCall(nameof(RecalculateUVDistributionMetrics))) return;
+            for (int set = 0; set < m_UVMetrics.Length; set++) RecalculateUVDistributionMetricCore(set, uvAreaThreshold);
         }
 
         /// <summary>A UV set's metric: the triangles' world-to-UV area ratio, as the Unity
@@ -1192,6 +1193,12 @@ namespace UnityEngine
         /// when it is not over 0.001. Only the first two sets are kept (another index does
         /// nothing).</summary>
         public void RecalculateUVDistributionMetric(int uvSetIndex, float uvAreaThreshold = 1e-9f)
+        {
+            if (!CanCall(nameof(RecalculateUVDistributionMetric))) return;
+            RecalculateUVDistributionMetricCore(uvSetIndex, uvAreaThreshold);
+        }
+
+        void RecalculateUVDistributionMetricCore(int uvSetIndex, float uvAreaThreshold)
         {
             if (uvSetIndex < 0 || uvSetIndex >= m_UVMetrics.Length) return;
             EnsureModelLoaded();
@@ -1210,8 +1217,11 @@ namespace UnityEngine
             {
                 var list = new List<int>();
                 foreach (var sub in m_SubMeshes)
-                    if (sub.Topology == MeshTopology.Triangles)
-                        foreach (var i in sub.Indices) list.Add(i + sub.BaseVertex);
+                {
+                    if (sub.Topology != MeshTopology.Triangles) continue;
+                    int count = sub.Indices.Length - sub.Indices.Length % 3;
+                    for (int k = 0; k < count; k++) list.Add(sub.Indices[k] + sub.BaseVertex);
+                }
                 indices = list.ToArray();
             }
             m_UVMetrics[uvSetIndex] = UVDistributionMetric(m_Vertices, indices, uvs, uvAreaThreshold);

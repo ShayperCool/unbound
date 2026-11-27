@@ -387,10 +387,18 @@ namespace UnityEngine.Tests
             Assert.Equal(1, jsonCalls);
             Assert.False(mesh.m_DeferredModel);
 
+            // Mutate metrics before RevertTo so the test verifies RevertToDeferred restores saved metrics.
+            mesh.m_UVMetrics[0] = 9f;
+            mesh.m_UVMetrics[1] = 25f;
+
             var reimported = new Mesh { name = "DeferredProp" };
             reimported.ReadSerialized(DeferredBody("bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb", 2), null);
+            reimported.m_UVMetrics[0] = 4f;
+            reimported.m_UVMetrics[1] = 16f;
             mesh.RevertTo(reimported);
             Assert.True(mesh.m_DeferredModel);
+            Assert.Equal(4f, mesh.GetUVDistributionMetric(0));
+            Assert.Equal(16f, mesh.GetUVDistributionMetric(1));
             Assert.Empty(mesh.m_Vertices);
             Assert.True(mesh.m_Dirty);
             Assert.Equal(handle, mesh.m_Handle);

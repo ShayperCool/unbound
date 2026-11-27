@@ -362,7 +362,24 @@ namespace Unbound.Runtime
         /// -1 when the text is no entry.</summary>
         static int KeyEnd(string text)
         {
-            if (text.Length == 0 || text[0] == '\'' || text[0] == '"' || text[0] == '{' || text[0] == '[') return -1;
+            if (text.Length == 0 || text[0] == '"' || text[0] == '{' || text[0] == '[') return -1;
+            if (text[0] == '\'')
+            {
+                int i = 1;
+                while (i < text.Length)
+                {
+                    if (text[i] == '\'')
+                    {
+                        if (i + 1 < text.Length && text[i + 1] == '\'') { i += 2; continue; }
+                        int colon = i + 1;
+                        return colon < text.Length && text[colon] == ':'
+                            && (colon + 1 == text.Length || text[colon + 1] == ' ')
+                            ? colon : -1;
+                    }
+                    i++;
+                }
+                return -1;
+            }
             for (int i = 0; i < text.Length; i++)
             {
                 if (text[i] != ':') continue;
