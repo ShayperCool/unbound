@@ -858,6 +858,44 @@ pub struct ImportedModel {
     /// The meta's fileID table, which [`ImportedModel::hierarchy_file_ids`] takes IDs from.
     #[serde(default)]
     pub file_id_table: FileIdTable,
+    /// Why the file's content could not be read, when the Editor logs it: the model is then an
+    /// empty file's (see `read_failure`), and its import logs [`ModelReadError::message`].
+    #[serde(default)]
+    pub read_error: Option<ModelReadError>,
+}
+
+/// A model file whose content does not read as a model. The Editor imports it as an empty root
+/// and logs an error naming why (matches the Unity 6000.0.71f1 Editor, tests/projects/brokenmodel).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub enum ModelReadError {
+    /// No reader recognises the file (an empty file, text that is no model).
+    Unreadable,
+    /// A binary FBX cut short.
+    Corrupted,
+    /// Content the loader rejects for another reason (its description), whose Editor import is
+    /// not measured: Unbound imports the root alone and says so.
+    Unread(String),
+}
+
+impl ModelReadError {
+    /// The error the import logs for the asset at project path `path`, whose file the project
+    /// shows under the directory `root` (the parent of `Application.dataPath`).
+    pub fn message(&self, root: &str, path: &str) -> String {
+        let root = root.replace('\\', "/");
+        let shown = format!("{}/{path}", root.trim_end_matches('/'));
+        match self {
+            ModelReadError::Unreadable => format!(
+                "ImportFBX Errors:\nCouldn't read file {shown}.\nNone of the registered readers can process the file\n\n"
+            ),
+            ModelReadError::Corrupted => format!(
+                "ImportFBX Errors:\nCouldn't import file {shown}.\nFile is corrupted: '{}'\n\n",
+                path.rsplit('/').next().unwrap_or(path)
+            ),
+            ModelReadError::Unread(reason) => format!(
+                "Unbound: '{path}' does not read as a model ({reason}); it imports as an empty root (what the Editor imports from it is not measured)"
+            ),
+        }
+    }
 }
 
 /// A user property of a node (an FBX property flagged as user-defined), with the value
@@ -1004,7 +1042,8 @@ impl Importer for ModelImporter {
     // 61: the nodes' FBX user properties, the root node's name and the fileID table are kept.
     // 62: OBJ bindings a missing or incomplete material library does not resolve are dropped.
     // (`.blend` files, imported since, had no entries before: their key also holds Blender's.)
-    const VERSION: u32 = 62;
+    // 63: a file whose content does not read imports as its root alone (`read_error`).
+    const VERSION: u32 = 63;
 
     fn dependencies(&self, source: &Path) -> Result<Vec<std::path::PathBuf>> {
         if !source
@@ -1300,7 +1339,7 @@ fn import_with(
         && settings.normals != NormalMode::None
         && settings.normal_calculation != 0
         && settings.normal_smoothing_source < 2;
-    let load = |raw_axes, retain_dom| {
+    let load = |bytes: &[u8], raw_axes, retain_dom| {
         ufbx::load_memory(
             bytes,
             ufbx::LoadOpts {
@@ -1329,10 +1368,20 @@ fn import_with(
                 ..Default::default()
             },
         )
-        .map_err(|e| anyhow!("{}", e.description))
     };
     let baked = !is_obj && settings.bake_axis_conversion;
-    let mut scene = load(baked, reads_fbx_smoothing)?;
+    // A file whose content does not read imports as an empty file of its format would.
+    let (mut scene, bytes, read_error, read_warning) = match load(bytes, baked, reads_fbx_smoothing)
+    {
+        Ok(scene) => (scene, bytes, None, None),
+        Err(error) => {
+            let (read_error, warning) = read_failure(bytes, is_obj, &error)?;
+            let empty = if is_obj { EMPTY_OBJ } else { EMPTY_FBX };
+            let scene = load(empty, baked, reads_fbx_smoothing)
+                .map_err(|e| anyhow!("{}", e.description))?;
+            (scene, empty, read_error, warning)
+        }
+    };
     let static_geometry = scene.anim_stacks.is_empty()
         && scene.skin_deformers.is_empty()
         && scene.blend_deformers.is_empty()
@@ -1359,7 +1408,7 @@ fn import_with(
     // scales. Static Unity imports retain positive source scales and use a different
     // top-level rotation. Read the original local transforms for that measured path.
     if conversion.is_some() && !baked {
-        scene = load(true, reads_fbx_smoothing)?;
+        scene = load(bytes, true, reads_fbx_smoothing).map_err(|e| anyhow!("{}", e.description))?;
     }
 
     let file_unit = if is_obj || scene.settings.unit_meters <= 0.0 {
@@ -1374,7 +1423,7 @@ fn import_with(
             1.0
         };
 
-    let mut warnings: Vec<String> = group_warning.into_iter().collect();
+    let mut warnings: Vec<String> = group_warning.into_iter().chain(read_warning).collect();
     let fbx_smoothing = if reads_fbx_smoothing
         && (settings.normals == NormalMode::Calculate
             || scene.meshes.iter().any(|m| !m.vertex_normal.exists))
@@ -1419,6 +1468,7 @@ fn import_with(
             user_properties: Vec::new(),
             root_node_name: None,
             file_id_table: table.clone(),
+            read_error,
         },
         unique_names: HashMap::new(),
         node_index: HashMap::new(),
@@ -1474,7 +1524,7 @@ fn import_with(
         let dom_scene = if reads_fbx_smoothing || is_obj {
             &scene
         } else {
-            with_dom = load(false, true)?;
+            with_dom = load(bytes, false, true).map_err(|e| anyhow!("{}", e.description))?;
             &with_dom
         };
         let order = property_order(dom_scene);
@@ -1621,6 +1671,74 @@ fn import_with(
             .push("cameras and lights are imported as empty nodes".into());
     }
     Ok(model)
+}
+
+/// The signature a binary FBX file starts with.
+const FBX_BINARY_SIGNATURE: &[u8] = b"Kaydara FBX Binary  \0";
+
+/// What a model file whose content does not read is imported as: an FBX or an OBJ with nothing in
+/// it, so that the root keeps what the importer's settings give it (an Animator and an Avatar, or a
+/// Legacy Animation).
+const EMPTY_FBX: &[u8] = b"; FBX 7.4.0 project file\nFBXHeaderExtension:  {\n\tFBXHeaderVersion: 1003\n\tFBXVersion: 7400\n}\n";
+const EMPTY_OBJ: &[u8] = b"# empty\n";
+
+/// Why the loader rejected a model file's content with `error`, and what Unbound says of it. The
+/// Editor imports such a file as an empty root, with what its settings add (matches the Unity
+/// 6000.0.71f1 Editor, tests/projects/brokenmodel: an empty or text `.fbx` and a binary one cut
+/// after its header log the errors of [`ModelReadError`]; an ASCII `.fbx` cut inside a block, an
+/// empty or text `.obj` log none). An ASCII FBX cut short reads in the Editor up to the cut, which
+/// Unbound does not do (said). Content rejected for another reason imports the root too, said
+/// ([`ModelReadError::Unread`]); the loader failing for Unbound's own reasons (memory, I/O, its
+/// options) and a real FBX version it does not read fail the import.
+fn read_failure(
+    bytes: &[u8],
+    is_obj: bool,
+    error: &ufbx::Error,
+) -> Result<(Option<ModelReadError>, Option<String>)> {
+    use ufbx::ErrorType as E;
+    let content = matches!(
+        error.type_,
+        E::EmptyFile
+            | E::UnrecognizedFileFormat
+            | E::UnsupportedVersion
+            | E::TruncatedFile
+            | E::Unknown
+            | E::InvalidUtf8
+            | E::ZeroVertexSize
+            | E::TruncatedVertexStream
+            | E::BadNurbs
+            | E::BadIndex
+            | E::NodeDepthLimit
+            | E::DuplicateOverride
+    );
+    // A version of 0: the file names none, so no reader recognises it; another is a real FBX.
+    let named_version = error.type_ == E::UnsupportedVersion && error.info() != "0";
+    anyhow::ensure!(
+        content && !named_version,
+        "{} ({})",
+        error.description,
+        error.info()
+    );
+    let binary = bytes.starts_with(FBX_BINARY_SIGNATURE);
+    Ok(match error.type_ {
+        // An OBJ reads as far as it can: an empty or text file is an empty model.
+        E::EmptyFile | E::UnrecognizedFileFormat | E::UnsupportedVersion if is_obj => (None, None),
+        E::EmptyFile | E::UnrecognizedFileFormat | E::UnsupportedVersion => {
+            (Some(ModelReadError::Unreadable), None)
+        }
+        E::TruncatedFile if binary => (Some(ModelReadError::Corrupted), None),
+        E::TruncatedFile if !is_obj => (
+            None,
+            Some(
+                "the ASCII FBX is cut short: nothing of it is imported (the Editor imports what precedes the cut)"
+                    .to_string(),
+            ),
+        ),
+        _ => (
+            Some(ModelReadError::Unread(error.description.to_string())),
+            None,
+        ),
+    })
 }
 
 struct Builder<'a> {

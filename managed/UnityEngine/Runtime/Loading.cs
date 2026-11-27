@@ -1091,6 +1091,19 @@ namespace Unbound.Runtime
 
         static IDisposable ImportMessages(string guid) => Unbound.Runtime.Log.EarlierImport(!s_ImportedInSession.Contains(guid));
 
+        /// <summary>The errors the import of the model <paramref name="guid"/> logs, between its
+        /// preprocessors and its postprocessors: a file whose content does not read logs the
+        /// Editor's error, naming the file under the directory the project is seen in, and imports
+        /// as an empty root (matches the Unity 6000.0.71f1 Editor, tests/projects/brokenmodel).</summary>
+        static void LogModelImportErrors(string guid)
+        {
+            var root = System.IO.Path.GetDirectoryName(Application.dataPath);
+            using var answer = JsonDocument.Parse(Native.Call("model-messages",
+                "{\"guid\":" + JsonSerializer.Serialize(guid) + ",\"root\":" + JsonSerializer.Serialize(root) + "}"));
+            foreach (var error in answer.RootElement.GetProperty("errors").EnumerateArray())
+                Debug.LogError(error.GetString());
+        }
+
         /// <summary>The files loaded now.</summary>
         internal static List<LoadedFile> LoadedFiles() => new List<LoadedFile>(s_Files.Values);
 
@@ -1159,6 +1172,7 @@ namespace Unbound.Runtime
                         if (postprocessed) s_ReadingForPostprocessors.Add(guid);
                         try { documents = Native.LoadDocuments(postprocessed ? "raw:" + guid : guid); }
                         finally { s_ReadingForPostprocessors.Remove(guid); }
+                        if (model) LogModelImportErrors(guid);
                         using (postprocessed && model ? ModelMaterialImport.Defer(info.Path) : null)
                             file = ObjectGraphBuilder.Build(documents, info.Path, guid, ObjectGraphBuilder.Kind.PrefabAsset, null, Publish);
                         if (model) ModelMaterialImport.UsePipelineDefault(file);

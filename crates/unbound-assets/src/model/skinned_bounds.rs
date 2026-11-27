@@ -593,6 +593,7 @@ mod tests {
             user_properties: Vec::new(),
             root_node_name: None,
             file_id_table: Default::default(),
+            read_error: None,
         }
     }
 

@@ -349,6 +349,7 @@ fn bind_pose_conversion_mirrors_and_scales() {
             user_properties: Vec::new(),
             root_node_name: None,
             file_id_table: Default::default(),
+            read_error: None,
             clips: Vec::new(),
         },
         unique_names: HashMap::new(),
@@ -2321,4 +2322,120 @@ fn the_model_kinds_formats_are_imported_or_reported() {
         );
     }
     assert!(!is_model_format("prefab"));
+}
+
+/// A meta of a new model (`fileIdsGeneration: 2`) with the rig `animation_type`/`avatar_setup`.
+fn new_model(animation_type: i32, avatar_setup: i32) -> Value {
+    meta(&format!(
+        "ModelImporter:\n  serializedVersion: 22200\n  fileIdsGeneration: 2\n  animationType: {animation_type}\n  avatarSetup: {avatar_setup}\n"
+    ))
+}
+
+/// A binary FBX cut after its header (tests/projects/brokenmodel Truncated.fbx).
+fn truncated_binary_fbx() -> Vec<u8> {
+    let mut bytes = FBX_BINARY_SIGNATURE.to_vec();
+    bytes.extend_from_slice(&[0x1a, 0x00]);
+    bytes.extend_from_slice(&7400u32.to_le_bytes());
+    bytes.extend_from_slice(&[0xe8, 0x03, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x14]);
+    bytes
+}
+
+#[test]
+fn a_file_that_does_not_read_imports_as_an_empty_root() {
+    // tests/projects/brokenmodel: the Editor imports such a file as an empty root named after
+    // it, logging why for an FBX no reader recognises or a binary one cut short, never failing
+    // the import.
+    let cut_ascii = "; FBX 7.4.0 project file\nFBXHeaderExtension:  {\n\tFBXHeaderVersion: 1003\n\tFBXVersion: 7400\n\tCreationTimeStamp:  {\n\t\tVersion: 1000\n";
+    let cases: Vec<(&str, Vec<u8>, Option<ModelReadError>)> = vec![
+        (
+            "Garbage.fbx",
+            b"not a model\n".to_vec(),
+            Some(ModelReadError::Unreadable),
+        ),
+        ("Empty.fbx", Vec::new(), Some(ModelReadError::Unreadable)),
+        (
+            "Truncated.fbx",
+            truncated_binary_fbx(),
+            Some(ModelReadError::Corrupted),
+        ),
+        ("CutAscii.fbx", cut_ascii.as_bytes().to_vec(), None),
+        ("Empty.obj", Vec::new(), None),
+        (
+            "Garbage.obj",
+            b"this is not\n an obj file \x01\x02\n".to_vec(),
+            None,
+        ),
+    ];
+    // A model with one node: its root takes the same ids (the Editor's: brokenmodel */fileids).
+    let tri = ModelImporter::default()
+        .import(
+            Path::new("Tri.obj"),
+            b"v 0 0 0\nv 1 0 0\nv 0 1 0\nf 1 2 3\n",
+            &new_model(2, 0),
+        )
+        .unwrap();
+    for (name, bytes, expected) in cases {
+        let model = ModelImporter::default()
+            .import(Path::new(name), &bytes, &new_model(2, 0))
+            .unwrap_or_else(|e| panic!("{name}: {e:#}"));
+        assert_eq!(model.read_error, expected, "{name}");
+        assert_eq!(model.nodes.len(), 1, "{name}");
+        let root = &model.nodes[0];
+        assert_eq!(root.name, name.split('.').next().unwrap());
+        assert!(root.renderer.is_none() && root.children.is_empty());
+        assert_eq!(
+            (root.position, root.rotation, root.scale),
+            ([0.0; 3], [0.0, 0.0, 0.0, 1.0], [1.0; 3]),
+            "{name}"
+        );
+        assert!(model.meshes.is_empty() && model.materials.is_empty() && model.clips.is_empty());
+        assert_eq!((model.animator, model.avatar), (None, None), "{name}");
+        assert_eq!(root.game_object.id, tri.nodes[0].game_object.id, "{name}");
+        assert_eq!(root.transform.id, tri.nodes[0].transform.id, "{name}");
+        // Only the cut ASCII file says what it does not import.
+        assert_eq!(
+            model.warnings.is_empty(),
+            !name.starts_with("CutAscii"),
+            "{name}: {:?}",
+            model.warnings
+        );
+    }
+}
+
+#[test]
+fn a_file_that_does_not_read_keeps_what_its_rig_adds_to_the_root() {
+    // tests/projects/brokenmodel RigGeneric, RigHumanoid (Animator and Avatar), RigLegacy
+    // (Animation).
+    for (animation_type, avatar_setup, animator, avatar) in [
+        (2, 1, true, true),
+        (3, 1, true, true),
+        (1, 0, true, false),
+        (2, 0, false, false),
+    ] {
+        let model = ModelImporter::default()
+            .import(
+                Path::new("Rig.fbx"),
+                b"not a model\n",
+                &new_model(animation_type, avatar_setup),
+            )
+            .unwrap();
+        assert_eq!(model.read_error, Some(ModelReadError::Unreadable));
+        assert_eq!(
+            (model.animator.is_some(), model.avatar.is_some()),
+            (animator, avatar),
+            "animationType {animation_type}"
+        );
+    }
+}
+
+#[test]
+fn a_model_read_error_names_the_file_as_the_editor_logs_it() {
+    assert_eq!(
+        ModelReadError::Unreadable.message("/project/", "Assets/Models/Garbage.fbx"),
+        "ImportFBX Errors:\nCouldn't read file /project/Assets/Models/Garbage.fbx.\nNone of the registered readers can process the file\n\n"
+    );
+    assert_eq!(
+        ModelReadError::Corrupted.message("/project", "Assets/Models/Garbage.fbx"),
+        "ImportFBX Errors:\nCouldn't import file /project/Assets/Models/Garbage.fbx.\nFile is corrupted: 'Garbage.fbx'\n\n"
+    );
 }

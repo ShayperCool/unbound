@@ -1,0 +1,46 @@
+{
+ "Unbound makes no ImportLog sub-asset, which the Editor adds to an asset whose import logs a warning or an error (LoadAllAssetsAtPath, LoadAllAssetRepresentationsAtPath)": [
+  "Empty_fbx/after/all",
+  "Empty_fbx/all",
+  "Garbage_fbx/after/all",
+  "Garbage_fbx/all",
+  "RigGeneric_fbx/after/all",
+  "RigGeneric_fbx/all",
+  "RigHumanoid_fbx/after/all",
+  "RigHumanoid_fbx/all",
+  "RigLegacy_fbx/after/all",
+  "RigLegacy_fbx/all",
+  "Tri_obj/after/all",
+  "Tri_obj/after/representations",
+  "Tri_obj/all",
+  "Tri_obj/representations",
+  "Truncated_fbx/after/all",
+  "Truncated_fbx/all",
+  "fresh/all",
+  "fresh/refreshed/all"
+ ],
+ "An ASCII FBX cut inside its connections: the Editor leaves out the models whose connection to the root the cut removed, Unbound's loader places them under the root": [
+  "CutModel_fbx/after/all",
+  "CutModel_fbx/after/gameobject",
+  "CutModel_fbx/after/main",
+  "CutModel_fbx/after/representations",
+  "CutModel_fbx/all",
+  "CutModel_fbx/gameobject",
+  "CutModel_fbx/main",
+  "CutModel_fbx/representations"
+ ],
+ "Unbound's ImportAsset of a loaded model does not import it again (said: it cannot replace a loaded model's objects in place), and ImportAsset of a new one imports it at its first load, so neither runs the import's callbacks or logs its messages during the call (a changed model's Refresh does: fresh/refresh.events); Unbound also logs no Humanoid avatar error for a rig without its bones": [
+  "CutAscii_fbx/import.events",
+  "CutModel_fbx/import.events",
+  "Empty_fbx/import.events",
+  "Empty_obj/import.events",
+  "Garbage_fbx/import.events",
+  "Garbage_obj/import.events",
+  "RigGeneric_fbx/import.events",
+  "RigHumanoid_fbx/import.events",
+  "RigLegacy_fbx/import.events",
+  "Tri_obj/import.events",
+  "Truncated_fbx/import.events",
+  "fresh/import.events"
+ ]
+}

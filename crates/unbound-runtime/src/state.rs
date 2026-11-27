@@ -1690,6 +1690,28 @@ pub fn dispatch(method: &str, request: &str) -> Result<String> {
             }
             Ok("{}".to_string())
         }
+        "model-messages" => {
+            // The errors a model's import logs (a file whose content does not read: see
+            // `unbound_assets::model::ModelReadError`).
+            // `root`: the directory the game sees the project in (`Application.dataPath`'s).
+            #[derive(Deserialize)]
+            struct Request {
+                guid: String,
+                root: String,
+            }
+            let r: Request = serde_json::from_str(request)?;
+            let guid = Guid::parse(&r.guid).context("bad guid")?;
+            let model = imported_model(guid)?;
+            let errors: Vec<String> = match &model.read_error {
+                Some(error) => {
+                    let db = state().db();
+                    let asset = db.by_guid(guid).context("no such asset")?;
+                    vec![error.message(&r.root, &asset.path)]
+                }
+                None => Vec::new(),
+            };
+            Ok(json!({ "errors": errors }).to_string())
+        }
         "model-postprocess" => {
             // What a model's postprocessors are given beyond its prefab: the FBX user properties
             // of its nodes, by the nodes' GameObjects, the name the root had in the file when it
