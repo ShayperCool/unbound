@@ -25,8 +25,8 @@ What it shows: `Refresh` imports every changed asset during the call, loaded or 
 all; the loaded objects take the new content, and a later load of one not loaded runs no callback;
 a `Refresh` with nothing changed runs none; a model that does not import does not stop the others. `ImportAsset` of a changed asset does the same for it.
 
-`residuals.json` names what Unbound does otherwise: no `OnPreprocessAsset` for a text asset, and the
-first import of an asset at its first load in the session.
+`residuals.json` names what Unbound does otherwise: the first import of an asset at its first load in
+the session.
 
 Record and gate:
 

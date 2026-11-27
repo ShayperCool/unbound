@@ -406,6 +406,31 @@ namespace UnityEngine.Tests
             Assert.Null(AssetPostprocessing.ExistingSession(path));
         }
 
+        [Fact]
+        public void ATextAssetGetsOnPreprocessAssetBeforeEachImport()
+        {
+            // tests/projects/refreshchanged import/txt/events, refresh/events: a TextScriptImporter
+            // asset's import starts with OnPreprocessAsset, once per import.
+            s_ImportCalls.Clear();
+            const string path = "Assets/Preprocessed.txt", guid = "0123456789abcdef0123456789abcdec";
+            var importer = AssetImporter.FromMeta(path, guid, "TextScriptImporter", TestYaml.DocumentBody("TextScriptImporter:\n  userData: \n"));
+            using (AssetPostprocessing.HooksForTests("OnPreprocessAsset", new List<(int, Type, System.Reflection.MethodInfo)> { Hook<PreprocessingPostprocessor>("Count") }))
+            using (AssetImporter.Importing(path, importer))
+            {
+                AssetPostprocessing.EnsurePreprocessed(path, "text", guid);
+                AssetPostprocessing.EnsurePreprocessed(path, "text", guid);
+                Assert.Equal(new[] { "preprocess Assets/Preprocessed.txt True" }, s_ImportCalls);
+                // Imported again: preprocessed again.
+                AssetPostprocessing.ForgetPreprocessed(path);
+                AssetPostprocessing.EnsurePreprocessed(path, "text", guid);
+                Assert.Equal(2, s_ImportCalls.Count);
+                // Kinds with no measured OnPreprocessAsset get none.
+                AssetPostprocessing.EnsurePreprocessed("Assets/Other.shader", "shader");
+                Assert.Equal(2, s_ImportCalls.Count);
+            }
+            AssetPostprocessing.ForgetPreprocessed(path);
+        }
+
         static readonly List<string> s_ImportCalls = new List<string>();
 
         sealed class CountingPostprocessor : AssetPostprocessor

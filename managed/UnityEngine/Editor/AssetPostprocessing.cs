@@ -18,8 +18,10 @@ namespace UnityEditor
     /// loads, the others as they first load), and the settings they set are what the asset imports
     /// with (the Editor writes them into the .meta; Unbound writes no authored file and keeps them in
     /// memory, part of the import cache's key). Prefabs are imported when postprocessors change
-    /// prefab imports (OnPostprocessPrefab): each gets OnPreprocessAsset then. Assets of other
-    /// kinds, which Unbound does not import, get no OnPreprocessAsset. The postprocessors of a
+    /// prefab imports (OnPostprocessPrefab): each gets OnPreprocessAsset then. A text asset (the
+    /// TextScriptImporter's) gets OnPreprocessAsset as it first loads, and again before each import
+    /// of it (tests/projects/refreshchanged). Assets of other kinds (native-format assets, fonts,
+    /// shaders, package manifests: unmeasured) get no OnPreprocessAsset. The postprocessors of a
     /// texture, its sprites, a cubemap and an audio clip run when the asset loads, on its objects;
     /// a model's and a prefab's as it loads or a scene first expands it
     /// (<see cref="HierarchyPostprocessing"/>). Every callback of an asset's import is called on
@@ -448,9 +450,13 @@ namespace UnityEditor
         internal static void EnsurePreprocessed(string path, string kind, string guid = null)
         {
             if (path == null || !s_Preprocessed.Add(path)) return;
-            // A prefab has no preprocessor of its own: OnPreprocessAsset alone.
+            // A prefab and a text asset have no preprocessor of their own: OnPreprocessAsset alone
+            // (a TextScriptImporter's, measured: tests/projects/refreshchanged refresh/events,
+            // import/txt/events).
             string own = kind switch { "texture" => "OnPreprocessTexture", "model" => "OnPreprocessModel", "audio" => "OnPreprocessAudio", _ => null };
-            if (own == null && kind != "prefab") return;
+            if (own == null && kind != "prefab" && kind != "text") return;
+            // A package manifest's import is not measured.
+            if (kind == "text" && Unbound.Runtime.Native.IsReady && AssetDatabase.ImporterOf(path) == "PackageManifestImporter") return;
             if (Hooks("OnPreprocessAsset").Count == 0 && (own == null || Hooks(own).Count == 0) && (kind != "model" || Hooks("OnPreprocessAnimation").Count == 0))
                 return;
             Preprocess(path, kind, guid);

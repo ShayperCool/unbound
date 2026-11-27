@@ -66,6 +66,8 @@ namespace Unbound.Runtime
             string name = System.IO.Path.GetFileNameWithoutExtension(info.Path);
             long size = new System.IO.FileInfo(info.File).Length;
             bool manifest = UnityEditor.AssetDatabase.ImporterOf(info.Path) == "PackageManifestImporter";
+            // Every import starts with OnPreprocessAsset.
+            UnityEditor.AssetPostprocessing.EnsurePreprocessed(info.Path, "text", info.Guid);
             using (ObjectRegistry.AsAssets())
             {
                 asset = manifest ? new UnityEditorInternal.PackageManifest(info.File, name, size) : new TextAsset(info.File, name, size);
