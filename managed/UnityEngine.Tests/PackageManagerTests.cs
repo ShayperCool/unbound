@@ -112,6 +112,10 @@ namespace UnityEngine.Tests
             Assert.Equal("1.5.0", populated.verified);
 #pragma warning restore CS0618
             Assert.Equal(new[] { "0.9.0" }, populated.deprecated);
+
+            var nullTail = new VersionsInfo(new[] { "1.0.0", null }, new string[] { null }, null, null);
+            Assert.Equal("", nullTail.latest);
+            Assert.Equal("", nullTail.latestCompatible);
         }
 
         [Fact]
@@ -143,7 +147,7 @@ namespace UnityEngine.Tests
                 Assert.Equal("1.0.0", builtin.versions.latestCompatible);
                 Assert.Empty(builtin.versions.deprecated);
                 Assert.Empty(builtin.errors);
-            });
+            }, "PackageInfo.versions");
             Assert.Empty(cleanLogs);
 
             VersionsInfo registryVersions = null;
@@ -197,6 +201,22 @@ namespace UnityEngine.Tests
             Assert.Equal(StatusCode.Failure, onlineMiss.Status);
             Assert.Equal(ErrorCode.NotFound, onlineMiss.Error.errorCode);
             Assert.Contains(logs, m => m.Contains("Client.Search"));
+
+            SearchRequest onlineBuiltin = null;
+            var onlineHitLogs = CaptureLogs(() => onlineBuiltin = Client.Search("com.unity.modules.audio"), "Client.Search");
+            Assert.Equal(StatusCode.Success, onlineBuiltin.Status);
+            Assert.Contains(onlineHitLogs, m => m.Contains("Client.Search"));
+
+            SearchRequest regOffline = null;
+            var regLogs = CaptureLogs(() => regOffline = Client.Search("com.probe.registry", offlineMode: true), "Client.Search");
+            Assert.Equal(StatusCode.Success, regOffline.Status);
+            Assert.Single(regOffline.Result);
+            Assert.Contains(regLogs, m => m.Contains("Client.Search"));
+
+            SearchRequest allReq = null;
+            var allLogs = CaptureLogs(() => allReq = Client.SearchAll(offlineMode: true), "Client.SearchAll");
+            Assert.Equal(StatusCode.Success, allReq.Status);
+            Assert.Contains(allLogs, m => m.Contains("Client.SearchAll"));
         }
 
         [Fact]
@@ -224,7 +244,9 @@ namespace UnityEngine.Tests
             {
                 remMissing = Client.Remove("com.probe.not.installed");
                 embedAlready = Client.Embed("com.probe.pm");
-            });
+            },
+            "UnityEditor.PackageManager.Client.Remove",
+            "UnityEditor.PackageManager.Client.Embed");
             Assert.Empty(measuredFailureLogs);
             Assert.True(remMissing.IsCompleted);
             Assert.Equal(StatusCode.Failure, remMissing.Status);
