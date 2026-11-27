@@ -93,8 +93,6 @@ namespace Unbound.Runtime
         {
             if (classId == 92 && Compat.RemovesLegacyGuiLayer(release ?? ProjectInfo.UnityVersion))
                 return (ClassReading.Ignored, "GUILayer: obsolete serialized component removed on load (tests/projects/classids)");
-            if (classId == 181963792)
-                return (ClassReading.Unsupported, "Preset: UnityEditor.Presets.Preset serialized properties and ApplyTo are not supported; references to this asset are null");
             if (s_Loader.TryGetValue(classId, out var loader)) return (ClassReading.Loader, loader);
             if (s_Ignored.TryGetValue(classId, out var reason)) return (ClassReading.Ignored, reason);
             if (s_IgnoredWithoutData.TryGetValue(classId, out var data))

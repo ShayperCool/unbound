@@ -101,8 +101,8 @@ namespace Unbound.Tests
             Assert.Equal("Loader", navMesh.Reading);
             Assert.Equal("NavMeshSettings", navMesh.UnityName);
             Assert.Equal("Ignored", Listed(1002, "EditorExtensionImpl", new[] { "m_Object" }).Reading);
-            // Editor scripts can apply a preset: it stays loud.
-            Assert.Equal("Unsupported", Listed(181963792, "Preset", new[] { "m_Properties" }).Reading);
+            // Preset reads its serialized properties through AssetAdapters.
+            Assert.Equal("Read", Listed(181963792, "Preset", new[] { "m_Properties" }).Reading);
         }
 
         [Fact]

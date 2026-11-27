@@ -108,6 +108,7 @@ namespace Unbound.Runtime
             Read<UnityEditor.Animations.AnimatorState>((a, b, r) => a.ReadSerialized(b, r));
             Read<UnityEditor.Animations.AnimatorTransitionBase>((a, b, r) => a.ReadSerialized(b, r));
             Read<UnityEditor.Animations.BlendTree>((a, b, r) => a.ReadSerialized(b, r));
+            Read<UnityEditor.Presets.Preset>((a, b, r) => a.ReadSerialized(b, r));
 
             // Cloned only: loaded from their compiled forms.
             Clone<ComputeShader>(a => a.CloneObject());

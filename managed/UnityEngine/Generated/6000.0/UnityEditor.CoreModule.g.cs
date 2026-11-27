@@ -38325,48 +38325,6 @@ namespace UnityEditor.Presets
         [global::Unbound.Stub] public AddPresetTypeWindow() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Presets.AddPresetTypeWindow.ctor"); }
         protected override bool setInitialSelectionPosition { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Presets.AddPresetTypeWindow.setInitialSelectionPosition"); return default; } }
     }
-    [global::System.Serializable]
-    [global::Unbound.Stub]
-    public unsafe partial struct DefaultPreset
-    {
-        [global::System.Obsolete("Use the new getter/setter instead. (UnityUpgradable) -> filter")] [global::Unbound.Stub] public string m_Filter;
-        [global::System.Obsolete("Use the new getter/setter instead. (UnityUpgradable) -> preset")] [global::Unbound.Stub] public global::UnityEditor.Presets.Preset m_Preset;
-        [global::Unbound.Stub] public DefaultPreset(string filter, global::UnityEditor.Presets.Preset preset) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Presets.DefaultPreset.ctor"); }
-        [global::Unbound.Stub] public DefaultPreset(string filter, global::UnityEditor.Presets.Preset preset, bool enabled) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Presets.DefaultPreset.ctor"); }
-        public string filter { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Presets.DefaultPreset.filter"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Presets.DefaultPreset.filter"); } }
-        public global::UnityEditor.Presets.Preset preset { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Presets.DefaultPreset.preset"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Presets.DefaultPreset.preset"); } }
-        public bool enabled { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Presets.DefaultPreset.enabled"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Presets.DefaultPreset.enabled"); } }
-    }
-    [global::Unbound.Stub]
-    public unsafe sealed partial class Preset : global::UnityEngine.Object
-    {
-        [global::Unbound.Stub] public Preset(global::UnityEngine.Object source) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Presets.Preset.ctor"); }
-        [global::Unbound.Stub] public bool ApplyTo(global::UnityEngine.Object target) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Presets.Preset.ApplyTo"); return default; }
-        [global::Unbound.Stub] public bool ApplyTo(global::UnityEngine.Object target, string[] selectedPropertyPaths) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Presets.Preset.ApplyTo"); return default; }
-        [global::Unbound.Stub] public bool DataEquals(global::UnityEngine.Object target) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Presets.Preset.DataEquals"); return default; }
-        [global::Unbound.Stub] public bool UpdateProperties(global::UnityEngine.Object source) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Presets.Preset.UpdateProperties"); return default; }
-        [global::Unbound.Stub] public global::UnityEditor.Presets.PresetType GetPresetType() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Presets.Preset.GetPresetType"); return default; }
-        [global::Unbound.Stub] public string GetTargetFullTypeName() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Presets.Preset.GetTargetFullTypeName"); return default; }
-        [global::Unbound.Stub] public string GetTargetTypeName() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Presets.Preset.GetTargetTypeName"); return default; }
-        [global::Unbound.Stub] public bool IsValid() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Presets.Preset.IsValid"); return default; }
-        [global::Unbound.Stub] internal bool IsCoupled() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Presets.Preset.IsCoupled"); return default; }
-        [global::Unbound.Stub] public bool CanBeAppliedTo(global::UnityEngine.Object target) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Presets.Preset.CanBeAppliedTo"); return default; }
-        [global::Unbound.Stub] internal global::UnityEngine.Object GetReferenceObject() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Presets.Preset.GetReferenceObject"); return default; }
-        [global::Unbound.Stub] public static global::UnityEditor.Presets.Preset[] GetDefaultPresetsForObject(global::UnityEngine.Object target) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Presets.Preset.GetDefaultPresetsForObject"); return global::System.Array.Empty<global::UnityEditor.Presets.Preset>(); }
-        [global::System.Obsolete("Use GetDefaultPresetsForObject to get the full ordered list of default Presets that would be applied to that Object")] [global::Unbound.Stub] public static global::UnityEditor.Presets.Preset GetDefaultForObject(global::UnityEngine.Object target) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Presets.Preset.GetDefaultForObject"); return default; }
-        [global::System.Obsolete("Use GetDefaultPresetsForType to get the full list of default Presets for a given PresetType.")] [global::Unbound.Stub] public static global::UnityEditor.Presets.Preset GetDefaultForPreset(global::UnityEditor.Presets.Preset preset) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Presets.Preset.GetDefaultForPreset"); return default; }
-        [global::Unbound.Stub] public static global::UnityEditor.Presets.PresetType[] GetAllDefaultTypes() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Presets.Preset.GetAllDefaultTypes"); return global::System.Array.Empty<global::UnityEditor.Presets.PresetType>(); }
-        [global::Unbound.Stub] public static global::UnityEditor.Presets.DefaultPreset[] GetDefaultPresetsForType(global::UnityEditor.Presets.PresetType type) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Presets.Preset.GetDefaultPresetsForType"); return global::System.Array.Empty<global::UnityEditor.Presets.DefaultPreset>(); }
-        [global::Unbound.Stub] public static bool SetDefaultPresetsForType(global::UnityEditor.Presets.PresetType type, global::UnityEditor.Presets.DefaultPreset[] presets) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Presets.Preset.SetDefaultPresetsForType"); return default; }
-        [global::System.Obsolete("Use SetDefaultPresetsForType instead.")] [global::Unbound.Stub] public static bool SetAsDefault(global::UnityEditor.Presets.Preset preset) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Presets.Preset.SetAsDefault"); return default; }
-        [global::Unbound.Stub] public static void RemoveFromDefault(global::UnityEditor.Presets.Preset preset) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Presets.Preset.RemoveFromDefault"); }
-        [global::System.Obsolete("Use PresetType.IsValidDefault instead.")] [global::Unbound.Stub] public static bool IsPresetExcludedFromDefaultPresets(global::UnityEditor.Presets.Preset preset) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Presets.Preset.IsPresetExcludedFromDefaultPresets"); return default; }
-        [global::System.Obsolete("Use PresetType.IsValidDefault instead.")] [global::Unbound.Stub] public static bool IsObjectExcludedFromDefaultPresets(global::UnityEngine.Object target) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Presets.Preset.IsObjectExcludedFromDefaultPresets"); return default; }
-        [global::System.Obsolete("Use PresetType.IsValid instead.")] [global::Unbound.Stub] public static bool IsObjectExcludedFromPresets(global::UnityEngine.Object target) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Presets.Preset.IsObjectExcludedFromPresets"); return default; }
-        [global::Unbound.Stub] public static bool IsEditorTargetAPreset(global::UnityEngine.Object target) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Presets.Preset.IsEditorTargetAPreset"); return default; }
-        public global::UnityEditor.PropertyModification[] PropertyModifications { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Presets.Preset.PropertyModifications"); return global::System.Array.Empty<global::UnityEditor.PropertyModification>(); } }
-        public string[] excludedProperties { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Presets.Preset.excludedProperties"); return global::System.Array.Empty<string>(); } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Presets.Preset.excludedProperties"); } }
-    }
     [global::Unbound.Stub]
     internal unsafe static partial class PresetEditorHelper
     {
@@ -38390,8 +38348,6 @@ namespace UnityEditor.Presets
         [global::Unbound.Stub] internal PresetType(int nativeTypeID) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Presets.PresetType.ctor"); }
         [global::Unbound.Stub] internal PresetType(global::System.Type type) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Presets.PresetType.ctor"); }
         [global::Unbound.Stub] internal global::UnityEngine.Texture2D GetIcon() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Presets.PresetType.GetIcon"); return default; }
-        [global::Unbound.Stub] public bool IsValidDefault() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Presets.PresetType.IsValidDefault"); return default; }
-        [global::Unbound.Stub] public string GetManagedTypeName() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Presets.PresetType.GetManagedTypeName"); return default; }
     }
     [global::Unbound.Stub]
     internal unsafe partial class PresetTypeDropdownItem : global::UnityEditor.IMGUI.Controls.AdvancedDropdownItem
