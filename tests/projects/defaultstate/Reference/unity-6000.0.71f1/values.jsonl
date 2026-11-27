@@ -17779,4 +17779,10 @@
 {"key":"UnityEditor.Presets.DefaultPreset/Property/UnityEditor.Presets.DefaultPreset/filter","status":"value","value":"null"}
 {"key":"UnityEditor.Presets.DefaultPreset/Property/UnityEditor.Presets.DefaultPreset/preset","status":"value","value":"null"}
 {"key":"UnityEditor.Presets.Preset/@factory","status":"excluded","value":"no-public-parameterless-constructor"}
+{"key":"UnityEditor.PackageManager.Error/@factory","status":"excluded","value":"no-public-parameterless-constructor"}
+{"key":"UnityEditor.PackageManager.Requests.AddAndRemoveRequest/@factory","status":"excluded","value":"no-public-parameterless-constructor"}
+{"key":"UnityEditor.PackageManager.Requests.AddRequest/@factory","status":"excluded","value":"no-public-parameterless-constructor"}
+{"key":"UnityEditor.PackageManager.Requests.EmbedRequest/@factory","status":"excluded","value":"no-public-parameterless-constructor"}
+{"key":"UnityEditor.PackageManager.Requests.RemoveRequest/@factory","status":"excluded","value":"no-public-parameterless-constructor"}
+{"key":"UnityEditor.PackageManager.VersionsInfo/@factory","status":"excluded","value":"no-public-parameterless-constructor"}
 {"key":"complete","status":"value","value":"1"}

@@ -1,5 +1,11 @@
 # Default state of implemented API types
 
+The PackageManager slice (Q819 batch 5) adds 6 type rows and 6 inventory types for the hand-written
+`Error`, `VersionsInfo`, `AddRequest`, `RemoveRequest`, `AddAndRemoveRequest` and `EmbedRequest`
+(all `no-public-parameterless-constructor`, `@factory` rows only; they have no default-state
+values), appended before the completion row from two macOS Editor batch captures that agree on
+them; every earlier row is unchanged.
+
 The experimental texture playables slice adds 5 type rows for the hand-written CameraPlayable,
 MaterialEffectPlayable, TextureMixerPlayable and TexturePlayableOutput (structs) and the static
 TexturePlayableBinding (their `@factory` kinds only; they have no default-state values), from two

@@ -2070,6 +2070,12 @@
     {
       "category": "class",
       "module": "UnityEditor.CoreModule",
+      "status": "no-public-parameterless-constructor",
+      "type": "UnityEditor.PackageManager.Error"
+    },
+    {
+      "category": "class",
+      "module": "UnityEditor.CoreModule",
       "status": "static",
       "type": "UnityEditor.PackageManager.Events"
     },
@@ -2095,7 +2101,31 @@
       "category": "class",
       "module": "UnityEditor.CoreModule",
       "status": "no-public-parameterless-constructor",
+      "type": "UnityEditor.PackageManager.Requests.AddAndRemoveRequest"
+    },
+    {
+      "category": "class",
+      "module": "UnityEditor.CoreModule",
+      "status": "no-public-parameterless-constructor",
+      "type": "UnityEditor.PackageManager.Requests.AddRequest"
+    },
+    {
+      "category": "class",
+      "module": "UnityEditor.CoreModule",
+      "status": "no-public-parameterless-constructor",
+      "type": "UnityEditor.PackageManager.Requests.EmbedRequest"
+    },
+    {
+      "category": "class",
+      "module": "UnityEditor.CoreModule",
+      "status": "no-public-parameterless-constructor",
       "type": "UnityEditor.PackageManager.Requests.ListRequest"
+    },
+    {
+      "category": "class",
+      "module": "UnityEditor.CoreModule",
+      "status": "no-public-parameterless-constructor",
+      "type": "UnityEditor.PackageManager.Requests.RemoveRequest"
     },
     {
       "category": "class",
@@ -2126,6 +2156,12 @@
       "module": "UnityEditor.CoreModule",
       "status": "candidate",
       "type": "UnityEditor.PackageManager.UI.Sample"
+    },
+    {
+      "category": "class",
+      "module": "UnityEditor.CoreModule",
+      "status": "no-public-parameterless-constructor",
+      "type": "UnityEditor.PackageManager.VersionsInfo"
     },
     {
       "category": "scriptable",
