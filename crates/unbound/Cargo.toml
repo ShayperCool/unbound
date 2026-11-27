@@ -29,3 +29,6 @@ unbound-remote.workspace = true
 
 [target.'cfg(all(unix, not(target_os = "macos")))'.dependencies]
 tikv-jemallocator.workspace = true
+
+[build-dependencies]
+cc = "1"

@@ -7,7 +7,6 @@
  */
 #include <stdatomic.h>
 #include <stddef.h>
-#include <stdint.h>
 #include <unistd.h>
 
 typedef int (*unbound_execve_fn)(const char *, char *const[], char *const[]);
@@ -17,15 +16,14 @@ typedef int (*unbound_execve_hook_fn)(
     char *const[],
     unbound_execve_fn);
 
-static _Atomic uintptr_t g_execve_hook = 0;
+static _Atomic(unbound_execve_hook_fn) g_execve_hook = NULL;
 
 void unbound_launch_guard_set_hook(unbound_execve_hook_fn hook) {
-    atomic_store_explicit(&g_execve_hook, (uintptr_t)hook, memory_order_release);
+    atomic_store_explicit(&g_execve_hook, hook, memory_order_release);
 }
 
 static int unbound_interposed_execve(const char *path, char *const argv[], char *const envp[]) {
-    unbound_execve_hook_fn hook =
-        (unbound_execve_hook_fn)atomic_load_explicit(&g_execve_hook, memory_order_acquire);
+    unbound_execve_hook_fn hook = atomic_load_explicit(&g_execve_hook, memory_order_acquire);
     if (hook != NULL) {
         return hook(path, argv, envp, execve);
     }

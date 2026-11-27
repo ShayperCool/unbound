@@ -1,5 +1,4 @@
 use std::path::PathBuf;
-use std::process::Command;
 
 fn main() {
     // The executable's own `execve` (src/editor_launch.rs) must be the one .NET's native library
@@ -40,23 +39,28 @@ fn main() {
             std::process::id()
         ));
         let src = manifest.join("launch_guard_macos.c");
-        println!("cargo:rerun-if-env-changed=CC");
-        let cc = std::env::var_os("CC").unwrap_or_else(|| "cc".into());
-        let status = Command::new(&cc)
+        let mut build = cc::Build::new();
+        build
+            .file(&src)
+            .opt_level(2)
+            .pic(true)
+            .warnings(true)
+            .extra_warnings(true)
+            .warnings_into_errors(true);
+        let compiler = build.get_compiler();
+        let objects = build.compile_intermediates();
+        let status = compiler
+            .to_command()
             .args([
-                "-O2",
-                "-Wall",
-                "-Wextra",
-                "-Werror",
                 "-dynamiclib",
                 "-install_name",
                 "@rpath/libunbound_launch_guard.dylib",
                 "-o",
             ])
             .arg(&tmp)
-            .arg(&src)
+            .args(&objects)
             .status()
-            .expect("running cc to build libunbound_launch_guard.dylib");
+            .expect("linking libunbound_launch_guard.dylib");
         assert!(
             status.success(),
             "building libunbound_launch_guard.dylib failed with {status}"

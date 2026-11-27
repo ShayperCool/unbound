@@ -6474,6 +6474,7 @@ name = "unbound"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "cc",
  "clap",
  "libc",
  "serde",
