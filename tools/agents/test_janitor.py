@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Disk janitor safety controls, using private fixtures only."""
 import contextlib
+import errno
 import io
 import json
 import os
@@ -561,6 +562,53 @@ class JanitorTests(unittest.TestCase):
         self.assertFalse(old.exists())
         self.assertEqual(self.rows('links')[0]['unsettled'], 0)
 
+    @unittest.skipIf(os.geteuid() == 0, 'root can list any directory')
+    def test_unreadable_subdirectories_are_skipped_and_logged(self):
+        old, newest = self.instances('probe', ['gate-1', 'gate-2'])
+        blocked = self.cache/'lost+found'
+        blocked.mkdir()
+        blocked.chmod(0)
+        self.addCleanup(blocked.chmod, 0o755)
+        external = self.root/'external'
+        ext_blocked = external/'lost+found'
+        ext_blocked.mkdir(parents=True)
+        (ext_blocked/'hidden').mkdir()
+        ext_blocked.chmod(0)
+        self.addCleanup(ext_blocked.chmod, 0o755)
+        (self.cache/'ext-link').symlink_to(external)
+        (self.cache/'blocked-target-link').symlink_to(ext_blocked/'hidden')
+        self.collect_applied()
+        self.assertFalse(old.exists())
+        self.assertTrue(newest.is_dir())
+        self.assertFalse(self.j.partial)
+        links = self.rows('links')[0]
+        self.assertEqual(links['unreadable'], 2)
+        self.assertIn(str(blocked), links['unreadable_examples'])
+        self.assertIn(str(ext_blocked), links['unreadable_examples'])
+
+    @unittest.skipIf(os.geteuid() == 0, 'root can list any directory')
+    def test_unreadable_scan_root_still_fails_closed(self):
+        unreadable_root = self.root/'unreadable-root'
+        unreadable_root.mkdir()
+        unreadable_root.chmod(0)
+        self.addCleanup(unreadable_root.chmod, 0o755)
+        with self.assertRaises(PermissionError):
+            janitor.link_walk([unreadable_root], index_root=self.cache)
+
+    def test_non_permission_oserror_in_link_walk_still_fails_closed(self):
+        old, newest = self.instances('probe', ['gate-1', 'gate-2'])
+        broken = self.directory('broken')
+        original = run_cache_index.DirectoryIndex.entries
+        def io_error(index, path, info):
+            if path == str(broken):
+                raise OSError(errno.EIO, 'Input/output error', path)
+            return original(index, path, info)
+        with patch.object(run_cache_index.DirectoryIndex, 'entries', io_error):
+            with self.assertRaises(OSError):
+                self.collect_applied()
+        self.assertTrue(old.is_dir())
+        self.assertEqual(self.j.removed, 0)
+
     def test_runs_in_a_sheriff_or_baseline_probe_folder_stay(self):
         first, newest = self.instances('baseline-probe', ['gate-1', 'gate-2'])
         self.collect_applied()
@@ -732,7 +780,7 @@ class JanitorTests(unittest.TestCase):
         alias = self.cache/'alias'
         alias.symlink_to(path, target_is_directory=True)
         (self.cache/'chain').symlink_to(alias/'output')
-        self.j.links, _ = janitor.link_walk([self.cache])
+        self.j.links, _, _ = janitor.link_walk([self.cache])
         self.assertTrue(self.j.check(path, 72)[0].startswith('symlink reference'))
         self.j.links = []
         self.j.processes = janitor.PathSet([path/'output'])

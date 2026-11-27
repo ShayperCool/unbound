@@ -298,6 +298,10 @@ def gone(error):
     return error.errno in (errno.ENOENT, errno.ESRCH, errno.ENOTDIR)
 
 
+def unreadable_error(error):
+    return isinstance(error, PermissionError) or error.errno in (errno.EACCES, errno.EPERM)
+
+
 def children(path):
     try:
         return sorted(path.iterdir())
@@ -411,23 +415,26 @@ def current_entries(directory):
 
 def link_walk(roots, *, excluded=(), seconds=300, index_root=None, prune=True):
     """Every link at any depth under roots, following links to directories: ([(link, destination)],
-    places still changing after the last recheck), with the lexical and the resolved destination of
-    each link (lexical paths protect the intermediate links of a chain). Installations and
-    compiler stores are excluded.
+    places still changing after the last recheck, unreadable paths skipped), with the lexical and
+    the resolved destination of each link (lexical paths protect the intermediate links of a chain).
+    Installations and compiler stores are excluded.
 
     Workers write meanwhile. A directory that vanishes is skipped, and one that changes while it
     is listed is listed directly; after the walk, the nearest listed place above each vanished
     directory and the changed directories are listed again (up to RECHECK_ROUNDS times), so that a
-    folder renamed in place (an Editor rotating its cache folders) is walked under its new name. A directory moved
-    elsewhere during the walk can be missed (see the module docstring). Raises TimeoutError when
-    the walk does not finish in seconds: an incomplete walk permits no removal. The walk visits
-    millions of directories, so it keeps paths as strings."""
+    folder renamed in place (an Editor rotating its cache folders) is walked under its new name.
+    A non-root directory or link target that denies permission (e.g. a root-owned lost+found) is
+    skipped and returned in unreadable; unreadable scan roots and other I/O errors still raise.
+    A directory moved elsewhere during the walk can be missed (see the module docstring). Raises
+    TimeoutError when the walk does not finish in seconds: an incomplete walk permits no removal.
+    The walk visits millions of directories, so it keeps paths as strings."""
     deadline = time.monotonic()+seconds
     excluded = {os.fspath(Path(p).resolve()) for p in excluded}
     roots = list(dict.fromkeys(os.fspath(Path(p).absolute()) for p in roots))
+    root_set = set(roots)
     # One shared index of listings for every scan root; no index files in checkouts.
     index = DirectoryIndex(Path(index_root or roots[0]), seconds=seconds)
-    found, visited, pending, known, changed = [], {}, list(roots), set(), set()
+    found, visited, pending, known, changed, unreadable = [], {}, list(roots), set(), set(), set()
     # Directories listed so far: only their vanished children are looked for again (a link
     # target outside the roots that vanished leaves no listing of its own place to read again).
     listed_paths = set()
@@ -452,9 +459,12 @@ def link_walk(roots, *, excluded=(), seconds=300, index_root=None, prune=True):
         try:
             previous_info = os.stat(previous)
         except OSError as error:
-            if not gone(error):
-                raise
-            return False
+            if gone(error):
+                return False
+            if unreadable_error(error) and previous not in root_set:
+                unreadable.add(previous)
+                return False
+            raise
         return (previous_info.st_dev, previous_info.st_ino) == identity  # reached through a link
 
     def follow(listed):
@@ -466,6 +476,9 @@ def link_walk(roots, *, excluded=(), seconds=300, index_root=None, prune=True):
         for link, result in zip(links, index.map(link_target, links)):
             if isinstance(result, OSError):
                 if gone(result):
+                    continue
+                if unreadable_error(result):
+                    unreadable.add(link)
                     continue
                 raise result
             lexical, target, is_dir = result
@@ -488,26 +501,38 @@ def link_walk(roots, *, excluded=(), seconds=300, index_root=None, prune=True):
                 listed = []
                 for directory, info in zip(batch, index.stat_many(batch)):
                     if isinstance(info, OSError):
-                        if not gone(info):
-                            raise info
-                        vanished(directory)
-                        continue
+                        if gone(info):
+                            vanished(directory)
+                            continue
+                        if unreadable_error(info) and directory not in root_set:
+                            unreadable.add(directory)
+                            continue
+                        raise info
                     identity = (info.st_dev, info.st_ino)
                     if walked(directory, identity):
                         continue
                     try:
                         entries = index.entries(directory, info)
                     except DirectoryChanged:
-                        entries = current_entries(directory)
+                        try:
+                            entries = current_entries(directory)
+                        except OSError as error:
+                            if unreadable_error(error) and directory not in root_set:
+                                unreadable.add(directory)
+                                continue
+                            raise
                         if entries is None:
                             vanished(directory)
                             continue
                         changed.add(directory)
                     except OSError as error:
-                        if not gone(error):
-                            raise
-                        vanished(directory)
-                        continue
+                        if gone(error):
+                            vanished(directory)
+                            continue
+                        if unreadable_error(error) and directory not in root_set:
+                            unreadable.add(directory)
+                            continue
+                        raise
                     visited[identity] = directory
                     listed_paths.add(directory)
                     listed.append(entries)
@@ -522,7 +547,13 @@ def link_walk(roots, *, excluded=(), seconds=300, index_root=None, prune=True):
             for directory in recheck:
                 if any(inside(directory, path) for path in excluded):
                     continue
-                entries = current_entries(directory)
+                try:
+                    entries = current_entries(directory)
+                except OSError as error:
+                    if unreadable_error(error) and directory not in root_set:
+                        unreadable.add(directory)
+                        continue
+                    raise
                 if entries is None:
                     vanished(directory)  # renamed or removed since: look higher up
                 else:
@@ -532,7 +563,7 @@ def link_walk(roots, *, excluded=(), seconds=300, index_root=None, prune=True):
             index.finish()
     finally:
         index.close()
-    return found, sorted(changed)
+    return found, sorted(changed), sorted(unreadable)
 
 
 class PathSet:
@@ -705,8 +736,8 @@ class Janitor:
         started = time.monotonic()
         # The promoted suite's metadata is read again with every walk (a promotion at once).
         self.refresh_baseline(force=self.links_at is not None)
-        self.links, unsettled = link_walk([*self.scan_roots, *sorted(self.suite_roots)], excluded=self.excluded,
-                                          index_root=self.cache, seconds=min(self.scan_seconds, self.budget()))
+        self.links, unsettled, unreadable = link_walk([*self.scan_roots, *sorted(self.suite_roots)], excluded=self.excluded,
+                                                      index_root=self.cache, seconds=min(self.scan_seconds, self.budget()))
         self.links_at = started
         # Per candidate, the links outside it that name something inside it.
         self.incoming = {}
@@ -718,8 +749,10 @@ class Janitor:
             if self.within_removed(destination) and not self.within_removed(link):
                 self.emit('error', link=link, destination=destination, reason='a link names a directory removed in this run')
         # Places still changing after the last recheck: a link created there may be unseen.
+        # Non-root directories that denied permission (e.g. root-owned lost+found) are skipped and logged.
         self.emit('links', links=len(self.links), candidates_named=len(self.incoming),
                   unsettled=len(unsettled), unsettled_examples=unsettled[:5],
+                  unreadable=len(unreadable), unreadable_examples=unreadable[:5],
                   seconds=round(time.monotonic()-started, 3))
 
     def refresh_processes(self, force=False):
