@@ -71,4 +71,32 @@
 {"k":"made/Tuned/modifications","v":"m_Enabled=1\nm_EditorHideFlags=0\nm_EditorClassIdentifier=\ncount=3\nspeed=1.5\nlabel=made\ntint.r=1\ntint.g=0\ntint.b=0\ntint.a=1\ntarget=\nhidden=7"}
 {"k":"made/Tuned/excluded","v":""}
 {"k":"made/GameObject/valid","v":"throws System.NotSupportedException"}
+{"k":"asset/MissingScript/valid","v":"False"}
+{"k":"asset/MissingScript/presetType","v":"valid False default False managed 'UnityEngine.MonoBehaviour'"}
+{"k":"type/ScriptedImporter","v":"valid True default True managed 'TuneImporter'"}
+{"k":"defaults/LowerNamedTransform","v":"[]"}
+{"k":"defaults/ChildNamedTransform","v":"[Transform]"}
+{"k":"defaults/SlashNamedTransform","v":"[]"}
+{"k":"allDefaultTypes","v":"valid True default True managed 'UnityEngine.BoxCollider'|valid True default True managed 'UnityEngine.Transform'"}
+{"k":"dataEquals/TransformAfterApply","v":"True"}
+{"k":"dataEquals/TransformPartial","v":"False"}
+{"k":"dataEquals/TunedAfterApply","v":"True"}
+{"k":"dataEquals/BoxAfterApply","v":"True"}
+{"k":"dataEquals/MaterialAfterApply","v":"True"}
+{"k":"dataEquals/WrongType","v":"False"}
+{"k":"dataEquals/Null","v":"throws System.ArgumentNullException"}
+{"k":"excluded/Apply","v":"True (0.00, 0.00, 0.00) (2.00, 2.00, 2.00)"}
+{"k":"excluded/DataEqualsDiffExcluded","v":"True"}
+{"k":"excluded/List","v":"m_LocalPosition"}
+{"k":"update/Tuned","v":"True True 42 updated"}
+{"k":"update/WrongType","v":"False"}
+{"k":"update/Null","v":"throws System.ArgumentNullException"}
+{"k":"made/ScriptableObject/name","v":""}
+{"k":"made/ScriptableObject/fullType","v":"TunedData"}
+{"k":"made/ScriptableObject/type","v":"TunedData"}
+{"k":"made/ScriptableObject/valid","v":"True"}
+{"k":"made/ScriptableObject/presetType","v":"valid True default True managed 'TunedData'"}
+{"k":"made/ScriptableObject/modifications","v":"m_Enabled=1\nm_EditorHideFlags=0\nm_EditorClassIdentifier=\nvalue=11"}
+{"k":"made/ScriptableObject/excluded","v":""}
+{"k":"removeFromDefault/Null","v":"throws System.NullReferenceException"}
 {"k":"complete","v":true}

@@ -140,6 +140,53 @@ public class PresetsProbe : MonoBehaviour
         made.label = "made";
         Describe("made/Tuned", new Preset(made));
         Try("made/GameObject/valid", () => "" + new Preset(source).IsValid());
+
+        // Controls for missing script, ScriptedImporter, filter edge cases, GetAllDefaultTypes,
+        // DataEquals, excludedProperties, UpdateProperties, ScriptableObject preset, RemoveFromDefault.
+        var missingPreset = AssetDatabase.LoadAssetAtPath<Preset>("Assets/Presets/MissingScript.preset");
+        Try("asset/MissingScript/valid", () => "" + missingPreset.IsValid());
+        Try("asset/MissingScript/presetType", () => Type(missingPreset.GetPresetType()));
+        Try("type/ScriptedImporter", () => Type(new PresetType(AssetImporter.GetAtPath("Assets/Presets/Sample.tune"))));
+
+        var lowerNamed = new GameObject("namedLower");
+        var childNamed = new GameObject("NamedChild");
+        childNamed.transform.SetParent(other.transform, false);
+        var slashNamed = new GameObject("Named/Slash");
+        Try("defaults/LowerNamedTransform", () => Names(Preset.GetDefaultPresetsForObject(lowerNamed.transform)));
+        Try("defaults/ChildNamedTransform", () => Names(Preset.GetDefaultPresetsForObject(childNamed.transform)));
+        Try("defaults/SlashNamedTransform", () => Names(Preset.GetDefaultPresetsForObject(slashNamed.transform)));
+        Try("allDefaultTypes", () => string.Join("|", Preset.GetAllDefaultTypes().Select(Type)));
+
+        Try("dataEquals/TransformAfterApply", () => "" + transformPreset.DataEquals(named.transform));
+        Try("dataEquals/TransformPartial", () => "" + transformPreset.DataEquals(other.transform));
+        Try("dataEquals/TunedAfterApply", () => "" + tunedPreset.DataEquals(tuned));
+        Try("dataEquals/BoxAfterApply", () => "" + boxPreset.DataEquals(box));
+        Try("dataEquals/MaterialAfterApply", () => "" + materialPreset.DataEquals(material));
+        Try("dataEquals/WrongType", () => "" + transformPreset.DataEquals(box));
+        Try("dataEquals/Null", () => "" + transformPreset.DataEquals(null));
+
+        var exSource = new GameObject("ExSource");
+        exSource.transform.localPosition = new Vector3(1, 2, 3);
+        exSource.transform.localScale = new Vector3(2, 2, 2);
+        var exPreset = new Preset(exSource.transform);
+        exPreset.excludedProperties = new[] { "m_LocalPosition" };
+        var exTarget = new GameObject("ExTarget");
+        Try("excluded/Apply", () => exPreset.ApplyTo(exTarget.transform) + " " + exTarget.transform.localPosition + " " + exTarget.transform.localScale);
+        Try("excluded/DataEqualsDiffExcluded", () => "" + exPreset.DataEquals(exTarget.transform));
+        Try("excluded/List", () => string.Join(",", exPreset.excludedProperties));
+
+        var upPreset = new Preset(made);
+        made.count = 42;
+        made.label = "updated";
+        var upTarget = new GameObject("UpTarget").AddComponent<Tuned>();
+        Try("update/Tuned", () => upPreset.UpdateProperties(made) + " " + upPreset.ApplyTo(upTarget) + " " + upTarget.count + " " + upTarget.label);
+        Try("update/WrongType", () => "" + upPreset.UpdateProperties(box));
+        Try("update/Null", () => "" + upPreset.UpdateProperties(null));
+
+        var soData = ScriptableObject.CreateInstance<TunedData>();
+        soData.value = 11;
+        Describe("made/ScriptableObject", new Preset(soData));
+        Try("removeFromDefault/Null", () => { Preset.RemoveFromDefault(null); return "ok"; });
     }
 #endif
 }
