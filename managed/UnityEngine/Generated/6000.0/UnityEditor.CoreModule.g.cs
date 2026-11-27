@@ -40143,36 +40143,6 @@ namespace UnityEditor.Scripting.Compilers
         [global::Unbound.Stub] protected CompilerBase() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Scripting.Compilers.CompilerBase.ctor"); }
         public abstract string Version { get; }
     }
-    [global::Unbound.Stub]
-    internal unsafe partial struct CompilerMessage
-    {
-        [global::Unbound.Stub] public string message;
-        [global::Unbound.Stub] public string file;
-        [global::Unbound.Stub] public int line;
-        [global::Unbound.Stub] public int column;
-        [global::Unbound.Stub] public global::UnityEditor.Scripting.Compilers.CompilerMessageType type;
-        [global::Unbound.Stub] internal string assemblyName;
-    }
-    internal enum CompilerMessageType
-    {
-        Error = 0,
-        Warning = 1,
-        Information = 2,
-    }
-    [global::Unbound.Stub]
-    internal unsafe abstract partial class CompilerOutputParserBase
-    {
-        [global::Unbound.Stub] protected static global::UnityEditor.Scripting.Compilers.CompilerMessage CreateInternalCompilerErrorMessage(string[] compileroutput) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Scripting.Compilers.CompilerOutputParserBase.CreateInternalCompilerErrorMessage"); return default; }
-        [global::Unbound.Stub] protected internal static global::UnityEditor.Scripting.Compilers.CompilerMessage CreateCompilerMessageFromMatchedRegex(string line, global::System.Text.RegularExpressions.Match m, string errorId, string informationId = null) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Scripting.Compilers.CompilerOutputParserBase.CreateCompilerMessageFromMatchedRegex"); return default; }
-        [global::Unbound.Stub] public virtual global::System.Collections.Generic.IEnumerable<global::UnityEditor.Scripting.Compilers.CompilerMessage> Parse(string[] errorOutput, bool compilationHadFailure) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Scripting.Compilers.CompilerOutputParserBase.Parse"); return global::System.Array.Empty<global::UnityEditor.Scripting.Compilers.CompilerMessage>(); }
-        [global::Unbound.Stub] public virtual global::System.Collections.Generic.IEnumerable<global::UnityEditor.Scripting.Compilers.CompilerMessage> Parse(string[] errorOutput, string[] standardOutput, bool compilationHadFailure, string assemblyName_unused = null) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Scripting.Compilers.CompilerOutputParserBase.Parse"); return global::System.Array.Empty<global::UnityEditor.Scripting.Compilers.CompilerMessage>(); }
-        [global::Unbound.Stub] protected virtual bool ShouldParseLine(string line) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Scripting.Compilers.CompilerOutputParserBase.ShouldParseLine"); return default; }
-        protected abstract string GetErrorIdentifier();
-        [global::Unbound.Stub] protected virtual string GetInformationIdentifier() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Scripting.Compilers.CompilerOutputParserBase.GetInformationIdentifier"); return default; }
-        protected abstract global::System.Text.RegularExpressions.Regex GetOutputRegex();
-        [global::Unbound.Stub] protected virtual global::System.Text.RegularExpressions.Regex GetInternalErrorOutputRegex() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Scripting.Compilers.CompilerOutputParserBase.GetInternalErrorOutputRegex"); return default; }
-        [global::Unbound.Stub] protected CompilerOutputParserBase() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Scripting.Compilers.CompilerOutputParserBase.ctor"); }
-    }
     unsafe partial class CompilerSpecificResponseFiles
     {
         public const string MicrosoftCSharpCompiler = "csc.rsp";
