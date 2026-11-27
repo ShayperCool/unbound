@@ -11,7 +11,8 @@ using UnityEngine;
 /// Writes values.jsonl in $BROKENMODEL_OUT (tests/value_probe.py rows): what the AssetDatabase
 /// answers for model files that do not import (a text .fbx, an empty .fbx, a binary .fbx cut after its
 /// header, an ASCII .fbx cut inside a block, an ASCII .fbx with
-/// two models cut inside its connections, text .fbx files whose .meta asks for a Generic or
+/// two models cut inside its connections, ASCII ones cut inside a number and at a line end, a binary
+/// one cut mid-file, a Git LFS pointer, zero bytes and an HTML page as .fbx files, text .fbx files whose .meta asks for a Generic or
 /// Humanoid avatar or a Legacy animation, a text .obj, an empty .obj, and a text .fbx created without a .meta in
 /// the session), the callbacks and log lines their ImportAsset gives,
 /// and a model that imports as the control.
@@ -124,7 +125,7 @@ public class BrokenModelProbe : MonoBehaviour
         // Play forgets it).
         ModelEvents.Events.Clear();
 
-        foreach (var name in new[] { "Garbage.fbx", "Empty.fbx", "Truncated.fbx", "CutAscii.fbx", "CutModel.fbx", "RigGeneric.fbx", "RigHumanoid.fbx", "RigLegacy.fbx", "Garbage.obj", "Empty.obj", "Tri.obj" })
+        foreach (var name in new[] { "Garbage.fbx", "Empty.fbx", "Truncated.fbx", "CutAscii.fbx", "CutModel.fbx", "CutToken.fbx", "CutLine.fbx", "CutBinary.fbx", "Lfs.fbx", "Zeros.fbx", "Html.fbx", "RigGeneric.fbx", "RigHumanoid.fbx", "RigLegacy.fbx", "Garbage.obj", "Empty.obj", "Tri.obj" })
         {
             var path = "Assets/Models/" + name;
             var key = name.Replace('.', '_');

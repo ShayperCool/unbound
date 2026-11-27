@@ -1,0 +1,47 @@
+; FBX 7.4.0 project file
+; tests/projects/brokenmodel: cut
+FBXHeaderExtension:  {
+	FBXHeaderVersion: 1003
+	FBXVersion: 7400
+	Creator: "Unbound asset postprocessor probe"
+}
+GlobalSettings:  {
+	Version: 1000
+	Properties70:  {
+		P: "UpAxis", "int", "Integer", "",1
+		P: "UpAxisSign", "int", "Integer", "",1
+		P: "FrontAxis", "int", "Integer", "",2
+		P: "FrontAxisSign", "int", "Integer", "",1
+		P: "CoordAxis", "int", "Integer", "",0
+		P: "CoordAxisSign", "int", "Integer", "",1
+		P: "UnitScaleFactor", "double", "Number", "",100
+	}
+}
+Definitions:  {
+	Version: 100
+	Count: 7
+	ObjectType: "Model" {
+		Count: 4
+	}
+	ObjectType: "Geometry" {
+		Count: 3
+	}
+}
+Objects:  {
+	Model: 200000, "Model::Tagged", "Mesh" {
+		Version: 232
+		Properties70:  {
+			P: "Lcl Translation", "Lcl Translation", "", "A",0.0,0,0
+			P: "collider", "bool", "", "U",1
+			P: "count", "int", "Integer", "U",3
+			P: "weight", "double", "Number", "U",2.5
+			P: "label", "KString", "", "U", "hello"
+			P: "offset", "Vector3D", "Vector", "U",1.0,2.0,3.0
+			P: "tint", "ColorRGB", "Color", "U",0.25,0.5,0.75
+			P: "animatedWeight", "Number", "", "A+U",0.75
+			P: "UDP3DSMAX", "KString", "", "U", "key = value"
+			P: "notUser", "Number", "", "A",9.0
+		}
+		Shading: T
+		Culling: "CullingOff"
+	}
