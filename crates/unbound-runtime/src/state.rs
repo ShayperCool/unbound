@@ -335,9 +335,10 @@ impl RuntimeState {
 
     /// Writes the `.meta` of every file and folder of the project's own assets that has none, as
     /// the Editor imports them (the project's ScriptedImporters taking the extensions they
-    /// declare, once known: [`project_new_importer`]). Returns the files given one, and those whose
-    /// `.meta` names a project's ScriptedImporter (its fields for the managed side to write).
-    fn write_new_metas(&self) -> (Vec<PathBuf>, std::collections::HashSet<PathBuf>) {
+    /// declare, once known: [`project_new_importer`]), the files left without one warned when
+    /// `warn`. Returns the files given one, and those whose `.meta` names a project's
+    /// ScriptedImporter (its fields for the managed side to write).
+    fn write_new_metas(&self, warn: bool) -> (Vec<PathBuf>, std::collections::HashSet<PathBuf>) {
         let own_sections = std::cell::RefCell::new(std::collections::HashSet::new());
         if !self.new_meta_measured {
             return (Vec::new(), Default::default());
@@ -352,13 +353,29 @@ impl RuntimeState {
             }
             importer
         };
-        let written = unbound_assets::new_meta::import_roots(
-            &self.editable_roots,
-            &self.new_meta,
-            unbound_project::assetdb::is_hidden,
-            &project,
-        )
-        .written;
+        let written = if warn {
+            unbound_assets::new_meta::import_roots(
+                &self.editable_roots,
+                &self.new_meta,
+                unbound_project::assetdb::is_hidden,
+                &project,
+            )
+            .written
+        } else {
+            self.editable_roots
+                .iter()
+                .filter(|root| root.is_dir())
+                .flat_map(|root| {
+                    unbound_assets::new_meta::import_new(
+                        root,
+                        &self.new_meta,
+                        unbound_project::assetdb::is_hidden,
+                        &project,
+                    )
+                    .written
+                })
+                .collect()
+        };
         let files = written.iter().map(|meta| meta.with_extension("")).collect();
         (files, own_sections.into_inner())
     }
@@ -384,7 +401,8 @@ impl RuntimeState {
     /// ScriptedImporters decide, now that they are known: given their `.meta` and listed (the
     /// other assets are not read again). Each result names its path.
     fn import_found(&self) -> Vec<serde_json::Value> {
-        let (files, own_sections) = self.write_new_metas();
+        // What still gets none was warned of as the project opened.
+        let (files, own_sections) = self.write_new_metas(false);
         let requests: Vec<ImportPath> = files
             .iter()
             .filter_map(|file| {
@@ -422,7 +440,7 @@ impl RuntimeState {
     /// looked at. Returns each path that changed: what it is now, or for a gone asset its former
     /// GUID as `removed` (none when the GUID is listed again elsewhere: the asset moved).
     fn refresh_assets(&self) -> Vec<serde_json::Value> {
-        let (_, own_sections) = self.write_new_metas();
+        let (_, own_sections) = self.write_new_metas(true);
         let roots: Vec<_> = self
             .asset_roots
             .iter()
@@ -2478,29 +2496,50 @@ fn has_native_importer(ext: &str) -> bool {
         || native_importer(&format!("x.{ext}")).is_some_and(|name| name != "DefaultImporter")
 }
 
+/// The extensions the Editor's own ScriptedImporters declare that Unbound has no class for
+/// (Unity's C# for 6000.0: SearchDatabaseImporter `.index`, its search index entries
+/// `.~aindex00` to `.~aindex0F`, DeviceInfoImporter `.device`, GraphicsStateCollectionImporter
+/// `.graphicsstate`): a new file of one gets no `.meta` (said), not the DefaultImporter's.
+fn editor_scripted_extension(ext: &str) -> bool {
+    matches!(ext, "index" | "device" | "graphicsstate")
+        || ext
+            .strip_prefix("~aindex0")
+            .is_some_and(|digit| digit.len() == 1 && digit.chars().all(|c| c.is_ascii_hexdigit()))
+}
+
 /// The importer a new file of an extension no importer of the Editor's own claims gets, once the
 /// project's ScriptedImporters are known (matches the Unity 6000.0.71f1 Editor,
 /// tests/projects/importerpick `open/New.*` as the project opens, `session/*` by Refresh and
 /// ImportAsset): the ScriptedImporter of the project's scripts that declares it, else the
-/// DefaultImporter (an extension no importer declares; one that a plug-in's or the Editor's own
-/// importer declares, that two importers declare, or a file without an extension: none, not
-/// measured).
+/// DefaultImporter (an extension no importer declares). An extension that a plug-in's or the
+/// Editor's own importer declares (also beside a project's: [`editor_scripted_extension`]), that
+/// two importers declare, or a file without an extension: none, not measured.
 fn project_new_importer(file: &Path) -> Option<unbound_assets::new_meta::NewImporter> {
-    use unbound_assets::new_meta::NewImporter;
     let ext = file.extension()?.to_str()?.to_ascii_lowercase();
     let registry = state().scripted_extensions.read().unwrap();
-    let registry = registry.as_ref()?;
-    if let Some((guid, file_id)) = registry.defaults.get(&ext) {
+    new_importer_of(&ext, registry.as_ref()?)
+}
+
+/// [`project_new_importer`] of a lowercase extension under the project's `registry`.
+fn new_importer_of(
+    ext: &str,
+    registry: &ScriptedExtensions,
+) -> Option<unbound_assets::new_meta::NewImporter> {
+    use unbound_assets::new_meta::NewImporter;
+    if ext.is_empty()
+        || editor_scripted_extension(ext)
+        || registry.keep_meta.contains(ext)
+        || registry.rejected.contains(ext)
+    {
+        return None;
+    }
+    if let Some((guid, file_id)) = registry.defaults.get(ext) {
         return Some(NewImporter::ProjectScripted {
             script: Guid::parse(guid)?,
             file_id: *file_id,
         });
     }
-    (!ext.is_empty()
-        && !registry.keep_meta.contains(&ext)
-        && !registry.rejected.contains(&ext)
-        && !has_native_importer(&ext))
-    .then_some(NewImporter::Default)
+    (!has_native_importer(ext)).then_some(NewImporter::Default)
 }
 
 /// `meta` with the section of the importer that imports its file
@@ -4222,6 +4261,49 @@ mod tests {
         assert_eq!(pick("json", true), Some(("aaaa".to_string(), 11500000)));
         assert_eq!(pick("both", false), None);
         assert_eq!(pick("foo", false), Some(("aaaa".to_string(), 11500000)));
+    }
+
+    /// A new file's importer once the project's ScriptedImporters are known (tests/projects/
+    /// importerpick open/New.*): the declaring project importer, the DefaultImporter for an
+    /// extension nobody declares; none for a plug-in's, a rejected, an Editor's own importer's
+    /// extension (also beside a project's) and a file without an extension.
+    #[test]
+    fn a_new_file_takes_its_extensions_importer_once_the_projects_are_known() {
+        use unbound_assets::new_meta::NewImporter;
+        let foo = ("fe7149dab52c402586c2710ef982d2dd".to_string(), 11500000);
+        let (registry, _) = super::scripted_registry(
+            [
+                ("foo".to_string(), foo.clone()),
+                ("index".to_string(), foo.clone()),
+            ],
+            &["dllext".to_string()],
+            &["both".to_string()],
+            &[foo.0.clone()],
+        );
+        let of = |ext| super::new_importer_of(ext, &registry);
+        assert_eq!(
+            of("foo"),
+            Some(NewImporter::ProjectScripted {
+                script: unbound_yaml::Guid::parse(&foo.0).unwrap(),
+                file_id: 11500000
+            })
+        );
+        assert_eq!(of("qux"), Some(NewImporter::Default));
+        for none in [
+            "dllext",
+            "both",
+            "index",
+            "device",
+            "graphicsstate",
+            "~aindex0a",
+            "",
+            "spm",
+            "mp4",
+        ] {
+            assert_eq!(of(none), None, "{none}");
+        }
+        // Only the search index entries' own sixteen extensions are the Editor's.
+        assert_eq!(of("~aindex10"), Some(NewImporter::Default));
     }
 
     /// The importer an extension has natively is named from one table: the measured importers of
