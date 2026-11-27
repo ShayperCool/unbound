@@ -197,26 +197,63 @@ namespace UnityEngine.Tests
             }
 
             SearchRequest onlineMiss = null;
-            var logs = CaptureLogs(() => onlineMiss = Client.Search("com.probe.does.not.exist", offlineMode: false), "Client.Search");
+            var logs = CaptureLogs(() => onlineMiss = Client.Search("com.probe.does.not.exist", offlineMode: false), "Client.Search(online)");
             Assert.Equal(StatusCode.Failure, onlineMiss.Status);
             Assert.Equal(ErrorCode.NotFound, onlineMiss.Error.errorCode);
-            Assert.Contains(logs, m => m.Contains("Client.Search"));
+            Assert.Contains(logs, m => m.Contains("Client.Search(online)"));
 
+            // Online mode and unmeasured Registry source use distinct Stubs.Ignored keys so neither suppresses the other.
             SearchRequest onlineBuiltin = null;
-            var onlineHitLogs = CaptureLogs(() => onlineBuiltin = Client.Search("com.unity.modules.audio"), "Client.Search");
-            Assert.Equal(StatusCode.Success, onlineBuiltin.Status);
-            Assert.Contains(onlineHitLogs, m => m.Contains("Client.Search"));
-
             SearchRequest regOffline = null;
-            var regLogs = CaptureLogs(() => regOffline = Client.Search("com.probe.registry", offlineMode: true), "Client.Search");
+            var combinedLogs = CaptureLogs(() =>
+            {
+                onlineBuiltin = Client.Search("com.unity.modules.audio");
+                regOffline = Client.Search("com.probe.registry", offlineMode: true);
+            }, "Client.Search(online)", "Client.Search(Registry)");
+            Assert.Equal(StatusCode.Success, onlineBuiltin.Status);
             Assert.Equal(StatusCode.Success, regOffline.Status);
             Assert.Single(regOffline.Result);
-            Assert.Contains(regLogs, m => m.Contains("Client.Search"));
+            Assert.Contains(combinedLogs, m => m.Contains("Client.Search(online)"));
+            Assert.Contains(combinedLogs, m => m.Contains("Client.Search(Registry)"));
 
             SearchRequest allReq = null;
             var allLogs = CaptureLogs(() => allReq = Client.SearchAll(offlineMode: true), "Client.SearchAll");
             Assert.Equal(StatusCode.Success, allReq.Status);
             Assert.Contains(allLogs, m => m.Contains("Client.SearchAll"));
+        }
+
+        [Fact]
+        public void SerializedFieldsRoundTripThroughJsonUtility()
+        {
+            var req = Client.Remove("com.probe.not.installed");
+            var reqJson = JsonUtility.ToJson(req);
+            Assert.Contains("\"m_PackageIdOrName\":\"com.probe.not.installed\"", reqJson);
+            var reqRt = JsonUtility.FromJson<RemoveRequest>(reqJson);
+            Assert.Equal("com.probe.not.installed", reqRt.PackageIdOrName);
+
+            var err = new Error(NativeErrorCode.Conflict, "boom");
+            var errJson = JsonUtility.ToJson(err);
+            var errRt = JsonUtility.FromJson<Error>(errJson);
+            Assert.Equal(ErrorCode.Conflict, errRt.errorCode);
+            Assert.Equal("boom", errRt.message);
+
+            var vi = new VersionsInfo(new[] { "1.0.0", "2.0.0" }, new[] { "1.0.0" }, "1.0.0", new[] { "0.9.0" });
+            var viJson = JsonUtility.ToJson(vi);
+            var viRt = JsonUtility.FromJson<VersionsInfo>(viJson);
+            Assert.Equal(new[] { "1.0.0", "2.0.0" }, viRt.all);
+            Assert.Equal("2.0.0", viRt.latest);
+            Assert.Equal("1.0.0", viRt.recommended);
+            Assert.Equal(new[] { "0.9.0" }, viRt.deprecated);
+
+            var col = new PackageCollection(Array.Empty<PackageInfo>(), new Error(NativeErrorCode.Conflict, "col-err"));
+            var colJson = JsonUtility.ToJson(col);
+            Assert.Contains("\"m_Error\"", colJson);
+            Assert.Contains("\"col-err\"", colJson);
+
+            var bi = PackageInfo.FindForPackageName("com.unity.modules.audio");
+            var piJson = JsonUtility.ToJson(bi);
+            Assert.Contains("\"m_Versions\"", piJson);
+            Assert.Contains("\"m_Errors\"", piJson);
         }
 
         [Fact]

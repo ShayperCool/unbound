@@ -147,8 +147,8 @@ namespace UnityEditor.PackageManager
         static readonly List<PackageInfo> s_Registered = new List<PackageInfo>();
         static readonly Dictionary<string, PackageInfo> s_ByName = new Dictionary<string, PackageInfo>(StringComparer.Ordinal);
 
-        [SerializeField] readonly VersionsInfo m_Versions;
-        [SerializeField] readonly Error[] m_Errors = Array.Empty<Error>();
+        [SerializeField] VersionsInfo m_Versions;
+        [SerializeField] Error[] m_Errors = Array.Empty<Error>();
 
         internal PackageInfo()
         {
@@ -270,7 +270,7 @@ namespace UnityEditor.PackageManager
     public partial class PackageCollection : IEnumerable<PackageInfo>, IEnumerable
     {
         readonly List<PackageInfo> m_Packages;
-        [SerializeField] readonly Error m_Error;
+        [SerializeField] Error m_Error;
 
         private PackageCollection()
         {
@@ -316,7 +316,7 @@ namespace UnityEditor.PackageManager
             if (string.IsNullOrWhiteSpace(packageIdOrName))
                 throw new ArgumentException("Package id or name cannot be null, empty or whitespace", nameof(packageIdOrName));
             if (!offlineMode)
-                Unbound.Runtime.Stubs.Ignored("Client.Search", "only searches registered packages offline (no registry network access)");
+                Unbound.Runtime.Stubs.Ignored("Client.Search(online)", "only searches registered packages offline (no registry network access)");
             var name = packageIdOrName;
             int at = name.IndexOf('@');
             if (at >= 0) name = name.Substring(0, at);
@@ -327,7 +327,7 @@ namespace UnityEditor.PackageManager
                     return new SearchRequest(new[] { found }, packageIdOrName);
                 if (found.source == PackageSource.Embedded || found.source == PackageSource.Local)
                     return new SearchRequest(new Error(NativeErrorCode.NotFound, $"Package '{packageIdOrName}' was not found."), packageIdOrName);
-                Unbound.Runtime.Stubs.Ignored("Client.Search", $"search for {found.source} packages is not measured (Unbound reads no registry cache)");
+                Unbound.Runtime.Stubs.Ignored($"Client.Search({found.source})", $"search for {found.source} packages is not measured (Unbound reads no registry cache)");
                 return new SearchRequest(new[] { found }, packageIdOrName);
             }
             return new SearchRequest(new Error(NativeErrorCode.NotFound, $"Package '{packageIdOrName}' was not found."), packageIdOrName);
@@ -534,7 +534,7 @@ namespace UnityEditor.PackageManager.Requests
     [Serializable]
     public sealed partial class RemoveRequest : Request
     {
-        [SerializeField] readonly string m_PackageIdOrName;
+        [SerializeField] string m_PackageIdOrName;
 
         private RemoveRequest() { }
 
