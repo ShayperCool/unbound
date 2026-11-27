@@ -1,16 +1,4 @@
 {
- "Mesh.RecalculateUVDistributionMetrics is not computed (GetUVDistributionMetric answers 1); Unity's metric is a trimmed statistic of world-to-UV triangle area ratios (follow-up in docs/COMPATIBILITY_GAPS.md)": [
-  "Full/mesh/LOD0_Mesh/uvDistribution",
-  "Full/mesh/LOD1_Mesh/uvDistribution",
-  "Full/mesh/LOD2_Mesh/uvDistribution",
-  "Full/mesh/LOD3_Mesh/uvDistribution",
-  "Remapped/mesh/LOD0_Mesh/uvDistribution",
-  "Settings/mesh/LOD0_Mesh/uvDistribution",
-  "Settings/mesh/LOD1_Mesh/uvDistribution",
-  "Settings/mesh/LOD2_Mesh/uvDistribution",
-  "Settings/mesh/LOD3_Mesh/uvDistribution",
-  "Simple/mesh/LOD0_Mesh/uvDistribution"
- ],
  "Reparenting a child with Transform.parent keeps a local rotation of (0, 0, 0, 1) where the Editor gives (-0, -0, -0, 1) under an unrotated parent (signed zeros only; Transform arithmetic follow-up)": [
   "Full/go/Full/Collider1/transform",
   "Full/go/Full/LOD0/transform",

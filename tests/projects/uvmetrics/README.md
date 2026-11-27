@@ -28,11 +28,13 @@ throws nothing); a mesh whose triangles all have the same ratio answers that rat
 recalculated (a quad twice as large 4, UVs half as large 4, both 144 at 3x and a quarter), the
 others keep theirs; triangles whose UV area is under the threshold are skipped, and with none left
 the metric is 1; changing the vertices keeps the metric until it is recalculated. Ratios that
-differ do not give their average: 1 and 4 give 4 (whatever their areas); 1..n give values near the
-mean plus a standard deviation of the ratios kept after a cut that depends on the triangles' areas
-(Unbound does not compute the metric: residuals). `IsCollabEnabledForCurrentProject` answers false
-(Unity's C#, CollabToUVCSBridge.cs, answers false
-for any project).
+differ do not give their average: 1 and 4 give 4 (whatever their areas); 1..n give the mean plus
+the upper one-sided standard deviation of the ratios kept after an area cut (the world areas,
+largest first, of all but a tenth of the triangles give a mean less the lower one-sided standard
+deviation when that deviation is at least 0.1, floored at 0.001, alongside minimum edge length
+0.001 and minimum angle 5 degrees). Unbound computes the metric and matches all 75/75 rows with no
+residuals. `IsCollabEnabledForCurrentProject` answers false (Unity's C#, CollabToUVCSBridge.cs,
+answers false for any project).
 
 Record and gate:
 

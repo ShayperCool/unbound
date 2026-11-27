@@ -1246,8 +1246,9 @@ namespace UnityEngine
             float cut = k_MetricMinimum;
             if (kept > 0)
             {
-                float mean = MeanOf(areas, kept);
-                float deviation = DeviationOf(areas, kept, mean, below: true);
+                var keptAreas = areas.AsSpan(0, kept);
+                float mean = MeanOf(keptAreas);
+                float deviation = DeviationOf(keptAreas, mean, below: true);
                 if (deviation >= k_MetricDeviationFloor) cut = Math.Max(mean - deviation, k_MetricMinimum);
             }
 
@@ -1276,28 +1277,28 @@ namespace UnityEngine
             float metric = 0f;
             if (ratios.Count > 0)
             {
-                var values = ratios.ToArray();
-                float mean = MeanOf(values, values.Length);
-                metric = mean + DeviationOf(values, values.Length, mean, below: false);
+                var values = System.Runtime.InteropServices.CollectionsMarshal.AsSpan(ratios);
+                float mean = MeanOf(values);
+                metric = mean + DeviationOf(values, mean, below: false);
             }
             return k_MetricMinimum < metric ? metric : 1f;
 
             static float Length(Vector3 v) => MathF.Sqrt(v.z * v.z + v.y * v.y + v.x * v.x);
         }
 
-        static float MeanOf(float[] values, int count)
+        static float MeanOf(ReadOnlySpan<float> values)
         {
             float sum = 0f;
-            for (int i = 0; i < count; i++) sum += values[i];
-            return sum / count;
+            for (int i = 0; i < values.Length; i++) sum += values[i];
+            return sum / values.Length;
         }
 
         /// <summary>The deviation from <paramref name="mean"/> of the values on one side of it.</summary>
-        static float DeviationOf(float[] values, int count, float mean, bool below)
+        static float DeviationOf(ReadOnlySpan<float> values, float mean, bool below)
         {
             float sum = 0f;
             int n = 0;
-            for (int i = 0; i < count; i++)
+            for (int i = 0; i < values.Length; i++)
             {
                 float v = values[i];
                 if (below ? v < mean : mean < v)
