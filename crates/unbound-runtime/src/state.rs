@@ -333,6 +333,87 @@ impl RuntimeState {
         )))
     }
 
+    /// Writes the `.meta` of every file and folder of the project's own assets that has none, as
+    /// the Editor imports them (the project's ScriptedImporters taking the extensions they
+    /// declare, once known: [`project_new_importer`]). Returns the files given one, and those whose
+    /// `.meta` names a project's ScriptedImporter (its fields for the managed side to write).
+    fn write_new_metas(&self) -> (Vec<PathBuf>, std::collections::HashSet<PathBuf>) {
+        let own_sections = std::cell::RefCell::new(std::collections::HashSet::new());
+        if !self.new_meta_measured {
+            return (Vec::new(), Default::default());
+        }
+        let project = |file: &Path| {
+            let importer = project_new_importer(file);
+            if matches!(
+                importer,
+                Some(unbound_assets::new_meta::NewImporter::ProjectScripted { .. })
+            ) {
+                own_sections.borrow_mut().insert(file.to_path_buf());
+            }
+            importer
+        };
+        let written = unbound_assets::new_meta::import_roots(
+            &self.editable_roots,
+            &self.new_meta,
+            unbound_project::assetdb::is_hidden,
+            &project,
+        )
+        .written;
+        let files = written.iter().map(|meta| meta.with_extension("")).collect();
+        (files, own_sections.into_inner())
+    }
+
+    /// `result` of importing `path` marked when the path's new `.meta` names a project's
+    /// ScriptedImporter (`own_sections`: [`Self::write_new_metas`]).
+    fn mark_own_section(
+        &self,
+        path: &str,
+        result: &mut serde_json::Value,
+        own_sections: &std::collections::HashSet<PathBuf>,
+    ) {
+        if result.get("error").is_none()
+            && self
+                .file_of(path)
+                .is_some_and(|file| own_sections.contains(&file))
+        {
+            result["ownSection"] = json!(true);
+        }
+    }
+
+    /// The files left without a `.meta` as the project opened whose importer the project's
+    /// ScriptedImporters decide, now that they are known: given their `.meta` and listed (the
+    /// other assets are not read again). Each result names its path.
+    fn import_found(&self) -> Vec<serde_json::Value> {
+        let (files, own_sections) = self.write_new_metas();
+        let requests: Vec<ImportPath> = files
+            .iter()
+            .filter_map(|file| {
+                self.asset_roots.iter().find_map(|(dir, root)| {
+                    let rest = file.strip_prefix(dir).ok()?;
+                    Some(format!(
+                        "{root}/{}",
+                        rest.to_string_lossy().replace('\\', "/")
+                    ))
+                })
+            })
+            .map(|path| ImportPath {
+                path,
+                main: None,
+                baked: false,
+            })
+            .collect();
+        let results = self.import_paths(&requests);
+        requests
+            .iter()
+            .zip(results)
+            .map(|(request, mut result)| {
+                result["path"] = json!(request.path);
+                self.mark_own_section(&request.path, &mut result, &own_sections);
+                result
+            })
+            .collect()
+    }
+
     /// AssetDatabase.Refresh as the Editor refreshes: every new file and folder of the project's
     /// own assets imported (a `.meta` written), and what changed on disk without the
     /// AssetDatabase imported again (assets deleted, copied with their `.meta`, `.meta` files
@@ -341,27 +422,7 @@ impl RuntimeState {
     /// looked at. Returns each path that changed: what it is now, or for a gone asset its former
     /// GUID as `removed` (none when the GUID is listed again elsewhere: the asset moved).
     fn refresh_assets(&self) -> Vec<serde_json::Value> {
-        // The new files whose .meta names a project's ScriptedImporter (its fields to be written).
-        let own_sections = std::cell::RefCell::new(std::collections::HashSet::new());
-        if self.new_meta_measured {
-            let project = |file: &Path| {
-                let importer = project_new_importer(file);
-                if matches!(
-                    importer,
-                    Some(unbound_assets::new_meta::NewImporter::ProjectScripted { .. })
-                ) {
-                    own_sections.borrow_mut().insert(file.to_path_buf());
-                }
-                importer
-            };
-            unbound_assets::new_meta::import_roots(
-                &self.editable_roots,
-                &self.new_meta,
-                unbound_project::assetdb::is_hidden,
-                &project,
-            );
-        }
-        let own_sections = own_sections.into_inner();
+        let (_, own_sections) = self.write_new_metas();
         let roots: Vec<_> = self
             .asset_roots
             .iter()
@@ -404,13 +465,7 @@ impl RuntimeState {
             .zip(results)
             .map(|(request, mut result)| {
                 result["path"] = json!(request.path);
-                if self
-                    .file_of(&request.path)
-                    .is_some_and(|file| own_sections.contains(&file))
-                    && result.get("error").is_none()
-                {
-                    result["ownSection"] = json!(true);
-                }
+                self.mark_own_section(&request.path, &mut result, &own_sections);
                 if let Some(guid) = gone
                     .get(request.path.as_str())
                     .filter(|_| result.get("error").is_none())
@@ -2574,11 +2629,7 @@ fn set_scripted_importers(request: &str) -> Result<String> {
     *s.scripted_extensions.write().unwrap() = Some(registry);
     // The files left without a .meta as the project opened, whose importer only the project's
     // scripts decide: imported now, as the Editor imports them when it opens the project.
-    let found = if first && s.new_meta_measured {
-        s.refresh_assets()
-    } else {
-        Vec::new()
-    };
+    let found = if first { s.import_found() } else { Vec::new() };
     Ok(json!({ "stale": stale, "native": native, "found": found }).to_string())
 }
 
