@@ -1616,6 +1616,12 @@ fn run_session(args: &ProjectArgs, run: RunArgs) -> Result<()> {
     if !run.virtual_players.is_empty() && args.player {
         anyhow::bail!("--virtual-player requires Editor Play mode (cannot be used with --player)");
     }
+    #[cfg(not(target_os = "linux"))]
+    if !run.virtual_players.is_empty() {
+        anyhow::bail!(
+            "--virtual-player is only supported on Linux until Editor launch interception is implemented on this OS"
+        );
+    }
     if !run.virtual_players.is_empty()
         && run
             .editor_args

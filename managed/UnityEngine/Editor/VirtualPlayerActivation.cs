@@ -82,9 +82,11 @@ namespace UnityEditor
                 entries[i] = new PlayerEntry(i + 1, name, string.Equals(kind, "Main", StringComparison.Ordinal), instance);
             }
 
-            foreach (var raw in s_Requested)
+            // Resolve and deduplicate every requested target before activating any player so an
+            // invalid later spec fails loudly without creating folders or launching an earlier clone.
+            var targets = ResolveAllTargets(s_Requested, entries);
+            foreach (var entry in targets)
             {
-                var entry = ResolveTarget(raw, entries);
                 var invokeArgs = new object[] { null, null };
                 object ret;
                 try
@@ -105,6 +107,18 @@ namespace UnityEditor
                         $"Unbound: activating virtual player '{entry.Name}' (index {entry.Index}) failed ({error}).");
                 }
             }
+        }
+
+        internal static List<PlayerEntry> ResolveAllTargets(string[] requested, PlayerEntry[] entries)
+        {
+            var resolved = new List<PlayerEntry>(requested.Length);
+            var seen = new HashSet<int>();
+            foreach (var raw in requested)
+            {
+                var entry = ResolveTarget(raw, entries);
+                if (seen.Add(entry.Index)) resolved.Add(entry);
+            }
+            return resolved;
         }
 
         internal readonly struct PlayerEntry

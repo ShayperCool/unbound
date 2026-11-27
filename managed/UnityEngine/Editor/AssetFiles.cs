@@ -40,6 +40,7 @@ namespace Unbound.Runtime
         internal static void SaveDirty(Object only = null, bool unchangedStays = false, ICollection<string> onlyFiles = null, bool willSave = false,
             bool settings = false, bool callWhenNone = true, bool writePrefabs = false, bool exit = false)
         {
+            if (ProjectInfo.ReadOnly) return;
             if (settings && !willSave) SettingsAssets.Save();
             Undo.FlushDirtiness();
             // The assets CreateAsset made are written from their objects (and so no longer dirty);

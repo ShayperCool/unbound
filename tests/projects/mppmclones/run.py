@@ -76,13 +76,42 @@ def check():
             env=env2, stdout=log, stderr=subprocess.STDOUT,
         ).returncode
 
-    # 3. Invalid --virtual-player fails loudly.
+    # 3. Third run activating by player name ("Player 2") reusing the existing Library/VP clone and
+    # saved SystemData.json.
+    out3 = out / 'run3'
+    out3.mkdir(parents=True, exist_ok=True)
+    env3 = dict(os.environ, MPPM_PROBE_OUT=str(out3), MPPM_PROBE_MODE='activate')
+    with open(out / 'reuse.log', 'w') as log:
+        code3 = subprocess.run(
+            [str(value_probe.LAUNCHER), '--kind', 'engine-gpu', 'timeout', '900', cli,
+             '--project-data', str(main_data), 'run', '-p', str(proj),
+             '--virtual-player', 'Player 2', '--headless', '100000', '--no-watch'],
+            env=env3, stdout=log, stderr=subprocess.STDOUT,
+        ).returncode
+    reuse_main_kv = parse_kv(out3 / 'main.txt')
+    reuse_clone_kv = parse_kv(out3 / 'clone.txt')
+    reuse_pid = int(reuse_clone_kv['pid']) if reuse_clone_kv.get('pid', '').isdigit() else -1
+    reuse_exited = False
+    if reuse_pid > 0:
+        deadline = time.time() + 15
+        while time.time() < deadline:
+            try:
+                os.kill(reuse_pid, 0)
+            except ProcessLookupError:
+                reuse_exited = True
+                break
+            time.sleep(0.2)
+
+    # 4. Mixed valid + invalid --virtual-player fails loudly without launching any clone.
+    out4 = out / 'run4'
+    out4.mkdir(parents=True, exist_ok=True)
     with open(out / 'invalid.log', 'w') as log:
         code_bad = subprocess.run(
             [str(value_probe.LAUNCHER), '--kind', 'engine-gpu', 'timeout', '300', cli,
              '--project-data', str(main_data), 'run', '-p', str(proj),
-             '--virtual-player', '1', '--headless', '10', '--no-watch'],
-            env=dict(os.environ), stdout=log, stderr=subprocess.STDOUT,
+             '--virtual-player', '2', '--virtual-player', '1', '--headless', '10', '--no-watch'],
+            env=dict(os.environ, MPPM_PROBE_OUT=str(out4), MPPM_PROBE_MODE='activate'),
+            stdout=log, stderr=subprocess.STDOUT,
         ).returncode
 
     checks = [
@@ -103,6 +132,9 @@ def check():
         ('clone read SystemData.json tags', clone_kv.get('tagsOk') == 'True', clone_kv),
         ('clone args include -library-redirect', clone_kv.get('hasLibraryRedirect') == 'True', clone_kv),
         ('clone args include -readonly', clone_kv.get('hasReadOnly') == 'True', clone_kv),
+        ('clone -readonly suppresses asset writes',
+         clone_kv.get('readOnlyNoWrite') == 'True' and not (proj / 'Assets' / 'CloneShouldNotWrite.asset').exists(),
+         clone_kv),
         ('clone args include -vpId=mppm*', clone_kv.get('hasVpId') == 'True', clone_kv),
         ('clone args include -vp-channel-name=vp-channel', clone_kv.get('hasChannelName') == 'True', clone_kv),
         ('clone args include -ump-channel-service-port', clone_kv.get('hasChannelPort') == 'True', clone_kv),
@@ -110,7 +142,13 @@ def check():
         ('clone closed when main exited', clone_exited, clone_pid),
         ('no-auto run exited 0', code2 == 0, code2),
         ('no-auto run did not launch a clone', not (out2 / 'clone.txt').exists(), str(out2 / 'clone.txt')),
-        ('invalid --virtual-player 1 fails loudly', code_bad != 0, code_bad),
+        ('by-name reuse run exited 0', code3 == 0, code3),
+        ('by-name reuse saw clone report and client',
+         reuse_main_kv.get('cloneReportExists') == 'True' and int(reuse_main_kv.get('channelClients', '0') or '0') >= 1,
+         reuse_main_kv),
+        ('by-name reuse clone closed on main exit', reuse_exited, reuse_pid),
+        ('mixed valid+invalid --virtual-player fails loudly without launching clone',
+         code_bad != 0 and not (out4 / 'clone.txt').exists(), (code_bad, str(out4 / 'clone.txt'))),
     ]
     failed = [(name, detail) for name, ok, detail in checks if not ok]
     for name, detail in failed:

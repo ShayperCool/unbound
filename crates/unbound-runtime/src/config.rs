@@ -406,6 +406,9 @@ pub fn prepare(
     if !options.virtual_players.is_empty() {
         config["virtualPlayers"] = json!(options.virtual_players);
     }
+    if project.open_options.read_only {
+        config["readOnly"] = json!(true);
+    }
     // Retain the metadata in Edit mode too: a session may enter Play mode later.
     config["disabledModules"] = json!(
         graph

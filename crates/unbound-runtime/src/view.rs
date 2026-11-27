@@ -86,12 +86,15 @@ pub fn build(project: &Project) -> Result<PathBuf> {
     let library = library(project);
     std::fs::create_dir_all(&library).with_context(|| format!("creating {}", library.display()))?;
     link(&library, &view.join("Library"))?;
-    // A virtual project clone reads sibling files in its parent directory (e.g. Library/VP/SystemData.json)
-    // via Path.Combine(Application.dataPath, "..", ".."). Because the game runs inside
-    // <projectData>/ProjectView, its parent is <projectData>; link those sibling files there so
-    // they stay live without touching Unity's Library/.
-    if project.library_redirect.is_some()
+    // A virtual project clone placed inside its redirected Library (e.g. Library/VP/<id> with
+    // -library-redirect ../..) reads sibling files in its parent directory (such as
+    // Library/VP/SystemData.json) via Path.Combine(Application.dataPath, "..", ".."). Because the
+    // game runs inside <projectData>/ProjectView, its parent is <projectData>; link those sibling
+    // files there so they stay live without touching Unity's Library/. Only link when the clone's
+    // parent is inside the redirected Library, and never link Unbound's own data files.
+    if let Some(redirect) = &project.library_redirect
         && let Some(parent) = project.root.parent()
+        && parent.starts_with(redirect)
         && let Ok(entries) = std::fs::read_dir(parent)
     {
         for entry in entries.flatten() {
@@ -100,7 +103,7 @@ pub fn build(project: &Project) -> Result<PathBuf> {
                 continue;
             }
             let name = entry.file_name();
-            if name == ".gitignore" || name == "VirtualPlayer.log" {
+            if name == ".gitignore" || name == "VirtualPlayer.log" || name == "ImportRecord.json" {
                 continue;
             }
             let dst = data.join(&name);
@@ -239,6 +242,7 @@ mod tests {
         std::os::unix::fs::symlink(main.join("ProjectSettings"), clone.join("ProjectSettings"))
             .unwrap();
         std::fs::write(vp.join("SystemData.json"), r#"{"players":[]}"#).unwrap();
+        std::fs::write(vp.join("ImportRecord.json"), r#"{"sentinel":true}"#).unwrap();
 
         let opts = OpenOptions {
             library_redirect: Some(PathBuf::from("../..")),
@@ -253,16 +257,16 @@ mod tests {
 
         // In .NET, Path.GetFullPath(Path.Combine(Application.dataPath, "..", "..", "SystemData.json"))
         // lexically collapses <projectData>/ProjectView/Assets/../.. to <projectData>/SystemData.json.
-        let sys_data_in_project_data = view
-            .parent()
-            .expect("ProjectView sits inside project data")
-            .join("SystemData.json");
+        let project_data = view.parent().expect("ProjectView sits inside project data");
+        let sys_data_in_project_data = project_data.join("SystemData.json");
         assert!(
             std::fs::symlink_metadata(&sys_data_in_project_data)
                 .unwrap()
                 .file_type()
                 .is_symlink()
         );
+        // Unbound's own data files (ImportRecord.json) are never linked from the parent folder.
+        assert!(!project_data.join("ImportRecord.json").exists());
         assert_eq!(
             std::fs::read_to_string(&sys_data_in_project_data).unwrap(),
             r#"{"players":[]}"#
@@ -275,6 +279,25 @@ mod tests {
         );
         // Unity's own Library/ in the main project was never created.
         assert!(!main.join("Library").exists());
+
+        // A standalone project with -library-redirect pointing outside its parent must not link
+        // unrelated files from its parent directory into LibraryUnbound/.
+        let shared_lib = base.join("shared-lib");
+        std::fs::create_dir_all(&shared_lib).unwrap();
+        std::fs::write(base.join("unrelated.txt"), "do not link").unwrap();
+        let standalone_opts = OpenOptions {
+            library_redirect: Some(PathBuf::from("../shared-lib")),
+            read_only: true,
+        };
+        let standalone = Project::open_with_options(&main, &standalone_opts).unwrap();
+        let standalone_view = build(&standalone).unwrap();
+        assert!(
+            !standalone_view
+                .parent()
+                .unwrap()
+                .join("unrelated.txt")
+                .exists()
+        );
 
         std::fs::remove_dir_all(&base).unwrap();
     }

@@ -38,6 +38,7 @@ public sealed class GameConfig
     public bool EditMode { get; set; }
     public List<string> CommandLine { get; set; } = new();
     public List<string> VirtualPlayers { get; set; } = new();
+    public bool ReadOnly { get; set; }
     /// <summary><c>debug</c> or <c>release</c>: the Code Optimization scripts were compiled with.</summary>
     public string CodeOptimization { get; set; } = "release";
     public ScriptCompilerConfig ScriptCompiler { get; set; } = new();
@@ -357,6 +358,7 @@ public static unsafe class Game
         ProjectInfo.ProjectPath = c.ProjectPath;
         ProjectInfo.ProjectRootPath = c.ProjectRoot;
         ProjectInfo.UnboundDirectoryPath = c.ProjectData;
+        ProjectInfo.ReadOnly = c.ReadOnly;
         Unbound.EditorProcess.s_CommandLine = c.CommandLine.Count > 0 ? c.CommandLine.ToArray() : null;
         UnityEditor.VirtualPlayerActivation.Configure(c.VirtualPlayers.Count > 0 ? c.VirtualPlayers.ToArray() : null);
         UnityEditor.Compilation.CompilationPipeline.s_Compiler = (c.ScriptCompiler.LanguageVersion, c.ScriptCompiler.Arguments.ToArray(), c.ScriptCompiler.Analyzers.ToArray(), c.ScriptCompiler.NetStandard);

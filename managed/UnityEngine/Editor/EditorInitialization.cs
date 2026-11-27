@@ -103,7 +103,7 @@ namespace UnityEditor
             AssetPostprocessing.ForgetOrder();
             // The project's ScriptedImporters pick their files by extension; the first load writes
             // the `.meta` files that name another one, as the Editor's import as the project opens.
-            Unbound.Runtime.ScriptedImports.RegisterExtensions(rewriteStale: !s_ExtensionsRegistered);
+            Unbound.Runtime.ScriptedImports.RegisterExtensions(rewriteStale: !s_ExtensionsRegistered && !ProjectInfo.ReadOnly);
             s_ExtensionsRegistered = true;
             MainView.Open();
             DomainLoading = true;
@@ -183,7 +183,7 @@ namespace UnityEditor
             var start = ProjectImports.TakeStart();
             // The textures the import found give their sprites their IDs (written into their
             // .meta) before anything postprocesses them.
-            if (start != null) SpriteImports.Imported(start.Imported);
+            if (start != null && !ProjectInfo.ReadOnly) SpriteImports.Imported(start.Imported);
             if (start == null) AssetPostprocessing.DomainLoaded(deferred);
             else if (!enteringPlayMode) ProjectOpened(start, deferred);
             else
@@ -212,7 +212,7 @@ namespace UnityEditor
                 var files = ChangedDuring(() => AssetPostprocessing.ProjectOpened(start, deferred), o =>
                     o.IsPersistentAsset && AssetDatabaseRuntime.TryGetLocation(o, out var guid, out _) ? guid : null);
                 // The saves are one import of those files (tests/projects/firstimport session.0).
-                if (files.Count > 0)
+                if (files.Count > 0 && !ProjectInfo.ReadOnly)
                     using (SessionImports.Write()) AssetFiles.SaveDirty(onlyFiles: files);
             }
             finally { ProjectImports.CommitStart(); }

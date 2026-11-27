@@ -60,6 +60,19 @@ public class MppmCloneProbe : MonoBehaviour
             sb.AppendLine("hasMainProcessId=" + args.Any(a => a.StartsWith("-mainProcessId=", StringComparison.Ordinal)));
             sb.AppendLine("pid=" + System.Diagnostics.Process.GetCurrentProcess().Id);
             sb.AppendLine("dataPath=" + Application.dataPath);
+            // Exercise -readonly write suppression inside the clone (Refresh, SaveAssets, CreateAsset).
+            AssetDatabase.Refresh();
+            try
+            {
+                AssetDatabase.CreateAsset(new Mesh(), "Assets/CloneShouldNotWrite.asset");
+                AssetDatabase.SaveAssets();
+            }
+            catch (Exception)
+            {
+                // Refusing to create/save under -readonly is expected.
+            }
+            bool createdFile = File.Exists(Path.Combine(Application.dataPath, "CloneShouldNotWrite.asset"));
+            sb.AppendLine("readOnlyNoWrite=" + (!createdFile));
             sb.AppendLine("args=" + string.Join(" | ", args));
             var tmp = Path.Combine(outDir, "clone.txt.tmp");
             var dst = Path.Combine(outDir, "clone.txt");

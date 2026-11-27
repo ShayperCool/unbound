@@ -407,7 +407,16 @@ impl Project {
                 .ok()
                 .and_then(|a| a.parent().map(Path::to_path_buf))
                 .filter(|p| p.join("Packages/manifest.json").exists());
-            from_redirect.or(from_assets).with_context(|| {
+            let from_settings = root
+                .join("ProjectSettings")
+                .canonicalize()
+                .ok()
+                .and_then(|s| s.parent().map(Path::to_path_buf))
+                .filter(|p| p.join("Packages/manifest.json").exists());
+            from_redirect
+                .or(from_assets)
+                .or(from_settings)
+                .with_context(|| {
                 format!(
                     "Packages/manifest.json is missing in '{}' and could not be located via -library-redirect '{}'",
                     root.display(),
@@ -480,10 +489,10 @@ impl Project {
         unbound_dir(&self.root)
     }
 
-    /// The asset folders the project holds itself, where the Editor writes (a new asset's `.meta`
-    /// file, edited importer settings): `Assets` and the packages embedded in `Packages/` or kept
-    /// in a local folder. Packages from the registry, the installation or Git are read-only.
-    pub fn editable_roots(&self) -> Vec<&Path> {
+    /// The asset folders the project holds itself: `Assets` and the packages embedded in
+    /// `Packages/` or kept in a local folder. Packages from the registry, the installation or Git
+    /// are immutable.
+    pub fn project_roots(&self) -> Vec<&Path> {
         let mut roots = vec![self.assets.as_path()];
         roots.extend(
             self.packages
@@ -492,6 +501,15 @@ impl Project {
                 .map(|p| p.root.as_path()),
         );
         roots
+    }
+
+    /// The asset folders where the Editor may write (a new asset's `.meta` file, edited importer
+    /// settings): empty when opened with `-readonly`, otherwise [`Self::project_roots`].
+    pub fn editable_roots(&self) -> Vec<&Path> {
+        if self.open_options.read_only {
+            return Vec::new();
+        }
+        self.project_roots()
     }
 
     /// The directories of the asset database's roots with the paths Unity gives them
@@ -1808,6 +1826,8 @@ mod tests {
             Some(main.join("LibraryUnbound/Library").canonicalize().unwrap())
         );
         assert!(opened.open_options.read_only);
+        assert!(opened.editable_roots().is_empty());
+        assert!(!opened.project_roots().is_empty());
         // -readonly must not create ProjectSettings/InputManager.asset.
         assert!(!main.join("ProjectSettings/InputManager.asset").exists());
 

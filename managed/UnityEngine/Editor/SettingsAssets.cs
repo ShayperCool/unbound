@@ -416,7 +416,7 @@ namespace Unbound.Runtime
         /// — in Edit mode only (in Play mode the Editor keeps them unsaved).</summary>
         internal static void Save(SettingsFile only = null)
         {
-            if (EditorApplication.isPlaying) return;
+            if (EditorApplication.isPlaying || ProjectInfo.ReadOnly) return;
             foreach (var f in s_Files?.Values ?? Enumerable.Empty<SettingsFile>())
             {
                 if (!f.Dirty || f.Documents == null || (only != null && f != only)) continue;

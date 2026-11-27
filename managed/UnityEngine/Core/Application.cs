@@ -346,6 +346,11 @@ namespace UnityEngine
         /// runs): the managed side asks no environment for it.</summary>
         internal static string UnboundDirectoryPath = "";
 
+        /// <summary>Opened with <c>-readonly</c> (e.g. a Multiplayer Play Mode virtual project
+        /// clone): never write back into <c>Assets/</c>, <c>Packages/</c>, or
+        /// <c>ProjectSettings/</c>.</summary>
+        internal static bool ReadOnly;
+
         /// <summary>The name of Unbound's own directory in a project's root, where nothing else
         /// is asked for: everything Unbound keeps per project (caches, the project view the game
         /// runs in, logs, results). <c>Library/</c> is Unity's: Unbound keeps nothing there.</summary>

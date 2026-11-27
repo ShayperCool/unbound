@@ -29,8 +29,14 @@ pub struct RuntimeState {
     resources: RwLock<HashMap<String, Vec<Guid>>>,
     /// The asset database's roots (`Assets` and each package), as the project scanned them.
     asset_roots: Vec<(PathBuf, String)>,
-    /// The asset folders the project holds itself (`Project::editable_roots`).
+    /// The asset folders the project holds itself (`Project::project_roots`), rescanned on
+    /// `AssetDatabase.Refresh`.
+    scan_roots: Vec<PathBuf>,
+    /// The asset folders where editor APIs may write (`Project::editable_roots`; empty under
+    /// `-readonly`).
     editable_roots: Vec<PathBuf>,
+    /// Opened with `-readonly`: never create or modify `.meta`, asset or project-settings files.
+    read_only: bool,
     /// What new `.meta` files depend on (the installation's platform modules).
     new_meta: unbound_assets::new_meta::MetaContext,
     /// The project's release family's new `.meta` files are measured (6000.0).
@@ -303,7 +309,9 @@ impl RuntimeState {
             .map(|other| other.path.clone())
             .or_else(|| taken.get(&guid).filter(|other| **other != path).cloned());
         let mut conflict = None;
-        if let Some(owner) = owner {
+        if let Some(owner) = owner
+            && !self.read_only
+        {
             let fresh = unbound_assets::new_meta::new_guid();
             // Written again with LF, as the Editor writes a .meta (tests/projects/projectwrites 06.crlf).
             let text = std::fs::read_to_string(&meta)?.replace("\r\n", "\n");
@@ -340,7 +348,7 @@ impl RuntimeState {
     /// ScriptedImporter (its fields for the managed side to write).
     fn write_new_metas(&self, warn: bool) -> (Vec<PathBuf>, std::collections::HashSet<PathBuf>) {
         let own_sections = std::cell::RefCell::new(std::collections::HashSet::new());
-        if !self.new_meta_measured {
+        if !self.new_meta_measured || self.read_only {
             return (Vec::new(), Default::default());
         }
         let project = |file: &Path| {
@@ -444,7 +452,7 @@ impl RuntimeState {
         let roots: Vec<_> = self
             .asset_roots
             .iter()
-            .filter(|(dir, _)| self.editable_roots.contains(dir))
+            .filter(|(dir, _)| self.scan_roots.contains(dir))
             .map(|(dir, path)| unbound_project::assetdb::Root {
                 dir,
                 virtual_path: path.clone(),
@@ -552,11 +560,17 @@ pub fn initialize(project: &Project) -> Result<&'static RuntimeState> {
             .into_iter()
             .map(|(dir, path)| (dir.to_path_buf(), path))
             .collect(),
+        scan_roots: project
+            .project_roots()
+            .into_iter()
+            .map(Path::to_path_buf)
+            .collect(),
         editable_roots: project
             .editable_roots()
             .into_iter()
             .map(Path::to_path_buf)
             .collect(),
+        read_only: project.open_options.read_only,
         new_meta_measured: unbound_compat::MeasuredFamily::of(project.version).is_some(),
         guid_only_cubes: Default::default(),
         scripted_extensions: RwLock::new(None),

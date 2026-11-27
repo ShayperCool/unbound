@@ -8,9 +8,18 @@
     "crates/unbound-runtime/src/view.rs",
     "crates/unbound-runtime/src/config.rs",
     "crates/unbound-runtime/src/game.rs",
+    "crates/unbound-runtime/src/state.rs",
     "crates/unbound/src/main.rs",
     "crates/unbound/src/commands.rs",
     "crates/unbound/src/editor_launch.rs",
-    "managed/UnityEngine/Editor/VirtualPlayerActivation.cs"
+    "managed/Unbound.Host/Game.cs",
+    "managed/UnityEngine/Core/Application.cs",
+    "managed/UnityEngine/Runtime/PlayerLoopDriver.cs",
+    "managed/UnityEngine/Editor/VirtualPlayerActivation.cs",
+    "managed/UnityEngine/Editor/EditorInitialization.cs",
+    "managed/UnityEngine/Editor/AssetFiles.cs",
+    "managed/UnityEngine/Editor/SettingsAssets.cs",
+    "managed/UnityEngine/Editor/SpriteImports.cs",
+    "managed/UnityEngine/Editor/VFX/VisualEffectWrites.cs"
   ]
 }

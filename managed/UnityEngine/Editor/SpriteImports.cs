@@ -56,7 +56,7 @@ namespace UnityEditor
         internal static void Imported(IEnumerable<string> imported, Func<string, string> kindOf, Func<string, string> guidOf,
             Func<string, List<YDocument>> metaOf, Func<string, TextureImporter> importerAt, Func<AssetImporter, bool> write)
         {
-            if (!Compat.SpriteFirstImportMeasured) return;
+            if (!Compat.SpriteFirstImportMeasured || UnityEngine.ProjectInfo.ReadOnly) return;
             foreach (var path in imported)
             {
                 // Chosen by the database's listing and the .meta alone: no asset is loaded (a

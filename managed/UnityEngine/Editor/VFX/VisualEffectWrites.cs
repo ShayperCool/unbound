@@ -37,6 +37,7 @@ namespace Unbound.Runtime
             var info = AssetDatabaseRuntime.Info(guid);
             var loaded = AssetDatabaseRuntime.LoadFile(guid);
             if (info == null || loaded == null || string.IsNullOrEmpty(info.File)) return;
+            if (ProjectInfo.ReadOnly) return;
             if (AssetDatabase.IsImmutablePackagePath(info.Path))
             {
                 Debug.LogWarning($"Unbound: {info.Path} is not written: it is in a package the project does not hold.");
