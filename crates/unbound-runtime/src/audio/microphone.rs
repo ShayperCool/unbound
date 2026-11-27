@@ -31,26 +31,33 @@ pub enum DeviceKey {
     Source(String),
 }
 
-/// Resolves a script device name against a cached device list into a stable [`DeviceKey`].
-pub fn resolve_device_key(devices: &[DeviceInfo], device_name: Option<&str>) -> Option<DeviceKey> {
+/// Resolves a script device name against a cached device list into a borrowed target without
+/// allocating: `None` when not found, `Some(None)` for the default device (`DeviceKey::Default`),
+/// or `Some(Some(target))` for a specific backend source (`DeviceKey::Source`).
+pub fn resolve_device_target<'a>(
+    devices: &'a [DeviceInfo],
+    device_name: Option<&str>,
+) -> Option<Option<&'a str>> {
     if devices.is_empty() {
         return None;
     }
     match device_name {
-        None | Some("") => Some(DeviceKey::Default),
+        None | Some("") => Some(None),
         Some(name) => {
             let idx = devices.iter().position(|d| d.name == name)?;
             if idx == 0 {
-                Some(DeviceKey::Default)
+                Some(None)
             } else {
-                devices[idx]
-                    .target
-                    .as_ref()
-                    .map(|t| DeviceKey::Source(t.clone()))
-                    .or(Some(DeviceKey::Default))
+                Some(devices[idx].target.as_deref())
             }
         }
     }
+}
+
+/// Resolves a script device name against a cached device list into a stable [`DeviceKey`].
+pub fn resolve_device_key(devices: &[DeviceInfo], device_name: Option<&str>) -> Option<DeviceKey> {
+    resolve_device_target(devices, device_name)
+        .map(|target| target.map_or(DeviceKey::Default, |t| DeviceKey::Source(t.to_string())))
 }
 
 /// Pure ring-buffer state shared between a capture callback and `Microphone.GetPosition`/`IsRecording`.
@@ -632,8 +639,6 @@ mod backend {
                 return;
             };
             active.state.stopped.store(true, Ordering::Release);
-            active.state.query.active.store(false, Ordering::Release);
-            active.state.query.position.store(0, Ordering::Release);
             let api = &self.api;
             unsafe {
                 (api.pa_threaded_mainloop_lock)(self.mainloop);
@@ -642,7 +647,11 @@ mod backend {
                 (api.pa_stream_disconnect)(active.stream);
                 (api.pa_stream_unref)(active.stream);
                 (api.pa_threaded_mainloop_unlock)(self.mainloop);
-                // Safe: callbacks were cleared under the mainloop lock before reclaiming the Arc.
+                // Safe: callbacks were cleared under the mainloop lock so `stream_read_cb`
+                // cannot run again. Clear the query state only now so `StreamQueryState`
+                // always has a single writer and never flips false -> true -> false.
+                active.state.query.active.store(false, Ordering::Release);
+                active.state.query.position.store(0, Ordering::Release);
                 drop(Arc::from_raw(active.userdata));
             }
         }
@@ -856,10 +865,22 @@ mod backend {
     /// Snapshot read by polling queries (`is_recording`, `is_any_recording`, `position`).
     /// Guarded by a leaf `RwLock` that is never held across `Mixer` or PulseAudio locks, so
     /// polling from `OnAudioFilterRead` (which holds `Mixer`) cannot deadlock with control ops.
+    /// Split into `default_stream` + `source_streams` so lookups borrow `&str` with zero
+    /// heap allocations on the audio/per-frame hot path.
     #[derive(Default)]
     struct QueryTable {
         devices: Vec<DeviceInfo>,
-        streams: HashMap<DeviceKey, Arc<StreamQueryState>>,
+        default_stream: Option<Arc<StreamQueryState>>,
+        source_streams: HashMap<String, Arc<StreamQueryState>>,
+    }
+
+    impl QueryTable {
+        fn stream_for(&self, device_name: Option<&str>) -> Option<&Arc<StreamQueryState>> {
+            match resolve_device_target(&self.devices, device_name)? {
+                None => self.default_stream.as_ref(),
+                Some(target) => self.source_streams.get(target),
+            }
+        }
     }
 
     pub struct PlatformRecorder {
@@ -880,10 +901,16 @@ mod backend {
         fn sync_query(&self, client: &PulseClient) {
             let mut q = self.query.write().unwrap_or_else(|e| e.into_inner());
             q.devices.clone_from(&client.cached_devices);
-            q.streams.clear();
+            q.default_stream = None;
+            q.source_streams.clear();
             for (key, active) in &client.streams {
-                q.streams
-                    .insert(key.clone(), Arc::clone(&active.state.query));
+                let entry = Arc::clone(&active.state.query);
+                match key {
+                    DeviceKey::Default => q.default_stream = Some(entry),
+                    DeviceKey::Source(source) => {
+                        q.source_streams.insert(source.clone(), entry);
+                    }
+                }
             }
         }
 
@@ -963,25 +990,23 @@ mod backend {
 
         pub fn is_recording(&self, device_name: Option<&str>) -> bool {
             let q = self.query.read().unwrap_or_else(|e| e.into_inner());
-            let Some(key) = resolve_device_key(&q.devices, device_name) else {
-                return false;
-            };
-            q.streams
-                .get(&key)
+            q.stream_for(device_name)
                 .is_some_and(|s| s.active.load(Ordering::Acquire))
         }
 
         pub fn is_any_recording(&self) -> bool {
             let q = self.query.read().unwrap_or_else(|e| e.into_inner());
-            q.streams.values().any(|s| s.active.load(Ordering::Acquire))
+            q.default_stream
+                .as_ref()
+                .is_some_and(|s| s.active.load(Ordering::Acquire))
+                || q.source_streams
+                    .values()
+                    .any(|s| s.active.load(Ordering::Acquire))
         }
 
         pub fn position(&self, device_name: Option<&str>) -> i32 {
             let q = self.query.read().unwrap_or_else(|e| e.into_inner());
-            let Some(key) = resolve_device_key(&q.devices, device_name) else {
-                return 0;
-            };
-            match q.streams.get(&key) {
+            match q.stream_for(device_name) {
                 Some(s) if s.active.load(Ordering::Acquire) => {
                     s.position.load(Ordering::Acquire) as i32
                 }
@@ -1017,20 +1042,27 @@ mod backend {
         pub(super) fn test_with_state_locked(
             &self,
             devices: Vec<DeviceInfo>,
-            key: DeviceKey,
-            position: usize,
-            active: bool,
+            streams: &[(DeviceKey, usize, bool)],
             f: impl FnOnce(),
         ) {
             let _guard = self.state.lock().unwrap();
-            let query_state = Arc::new(StreamQueryState {
-                active: AtomicBool::new(active),
-                position: AtomicUsize::new(position),
-            });
             {
                 let mut q = self.query.write().unwrap();
                 q.devices = devices;
-                q.streams.insert(key, query_state);
+                q.default_stream = None;
+                q.source_streams.clear();
+                for (key, position, active) in streams {
+                    let query_state = Arc::new(StreamQueryState {
+                        active: AtomicBool::new(*active),
+                        position: AtomicUsize::new(*position),
+                    });
+                    match key {
+                        DeviceKey::Default => q.default_stream = Some(query_state),
+                        DeviceKey::Source(source) => {
+                            q.source_streams.insert(source.clone(), query_state);
+                        }
+                    }
+                }
             }
             f();
         }
@@ -1274,19 +1306,45 @@ mod tests {
         let devices = deduplicate_names([
             ("Default Input Device".into(), Some("src0".into())),
             ("USB Mic".into(), Some("src1".into())),
+            ("Line In".into(), Some("src2".into())),
         ]);
-        recorder
-            .inner
-            .test_with_state_locked(devices, DeviceKey::Default, 42, true, || {
+        recorder.inner.test_with_state_locked(
+            devices,
+            &[
+                (DeviceKey::Default, 42, true),
+                (DeviceKey::Source("src1".into()), 99, true),
+            ],
+            || {
                 // Holding PlatformRecorder.state simulates a main-thread control op (e.g. Start/End/devices)
-                // blocked on Mixer or PulseAudio; polling queries must read only the leaf QueryTable.
-                assert!(recorder.is_recording(None));
-                assert!(recorder.is_recording(Some("Default Input Device")));
-                assert!(!recorder.is_recording(Some("USB Mic")));
-                assert!(recorder.is_any_recording());
-                assert_eq!(recorder.position(None), 42);
-                assert_eq!(recorder.position(Some("Default Input Device")), 42);
-                assert_eq!(recorder.position(Some("USB Mic")), 0);
-            });
+                // blocked on Mixer or PulseAudio; polling queries must read only the leaf QueryTable
+                // and perform zero heap allocations for both default and non-default device names.
+                crate::audio::tests::allocations::start();
+                let rec_none = recorder.is_recording(None);
+                let rec_default = recorder.is_recording(Some("Default Input Device"));
+                let rec_usb = recorder.is_recording(Some("USB Mic"));
+                let rec_line = recorder.is_recording(Some("Line In"));
+                let rec_missing = recorder.is_recording(Some("Missing"));
+                let rec_any = recorder.is_any_recording();
+                let pos_none = recorder.position(None);
+                let pos_default = recorder.position(Some("Default Input Device"));
+                let pos_usb = recorder.position(Some("USB Mic"));
+                let pos_line = recorder.position(Some("Line In"));
+                let pos_missing = recorder.position(Some("Missing"));
+                let allocs = crate::audio::tests::allocations::finish();
+
+                assert_eq!(allocs, 0, "microphone polling queries must not allocate");
+                assert!(rec_none);
+                assert!(rec_default);
+                assert!(rec_usb);
+                assert!(!rec_line);
+                assert!(!rec_missing);
+                assert!(rec_any);
+                assert_eq!(pos_none, 42);
+                assert_eq!(pos_default, 42);
+                assert_eq!(pos_usb, 99);
+                assert_eq!(pos_line, 0);
+                assert_eq!(pos_missing, 0);
+            },
+        );
     }
 }

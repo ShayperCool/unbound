@@ -174,7 +174,7 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
-        public void UnsupportedPlatformWarnsViaStubsAndReturnsNullWithoutThrowing()
+        public void UnsupportedPlatformThrowsForNonEmptyDeviceAndWarnsViaStubsForDefault()
         {
             m_Backend.VirtualMicSupported = false;
             Stubs.Forget("Microphone.devices");
@@ -183,13 +183,18 @@ namespace UnityEngine.Tests
             TakeLogs();
             Assert.Empty(Microphone.devices);
             Assert.False(Microphone.isAnyDeviceRecording);
-            Assert.Throws<ArgumentException>(() => Microphone.Start("no such device", false, 1, 44100));
+            var preStartLogs = TakeLogs();
+            Assert.Contains(preStartLogs, l => l.Message.Contains("Microphone.devices"));
+            Assert.Contains(preStartLogs, l => l.Message.Contains("Microphone.isAnyDeviceRecording"));
+
+            var ex = Assert.Throws<ArgumentException>(() => Microphone.Start("no such device", false, 1, 44100));
+            Assert.Equal("Couldn't acquire device ID for device name no such device", ex.Message);
+            Assert.Empty(TakeLogs());
+
             Assert.Null(Microphone.Start(null, false, 1, 44100));
             Assert.Null(Microphone.Start("", false, 1, 44100));
-            var logs = TakeLogs();
-            Assert.Contains(logs, l => l.Message.Contains("Microphone.devices"));
-            Assert.Contains(logs, l => l.Message.Contains("Microphone.isAnyDeviceRecording"));
-            Assert.Contains(logs, l => l.Message.Contains("Microphone.Start"));
+            var startLogs = TakeLogs();
+            Assert.Contains(startLogs, l => l.Message.Contains("Microphone.Start"));
             Assert.False(Microphone.IsRecording(null));
             Assert.Equal(0, Microphone.GetPosition(null));
             Microphone.GetDeviceCaps(null, out int minF, out int maxF);
