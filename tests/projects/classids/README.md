@@ -25,9 +25,8 @@ FlareLayer's control also acquires a Camera on load. Matching that dependency re
 rendering follow-up; it does not add serialized properties to FlareLayer itself. Unity 6000.0's
 [FlareLayer API](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/FlareLayer.html)
 documents that it has no own properties. The base Behaviour enabled flag has a shared reader.
-[Preset](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Presets.Preset.html) is an
-Editor API for stored properties and applying them to objects. Unbound does not implement that
-asset's reader or API and doctor lists ClassID 181963792 explicitly as unsupported.
+[Preset](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Presets.Preset.html)
+(ClassID 181963792) is read through `AssetAdapters` (`tests/projects/presets`).
 
 The ids 100000 to 100011 (`int`, `bool`, `Vector3f`, ...) are serialization placeholders without a
 base class, never objects of a file.

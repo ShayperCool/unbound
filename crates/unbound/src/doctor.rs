@@ -586,12 +586,12 @@ mod tests {
             .iter()
             .map(|e| e.reading.as_str())
             .collect();
-        assert_eq!(reading, ["Read", "Read", "Ignored", "Unsupported"]);
+        assert_eq!(reading, ["Read", "Read", "Ignored", "Read"]);
         assert!(
             !coverage
                 .unread_in_release
                 .iter()
-                .any(|e| matches!(e.class_id, 81 | 124))
+                .any(|e| matches!(e.class_id, 81 | 124 | 181963792))
         );
         assert!(
             coverage
