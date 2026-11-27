@@ -2419,6 +2419,54 @@ fn a_real_fbx_version_the_loader_does_not_read_still_fails_the_import() {
 }
 
 #[test]
+fn a_whole_ascii_fbx_the_loader_rejects_says_so() {
+    // A whole file (no block left open) is not one cut short: the Editor may read it, so its
+    // empty root comes with Unbound's error, not silently (not measured).
+    let whole = std::fs::read(
+        Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("../../tests/projects/assetpostprocessors/Assets/Models/UserProps.fbx"),
+    )
+    .unwrap();
+    let mut bom = b"\xEF\xBB\xBF".to_vec();
+    bom.extend_from_slice(&whole);
+    let text = String::from_utf8(whole).unwrap();
+    let bad_token = text.replacen("\t\t\ta: 0,2,3,-2", "\t\t @@@ \ta: 0,2,3,-2", 1);
+    assert_ne!(bad_token, text);
+    for (name, bytes) in [("Bom.fbx", bom), ("BadToken.fbx", bad_token.into_bytes())] {
+        let model = ModelImporter::default()
+            .import(Path::new(name), &bytes, &new_model(2, 0))
+            .unwrap_or_else(|e| panic!("{name}: {e:#}"));
+        let Some(error @ ModelReadError::Unread(_)) = &model.read_error else {
+            panic!("{name}: {:?}", model.read_error);
+        };
+        assert!(
+            error
+                .message("/p", "Assets/X.fbx")
+                .starts_with("Unbound: 'Assets/X.fbx'")
+        );
+        assert_eq!(model.nodes.len(), 1, "{name}");
+        assert!(model.warnings.is_empty(), "{name}: {:?}", model.warnings);
+    }
+}
+
+#[test]
+fn an_ascii_fbx_cut_short_leaves_blocks_open() {
+    // tests/projects/brokenmodel's cuts, and a whole file.
+    for (name, open) in [
+        ("CutAscii.fbx", 2),
+        ("CutToken.fbx", 3),
+        ("CutLine.fbx", 1),
+        ("CutModel.fbx", 1),
+    ] {
+        assert_eq!(ascii_fbx_open_blocks(&broken_model(name)), open, "{name}");
+    }
+    assert_eq!(
+        ascii_fbx_open_blocks(b"; a { comment\nA:  {\n\tB: \"}\"\n}\n"),
+        0
+    );
+}
+
+#[test]
 fn an_ascii_fbx_starts_with_its_header_block() {
     assert!(is_ascii_fbx(
         b"; FBX 7.4.0 project file\n; ---\n\nFBXHeaderExtension:  {\n"

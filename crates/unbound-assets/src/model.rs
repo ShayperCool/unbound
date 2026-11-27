@@ -866,18 +866,21 @@ pub struct ImportedModel {
 
 /// A model file whose content does not read as a model. The Editor imports it as an empty root
 /// and logs an error naming why (matches the Unity 6000.0.71f1 Editor, tests/projects/brokenmodel).
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum ModelReadError {
     /// No reader recognises the file (no bytes, text or data that is no model).
     Unreadable,
     /// A binary FBX whose content does not read (cut short).
     Corrupted,
+    /// A whole ASCII FBX the loader rejects (its reason), which the Editor may read: Unbound
+    /// imports an empty root and says so (not measured).
+    Unread(String),
 }
 
 impl ModelReadError {
     /// The error the import logs for the asset at project path `path`, whose file the project
     /// shows under the directory `root` (the parent of `Application.dataPath`).
-    pub fn message(self, root: &str, path: &str) -> String {
+    pub fn message(&self, root: &str, path: &str) -> String {
         let root = root.replace('\\', "/");
         let shown = format!("{}/{path}", root.trim_end_matches('/'));
         match self {
@@ -887,6 +890,9 @@ impl ModelReadError {
             ModelReadError::Corrupted => format!(
                 "ImportFBX Errors:\nCouldn't import file {shown}.\nFile is corrupted: '{}'\n\n",
                 path.rsplit('/').next().unwrap_or(path)
+            ),
+            ModelReadError::Unread(reason) => format!(
+                "Unbound: '{path}' does not read as an FBX ({reason}); it imports as an empty root (the Editor's import of it is not measured)"
             ),
         }
     }
@@ -1036,8 +1042,8 @@ impl Importer for ModelImporter {
     // 61: the nodes' FBX user properties, the root node's name and the fileID table are kept.
     // 62: OBJ bindings a missing or incomplete material library does not resolve are dropped.
     // (`.blend` files, imported since, had no entries before: their key also holds Blender's.)
-    // 63: a file whose content does not read imports as its root alone (`read_error`).
-    const VERSION: u32 = 63;
+    // 64: a file whose content does not read imports as an empty file of its format (`read_error`).
+    const VERSION: u32 = 64;
 
     fn dependencies(&self, source: &Path) -> Result<Vec<std::path::PathBuf>> {
         if !source
@@ -1683,8 +1689,10 @@ const EMPTY_OBJ: &[u8] = b"# empty\n";
 /// is no FBX at all is one no reader recognises (no bytes, a line of text, zero bytes, a Git LFS
 /// pointer, an HTML page); an ASCII FBX cut short reads without an error up to the cut, keeping
 /// the nodes connected to the root by then (cut in its header, inside a number, at a line end,
-/// in its connections), of which Unbound imports nothing when the loader rejects it (said); an
-/// OBJ reads as an empty model without an error (no bytes, text). The loader failing for
+/// in its connections), of which Unbound imports nothing when the loader rejects it (said); a
+/// whole ASCII FBX the loader rejects imports as an empty root with Unbound's error
+/// ([`ModelReadError::Unread`]); an OBJ reads as an empty model without an error (no bytes,
+/// text). The loader failing for
 /// Unbound's own reasons (memory, I/O, its options) and a real FBX version it does not read
 /// fail the import.
 fn read_failure(
@@ -1720,17 +1728,41 @@ fn read_failure(
         (None, None)
     } else if bytes.starts_with(FBX_BINARY_SIGNATURE) {
         (Some(ModelReadError::Corrupted), None)
-    } else if is_ascii_fbx(bytes) {
+    } else if is_ascii_fbx(bytes) && ascii_fbx_open_blocks(bytes) > 0 {
         (
             None,
             Some(format!(
-                "the ASCII FBX does not read ({}): nothing of it is imported (the Editor imports what is connected to the root before a cut)",
+                "the ASCII FBX is cut short ({}): nothing of it is imported (the Editor imports what is connected to the root before the cut)",
                 error.description
             )),
+        )
+    } else if is_ascii_fbx(bytes) {
+        (
+            Some(ModelReadError::Unread(error.description.to_string())),
+            None,
         )
     } else {
         (Some(ModelReadError::Unreadable), None)
     })
+}
+
+/// How many blocks an ASCII FBX leaves open at its end (`{` and `}` outside strings and `;`
+/// comments): more than none for a file cut short, none for a whole one.
+fn ascii_fbx_open_blocks(bytes: &[u8]) -> i64 {
+    let (mut depth, mut in_string, mut in_comment) = (0i64, false, false);
+    for &b in bytes {
+        match b {
+            b'\n' => in_comment = false,
+            _ if in_comment => {}
+            b'"' => in_string = !in_string,
+            _ if in_string => {}
+            b';' => in_comment = true,
+            b'{' => depth += 1,
+            b'}' => depth -= 1,
+            _ => {}
+        }
+    }
+    depth
 }
 
 /// Whether `bytes` start as an ASCII FBX: after blank lines and `;` comments, the
