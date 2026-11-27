@@ -10,8 +10,15 @@ The vision utility slice adds one row: the static `UnityEngine.Accessibility.Vis
 The shortcut value types slice (Q818) adds 23 rows for the nine UnityEditor.ShortcutManagement
 types written by hand (KeyCombination, ShortcutBinding, ShortcutArguments, the two event
 argument structs, and the shortcut, clutch, reserved-modifier and base attributes, which record
-only their factory status), from two macOS Editor batch captures that agree on them (their values
-depend on neither the OS nor the graphics device); earlier rows are unchanged.
+only their factory status), recorded first from two macOS Editor batch captures and confirmed
+byte for byte by two Linux GPU captures; earlier rows are unchanged.
+
+The IHV importer, package sample and VersionControl slices (Q836, Q819 batches 2 and 3; Q846)
+add 40 rows and 11 inventory types: IHVImageFormatImporter (19), PackageManager.UI.Sample (7) and
+the VersionControl Asset, AssetList, ChangeSet, Message, Plugin, Provider, Task,
+VersionControlUtils and VersionControlSettings (14), appended before the completion row from two
+independent Linux GPU captures that agree on them; every earlier row and inventory entry is
+byte-identical. A new ChangeSet has an empty description and id -1.
 
 The Tile Palette and terrain layer slice adds 17 rows: GridBrushBase (abstract), CustomGridBrushAttribute
 and GridPalette written by hand (13), the static TerrainLayerUtility (1), and AssetPreview, Help and

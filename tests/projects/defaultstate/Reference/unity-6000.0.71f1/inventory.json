@@ -1794,6 +1794,12 @@
     {
       "category": "class",
       "module": "UnityEditor.CoreModule",
+      "status": "candidate",
+      "type": "UnityEditor.IHVImageFormatImporter"
+    },
+    {
+      "category": "class",
+      "module": "UnityEditor.CoreModule",
       "status": "no-public-parameterless-constructor",
       "type": "UnityEditor.IMGUI.Controls.MultiColumnHeader"
     },
@@ -2114,6 +2120,12 @@
       "module": "UnityEditor.CoreModule",
       "status": "static",
       "type": "UnityEditor.PackageManager.UI.PackageManagerExtensions"
+    },
+    {
+      "category": "struct",
+      "module": "UnityEditor.CoreModule",
+      "status": "candidate",
+      "type": "UnityEditor.PackageManager.UI.Sample"
     },
     {
       "category": "scriptable",
@@ -3362,6 +3374,60 @@
       "module": "UnityEditor.CoreModule",
       "status": "candidate",
       "type": "UnityEditor.UpdatePrefabInstancesEventArgs"
+    },
+    {
+      "category": "class",
+      "module": "UnityEditor.CoreModule",
+      "status": "no-public-parameterless-constructor",
+      "type": "UnityEditor.VersionControl.Asset"
+    },
+    {
+      "category": "class",
+      "module": "UnityEditor.CoreModule",
+      "status": "candidate",
+      "type": "UnityEditor.VersionControl.AssetList"
+    },
+    {
+      "category": "class",
+      "module": "UnityEditor.CoreModule",
+      "status": "candidate",
+      "type": "UnityEditor.VersionControl.ChangeSet"
+    },
+    {
+      "category": "class",
+      "module": "UnityEditor.CoreModule",
+      "status": "no-public-parameterless-constructor",
+      "type": "UnityEditor.VersionControl.Message"
+    },
+    {
+      "category": "class",
+      "module": "UnityEditor.CoreModule",
+      "status": "no-public-parameterless-constructor",
+      "type": "UnityEditor.VersionControl.Plugin"
+    },
+    {
+      "category": "class",
+      "module": "UnityEditor.CoreModule",
+      "status": "candidate",
+      "type": "UnityEditor.VersionControl.Provider"
+    },
+    {
+      "category": "class",
+      "module": "UnityEditor.CoreModule",
+      "status": "no-public-parameterless-constructor",
+      "type": "UnityEditor.VersionControl.Task"
+    },
+    {
+      "category": "class",
+      "module": "UnityEditor.CoreModule",
+      "status": "static",
+      "type": "UnityEditor.VersionControl.VersionControlUtils"
+    },
+    {
+      "category": "class",
+      "module": "UnityEditor.CoreModule",
+      "status": "no-public-parameterless-constructor",
+      "type": "UnityEditor.VersionControlSettings"
     },
     {
       "category": "scriptable",
