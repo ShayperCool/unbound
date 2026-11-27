@@ -32,8 +32,12 @@ public class LaunchProbe : MonoBehaviour
             return;
         }
         var log = new System.Text.StringBuilder();
+        var executable = Application.platform == RuntimePlatform.OSXEditor
+            ? Path.Combine(EditorApplication.applicationPath, "Contents", "MacOS", "Unity")
+            : EditorApplication.applicationPath;
         log.AppendLine("applicationPath " + EditorApplication.applicationPath);
-        try { var p = Process.Start(new ProcessStartInfo(EditorApplication.applicationPath, "-batchmode -projectPath /tmp/x") { UseShellExecute = false, RedirectStandardError = true }); log.AppendLine("plain launch started pid " + p.Id + " stderr " + p.StandardError.ReadToEnd()); }
+        log.AppendLine("executable " + executable);
+        try { var p = Process.Start(new ProcessStartInfo(executable, "-batchmode -projectPath /tmp/x") { UseShellExecute = false, RedirectStandardError = true }); log.AppendLine("plain launch started pid " + p.Id + " stderr " + p.StandardError.ReadToEnd()); }
         catch (Exception e) { log.AppendLine("plain launch: " + e.GetType().Name + ": " + e.Message); }
         // As Multiplayer Play Mode starts a virtual player (ProcessSystem): its log in the clone's
         // Logs folder, which does not exist yet; the Process and its pipes disposed at once.
@@ -43,7 +47,7 @@ public class LaunchProbe : MonoBehaviour
         try
         {
             using var p = new Process();
-            p.StartInfo = new ProcessStartInfo(EditorApplication.applicationPath,
+            p.StartInfo = new ProcessStartInfo(executable,
                 $"-projectPath \"{clone}\" --virtual-project-clone -forgetProjectPath -logFile \"{editorLog}\" -vp-channel-name=vp-channel -ump-channel-service-port 1234 -vpId=abc")
             { UseShellExecute = false, RedirectStandardError = true, RedirectStandardOutput = true, CreateNoWindow = true };
             p.Start();

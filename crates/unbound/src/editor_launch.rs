@@ -3,7 +3,9 @@
 //! Game and editor code see the real Unity installation (`EditorApplication.applicationPath`
 //! stays its executable: packages find the installation through it). Unbound never runs that
 //! executable: the process's `execve` (which .NET's `Process.Start` calls in the new process) is
-//! Unbound's own, exported from the executable, and looks at what is about to run:
+//! intercepted — exported from the executable on Linux (`exported.list`), and interposed through
+//! a linked `__DATA,__interpose` dylib (`libunbound_launch_guard.dylib`) on macOS — and looks at
+//! what is about to run:
 //!
 //! - a virtual player that Multiplayer Play Mode starts (`--virtual-project-clone`, its project
 //!   folder as `-projectPath`) runs as another `unbound run` of that folder, with the player's
@@ -33,9 +35,9 @@ struct Guard {
 static GUARD: OnceLock<Guard> = OnceLock::new();
 
 /// Guards launches of `unity` (the Editor's executable) from now on. Call before game code runs.
-/// Linux only: elsewhere a launch is not intercepted (said once here).
+/// Intercepted on Linux and macOS; elsewhere a launch is not intercepted (said once here).
 pub fn install(unity: &Path) {
-    #[cfg(not(target_os = "linux"))]
+    #[cfg(not(any(target_os = "linux", target_os = "macos")))]
     tracing::warn!(
         "Unbound does not intercept launches of the Unity Editor's executable on this OS: a Multiplayer Play Mode virtual player would start the real Editor"
     );
@@ -61,15 +63,19 @@ pub fn install(unity: &Path) {
             }
         }
     }
-    #[cfg(target_os = "linux")]
+    #[cfg(any(target_os = "linux", target_os = "macos"))]
     let stderr = unsafe { libc::fcntl(2, libc::F_DUPFD_CLOEXEC, 100) };
-    #[cfg(not(target_os = "linux"))]
+    #[cfg(not(any(target_os = "linux", target_os = "macos")))]
     let stderr = 2;
     let _ = GUARD.set(Guard {
         unity: forms,
         unbound,
         stderr,
     });
+    #[cfg(target_os = "macos")]
+    unsafe {
+        unbound_launch_guard_set_hook(macos_execve_hook);
+    }
 }
 
 const PATH_LIMIT: usize = 4096;
@@ -184,6 +190,10 @@ const PROJECT: &[u8] = b"-p\0";
 const NO_WATCH: &[u8] = b"--no-watch\0";
 const REST: &[u8] = b"--\0";
 
+#[cfg(any(target_os = "linux", target_os = "macos"))]
+type ExecveFn =
+    unsafe extern "C" fn(*const c_char, *const *const c_char, *const *const c_char) -> c_int;
+
 /// # Safety
 /// The C `execve`: `path` a C string, `argv` and `envp` null-terminated arrays of C strings.
 #[cfg(target_os = "linux")]
@@ -198,14 +208,14 @@ pub unsafe extern "C" fn execve(
             && !path.is_null()
             && is_unity(guard, bytes(path))
         {
-            return launch(guard, argv, envp);
+            return launch(guard, argv, envp, real_execve);
         }
         real_execve(path, argv, envp)
     }
 }
 
 #[cfg(target_os = "linux")]
-unsafe fn real_execve(
+unsafe extern "C" fn real_execve(
     path: *const c_char,
     argv: *const *const c_char,
     envp: *const *const c_char,
@@ -213,19 +223,61 @@ unsafe fn real_execve(
     unsafe { libc::syscall(libc::SYS_execve, path, argv, envp) as c_int }
 }
 
+#[cfg(target_os = "macos")]
+type ExecveHookFn = unsafe extern "C" fn(
+    *const c_char,
+    *const *const c_char,
+    *const *const c_char,
+    ExecveFn,
+) -> c_int;
+
+#[cfg(target_os = "macos")]
+unsafe extern "C" {
+    fn unbound_launch_guard_set_hook(hook: ExecveHookFn);
+}
+
+#[cfg(target_os = "macos")]
+unsafe extern "C" fn macos_execve_hook(
+    path: *const c_char,
+    argv: *const *const c_char,
+    envp: *const *const c_char,
+    real: ExecveFn,
+) -> c_int {
+    unsafe {
+        if let Some(guard) = GUARD.get()
+            && !path.is_null()
+            && is_unity(guard, bytes(path))
+        {
+            return launch(guard, argv, envp, real);
+        }
+        real(path, argv, envp)
+    }
+}
+
 fn is_unity(guard: &Guard, path: &[u8]) -> bool {
     let mut buffer = [0u8; PATH_LIMIT];
     let Some(n) = normalize(path, &mut buffer) else {
         return false;
     };
-    guard
-        .unity
-        .iter()
-        .any(|form| form.as_slice() == &buffer[..n])
+    guard.unity.iter().any(|form| {
+        #[cfg(target_os = "macos")]
+        {
+            form.as_slice().eq_ignore_ascii_case(&buffer[..n])
+        }
+        #[cfg(not(target_os = "macos"))]
+        {
+            form.as_slice() == &buffer[..n]
+        }
+    })
 }
 
-#[cfg(target_os = "linux")]
-unsafe fn launch(guard: &Guard, argv: *const *const c_char, envp: *const *const c_char) -> c_int {
+#[cfg(any(target_os = "linux", target_os = "macos"))]
+unsafe fn launch(
+    guard: &Guard,
+    argv: *const *const c_char,
+    envp: *const *const c_char,
+    real: ExecveFn,
+) -> c_int {
     unsafe {
         // The arguments, without the program's own.
         let mut args: [&[u8]; ARG_LIMIT] = [&[]; ARG_LIMIT];
@@ -290,11 +342,11 @@ unsafe fn launch(guard: &Guard, argv: *const *const c_char, envp: *const *const 
         run[4] = NO_WATCH.as_ptr().cast();
         run[5] = REST.as_ptr().cast();
         run[6..6 + count].copy_from_slice(&pointers[..count]);
-        real_execve(unbound.as_ptr(), run.as_ptr(), environment.as_ptr())
+        real(unbound.as_ptr(), run.as_ptr(), environment.as_ptr())
     }
 }
 
-#[cfg(target_os = "linux")]
+#[cfg(any(target_os = "linux", target_os = "macos"))]
 unsafe fn refuse(guard: &Guard, why: &[u8]) -> c_int {
     const PREFIX: &[u8] = b"Unbound: refusing to run the Unity Editor's executable: ";
     let fd = if guard.stderr >= 0 { guard.stderr } else { 2 };
@@ -302,7 +354,14 @@ unsafe fn refuse(guard: &Guard, why: &[u8]) -> c_int {
         libc::write(fd, PREFIX.as_ptr().cast(), PREFIX.len());
         libc::write(fd, why.as_ptr().cast(), why.len());
         libc::write(fd, b"\n".as_ptr().cast(), 1);
-        *libc::__errno_location() = libc::EPERM;
+        #[cfg(target_os = "linux")]
+        {
+            *libc::__errno_location() = libc::EPERM;
+        }
+        #[cfg(target_os = "macos")]
+        {
+            *libc::__error() = libc::EPERM;
+        }
     }
     -1
 }
@@ -349,5 +408,29 @@ mod tests {
         assert_eq!(classify(&plain), Launch::Refused);
         let no_project: Vec<&[u8]> = vec![b"--virtual-project-clone"];
         assert_eq!(classify(&no_project), Launch::Refused);
+    }
+
+    #[test]
+    fn unity_path_matching_handles_normalization_and_platform_case() {
+        let guard = Guard {
+            unity: vec![
+                b"/Applications/Unity/Hub/Editor/6000.0.71f1/Unity.app/Contents/MacOS/Unity"
+                    .to_vec(),
+            ],
+            unbound: None,
+            stderr: 2,
+        };
+        assert!(is_unity(
+            &guard,
+            b"/Applications/Unity/Hub/Editor/6000.0.71f1/Unity.app/Contents/MacOS/../MacOS/Unity"
+        ));
+        assert!(!is_unity(&guard, b"/usr/bin/true"));
+        assert!(!is_unity(&guard, b"relative/Unity"));
+        let diff_case =
+            b"/applications/unity/hub/editor/6000.0.71f1/unity.app/contents/macos/unity";
+        #[cfg(target_os = "macos")]
+        assert!(is_unity(&guard, diff_case));
+        #[cfg(not(target_os = "macos"))]
+        assert!(!is_unity(&guard, diff_case));
     }
 }

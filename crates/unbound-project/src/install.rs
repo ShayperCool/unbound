@@ -53,11 +53,15 @@ impl UnityInstall {
         self.data.parent()?.parent()
     }
 
-    /// The `Unity` executable: `Editor/Unity` on Linux, `Unity.app/Contents/MacOS/Unity` on macOS.
+    /// The `Unity` executable: `Editor/Unity` on Linux, `Unity.app/Contents/MacOS/Unity` on macOS
+    /// (or `<data>/../Contents/MacOS/Unity` when running on macOS from an unpacked archive, where
+    /// `EditorApplication.applicationPath` is `<data>/..` and packages append `Contents/MacOS/Unity`).
     pub fn editor_executable(&self) -> PathBuf {
         let mac = self.data.join("MacOS/Unity");
         if mac.is_file() {
             mac
+        } else if cfg!(target_os = "macos") {
+            self.data.join("../Contents/MacOS/Unity")
         } else {
             self.data.join("../Unity")
         }
@@ -332,6 +336,37 @@ mod tests {
             std::fs::create_dir_all(mac.join("PlaybackEngines").join(platform)).unwrap();
         }
         assert!(!has_api_reference_platforms(&mac));
+        std::fs::remove_dir_all(&root).unwrap();
+    }
+
+    #[test]
+    fn editor_executable_matches_bundle_and_unpacked_layouts() {
+        let root = std::env::temp_dir().join(format!("unbound-edexe-{}", std::process::id()));
+        let bundle_data = root.join("Unity.app/Contents");
+        let bundle_bin = bundle_data.join("MacOS/Unity");
+        touch(&bundle_bin);
+        let bundle_install = UnityInstall {
+            data: bundle_data,
+            version: "6000.0.71f1".parse().unwrap(),
+        };
+        assert_eq!(bundle_install.editor_executable(), bundle_bin);
+
+        let unpacked_data = root.join("Editor/Data");
+        std::fs::create_dir_all(&unpacked_data).unwrap();
+        let unpacked_install = UnityInstall {
+            data: unpacked_data.clone(),
+            version: "6000.0.71f1".parse().unwrap(),
+        };
+        #[cfg(target_os = "macos")]
+        assert_eq!(
+            unpacked_install.editor_executable(),
+            unpacked_data.join("../Contents/MacOS/Unity")
+        );
+        #[cfg(not(target_os = "macos"))]
+        assert_eq!(
+            unpacked_install.editor_executable(),
+            unpacked_data.join("../Unity")
+        );
         std::fs::remove_dir_all(&root).unwrap();
     }
 }

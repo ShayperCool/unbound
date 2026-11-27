@@ -7,6 +7,8 @@
     "crates/unbound/src/editor_launch.rs",
     "crates/unbound/src/commands.rs",
     "crates/unbound/src/main.rs",
-    "crates/unbound/build.rs"
+    "crates/unbound/build.rs",
+    "crates/unbound/launch_guard_macos.c",
+    "crates/unbound-project/src/install.rs"
   ]
 }

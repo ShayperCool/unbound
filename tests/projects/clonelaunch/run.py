@@ -2,7 +2,7 @@
 """Launches of the Unity Editor's executable from a game Unbound runs; see README.md.
 
 `check` runs the engine on a private copy of the probe (the launcher) with another private copy as
-the virtual player's project, and checks what the launcher and the player wrote. Linux only."""
+the virtual player's project, and checks what the launcher and the player wrote. Linux and macOS."""
 import argparse
 import os
 from pathlib import Path
@@ -17,9 +17,10 @@ import value_probe  # noqa: E402
 
 
 def check():
-    if sys.platform != 'linux':
-        print('clonelaunch: the launch of the Editor\'s executable is guarded on Linux only (macOS: not implemented); not run')
+    if sys.platform not in ('linux', 'darwin'):
+        print(f'clonelaunch: the launch of the Editor\'s executable is guarded on Linux and macOS only ({sys.platform}: not implemented); not run')
         return 0
+    editor_suffix = '/Contents/MacOS/Unity' if sys.platform == 'darwin' else '/Editor/Unity'
     out = run_root(ROOT, private_label())
     main = project_copy(ROOT, out/'main')
     clone = project_copy(ROOT, out/'clone')
@@ -46,7 +47,7 @@ def check():
         ('clone command line', clone_lines[1:11] == [
             '-projectPath', str(clone), '--virtual-project-clone', '-forgetProjectPath', '-logFile', str(editor_log),
             '-vp-channel-name=vp-channel', '-ump-channel-service-port', '1234', '-vpId=abc'], clone_lines[:11]),
-        ('clone command line names the Editor', bool(clone_lines) and clone_lines[0].endswith('/Editor/Unity'), clone_lines[:1]),
+        ('clone command line names the Editor', bool(clone_lines) and clone_lines[0].endswith(editor_suffix), clone_lines[:1]),
         ('clone console log in its -logFile', 'The virtual player logs this.' in text(editor_log), str(editor_log)),
         ('clone process output in its own project data', 'INFO' in text(native_log), str(native_log)),
         ('clone project data its own', (clone/'LibraryUnbound'/'ProjectView').is_dir() and (out/'main-data'/'ProjectView').is_dir()

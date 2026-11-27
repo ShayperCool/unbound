@@ -1,9 +1,10 @@
 # clonelaunch
 
-Launches of the Unity Editor's executable (`EditorApplication.applicationPath`) from a game Unbound
-runs. Unbound's own mechanism, so there is no Editor reference (the Editor would start Unity):
-`run.py check` runs the engine on a private copy of this project, whose `LaunchProbe` launches the
-executable twice with `Process.Start`, and checks what happened:
+Launches of the Unity Editor's executable (`EditorApplication.applicationPath`, or its
+`Contents/MacOS/Unity` binary on macOS) from a game Unbound runs. Unbound's own mechanism, so there
+is no Editor reference (the Editor would start Unity): `run.py check` runs the engine on a private
+copy of this project, whose `LaunchProbe` launches the executable twice with `Process.Start`, and
+checks what happened:
 
 * with ordinary Editor arguments (`-batchmode -projectPath ...`): refused, `Process.Start` throws
   (`Win32Exception`, "Operation not permitted"), and the launcher's standard error says why;
@@ -16,7 +17,7 @@ executable twice with `Process.Start`, and checks what happened:
   its own output is `VirtualPlayer.log` in its own project data (`LibraryUnbound`), though the
   launcher keeps its project data elsewhere (`--project-data`).
 
-Linux only: on macOS the launch is not intercepted yet and the check does not run.
+Linux and macOS.
 
 ```sh
 python3 tests/projects/clonelaunch/run.py check
