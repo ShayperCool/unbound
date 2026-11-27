@@ -12,7 +12,8 @@ using UnityEngine;
 /// picks for files whose .meta names a ScriptedImporter of another extension, of an extension no
 /// importer declares, a native importer for a claimed extension, or no importer at all; what each
 /// imports to, what opening the project and SetLabels write, and the AssetDatabase importer
-/// queries. GUID lines read "guid: (guid)".
+/// queries; files without a .meta, found as the project opens, by Refresh and by ImportAsset. GUID
+/// lines read "guid: (guid)".
 /// </summary>
 public class ImporterPickProbe : MonoBehaviour
 {
@@ -109,6 +110,22 @@ public class ImporterPickProbe : MonoBehaviour
                 return ImporterValues(AssetImporter.GetAtPath(path)) + " | " + Imported(path);
             });
             Meta("labels/" + name + "/meta", path);
+        }
+
+        // Files of the session without a .meta: found by Refresh, imported by ImportAsset.
+        Directory.CreateDirectory("Assets/Session");
+        File.WriteAllText("Assets/Session/Refreshed.foo", "Refreshed.foo\n");
+        File.WriteAllText("Assets/Session/Refreshed.part", "Refreshed.part\n");
+        File.WriteAllText("Assets/Session/Refreshed.qux", "Refreshed.qux\n");
+        Try("session/refresh", () => { AssetDatabase.Refresh(); return "ok"; });
+        File.WriteAllText("Assets/Session/Imported.foo", "Imported.foo\n");
+        Try("session/import", () => { AssetDatabase.ImportAsset("Assets/Session/Imported.foo"); return "ok"; });
+        foreach (var name in new[] { "Refreshed.foo", "Refreshed.part", "Refreshed.qux", "Imported.foo" })
+        {
+            var path = "Assets/Session/" + name;
+            Meta("session/" + name, path);
+            Try("session/" + name + "/importer", () => ImporterValues(AssetImporter.GetAtPath(path)));
+            Try("session/" + name + "/imported", () => Imported(path));
         }
     }
 }

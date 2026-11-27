@@ -19,6 +19,7 @@ each importing a text file as a TextAsset whose text names the importer, with an
 | `Plain.txt` | FooImporter's section, `setting: 7` (`.txt` is the TextScriptImporter's) |
 | `Default.foo`, `Text.foo` | a DefaultImporter's, a TextScriptImporter's section |
 | `Guid.foo`, `Guid.xyz`, `Guid.uss` | the GUID alone |
+| `New.foo`, `New.part`, `New.qux` | none |
 
 `Assets/Scripts/ImporterPickProbe.cs` records in Play mode into values.jsonl in
 `$IMPORTERPICK_OUT` (tests/value_probe.py), each `.meta` with its GUID line read `guid: (guid)`:
@@ -26,7 +27,9 @@ for each file `open/<file>` (its `.meta` as the project opened), `importer/`, `i
 importer's class and setting, the main asset), `type/`, `default/`, `available/`, `override/`
 (`AssetDatabase.GetImporterType`, `GetDefaultImporter`, `GetAvailableImporters`,
 `GetImporterOverride`); then `labels/<file>` and `labels/<file>/meta`: `SetLabels`, the importer,
-the main asset and the file.
+the main asset and the file. Then `Assets/Session/Refreshed.foo`, `.part` and `.qux` are written
+without a `.meta` and `AssetDatabase.Refresh` called, `Imported.foo` written and imported by
+`ImportAsset`: `session/<file>` (the `.meta`), `/importer` and `/imported`.
 
 What it shows: the extension decides. A file of an extension a ScriptedImporter declares is
 imported by that importer whatever its `.meta` names (none, another ScriptedImporter, the
@@ -39,7 +42,9 @@ extension's, with that importer's section at its defaults; the others keep their
 are written again (here by `SetLabels`), which then writes the importer's own section: the
 ScriptedImporter's at its defaults, the TextScriptImporter's or the DefaultImporter's. The queries
 answer the importer used; `GetDefaultImporter` and `GetAvailableImporters` give none for an
-extension nobody declares.
+extension nobody declares. A file without a `.meta`, found as the project opens, by `Refresh` or
+by `ImportAsset`, gets the `.meta` of its extension's importer: the ScriptedImporter's section with
+the importer's fields at their defaults, or the DefaultImporter's for an extension nobody declares.
 
 Not covered: a ScriptedImporter that declares a native importer's extension, `overrideExts`,
 `SetImporterOverride`, two ScriptedImporters declaring one extension, a ScriptedImporter class
