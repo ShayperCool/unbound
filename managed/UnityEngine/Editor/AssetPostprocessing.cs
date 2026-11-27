@@ -455,8 +455,9 @@ namespace UnityEditor
             // import/txt/events).
             string own = kind switch { "texture" => "OnPreprocessTexture", "model" => "OnPreprocessModel", "audio" => "OnPreprocessAudio", _ => null };
             if (own == null && kind != "prefab" && kind != "text") return;
-            // Only the TextScriptImporter's text (a package manifest's import, or one a ScriptedImporter
-            // override takes, is not this one; listed once the native side knows the asset).
+            // Only a text of the TextScriptImporter's extensions: a package manifest's import is not
+            // measured (the listed importer, which follows the extension; a .meta's ScriptedImporter
+            // override is not told apart here).
             if (kind == "text" && Unbound.Runtime.Native.IsReady && AssetDatabase.ImporterOf(path) != "TextScriptImporter") return;
             if (Hooks("OnPreprocessAsset").Count == 0 && (own == null || Hooks(own).Count == 0) && (kind != "model" || Hooks("OnPreprocessAnimation").Count == 0))
                 return;
