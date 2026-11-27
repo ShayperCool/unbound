@@ -414,19 +414,22 @@ namespace UnityEngine.Tests
             s_ImportCalls.Clear();
             const string path = "Assets/Preprocessed.txt", guid = "0123456789abcdef0123456789abcdec";
             var importer = AssetImporter.FromMeta(path, guid, "TextScriptImporter", TestYaml.DocumentBody("TextScriptImporter:\n  userData: \n"));
-            using (AssetPostprocessing.HooksForTests("OnPreprocessAsset", new List<(int, Type, System.Reflection.MethodInfo)> { Hook<PreprocessingPostprocessor>("Count") }))
+            using (AssetPostprocessing.HooksForTests("OnPreprocessAsset", new List<(int, Type, System.Reflection.MethodInfo)> { Hook<PreprocessingPostprocessor>("Count"), Hook<CountingPostprocessor>("Count") }))
             using (AssetImporter.Importing(path, importer))
             {
                 AssetPostprocessing.EnsurePreprocessed(path, "text", guid);
                 AssetPostprocessing.EnsurePreprocessed(path, "text", guid);
-                Assert.Equal(new[] { "preprocess Assets/Preprocessed.txt True" }, s_ImportCalls);
-                // Imported again: preprocessed again.
+                Assert.Equal(new[] { "preprocess Assets/Preprocessed.txt True", "count 1 Assets/Preprocessed.txt" }, s_ImportCalls);
+                // Its import ends there (tests/projects/assetpostprocessors: a later import's
+                // postprocessors are new ones).
+                Assert.Null(AssetPostprocessing.ExistingSession(path));
+                // Imported again: preprocessed again, by new postprocessors.
                 AssetPostprocessing.ForgetPreprocessed(path);
                 AssetPostprocessing.EnsurePreprocessed(path, "text", guid);
-                Assert.Equal(2, s_ImportCalls.Count);
+                Assert.Equal(new[] { "preprocess Assets/Preprocessed.txt True", "count 1 Assets/Preprocessed.txt", "preprocess Assets/Preprocessed.txt True", "count 1 Assets/Preprocessed.txt" }, s_ImportCalls);
                 // Kinds with no measured OnPreprocessAsset get none.
                 AssetPostprocessing.EnsurePreprocessed("Assets/Other.shader", "shader");
-                Assert.Equal(2, s_ImportCalls.Count);
+                Assert.Equal(4, s_ImportCalls.Count);
             }
             AssetPostprocessing.ForgetPreprocessed(path);
         }

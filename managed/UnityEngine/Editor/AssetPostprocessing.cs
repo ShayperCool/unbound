@@ -455,11 +455,15 @@ namespace UnityEditor
             // import/txt/events).
             string own = kind switch { "texture" => "OnPreprocessTexture", "model" => "OnPreprocessModel", "audio" => "OnPreprocessAudio", _ => null };
             if (own == null && kind != "prefab" && kind != "text") return;
-            // A package manifest's import is not measured.
-            if (kind == "text" && Unbound.Runtime.Native.IsReady && AssetDatabase.ImporterOf(path) == "PackageManifestImporter") return;
+            // Only the TextScriptImporter's text (a package manifest's import, or one a ScriptedImporter
+            // override takes, is not this one; listed once the native side knows the asset).
+            if (kind == "text" && Unbound.Runtime.Native.IsReady && AssetDatabase.ImporterOf(path) != "TextScriptImporter") return;
             if (Hooks("OnPreprocessAsset").Count == 0 && (own == null || Hooks(own).Count == 0) && (kind != "model" || Hooks("OnPreprocessAnimation").Count == 0))
                 return;
             Preprocess(path, kind, guid);
+            // A text asset's import has no other callback: it ends here, so the next import makes
+            // new postprocessors (as every import does: ImportSession).
+            if (kind == "text") EndSession(path);
         }
 
         /// <summary>An asset's preprocessors: OnPreprocessAsset, then its type's (a model's
