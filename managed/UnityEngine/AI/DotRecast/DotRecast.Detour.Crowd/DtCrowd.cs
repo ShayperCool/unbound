@@ -1825,7 +1825,7 @@ namespace DotRecast.Detour.Crowd
                         if (count == 0) continue;
                         float combined = capRadius + ag.option.radius;
                         _obstacleQuery.AddCircle(new RcVec3f(p0x, 0f, p0z), combined, nei.vel, share);
-                        if (count == 2)
+                        if (count == 2 && (p0x != p1x || p0z != p1z))
                         {
                             _obstacleQuery.AddCircle(new RcVec3f(p1x, 0f, p1z), combined, nei.vel, share);
                             _obstacleQuery.AddMovingSegment(p0x, p0z, p1x, p1z, nei.vel.X, nei.vel.Z, combined, share);
@@ -1854,8 +1854,8 @@ namespace DotRecast.Detour.Crowd
             }
         }
 
-        /// <summary>Adds the facing and touching edges of an oriented box's clipped hull as padded
-        /// moving segments and their adjacent vertices as circles to the avoidance query.</summary>
+        /// <summary>Adds the facing edges of an oriented box's clipped hull as padded moving
+        /// segments and their adjacent vertices as circles to the avoidance query.</summary>
         private void AddBoxAvoidance(DtCrowdAgent ag, DtCrowdAgent box, float share)
         {
             Span<float> hx = stackalloc float[32];
@@ -1865,42 +1865,13 @@ namespace DotRecast.Detour.Crowd
                 return;
 
             float agentRadius = ag.option.radius;
-            float touchSq = DtObstacleAvoidanceQuery.SegmentTouchDistance * DtObstacleAvoidanceQuery.SegmentTouchDistance;
             Span<bool> active = stackalloc bool[32];
             for (int prev = n - 1, curr = 0; curr < n; prev = curr++)
             {
                 float ax = hx[prev], az = hz[prev];
                 float bx = hx[curr], bz = hz[curr];
                 float ex = bx - ax, ez = bz - az;
-                bool facing = ex * az - ez * ax <= 0f;
-
-                float len = MathF.Sqrt(ex * ex + ez * ez);
-                float nx = 0f, nz = 0f;
-                if (len > 0f)
-                {
-                    nx = -ez / len;
-                    nz = ex / len;
-                }
-                float e0x = ax + nx * agentRadius;
-                float e0z = az + nz * agentRadius;
-                float e1x = bx + nx * agentRadius;
-                float e1z = bz + nz * agentRadius;
-                float edx = e1x - e0x, edz = e1z - e0z;
-                float eLenSq = edx * edx + edz * edz;
-                float distSq;
-                if (eLenSq == 0f)
-                {
-                    distSq = e0x * e0x + e0z * e0z;
-                }
-                else
-                {
-                    float t = Math.Clamp((-e0x * edx - e0z * edz) / eLenSq, 0f, 1f);
-                    float dx = t * edx + e0x;
-                    float dz = t * edz + e0z;
-                    distSq = dx * dx + dz * dz;
-                }
-
-                active[prev] = facing || distSq < touchSq;
+                active[prev] = ex * az - ez * ax <= 0f;
             }
 
             for (int prev = n - 1, curr = 0; curr < n; prev = curr++)

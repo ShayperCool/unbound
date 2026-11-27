@@ -41,7 +41,7 @@ namespace DotRecast.Detour.Crowd
         const float CentreSideOffset = 0.04f;
         /// Unbound: an edge nearer than this to the agent counts as at least SegmentMinDistance from
         /// it on the edge's outer side, whichever side the agent is on (Unity's).
-        internal const float SegmentTouchDistance = 0.05f;
+        const float SegmentTouchDistance = 0.05f;
         const float SegmentMinDistance = 0.025f;
         /// Unbound: an edge's time to impact counts double (it is divided by this; Unity's).
         const float SegmentTimeWeight = 0.5f;
@@ -98,7 +98,7 @@ namespace DotRecast.Detour.Crowd
             float dz = p1z - p0z;
             float len = MathF.Sqrt(dx * dx + dz * dz);
             float dirX = 0f, dirZ = 0f, halfLen = 0f;
-            if (len >= MovingSegmentLengthEpsilon)
+            if (len >= 2f * MovingSegmentLengthEpsilon)
             {
                 dirX = dx / len;
                 dirZ = dz / len;
@@ -187,6 +187,12 @@ namespace DotRecast.Detour.Crowd
         public int GetObstacleSegmentCount() => m_nsegments;
 
         public DtObstacleSegment GetObstacleSegment(int i) => m_segments[i];
+
+        internal float TimeToImpactForTests(RcVec3f vcand, RcVec3f vel, float horizTime)
+        {
+            m_params = new DtObstacleAvoidanceParams { horizTime = horizTime };
+            return TimeToImpact(vcand, vel);
+        }
 
         /// The time the agent, at the origin, moving at <paramref name="vcand"/> takes to meet the
         /// nearest obstacle, at most the prediction time.

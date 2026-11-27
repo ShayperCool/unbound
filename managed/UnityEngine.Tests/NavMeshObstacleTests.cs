@@ -360,8 +360,8 @@ namespace UnityEngine.Tests
             using var release = TestRelease.Pin(TestRelease.Measured);
 
             // 1. A long thin box on the measured release is a single crowd obstacle (no circle cover
-            //    or long-box warning), and an agent placed inside its interior is pushed out across
-            //    the centroid-wedge edge.
+            //    or long-box warning), pushing both a touching outside agent and an interior agent
+            //    (exercising TryOverlapBox's side < 0f branch) out across the centroid-wedge edge.
             var warnings = new List<string>();
             WithWarnings(warnings, () =>
             {
@@ -378,6 +378,30 @@ namespace UnityEngine.Tests
                 Assert.True(Mathf.Abs(agent.nextPosition.x - 3.5f) < 2e-3f && Mathf.Abs(agent.nextPosition.z - 0.6f) < 2e-3f,
                     $"expected (3.5, 0.6), at {agent.nextPosition}");
                 Remove(agent);
+
+                // Interior placement: (0.5, 0.05) lies strictly inside [-5, +5] x [-0.1, +0.1]
+                // in the top-edge centroid wedge (slope 0.05/0.5 > 0.1/5), so TryOverlapBox hits side < 0f.
+                var interiorAg = new DotRecast.Detour.Crowd.DtCrowdAgent(0)
+                {
+                    npos = new DotRecast.Core.Numerics.RcVec3f(0.5f, 0f, 0.05f),
+                    option = new DotRecast.Detour.Crowd.DtCrowdAgentParams { height = 2f, radius = 0.5f },
+                };
+                var boxAg = new DotRecast.Detour.Crowd.DtCrowdAgent(1)
+                {
+                    npos = new DotRecast.Core.Numerics.RcVec3f(0f, 0.5f, 0f),
+                    option = new DotRecast.Detour.Crowd.DtCrowdAgentParams
+                    {
+                        boxObstacle = true,
+                        boxHalfExtents = new DotRecast.Core.Numerics.RcVec3f(5f, 0.5f, 0.1f),
+                        boxAxisX = new DotRecast.Core.Numerics.RcVec3f(1f, 0f, 0f),
+                        boxAxisY = new DotRecast.Core.Numerics.RcVec3f(0f, 1f, 0f),
+                        boxAxisZ = new DotRecast.Core.Numerics.RcVec3f(0f, 0f, 1f),
+                    },
+                };
+                Assert.True(DotRecast.Detour.Crowd.DtCrowd.TryOverlapBox(interiorAg, boxAg, out float cx, out float cz, out float pen));
+                Assert.True(MathF.Abs(cx) < 1e-5f && MathF.Abs(cz - 0.05f) < 1e-5f, $"expected closest (0, 0.05), got ({cx}, {cz})");
+                Assert.True(MathF.Abs(pen - 0.55f) < 1e-5f, $"expected interior pen 0.55 (dist 0.05 + radius 0.5), got {pen}");
+
                 Remove(box);
             });
 
@@ -437,10 +461,18 @@ namespace UnityEngine.Tests
         {
             // Moving segment TOI applies midpoint taper 0.5 + 0.5*(1 - 2s)^2, giving half the TOI
             // for a center hit (s = 0.5) compared to an endpoint graze (s = 0 or 1).
-            var queryCenter = new DotRecast.Detour.Crowd.DtObstacleAvoidanceQuery(16, 8, 16);
-            queryCenter.AddMovingSegment(-2f, 2f, 2f, 2f, 0f, 0f, 0.5f, 1f);
+            var query = new DotRecast.Detour.Crowd.DtObstacleAvoidanceQuery(16, 8, 16);
+            query.AddMovingSegment(-2f, 2f, 2f, 2f, 0f, 0f, 0.5f, 1f);
+
+            // Both rays meet the front face z = 1.5 at tEnter = 1.0 s: center at (0, 1.5) (s = 0.5)
+            // and right endpoint at (2, 1.5) (s = 1.0). Midpoint taper halves the center TOI.
+            float toiCenter = query.TimeToImpactForTests(new DotRecast.Core.Numerics.RcVec3f(0f, 0f, 1.5f), default, 5f);
+            float toiEndpoint = query.TimeToImpactForTests(new DotRecast.Core.Numerics.RcVec3f(2f, 0f, 1.5f), default, 5f);
+            Assert.True(MathF.Abs(toiEndpoint - 1.0f) < 1e-5f, $"expected endpoint TOI 1.0, got {toiEndpoint}");
+            Assert.True(MathF.Abs(toiCenter - 0.5f) < 1e-5f, $"expected tapered center TOI 0.5, got {toiCenter}");
+
             var p = new DotRecast.Detour.Crowd.DtObstacleAvoidanceParams { horizTime = 5f, adaptiveDivs = 5, adaptiveRings = 2, adaptiveDepth = 2 };
-            queryCenter.SampleVelocityAdaptive(3.5f, new DotRecast.Core.Numerics.RcVec3f(0f, 0f, 3.5f),
+            query.SampleVelocityAdaptive(3.5f, new DotRecast.Core.Numerics.RcVec3f(0f, 0f, 3.5f),
                 new DotRecast.Core.Numerics.RcVec3f(0f, 0f, 3.5f), out var velWithSeg, p, null);
             // Walking straight into a 4 m wide horizontal segment at z = 2 must deflect laterally.
             Assert.True(MathF.Abs(velWithSeg.X) > 0.5f, $"expected lateral deflection around segment, got {velWithSeg}");

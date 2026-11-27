@@ -164,8 +164,9 @@ the unclipped far endpoint when it still lies within `radius` of the agent's hei
 `cap45shortlow`, `cap45shortlow2`, `cap45shorthigh` and `cap45low`), and ranks as a neighbour by
 the half-diagonal of its horizontal extents without a vertical pre-cull (`caprank`, `caprankyaw`,
 `caprankoverhead`). Walking past a lying or tilted capsule adds its clipped endpoints as circles
-and its shaft as a padded moving segment to velocity sampling. Unbound matches every capsule and
-box contact and steering value in `obstacle-shapes`.
+and its shaft as a padded moving segment to velocity sampling. Unbound matches every capsule value
+and 7222 of 7290 total values in `obstacle-shapes` (all except the 68 box corner-contact values
+listed above).
 
     UNBOUND_PROBE_UNITY_VERSION=6000.0.71f1 python3 tests/projects/navpath/run.py editor --profile obstacle-shapes --label L
     UNBOUND_PROBE_UNITY_VERSION=6000.0.71f1 python3 tests/projects/navpath/run.py publish --profile obstacle-shapes --label L
