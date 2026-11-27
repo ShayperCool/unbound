@@ -1,0 +1,6 @@
+{
+  "name": "com.probe.pm",
+  "version": "1.2.3",
+  "displayName": "Probe PackageManager",
+  "description": "Embedded package for PackageManager probe."
+}

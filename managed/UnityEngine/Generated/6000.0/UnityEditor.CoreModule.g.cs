@@ -32485,17 +32485,13 @@ namespace UnityEditor.PackageManager
     }
     unsafe static partial class Client
     {
-        [global::Unbound.Stub] public static global::UnityEditor.PackageManager.Requests.AddRequest Add(string identifier) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.PackageManager.Client.Add"); return default; }
-        [global::Unbound.Stub] public static global::UnityEditor.PackageManager.Requests.AddAndRemoveRequest AddAndRemove(string[] packagesToAdd = null, string[] packagesToRemove = null) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.PackageManager.Client.AddAndRemove"); return default; }
         [global::Unbound.Stub] internal static global::UnityEditor.PackageManager.Requests.AddScopedRegistryRequest AddScopedRegistry(string registryName, string url, string[] scopes, bool dryRun = false) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.PackageManager.Client.AddScopedRegistry"); return default; }
         [global::Unbound.Stub] public static global::UnityEditor.PackageManager.Requests.ClearCacheRequest ClearCache() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.PackageManager.Client.ClearCache"); return default; }
         [global::Unbound.Stub] internal static global::UnityEditor.PackageManager.Requests.ClearCacheRootRequest ClearCacheRoot() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.PackageManager.Client.ClearCacheRoot"); return default; }
-        [global::Unbound.Stub] public static global::UnityEditor.PackageManager.Requests.EmbedRequest Embed(string packageName) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.PackageManager.Client.Embed"); return default; }
         [global::Unbound.Stub] internal static global::UnityEditor.PackageManager.Requests.GetRegistriesRequest GetRegistries() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.PackageManager.Client.GetRegistries"); return default; }
         [global::Unbound.Stub] internal static global::UnityEditor.PackageManager.Requests.GetCacheRootRequest GetCacheRoot() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.PackageManager.Client.GetCacheRoot"); return default; }
         [global::Unbound.Stub] internal static global::UnityEditor.PackageManager.Requests.GetCacheRootRequest GetDefaultCacheRoot() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.PackageManager.Client.GetDefaultCacheRoot"); return default; }
         [global::Unbound.Stub] internal static global::UnityEditor.PackageManager.Requests.ListBuiltInPackagesRequest ListBuiltInPackages() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.PackageManager.Client.ListBuiltInPackages"); return default; }
-        [global::Unbound.Stub] public static global::UnityEditor.PackageManager.Requests.RemoveRequest Remove(string packageName) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.PackageManager.Client.Remove"); return default; }
         [global::Unbound.Stub] internal static global::UnityEditor.PackageManager.Requests.RemoveScopedRegistryRequest RemoveScopedRegistry(string registryId) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.PackageManager.Client.RemoveScopedRegistry"); return default; }
         [global::Unbound.Stub] internal static global::UnityEditor.PackageManager.Requests.SetCacheRootRequest SetCacheRoot(string newPath) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.PackageManager.Client.SetCacheRoot"); return default; }
         [global::System.Obsolete("ResetToEditorDefaults is deprecated and will be removed in a later version.")] [global::Unbound.Stub] public static global::UnityEditor.PackageManager.Requests.ResetToEditorDefaultsRequest ResetToEditorDefaults() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.PackageManager.Client.ResetToEditorDefaults"); return default; }
@@ -32552,23 +32548,6 @@ namespace UnityEditor.PackageManager
         public global::UnityEditor.PackageManager.EntitlementLicensingModel licensingModel { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.PackageManager.EntitlementsInfo.licensingModel"); return default; } }
         public global::UnityEditor.Experimental.Licensing.EntitlementStatus status { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.PackageManager.EntitlementsInfo.status"); return default; } }
     }
-    [global::System.Serializable]
-    [global::Unbound.Stub]
-    public unsafe partial class Error
-    {
-        [global::Unbound.Stub] internal Error(global::UnityEditor.PackageManager.NativeErrorCode errorCode, string message) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.PackageManager.Error.ctor"); }
-        public global::UnityEditor.PackageManager.ErrorCode errorCode { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.PackageManager.Error.errorCode"); return default; } }
-        public string message { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.PackageManager.Error.message"); return default; } }
-    }
-    public enum ErrorCode
-    {
-        Unknown = 0,
-        NotFound = 1,
-        Forbidden = 2,
-        InvalidParameter = 3,
-        Conflict = 4,
-        AggregateError = 5,
-    }
     unsafe static partial class Events
     {
         [global::Unbound.Stub] internal static void InvokeRegisteringPackages(global::System.IntPtr nativePackageDiffHandle) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.PackageManager.Events.InvokeRegisteringPackages"); }
@@ -32612,33 +32591,6 @@ namespace UnityEditor.PackageManager
         Silly = 5,
     }
     [global::Unbound.Stub]
-    internal unsafe static partial class NativeEnumExtensions
-    {
-        [global::Unbound.Stub] public static global::UnityEditor.PackageManager.StatusCode ConvertToManaged(this global::UnityEditor.PackageManager.NativeStatusCode status) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.PackageManager.NativeEnumExtensions.ConvertToManaged"); return default; }
-        [global::Unbound.Stub] public static global::UnityEditor.PackageManager.ErrorCode ConvertToManaged(this global::UnityEditor.PackageManager.NativeErrorCode errorCode) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.PackageManager.NativeEnumExtensions.ConvertToManaged"); return default; }
-        [global::Unbound.Stub] public static bool IsCompleted(this global::UnityEditor.PackageManager.NativeStatusCode status) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.PackageManager.NativeEnumExtensions.IsCompleted"); return default; }
-    }
-    internal enum NativeErrorCode
-    {
-        Unknown = 0,
-        NotFound = 1,
-        Forbidden = 2,
-        InvalidParameter = 3,
-        Conflict = 4,
-        AggregateError = 5,
-        Cancelled = 6,
-        Success = 7,
-    }
-    internal enum NativeStatusCode
-    {
-        InQueue = 0,
-        InProgress = 1,
-        Done = 2,
-        Error = 3,
-        NotFound = 4,
-        Cancelled = 5,
-    }
-    [global::Unbound.Stub]
     internal unsafe partial class OperationStatus
     {
         public global::UnityEditor.PackageManager.PackageInfo[] packageList { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.PackageManager.OperationStatus.packageList"); return global::System.Array.Empty<global::UnityEditor.PackageManager.PackageInfo>(); } }
@@ -32650,11 +32602,6 @@ namespace UnityEditor.PackageManager
     {
         [global::Unbound.Stub] internal PackOperationResult() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.PackageManager.PackOperationResult.ctor"); }
         public string tarballPath { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.PackageManager.PackOperationResult.tarballPath"); return default; } }
-    }
-    unsafe partial class PackageCollection
-    {
-        [global::Unbound.Stub] internal PackageCollection(global::System.Collections.Generic.IEnumerable<global::UnityEditor.PackageManager.PackageInfo> packages, global::UnityEditor.PackageManager.Error error) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.PackageManager.PackageCollection.ctor"); }
-        public global::UnityEditor.PackageManager.Error error { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.PackageManager.PackageCollection.error"); return default; } }
     }
     [global::System.Serializable]
     [global::Unbound.Stub]
@@ -32674,8 +32621,6 @@ namespace UnityEditor.PackageManager
     unsafe partial class PackageInfo
     {
         [global::Unbound.Stub] internal static global::System.Collections.Generic.List<global::UnityEditor.PackageManager.PackageInfo> GetForAssemblyFilePaths(global::System.Collections.Generic.List<string> assemblyPaths) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.PackageManager.PackageInfo.GetForAssemblyFilePaths"); return new global::System.Collections.Generic.List<global::UnityEditor.PackageManager.PackageInfo>(); }
-        public global::UnityEditor.PackageManager.Error[] errors { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.PackageManager.PackageInfo.errors"); return global::System.Array.Empty<global::UnityEditor.PackageManager.Error>(); } }
-        public global::UnityEditor.PackageManager.VersionsInfo versions { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.PackageManager.PackageInfo.versions"); return default; } }
         public global::UnityEditor.PackageManager.DependencyInfo[] resolvedDependencies { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.PackageManager.PackageInfo.resolvedDependencies"); return global::System.Array.Empty<global::UnityEditor.PackageManager.DependencyInfo>(); } }
         public global::UnityEditor.PackageManager.AuthorInfo author { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.PackageManager.PackageInfo.author"); return default; } }
         internal bool hideInEditor { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.PackageManager.PackageInfo.hideInEditor"); return default; } }
@@ -32838,19 +32783,6 @@ namespace UnityEditor.PackageManager
     }
     [global::System.Serializable]
     [global::Unbound.Stub]
-    public unsafe partial class VersionsInfo
-    {
-        [global::Unbound.Stub] internal VersionsInfo(global::System.Collections.Generic.IEnumerable<string> all, global::System.Collections.Generic.IEnumerable<string> compatible, string recommended, global::System.Collections.Generic.IEnumerable<string> deprecated) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.PackageManager.VersionsInfo.ctor"); }
-        public string[] all { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.PackageManager.VersionsInfo.all"); return global::System.Array.Empty<string>(); } }
-        public string[] compatible { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.PackageManager.VersionsInfo.compatible"); return global::System.Array.Empty<string>(); } }
-        public string recommended { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.PackageManager.VersionsInfo.recommended"); return default; } }
-        public string[] deprecated { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.PackageManager.VersionsInfo.deprecated"); return global::System.Array.Empty<string>(); } }
-        [global::System.Obsolete("'verified' is obsolete; use 'recommended' instead. (UnityUpgradable) -> recommended")] public string verified { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.PackageManager.VersionsInfo.verified"); return default; } }
-        public string latest { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.PackageManager.VersionsInfo.latest"); return default; } }
-        public string latestCompatible { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.PackageManager.VersionsInfo.latestCompatible"); return default; } }
-    }
-    [global::System.Serializable]
-    [global::Unbound.Stub]
     internal unsafe partial class Violation
     {
         [global::Unbound.Stub] public Violation() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.PackageManager.Violation.ctor"); }
@@ -32862,20 +32794,12 @@ namespace UnityEditor.PackageManager
 }
 namespace UnityEditor.PackageManager.Requests
 {
-    [global::System.Serializable]
-    [global::Unbound.Stub]
-    public unsafe sealed partial class AddAndRemoveRequest : global::UnityEditor.PackageManager.Requests.Request<global::UnityEditor.PackageManager.PackageCollection>
+    unsafe partial class AddAndRemoveRequest
     {
-        [global::Unbound.Stub] internal AddAndRemoveRequest(long operationId, global::UnityEditor.PackageManager.NativeStatusCode initialStatus) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.PackageManager.Requests.AddAndRemoveRequest.ctor"); }
-        [global::Unbound.Stub] protected override global::UnityEditor.PackageManager.PackageCollection GetResult() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.PackageManager.Requests.AddAndRemoveRequest.GetResult"); return default; }
         internal event global::System.Action<global::UnityEditor.PackageManager.ProgressUpdateEventArgs> progressUpdated { [global::Unbound.Stub] add { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.PackageManager.Requests.AddAndRemoveRequest.progressUpdated"); } [global::Unbound.Stub] remove { } }
     }
-    [global::System.Serializable]
-    [global::Unbound.Stub]
-    public unsafe sealed partial class AddRequest : global::UnityEditor.PackageManager.Requests.Request<global::UnityEditor.PackageManager.PackageInfo>
+    unsafe partial class AddRequest
     {
-        [global::Unbound.Stub] internal AddRequest(long operationId, global::UnityEditor.PackageManager.NativeStatusCode initialStatus) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.PackageManager.Requests.AddRequest.ctor"); }
-        [global::Unbound.Stub] protected override global::UnityEditor.PackageManager.PackageInfo GetResult() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.PackageManager.Requests.AddRequest.GetResult"); return default; }
         internal event global::System.Action<global::UnityEditor.PackageManager.ProgressUpdateEventArgs> progressUpdated { [global::Unbound.Stub] add { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.PackageManager.Requests.AddRequest.progressUpdated"); } [global::Unbound.Stub] remove { } }
     }
     [global::System.Serializable]
@@ -32900,13 +32824,6 @@ namespace UnityEditor.PackageManager.Requests
     }
     [global::System.Serializable]
     [global::Unbound.Stub]
-    public unsafe sealed partial class EmbedRequest : global::UnityEditor.PackageManager.Requests.Request<global::UnityEditor.PackageManager.PackageInfo>
-    {
-        [global::Unbound.Stub] internal EmbedRequest(long operationId, global::UnityEditor.PackageManager.NativeStatusCode initialStatus) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.PackageManager.Requests.EmbedRequest.ctor"); }
-        [global::Unbound.Stub] protected override global::UnityEditor.PackageManager.PackageInfo GetResult() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.PackageManager.Requests.EmbedRequest.GetResult"); return default; }
-    }
-    [global::System.Serializable]
-    [global::Unbound.Stub]
     internal unsafe sealed partial class GetCacheRootRequest : global::UnityEditor.PackageManager.Requests.Request<global::UnityEditor.PackageManager.CacheRootConfig>
     {
         [global::Unbound.Stub] internal GetCacheRootRequest(long operationId, global::UnityEditor.PackageManager.NativeStatusCode initialStatus) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.PackageManager.Requests.GetCacheRootRequest.ctor"); }
@@ -32926,10 +32843,6 @@ namespace UnityEditor.PackageManager.Requests
         [global::Unbound.Stub] internal ListBuiltInPackagesRequest(long operationId, global::UnityEditor.PackageManager.NativeStatusCode initialStatus) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.PackageManager.Requests.ListBuiltInPackagesRequest.ctor"); }
         [global::Unbound.Stub] protected override global::UnityEditor.PackageManager.PackageInfo[] GetResult() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.PackageManager.Requests.ListBuiltInPackagesRequest.GetResult"); return global::System.Array.Empty<global::UnityEditor.PackageManager.PackageInfo>(); }
     }
-    unsafe partial class ListRequest
-    {
-        [global::Unbound.Stub] internal ListRequest(long operationId, global::UnityEditor.PackageManager.NativeStatusCode initialStatus) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.PackageManager.Requests.ListRequest.ctor"); }
-    }
     [global::System.Serializable]
     [global::Unbound.Stub]
     public unsafe sealed partial class PackRequest : global::UnityEditor.PackageManager.Requests.Request<global::UnityEditor.PackageManager.PackOperationResult>
@@ -32939,42 +32852,20 @@ namespace UnityEditor.PackageManager.Requests
     }
     [global::System.Serializable]
     [global::Unbound.Stub]
-    public unsafe sealed partial class RemoveRequest : global::UnityEditor.PackageManager.Requests.Request
-    {
-        [global::Unbound.Stub] internal RemoveRequest(long operationId, global::UnityEditor.PackageManager.NativeStatusCode initialStatus, string packageName) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.PackageManager.Requests.RemoveRequest.ctor"); }
-        public string PackageIdOrName { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.PackageManager.Requests.RemoveRequest.PackageIdOrName"); return default; } }
-    }
-    [global::System.Serializable]
-    [global::Unbound.Stub]
     internal unsafe sealed partial class RemoveScopedRegistryRequest : global::UnityEditor.PackageManager.Requests.Request
     {
         [global::Unbound.Stub] internal RemoveScopedRegistryRequest(long operationId, global::UnityEditor.PackageManager.NativeStatusCode initialStatus) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.PackageManager.Requests.RemoveScopedRegistryRequest.ctor"); }
     }
     unsafe partial class Request : global::UnityEngine.ISerializationCallbackReceiver
     {
-        internal const string ShimPackageType = "shim";
-        [global::Unbound.Stub] protected virtual void FetchNativeData() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.PackageManager.Requests.Request.FetchNativeData"); }
         [global::Unbound.Stub] void global::UnityEngine.ISerializationCallbackReceiver.OnBeforeSerialize() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.PackageManager.Requests.Request.OnBeforeSerialize"); }
         [global::Unbound.Stub] void global::UnityEngine.ISerializationCallbackReceiver.OnAfterDeserialize() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.PackageManager.Requests.Request.OnAfterDeserialize"); }
-        [global::Unbound.Stub] internal Request(long operationId, global::UnityEditor.PackageManager.NativeStatusCode initialStatus) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.PackageManager.Requests.Request.ctor"); }
-        internal global::UnityEditor.PackageManager.NativeStatusCode NativeStatus { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.PackageManager.Requests.Request.NativeStatus"); return default; } }
-        internal long Id { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.PackageManager.Requests.Request.Id"); return default; } }
-        public global::UnityEditor.PackageManager.Error Error { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.PackageManager.Requests.Request.Error"); return default; } }
-    }
-    unsafe partial class Request<T>
-    {
-        [global::Unbound.Stub] protected sealed override void FetchNativeData() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.PackageManager.Requests.Request<T>.FetchNativeData"); }
-        [global::Unbound.Stub] internal Request(long operationId, global::UnityEditor.PackageManager.NativeStatusCode initialStatus) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.PackageManager.Requests.Request<T>.ctor"); }
     }
     [global::System.Serializable]
     [global::Unbound.Stub]
     public unsafe sealed partial class ResetToEditorDefaultsRequest : global::UnityEditor.PackageManager.Requests.Request
     {
         [global::Unbound.Stub] internal ResetToEditorDefaultsRequest(long operationId, global::UnityEditor.PackageManager.NativeStatusCode initialStatus) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.PackageManager.Requests.ResetToEditorDefaultsRequest.ctor"); }
-    }
-    unsafe partial class SearchRequest
-    {
-        [global::Unbound.Stub] internal SearchRequest(long operationId, global::UnityEditor.PackageManager.NativeStatusCode initialStatus, string packageIdOrName) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.PackageManager.Requests.SearchRequest.ctor"); }
     }
     [global::System.Serializable]
     [global::Unbound.Stub]

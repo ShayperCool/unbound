@@ -1,0 +1,81 @@
+{"k":"info/embedded.found","v":"True"}
+{"k":"info/embedded.source","v":"Embedded"}
+{"k":"info/embedded.versions","v":"all=[] compatible=[] recommended=\"\" verified=\"\" deprecated=[] latest=\"\" latestCompatible=\"\""}
+{"k":"info/embedded.errors","v":"count=0"}
+{"k":"info/local.found","v":"True"}
+{"k":"info/local.source","v":"Local"}
+{"k":"info/local.versions","v":"all=[] compatible=[] recommended=\"\" verified=\"\" deprecated=[] latest=\"\" latestCompatible=\"\""}
+{"k":"info/local.errors","v":"count=0"}
+{"k":"info/builtin.found","v":"True"}
+{"k":"info/builtin.source","v":"BuiltIn"}
+{"k":"info/builtin.versions","v":"all=[\"1.0.0\"] compatible=[\"1.0.0\"] recommended=\"1.0.0\" verified=\"1.0.0\" deprecated=[] latest=\"1.0.0\" latestCompatible=\"1.0.0\""}
+{"k":"info/builtin.errors","v":"count=0"}
+{"k":"list/status","v":"Success"}
+{"k":"list/error","v":"null"}
+{"k":"list/collection.error","v":"null"}
+{"k":"list/embedded.versions","v":"all=[] compatible=[] recommended=\"\" verified=\"\" deprecated=[] latest=\"\" latestCompatible=\"\""}
+{"k":"list/embedded.errors","v":"count=0"}
+{"k":"validate/search.null","v":"throws System.ArgumentException param=\"packageIdOrName\" msg=\"Package id or name cannot be null, empty or whitespace\""}
+{"k":"validate/search.empty","v":"throws System.ArgumentException param=\"packageIdOrName\" msg=\"Package id or name cannot be null, empty or whitespace\""}
+{"k":"validate/search.ws","v":"throws System.ArgumentException param=\"packageIdOrName\" msg=\"Package id or name cannot be null, empty or whitespace\""}
+{"k":"search/builtin.packageIdOrName","v":"\"com.unity.modules.audio\""}
+{"k":"search/builtin.status","v":"Success"}
+{"k":"search/builtin.hasError","v":"False"}
+{"k":"search/builtin.errorCode","v":"null"}
+{"k":"search/builtin.hasMessage","v":"False"}
+{"k":"search/builtin.resultCount","v":"1"}
+{"k":"search/builtinVersionMatch.packageIdOrName","v":"\"com.unity.modules.audio@1.0.0\""}
+{"k":"search/builtinVersionMatch.status","v":"Success"}
+{"k":"search/builtinVersionMatch.hasError","v":"False"}
+{"k":"search/builtinVersionMatch.errorCode","v":"null"}
+{"k":"search/builtinVersionMatch.hasMessage","v":"False"}
+{"k":"search/builtinVersionMatch.resultCount","v":"1"}
+{"k":"search/builtinVersionMiss.packageIdOrName","v":"\"com.unity.modules.audio@9.9.9\""}
+{"k":"search/builtinVersionMiss.status","v":"Success"}
+{"k":"search/builtinVersionMiss.hasError","v":"False"}
+{"k":"search/builtinVersionMiss.errorCode","v":"null"}
+{"k":"search/builtinVersionMiss.hasMessage","v":"False"}
+{"k":"search/builtinVersionMiss.resultCount","v":"1"}
+{"k":"search/embedded.packageIdOrName","v":"\"com.probe.pm\""}
+{"k":"search/embedded.status","v":"Failure"}
+{"k":"search/embedded.hasError","v":"True"}
+{"k":"search/embedded.errorCode","v":"NotFound"}
+{"k":"search/embedded.hasMessage","v":"True"}
+{"k":"search/embedded.resultCount","v":"null"}
+{"k":"search/local.packageIdOrName","v":"\"com.probe.local\""}
+{"k":"search/local.status","v":"Failure"}
+{"k":"search/local.hasError","v":"True"}
+{"k":"search/local.errorCode","v":"NotFound"}
+{"k":"search/local.hasMessage","v":"True"}
+{"k":"search/local.resultCount","v":"null"}
+{"k":"search/missing.packageIdOrName","v":"\"com.probe.does.not.exist\""}
+{"k":"search/missing.status","v":"Failure"}
+{"k":"search/missing.hasError","v":"True"}
+{"k":"search/missing.errorCode","v":"NotFound"}
+{"k":"search/missing.hasMessage","v":"True"}
+{"k":"search/missing.resultCount","v":"null"}
+{"k":"validate/add.null","v":"throws System.ArgumentException param=\"identifier\" msg=\"Package identifier cannot be null, empty or whitespace\""}
+{"k":"validate/add.empty","v":"throws System.ArgumentException param=\"identifier\" msg=\"Package identifier cannot be null, empty or whitespace\""}
+{"k":"validate/add.ws","v":"throws System.ArgumentException param=\"identifier\" msg=\"Package identifier cannot be null, empty or whitespace\""}
+{"k":"validate/remove.null","v":"throws System.ArgumentException param=\"packageName\" msg=\"Package name cannot be null, empty or whitespace\""}
+{"k":"validate/remove.empty","v":"throws System.ArgumentException param=\"packageName\" msg=\"Package name cannot be null, empty or whitespace\""}
+{"k":"validate/remove.ws","v":"throws System.ArgumentException param=\"packageName\" msg=\"Package name cannot be null, empty or whitespace\""}
+{"k":"validate/addAndRemove.bothNull","v":"throws System.ArgumentException param=null msg=\"No packages provided to add or remove\""}
+{"k":"validate/addAndRemove.bothEmpty","v":"throws System.ArgumentException param=null msg=\"No packages provided to add or remove\""}
+{"k":"validate/addAndRemove.addWs","v":"throws System.ArgumentException param=\"packagesToAdd\" msg=\"Packages to add cannot contain null, empty or whitespace values\""}
+{"k":"validate/addAndRemove.removeEmpty","v":"throws System.ArgumentException param=\"packagesToRemove\" msg=\"Packages to remove cannot contain null, empty or whitespace values\""}
+{"k":"validate/embed.null","v":"throws System.ArgumentException param=\"packageName\" msg=\"Package name cannot be null, empty or whitespace\""}
+{"k":"validate/embed.empty","v":"throws System.ArgumentException param=\"packageName\" msg=\"Package name cannot be null, empty or whitespace\""}
+{"k":"validate/embed.ws","v":"throws System.ArgumentException param=\"packageName\" msg=\"Package name cannot be null, empty or whitespace\""}
+{"k":"validate/embed.notRegistered","v":"throws System.InvalidOperationException msg=\"Cannot embed package [com.probe.not.registered] because it is not registered in the Asset Database.\""}
+{"k":"remove/notInstalled.packageIdOrName","v":"\"com.probe.not.installed\""}
+{"k":"remove/notInstalled.status","v":"Failure"}
+{"k":"remove/notInstalled.hasError","v":"True"}
+{"k":"remove/notInstalled.errorCode","v":"NotFound"}
+{"k":"remove/notInstalled.hasMessage","v":"True"}
+{"k":"embed/alreadyEmbedded.status","v":"Failure"}
+{"k":"embed/alreadyEmbedded.hasError","v":"True"}
+{"k":"embed/alreadyEmbedded.errorCode","v":"Unknown"}
+{"k":"embed/alreadyEmbedded.hasMessage","v":"True"}
+{"k":"embed/alreadyEmbedded.resultNull","v":"True"}
+{"k":"complete","v":true}
