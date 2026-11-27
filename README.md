@@ -122,7 +122,8 @@ are still open. **[ ]** means it has not started or is only a stub. The open det
   - [x] VideoPlayer (through the system's ffmpeg)
   - [ ] 🚧 Video audio output, URL sources, transparency
   - [x] Tracker modules (`.mod`, `.xm`, `.s3m`, `.it`)
-  - [ ] Microphone recording, spatializer plugins
+  - [x] `Microphone` recording on Linux PulseAudio (`tests/projects/audiomic`)
+  - [ ] Spatializer plugins, non-Linux `Microphone` capture
 - [ ] 🚧 **Assets**
   - [x] Model, texture, audio and font import
   - [x] AssetBundles (UnityFS), Addressables in Play mode
