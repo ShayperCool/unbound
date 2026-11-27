@@ -400,7 +400,7 @@ def link_target(path):
         try:
             is_dir = stat.S_ISDIR(os.stat(target).st_mode)
         except OSError as error:
-            if gone(error):
+            if gone(error) or error.errno in (errno.ELOOP, errno.ENAMETOOLONG):
                 return lexical, resolved, False, None
             if unreadable_error(error):
                 return lexical, resolved, False, error
@@ -523,7 +523,13 @@ def link_walk(roots, *, excluded=(), seconds=300, index_root=None, prune=True):
                     if directory in root_set:
                         # A 0o444 scan root allows stat(root) and scandir(root) via d_type,
                         # while denying search (+x) on its children; fail closed here.
-                        os.stat(os.path.join(directory, '.'))
+                        try:
+                            os.stat(os.path.join(directory, '.'))
+                        except OSError as error:
+                            if gone(error):
+                                vanished(directory)
+                                continue
+                            raise
                     identity = (info.st_dev, info.st_ino)
                     if walked(directory, identity):
                         continue

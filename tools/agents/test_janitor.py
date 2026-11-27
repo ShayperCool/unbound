@@ -589,6 +589,16 @@ class JanitorTests(unittest.TestCase):
         self.assertFalse(self.j.partial)
         links = self.rows('links')[0]
         self.assertEqual(links['unreadable'], 5)
+        self.assertEqual(
+            set(links['unreadable_examples']),
+            {
+                str(blocked),
+                str(ext_blocked),
+                str(self.cache/'blocked-target-link'),
+                str(nosearch/'child-dir'),
+                str(nosearch/'child-link'),
+            },
+        )
         # Standalone link pointing behind an unreadable directory keeps its lexical protection and logs unreadable.
         standalone = self.root/'standalone'
         standalone.mkdir()
@@ -596,6 +606,18 @@ class JanitorTests(unittest.TestCase):
         found, _, unreadable = janitor.link_walk([standalone], index_root=self.cache)
         self.assertTrue(any(src == str(standalone/'behind-blocked') for src, _ in found))
         self.assertEqual(unreadable, [str(standalone/'behind-blocked')])
+
+    def test_cyclic_and_overlong_symlinks_do_not_abort_link_walk(self):
+        links_dir = self.root/'weird-links'
+        links_dir.mkdir()
+        (links_dir/'self-loop').symlink_to('self-loop')
+        (links_dir/'too-long').symlink_to('/' + 'x' * 300)
+        found, unsettled, unreadable = janitor.link_walk([links_dir], index_root=self.cache)
+        self.assertEqual(unsettled, [])
+        self.assertEqual(unreadable, [])
+        sources = {src for src, _ in found}
+        self.assertIn(str(links_dir/'self-loop'), sources)
+        self.assertIn(str(links_dir/'too-long'), sources)
 
     @unittest.skipIf(os.geteuid() == 0, 'root can list any directory')
     def test_unreadable_scan_root_still_fails_closed(self):
@@ -657,6 +679,21 @@ class JanitorTests(unittest.TestCase):
                 self.collect_applied()
         self.assertTrue(old.is_dir())
         self.assertEqual(self.j.removed, 0)
+
+        # A non-permission OSError from os.stat on a symlink target also fails closed.
+        link_dir = self.root/'link-eio'
+        link_dir.mkdir()
+        target = self.root/'link-eio-target'
+        target.mkdir()
+        (link_dir/'bad').symlink_to(target)
+        real_stat = janitor.os.stat
+        def stat_eio(path, *args, **kwargs):
+            if os.fspath(path) == str(target):
+                raise OSError(errno.EIO, 'Input/output error', str(target))
+            return real_stat(path, *args, **kwargs)
+        with patch.object(janitor.os, 'stat', side_effect=stat_eio):
+            with self.assertRaises(OSError):
+                janitor.link_walk([link_dir], index_root=self.cache)
 
     def test_runs_in_a_sheriff_or_baseline_probe_folder_stay(self):
         first, newest = self.instances('baseline-probe', ['gate-1', 'gate-2'])
