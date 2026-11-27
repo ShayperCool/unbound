@@ -2331,57 +2331,56 @@ fn new_model(animation_type: i32, avatar_setup: i32) -> Value {
     ))
 }
 
-/// A binary FBX cut after its header (tests/projects/brokenmodel Truncated.fbx).
-fn truncated_binary_fbx() -> Vec<u8> {
-    let mut bytes = FBX_BINARY_SIGNATURE.to_vec();
-    bytes.extend_from_slice(&[0x1a, 0x00]);
-    bytes.extend_from_slice(&7400u32.to_le_bytes());
-    bytes.extend_from_slice(&[0xe8, 0x03, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x14]);
-    bytes
+/// A file of tests/projects/brokenmodel/Assets/Models.
+fn broken_model(name: &str) -> Vec<u8> {
+    let path = Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("../../tests/projects/brokenmodel/Assets/Models")
+        .join(name);
+    std::fs::read(&path).unwrap_or_else(|e| panic!("{}: {e}", path.display()))
 }
 
 #[test]
 fn a_file_that_does_not_read_imports_as_an_empty_root() {
     // tests/projects/brokenmodel: the Editor imports such a file as an empty root named after
-    // it, logging why for an FBX no reader recognises or a binary one cut short, never failing
-    // the import.
-    let cut_ascii = "; FBX 7.4.0 project file\nFBXHeaderExtension:  {\n\tFBXHeaderVersion: 1003\n\tFBXVersion: 7400\n\tCreationTimeStamp:  {\n\t\tVersion: 1000\n";
-    let cases: Vec<(&str, Vec<u8>, Option<ModelReadError>)> = vec![
-        (
-            "Garbage.fbx",
-            b"not a model\n".to_vec(),
-            Some(ModelReadError::Unreadable),
-        ),
-        ("Empty.fbx", Vec::new(), Some(ModelReadError::Unreadable)),
-        (
-            "Truncated.fbx",
-            truncated_binary_fbx(),
-            Some(ModelReadError::Corrupted),
-        ),
-        ("CutAscii.fbx", cut_ascii.as_bytes().to_vec(), None),
-        ("Empty.obj", Vec::new(), None),
-        (
-            "Garbage.obj",
-            b"this is not\n an obj file \x01\x02\n".to_vec(),
-            None,
-        ),
+    // it, never failing the import, and tells by its content what to log.
+    use ModelReadError::{Corrupted, Unreadable};
+    let cases: [(&str, Option<ModelReadError>); 13] = [
+        ("Garbage.fbx", Some(Unreadable)),
+        ("Empty.fbx", Some(Unreadable)),
+        ("Zeros.fbx", Some(Unreadable)),
+        ("Lfs.fbx", Some(Unreadable)),
+        ("Html.fbx", Some(Unreadable)),
+        ("Truncated.fbx", Some(Corrupted)),
+        ("CutBinary.fbx", Some(Corrupted)),
+        ("CutAscii.fbx", None),
+        ("CutToken.fbx", None),
+        ("Empty.obj", None),
+        ("Garbage.obj", None),
+        // Files the loader reads, for the control.
+        ("CutLine.fbx", None),
+        ("Tri.obj", None),
     ];
     // A model with one node: its root takes the same ids (the Editor's: brokenmodel */fileids).
     let tri = ModelImporter::default()
         .import(
             Path::new("Tri.obj"),
-            b"v 0 0 0\nv 1 0 0\nv 0 1 0\nf 1 2 3\n",
+            &broken_model("Tri.obj"),
             &new_model(2, 0),
         )
         .unwrap();
-    for (name, bytes, expected) in cases {
+    for (name, expected) in cases {
         let model = ModelImporter::default()
-            .import(Path::new(name), &bytes, &new_model(2, 0))
+            .import(Path::new(name), &broken_model(name), &new_model(2, 0))
             .unwrap_or_else(|e| panic!("{name}: {e:#}"));
         assert_eq!(model.read_error, expected, "{name}");
-        assert_eq!(model.nodes.len(), 1, "{name}");
         let root = &model.nodes[0];
         assert_eq!(root.name, name.split('.').next().unwrap());
+        assert_eq!(root.game_object.id, tri.nodes[0].game_object.id, "{name}");
+        assert_eq!(root.transform.id, tri.nodes[0].transform.id, "{name}");
+        if matches!(name, "CutLine.fbx" | "Tri.obj") {
+            continue;
+        }
+        assert_eq!(model.nodes.len(), 1, "{name}");
         assert!(root.renderer.is_none() && root.children.is_empty());
         assert_eq!(
             (root.position, root.rotation, root.scale),
@@ -2390,16 +2389,46 @@ fn a_file_that_does_not_read_imports_as_an_empty_root() {
         );
         assert!(model.meshes.is_empty() && model.materials.is_empty() && model.clips.is_empty());
         assert_eq!((model.animator, model.avatar), (None, None), "{name}");
-        assert_eq!(root.game_object.id, tri.nodes[0].game_object.id, "{name}");
-        assert_eq!(root.transform.id, tri.nodes[0].transform.id, "{name}");
-        // Only the cut ASCII file says what it does not import.
+        // Only an ASCII FBX the loader rejects says that nothing of it is imported.
         assert_eq!(
-            model.warnings.is_empty(),
-            !name.starts_with("CutAscii"),
+            model.warnings.len(),
+            usize::from(matches!(name, "CutAscii.fbx" | "CutToken.fbx")),
             "{name}: {:?}",
             model.warnings
         );
     }
+}
+
+#[test]
+fn a_real_fbx_version_the_loader_does_not_read_still_fails_the_import() {
+    // A whole binary FBX naming version 8000: a file of a version the Editor may read, not
+    // content that does not read.
+    let mut bytes = broken_model("CutBinary.fbx");
+    bytes.truncate(23);
+    let whole = std::fs::read(
+        Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("../../tests/projects/lightmapuvs/Assets/Resources/Repair/Lines.fbx"),
+    )
+    .unwrap();
+    bytes.extend_from_slice(&8000u32.to_le_bytes());
+    bytes.extend_from_slice(&whole[27..]);
+    let error = ModelImporter::default()
+        .import(Path::new("Future.fbx"), &bytes, &new_model(2, 0))
+        .unwrap_err();
+    assert!(format!("{error:#}").contains("8000"), "{error:#}");
+}
+
+#[test]
+fn an_ascii_fbx_starts_with_its_header_block() {
+    assert!(is_ascii_fbx(
+        b"; FBX 7.4.0 project file\n; ---\n\nFBXHeaderExtension:  {\n"
+    ));
+    assert!(is_ascii_fbx(b"\xEF\xBB\xBFFBXHeaderExtension:  {\n"));
+    assert!(!is_ascii_fbx(b"; FBX 7.4.0 project file\n"));
+    assert!(!is_ascii_fbx(
+        b"version https://git-lfs.github.com/spec/v1\n"
+    ));
+    assert!(!is_ascii_fbx(b""));
 }
 
 #[test]

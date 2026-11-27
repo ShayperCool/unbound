@@ -866,21 +866,18 @@ pub struct ImportedModel {
 
 /// A model file whose content does not read as a model. The Editor imports it as an empty root
 /// and logs an error naming why (matches the Unity 6000.0.71f1 Editor, tests/projects/brokenmodel).
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum ModelReadError {
-    /// No reader recognises the file (an empty file, text that is no model).
+    /// No reader recognises the file (no bytes, text or data that is no model).
     Unreadable,
-    /// A binary FBX cut short.
+    /// A binary FBX whose content does not read (cut short).
     Corrupted,
-    /// Content the loader rejects for another reason (its description), whose Editor import is
-    /// not measured: Unbound imports the root alone and says so.
-    Unread(String),
 }
 
 impl ModelReadError {
     /// The error the import logs for the asset at project path `path`, whose file the project
     /// shows under the directory `root` (the parent of `Application.dataPath`).
-    pub fn message(&self, root: &str, path: &str) -> String {
+    pub fn message(self, root: &str, path: &str) -> String {
         let root = root.replace('\\', "/");
         let shown = format!("{}/{path}", root.trim_end_matches('/'));
         match self {
@@ -890,9 +887,6 @@ impl ModelReadError {
             ModelReadError::Corrupted => format!(
                 "ImportFBX Errors:\nCouldn't import file {shown}.\nFile is corrupted: '{}'\n\n",
                 path.rsplit('/').next().unwrap_or(path)
-            ),
-            ModelReadError::Unread(reason) => format!(
-                "Unbound: '{path}' does not read as a model ({reason}); it imports as an empty root (what the Editor imports from it is not measured)"
             ),
         }
     }
@@ -1683,13 +1677,16 @@ const EMPTY_FBX: &[u8] = b"; FBX 7.4.0 project file\nFBXHeaderExtension:  {\n\tF
 const EMPTY_OBJ: &[u8] = b"# empty\n";
 
 /// Why the loader rejected a model file's content with `error`, and what Unbound says of it. The
-/// Editor imports such a file as an empty root, with what its settings add (matches the Unity
-/// 6000.0.71f1 Editor, tests/projects/brokenmodel: an empty or text `.fbx` and a binary one cut
-/// after its header log the errors of [`ModelReadError`]; an ASCII `.fbx` cut inside a block, an
-/// empty or text `.obj` log none). An ASCII FBX cut short reads in the Editor up to the cut, which
-/// Unbound does not do (said). Content rejected for another reason imports the root too, said
-/// ([`ModelReadError::Unread`]); the loader failing for Unbound's own reasons (memory, I/O, its
-/// options) and a real FBX version it does not read fail the import.
+/// Editor imports such a file as an empty root with what its settings add, and tells the file's
+/// kind by its content (matches the Unity 6000.0.71f1 Editor, tests/projects/brokenmodel): a
+/// binary FBX that does not read is corrupted (cut after its header or mid-file); an `.fbx` that
+/// is no FBX at all is one no reader recognises (no bytes, a line of text, zero bytes, a Git LFS
+/// pointer, an HTML page); an ASCII FBX cut short reads without an error up to the cut, keeping
+/// the nodes connected to the root by then (cut in its header, inside a number, at a line end,
+/// in its connections), of which Unbound imports nothing when the loader rejects it (said); an
+/// OBJ reads as an empty model without an error (no bytes, text). The loader failing for
+/// Unbound's own reasons (memory, I/O, its options) and a real FBX version it does not read
+/// fail the import.
 fn read_failure(
     bytes: &[u8],
     is_obj: bool,
@@ -1719,26 +1716,32 @@ fn read_failure(
         error.description,
         error.info()
     );
-    let binary = bytes.starts_with(FBX_BINARY_SIGNATURE);
-    Ok(match error.type_ {
-        // An OBJ reads as far as it can: an empty or text file is an empty model.
-        E::EmptyFile | E::UnrecognizedFileFormat | E::UnsupportedVersion if is_obj => (None, None),
-        E::EmptyFile | E::UnrecognizedFileFormat | E::UnsupportedVersion => {
-            (Some(ModelReadError::Unreadable), None)
-        }
-        E::TruncatedFile if binary => (Some(ModelReadError::Corrupted), None),
-        E::TruncatedFile if !is_obj => (
+    Ok(if is_obj {
+        (None, None)
+    } else if bytes.starts_with(FBX_BINARY_SIGNATURE) {
+        (Some(ModelReadError::Corrupted), None)
+    } else if is_ascii_fbx(bytes) {
+        (
             None,
-            Some(
-                "the ASCII FBX is cut short: nothing of it is imported (the Editor imports what precedes the cut)"
-                    .to_string(),
-            ),
-        ),
-        _ => (
-            Some(ModelReadError::Unread(error.description.to_string())),
-            None,
-        ),
+            Some(format!(
+                "the ASCII FBX does not read ({}): nothing of it is imported (the Editor imports what is connected to the root before a cut)",
+                error.description
+            )),
+        )
+    } else {
+        (Some(ModelReadError::Unreadable), None)
     })
+}
+
+/// Whether `bytes` start as an ASCII FBX: after blank lines and `;` comments, the
+/// `FBXHeaderExtension` block every ASCII FBX opens with.
+fn is_ascii_fbx(bytes: &[u8]) -> bool {
+    let bytes = bytes.strip_prefix(b"\xEF\xBB\xBF").unwrap_or(bytes);
+    bytes
+        .split(|&b| b == b'\n')
+        .map(|line| line.trim_ascii())
+        .find(|line| !line.is_empty() && !line.starts_with(b";"))
+        .is_some_and(|line| line.starts_with(b"FBXHeaderExtension:"))
 }
 
 struct Builder<'a> {

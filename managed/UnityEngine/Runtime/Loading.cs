@@ -1100,8 +1100,10 @@ namespace Unbound.Runtime
             var root = System.IO.Path.GetDirectoryName(Application.dataPath);
             using var answer = JsonDocument.Parse(Native.Call("model-messages",
                 "{\"guid\":" + JsonSerializer.Serialize(guid) + ",\"root\":" + JsonSerializer.Serialize(root) + "}"));
+            // An importer's message: the engine's, not Debug.unityLogger's (the route componentlogs
+            // measured for the engine's diagnostics; an import message's stack is not measured).
             foreach (var error in answer.RootElement.GetProperty("errors").EnumerateArray())
-                Debug.LogError(error.GetString());
+                Unbound.Runtime.Log.Engine(LogType.Error, error.GetString(), null);
         }
 
         /// <summary>The files loaded now.</summary>

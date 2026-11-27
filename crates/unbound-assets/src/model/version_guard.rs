@@ -38,6 +38,7 @@ const FLOAT_GRID: f64 = 1024.0;
 const PROJECTS: &[&str] = &[
     "animculling",
     "blendshapes",
+    "brokenmodel",
     "humanoid",
     "lightmapuvs",
     "meshreadable",
