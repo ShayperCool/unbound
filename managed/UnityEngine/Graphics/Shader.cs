@@ -17,7 +17,41 @@ namespace UnityEngine
         /// <summary>Default textures of texture properties (EditorMaterialUtility.SetShaderDefaults):
         /// new materials start with them.</summary>
         internal readonly Dictionary<string, Texture> m_DefaultTextures = new Dictionary<string, Texture>();
+        /// <summary>Textures every material of the shader has under their names, whatever the
+        /// material sets (EditorMaterialUtility.SetShaderNonModifiableDefaults, the ShaderImporter's
+        /// nonModifiableTextures): <see cref="NonModifiableTexture"/>.</summary>
         internal readonly Dictionary<string, Texture> m_NonModifiableTextures = new Dictionary<string, Texture>();
+        /// <summary>The ShaderImporter's defaultTextures and nonModifiableTextures of a project
+        /// shader, as references its .meta holds, loaded into the dictionaries above when first
+        /// needed (<see cref="ImportedTextures"/>).</summary>
+        internal List<(string Name, ObjectRef Texture, bool NonModifiable)> m_ImporterTextures;
+
+        /// <summary>The importer's textures loaded into <see cref="m_DefaultTextures"/> and
+        /// <see cref="m_NonModifiableTextures"/> (the shader's own settings through the editor API
+        /// win); a reference to no texture that loads is none.</summary>
+        internal void ImportedTextures()
+        {
+            var pending = m_ImporterTextures;
+            if (pending == null) return;
+            m_ImporterTextures = null;
+            foreach (var (name, reference, nonModifiable) in pending)
+            {
+                Texture texture = null;
+                try { texture = AssetDatabaseRuntime.Load(reference.Guid, reference.FileId, typeof(Texture)) as Texture; }
+                catch (Exception) { }
+                if (texture == null) continue;
+                var into = nonModifiable ? m_NonModifiableTextures : m_DefaultTextures;
+                into.TryAdd(name, texture);
+            }
+        }
+
+        /// <summary>The texture every material of the shader has under <paramref name="name"/>, or
+        /// null (matches the Unity 6000.0.71f1 Editor, tests/projects/materialsave loaded.*._Locked).</summary>
+        internal Texture NonModifiableTexture(string name)
+        {
+            ImportedTextures();
+            return m_NonModifiableTextures.Count > 0 && m_NonModifiableTextures.TryGetValue(name, out var texture) && texture ? texture : null;
+        }
         internal readonly List<ShaderPropertyInfo> m_Properties = new List<ShaderPropertyInfo>();
         /// <summary>The ShaderGUI class names the source gives: for any pipeline, and per pipeline
         /// asset type.</summary>

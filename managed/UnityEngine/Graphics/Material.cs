@@ -36,6 +36,11 @@ namespace UnityEngine
             internal Vector2 Offset;
             /// <summary>The renderer has the destroyed-texture stand-in for it (Material.Sync).</summary>
             internal bool SentDestroyed;
+            /// <summary>The reference the material's data holds when it names no texture that loads
+            /// (a GUID no asset has, an object its file lacks): kept as it was until a texture is
+            /// set, as the Editor saves it (matches the Unity 6000.0.71f1 Editor,
+            /// tests/projects/materialsave file.MissingProps, file.NoLocked._Missing).</summary>
+            internal ObjectRef? Unresolved;
         }
 
         /// <summary>
@@ -144,6 +149,11 @@ namespace UnityEngine
 
         internal (Texture Texture, Vector2 Scale, Vector2 Offset) SheetTexture(int id) =>
             m_Textures.TryGetValue(id, out var slot) ? (slot.Texture ? slot.Texture : null, slot.Scale, slot.Offset) : (null, Vector2.one, Vector2.zero);
+
+        /// <summary>The reference a texture entry of the material's data keeps for a texture that
+        /// does not load (see <see cref="TextureSlot.Unresolved"/>), when it holds no texture.</summary>
+        internal ObjectRef? UnresolvedTexture(int id) =>
+            m_Textures.TryGetValue(id, out var slot) && !slot.Texture ? slot.Unresolved : null;
 
         // Reload wrappers share one material's values and renderer state. Ordinary copies
         // construct a separate state through the regular constructors.
@@ -298,9 +308,31 @@ namespace UnityEngine
             m_State.m_UnresolvedShader = null;
             m_TextureNames.Clear();
             AddTextureNames();
+            shader.ImportedTextures();
             foreach (var pair in shader.m_DefaultTextures)
                 if (pair.Value != null) Slot(Shader.PropertyToID(pair.Key)).Texture = pair.Value;
+            TakeNonModifiableTextures();
             DrawerKeywords();
+        }
+
+        /// <summary>The shader's non-modifiable textures in the material's slots of the texture
+        /// properties it declares: a new material starts with them and a loaded one takes them
+        /// whatever its data held, which a save then writes (matches the Unity 6000.0.71f1 Editor,
+        /// tests/projects/materialsave file.OtherLocked, file.NoLocked, file.New). A texture set
+        /// from script afterwards is what the slot (and a save) holds, while GetTexture still
+        /// answers the shader's (saved.SetLocked._Locked; what draws then is not measured).</summary>
+        void TakeNonModifiableTextures()
+        {
+            if (m_Shader == null) return;
+            m_Shader.ImportedTextures();
+            if (m_Shader.m_NonModifiableTextures.Count == 0) return;
+            foreach (var p in m_Shader.m_Properties)
+                if (p.Type == ShaderPropertyType.Texture && m_Shader.NonModifiableTexture(p.Name) is Texture texture)
+                {
+                    var slot = Slot(Shader.PropertyToID(p.Name));
+                    slot.Texture = texture;
+                    slot.Unresolved = null;
+                }
         }
 
         void AddTextureNames()
@@ -392,6 +424,7 @@ namespace UnityEngine
                 // A slot this material already has is reused (ResetToCopyOf).
                 if (!m_Textures.TryGetValue(p.Key, out var slot)) m_Textures[p.Key] = slot = NewSlot();
                 slot.Texture = p.Value.Texture;
+                slot.Unresolved = p.Value.Unresolved;
                 slot.Element = p.Value.Element;
                 slot.ElementBinding = p.Value.ElementBinding;
                 slot.Scale = p.Value.Scale;
@@ -943,7 +976,7 @@ namespace UnityEngine
                 foreach (var p in parent.m_Vectors) if (!Own(p.Key)) m_Vectors[p.Key] = p.Value;
                 foreach (var p in parent.m_Matrices) if (!Own(p.Key)) m_Matrices[p.Key] = p.Value;
                 foreach (var p in parent.m_Textures)
-                    if (!Own(p.Key)) m_Textures[p.Key] = new TextureSlot { Texture = p.Value.Texture, Element = p.Value.Element, ElementBinding = p.Value.ElementBinding, Scale = p.Value.Scale, Offset = p.Value.Offset };
+                    if (!Own(p.Key)) m_Textures[p.Key] = new TextureSlot { Texture = p.Value.Texture, Unresolved = p.Value.Unresolved, Element = p.Value.Element, ElementBinding = p.Value.ElementBinding, Scale = p.Value.Scale, Offset = p.Value.Offset };
                 m_TextureNames.UnionWith(parent.m_TextureNames);
                 if (m_InheritKeywords)
                 {
@@ -1540,6 +1573,7 @@ namespace UnityEngine
             TouchSheet(profileAccess, validateDeferred: false);
             var slot = Slot(nameID);
             slot.Texture = value;
+            slot.Unresolved = null;
             slot.Element = element;
             slot.ElementBinding = elementBinding;
             m_VectorsAfterTexture.Remove(HdrDecode.IdOf(nameID));
@@ -1566,6 +1600,9 @@ namespace UnityEngine
             if (!HasTextureSlot(nameID) || ScriptOnlyTexture(nameID)) { Missing(nameID, "a texture"); return null; }
             if (!m_Textures.TryGetValue(nameID, out var slot)) return null;
             if (slot.ElementBinding && Declared(nameID) != ShaderPropertyType.Texture) { Missing(nameID, "a texture"); return null; }
+            // A non-modifiable texture of the shader is what any of its materials answers
+            // (TakeNonModifiableTextures).
+            if (Declared(nameID) == ShaderPropertyType.Texture && m_Shader.NonModifiableTexture(Shader.IdToName(nameID)) is Texture locked) return locked;
             // A destroyed texture reads as null itself, not as its destroyed object (matches the
             // Unity 6000.0.71f1 Editor, tests/projects/defaulttextures destroyed.*.held).
             return slot.Texture ? slot.Texture : null;
@@ -1609,6 +1646,7 @@ namespace UnityEngine
             var slot = spare[spare.Count - 1];
             spare.RemoveAt(spare.Count - 1);
             slot.Texture = null;
+            slot.Unresolved = null;
             slot.Element = default;
             slot.ElementBinding = false;
             slot.Scale = Vector2.one;
@@ -1882,7 +1920,7 @@ namespace UnityEngine
             foreach (var p in mat.m_Vectors) if (Declares(p.Key)) m_Vectors[p.Key] = p.Value;
             foreach (var p in mat.m_Matrices) if (Declares(p.Key)) m_Matrices[p.Key] = p.Value;
             foreach (var p in mat.m_Textures)
-                if (Declares(p.Key)) m_Textures[p.Key] = new TextureSlot { Texture = p.Value.Texture, Element = p.Value.Element, ElementBinding = p.Value.ElementBinding, Scale = p.Value.Scale, Offset = p.Value.Offset };
+                if (Declares(p.Key)) m_Textures[p.Key] = new TextureSlot { Texture = p.Value.Texture, Unresolved = p.Value.Unresolved, Element = p.Value.Element, ElementBinding = p.Value.ElementBinding, Scale = p.Value.Scale, Offset = p.Value.Offset };
             CopyMatchingKeywords(mat);
             m_DoubleSidedGI = mat.m_DoubleSidedGI;
             m_EnableInstancing = mat.m_EnableInstancing;
@@ -2047,9 +2085,11 @@ namespace UnityEngine
                     var slot = Slot(Shader.PropertyToID(name));
                     var texRef = value.Ref("m_Texture");
                     slot.Texture = texRef.IsNull ? null : resolver.Resolve(texRef, typeof(Texture)) as Texture;
+                    slot.Unresolved = slot.Texture == null && !texRef.IsNull ? texRef : null;
                     slot.Scale = value.Get("m_Scale") != null ? value.Vector2("m_Scale") : Vector2.one;
                     slot.Offset = value.Vector2("m_Offset");
                 }
+                TakeNonModifiableTextures();
                 foreach (var (name, value) in Entries(saved.Get("m_Floats")))
                 {
                     int id = Shader.PropertyToID(name);

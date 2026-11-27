@@ -225,7 +225,8 @@ namespace Unbound.Runtime
             {
                 var (texture, scale, offset) = m.SheetTexture(id);
                 var env = YText.Map();
-                env.Add("m_Texture", Ref(texture));
+                // A reference to a texture that does not load is kept, as the shader's is.
+                env.Add("m_Texture", m.UnresolvedTexture(id) is ObjectRef missing ? Reference(missing) : Ref(texture));
                 env.Add("m_Scale", Vector2Map(scale));
                 env.Add("m_Offset", Vector2Map(offset));
                 textures.Add(Shader.IdToName(id), env);

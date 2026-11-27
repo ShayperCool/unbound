@@ -16,6 +16,7 @@ namespace UnityEngine
             };
             copy.m_Properties.AddRange(m_Properties);
             copy.m_PipelineEditors.AddRange(m_PipelineEditors);
+            ImportedTextures();
             foreach (var pair in m_DefaultTextures) copy.m_DefaultTextures.Add(pair.Key, pair.Value);
             foreach (var pair in m_NonModifiableTextures) copy.m_NonModifiableTextures.Add(pair.Key, pair.Value);
             return copy;

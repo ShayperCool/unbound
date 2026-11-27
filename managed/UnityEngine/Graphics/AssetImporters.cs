@@ -155,10 +155,34 @@ namespace Unbound.Runtime
             ShaderLab.Editors(source, shader);
             shader.PropertiesChanged(layoutKnown && declared != null);
             shader.IsPersistentAsset = true;
+            shader.m_ImporterTextures = ImporterTextures(info);
             Shader.Register(shader);
             var file = new LoadedFile { MainObject = shader };
             file.Objects[ShaderFileId] = shader;
             return file;
+        }
+
+        /// <summary>The textures a shader's .meta gives its materials: the ShaderImporter's
+        /// defaultTextures (new materials start with them) and nonModifiableTextures (every
+        /// material has them), each a list of one-entry maps from a property name to a texture.</summary>
+        static List<(string, ObjectRef, bool)> ImporterTextures(AssetDatabaseRuntime.AssetInfo info)
+        {
+            List<YDocument> docs;
+            try { docs = Native.LoadDocuments("meta:" + info.Guid); }
+            catch (InvalidOperationException) { return null; }
+            if (docs.Count == 0 || docs[0].TypeName != "ShaderImporter") return null;
+            List<(string, ObjectRef, bool)> textures = null;
+            foreach (var (key, nonModifiable) in new[] { ("defaultTextures", false), ("nonModifiableTextures", true) })
+                foreach (var entry in docs[0].Body.Get(key)?.Seq() ?? Array.Empty<YNode>())
+                {
+                    if (entry.Kind != YKind.Map) continue;
+                    for (int i = 0; i < entry.Keys.Length; i++)
+                    {
+                        var reference = entry.Values[i].AsRef();
+                        if (!reference.IsNull && reference.Guid != null) (textures ??= new List<(string, ObjectRef, bool)>()).Add((entry.Keys[i], reference, nonModifiable));
+                    }
+                }
+            return textures;
         }
 
         internal static void EnsureRegistered() { }

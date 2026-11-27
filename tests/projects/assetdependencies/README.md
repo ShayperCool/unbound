@@ -56,6 +56,4 @@ python3 tests/projects/assetdependencies/run.py record --label <label>   # twice
 python3 tests/projects/assetdependencies/run.py gate
 ```
 
-`residuals.json` names the open differences: the order of the answers (Unbound sorts them), and a
-material's save in Unbound, which writes neither the shader's non-modifiable texture nor the missing
-GUID's reference.
+`residuals.json` names the open differences: the order of the answers (Unbound sorts them).

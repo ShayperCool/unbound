@@ -3,6 +3,7 @@
   "change/dirty/default",
   "change/dirty/recursive",
   "change/saved/default",
+  "change/saved/direct",
   "change/saved/recursive",
   "change/savedPrefab/default",
   "change/savedPrefab/direct",
@@ -33,11 +34,6 @@
   "many/recursive",
   "odd/backslash/recursive",
   "odd/case/recursive"
- ],
- "A material's save in Unbound writes its shader's non-modifiable textures (_Locked) and a reference to a GUID no asset has (_Missing) as none, where the Editor writes them (so the saved material's direct dependencies lack Tex2.png)": [
-  "change/file",
-  "change/saved/direct",
-  "change/saved/direct.set"
  ],
  "The Editor imported Dependency.shader before the shader it names (its log: 'Probe/Custom' not found), so its first answers lack it and its reimport warns of an inconsistent result; Unbound answers with the named shader once it is a project shader, as the Editor does after that reimport (resolved/Dependency)": [
   "deps/Assets/Deps/Dependency.shader/default",
