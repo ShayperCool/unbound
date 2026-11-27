@@ -261,6 +261,11 @@ namespace DotRecast.Detour.Crowd
                     tEnter = -float.MaxValue;
                     tExit = float.MaxValue;
 
+                    // Matches Unity 6000.0.71f1 (tests/projects/navpath obstacle-shapes, e.g.
+                    // steer.boxcarvemovingsunk.f10.velocity.z = 0.00122264074): when a ray is
+                    // parallel to one slab axis (|denom| <= MovingSegmentLengthEpsilon), that axis
+                    // is skipped without rejecting |originProj| > halfExtent; adding outside-slab
+                    // rejection makes steer.boxcarvemovingsunk.f10.velocity.z drop to 0.
                     float denom0 = vx * seg.dirX + vz * seg.dirZ;
                     if (MathF.Abs(denom0) > MovingSegmentLengthEpsilon)
                     {

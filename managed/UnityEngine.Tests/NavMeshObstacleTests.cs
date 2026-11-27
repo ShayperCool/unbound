@@ -478,6 +478,24 @@ namespace UnityEngine.Tests
             Assert.True(MathF.Abs(velWithSeg.X) > 0.5f, $"expected lateral deflection around segment, got {velWithSeg}");
         }
 
+        [Fact]
+        public void PaddedMovingSegmentAxisSkipMatchesMeasuredUnityRule()
+        {
+            // Matches Unity 6000.0.71f1 (tests/projects/navpath obstacle-shapes,
+            // steer.boxcarvemovingsunk.f10.velocity.z = 0.00122264074): when relative velocity is
+            // parallel to one slab axis (|denom| <= 1e-6), that axis is skipped and the other
+            // slab axis still yields an intersection time; when both axes have |denom| <= 1e-6,
+            // no hit is reported.
+            var dvel = new DotRecast.Core.Numerics.RcVec3f(3.5f, 0f, 0f);
+            var q0 = new DotRecast.Detour.Crowd.DtObstacleAvoidanceQuery(16, 8, 16);
+            q0.AddMovingSegment(1.5f, 3.5f, 1.5f, 4.5f, 0f, 0f, 0.5f, 1f);
+            float tAxisSkip = q0.TimeToImpactForTests(dvel, dvel, 2.0f);
+            Assert.True(tAxisSkip < 1.0f, $"expected axis-skip TOI < 1.0 matching Unity 6000.0.71f1, got {tAxisSkip}");
+
+            // Zero relative velocity on both axes yields no hit (horizTime).
+            Assert.Equal(2.0f, q0.TimeToImpactForTests(default, default, 2.0f));
+        }
+
         [Theory]
         [InlineData(10000f, 0f, 0)]
         [InlineData(10000f, 0f, 9999)]
