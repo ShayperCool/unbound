@@ -113,9 +113,15 @@ namespace Unbound.Runtime
                 }
                 case YKind.Map:
                 {
+                    var keys = new string[Keys.Count];
+                    for (int i = 0; i < keys.Length; i++)
+                    {
+                        var k = Keys[i];
+                        keys[i] = k.Length >= 2 && k[0] == '\'' && k[k.Length - 1] == '\'' ? UnityYamlText.Unquote(k) : k;
+                    }
                     var values = new YNode[Values.Count];
                     for (int i = 0; i < values.Length; i++) values[i] = Values[i].ToNode();
-                    return new YNode { Kind = YKind.Map, Keys = Keys.ToArray(), Values = values };
+                    return new YNode { Kind = YKind.Map, Keys = keys, Values = values };
                 }
                 default: return YNode.Null;
             }
@@ -346,7 +352,7 @@ namespace Unbound.Runtime
                     seq.Items[seq.Items.Count - 1].Flow = seq.Items[seq.Items.Count - 1].Flow;
                     continue;
                 }
-                if (rest.Length > 0 && rest[0] != '{' && rest[0] != '[' && rest[0] != '\'' && rest[0] != '"' && KeyEnd(rest) >= 0)
+                if (rest.Length > 0 && rest[0] != '{' && rest[0] != '[' && rest[0] != '"' && KeyEnd(rest) >= 0)
                 {
                     seq.Items.Add(ParseMap(lines, ref at, indent + 2, rest));
                     continue;

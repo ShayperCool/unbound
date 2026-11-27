@@ -314,6 +314,16 @@ namespace UnityEngine.Tests
                 reloaded.ReadSerialized(TestYaml.DocumentBody(updatedYaml), new NullResolver());
                 Assert.Equal(4f, reloaded.GetUVDistributionMetric(0));
                 Assert.Equal(16f, reloaded.GetUVDistributionMetric(1));
+
+                // YText.ToNode() must unquote single-quoted keys so ReadSerialized finds m_MeshMetrics[0..1].
+                var fromNode = new Mesh();
+                try
+                {
+                    fromNode.ReadSerialized(docs[0].Body.ToNode(), new NullResolver());
+                    Assert.Equal(4f, fromNode.GetUVDistributionMetric(0));
+                    Assert.Equal(16f, fromNode.GetUVDistributionMetric(1));
+                }
+                finally { Object.DestroyImmediate(fromNode); }
             }
             finally
             {
@@ -321,6 +331,66 @@ namespace UnityEngine.Tests
                 Object.DestroyImmediate(mesh);
                 if (reloaded != null) Object.DestroyImmediate(reloaded);
             }
+        }
+
+        [Fact]
+        public void SingleQuotedYamlKeysRoundTripInSequencesAndMapsWithoutBreakingQuotedScalars()
+        {
+            const string yaml =
+                "%YAML 1.1\n" +
+                "%TAG !u! tag:unity3d.com,2011:\n" +
+                "--- !u!114 &11400000\n" +
+                "MonoBehaviour:\n" +
+                "  weights:\n" +
+                "  - 'weight[0]': 1\n" +
+                "    'weight[1]': 0\n" +
+                "  harmonics:\n" +
+                "  - 'sh[ 0]': 17\n" +
+                "    'sh[ 1]': 17.5\n" +
+                "  scalars:\n" +
+                "  - 'a: b'\n" +
+                "  - 'end:'\n" +
+                "  after: 12\n";
+
+            var docs = UnityYamlText.Parse(yaml);
+            Assert.Single(docs);
+            Assert.Equal(yaml, UnityYamlText.Write(docs));
+
+            var body = docs[0].Body;
+            Assert.Equal("12", body.Get("after")?.Raw);
+            var weights = body.Get("weights");
+            Assert.Equal(YKind.Seq, weights.Kind);
+            Assert.Single(weights.Items);
+            Assert.Equal(YKind.Map, weights.Items[0].Kind);
+            Assert.Equal("1", weights.Items[0].Get("'weight[0]'")?.Raw);
+            Assert.Equal("0", weights.Items[0].Get("'weight[1]'")?.Raw);
+
+            var scalars = body.Get("scalars");
+            Assert.Equal(2, scalars.Items.Count);
+            Assert.Equal(YKind.Scalar, scalars.Items[0].Kind);
+            Assert.Equal("a: b", scalars.Items[0].Text);
+            Assert.Equal(YKind.Scalar, scalars.Items[1].Kind);
+            Assert.Equal("end:", scalars.Items[1].Text);
+
+            var node = body.ToNode();
+            Assert.Equal(12, node.Int("after"));
+            var wNode = node.Get("weights").Items[0];
+            Assert.Equal(1f, wNode.Float("weight[0]"));
+            Assert.Equal(0f, wNode.Float("weight[1]"));
+            var hNode = node.Get("harmonics").Items[0];
+            Assert.Equal(17f, hNode.Float("sh[ 0]"));
+            Assert.Equal(17.5f, hNode.Float("sh[ 1]"));
+
+            const string meta =
+                "TextureImporter:\n" +
+                "  weights:\n" +
+                "  - 'weight[0]': 1\n" +
+                "    'weight[1]': 0\n" +
+                "  userData: keep\n";
+            var top = UnityYamlText.ParseTopLevel(meta);
+            Assert.Equal(meta, UnityYamlText.WriteTopLevel(top));
+            Assert.Equal("keep", top.Get("TextureImporter").Get("userData")?.Raw);
+            Assert.Equal(1f, top.ToNode().Get("TextureImporter").Get("weights").Items[0].Float("weight[0]"));
         }
 
         [Fact]
@@ -337,14 +407,16 @@ namespace UnityEngine.Tests
                 mesh.uv = new[]
                 {
                     Vector2.zero, new Vector2(0f, 1f), new Vector2(1f, 0f),
-                    Vector2.zero, new Vector2(0f, 1f), new Vector2(1f, 0f),
+                    Vector2.zero, new Vector2(0f, 0.5f), new Vector2(0.5f, 0f),
                 };
                 mesh.subMeshCount = 2;
-                // Submesh 0 has 4 indices (1 trailing index beyond a triangle multiple); submesh 1 has 3.
+                // Submesh 0 has 4 indices (ratio 4 + 1 trailing index); submesh 1 has 3 indices (ratio 16).
+                // Mean of {4, 16} + upper deviation = 10 + 6 = 16; without % 3 truncation submesh 1 is
+                // shifted into a degenerate triangle and the metric stays 4.
                 mesh.m_SubMeshes[0].Indices = new[] { 0, 1, 2, 0 };
                 mesh.m_SubMeshes[1].Indices = new[] { 3, 4, 5 };
                 mesh.RecalculateUVDistributionMetrics();
-                Assert.Equal(4f, mesh.GetUVDistributionMetric(0));
+                Assert.Equal(16f, mesh.GetUVDistributionMetric(0));
             }
             finally { Object.DestroyImmediate(mesh); }
         }
