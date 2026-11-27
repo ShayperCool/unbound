@@ -299,27 +299,23 @@ namespace Unbound.Runtime
     // C4: a capsule has radius times the larger horizontal scale and shaft along its local up axis.
     //   On the measured release (navpath obstacle-separation and obstacle-shapes), capsule obstacles
     //   enter the proximity grid by their per-axis horizontal extents, rank as neighbours by the
-    //   half-diagonal of those extents without a vertical pre-cull, and clip their shaft against
-    //   the agent's height span with the horizontal cap margin (1 - |axis.y|) * radius (using full
+    //   half-diagonal of those extents without a vertical pre-cull, clip their shaft against the
+    //   agent's height span with the horizontal cap margin (1 - |axis.y|) * radius (using full
     //   radius when the shaft overlaps the agent's height and the clipped cap radius sqrt(r^2 - dy^2)
     //   when it lies wholly above or below, collapsing to a single inward-pushing cap circle only
-    //   for |axis.y| > 0.99; walking past lying or tilted shafts, Unity keeps 1 to 2 cm more
-    //   clearance alongside the shaft, listed). Other releases keep an upright circle at the center.
-    // C5 (measured, not reproduced): Unity avoids a box, and pushes agents out of it, by its
-    //   outline (navpath obstacle-shapes box*, listed); the one box it ignores is one spanning the
-    //   agent's height exactly, a float coincidence. Unbound's choice:
-    //   a box is the rectangle around its horizontal outline, along
-    //   its turned x axis, cut into ceil(long side / short side) equal pieces along its longer side,
-    //   each covered by the circle through its corners. Bound: each circle's radius is at most
-    //   sqrt(2) times the box's half-width, so the cover bulges at most (sqrt(2) - 1) times the
-    //   half-width beyond the box's long sides and less than the half-width beyond its ends (a square
-    //   box is one circle). At most MaxBoxCircles (16) circles per box: a box
-    //   longer than 16 times its width (or with no width) gets 16 circles of larger radius, whose
-    //   bulge grows with its length; that is reported once per run.
-    // C6 (Unbound's choice, unmeasured for non-capsule obstacles): non-capsule obstacles count for an
-    //   agent whose height span overlaps their own (the test Unity's agents apply to each other:
-    //   the obstacle's bottom is not above the agent's head, its top not below the agent's feet).
-    //   On the measured release, capsules defer vertical culling to shaft clipping (C4).
+    //   for |axis.y| > 0.99), and contribute endpoint circles plus a padded moving segment to
+    //   velocity sampling. Other releases keep an upright circle at the center.
+    // C5: on the measured release (navpath obstacle-shapes), a box obstacle enters the proximity
+    //   grid and neighbour ranking by its center and rotated world half-extents without a vertical
+    //   pre-cull, clips its 3D corners and edges strictly against the agent's height span (0, height)
+    //   into a 2D convex hull, pushes overlapping agents out from the nearest point on the centroid-
+    //   wedge edge, and adds facing or touching hull edges as padded moving segments plus their
+    //   adjacent vertices as circles to velocity sampling. Other releases approximate a box with
+    //   at most MaxBoxCircles (16) circles covering its horizontal rectangle, reporting once per run
+    //   when a box is longer than 16 times its width.
+    // C6 (Unbound's choice, unmeasured for unmeasured releases): on unmeasured releases, obstacles
+    //   count for an agent whose height span overlaps their own (bottom not above head, top not
+    //   below feet). On the measured release, capsules and boxes defer vertical culling to clipping.
     // C7 (Unbound's choice, unmeasured): an obstacle circle whose centre lies beyond an agent's
     //   neighbour range is not seen, and circles take places among the agent's nearest neighbours as
     //   other agents do. Limit: the crowd gathers at most DtCrowd.NeighbourCandidates (64) neighbour
@@ -699,12 +695,28 @@ namespace Unbound.Runtime
             internal readonly Vector3 CapsuleAxis;
             /// <summary>Half the distance between the cap sphere centers of a measured capsule obstacle.</summary>
             internal readonly float CapsuleHalfShaft;
+            internal readonly bool IsBox;
+            internal readonly Vector3 BoxHalfExtents;
+            internal readonly Vector3 BoxAxisX;
+            internal readonly Vector3 BoxAxisY;
+            internal readonly Vector3 BoxAxisZ;
+            internal bool UsesShapeCenter => IsCapsule || IsBox;
             /// <summary>Horizontal world extents along X and Z from the obstacle center.</summary>
-            internal float ExtentX => IsCapsule ? Radius + Mathf.Abs(CapsuleAxis.x) * CapsuleHalfShaft : Radius;
-            internal float ExtentZ => IsCapsule ? Radius + Mathf.Abs(CapsuleAxis.z) * CapsuleHalfShaft : Radius;
+            internal float ExtentX => IsCapsule
+                ? Radius + Mathf.Abs(CapsuleAxis.x) * CapsuleHalfShaft
+                : IsBox
+                    ? Mathf.Abs(BoxAxisX.x) * BoxHalfExtents.x + Mathf.Abs(BoxAxisY.x) * BoxHalfExtents.y + Mathf.Abs(BoxAxisZ.x) * BoxHalfExtents.z
+                    : Radius;
+            internal float ExtentZ => IsCapsule
+                ? Radius + Mathf.Abs(CapsuleAxis.z) * CapsuleHalfShaft
+                : IsBox
+                    ? Mathf.Abs(BoxAxisX.z) * BoxHalfExtents.x + Mathf.Abs(BoxAxisY.z) * BoxHalfExtents.y + Mathf.Abs(BoxAxisZ.z) * BoxHalfExtents.z
+                    : Radius;
 
             internal Circle(Vector3 center, float radius, float bottom, float top, Vector3 velocity,
-                NavMeshObstacle owner, bool isCapsule = false, Vector3 capsuleAxis = default, float capsuleHalfShaft = 0f)
+                NavMeshObstacle owner, bool isCapsule = false, Vector3 capsuleAxis = default, float capsuleHalfShaft = 0f,
+                bool isBox = false, Vector3 boxHalfExtents = default,
+                Vector3 boxAxisX = default, Vector3 boxAxisY = default, Vector3 boxAxisZ = default)
             {
                 Center = center;
                 Radius = radius;
@@ -715,6 +727,11 @@ namespace Unbound.Runtime
                 IsCapsule = isCapsule;
                 CapsuleAxis = capsuleAxis;
                 CapsuleHalfShaft = capsuleHalfShaft;
+                IsBox = isBox;
+                BoxHalfExtents = boxHalfExtents;
+                BoxAxisX = boxAxisX;
+                BoxAxisY = boxAxisY;
+                BoxAxisZ = boxAxisZ;
             }
         }
 
@@ -741,10 +758,10 @@ namespace Unbound.Runtime
         static void CollectCircles()
         {
             s_Circles.Clear();
-            bool measuredCapsules = Compat.NavMeshCapsuleAvoidanceMeasured;
+            bool measuredShapes = Compat.NavMeshObstacleShapesMeasured;
             foreach (var obstacle in s_Obstacles)
                 if (obstacle != null && obstacle.isActiveAndEnabled && !IsCarved(obstacle))
-                    AddCircles(obstacle, s_Circles, measuredCapsules);
+                    AddCircles(obstacle, s_Circles, measuredShapes);
         }
 
         /// <summary>Before <paramref name="crowd"/> updates: the enabled obstacles,
@@ -759,7 +776,7 @@ namespace Unbound.Runtime
                 s_InCrowd.Add(crowd, members);
             }
             if (!crowd.Config().predictNeighbourBounds) CollectCircles();
-            // Measured capsules keep their center for admission and projection. The older
+            // Measured capsules and boxes keep their center for admission and clipping. The older
             // proxies stand on the obstacle's bottom (C6).
             var agents = crowd.GetActiveAgents();
             bool prediction = crowd.Config().predictNeighbourBounds;
@@ -769,7 +786,7 @@ namespace Unbound.Runtime
             s_NearPositions.Clear();
             foreach (var c in s_Circles)
             {
-                var position = new RcVec3f(c.Center.x, c.IsCapsule ? c.Center.y : c.Bottom, c.Center.z);
+                var position = new RcVec3f(c.Center.x, c.UsesShapeCenter ? c.Center.y : c.Bottom, c.Center.z);
                 if (!NearAWalkingAgent(agents, position, c, cell, prediction, 1f / cellX, 1f / cellZ)) continue;
                 s_Near.Add(c);
                 s_NearPositions.Add(position);
@@ -797,6 +814,11 @@ namespace Unbound.Runtime
                     capsuleObstacle = c.IsCapsule,
                     capsuleAxis = c.IsCapsule ? NavMesh.V(c.CapsuleAxis) : RcVec3f.Zero,
                     capsuleHalfShaft = c.CapsuleHalfShaft,
+                    boxObstacle = c.IsBox,
+                    boxHalfExtents = c.IsBox ? NavMesh.V(c.BoxHalfExtents) : RcVec3f.Zero,
+                    boxAxisX = c.IsBox ? NavMesh.V(c.BoxAxisX) : RcVec3f.Zero,
+                    boxAxisY = c.IsBox ? NavMesh.V(c.BoxAxisY) : RcVec3f.Zero,
+                    boxAxisZ = c.IsBox ? NavMesh.V(c.BoxAxisZ) : RcVec3f.Zero,
                     updateFlags = 0,
                     obstacleAvoidanceType = 0,
                     queryFilterType = 0,
@@ -835,7 +857,7 @@ namespace Unbound.Runtime
                 // Obstacle circles are never walking; agents on links or off the NavMesh do not look
                 // for neighbours.
                 if (ag.state != DtCrowdAgentState.DT_CROWDAGENT_STATE_WALKING) continue;
-                if (!circle.IsCapsule && !DtCrowd.HeightsOverlap(ag, position, height)) continue;
+                if (!circle.UsesShapeCenter && !DtCrowd.HeightsOverlap(ag, position, height)) continue;
                 float reach = DtCrowd.NeighbourReach(ag, horizon);
                 if (prediction)
                 {
@@ -929,8 +951,8 @@ namespace Unbound.Runtime
                 && Cell(max.Z, invZ) >= z0 && Cell(min.Z, invZ) <= z1;
         }
 
-        /// <summary>The obstacle's shape as circles in the horizontal plane, with its height span.</summary>
-        static void AddCircles(NavMeshObstacle obstacle, List<Circle> into, bool measuredCapsules)
+        /// <summary>The obstacle's shape as avoidance entries, with its height span.</summary>
+        static void AddCircles(NavMeshObstacle obstacle, List<Circle> into, bool measuredShapes)
         {
             var t = obstacle.transform;
             var center = t.TransformPoint(obstacle.center);
@@ -940,7 +962,7 @@ namespace Unbound.Runtime
             {
                 float radius = obstacle.ShapeRadius * Mathf.Max(Mathf.Abs(scale.x), Mathf.Abs(scale.z));
                 float half = obstacle.ShapeHeight * Mathf.Abs(scale.y) * 0.5f;
-                if (measuredCapsules)
+                if (measuredShapes)
                 {
                     Vector3 axis = t.rotation * Vector3.up;
                     float lenSq = axis.sqrMagnitude;
@@ -956,6 +978,16 @@ namespace Unbound.Runtime
                 return;
             }
             var rotation = t.rotation;
+            if (measuredShapes)
+            {
+                var halfExtents = WorldExtents(obstacle, scale);
+                var axes = Matrix4x4.Rotate(rotation);
+                Vector3 ux = axes.GetColumn(0), uy = axes.GetColumn(1), uz = axes.GetColumn(2);
+                float halfH = Mathf.Abs(ux.y) * halfExtents.x + Mathf.Abs(uy.y) * halfExtents.y + Mathf.Abs(uz.y) * halfExtents.z;
+                into.Add(new Circle(center, 0f, center.y - halfH, center.y + halfH, velocity,
+                    obstacle, isBox: true, boxHalfExtents: halfExtents, boxAxisX: ux, boxAxisY: uy, boxAxisZ: uz));
+                return;
+            }
             var size = obstacle.size;
             var ax = rotation * new Vector3(size.x * scale.x * 0.5f, 0f, 0f);
             var ay = rotation * new Vector3(0f, size.y * scale.y * 0.5f, 0f);

@@ -38,8 +38,9 @@ namespace DotRecast.Detour.Crowd
         public float collisionResolveFactor = 0.7f;
         public bool resolveAgentOverlapsIn3D;
         public bool weightedWallProjection;
-        public int maxObstacleAvoidanceCircles = DtCrowdConst.DT_CROWDAGENT_MAX_NEIGHBOURS; // Max number of neighbour agents to consider in obstacle avoidance processing
+        public int maxObstacleAvoidanceCircles = 104; // Max obstacle circles in avoidance query (Unity's primitive pool cap)
         public int maxObstacleAvoidanceSegments = DtLocalBoundary.MAX_LOCAL_SEGS; // Max number of neighbour segments to consider in obstacle avoidance processing
+        public int maxObstacleAvoidanceMovingSegments = 104; // Max padded moving segments from capsule/box obstacles in avoidance query
 
         public DtCrowdConfig(float maxAgentRadius)
         {

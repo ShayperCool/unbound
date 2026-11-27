@@ -22,8 +22,8 @@ there are no listed keys for this profile. Its currently failing scope is in REA
 The `--profile obstacle-separation` records close-range steering and capsule contact. It uses
 Reference/unity-<release>/obstacle-separation.json and compares all values at the same tolerance.
 The `--profile obstacle-shapes` records agents placed in and walking past boxes and lying or
-tilted capsules (Reference/unity-<release>/obstacle-shapes.json); box values and the walks past
-capsules are listed, capsule contacts are gated.
+tilted capsules (Reference/unity-<release>/obstacle-shapes.json); all values except 68 box
+corner-contact values (listed below) are gated.
 
 Listed, not gated (docs/COMPATIBILITY_GAPS.md, the path-cost row):
   hole.shapes two.p1.*    a straight line grazing a mesh vertex that the builders place about 2e-6
@@ -91,9 +91,16 @@ LISTED = {
     'carve.rules': ('poly.p47', 'poly.p51'),
     'place.links': tuple(f'{path}.{part}' for path in ('m.p.ab', 'r30.p.ab', 'r30.w.ab', 'm.w.ba') for part in ('n', 'c')),
     'replan.topofar': ('a.given', 'mask.given'),
-    # Boxes, and walks past lying or tilted capsules: measured, not reproduced (README, Obstacle
-    # shapes). Contacts with lying and tilted capsules are gated.
-    'steer.shapes': ('contact.box', 'steer.box', 'steer.caplying', 'steer.captilt'),
+    # Box corner contact where the closest point on the ray-intersected hull edge clamps to a
+    # vertex (t <= 0 or t >= 1): Unity 6000.0.71f1 pushes along -X (inward into the box in
+    # boxtilt*.s4 and oscillating in boxtiltx.s2), whereas Unbound pushes away from the corner
+    # vertex so agents are not driven into boxes (68 of 7290 values; README, Obstacle shapes).
+    'steer.shapes': (
+        'contact.boxtilt.s5.', 'contact.boxtilt1.s4.', 'contact.boxtilt10.s4.',
+        'contact.boxtiltx.s2.', 'contact.boxtilt001.s4.',
+        'steer.boxmovingsunk.f6', 'steer.boxmovingsunk.f7', 'steer.boxmovingsunk.f8',
+        'steer.boxcarvemovingsunk.f6', 'steer.boxcarvemovingsunk.f7', 'steer.boxcarvemovingsunk.f8',
+    ),
 }
 
 

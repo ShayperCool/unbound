@@ -123,8 +123,11 @@ namespace UnityEngine.Tests
             return (deviation, passed, false);
         }
 
-        // A safety invariant of this box-cover implementation, not a promise that local
-        // avoidance plans a route around every wall. Check every original step, including stalls.
+        // A safety invariant for box clearance, not a promise that local avoidance plans a route
+        // around every wall. Check every original step, including stalls. Under the unmeasured
+        // circle cover, circles protrude past the box faces so clearance stays >= -1e-4 m; under
+        // the exact box outline, 4 relaxation iterations at collisionResolveFactor = 0.7 leave at
+        // most (1 - 0.7)^4 of a single step (~0.0005 m at 3.5 m/s, 1/50 s).
         static void AssertOutsideBoxFootprint(NavMeshAgent agent, NavMeshObstacle obstacle, Vector3 position)
         {
             var center = obstacle.transform.TransformPoint(obstacle.center);
@@ -136,7 +139,8 @@ namespace UnityEngine.Tests
             float qz = Mathf.Abs((relative.x * z.x + relative.z * z.z) / hz) - hz;
             float outside = Mathf.Sqrt(Mathf.Max(qx, 0f) * Mathf.Max(qx, 0f) + Mathf.Max(qz, 0f) * Mathf.Max(qz, 0f));
             float clearance = outside + Mathf.Min(Mathf.Max(qx, qz), 0f) - agent.radius;
-            Assert.True(clearance >= -1e-4f, $"agent penetrated the box footprint by {-clearance} m at {position}");
+            float limit = Compat.NavMeshObstacleShapesMeasured ? -1e-3f : -1e-4f;
+            Assert.True(clearance >= limit, $"agent penetrated the box footprint by {-clearance} m at {position}");
         }
 
         /// <summary>Two agents' walks: the closest they came to each other (centre to centre).</summary>
@@ -325,25 +329,121 @@ namespace UnityEngine.Tests
             var warnings = new List<string>();
             WithWarnings(warnings, () =>
             {
-                ObstacleSystem.s_WarnedLongBox = false;
-                ObstacleSystem.s_WarnedCandidates = false;
-                Agent();
-                // A box 10 m by 0.2 m needs 50 circles of its width, more than the 16 it gets (C5).
-                Box(new Vector3(0f, 0.5f, 3f), new Vector3(10f, 1f, 0.2f));
-                Step();
-                Step();
-                Assert.Single(warnings, w => w.Contains("times as long as it is wide"));
-                Assert.DoesNotContain(warnings, w => w.Contains("neighbours its avoidance considers"));
+                using (TestRelease.Pin(TestRelease.Unmeasured))
+                {
+                    ObstacleSystem.s_WarnedLongBox = false;
+                    ObstacleSystem.s_WarnedCandidates = false;
+                    Agent();
+                    // On unmeasured releases, a box 10 m by 0.2 m needs 50 circles of its width,
+                    // more than the 16 it gets (C5).
+                    Box(new Vector3(0f, 0.5f, 3f), new Vector3(10f, 1f, 0.2f));
+                    Step();
+                    Step();
+                    Assert.Single(warnings, w => w.Contains("times as long as it is wide"));
+                    Assert.DoesNotContain(warnings, w => w.Contains("neighbours its avoidance considers"));
 
-                // 60 small obstacles near the agent: with the box's 16 circles and the agent, more
-                // than the 64 neighbour candidates the crowd gathers (C7).
-                for (int i = 0; i < 60; i++)
-                    Capsule(new Vector3(-7f + 0.1f * i, 1f, -3f), 0.05f);
-                Step();
-                Step();
-                Assert.Single(warnings, w => w.Contains("times as long as it is wide"));
-                Assert.Single(warnings, w => w.Contains("neighbours its avoidance considers"));
+                    // 60 small obstacles near the agent: with the box's 16 circles and the agent, more
+                    // than the 64 neighbour candidates the crowd gathers (C7).
+                    for (int i = 0; i < 60; i++)
+                        Capsule(new Vector3(-7f + 0.1f * i, 1f, -3f), 0.05f);
+                    Step();
+                    Step();
+                    Assert.Single(warnings, w => w.Contains("times as long as it is wide"));
+                    Assert.Single(warnings, w => w.Contains("neighbours its avoidance considers"));
+                }
             });
+        }
+
+        [Fact]
+        public void OrientedBoxOutlineAvoidanceContactAndSteeringMatchMeasuredRules()
+        {
+            using var release = TestRelease.Pin(TestRelease.Measured);
+
+            // 1. A long thin box on the measured release is a single crowd obstacle (no circle cover
+            //    or long-box warning), and an agent placed inside its interior is pushed out across
+            //    the centroid-wedge edge.
+            var warnings = new List<string>();
+            WithWarnings(warnings, () =>
+            {
+                ObstacleSystem.s_WarnedLongBox = false;
+                var box = Box(new Vector3(0f, 0.5f, 0f), new Vector3(10f, 1f, 0.2f));
+                var standing = new GameObject("agent-box");
+                m_Objects.Add(standing);
+                standing.transform.position = new Vector3(3.5f, 0f, 0.25f);
+                var agent = standing.AddComponent<NavMeshAgent>();
+                for (int i = 0; i < 15; i++) Step();
+                Assert.DoesNotContain(warnings, w => w.Contains("times as long as it is wide"));
+                Assert.Equal(2, CrowdMembers(agent));
+                // Closest point on the z = +0.1 side is (3.5, 0.1), so combined clearance pushes to z = 0.6.
+                Assert.True(Mathf.Abs(agent.nextPosition.x - 3.5f) < 2e-3f && Mathf.Abs(agent.nextPosition.z - 0.6f) < 2e-3f,
+                    $"expected (3.5, 0.6), at {agent.nextPosition}");
+                Remove(agent);
+                Remove(box);
+            });
+
+            // 2. Control outside the probe's exact angles: a 22-degree yawed, 3 x 1 x 1 box at y = 0.5
+            //    pushes a touching agent along its rotated face normal rather than a circle cover.
+            var yawed = Box(new Vector3(0f, 0.5f, 0f), new Vector3(3f, 1f, 1f), Quaternion.Euler(0f, 22f, 0f));
+            var yawAgentGo = new GameObject("agent-yaw");
+            m_Objects.Add(yawAgentGo);
+            // Normal of the +Z face turned +22 deg about Y (left-handed: +Z rotates toward +X): (sin 22, cos 22).
+            float rad = 22f * Mathf.Deg2Rad;
+            Vector2 n = new Vector2(Mathf.Sin(rad), Mathf.Cos(rad));
+            // Place at distance 0.75 from center along face normal (half-depth 0.5 + 0.25 -> overlaps agent radius 0.5).
+            yawAgentGo.transform.position = new Vector3(n.x * 0.75f, 0f, n.y * 0.75f);
+            var yawAgent = yawAgentGo.AddComponent<NavMeshAgent>();
+            for (int i = 0; i < 15; i++) Step();
+            Assert.True(Mathf.Abs(yawAgent.nextPosition.x - n.x) < 2e-3f && Mathf.Abs(yawAgent.nextPosition.z - n.y) < 2e-3f,
+                $"expected ({n.x:F4}, {n.y:F4}), at {yawAgent.nextPosition}");
+            Remove(yawAgent);
+            Remove(yawed);
+
+            // 3. Exact-height box spanning [feet, head] strictly produces no clipped points (0 hull vertices).
+            var standingExact = new GameObject("agent-exact");
+            m_Objects.Add(standingExact);
+            standingExact.transform.position = new Vector3(0f, 0f, 0f);
+            var exactAgent = standingExact.AddComponent<NavMeshAgent>();
+            float feet = exactAgent.nextPosition.y;
+            var exactBox = Box(new Vector3(0f, feet + 1f, 0f), new Vector3(1f, 2f, 1f));
+            for (int i = 0; i < 5; i++) Step();
+            Assert.True(Mathf.Abs(exactAgent.nextPosition.x) < 1e-4f && Mathf.Abs(exactAgent.nextPosition.z) < 1e-4f,
+                $"exact-height box should not displace agent, moved to {exactAgent.nextPosition}");
+            Remove(exactAgent);
+            Remove(exactBox);
+
+            // 4. Non-finite box inputs never produce NaN or throw.
+            var badAg = new DotRecast.Detour.Crowd.DtCrowdAgent(0)
+            {
+                npos = new DotRecast.Core.Numerics.RcVec3f(0f, 0f, 0f),
+                option = new DotRecast.Detour.Crowd.DtCrowdAgentParams { height = 2f, radius = 0.5f },
+            };
+            var badBox = new DotRecast.Detour.Crowd.DtCrowdAgent(1)
+            {
+                npos = new DotRecast.Core.Numerics.RcVec3f(float.NaN, 1f, 0f),
+                option = new DotRecast.Detour.Crowd.DtCrowdAgentParams
+                {
+                    boxObstacle = true,
+                    boxHalfExtents = new DotRecast.Core.Numerics.RcVec3f(0.5f, 0.5f, 0.5f),
+                    boxAxisX = new DotRecast.Core.Numerics.RcVec3f(1f, 0f, 0f),
+                    boxAxisY = new DotRecast.Core.Numerics.RcVec3f(0f, 1f, 0f),
+                    boxAxisZ = new DotRecast.Core.Numerics.RcVec3f(0f, 0f, 1f),
+                },
+            };
+            Assert.False(DotRecast.Detour.Crowd.DtCrowd.TryOverlapBox(badAg, badBox, out _, out _, out _));
+        }
+
+        [Fact]
+        public void PaddedMovingSegmentMidpointTaperReducesTimeToImpactNearCenter()
+        {
+            // Moving segment TOI applies midpoint taper 0.5 + 0.5*(1 - 2s)^2, giving half the TOI
+            // for a center hit (s = 0.5) compared to an endpoint graze (s = 0 or 1).
+            var queryCenter = new DotRecast.Detour.Crowd.DtObstacleAvoidanceQuery(16, 8, 16);
+            queryCenter.AddMovingSegment(-2f, 2f, 2f, 2f, 0f, 0f, 0.5f, 1f);
+            var p = new DotRecast.Detour.Crowd.DtObstacleAvoidanceParams { horizTime = 5f, adaptiveDivs = 5, adaptiveRings = 2, adaptiveDepth = 2 };
+            queryCenter.SampleVelocityAdaptive(3.5f, new DotRecast.Core.Numerics.RcVec3f(0f, 0f, 3.5f),
+                new DotRecast.Core.Numerics.RcVec3f(0f, 0f, 3.5f), out var velWithSeg, p, null);
+            // Walking straight into a 4 m wide horizontal segment at z = 2 must deflect laterally.
+            Assert.True(MathF.Abs(velWithSeg.X) > 0.5f, $"expected lateral deflection around segment, got {velWithSeg}");
         }
 
         [Theory]

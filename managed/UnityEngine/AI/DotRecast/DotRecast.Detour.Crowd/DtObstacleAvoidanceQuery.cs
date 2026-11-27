@@ -41,10 +41,11 @@ namespace DotRecast.Detour.Crowd
         const float CentreSideOffset = 0.04f;
         /// Unbound: an edge nearer than this to the agent counts as at least SegmentMinDistance from
         /// it on the edge's outer side, whichever side the agent is on (Unity's).
-        const float SegmentTouchDistance = 0.05f;
+        internal const float SegmentTouchDistance = 0.05f;
         const float SegmentMinDistance = 0.025f;
         /// Unbound: an edge's time to impact counts double (it is divided by this; Unity's).
         const float SegmentTimeWeight = 0.5f;
+        const float MovingSegmentLengthEpsilon = 1e-6f;
 
         private DtObstacleAvoidanceParams m_params;
         private float m_invHorizTime;
@@ -58,7 +59,11 @@ namespace DotRecast.Detour.Crowd
         private readonly DtObstacleSegment[] m_segments;
         private int m_nsegments;
 
-        public DtObstacleAvoidanceQuery(int maxCircles, int maxSegments)
+        private readonly int m_maxMovingSegments;
+        private readonly DtObstacleMovingSegment[] m_movingSegments;
+        private int m_nmovingSegments;
+
+        public DtObstacleAvoidanceQuery(int maxCircles, int maxSegments, int maxMovingSegments = 104)
         {
             m_maxCircles = maxCircles;
             m_circles = new DtObstacleCircle[m_maxCircles];
@@ -69,12 +74,53 @@ namespace DotRecast.Detour.Crowd
             m_segments = new DtObstacleSegment[m_maxSegments];
             for (int i = 0; i < m_maxSegments; i++)
                 m_segments[i] = new DtObstacleSegment();
+
+            m_maxMovingSegments = maxMovingSegments;
+            m_movingSegments = new DtObstacleMovingSegment[m_maxMovingSegments];
         }
 
         public void Reset()
         {
             m_ncircles = 0;
             m_nsegments = 0;
+            m_nmovingSegments = 0;
+        }
+
+        /// A padded horizontal segment from (p0x, p0z) to (p1x, p1z) relative to the agent,
+        /// moving at (velX, velZ), inflated by <paramref name="rad"/>.
+        public void AddMovingSegment(float p0x, float p0z, float p1x, float p1z,
+            float velX, float velZ, float rad, float weight)
+        {
+            if (m_nmovingSegments >= m_maxMovingSegments)
+                return;
+
+            float dx = p1x - p0x;
+            float dz = p1z - p0z;
+            float len = MathF.Sqrt(dx * dx + dz * dz);
+            float dirX = 0f, dirZ = 0f, halfLen = 0f;
+            if (len >= MovingSegmentLengthEpsilon)
+            {
+                dirX = dx / len;
+                dirZ = dz / len;
+                halfLen = 0.5f * len;
+            }
+
+            m_movingSegments[m_nmovingSegments++] = new DtObstacleMovingSegment
+            {
+                p0x = p0x,
+                p0z = p0z,
+                p1x = p1x,
+                p1z = p1z,
+                velX = velX,
+                velZ = velZ,
+                midX = 0.5f * p0x + 0.5f * p1x,
+                midZ = 0.5f * p0z + 0.5f * p1z,
+                dirX = dirX,
+                dirZ = dirZ,
+                halfLen = halfLen,
+                rad = rad,
+                weight = weight,
+            };
         }
 
         /// A circle at <paramref name="rel"/> from the agent (x, z) of the agent's and the
@@ -178,6 +224,85 @@ namespace DotRecast.Detour.Crowd
                     tmin = MathF.Min(t, tmin);
             }
 
+            for (int i = 0; i < m_nmovingSegments; ++i)
+            {
+                ref readonly DtObstacleMovingSegment seg = ref m_movingSegments[i];
+                float w = seg.weight;
+                float vx = vcand.X - ((1f - w) * vel.X + w * seg.velX);
+                float vz = vcand.Z - ((1f - w) * vel.Z + w * seg.velZ);
+
+                float tEnter, tExit;
+                if (seg.halfLen < MovingSegmentLengthEpsilon)
+                {
+                    float a = vx * vx + vz * vz;
+                    if (a < 1e-4f)
+                        continue;
+
+                    float b = vx * seg.midX + vz * seg.midZ;
+                    float c = seg.midX * seg.midX + seg.midZ * seg.midZ - seg.rad * seg.rad;
+                    float d = b * b - c * a;
+                    if (d < 0f)
+                        continue;
+
+                    float inva = 1f / a;
+                    float rd = MathF.Sqrt(d);
+                    tEnter = (b - rd) * inva;
+                    tExit = (b + rd) * inva;
+                }
+                else
+                {
+                    bool hit = false;
+                    tEnter = -float.MaxValue;
+                    tExit = float.MaxValue;
+
+                    float denom0 = vx * seg.dirX + vz * seg.dirZ;
+                    if (MathF.Abs(denom0) > MovingSegmentLengthEpsilon)
+                    {
+                        float originProj0 = -(seg.midX * seg.dirX + seg.midZ * seg.dirZ);
+                        float inv = 1f / denom0;
+                        float t0 = -(originProj0 + seg.halfLen) * inv;
+                        float t1 = -(originProj0 - seg.halfLen) * inv;
+                        float sMin = inv > 0f ? t0 : t1;
+                        float sMax = inv > 0f ? t1 : t0;
+                        if (sMin > tEnter) tEnter = sMin;
+                        if (sMax < tExit) tExit = sMax;
+                        hit = true;
+                    }
+
+                    float perpX = -seg.dirZ, perpZ = seg.dirX;
+                    float denom1 = vx * perpX + vz * perpZ;
+                    if (MathF.Abs(denom1) > MovingSegmentLengthEpsilon)
+                    {
+                        float originProj1 = -(seg.midX * perpX + seg.midZ * perpZ);
+                        float inv = 1f / denom1;
+                        float t0 = -(originProj1 + seg.rad) * inv;
+                        float t1 = -(originProj1 - seg.rad) * inv;
+                        float sMin = inv > 0f ? t0 : t1;
+                        float sMax = inv > 0f ? t1 : t0;
+                        if (sMin > tEnter) tEnter = sMin;
+                        if (sMax < tExit) tExit = sMax;
+                        hit = true;
+                    }
+
+                    if (!hit || tEnter > tExit)
+                        continue;
+                }
+
+                if (tEnter < 0f && tExit > 0f)
+                    tEnter = tEnter * -2f / tExit;
+
+                float dx = seg.p1x - seg.p0x;
+                float dz = seg.p1z - seg.p0z;
+                float lenSq = dx * dx + dz * dz;
+                float s = 0f;
+                if (lenSq != 0f)
+                    s = Math.Clamp(((vx * tEnter - seg.p0x) * dx + (vz * tEnter - seg.p0z) * dz) / lenSq, 0f, 1f);
+                float u = 1f - 2f * s;
+                float t = tEnter * (0.5f + 0.5f * u * u);
+                if (t >= 0f && t < tmin)
+                    tmin = t;
+            }
+
             for (int i = 0; i < m_nsegments; ++i)
             {
                 DtObstacleSegment seg = m_segments[i];
@@ -217,7 +342,7 @@ namespace DotRecast.Detour.Crowd
             DtObstacleAvoidanceParams option, DtObstacleAvoidanceDebugData debug)
         {
             debug?.Reset();
-            if (option.horizTime < MinVelocity || (m_ncircles == 0 && m_nsegments == 0))
+            if (option.horizTime < MinVelocity || (m_ncircles == 0 && m_nsegments == 0 && m_nmovingSegments == 0))
             {
                 nvel = dvel;
                 return 0;

@@ -142,7 +142,10 @@ namespace DotRecast.Detour.Crowd
             _config = config;
             _agentPlacementHalfExtents = new RcVec3f(config.maxAgentRadius * 2.0f, config.maxAgentRadius * 1.5f, config.maxAgentRadius * 2.0f);
 
-            _obstacleQuery = new DtObstacleAvoidanceQuery(config.maxObstacleAvoidanceCircles, config.maxObstacleAvoidanceSegments);
+            _obstacleQuery = new DtObstacleAvoidanceQuery(
+                config.maxObstacleAvoidanceCircles,
+                config.maxObstacleAvoidanceSegments,
+                config.maxObstacleAvoidanceMovingSegments);
 
             _filters = new IDtQueryFilter[DtCrowdConst.DT_CROWD_MAX_QUERY_FILTER_TYPE];
             for (int i = 0; i < DtCrowdConst.DT_CROWD_MAX_QUERY_FILTER_TYPE; i++)
@@ -1125,8 +1128,8 @@ namespace DotRecast.Detour.Crowd
                     continue;
                 }
 
-                bool capsuleObstacle = ag.option.capsuleObstacle;
-                if (!capsuleObstacle && !HeightsOverlap(skip, ag.npos, ag.option.height))
+                bool shapeObstacle = ag.option.capsuleObstacle || ag.option.boxObstacle;
+                if (!shapeObstacle && !HeightsOverlap(skip, ag.npos, ag.option.height))
                 {
                     continue;
                 }
@@ -1134,10 +1137,10 @@ namespace DotRecast.Detour.Crowd
                 // In 3D, as Unity's agents measure (a neighbour above or below is farther).
                 RcVec3f diff = RcVec3f.Subtract(ag.npos, pos);
                 float radius = ag.option.radius;
-                if (capsuleObstacle)
+                if (shapeObstacle)
                 {
                     // Obstacle admission ranks the center with the horizontal bounds' half-diagonal.
-                    // The clipped capsule section is tested during avoidance and contact.
+                    // The clipped capsule or box section is tested during avoidance and contact.
                     HorizontalExtents(ag, out float ex, out float ez);
                     radius = MathF.Sqrt(ex * ex + ez * ez);
                 }
@@ -1148,9 +1151,9 @@ namespace DotRecast.Detour.Crowd
                 }
 
                 // Both at full speed (an agent standing with both speeds zero: at once if touching).
-                float gap = capsuleObstacle ? diff.Length() - radius - skip.option.radius : diff.Length() - radii;
+                float gap = shapeObstacle ? diff.Length() - radius - skip.option.radius : diff.Length() - radii;
                 float closing = skip.option.reachSpeed + ag.vel.Length();
-                float time = closing > 0f || (capsuleObstacle && gap < 0f)
+                float time = closing > 0f || (shapeObstacle && gap < 0f)
                     ? gap / closing : gap <= 0f ? 0f : float.PositiveInfinity;
                 if (time > horizon)
                 {
@@ -1418,8 +1421,234 @@ namespace DotRecast.Detour.Crowd
                 ez = MathF.Abs(ag.option.capsuleAxis.Z) * ag.option.capsuleHalfShaft + r;
                 return;
             }
+            if (ag.option.boxObstacle)
+            {
+                RcVec3f h = ag.option.boxHalfExtents;
+                RcVec3f ux = ag.option.boxAxisX;
+                RcVec3f uy = ag.option.boxAxisY;
+                RcVec3f uz = ag.option.boxAxisZ;
+                ex = MathF.Abs(ux.X) * h.X + MathF.Abs(uy.X) * h.Y + MathF.Abs(uz.X) * h.Z;
+                ez = MathF.Abs(ux.Z) * h.X + MathF.Abs(uy.Z) * h.Y + MathF.Abs(uz.Z) * h.Z;
+                return;
+            }
             ex = r;
             ez = r;
+        }
+
+        // The twelve edges of an oriented box indexed by corner bits (bit 0 = X, bit 1 = Y, bit 2 = Z).
+        static readonly int[] BoxEdgeStart = { 0, 1, 3, 2, 4, 5, 7, 6, 0, 1, 2, 3 };
+        static readonly int[] BoxEdgeEnd = { 1, 3, 2, 0, 5, 7, 6, 4, 4, 5, 6, 7 };
+
+        /// <summary>Clips an oriented box obstacle against the agent's vertical span (0, ag.height)
+        /// in horizontal coordinates relative to the agent and returns its clockwise 2D convex hull
+        /// (at least 3 vertices, or 0 if no polygon survives). Matches Unity 6000.0.71f1
+        /// (tests/projects/navpath obstacle-shapes).</summary>
+        internal static int ClipBoxHull(DtCrowdAgent ag, DtCrowdAgent box, Span<float> hullX, Span<float> hullZ)
+        {
+            float rx = box.npos.X - ag.npos.X;
+            float ry = box.npos.Y - ag.npos.Y;
+            float rz = box.npos.Z - ag.npos.Z;
+            float maxY = ag.option.height;
+            RcVec3f h = box.option.boxHalfExtents;
+            RcVec3f ux = box.option.boxAxisX;
+            RcVec3f uy = box.option.boxAxisY;
+            RcVec3f uz = box.option.boxAxisZ;
+
+            if (!float.IsFinite(rx) || !float.IsFinite(ry) || !float.IsFinite(rz) || !float.IsFinite(maxY)
+                || !float.IsFinite(h.X) || !float.IsFinite(h.Y) || !float.IsFinite(h.Z)
+                || !float.IsFinite(ux.X) || !float.IsFinite(ux.Y) || !float.IsFinite(ux.Z)
+                || !float.IsFinite(uy.X) || !float.IsFinite(uy.Y) || !float.IsFinite(uy.Z)
+                || !float.IsFinite(uz.X) || !float.IsFinite(uz.Y) || !float.IsFinite(uz.Z))
+                return 0;
+
+            Span<float> cx = stackalloc float[8];
+            Span<float> cy = stackalloc float[8];
+            Span<float> cz = stackalloc float[8];
+            for (int i = 0; i < 8; i++)
+            {
+                float sx = (i & 1) != 0 ? h.X : -h.X;
+                float sy = (i & 2) != 0 ? h.Y : -h.Y;
+                float sz = (i & 4) != 0 ? h.Z : -h.Z;
+                cx[i] = rx + sx * ux.X + sy * uy.X + sz * uz.X;
+                cy[i] = ry + sx * ux.Y + sy * uy.Y + sz * uz.Y;
+                cz[i] = rz + sx * ux.Z + sy * uy.Z + sz * uz.Z;
+            }
+
+            Span<float> px = stackalloc float[32];
+            Span<float> pz = stackalloc float[32];
+            int npts = 0;
+
+            for (int i = 0; i < 8; i++)
+            {
+                if (cy[i] > 0f && cy[i] < maxY)
+                {
+                    px[npts] = cx[i];
+                    pz[npts] = cz[i];
+                    npts++;
+                }
+            }
+
+            for (int e = 0; e < 12; e++)
+            {
+                int i0 = BoxEdgeStart[e];
+                int i1 = BoxEdgeEnd[e];
+                int lo, hi;
+                if (cy[i0] > cy[i1]) { hi = i0; lo = i1; }
+                else { hi = i1; lo = i0; }
+
+                float yLo = cy[lo], yHi = cy[hi];
+                float dy = yHi - yLo;
+                if (yHi > maxY && yLo < maxY)
+                {
+                    float t = (maxY - yLo) / dy;
+                    float omt = 1f - t;
+                    px[npts] = cx[hi] * t + cx[lo] * omt;
+                    pz[npts] = cz[hi] * t + cz[lo] * omt;
+                    npts++;
+                }
+                if (yHi > 0f && yLo < 0f)
+                {
+                    float t = (0f - yLo) / dy;
+                    float omt = 1f - t;
+                    px[npts] = cx[hi] * t + cx[lo] * omt;
+                    pz[npts] = cz[hi] * t + cz[lo] * omt;
+                    npts++;
+                }
+            }
+
+            if (npts < 3)
+                return 0;
+
+            // Sort ascending by (x, z) for monotone chain convex hull.
+            for (int i = 1; i < npts; i++)
+            {
+                float vx = px[i], vz = pz[i];
+                int j = i - 1;
+                while (j >= 0 && (px[j] > vx || (px[j] == vx && pz[j] > vz)))
+                {
+                    px[j + 1] = px[j];
+                    pz[j + 1] = pz[j];
+                    j--;
+                }
+                px[j + 1] = vx;
+                pz[j + 1] = vz;
+            }
+
+            // Clockwise monotone chain in (x, z): keep turns where (A-O).z*(B-O).x - (A-O).x*(B-O).z > 0.
+            int m = 0;
+            for (int i = 0; i < npts; i++)
+            {
+                while (m >= 2)
+                {
+                    float oax = hullX[m - 1] - hullX[m - 2];
+                    float oaz = hullZ[m - 1] - hullZ[m - 2];
+                    float obx = px[i] - hullX[m - 2];
+                    float obz = pz[i] - hullZ[m - 2];
+                    if (oaz * obx - oax * obz > 0f)
+                        break;
+                    m--;
+                }
+                hullX[m] = px[i];
+                hullZ[m] = pz[i];
+                m++;
+            }
+
+            int upperStart = m + 1;
+            for (int i = npts - 2; i >= 0; i--)
+            {
+                while (m >= upperStart)
+                {
+                    float oax = hullX[m - 1] - hullX[m - 2];
+                    float oaz = hullZ[m - 1] - hullZ[m - 2];
+                    float obx = px[i] - hullX[m - 2];
+                    float obz = pz[i] - hullZ[m - 2];
+                    if (oaz * obx - oax * obz > 0f)
+                        break;
+                    m--;
+                }
+                hullX[m] = px[i];
+                hullZ[m] = pz[i];
+                m++;
+            }
+
+            m--;
+            return m >= 3 ? m : 0;
+        }
+
+        /// <summary>Tests whether an agent cylinder at the origin overlaps an oriented box obstacle's
+        /// clipped 2D convex hull, returning the closest hull edge point and penetration depth.
+        /// Matches Unity 6000.0.71f1 (tests/projects/navpath obstacle-shapes).</summary>
+        internal static bool TryOverlapBox(DtCrowdAgent ag, DtCrowdAgent box,
+            out float closestX, out float closestZ, out float pen)
+        {
+            closestX = closestZ = pen = 0f;
+            Span<float> hx = stackalloc float[32];
+            Span<float> hz = stackalloc float[32];
+            int n = ClipBoxHull(ag, box, hx, hz);
+            if (n < 3)
+                return false;
+
+            float sumX = 0f, sumZ = 0f;
+            for (int i = 0; i < n; i++)
+            {
+                sumX += hx[i];
+                sumZ += hz[i];
+            }
+            float invN = 1f / n;
+            float centX = sumX * invN;
+            float centZ = sumZ * invN;
+            // Agent is at the origin, so vector from hull centroid to agent is (-centX, -centZ).
+            float vx = -centX, vz = -centZ;
+
+            for (int prev = n - 1, curr = 0; curr < n; prev = curr++)
+            {
+                float ax = hx[prev], az = hz[prev];
+                float bx = hx[curr], bz = hz[curr];
+                float acx = ax - centX, acz = az - centZ;
+                if (acx * vz - acz * vx > 0f)
+                    continue;
+                float bcx = bx - centX, bcz = bz - centZ;
+                if (bcx * vz - bcz * vx < 0f)
+                    continue;
+
+                float abx = bx - ax, abz = bz - az;
+                float lenSq = abx * abx + abz * abz;
+                float cx, cz;
+                if (lenSq == 0f)
+                {
+                    cx = ax;
+                    cz = az;
+                }
+                else
+                {
+                    float t = (-ax * abx - az * abz) / lenSq;
+                    if (t <= 0f) { cx = ax; cz = az; }
+                    else if (t >= 1f) { cx = bx; cz = bz; }
+                    else { float omt = 1f - t; cx = ax * omt + bx * t; cz = az * omt + bz * t; }
+                }
+
+                float distSq = cx * cx + cz * cz;
+                // Clockwise hull: origin lies strictly inside when AB x (0 - A) < 0.
+                float side = abx * (-az) - (-ax) * abz;
+                float agentRadius = ag.option.radius;
+                if (side < 0f)
+                {
+                    closestX = cx;
+                    closestZ = cz;
+                    pen = MathF.Sqrt(distSq) + agentRadius;
+                    return true;
+                }
+                if (distSq < agentRadius * agentRadius)
+                {
+                    closestX = cx;
+                    closestZ = cz;
+                    pen = agentRadius - MathF.Sqrt(distSq);
+                    return true;
+                }
+                return false;
+            }
+
+            return false;
         }
 
         /// <summary>Clips a capsule obstacle against the agent's vertical span [0, ag.height] in
@@ -1589,18 +1818,27 @@ namespace DotRecast.Detour.Crowd
                 for (int j = 0; j < ag.nneis; ++j)
                 {
                     DtCrowdAgent nei = ag.neis[j].agent;
-                    float radius = nei.option.radius;
-                    RcVec3f rel;
+                    float share = AvoidanceShare(ag, nei);
                     if (nei.option.capsuleObstacle)
                     {
-                        if (!TryProjectCapsule(ag, nei, out float relX, out float relZ, out radius, out _)) continue;
-                        rel = new RcVec3f(relX, 0f, relZ);
+                        int count = ClipCapsule(ag, nei, out float p0x, out float p0z, out float p1x, out float p1z, out float capRadius);
+                        if (count == 0) continue;
+                        float combined = capRadius + ag.option.radius;
+                        _obstacleQuery.AddCircle(new RcVec3f(p0x, 0f, p0z), combined, nei.vel, share);
+                        if (count == 2)
+                        {
+                            _obstacleQuery.AddCircle(new RcVec3f(p1x, 0f, p1z), combined, nei.vel, share);
+                            _obstacleQuery.AddMovingSegment(p0x, p0z, p1x, p1z, nei.vel.X, nei.vel.Z, combined, share);
+                        }
+                        continue;
                     }
-                    else
+                    if (nei.option.boxObstacle)
                     {
-                        rel = RcVec3f.Subtract(nei.npos, ag.npos);
+                        AddBoxAvoidance(ag, nei, share);
+                        continue;
                     }
-                    _obstacleQuery.AddCircle(rel, radius + ag.option.radius, nei.vel, AvoidanceShare(ag, nei));
+                    RcVec3f rel = RcVec3f.Subtract(nei.npos, ag.npos);
+                    _obstacleQuery.AddCircle(rel, nei.option.radius + ag.option.radius, nei.vel, share);
                 }
 
                 // Append the NavMesh's edges as obstacles.
@@ -1613,6 +1851,65 @@ namespace DotRecast.Detour.Crowd
                 DtObstacleAvoidanceDebugData vod = debugAgent == ag ? debug.vod : null;
                 DtObstacleAvoidanceParams option = _obstacleQueryParams[ag.option.obstacleAvoidanceType];
                 _velocitySampleCount += _obstacleQuery.SampleVelocityAdaptive(ag.desiredSpeed, ag.vel, ag.dvel, out ag.nvel, option, vod);
+            }
+        }
+
+        /// <summary>Adds the facing and touching edges of an oriented box's clipped hull as padded
+        /// moving segments and their adjacent vertices as circles to the avoidance query.</summary>
+        private void AddBoxAvoidance(DtCrowdAgent ag, DtCrowdAgent box, float share)
+        {
+            Span<float> hx = stackalloc float[32];
+            Span<float> hz = stackalloc float[32];
+            int n = ClipBoxHull(ag, box, hx, hz);
+            if (n < 3)
+                return;
+
+            float agentRadius = ag.option.radius;
+            float touchSq = DtObstacleAvoidanceQuery.SegmentTouchDistance * DtObstacleAvoidanceQuery.SegmentTouchDistance;
+            Span<bool> active = stackalloc bool[32];
+            for (int prev = n - 1, curr = 0; curr < n; prev = curr++)
+            {
+                float ax = hx[prev], az = hz[prev];
+                float bx = hx[curr], bz = hz[curr];
+                float ex = bx - ax, ez = bz - az;
+                bool facing = ex * az - ez * ax <= 0f;
+
+                float len = MathF.Sqrt(ex * ex + ez * ez);
+                float nx = 0f, nz = 0f;
+                if (len > 0f)
+                {
+                    nx = -ez / len;
+                    nz = ex / len;
+                }
+                float e0x = ax + nx * agentRadius;
+                float e0z = az + nz * agentRadius;
+                float e1x = bx + nx * agentRadius;
+                float e1z = bz + nz * agentRadius;
+                float edx = e1x - e0x, edz = e1z - e0z;
+                float eLenSq = edx * edx + edz * edz;
+                float distSq;
+                if (eLenSq == 0f)
+                {
+                    distSq = e0x * e0x + e0z * e0z;
+                }
+                else
+                {
+                    float t = Math.Clamp((-e0x * edx - e0z * edz) / eLenSq, 0f, 1f);
+                    float dx = t * edx + e0x;
+                    float dz = t * edz + e0z;
+                    distSq = dx * dx + dz * dz;
+                }
+
+                active[prev] = facing || distSq < touchSq;
+            }
+
+            for (int prev = n - 1, curr = 0; curr < n; prev = curr++)
+            {
+                if (active[prev])
+                    _obstacleQuery.AddMovingSegment(hx[prev], hz[prev], hx[curr], hz[curr],
+                        box.vel.X, box.vel.Z, agentRadius, share);
+                if (active[prev] || active[curr])
+                    _obstacleQuery.AddCircle(new RcVec3f(hx[curr], 0f, hz[curr]), agentRadius, box.vel, share);
             }
         }
 
@@ -1689,6 +1986,19 @@ namespace DotRecast.Detour.Crowd
                         // equals half each (Unity's; measured).
                         if (nei.option.avoidancePriority > ag.option.avoidancePriority)
                         {
+                            continue;
+                        }
+
+                        if (nei.option.boxObstacle)
+                        {
+                            if (!TryOverlapBox(ag, nei, out float cx, out float cz, out float boxPen) || boxPen <= 0f)
+                                continue;
+                            float cLen = MathF.Sqrt(cx * cx + cz * cz);
+                            var boxDir = cLen > CapsuleSurfaceNormalEpsilon
+                                ? new RcVec3f(-cx / cLen, 0f, -cz / cLen)
+                                : new RcVec3f(1f, 0f, 0f);
+                            ag.disp = RcVec.Mad(ag.disp, boxDir, boxPen * _config.collisionResolveFactor);
+                            w += 1f;
                             continue;
                         }
 

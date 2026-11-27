@@ -48,6 +48,14 @@ namespace DotRecast.Detour.Crowd
         public RcVec3f capsuleAxis;
         public float capsuleHalfShaft;
 
+        /// Uses the measured obstacle rules for an oriented box: boxHalfExtents are the scaled
+        /// half-sizes along its orthonormal rotation axes (boxAxisX, boxAxisY, boxAxisZ).
+        public bool boxObstacle;
+        public RcVec3f boxHalfExtents;
+        public RcVec3f boxAxisX;
+        public RcVec3f boxAxisY;
+        public RcVec3f boxAxisZ;
+
         /// the agent path.
         /// Flags that impact steering behavior. (See: #UpdateFlags)
         public int updateFlags;

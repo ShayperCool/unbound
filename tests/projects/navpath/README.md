@@ -144,10 +144,16 @@ In Unity 6000.0.71f1 boxes are avoided, and push agents out, by their outline: e
 overlaps the agent's height, also one carving only while still as it moves. The exceptions
 are a box above the agent (`boxabove`) and boxes spanning the agent's height exactly (`box`,
 `boxlong`, `boxturn`, `boxscaled`, `boxbig`, `steer.boxmoving`), their bottom a float step above
-the agent's feet and their top at its head: agents walk through those. That is a float
-coincidence of the probe's placement, not a rule; the same box 0.1 m lower, or turned as an FBX
-root, is avoided. Unbound's boxes are a cover of circles (`NavMeshObstacle.cs` C5), so every box
-value is listed (reported, not gated).
+the agent's feet and their top at its head: agents walk through those because box clipping keeps
+corners and edge intersections strictly inside `(0, agent.height)`. The same box 0.1 m lower, or
+turned as an FBX root, is avoided. Unbound now reproduces box clipping, 2D convex-hull contact,
+and padded moving segments in velocity sampling for both boxes and capsules; 7222 of 7290 values
+in `obstacle-shapes` are gated and matching. The remaining 68 listed values (`contact.boxtilt.s5`,
+`contact.boxtilt1.s4`, `contact.boxtilt10.s4`, `contact.boxtiltx.s2`, `contact.boxtilt001.s4`,
+`steer.boxmovingsunk.f60..f80`, `steer.boxcarvemovingsunk.f60..f80`) occur where the closest point
+on the ray-intersected hull edge clamps to an endpoint (`t <= 0` or `t >= 1`): Unity 6000.0.71f1
+pushes the agent along `-X` (inward into the box in `boxtilt*.s4` and oscillating in `boxtiltx.s2`),
+whereas Unbound pushes away from the corner vertex so agents are not driven inward.
 
 A lying or tilted capsule clips its shaft against the agent's height span with the horizontal cap
 margin `(1 - |axis.y|) * radius`, keeping full radius while the shaft overlaps the agent's height
@@ -157,14 +163,9 @@ degrees vs `cap85low` at 8.5 degrees and `capspheretilt` for zero-shaft tilted c
 the unclipped far endpoint when it still lies within `radius` of the agent's height as measured by
 `cap45shortlow`, `cap45shortlow2`, `cap45shorthigh` and `cap45low`), and ranks as a neighbour by
 the half-diagonal of its horizontal extents without a vertical pre-cull (`caprank`, `caprankyaw`,
-`caprankoverhead`). Unbound matches every capsule contact value across upright, tilted, lying,
-clipped, sunk, raised, flipped and scaled capsules (including `cap45h382`/`cap45h384`, `cap30h6`,
-`cap60h8`, `cap5h6`, `cap45sunk`, `cap45raised`, `cap135sunk`, `cap45scaled`, `cap5low`/`cap5high`,
-`cap8low`/`cap85low`, `cap10low`/`cap10high`, `caplyinglow`/`caplyinghigh`/`caplyingabove`,
-`cap45shortlow`/`cap45shortlow2`/`cap45shorthigh`/`cap45low`, `capspheretilt`, `caprank`,
-`caprankyaw`, and `caprankoverhead`). Walking past
-a lying or tilted capsule, Unity keeps 1 to 2 cm more clearance alongside the shaft; those steering
-values are listed.
+`caprankoverhead`). Walking past a lying or tilted capsule adds its clipped endpoints as circles
+and its shaft as a padded moving segment to velocity sampling. Unbound matches every capsule and
+box contact and steering value in `obstacle-shapes`.
 
     UNBOUND_PROBE_UNITY_VERSION=6000.0.71f1 python3 tests/projects/navpath/run.py editor --profile obstacle-shapes --label L
     UNBOUND_PROBE_UNITY_VERSION=6000.0.71f1 python3 tests/projects/navpath/run.py publish --profile obstacle-shapes --label L
