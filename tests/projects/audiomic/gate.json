@@ -1,0 +1,15 @@
+{
+  "commands": [
+    "python3 tests/projects/audiomic/run.py gate"
+  ],
+  "summary": "audiomic: [0-9]+/[0-9]+ values match.*",
+  "engine_paths": [
+    "crates/unbound-runtime/src/audio/",
+    "crates/unbound-runtime/src/native_api.rs",
+    "crates/unbound-runtime/src/state.rs",
+    "managed/UnityEngine/Audio/",
+    "managed/UnityEngine/Platform/Handheld.cs",
+    "tests/projects/audiomic/",
+    "tests/projects/video/"
+  ]
+}
