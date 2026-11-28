@@ -10,8 +10,8 @@ endpoints and a short nonzero segment. The distance calculation also runs on a w
 drawing and picking are separate work.
 
 ```sh
-python3 tests/projects/handlesstate/run.py record handles-native-a
-python3 tests/projects/handlesstate/run.py record handles-native-b
+python3 tests/projects/handlesstate/run.py record --label handles-native-a
+python3 tests/projects/handlesstate/run.py record --label handles-native-b
 python3 tests/projects/handlesstate/run.py publish handles-native-a handles-native-b
-UNBOUND=/path/to/unbound python3 tests/projects/handlesstate/run.py gate handles-engine
+UNBOUND=/path/to/unbound python3 tests/projects/handlesstate/run.py gate --label handles-engine
 ```
