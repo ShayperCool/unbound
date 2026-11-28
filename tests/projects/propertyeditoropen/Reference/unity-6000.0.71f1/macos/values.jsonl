@@ -18,4 +18,8 @@
 {"k":"open.focusEventAndPanel","v":"keepsFocusDuringEvent=True|panels=2"}
 {"k":"open.closeFocus","v":"closed=True|focusKept=True|events=1"}
 {"k":"open.focusThrowingSubscriber","v":"EX:FormatException|newWindows=1"}
+{"k":"open.firstWindowPosition","v":"(0.00, 26.00)"}
+{"k":"open.movedPriorWindow","v":"original=(0.00, 26.00)|moved=(0.00, 26.00)|next=(0.00, 26.00)"}
+{"k":"open.priorWindowFocus","v":"before=none|afterOpen=none|openEvents=none|afterClose=none|closeEvents=none|lostFocus=0"}
+{"k":"open.closeAfterFocusChanged","v":"hadFocus=False|focusedAfter=False|events=1"}
 {"k":"complete","v":true}

@@ -24,11 +24,15 @@ def main():
         parser.error('labels must be single directory names')
     profile = 'macos' if sys.platform == 'darwin' else None
     if args.mode == 'record':
-        value_probe.record(PROBE, 'ImguiSkinRunner.Record', VARIABLE, args.label, batch=True, base=BASE, macos_batch=profile == 'macos')
+        editor_env = (lambda out: value_probe.private_editor_home(out, {})) if profile is None else None
+        value_probe.record(PROBE, 'ImguiSkinRunner.Record', VARIABLE, args.label, batch=True, base=BASE,
+                           macos_batch=profile == 'macos', editor_env=editor_env)
         return 0
     if args.mode == 'publish':
         return value_probe.publish(PROBE, args.labels, profile=profile)
-    return value_probe.gate(PROBE, VARIABLE, args.label, 0, ['--headless', '120'], base=BASE, profile=profile)
+    residuals = 'residuals-macos.json' if profile == 'macos' else 'residuals.json'
+    return value_probe.gate(PROBE, VARIABLE, args.label, 0, ['--headless', '120'], base=BASE,
+                            profile=profile, residuals_file=residuals)
 
 
 if __name__ == '__main__':

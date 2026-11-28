@@ -1,0 +1,6 @@
+{
+  "Show and Focus on the ordinary window leave keyboard focus unset in the macOS batch Editor. Unbound's ordinary window model grants focus. With that prior model focus present, inspector opening and closing preserve it and report unmeasured macOS notifications.": [
+    "open.priorWindowFocus",
+    "open.closeAfterFocusChanged"
+  ]
+}

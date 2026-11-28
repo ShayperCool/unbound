@@ -31,6 +31,7 @@ static class PropertyEditorOpenProbe
         var second = new GameObject("Second target");
         var destroyed = new GameObject("Destroyed target");
         Object.DestroyImmediate(destroyed);
+        Vector2 initialPosition = default;
 
         void Capture(string key, Func<string> read)
         {
@@ -56,7 +57,9 @@ static class PropertyEditorOpenProbe
             Capture("open.first", () =>
             {
                 EditorUtility.OpenPropertyEditor(first);
-                return string.Join(",", Added().Select(window => window.titleContent.text));
+                var windows = Added();
+                if (windows.Length == 1) initialPosition = windows[0].position.position;
+                return string.Join(",", windows.Select(window => window.titleContent.text));
             });
             Capture("open.second", () =>
             {
@@ -182,6 +185,83 @@ static class PropertyEditorOpenProbe
                 {
                     EditorWindow.windowFocusChanged -= badFocus;
                 }
+
+                foreach (var window in Added()) window.Close();
+
+                EditorWindow OpenNew(Object target)
+                {
+                    var before = Added();
+                    EditorUtility.OpenPropertyEditor(target);
+                    return Added().Single(window => !before.Contains(window));
+                }
+
+                Capture("open.firstWindowPosition", () => initialPosition.ToString());
+                Capture("open.movedPriorWindow", () =>
+                {
+                    var previous = OpenNew(first);
+                    var original = previous.position;
+                    previous.position = new Rect(100, 200, original.width, original.height);
+                    var moved = previous.position;
+                    var next = OpenNew(second).position;
+                    return $"original={original.position}|moved={moved.position}|next={next.position}";
+                });
+                var priorWindow = ScriptableObject.CreateInstance<FocusedInspectorProbeWindow>();
+                try
+                {
+                    priorWindow.Show();
+                    priorWindow.Focus();
+                    Capture("open.priorWindowFocus", () =>
+                    {
+                        string Focused()
+                        {
+                            var focused = EditorWindow.focusedWindow;
+                            if (focused == null) return "none";
+                            return focused == priorWindow ? "prior" : "other";
+                        }
+
+                        var initialFocus = Focused();
+                        int lostBefore = priorWindow.LostFocus;
+                        var notifications = new List<string>();
+                        Action recordFocus = () => notifications.Add(Focused());
+                        EditorWindow.windowFocusChanged += recordFocus;
+                        try
+                        {
+                            var window = OpenNew(second);
+                            var afterOpen = Focused();
+                            var notifiedOnOpen = string.Join(",", notifications);
+                            notifications.Clear();
+                            window.Close();
+                            return $"before={initialFocus}|afterOpen={afterOpen}|openEvents={notifiedOnOpen}|afterClose={Focused()}|closeEvents={string.Join(",", notifications)}|lostFocus={priorWindow.LostFocus - lostBefore}";
+                        }
+                        finally
+                        {
+                            EditorWindow.windowFocusChanged -= recordFocus;
+                        }
+                    });
+
+                    Capture("open.closeAfterFocusChanged", () =>
+                    {
+                        var window = OpenNew(first);
+                        priorWindow.Focus();
+                        bool hadFocus = EditorWindow.focusedWindow == priorWindow;
+                        int events = 0;
+                        Action onClose = () => events++;
+                        EditorWindow.windowFocusChanged += onClose;
+                        try
+                        {
+                            window.Close();
+                            return $"hadFocus={hadFocus}|focusedAfter={EditorWindow.focusedWindow == priorWindow}|events={events}";
+                        }
+                        finally
+                        {
+                            EditorWindow.windowFocusChanged -= onClose;
+                        }
+                    });
+                }
+                finally
+                {
+                    priorWindow.Close();
+                }
             }
             finally
             {
@@ -210,6 +290,13 @@ static class PropertyEditorOpenProbe
         File.WriteAllLines(Path.Combine(directory, "values.jsonl"), output);
         EditorApplication.Exit(0);
     }
+}
+
+public sealed class FocusedInspectorProbeWindow : EditorWindow
+{
+    public int LostFocus { get; private set; }
+
+    void OnLostFocus() => LostFocus++;
 }
 
 [CustomEditor(typeof(FocusedInspectorFixture))]
