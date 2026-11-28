@@ -506,7 +506,9 @@ def recipes(release):
                               'GAMEPAD_PROBE_OUT': '{work}/out'}),
                     py('compare.py', ref('gamepad.jsonl'), '{work}/out/gamepad.jsonl'),
                     Step('driver', ['sg', 'input', '-c',
-                                    '"{python}" "{probe}/legacy_hats.py" check --label "{label}"'])]
+                                    '"$GAMEPAD_PYTHON" "$GAMEPAD_HAT_DRIVER" check --label "$GAMEPAD_RUN_LABEL"'],
+                         env={'GAMEPAD_PYTHON': '{python}', 'GAMEPAD_HAT_DRIVER': '{probe}/legacy_hats.py',
+                              'GAMEPAD_RUN_LABEL': '{label}'})]
     R['avoidance'] = []
     for config in sorted((PROJECTS/'avoidance/Configs').glob('*.txt')):
         scene = ['--scene', 'Assets/Scenes/Walls.unity'] if config.stem.startswith('walls-') else []

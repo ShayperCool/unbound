@@ -215,25 +215,26 @@ public class GamepadProbe : MonoBehaviour
         }
     }
 
-    static int ReadInitialHat()
+    int ReadInitialHat()
     {
-        const ulong EVIOCGABS = 0x80184540;
-        foreach (var input in Directory.GetDirectories("/sys/devices/virtual/input", "input*"))
+        // UI_GET_SYSNAME with a 256-byte buffer and EVIOCGABS with an input_absinfo.
+        const ulong UI_GET_SYSNAME = 0x8100552c, EVIOCGABS = 0x80184540;
+        var name = new byte[256];
+        if (ioctl(m_Fd, UI_GET_SYSNAME, name) < 0)
+            throw new InvalidOperationException("Cannot identify the probe joystick in sysfs.");
+        var sysname = Encoding.ASCII.GetString(name, 0, Array.IndexOf(name, (byte)0));
+        var input = Path.Combine("/sys/devices/virtual/input", sysname);
+        foreach (var evdev in Directory.GetDirectories(input, "event*"))
         {
-            if (!File.Exists(Path.Combine(input, "name")) ||
-                File.ReadAllText(Path.Combine(input, "name")).Trim() != "Logitech Dual Action") continue;
-            foreach (var evdev in Directory.GetDirectories(input, "event*"))
+            var fd = open(Path.Combine("/dev/input", Path.GetFileName(evdev)), 0x800);
+            if (fd < 0) continue;
+            try
             {
-                var fd = open(Path.Combine("/dev/input", Path.GetFileName(evdev)), 0x800);
-                if (fd < 0) continue;
-                try
-                {
-                    var info = new byte[24];
-                    if (ioctl(fd, EVIOCGABS + ABS_HAT0X, info) >= 0)
-                        return BitConverter.ToInt32(info, 0);
-                }
-                finally { close(fd); }
+                var info = new byte[24];
+                if (ioctl(fd, EVIOCGABS + ABS_HAT0X, info) >= 0)
+                    return BitConverter.ToInt32(info, 0);
             }
+            finally { close(fd); }
         }
         throw new InvalidOperationException("Cannot read the probe joystick's initial hat position.");
     }
