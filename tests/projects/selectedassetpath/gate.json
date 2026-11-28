@@ -1,0 +1,18 @@
+{
+  "commands": [
+    "python3 tests/projects/selectedassetpath/run.py gate"
+  ],
+  "engine_paths": [
+    "managed/UnityEngine/Editor/AssetDatabase.SelectionPath.cs",
+    "managed/UnityEngine/Editor/AssetDatabase.cs",
+    "managed/UnityEngine/Editor/AssetDatabaseFiles.cs",
+    "managed/UnityEngine/Editor/AssetPaths.cs",
+    "managed/UnityEngine/Editor/EditorState.cs",
+    "managed/UnityEngine/Editor/FileUtil.cs",
+    "managed/UnityEngine/Editor/ProjectWindowUtil.cs",
+    "managed/UnityEngine/Runtime/Compat.cs",
+    "tests/projects/analyticssession/ProjectSettings",
+    "tests/projects/imguiskin/Assets/Editor",
+    "tests/projects/imguiskin/Assets/Scenes"
+  ]
+}

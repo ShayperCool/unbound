@@ -1,0 +1,114 @@
+{"k":"none.selected","v":""}
+{"k":"none.collision","v":"Assets/Name 1.txt"}
+{"k":"none.noncollision","v":"Assets/Available.txt"}
+{"k":"root.selected","v":"Assets"}
+{"k":"root.collision","v":"Assets/Name 1.txt"}
+{"k":"root.noncollision","v":"Assets/Available.txt"}
+{"k":"folder.selected","v":"Assets/Selection"}
+{"k":"folder.collision","v":"Assets/Selection/Name 1.txt"}
+{"k":"folder.noncollision","v":"Assets/Selection/Available.txt"}
+{"k":"child.selected","v":"Assets/Selection/Child"}
+{"k":"child.collision","v":"Assets/Selection/Child/Name 1.txt"}
+{"k":"child.noncollision","v":"Assets/Selection/Child/Available.txt"}
+{"k":"asset.selected","v":"Assets/Selection/Child/Name.txt"}
+{"k":"asset.collision","v":"Assets/Selection/Child/Name 1.txt"}
+{"k":"asset.noncollision","v":"Assets/Selection/Child/Available.txt"}
+{"k":"scene.selected","v":""}
+{"k":"scene.collision","v":"Assets/Name 1.txt"}
+{"k":"scene.noncollision","v":"Assets/Available.txt"}
+{"k":"multi.selected","v":"Assets/Selection/Child"}
+{"k":"multi.result","v":"Assets/Selection/Child/Name 1.txt"}
+{"k":"name.null","v":""}
+{"k":"name.empty","v":""}
+{"k":"name.prefixed","v":"Assets/Selection/Assets_Name.txt"}
+{"k":"name.slash","v":"Assets/Selection/Child_Name.txt"}
+{"k":"name.backslash","v":"Assets/Selection/Child_Name.txt"}
+{"k":"name.reservedAscii","v":"Assets/Selection/a_b_c_d_e_f_g_h.txt"}
+{"k":"name.period","v":"Assets/Selection/Thing_"}
+{"k":"name.whitespace","v":"Assets/Selection/Name.txt_"}
+{"k":"name.onlyWhitespace","v":""}
+{"k":"name.tab","v":"Assets/Selection/A\tB.txt"}
+{"k":"name.newline","v":"Assets/Selection/A\nB.txt"}
+{"k":"name.dot","v":"Assets/Selection/_"}
+{"k":"name.dotDot","v":"Assets/Selection/__"}
+{"k":"name.absolute","v":"Assets/Selection/_private_Name.txt"}
+{"k":"name.prefix","v":"Assets/Selection/Name 1.txt"}
+{"k":"deleted.active","v":""}
+{"k":"deleted.result","v":"Assets/Name 1.txt"}
+{"k":"package.asset.selected","v":"Packages/com.unbound.selected-fixture/Contents/Payload.txt"}
+{"k":"package.asset.result","v":"Packages/com.unbound.selected-fixture/Contents/New.txt"}
+{"k":"package.folder.selected","v":"Packages/com.unbound.selected-fixture/Contents"}
+{"k":"package.folder.result","v":"Packages/com.unbound.selected-fixture/Contents/New.txt"}
+{"k":"builtinPackage.selected","v":"Packages/com.unity.modules.imgui"}
+{"k":"builtinPackage.result","v":"Packages/com.unity.modules.imgui/New.txt"}
+{"k":"name.leadingTab","v":"Assets/Selection/\tA.txt"}
+{"k":"name.trailingTab","v":"Assets/Selection/A.txt\t"}
+{"k":"name.leadingNbsp","v":"Assets/Selection/ A.txt"}
+{"k":"name.trailingNbsp","v":"Assets/Selection/A.txt "}
+{"k":"name.trailingDotsSpaces","v":"Assets/Selection/A.txt . _"}
+{"k":"name.dotPrefix","v":"Assets/Selection/_hidden"}
+{"k":"name.reservedWord","v":""}
+{"k":"name.control","v":"Assets/Selection/A\u0001B.txt"}
+{"k":"names.dotsPrefix","v":"Assets/Selection/_..a.txt"}
+{"k":"names.dotsSuffix","v":"Assets/Selection/A.txt.._"}
+{"k":"names.spacesSuffix","v":"Assets/Selection/A.txt  _"}
+{"k":"names.spacesPrefix","v":"Assets/Selection/A.txt"}
+{"k":"names.dotAfterLeadingSpaces","v":"Assets/Selection/_.A.txt"}
+{"k":"names.hiddenBoth","v":"Assets/Selection/_x_"}
+{"k":"names.spacesOnly","v":""}
+{"k":"names.spacesAndDots","v":"Assets/Selection/_ ._"}
+{"k":"names.nul","v":"Assets/Selection/A_B.txt"}
+{"k":"names.nulFirst","v":"Assets/Selection/_B.txt"}
+{"k":"names.nulLast","v":"Assets/Selection/A.txt_"}
+{"k":"names.reservedLower","v":""}
+{"k":"names.reservedWithSpace","v":"Assets/Selection/CON .txt"}
+{"k":"names.reservedNone","v":""}
+{"k":"names.reservedMultiExt","v":""}
+{"k":"names.reservedDigit","v":""}
+{"k":"names.reservedZero","v":""}
+{"k":"names.reservedTwoDigits","v":"Assets/Selection/COM10.txt"}
+{"k":"names.reservedUpper","v":""}
+{"k":"names.reservedSuperscript","v":"Assets/Selection/LPT².txt"}
+{"k":"names.reservedConsole","v":"Assets/Selection/CONOUT$.txt"}
+{"k":"names.caseCollision","v":"Assets/Selection/name 1.txt"}
+{"k":"names.numberedCollision","v":"Assets/Selection/Name 5.txt"}
+{"k":"names.tilde","v":"Assets/Selection/A.txt~"}
+{"k":"names.hiddenTmp","v":"Assets/Selection/A.tmp"}
+{"k":"names.noExtension","v":"Assets/Selection/Available"}
+{"k":"names.longName","v":"Assets/Selection/XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX.txt"}
+{"k":"names.numberedCollisionExternal","v":"Assets/Selection/Name 6.txt"}
+{"k":"names.metaOnlyExternal","v":"Assets/Selection/MetaOnly.txt"}
+{"k":"names.numberedCollisionListed","v":"Assets/Selection/Name 6.txt"}
+{"k":"suffix.First 0.txt","v":"Assets/Selection/First 1.txt"}
+{"k":"suffix.First 0005.txt","v":"Assets/Selection/First 0006.txt"}
+{"k":"suffix.First5.txt","v":"Assets/Selection/First5 1.txt"}
+{"k":"suffix.First-5.txt","v":"Assets/Selection/First-5 1.txt"}
+{"k":"suffix.First  5.txt","v":"Assets/Selection/First  6.txt"}
+{"k":"suffix.First 2147483647.txt","v":"Assets/Selection/First 2147483647 1.txt"}
+{"k":"suffix.First 9999999999999999999.txt","v":"Assets/Selection/First 9999999999999999999 1.txt"}
+{"k":"suffix.First\t5.txt","v":"Assets/Selection/First\t5 1.txt"}
+{"k":"suffix.First ７.txt","v":"Assets/Selection/First ７ 1.txt"}
+{"k":"suffix.First\n5.txt","v":"Assets/Selection/First\n5 1.txt"}
+{"k":"names.directoryCollision","v":"Assets/Selection/existing folder 1"}
+{"k":"names.numberedTwoCollisions","v":"Assets/Selection/Name 7.txt"}
+{"k":"names.resultUnreserved","v":"False"}
+{"k":"names.repeatUnreserved","v":"Assets/Selection/Available.txt"}
+{"k":"names.numberedLimitCollision","v":"Assets/Selection/First 2147483646 1.txt"}
+{"k":"validation.NUL","v":""}
+{"k":"validation.CLOCK$","v":"Assets/Selection/CLOCK$"}
+{"k":"validation.LPT0","v":""}
+{"k":"validation.lpt8 .txt","v":"Assets/Selection/lpt8 .txt"}
+{"k":"validation.PRN..txt","v":""}
+{"k":"validation.COM2 ","v":"Assets/Selection/COM2_"}
+{"k":"validation.NUL...","v":""}
+{"k":"validation..NUL","v":"Assets/Selection/_NUL"}
+{"k":"validation. A . ","v":"Assets/Selection/A ._"}
+{"k":"validation.a/b","v":"Assets/Selection/a_b"}
+{"k":"frame.logs","v":""}
+{"k":"frame.selected","v":"Assets/Selection"}
+{"k":"names.deletedSourceName","v":"Assets/Selection/Name.txt"}
+{"k":"folder.externallyRemoved.selected","v":"Assets/Selection/Child"}
+{"k":"folder.externallyRemoved.result","v":""}
+{"k":"folder.externallyRemoved.logs","v":""}
+{"k":"names.numberedLimitFree","v":"Assets/Selection/Second 2147483646 1.txt"}
+{"k":"complete","v":true}
