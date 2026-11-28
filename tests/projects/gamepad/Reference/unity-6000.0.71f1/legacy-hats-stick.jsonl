@@ -1,0 +1,9 @@
+{"frame":5,"case":"create","ok":true}
+{"frame":64,"case":"centered","axes":[0,0,0,0,0,0,0,0,0,0]}
+{"frame":73,"case":"right","axes":[1,0,0,0,1,0,0,0,0,0]}
+{"frame":82,"case":"upper-right","axes":[0,0,0,0,1,-1,0,0,0,0]}
+{"frame":91,"case":"lower-left","axes":[0,0,0,0,-1,1,0,0,0,0]}
+{"frame":100,"case":"second-lower-left","axes":[0,0,0,0,0,0,-1,1,0,0]}
+{"frame":109,"case":"second-upper-right","axes":[0,0,0,0,0,0,1,-1,0,0]}
+{"frame":138,"case":"unplugged","axes":[0,0,0,0,0,0,0,0,0,0]}
+{"frame":138,"case":"complete","ok":true}

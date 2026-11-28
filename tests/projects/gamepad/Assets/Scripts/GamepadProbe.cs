@@ -26,6 +26,7 @@ public class GamepadProbe : MonoBehaviour
     const int Create = 5, Destroy = 150, TouchStart = 155, TouchEnd = 180, End = 190;
 
     static readonly StringBuilder s_Out = new StringBuilder();
+    static readonly string s_HatProbe = Environment.GetEnvironmentVariable("GAMEPAD_LEGACY_HATS");
     int m_Frame;
     int m_Fd = -1;
     string m_LastDevices;
@@ -52,16 +53,18 @@ public class GamepadProbe : MonoBehaviour
     const int EV_SYN = 0, EV_KEY = 1, EV_ABS = 3;
     const int BTN_A = 0x130, BTN_B = 0x131, BTN_X = 0x133, BTN_Y = 0x134, BTN_TL = 0x136, BTN_TR = 0x137,
         BTN_SELECT = 0x13a, BTN_START = 0x13b, BTN_MODE = 0x13c, BTN_THUMBL = 0x13d, BTN_THUMBR = 0x13e;
-    const int ABS_X = 0, ABS_Y = 1, ABS_Z = 2, ABS_RX = 3, ABS_RY = 4, ABS_RZ = 5, ABS_HAT0X = 0x10, ABS_HAT0Y = 0x11;
+    const int ABS_X = 0, ABS_Y = 1, ABS_Z = 2, ABS_RX = 3, ABS_RY = 4, ABS_RZ = 5,
+        ABS_HAT0X = 0x10, ABS_HAT0Y = 0x11, ABS_HAT1X = 0x12, ABS_HAT1Y = 0x13;
 
     static readonly int[] s_Buttons = { BTN_A, BTN_B, BTN_X, BTN_Y, BTN_TL, BTN_TR, BTN_SELECT, BTN_START, BTN_MODE, BTN_THUMBL, BTN_THUMBR };
+    static readonly int[] s_StickButtons = { 0x120, 0x121, 0x122 };
 
-    bool CreatePad()
+    bool CreatePad(bool unmapped = false)
     {
         m_Fd = open("/dev/uinput", 0x801); // O_WRONLY | O_NONBLOCK
         if (m_Fd < 0) return false;
         ioctl(m_Fd, UI_SET_EVBIT, EV_KEY);
-        foreach (var b in s_Buttons) ioctl(m_Fd, UI_SET_KEYBIT, b);
+        foreach (var b in unmapped ? s_StickButtons : s_Buttons) ioctl(m_Fd, UI_SET_KEYBIT, b);
         ioctl(m_Fd, UI_SET_EVBIT, EV_ABS);
         void Abs(int code, int min, int max, int fuzz, int flat)
         {
@@ -76,16 +79,24 @@ public class GamepadProbe : MonoBehaviour
             ioctl(m_Fd, UI_ABS_SETUP, setup);
         }
         foreach (var a in new[] { ABS_X, ABS_Y, ABS_RX, ABS_RY }) Abs(a, -32768, 32767, 16, 128);
-        Abs(ABS_Z, 0, 255, 0, 0);
-        Abs(ABS_RZ, 0, 255, 0, 0);
+        if (!unmapped)
+        {
+            Abs(ABS_Z, 0, 255, 0, 0);
+            Abs(ABS_RZ, 0, 255, 0, 0);
+        }
         Abs(ABS_HAT0X, -1, 1, 0, 0);
         Abs(ABS_HAT0Y, -1, 1, 0, 0);
+        if (unmapped)
+        {
+            Abs(ABS_HAT1X, -1, 1, 0, 0);
+            Abs(ABS_HAT1Y, -1, 1, 0, 0);
+        }
         var dev = new byte[92];
         BitConverter.GetBytes((ushort)0x03).CopyTo(dev, 0);
-        BitConverter.GetBytes((ushort)0x045e).CopyTo(dev, 2);
-        BitConverter.GetBytes((ushort)0x028e).CopyTo(dev, 4);
+        BitConverter.GetBytes((ushort)(unmapped ? 0x1234 : 0x045e)).CopyTo(dev, 2);
+        BitConverter.GetBytes((ushort)(unmapped ? 0x5421 : 0x028e)).CopyTo(dev, 4);
         BitConverter.GetBytes((ushort)0x0110).CopyTo(dev, 6);
-        Encoding.ASCII.GetBytes("Microsoft X-Box 360 pad").CopyTo(dev, 8);
+        Encoding.ASCII.GetBytes(unmapped ? "Probe Flight Stick" : "Microsoft X-Box 360 pad").CopyTo(dev, 8);
         if (ioctl(m_Fd, UI_DEV_SETUP, dev) < 0) return false;
         return ioctl(m_Fd, UI_DEV_CREATE, 0) >= 0;
     }
@@ -104,6 +115,14 @@ public class GamepadProbe : MonoBehaviour
         if (m_Fd < 0) return;
         foreach (var e in events) Emit(e.Type, e.Code, e.Value);
         Emit(EV_SYN, 0, 0);
+    }
+
+    void DestroyPad()
+    {
+        if (m_Fd < 0) return;
+        ioctl(m_Fd, UI_DEV_DESTROY, 0);
+        close(m_Fd);
+        m_Fd = -1;
     }
 
     /// <summary>The steps, by frame.</summary>
@@ -139,14 +158,7 @@ public class GamepadProbe : MonoBehaviour
             case 167: Pointer(new Vector2(300, 100), true); break;
             case 168: Pointer(new Vector2(300, 100), false); break;
             case 172: TouchSimulation.Disable(); break;
-            case Destroy:
-                if (m_Fd >= 0)
-                {
-                    ioctl(m_Fd, UI_DEV_DESTROY, 0);
-                    close(m_Fd);
-                    m_Fd = -1;
-                }
-                break;
+            case Destroy: DestroyPad(); break;
         }
     }
 
@@ -166,12 +178,62 @@ public class GamepadProbe : MonoBehaviour
     static string Button(ButtonControl b) => b == null ? "null" : $"[{B(b.isPressed)},{B(b.wasPressedThisFrame)},{B(b.wasReleasedThisFrame)},{F(b.ReadValue())}]";
     static string Vec(Vector2Control c) => c == null ? "null" : $"[{F(c.ReadValue().x)},{F(c.ReadValue().y)}]";
 
+    void LegacyAxes(string phase)
+    {
+        var axes = Enumerable.Range(0, 10).Select(i => F(Input.GetAxisRaw("ProbeAxis" + i)));
+        Record(phase, $"\"axes\":[{string.Join(",", axes)}]");
+    }
+
+    void LegacyHatStep()
+    {
+        switch (m_Frame)
+        {
+            case Create: Record("create", $"\"ok\":{B(CreatePad(s_HatProbe == "stick"))}"); break;
+            case 64: LegacyAxes("centered"); break;
+            case 65: Send((EV_ABS, ABS_X, 32767), (EV_ABS, ABS_HAT0X, 1)); break;
+            case 73: LegacyAxes("right"); break;
+            case 74: Send((EV_ABS, ABS_X, 0), (EV_ABS, ABS_HAT0Y, -1)); break;
+            case 82: LegacyAxes("upper-right"); break;
+            case 83: Send((EV_ABS, ABS_HAT0X, -1), (EV_ABS, ABS_HAT0Y, 1)); break;
+            case 91: LegacyAxes("lower-left"); break;
+            case 92:
+                Send((EV_ABS, ABS_HAT0X, 0), (EV_ABS, ABS_HAT0Y, 0), (EV_ABS, ABS_HAT1X, -1), (EV_ABS, ABS_HAT1Y, 1));
+                break;
+            case 100: LegacyAxes("second-lower-left"); break;
+            case 101: Send((EV_ABS, ABS_HAT1X, 1), (EV_ABS, ABS_HAT1Y, -1)); break;
+            case 109: LegacyAxes("second-upper-right"); break;
+            case 110: DestroyPad(); break;
+            case 138:
+                LegacyAxes("unplugged");
+                Record("complete", "\"ok\":true");
+                Finish("legacy-hats.jsonl");
+                break;
+        }
+    }
+
+    static void Finish(string file)
+    {
+        var dir = Environment.GetEnvironmentVariable("GAMEPAD_PROBE_OUT");
+        Directory.CreateDirectory(dir);
+        File.WriteAllText(Path.Combine(dir, file), s_Out.ToString());
+#if UNITY_EDITOR
+        UnityEditor.EditorApplication.Exit(0);
+#else
+        Application.Quit();
+#endif
+    }
+
     void Update()
     {
         // Frames take at least 16 ms, so the pad's hotplug (udev, then SDL) lands on the same
         // frames however fast the frames run.
         System.Threading.Thread.Sleep(16);
         m_Frame++;
+        if (s_HatProbe != null)
+        {
+            LegacyHatStep();
+            return;
+        }
         Step(m_Frame);
         var devices = string.Join(",", InputSystem.devices.Select(d =>
             $"{{\"name\":{J(d.name)},\"layout\":{J(d.layout)},\"type\":{J(d.GetType().FullName)},\"interface\":{J(d.description.interfaceName)},\"product\":{J(d.description.product)}," +
@@ -215,25 +277,8 @@ public class GamepadProbe : MonoBehaviour
         string Btn(string button) { try { return B(Input.GetButton(button)); } catch (Exception e) { return J(e.GetType().Name); } }
         Record("legacy", $"\"names\":[{string.Join(",", names.Select(J))}],\"keys\":[{string.Join(",", keys)}],\"downs\":[{string.Join(",", downs)}],\"joy1\":[{string.Join(",", joy1)}]," +
             $"\"horizontal\":{Axis("Horizontal")},\"vertical\":{Axis("Vertical")},\"fire1\":{Btn("Fire1")},\"jump\":{Btn("Jump")},\"submit\":{Btn("Submit")},\"cancel\":{Btn("Cancel")}");
-        if (m_Frame == End)
-        {
-            var dir = Environment.GetEnvironmentVariable("GAMEPAD_PROBE_OUT");
-            Directory.CreateDirectory(dir);
-            File.WriteAllText(Path.Combine(dir, "gamepad.jsonl"), s_Out.ToString());
-#if UNITY_EDITOR
-            UnityEditor.EditorApplication.Exit(0);
-#else
-            Application.Quit();
-#endif
-        }
+        if (m_Frame == End) Finish("gamepad.jsonl");
     }
 
-    void OnDestroy()
-    {
-        if (m_Fd >= 0)
-        {
-            ioctl(m_Fd, UI_DEV_DESTROY, 0);
-            close(m_Fd);
-        }
-    }
+    void OnDestroy() => DestroyPad();
 }
