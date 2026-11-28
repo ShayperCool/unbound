@@ -29,6 +29,8 @@ public class GamepadProbe : MonoBehaviour
     static readonly string s_HatProbe = Environment.GetEnvironmentVariable("GAMEPAD_LEGACY_HATS");
     int m_Frame;
     int m_Fd = -1;
+    int m_PadFd = -1;
+    int m_StickFd = -1;
     string m_LastDevices;
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
@@ -55,6 +57,7 @@ public class GamepadProbe : MonoBehaviour
         BTN_SELECT = 0x13a, BTN_START = 0x13b, BTN_MODE = 0x13c, BTN_THUMBL = 0x13d, BTN_THUMBR = 0x13e;
     const int ABS_X = 0, ABS_Y = 1, ABS_Z = 2, ABS_RX = 3, ABS_RY = 4, ABS_RZ = 5,
         ABS_HAT0X = 0x10, ABS_HAT0Y = 0x11, ABS_HAT1X = 0x12, ABS_HAT1Y = 0x13;
+    const int ABS_THROTTLE = 6;
 
     static readonly int[] s_Buttons = { BTN_A, BTN_B, BTN_X, BTN_Y, BTN_TL, BTN_TR, BTN_SELECT, BTN_START, BTN_MODE, BTN_THUMBL, BTN_THUMBR };
     static readonly int[] s_StickButtons = { 0x120, 0x121, 0x122 };
@@ -83,6 +86,7 @@ public class GamepadProbe : MonoBehaviour
         {
             Abs(ABS_Z, 0, 255, 0, 0);
             Abs(ABS_RZ, 0, 255, 0, 0);
+            if (s_HatProbe == "mixed") Abs(ABS_THROTTLE, -32768, 32767, 0, 0);
         }
         Abs(ABS_HAT0X, -1, 1, 0, 0);
         Abs(ABS_HAT0Y, -1, 1, 0, 0);
@@ -211,6 +215,74 @@ public class GamepadProbe : MonoBehaviour
         }
     }
 
+    void MixedAxis(string phase)
+    {
+        var selectors = new[] { "ProbeAny", "ProbeAxis4", "ProbeSecond" };
+        var axes = selectors.Select(name => F(Input.GetAxisRaw(name)));
+        Record(phase, $"\"axes\":[{string.Join(",", axes)}]");
+    }
+
+    void MixedHatStep()
+    {
+        switch (m_Frame)
+        {
+            case Create:
+                Record("create", $"\"ok\":{B(CreatePad())}");
+                m_PadFd = m_Fd;
+                break;
+            case 40:
+                Record("create-stick", $"\"ok\":{B(CreatePad(unmapped: true))}");
+                m_StickFd = m_Fd;
+                break;
+            case 90:
+                m_Fd = m_PadFd;
+                Send((EV_ABS, ABS_Z, 96), (EV_ABS, ABS_RY, -20000), (EV_ABS, ABS_THROTTLE, 32767));
+                break;
+            case 98: Send((EV_ABS, ABS_Z, 128)); break;
+            case 105:
+                LegacyAxes("pad-analog");
+                MixedAxis("pad-only");
+                break;
+            case 106:
+                m_Fd = m_StickFd;
+                Send((EV_ABS, ABS_HAT0X, -1));
+                break;
+            case 113: MixedAxis("both-active"); break;
+            case 114:
+                m_Fd = m_PadFd;
+                Send((EV_ABS, ABS_HAT0X, -1));
+                break;
+            case 121: LegacyAxes("pad-left"); break;
+            case 122: Send((EV_ABS, ABS_HAT0Y, 1)); break;
+            case 129: LegacyAxes("pad-left-down"); break;
+            case 130: Send((EV_ABS, ABS_HAT0X, 1), (EV_ABS, ABS_HAT0Y, -1)); break;
+            case 137: LegacyAxes("pad-lower-left-to-upper-right"); break;
+            case 138: Send((EV_ABS, ABS_HAT0Y, 1)); break;
+            case 145: LegacyAxes("pad-y-only-reversal"); break;
+            case 146: Send((EV_ABS, ABS_HAT0X, -1), (EV_ABS, ABS_HAT0Y, -1)); break;
+            case 153: LegacyAxes("pad-lower-right-to-upper-left"); break;
+            case 154: Send((EV_ABS, ABS_HAT0X, 1), (EV_ABS, ABS_HAT0Y, 1)); break;
+            case 161: LegacyAxes("pad-upper-left-to-lower-right"); break;
+            case 162:
+                FinishMixedDevices();
+                break;
+            case 170:
+                LegacyAxes("unplugged");
+                Record("complete", "\"ok\":true");
+                Finish("legacy-hats.jsonl");
+                break;
+        }
+    }
+
+    void FinishMixedDevices()
+    {
+        m_Fd = m_PadFd;
+        DestroyPad();
+        m_Fd = m_StickFd;
+        DestroyPad();
+        m_PadFd = m_StickFd = -1;
+    }
+
     static void Finish(string file)
     {
         var dir = Environment.GetEnvironmentVariable("GAMEPAD_PROBE_OUT");
@@ -231,7 +303,8 @@ public class GamepadProbe : MonoBehaviour
         m_Frame++;
         if (s_HatProbe != null)
         {
-            LegacyHatStep();
+            if (s_HatProbe == "mixed") MixedHatStep();
+            else LegacyHatStep();
             return;
         }
         Step(m_Frame);
@@ -280,5 +353,9 @@ public class GamepadProbe : MonoBehaviour
         if (m_Frame == End) Finish("gamepad.jsonl");
     }
 
-    void OnDestroy() => DestroyPad();
+    void OnDestroy()
+    {
+        if (s_HatProbe == "mixed") FinishMixedDevices();
+        else DestroyPad();
+    }
 }

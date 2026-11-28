@@ -1,0 +1,10 @@
+{
+  "exclusive": true,
+  "engine_paths": [
+    "crates/unbound-runtime/src/gamepads.rs",
+    "managed/UnityEngine/Input/Gamepads.cs",
+    "managed/UnityEngine/Input/NativeInput.cs",
+    "managed/UnityEngine/Core/Input.cs",
+    "managed/UnityEngine/Runtime/Compat.cs"
+  ]
+}

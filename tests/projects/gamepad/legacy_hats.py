@@ -15,7 +15,7 @@ import value_probe
 
 RELEASE = "6000.0.71f1"
 REFERENCE = ROOT / "Reference" / f"unity-{RELEASE}"
-DEVICES = ("mapped", "stick")
+DEVICES = ("mapped", "stick", "mixed")
 
 
 def prepare(project):
@@ -24,8 +24,9 @@ def prepare(project):
     marker = "  m_UsePhysicalKeys:"
     if manager.count(marker) != 1:
         raise RuntimeError("cannot add axes to the fixture's Input Manager")
+    axes = [(f"ProbeAxis{axis}", axis, 1) for axis in range(10)] + [("ProbeAny", 4, 0), ("ProbeSecond", 4, 2)]
     rows = "".join(f"""  - serializedVersion: 3
-    m_Name: ProbeAxis{axis}
+    m_Name: {name}
     gravity: 0
     dead: 0
     sensitivity: 1
@@ -33,8 +34,8 @@ def prepare(project):
     invert: 0
     type: 2
     axis: {axis}
-    joyNum: 1
-""" for axis in range(10))
+    joyNum: {joystick}
+""" for name, axis, joystick in axes)
     path.write_text(manager.replace(marker, rows + marker))
 
 

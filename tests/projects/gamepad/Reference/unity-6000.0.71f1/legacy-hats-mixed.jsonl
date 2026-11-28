@@ -1,0 +1,13 @@
+{"frame":5,"case":"create","ok":true}
+{"frame":40,"case":"create-stick","ok":true}
+{"frame":105,"case":"pad-analog","axes":[0,0,0.5019379,0,-0.6103702,0,0,0,0,0]}
+{"frame":105,"case":"pad-only","axes":[-0.6103702,-0.6103702,0]}
+{"frame":113,"case":"both-active","axes":[-1,-0.6103702,-1]}
+{"frame":121,"case":"pad-left","axes":[0,0,0.5019379,0,-0.6103702,0,-1,0,0,0]}
+{"frame":129,"case":"pad-left-down","axes":[0,0,0.5019379,0,-0.6103702,0,-1,1,0,0]}
+{"frame":137,"case":"pad-lower-left-to-upper-right","axes":[0,0,0.5019379,0,-0.6103702,0,1,-1,0,0]}
+{"frame":145,"case":"pad-y-only-reversal","axes":[0,0,0.5019379,0,-0.6103702,0,1,0,0,0]}
+{"frame":153,"case":"pad-lower-right-to-upper-left","axes":[0,0,0.5019379,0,-0.6103702,0,0,-1,0,0]}
+{"frame":161,"case":"pad-upper-left-to-lower-right","axes":[0,0,0.5019379,0,-0.6103702,0,1,0,0,0]}
+{"frame":170,"case":"unplugged","axes":[0,0,0,0,0,0,0,0,0,0]}
+{"frame":170,"case":"complete","ok":true}
