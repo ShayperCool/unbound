@@ -59,7 +59,7 @@ public static class PreviewInitProbe
                 child.transform.SetParent(root.transform, false);
                 grandchild.transform.SetParent(child.transform, false);
                 grandchild.SetActive(false);
-                root.hideFlags = HideFlags.NotEditable;
+                root.hideFlags = HideFlags.NotEditable | HideFlags.HideInInspector;
                 child.hideFlags = HideFlags.DontUnloadUnusedAsset;
                 var rootRenderer = root.GetComponent<MeshRenderer>();
                 var childRenderer = child.GetComponent<MeshRenderer>();
@@ -115,6 +115,27 @@ public static class PreviewInitProbe
             }
             finally { UnityEngine.Object.DestroyImmediate(overridden); }
 
+            var temporaryOverride = ScriptableObject.CreateInstance<PreviewProbePipelineAsset>();
+            var fallbackRoot = new GameObject("Destroyed quality override", typeof(MeshRenderer));
+            try
+            {
+                GraphicsSettings.defaultRenderPipeline = pipeline;
+                QualitySettings.renderPipeline = temporaryOverride;
+                Add("quality.liveOverrideSelected", ReferenceEquals(GraphicsSettings.currentRenderPipeline, temporaryOverride));
+                UnityEngine.Object.DestroyImmediate(temporaryOverride);
+                Add("quality.destroyedOverrideIsNull", QualitySettings.renderPipeline == null);
+                Add("quality.defaultSelectedAfterDestroy", ReferenceEquals(GraphicsSettings.currentRenderPipeline, pipeline));
+                Add("quality.activeAfterDestroy", GraphicsSettings.isScriptableRenderPipelineEnabled);
+                var renderer = fallbackRoot.GetComponent<MeshRenderer>();
+                renderer.lightProbeUsage = LightProbeUsage.CustomProvided;
+                Add("quality.configureAfterDestroy", Invoke(Configure, fallbackRoot));
+                Add("quality.usageAfterDestroy", renderer.lightProbeUsage);
+            }
+            finally
+            {
+                UnityEngine.Object.DestroyImmediate(fallbackRoot);
+                if (temporaryOverride != null) UnityEngine.Object.DestroyImmediate(temporaryOverride);
+            }
         }
         finally
         {

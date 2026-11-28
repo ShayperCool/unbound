@@ -5,8 +5,9 @@ The Unity 6000.0.71f1 captures cover `InitInstantiatedPreviewRecursive` and
 `HideAndDontSave` on the existing hierarchy, including inactive descendants.
 The SRP helper sets the selected renderer's light probe usage to `Off`.
 The probe gives renderers a different starting value, checks the quality
-override, and calls the SRP helper directly on the parent with a child that
-has its own setting.
+override and fallback after destroying it, and calls the SRP helper directly
+on the parent with a child that has its own setting. The parent starts with
+`HideInInspector`, which recursive preparation clears.
 
 Unity documents the `OnDisable` and `OnEnable` callbacks associated with
 hide flags. The probe also assigns the flags directly, and records the order

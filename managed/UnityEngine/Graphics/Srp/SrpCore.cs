@@ -599,7 +599,14 @@ namespace UnityEngine.Rendering
         public static RenderPipelineAsset renderPipelineAsset { get => defaultRenderPipeline; set => defaultRenderPipeline = value; }
 
         /// <summary>The quality level's pipeline, else the default one.</summary>
-        public static RenderPipelineAsset currentRenderPipeline => QualitySettings.renderPipeline ?? defaultRenderPipeline;
+        public static RenderPipelineAsset currentRenderPipeline
+        {
+            get
+            {
+                var qualityPipeline = QualitySettings.renderPipeline;
+                return qualityPipeline != null ? qualityPipeline : defaultRenderPipeline;
+            }
+        }
 
         public static bool isScriptableRenderPipelineEnabled => currentRenderPipeline != null;
 
