@@ -35,9 +35,9 @@ namespace UnityEditor
         {
             const string member = "UnityEditor.EditorUtility.DisplayCustomMenuWithSeparators";
             int count = options?.Length ?? 0;
-            if ((enabled?.Length ?? 0) != count || (separator?.Length ?? 0) != count)
+            if ((enabled?.Length ?? 0) < count || (separator?.Length ?? 0) < count)
             {
-                Stubs.Ignored(member + " (option masks)", "requires option masks matching the number of labels");
+                Stubs.Ignored(member + " (option masks)", "requires option masks covering every label");
                 return;
             }
             FinishCustomMenuRequest(member);
