@@ -1,0 +1,18 @@
+{
+  "commands": [
+    "python3 tests/projects/handlesstate/run.py gate"
+  ],
+  "summary": "handlesstate: .*",
+  "engine_paths": [
+    "managed/UnityEngine/Editor/Handles.State.cs",
+    "managed/UnityEngine/Runtime/Compat.cs",
+    "tests/projects/handlesstate/",
+    "managed/UnityEngine/Editor/Editors.cs",
+    "tests/projects/cameramatrices/Assets/Scenes/",
+    "tests/projects/cameramatrices/Assets/Scenes.meta",
+    "tests/projects/cameramatrices/Assets/Editor/",
+    "tests/projects/cameramatrices/Assets/Editor.meta",
+    "tests/projects/cameramatrices/Packages/",
+    "tests/projects/cameramatrices/ProjectSettings/"
+  ]
+}
