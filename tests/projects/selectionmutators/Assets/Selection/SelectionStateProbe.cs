@@ -127,10 +127,16 @@ static class SelectionStateProbe
     {
         var context = new GameObject("Context only");
         var emptyContext = new GameObject("Empty selection context");
+        var material = AssetDatabase.LoadAssetAtPath<Material>("Assets/Selection Material.mat");
+        var materialId = material.GetInstanceID();
         int tick = 0, notices = 0;
         void Changed() => notices++;
         void State(string key) => add(key, "notices=" + notices + "|count=" + Selection.count
             + "|context=" + (Selection.activeContext == null ? "null" : Selection.activeContext.name));
+        void MaterialState(string key) => add(key, "notices=" + notices + "|count=" + Selection.count
+            + "|activeA=" + (Selection.activeObject == a) + "|activeZero=" + (Selection.activeInstanceID == 0)
+            + "|containsMaterial=" + Selection.Contains(materialId)
+            + "|contextMaterial=" + (Selection.activeContext != null && Selection.activeContext.GetInstanceID() == materialId));
         void Step()
         {
             switch (++tick)
@@ -161,6 +167,24 @@ static class SelectionStateProbe
                     break;
                 case 19:
                     State("notify.destroySelected.next");
+                    Selection.SetActiveObjectWithContext(a, material);
+                    break;
+                case 22:
+                    notices = 0;
+                    Resources.UnloadAsset(material);
+                    MaterialState("notify.materialContext.now");
+                    break;
+                case 25:
+                    MaterialState("notify.materialContext.next");
+                    Selection.SetActiveObjectWithContext(material, material);
+                    break;
+                case 28:
+                    notices = 0;
+                    Resources.UnloadAsset(material);
+                    MaterialState("notify.materialActiveContext.now");
+                    break;
+                case 31:
+                    MaterialState("notify.materialActiveContext.next");
                     EditorApplication.update -= Step;
                     Selection.selectionChanged -= Changed;
                     finish();

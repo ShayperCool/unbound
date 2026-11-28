@@ -72,4 +72,8 @@
 {"k":"notify.emptyContext.next","v":"notices=0|count=0|context=null"}
 {"k":"notify.destroySelected.now","v":"notices=0|count=1|context=null"}
 {"k":"notify.destroySelected.next","v":"notices=1|count=1|context=null"}
+{"k":"notify.materialContext.now","v":"notices=0|count=1|activeA=True|activeZero=False|containsMaterial=False|contextMaterial=True"}
+{"k":"notify.materialContext.next","v":"notices=0|count=1|activeA=True|activeZero=False|containsMaterial=False|contextMaterial=True"}
+{"k":"notify.materialActiveContext.now","v":"notices=0|count=0|activeA=False|activeZero=True|containsMaterial=False|contextMaterial=True"}
+{"k":"notify.materialActiveContext.next","v":"notices=1|count=0|activeA=False|activeZero=True|containsMaterial=False|contextMaterial=True"}
 {"k":"complete","v":true}

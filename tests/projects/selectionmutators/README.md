@@ -10,7 +10,8 @@ an unloaded asset reuses its instance ID without selecting it again.
 Active component setters select the owner and keep the component as the active object. Array
 setters retain the explicit component entry. The asset controls distinguish eager loading of the
 active ID from resolved reads of other IDs and from GUID inspection. Unloading a selected material
-clears its entry while its original wrapper stays usable. A separate sequence of editor updates
+clears its entry and active role while the original wrapper and any context by its ID stay usable.
+A separate sequence of editor updates
 separates selected-entry destruction from context-only destruction and measures their notifications.
 
 The startup batch has one known callback timing difference. Unity records zero calls after the
