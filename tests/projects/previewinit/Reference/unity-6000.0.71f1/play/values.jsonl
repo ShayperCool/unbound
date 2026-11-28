@@ -45,4 +45,10 @@
 {"k":"quality.activeAfterDestroy","v":"True"}
 {"k":"quality.configureAfterDestroy","v":"ok"}
 {"k":"quality.usageAfterDestroy","v":"Off"}
+{"k":"quality.liveDefaultPrimitive","v":"Preview pipeline default"}
+{"k":"quality.bothDestroyedPipelineClrNull","v":"True"}
+{"k":"quality.bothDestroyedPipelineTypeNull","v":"True"}
+{"k":"quality.bothDestroyedPipelineActive","v":"False"}
+{"k":"quality.bothDestroyedPrimitive","v":"Default-Material"}
+{"k":"quality.bothDestroyedPrimitiveVirtualGetter","v":"Default-Material"}
 {"k":"complete","v":true}
