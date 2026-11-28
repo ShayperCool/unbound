@@ -1848,6 +1848,8 @@ namespace Unbound.Runtime
         }
 
         static Object s_UnloadingAsset;
+
+        internal static bool IsUnloading(Object obj) => ReferenceEquals(obj, s_UnloadingAsset);
         static bool s_ReadingAgain;
         internal static Func<string, bool> AssetExistsOverride;
 
@@ -1884,7 +1886,7 @@ namespace Unbound.Runtime
 
         internal static void OnAssetDestroyed(Object obj)
         {
-            if (obj is null || ReferenceEquals(obj, s_UnloadingAsset)) return;
+            if (obj is null || IsUnloading(obj)) return;
             int id = obj.m_InstanceID;
             if (!s_IdLocations.Remove(id, out var loc)) return;
             if (s_AssetIds.TryGetValue(loc, out int mapped) && mapped == id)

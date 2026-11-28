@@ -503,11 +503,12 @@ namespace UnityEngine
             if (m_Destroyed) return;
             m_Destroyed = true;
             if (this is Texture) Texture.s_DestroyedEpoch++;
+            var unloading = IsPersistentAsset && AssetDatabaseRuntime.IsUnloading(this);
             if (IsPersistentAsset) AssetDatabaseRuntime.OnAssetDestroyed(this);
             ObjectDispatch.Destroyed(this);
             OnEngineDestroy();
             ObjectRegistry.Unregister(this);
-            NotifyEngineObjectUnloadedOrDestroyed(destroyed: true);
+            NotifyEngineObjectUnloadedOrDestroyed(destroyed: !unloading);
         }
     }
 
