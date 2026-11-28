@@ -76,4 +76,8 @@
 {"k":"notify.materialContext.next","v":"notices=0|count=1|activeA=True|activeZero=False|containsMaterial=False|contextMaterial=True"}
 {"k":"notify.materialActiveContext.now","v":"notices=0|count=0|activeA=False|activeZero=True|containsMaterial=False|contextMaterial=True"}
 {"k":"notify.materialActiveContext.next","v":"notices=1|count=0|activeA=False|activeZero=True|containsMaterial=False|contextMaterial=True"}
+{"k":"notify.scriptableContext.now","v":"loaded=False|notices=0|count=1|activeA=True|activeZero=False|contains=False|contextMatches=True"}
+{"k":"notify.scriptableContext.next","v":"loaded=True|notices=0|count=1|activeA=True|activeZero=False|contains=False|contextMatches=True"}
+{"k":"notify.scriptableActiveContext.now","v":"loaded=False|notices=0|count=0|activeA=False|activeZero=True|contains=False|contextMatches=True"}
+{"k":"notify.scriptableActiveContext.next","v":"loaded=True|notices=1|count=0|activeA=False|activeZero=True|contains=False|contextMatches=True"}
 {"k":"complete","v":true}

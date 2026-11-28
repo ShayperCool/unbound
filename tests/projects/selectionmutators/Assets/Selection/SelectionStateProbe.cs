@@ -129,6 +129,9 @@ static class SelectionStateProbe
         var emptyContext = new GameObject("Empty selection context");
         var material = AssetDatabase.LoadAssetAtPath<Material>("Assets/Selection Material.mat");
         var materialId = material.GetInstanceID();
+        const string scriptablePath = "Assets/Selection Reload.asset";
+        SelectionProbeAsset scriptable = null;
+        int scriptableId = 0;
         int tick = 0, notices = 0;
         void Changed() => notices++;
         void State(string key) => add(key, "notices=" + notices + "|count=" + Selection.count
@@ -137,6 +140,10 @@ static class SelectionStateProbe
             + "|activeA=" + (Selection.activeObject == a) + "|activeZero=" + (Selection.activeInstanceID == 0)
             + "|containsMaterial=" + Selection.Contains(materialId)
             + "|contextMaterial=" + (Selection.activeContext != null && Selection.activeContext.GetInstanceID() == materialId));
+        void ScriptableState(string key) => add(key, "loaded=" + AssetDatabase.IsMainAssetAtPathLoaded(scriptablePath)
+            + "|notices=" + notices + "|count=" + Selection.count + "|activeA=" + (Selection.activeObject == a)
+            + "|activeZero=" + (Selection.activeInstanceID == 0) + "|contains=" + Selection.Contains(scriptableId)
+            + "|contextMatches=" + (Selection.activeContext != null && Selection.activeContext.GetInstanceID() == scriptableId));
         void Step()
         {
             switch (++tick)
@@ -185,6 +192,27 @@ static class SelectionStateProbe
                     break;
                 case 31:
                     MaterialState("notify.materialActiveContext.next");
+                    scriptable = AssetDatabase.LoadAssetAtPath<SelectionProbeAsset>(scriptablePath);
+                    scriptableId = scriptable.GetInstanceID();
+                    Selection.SetActiveObjectWithContext(a, scriptable);
+                    break;
+                case 34:
+                    notices = 0;
+                    Resources.UnloadAsset(scriptable);
+                    ScriptableState("notify.scriptableContext.now");
+                    break;
+                case 37:
+                    ScriptableState("notify.scriptableContext.next");
+                    scriptable = AssetDatabase.LoadAssetAtPath<SelectionProbeAsset>(scriptablePath);
+                    Selection.SetActiveObjectWithContext(scriptable, scriptable);
+                    break;
+                case 40:
+                    notices = 0;
+                    Resources.UnloadAsset(scriptable);
+                    ScriptableState("notify.scriptableActiveContext.now");
+                    break;
+                case 43:
+                    ScriptableState("notify.scriptableActiveContext.next");
                     EditorApplication.update -= Step;
                     Selection.selectionChanged -= Changed;
                     finish();

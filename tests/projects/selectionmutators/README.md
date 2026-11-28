@@ -11,6 +11,8 @@ Active component setters select the owner and keep the component as the active o
 setters retain the explicit component entry. The asset controls distinguish eager loading of the
 active ID from resolved reads of other IDs and from GUID inspection. Unloading a selected material
 clears its entry and active role while the original wrapper and any context by its ID stay usable.
+Unloading a selected ScriptableObject likewise preserves context by ID, which resolves its reloaded
+wrapper on access.
 A separate sequence of editor updates
 separates selected-entry destruction from context-only destruction and measures their notifications.
 
