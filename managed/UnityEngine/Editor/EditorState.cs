@@ -35,14 +35,24 @@ namespace UnityEditor
             selectionChanged?.Invoke();
         }
 
-        static void SetSelection(int[] ids, int active, int context, bool recordUndo = true)
+        // Keep removals constant-time during destruction. Rebuild the ordered view once when
+        // a reader or the next selection edit needs it.
+        static int[] CurrentIds()
+        {
+            if (s_Ids.Length != s_SelectedIds.Count)
+                s_Ids = s_Ids.Where(s_SelectedIds.Contains).ToArray();
+            return s_Ids;
+        }
+
+        static void SetSelection(int[] ids, int active, int context)
         {
             var measured = Compat.SelectionMutationsMeasured;
             var clean = (measured ? ids : ids.Where(id => id != 0)).Distinct().ToArray();
             if (!measured && (active == 0 || Array.IndexOf(clean, active) < 0))
                 active = clean.Length > 0 ? clean[0] : 0;
-            if (s_Active == active && s_Context == context && s_Ids.SequenceEqual(clean)) return;
-            if (recordUndo && !Undo.isProcessing) Undo.RecordSelection(s_Ids, s_Active, clean, active);
+            var previous = CurrentIds();
+            if (s_Active == active && s_Context == context && previous.SequenceEqual(clean)) return;
+            if (!Undo.isProcessing) Undo.RecordSelection(previous, s_Active, clean, active);
             s_Ids = clean;
             s_SelectedIds.Clear();
             s_SelectedIds.UnionWith(clean);
@@ -55,9 +65,10 @@ namespace UnityEditor
         {
             if (!s_SelectedIds.Contains(instanceID) && s_Context != instanceID) return;
             if (!Compat.SelectionMutationsMeasured) return;
-            SetSelection(s_Ids.Where(id => id != instanceID).ToArray(),
-                s_Active == instanceID ? 0 : s_Active, s_Context == instanceID ? 0 : s_Context,
-                recordUndo: false);
+            s_SelectedIds.Remove(instanceID);
+            if (s_Active == instanceID) s_Active = 0;
+            if (s_Context == instanceID) s_Context = 0;
+            s_Changed = true;
         }
 
         /// <summary>Undo and redo put a recorded selection back.</summary>
@@ -65,7 +76,7 @@ namespace UnityEditor
 
         static Object Find(int id) => id == 0 ? null : ObjectRegistry.FindById(id);
 
-        static IEnumerable<Object> Selected() => s_Ids.Select(Find).Where(o => o != null);
+        static IEnumerable<Object> Selected() => CurrentIds().Select(Find).Where(o => o != null);
 
         public static Object activeObject
         {
@@ -107,7 +118,7 @@ namespace UnityEditor
             {
                 if (Compat.SelectionMutationsMeasured && value == s_Active)
                 {
-                    if (s_Context != 0) SetSelection(s_Ids, value, 0);
+                    if (s_Context != 0) SetSelection(CurrentIds(), value, 0);
                     return;
                 }
                 SetSelection(value == 0 ? Array.Empty<int>() : new[] { value }, value, 0);
@@ -126,7 +137,7 @@ namespace UnityEditor
 
         public static int[] instanceIDs
         {
-            get => Compat.SelectionMutationsMeasured ? (int[])s_Ids.Clone()
+            get => Compat.SelectionMutationsMeasured ? (int[])CurrentIds().Clone()
                 : Selected().Select(o => o.GetInstanceID()).ToArray();
             set
             {
@@ -160,7 +171,7 @@ namespace UnityEditor
 
         static void AddInstance(int instanceID)
         {
-            if (!s_SelectedIds.Contains(instanceID)) instanceIDs = s_Ids.Append(instanceID).ToArray();
+            if (!s_SelectedIds.Contains(instanceID)) instanceIDs = CurrentIds().Append(instanceID).ToArray();
         }
 
         [global::Unbound.ImplementedIn(Compat.SelectionMutationsFamily)]
@@ -175,7 +186,7 @@ namespace UnityEditor
             if (CanMutate(nameof(Remove)) && obj != null) RemoveInstance(obj.GetInstanceID());
         }
 
-        static void RemoveInstance(int instanceID) => instanceIDs = s_Ids.Where(id => id != instanceID).ToArray();
+        static void RemoveInstance(int instanceID) => instanceIDs = CurrentIds().Where(id => id != instanceID).ToArray();
 
         static bool CanMutate(string member)
         {
