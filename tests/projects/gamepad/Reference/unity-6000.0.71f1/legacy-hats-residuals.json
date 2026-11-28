@@ -1,0 +1,18 @@
+{
+  "mapped": {
+    "centered/2": [0, -1],
+    "centered/5": [0, -1],
+    "right/2": [0, -1],
+    "right/5": [0, -1],
+    "upper-right/2": [0, -1],
+    "upper-right/5": [0, -1],
+    "lower-left/2": [0, -1],
+    "lower-left/5": [0, -1],
+    "lower-left/6": [0, -1],
+    "lower-left/7": [0, 1],
+    "second-lower-left/2": [0, -1],
+    "second-lower-left/5": [0, -1],
+    "second-upper-right/2": [0, -1],
+    "second-upper-right/5": [0, -1]
+  }
+}

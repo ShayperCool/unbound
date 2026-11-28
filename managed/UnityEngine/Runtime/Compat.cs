@@ -11,6 +11,10 @@ namespace Unbound.Runtime
     /// </summary>
     internal static class Compat
     {
+        /// <summary>Legacy Input appends SDL hat components to the analog axes (Linux
+        /// 6000.0.71f1, tests/projects/gamepad). Other platforms and families are unmeasured.</summary>
+        internal static bool LegacyJoystickHatAxes => OperatingSystem.IsLinux() && Family == ReleaseFamily.Unity6000_0;
+
         // Property-editor window default measured by the defaultstate 6000.0.71f1 controls.
         internal const float PropertyEditorMinimumWidth = 275f;
 

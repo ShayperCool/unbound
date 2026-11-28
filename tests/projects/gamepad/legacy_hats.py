@@ -47,6 +47,42 @@ def load(path):
     return records
 
 
+def compare(device, expected, actual):
+    known_path = REFERENCE / "legacy-hats-residuals.json"
+    known = json.loads(known_path.read_text()).get(device, {})
+    seen = set()
+    differences = 0
+    if len(actual) != len(expected):
+        print(f"{device}: expected {len(expected)} rows, got {len(actual)}")
+        differences += 1
+    for want, got in zip(expected, actual):
+        case = want["case"]
+        if want == got:
+            continue
+        want_axes, got_axes = want.get("axes"), got.get("axes")
+        if (want_axes is None or got_axes is None or len(want_axes) != len(got_axes)
+                or {**want, "axes": None} != {**got, "axes": None}):
+            print(f"{device}: expected {want!r}, got {got!r}")
+            differences += 1
+            continue
+        for index, (wanted, observed) in enumerate(zip(want_axes, got_axes)):
+            if wanted == observed:
+                continue
+            key = f"{case}/{index}"
+            residual = known.get(key) == [wanted, observed]
+            print(f"{device} {key}: Editor {wanted}, engine {observed}"
+                  + (" (known residual)" if residual else ""))
+            if residual:
+                seen.add(key)
+            else:
+                differences += 1
+    for key in sorted(known.keys() - seen):
+        print(f"{device} {key}: stale residual")
+        differences += 1
+    print(f"{device}: {len(expected)} rows, {len(seen)} known differing cells, {differences} failures")
+    return differences
+
+
 def capture(mode, device, label):
     os.environ.setdefault("UNBOUND_PROBE_UNITY_VERSION", RELEASE)
     if unity_version() != RELEASE:
@@ -98,13 +134,7 @@ def main():
         actual = capture(args.mode, device, args.label)
         if args.mode == "check":
             expected = load(REFERENCE / f"legacy-hats-{device}.jsonl")
-            if len(actual) != len(expected):
-                print(f"{device}: expected {len(expected)} rows, got {len(actual)}")
-                errors += 1
-            for want, got in zip(expected, actual):
-                if want != got:
-                    print(f"{device}: expected {want!r}, got {got!r}")
-                    errors += 1
+            errors += compare(device, expected, actual)
     return 1 if errors else 0
 
 

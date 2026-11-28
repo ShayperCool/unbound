@@ -201,20 +201,39 @@ namespace Unbound.Runtime
             return button >= 0 && button < buttons.Length && buttons[button];
         }
 
-        /// <summary>Legacy joystick axis: <c>axis/32767</c>, clamped (measured); joystick 0 is any
-        /// joystick (the one pushed furthest).</summary>
+        /// <summary>Legacy joystick axis: the analog axes, then hat X and Y in SDL hat order.
+        /// Joystick 0 selects the joystick with the largest magnitude for the requested axis.</summary>
         internal static float Axis(int joystick, int axis)
         {
+            if (axis < 0) return 0f;
             float best = 0f;
             for (int j = 0; j < Attached.Count; j++)
             {
                 if (joystick != 0 && joystick != j + 1) continue;
-                var axes = Attached[j].Axes;
-                if (axis < 0 || axis >= axes.Length) continue;
-                float v = Mathf.Clamp(axes[axis] / 32767f, -1f, 1f);
+                float v = AxisValue(Attached[j], axis);
                 if (Mathf.Abs(v) > Mathf.Abs(best)) best = v;
             }
             return best;
+        }
+
+        static float AxisValue(Device device, int axis)
+        {
+            if (axis < device.Axes.Length)
+                return Mathf.Clamp(device.Axes[axis] / 32767f, -1f, 1f);
+            int component = axis - device.Axes.Length;
+            int hat = component / 2;
+            return hat < device.Hats.Length && Compat.LegacyJoystickHatAxes
+                ? HatComponent(device.Hats[hat], horizontal: component % 2 == 0)
+                : 0f;
+        }
+
+        static int HatComponent(byte state, bool horizontal)
+        {
+            // SDL_HAT_* direction flags.
+            const byte up = 1, right = 2, down = 4, left = 8;
+            byte positive = horizontal ? right : down;
+            byte negative = horizontal ? left : up;
+            return ((state & positive) != 0 ? 1 : 0) - ((state & negative) != 0 ? 1 : 0);
         }
     }
 }

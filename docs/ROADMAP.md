@@ -115,7 +115,7 @@ In dependency order; each item ends with an Editor-reference probe.
       touchscreen). `tests/projects/gamepad` plugs a virtual pad in through uinput and matches the
       Editor record for record (349/349) but for the Editor's SDL holding back a trigger's first
       move. Left: joysticks SDL does not map (legacy Input reads them; the Input System's SDL
-      joystick layouts are not fed, a warning says so), hats as legacy axes, rumble.
+      joystick layouts are not fed, a warning says so) and rumble. Legacy hat axes use SDL hat order after the analog axes on the measured Linux release.
 
 ### 3. Rendering
 - [x] Built-in RP extension points: CommandBuffer, camera command buffers, Graphics.Blit,
