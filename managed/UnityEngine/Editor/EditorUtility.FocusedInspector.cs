@@ -1,4 +1,3 @@
-using System.Collections.Generic;
 using Unbound.Runtime;
 using UnityEngine;
 using Object = UnityEngine.Object;
@@ -73,12 +72,9 @@ namespace UnityEditor
 
         static string HierarchyTooltip(GameObject go)
         {
-            var path = new Stack<string>();
-            for (var node = go.transform; node != null; node = node.parent)
-                path.Push(node.name);
             var scene = go.scene.name;
-            path.Push(string.IsNullOrEmpty(scene) ? "Unsaved Scene" : scene);
-            return string.Join("/", path);
+            if (string.IsNullOrEmpty(scene)) scene = "Unsaved Scene";
+            return scene + "/" + AnimationUtility.CalculateTransformPath(go.transform, null);
         }
     }
 }

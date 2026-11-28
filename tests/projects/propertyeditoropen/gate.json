@@ -10,6 +10,7 @@
     "managed/UnityEngine/Editor/EditorPlayMode.cs",
     "managed/UnityEngine/Editor/EditorState.cs",
     "managed/UnityEngine/Editor/AssetDatabase.cs",
+    "managed/UnityEngine/Editor/AnimationUtility.cs",
     "managed/UnityEngine/Editor/EditorGUI.InspectorTitlebar.cs",
     "managed/UnityEngine/Editor/ObjectNames.cs",
     "managed/UnityEngine/Runtime/Compat.cs",
