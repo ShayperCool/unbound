@@ -4,7 +4,7 @@ using Unbound.Runtime;
 
 namespace UnityEditor
 {
-    public sealed partial class EditorUtility
+    public partial class EditorUtility
     {
         [Unbound.ImplementedIn(Compat.PreviewInitializationFamily)]
         internal static void ConfigurePreviewObjectSRP(GameObject go)
