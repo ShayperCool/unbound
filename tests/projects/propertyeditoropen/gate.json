@@ -7,6 +7,7 @@
     "managed/UnityEngine/Editor/EditorUtility.FocusedInspector.cs",
     "managed/UnityEngine/Editor/EditorWindow.cs",
     "managed/UnityEngine/Editor/Editors.cs",
+    "managed/UnityEngine/Editor/EditorSession.cs",
     "managed/UnityEngine/Editor/EditorPlayMode.cs",
     "managed/UnityEngine/Editor/EditorState.cs",
     "managed/UnityEngine/Editor/AssetDatabase.cs",

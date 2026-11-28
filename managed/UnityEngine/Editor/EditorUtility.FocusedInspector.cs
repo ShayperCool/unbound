@@ -35,12 +35,17 @@ namespace UnityEditor
 
         internal static PropertyEditor OpenPropertyEditor(Object obj, bool showWindow = true)
         {
-            if (obj == null) return null;
             if (!Compat.FocusedPropertyEditorMeasured)
             {
                 Stubs.Ignored("UnityEditor.EditorUtility.OpenPropertyEditor", "focused inspector opening is unmeasured for this release family");
                 return null;
             }
+            if (!EditorSession.IsPlaying)
+            {
+                Stubs.Ignored("UnityEditor.EditorUtility.OpenPropertyEditor in Edit mode", "is unmeasured");
+                return null;
+            }
+            if (obj == null) return null;
 
             var inspector = CreateInstance<PropertyEditor>();
             inspector.m_InspectedObject = obj;
