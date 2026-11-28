@@ -57,6 +57,7 @@ sealed class ApiType
     public required LoadedAssembly Assembly;
     public required TypeDefinitionHandle Handle;
     public required string FullName;
+    public string? ReportedFamily;
 
     Dictionary<string, List<ApiMethod>>? _methods;
     Dictionary<string, (string Signature, bool IsStub)>? _fields;
@@ -85,7 +86,7 @@ sealed class ApiType
                     if (!methods.TryGetValue(name, out var list))
                         methods[name] = list = new();
                     list.Add(new ApiMethod(CanonicalSignatures.MethodOf(md, handle), method.Attributes,
-                        Stubs.Marked(md, method.GetCustomAttributes())));
+                        Stubs.Marked(md, method.GetCustomAttributes(), ReportedFamily)));
                 }
                 _methods = methods;
             }
@@ -128,14 +129,14 @@ sealed class ApiIndex
 
     public List<LoadedAssembly> Assemblies { get; } = new();
 
-    public static ApiIndex Load(IEnumerable<string> paths)
+    public static ApiIndex Load(IEnumerable<string> paths, string? reportedFamily = null)
     {
         var index = new ApiIndex();
         foreach (var path in paths)
         {
             var assembly = LoadedAssembly.TryLoad(path, out var problem)
                 ?? throw new BadImageFormatException($"{path}: {problem}");
-            index.Add(assembly);
+            index.Add(assembly, reportedFamily);
         }
         return index;
     }
@@ -148,7 +149,7 @@ sealed class ApiIndex
         return index;
     }
 
-    void Add(LoadedAssembly assembly)
+    void Add(LoadedAssembly assembly, string? reportedFamily = null)
     {
         Assemblies.Add(assembly);
         var md = assembly.Reader;
@@ -159,7 +160,7 @@ sealed class ApiIndex
                 continue; // <Module>, <PrivateImplementationDetails>
             if (!_types.TryGetValue(name, out var list))
                 _types[name] = list = new();
-            list.Add(new ApiType { Assembly = assembly, Handle = handle, FullName = name });
+            list.Add(new ApiType { Assembly = assembly, Handle = handle, FullName = name, ReportedFamily = reportedFamily });
         }
         foreach (var handle in md.ExportedTypes)
             if (md.GetExportedType(handle).Implementation.Kind != HandleKind.AssemblyFile)
@@ -288,12 +289,13 @@ sealed class ApiIndex
 /// <summary>Recognizes the implementation's generated compatibility stubs.</summary>
 static class Stubs
 {
-    /// <summary>Whether the attributes include <c>Unbound.StubAttribute</c>.</summary>
-    public static bool Marked(MetadataReader md, CustomAttributeHandleCollection attributes)
+    /// <summary>Whether the attributes mark an unconditional stub or exclude the reported family.</summary>
+    public static bool Marked(MetadataReader md, CustomAttributeHandleCollection attributes, string? reportedFamily = null)
     {
         foreach (var handle in attributes)
         {
-            var constructor = md.GetCustomAttribute(handle).Constructor;
+            var attribute = md.GetCustomAttribute(handle);
+            var constructor = attribute.Constructor;
             var name = constructor.Kind switch
             {
                 HandleKind.MethodDefinition => MetadataNames.TypeDefinition(md, md.GetMethodDefinition((MethodDefinitionHandle)constructor).GetDeclaringType()),
@@ -302,6 +304,12 @@ static class Stubs
             };
             if (name == "Unbound.StubAttribute")
                 return true;
+            if (reportedFamily != null && name == "Unbound.ImplementedInAttribute")
+            {
+                var arguments = md.GetBlobReader(attribute.Value);
+                if (arguments.ReadUInt16() == 1 && arguments.ReadSerializedString() != reportedFamily)
+                    return true;
+            }
         }
         return false;
     }

@@ -11,12 +11,14 @@ namespace UnityEditor
 
         public static CompareFunction zTest
         {
+            [Unbound.ImplementedIn(Compat.EditorHandlesFamily)]
             get
             {
                 if (!DrawingStateMeasured("UnityEditor.Handles.zTest")) return default;
                 MainThreadCheck.Check("get_zTest");
                 return s_ZTest;
             }
+            [Unbound.ImplementedIn(Compat.EditorHandlesFamily)]
             set
             {
                 if (!DrawingStateMeasured("UnityEditor.Handles.zTest")) return;
@@ -27,12 +29,14 @@ namespace UnityEditor
 
         public static bool lighting
         {
+            [Unbound.ImplementedIn(Compat.EditorHandlesFamily)]
             get
             {
                 if (!DrawingStateMeasured("UnityEditor.Handles.lighting")) return default;
                 MainThreadCheck.Check("get_lighting");
                 return s_Lighting;
             }
+            [Unbound.ImplementedIn(Compat.EditorHandlesFamily)]
             set
             {
                 if (!DrawingStateMeasured("UnityEditor.Handles.lighting")) return;
@@ -54,14 +58,17 @@ namespace UnityEditor
         // Unity's line projection retains the raw direction below this length.
         const float MinNormalizedLineLength = 1e-6f;
 
+        [Unbound.ImplementedIn(Compat.EditorHandlesFamily)]
         public static float PointOnLineParameter(Vector3 point, Vector3 linePoint, Vector3 lineDirection) =>
             LineGeometryMeasured("UnityEditor.HandleUtility.PointOnLineParameter")
                 ? Vector3.Dot(point - linePoint, lineDirection) / lineDirection.sqrMagnitude : default;
 
+        [Unbound.ImplementedIn(Compat.EditorHandlesFamily)]
         public static Vector3 ProjectPointLine(Vector3 point, Vector3 lineStart, Vector3 lineEnd) =>
             LineGeometryMeasured("UnityEditor.HandleUtility.ProjectPointLine")
                 ? ProjectSegment(point, lineStart, lineEnd) : default;
 
+        [Unbound.ImplementedIn(Compat.EditorHandlesFamily)]
         public static float DistancePointLine(Vector3 point, Vector3 lineStart, Vector3 lineEnd) =>
             LineGeometryMeasured("UnityEditor.HandleUtility.DistancePointLine")
                 ? Vector3.Distance(point, ProjectSegment(point, lineStart, lineEnd)) : default;

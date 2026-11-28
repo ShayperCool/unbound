@@ -17,6 +17,13 @@ namespace Unbound
     {
     }
 
+    /// <summary>Marks an API that is still a stub outside the specified Unity release family.</summary>
+    [AttributeUsage(AttributeTargets.Method, Inherited = false)]
+    internal sealed class ImplementedInAttribute : Attribute
+    {
+        public ImplementedInAttribute(string family) { }
+    }
+
     /// <summary>
     /// Marks a hand-written member that does nothing, or answers a constant, because the Editor does
     /// the same (an Android API in the Linux Editor, a player-only setting). <c>unbound api-check</c>

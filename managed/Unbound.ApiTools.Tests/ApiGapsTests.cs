@@ -91,6 +91,64 @@ public class ApiGapsTests
         }
         """;
 
+    [Theory]
+    [InlineData("6000.0", 0)]
+    [InlineData("6000.3", 2)]
+    public void ReportsMethodsAndAccessorsOutsideTheirImplementedFamily(string family, int missing)
+    {
+        const string engine = """
+            namespace UnityEngine
+            {
+                public class Control
+                {
+                    public static float Distance(float point) => point;
+                    public static bool Enabled { get; set; }
+                }
+            }
+            """;
+        const string implementation = """
+            namespace Unbound
+            {
+                internal sealed class ImplementedInAttribute : System.Attribute
+                {
+                    public ImplementedInAttribute(string family) { }
+                }
+            }
+            namespace UnityEngine
+            {
+                public class Control
+                {
+                    [Unbound.ImplementedIn("6000.0")]
+                    public static float Distance(float point) => point;
+                    public static bool Enabled { get; [Unbound.ImplementedIn("6000.0")] set; }
+                }
+            }
+            """;
+        const string game = """
+            public class Caller
+            {
+                public static void Main()
+                {
+                    UnityEngine.Control.Enabled = !UnityEngine.Control.Enabled;
+                    UnityEngine.Control.Distance(1f);
+                }
+            }
+            """;
+        var root = TestAssemblies.TempDir();
+        try
+        {
+            var directory = Path.Combine(root, "UnityEngine");
+            var core = TestAssemblies.Compile(directory, "UnityEngine.CoreModule", engine);
+            var gameAssembly = TestAssemblies.Compile(Path.Combine(root, "game"), "Game", game, core);
+            var impl = TestAssemblies.Compile(Path.Combine(root, "impl"), "UnityEngine.CoreModule", implementation);
+            var report = ApiGaps.Analyze(new[] { gameAssembly }, impl, directory, releaseFamily: family);
+            Assert.Equal(missing, report.Members.Stubbed);
+            var reported = report.MissingMembers.SelectMany(group => group.Members).Select(member => member.Name).Order().ToArray();
+            Assert.Equal(missing == 0 ? Array.Empty<string>() : new[] { "Distance", "set_Enabled" }, reported);
+        }
+        finally { Directory.Delete(root, recursive: true); }
+    }
+
     [Fact]
     public void ReportsWhatTheImplementationLacks()
     {

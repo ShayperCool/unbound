@@ -595,6 +595,7 @@ namespace Unbound.Runtime
         /// families are unmeasured.</summary>
         internal static bool EditorWindowGuiMeasured => Family == ReleaseFamily.Unity6000_0;
 
+        internal const string EditorHandlesFamily = "6000.0";
         internal static bool EditorHandleDrawingStateMeasured => Family == ReleaseFamily.Unity6000_0;
         internal static bool EditorHandleLineGeometryMeasured => Family == ReleaseFamily.Unity6000_0;
 

@@ -28,11 +28,11 @@ namespace Unbound.ApiTools;
 public static class ApiGaps
 {
     public static GapReport Analyze(IEnumerable<string> gameAssemblies, string implAssembly, string unityManagedEngineDir,
-        IEnumerable<string>? platformModules = null)
+        IEnumerable<string>? platformModules = null, string? releaseFamily = null)
     {
         var watch = Stopwatch.StartNew();
         var report = new GapReport();
-        var impl = ApiIndex.Load(new[] { implAssembly });
+        var impl = ApiIndex.Load(new[] { implAssembly }, releaseFamily);
         var unityFiles = UnityModules.Files(unityManagedEngineDir, platformModules);
         var unity = ApiIndex.Load(unityFiles);
 

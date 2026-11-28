@@ -22,6 +22,7 @@ public sealed class ApiGapsRequest
     public string ImplAssembly { get; set; } = "";
     public string UnityManagedEngineDir { get; set; } = "";
     public List<string> PlatformModules { get; set; } = new();
+    public string? ReleaseFamily { get; set; }
 }
 
 /// <summary>The <c>gen-stubs</c> host method.</summary>

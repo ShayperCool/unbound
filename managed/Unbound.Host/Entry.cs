@@ -76,7 +76,8 @@ public static unsafe class Entry
             case "api-gaps":
                 var gaps = JsonSerializer.Deserialize<ApiGapsRequest>(body, Json)
                     ?? throw new ArgumentException("empty api-gaps request");
-                return JsonSerializer.Serialize(ApiGaps.Analyze(gaps.GameAssemblies, gaps.ImplAssembly, gaps.UnityManagedEngineDir, gaps.PlatformModules), Json);
+                return JsonSerializer.Serialize(ApiGaps.Analyze(gaps.GameAssemblies, gaps.ImplAssembly,
+                    gaps.UnityManagedEngineDir, gaps.PlatformModules, gaps.ReleaseFamily), Json);
             case "api-check":
                 var check = JsonSerializer.Deserialize<ApiCheckRequest>(body, Json)
                     ?? throw new ArgumentException("empty api-check request");

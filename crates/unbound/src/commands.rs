@@ -1193,11 +1193,13 @@ pub fn api_gaps(args: &ProjectArgs, top: usize, as_json: bool) -> Result<()> {
         game.extend(assembly.plugins.iter().cloned());
     }
     let implementation = unbound_host::managed_dir()?.join("UnityEngine.CoreModule.dll");
+    let (major, minor) = project.version.family();
     let gaps_request = json!({
         "gameAssemblies": game,
         "implAssembly": implementation,
         "unityManagedEngineDir": project.install.managed_engine_dir(),
         "platformModules": project.install.platform_modules(),
+        "releaseFamily": format!("{major}.{minor}"),
     });
     let response = runtime.call_raw("api-gaps", &serde_json::to_vec(&gaps_request)?)?;
     if as_json {
