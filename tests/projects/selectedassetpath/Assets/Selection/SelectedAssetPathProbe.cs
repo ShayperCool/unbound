@@ -160,6 +160,41 @@ static class SelectedAssetPathProbe
             Selection.activeObject = folder;
             File.WriteAllText("Assets/Selection/Second 2147483646.txt", "penultimate number");
             Add("names.numberedLimitFree", PathFor("Second 2147483646.txt"));
+            foreach (var digits in new[] { "999997", "999999", "1000000", "000000", "0000000", "000999", "0000999", "1234567" })
+            {
+                string numbered = "Shots " + digits + ".txt";
+                File.WriteAllText("Assets/Selection/" + numbered, "numbered filename");
+                Add("width.shots." + digits, PathFor(numbered));
+            }
+            File.WriteAllText("Assets/Selection/BlockCross 999999.txt", "last six-digit suffix");
+            File.WriteAllText("Assets/Selection/BlockCross 1000000.txt", "first seven-digit suffix");
+            Add("width.crossOccupied", PathFor("BlockCross 999999.txt"));
+
+            foreach (var (key, existing, request) in new (string, string, string)[]
+            {
+                ("accent", "Étage.txt", "étage.txt"),
+                ("capitalSharpS", "Straße.txt", "STRAẞE.txt"),
+                ("greek", "Στάδιο.txt", "σΤΆΔΙΟ.txt"),
+                ("decomposed", "Café.txt", "Cafe\u0301.txt"),
+                ("kelvin", "Kase.txt", "Kase.txt"),
+                ("supplementary", "𐐀.txt", "𐐨.txt"),
+            })
+            {
+                File.WriteAllText("Assets/Selection/" + existing, "Unicode filename");
+                Add("unicode." + key + ".physicalAlias", File.Exists("Assets/Selection/" + request).ToString());
+                Add("unicode." + key + ".path", PathFor(request));
+            }
+            Add("unicode.freeAccent", PathFor("libreé.txt"));
+            Add("unicode.freeKelvin", PathFor("LibreK.txt"));
+            Add("unicode.joiner", PathFor("A\u200dB.txt"));
+            Add("unicode.unpairedSurrogate", PathFor("Then\ud800.txt"));
+            Add("unicode.unpairedLow", PathFor("Then\udc00.txt"));
+            Add("unicode.unpairedTerminalHigh", PathFor("Then\ud800"));
+            Add("unicode.unpairedHighBeforeLetter", PathFor("Then\ud800X.txt"));
+            Add("unicode.unpairedTwoHigh", PathFor("Then\ud800\ud800.txt"));
+            Add("unicode.asciiCaseInAccent", PathFor("ÉTAGE.txt"));
+            File.WriteAllText("Assets/Selection/AB.txt", "name without a joiner");
+            Add("unicode.joinerWithPlainSibling", PathFor("A\u200dB.txt"));
         }
         finally
         {

@@ -111,4 +111,35 @@
 {"k":"folder.externallyRemoved.result","v":""}
 {"k":"folder.externallyRemoved.logs","v":""}
 {"k":"names.numberedLimitFree","v":"Assets/Selection/Second 2147483646 1.txt"}
+{"k":"width.shots.999997","v":"Assets/Selection/Shots 999998.txt"}
+{"k":"width.shots.999999","v":"Assets/Selection/Shots 1000000.txt"}
+{"k":"width.shots.1000000","v":"Assets/Selection/Shots 1000000 1.txt"}
+{"k":"width.shots.000000","v":"Assets/Selection/Shots 000001.txt"}
+{"k":"width.shots.0000000","v":"Assets/Selection/Shots 0000000 1.txt"}
+{"k":"width.shots.000999","v":"Assets/Selection/Shots 001000.txt"}
+{"k":"width.shots.0000999","v":"Assets/Selection/Shots 0000999 1.txt"}
+{"k":"width.shots.1234567","v":"Assets/Selection/Shots 1234567 1.txt"}
+{"k":"width.crossOccupied","v":"Assets/Selection/BlockCross 1000001.txt"}
+{"k":"unicode.accent.physicalAlias","v":"False"}
+{"k":"unicode.accent.path","v":"Assets/Selection/étage.txt"}
+{"k":"unicode.capitalSharpS.physicalAlias","v":"False"}
+{"k":"unicode.capitalSharpS.path","v":"Assets/Selection/STRAẞE.txt"}
+{"k":"unicode.greek.physicalAlias","v":"False"}
+{"k":"unicode.greek.path","v":"Assets/Selection/σΤΆΔΙΟ.txt"}
+{"k":"unicode.decomposed.physicalAlias","v":"False"}
+{"k":"unicode.decomposed.path","v":"Assets/Selection/Café.txt"}
+{"k":"unicode.kelvin.physicalAlias","v":"False"}
+{"k":"unicode.kelvin.path","v":"Assets/Selection/Kase.txt"}
+{"k":"unicode.supplementary.physicalAlias","v":"False"}
+{"k":"unicode.supplementary.path","v":"Assets/Selection/𐐨.txt"}
+{"k":"unicode.freeAccent","v":"Assets/Selection/libreé.txt"}
+{"k":"unicode.freeKelvin","v":"Assets/Selection/LibreK.txt"}
+{"k":"unicode.joiner","v":"Assets/Selection/A‍B.txt"}
+{"k":"unicode.unpairedSurrogate","v":"Assets/Selection/Then�txt"}
+{"k":"unicode.unpairedLow","v":"Assets/Selection/Then�.txt"}
+{"k":"unicode.unpairedTerminalHigh","v":"Assets/Selection/Then�"}
+{"k":"unicode.unpairedHighBeforeLetter","v":"Assets/Selection/Then�.txt"}
+{"k":"unicode.unpairedTwoHigh","v":"Assets/Selection/Then�.txt"}
+{"k":"unicode.asciiCaseInAccent","v":"Assets/Selection/ÉTAGE 1.txt"}
+{"k":"unicode.joinerWithPlainSibling","v":"Assets/Selection/A‍B.txt"}
 {"k":"complete","v":true}
