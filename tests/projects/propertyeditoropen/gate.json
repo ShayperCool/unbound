@@ -1,0 +1,20 @@
+{
+  "commands": [
+    "python3 tests/projects/propertyeditoropen/run.py gate"
+  ],
+  "summary": "propertyeditoropen(?: macos)?: [0-9]+/[0-9]+ values match.*",
+  "engine_paths": [
+    "managed/UnityEngine/Editor/EditorUtility.FocusedInspector.cs",
+    "managed/UnityEngine/Editor/EditorWindow.cs",
+    "managed/UnityEngine/Editor/Editors.cs",
+    "managed/UnityEngine/Editor/EditorPlayMode.cs",
+    "managed/UnityEngine/Editor/EditorState.cs",
+    "managed/UnityEngine/Editor/AssetDatabase.cs",
+    "managed/UnityEngine/Editor/EditorGUI.InspectorTitlebar.cs",
+    "managed/UnityEngine/Editor/ObjectNames.cs",
+    "managed/UnityEngine/Runtime/Compat.cs",
+    "tests/projects/analyticssession/ProjectSettings/",
+    "tests/projects/imguiskin/Assets/Editor/",
+    "tests/projects/imguiskin/Assets/Scenes/"
+  ]
+}

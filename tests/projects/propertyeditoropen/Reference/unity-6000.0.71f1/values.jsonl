@@ -1,0 +1,21 @@
+{"k":"open.null","v":"0"}
+{"k":"open.destroyed","v":"0"}
+{"k":"open.first","v":"First target"}
+{"k":"open.second","v":"First target,Second target"}
+{"k":"open.tooltips","v":"Probe/First target|Probe/Second target"}
+{"k":"open.relativePosition","v":"(30.00, 30.00)"}
+{"k":"open.targets","v":"first,second"}
+{"k":"open.component","v":"Nested target|Probe/First target/Nested target (Transform)|target=True"}
+{"k":"open.asset","v":"Fixture|Assets/Fixture.txt|target=True"}
+{"k":"open.keepsSelection","v":"True"}
+{"k":"open.duplicate","v":"First target|Probe/First target|target=True"}
+{"k":"open.customTarget","v":"Nested target|Probe/First target/Nested target (Focused Inspector Fixture (Script))|target=True"}
+{"k":"open.customEnableOnReturn","v":"0"}
+{"k":"open.customDisableOnClose","v":"0"}
+{"k":"open.tracker","v":"locked=True|targets=1|target=True|editors=0"}
+{"k":"open.trackerCollectionAndUnlock","v":"previousList=Second target|locked=False|targets=|restored=True|restoredTargets=First target"}
+{"k":"open.focus","v":"created=True|newHasFocus=False|keepsFocus=True|events=1"}
+{"k":"open.focusEventAndPanel","v":"keepsFocusDuringEvent=True|panels=2"}
+{"k":"open.closeFocus","v":"closed=True|focusKept=True|events=0"}
+{"k":"open.focusThrowingSubscriber","v":"EX:FormatException|newWindows=1"}
+{"k":"complete","v":true}
