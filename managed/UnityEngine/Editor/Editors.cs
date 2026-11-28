@@ -191,21 +191,65 @@ namespace UnityEditor
         public bool isFallback { get; set; }
     }
 
-    /// <summary>The inspector window's editors: Unbound has no inspector window, so none.</summary>
+    /// <summary>The targets of a focused inspector. Batch opening retains the lock without
+    /// instantiating inspector editors.</summary>
     [global::System.Serializable]
     public sealed partial class ActiveEditorTracker
     {
         static ActiveEditorTracker s_Shared;
+        Object[] m_FocusedTargets;
+        bool m_IsLocked;
 
         public ActiveEditorTracker() { }
 
-        [Unbound.EditorFaithful("no inspector window is open (measured: tests/projects/editorui ActiveEditorTracker.activeEditors)")]
+        internal ActiveEditorTracker(Object focusedTarget)
+        {
+            m_FocusedTargets = new[] { focusedTarget };
+            m_IsLocked = true;
+        }
+
+        public bool isLocked
+        {
+            get
+            {
+                if (m_FocusedTargets != null) return m_IsLocked;
+                Stubs.NotImplemented("UnityEditor.ActiveEditorTracker.isLocked");
+                return false;
+            }
+            set
+            {
+                if (m_FocusedTargets == null)
+                {
+                    Stubs.NotImplemented("UnityEditor.ActiveEditorTracker.isLocked");
+                    return;
+                }
+                if (m_IsLocked == value) return;
+                m_FocusedTargets = value ? Selection.objects : Array.Empty<Object>();
+                m_IsLocked = value;
+            }
+        }
+
+        internal void GetObjectsLockedByThisTracker(List<Object> lockedObjects)
+        {
+            if (m_FocusedTargets == null || lockedObjects == null)
+            {
+                Stubs.NotImplemented("UnityEditor.ActiveEditorTracker.GetObjectsLockedByThisTracker");
+                return;
+            }
+            lockedObjects.Clear();
+            lockedObjects.AddRange(m_FocusedTargets);
+        }
+
+        [Unbound.EditorFaithful("batch mode has no active inspector editors (tests/projects/editorui and propertyeditoropen)")]
         public Editor[] activeEditors => Array.Empty<Editor>();
 
         public static ActiveEditorTracker sharedTracker => s_Shared ??= new ActiveEditorTracker();
 
-        [Unbound.EditorFaithful("no inspector window is open, so there are no editors to make again")]
-        public void ForceRebuild() { }
+        public void ForceRebuild()
+        {
+            if (m_FocusedTargets != null)
+                Stubs.Ignored("UnityEditor.ActiveEditorTracker.ForceRebuild", "cannot rebuild editors for a focused inspector");
+        }
     }
 
     internal partial class TransformInspector : Editor

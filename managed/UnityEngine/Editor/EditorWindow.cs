@@ -22,6 +22,7 @@ namespace UnityEditor
         Vector2 m_MaxSize = new Vector2(4000, 4000);
         internal GUIContent m_TitleContent = new GUIContent();
         bool m_Shown;
+        bool m_NotifyFocusOnClose;
         VisualElement m_UIRootElement;
         Panel m_Panel;
 
@@ -232,9 +233,9 @@ namespace UnityEditor
         }
 
         /// <summary>Shows the window the first time: its root joins an Editor panel, CreateGUI runs,
-        /// and the window takes the focus (measured: tests/projects/editorwindowgui window.afterShow,
+        /// and the normal show path takes focus (measured: tests/projects/editorwindowgui window.afterShow,
         /// OnEnable then CreateGUI then OnFocus).</summary>
-        void Open()
+        void Open(bool focus = true)
         {
             if (!s_Open.Contains(this)) s_Open.Add(this);
             if (m_Shown) return;
@@ -247,7 +248,17 @@ namespace UnityEditor
             m_Panel = new Panel(this, ContextType.Editor, EventDispatcher.CreateDefault());
             m_Panel.visualTree.Add(rootVisualElement);
             Message(this, "CreateGUI");
-            Focus();
+            if (focus) Focus();
+        }
+
+        // A focused inspector in batch Play mode attaches a panel and raises the window
+        // notification while leaving the current keyboard focus in place.
+        internal void ShowFocusedInspector()
+        {
+            if (m_Shown) return;
+            m_NotifyFocusOnClose = Compat.FocusedPropertyEditorCloseNotificationMeasured;
+            Open(focus: false);
+            windowFocusChanged?.Invoke();
         }
 
         public void Show() => Open();
@@ -298,9 +309,11 @@ namespace UnityEditor
             m_UIRootElement?.RemoveFromHierarchy();
             m_Panel?.Dispose();
             m_Panel = null;
-            if (s_Focused == this)
+            bool wasFocused = s_Focused == this;
+            if (wasFocused) s_Focused = null;
+            if (wasFocused || m_NotifyFocusOnClose)
             {
-                s_Focused = null;
+                m_NotifyFocusOnClose = false;
                 windowFocusChanged?.Invoke();
             }
             DestroyImmediate(this, true);
