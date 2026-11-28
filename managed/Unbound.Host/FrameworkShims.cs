@@ -133,9 +133,8 @@ static class FrameworkShims
                         changed = true;
                         continue;
                     }
-                    if (Exists(target)) continue;
                     var shim = FindShim(target);
-                    if (shim == null) continue;
+                    if (shim == null || Exists(shim)) continue;
                     instruction.OpCode = OpCodes.Call;
                     instruction.Operand = module.ImportReference(shim);
                     changed = true;
@@ -175,24 +174,20 @@ static class FrameworkShims
         return false;
     }
 
-    /// <summary>Whether .NET itself has the member (then the call stays as it is).</summary>
-    static bool Exists(MethodReference target)
+    /// <summary>Check the known framework receiver from the shim's signature. Cecil's names
+    /// for arbitrary declaring types cannot be passed to the reflection type-name parser.</summary>
+    static bool Exists(System.Reflection.MethodInfo shim)
     {
-        var type = Type.GetType(target.DeclaringType.FullName + ", " + RuntimeAssemblyOf(target.DeclaringType.FullName), false);
-        if (type == null) return true; // not a framework type we know: leave it
-        var parameters = target.Parameters.Select(p => p.ParameterType.FullName).ToArray();
-        return type.GetMethods(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Static)
-            .Any(m => m.Name == target.Name && m.GetParameters().Select(p => p.ParameterType.FullName).SequenceEqual(parameters));
+        var parameters = shim.GetParameters();
+        var receiver = parameters[0].ParameterType;
+        return receiver.GetMethod(shim.Name, System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance,
+            parameters.Skip(1).Select(p => p.ParameterType).ToArray()) != null;
     }
-
-    static string RuntimeAssemblyOf(string typeName) =>
-        typeName.StartsWith("System.Reflection.Emit.", StringComparison.Ordinal) ? "System.Private.CoreLib" : "System.Private.CoreLib";
 
     static System.Reflection.MethodInfo? FindShim(MethodReference target)
     {
-        var wanted = new List<string>();
-        if (target.HasThis) wanted.Add(target.DeclaringType.FullName);
-        wanted.AddRange(target.Parameters.Select(p => p.ParameterType.FullName));
+        if (!target.HasThis) return null;
+        var wanted = target.Parameters.Select(p => p.ParameterType.FullName).Prepend(target.DeclaringType.FullName).ToArray();
         return s_Shims.FirstOrDefault(m => m.Name == target.Name
             && m.GetParameters().Select(p => p.ParameterType.FullName).SequenceEqual(wanted));
     }
