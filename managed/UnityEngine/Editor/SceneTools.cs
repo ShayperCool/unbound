@@ -33,6 +33,8 @@ namespace UnityEditor
     /// view draws them.</summary>
     public sealed partial class Tools
     {
+        internal static int s_ButtonDown = -1;
+
         static PivotMode? s_PivotMode;
         static PivotRotation? s_PivotRotation;
 
