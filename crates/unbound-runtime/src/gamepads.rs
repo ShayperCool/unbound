@@ -48,6 +48,7 @@ sdl_api! {
     SDL_GameControllerAddMapping: fn(*const c_char) -> c_int;
     SDL_PumpEvents: fn();
     SDL_FlushEvents: fn(u32, u32);
+    SDL_PeepEvents: fn(*mut SdlEvent, c_int, c_int, u32, u32) -> c_int;
     SDL_NumJoysticks: fn() -> c_int;
     SDL_JoystickGetDeviceInstanceID: fn(c_int) -> i32;
     SDL_IsGameController: fn(c_int) -> c_int;
@@ -72,6 +73,24 @@ sdl_api! {
     SDL_JoystickGetProductVersion: fn(*mut c_void) -> u16;
 }
 
+// SDL2's event ABI. The union is 56 bytes on the supported 64-bit hosts.
+#[repr(C)]
+#[derive(Clone, Copy)]
+struct ControllerButtonEvent {
+    event_type: u32,
+    timestamp: u32,
+    instance: i32,
+    button: u8,
+    state: u8,
+    padding: [u8; 2],
+}
+
+#[repr(C)]
+union SdlEvent {
+    controller_button: ControllerButtonEvent,
+    storage: [u64; 7],
+}
+
 struct Device {
     /// The controller when SDL knows the device's mapping, else null.
     controller: *mut c_void,
@@ -81,6 +100,8 @@ struct Device {
     vendor: u16,
     product: u16,
     version: u16,
+    /// Signed X/Y of the ordered controller button transitions.
+    legacy_dpad: [i8; 2],
 }
 
 struct Sdl {
@@ -227,14 +248,60 @@ fn manufacturer(vendor: u16) -> String {
 }
 
 impl Sdl {
+    /// The Legacy Input axes retain the result of the last transition on each D-pad axis.
+    /// The Input System still reads the current set of pressed buttons.
+    fn read_dpad_events(&mut self) {
+        const SDL_GETEVENT: c_int = 2;
+        const SDL_CONTROLLERBUTTONDOWN: u32 = 0x651;
+        const SDL_CONTROLLERBUTTONUP: u32 = 0x652;
+        const SDL_DPAD_UP: u8 = 11;
+        const SDL_DPAD_DOWN: u8 = 12;
+        const SDL_DPAD_LEFT: u8 = 13;
+        const SDL_DPAD_RIGHT: u8 = 14;
+        let mut events = std::mem::MaybeUninit::<[SdlEvent; 32]>::uninit();
+        let events = events.as_mut_ptr().cast::<SdlEvent>();
+        loop {
+            let count = unsafe {
+                (self.api.SDL_PeepEvents)(
+                    events,
+                    32,
+                    SDL_GETEVENT,
+                    SDL_CONTROLLERBUTTONDOWN,
+                    SDL_CONTROLLERBUTTONUP,
+                )
+            };
+            if count <= 0 {
+                break;
+            }
+            // SDL initializes each returned event. The requested range only contains buttons.
+            let batch = unsafe { std::slice::from_raw_parts(events, count as usize) };
+            for event in batch {
+                let button = unsafe { event.controller_button };
+                let (axis, direction) = match button.button {
+                    SDL_DPAD_UP => (1, -1),
+                    SDL_DPAD_DOWN => (1, 1),
+                    SDL_DPAD_LEFT => (0, -1),
+                    SDL_DPAD_RIGHT => (0, 1),
+                    _ => continue,
+                };
+                if let Some(device) = self.devices.get_mut(&button.instance) {
+                    device.legacy_dpad[axis] = if button.state == 0 { 0 } else { direction };
+                }
+            }
+        }
+    }
+
     /// Pumps SDL's events and opens and closes the devices that came and went.
     fn update(&mut self) {
+        unsafe { (self.api.SDL_PumpEvents)() };
+        if cfg!(target_os = "linux") && !self.devices.is_empty() {
+            self.read_dpad_events();
+        }
         let api = &self.api;
         let added = &mut self.added;
         let removed = &mut self.removed;
         let before = (added.len(), removed.len());
         unsafe {
-            (api.SDL_PumpEvents)();
             (api.SDL_FlushEvents)(0, u32::MAX);
             // Pads that went away.
             self.devices.retain(|id, device| {
@@ -286,6 +353,7 @@ impl Sdl {
                     vendor,
                     product: (api.SDL_JoystickGetProduct)(joystick),
                     version: (api.SDL_JoystickGetProductVersion)(joystick),
+                    legacy_dpad: [0; 2],
                 };
                 added.push(id);
                 self.devices.insert(id, device);
@@ -344,6 +412,7 @@ impl Sdl {
                             .collect();
                         device["padButtons"] = json!(pad_buttons);
                         device["padAxes"] = json!(pad_axes);
+                        device["legacyDpad"] = json!(d.legacy_dpad);
                     }
                     device
                 }
@@ -389,6 +458,7 @@ impl Sdl {
                     };
                     bytes.extend_from_slice(&v.to_le_bytes());
                 }
+                bytes.extend(d.legacy_dpad.map(|value| value as u8));
                 for i in 0..axes {
                     bytes.extend_from_slice(&(api.SDL_JoystickGetAxis)(j, i).to_le_bytes());
                 }

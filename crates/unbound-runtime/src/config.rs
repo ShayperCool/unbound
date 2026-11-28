@@ -764,6 +764,7 @@ fn input_axes(project: &Project) -> Vec<Json> {
             "invert": i("invert") != 0,
             "type": i("type"),
             "axis": i("axis"),
+            "joyNum": i("joyNum"),
         }));
     }
     axes

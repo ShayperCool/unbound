@@ -28,6 +28,7 @@ namespace Unbound.Runtime
             /// (left x, left y, right x, right y, left trigger, right trigger).</summary>
             internal uint PadButtons;
             internal short[] PadAxes = new short[6];
+            internal sbyte LegacyDpadX, LegacyDpadY;
         }
 
         /// <summary>The attached devices, in the order SDL found them (legacy joystick numbers).</summary>
@@ -136,6 +137,9 @@ namespace Unbound.Runtime
                 {
                     device.PadButtons = e.GetProperty("padButtons").GetUInt32();
                     device.PadAxes = Shorts(e.GetProperty("padAxes"));
+                    var dpad = e.GetProperty("legacyDpad");
+                    device.LegacyDpadX = (sbyte)dpad[0].GetInt32();
+                    device.LegacyDpadY = (sbyte)dpad[1].GetInt32();
                 }
             }
         }
@@ -170,6 +174,8 @@ namespace Unbound.Runtime
                 {
                     device.PadButtons = isPad ? padButtons : 0;
                     for (int i = 0; i < 6; i++) device.PadAxes[i] = Short(state, ref at);
+                    device.LegacyDpadX = unchecked((sbyte)state[at++]);
+                    device.LegacyDpadY = unchecked((sbyte)state[at++]);
                     if (device.Axes.Length != axes) device.Axes = new short[axes];
                     for (int i = 0; i < axes; i++) device.Axes[i] = Short(state, ref at);
                     if (device.Buttons.Length != buttons) device.Buttons = new bool[buttons];
@@ -179,7 +185,7 @@ namespace Unbound.Runtime
                 }
                 else
                 {
-                    at += 12 + 2 * axes + buttons + hats;
+                    at += 14 + 2 * axes + buttons + hats;
                 }
                 at = (at + 3) & ~3;
             }
@@ -218,8 +224,15 @@ namespace Unbound.Runtime
 
         static float AxisValue(Device device, int axis)
         {
+            if (device.IsGamepad && Compat.LegacyJoystickHatAxes)
+            {
+                int dpad = axis - device.PadAxes.Length;
+                if (dpad == 0) return device.LegacyDpadX;
+                if (dpad == 1) return device.LegacyDpadY;
+            }
             if (axis < device.Axes.Length)
                 return Mathf.Clamp(device.Axes[axis] / 32767f, -1f, 1f);
+            if (device.IsGamepad) return 0f;
             int component = axis - device.Axes.Length;
             int hat = component / 2;
             return hat < device.Hats.Length && Compat.LegacyJoystickHatAxes

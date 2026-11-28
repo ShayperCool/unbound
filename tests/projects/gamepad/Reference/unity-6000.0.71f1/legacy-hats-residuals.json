@@ -8,11 +8,25 @@
     "upper-right/5": [0, -1],
     "lower-left/2": [0, -1],
     "lower-left/5": [0, -1],
-    "lower-left/6": [0, -1],
-    "lower-left/7": [0, 1],
     "second-lower-left/2": [0, -1],
     "second-lower-left/5": [0, -1],
     "second-upper-right/2": [0, -1],
     "second-upper-right/5": [0, -1]
+  },
+  "mixed": {
+    "pad-analog/2": [0.5019379, 0.003906369],
+    "pad-analog/5": [0, -1],
+    "pad-left/2": [0.5019379, 0.003906369],
+    "pad-left/5": [0, -1],
+    "pad-left-down/2": [0.5019379, 0.003906369],
+    "pad-left-down/5": [0, -1],
+    "pad-lower-left-to-upper-right/2": [0.5019379, 0.003906369],
+    "pad-lower-left-to-upper-right/5": [0, -1],
+    "pad-y-only-reversal/2": [0.5019379, 0.003906369],
+    "pad-y-only-reversal/5": [0, -1],
+    "pad-lower-right-to-upper-left/2": [0.5019379, 0.003906369],
+    "pad-lower-right-to-upper-left/5": [0, -1],
+    "pad-upper-left-to-lower-right/2": [0.5019379, 0.003906369],
+    "pad-upper-left-to-lower-right/5": [0, -1]
   }
 }

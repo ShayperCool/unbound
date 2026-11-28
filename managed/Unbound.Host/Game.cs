@@ -267,6 +267,7 @@ public sealed class ScriptConfig
 
 public sealed class AxisConfig
 {
+    public int JoyNum { get; set; }
     public string Name { get; set; } = "";
     public string Negative { get; set; } = "";
     public string Positive { get; set; } = "";
@@ -448,6 +449,7 @@ public static unsafe class Game
             {
                 Name = a.Name, Negative = a.Negative, Positive = a.Positive, AltNegative = a.AltNegative, AltPositive = a.AltPositive,
                 Gravity = a.Gravity, Dead = a.Dead, Sensitivity = a.Sensitivity, Snap = a.Snap, Invert = a.Invert, Type = a.Type, Axis = a.Axis,
+                JoyNum = a.JoyNum,
             });
         }
         Input.ConfigureAxes(axes);
