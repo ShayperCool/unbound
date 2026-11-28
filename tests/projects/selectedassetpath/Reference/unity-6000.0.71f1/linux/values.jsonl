@@ -142,4 +142,7 @@
 {"k":"unicode.unpairedTwoHigh","v":"Assets/Selection/Then�.txt"}
 {"k":"unicode.asciiCaseInAccent","v":"Assets/Selection/ÉTAGE 1.txt"}
 {"k":"unicode.joinerWithPlainSibling","v":"Assets/Selection/A‍B.txt"}
+{"k":"unicode.noncharacter","v":"Assets/Selection/Guide￾.txt"}
+{"k":"unicode.noncharacterWithDecomposition","v":"Assets/Selection/libreé￾K￾Å.txt"}
+{"k":"unicode.noncharacterLogs","v":""}
 {"k":"complete","v":true}

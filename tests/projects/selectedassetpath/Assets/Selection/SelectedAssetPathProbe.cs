@@ -195,6 +195,15 @@ static class SelectedAssetPathProbe
             Add("unicode.asciiCaseInAccent", PathFor("ÉTAGE.txt"));
             File.WriteAllText("Assets/Selection/AB.txt", "name without a joiner");
             Add("unicode.joinerWithPlainSibling", PathFor("A\u200dB.txt"));
+            capture.Messages.Clear();
+            Debug.unityLogger.logHandler = capture;
+            try
+            {
+                Add("unicode.noncharacter", PathFor("Guide\ufffe.txt"));
+                Add("unicode.noncharacterWithDecomposition", PathFor("libreé\ufffeK\ufffeÅ.txt"));
+            }
+            finally { Debug.unityLogger.logHandler = handler; }
+            Add("unicode.noncharacterLogs", string.Join("|", capture.Messages));
         }
         finally
         {

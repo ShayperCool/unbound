@@ -13,6 +13,8 @@ is reserved. All fixture writes stay in the private project copy. The meta-only 
 Linux and macOS references capture the filename spelling and collision behavior of each host.
 The macOS profile includes decomposed filenames and Unicode aliases that resolve to an
 existing file. Linux retains the requested Unicode spelling and handles ASCII case collisions.
+Both profiles preserve U+FFFE, including when adjacent letters require decomposition.
+Publication checks the sealed launch's host and writes only that host's reference directory.
 
 The framing controls call `ProjectWindowUtil.FrameObjectInProjectWindow` with a folder ID,
 zero, and an unknown ID while no Project Browser is open. The probe captures the logger and

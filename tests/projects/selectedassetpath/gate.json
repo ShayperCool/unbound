@@ -1,5 +1,6 @@
 {
   "commands": [
+    "python3 tests/projects/selectedassetpath/test_publish.py",
     "python3 tests/projects/selectedassetpath/run.py gate"
   ],
   "engine_paths": [
