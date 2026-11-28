@@ -1343,6 +1343,7 @@ namespace Unbound.Runtime
                         file.Objects[fileId] = wrapper;
                         if (file.MainObject == material) file.MainObject = wrapper;
                     }
+                    material.NotifyEngineObjectUnloadedOrDestroyed();
                     return true;
                 case Texture2D texture:
                     return texture.ReloadImported();

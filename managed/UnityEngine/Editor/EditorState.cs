@@ -25,7 +25,7 @@ namespace UnityEditor
         static Selection()
         {
             EditorApplication.InternalUpdate += NotifyIfChanged;
-            Object.EngineObjectDestroyed += OnObjectDestroyed;
+            Object.EngineObjectUnloadedOrDestroyed += OnObjectUnavailable;
         }
 
         static void NotifyIfChanged()
@@ -50,6 +50,8 @@ namespace UnityEditor
             var clean = (measured ? ids : ids.Where(id => id != 0)).Distinct().ToArray();
             if (!measured && (active == 0 || Array.IndexOf(clean, active) < 0))
                 active = clean.Length > 0 ? clean[0] : 0;
+            // The active asset is resolved on assignment. Other IDs can stay unloaded.
+            if (measured) _ = Find(active);
             var previous = CurrentIds();
             if (s_Active == active && s_Context == context && previous.SequenceEqual(clean)) return;
             if (!Undo.isProcessing) Undo.RecordSelection(previous, s_Active, clean, active);
@@ -61,20 +63,33 @@ namespace UnityEditor
             s_Changed = true;
         }
 
-        static void OnObjectDestroyed(int instanceID)
+        static void OnObjectUnavailable(int instanceID)
         {
-            if (!s_SelectedIds.Contains(instanceID) && s_Context != instanceID) return;
+            var wasActive = s_Active == instanceID;
+            if (!wasActive && s_Context != instanceID && !s_SelectedIds.Contains(instanceID)) return;
             if (!Compat.SelectionMutationsMeasured) return;
-            s_SelectedIds.Remove(instanceID);
-            if (s_Active == instanceID) s_Active = 0;
+            var wasSelected = s_SelectedIds.Remove(instanceID);
+            if (wasActive) s_Active = 0;
             if (s_Context == instanceID) s_Context = 0;
-            s_Changed = true;
+            if (wasActive || wasSelected) s_Changed = true;
+        }
+
+        static void SetActiveSelection(int id, int context)
+        {
+            var selectedId = id;
+            if (Compat.SelectionMutationsMeasured && Find(id) is Component component && component.gameObject != null)
+                selectedId = component.gameObject.GetInstanceID();
+            SetSelection(id == 0 ? Array.Empty<int>() : new[] { selectedId }, id, context);
         }
 
         /// <summary>Undo and redo put a recorded selection back.</summary>
         internal static void Restore(int[] ids, int active) => SetSelection(ids, active, 0);
 
-        static Object Find(int id) => id == 0 ? null : ObjectRegistry.FindById(id);
+        static Object Find(int id)
+        {
+            if (id == 0) return null;
+            return Compat.SelectionMutationsMeasured ? AssetDatabaseRuntime.FindOrReloadById(id) : ObjectRegistry.FindById(id);
+        }
 
         static IEnumerable<Object> Selected() => CurrentIds().Select(Find).Where(o => o != null);
 
@@ -103,10 +118,10 @@ namespace UnityEditor
         {
             get
             {
-                var go = activeObject as GameObject;
+                var go = Compat.SelectionMutationsMeasured ? activeGameObject : activeObject as GameObject;
                 return go != null && !go.IsPersistentAsset ? go.transform : null;
             }
-            set => activeObject = value != null ? value.gameObject : null;
+            set => activeObject = Compat.SelectionMutationsMeasured ? value : value != null ? value.gameObject : null;
         }
 
         public static Object activeContext => Find(s_Context);
@@ -121,7 +136,7 @@ namespace UnityEditor
                     if (s_Context != 0) SetSelection(CurrentIds(), value, 0);
                     return;
                 }
-                SetSelection(value == 0 ? Array.Empty<int>() : new[] { value }, value, 0);
+                SetActiveSelection(value, 0);
             }
         }
 
@@ -152,8 +167,15 @@ namespace UnityEditor
 
         public static Transform[] transforms => GetTransforms(SelectionMode.Unfiltered);
 
-        public static string[] assetGUIDs =>
-            Selected().Select(o => AssetDatabaseRuntime.TryGetLocation(o, out var guid, out _) ? guid : null).Where(g => g != null).Distinct().ToArray();
+        public static string[] assetGUIDs => CurrentIds().Select(AssignedAssetGuid).Where(guid => guid != null).Distinct().ToArray();
+
+        static string AssignedAssetGuid(int id)
+        {
+            if (Compat.SelectionMutationsMeasured && AssetDatabaseRuntime.TryGetPersistentLocation(id, out var guid, out _))
+                return guid;
+            var obj = ObjectRegistry.FindById(id);
+            return obj != null && AssetDatabaseRuntime.TryGetLocation(obj, out guid, out _) ? guid : null;
+        }
 
         public static int count => Selected().Count();
 
@@ -203,7 +225,7 @@ namespace UnityEditor
         public static void SetActiveObjectWithContext(Object obj, Object context)
         {
             int id = obj != null ? obj.GetInstanceID() : 0;
-            SetSelection(id == 0 ? Array.Empty<int>() : new[] { id }, id, context != null ? context.GetInstanceID() : 0);
+            SetActiveSelection(id, context != null ? context.GetInstanceID() : 0);
         }
 
         /// <summary>The selected scene objects' transforms (assets are not in the scene).</summary>
