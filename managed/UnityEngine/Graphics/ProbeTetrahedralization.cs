@@ -366,7 +366,9 @@ namespace UnityEngine
                     Vector3 e1 = p[t[(k + 1) % 3]] - p[t[k]], e2 = p[t[(k + 2) % 3]] - p[t[k]];
                     float l1 = Length(e1), l2 = Length(e2);
                     float d = ((e1.x / l1) * (e2.x / l2) + (e2.y / l2) * (e1.y / l1)) + (e1.z / l1) * (e2.z / l2);
-                    float angle = MathF.Acos(Math.Clamp(d, -1f, 1f));
+                    // Use double-precision Math.Acos rounded once to float (Mathf.Acos) rather than
+                    // MathF.Acos, whose OS libm acosf differs by 1 ULP on macOS libSystem vs Linux glibc.
+                    float angle = Mathf.Acos(Math.Clamp(d, -1f, 1f));
                     ref var s = ref sums[t[k]];
                     s = new Vector3(s.x + angle * normal.x, s.y + angle * normal.y, s.z + angle * normal.z);
                 }

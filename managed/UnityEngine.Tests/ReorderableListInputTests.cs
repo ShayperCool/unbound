@@ -19,6 +19,8 @@ namespace UnityEngine.Tests
             m_Release.Dispose();
         }
 
+        static bool Mac => Application.platform == RuntimePlatform.OSXEditor;
+
         static void Reset()
         {
             GUIUtility.hotControl = 0;
@@ -136,9 +138,15 @@ namespace UnityEngine.Tests
             Pass(Mouse(EventType.MouseUp, Remove(4)), list);
             Assert.Equal("a,c,", string.Join(",", items));
             Assert.Equal(0, list.index);
-            // script/plain.delete.*: Delete on the focused list removes the selected row.
+            // script/plain.delete.*: the platform's Delete shortcut (Command-Backspace on macOS,
+            // Delete elsewhere, per Unity 6000.0 ReorderableList.cs) removes the selected row on
+            // the focused list; the other platform's shortcut is ignored.
             calls.Clear();
-            Assert.True(Pass(Event.KeyboardEvent("delete"), list));
+            Assert.False(Pass(Event.KeyboardEvent(Mac ? "delete" : "%backspace"), list));
+            if (Mac) Assert.False(Pass(Event.KeyboardEvent("backspace"), list));
+            Assert.Equal("a,c,", string.Join(",", items));
+            Assert.Empty(calls);
+            Assert.True(Pass(Event.KeyboardEvent(Mac ? "%backspace" : "delete"), list));
             Assert.Equal("c,", string.Join(",", items));
             Assert.Equal(new[] { "changed 0/2" }, calls);
         }
@@ -169,15 +177,22 @@ namespace UnityEngine.Tests
         [Fact]
         public void AMultiSelectListTogglesWithTheActionKeyAndSelectsRangesWithShift()
         {
+            var action = Mac ? EventModifiers.Command : EventModifiers.Control;
+            var nonAction = Mac ? EventModifiers.Control : EventModifiers.Command;
             var list = new ReorderableList(new List<string> { "a", "b", "c", "d", "e" }, typeof(string)) { multiSelect = true };
-            // script/multi.*.
+            // script/multi.*: EditorGUI.actionKey is Command on macOS, Control elsewhere.
             Pass(Mouse(EventType.MouseDown, Row(1)), list);
             Pass(Mouse(EventType.MouseUp, Row(1)), list);
-            Pass(Mouse(EventType.MouseDown, Row(3), EventModifiers.Control), list);
-            Pass(Mouse(EventType.MouseUp, Row(3), EventModifiers.Control), list);
+            Pass(Mouse(EventType.MouseDown, Row(3), nonAction), list);
+            Pass(Mouse(EventType.MouseUp, Row(3), nonAction), list);
+            Assert.Equal(new[] { 3 }, list.selectedIndices);
+            Pass(Mouse(EventType.MouseDown, Row(1)), list);
+            Pass(Mouse(EventType.MouseUp, Row(1)), list);
+            Pass(Mouse(EventType.MouseDown, Row(3), action), list);
+            Pass(Mouse(EventType.MouseUp, Row(3), action), list);
             Assert.Equal(new[] { 1, 3 }, list.selectedIndices);
-            Pass(Mouse(EventType.MouseDown, Row(1), EventModifiers.Control), list);
-            Pass(Mouse(EventType.MouseUp, Row(1), EventModifiers.Control), list);
+            Pass(Mouse(EventType.MouseDown, Row(1), action), list);
+            Pass(Mouse(EventType.MouseUp, Row(1), action), list);
             Assert.Equal(new[] { 3 }, list.selectedIndices);
             Pass(Mouse(EventType.MouseDown, Row(0), EventModifiers.Shift), list);
             Pass(Mouse(EventType.MouseUp, Row(0), EventModifiers.Shift), list);
