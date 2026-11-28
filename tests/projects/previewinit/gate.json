@@ -1,0 +1,20 @@
+{
+  "commands": ["python3 tests/projects/previewinit/run.py gate"],
+  "summary": "previewinit (edit|play): [0-9]+/[0-9]+ values match.*",
+  "engine_paths": [
+    "managed/UnityEngine/Core/GameObject.cs",
+    "managed/UnityEngine/Core/Object.cs",
+    "managed/UnityEngine/Core/SceneManagement.cs",
+    "managed/UnityEngine/Core/Transform.cs",
+    "managed/UnityEngine/Editor/EditorUtility.PreviewInitialization.cs",
+    "managed/UnityEngine/Graphics/FrameBuilder.cs",
+    "managed/UnityEngine/Graphics/Renderer.cs",
+    "managed/UnityEngine/Graphics/Srp/SrpCore.cs",
+    "managed/UnityEngine/Runtime/Compat.cs",
+    "managed/UnityEngine/Runtime/Lifecycle.cs",
+    "managed/UnityEngine/Runtime/SceneRegistry.cs",
+    "tests/projects/analyticssession/ProjectSettings/",
+    "tests/projects/imguiskin/Assets/Editor/",
+    "tests/projects/imguiskin/Assets/Scenes/"
+  ]
+}

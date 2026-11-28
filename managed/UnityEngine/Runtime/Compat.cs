@@ -629,6 +629,10 @@ namespace Unbound.Runtime
         /// 6000.0.71f1. Other families keep their unmeasured answer (not implemented, said once).</summary>
         internal static bool EditorPreviewsMeasured => Family == ReleaseFamily.Unity6000_0;
 
+        // Existing hierarchy preparation for previews, measured by tests/projects/previewinit.
+        internal const string PreviewInitializationFamily = "6000.0";
+        internal static bool PreviewInitializationMeasured => Family == ReleaseFamily.Unity6000_0;
+
         // EditorGUI's text, number and delayed fields and sliders (tests/projects/editorvaluefields).
         internal static bool EditorValueFieldsMeasured => Family == ReleaseFamily.Unity6000_0;
 
