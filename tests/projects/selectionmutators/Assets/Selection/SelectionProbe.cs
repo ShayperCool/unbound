@@ -138,15 +138,15 @@ public static class SelectionProbe
             if (++ticks < 3) return;
             EditorApplication.update -= Finish;
             rows.Add(JsonUtility.ToJson(new Row { k = "update.selectionChanged", v = notices.ToString() }));
-            Write();
-            EditorApplication.Exit(0);
+            Selection.selectionChanged -= Changed;
+            SelectionStateProbe.Record((key, value) => rows.Add(JsonUtility.ToJson(new Row { k = key, v = value })), Write);
         }
         void Write()
         {
-            Selection.selectionChanged -= Changed;
             Directory.CreateDirectory(output);
             rows.Add("{\"k\":\"complete\",\"v\":true}");
             File.WriteAllLines(Path.Combine(output, "values.jsonl"), rows);
+            EditorApplication.Exit(0);
         }
         EditorApplication.update += Finish;
     }
