@@ -1,0 +1,12 @@
+{
+  "commands": ["python3 tests/projects/selectionmutators/run.py gate"],
+  "engine_paths": [
+    "managed/UnityEngine/Editor/EditorState.cs",
+    "managed/UnityEngine/Editor/Undo.cs",
+    "managed/UnityEngine/Core/Object.cs",
+    "managed/UnityEngine/Runtime/Compat.cs",
+    "tests/projects/imguiskin/Assets/Scenes",
+    "tests/projects/imguiskin/Assets/Editor",
+    "tests/projects/analyticssession/ProjectSettings"
+  ]
+}
