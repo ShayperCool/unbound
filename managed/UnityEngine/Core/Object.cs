@@ -492,9 +492,10 @@ namespace UnityEngine
         // Called when the engine object is gone; subclasses release what they hold.
         internal virtual void OnEngineDestroy() { }
 
-        internal static event Action<int> EngineObjectUnloadedOrDestroyed;
+        internal static event Action<int, bool> EngineObjectUnloadedOrDestroyed;
 
-        internal void NotifyEngineObjectUnloadedOrDestroyed() => EngineObjectUnloadedOrDestroyed?.Invoke(m_InstanceID);
+        internal void NotifyEngineObjectUnloadedOrDestroyed(bool destroyed) =>
+            EngineObjectUnloadedOrDestroyed?.Invoke(m_InstanceID, destroyed);
 
         /// <summary>Marks the engine side destroyed and forgets the instance id.</summary>
         internal void MarkDestroyed()
@@ -506,7 +507,7 @@ namespace UnityEngine
             ObjectDispatch.Destroyed(this);
             OnEngineDestroy();
             ObjectRegistry.Unregister(this);
-            NotifyEngineObjectUnloadedOrDestroyed();
+            NotifyEngineObjectUnloadedOrDestroyed(destroyed: true);
         }
     }
 

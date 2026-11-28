@@ -63,14 +63,15 @@ namespace UnityEditor
             s_Changed = true;
         }
 
-        static void OnObjectUnavailable(int instanceID)
+        static void OnObjectUnavailable(int instanceID, bool destroyed)
         {
             var wasActive = s_Active == instanceID;
-            if (!wasActive && s_Context != instanceID && !s_SelectedIds.Contains(instanceID)) return;
+            var lostContext = destroyed && s_Context == instanceID;
+            if (!wasActive && !lostContext && !s_SelectedIds.Contains(instanceID)) return;
             if (!Compat.SelectionMutationsMeasured) return;
             var wasSelected = s_SelectedIds.Remove(instanceID);
             if (wasActive) s_Active = 0;
-            if (s_Context == instanceID) s_Context = 0;
+            if (lostContext) s_Context = 0;
             if (wasActive || wasSelected) s_Changed = true;
         }
 
