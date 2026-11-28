@@ -6,6 +6,7 @@
   "engine_paths": [
     "managed/UnityEngine/Editor/EditorUtility.ContextMenus.cs",
     "managed/UnityEngine/Editor/SceneTools.cs",
+    "managed/UnityEngine/Runtime/Compat.cs",
     "managed/UnityEngine/IMGUI/GUIUtility.cs",
     "tests/projects/analyticssession/ProjectSettings/",
     "tests/projects/imguiskin/Assets/Editor/",

@@ -23,7 +23,7 @@ def main():
     if any(Path(label).name != label or label in ('.', '..') for label in (args.label, *args.labels)):
         parser.error('labels must be single directory names')
     if args.mode == 'record':
-        value_probe.record(PROBE, 'ImguiSkinRunner.Record', VARIABLE, args.label, batch=True, base=BASE, macos_batch=True)
+        value_probe.record(PROBE, 'ImguiSkinRunner.Record', VARIABLE, args.label, batch=True, base=BASE)
         return 0
     if args.mode == 'publish':
         return value_probe.publish(PROBE, args.labels)

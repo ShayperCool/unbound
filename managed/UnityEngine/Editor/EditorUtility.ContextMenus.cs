@@ -31,11 +31,25 @@ namespace UnityEditor
         }
 
         public static void DisplayCustomMenuWithSeparators(Rect position, string[] options, bool[] enabled,
-            bool[] separator, int[] selected, SelectMenuItemFunction callback, object userData) =>
-            FinishCustomMenuRequest("UnityEditor.EditorUtility.DisplayCustomMenuWithSeparators");
+            bool[] separator, int[] selected, SelectMenuItemFunction callback, object userData)
+        {
+            const string member = "UnityEditor.EditorUtility.DisplayCustomMenuWithSeparators";
+            int count = options?.Length ?? 0;
+            if ((enabled?.Length ?? 0) != count || (separator?.Length ?? 0) != count)
+            {
+                Stubs.Ignored(member + " (option masks)", "requires option masks matching the number of labels");
+                return;
+            }
+            FinishCustomMenuRequest(member);
+        }
 
         static void FinishCustomMenuRequest(string member)
         {
+            if (!Compat.EditorCustomMenuCompletionMeasured)
+            {
+                Stubs.Ignored(member + " (release family)", "cannot show an Editor context menu. Completion is unmeasured for this release family");
+                return;
+            }
             ResetMouseDown();
             Stubs.Ignored(member, "cannot show an Editor context menu");
         }

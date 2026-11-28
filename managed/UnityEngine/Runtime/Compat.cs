@@ -618,6 +618,10 @@ namespace Unbound.Runtime
         /// on Unity 6000.0.71f1. Other families retain their unmeasured answers.</summary>
         internal static bool EditorPopupWindowMeasured => Family == ReleaseFamily.Unity6000_0;
 
+        /// <summary>Completion after a batch context menu request, measured by
+        /// tests/projects/displaycustommenu on Unity 6000.0.71f1.</summary>
+        internal static bool EditorCustomMenuCompletionMeasured => Family == ReleaseFamily.Unity6000_0;
+
         /// <summary>The Editor's channel service (running state, own channels, channel ids), its
         /// interface language settings and Collab.instance, measured in Play mode by
         /// tests/projects/editorchannels on Unity 6000.0.71f1. Other families are unmeasured.</summary>
