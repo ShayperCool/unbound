@@ -20,11 +20,16 @@ macOS retains the initial position when a move is requested, and closing publish
 one notification. The ordinary `Show` and `Focus` calls left keyboard focus unset
 in both macOS captures. Unbound's ordinary window model grants focus, so the two
 prior-focus controls retain this raw difference and the inspector reports the
-unsupported macOS case. The runner selects the recorded profile for the host.
+unsupported macOS case. The gate allows the two exact fallback values alongside
+the reference values. Explicit focus on the inspector also reports its macOS
+limitation, including the effect on closing notifications. The runner selects the
+recorded profile for the host.
 The Linux recorder gives each launch fresh Editor preferences. Two exploratory
 Linux runs using saved preferences after a resize reported three notifications
-and focused the newly opened inspector in the earlier no-prior-focus control.
-Edit mode, interactive window layout and additional release families are unmeasured.
+and focused the newly opened inspector in the earlier focus control. Opening a
+live inspector reports that saved geometry and layout-dependent focus are
+unsupported. Live Edit-mode opening, interactive window layout and additional
+release families are unmeasured.
 
 [Unity 6.0 Manual on focused inspectors](https://docs.unity.com/en-us/engine/6000.0/manual/unity-editor/editor-windows-views-reference/using-the-inspector/inspector-focused),
 [windowFocusChanged API](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/EditorWindow-windowFocusChanged.html),

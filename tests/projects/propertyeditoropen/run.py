@@ -13,6 +13,24 @@ BASE = [(PROBE.parent/'imguiskin', ('Assets/Scenes', 'Assets/Editor')),
         (PROBE.parent/'analyticssession', ('ProjectSettings',))]
 VARIABLE = 'PROPERTY_EDITOR_OPEN_OUT'
 
+# The exact Unbound outcomes of the two macOS controls whose prerequisites differ.
+MACOS_FOCUS_FALLBACKS = {
+    'open.priorWindowFocus': 'before=prior|afterOpen=prior|openEvents=prior|afterClose=prior|closeEvents=prior|lostFocus=0',
+    'open.closeAfterFocusChanged': 'hadFocus=True|focusedAfter=True|events=1',
+}
+
+
+def macos_focus_gate(label):
+    reference = value_probe.reference_dir(PROBE, profile='macos') / value_probe.VALUES
+    capture = value_probe.run_root(PROBE, label) / 'engine' / value_probe.VALUES
+    expected = value_probe.read_values(reference)
+    actual = value_probe.read_values(capture)
+    unsupported = [key for key, fallback in MACOS_FOCUS_FALLBACKS.items()
+                   if actual.get(key) not in (expected[key], fallback)]
+    for key in unsupported:
+        print(f'{key}: result outside the recorded macOS focus residual')
+    return int(bool(unsupported))
+
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
@@ -31,8 +49,9 @@ def main():
     if args.mode == 'publish':
         return value_probe.publish(PROBE, args.labels, profile=profile)
     residuals = 'residuals-macos.json' if profile == 'macos' else 'residuals.json'
-    return value_probe.gate(PROBE, VARIABLE, args.label, 0, ['--headless', '120'], base=BASE,
-                            profile=profile, residuals_file=residuals)
+    result = value_probe.gate(PROBE, VARIABLE, args.label, 0, ['--headless', '120'], base=BASE,
+                              profile=profile, residuals_file=residuals)
+    return result if result or profile is None else macos_focus_gate(args.label)
 
 
 if __name__ == '__main__':
