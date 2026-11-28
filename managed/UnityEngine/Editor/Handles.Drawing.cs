@@ -12,44 +12,44 @@ namespace UnityEditor
     /// </summary>
     public sealed partial class Handles
     {
-        static void Draw(string member)
+        static void Draw(string diagnosticKey)
         {
             if (Event.current.type != EventType.Repaint) return;
-            Stubs.Ignored("Handles." + member, "draws nothing (Unbound draws no handles)");
+            Stubs.Ignored(diagnosticKey, "draws nothing (Unbound draws no handles)");
         }
 
-        public static void DrawAAPolyLine(params Vector3[] points) => Draw(nameof(DrawAAPolyLine));
-        public static void DrawAAPolyLine(float width, params Vector3[] points) => Draw(nameof(DrawAAPolyLine));
+        public static void DrawAAPolyLine(params Vector3[] points) => Draw("Handles." + nameof(DrawAAPolyLine));
+        public static void DrawAAPolyLine(float width, params Vector3[] points) => Draw("Handles." + nameof(DrawAAPolyLine));
         // Unity's reads the texture's height for the width first, in every event.
         public static void DrawAAPolyLine(Texture2D lineTex, params Vector3[] points)
         {
             _ = lineTex.height / 2;
-            Draw(nameof(DrawAAPolyLine));
+            Draw("Handles." + nameof(DrawAAPolyLine));
         }
-        public static void DrawAAPolyLine(float width, int actualNumberOfPoints, params Vector3[] points) => Draw(nameof(DrawAAPolyLine));
-        public static void DrawAAPolyLine(Texture2D lineTex, float width, params Vector3[] points) => Draw(nameof(DrawAAPolyLine));
-        public static void DrawAAPolyLine(Color[] colors, Vector3[] points) => Draw(nameof(DrawAAPolyLine));
-        public static void DrawAAPolyLine(float width, Color[] colors, Vector3[] points) => Draw(nameof(DrawAAPolyLine));
-        public static void DrawAAConvexPolygon(params Vector3[] points) => Draw(nameof(DrawAAConvexPolygon));
-        public static void DrawPolyLine(params Vector3[] points) => Draw(nameof(DrawPolyLine));
-        public static void DrawLines(Vector3[] lineSegments) => Draw(nameof(DrawLines));
-        public static void DrawLines(Vector3[] points, int[] segmentIndices) => Draw(nameof(DrawLines));
-        public static void DrawDottedLine(Vector3 p1, Vector3 p2, float screenSpaceSize) => Draw(nameof(DrawDottedLine));
-        public static void DrawDottedLines(Vector3[] lineSegments, float screenSpaceSize) => Draw(nameof(DrawDottedLines));
-        public static void DrawDottedLines(Vector3[] points, int[] segmentIndices, float screenSpaceSize) => Draw(nameof(DrawDottedLines));
+        public static void DrawAAPolyLine(float width, int actualNumberOfPoints, params Vector3[] points) => Draw("Handles." + nameof(DrawAAPolyLine));
+        public static void DrawAAPolyLine(Texture2D lineTex, float width, params Vector3[] points) => Draw("Handles." + nameof(DrawAAPolyLine));
+        public static void DrawAAPolyLine(Color[] colors, Vector3[] points) => Draw("Handles." + nameof(DrawAAPolyLine));
+        public static void DrawAAPolyLine(float width, Color[] colors, Vector3[] points) => Draw("Handles." + nameof(DrawAAPolyLine));
+        public static void DrawAAConvexPolygon(params Vector3[] points) => Draw("Handles." + nameof(DrawAAConvexPolygon));
+        public static void DrawPolyLine(params Vector3[] points) => Draw("Handles." + nameof(DrawPolyLine));
+        public static void DrawLines(Vector3[] lineSegments) => Draw("Handles." + nameof(DrawLines));
+        public static void DrawLines(Vector3[] points, int[] segmentIndices) => Draw("Handles." + nameof(DrawLines));
+        public static void DrawDottedLine(Vector3 p1, Vector3 p2, float screenSpaceSize) => Draw("Handles." + nameof(DrawDottedLine));
+        public static void DrawDottedLines(Vector3[] lineSegments, float screenSpaceSize) => Draw("Handles." + nameof(DrawDottedLines));
+        public static void DrawDottedLines(Vector3[] points, int[] segmentIndices, float screenSpaceSize) => Draw("Handles." + nameof(DrawDottedLines));
 
         public static void DrawBezier(Vector3 startPosition, Vector3 endPosition, Vector3 startTangent, Vector3 endTangent, Color color, Texture2D texture, float width) =>
-            Draw(nameof(DrawBezier));
+            Draw("Handles." + nameof(DrawBezier));
 
-        public static void DrawWireCube(Vector3 center, Vector3 size) => Draw(nameof(DrawWireCube));
-        public static void DrawWireDisc(Vector3 center, Vector3 normal, float radius) => Draw(nameof(DrawWireDisc));
-        public static void DrawWireDisc(Vector3 center, Vector3 normal, float radius, float thickness) => Draw(nameof(DrawWireDisc));
-        public static void DrawWireArc(Vector3 center, Vector3 normal, Vector3 from, float angle, float radius) => Draw(nameof(DrawWireArc));
-        public static void DrawWireArc(Vector3 center, Vector3 normal, Vector3 from, float angle, float radius, float thickness) => Draw(nameof(DrawWireArc));
-        public static void DrawSolidDisc(Vector3 center, Vector3 normal, float radius) => Draw(nameof(DrawSolidDisc));
-        public static void DrawSolidArc(Vector3 center, Vector3 normal, Vector3 from, float angle, float radius) => Draw(nameof(DrawSolidArc));
-        public static void DrawSolidRectangleWithOutline(Rect rectangle, Color faceColor, Color outlineColor) => Draw(nameof(DrawSolidRectangleWithOutline));
-        public static void DrawSolidRectangleWithOutline(Vector3[] verts, Color faceColor, Color outlineColor) => Draw(nameof(DrawSolidRectangleWithOutline));
+        public static void DrawWireCube(Vector3 center, Vector3 size) => Draw("Handles." + nameof(DrawWireCube));
+        public static void DrawWireDisc(Vector3 center, Vector3 normal, float radius) => Draw("Handles." + nameof(DrawWireDisc));
+        public static void DrawWireDisc(Vector3 center, Vector3 normal, float radius, float thickness) => Draw("Handles." + nameof(DrawWireDisc));
+        public static void DrawWireArc(Vector3 center, Vector3 normal, Vector3 from, float angle, float radius) => Draw("Handles." + nameof(DrawWireArc));
+        public static void DrawWireArc(Vector3 center, Vector3 normal, Vector3 from, float angle, float radius, float thickness) => Draw("Handles." + nameof(DrawWireArc));
+        public static void DrawSolidDisc(Vector3 center, Vector3 normal, float radius) => Draw("Handles." + nameof(DrawSolidDisc));
+        public static void DrawSolidArc(Vector3 center, Vector3 normal, Vector3 from, float angle, float radius) => Draw("Handles." + nameof(DrawSolidArc));
+        public static void DrawSolidRectangleWithOutline(Rect rectangle, Color faceColor, Color outlineColor) => Draw("Handles." + nameof(DrawSolidRectangleWithOutline));
+        public static void DrawSolidRectangleWithOutline(Vector3[] verts, Color faceColor, Color outlineColor) => Draw("Handles." + nameof(DrawSolidRectangleWithOutline));
 
         /// <summary>Labels are GUI calls: outside OnGUI they throw ArgumentException (measured:
         /// tests/projects/editorwindowgui handles.outsideGui.labelAndRepaint); Unbound draws none.</summary>

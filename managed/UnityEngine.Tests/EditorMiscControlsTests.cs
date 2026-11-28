@@ -155,6 +155,42 @@ namespace UnityEngine.Tests
             public void LogFormat(LogType logType, Object context, string format, params object[] args) => Lines.Add(string.Format(format, args));
         }
 
+        [Theory]
+        [InlineData(false)]
+        [InlineData(true)]
+        public void ALinkButtonRepaintReportsItsUnderlineOnce(bool contentOverload)
+        {
+            const string lineKey = "Handles.DrawLine";
+            const string underlineKey = "UnityEditor.EditorGUILayout.LinkButton underline";
+            var capture = new Capture();
+            var previous = Debug.unityLogger.logHandler;
+            var previousColor = Handles.color;
+            Unbound.Runtime.Stubs.Forget(lineKey);
+            Unbound.Runtime.Stubs.Forget(underlineKey);
+            Debug.unityLogger.logHandler = capture;
+            try
+            {
+                Handles.color = Color.red;
+                Pass(new Event { type = EventType.Layout }, DrawLink);
+                Assert.Empty(capture.Lines.FindAll(IsUnderlineDiagnostic));
+                Handles.color = Color.red;
+                Pass(new Event { type = EventType.Repaint }, DrawLink);
+                Assert.Equal(Color.white, Handles.color);
+                Assert.Equal("Unbound: " + underlineKey + " the link's underline is not drawn (Unbound draws no handles)",
+                    Assert.Single(capture.Lines.FindAll(IsUnderlineDiagnostic)));
+            }
+            finally
+            {
+                Handles.color = previousColor;
+                Debug.unityLogger.logHandler = previous;
+                Unbound.Runtime.Stubs.Forget(lineKey);
+                Unbound.Runtime.Stubs.Forget(underlineKey);
+            }
+
+            bool DrawLink() => contentOverload ? EditorGUILayout.LinkButton(new GUIContent("Link")) : EditorGUILayout.LinkButton("Link");
+            static bool IsUnderlineDiagnostic(string line) => line.Contains(lineKey) || line.Contains(underlineKey);
+        }
+
         [Fact]
         public void OtherFamiliesReportTheControlsNotImplemented()
         {

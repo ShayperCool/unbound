@@ -539,7 +539,7 @@ namespace UnityEditor
         public static void DrawLine(Vector3 p1, Vector3 p2)
         {
             RequireSceneGUI();
-            if (Compat.EditorHandleDrawingStateMeasured) Draw(nameof(DrawLine));
+            if (Compat.EditorHandleDrawingStateMeasured) Draw("Handles." + nameof(DrawLine));
         }
 
         public static void DrawLine(Vector3 p1, Vector3 p2, float thickness) => DrawLine(p1, p2);

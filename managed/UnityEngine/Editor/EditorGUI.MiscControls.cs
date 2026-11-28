@@ -365,8 +365,6 @@ namespace UnityEditor
         {
             if (!EditorGUI.MiscMeasured("UnityEditor.EditorGUILayout.LinkButton")) return false;
             var position = s_LastRect = GUILayoutUtility.GetRect(label, EditorStyles.linkLabel, options);
-            Handles.color = EditorStyles.linkLabel.normal.textColor;
-            Handles.DrawLine(new Vector3(position.xMin + EditorStyles.linkLabel.padding.left, position.yMax), new Vector3(position.xMax - EditorStyles.linkLabel.padding.right, position.yMax));
             if (Event.current.type == EventType.Repaint)
                 Stubs.Ignored("UnityEditor.EditorGUILayout.LinkButton underline", "the link's underline is not drawn (Unbound draws no handles)");
             Handles.color = Color.white;

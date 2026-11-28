@@ -118,6 +118,11 @@ namespace UnityEngine.Tests
                 Event.current = new Event { type = EventType.Repaint };
                 DrawLine();
                 Assert.Equal("Unbound: Handles.DrawLine draws nothing (Unbound draws no handles)", Assert.Single(capture.Lines));
+                DrawLine();
+                long before = GC.GetAllocatedBytesForCurrentThread();
+                for (int i = 0; i < 256; i++) DrawLine();
+                Assert.Equal(0L, GC.GetAllocatedBytesForCurrentThread() - before);
+                Assert.Single(capture.Lines);
             }
             finally
             {
