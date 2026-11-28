@@ -595,6 +595,9 @@ namespace Unbound.Runtime
         /// families are unmeasured.</summary>
         internal static bool EditorWindowGuiMeasured => Family == ReleaseFamily.Unity6000_0;
 
+        internal static bool EditorHandleDrawingStateMeasured => Family == ReleaseFamily.Unity6000_0;
+        internal static bool EditorHandleLineGeometryMeasured => Family == ReleaseFamily.Unity6000_0;
+
         /// <summary>Focused inspector opening and lock state in batch Play mode, measured by
         /// tests/projects/propertyeditoropen on Unity 6000.0.71f1.</summary>
         internal static bool FocusedPropertyEditorMeasured => Family == ReleaseFamily.Unity6000_0;
