@@ -103,7 +103,19 @@ namespace UnityEditor
                 || stem.Equals("AUX", compare) || (stem.Length == 4 && char.IsAsciiDigit(stem[3])
                     && (stem[..3].Equals("COM", compare) || stem[..3].Equals("LPT", compare)))) return "";
             string result = new string(chars);
-            return OperatingSystem.IsMacOS() ? result.Normalize(NormalizationForm.FormD) : result;
+            return OperatingSystem.IsMacOS() ? DecomposeSelectedAssetName(result) : result;
+        }
+
+        static string DecomposeSelectedAssetName(string name)
+        {
+            const char noncharacter = '\uFFFE';
+            if (!name.Contains(noncharacter)) return name.Normalize(NormalizationForm.FormD);
+
+            // CoreCLR's normalizer rejects U+FFFE. The Editor preserves it between decomposed runs.
+            string[] parts = name.Split(noncharacter);
+            for (int i = 0; i < parts.Length; i++)
+                parts[i] = parts[i].Normalize(NormalizationForm.FormD);
+            return string.Join(noncharacter, parts);
         }
     }
 }
