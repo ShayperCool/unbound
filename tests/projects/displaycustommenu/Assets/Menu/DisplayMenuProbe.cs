@@ -95,6 +95,17 @@ static class DisplayMenuProbe
             null, null, null, null, null, null)));
         Add("menu.sceneButtonAfterEmpty", Convert.ToString(mouseButton.GetValue(null)));
 
+        void ExtraMaskControl(string key, string[] labels, bool[] enabled, bool[] separators)
+        {
+            GUIUtility.hotControl = 587;
+            mouseButton.SetValue(null, 3);
+            Add(key + ".call", Attempt(() => EditorUtility.DisplayCustomMenuWithSeparators(position,
+                labels, enabled, separators, labels == null ? Array.Empty<int>() : new[] { 0 }, null, null)));
+            Add(key + ".after", $"{GUIUtility.hotControl}/{mouseButton.GetValue(null)}");
+        }
+        ExtraMaskControl("menu.extraEnabled", new[] { "A" }, new[] { true, false }, new[] { false });
+        ExtraMaskControl("menu.extraSeparator", new[] { "A" }, new[] { true }, new[] { false, true });
+        ExtraMaskControl("menu.emptyLabelsNonemptyMasks", null, new[] { true }, new[] { false });
         output.Add("{\"k\":\"complete\",\"v\":true}");
         File.WriteAllLines(Path.Combine(directory, "values.jsonl"), output);
         EditorApplication.Exit(0);

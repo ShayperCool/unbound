@@ -24,4 +24,10 @@
 {"k":"menu.sceneButtonAfterFailure","v":"2"}
 {"k":"menu.separatorNullArrays","v":"ok"}
 {"k":"menu.sceneButtonAfterEmpty","v":"-1"}
+{"k":"menu.extraEnabled.call","v":"ok"}
+{"k":"menu.extraEnabled.after","v":"0/-1"}
+{"k":"menu.extraSeparator.call","v":"ok"}
+{"k":"menu.extraSeparator.after","v":"0/-1"}
+{"k":"menu.emptyLabelsNonemptyMasks.call","v":"ok"}
+{"k":"menu.emptyLabelsNonemptyMasks.after","v":"0/-1"}
 {"k":"complete","v":true}
