@@ -40,19 +40,19 @@ namespace UnityEditor
                 Stubs.Ignored("UnityEditor.EditorUtility.OpenPropertyEditor", "focused inspector opening is unmeasured for this release family");
                 return null;
             }
+            if (obj == null) return null;
             if (!EditorSession.IsPlaying)
             {
                 Stubs.Ignored("UnityEditor.EditorUtility.OpenPropertyEditor in Edit mode", "is unmeasured");
                 return null;
             }
-            if (obj == null) return null;
-
             var inspector = CreateInstance<PropertyEditor>();
             inspector.m_InspectedObject = obj;
             inspector.m_FocusedTracker = new ActiveEditorTracker(obj);
             inspector.titleContent = new GUIContent(obj.name, AssetPreview.MiniThumbnail(obj), TargetTooltip(obj));
             if (showWindow)
             {
+                Stubs.Ignored("UnityEditor.EditorUtility.OpenPropertyEditor saved layout", "saved window geometry and layout-dependent focus are unsupported");
                 inspector.ShowFocusedInspector();
                 if (Compat.FocusedPropertyEditorLinuxHostMeasured && s_LastFocusedInspector != null)
                 {

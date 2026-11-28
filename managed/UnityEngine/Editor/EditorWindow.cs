@@ -29,6 +29,8 @@ namespace UnityEditor
         // Creation-time values recorded by defaultstate on 6000.0.71f1.
         const float DefaultWindowWidth = 320f, DefaultWindowHeight = 550f, DefaultMinimumSize = 50f;
         const int DefaultDepthBufferBits = 24;
+        // Batch content origin on both measured hosts (propertyeditoropen open.firstWindowPosition).
+        static readonly Vector2 s_FocusedInspectorOrigin = new Vector2(0f, 26f);
 
         public EditorWindow()
         {
@@ -256,13 +258,12 @@ namespace UnityEditor
             if (focus) Focus();
         }
 
-        // The batch inspector host opens at a content origin of (0, 26) on both measured hosts.
-        // Opening attaches a panel and publishes the focus notifications observed for that host.
+        // Opening attaches a panel and publishes the batch focus notifications for that host.
         internal void ShowFocusedInspector()
         {
             if (m_Shown) return;
             m_ShownAsFocusedInspector = true;
-            m_Position.position = new Vector2(0, 26);
+            m_Position.position = s_FocusedInspectorOrigin;
             bool hadFocus = s_Focused != null;
             Open(focus: false);
             if (hadFocus && Compat.FocusedPropertyEditorMacHostMeasured)
@@ -298,6 +299,8 @@ namespace UnityEditor
         /// tests/projects/editorwindowgui window.laterFrame).</summary>
         public void Focus()
         {
+            if (m_ShownAsFocusedInspector && Compat.FocusedPropertyEditorMacHostMeasured)
+                Stubs.Ignored("UnityEditor.EditorWindow.Focus on a focused inspector", "explicit inspector focus and its close effects are unsupported on macOS");
             if (s_Focused == this) return;
             var previous = s_Focused;
             s_Focused = this;
