@@ -1,3 +1,9 @@
+{"k":"json/request.empty.error","v":"null"}
+{"k":"json/request.unfetched.error","v":"null"}
+{"k":"json/request.fetched.error","v":"Unknown:probe error"}
+{"k":"json/collection.empty.error","v":"null"}
+{"k":"json/collection.unset.error","v":"null"}
+{"k":"json/collection.set.error","v":"Unknown:probe error"}
 {"k":"info/embedded.found","v":"True"}
 {"k":"info/embedded.source","v":"Embedded"}
 {"k":"info/embedded.versions","v":"all=[] compatible=[] recommended=\"\" verified=\"\" deprecated=[] latest=\"\" latestCompatible=\"\""}

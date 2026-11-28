@@ -1,6 +1,7 @@
 {
   "dependencies": {
     "com.probe.local": "file:LocalPackages/com.probe.local",
-    "com.unity.modules.audio": "1.0.0"
+    "com.unity.modules.audio": "1.0.0",
+    "com.unity.modules.jsonserialize": "1.0.0"
   }
 }

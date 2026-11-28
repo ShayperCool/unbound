@@ -99,6 +99,17 @@ public class PackageManagerProbe : MonoBehaviour
 
     static IEnumerator Run()
     {
+
+        const string payload = "\"m_Error\":{\"m_ErrorCode\":0,\"m_Message\":\"probe error\"}";
+        string ErrorText(UnityEditor.PackageManager.Error error) =>
+            error == null ? "null" : error.errorCode + ":" + error.message;
+        Row("json/request.empty.error", ErrorText(JsonUtility.FromJson<RemoveRequest>("{}").Error));
+        Row("json/request.unfetched.error", ErrorText(JsonUtility.FromJson<RemoveRequest>("{" + payload + "}").Error));
+        Row("json/request.fetched.error", ErrorText(JsonUtility.FromJson<RemoveRequest>("{\"m_ErrorFetched\":true," + payload + "}").Error));
+        Row("json/collection.empty.error", ErrorText(JsonUtility.FromJson<PackageCollection>("{}").error));
+        Row("json/collection.unset.error", ErrorText(JsonUtility.FromJson<PackageCollection>("{" + payload + "}").error));
+        Row("json/collection.set.error", ErrorText(JsonUtility.FromJson<PackageCollection>("{\"m_HasError\":true," + payload + "}").error));
+
         // 1. PackageInfo.versions & errors on embedded, local and built-in packages.
         foreach (var entry in new[] { ("embedded", "com.probe.pm"), ("local", "com.probe.local"), ("builtin", "com.unity.modules.audio") })
         {
