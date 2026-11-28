@@ -599,6 +599,11 @@ namespace Unbound.Runtime
         /// families are unmeasured.</summary>
         internal static bool EditorWindowGuiMeasured => Family == ReleaseFamily.Unity6000_0;
 
+        /// <summary>Selection mutation and raw instance ID behavior measured on Unity
+        /// 6000.0.71f1 by tests/projects/selectionmutators.</summary>
+        internal const string SelectionMutationsFamily = "6000.0";
+        internal static bool SelectionMutationsMeasured => Family == ReleaseFamily.Unity6000_0;
+
         internal const string EditorHandlesFamily = "6000.0";
         internal static bool EditorHandleDrawingStateMeasured => Family == ReleaseFamily.Unity6000_0;
         internal static bool EditorHandleLineGeometryMeasured => Family == ReleaseFamily.Unity6000_0;

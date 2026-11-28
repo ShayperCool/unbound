@@ -22,7 +22,11 @@ namespace UnityEditor
 
         public static Action selectionChanged;
 
-        static Selection() => EditorApplication.InternalUpdate += NotifyIfChanged;
+        static Selection()
+        {
+            EditorApplication.InternalUpdate += NotifyIfChanged;
+            Object.EngineObjectDestroyed += OnObjectDestroyed;
+        }
 
         static void NotifyIfChanged()
         {
@@ -31,19 +35,29 @@ namespace UnityEditor
             selectionChanged?.Invoke();
         }
 
-        static void SetSelection(int[] ids, int active, int context)
+        static void SetSelection(int[] ids, int active, int context, bool recordUndo = true)
         {
-            var clean = ids.Where(id => id != 0).Distinct().ToArray();
-            if (active != 0 && Array.IndexOf(clean, active) < 0) active = clean.Length > 0 ? clean[0] : 0;
-            if (active == 0 && clean.Length > 0) active = clean[0];
+            var measured = Compat.SelectionMutationsMeasured;
+            var clean = (measured ? ids : ids.Where(id => id != 0)).Distinct().ToArray();
+            if (!measured && (active == 0 || Array.IndexOf(clean, active) < 0))
+                active = clean.Length > 0 ? clean[0] : 0;
             if (s_Active == active && s_Context == context && s_Ids.SequenceEqual(clean)) return;
-            if (!Undo.isProcessing) Undo.RecordSelection(s_Ids, s_Active, clean, active);
+            if (recordUndo && !Undo.isProcessing) Undo.RecordSelection(s_Ids, s_Active, clean, active);
             s_Ids = clean;
             s_SelectedIds.Clear();
             s_SelectedIds.UnionWith(clean);
             s_Active = active;
             s_Context = context;
             s_Changed = true;
+        }
+
+        static void OnObjectDestroyed(int instanceID)
+        {
+            if (!s_SelectedIds.Contains(instanceID) && s_Context != instanceID) return;
+            if (!Compat.SelectionMutationsMeasured) return;
+            SetSelection(s_Ids.Where(id => id != instanceID).ToArray(),
+                s_Active == instanceID ? 0 : s_Active, s_Context == instanceID ? 0 : s_Context,
+                recordUndo: false);
         }
 
         /// <summary>Undo and redo put a recorded selection back.</summary>
@@ -56,7 +70,11 @@ namespace UnityEditor
         public static Object activeObject
         {
             get => Find(s_Active);
-            set => SetActiveObjectWithContext(value, null);
+            set
+            {
+                if (Compat.SelectionMutationsMeasured) activeInstanceID = value != null ? value.GetInstanceID() : 0;
+                else SetActiveObjectWithContext(value, null);
+            }
         }
 
         public static GameObject activeGameObject
@@ -84,8 +102,16 @@ namespace UnityEditor
 
         public static int activeInstanceID
         {
-            get => Find(s_Active) != null ? s_Active : 0;
-            set => SetSelection(value == 0 ? Array.Empty<int>() : new[] { value }, value, 0);
+            get => Compat.SelectionMutationsMeasured || Find(s_Active) != null ? s_Active : 0;
+            set
+            {
+                if (Compat.SelectionMutationsMeasured && value == s_Active)
+                {
+                    if (s_Context != 0) SetSelection(s_Ids, value, 0);
+                    return;
+                }
+                SetSelection(value == 0 ? Array.Empty<int>() : new[] { value }, value, 0);
+            }
         }
 
         public static Object[] objects
@@ -94,17 +120,20 @@ namespace UnityEditor
             set
             {
                 var ids = (value ?? Array.Empty<Object>()).Where(o => o != null).Select(o => o.GetInstanceID()).ToArray();
-                SetSelection(ids, ids.Length > 0 ? ids[0] : 0, s_Context);
+                SetSelection(ids, ids.Length > 0 ? ids[0] : 0, Compat.SelectionMutationsMeasured ? 0 : s_Context);
             }
         }
 
         public static int[] instanceIDs
         {
-            get => Selected().Select(o => o.GetInstanceID()).ToArray();
+            get => Compat.SelectionMutationsMeasured ? (int[])s_Ids.Clone()
+                : Selected().Select(o => o.GetInstanceID()).ToArray();
             set
             {
+                var measured = Compat.SelectionMutationsMeasured;
+                if (measured && value == null) throw new ArgumentNullException(nameof(instanceIDs));
                 var ids = value ?? Array.Empty<int>();
-                SetSelection(ids, ids.Length > 0 ? ids[0] : 0, s_Context);
+                SetSelection(ids, ids.Length > 0 ? ids[0] : 0, measured ? 0 : s_Context);
             }
         }
 
@@ -117,7 +146,46 @@ namespace UnityEditor
 
         public static int count => Selected().Count();
 
-        public static bool Contains(int instanceID) => s_SelectedIds.Contains(instanceID) && Find(instanceID) != null;
+        [global::Unbound.ImplementedIn(Compat.SelectionMutationsFamily)]
+        internal static void Add(int instanceID)
+        {
+            if (CanMutate(nameof(Add))) AddInstance(instanceID);
+        }
+
+        [global::Unbound.ImplementedIn(Compat.SelectionMutationsFamily)]
+        internal static void Add(Object obj)
+        {
+            if (CanMutate(nameof(Add)) && obj != null) AddInstance(obj.GetInstanceID());
+        }
+
+        static void AddInstance(int instanceID)
+        {
+            if (!s_SelectedIds.Contains(instanceID)) instanceIDs = s_Ids.Append(instanceID).ToArray();
+        }
+
+        [global::Unbound.ImplementedIn(Compat.SelectionMutationsFamily)]
+        internal static void Remove(int instanceID)
+        {
+            if (CanMutate(nameof(Remove))) RemoveInstance(instanceID);
+        }
+
+        [global::Unbound.ImplementedIn(Compat.SelectionMutationsFamily)]
+        internal static void Remove(Object obj)
+        {
+            if (CanMutate(nameof(Remove)) && obj != null) RemoveInstance(obj.GetInstanceID());
+        }
+
+        static void RemoveInstance(int instanceID) => instanceIDs = s_Ids.Where(id => id != instanceID).ToArray();
+
+        static bool CanMutate(string member)
+        {
+            if (Compat.SelectionMutationsMeasured) return true;
+            Stubs.Ignored("UnityEditor.Selection." + member, "selection mutations are unmeasured for this release family");
+            return false;
+        }
+
+        public static bool Contains(int instanceID) => s_SelectedIds.Contains(instanceID)
+            && (Compat.SelectionMutationsMeasured || Find(instanceID) != null);
 
         public static bool Contains(Object obj) => Contains(obj.GetInstanceID());
 
