@@ -39,4 +39,10 @@
 {"k":"quality.configure","v":"ok"}
 {"k":"quality.usage","v":"Off"}
 {"k":"quality.flags","v":"0"}
+{"k":"quality.liveOverrideSelected","v":"True"}
+{"k":"quality.destroyedOverrideIsNull","v":"True"}
+{"k":"quality.defaultSelectedAfterDestroy","v":"True"}
+{"k":"quality.activeAfterDestroy","v":"True"}
+{"k":"quality.configureAfterDestroy","v":"ok"}
+{"k":"quality.usageAfterDestroy","v":"Off"}
 {"k":"complete","v":true}
