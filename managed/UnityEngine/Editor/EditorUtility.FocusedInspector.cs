@@ -54,7 +54,7 @@ namespace UnityEditor
             if (showWindow)
             {
                 inspector.ShowFocusedInspector();
-                if (Compat.FocusedPropertyEditorStaggerMeasured && s_LastFocusedInspector != null)
+                if (Compat.FocusedPropertyEditorLinuxHostMeasured && s_LastFocusedInspector != null)
                 {
                     var previous = s_LastFocusedInspector.position;
                     var current = inspector.position;

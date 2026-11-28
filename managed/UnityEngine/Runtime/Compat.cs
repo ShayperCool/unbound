@@ -599,14 +599,14 @@ namespace Unbound.Runtime
         /// tests/projects/propertyeditoropen on Unity 6000.0.71f1.</summary>
         internal static bool FocusedPropertyEditorMeasured => Family == ReleaseFamily.Unity6000_0;
 
-        /// <summary>The batch Editor applies the second inspector's position offset on Linux.
-        /// On macOS the measured batch windows retain their starting position.</summary>
-        internal static bool FocusedPropertyEditorStaggerMeasured =>
+        /// <summary>Linux batch focus transitions and inspector window placement measured by
+        /// tests/projects/propertyeditoropen.</summary>
+        internal static bool FocusedPropertyEditorLinuxHostMeasured =>
             FocusedPropertyEditorMeasured && OperatingSystem.IsLinux();
 
-        /// <summary>The macOS batch Editor notifies focus listeners when an unfocused property
-        /// editor closes (tests/projects/propertyeditoropen open.closeFocus).</summary>
-        internal static bool FocusedPropertyEditorCloseNotificationMeasured =>
+        /// <summary>macOS batch inspector windows retain their starting position and notify focus
+        /// listeners on close, measured by tests/projects/propertyeditoropen.</summary>
+        internal static bool FocusedPropertyEditorMacHostMeasured =>
             FocusedPropertyEditorMeasured && OperatingSystem.IsMacOS();
 
         /// <summary>The animatable bindings of engine components (tests/projects/animbindings) and the

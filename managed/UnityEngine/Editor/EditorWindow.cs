@@ -22,7 +22,7 @@ namespace UnityEditor
         Vector2 m_MaxSize = new Vector2(4000, 4000);
         internal GUIContent m_TitleContent = new GUIContent();
         bool m_Shown;
-        bool m_NotifyFocusOnClose;
+        bool m_ShownAsFocusedInspector;
         VisualElement m_UIRootElement;
         Panel m_Panel;
 
@@ -57,7 +57,12 @@ namespace UnityEditor
         public Rect position
         {
             get => m_Position;
-            set => m_Position = value;
+            set
+            {
+                if (m_ShownAsFocusedInspector && Compat.FocusedPropertyEditorMacHostMeasured)
+                    value.position = m_Position.position;
+                m_Position = value;
+            }
         }
 
         public Vector2 minSize
@@ -251,14 +256,20 @@ namespace UnityEditor
             if (focus) Focus();
         }
 
-        // A focused inspector in batch Play mode attaches a panel and raises the window
-        // notification while leaving the current keyboard focus in place.
+        // The batch inspector host opens at a content origin of (0, 26) on both measured hosts.
+        // Opening attaches a panel and publishes the focus notifications observed for that host.
         internal void ShowFocusedInspector()
         {
             if (m_Shown) return;
-            m_NotifyFocusOnClose = Compat.FocusedPropertyEditorCloseNotificationMeasured;
+            m_ShownAsFocusedInspector = true;
+            m_Position.position = new Vector2(0, 26);
+            bool hadFocus = s_Focused != null;
             Open(focus: false);
+            if (hadFocus && Compat.FocusedPropertyEditorMacHostMeasured)
+                Stubs.Ignored("UnityEditor.EditorUtility.OpenPropertyEditor with existing keyboard focus", "focus notifications with a prior focused window are unmeasured on macOS");
             windowFocusChanged?.Invoke();
+            if (hadFocus && Compat.FocusedPropertyEditorLinuxHostMeasured)
+                windowFocusChanged?.Invoke();
         }
 
         public void Show() => Open();
@@ -310,12 +321,15 @@ namespace UnityEditor
             m_Panel?.Dispose();
             m_Panel = null;
             bool wasFocused = s_Focused == this;
-            if (wasFocused) s_Focused = null;
-            if (wasFocused || m_NotifyFocusOnClose)
-            {
-                m_NotifyFocusOnClose = false;
+            bool wasFocusedInspector = m_ShownAsFocusedInspector;
+            m_ShownAsFocusedInspector = false;
+            bool notifyInspectorClose = wasFocusedInspector && Compat.FocusedPropertyEditorMacHostMeasured;
+            if (notifyInspectorClose && !wasFocused && s_Focused != null)
+                Stubs.Ignored("UnityEditor.EditorWindow.Close on a focused inspector with existing keyboard focus", "focus notifications with a prior focused window are unmeasured on macOS");
+            if (wasFocused || (wasFocusedInspector && Compat.FocusedPropertyEditorLinuxHostMeasured))
+                s_Focused = null;
+            if (wasFocused || notifyInspectorClose)
                 windowFocusChanged?.Invoke();
-            }
             DestroyImmediate(this, true);
         }
 

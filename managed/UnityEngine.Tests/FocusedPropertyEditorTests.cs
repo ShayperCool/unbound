@@ -84,5 +84,41 @@ namespace UnityEngine.Tests
                 Object.DestroyImmediate(target);
             }
         }
+
+        [Fact]
+        public void MacBatchInspectorReportsExistingModelFocus()
+        {
+            if (!System.OperatingSystem.IsMacOS()) return;
+            using var release = TestRelease.Pin(TestRelease.Measured);
+            const string open = OpenMember + " with existing keyboard focus";
+            const string close = "UnityEditor.EditorWindow.Close on a focused inspector with existing keyboard focus";
+            Stubs.Forget(open);
+            Stubs.Forget(close);
+            var before = Resources.FindObjectsOfTypeAll<PropertyEditor>();
+            var previous = EditorWindow.focusedWindow;
+            var prior = ScriptableObject.CreateInstance<EditorWindow>();
+            var target = new GameObject("Focused inspector prior focus target");
+            using var logs = new RecordedLogs();
+            try
+            {
+                prior.Show();
+                Assert.Same(prior, EditorWindow.focusedWindow);
+                EditorUtility.OpenPropertyEditor(target);
+                var inspector = Assert.Single(Resources.FindObjectsOfTypeAll<PropertyEditor>().Except(before));
+                Assert.Same(prior, EditorWindow.focusedWindow);
+                inspector.Close();
+                Assert.Same(prior, EditorWindow.focusedWindow);
+                Assert.Contains(logs.Logged, line => line.Contains(open) && line.Contains("unmeasured on macOS"));
+                Assert.Contains(logs.Logged, line => line.Contains(close) && line.Contains("unmeasured on macOS"));
+            }
+            finally
+            {
+                foreach (var window in Resources.FindObjectsOfTypeAll<PropertyEditor>().Except(before))
+                    window.Close();
+                prior.Close();
+                if (previous != null) previous.Focus();
+                Object.DestroyImmediate(target);
+            }
+        }
     }
 }
