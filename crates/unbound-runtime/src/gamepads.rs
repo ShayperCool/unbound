@@ -82,7 +82,6 @@ struct ControllerButtonEvent {
     instance: i32,
     button: u8,
     state: u8,
-    padding: [u8; 2],
 }
 
 #[repr(C)]
@@ -353,6 +352,7 @@ impl Sdl {
                     vendor,
                     product: (api.SDL_JoystickGetProduct)(joystick),
                     version: (api.SDL_JoystickGetProductVersion)(joystick),
+                    // Legacy axes start centered even when the physical hat is already held.
                     legacy_dpad: [0; 2],
                 };
                 added.push(id);
@@ -489,7 +489,8 @@ pub fn poll(family: &str) -> Value {
 /// The frame's input, the per-frame path that `poll` (names and ids, only when the attached set
 /// changed) complements: `u32 generation` (of the attached set, as `poll` reports it), `i32
 /// count`, then per device in instance-id order `i32 id, axes, buttons, hats, is_pad; u32
-/// pad_buttons; i16 pad_axes[6]; i16 axes[axes]; u8 buttons[buttons]; u8 hats[hats]`, padded to
+/// pad_buttons; i16 pad_axes[6]; i8 legacy_dpad[2]; i16 axes[axes]; u8 buttons[buttons];
+/// u8 hats[hats]`, padded to
 /// 4 bytes; little-endian. Written into `out` when it fits; returns the bytes it takes, 0 when
 /// SDL is unavailable.
 pub fn state(family: &str, out: &mut [u8]) -> usize {

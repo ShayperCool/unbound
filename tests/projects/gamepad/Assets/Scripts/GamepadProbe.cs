@@ -62,19 +62,19 @@ public class GamepadProbe : MonoBehaviour
     static readonly int[] s_Buttons = { BTN_A, BTN_B, BTN_X, BTN_Y, BTN_TL, BTN_TR, BTN_SELECT, BTN_START, BTN_MODE, BTN_THUMBL, BTN_THUMBR };
     static readonly int[] s_StickButtons = { 0x120, 0x121, 0x122 };
 
-    bool CreatePad(bool unmapped = false)
+    bool CreatePad(bool unmapped = false, bool shortPad = false)
     {
         m_Fd = open("/dev/uinput", 0x801); // O_WRONLY | O_NONBLOCK
         if (m_Fd < 0) return false;
         ioctl(m_Fd, UI_SET_EVBIT, EV_KEY);
         foreach (var b in unmapped ? s_StickButtons : s_Buttons) ioctl(m_Fd, UI_SET_KEYBIT, b);
         ioctl(m_Fd, UI_SET_EVBIT, EV_ABS);
-        void Abs(int code, int min, int max, int fuzz, int flat)
+        void Abs(int code, int min, int max, int fuzz, int flat, int initial = 0)
         {
             ioctl(m_Fd, UI_SET_ABSBIT, code);
             var setup = new byte[28];
             BitConverter.GetBytes((ushort)code).CopyTo(setup, 0);
-            BitConverter.GetBytes(0).CopyTo(setup, 4);
+            BitConverter.GetBytes(initial).CopyTo(setup, 4);
             BitConverter.GetBytes(min).CopyTo(setup, 8);
             BitConverter.GetBytes(max).CopyTo(setup, 12);
             BitConverter.GetBytes(fuzz).CopyTo(setup, 16);
@@ -82,13 +82,13 @@ public class GamepadProbe : MonoBehaviour
             ioctl(m_Fd, UI_ABS_SETUP, setup);
         }
         foreach (var a in new[] { ABS_X, ABS_Y, ABS_RX, ABS_RY }) Abs(a, -32768, 32767, 16, 128);
-        if (!unmapped)
+        if (!unmapped && !shortPad)
         {
             Abs(ABS_Z, 0, 255, 0, 0);
             Abs(ABS_RZ, 0, 255, 0, 0);
             if (s_HatProbe == "mixed") Abs(ABS_THROTTLE, -32768, 32767, 0, 0);
         }
-        Abs(ABS_HAT0X, -1, 1, 0, 0);
+        Abs(ABS_HAT0X, -1, 1, 0, 0, initial: shortPad ? 1 : 0);
         Abs(ABS_HAT0Y, -1, 1, 0, 0);
         if (unmapped)
         {
@@ -97,10 +97,10 @@ public class GamepadProbe : MonoBehaviour
         }
         var dev = new byte[92];
         BitConverter.GetBytes((ushort)0x03).CopyTo(dev, 0);
-        BitConverter.GetBytes((ushort)(unmapped ? 0x1234 : 0x045e)).CopyTo(dev, 2);
-        BitConverter.GetBytes((ushort)(unmapped ? 0x5421 : 0x028e)).CopyTo(dev, 4);
+        BitConverter.GetBytes((ushort)(unmapped ? 0x1234 : shortPad ? 0x046d : 0x045e)).CopyTo(dev, 2);
+        BitConverter.GetBytes((ushort)(unmapped ? 0x5421 : shortPad ? 0xc216 : 0x028e)).CopyTo(dev, 4);
         BitConverter.GetBytes((ushort)0x0110).CopyTo(dev, 6);
-        Encoding.ASCII.GetBytes(unmapped ? "Probe Flight Stick" : "Microsoft X-Box 360 pad").CopyTo(dev, 8);
+        Encoding.ASCII.GetBytes(unmapped ? "Probe Flight Stick" : shortPad ? "Logitech Dual Action" : "Microsoft X-Box 360 pad").CopyTo(dev, 8);
         if (ioctl(m_Fd, UI_DEV_SETUP, dev) < 0) return false;
         return ioctl(m_Fd, UI_DEV_CREATE, 0) >= 0;
     }
@@ -182,10 +182,10 @@ public class GamepadProbe : MonoBehaviour
     static string Button(ButtonControl b) => b == null ? "null" : $"[{B(b.isPressed)},{B(b.wasPressedThisFrame)},{B(b.wasReleasedThisFrame)},{F(b.ReadValue())}]";
     static string Vec(Vector2Control c) => c == null ? "null" : $"[{F(c.ReadValue().x)},{F(c.ReadValue().y)}]";
 
-    void LegacyAxes(string phase)
+    void LegacyAxes(string phase, string extra = "")
     {
         var axes = Enumerable.Range(0, 10).Select(i => F(Input.GetAxisRaw("ProbeAxis" + i)));
-        Record(phase, $"\"axes\":[{string.Join(",", axes)}]");
+        Record(phase, $"\"axes\":[{string.Join(",", axes)}]{extra}");
     }
 
     void LegacyHatStep()
@@ -208,6 +208,52 @@ public class GamepadProbe : MonoBehaviour
             case 109: LegacyAxes("second-upper-right"); break;
             case 110: DestroyPad(); break;
             case 138:
+                LegacyAxes("unplugged");
+                Record("complete", "\"ok\":true");
+                Finish("legacy-hats.jsonl");
+                break;
+        }
+    }
+
+    static int ReadInitialHat()
+    {
+        const ulong EVIOCGABS = 0x80184540;
+        foreach (var input in Directory.GetDirectories("/sys/devices/virtual/input", "input*"))
+        {
+            if (!File.Exists(Path.Combine(input, "name")) ||
+                File.ReadAllText(Path.Combine(input, "name")).Trim() != "Logitech Dual Action") continue;
+            foreach (var evdev in Directory.GetDirectories(input, "event*"))
+            {
+                var fd = open(Path.Combine("/dev/input", Path.GetFileName(evdev)), 0x800);
+                if (fd < 0) continue;
+                try
+                {
+                    var info = new byte[24];
+                    if (ioctl(fd, EVIOCGABS + ABS_HAT0X, info) >= 0)
+                        return BitConverter.ToInt32(info, 0);
+                }
+                finally { close(fd); }
+            }
+        }
+        throw new InvalidOperationException("Cannot read the probe joystick's initial hat position.");
+    }
+
+    void ShortPadStep()
+    {
+        switch (m_Frame)
+        {
+            case Create:
+                Record("create", $"\"ok\":{B(CreatePad(shortPad: true))}");
+                break;
+            case 64:
+                LegacyAxes("held-at-discovery", $",\"kernelHat\":{ReadInitialHat()},\"product\":{J(Gamepad.current?.description.product)}");
+                break;
+            case 65: Send((EV_ABS, ABS_HAT0X, 0)); break;
+            case 73: LegacyAxes("released"); break;
+            case 74: Send((EV_ABS, ABS_HAT0X, 1)); break;
+            case 82: LegacyAxes("pressed-after-discovery"); break;
+            case 83: DestroyPad(); break;
+            case 105:
                 LegacyAxes("unplugged");
                 Record("complete", "\"ok\":true");
                 Finish("legacy-hats.jsonl");
@@ -304,6 +350,7 @@ public class GamepadProbe : MonoBehaviour
         if (s_HatProbe != null)
         {
             if (s_HatProbe == "mixed") MixedHatStep();
+            else if (s_HatProbe == "short") ShortPadStep();
             else LegacyHatStep();
             return;
         }

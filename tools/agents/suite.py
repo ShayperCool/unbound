@@ -505,7 +505,8 @@ def recipes(release):
                          env={'UNBOUND': '{cli}', 'UNBOUND_PROBE_PROJECT': '{project}',
                               'GAMEPAD_PROBE_OUT': '{work}/out'}),
                     py('compare.py', ref('gamepad.jsonl'), '{work}/out/gamepad.jsonl'),
-                    driver('legacy_hats.py', 'check', '--label', '{label}')]
+                    Step('driver', ['sg', 'input', '-c',
+                                    '"{python}" "{probe}/legacy_hats.py" check --label "{label}"'])]
     R['avoidance'] = []
     for config in sorted((PROJECTS/'avoidance/Configs').glob('*.txt')):
         scene = ['--scene', 'Assets/Scenes/Walls.unity'] if config.stem.startswith('walls-') else []

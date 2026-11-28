@@ -1,0 +1,6 @@
+{"frame":5,"case":"create","ok":true}
+{"frame":64,"case":"held-at-discovery","axes":[0,0,0,0,0,0,0,0,0,0],"kernelHat":1,"product":"Logitech Dual Action"}
+{"frame":73,"case":"released","axes":[0,0,0,0,0,0,0,0,0,0]}
+{"frame":82,"case":"pressed-after-discovery","axes":[0,0,0,0,0,0,1,0,0,0]}
+{"frame":105,"case":"unplugged","axes":[0,0,0,0,0,0,0,0,0,0]}
+{"frame":105,"case":"complete","ok":true}

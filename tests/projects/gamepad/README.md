@@ -50,7 +50,9 @@ with two hats, and both devices attached with different readings on the
 same numbered axis. Unmapped hats come after the raw analog axes. For a
 mapped controller, a D-pad press writes its sign and a release writes zero
 on axes 6 and 7, in controller event order. The mixed-device control also
-checks the all-joysticks and individual-device selectors.
+checks the all-joysticks and individual-device selectors. A mapped
+four-axis pad uses the same D-pad slots. A hat held before attachment
+leaves Legacy Input centered until a new direction event.
 
 The suite compares the recorded values with `legacy_hats.py check`. The
 mapped trigger-axis differences are retained as exact per-cell residuals.

@@ -15,7 +15,7 @@ import value_probe
 
 RELEASE = "6000.0.71f1"
 REFERENCE = ROOT / "Reference" / f"unity-{RELEASE}"
-DEVICES = ("mapped", "stick", "mixed")
+DEVICES = ("mapped", "stick", "mixed", "short")
 
 
 def prepare(project):
