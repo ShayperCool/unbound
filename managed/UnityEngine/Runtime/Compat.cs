@@ -604,6 +604,11 @@ namespace Unbound.Runtime
         internal const string SelectionMutationsFamily = "6000.0";
         internal static bool SelectionMutationsMeasured => Family == ReleaseFamily.Unity6000_0;
 
+        /// <summary>Selection-based unique asset paths measured by tests/projects/selectedassetpath
+        /// on Unity 6000.0.71f1.</summary>
+        internal const string SelectedAssetPathFamily = "6000.0";
+        internal static bool SelectedAssetPathMeasured => Family == ReleaseFamily.Unity6000_0;
+
         internal const string EditorHandlesFamily = "6000.0";
         internal static bool EditorHandleDrawingStateMeasured => Family == ReleaseFamily.Unity6000_0;
         internal static bool EditorHandleLineGeometryMeasured => Family == ReleaseFamily.Unity6000_0;

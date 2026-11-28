@@ -59,6 +59,9 @@ namespace UnityEditor
         /// <summary>Selects the object (framing it would need a Project window).</summary>
         public static void ShowCreatedAsset(Object o) => Selection.activeObject = o;
 
+        /// <summary>Framing leaves selection alone when there is no Project Browser.</summary>
+        internal static void FrameObjectInProjectWindow(int instanceID) { }
+
         public static bool IsFolder(int instanceID) => AssetDatabase.IsValidFolder(AssetDatabase.GetAssetPath(instanceID));
 
         /// <summary>The path up to its last '/', once outer slashes are trimmed; null for an empty

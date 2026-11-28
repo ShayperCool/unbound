@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -19,17 +20,43 @@ namespace Unbound.Runtime
         /// <summary>The name itself when it is free in the folder, else the first free
         /// "stem N.ext" from 1 (a stem's own " N" replaced): tests/projects/projectwrites
         /// 05.unique.</summary>
-        internal static string Unique(string folder, string name, Func<string, bool> taken)
+        internal static string Unique(string folder, string name, Func<string, bool> taken, bool continueNumberedName = false)
         {
             var candidate = folder + "/" + name;
             if (!taken(candidate)) return candidate;
             var extension = System.IO.Path.GetExtension(name);
             var stem = name.Substring(0, name.Length - extension.Length);
-            var numbered = s_Numbered.Match(stem);
-            if (numbered.Success) stem = numbered.Groups[1].Value;
-            for (int i = 1; ; i++)
+            string prefix = folder + "/" + stem + " ";
+            string numberedPrefix = prefix;
+            string numberFormat = null;
+            int start = 1;
+            if (continueNumberedName)
             {
-                candidate = folder + "/" + stem + " " + i + extension;
+                // The Project selection query extends a numeric suffix up to the integer limit.
+                int separator = stem.LastIndexOf(' ');
+                if (separator >= 0 && int.TryParse(stem.AsSpan(separator + 1), NumberStyles.None,
+                    CultureInfo.InvariantCulture, out int number) && number < int.MaxValue)
+                {
+                    int digits = stem.Length - separator - 1;
+                    numberedPrefix = folder + "/" + stem.Substring(0, separator) + " ";
+                    numberFormat = "D" + digits.ToString(CultureInfo.InvariantCulture);
+                    start = number + 1;
+                }
+            }
+            else
+            {
+                var numbered = s_Numbered.Match(stem);
+                if (numbered.Success) numberedPrefix = folder + "/" + numbered.Groups[1].Value + " ";
+            }
+            for (long i = start; ; i++)
+            {
+                if (numberFormat != null && i == int.MaxValue)
+                {
+                    numberedPrefix = prefix;
+                    numberFormat = null;
+                    i = 1;
+                }
+                candidate = numberedPrefix + i.ToString(numberFormat, CultureInfo.InvariantCulture) + extension;
                 if (!taken(candidate)) return candidate;
             }
         }
