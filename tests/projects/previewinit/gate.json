@@ -3,6 +3,7 @@
   "summary": "previewinit (edit|play): [0-9]+/[0-9]+ values match.*",
   "engine_paths": [
     "managed/UnityEngine/Core/GameObject.cs",
+    "managed/UnityEngine/Core/LayerMask.cs",
     "managed/UnityEngine/Core/Object.cs",
     "managed/UnityEngine/Core/SceneManagement.cs",
     "managed/UnityEngine/Core/Transform.cs",

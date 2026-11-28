@@ -604,7 +604,9 @@ namespace UnityEngine.Rendering
             get
             {
                 var qualityPipeline = QualitySettings.renderPipeline;
-                return qualityPipeline != null ? qualityPipeline : defaultRenderPipeline;
+                if (qualityPipeline != null) return qualityPipeline;
+                var defaultPipeline = defaultRenderPipeline;
+                return defaultPipeline != null ? defaultPipeline : null;
             }
         }
 

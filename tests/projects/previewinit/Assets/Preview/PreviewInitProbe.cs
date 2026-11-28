@@ -20,6 +20,23 @@ sealed class PreviewProbePipelineAsset : RenderPipelineAsset
     protected override RenderPipeline CreatePipeline() => null;
 }
 
+sealed class PreviewMaterialPipelineAsset : RenderPipelineAsset
+{
+    internal Material ProbeMaterial;
+    internal bool ReadName;
+
+    protected override RenderPipeline CreatePipeline() => null;
+
+    public override Material defaultMaterial
+    {
+        get
+        {
+            if (ReadName) _ = name;
+            return ProbeMaterial;
+        }
+    }
+}
+
 public static class PreviewInitProbe
 {
     [Serializable] struct Row { public string k; public string v; }
@@ -130,6 +147,7 @@ public static class PreviewInitProbe
                 renderer.lightProbeUsage = LightProbeUsage.CustomProvided;
                 Add("quality.configureAfterDestroy", Invoke(Configure, fallbackRoot));
                 Add("quality.usageAfterDestroy", renderer.lightProbeUsage);
+                RecordDestroyedDefault(Add);
             }
             finally
             {
@@ -147,6 +165,45 @@ public static class PreviewInitProbe
         rows.Add("{\"k\":\"complete\",\"v\":true}");
         File.WriteAllLines(Path.Combine(directory, "values.jsonl"), rows);
         if (exitEditor) EditorApplication.Exit(0);
+    }
+
+    static void RecordDestroyedDefault(Action<string, object> add)
+    {
+        var previous = GraphicsSettings.defaultRenderPipeline;
+        var pipeline = ScriptableObject.CreateInstance<PreviewMaterialPipelineAsset>();
+        var material = new Material(Shader.Find("Standard")) { name = "Preview pipeline default" };
+        try
+        {
+            pipeline.ProbeMaterial = material;
+            GraphicsSettings.defaultRenderPipeline = pipeline;
+            add("quality.liveDefaultPrimitive", PrimitiveMaterial());
+            UnityEngine.Object.DestroyImmediate(pipeline);
+            add("quality.bothDestroyedPipelineClrNull", ReferenceEquals(GraphicsSettings.currentRenderPipeline, null));
+            add("quality.bothDestroyedPipelineTypeNull", GraphicsSettings.currentRenderPipelineAssetType == null);
+            add("quality.bothDestroyedPipelineActive", GraphicsSettings.isScriptableRenderPipelineEnabled);
+            add("quality.bothDestroyedPrimitive", PrimitiveMaterial());
+            pipeline.ReadName = true;
+            add("quality.bothDestroyedPrimitiveVirtualGetter", PrimitiveMaterial());
+        }
+        finally
+        {
+            GraphicsSettings.defaultRenderPipeline = previous;
+            if (pipeline != null) UnityEngine.Object.DestroyImmediate(pipeline);
+            UnityEngine.Object.DestroyImmediate(material);
+        }
+    }
+
+    static string PrimitiveMaterial()
+    {
+        GameObject primitive = null;
+        try
+        {
+            primitive = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            var material = primitive.GetComponent<MeshRenderer>().sharedMaterial;
+            return material != null ? material.name : "null";
+        }
+        catch (Exception error) { return error.GetType().Name; }
+        finally { if (primitive != null) UnityEngine.Object.DestroyImmediate(primitive); }
     }
 
     static string Invoke(MethodInfo method, GameObject target)
