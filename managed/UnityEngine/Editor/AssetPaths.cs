@@ -16,6 +16,7 @@ namespace Unbound.Runtime
     internal static class AssetPaths
     {
         static readonly Regex s_Numbered = new Regex("^(.*) ([0-9]+)$");
+        const int SelectedPathSuffixMaxDigits = 6;
 
         /// <summary>The name itself when it is free in the folder, else the first free
         /// "stem N.ext" from 1 (a stem's own " N" replaced): tests/projects/projectwrites
@@ -26,18 +27,17 @@ namespace Unbound.Runtime
             if (!taken(candidate)) return candidate;
             var extension = System.IO.Path.GetExtension(name);
             var stem = name.Substring(0, name.Length - extension.Length);
-            string prefix = folder + "/" + stem + " ";
-            string numberedPrefix = prefix;
+            string numberedPrefix = folder + "/" + stem + " ";
             string numberFormat = null;
             int start = 1;
             if (continueNumberedName)
             {
-                // The Project selection query extends a numeric suffix up to the integer limit.
+                // The Project selection query continues incoming suffixes of up to six digits.
                 int separator = stem.LastIndexOf(' ');
-                if (separator >= 0 && int.TryParse(stem.AsSpan(separator + 1), NumberStyles.None,
-                    CultureInfo.InvariantCulture, out int number) && number < int.MaxValue)
+                int digits = stem.Length - separator - 1;
+                if (separator >= 0 && digits <= SelectedPathSuffixMaxDigits &&
+                    int.TryParse(stem.AsSpan(separator + 1), NumberStyles.None, CultureInfo.InvariantCulture, out int number))
                 {
-                    int digits = stem.Length - separator - 1;
                     numberedPrefix = folder + "/" + stem.Substring(0, separator) + " ";
                     numberFormat = "D" + digits.ToString(CultureInfo.InvariantCulture);
                     start = number + 1;
@@ -50,12 +50,6 @@ namespace Unbound.Runtime
             }
             for (long i = start; ; i++)
             {
-                if (numberFormat != null && i == int.MaxValue)
-                {
-                    numberedPrefix = prefix;
-                    numberFormat = null;
-                    i = 1;
-                }
                 candidate = numberedPrefix + i.ToString(numberFormat, CultureInfo.InvariantCulture) + extension;
                 if (!taken(candidate)) return candidate;
             }
