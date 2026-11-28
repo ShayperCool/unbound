@@ -94,6 +94,46 @@ namespace UnityEngine.Tests
             finally { Event.current = previous; }
         }
 
+        [Theory]
+        [InlineData(false)]
+        [InlineData(true)]
+        public void DrawLineReportsUndrawnRepaints(bool thick)
+        {
+            using var release = TestRelease.Pin(TestRelease.Measured);
+            using var engine = Unbound.Runtime.MainThreadCheck.Engine();
+            var previousEvent = Event.current;
+            var previousHandler = Debug.unityLogger.logHandler;
+            var previousDepth = Handles.zTest;
+            var capture = new Capture();
+            Debug.unityLogger.logHandler = capture;
+            Unbound.Runtime.Stubs.Forget("Handles.DrawLine");
+            try
+            {
+                Handles.zTest = Rendering.CompareFunction.LessEqual;
+                Event.current = null;
+                Assert.Throws<NullReferenceException>(DrawLine);
+                Event.current = new Event { type = EventType.Layout };
+                DrawLine();
+                Assert.Empty(capture.Lines);
+                Event.current = new Event { type = EventType.Repaint };
+                DrawLine();
+                Assert.Equal("Unbound: Handles.DrawLine draws nothing (Unbound draws no handles)", Assert.Single(capture.Lines));
+            }
+            finally
+            {
+                Handles.zTest = previousDepth;
+                Event.current = previousEvent;
+                Debug.unityLogger.logHandler = previousHandler;
+                Unbound.Runtime.Stubs.Forget("Handles.DrawLine");
+            }
+
+            void DrawLine()
+            {
+                if (thick) Handles.DrawLine(Vector3.zero, Vector3.one, 2f);
+                else Handles.DrawLine(Vector3.zero, Vector3.one);
+            }
+        }
+
         [Fact]
         public void IconsAreKeptForGameObjectsAndScriptableObjectsOnly()
         {

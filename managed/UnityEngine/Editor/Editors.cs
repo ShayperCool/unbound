@@ -536,9 +536,13 @@ namespace UnityEditor
         /// <summary>Handles draw into a scene view's GUI: outside one the Editor's throw.</summary>
         static void RequireSceneGUI() => EditorGUI.RequireGUI();
 
-        public static void DrawLine(Vector3 p1, Vector3 p2) => RequireSceneGUI();
+        public static void DrawLine(Vector3 p1, Vector3 p2)
+        {
+            RequireSceneGUI();
+            if (Compat.EditorHandleDrawingStateMeasured) Draw(nameof(DrawLine));
+        }
 
-        public static void DrawLine(Vector3 p1, Vector3 p2, float thickness) => RequireSceneGUI();
+        public static void DrawLine(Vector3 p1, Vector3 p2, float thickness) => DrawLine(p1, p2);
 
         public static void Label(Vector3 position, string text) => DrawLabel();
 
